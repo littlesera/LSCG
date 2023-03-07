@@ -90,8 +90,11 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
         /** @type {(args: [Character, boolean], next: (args: [Character, boolean]) => number) => number} */
         (args, next) => {
             let level = next(args);
+            var mod = (chokeLevel - 1);
+            if (mod < 0)
+                mod = 0;
             if (chokeLevel > 2) {                
-                level += 2;
+                level += mod;
             }
             return level;
         }
