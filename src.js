@@ -84,7 +84,7 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
         chokeLevel++;
         if (chokeLevel < 4) {
             clearTimeout(chokeTimeout);
-            chokeTimeout = setTimeout(DecreaseCollarChoke(), chokeTimer);
+            chokeTimeout = setTimeout(DecreaseCollarChoke, chokeTimer);
             switch (chokeLevel) {
                 case 1:
                     SendAction("%NAME%'s eyes flutter slightly as her collar starts to tighten around her neck with a quiet hiss.");
@@ -118,7 +118,7 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
     function StartPassout() {
         clearTimeout(chokeTimeout);
         SendAction("%NAME%'s eyes start to roll back, gasping and choking as her collar presses in tightly and completely with a final hiss.");
-        chokeTimeout = setTimeout(Passout(), passoutTimer);
+        chokeTimeout = setTimeout(Passout, passoutTimer);
     }
 
     function Passout() {
