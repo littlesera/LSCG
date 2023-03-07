@@ -1,5 +1,4 @@
-const CCollar_Version = '0.0.1';
-const CCollar_Settings_Version = 1;
+const SeraTest_Version = '0.0.1';
 
 // Bondage Club Mod Development Kit (1.1.0)
 // For more info see: https://github.com/Jomshir98/bondage-club-mod-sdk
@@ -8,20 +7,20 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
 
 async function runSera(){
 	
-	await waitFor(() => ServerSocket && ServerIsConnected);	
+    await waitFor(() => ServerSocket && ServerIsConnected);	
 
     const modApi = bcModSDK.registerMod({
-	name: 'CCollar',
-	fullName: 'Choke Collar',
-	version: CCollar_Version
+	name: 'SeraTest',
+	fullName: 'Sera Test',
+	version: SeraTest_Version
     });
 
-    if(Player.CCollar != null){
-	console.log("Choke Collar loaded");
+    if(Player.SeraTest != null){
+	console.log("Sera Test loaded");
     }
-    window.CCollar_Version = CCollar_Version
+    window.CCollar_Version = SeraTest_Version
 
-    window.ChatRoomRegisterMessageHandler({ Priority: 600, Description: "Choke Collar", Callback: (data, sender, msg, metadata) => {
+    window.ChatRoomRegisterMessageHandler({ Priority: 600, Description: "Sera Test", Callback: (data, sender, msg, metadata) => {
 	console.info("beep");
     }});
 };
