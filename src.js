@@ -107,16 +107,19 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
         chokeLevel++;
         if (chokeLevel < 4) {
             setChokeTimeout(DecreaseCollarChoke, chokeTimer);
-
+            IncreaseArousal();
             switch (chokeLevel) {
                 case 1:
                     SendAction("%NAME%'s eyes flutter as her collar starts to tighten around her neck with a quiet hiss.");
+                    CharacterSetFacialExpression(Player, "Blush", "Low");
                     break;
                 case 2:
                     SendAction("%NAME% gasps for air as her collar presses in around her neck with a hiss.");
+                    CharacterSetFacialExpression(Player, "Blush", "Medium");
                     break;
                 case 3:
                     SendAction("%NAME%'s face runs flush, choking as her collar hisses, barely allowing any air to her lungs.");
+                    CharacterSetFacialExpression(Player, "Blush", "High");
                     break;
                 default:
                     break;
@@ -141,15 +144,19 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
         switch (chokeLevel) {
             case 3:
                 SendAction("%NAME% chokes and gasps desperately as her collar slowly releases some pressure.");
+                CharacterSetFacialExpression(Player, "Blush", "High");
                 break;
             case 2:
                 SendAction("%NAME%'s collar opens a little as she lets out a moan and gulps for air.");
+                CharacterSetFacialExpression(Player, "Blush", "Medium");
                 break;
             case 1:
                 SendAction("%NAME% whimpers thankfully as her collar reduces most of its pressure around her neck.");
+                CharacterSetFacialExpression(Player, "Blush", "Low");
                 break;
             case 0:
                 SendAction("%NAME% takes deep breaths as her collar releases her neck with a hiss.");
+                CharacterSetFacialExpression(Player, "Blush", "None");
                 break;
             default:
                 break;
@@ -170,5 +177,12 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
         SendAction("As %NAME% passes out, her collar releases all of its pressure with a hiss.");
         clearTimeout(chokeTimeout);
         ResetCollarChoke();
+    }
+
+    function IncreaseArousal() {
+        Player.ArousalSettings.ProgressTimer = Player.ArousalSettings.Progress + 5;
+        ActivityChatRoomArousalSync(Player);
+        Player.BCT.splitOrgasmArousal.ProgressTimer = Player.BCT.splitOrgasmArousal.arousalProgress + 20;
+        BCT_API?.ActivityChatRoomBCTArousalSync(Player);
     }
 })();
