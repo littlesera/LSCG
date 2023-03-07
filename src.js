@@ -75,8 +75,11 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
     ];
     chokeLevel = 0;
     chokeTimeout = 0;
-    chokeTimer = 60000;
-    passoutTimer = 30000;
+    chokeTimer = 120000;
+    chokeEventTimer = 60000;
+    passout1Timer = 30000;
+    passout2Timer = 10000;
+    passout3Timer = 5000;
 
     function setChokeTimeout(f, delay) {
         clearTimeout(chokeTimeout);
@@ -147,17 +150,17 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
             case 3:
                 SendAction("%NAME% chokes and gasps desperately as her collar slowly releases some pressure.");
                 CharacterSetFacialExpression(Player, "Blush", "High");
-                CharacterSetFacialExpression(Player, "Eyes", "VeryLewd");
+                CharacterSetFacialExpression(Player, "Eyes", "Lewd");
                 break;
             case 2:
                 SendAction("%NAME%'s collar opens a little as she lets out a moan, gulping for air.");
                 CharacterSetFacialExpression(Player, "Blush", "Medium");
-                CharacterSetFacialExpression(Player, "Eyes", "Lewd");
+                CharacterSetFacialExpression(Player, "Eyes", "Sad");
                 break;
             case 1:
                 SendAction("%NAME% whimpers thankfully as her collar reduces most of its pressure around her neck.");
                 CharacterSetFacialExpression(Player, "Blush", "Low");
-                CharacterSetFacialExpression(Player, "Eyes", "Sad");
+                CharacterSetFacialExpression(Player, "Eyes", "None");
                 break;
             case 0:
                 SendAction("%NAME% takes deep breaths as her collar releases her neck with a hiss.");
@@ -175,16 +178,35 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
 
     function StartPassout() {
         SendAction("%NAME%'s eyes start to roll back, gasping and choking as her collar presses in tightly and completely with a final hiss.");
+        CharacterSetFacialExpression(Player, "Blush", "VeryHigh");
+        CharacterSetFacialExpression(Player, "Eyebrows", "Soft");
+        CharacterSetFacialExpression(Player, "Eyes", "Lewd");
+        setChokeTimeout(Passout1, passout1Timer);
+    }
+
+    function Passout1() {
+        IncreaseArousal();
+        SendAction("%NAME% chokes and spasms, her collar holding holding tight.");
+        CharacterSetFacialExpression(Player, "Blush", "Extreme");
+        CharacterSetFacialExpression(Player, "Eyebrows", "Soft");
+        CharacterSetFacialExpression(Player, "Eyes", "Lewd");
+        CharacterSetFacialExpression(Player, "Mouth", "HalfOpen");
+        setChokeTimeout(Passout2, passout2Timer);
+    }
+
+    function Passout2() {
+        IncreaseArousal();
+        SendAction("%NAME% convulses weakly, her eyes rolling back as the collar hisses impossibly tighter.");
         CharacterSetFacialExpression(Player, "Blush", "ShortBreath");
         CharacterSetFacialExpression(Player, "Eyebrows", "Soft");
         CharacterSetFacialExpression(Player, "Eyes", "VeryLewd");
         CharacterSetFacialExpression(Player, "Mouth", "HalfOpen");
-        setChokeTimeout(Passout, passoutTimer);
+        setChokeTimeout(Passout3, passout3Timer);
     }
 
-    function Passout() {
+    function Passout3() {
         IncreaseArousal();
-        SendAction("As %NAME% passes out, her collar releases all of its pressure with a hiss.");
+        SendAction("As %NAME% collapses unconscious, her collar releases all of its pressure with a long hiss.");
         CharacterSetFacialExpression(Player, "Blush", "Medium");
         CharacterSetFacialExpression(Player, "Eyebrows", "Soft");
         CharacterSetFacialExpression(Player, "Eyes", "Closed");
