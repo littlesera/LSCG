@@ -241,24 +241,6 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
         return Math.floor(Math.random() * max);
       }
 
-    ChokeEvents = {
-        low: [
-            "%NAME% coughs as her collar pushes against her windpipe",
-            "%NAME% gulps as she feels the tight collar around her neck",
-            "%NAME% shifts nervously in her tight collar"
-        ],
-        mid: [
-            "%NAME% whimpers pleadingly as she struggles to take a full breath",
-            "%NAME% chokes against her collar, moaning softly",
-            "%NAME%'s eyes flutter weakly as her collar presses into her neck"
-        ],
-        high: [
-            "%NAME% splutters and chokes, struggling to breath",
-            "%NAME% grunts and moans, straining to breath",
-            "%NAME%'s eyes have trouble focusing, as she chokes and gets lightheaded"
-        ]
-    }
-
     function ChokeEvent() {
         // only activate 1/3 times triggered
         if (getRandomInt(2) > 0) {
@@ -267,6 +249,23 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
     }
 
     function ActivateChokeEvent() {
+        let ChokeEvents = {
+            low: [
+                "%NAME% coughs as her collar pushes against her windpipe",
+                "%NAME% gulps as she feels the tight collar around her neck",
+                "%NAME% shifts nervously in her tight collar"
+            ],
+            mid: [
+                "%NAME% whimpers pleadingly as she struggles to take a full breath",
+                "%NAME% chokes against her collar, moaning softly",
+                "%NAME%'s eyes flutter weakly as her collar presses into her neck"
+            ],
+            high: [
+                "%NAME% splutters and chokes, struggling to breath",
+                "%NAME% grunts and moans, straining to breath",
+                "%NAME%'s eyes have trouble focusing, as she chokes and gets lightheaded"
+            ]
+        }
         let choice = getRandomInt(2);
         switch (Player.LittleSera.chokeLevel) {
             case 1:
