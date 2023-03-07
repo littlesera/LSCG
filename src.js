@@ -23,7 +23,7 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
   }
   //end of do not touch this
 	
-    const modApi = bcModSDK.registerMod({
+    const SDK = bcModSDK.registerMod({
         name: 'SeraScripts',
         fullName: 'Sera Scripts',
         version: SeraScripts_Version
@@ -78,25 +78,46 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
     chokeTimer = 60000;
     passoutTimer = 10000;
 
+    function setChokeTimeout(f, delay) {
+        clearTimeout(chokeTimeout);
+        chokeTimeout = setTimeout(f, delay);
+    }
+
+    // gag level mod
+    SDK.hookFunction(
+        "SpeechGetTotalGagLevel",
+        4,
+        /** @type {(args: [Character, boolean], next: (args: [Character, boolean]) => number) => number} */
+        (args, next) => {
+            let level = next(args);
+            if (chokeLevel > 2) {                
+                level += 2;
+            }
+            return level;
+        }
+    );
+
+
     function IncreaseCollarChoke() {
         if (chokeLevel == 4)
             return;
         chokeLevel++;
         if (chokeLevel < 4) {
-            clearTimeout(chokeTimeout);
-            chokeTimeout = setTimeout(DecreaseCollarChoke, chokeTimer);
+            setChokeTimeout(DecreaseCollarChoke, chokeTimer);
+
             switch (chokeLevel) {
                 case 1:
-                    SendAction("%NAME%'s eyes flutter slightly as her collar starts to tighten around her neck with a quiet hiss.");
+                    SendAction("%NAME%'s eyes flutter as her collar starts to tighten around her neck with a quiet hiss.");
                     break;
                 case 2:
                     SendAction("%NAME% gasps for air as her collar presses in around her neck with a hiss.");
                     break;
                 case 3:
-                    SendAction("%NAME%'s face runs flush, choking as her collar hisses and barely allows any air to her lungs.");
+                    SendAction("%NAME%'s face runs flush, choking as her collar hisses, barely allowing any air to her lungs.");
+                    break;
+                default:
                     break;
             }
-
         }
         else if (chokeLevel >= 4) {
             chokeLevel = 4;
@@ -105,9 +126,31 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
     }
 
     function DecreaseCollarChoke() {
-        chokeLevel--;
-        if (chokeLevel < 0)
+        if (chokeLevel <= 0) {
             chokeLevel = 0;
+            return;
+        }
+
+        chokeLevel--;
+        if (chokeLevel > 0)
+            setChokeTimeout(DecreaseCollarChoke, chokeTimer);
+
+        switch (chokeLevel) {
+            case 3:
+                SendAction("%NAME% chokes and gasps desperately as her collar slowly releases some pressure.");
+                break;
+            case 2:
+                SendAction("%NAME%'s collar opens a little as she lets out a moan and gulps for air.");
+                break;
+            case 1:
+                SendAction("%NAME% whimpers thankfully as her collar reduces most of its pressure around her neck.");
+                break;
+            case 0:
+                SendAction("%NAME% takes deep breaths as her collar releases her neck with a hiss.");
+                break;
+            default:
+                break;
+        }
     }
 
     function ResetCollarChoke() {
@@ -116,14 +159,13 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
     }
 
     function StartPassout() {
-        clearTimeout(chokeTimeout);
         SendAction("%NAME%'s eyes start to roll back, gasping and choking as her collar presses in tightly and completely with a final hiss.");
-        chokeTimeout = setTimeout(Passout, passoutTimer);
+        setChokeTimeout(Passout, passoutTimer);
     }
 
     function Passout() {
-        clearTimeout(chokeTimeout);
         SendAction("As %NAME% passes out, her collar releases all of its pressure with a hiss.");
+        clearTimeout(chokeTimeout);
         ResetCollarChoke();
     }
 })();
