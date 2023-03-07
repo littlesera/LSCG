@@ -81,6 +81,16 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
     passout2Timer = 10000;
     passout3Timer = 5000;
 
+    if (!Player.LittleSera)
+        Player.LittleSera = {};
+    if (!Player.LittleSera.chokeLevel) {
+        Player.LittleSera.chokeLevel = 0;
+    }
+    chokeLevel = Player.LittleSera.chokeLevel;
+    if (chokeLevel > 2) {
+        setChokeTimeout(DecreaseCollarChoke, chokeTimer);
+    }
+
     function setChokeTimeout(f, delay) {
         clearTimeout(chokeTimeout);
         chokeTimeout = setTimeout(f, delay);
