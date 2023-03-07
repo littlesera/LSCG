@@ -249,7 +249,7 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
     }
 
     function ActivateChokeEvent() {
-        let ChokeEvents = {
+        const ChokeEvents = {
             low: [
                 "%NAME% coughs as her collar pushes against her windpipe",
                 "%NAME% gulps as she feels the tight collar around her neck",
