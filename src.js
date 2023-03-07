@@ -29,10 +29,6 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
         version: SeraScripts_Version
     });
 
-    allowedChokeMembers = [
-        96251
-    ];
-
     if(Player.SeraScripts != null){
 	    console.log("Sera Scripts loaded");
     }
@@ -73,6 +69,10 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
     }
 
     // Choke Collar Code
+    allowedChokeMembers = [
+        96251,
+        60504
+    ];
     chokeLevel = 0;
     chokeTimeout = 0;
     chokeTimer = 60000;
