@@ -42,7 +42,7 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
     window.ChatRoomRegisterMessageHandler({ Priority: 600, Description: "Sera Scripts", Callback: (data, sender, msg, metadata) => {
         var lowerMsg = msg.toLowerCase();
         var lowerMsgWords = lowerMsg.match(/\b(\w+)\b/g);
-        if (!!data && data.Type == "Chat" && !!sender && allowedChokeMembers.indexOf(sender.MemberNumber) >= 0) {
+        if (data.Type == "Chat" && !!sender && allowedChokeMembers.indexOf(sender.MemberNumber) >= 0) {
             if (lowerMsgWords.indexOf("tight") >= 0)
                 IncreaseCollarChoke();
             else if (lowerMsgWords.indexOf("loose") >= 0)
@@ -50,12 +50,80 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
         }            
     }});
 
+    function SendAction(action) {
+        ServerSend("ChatRoomChat", {Content: "Beep", Type: "Action", Dictionary: [{Tag: "Beep", Text: replace_template(action, Player.CharacterNickname)}]});
+    }
+
+    function SendChat(msg) {
+        ServerSend("ChatRoomChat", {Type: "Chat", Content: msg})
+    }
+
+    function replace_template(text, source_name = '') {
+        let result = text
+        // result = result.replaceAll("%POSSESSIVE%", Player.BCAR.bcarSettings.genderDefault.capPossessive.toLocaleLowerCase())
+        // result = result.replaceAll("%CAP_POSSESSIVE%", Player.BCAR.bcarSettings.genderDefault.capPossessive)
+        // result = result.replaceAll("%PRONOUN%", Player.BCAR.bcarSettings.genderDefault.capPronoun.toLocaleLowerCase())
+        // result = result.replaceAll("%CAP_PRONOUN%", Player.BCAR.bcarSettings.genderDefault.capPronoun)
+        // result = result.replaceAll("%INTENSIVE%", Player.BCAR.bcarSettings.genderDefault.capIntensive.toLocaleLowerCase())
+        // result = result.replaceAll("%CAP_INTENSIVE%", Player.BCAR.bcarSettings.genderDefault.capIntensive)
+        result = result.replaceAll("%NAME%", CharacterNickname(Player)) //Does this works to print "Lilly"? -- it should, yes
+        result = result.replaceAll("%OPP_NAME%", source_name) // finally we can use the source name to make the substitution
+
+        return result
+    }
+
+    // Choke Collar Code
     chokeLevel = 0;
+    chokeTimeout = 0;
+    chokeTimer = 60000;
+    passoutTimer = 10000;
+
     function IncreaseCollarChoke() {
+        if (chokeLevel == 4)
+            return;
         chokeLevel++;
+        if (chokeLevel < 4) {
+            clearTimeout(chokeTimeout);
+            chokeTimeout = setTimeout(DecreaseCollarChoke(), chokeTimer);
+            switch (chokeLevel) {
+                case 1:
+                    SendAction("%NAME%'s eyes flutter slightly as her collar starts to tighten around her neck with a quiet hiss.");
+                    break;
+                case 2:
+                    SendAction("%NAME% gasps for air as her collar presses in around her neck with a hiss.");
+                    break;
+                case 3:
+                    SendAction("%NAME%'s face runs flush, choking as her collar hisses and barely allows any air to her lungs.");
+                    break;
+            }
+
+        }
+        else if (chokeLevel >= 4) {
+            chokeLevel = 4;
+            StartPassout();
+        }
     }
 
     function DecreaseCollarChoke() {
         chokeLevel--;
+        if (chokeLevel < 0)
+            chokeLevel = 0;
+    }
+
+    function ResetCollarChoke() {
+        chokeLevel = 0;
+        clearTimeout(chokeTimeout);
+    }
+
+    function StartPassout() {
+        clearTimeout(chokeTimeout);
+        SendAction("%NAME%'s eyes start to roll back, gasping and choking as her collar presses in tightly and completely with a final hiss.");
+        chokeTimeout = setTimeout(Passout(), passoutTimer);
+    }
+
+    function Passout() {
+        clearTimeout(chokeTimeout);
+        SendAction("As %NAME% passes out, her collar releases all of its pressure with a hiss.");
+        ResetCollarChoke();
     }
 })();
