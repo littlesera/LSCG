@@ -38,12 +38,12 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
     window.ChatRoomRegisterMessageHandler({ Priority: 600, Description: "Sera Scripts", Callback: (data, sender, msg, metadata) => {
         var lowerMsg = msg.toLowerCase();
         var lowerMsgWords = lowerMsg.match(/\b(\w+)\b/g);
-        if (data.Type == "Chat" && !!sender && allowedChokeMembers.indexOf(sender.MemberNumber) >= 0) {
+        if (data.Type == "Chat" && !!sender && allowedChokeMembers.indexOf(sender.MemberNumber) >= 0 && !!lowerMsgWords && lowerMsgWords.length > 0) {
             if (lowerMsgWords.indexOf("tight") >= 0)
                 IncreaseCollarChoke();
             else if (lowerMsgWords.indexOf("loose") >= 0)
                 DecreaseCollarChoke();
-        }            
+        }
     }});
 
     function SendAction(action) {
