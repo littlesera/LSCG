@@ -113,16 +113,17 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
                 case 1:
                     SendAction("%NAME%'s eyes flutter as her collar starts to tighten around her neck with a quiet hiss.");
                     CharacterSetFacialExpression(Player, "Blush", "Low");
+                    CharacterSetFacialExpression(Player, "Eyes", "Sad");
                     break;
                 case 2:
                     SendAction("%NAME% gasps for air as her collar presses in around her neck with a hiss.");
                     CharacterSetFacialExpression(Player, "Blush", "Medium");
-                    CharacterSetFacialExpression(Player, "Eyes", "Sad");
+                    CharacterSetFacialExpression(Player, "Eyes", "Surprised");
                     break;
                 case 3:
                     SendAction("%NAME%'s face runs flush, choking as her collar hisses, barely allowing any air to her lungs.");
                     CharacterSetFacialExpression(Player, "Blush", "High");
-                    CharacterSetFacialExpression(Player, "Eyes", "Sad");
+                    CharacterSetFacialExpression(Player, "Eyes", "Scared");
                     break;
                 default:
                     break;
@@ -148,14 +149,17 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
             case 3:
                 SendAction("%NAME% chokes and gasps desperately as her collar slowly releases some pressure.");
                 CharacterSetFacialExpression(Player, "Blush", "High");
+                CharacterSetFacialExpression(Player, "Eyes", "VeryLewd");
                 break;
             case 2:
                 SendAction("%NAME%'s collar opens a little as she lets out a moan, gulping for air.");
                 CharacterSetFacialExpression(Player, "Blush", "Medium");
+                CharacterSetFacialExpression(Player, "Eyes", "Lewd");
                 break;
             case 1:
                 SendAction("%NAME% whimpers thankfully as her collar reduces most of its pressure around her neck.");
                 CharacterSetFacialExpression(Player, "Blush", "Low");
+                CharacterSetFacialExpression(Player, "Eyes", "Sad");
                 break;
             case 0:
                 SendAction("%NAME% takes deep breaths as her collar releases her neck with a hiss.");
