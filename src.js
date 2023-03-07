@@ -69,6 +69,8 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
     }
 
     // Choke Collar Code
+    await waitFor(() => !!Player?.AccountName);
+    
     allowedChokeMembers = [
         96251,
         60504
