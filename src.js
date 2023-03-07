@@ -73,7 +73,7 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
         96251,
         60504
     ];
-    chokeLevel = 0;
+
     chokeTimeout = 0;
     chokeTimer = 120000;
     chokeEventTimer = 60000;
@@ -86,8 +86,7 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
     if (!Player.LittleSera.chokeLevel) {
         Player.LittleSera.chokeLevel = 0;
     }
-    chokeLevel = Player.LittleSera.chokeLevel;
-    if (chokeLevel > 2) {
+    if (Player.LittleSera.chokeLevel > 2) {
         setChokeTimeout(DecreaseCollarChoke, chokeTimer);
     }
 
@@ -103,7 +102,7 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
         /** @type {(args: [Character, boolean], next: (args: [Character, boolean]) => number) => number} */
         (args, next) => {
             let level = next(args);
-            var mod = (chokeLevel - 1);
+            var mod = (Player.LittleSera.chokeLevel - 1);
             if (mod > 0) {                
                 level += mod;
             }
@@ -113,13 +112,13 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
 
 
     function IncreaseCollarChoke() {
-        if (chokeLevel == 4)
+        if (Player.LittleSera.chokeLevel == 4)
             return;
-        chokeLevel++;
-        if (chokeLevel < 4) {
+            Player.LittleSera.chokeLevel++;
+        if (Player.LittleSera.chokeLevel < 4) {
             IncreaseArousal();
             CharacterSetFacialExpression(Player, "Eyebrows", "Soft");
-            switch (chokeLevel) {
+            switch (Player.LittleSera.chokeLevel) {
                 case 1:
                     SendAction("%NAME%'s eyes flutter as her collar starts to tighten around her neck with a quiet hiss.");
                     CharacterSetFacialExpression(Player, "Blush", "Low");
@@ -140,23 +139,23 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
                     break;
             }
         }
-        else if (chokeLevel >= 4) {
-            chokeLevel = 4;
+        else if (Player.LittleSera.chokeLevel >= 4) {
+            Player.LittleSera.chokeLevel = 4;
             StartPassout();
         }
     }
 
     function DecreaseCollarChoke() {
-        if (chokeLevel <= 0) {
-            chokeLevel = 0;
+        if (Player.LittleSera.chokeLevel <= 0) {
+            Player.LittleSera.chokeLevel = 0;
             return;
         }
 
-        chokeLevel--;
-        if (chokeLevel > 0)
+        Player.LittleSera.chokeLevel--;
+        if (Player.LittleSera.chokeLevel > 0)
             setChokeTimeout(DecreaseCollarChoke, chokeTimer);
 
-        switch (chokeLevel) {
+        switch (Player.LittleSera.chokeLevel) {
             case 3:
                 SendAction("%NAME% chokes and gasps desperately as her collar slowly releases some pressure.");
                 CharacterSetFacialExpression(Player, "Blush", "High");
@@ -182,7 +181,7 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
     }
 
     function ResetCollarChoke() {
-        chokeLevel = 0;
+        Player.LittleSera.chokeLevel = 0;
         clearTimeout(chokeTimeout);
     }
 
