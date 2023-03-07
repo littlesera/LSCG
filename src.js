@@ -9,6 +9,20 @@ async function runSera(){
 	
     await waitFor(() => ServerSocket && ServerIsConnected);	
 
+	//do not touch this
+	async function waitFor(func, cancelFunc = () => false) {
+		while (!func()) {
+			if (cancelFunc()) return false;
+			await sleep(10);
+		}
+		return true;
+	}
+
+  function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+  //end of do not touch this
+	
     const modApi = bcModSDK.registerMod({
 	name: 'SeraTest',
 	fullName: 'Sera Test',
