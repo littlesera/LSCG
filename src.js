@@ -108,6 +108,7 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
         if (chokeLevel < 4) {
             setChokeTimeout(DecreaseCollarChoke, chokeTimer);
             IncreaseArousal();
+            CharacterSetFacialExpression(Player, "Eyebrows", "Soft");
             switch (chokeLevel) {
                 case 1:
                     SendAction("%NAME%'s eyes flutter as her collar starts to tighten around her neck with a quiet hiss.");
@@ -116,10 +117,12 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
                 case 2:
                     SendAction("%NAME% gasps for air as her collar presses in around her neck with a hiss.");
                     CharacterSetFacialExpression(Player, "Blush", "Medium");
+                    CharacterSetFacialExpression(Player, "Eyes", "Sad");
                     break;
                 case 3:
                     SendAction("%NAME%'s face runs flush, choking as her collar hisses, barely allowing any air to her lungs.");
                     CharacterSetFacialExpression(Player, "Blush", "High");
+                    CharacterSetFacialExpression(Player, "Eyes", "Sad");
                     break;
                 default:
                     break;
@@ -147,7 +150,7 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
                 CharacterSetFacialExpression(Player, "Blush", "High");
                 break;
             case 2:
-                SendAction("%NAME%'s collar opens a little as she lets out a moan and gulps for air.");
+                SendAction("%NAME%'s collar opens a little as she lets out a moan, gulping for air.");
                 CharacterSetFacialExpression(Player, "Blush", "Medium");
                 break;
             case 1:
@@ -170,19 +173,28 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
 
     function StartPassout() {
         SendAction("%NAME%'s eyes start to roll back, gasping and choking as her collar presses in tightly and completely with a final hiss.");
+        CharacterSetFacialExpression(Player, "Blush", "ShortBreath");
+        CharacterSetFacialExpression(Player, "Eyebrows", "Soft");
+        CharacterSetFacialExpression(Player, "Eyes", "VeryLewd");
+        CharacterSetFacialExpression(Player, "Mouth", "HalfOpen");
         setChokeTimeout(Passout, passoutTimer);
     }
 
     function Passout() {
+        IncreaseArousal();
         SendAction("As %NAME% passes out, her collar releases all of its pressure with a hiss.");
+        CharacterSetFacialExpression(Player, "Blush", "None");
+        CharacterSetFacialExpression(Player, "Eyebrows", "Soft");
+        CharacterSetFacialExpression(Player, "Eyes", "Closed");
+        CharacterSetFacialExpression(Player, "Mouth", "Closed");
         clearTimeout(chokeTimeout);
         ResetCollarChoke();
     }
 
     function IncreaseArousal() {
-        Player.ArousalSettings.ProgressTimer = Player.ArousalSettings.Progress + 5;
+        Player.ArousalSettings.ProgressTimer = Player.ArousalSettings.Progress + 10;
         ActivityChatRoomArousalSync(Player);
-        Player.BCT.splitOrgasmArousal.ProgressTimer = Player.BCT.splitOrgasmArousal.arousalProgress + 20;
+        Player.BCT.splitOrgasmArousal.ProgressTimer = Player.BCT.splitOrgasmArousal.arousalProgress + 30;
         BCT_API?.ActivityChatRoomBCTArousalSync(Player);
     }
 })();
