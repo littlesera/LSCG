@@ -81,13 +81,16 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
     passout2Timer = 10000;
     passout3Timer = 5000;
 
-    if (!Player.LittleSera)
-        Player.LittleSera = {};
-    if (!Player.LittleSera.chokeLevel) {
-        Player.LittleSera.chokeLevel = 0;
-    }
+    Player.LittleSera = Player.OnlineSettings.LittleSera || {chokeLevel: 0}
+    settingsSave();
+
     if (Player.LittleSera.chokeLevel > 2) {
         setChokeTimeout(DecreaseCollarChoke, chokeTimer);
+    }
+
+    function settingsSave() {
+        Player.OnlineSettings.LittleSera = Player.LittleSera
+        window.ServerAccountUpdate.QueueData({OnlineSettings: window.Player.OnlineSettings})
     }
 
     function setChokeTimeout(f, delay) {
@@ -143,6 +146,8 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
             Player.LittleSera.chokeLevel = 4;
             StartPassout();
         }
+
+        settingsSave();
     }
 
     function DecreaseCollarChoke() {
@@ -178,11 +183,14 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
             default:
                 break;
         }
+
+        settingsSave();
     }
 
     function ResetCollarChoke() {
         Player.LittleSera.chokeLevel = 0;
         clearTimeout(chokeTimeout);
+        settingsSave();
     }
 
     function StartPassout() {
