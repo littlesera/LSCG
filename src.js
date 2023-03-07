@@ -76,7 +76,7 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
     chokeLevel = 0;
     chokeTimeout = 0;
     chokeTimer = 60000;
-    passoutTimer = 10000;
+    passoutTimer = 30000;
 
     function setChokeTimeout(f, delay) {
         clearTimeout(chokeTimeout);
@@ -91,9 +91,7 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
         (args, next) => {
             let level = next(args);
             var mod = (chokeLevel - 1);
-            if (mod < 0)
-                mod = 0;
-            if (chokeLevel > 2) {                
+            if (mod > 0) {                
                 level += mod;
             }
             return level;
@@ -106,7 +104,6 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
             return;
         chokeLevel++;
         if (chokeLevel < 4) {
-            setChokeTimeout(DecreaseCollarChoke, chokeTimer);
             IncreaseArousal();
             CharacterSetFacialExpression(Player, "Eyebrows", "Soft");
             switch (chokeLevel) {
@@ -121,6 +118,7 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
                     CharacterSetFacialExpression(Player, "Eyes", "Surprised");
                     break;
                 case 3:
+                    setChokeTimeout(DecreaseCollarChoke, chokeTimer);
                     SendAction("%NAME%'s face runs flush, choking as her collar hisses, barely allowing any air to her lungs.");
                     CharacterSetFacialExpression(Player, "Blush", "High");
                     CharacterSetFacialExpression(Player, "Eyes", "Scared");
@@ -187,7 +185,7 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
     function Passout() {
         IncreaseArousal();
         SendAction("As %NAME% passes out, her collar releases all of its pressure with a hiss.");
-        CharacterSetFacialExpression(Player, "Blush", "None");
+        CharacterSetFacialExpression(Player, "Blush", "Medium");
         CharacterSetFacialExpression(Player, "Eyebrows", "Soft");
         CharacterSetFacialExpression(Player, "Eyes", "Closed");
         CharacterSetFacialExpression(Player, "Mouth", "Closed");
