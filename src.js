@@ -70,7 +70,7 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
 
     // Choke Collar Code
     await waitFor(() => !!Player?.AccountName);
-    
+
     allowedChokeMembers = [
         96251,
         60504
@@ -78,7 +78,7 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
 
     chokeTimeout = 0;
     chokeTimer = 120000;
-    chokeEventTimer = 60000;
+    chokeEventTimer = 30000;
     passout1Timer = 30000;
     passout2Timer = 10000;
     passout3Timer = 5000;
@@ -89,6 +89,9 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
     if (Player.LittleSera.chokeLevel > 2) {
         setChokeTimeout(DecreaseCollarChoke, chokeTimer);
     }
+    
+    ActivateChokeEvent();
+    _events = setTimeout(ChokeEvent, chokeEventTimer);
 
     function settingsSave() {
         Player.OnlineSettings.LittleSera = Player.LittleSera
@@ -232,6 +235,52 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
         CharacterSetFacialExpression(Player, "Mouth", "Closed");
         clearTimeout(chokeTimeout);
         ResetCollarChoke();
+    }
+
+    function getRandomInt(max) {
+        return Math.floor(Math.random() * max);
+      }
+
+    ChokeEvents = {
+        low: [
+            "%NAME% coughs as her collar pushes against her windpipe",
+            "%NAME% gulps as she feels the tight collar around her neck",
+            "%NAME% shifts nervously in her tight collar"
+        ],
+        mid: [
+            "%NAME% whimpers pleadingly as she struggles to take a full breath",
+            "%NAME% chokes against her collar, moaning softly",
+            "%NAME%'s eyes flutter weakly as her collar presses into her neck"
+        ],
+        high: [
+            "%NAME% splutters and chokes, struggling to breath",
+            "%NAME% grunts and moans, straining to breath",
+            "%NAME%'s eyes have trouble focusing, as she chokes and gets lightheaded"
+        ]
+    }
+
+    function ChokeEvent() {
+        // only activate 1/3 times triggered
+        if (getRandomInt(2) > 0) {
+            ActivateChokeEvent();
+        }        
+    }
+
+    function ActivateChokeEvent() {
+        let choice = getRandomInt(2);
+        switch (Player.LittleSera.chokeLevel) {
+            case 1:
+                SendAction(ChokeEvents.low[choice]);
+                break;
+            case 2:
+                SendAction(ChokeEvents.mid[choice]);
+                break;
+            case 3:
+                SendAction(ChokeEvents.high[choice]);
+                break;
+            default:
+                break;
+        }
     }
 
     function IncreaseArousal() {
