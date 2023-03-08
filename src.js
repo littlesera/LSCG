@@ -132,31 +132,31 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
 		ActivateChokeEvent();
 	});
 
-    // gag level mod
-    SDK.hookFunction(
-        "SpeechGetTotalGagLevel",
-        4,
-        /** @type {(args: [Character, boolean], next: (args: [Character, boolean]) => number) => number} */
-        (args, next) => {
-            let level = next(args);
-            var mod = (Player.LittleSera.chokeLevel - 1);
-            if (mod > 0) {                
-                level += mod;
-            }
-            return level;
-        }
-    );
+    // // gag level mod
+    // SDK.hookFunction(
+    //     "SpeechGetTotalGagLevel",
+    //     4,
+    //     /** @type {(args: [Character, boolean], next: (args: [Character, boolean]) => number) => number} */
+    //     (args, next) => {
+    //         let level = next(args);
+    //         var mod = (Player.LittleSera.chokeLevel - 1);
+    //         if (mod > 0) {                
+    //             level += mod;
+    //         }
+    //         return level;
+    //     }
+    // );
     
-    SDK.hookFunction('ServerSend', 5, (args, next) => {
+    SDK.hookFunction('ServerSend', 4, (args, next) => {
         // Prevent speech at choke level 4
         if (args[0] == "ChatRoomChat" && args[1].Type == "Chat"){
             if (Player.LittleSera.chokeLevel >= 4) {
                 SendAction("%NAME%'s mouth moves silently.");
                 return null;
             }
-            else if (triggerActivated) {
-                SendAction("%NAME%'s eyelids flutter as a thought tries to enter her blank mind...");
-                return null;
+            else if (Player.LittleSera.chokeLevel > 1) {
+                args[1].Content = SpeechGarbleByGagLevel((Player.LittleSera.chokeLevel-1)^2, args[1].Content);
+                return next(args);
             }
             else
                 return next(args);
@@ -350,11 +350,15 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
         Player.LittleSera.trigger = commonWords[getRandomInt(wordLength)];
         settingsSave();
     }
+    if (!Player.LittleSera.activatedAt) {
+        Player.LittleSera.activatedAt = new Date();
+        settingsSave();
+    }
 
     triggerTimeout = 0;
     triggerActivated = false;
     triggerTimer = 300000; // 5 min
-    lingerTimeout = 0;
+    lingerInterval = 0;
     lingerTimer = 1800000; // 30min
 
     SDK.hookFunction("Player.HasTints", 4, (args, next) => {
@@ -380,17 +384,21 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
                 SendAction("%NAME%'s eyelids flutter as a thought tries to enter her blank mind...");
                 return null;
             }
-            else if (args[0] == "ChatRoomCharacterPoseUpdate") {
-                SendAction("%NAME% trembles as her muscles refuse to move for her...");
-                return null;
-            }
+            // else if (args[0] == "ChatRoomCharacterPoseUpdate") {
+            //     SendAction("%NAME% trembles as her muscles refuse to move for her...");
+            //     return null;
+            // }
             return next(args);
         }
         return next(args);
     });
 
     function StartTriggerWord() {
+        if (triggerActivated)
+            return;
+
         triggerActivated = true;
+        AudioPlaySoundEffect("SciFiEffect", 1);
         
         SendAction("%NAME%'s eyes immediately unfocus, her posture slumping slightly as she loses control of her body at the utterance of a trigger word.'")
         CharacterSetFacialExpression(Player, "Blush", "Medium");
@@ -400,8 +408,8 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
         clearTimeout(triggerTimeout);
         triggerTimeout = setTimeout(TriggerRestore, triggerTimer);
 
-        clearTimeout(lingerTimeout);
-        lingerTimeout = setTimeout(RollTriggerWord, lingerTimer);
+        clearInterval(lingerInterval);
+        lingerInterval = setInterval(CheckNewTrigger, 1000);
     }
 
     function TriggerRestoreBoop() {
@@ -420,14 +428,18 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
         triggerActivated = false;
     }
 
+    function CheckNewTrigger() {
+        if (triggerActivated)
+            return;
+        if (Player.LittleSera.activatedAt > 0 && new Date() - Player.LittleSera.activatedAt > lingerTimer)
+            RollTriggerWord();
+    }
+
     function RollTriggerWord() {
-        if (triggerActivated) {
-            clearTimeout(lingerTimeout);
-            lingerTimeout = setTimeout(RollTriggerWord, 1000);
-        }
 
         SendAction("%NAME% concentrates, breaking the hold the previous trigger word held over her.");
         Player.LittleSera.trigger = commonWords[getRandomInt(commonWords.length)];
+        Player.LittleSera.activatedAt = 0;
         settingsSave();
     }
 })();
