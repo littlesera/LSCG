@@ -155,7 +155,7 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
                 return null;
             }
             else if (Player.LittleSera.chokeLevel > 1) {
-                args[1].Content = SpeechGarbleByGagLevel((Player.LittleSera.chokeLevel-1)^2, args[1].Content);
+                args[1].Content = SpeechGarbleByGagLevel((Player.LittleSera.chokeLevel-1)**2, args[1].Content);
                 return next(args);
             }
             else
