@@ -354,17 +354,26 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
     triggerTimeout = 0;
     triggerActivated = false;
     triggerTimer = 300000; // 5 min
+    lingerTimeout = 0;
+    lingerTimer = 1800000; // 30min
+
+    SDK.hookFunction("Player.HasTints", 9, (args, next) => {
+        return next(args);
+    });
+
     function StartTriggerWord() {
         triggerActivated = true;
-        Player.LittleSera.trigger = commonWords[getRandomInt(commonWords.length)];
-        settingsSave();
+        
         SendAction("%NAME%'s eyes immediately unfocus, her posture slumping slightly as she loses control of her body at the utterance of a trigger word.'")
-        CharacterSetFacialExpression(Player, "Blush", "Low");
+        CharacterSetFacialExpression(Player, "Blush", "Medium");
         CharacterSetFacialExpression(Player, "Eyebrows", "Lowered");
         CharacterSetFacialExpression(Player, "Eyes", "Dazed");
         CharacterSetFacialExpression(Player, "Fluids", "DroolLow");
         clearTimeout(triggerTimeout);
         triggerTimeout = setTimeout(TriggerRestore, triggerTimer);
+
+        clearTimeout(lingerTimeout);
+        lingerTimeout = setTimeout(RollTriggerWord, lingerTimer);
     }
 
     function TriggerRestoreBoop() {
@@ -381,6 +390,17 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
         CharacterSetFacialExpression(Player, "Eyes", "None");
         clearTimeout(triggerTimeout);
         triggerActivated = false;
+    }
+
+    function RollTriggerWord() {
+        if (triggerActivated) {
+            clearTimeout(lingerTimeout);
+            lingerTimeout = setTimeout(RollTriggerWord, 1000);
+        }
+
+        SendAction("%NAME% concentrates, breaking the hold the previous trigger word held over her.");
+        Player.LittleSera.trigger = commonWords[getRandomInt(commonWords.length)];
+        settingsSave();
     }
 })();
 
