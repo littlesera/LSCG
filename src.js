@@ -363,7 +363,7 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
     });
 
     SDK.hookFunction("Player.GetTints", 4, (args, next) => {
-        if (triggerActivated) return {r: 148, g: 0, b: 211, a: 0.4};
+        if (triggerActivated) return [{r: 148, g: 0, b: 211, a: 0.4}];
         return next(args);
     });
     
