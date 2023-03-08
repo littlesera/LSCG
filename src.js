@@ -78,7 +78,7 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
 
     chokeTimeout = 0;
     chokeTimer = 120000;
-    chokeEventTimer = 60000;
+    chokeEventTimer = 60010;
     passout1Timer = 30000;
     passout2Timer = 10000;
     passout3Timer = 5000;
@@ -260,7 +260,7 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
         if (Player.LittleSera.chokeLevel > 2) {
             ActivateChokeEvent();
         }    
-        else if (getRandomInt(4) == 0) {
+        else if (getRandomInt(10) == 0) {
             ActivateChokeEvent();
         }        
     }
