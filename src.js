@@ -234,7 +234,7 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
                 break;
             case 0:
                 clearTimeout(chokeTimeout);
-                SendAction("%NAME% takes deep breaths as her collar releases her neck with a hiss.");
+                SendAction("%NAME% takes a deep breath as her collar releases its grip with a hiss.");
                 CharacterSetFacialExpression(Player, "Blush", "None");
                 break;
             default:
