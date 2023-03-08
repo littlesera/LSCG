@@ -80,8 +80,8 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
     chokeTimer = 120000;
     chokeEventTimer = 60010;
     passout1Timer = 30000;
-    passout2Timer = 10000;
-    passout3Timer = 5000;
+    passout2Timer = 15000;
+    passout3Timer = 10000;
 
     Player.LittleSera = Player.OnlineSettings.LittleSera || {chokeLevel: 0}
     settingsSave();
