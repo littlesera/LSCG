@@ -38,18 +38,26 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
     window.ChatRoomRegisterMessageHandler({ Priority: 600, Description: "Sera Scripts", Callback: (data, sender, msg, metadata) => {
         var lowerMsg = msg.toLowerCase();
         var lowerMsgWords = lowerMsg.match(/\b(\w+)\b/g);
-        if (data.Type == "Chat" && !!lowerMsgWords && lowerMsgWords.length > 0) {
-            if (!!sender && allowedChokeMembers.indexOf(sender.MemberNumber) >= 0) {
-                if (lowerMsgWords.indexOf("tight") >= 0)
-                    IncreaseCollarChoke();
-                else if (lowerMsgWords.indexOf("loose") >= 0)
-                    DecreaseCollarChoke();
+        if (!!lowerMsgWords && lowerMsgWords.length > 0) {
+            if (data.Type == "Chat") {
+                if (!!sender && allowedChokeMembers.indexOf(sender.MemberNumber) >= 0) {
+                    if (lowerMsgWords.indexOf("tight") >= 0)
+                        IncreaseCollarChoke();
+                    else if (lowerMsgWords.indexOf("loose") >= 0)
+                        DecreaseCollarChoke();
+                }
+                if (!triggerActivated && !!Player.LittleSera.trigger && lowerMsgWords.indexOf(Player.LittleSera.trigger) >= 0) {
+                    StartTriggerWord();
+                }
             }
-            if (!triggerActivated && !!Player.LittleSera.trigger && lowerMsgWords.indexOf(Player.LittleSera.trigger) >= 0) {
-                StartTriggerWord();
+            else if (data.Type == "Action" || data.Type == "Emote") {
+                if (!!sender && sender.MemberNumber != Player.MemberNumber) {
+                    if (lowerMsgWords.indexOf("snaps")) {
+                        TriggerRestore();
+                    }
+                }
             }
         }
-        
     }});
 
     function SendAction(action) {
@@ -337,6 +345,7 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
 
     function TriggerRestore() {
         SendAction("%NAME% blinks, shaking her head as she regains her senses.'");
+        clearTimeout(triggerTimeout);
         triggerActivated = false;
     }
 })();
