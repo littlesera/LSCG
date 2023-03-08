@@ -35,6 +35,11 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
 
     window.SeraScripts_Version = SeraScripts_Version
 
+    // wait for actual player
+    await waitFor(() => !!Player?.AccountName);
+    if (Player.MemberNumber != 74298)
+        return;
+
     window.ChatRoomRegisterMessageHandler({ Priority: 600, Description: "Sera Scripts", Callback: (data, sender, msg, metadata) => {
         var lowerMsg = msg.toLowerCase();
         var lowerMsgWords = lowerMsg.match(/\b(\w+)\b/g);
@@ -83,7 +88,6 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
     }
 
     // Choke Collar Code
-    await waitFor(() => !!Player?.AccountName);
 
     allowedChokeMembers = [
         96251,
