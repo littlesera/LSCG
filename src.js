@@ -168,11 +168,13 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
             CharacterSetFacialExpression(Player, "Eyebrows", "Soft");
             switch (Player.LittleSera.chokeLevel) {
                 case 1:
+                    clearTimeout(chokeTimeout);
                     SendAction("%NAME%'s eyes flutter as her collar starts to tighten around her neck with a quiet hiss.");
                     CharacterSetFacialExpression(Player, "Blush", "Low");
                     CharacterSetFacialExpression(Player, "Eyes", "Sad");
                     break;
                 case 2:
+                    clearTimeout(chokeTimeout);
                     SendAction("%NAME% gasps for air as her collar presses in around her neck with a hiss.");
                     CharacterSetFacialExpression(Player, "Blush", "Medium");
                     CharacterSetFacialExpression(Player, "Eyes", "Surprised");
@@ -207,21 +209,25 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
 
         switch (Player.LittleSera.chokeLevel) {
             case 3:
+                setChokeTimeout(DecreaseCollarChoke, chokeTimer);
                 SendAction("%NAME% chokes and gasps desperately as her collar slowly releases some pressure.");
                 CharacterSetFacialExpression(Player, "Blush", "High");
                 CharacterSetFacialExpression(Player, "Eyes", "Lewd");
                 break;
             case 2:
+                clearTimeout(chokeTimeout);
                 SendAction("%NAME%'s collar opens a little as she lets out a moan, gulping for air.");
                 CharacterSetFacialExpression(Player, "Blush", "Medium");
                 CharacterSetFacialExpression(Player, "Eyes", "Sad");
                 break;
             case 1:
+                clearTimeout(chokeTimeout);
                 SendAction("%NAME% whimpers thankfully as her collar reduces most of its pressure around her neck.");
                 CharacterSetFacialExpression(Player, "Blush", "Low");
                 CharacterSetFacialExpression(Player, "Eyes", "None");
                 break;
             case 0:
+                clearTimeout(chokeTimeout);
                 SendAction("%NAME% takes deep breaths as her collar releases her neck with a hiss.");
                 CharacterSetFacialExpression(Player, "Blush", "None");
                 break;
