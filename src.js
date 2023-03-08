@@ -90,7 +90,7 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
         setChokeTimeout(DecreaseCollarChoke, chokeTimer);
     }
     
-    _events = setTimeout(ChokeEvent, chokeEventTimer);
+    eventInterval = setInterval(ChokeEvent, chokeEventTimer);
 
     function settingsSave() {
         Player.OnlineSettings.LittleSera = Player.LittleSera
