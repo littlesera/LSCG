@@ -63,7 +63,8 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
                 }
             }
             else if (data.Type == "Activity") {
-                if (data.Dictionary.find(d => d.Tag == "TargetCharacter").MemberNumber == Player.MemberNumber) {
+                let target = data.Dictionary.find(d => d.Tag == "TargetCharacter");
+                if (!!target && target.MemberNumber == Player.MemberNumber) {
                     if (data.Content == "ChatOther-ItemNose-Pet" && triggerActivated)
                         TriggerRestoreBoop();
                 }
