@@ -258,7 +258,7 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
     function ChokeEvent() {
         // only activate 1/3 times triggered
         console.info("testing for choke event...");
-        if (getRandomInt(3) > 0) {
+        if (getRandomInt(3) ==0) {
             ActivateChokeEvent();
         }        
     }
