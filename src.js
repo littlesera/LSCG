@@ -146,7 +146,7 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
             return level;
         }
     );
-
+    
     SDK.hookFunction('ServerSend', 5, (args, next) => {
         // Prevent speech at choke level 4
         if (args[0] == "ChatRoomChat" && args[1].Type == "Chat"){
@@ -357,7 +357,30 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
     lingerTimeout = 0;
     lingerTimer = 1800000; // 30min
 
-    SDK.hookFunction("Player.HasTints", 9, (args, next) => {
+    SDK.hookFunction("Player.HasTints", 4, (args, next) => {
+        if (triggerActivated) return true;
+        return next(args);
+    });
+
+    SDK.hookFunction("Player.GetTints", 4, (args, next) => {
+        if (triggerActivated) return {r: 148, g: 0, b: 211, a: 0.4};
+        return next(args);
+    });
+    
+    SDK.hookFunction('ServerSend', 5, (args, next) => {
+        // Prevent speech at choke level 4
+        if (triggerActivated) {
+            var type = args[0];
+            if (args[0] == "ChatRoomChat" && args[1].Type == "Chat"){
+                SendAction("%NAME%'s eyelids flutter as a thought tries to enter her blank mind...");
+                return null;
+            }
+            else if (args[0] == "ChatRoomCharacterPoseUpdate") {
+                SendAction("%NAME% trembles as her muscles refuse to move for her...");
+                return null;
+            }
+            return next(args);
+        }
         return next(args);
     });
 
