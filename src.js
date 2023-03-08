@@ -393,6 +393,9 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
         return next(args);
     });
 
+    clearInterval(lingerInterval);
+    lingerInterval = setInterval(CheckNewTrigger, 1000);
+
     function StartTriggerWord() {
         if (triggerActivated)
             return;
