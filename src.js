@@ -352,7 +352,7 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
         settingsSave();
     }
     if (!Player.LittleSera.activatedAt) {
-        Player.LittleSera.activatedAt = new Date().getTime();
+        Player.LittleSera.activatedAt = 0;
         settingsSave();
     }
 
@@ -402,6 +402,7 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
             return;
 
         triggerActivated = true;
+        Player.OnlineSettings.LittleSera.activatedAt = new Date().getTime();
         AudioPlaySoundEffect("SciFiEffect", 1);
         
         SendAction("%NAME%'s eyes immediately unfocus, her posture slumping slightly as she loses control of her body at the utterance of a trigger word.'")
