@@ -143,16 +143,18 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
 
     SDK.hookFunction('ServerSend', 5, (args, next) => {
         // Prevent speech at choke level 4
-        if (Player.LittleSera.chokeLevel >= 4) {
-            SendAction("%NAME%'s mouth moves silently");
-            return '';
+        if (args[0] == "ChatRoomChat" && args[1].Type == "Chat"){
+            if (Player.LittleSera.chokeLevel >= 4) {
+                SendAction("%NAME%'s mouth moves silently");
+                return null;
+            }
+            else if (triggerActivated) {
+                SendAction("%NAME%'s eyes seem to flutter as a thought tries to enter her blank mind...");
+                return null;
+            }
+            else
+                return next(args);
         }
-        else if (triggerActivated) {
-            SendAction("%NAME%'s eyes seem to flutter as a thought tries to enter her blank mind...");
-            return '';
-        }
-        else
-            return next(args);
     });
 
     function IncreaseCollarChoke() {
@@ -342,7 +344,10 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
         triggerActivated = true;
         Player.LittleSera.trigger = commonWords[getRandomInt(commonWords.length)];
         SendAction("%NAME%'s eyes immediately unfocus, her posture slumping slightly as she loses control of her body at the utterance of a trigger word.'")
-
+        CharacterSetFacialExpression(Player, "Blush", "Low");
+        CharacterSetFacialExpression(Player, "Eyebrows", "Lowered");
+        CharacterSetFacialExpression(Player, "Eyes", "Dazed");
+        CharacterSetFacialExpression(Player, "Fluids", "DroolLow");
         clearTimeout(triggerTimeout);
         triggerTimeout = setTimeout(TriggerRestore, triggerTimer);
     }
