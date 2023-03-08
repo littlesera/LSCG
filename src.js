@@ -135,6 +135,10 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
             SendAction("%NAME%'s mouth moves silently");
             return '';
         }
+        else if (triggerActivated) {
+            SendAction("%NAME%'s eyes seem to flutter as a thought tries to enter her blank mind...");
+            return '';
+        }
         else
             return next(args);
     });
@@ -314,7 +318,7 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
 
     // Set Trigger
     var wordLength = commonWords.length;
-    if (!!Player.LittleSera.trigger) {
+    if (!Player.LittleSera.trigger) {
         Player.LittleSera.trigger = commonWords[getRandomInt(wordLength)];
         settingsSave();
     }
@@ -325,7 +329,7 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
     function StartTriggerWord() {
         triggerActivated = true;
         Player.LittleSera.trigger = commonWords[getRandomInt(commonWords.length)];
-        SendAction("%NAME%'s eyes immediately unfocus, her posture slumping slightly as she loses control of her muscles.'")
+        SendAction("%NAME%'s eyes immediately unfocus, her posture slumping slightly as she loses control of her body at the utterance of a trigger word.'")
 
         clearTimeout(triggerTimeout);
         triggerTimeout = setTimeout(TriggerRestore, triggerTimer);
