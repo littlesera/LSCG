@@ -366,7 +366,12 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
         if (triggerActivated) return [{r: 148, g: 0, b: 211, a: 0.4}];
         return next(args);
     });
-    
+        
+    SDK.hookFunction("Player.GetBlurLevel", 4, (args, next) => {
+        if (triggerActivated) return 3;
+        return next(args);
+    });
+
     SDK.hookFunction('ServerSend', 5, (args, next) => {
         // Prevent speech at choke level 4
         if (triggerActivated) {
