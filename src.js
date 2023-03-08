@@ -90,7 +90,6 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
         setChokeTimeout(DecreaseCollarChoke, chokeTimer);
     }
     
-    ActivateChokeEvent();
     _events = setTimeout(ChokeEvent, chokeEventTimer);
 
     function settingsSave() {
@@ -102,6 +101,12 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
         clearTimeout(chokeTimeout);
         chokeTimeout = setTimeout(f, delay);
     }
+
+    // event on room join
+    SDK.hookFunction("ChatRoomSync", 4, (args, next) => {
+		next(args);
+		ActivateChokeEvent();
+	});
 
     // gag level mod
     SDK.hookFunction(
@@ -118,6 +123,15 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
         }
     );
 
+    SDK.hookFunction('SpeechGarble', 4, (args, next) => {
+        // Prevent speech at choke level 4
+        if (Player.LittleSera.chokeLevel >= 4) {
+            SendAction("%NAME%'s mouth moves silently");
+            return '';
+        }
+        else
+            return next(args);
+    });
 
     function IncreaseCollarChoke() {
         if (Player.LittleSera.chokeLevel == 4)
@@ -208,7 +222,7 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
 
     function Passout1() {
         IncreaseArousal();
-        SendAction("%NAME% chokes and spasms, her collar holding holding tight.");
+        SendAction("%NAME% chokes and spasms, her collar holding tight.");
         CharacterSetFacialExpression(Player, "Blush", "Extreme");
         CharacterSetFacialExpression(Player, "Eyebrows", "Soft");
         CharacterSetFacialExpression(Player, "Eyes", "Lewd");
@@ -243,6 +257,7 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
 
     function ChokeEvent() {
         // only activate 1/3 times triggered
+        console.info("testing for choke event...");
         if (getRandomInt(2) > 0) {
             ActivateChokeEvent();
         }        
