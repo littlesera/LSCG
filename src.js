@@ -58,8 +58,14 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
             else if (data.Type == "Action" || data.Type == "Emote") {
                 if (!!sender && sender.MemberNumber != Player.MemberNumber) {
                     if (lowerMsgWords.indexOf("snaps") >= 0 && triggerActivated) {
-                        TriggerRestore();
+                        TriggerRestoreSnap();
                     }
+                }
+            }
+            else if (data.Type == "Activity") {
+                if (data.Dictionary.find(d => d.Tag == "TargetCharacter").MemberNumber == Player.MemberNumber) {
+                    if (data.Content == "ChatOther-ItemNose-Pet" && triggerActivated)
+                        TriggerRestoreBoop();
                 }
             }
         }
@@ -145,7 +151,7 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
         // Prevent speech at choke level 4
         if (args[0] == "ChatRoomChat" && args[1].Type == "Chat"){
             if (Player.LittleSera.chokeLevel >= 4) {
-                SendAction("%NAME%'s mouth moves silently");
+                SendAction("%NAME%'s mouth moves silently.");
                 return null;
             }
             else if (triggerActivated) {
@@ -245,7 +251,7 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
     }
 
     function StartPassout() {
-        SendAction("%NAME%'s eyes start to roll back, gasping and choking as her collar presses in tightly and completely with a final hiss.");
+        SendAction("%NAME%'s eyes start to roll back, gasping and choking as her collar presses in tightly and completely with a menacing hiss.");
         CharacterSetFacialExpression(Player, "Blush", "VeryHigh");
         CharacterSetFacialExpression(Player, "Eyebrows", "Soft");
         CharacterSetFacialExpression(Player, "Eyes", "Lewd");
@@ -300,19 +306,19 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
     function ActivateChokeEvent() {
         const ChokeEvents = {
             low: [
-                "%NAME% coughs as her collar pushes against her throat",
-                "%NAME% gulps as she feels the tight collar around her neck",
-                "%NAME% shifts nervously in her tight collar"
+                "%NAME% coughs as her collar pushes against her throat.",
+                "%NAME% gulps as she feels the tight collar around her neck.",
+                "%NAME% shifts nervously in her tight collar."
             ],
             mid: [
-                "%NAME% whimpers pleadingly as she struggles to take a full breath",
-                "%NAME% chokes against her collar, moaning softly",
-                "%NAME%'s eyes flutter weakly as her collar presses into her neck"
+                "%NAME% whimpers pleadingly as she struggles to take a full breath.",
+                "%NAME% chokes against her collar, moaning softly.",
+                "%NAME%'s eyes flutter weakly as her collar presses into her neck."
             ],
             high: [
-                "%NAME% splutters and chokes, struggling to breath",
-                "%NAME% grunts and moans, straining to breath",
-                "%NAME%'s eyes have trouble focusing, as she chokes and gets lightheaded"
+                "%NAME% splutters and chokes, struggling to breath.",
+                "%NAME% grunts and moans, straining to breath.",
+                "%NAME%'s eyes have trouble focusing, as she chokes and gets lightheaded."
             ]
         }
         let choice = getRandomInt(3);
@@ -361,8 +367,17 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
         triggerTimeout = setTimeout(TriggerRestore, triggerTimer);
     }
 
+    function TriggerRestoreBoop() {
+        SendAction("%NAME% reboots, blinking and gasping as she regains her senses.'");
+        TriggerRestore();
+    }
+
+    function TriggerRestoreSnap() {
+        SendAction("%NAME% blinks, shaking her head with confusion as she regains her senses.'");
+        TriggerRestore();
+    }
+
     function TriggerRestore() {
-        SendAction("%NAME% blinks, shaking her head as she regains her senses.'");
         CharacterSetFacialExpression(Player, "Eyes", "None");
         clearTimeout(triggerTimeout);
         triggerActivated = false;
