@@ -149,7 +149,7 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
                 return null;
             }
             else if (triggerActivated) {
-                SendAction("%NAME%'s eyes seem to flutter as a thought tries to enter her blank mind...");
+                SendAction("%NAME%'s eyelids flutter as a thought tries to enter her blank mind...");
                 return null;
             }
             else
@@ -345,6 +345,7 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
     function StartTriggerWord() {
         triggerActivated = true;
         Player.LittleSera.trigger = commonWords[getRandomInt(commonWords.length)];
+        settingsSave();
         SendAction("%NAME%'s eyes immediately unfocus, her posture slumping slightly as she loses control of her body at the utterance of a trigger word.'")
         CharacterSetFacialExpression(Player, "Blush", "Low");
         CharacterSetFacialExpression(Player, "Eyebrows", "Lowered");
@@ -356,6 +357,7 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
 
     function TriggerRestore() {
         SendAction("%NAME% blinks, shaking her head as she regains her senses.'");
+        CharacterSetFacialExpression(Player, "Eyes", "None");
         clearTimeout(triggerTimeout);
         triggerActivated = false;
     }
