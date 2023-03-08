@@ -141,7 +141,7 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
         }
     );
 
-    SDK.hookFunction('SpeechGarble', 4, (args, next) => {
+    SDK.hookFunction('ServerSend', 5, (args, next) => {
         // Prevent speech at choke level 4
         if (Player.LittleSera.chokeLevel >= 4) {
             SendAction("%NAME%'s mouth moves silently");
