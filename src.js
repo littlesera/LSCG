@@ -351,7 +351,7 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
         settingsSave();
     }
     if (!Player.LittleSera.activatedAt) {
-        Player.LittleSera.activatedAt = new Date();
+        Player.LittleSera.activatedAt = new Date().getTime();
         settingsSave();
     }
 
@@ -431,7 +431,7 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
     function CheckNewTrigger() {
         if (triggerActivated)
             return;
-        if (Player.LittleSera.activatedAt > 0 && new Date() - Player.LittleSera.activatedAt > lingerTimer)
+        if (Player.LittleSera.activatedAt > 0 && new Date().getTime() - Player.LittleSera.activatedAt > lingerTimer)
             RollTriggerWord();
     }
 
