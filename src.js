@@ -257,12 +257,12 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
 
     function ChokeEvent() {
         // only activate 1/4 times triggered unless at high level
-        if (Player.LittleSera.chokeLevel > 2) {
+        if (Player.LittleSera.chokeLevel > 2)
             ActivateChokeEvent();
-        }    
-        else if (getRandomInt(10) == 0) {
+        else if (Player.LittleSera.chokeLevel == 2 && getRandomInt(8) == 0)
             ActivateChokeEvent();
-        }        
+        else if (Player.LittleSera.chokeLevel == 1 && getRandomInt(15) == 0)
+            ActivateChokeEvent();
     }
 
     function ActivateChokeEvent() {
