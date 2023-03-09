@@ -72,6 +72,43 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
         }
     }});
 
+    CommandCombine([
+        {
+            Tag: 'tight',
+            Description: ": tighten collar",
+    
+            Action: () => {
+                IncreaseCollarChoke();
+            }
+        },
+        {
+            Tag: 'loose',
+            Description: ": loosen collar",
+    
+            Action: () => {
+                DecreaseCollarChoke();
+            }
+        },
+        {
+            Tag: 'zonk',
+            Description: ": zonk self",
+    
+            Action: () => {
+                if (!triggerActivated)
+                    StartTriggerWord();
+            }
+        },
+        {
+            Tag: 'unzonk',
+            Description: ": unzonk self",
+    
+            Action: () => {
+                if (triggerActivated)
+                    TriggerRestoreTimeout();
+            }
+        }
+    ])
+
     function SendAction(action) {
         ServerSend("ChatRoomChat", {Content: "Beep", Type: "Action", Dictionary: [{Tag: "Beep", Text: replace_template(action, Player.CharacterNickname)}]});
     }
