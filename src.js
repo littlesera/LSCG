@@ -422,17 +422,17 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
     }
 
     function TriggerRestoreBoop() {
-        SendAction("%NAME% reboots, blinking and gasping as she regains her senses.'");
+        SendAction("%NAME% reboots, blinking and gasping as she regains her senses.");
         TriggerRestore();
     }
 
     function TriggerRestoreSnap() {
-        SendAction("%NAME% blinks, shaking her head with confusion as she regains her senses.'");
+        SendAction("%NAME% blinks, shaking her head with confusion as she regains her senses.");
         TriggerRestore();
     }
 
     function TriggerRestoreTimeout() {
-        SendAction("%NAME% gasps, blinking with confusion and blushing.'");
+        SendAction("%NAME% gasps, blinking with confusion and blushing.");
         TriggerRestore();
     }
 
