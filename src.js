@@ -457,7 +457,6 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
         Player.Appearance.push(eyeItem1);
         Player.Appearance.push(eyeItem2);
 
-        CharacterRefresh(Player, true);
 		ChatRoomCharacterUpdate(Player);
     }
 
