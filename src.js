@@ -539,6 +539,7 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
 
     function TriggerRestore() {
         ResetEyes();
+        AudioPlaySoundEffect("SpankSkin");
         CharacterSetFacialExpression(Player, "Eyes", "None");
         clearInterval(hornyTimeout);
         clearTimeout(triggerTimeout);
