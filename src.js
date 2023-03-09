@@ -429,12 +429,13 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
     function SetEyes() {
         Player.LittleSera.existingEye1 = InventoryGet(Player, "Eyes");
         Player.LittleSera.existingEye2 = InventoryGet(Player, "Eyes2");
+        settingsSave();
         EnforceEyes();
     }
 
     function EnforceEyes() {
-        InventoryRemove(Player, "Eyes");
-        InventoryRemove(Player, "Eyes2");
+        InventoryRemove(Player, "Eyes", false);
+        InventoryRemove(Player, "Eyes2", false);
 
         var eyeAsset1 = AssetGet("Female3DCG", "Eyes", "Eyes9");
         var eyeItem1 = {
