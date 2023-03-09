@@ -65,8 +65,13 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
             else if (data.Type == "Activity") {
                 let target = data.Dictionary.find(d => d.Tag == "TargetCharacter");
                 if (!!target && target.MemberNumber == Player.MemberNumber) {
-                    if (data.Content == "ChatOther-ItemNose-Pet" && triggerActivated)
-                        TriggerRestoreBoop();
+                    if (data.Content == "ChatOther-ItemNose-Pet")
+                    {
+                        if (triggerActivated)
+                            TriggerRestoreBoop();
+                        else
+                            BoopReact();
+                    }
                 }
             }
         }
@@ -129,6 +134,21 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
         result = result.replaceAll("%OPP_NAME%", source_name) // finally we can use the source name to make the substitution
 
         return result
+    }
+
+    // Misc
+
+    const boopReactions = [
+        "%NAME% wiggles her nose.",
+        "%NAME% wiggles her nose with a small frown.",
+        "%NAME% sneezes in surprise.",
+        "%NAME% looks crosseyed at her nose.",
+        "%NAME% wiggles her nose with a squeak.",
+        "%NAME% meeps!"
+    ]
+
+    function BoopReact() {
+        SendAction(boopReactions[getRandomInt(boopReactions.length)]);
     }
 
     // Choke Collar Code
