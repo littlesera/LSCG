@@ -467,7 +467,7 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
         Player.Appearance.push(Player.LittleSera.existingEye1);
         Player.Appearance.push(Player.LittleSera.existingEye2);
 
-		ChatRoomCharacterUpdate(Player);
+        ChatRoomCharacterUpdate(Player);
 
         Player.LittleSera.existingEye1 = null;
         Player.LittleSera.existingEye2 = null;
