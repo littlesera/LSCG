@@ -412,7 +412,7 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
         CharacterSetFacialExpression(Player, "Eyes", "Dazed");
         CharacterSetFacialExpression(Player, "Fluids", "DroolLow");
         clearTimeout(triggerTimeout);
-        triggerTimeout = setTimeout(TriggerRestore, triggerTimer);
+        triggerTimeout = setTimeout(TriggerRestoreTimeout, triggerTimer);
 
         clearInterval(lingerInterval);
         lingerInterval = setInterval(CheckNewTrigger, 1000);
@@ -428,6 +428,11 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
 
     function TriggerRestoreSnap() {
         SendAction("%NAME% blinks, shaking her head with confusion as she regains her senses.'");
+        TriggerRestore();
+    }
+
+    function TriggerRestoreTimeout() {
+        SendAction("%NAME% gasps, blinking with confusion and blushing.'");
         TriggerRestore();
     }
 
