@@ -173,8 +173,8 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
             return;
         Player.LittleSera.chokeLevel++;
         AudioPlaySoundEffect("HydraulicLock");
+        IncreaseArousal();
         if (Player.LittleSera.chokeLevel < 4) {
-            IncreaseArousal();
             CharacterSetFacialExpression(Player, "Eyebrows", "Soft");
             switch (Player.LittleSera.chokeLevel) {
                 case 1:
@@ -348,9 +348,9 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
     }
 
     function IncreaseArousal() {
-        Player.ArousalSettings.ProgressTimer = Math.min(99, Player.ArousalSettings.Progress + 20);
+        ActivitySetArousal(Player, Math.min(99, Player.ArousalSettings.Progress + 20));
         ActivityChatRoomArousalSync(Player);
-        Player.BCT.splitOrgasmArousal.ProgressTimer = Player.BCT.splitOrgasmArousal.arousalProgress + 30;
+        Player.BCT.splitOrgasmArousal.arousalProgress = Math.min(Player.BCT.splitOrgasmArousal.arousalProgress + 25, 100);
         BCT_API?.ActivityChatRoomBCTArousalSync(Player);
     }
 
