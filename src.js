@@ -169,7 +169,8 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
     function IncreaseCollarChoke() {
         if (Player.LittleSera.chokeLevel == 4)
             return;
-            Player.LittleSera.chokeLevel++;
+        Player.LittleSera.chokeLevel++;
+        AudioPlaySoundEffect("HydraulicLock");
         if (Player.LittleSera.chokeLevel < 4) {
             IncreaseArousal();
             CharacterSetFacialExpression(Player, "Eyebrows", "Soft");
@@ -210,6 +211,7 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
             return;
         }
 
+        AudioPlaySoundEffect("Deflation");
         Player.LittleSera.chokeLevel--;
         if (Player.LittleSera.chokeLevel > 0)
             setChokeTimeout(DecreaseCollarChoke, chokeTimer);
@@ -309,12 +311,15 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
             low: [
                 "%NAME% coughs as her collar pushes against her throat.",
                 "%NAME% gulps as she feels the tight collar around her neck.",
-                "%NAME% shifts nervously in her tight collar."
+                "%NAME% shifts nervously in her tight collar.",
+                "%NAME% trembles, very conscious of the tight collar around her neck.",
+                "%NAME% huffs uncomfortably in her tight collar."
             ],
             mid: [
                 "%NAME% whimpers pleadingly as she struggles to take a full breath.",
                 "%NAME% chokes against her collar, moaning softly.",
-                "%NAME%'s eyes flutter weakly as her collar presses into her neck."
+                "%NAME%'s eyes flutter weakly as her collar presses into her neck.",
+                "%NAME% tries to focus on breathing, each inhale an effort in her collar."
             ],
             high: [
                 "%NAME% splutters and chokes, struggling to breath.",
@@ -325,13 +330,13 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
         let choice = getRandomInt(3);
         switch (Player.LittleSera.chokeLevel) {
             case 1:
-                SendAction(ChokeEvents.low[choice]);
+                SendAction(ChokeEvents.low[getRandomInt(ChokeEvents.low.length)]);
                 break;
             case 2:
-                SendAction(ChokeEvents.mid[choice]);
+                SendAction(ChokeEvents.mid[getRandomInt(ChokeEvents.mid.length)]);
                 break;
             case 3:
-                SendAction(ChokeEvents.high[choice]);
+                SendAction(ChokeEvents.high[getRandomInt(ChokeEvents.high.length)]);
                 break;
             default:
                 break;
@@ -380,18 +385,22 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
         return next(args);
     });
 
+    const hypnoBlockStrings = [
+        "%NAME%'s eyelids flutter as a thought tries to enter her blank mind...",
+        "%NAME% sways weakly in her place, drifting peacefully...",
+        "%NAME% trembles as something deep and forgotten fails to resurface...",
+        "%NAME% moans softly as she drops even deeper into trance...",
+        "%NAME% quivers, patiently awaiting something to fill her empty head..."
+    ];
+
     SDK.hookFunction('ServerSend', 5, (args, next) => {
         // Prevent speech at choke level 4
         if (triggerActivated) {
             var type = args[0];
-            if (args[0] == "ChatRoomChat" && args[1].Type == "Chat"){
-                SendAction("%NAME%'s eyelids flutter as a thought tries to enter her blank mind...");
+            if (type == "ChatRoomChat" && args[1].Type == "Chat"){
+                SendAction(hypnoBlockStrings[getRandomInt(hypnoBlockStrings.length)]);
                 return null;
             }
-            // else if (args[0] == "ChatRoomCharacterPoseUpdate") {
-            //     SendAction("%NAME% trembles as her muscles refuse to move for her...");
-            //     return null;
-            // }
             return next(args);
         }
         return next(args);
