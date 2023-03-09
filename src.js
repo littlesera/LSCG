@@ -444,7 +444,7 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
     }
 
     function HypnoHorny() {
-        var progress = Math.min(99, Player.ArousalSettings.Progress + 1);
+        var progress = Math.min(99, Player.ArousalSettings.Progress + 5);
         Player.BCT.splitOrgasmArousal.arousalProgress = Math.min(Player.BCT.splitOrgasmArousal.arousalProgress + 10, 100);
         BCT_API?.ActivityChatRoomBCTArousalSync(Player);
         ActivitySetArousal(Player, progress);
