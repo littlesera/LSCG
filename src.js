@@ -349,7 +349,6 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
 
     function IncreaseArousal() {
         ActivitySetArousal(Player, Math.min(99, Player.ArousalSettings.Progress + 10));
-        ActivityChatRoomArousalSync(Player);
         Player.BCT.splitOrgasmArousal.arousalProgress = Math.min(Player.BCT.splitOrgasmArousal.arousalProgress + 25, 100);
         BCT_API?.ActivityChatRoomBCTArousalSync(Player);
     }
