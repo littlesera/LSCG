@@ -355,7 +355,7 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
         Player.LittleSera.activatedAt = 0;
         settingsSave();
     }
-    if (!!Player.LittleSera.existingEye1)
+    if (!!Player.LittleSera.existingEye1Name)
         ResetEyes();
 
     triggerTimeout = 0;
@@ -427,50 +427,50 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
     }
 
     function SetEyes() {
-        Player.LittleSera.existingEye1 = InventoryGet(Player, "Eyes");
-        Player.LittleSera.existingEye2 = InventoryGet(Player, "Eyes2");
+        Player.LittleSera.existingEye1Name = InventoryGet(Player, "Eyes").Asset.Name;
+        Player.LittleSera.existingEye1Color = InventoryGet(Player, "Eyes").Color;
+        Player.LittleSera.existingEye2Name = InventoryGet(Player, "Eyes2").Asset.Name;
+        Player.LittleSera.existingEye2Color = InventoryGet(Player, "Eyes2").Color;
         settingsSave();
         EnforceEyes();
     }
 
     function EnforceEyes() {
-        InventoryRemove(Player, "Eyes", false);
-        InventoryRemove(Player, "Eyes2", false);
-
         var eyeAsset1 = AssetGet("Female3DCG", "Eyes", "Eyes9");
-        var eyeItem1 = {
-            Asset: eyeAsset1,
-            Color: ["#A2A2A2"],
-            Property: {Expression: "Dazed"},
-            Craft: undefined,
-            Difficulty: 0
-        };
         var eyeAsset2 = AssetGet("Female3DCG", "Eyes2", "Eyes9");
-        var eyeItem2 = {
-            Asset: eyeAsset2,
-            Color: ["#A2A2A2"],
-            Property: {Expression: "Dazed"},
-            Craft: undefined,
-            Difficulty: 0
-        }
 
-        Player.Appearance.push(eyeItem1);
-        Player.Appearance.push(eyeItem2);
+        var eyes1 = InventoryGet(Player, "Eyes");
+        var eyes2 = InventoryGet(Player, "Eyes2");
+
+        eyes1.Asset = eyeAsset1;
+        eyes1.Color = "#A2A2A2";
+        
+        eyes2.Asset = eyeAsset2;
+        eyes2.Color = "#A2A2A2";
 
         ChatRoomCharacterUpdate(Player);
     }
 
     function ResetEyes() {
-        InventoryRemove(Player, "Eyes", false);
-        InventoryRemove(Player, "Eyes2", false);
+        var eyeAsset1 = AssetGet("Female3DCG", "Eyes", Player.LittleSera.existingEye1Name);
+        var eyeAsset2 = AssetGet("Female3DCG", "Eyes2", Player.LittleSera.existingEye2Name);
 
-        Player.Appearance.push(Player.LittleSera.existingEye1);
-        Player.Appearance.push(Player.LittleSera.existingEye2);
+        var eyes1 = InventoryGet(Player, "Eyes");
+        var eyes2 = InventoryGet(Player, "Eyes2");
+
+        eyes1.Asset = eyeAsset1;
+        eyes1.Color = Player.LittleSera.existingEye1Color;
+        
+        eyes2.Asset = eyeAsset2;
+        eyes2.Color = Player.LittleSera.existingEye2Color;
 
         ChatRoomCharacterUpdate(Player);
 
-        Player.LittleSera.existingEye1 = null;
-        Player.LittleSera.existingEye2 = null;
+        Player.LittleSera.existingEye1Name = null;
+        Player.LittleSera.existingEye1Color = null;
+        Player.LittleSera.existingEye2Name = null;
+        Player.LittleSera.existingEye2Color = null;
+        settingsSave();
     }
 
     function TriggerRestoreBoop() {
