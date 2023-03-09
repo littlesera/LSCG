@@ -406,7 +406,7 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
         Player.OnlineSettings.LittleSera.activatedAt = new Date().getTime();
         AudioPlaySoundEffect("SciFiEffect", 1);
         
-        SendAction("%NAME%'s eyes immediately unfocus, her posture slumping slightly as she loses control of her body at the utterance of a trigger word.'")
+        SendAction("%NAME%'s eyes immediately unfocus, her posture slumping slightly as she loses control of her body at the utterance of a trigger word.");
         CharacterSetFacialExpression(Player, "Blush", "Medium");
         CharacterSetFacialExpression(Player, "Eyebrows", "Lowered");
         CharacterSetFacialExpression(Player, "Eyes", "Dazed");
