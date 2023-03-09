@@ -133,21 +133,6 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
 		ActivateChokeEvent();
 	});
 
-    // // gag level mod
-    // SDK.hookFunction(
-    //     "SpeechGetTotalGagLevel",
-    //     4,
-    //     /** @type {(args: [Character, boolean], next: (args: [Character, boolean]) => number) => number} */
-    //     (args, next) => {
-    //         let level = next(args);
-    //         var mod = (Player.LittleSera.chokeLevel - 1);
-    //         if (mod > 0) {                
-    //             level += mod;
-    //         }
-    //         return level;
-    //     }
-    // );
-    
     SDK.hookFunction('ServerSend', 4, (args, next) => {
         // Prevent speech at choke level 4
         if (args[0] == "ChatRoomChat" && args[1].Type == "Chat"){
@@ -164,6 +149,23 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
         }
         else
             return next(args);
+    });
+
+    SDK.hookFunction("Player.HasTints", 5, (args, next) => {
+        if (Player.LittleSera.chokeLevel > 2) return true;
+        return next(args);
+    });
+
+    SDK.hookFunction("Player.GetTints", 5, (args, next) => {
+        if (Player.LittleSera.chokeLevel == 3) return [{r: 0, g: 0, b: 0, a: 0.2}];
+        else if (Player.LittleSera.chokeLevel == 4) return [{r: 0, g: 0, b: 0, a: 0.5}];
+        return next(args);
+    });
+        
+    SDK.hookFunction("Player.GetBlurLevel", 5, (args, next) => {
+        if (Player.LittleSera.chokeLevel == 3) return 2;
+        if (Player.LittleSera.chokeLevel == 4) return 6;
+        return next(args);
     });
 
     function IncreaseCollarChoke() {
@@ -274,6 +276,7 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
     function Passout2() {
         IncreaseArousal();
         SendAction("%NAME% convulses weakly, her eyes rolling back as the collar hisses impossibly tighter.");
+        AudioPlaySoundEffect("HydraulicLock");
         CharacterSetFacialExpression(Player, "Blush", "ShortBreath");
         CharacterSetFacialExpression(Player, "Eyebrows", "Soft");
         CharacterSetFacialExpression(Player, "Eyes", "VeryLewd");
@@ -284,6 +287,7 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
     function Passout3() {
         IncreaseArousal();
         SendAction("As %NAME% collapses unconscious, her collar releases all of its pressure with a long hiss.");
+        AudioPlaySoundEffect("Deflation");
         CharacterSetFacialExpression(Player, "Blush", "Medium");
         CharacterSetFacialExpression(Player, "Eyebrows", "Soft");
         CharacterSetFacialExpression(Player, "Eyes", "Closed");
