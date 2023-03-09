@@ -461,13 +461,12 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
     }
 
     function ResetEyes() {
-        InventoryRemove(Player, "Eyes");
-        InventoryRemove(Player, "Eyes2");
+        InventoryRemove(Player, "Eyes", false);
+        InventoryRemove(Player, "Eyes2", false);
 
         Player.Appearance.push(Player.LittleSera.existingEye1);
         Player.Appearance.push(Player.LittleSera.existingEye2);
 
-        CharacterRefresh(Player, true);
 		ChatRoomCharacterUpdate(Player);
 
         Player.LittleSera.existingEye1 = null;
