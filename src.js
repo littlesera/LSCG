@@ -440,7 +440,7 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
         var eyeAsset1 = AssetGet("Female3DCG", "Eyes", "Eyes9");
         var eyeItem1 = {
             Asset: eyeAsset1,
-            Color: "#A2A2A2",
+            Color: ["#A2A2A2"],
             Property: {Expression: "Dazed"},
             Craft: undefined,
             Difficulty: 0
@@ -448,7 +448,7 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
         var eyeAsset2 = AssetGet("Female3DCG", "Eyes2", "Eyes9");
         var eyeItem2 = {
             Asset: eyeAsset2,
-            Color: "#A2A2A2",
+            Color: ["#A2A2A2"],
             Property: {Expression: "Dazed"},
             Craft: undefined,
             Difficulty: 0
