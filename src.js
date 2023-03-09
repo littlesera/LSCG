@@ -355,6 +355,8 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
         Player.LittleSera.activatedAt = 0;
         settingsSave();
     }
+    if (!!Player.LittleSera.existingEye1)
+        ResetEyes();
 
     triggerTimeout = 0;
     triggerActivated = false;
@@ -403,14 +405,17 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
             return;
 
         triggerActivated = true;
-        Player.OnlineSettings.LittleSera.activatedAt = new Date().getTime();
+        Player.LittleSera.activatedAt = new Date().getTime();
         AudioPlaySoundEffect("SciFiEffect", 1);
+        settingsSave();
         
         SendAction("%NAME%'s eyes immediately unfocus, her posture slumping slightly as she loses control of her body at the utterance of a trigger word.");
+        SetEyes();
         CharacterSetFacialExpression(Player, "Blush", "Medium");
         CharacterSetFacialExpression(Player, "Eyebrows", "Lowered");
         CharacterSetFacialExpression(Player, "Eyes", "Dazed");
-        CharacterSetFacialExpression(Player, "Fluids", "DroolLow");
+        CharacterSetFacialExpression(Player, "Fluids", "DroolLow");    
+
         clearTimeout(triggerTimeout);
         triggerTimeout = setTimeout(TriggerRestoreTimeout, triggerTimer);
 
@@ -419,6 +424,54 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
 
         clearInterval(hornyTimeout);
         hornyTimeout = setInterval(HypnoHorny, triggerTimer / 100);
+    }
+
+    function SetEyes() {
+        Player.LittleSera.existingEye1 = InventoryGet(Player, "Eyes");
+        Player.LittleSera.existingEye2 = InventoryGet(Player, "Eyes2");
+        EnforceEyes();
+    }
+
+    function EnforceEyes() {
+        InventoryRemove(Player, "Eyes");
+        InventoryRemove(Player, "Eyes2");
+
+        var eyeAsset1 = AssetGet("Female3DCG", "Eyes", "Eyes9");
+        var eyeItem1 = {
+            Asset: eyeAsset1,
+            Color: "#A2A2A2",
+            Property: {Expression: "Dazed"},
+            Craft: undefined,
+            Difficulty: 0
+        };
+        var eyeAsset2 = AssetGet("Female3DCG", "Eyes2", "Eyes9");
+        var eyeItem2 = {
+            Asset: eyeAsset2,
+            Color: "#A2A2A2",
+            Property: {Expression: "Dazed"},
+            Craft: undefined,
+            Difficulty: 0
+        }
+
+        Player.Appearance.push(eyeItem1);
+        Player.Appearance.push(eyeItem2);
+
+        CharacterRefresh(Player, true);
+		ChatRoomCharacterUpdate(Player);
+    }
+
+    function ResetEyes() {
+        InventoryRemove(Player, "Eyes");
+        InventoryRemove(Player, "Eyes2");
+
+        Player.Appearance.push(Player.LittleSera.existingEye1);
+        Player.Appearance.push(Player.LittleSera.existingEye2);
+
+        CharacterRefresh(Player, true);
+		ChatRoomCharacterUpdate(Player);
+
+        Player.LittleSera.existingEye1 = null;
+        Player.LittleSera.existingEye2 = null;
     }
 
     function TriggerRestoreBoop() {
@@ -437,6 +490,7 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
     }
 
     function TriggerRestore() {
+        ResetEyes();
         CharacterSetFacialExpression(Player, "Eyes", "None");
         clearInterval(hornyTimeout);
         clearTimeout(triggerTimeout);
@@ -444,11 +498,18 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
     }
 
     function HypnoHorny() {
-        Player.ArousalSettings.ProgressTimer++;
-        var progress = Math.min(99, Player.ArousalSettings.Progress + 5);
-        Player.BCT.splitOrgasmArousal.arousalProgress = Math.min(Player.BCT.splitOrgasmArousal.arousalProgress + 10, 100);
-        BCT_API?.ActivityChatRoomBCTArousalSync(Player);
-        ActivitySetArousal(Player, progress);
+        if (triggerActivated) {
+            // enforce eye expression
+            EnforceEyes();
+            CharacterSetFacialExpression(Player, "Eyebrows", "Lowered");
+            CharacterSetFacialExpression(Player, "Eyes", "Dazed");
+
+            Player.ArousalSettings.ProgressTimer++;
+            var progress = Math.min(99, Player.ArousalSettings.Progress + 5);
+            Player.BCT.splitOrgasmArousal.arousalProgress = Math.min(Player.BCT.splitOrgasmArousal.arousalProgress + 10, 100);
+            BCT_API?.ActivityChatRoomBCTArousalSync(Player);
+            ActivitySetArousal(Player, progress);
+        }
     }
 
     function CheckNewTrigger() {
