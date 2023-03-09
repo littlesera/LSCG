@@ -339,7 +339,7 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
     }
 
     function IncreaseArousal() {
-        Player.ArousalSettings.ProgressTimer = Player.ArousalSettings.Progress + 10;
+        Player.ArousalSettings.ProgressTimer = Math.min(99, Player.ArousalSettings.Progress + 20);
         ActivityChatRoomArousalSync(Player);
         Player.BCT.splitOrgasmArousal.ProgressTimer = Player.BCT.splitOrgasmArousal.arousalProgress + 30;
         BCT_API?.ActivityChatRoomBCTArousalSync(Player);
@@ -361,6 +361,7 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
     triggerTimer = 300000; // 5 min
     lingerInterval = 0;
     lingerTimer = 1800000; // 30min
+    hornyTimeout = 0;
 
     SDK.hookFunction("Player.HasTints", 4, (args, next) => {
         if (triggerActivated) return true;
@@ -415,6 +416,9 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
 
         clearInterval(lingerInterval);
         lingerInterval = setInterval(CheckNewTrigger, 1000);
+
+        clearInterval(hornyTimeout);
+        hornyTimeout = setInterval(HypnoHorny, triggerTimer / 100);
     }
 
     function TriggerRestoreBoop() {
@@ -429,8 +433,16 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
 
     function TriggerRestore() {
         CharacterSetFacialExpression(Player, "Eyes", "None");
+        clearInterval(hornyTimeout);
         clearTimeout(triggerTimeout);
         triggerActivated = false;
+    }
+
+    function HypnoHorny() {
+        var progress = Math.min(99, Player.ArousalSettings.Progress + 1);
+        Player.BCT.splitOrgasmArousal.arousalProgress = Math.min(Player.BCT.splitOrgasmArousal.arousalProgress + 10, 100);
+        BCT_API?.ActivityChatRoomBCTArousalSync(Player);
+        ActivitySetArousal(Player, progress);
     }
 
     function CheckNewTrigger() {
