@@ -51,7 +51,7 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
                     else if (lowerMsgWords.indexOf("loose") >= 0)
                         DecreaseCollarChoke();
                 }
-                if (!triggerActivated && !!Player.LittleSera.trigger && lowerMsgWords.indexOf(Player.LittleSera.trigger) >= 0) {
+                if (!triggerActivated && !!Player.LittleSera.trigger && lowerMsgWords.indexOf(Player.LittleSera.trigger) >= 0 && sender.MemberNumber != Player.MemberNumber) {
                     StartTriggerWord();
                 }
             }
