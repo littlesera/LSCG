@@ -189,10 +189,14 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
     }
 
     function NormalBoopReact() {
+        CharacterSetFacialExpression(Player, "Blush", "Low");
         SendAction(normalBoopReactions[getRandomInt(normalBoopReactions.length)]);
     }
 
     function ProtestBoopReact(booper) {
+        CharacterSetFacialExpression(Player, "Blush", "Medium");
+        CharacterSetFacialExpression(Player, "Eyes", "Daydream");
+
         if (Player.IsRestrained())
             SendAction(boundBoopReactions[getRandomInt(boundBoopReactions.length)]);
         else
@@ -200,6 +204,8 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
     }
 
     function BigProtestBoopReact(booper) {
+        CharacterSetFacialExpression(Player, "Blush", "High");
+        CharacterSetFacialExpression(Player, "Eyes", "Dizzy");
         SendAction(bigProtestBoopReactions[getRandomInt(bigProtestBoopReactions.length)]);
         boopShutdown = true;
         setTimeout(() => boopShutdown = false, 30000);
