@@ -114,8 +114,8 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
         }
     ])
 
-    function SendAction(action) {
-        ServerSend("ChatRoomChat", {Content: "Beep", Type: "Action", Dictionary: [{Tag: "Beep", Text: replace_template(action, Player.CharacterNickname)}]});
+    function SendAction(action, senderName = '') {
+        ServerSend("ChatRoomChat", {Content: "Beep", Type: "Action", Dictionary: [{Tag: "Beep", Text: replace_template(action, senderName)}]});
     }
 
     function SendChat(msg) {
@@ -183,9 +183,9 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
             },5000);
         }
         if (!!boopsPerPerson[booperId] && boopsPerPerson[booperId] > 5)
-            ProtestBoopReact();
+            ProtestBoopReact(booper);
         else if (!!boopsPerPerson[booperId] && boopsPerPerson[booperId] > 10)
-            BigProtestBoopReact();            
+            BigProtestBoopReact(booper);            
         else
             NormalBoopReact();
     }
@@ -194,14 +194,14 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
         SendAction(normalBoopReactions[getRandomInt(normalBoopReactions.length)]);
     }
 
-    function ProtestBoopReact() {
+    function ProtestBoopReact(booper) {
         if (Player.IsRestrained())
             SendAction(boundBoopReactions[getRandomInt(boundBoopReactions.length)]);
         else
-            SendAction(protestBoopReactions[getRandomInt(protestBoopReactions.length)]);
+            SendAction(protestBoopReactions[getRandomInt(protestBoopReactions.length)], booper.Nickname);
     }
 
-    function BigProtestBoopReact() {
+    function BigProtestBoopReact(booper) {
         SendAction(bigProtestBoopReactions[getRandomInt(bigProtestBoopReactions.length)]);
         boopShutdown = true;
         setTimeout(() => boopShutdown = false, 30000);
