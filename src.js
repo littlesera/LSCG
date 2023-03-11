@@ -165,27 +165,24 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
         "%NAME% whines and wiggles in her bondage."
     ]
 
-    boopsPerPerson = {};
+    boops = 0;
     boopShutdown = false;
+    boopDecreaseLoop = setInterval(() => {
+        if (boops > 0)
+            boops--;
+    }, 5000);
 
     function BoopReact(booperId) {
         if (boopShutdown)
             return;
+            
         var booper = ChatRoomCharacter.find(c => c.MemberNumber == booperId);
-        if (booper) {
-            if (!boopsPerPerson[booperId])
-                boopsPerPerson[booperId] = 1;
-            else
-                boopsPerPerson[booperId]++;
-            setTimeout(() => {
-                if (!!boopsPerPerson[booperId])
-                    boopsPerPerson[booperId]--;
-            },5000, booperId);
-        }
+        if (booper)
+            boops++;
         
-        if (!!boopsPerPerson[booperId] && boopsPerPerson[booperId] > 10)
+        if (boops > 10)
             BigProtestBoopReact(booper);            
-        else if (!!boopsPerPerson[booperId] && boopsPerPerson[booperId] > 5)
+        else if (boops > 5)
             ProtestBoopReact(booper);
         else
             NormalBoopReact();
