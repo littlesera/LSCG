@@ -190,6 +190,10 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
             NormalBoopReact();
     }
 
+    function NormalBoopReact() {
+        SendAction(normalBoopReactions[getRandomInt(normalBoopReactions.length)]);
+    }
+
     function ProtestBoopReact() {
         if (Player.IsRestrained())
             SendAction(boundBoopReactions[getRandomInt(boundBoopReactions.length)]);
