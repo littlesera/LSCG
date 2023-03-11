@@ -70,7 +70,7 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
                         if (triggerActivated)
                             TriggerRestoreBoop();
                         else
-                            BoopReact();
+                            BoopReact(sender.MemberNumber);
                     }
                 }
             }
@@ -136,9 +136,9 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
         return result
     }
 
-    // Misc
+    // Boops
 
-    const boopReactions = [
+    const normalBoopReactions = [
         "%NAME% wiggles her nose.",
         "%NAME% wiggles her nose with a small frown.",
         "%NAME% sneezes in surprise.",
@@ -147,8 +147,60 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
         "%NAME% meeps!"
     ]
 
-    function BoopReact() {
-        SendAction(boopReactions[getRandomInt(boopReactions.length)]);
+    const protestBoopReactions = [
+        "%NAME% swats at %OPP_NAME%'s hand.",
+        "%NAME% covers her nose protectively, squinting at %OPP_NAME%.",
+        "%NAME% snatches %OPP_NAME%'s booping finger."
+    ]
+
+    const bigProtestBoopReactions = [
+        "%NAME%'s nose overloads and shuts down."
+    ]
+
+    const boundBoopReactions = [
+        "%NAME% struggles in her bindings, huffing.",
+        "%NAME% frowns and squirms in her bindings.",
+        "%NAME% whimpers in her bondage.",
+        "%NAME% groans helplessly.",
+        "%NAME% whines and wiggles in her bondage."
+    ]
+
+    boopsPerPerson = {};
+    boopShutdown = false;
+
+    function BoopReact(booperId) {
+        if (boopShutdown)
+            return;
+        var booper = ChatRoomCharacter.find(c => c.MemberNumber == booperId);
+        if (booper) {
+            if (!!boopsPerPerson[booperId])
+                boopsPerPerson[booperId] = 1;
+            else
+                boopsPerPerson[booperId]++;
+            setTimeout((booperId) => {
+                if (!!boopsPerPerson[booperId])
+                    boopsPerPerson[booperId]--;
+            },5000);
+        }
+        if (!!boopsPerPerson[booperId] && boopsPerPerson[booperId] > 5)
+            ProtestBoopReact();
+        else if (!!boopsPerPerson[booperId] && boopsPerPerson[booperId] > 10)
+            BigProtestBoopReact();            
+        else
+            NormalBoopReact();
+    }
+
+    function ProtestBoopReact() {
+        if (Player.IsRestrained())
+            SendAction(boundBoopReactions[getRandomInt(boundBoopReactions.length)]);
+        else
+            SendAction(protestBoopReactions[getRandomInt(protestBoopReactions.length)]);
+    }
+
+    function BigProtestBoopReact() {
+        SendAction(bigProtestBoopReactions[getRandomInt(bigProtestBoopReactions.length)]);
+        boopShutdown = true;
+        setTimeout(() => boopShutdown = false, 30000);
     }
 
     // Choke Collar Code
