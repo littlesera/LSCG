@@ -175,14 +175,14 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
     function BoopReact(booperId) {
         if (boopShutdown)
             return;
-            
+
         var booper = ChatRoomCharacter.find(c => c.MemberNumber == booperId);
         if (booper)
             boops++;
         
-        if (boops > 10)
+        if (boops >= 5)
             BigProtestBoopReact(booper);            
-        else if (boops > 5)
+        else if (boops >= 3)
             ProtestBoopReact(booper);
         else
             NormalBoopReact();
