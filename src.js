@@ -173,7 +173,7 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
             return;
         var booper = ChatRoomCharacter.find(c => c.MemberNumber == booperId);
         if (booper) {
-            if (!!boopsPerPerson[booperId])
+            if (!boopsPerPerson[booperId])
                 boopsPerPerson[booperId] = 1;
             else
                 boopsPerPerson[booperId]++;
