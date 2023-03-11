@@ -177,15 +177,16 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
                 boopsPerPerson[booperId] = 1;
             else
                 boopsPerPerson[booperId]++;
-            setTimeout((booperId) => {
+            setTimeout(() => {
                 if (!!boopsPerPerson[booperId])
                     boopsPerPerson[booperId]--;
-            },5000);
+            },5000, booperId);
         }
-        if (!!boopsPerPerson[booperId] && boopsPerPerson[booperId] > 5)
-            ProtestBoopReact(booper);
-        else if (!!boopsPerPerson[booperId] && boopsPerPerson[booperId] > 10)
+        
+        if (!!boopsPerPerson[booperId] && boopsPerPerson[booperId] > 10)
             BigProtestBoopReact(booper);            
+        else if (!!boopsPerPerson[booperId] && boopsPerPerson[booperId] > 5)
+            ProtestBoopReact(booper);
         else
             NormalBoopReact();
     }
