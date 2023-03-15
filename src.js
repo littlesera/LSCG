@@ -534,7 +534,8 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
             return;
 
         triggerActivated = true;
-        Player.LittleSera.activatedAt = new Date().getTime();
+        if (Player.LittleSera.activatedAt == 0)
+            Player.LittleSera.activatedAt = new Date().getTime();
         AudioPlaySoundEffect("SciFiEffect", 1);
         settingsSave();
         
