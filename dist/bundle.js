@@ -46,7 +46,7 @@ function OnActivity(priority, description, callback) {
     }});
 }
 
-function SendAction$1(action, senderName = '') {
+function SendAction(action, senderName = '') {
     ServerSend("ChatRoomChat", {Content: "Beep", Type: "Action", Dictionary: [{Tag: "Beep", Text: replace_template(action, senderName)}]});
 }
 
@@ -1135,7 +1135,7 @@ SDK$1.hookFunction('ServerSend', 5, (args, next) => {
     if (triggerActivated) {
         var type = args[0];
         if (type == "ChatRoomChat" && args[1].Type == "Chat"){
-            SendAction$1(hypnoBlockStrings[getRandomInt$1(hypnoBlockStrings.length)]);
+            SendAction(hypnoBlockStrings[getRandomInt$1(hypnoBlockStrings.length)]);
             return null;
         }
         return next(args);
@@ -1153,7 +1153,7 @@ function StartTriggerWord() {
     AudioPlaySoundEffect("SciFiEffect", 1);
     settingsSave();
     
-    SendAction$1("%NAME%'s eyes immediately unfocus, her posture slumping slightly as she loses control of her body at the utterance of a trigger word.");
+    SendAction("%NAME%'s eyes immediately unfocus, her posture slumping slightly as she loses control of her body at the utterance of a trigger word.");
     SetEyes();
     CharacterSetFacialExpression(Player, "Blush", "Medium");
     CharacterSetFacialExpression(Player, "Eyebrows", "Lowered");
@@ -1218,17 +1218,17 @@ function ResetEyes() {
 }
 
 function TriggerRestoreBoop() {
-    SendAction$1("%NAME% reboots, blinking and gasping as she regains her senses.");
+    SendAction("%NAME% reboots, blinking and gasping as she regains her senses.");
     TriggerRestore();
 }
 
 function TriggerRestoreSnap() {
-    SendAction$1("%NAME% blinks, shaking her head with confusion as she regains her senses.");
+    SendAction("%NAME% blinks, shaking her head with confusion as she regains her senses.");
     TriggerRestore();
 }
 
 function TriggerRestoreTimeout() {
-    SendAction$1("%NAME% gasps, blinking with confusion and blushing.");
+    SendAction("%NAME% gasps, blinking with confusion and blushing.");
     TriggerRestore();
 }
 
@@ -1264,7 +1264,7 @@ function CheckNewTrigger() {
 
 function RollTriggerWord() {
 
-    SendAction$1("%NAME% concentrates, breaking the hold the previous trigger word held over her.");
+    SendAction("%NAME% concentrates, breaking the hold the previous trigger word held over her.");
     Player.LittleSera.trigger = commonWords[getRandomInt$1(commonWords.length)];
     Player.LittleSera.activatedAt = 0;
     settingsSave();
@@ -1350,7 +1350,7 @@ SDK.hookFunction('ServerSend', 4, (args, next) => {
     // Prevent speech at choke level 4
     if (args[0] == "ChatRoomChat" && args[1].Type == "Chat"){
         if (Player.LittleSera.chokeLevel >= 4) {
-            SendAction$1("%NAME%'s mouth moves silently.");
+            SendAction("%NAME%'s mouth moves silently.");
             return null;
         }
         else if (Player.LittleSera.chokeLevel > 1) {
@@ -1392,19 +1392,19 @@ function IncreaseCollarChoke() {
         switch (Player.LittleSera.chokeLevel) {
             case 1:
                 clearTimeout(chokeTimeout);
-                SendAction$1("%NAME%'s eyes flutter as her collar starts to tighten around her neck with a quiet hiss.");
+                SendAction("%NAME%'s eyes flutter as her collar starts to tighten around her neck with a quiet hiss.");
                 CharacterSetFacialExpression(Player, "Blush", "Low");
                 CharacterSetFacialExpression(Player, "Eyes", "Sad");
                 break;
             case 2:
                 clearTimeout(chokeTimeout);
-                SendAction$1("%NAME% gasps for air as her collar presses in around her neck with a hiss.");
+                SendAction("%NAME% gasps for air as her collar presses in around her neck with a hiss.");
                 CharacterSetFacialExpression(Player, "Blush", "Medium");
                 CharacterSetFacialExpression(Player, "Eyes", "Surprised");
                 break;
             case 3:
                 setChokeTimeout(DecreaseCollarChoke, chokeTimer);
-                SendAction$1("%NAME%'s face runs flush, choking as her collar hisses, barely allowing any air to her lungs.");
+                SendAction("%NAME%'s face runs flush, choking as her collar hisses, barely allowing any air to her lungs.");
                 CharacterSetFacialExpression(Player, "Blush", "High");
                 CharacterSetFacialExpression(Player, "Eyes", "Scared");
                 break;
@@ -1432,25 +1432,25 @@ function DecreaseCollarChoke() {
     switch (Player.LittleSera.chokeLevel) {
         case 3:
             setChokeTimeout(DecreaseCollarChoke, chokeTimer);
-            SendAction$1("%NAME% chokes and gasps desperately as her collar slowly releases some pressure.");
+            SendAction("%NAME% chokes and gasps desperately as her collar slowly releases some pressure.");
             CharacterSetFacialExpression(Player, "Blush", "High");
             CharacterSetFacialExpression(Player, "Eyes", "Lewd");
             break;
         case 2:
             clearTimeout(chokeTimeout);
-            SendAction$1("%NAME%'s collar opens a little as she lets out a moan, gulping for air.");
+            SendAction("%NAME%'s collar opens a little as she lets out a moan, gulping for air.");
             CharacterSetFacialExpression(Player, "Blush", "Medium");
             CharacterSetFacialExpression(Player, "Eyes", "Sad");
             break;
         case 1:
             clearTimeout(chokeTimeout);
-            SendAction$1("%NAME% whimpers thankfully as her collar reduces most of its pressure around her neck.");
+            SendAction("%NAME% whimpers thankfully as her collar reduces most of its pressure around her neck.");
             CharacterSetFacialExpression(Player, "Blush", "Low");
             CharacterSetFacialExpression(Player, "Eyes", "None");
             break;
         case 0:
             clearTimeout(chokeTimeout);
-            SendAction$1("%NAME% takes a deep breath as her collar releases its grip with a hiss.");
+            SendAction("%NAME% takes a deep breath as her collar releases its grip with a hiss.");
             CharacterSetFacialExpression(Player, "Blush", "None");
             break;
     }
@@ -1465,7 +1465,7 @@ function ResetCollarChoke() {
 }
 
 function StartPassout() {
-    SendAction$1("%NAME%'s eyes start to roll back, gasping and choking as her collar presses in tightly and completely with a menacing hiss.");
+    SendAction("%NAME%'s eyes start to roll back, gasping and choking as her collar presses in tightly and completely with a menacing hiss.");
     CharacterSetFacialExpression(Player, "Blush", "VeryHigh");
     CharacterSetFacialExpression(Player, "Eyebrows", "Soft");
     CharacterSetFacialExpression(Player, "Eyes", "Lewd");
@@ -1474,7 +1474,7 @@ function StartPassout() {
 
 function Passout1() {
     IncreaseArousal();
-    SendAction$1("%NAME% chokes and spasms, her collar holding tight.");
+    SendAction("%NAME% chokes and spasms, her collar holding tight.");
     CharacterSetFacialExpression(Player, "Blush", "Extreme");
     CharacterSetFacialExpression(Player, "Eyebrows", "Soft");
     CharacterSetFacialExpression(Player, "Eyes", "Lewd");
@@ -1484,7 +1484,7 @@ function Passout1() {
 
 function Passout2() {
     IncreaseArousal();
-    SendAction$1("%NAME% convulses weakly, her eyes rolling back as the collar hisses impossibly tighter.");
+    SendAction("%NAME% convulses weakly, her eyes rolling back as the collar hisses impossibly tighter.");
     AudioPlaySoundEffect("HydraulicLock");
     CharacterSetFacialExpression(Player, "Blush", "ShortBreath");
     CharacterSetFacialExpression(Player, "Eyebrows", "Soft");
@@ -1495,7 +1495,7 @@ function Passout2() {
 
 function Passout3() {
     IncreaseArousal();
-    SendAction$1("As %NAME% collapses unconscious, her collar releases all of its pressure with a long hiss.");
+    SendAction("As %NAME% collapses unconscious, her collar releases all of its pressure with a long hiss.");
     AudioPlaySoundEffect("Deflation");
     CharacterSetFacialExpression(Player, "Blush", "Medium");
     CharacterSetFacialExpression(Player, "Eyebrows", "Soft");
@@ -1538,13 +1538,13 @@ function ActivateChokeEvent() {
     };
     switch (Player.LittleSera.chokeLevel) {
         case 1:
-            SendAction$1(ChokeEvents.low[getRandomInt(ChokeEvents.low.length)]);
+            SendAction(ChokeEvents.low[getRandomInt(ChokeEvents.low.length)]);
             break;
         case 2:
-            SendAction$1(ChokeEvents.mid[getRandomInt(ChokeEvents.mid.length)]);
+            SendAction(ChokeEvents.mid[getRandomInt(ChokeEvents.mid.length)]);
             break;
         case 3:
-            SendAction$1(ChokeEvents.high[getRandomInt(ChokeEvents.high.length)]);
+            SendAction(ChokeEvents.high[getRandomInt(ChokeEvents.high.length)]);
             break;
     }
 }
@@ -1555,16 +1555,6 @@ function IncreaseArousal() {
     BCT_API?.ActivityChatRoomBCTArousalSync(Player);
 }
 
-const SeraScripts_Version = '0.0.1';
-
-bcModSDK.registerMod({
-    name: 'SeraScripts',
-    fullName: 'Sera Scripts',
-    version: SeraScripts_Version
-});
-
-window.SeraScripts_Version = SeraScripts_Version;
-
 OnActivity(100, "Little Sera Boops", (data, msg, sender, metadata) => {
     let target = data.Dictionary.find(d => d.Tag == "TargetCharacter");
     if (!!target && 
@@ -1574,9 +1564,6 @@ OnActivity(100, "Little Sera Boops", (data, msg, sender, metadata) => {
         BoopReact(sender.MemberNumber);
     }
 });
-
-
-// Boops
 
 const normalBoopReactions = [
     "%NAME% wiggles her nose.",
@@ -1630,7 +1617,7 @@ function BoopReact(booperId) {
 
 function NormalBoopReact() {
     CharacterSetFacialExpression(Player, "Blush", "Low");
-    SendAction(normalBoopReactions[getRandomInt(normalBoopReactions.length)]);
+    SendAction(normalBoopReactions[getRandomInt$1(normalBoopReactions.length)]);
 }
 
 function ProtestBoopReact(booper) {
@@ -1638,15 +1625,15 @@ function ProtestBoopReact(booper) {
     CharacterSetFacialExpression(Player, "Eyes", "Daydream");
 
     if (Player.IsRestrained())
-        SendAction(boundBoopReactions[getRandomInt(boundBoopReactions.length)]);
+        SendAction(boundBoopReactions[getRandomInt$1(boundBoopReactions.length)]);
     else
-        SendAction(protestBoopReactions[getRandomInt(protestBoopReactions.length)], booper.Nickname);
+        SendAction(protestBoopReactions[getRandomInt$1(protestBoopReactions.length)], booper.Nickname);
 }
 
 function BigProtestBoopReact(booper) {
     CharacterSetFacialExpression(Player, "Blush", "High");
     CharacterSetFacialExpression(Player, "Eyes", "Dizzy");
-    SendAction(bigProtestBoopReactions[getRandomInt(bigProtestBoopReactions.length)]);
+    SendAction(bigProtestBoopReactions[getRandomInt$1(bigProtestBoopReactions.length)]);
     boopShutdown = true;
     setTimeout(() => boopShutdown = false, 30000);
 }
