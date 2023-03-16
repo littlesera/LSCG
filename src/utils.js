@@ -23,7 +23,7 @@ export function parseMsgWords(msg) {
 }
 
 export function OnChat(priority, description, callback) {
-    window.ChatRoomRegisterMessageHandler({ Priority: pri, Description: description, Callback: (data, sender, msg, metadata) => {
+    window.ChatRoomRegisterMessageHandler({ Priority: priority, Description: description, Callback: (data, sender, msg, metadata) => {
         if (data.Type == "Chat") {
             callback(data, msg, sender, metadata);
         }
