@@ -52,9 +52,9 @@ const boundBoopReactions = [
     "%NAME% whines and wiggles in her bondage."
 ]
 
-boops = 0;
-boopShutdown = false;
-boopDecreaseLoop = setInterval(() => {
+let boops = 0;
+let boopShutdown = false;
+let boopDecreaseLoop = setInterval(() => {
     if (boops > 0)
         boops--;
 }, 5000);
