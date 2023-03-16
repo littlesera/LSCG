@@ -1086,7 +1086,7 @@ function hypnoActivated() {
 }
 
 // Set Trigger
-var wordLength = commonWords.length;
+let wordLength = commonWords.length;
 if (!Player.LittleSera.trigger) {
     Player.LittleSera.trigger = commonWords[getRandomInt$1(wordLength)];
     settingsSave();
@@ -1098,12 +1098,12 @@ if (!Player.LittleSera.activatedAt) {
 if (!!Player.LittleSera.existingEye1Name)
     ResetEyes();
 
-triggerTimeout = 0;
-triggerActivated = false;
-triggerTimer = 300000; // 5 min
-lingerInterval = 0;
-lingerTimer = 1800000; // 30min
-hornyTimeout = 0;
+let triggerTimeout = 0;
+let triggerActivated = false;
+let triggerTimer = 300000; // 5 min
+let lingerInterval = setInterval(CheckNewTrigger, 5000); // check if need to reroll every 5s
+let lingerTimer = 1800000; // 30min
+let hornyTimeout = 0;
 
 SDK$1.hookFunction("Player.HasTints", 4, (args, next) => {
     if (triggerActivated) return true;
@@ -1140,9 +1140,6 @@ SDK$1.hookFunction('ServerSend', 5, (args, next) => {
     }
     return next(args);
 });
-
-clearInterval(lingerInterval);
-lingerInterval = setInterval(CheckNewTrigger, 1000);
 
 function StartTriggerWord() {
     if (triggerActivated)
@@ -1316,26 +1313,25 @@ OnChat(600, "Choke Collar", (data, msg, sender, metadata) => {
 
 // Choke Collar Code
 
-allowedChokeMembers = [
+let allowedChokeMembers = [
     96251,
     60504
 ];
 
-chokeTimeout = 0;
-chokeTimer = 120000;
-chokeEventTimer = 60010;
-passout1Timer = 30000;
-passout2Timer = 15000;
-passout3Timer = 10000;
+let chokeTimeout = 0;
+let chokeTimer = 120000;
+let chokeEventTimer = 60010;
+let passout1Timer = 30000;
+let passout2Timer = 15000;
+let passout3Timer = 10000;
+setInterval(ChokeEvent, chokeEventTimer);
 
-Player.LittleSera = Player.OnlineSettings.LittleSera || {chokeLevel: 0};
+Player.LittleSera.chokeLevel = Player.OnlineSettings.LittleSera.chokeLevel || 0;
 settingsSave();
 
 if (Player.LittleSera.chokeLevel > 2) {
     setChokeTimeout(DecreaseCollarChoke, chokeTimer);
 }
-
-eventInterval = setInterval(ChokeEvent, chokeEventTimer);
 
 function setChokeTimeout(f, delay) {
     clearTimeout(chokeTimeout);
