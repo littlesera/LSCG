@@ -70,6 +70,7 @@ function getRandomInt$1(max) {
 
 await waitFor(() => ServerSocket && ServerIsConnected);	
 await waitFor(() => !!Player?.AccountName);
+Player.LittleSera = Player.OnlineSettings.LittleSera || {};
 
 const commonWords = [
     "able",
