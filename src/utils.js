@@ -72,5 +72,5 @@ export function getRandomInt(max) {
     return Math.floor(Math.random() * max);
 }
 
-waitFor(() => ServerSocket && ServerIsConnected);	
-waitFor(() => !!Player?.AccountName);
+await waitFor(() => ServerSocket && ServerIsConnected);	
+await waitFor(() => !!Player?.AccountName);
