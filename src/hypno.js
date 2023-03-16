@@ -1018,7 +1018,7 @@ export function hypnoActivated() {
 }
 
 // Set Trigger
-var wordLength = commonWords.length;
+let wordLength = commonWords.length;
 if (!Player.LittleSera.trigger) {
     Player.LittleSera.trigger = commonWords[getRandomInt(wordLength)];
     settingsSave();
@@ -1030,12 +1030,12 @@ if (!Player.LittleSera.activatedAt) {
 if (!!Player.LittleSera.existingEye1Name)
     ResetEyes();
 
-triggerTimeout = 0;
-triggerActivated = false;
-triggerTimer = 300000; // 5 min
-lingerInterval = 0;
-lingerTimer = 1800000; // 30min
-hornyTimeout = 0;
+let triggerTimeout = 0;
+let triggerActivated = false;
+let triggerTimer = 300000; // 5 min
+let lingerInterval = setInterval(CheckNewTrigger, 5000); // check if need to reroll every 5s
+let lingerTimer = 1800000; // 30min
+let hornyTimeout = 0;
 
 SDK.hookFunction("Player.HasTints", 4, (args, next) => {
     if (triggerActivated) return true;
@@ -1072,9 +1072,6 @@ SDK.hookFunction('ServerSend', 5, (args, next) => {
     }
     return next(args);
 });
-
-clearInterval(lingerInterval);
-lingerInterval = setInterval(CheckNewTrigger, 1000);
 
 function StartTriggerWord() {
     if (triggerActivated)

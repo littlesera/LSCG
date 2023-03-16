@@ -52,26 +52,25 @@ function loadCollarSettings() {
 
 // Choke Collar Code
 
-allowedChokeMembers = [
+let allowedChokeMembers = [
     96251,
     60504
 ];
 
-chokeTimeout = 0;
-chokeTimer = 120000;
-chokeEventTimer = 60010;
-passout1Timer = 30000;
-passout2Timer = 15000;
-passout3Timer = 10000;
+let chokeTimeout = 0;
+let chokeTimer = 120000;
+let chokeEventTimer = 60010;
+let passout1Timer = 30000;
+let passout2Timer = 15000;
+let passout3Timer = 10000;
+let eventInterval = setInterval(ChokeEvent, chokeEventTimer);
 
-Player.LittleSera = Player.OnlineSettings.LittleSera || {chokeLevel: 0}
+Player.LittleSera.chokeLevel = Player.OnlineSettings.LittleSera.chokeLevel || 0;
 settingsSave();
 
 if (Player.LittleSera.chokeLevel > 2) {
     setChokeTimeout(DecreaseCollarChoke, chokeTimer);
 }
-
-eventInterval = setInterval(ChokeEvent, chokeEventTimer);
 
 function setChokeTimeout(f, delay) {
     clearTimeout(chokeTimeout);
