@@ -18,7 +18,9 @@ function sleep(ms) {
 
 function parseMsgWords(msg) {
     var lowerMsg = msg.toLowerCase();
-    var lowerMsgWords = lowerMsg.match(/\b(\w+)\b/g);
+    var lowerMsgWords = lowerMsg.match(/\b(\w+)\b/g) || [];
+    if (!lowerMsgWords)
+        lowerMsgWords = [];
     return lowerMsgWords;
 }
 
