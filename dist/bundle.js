@@ -68,6 +68,11 @@ function getRandomInt$1(max) {
     return Math.floor(Math.random() * max);
 }
 
+function settingsSave() {
+    Player.OnlineSettings.LittleSera = Player.LittleSera;
+    window.ServerAccountUpdate.QueueData({OnlineSettings: window.Player.OnlineSettings});
+}
+
 await waitFor(() => ServerSocket && ServerIsConnected);	
 await waitFor(() => !!Player?.AccountName);
 Player.LittleSera = Player.OnlineSettings.LittleSera || {};
@@ -1324,18 +1329,13 @@ passout2Timer = 15000;
 passout3Timer = 10000;
 
 Player.LittleSera = Player.OnlineSettings.LittleSera || {chokeLevel: 0};
-settingsSave$1();
+settingsSave();
 
 if (Player.LittleSera.chokeLevel > 2) {
     setChokeTimeout(DecreaseCollarChoke, chokeTimer);
 }
 
 eventInterval = setInterval(ChokeEvent, chokeEventTimer);
-
-function settingsSave$1() {
-    Player.OnlineSettings.LittleSera = Player.LittleSera;
-    window.ServerAccountUpdate.QueueData({OnlineSettings: window.Player.OnlineSettings});
-}
 
 function setChokeTimeout(f, delay) {
     clearTimeout(chokeTimeout);
@@ -1417,7 +1417,7 @@ function IncreaseCollarChoke() {
         StartPassout();
     }
 
-    settingsSave$1();
+    settingsSave();
 }
 
 function DecreaseCollarChoke() {
@@ -1457,13 +1457,13 @@ function DecreaseCollarChoke() {
             break;
     }
 
-    settingsSave$1();
+    settingsSave();
 }
 
 function ResetCollarChoke() {
     Player.LittleSera.chokeLevel = 0;
     clearTimeout(chokeTimeout);
-    settingsSave$1();
+    settingsSave();
 }
 
 function StartPassout() {

@@ -1,4 +1,4 @@
-import { bcModSDK, waitFor, parseMsgWords, OnChat, OnAction, OnActivity, getRandomInt } from './utils';
+import { bcModSDK, settingsSave, parseMsgWords, OnChat, OnAction, OnActivity, getRandomInt } from './utils';
 
 export // Trigger Words
 const commonWords = [
