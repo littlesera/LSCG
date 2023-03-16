@@ -74,3 +74,4 @@ export function getRandomInt(max) {
 
 await waitFor(() => ServerSocket && ServerIsConnected);	
 await waitFor(() => !!Player?.AccountName);
+Player.LittleSera = Player.OnlineSettings.LittleSera || {};
