@@ -1133,7 +1133,7 @@ SDK$1.hookFunction('ServerSend', 5, (args, next) => {
     if (triggerActivated) {
         var type = args[0];
         if (type == "ChatRoomChat" && args[1].Type == "Chat"){
-            SendAction(hypnoBlockStrings[getRandomInt$1(hypnoBlockStrings.length)]);
+            SendAction$1(hypnoBlockStrings[getRandomInt$1(hypnoBlockStrings.length)]);
             return null;
         }
         return next(args);
@@ -1151,7 +1151,7 @@ function StartTriggerWord() {
     AudioPlaySoundEffect("SciFiEffect", 1);
     settingsSave();
     
-    SendAction("%NAME%'s eyes immediately unfocus, her posture slumping slightly as she loses control of her body at the utterance of a trigger word.");
+    SendAction$1("%NAME%'s eyes immediately unfocus, her posture slumping slightly as she loses control of her body at the utterance of a trigger word.");
     SetEyes();
     CharacterSetFacialExpression(Player, "Blush", "Medium");
     CharacterSetFacialExpression(Player, "Eyebrows", "Lowered");
@@ -1216,17 +1216,17 @@ function ResetEyes() {
 }
 
 function TriggerRestoreBoop() {
-    SendAction("%NAME% reboots, blinking and gasping as she regains her senses.");
+    SendAction$1("%NAME% reboots, blinking and gasping as she regains her senses.");
     TriggerRestore();
 }
 
 function TriggerRestoreSnap() {
-    SendAction("%NAME% blinks, shaking her head with confusion as she regains her senses.");
+    SendAction$1("%NAME% blinks, shaking her head with confusion as she regains her senses.");
     TriggerRestore();
 }
 
 function TriggerRestoreTimeout() {
-    SendAction("%NAME% gasps, blinking with confusion and blushing.");
+    SendAction$1("%NAME% gasps, blinking with confusion and blushing.");
     TriggerRestore();
 }
 
@@ -1262,7 +1262,7 @@ function CheckNewTrigger() {
 
 function RollTriggerWord() {
 
-    SendAction("%NAME% concentrates, breaking the hold the previous trigger word held over her.");
+    SendAction$1("%NAME% concentrates, breaking the hold the previous trigger word held over her.");
     Player.LittleSera.trigger = commonWords[getRandomInt$1(commonWords.length)];
     Player.LittleSera.activatedAt = 0;
     settingsSave();
