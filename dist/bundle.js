@@ -1068,7 +1068,9 @@ OnChat(1000, "Hypno Scripts OnChat", (data, msg, sender, metadata) => {
 
 OnAction(1000, "Hypno Scripts OnAction", (data, msg, sender, metadata) => {
     var lowerMsgWords = parseMsgWords(msg);
-    if (lowerMsgWords.indexOf("snaps") >= 0 && hypnoActivated()) {
+    if (lowerMsgWords.indexOf("snaps") >= 0 && 
+        sender.MemberNumber != Player.MemberNumber &&
+        hypnoActivated()) {
         TriggerRestoreSnap();
     }
 });
