@@ -31,7 +31,7 @@ export function OnChat(priority, description, callback) {
 }
 
 export function OnAction(priority, description, callback) {
-    window.ChatRoomRegisterMessageHandler({ Priority: pri, Description: description, Callback: (data, sender, msg, metadata) => {
+    window.ChatRoomRegisterMessageHandler({ Priority: priority, Description: description, Callback: (data, sender, msg, metadata) => {
         if (data.Type == "Action" || data.Type == "Emote") {
             callback(data, msg, sender, metadata);
         }
@@ -39,7 +39,7 @@ export function OnAction(priority, description, callback) {
 }
 
 export function OnActivity(priority, description, callback) {
-    window.ChatRoomRegisterMessageHandler({ Priority: pri, Description: description, Callback: (data, sender, msg, metadata) => {
+    window.ChatRoomRegisterMessageHandler({ Priority: priority, Description: description, Callback: (data, sender, msg, metadata) => {
         if (data.Type == "Activity") {
             callback(data, msg, sender, metadata);
         }
