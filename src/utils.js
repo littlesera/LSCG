@@ -72,5 +72,23 @@ export function getRandomInt(max) {
     return Math.floor(Math.random() * max);
 }
 
-await waitFor(() => ServerSocket && ServerIsConnected);	
-await waitFor(() => !!Player?.AccountName);
+function initWait() {
+	console.debug("Little Sera: Init wait");
+	if (CurrentScreen == null || CurrentScreen === "Login") {
+		hookFunction("LoginResponse", 0, (args, next) => {
+			console.debug("Sera: Init LoginResponse caught", args);
+			next(args);
+			const response = args[0];
+			if (isObject(response) && typeof response.Name === "string" && typeof response.AccountName === "string") {
+				loginInit(args[0]);
+			}
+		});
+		InfoBeep(`Little Sera Ready!`);
+		console.log(`Little Sera Ready!`);
+	} else {
+		console.debug("Little Sera: Already logged in, init");
+		init();
+	}
+}
+
+initWait();
