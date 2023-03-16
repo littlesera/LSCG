@@ -8,7 +8,6 @@ const SDK = bcModSDK.registerMod({
     version: ChokeCollar_Version
 });
 
-await waitFor(() => !!Player?.AccountName);
 loadCollarSettings();
 
 if(Player.ChokeCollar != null){

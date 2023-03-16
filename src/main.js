@@ -4,8 +4,6 @@ import { } from './collar';
 
 const SeraScripts_Version = '0.0.1';
 
-await waitFor(() => ServerSocket && ServerIsConnected);	
-
 const SDK = bcModSDK.registerMod({
     name: 'SeraScripts',
     fullName: 'Sera Scripts',
@@ -13,9 +11,6 @@ const SDK = bcModSDK.registerMod({
 });
 
 window.SeraScripts_Version = SeraScripts_Version
-
-// wait for actual player
-await waitFor(() => !!Player?.AccountName);
 
 OnActivity(100, "Little Sera Boops", (data, msg, sender, metadata) => {
     let target = data.Dictionary.find(d => d.Tag == "TargetCharacter");

@@ -8,7 +8,6 @@ const SDK = bcModSDK.registerMod({
     version: HypnoScripts_Version
 });
 
-await waitFor(() => !!Player?.AccountName);
 loadHypnoSettings();
 
 if(Player.HypnoScripts != null){
