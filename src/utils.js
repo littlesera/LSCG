@@ -72,6 +72,11 @@ export function getRandomInt(max) {
     return Math.floor(Math.random() * max);
 }
 
+export function settingsSave() {
+    Player.OnlineSettings.LittleSera = Player.LittleSera
+    window.ServerAccountUpdate.QueueData({OnlineSettings: window.Player.OnlineSettings})
+}
+
 await waitFor(() => ServerSocket && ServerIsConnected);	
 await waitFor(() => !!Player?.AccountName);
 Player.LittleSera = Player.OnlineSettings.LittleSera || {};

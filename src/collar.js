@@ -1,4 +1,4 @@
-import { bcModSDK, waitFor, parseMsgWords, SendAction, OnChat } from './utils';
+import { bcModSDK, settingsSave, parseMsgWords, SendAction, OnChat } from './utils';
 
 const ChokeCollar_Version = '0.0.1';
 
@@ -72,11 +72,6 @@ if (Player.LittleSera.chokeLevel > 2) {
 }
 
 eventInterval = setInterval(ChokeEvent, chokeEventTimer);
-
-function settingsSave() {
-    Player.OnlineSettings.LittleSera = Player.LittleSera
-    window.ServerAccountUpdate.QueueData({OnlineSettings: window.Player.OnlineSettings})
-}
 
 function setChokeTimeout(f, delay) {
     clearTimeout(chokeTimeout);
