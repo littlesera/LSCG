@@ -66,7 +66,7 @@ function replace_template(text, source_name = '') {
     return result
 }
 
-function getRandomInt$1(max) {
+function getRandomInt(max) {
     return Math.floor(Math.random() * max);
 }
 
@@ -1092,7 +1092,7 @@ function hypnoActivated() {
 // Set Trigger
 let wordLength = commonWords.length;
 if (!Player.LittleSera.trigger) {
-    Player.LittleSera.trigger = commonWords[getRandomInt$1(wordLength)];
+    Player.LittleSera.trigger = commonWords[getRandomInt(wordLength)];
     settingsSave();
 }
 if (!Player.LittleSera.activatedAt) {
@@ -1137,7 +1137,7 @@ SDK$1.hookFunction('ServerSend', 5, (args, next) => {
     if (triggerActivated) {
         var type = args[0];
         if (type == "ChatRoomChat" && args[1].Type == "Chat"){
-            SendAction(hypnoBlockStrings[getRandomInt$1(hypnoBlockStrings.length)]);
+            SendAction(hypnoBlockStrings[getRandomInt(hypnoBlockStrings.length)]);
             return null;
         }
         return next(args);
@@ -1267,7 +1267,7 @@ function CheckNewTrigger() {
 function RollTriggerWord() {
 
     SendAction("%NAME% concentrates, breaking the hold the previous trigger word held over her.");
-    Player.LittleSera.trigger = commonWords[getRandomInt$1(commonWords.length)];
+    Player.LittleSera.trigger = commonWords[getRandomInt(commonWords.length)];
     Player.LittleSera.activatedAt = 0;
     settingsSave();
 }
@@ -1619,7 +1619,7 @@ function BoopReact(booperId) {
 
 function NormalBoopReact() {
     CharacterSetFacialExpression(Player, "Blush", "Low");
-    SendAction(normalBoopReactions[getRandomInt$1(normalBoopReactions.length)]);
+    SendAction(normalBoopReactions[getRandomInt(normalBoopReactions.length)]);
 }
 
 function ProtestBoopReact(booper) {
@@ -1627,15 +1627,15 @@ function ProtestBoopReact(booper) {
     CharacterSetFacialExpression(Player, "Eyes", "Daydream");
 
     if (Player.IsRestrained())
-        SendAction(boundBoopReactions[getRandomInt$1(boundBoopReactions.length)]);
+        SendAction(boundBoopReactions[getRandomInt(boundBoopReactions.length)]);
     else
-        SendAction(protestBoopReactions[getRandomInt$1(protestBoopReactions.length)], booper.Nickname);
+        SendAction(protestBoopReactions[getRandomInt(protestBoopReactions.length)], booper.Nickname);
 }
 
 function BigProtestBoopReact(booper) {
     CharacterSetFacialExpression(Player, "Blush", "High");
     CharacterSetFacialExpression(Player, "Eyes", "Dizzy");
-    SendAction(bigProtestBoopReactions[getRandomInt$1(bigProtestBoopReactions.length)]);
+    SendAction(bigProtestBoopReactions[getRandomInt(bigProtestBoopReactions.length)]);
     boopShutdown = true;
     setTimeout(() => boopShutdown = false, 30000);
 }
