@@ -1,4 +1,4 @@
-import { bcModSDK, settingsSave, parseMsgWords, SendAction, OnChat } from './utils';
+import { bcModSDK, settingsSave, parseMsgWords, SendAction, OnChat, getRandomInt } from './utils';
 
 const ChokeCollar_Version = '0.0.1';
 
