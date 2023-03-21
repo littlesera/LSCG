@@ -53,7 +53,7 @@ function addLipstickMarks() {
 
 function wearingMask() {
     var mask = InventoryGet(Player, "Mask");
-    if (!!mask && mask.Name != "Kissmark")
+    if (!!mask && mask.Asset.Name != "Kissmark")
         return true;
     return false;
 }
@@ -77,11 +77,14 @@ function getKissMarkTypeString(status) {
 }
 
 export function AddKissMark(sender, location) {
+    var color = getKisserLipColor(sender);
+    if (color == "Default")
+        return; // No lipstick
+
     var marks = getExistingLipstickMarks();
     if (!marks) {
         marks = addLipstickMarks();
     }
-    var color = getKisserLipColor(sender);
     marks.Color = [color];
     var status = getKissMarkStatus(marks.Property.Type);
 
