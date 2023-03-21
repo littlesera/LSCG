@@ -25,7 +25,7 @@ OnActivity(100, "Little Sera Kisses", (data, msg, sender, metadata) => {
 function getKisserLipColor(sender) {
     try {
         var mouth = InventoryGet(sender, "Mouth");
-        if (!!mouth)
+        if (!!mouth && mouth.Color != "Default")
             return mouth.Color[0];
         else
             return "Default";
