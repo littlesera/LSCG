@@ -36,7 +36,7 @@ function getKisserLipColor(sender) {
 }
 
 function getExistingLipstickMarks() {
-    var mask = InventoryGet(sender, "Mask");
+    var mask = InventoryGet(Player, "Mask");
     if (!!mask && mask.Asset.Name == "Kissmark")
         return mask;
     else
