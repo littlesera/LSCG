@@ -19,6 +19,26 @@ OnActivity(100, "Little Sera Kisses", (data, msg, sender, metadata) => {
                 default:
                     break;
             }
+
+            var item = data.Dictionary.find(d => d.Tag == "ActivityAsset");
+            if (!!item && item.AssetName == "Towel") {
+                switch (data.Content) {
+                    case "ChatOther-ItemHood-RubItem" :
+                    case "ChatSelf-ItemHood-RubItem" :
+                        RemoveKissMark("forehead");
+                        break;
+                    case "ChatOther-ItemMouth-RubItem" :
+                    case "ChatSelf-ItemMouth-RubItem" :
+                        RemoveKissMark("cheek");
+                        break;
+                    case "ChatOther-ItemNeck-RubItem" :
+                    case "ChatSelf-ItemNeck-RubItem" :
+                        RemoveKissMark("neck");
+                        break;
+                    default :
+                        break;
+                }
+            }
     }
 });
 
@@ -74,6 +94,32 @@ function getKissMarkTypeString(status) {
         "f" + (status.forehead ? "1" : "0") + 
         "n" + (status.neck1 ? "1" : "0") + 
         "l" + (status.neck2 ? "1" : "0");
+}
+
+export function RemoveKissMark(location) {
+    var marks = getExistingLipstickMarks();
+    if (!marks)
+        return;
+    var status = getKissMarkStatus(marks.Property.Type);
+
+    switch (location) {
+        case "cheek" :
+            status.cheek1 = false;
+            status.cheek2 = false;
+            break;
+        case "forehead" :
+            status.forehead = false;
+            break;
+        case "neck" :
+            status.neck1 = false;
+            status.cheek2 = false;
+            break;
+        default :
+            break;
+    }
+
+    marks.Property.Type = getKissMarkTypeString(status);
+    ChatRoomCharacterUpdate(Player);
 }
 
 export function AddKissMark(sender, location) {
