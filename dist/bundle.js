@@ -1672,7 +1672,7 @@ OnActivity(100, "Little Sera Kisses", (data, msg, sender, metadata) => {
 
 function getKisserLipColor(sender) {
     try {
-        var mouth = GetInventory(sender, "Mouth");
+        var mouth = InventoryGet(sender, "Mouth");
         if (!!mouth)
             return mouth.Color[0];
         else
@@ -1684,7 +1684,7 @@ function getKisserLipColor(sender) {
 }
 
 function getExistingLipstickMarks() {
-    var mask = GetInventory(sender, "Mask");
+    var mask = InventoryGet(sender, "Mask");
     if (!!mask && mask.Asset.Name == "Kissmark")
         return mask;
     else
