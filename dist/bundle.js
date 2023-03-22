@@ -66,7 +66,7 @@ var LSCG = (function (exports) {
 
 	var bcModSDKRef = /*@__PURE__*/getDefaultExportFromCjs(bcmodsdk);
 
-	const VERSION = LSCG_VERSION;
+	const VERSION = "0.0.1";
 	const patchedFunctions = new Map();
 	const bcModSDK = bcModSDKRef.registerMod({
 	    name: "LSCG",

@@ -1,7 +1,7 @@
 import bcModSDKRef from "bondage-club-mod-sdk";
 import { ModuleCategory } from "Settings/setting_definitions";
 
-export const VERSION = LSCG_VERSION;
+export const VERSION = "0.0.1";
 
 type PatchHook = (args: any[], next: (args: any[]) => any) => any;
 interface IPatchedFunctionData {
