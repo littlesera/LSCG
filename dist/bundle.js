@@ -328,6 +328,7 @@ var LSCG = (function (exports) {
 	        }, ModuleCategory.Hypno);
 	        // Set Trigger
 	        let wordLength = commonWords.length;
+	        Player.ClubGames.Hypno = Player.OnlineSettings.ClubGames.Hypno || {};
 	        if (!Player.ClubGames.Hypno.trigger) {
 	            Player.ClubGames.Hypno.trigger = commonWords[getRandomInt(wordLength)];
 	            settingsSave();
@@ -546,7 +547,7 @@ var LSCG = (function (exports) {
 	            return next(args);
 	        }, ModuleCategory.Collar);
 	        this.eventInterval = setInterval(this.ChokeEvent, this.chokeEventTimer);
-	        Player.ClubGames.ChokeCollar.chokeLevel = Player.OnlineSettings.ClubGames.ChokeCollar.chokeLevel || 0;
+	        Player.ClubGames.ChokeCollar = Player.OnlineSettings.ClubGames.ChokeCollar || { chokeLevel: 0 };
 	        settingsSave();
 	        if (Player.ClubGames.ChokeCollar.chokeLevel > 2) {
 	            this.setChokeTimeout(this.DecreaseCollarChoke, this.chokeTimer);
