@@ -1,6 +1,6 @@
 {
-  "name": "club-games",
-  "description": "Club Games",
+  "name": "ls-club-games",
+  "description": "Little Sera's Club Games",
   "version": "1.0.0",
   "main": "dist/bundle.js",
   "scripts": {
