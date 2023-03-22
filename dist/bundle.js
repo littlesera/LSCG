@@ -107,6 +107,7 @@ var LSCG = (function (exports) {
 	        var sender = getCharacter(data.Sender);
 	        if (data.Type == "Chat")
 	            callback(data, sender, data.Content, data.Dictionary);
+	        next(args);
 	    }, module);
 	}
 	function OnAction(priority, module, callback) {
@@ -115,6 +116,7 @@ var LSCG = (function (exports) {
 	        var sender = getCharacter(data.Sender);
 	        if (data.Type == "Action" || data.Type == "Emote")
 	            callback(data, sender, data.Content, data.Dictionary);
+	        next(args);
 	    }, module);
 	}
 	function OnActivity(priority, module, callback) {
@@ -123,6 +125,7 @@ var LSCG = (function (exports) {
 	        var sender = getCharacter(data.Sender);
 	        if (data.Type == "Activity")
 	            callback(data, sender, data.Content, data.Dictionary);
+	        next(args);
 	    }, module);
 	}
 	function initPatchableFunction(target) {
