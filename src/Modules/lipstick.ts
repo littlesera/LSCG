@@ -7,6 +7,7 @@ export class LipstickModule extends BaseModule {
         OnActivity(100, ModuleCategory.Lipstick, (data, sender, msg, metadata) => {
             let target = data.Dictionary.find((d: any) => d.Tag == "TargetCharacter");
             if (!!target && 
+                !!sender &&
                 target.MemberNumber == Player.MemberNumber) {
                     if (this.wearingMask())
                         return;
@@ -51,7 +52,7 @@ export class LipstickModule extends BaseModule {
         removeAllHooksByModule(ModuleCategory.Lipstick);
     }
 
-    getKisserLipColor(sender: PlayerCharacter): ItemColor | undefined {
+    getKisserLipColor(sender: Character): ItemColor | undefined {
         try {
             var mouth = InventoryGet(sender, "Mouth");
             if (!!mouth && mouth.Color && mouth.Color != "Default")
@@ -133,7 +134,7 @@ export class LipstickModule extends BaseModule {
         ChatRoomCharacterUpdate(Player);
     }
     
-    AddKissMark(sender: PlayerCharacter, location: string) {
+    AddKissMark(sender: Character, location: string) {
         var color = this.getKisserLipColor(sender);
         if (color == "Default")
             return; // No lipstick
