@@ -77,7 +77,7 @@ export class CollarModule extends BaseModule {
 
         this.eventInterval = setInterval(this.ChokeEvent, this.chokeEventTimer);
 
-        Player.ClubGames.ChokeCollar.chokeLevel = Player.OnlineSettings.ClubGames.ChokeCollar.chokeLevel || 0;
+        Player.ClubGames.ChokeCollar = Player.OnlineSettings.ClubGames.ChokeCollar || {chokeLevel: 0};
         settingsSave();
 
         if (Player.ClubGames.ChokeCollar.chokeLevel > 2) {

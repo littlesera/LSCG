@@ -81,6 +81,7 @@ export class HypnoModule extends BaseModule {
 
         // Set Trigger
         let wordLength: number = commonWords.length;
+        Player.ClubGames.Hypno = Player.OnlineSettings.ClubGames.Hypno || {};
         if (!Player.ClubGames.Hypno.trigger) {
             Player.ClubGames.Hypno.trigger = commonWords[getRandomInt(wordLength)];
             settingsSave();
