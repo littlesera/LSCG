@@ -1,20 +1,6 @@
 import { bcModSDK, settingsSave, parseMsgWords, SendAction, OnChat, getRandomInt } from './utils';
 
-const ChokeCollar_Version = '0.0.1';
-
-const SDK = bcModSDK.registerMod({
-    name: 'ChokeCollar',
-    fullName: 'ChokeCollar',
-    version: ChokeCollar_Version
-});
-
 loadCollarSettings();
-
-if(Player.ChokeCollar != null){
-    console.log("Choke Collar loaded");
-}
-
-window.ChokeCollar_Version = ChokeCollar_Version;
 
 CommandCombine([
     {
@@ -35,12 +21,12 @@ CommandCombine([
     }
 ])
 
-OnChat(600, "Choke Collar", (data, msg, sender, metadata) => {
+OnChat(600, (data, sender, msg, metadata) => {
     var lowerMsgWords = parseMsgWords(msg);
-    if (!!sender && allowedChokeMembers.indexOf(sender.MemberNumber) >= 0) {
-        if (lowerMsgWords.indexOf("tight") >= 0)
+    if (!!sender && allowedChokeMembers.indexOf(sender?.MemberNumber ?? 0) >= 0) {
+        if ((lowerMsgWords?.indexOf("tight") ?? -1) >= 0)
             IncreaseCollarChoke();
-        else if (lowerMsgWords.indexOf("loose") >= 0)
+        else if ((lowerMsgWords?.indexOf("loose") ?? -1) >= 0)
             DecreaseCollarChoke();
     }
 })
@@ -65,33 +51,33 @@ let passout2Timer = 15000;
 let passout3Timer = 10000;
 let eventInterval = setInterval(ChokeEvent, chokeEventTimer);
 
-Player.LittleSera.chokeLevel = Player.OnlineSettings.LittleSera.chokeLevel || 0;
+Player.ClubGames.ChokeCollar.chokeLevel = Player.OnlineSettings.ClubGames.ChokeCollar.chokeLevel || 0;
 settingsSave();
 
-if (Player.LittleSera.chokeLevel > 2) {
+if (Player.ClubGames.ChokeCollar.chokeLevel > 2) {
     setChokeTimeout(DecreaseCollarChoke, chokeTimer);
 }
 
-function setChokeTimeout(f, delay) {
+function setChokeTimeout(f: TimerHandler, delay: number | undefined) {
     clearTimeout(chokeTimeout);
     chokeTimeout = setTimeout(f, delay);
 }
 
 // event on room join
-SDK.hookFunction("ChatRoomSync", 4, (args, next) => {
+bcModSDK.hookFunction("ChatRoomSync", 4, (args, next) => {
     next(args);
     ActivateChokeEvent();
 });
 
-SDK.hookFunction('ServerSend', 4, (args, next) => {
+bcModSDK.hookFunction('ServerSend', 4, (args, next) => {
     // Prevent speech at choke level 4
     if (args[0] == "ChatRoomChat" && args[1].Type == "Chat"){
-        if (Player.LittleSera.chokeLevel >= 4) {
+        if (Player.ClubGames.ChokeCollar.chokeLevel >= 4) {
             SendAction("%NAME%'s mouth moves silently.");
             return null;
         }
-        else if (Player.LittleSera.chokeLevel > 1) {
-            args[1].Content = SpeechGarbleByGagLevel((Player.LittleSera.chokeLevel-1)**2, args[1].Content);
+        else if (Player.ClubGames.ChokeCollar.chokeLevel > 1) {
+            args[1].Content = SpeechGarbleByGagLevel((Player.ClubGames.ChokeCollar.chokeLevel-1)**2, args[1].Content);
             return next(args);
         }
         else
@@ -101,32 +87,32 @@ SDK.hookFunction('ServerSend', 4, (args, next) => {
         return next(args);
 });
 
-SDK.hookFunction("Player.HasTints", 5, (args, next) => {
-    if (Player.LittleSera.chokeLevel > 2) return true;
+bcModSDK.hookFunction("Player.HasTints", 5, (args, next) => {
+    if (Player.ClubGames.ChokeCollar.chokeLevel > 2) return true;
     return next(args);
 });
 
-SDK.hookFunction("Player.GetTints", 5, (args, next) => {
-    if (Player.LittleSera.chokeLevel == 3) return [{r: 0, g: 0, b: 0, a: 0.2}];
-    else if (Player.LittleSera.chokeLevel == 4) return [{r: 0, g: 0, b: 0, a: 0.5}];
+bcModSDK.hookFunction("Player.GetTints", 5, (args, next) => {
+    if (Player.ClubGames.ChokeCollar.chokeLevel == 3) return [{r: 0, g: 0, b: 0, a: 0.2}];
+    else if (Player.ClubGames.ChokeCollar.chokeLevel == 4) return [{r: 0, g: 0, b: 0, a: 0.5}];
     return next(args);
 });
     
-SDK.hookFunction("Player.GetBlurLevel", 5, (args, next) => {
-    if (Player.LittleSera.chokeLevel == 3) return 2;
-    if (Player.LittleSera.chokeLevel == 4) return 6;
+bcModSDK.hookFunction("Player.GetBlurLevel", 5, (args, next) => {
+    if (Player.ClubGames.ChokeCollar.chokeLevel == 3) return 2;
+    if (Player.ClubGames.ChokeCollar.chokeLevel == 4) return 6;
     return next(args);
 });
 
 function IncreaseCollarChoke() {
-    if (Player.LittleSera.chokeLevel == 4)
+    if (Player.ClubGames.ChokeCollar.chokeLevel == 4)
         return;
-    Player.LittleSera.chokeLevel++;
+    Player.ClubGames.ChokeCollar.chokeLevel++;
     AudioPlaySoundEffect("HydraulicLock");
     IncreaseArousal();
-    if (Player.LittleSera.chokeLevel < 4) {
+    if (Player.ClubGames.ChokeCollar.chokeLevel < 4) {
         CharacterSetFacialExpression(Player, "Eyebrows", "Soft");
-        switch (Player.LittleSera.chokeLevel) {
+        switch (Player.ClubGames.ChokeCollar.chokeLevel) {
             case 1:
                 clearTimeout(chokeTimeout);
                 SendAction("%NAME%'s eyes flutter as her collar starts to tighten around her neck with a quiet hiss.");
@@ -149,8 +135,8 @@ function IncreaseCollarChoke() {
                 break;
         }
     }
-    else if (Player.LittleSera.chokeLevel >= 4) {
-        Player.LittleSera.chokeLevel = 4;
+    else if (Player.ClubGames.ChokeCollar.chokeLevel >= 4) {
+        Player.ClubGames.ChokeCollar.chokeLevel = 4;
         StartPassout();
     }
 
@@ -158,17 +144,17 @@ function IncreaseCollarChoke() {
 }
 
 function DecreaseCollarChoke() {
-    if (Player.LittleSera.chokeLevel <= 0) {
-        Player.LittleSera.chokeLevel = 0;
+    if (Player.ClubGames.ChokeCollar.chokeLevel <= 0) {
+        Player.ClubGames.ChokeCollar.chokeLevel = 0;
         return;
     }
 
     AudioPlaySoundEffect("Deflation");
-    Player.LittleSera.chokeLevel--;
-    if (Player.LittleSera.chokeLevel > 0)
+    Player.ClubGames.ChokeCollar.chokeLevel--;
+    if (Player.ClubGames.ChokeCollar.chokeLevel > 0)
         setChokeTimeout(DecreaseCollarChoke, chokeTimer);
 
-    switch (Player.LittleSera.chokeLevel) {
+    switch (Player.ClubGames.ChokeCollar.chokeLevel) {
         case 3:
             setChokeTimeout(DecreaseCollarChoke, chokeTimer);
             SendAction("%NAME% chokes and gasps desperately as her collar slowly releases some pressure.");
@@ -200,7 +186,7 @@ function DecreaseCollarChoke() {
 }
 
 function ResetCollarChoke() {
-    Player.LittleSera.chokeLevel = 0;
+    Player.ClubGames.ChokeCollar.chokeLevel = 0;
     clearTimeout(chokeTimeout);
     settingsSave();
 }
@@ -248,11 +234,11 @@ function Passout3() {
 
 function ChokeEvent() {
     // only activate 1/4 times triggered unless at high level
-    if (Player.LittleSera.chokeLevel > 2)
+    if (Player.ClubGames.ChokeCollar.chokeLevel > 2)
         ActivateChokeEvent();
-    else if (Player.LittleSera.chokeLevel == 2 && getRandomInt(8) == 0)
+    else if (Player.ClubGames.ChokeCollar.chokeLevel == 2 && getRandomInt(8) == 0)
         ActivateChokeEvent();
-    else if (Player.LittleSera.chokeLevel == 1 && getRandomInt(15) == 0)
+    else if (Player.ClubGames.ChokeCollar.chokeLevel == 1 && getRandomInt(15) == 0)
         ActivateChokeEvent();
 }
 
@@ -277,7 +263,7 @@ function ActivateChokeEvent() {
             "%NAME%'s eyes have trouble focusing, as she chokes and gets lightheaded."
         ]
     }
-    switch (Player.LittleSera.chokeLevel) {
+    switch (Player.ClubGames.ChokeCollar.chokeLevel) {
         case 1:
             SendAction(ChokeEvents.low[getRandomInt(ChokeEvents.low.length)]);
             break;
@@ -293,7 +279,5 @@ function ActivateChokeEvent() {
 }
 
 function IncreaseArousal() {
-    ActivitySetArousal(Player, Math.min(99, Player.ArousalSettings.Progress + 10));
-    Player.BCT.splitOrgasmArousal.arousalProgress = Math.min(Player.BCT.splitOrgasmArousal.arousalProgress + 25, 100);
-    BCT_API?.ActivityChatRoomBCTArousalSync(Player);
+    ActivitySetArousal(Player, Math.min(99, Player.ArousalSettings?.Progress ?? 0 + 10));
 }

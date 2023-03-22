@@ -1,8 +1,8 @@
 import { OnActivity, SendAction, getRandomInt } from "./utils";
 import { hypnoActivated } from "./hypno";
 
-OnActivity(100, "Little Sera Boops", (data, msg, sender, metadata) => {
-    let target = data.Dictionary.find(d => d.Tag == "TargetCharacter");
+OnActivity(100, (data, sender, msg, metadata) => {
+    let target = data.Dictionary.find((d: any) => d.Tag == "TargetCharacter");
     if (!!target && 
         target.MemberNumber == Player.MemberNumber && 
         data.Content == "ChatOther-ItemNose-Pet" && 
@@ -45,13 +45,15 @@ let boopDecreaseLoop = setInterval(() => {
         boops--;
 }, 5000);
 
-function BoopReact(booperId) {
-    if (boopShutdown)
+function BoopReact(booperId: number | undefined) {
+    if (boopShutdown || !booperId)
         return;
 
-    var booper = ChatRoomCharacter.find(c => c.MemberNumber == booperId);
-    if (booper)
-        boops++;
+    let booper = ChatRoomCharacter.find(c => c.MemberNumber == booperId);
+    if (!booper)
+        return;
+
+    boops++;
     
     if (boops >= 5)
         BigProtestBoopReact(booper);            
@@ -66,7 +68,7 @@ function NormalBoopReact() {
     SendAction(normalBoopReactions[getRandomInt(normalBoopReactions.length)]);
 }
 
-function ProtestBoopReact(booper) {
+function ProtestBoopReact(booper: Character) {
     CharacterSetFacialExpression(Player, "Blush", "Medium");
     CharacterSetFacialExpression(Player, "Eyes", "Daydream");
 
@@ -76,7 +78,7 @@ function ProtestBoopReact(booper) {
         SendAction(protestBoopReactions[getRandomInt(protestBoopReactions.length)], booper.Nickname);
 }
 
-function BigProtestBoopReact(booper) {
+function BigProtestBoopReact(booper: Character) {
     CharacterSetFacialExpression(Player, "Blush", "High");
     CharacterSetFacialExpression(Player, "Eyes", "Dizzy");
     SendAction(bigProtestBoopReactions[getRandomInt(bigProtestBoopReactions.length)]);
