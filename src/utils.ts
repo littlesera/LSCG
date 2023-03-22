@@ -17,8 +17,8 @@ interface IPatchedFunctionData {
 const patchedFunctions: Map<string, IPatchedFunctionData> = new Map();
 
 export const bcModSDK = bcModSDKRef.registerMod({
-	name: "CG",
-	fullName: "Club Games",
+	name: "LSCG",
+	fullName: "Little Sera's Club Games",
 	version: "0.0.1",
 	repository: "https://github.com/littlesera/sera"
 });

@@ -69,8 +69,8 @@ var LSCG = (function (exports) {
 	const VERSION = LSCG_VERSION;
 	const patchedFunctions = new Map();
 	const bcModSDK = bcModSDKRef.registerMod({
-	    name: "CG",
-	    fullName: "Club Games",
+	    name: "LSCG",
+	    fullName: "Little Sera's Club Games",
 	    version: "0.0.1",
 	    repository: "https://github.com/littlesera/sera"
 	});
