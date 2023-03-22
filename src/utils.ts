@@ -50,27 +50,34 @@ export function parseMsgWords(msg: string): RegExpMatchArray | null {
     return lowerMsgWords;
 }
 
-export function OnChat(priority: any, module: ModuleCategory, callback: (data: any, sender: PlayerCharacter, msg: string, metadata: any) => void) {
+export function getCharacter(memberNumber: number) {
+	return ChatRoomCharacter.find(c => c.MemberNumber == memberNumber) ?? null;
+}
+
+export function OnChat(priority: any, module: ModuleCategory, callback: (data: any, sender: Character | null, msg: string, metadata: any) => void) {
     hookFunction("ChatRoomMessage", priority, (args, next) => {
         var data = args[0];
+		var sender = getCharacter(data.Sender);
         if (data.Type == "Chat")
-            callback(data, args[1], args[2], args[3]);
+            callback(data, sender, data.Content, data.Dictionary);
     }, module);
 }
 
-export function OnAction(priority: any, module: ModuleCategory, callback: (data: any, sender: PlayerCharacter, msg: string, metadata: any) => void) {
+export function OnAction(priority: any, module: ModuleCategory, callback: (data: any, sender: Character | null, msg: string, metadata: any) => void) {
     hookFunction("ChatRoomMessage", priority, (args, next) => {
         var data = args[0];
+		var sender = getCharacter(data.Sender);
         if (data.Type == "Action" || data.Type == "Emote")
-            callback(data, args[1], args[2], args[3]);
+			callback(data, sender, data.Content, data.Dictionary);
     }, module);
 }
 
-export function OnActivity(priority: any, module: ModuleCategory, callback: (data: any, sender: PlayerCharacter, msg: string, metadata: any) => void) {
+export function OnActivity(priority: any, module: ModuleCategory, callback: (data: any, sender: Character | null, msg: string, metadata: any) => void) {
     hookFunction("ChatRoomMessage", priority, (args, next) => {
         var data = args[0];
+		var sender = getCharacter(data.Sender);
         if (data.Type == "Activity")
-            callback(data, args[1], args[2], args[3]);
+			callback(data, sender, data.Content, data.Dictionary);
     }, module);
 }
 

@@ -97,25 +97,32 @@ var LSCG = (function (exports) {
 	    var lowerMsgWords = lowerMsg.match(/\b(\w+)\b/g);
 	    return lowerMsgWords;
 	}
+	function getCharacter(memberNumber) {
+	    var _a;
+	    return (_a = ChatRoomCharacter.find(c => c.MemberNumber == memberNumber)) !== null && _a !== void 0 ? _a : null;
+	}
 	function OnChat(priority, module, callback) {
 	    hookFunction("ChatRoomMessage", priority, (args, next) => {
 	        var data = args[0];
+	        var sender = getCharacter(data.Sender);
 	        if (data.Type == "Chat")
-	            callback(data, args[1], args[2], args[3]);
+	            callback(data, sender, data.Content, data.Dictionary);
 	    }, module);
 	}
 	function OnAction(priority, module, callback) {
 	    hookFunction("ChatRoomMessage", priority, (args, next) => {
 	        var data = args[0];
+	        var sender = getCharacter(data.Sender);
 	        if (data.Type == "Action" || data.Type == "Emote")
-	            callback(data, args[1], args[2], args[3]);
+	            callback(data, sender, data.Content, data.Dictionary);
 	    }, module);
 	}
 	function OnActivity(priority, module, callback) {
 	    hookFunction("ChatRoomMessage", priority, (args, next) => {
 	        var data = args[0];
+	        var sender = getCharacter(data.Sender);
 	        if (data.Type == "Activity")
-	            callback(data, args[1], args[2], args[3]);
+	            callback(data, sender, data.Content, data.Dictionary);
 	    }, module);
 	}
 	function initPatchableFunction(target) {
