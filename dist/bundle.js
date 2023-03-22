@@ -290,14 +290,14 @@ var LSCG = (function (exports) {
 	            if (!hypnoActivated() &&
 	                !!Player.ClubGames.Hypno.trigger &&
 	                ((_a = lowerMsgWords === null || lowerMsgWords === void 0 ? void 0 : lowerMsgWords.indexOf(Player.ClubGames.Hypno.trigger)) !== null && _a !== void 0 ? _a : -1) >= 0 &&
-	                sender.MemberNumber != Player.MemberNumber)
+	                (sender === null || sender === void 0 ? void 0 : sender.MemberNumber) != Player.MemberNumber)
 	                this.StartTriggerWord();
 	        });
 	        OnAction(1000, ModuleCategory.Hypno, (data, sender, msg, metadata) => {
 	            var _a;
 	            var lowerMsgWords = parseMsgWords(msg);
 	            if (((_a = lowerMsgWords === null || lowerMsgWords === void 0 ? void 0 : lowerMsgWords.indexOf("snaps")) !== null && _a !== void 0 ? _a : -1) >= 0 &&
-	                sender.MemberNumber != Player.MemberNumber &&
+	                (sender === null || sender === void 0 ? void 0 : sender.MemberNumber) != Player.MemberNumber &&
 	                hypnoActivated()) {
 	                this.TriggerRestoreSnap();
 	            }
@@ -349,7 +349,7 @@ var LSCG = (function (exports) {
 	        }
 	        if (!!Player.ClubGames.Hypno.existingEye1Name)
 	            this.ResetEyes();
-	        this.lingerInterval = setInterval(this.CheckNewTrigger, 5000);
+	        this.lingerInterval = setInterval(() => this.CheckNewTrigger(), 5000);
 	    }
 	    unload() {
 	        removeAllHooksByModule(ModuleCategory.Hypno);
@@ -369,11 +369,11 @@ var LSCG = (function (exports) {
 	        CharacterSetFacialExpression(Player, "Eyes", "Dazed");
 	        CharacterSetFacialExpression(Player, "Fluids", "DroolLow");
 	        clearTimeout(this.triggerTimeout);
-	        this.triggerTimeout = setTimeout(this.TriggerRestoreTimeout, this.triggerTimer);
+	        this.triggerTimeout = setTimeout(() => this.TriggerRestoreTimeout(), this.triggerTimer);
 	        clearInterval(this.lingerInterval);
-	        this.lingerInterval = setInterval(this.CheckNewTrigger, 1000);
+	        this.lingerInterval = setInterval(() => this.CheckNewTrigger(), 1000);
 	        clearInterval(this.hornyTimeout);
-	        this.hornyTimeout = setInterval(this.HypnoHorny, this.triggerTimer / 100);
+	        this.hornyTimeout = setInterval(() => this.HypnoHorny(), this.triggerTimer / 100);
 	    }
 	    SetEyes() {
 	        var _a, _b, _c, _d;
@@ -556,7 +556,7 @@ var LSCG = (function (exports) {
 	                return 6;
 	            return next(args);
 	        }, ModuleCategory.Collar);
-	        this.eventInterval = setInterval(this.ChokeEvent, this.chokeEventTimer);
+	        this.eventInterval = setInterval(() => this.ChokeEvent(), this.chokeEventTimer);
 	        Player.ClubGames.ChokeCollar = Player.OnlineSettings.ClubGames.ChokeCollar || { chokeLevel: 0 };
 	        settingsSave();
 	        if (Player.ClubGames.ChokeCollar.chokeLevel > 2) {
@@ -568,7 +568,10 @@ var LSCG = (function (exports) {
 	    }
 	    setChokeTimeout(f, delay) {
 	        clearTimeout(this.chokeTimeout);
-	        this.chokeTimeout = setTimeout(f, delay);
+	        if (typeof f === "string")
+	            this.chokeTimeout = setTimeout(f, delay);
+	        else
+	            this.chokeTimeout = setTimeout(() => f(), delay);
 	    }
 	    IncreaseCollarChoke() {
 	        if (Player.ClubGames.ChokeCollar.chokeLevel == 4)
