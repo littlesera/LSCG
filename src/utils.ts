@@ -1,4 +1,20 @@
 import bcModSDKRef from "bondage-club-mod-sdk";
+import { ModuleCategory } from "Settings/setting_definitions";
+
+export const VERSION = LSCG_VERSION;
+
+type PatchHook = (args: any[], next: (args: any[]) => any) => any;
+interface IPatchedFunctionData {
+	name: string;
+	hooks: {
+		hook: PatchHook;
+		priority: number;
+		module: ModuleCategory | null;
+		removeCallback: () => void;
+	}[];
+}
+
+const patchedFunctions: Map<string, IPatchedFunctionData> = new Map();
 
 export const bcModSDK = bcModSDKRef.registerMod({
 	name: "CG",
@@ -34,28 +50,85 @@ export function parseMsgWords(msg: string): RegExpMatchArray | null {
     return lowerMsgWords;
 }
 
-export function OnChat(priority: any, callback: (data: any, sender: PlayerCharacter, msg: string, metadata: any) => void) {
-    bcModSDK.hookFunction("ChatRoomMessage", priority, (args, next) => {
+export function OnChat(priority: any, module: ModuleCategory, callback: (data: any, sender: PlayerCharacter, msg: string, metadata: any) => void) {
+    hookFunction("ChatRoomMessage", priority, (args, next) => {
         var data = args[0];
         if (data.Type == "Chat")
             callback(data, args[1], args[2], args[3]);
-    });
+    }, module);
 }
 
-export function OnAction(priority: any, callback: (data: any, sender: PlayerCharacter, msg: string, metadata: any) => void) {
-    bcModSDK.hookFunction("ChatRoomMessage", priority, (args, next) => {
+export function OnAction(priority: any, module: ModuleCategory, callback: (data: any, sender: PlayerCharacter, msg: string, metadata: any) => void) {
+    hookFunction("ChatRoomMessage", priority, (args, next) => {
         var data = args[0];
         if (data.Type == "Action" || data.Type == "Emote")
             callback(data, args[1], args[2], args[3]);
-    });
+    }, module);
 }
 
-export function OnActivity(priority: any, callback: (data: any, sender: PlayerCharacter, msg: string, metadata: any) => void) {
-    bcModSDK.hookFunction("ChatRoomMessage", priority, (args, next) => {
+export function OnActivity(priority: any, module: ModuleCategory, callback: (data: any, sender: PlayerCharacter, msg: string, metadata: any) => void) {
+    hookFunction("ChatRoomMessage", priority, (args, next) => {
         var data = args[0];
         if (data.Type == "Activity")
             callback(data, args[1], args[2], args[3]);
-    });
+    }, module);
+}
+
+function initPatchableFunction(target: string): IPatchedFunctionData {
+	let result = patchedFunctions.get(target);
+	if (!result) {
+		result = {
+			name: target,
+			hooks: []
+		};
+		patchedFunctions.set(target, result);
+	}
+	return result;
+}
+
+export function hookFunction(target: string, priority: number, hook: PatchHook, module: ModuleCategory | null = null): void {
+	const data = initPatchableFunction(target);
+
+	if (data.hooks.some(h => h.hook === hook)) {
+		console.error(`BCX: Duplicate hook for "${target}"`, hook);
+		return;
+	}
+
+	const removeCallback = bcModSDK.hookFunction(target, priority, hook);
+
+	data.hooks.push({
+		hook,
+		priority,
+		module,
+		removeCallback
+	});
+	data.hooks.sort((a, b) => b.priority - a.priority);
+}
+
+export function removeHooksByModule(target: string, module: ModuleCategory): boolean {
+	const data = initPatchableFunction(target);
+
+	for (let i = data.hooks.length - 1; i >= 0; i--) {
+		if (data.hooks[i].module === module) {
+			data.hooks[i].removeCallback();
+			data.hooks.splice(i, 1);
+		}
+	}
+
+	return true;
+}
+
+export function removeAllHooksByModule(module: ModuleCategory): boolean {
+	for (const data of patchedFunctions.values()) {
+		for (let i = data.hooks.length - 1; i >= 0; i--) {
+			if (data.hooks[i].module === module) {
+				data.hooks[i].removeCallback();
+				data.hooks.splice(i, 1);
+			}
+		}
+	}
+
+	return true;
 }
 
 export function SendAction(action: string, senderName: string = '') {
@@ -89,6 +162,7 @@ export function settingsSave() {
     window.ServerAccountUpdate.QueueData({OnlineSettings: Player.OnlineSettings})
 }
 
-await waitFor(() => ServerSocket && ServerIsConnected);	
-await waitFor(() => !!Player?.AccountName);
-Player.ClubGames = Player.OnlineSettings.ClubGames || {};
+/** Checks if the `obj` is an object (not null, not array) */
+export function isObject(obj: unknown): obj is Record<string, any> {
+	return !!obj && typeof obj === "object" && !Array.isArray(obj);
+}

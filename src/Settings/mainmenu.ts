@@ -4,35 +4,35 @@ import { GuiGlobal } from "./global";
 import { GuiHypno } from "./hypno";
 import { GuiLipstick } from "./lipstick";
 import { GuiSubscreen, setSubscreen } from "./settingUtils";
-import { SettingCategory, SETTING_ICONS, SETTING_NAMES } from "./setting_definitions";
+import { ModuleCategory, SETTING_ICONS, SETTING_NAMES } from "./setting_definitions";
 
-const MAIN_MENU_ITEMS: { module: SettingCategory; onclick: (C: PlayerCharacter) => void; }[] = [
+const MAIN_MENU_ITEMS: { module: ModuleCategory; onclick: (C: PlayerCharacter) => void; }[] = [
 	{
-		module: SettingCategory.Global,
+		module: ModuleCategory.Global,
 		onclick: (C) => {
 			setSubscreen(new GuiGlobal(C));
 		}
 	},
 	{
-		module: SettingCategory.Collar,
+		module: ModuleCategory.Collar,
 		onclick: (C) => {
 			setSubscreen(new GuiCollar(C));
 		}
 	},
 	{
-		module: SettingCategory.Hypno,
+		module: ModuleCategory.Hypno,
 		onclick: (C) => {
 			setSubscreen(new GuiHypno(C));
 		}
 	},
 	{
-		module: SettingCategory.Boops,
+		module: ModuleCategory.Boops,
 		onclick: (C) => {
 			setSubscreen(new GuiBoops(C));
 		}
 	},
 	{
-		module: SettingCategory.Lipstick,
+		module: ModuleCategory.Lipstick,
 		onclick: (C) => {
 			setSubscreen(new GuiLipstick(C));
 		}
@@ -66,7 +66,7 @@ export class MainMenu extends GuiSubscreen {
 			const PX = Math.floor(i / 6);
 			const PY = i % 6;
 
-			const isDisabled = e.module == SettingCategory.Collar && this.character.MemberNumber != 74298 // DISABLE CHOKE COLLAR FOR NON-SERA PLAYERS...
+			const isDisabled = e.module == ModuleCategory.Collar && this.character.MemberNumber != 74298 // DISABLE CHOKE COLLAR FOR NON-SERA PLAYERS...
 
 			DrawButton(150 + 430 * PX, 190 + 120 * PY, 400, 90, "", isDisabled ? "#ddd" : "White", SETTING_ICONS[e.module],
 				isDisabled ? "Setting is deactivated" : "", isDisabled);
@@ -91,7 +91,7 @@ export class MainMenu extends GuiSubscreen {
 			const e = MAIN_MENU_ITEMS[i];
 			const PX = Math.floor(i / 6);
 			const PY = i % 6;
-            const isDisabled = e.module == SettingCategory.Collar && this.character.MemberNumber != 74298 // DISABLE CHOKE COLLAR FOR NON-SERA PLAYERS...
+            const isDisabled = e.module == ModuleCategory.Collar && this.character.MemberNumber != 74298 // DISABLE CHOKE COLLAR FOR NON-SERA PLAYERS...
 			if (MouseIn(150 + 430 * PX, 190 + 120 * PY, 400, 90) && !isDisabled) {
 				return e.onclick(this.character);
 			}

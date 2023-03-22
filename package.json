@@ -4,6 +4,8 @@
   "version": "1.0.0",
   "main": "dist/bundle.js",
   "scripts": {
+    "build": "rollup -c",
+    "dev": "rollup -c -w",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
