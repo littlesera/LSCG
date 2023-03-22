@@ -1,4 +1,4 @@
-import { hookFunction, isObject, VERSION } from './utils';
+import { hookFunction, isObject, settingsSave, VERSION } from './utils';
 import { init_modules, unload_modules } from 'modules';
 import './modules';
 
@@ -30,7 +30,12 @@ export function init() {
 	if (window.LSCG_Loaded)
 		return;
 	
+		// clear any old settings.
+	if (!!(<any>Player.OnlineSettings)?.LittleSera)
+		delete (<any>Player.OnlineSettings).LittleSera;
+
     Player.ClubGames = Player.OnlineSettings.ClubGames || {};
+	settingsSave();
 
 	if (!init_modules()) {
 		unload();
