@@ -75,7 +75,7 @@ export class CollarModule extends BaseModule {
             return next(args);
         }, ModuleCategory.Collar);
 
-        this.eventInterval = setInterval(this.ChokeEvent, this.chokeEventTimer);
+        this.eventInterval = setInterval(() => this.ChokeEvent(), this.chokeEventTimer);
 
         Player.ClubGames.ChokeCollar = Player.OnlineSettings.ClubGames.ChokeCollar || {chokeLevel: 0};
         settingsSave();
@@ -106,7 +106,10 @@ export class CollarModule extends BaseModule {
 
     setChokeTimeout(f: TimerHandler, delay: number | undefined) {
         clearTimeout(this.chokeTimeout);
-        this.chokeTimeout = setTimeout(f, delay);
+        if (typeof f === "string")
+            this.chokeTimeout = setTimeout(f, delay);
+        else
+            this.chokeTimeout = setTimeout(() => f(), delay);
     }
 
     IncreaseCollarChoke() {

@@ -30,14 +30,14 @@ export class HypnoModule extends BaseModule {
             if (!hypnoActivated() && 
                 !!Player.ClubGames.Hypno.trigger && 
                 (lowerMsgWords?.indexOf(Player.ClubGames.Hypno.trigger) ?? -1) >= 0 && 
-                sender.MemberNumber != Player.MemberNumber)
+                sender?.MemberNumber != Player.MemberNumber)
                 this.StartTriggerWord();
         });
         
         OnAction(1000, ModuleCategory.Hypno, (data, sender, msg, metadata) => {
             var lowerMsgWords = parseMsgWords(msg);
             if ((lowerMsgWords?.indexOf("snaps") ?? -1) >= 0 && 
-                sender.MemberNumber != Player.MemberNumber &&
+                sender?.MemberNumber != Player.MemberNumber &&
                 hypnoActivated()) {
                 this.TriggerRestoreSnap();
             }
@@ -93,7 +93,7 @@ export class HypnoModule extends BaseModule {
         if (!!Player.ClubGames.Hypno.existingEye1Name)
         this.ResetEyes();
 
-        this.lingerInterval = setInterval(this.CheckNewTrigger, 5000);
+        this.lingerInterval = setInterval(() => this.CheckNewTrigger(), 5000);
     }
 
     unload(): void {
@@ -132,13 +132,13 @@ export class HypnoModule extends BaseModule {
         CharacterSetFacialExpression(Player, "Fluids", "DroolLow");    
 
         clearTimeout(this.triggerTimeout);
-        this.triggerTimeout = setTimeout(this.TriggerRestoreTimeout, this.triggerTimer);
+        this.triggerTimeout = setTimeout(() => this.TriggerRestoreTimeout(), this.triggerTimer);
 
         clearInterval(this.lingerInterval);
-        this.lingerInterval = setInterval(this.CheckNewTrigger, 1000);
+        this.lingerInterval = setInterval(() => this.CheckNewTrigger(), 1000);
 
         clearInterval(this.hornyTimeout);
-        this.hornyTimeout = setInterval(this.HypnoHorny, this.triggerTimer / 100);
+        this.hornyTimeout = setInterval(() => this.HypnoHorny(), this.triggerTimer / 100);
     }
 
     SetEyes() {
