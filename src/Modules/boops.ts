@@ -15,7 +15,7 @@ export class BoopsModule extends BaseModule {
                 target.MemberNumber == Player.MemberNumber && 
                 data.Content == "ChatOther-ItemNose-Pet" && 
                 !hypnoActivated()) {
-                this.BoopReact(sender.MemberNumber);
+                this.BoopReact(sender?.MemberNumber);
             }
         });
 

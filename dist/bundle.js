@@ -777,7 +777,7 @@ var LSCG = (function (exports) {
 	                target.MemberNumber == Player.MemberNumber &&
 	                data.Content == "ChatOther-ItemNose-Pet" &&
 	                !hypnoActivated()) {
-	                this.BoopReact(sender.MemberNumber);
+	                this.BoopReact(sender === null || sender === void 0 ? void 0 : sender.MemberNumber);
 	            }
 	        });
 	        this.boopDecreaseLoop = setInterval(() => {
@@ -829,7 +829,7 @@ var LSCG = (function (exports) {
 	        OnActivity(100, ModuleCategory.Misc, (data, sender, msg, metadata) => {
 	            let target = data.Dictionary.find((d) => d.Tag == "TargetCharacter");
 	            if (!!target &&
-	                sender.MemberNumber == Player.MemberNumber &&
+	                (sender === null || sender === void 0 ? void 0 : sender.MemberNumber) == Player.MemberNumber &&
 	                data.Content == "ChatOther-ItemLegs-Sit" &&
 	                CharacterCanChangeToPose(Player, "Kneel")) {
 	                CharacterSetActivePose(Player, "Kneel");
@@ -846,6 +846,7 @@ var LSCG = (function (exports) {
 	        OnActivity(100, ModuleCategory.Lipstick, (data, sender, msg, metadata) => {
 	            let target = data.Dictionary.find((d) => d.Tag == "TargetCharacter");
 	            if (!!target &&
+	                !!sender &&
 	                target.MemberNumber == Player.MemberNumber) {
 	                if (this.wearingMask())
 	                    return;

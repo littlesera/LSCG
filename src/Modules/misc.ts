@@ -7,7 +7,7 @@ export class MiscModule extends BaseModule {
         OnActivity(100, ModuleCategory.Misc, (data, sender, msg, metadata) => {
             let target = data.Dictionary.find((d: any) => d.Tag == "TargetCharacter");
             if (!!target && 
-                sender.MemberNumber == Player.MemberNumber && 
+                sender?.MemberNumber == Player.MemberNumber && 
                 data.Content == "ChatOther-ItemLegs-Sit" &&
                 CharacterCanChangeToPose(Player, "Kneel")) {
                 CharacterSetActivePose(Player, "Kneel");
