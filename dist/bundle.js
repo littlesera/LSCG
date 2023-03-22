@@ -1042,9 +1042,14 @@ var LSCG = (function (exports) {
 	    init();
 	}
 	function init() {
+	    var _a;
 	    if (window.LSCG_Loaded)
 	        return;
+	    // clear any old settings.
+	    if (!!((_a = Player.OnlineSettings) === null || _a === void 0 ? void 0 : _a.LittleSera))
+	        delete Player.OnlineSettings.LittleSera;
 	    Player.ClubGames = Player.OnlineSettings.ClubGames || {};
+	    settingsSave();
 	    if (!init_modules()) {
 	        unload();
 	        return;
