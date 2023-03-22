@@ -1,40 +1,44 @@
-import { bcModSDK, settingsSave, parseMsgWords, SendAction, OnChat, getRandomInt } from './utils';
+import { BaseModule } from 'base';
+import { ModuleCategory } from 'Settings/setting_definitions';
+import { settingsSave, parseMsgWords, SendAction, OnChat, getRandomInt, hookFunction } from '../utils';
 
-loadCollarSettings();
+export class CollarModule extends BaseModule {
+    load(): void {
 
-CommandCombine([
-    {
-        Tag: 'tight',
-        Description: ": tighten collar",
+        CommandCombine([
+            {
+                Tag: 'tight',
+                Description: ": tighten collar",
 
-        Action: () => {
-            IncreaseCollarChoke();
-        }
-    },
-    {
-        Tag: 'loose',
-        Description: ": loosen collar",
+                Action: () => {
+                    IncreaseCollarChoke();
+                }
+            },
+            {
+                Tag: 'loose',
+                Description: ": loosen collar",
 
-        Action: () => {
-            DecreaseCollarChoke();
-        }
+                Action: () => {
+                    DecreaseCollarChoke();
+                }
+            }
+        ])
+
+        OnChat(600, ModuleCategory.Collar, (data, sender, msg, metadata) => {
+            var lowerMsgWords = parseMsgWords(msg);
+            if (!!sender && allowedChokeMembers.indexOf(sender?.MemberNumber ?? 0) >= 0) {
+                if ((lowerMsgWords?.indexOf("tight") ?? -1) >= 0)
+                    IncreaseCollarChoke();
+                else if ((lowerMsgWords?.indexOf("loose") ?? -1) >= 0)
+                    DecreaseCollarChoke();
+            }
+        })
     }
-])
+}
 
-OnChat(600, (data, sender, msg, metadata) => {
-    var lowerMsgWords = parseMsgWords(msg);
-    if (!!sender && allowedChokeMembers.indexOf(sender?.MemberNumber ?? 0) >= 0) {
-        if ((lowerMsgWords?.indexOf("tight") ?? -1) >= 0)
-            IncreaseCollarChoke();
-        else if ((lowerMsgWords?.indexOf("loose") ?? -1) >= 0)
-            DecreaseCollarChoke();
-    }
-})
+
 
 // *************** Functions *******************
-function loadCollarSettings() {
-    
-}
 
 // Choke Collar Code
 
@@ -64,12 +68,12 @@ function setChokeTimeout(f: TimerHandler, delay: number | undefined) {
 }
 
 // event on room join
-bcModSDK.hookFunction("ChatRoomSync", 4, (args, next) => {
+hookFunction("ChatRoomSync", 4, (args, next) => {
     next(args);
     ActivateChokeEvent();
 });
 
-bcModSDK.hookFunction('ServerSend', 4, (args, next) => {
+hookFunction('ServerSend', 4, (args, next) => {
     // Prevent speech at choke level 4
     if (args[0] == "ChatRoomChat" && args[1].Type == "Chat"){
         if (Player.ClubGames.ChokeCollar.chokeLevel >= 4) {
@@ -87,18 +91,18 @@ bcModSDK.hookFunction('ServerSend', 4, (args, next) => {
         return next(args);
 });
 
-bcModSDK.hookFunction("Player.HasTints", 5, (args, next) => {
+hookFunction("Player.HasTints", 5, (args, next) => {
     if (Player.ClubGames.ChokeCollar.chokeLevel > 2) return true;
     return next(args);
 });
 
-bcModSDK.hookFunction("Player.GetTints", 5, (args, next) => {
+hookFunction("Player.GetTints", 5, (args, next) => {
     if (Player.ClubGames.ChokeCollar.chokeLevel == 3) return [{r: 0, g: 0, b: 0, a: 0.2}];
     else if (Player.ClubGames.ChokeCollar.chokeLevel == 4) return [{r: 0, g: 0, b: 0, a: 0.5}];
     return next(args);
 });
     
-bcModSDK.hookFunction("Player.GetBlurLevel", 5, (args, next) => {
+hookFunction("Player.GetBlurLevel", 5, (args, next) => {
     if (Player.ClubGames.ChokeCollar.chokeLevel == 3) return 2;
     if (Player.ClubGames.ChokeCollar.chokeLevel == 4) return 6;
     return next(args);

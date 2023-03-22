@@ -1,24 +1,26 @@
-export enum SettingCategory {
+export enum ModuleCategory {
 	Global = 0,
 	Collar = 1,
 	Hypno = 2,
 	Boops = 3,
-	Lipstick = 4//,
-	//Misc = 99
+	Lipstick = 4,
+	Misc = 99
 }
 
-export const SETTING_NAMES: Record<SettingCategory, string> = {
-	[SettingCategory.Global]: "Global",
-	[SettingCategory.Collar]: "Choke Collar",
-	[SettingCategory.Hypno]: "Hypno",
-	[SettingCategory.Boops]: "Boops",
-	[SettingCategory.Lipstick]: "Lipstick"
+export const SETTING_NAMES: Record<ModuleCategory, string> = {
+    [ModuleCategory.Global]: "Global",
+    [ModuleCategory.Collar]: "Choke Collar",
+    [ModuleCategory.Hypno]: "Hypno",
+    [ModuleCategory.Boops]: "Boops",
+    [ModuleCategory.Lipstick]: "Lipstick",
+    [ModuleCategory.Misc]: "Miscellaneous"
 };
 
-export const SETTING_ICONS: Record<SettingCategory, string> = {
-	[SettingCategory.Global]: "Icons/General.png",
-	[SettingCategory.Collar]: "Icons/Restriction.png",
-	[SettingCategory.Hypno]: "Icons/Visibility.png",
-	[SettingCategory.Boops]: "Icons/Use.png",
-	[SettingCategory.Lipstick]: "Icons/Arousal.png"
+export const SETTING_ICONS: Record<ModuleCategory, string> = {
+    [ModuleCategory.Global]: "Icons/General.png",
+    [ModuleCategory.Collar]: "Icons/Restriction.png",
+    [ModuleCategory.Hypno]: "Icons/Visibility.png",
+    [ModuleCategory.Boops]: "Icons/Use.png",
+    [ModuleCategory.Lipstick]: "Icons/Arousal.png",
+    [ModuleCategory.Misc]: "Icons/ServiceBell.png"
 };
