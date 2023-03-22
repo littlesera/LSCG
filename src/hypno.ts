@@ -946,21 +946,7 @@ const commonWords = [
     "young"
 ];
 
-const HypnoScripts_Version = '0.0.1';
-
-const SDK = bcModSDK.registerMod({
-    name: 'HypnoScripts',
-    fullName: 'Hypno Scripts',
-    version: HypnoScripts_Version
-});
-
 loadHypnoSettings();
-
-if(Player.HypnoScripts != null){
-    console.log("Hypno Scripts loaded");
-}
-
-window.HypnoScripts_Version = HypnoScripts_Version;
 
 CommandCombine([
     {
@@ -983,26 +969,26 @@ CommandCombine([
     }
 ]);
 
-OnChat(1000, "Hypno Scripts OnChat", (data, msg, sender, metadata) => {
+OnChat(1000, (data, sender, msg, metadata) => {
     var lowerMsgWords = parseMsgWords(msg);
     if (!hypnoActivated() && 
-        !!Player.LittleSera.trigger && 
-        lowerMsgWords.indexOf(Player.LittleSera.trigger) >= 0 && 
+        !!Player.ClubGames.Hypno.trigger && 
+        (lowerMsgWords?.indexOf(Player.ClubGames.Hypno.trigger) ?? -1) >= 0 && 
         sender.MemberNumber != Player.MemberNumber)
         StartTriggerWord();
 });
 
-OnAction(1000, "Hypno Scripts OnAction", (data, msg, sender, metadata) => {
+OnAction(1000, (data, sender, msg, metadata) => {
     var lowerMsgWords = parseMsgWords(msg);
-    if (lowerMsgWords.indexOf("snaps") >= 0 && 
+    if ((lowerMsgWords?.indexOf("snaps") ?? -1) >= 0 && 
         sender.MemberNumber != Player.MemberNumber &&
         hypnoActivated()) {
         TriggerRestoreSnap();
     }
 });
 
-OnActivity(1000, "Hypno Scripts OnActivity", (data, msg, sender, metadata) => {
-    let target = data.Dictionary.find(d => d.Tag == "TargetCharacter");
+OnActivity(1000, (data, sender, msg, metadata) => {
+    let target = data.Dictionary.find((d: any) => d.Tag == "TargetCharacter");
     if (!!target && target.MemberNumber == Player.MemberNumber) {
         if (data.Content == "ChatOther-ItemNose-Pet" && triggerActivated)
             TriggerRestoreBoop();
@@ -1021,15 +1007,15 @@ export function hypnoActivated() {
 
 // Set Trigger
 let wordLength = commonWords.length;
-if (!Player.LittleSera.trigger) {
-    Player.LittleSera.trigger = commonWords[getRandomInt(wordLength)];
+if (!Player.ClubGames.Hypno.trigger) {
+    Player.ClubGames.Hypno.trigger = commonWords[getRandomInt(wordLength)];
     settingsSave();
 }
-if (!Player.LittleSera.activatedAt) {
-    Player.LittleSera.activatedAt = 0;
+if (!Player.ClubGames.Hypno.activatedAt) {
+    Player.ClubGames.Hypno.activatedAt = 0;
     settingsSave();
 }
-if (!!Player.LittleSera.existingEye1Name)
+if (!!Player.ClubGames.Hypno.existingEye1Name)
     ResetEyes();
 
 let triggerTimeout = 0;
@@ -1039,17 +1025,17 @@ let lingerInterval = setInterval(CheckNewTrigger, 5000); // check if need to rer
 let lingerTimer = 1800000; // 30min
 let hornyTimeout = 0;
 
-SDK.hookFunction("Player.HasTints", 4, (args, next) => {
+bcModSDK.hookFunction("Player.HasTints", 4, (args, next) => {
     if (triggerActivated) return true;
     return next(args);
 });
 
-SDK.hookFunction("Player.GetTints", 4, (args, next) => {
+bcModSDK.hookFunction("Player.GetTints", 4, (args, next) => {
     if (triggerActivated) return [{r: 148, g: 0, b: 211, a: 0.4}];
     return next(args);
 });
     
-SDK.hookFunction("Player.GetBlurLevel", 4, (args, next) => {
+bcModSDK.hookFunction("Player.GetBlurLevel", 4, (args, next) => {
     if (triggerActivated) return 3;
     return next(args);
 });
@@ -1062,7 +1048,7 @@ const hypnoBlockStrings = [
     "%NAME% quivers, patiently awaiting something to fill her empty head..."
 ];
 
-SDK.hookFunction('ServerSend', 5, (args, next) => {
+bcModSDK.hookFunction('ServerSend', 5, (args, next) => {
     // Prevent speech at choke level 4
     if (triggerActivated) {
         var type = args[0];
@@ -1080,8 +1066,8 @@ function StartTriggerWord() {
         return;
 
     triggerActivated = true;
-    if (Player.LittleSera.activatedAt == 0)
-        Player.LittleSera.activatedAt = new Date().getTime();
+    if (Player.ClubGames.Hypno.activatedAt == 0)
+        Player.ClubGames.Hypno.activatedAt = new Date().getTime();
     AudioPlaySoundEffect("SciFiEffect", 1);
     settingsSave();
     
@@ -1103,10 +1089,10 @@ function StartTriggerWord() {
 }
 
 function SetEyes() {
-    Player.LittleSera.existingEye1Name = InventoryGet(Player, "Eyes").Asset.Name;
-    Player.LittleSera.existingEye1Color = InventoryGet(Player, "Eyes").Color;
-    Player.LittleSera.existingEye2Name = InventoryGet(Player, "Eyes2").Asset.Name;
-    Player.LittleSera.existingEye2Color = InventoryGet(Player, "Eyes2").Color;
+    Player.ClubGames.Hypno.existingEye1Name = InventoryGet(Player, "Eyes")?.Asset.Name;
+    Player.ClubGames.Hypno.existingEye1Color = InventoryGet(Player, "Eyes")?.Color;
+    Player.ClubGames.Hypno.existingEye2Name = InventoryGet(Player, "Eyes2")?.Asset.Name;
+    Player.ClubGames.Hypno.existingEye2Color = InventoryGet(Player, "Eyes2")?.Color;
     settingsSave();
     EnforceEyes();
 }
@@ -1118,34 +1104,40 @@ function EnforceEyes() {
     var eyes1 = InventoryGet(Player, "Eyes");
     var eyes2 = InventoryGet(Player, "Eyes2");
 
-    eyes1.Asset = eyeAsset1;
-    eyes1.Color = "#A2A2A2";
-    
-    eyes2.Asset = eyeAsset2;
-    eyes2.Color = "#A2A2A2";
+    if (!!eyes1) {
+        eyes1.Asset = eyeAsset1 ?? <Asset>{};
+        eyes1.Color = "#A2A2A2";
+    }    
+    if (!!eyes2) {
+        eyes2.Asset = eyeAsset2  ?? <Asset>{};
+        eyes2.Color = "#A2A2A2";
+    }
 
     ChatRoomCharacterUpdate(Player);
 }
 
 function ResetEyes() {
-    var eyeAsset1 = AssetGet("Female3DCG", "Eyes", Player.LittleSera.existingEye1Name);
-    var eyeAsset2 = AssetGet("Female3DCG", "Eyes2", Player.LittleSera.existingEye2Name);
+    var eyeAsset1 = AssetGet("Female3DCG", "Eyes", Player.ClubGames.Hypno.existingEye1Name ?? "Eyes5");
+    var eyeAsset2 = AssetGet("Female3DCG", "Eyes2", Player.ClubGames.Hypno.existingEye2Name ?? "Eyes5");
 
     var eyes1 = InventoryGet(Player, "Eyes");
     var eyes2 = InventoryGet(Player, "Eyes2");
 
-    eyes1.Asset = eyeAsset1;
-    eyes1.Color = Player.LittleSera.existingEye1Color;
-    
-    eyes2.Asset = eyeAsset2;
-    eyes2.Color = Player.LittleSera.existingEye2Color;
+    if (!!eyes1) {
+        eyes1.Asset = eyeAsset1 ?? <Asset>{};
+        eyes1.Color = Player.ClubGames.Hypno.existingEye1Color;
+    }    
+    if (!!eyes2) {
+        eyes2.Asset = eyeAsset2  ?? <Asset>{};
+        eyes2.Color = Player.ClubGames.Hypno.existingEye2Color;
+    }
 
     ChatRoomCharacterUpdate(Player);
 
-    Player.LittleSera.existingEye1Name = null;
-    Player.LittleSera.existingEye1Color = null;
-    Player.LittleSera.existingEye2Name = null;
-    Player.LittleSera.existingEye2Color = null;
+    Player.ClubGames.Hypno.existingEye1Name = undefined;
+    Player.ClubGames.Hypno.existingEye1Color = undefined;
+    Player.ClubGames.Hypno.existingEye2Name = undefined;
+    Player.ClubGames.Hypno.existingEye2Color = undefined;
     settingsSave();
 }
 
@@ -1180,9 +1172,7 @@ function HypnoHorny() {
         CharacterSetFacialExpression(Player, "Eyebrows", "Lowered");
         CharacterSetFacialExpression(Player, "Eyes", "Dazed");
 
-        var progress = Math.min(99, Player.ArousalSettings.Progress + 5);
-        Player.BCT.splitOrgasmArousal.arousalProgress = Math.min(Player.BCT.splitOrgasmArousal.arousalProgress + 10, 100);
-        BCT_API?.ActivityChatRoomBCTArousalSync(Player);
+        var progress = Math.min(99, Player.ArousalSettings?.Progress ?? 0 + 5);
         ActivitySetArousal(Player, progress);
     }
 }
@@ -1190,14 +1180,14 @@ function HypnoHorny() {
 function CheckNewTrigger() {
     if (triggerActivated)
         return;
-    if (Player.LittleSera.activatedAt > 0 && new Date().getTime() - Player.LittleSera.activatedAt > lingerTimer)
+    if (Player.ClubGames.Hypno.activatedAt > 0 && new Date().getTime() - Player.ClubGames.Hypno.activatedAt > lingerTimer)
         RollTriggerWord();
 }
 
 function RollTriggerWord() {
 
     SendAction("%NAME% concentrates, breaking the hold the previous trigger word held over her.");
-    Player.LittleSera.trigger = commonWords[getRandomInt(commonWords.length)];
-    Player.LittleSera.activatedAt = 0;
+    Player.ClubGames.Hypno.trigger = commonWords[getRandomInt(commonWords.length)];
+    Player.ClubGames.Hypno.activatedAt = 0;
     settingsSave();
 }

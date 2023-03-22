@@ -1,57 +1,52 @@
-// Bondage Club Mod Development Kit (1.1.0)
-// For more info see: https://github.com/Jomshir98/bondage-club-mod-sdk
-/** @type {ModSDKGlobalAPI} */
-const bcModSDK=function(){const e="1.1.0";function o(e){alert("Mod ERROR:\n"+e);const o=new Error(e);throw console.error(o),o}const t=new TextEncoder;function n(e){return !!e&&"object"==typeof e&&!Array.isArray(e)}function r(e){const o=new Set;return e.filter((e=>!o.has(e)&&o.add(e)))}const i=new Map,a=new Set;function d(e){a.has(e)||(a.add(e),console.warn(e));}function s(e){const o=[],t=new Map,n=new Set;for(const r of p.values()){const i=r.patching.get(e.name);if(i){o.push(...i.hooks);for(const[o,a]of i.patches.entries())t.has(o)&&t.get(o)!==a&&d(`ModSDK: Mod '${r.name}' is patching function ${e.name} with same pattern that is already applied by different mod, but with different pattern:\nPattern:\n${o}\nPatch1:\n${t.get(o)||""}\nPatch2:\n${a}`),t.set(o,a),n.add(r.name);}}o.sort(((e,o)=>o.priority-e.priority));const r=function(e,o){if(0===o.size)return e;let t=e.toString().replaceAll("\r\n","\n");for(const[n,r]of o.entries())t.includes(n)||d(`ModSDK: Patching ${e.name}: Patch ${n} not applied`),t=t.replaceAll(n,r);return (0, eval)(`(${t})`)}(e.original,t);let i=function(o){var t,i;const a=null===(i=(t=m.errorReporterHooks).hookChainExit)||void 0===i?void 0:i.call(t,e.name,n),d=r.apply(this,o);return null==a||a(),d};for(let t=o.length-1;t>=0;t--){const n=o[t],r=i;i=function(o){var t,i;const a=null===(i=(t=m.errorReporterHooks).hookEnter)||void 0===i?void 0:i.call(t,e.name,n.mod),d=n.hook.apply(this,[o,e=>{if(1!==arguments.length||!Array.isArray(o))throw new Error(`Mod ${n.mod} failed to call next hook: Expected args to be array, got ${typeof e}`);return r.call(this,e)}]);return null==a||a(),d};}return {hooks:o,patches:t,patchesSources:n,enter:i,final:r}}function c(e,o=!1){let r=i.get(e);if(r)o&&(r.precomputed=s(r));else {let o=window;const a=e.split(".");for(let t=0;t<a.length-1;t++)if(o=o[a[t]],!n(o))throw new Error(`ModSDK: Function ${e} to be patched not found; ${a.slice(0,t+1).join(".")} is not object`);const d=o[a[a.length-1]];if("function"!=typeof d)throw new Error(`ModSDK: Function ${e} to be patched not found`);const c=function(e){let o=-1;for(const n of t.encode(e)){let e=255&(o^n);for(let o=0;o<8;o++)e=1&e?-306674912^e>>>1:e>>>1;o=o>>>8^e;}return ((-1^o)>>>0).toString(16).padStart(8,"0").toUpperCase()}(d.toString().replaceAll("\r\n","\n")),l={name:e,original:d,originalHash:c};r=Object.assign(Object.assign({},l),{precomputed:s(l),router:()=>{},context:o,contextProperty:a[a.length-1]}),r.router=function(e){return function(...o){return e.precomputed.enter.apply(this,[o])}}(r),i.set(e,r),o[r.contextProperty]=r.router;}return r}function l(){const e=new Set;for(const o of p.values())for(const t of o.patching.keys())e.add(t);for(const o of i.keys())e.add(o);for(const o of e)c(o,!0);}function f(){const e=new Map;for(const[o,t]of i)e.set(o,{name:o,original:t.original,originalHash:t.originalHash,sdkEntrypoint:t.router,currentEntrypoint:t.context[t.contextProperty],hookedByMods:r(t.precomputed.hooks.map((e=>e.mod))),patchedByMods:Array.from(t.precomputed.patchesSources)});return e}const p=new Map;function u(e){p.get(e.name)!==e&&o(`Failed to unload mod '${e.name}': Not registered`),p.delete(e.name),e.loaded=!1,l();}function g(e,t,r){"string"==typeof e&&"string"==typeof t&&(alert(`Mod SDK warning: Mod '${e}' is registering in a deprecated way.\nIt will work for now, but please inform author to update.`),e={name:e,fullName:e,version:t},t={allowReplace:!0===r}),e&&"object"==typeof e||o("Failed to register mod: Expected info object, got "+typeof e),"string"==typeof e.name&&e.name||o("Failed to register mod: Expected name to be non-empty string, got "+typeof e.name);let i=`'${e.name}'`;"string"==typeof e.fullName&&e.fullName||o(`Failed to register mod ${i}: Expected fullName to be non-empty string, got ${typeof e.fullName}`),i=`'${e.fullName} (${e.name})'`,"string"!=typeof e.version&&o(`Failed to register mod ${i}: Expected version to be string, got ${typeof e.version}`),e.repository||(e.repository=void 0),void 0!==e.repository&&"string"!=typeof e.repository&&o(`Failed to register mod ${i}: Expected repository to be undefined or string, got ${typeof e.version}`),null==t&&(t={}),t&&"object"==typeof t||o(`Failed to register mod ${i}: Expected options to be undefined or object, got ${typeof t}`);const a=!0===t.allowReplace,d=p.get(e.name);d&&(d.allowReplace&&a||o(`Refusing to load mod ${i}: it is already loaded and doesn't allow being replaced.\nWas the mod loaded multiple times?`),u(d));const s=e=>{"string"==typeof e&&e||o(`Mod ${i} failed to patch a function: Expected function name string, got ${typeof e}`);let t=g.patching.get(e);return t||(t={hooks:[],patches:new Map},g.patching.set(e,t)),t},f={unload:()=>u(g),hookFunction:(e,t,n)=>{g.loaded||o(`Mod ${i} attempted to call SDK function after being unloaded`);const r=s(e);"number"!=typeof t&&o(`Mod ${i} failed to hook function '${e}': Expected priority number, got ${typeof t}`),"function"!=typeof n&&o(`Mod ${i} failed to hook function '${e}': Expected hook function, got ${typeof n}`);const a={mod:g.name,priority:t,hook:n};return r.hooks.push(a),l(),()=>{const e=r.hooks.indexOf(a);e>=0&&(r.hooks.splice(e,1),l());}},patchFunction:(e,t)=>{g.loaded||o(`Mod ${i} attempted to call SDK function after being unloaded`);const r=s(e);n(t)||o(`Mod ${i} failed to patch function '${e}': Expected patches object, got ${typeof t}`);for(const[n,a]of Object.entries(t))"string"==typeof a?r.patches.set(n,a):null===a?r.patches.delete(n):o(`Mod ${i} failed to patch function '${e}': Invalid format of patch '${n}'`);l();},removePatches:e=>{g.loaded||o(`Mod ${i} attempted to call SDK function after being unloaded`);s(e).patches.clear(),l();},callOriginal:(e,t,n)=>(g.loaded||o(`Mod ${i} attempted to call SDK function after being unloaded`),"string"==typeof e&&e||o(`Mod ${i} failed to call a function: Expected function name string, got ${typeof e}`),Array.isArray(t)||o(`Mod ${i} failed to call a function: Expected args array, got ${typeof t}`),function(e,o,t=window){return c(e).original.apply(t,o)}(e,t,n)),getOriginalHash:e=>("string"==typeof e&&e||o(`Mod ${i} failed to get hash: Expected function name string, got ${typeof e}`),c(e).originalHash)},g={name:e.name,fullName:e.fullName,version:e.version,repository:e.repository,allowReplace:a,api:f,loaded:!0,patching:new Map};return p.set(e.name,g),Object.freeze(f)}function h(){const e=[];for(const o of p.values())e.push({name:o.name,fullName:o.fullName,version:o.version,repository:o.repository});return e}let m;const y=function(){if(void 0===window.bcModSdk)return window.bcModSdk=function(){const o={version:e,apiVersion:1,registerMod:g,getModsInfo:h,getPatchingInfo:f,errorReporterHooks:Object.seal({hookEnter:null,hookChainExit:null})};return m=o,Object.freeze(o)}();if(n(window.bcModSdk)||o("Failed to init Mod SDK: Name already in use"),1!==window.bcModSdk.apiVersion&&o(`Failed to init Mod SDK: Different version already loaded ('1.1.0' vs '${window.bcModSdk.version}')`),window.bcModSdk.version!==e&&(alert(`Mod SDK warning: Loading different but compatible versions ('1.1.0' vs '${window.bcModSdk.version}')\nOne of mods you are using is using an old version of SDK. It will work for now but please inform author to update`),window.bcModSdk.version.startsWith("1.0.")&&void 0===window.bcModSdk._shim10register)){const e=window.bcModSdk,o=Object.freeze(Object.assign(Object.assign({},e),{registerMod:(o,t,n)=>o&&"object"==typeof o&&"string"==typeof o.name&&"string"==typeof o.version?e.registerMod(o.name,o.version,"object"==typeof t&&!!t&&!0===t.allowReplace):e.registerMod(o,t,n),_shim10register:!0}));window.bcModSdk=o;}return window.bcModSdk}();return "undefined"!=typeof exports&&(Object.defineProperty(exports,"__esModule",{value:!0}),exports.default=y),y}();
+import bcModSDKRef from 'bondage-club-mod-sdk';
 
+const bcModSDK = bcModSDKRef.registerMod({
+    name: "CG",
+    fullName: "Club Games",
+    version: "0.0.1",
+    repository: "https://github.com/littlesera/sera"
+});
 //do not touch this
 async function waitFor(func, cancelFunc = () => false) {
     while (!func()) {
-        if (cancelFunc()) return false;
+        if (cancelFunc())
+            return false;
         await sleep(10);
     }
     return true;
 }
-
 function sleep(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
-
 function parseMsgWords(msg) {
     var lowerMsg = msg.toLowerCase();
-    var lowerMsgWords = lowerMsg.match(/\b(\w+)\b/g) || [];
-    if (!lowerMsgWords)
-        lowerMsgWords = [];
+    var lowerMsgWords = lowerMsg.match(/\b(\w+)\b/g);
     return lowerMsgWords;
 }
-
-function OnChat(priority, description, callback) {
-    window.ChatRoomRegisterMessageHandler({ Priority: priority, Description: description, Callback: (data, sender, msg, metadata) => {
-        if (data.Type == "Chat") {
-            callback(data, msg, sender, metadata);
-        }
-    }});
+function OnChat(priority, callback) {
+    bcModSDK.hookFunction("ChatRoomMessage", priority, (args, next) => {
+        var data = args[0];
+        if (data.Type == "Chat")
+            callback(data, args[1], args[2], args[3]);
+    });
 }
-
-function OnAction(priority, description, callback) {
-    window.ChatRoomRegisterMessageHandler({ Priority: priority, Description: description, Callback: (data, sender, msg, metadata) => {
-        if (data.Type == "Action" || data.Type == "Emote") {
-            callback(data, msg, sender, metadata);
-        }
-    }});
+function OnAction(priority, callback) {
+    bcModSDK.hookFunction("ChatRoomMessage", priority, (args, next) => {
+        var data = args[0];
+        if (data.Type == "Action" || data.Type == "Emote")
+            callback(data, args[1], args[2], args[3]);
+    });
 }
-
-function OnActivity(priority, description, callback) {
-    window.ChatRoomRegisterMessageHandler({ Priority: priority, Description: description, Callback: (data, sender, msg, metadata) => {
-        if (data.Type == "Activity") {
-            callback(data, msg, sender, metadata);
-        }
-    }});
+function OnActivity(priority, callback) {
+    bcModSDK.hookFunction("ChatRoomMessage", priority, (args, next) => {
+        var data = args[0];
+        if (data.Type == "Activity")
+            callback(data, args[1], args[2], args[3]);
+    });
 }
-
 function SendAction(action, senderName = '') {
-    ServerSend("ChatRoomChat", {Content: "Beep", Type: "Action", Dictionary: [{Tag: "Beep", Text: replace_template(action, senderName)}]});
+    ServerSend("ChatRoomChat", { Content: "Beep", Type: "Action", Dictionary: [{ Tag: "Beep", Text: replace_template(action, senderName) }] });
 }
-
 function replace_template(text, source_name = '') {
     let result = text;
     // result = result.replaceAll("%POSSESSIVE%", Player.BCAR.bcarSettings.genderDefault.capPossessive.toLocaleLowerCase())
@@ -62,22 +57,18 @@ function replace_template(text, source_name = '') {
     // result = result.replaceAll("%CAP_INTENSIVE%", Player.BCAR.bcarSettings.genderDefault.capIntensive)
     result = result.replaceAll("%NAME%", CharacterNickname(Player)); //Does this works to print "Lilly"? -- it should, yes
     result = result.replaceAll("%OPP_NAME%", source_name); // finally we can use the source name to make the substitution
-
-    return result
+    return result;
 }
-
 function getRandomInt(max) {
     return Math.floor(Math.random() * max);
 }
-
 function settingsSave() {
-    Player.OnlineSettings.LittleSera = Player.LittleSera;
-    window.ServerAccountUpdate.QueueData({OnlineSettings: window.Player.OnlineSettings});
+    Player.OnlineSettings.ClubGames = Player.ClubGames;
+    window.ServerAccountUpdate.QueueData({ OnlineSettings: Player.OnlineSettings });
 }
-
-await waitFor(() => ServerSocket && ServerIsConnected);	
-await waitFor(() => !!Player?.AccountName);
-Player.LittleSera = Player.OnlineSettings.LittleSera || {};
+await waitFor(() => ServerSocket && ServerIsConnected);
+await waitFor(() => !!(Player === null || Player === void 0 ? void 0 : Player.AccountName));
+Player.ClubGames = Player.OnlineSettings.ClubGames || {};
 
 const commonWords = [
     "able",
@@ -1023,26 +1014,10 @@ const commonWords = [
     "you",
     "young"
 ];
-
-const HypnoScripts_Version = '0.0.1';
-
-const SDK$1 = bcModSDK.registerMod({
-    name: 'HypnoScripts',
-    fullName: 'Hypno Scripts',
-    version: HypnoScripts_Version
-});
-
-if(Player.HypnoScripts != null){
-    console.log("Hypno Scripts loaded");
-}
-
-window.HypnoScripts_Version = HypnoScripts_Version;
-
 CommandCombine([
     {
         Tag: 'zonk',
         Description: ": zonk self",
-
         Action: () => {
             if (!triggerActivated)
                 StartTriggerWord();
@@ -1051,79 +1026,73 @@ CommandCombine([
     {
         Tag: 'unzonk',
         Description: ": unzonk self",
-
         Action: () => {
             if (triggerActivated)
                 TriggerRestoreTimeout();
         }
     }
 ]);
-
-OnChat(1000, "Hypno Scripts OnChat", (data, msg, sender, metadata) => {
+OnChat(1000, (data, sender, msg, metadata) => {
+    var _a;
     var lowerMsgWords = parseMsgWords(msg);
-    if (!hypnoActivated() && 
-        !!Player.LittleSera.trigger && 
-        lowerMsgWords.indexOf(Player.LittleSera.trigger) >= 0 && 
+    if (!hypnoActivated() &&
+        !!Player.ClubGames.Hypno.trigger &&
+        ((_a = lowerMsgWords === null || lowerMsgWords === void 0 ? void 0 : lowerMsgWords.indexOf(Player.ClubGames.Hypno.trigger)) !== null && _a !== void 0 ? _a : -1) >= 0 &&
         sender.MemberNumber != Player.MemberNumber)
         StartTriggerWord();
 });
-
-OnAction(1000, "Hypno Scripts OnAction", (data, msg, sender, metadata) => {
+OnAction(1000, (data, sender, msg, metadata) => {
+    var _a;
     var lowerMsgWords = parseMsgWords(msg);
-    if (lowerMsgWords.indexOf("snaps") >= 0 && 
+    if (((_a = lowerMsgWords === null || lowerMsgWords === void 0 ? void 0 : lowerMsgWords.indexOf("snaps")) !== null && _a !== void 0 ? _a : -1) >= 0 &&
         sender.MemberNumber != Player.MemberNumber &&
         hypnoActivated()) {
         TriggerRestoreSnap();
     }
 });
-
-OnActivity(1000, "Hypno Scripts OnActivity", (data, msg, sender, metadata) => {
-    let target = data.Dictionary.find(d => d.Tag == "TargetCharacter");
+OnActivity(1000, (data, sender, msg, metadata) => {
+    let target = data.Dictionary.find((d) => d.Tag == "TargetCharacter");
     if (!!target && target.MemberNumber == Player.MemberNumber) {
         if (data.Content == "ChatOther-ItemNose-Pet" && triggerActivated)
             TriggerRestoreBoop();
     }
 });
-
 function hypnoActivated() {
     return triggerActivated;
 }
-
 // Set Trigger
 let wordLength = commonWords.length;
-if (!Player.LittleSera.trigger) {
-    Player.LittleSera.trigger = commonWords[getRandomInt(wordLength)];
+if (!Player.ClubGames.Hypno.trigger) {
+    Player.ClubGames.Hypno.trigger = commonWords[getRandomInt(wordLength)];
     settingsSave();
 }
-if (!Player.LittleSera.activatedAt) {
-    Player.LittleSera.activatedAt = 0;
+if (!Player.ClubGames.Hypno.activatedAt) {
+    Player.ClubGames.Hypno.activatedAt = 0;
     settingsSave();
 }
-if (!!Player.LittleSera.existingEye1Name)
+if (!!Player.ClubGames.Hypno.existingEye1Name)
     ResetEyes();
-
 let triggerTimeout = 0;
 let triggerActivated = false;
 let triggerTimer = 300000; // 5 min
 let lingerInterval = setInterval(CheckNewTrigger, 5000); // check if need to reroll every 5s
 let lingerTimer = 1800000; // 30min
 let hornyTimeout = 0;
-
-SDK$1.hookFunction("Player.HasTints", 4, (args, next) => {
-    if (triggerActivated) return true;
+bcModSDK.hookFunction("Player.HasTints", 4, (args, next) => {
+    if (triggerActivated)
+        return true;
     return next(args);
 });
-
-SDK$1.hookFunction("Player.GetTints", 4, (args, next) => {
-    if (triggerActivated) return [{r: 148, g: 0, b: 211, a: 0.4}];
+bcModSDK.hookFunction("Player.GetTints", 4, (args, next) => {
+    if (triggerActivated)
+        return [{ r: 148, g: 0, b: 211, a: 0.4 }];
     return next(args);
 });
-    
-SDK$1.hookFunction("Player.GetBlurLevel", 4, (args, next) => {
-    if (triggerActivated) return 3;
+bcModSDK.hookFunction("Player.GetBlurLevel", 4, (args, next) => {
+    if (triggerActivated)
+        return 3;
     return next(args);
 });
-
 const hypnoBlockStrings = [
     "%NAME%'s eyelids flutter as a thought tries to enter her blank mind...",
     "%NAME% sways weakly in her place, drifting peacefully...",
@@ -1131,12 +1100,11 @@ const hypnoBlockStrings = [
     "%NAME% moans softly as she drops even deeper into trance...",
     "%NAME% quivers, patiently awaiting something to fill her empty head..."
 ];
-
-SDK$1.hookFunction('ServerSend', 5, (args, next) => {
+bcModSDK.hookFunction('ServerSend', 5, (args, next) => {
     // Prevent speech at choke level 4
     if (triggerActivated) {
         var type = args[0];
-        if (type == "ChatRoomChat" && args[1].Type == "Chat"){
+        if (type == "ChatRoomChat" && args[1].Type == "Chat") {
             SendAction(hypnoBlockStrings[getRandomInt(hypnoBlockStrings.length)]);
             return null;
         }
@@ -1144,96 +1112,84 @@ SDK$1.hookFunction('ServerSend', 5, (args, next) => {
     }
     return next(args);
 });
-
 function StartTriggerWord() {
     if (triggerActivated)
         return;
-
     triggerActivated = true;
-    if (Player.LittleSera.activatedAt == 0)
-        Player.LittleSera.activatedAt = new Date().getTime();
+    if (Player.ClubGames.Hypno.activatedAt == 0)
+        Player.ClubGames.Hypno.activatedAt = new Date().getTime();
     AudioPlaySoundEffect("SciFiEffect", 1);
     settingsSave();
-    
     SendAction("%NAME%'s eyes immediately unfocus, her posture slumping slightly as she loses control of her body at the utterance of a trigger word.");
     SetEyes();
     CharacterSetFacialExpression(Player, "Blush", "Medium");
     CharacterSetFacialExpression(Player, "Eyebrows", "Lowered");
     CharacterSetFacialExpression(Player, "Eyes", "Dazed");
-    CharacterSetFacialExpression(Player, "Fluids", "DroolLow");    
-
+    CharacterSetFacialExpression(Player, "Fluids", "DroolLow");
     clearTimeout(triggerTimeout);
     triggerTimeout = setTimeout(TriggerRestoreTimeout, triggerTimer);
-
     clearInterval(lingerInterval);
     lingerInterval = setInterval(CheckNewTrigger, 1000);
-
     clearInterval(hornyTimeout);
     hornyTimeout = setInterval(HypnoHorny, triggerTimer / 100);
 }
-
 function SetEyes() {
-    Player.LittleSera.existingEye1Name = InventoryGet(Player, "Eyes").Asset.Name;
-    Player.LittleSera.existingEye1Color = InventoryGet(Player, "Eyes").Color;
-    Player.LittleSera.existingEye2Name = InventoryGet(Player, "Eyes2").Asset.Name;
-    Player.LittleSera.existingEye2Color = InventoryGet(Player, "Eyes2").Color;
+    var _a, _b, _c, _d;
+    Player.ClubGames.Hypno.existingEye1Name = (_a = InventoryGet(Player, "Eyes")) === null || _a === void 0 ? void 0 : _a.Asset.Name;
+    Player.ClubGames.Hypno.existingEye1Color = (_b = InventoryGet(Player, "Eyes")) === null || _b === void 0 ? void 0 : _b.Color;
+    Player.ClubGames.Hypno.existingEye2Name = (_c = InventoryGet(Player, "Eyes2")) === null || _c === void 0 ? void 0 : _c.Asset.Name;
+    Player.ClubGames.Hypno.existingEye2Color = (_d = InventoryGet(Player, "Eyes2")) === null || _d === void 0 ? void 0 : _d.Color;
     settingsSave();
     EnforceEyes();
 }
-
 function EnforceEyes() {
     var eyeAsset1 = AssetGet("Female3DCG", "Eyes", "Eyes9");
     var eyeAsset2 = AssetGet("Female3DCG", "Eyes2", "Eyes9");
-
     var eyes1 = InventoryGet(Player, "Eyes");
     var eyes2 = InventoryGet(Player, "Eyes2");
-
-    eyes1.Asset = eyeAsset1;
-    eyes1.Color = "#A2A2A2";
-    
-    eyes2.Asset = eyeAsset2;
-    eyes2.Color = "#A2A2A2";
-
+    if (!!eyes1) {
+        eyes1.Asset = eyeAsset1 !== null && eyeAsset1 !== void 0 ? eyeAsset1 : {};
+        eyes1.Color = "#A2A2A2";
+    }
+    if (!!eyes2) {
+        eyes2.Asset = eyeAsset2 !== null && eyeAsset2 !== void 0 ? eyeAsset2 : {};
+        eyes2.Color = "#A2A2A2";
+    }
     ChatRoomCharacterUpdate(Player);
 }
-
 function ResetEyes() {
-    var eyeAsset1 = AssetGet("Female3DCG", "Eyes", Player.LittleSera.existingEye1Name);
-    var eyeAsset2 = AssetGet("Female3DCG", "Eyes2", Player.LittleSera.existingEye2Name);
-
+    var _a, _b;
+    var eyeAsset1 = AssetGet("Female3DCG", "Eyes", (_a = Player.ClubGames.Hypno.existingEye1Name) !== null && _a !== void 0 ? _a : "Eyes5");
+    var eyeAsset2 = AssetGet("Female3DCG", "Eyes2", (_b = Player.ClubGames.Hypno.existingEye2Name) !== null && _b !== void 0 ? _b : "Eyes5");
     var eyes1 = InventoryGet(Player, "Eyes");
     var eyes2 = InventoryGet(Player, "Eyes2");
-
-    eyes1.Asset = eyeAsset1;
-    eyes1.Color = Player.LittleSera.existingEye1Color;
-    
-    eyes2.Asset = eyeAsset2;
-    eyes2.Color = Player.LittleSera.existingEye2Color;
-
+    if (!!eyes1) {
+        eyes1.Asset = eyeAsset1 !== null && eyeAsset1 !== void 0 ? eyeAsset1 : {};
+        eyes1.Color = Player.ClubGames.Hypno.existingEye1Color;
+    }
+    if (!!eyes2) {
+        eyes2.Asset = eyeAsset2 !== null && eyeAsset2 !== void 0 ? eyeAsset2 : {};
+        eyes2.Color = Player.ClubGames.Hypno.existingEye2Color;
+    }
     ChatRoomCharacterUpdate(Player);
-
-    Player.LittleSera.existingEye1Name = null;
-    Player.LittleSera.existingEye1Color = null;
-    Player.LittleSera.existingEye2Name = null;
-    Player.LittleSera.existingEye2Color = null;
+    Player.ClubGames.Hypno.existingEye1Name = undefined;
+    Player.ClubGames.Hypno.existingEye1Color = undefined;
+    Player.ClubGames.Hypno.existingEye2Name = undefined;
+    Player.ClubGames.Hypno.existingEye2Color = undefined;
     settingsSave();
 }
-
 function TriggerRestoreBoop() {
     SendAction("%NAME% reboots, blinking and gasping as she regains her senses.");
     TriggerRestore();
 }
-
 function TriggerRestoreSnap() {
     SendAction("%NAME% blinks, shaking her head with confusion as she regains her senses.");
     TriggerRestore();
 }
-
 function TriggerRestoreTimeout() {
     SendAction("%NAME% gasps, blinking with confusion and blushing.");
     TriggerRestore();
 }
-
 function TriggerRestore() {
     ResetEyes();
     AudioPlaySoundEffect("SpankSkin");
@@ -1242,55 +1198,34 @@ function TriggerRestore() {
     clearTimeout(triggerTimeout);
     triggerActivated = false;
 }
-
 function HypnoHorny() {
+    var _a, _b;
     if (triggerActivated) {
         // enforce eye expression
         EnforceEyes();
         CharacterSetFacialExpression(Player, "Eyebrows", "Lowered");
         CharacterSetFacialExpression(Player, "Eyes", "Dazed");
-
-        var progress = Math.min(99, Player.ArousalSettings.Progress + 5);
-        Player.BCT.splitOrgasmArousal.arousalProgress = Math.min(Player.BCT.splitOrgasmArousal.arousalProgress + 10, 100);
-        BCT_API?.ActivityChatRoomBCTArousalSync(Player);
+        var progress = Math.min(99, (_b = (_a = Player.ArousalSettings) === null || _a === void 0 ? void 0 : _a.Progress) !== null && _b !== void 0 ? _b : 0 + 5);
         ActivitySetArousal(Player, progress);
     }
 }
-
 function CheckNewTrigger() {
     if (triggerActivated)
         return;
-    if (Player.LittleSera.activatedAt > 0 && new Date().getTime() - Player.LittleSera.activatedAt > lingerTimer)
+    if (Player.ClubGames.Hypno.activatedAt > 0 && new Date().getTime() - Player.ClubGames.Hypno.activatedAt > lingerTimer)
         RollTriggerWord();
 }
-
 function RollTriggerWord() {
-
     SendAction("%NAME% concentrates, breaking the hold the previous trigger word held over her.");
-    Player.LittleSera.trigger = commonWords[getRandomInt(commonWords.length)];
-    Player.LittleSera.activatedAt = 0;
+    Player.ClubGames.Hypno.trigger = commonWords[getRandomInt(commonWords.length)];
+    Player.ClubGames.Hypno.activatedAt = 0;
     settingsSave();
 }
-
-const ChokeCollar_Version = '0.0.1';
-
-const SDK = bcModSDK.registerMod({
-    name: 'ChokeCollar',
-    fullName: 'ChokeCollar',
-    version: ChokeCollar_Version
-});
-
-if(Player.ChokeCollar != null){
-    console.log("Choke Collar loaded");
-}
-
-window.ChokeCollar_Version = ChokeCollar_Version;
 
 CommandCombine([
     {
         Tag: 'tight',
         Description: ": tighten collar",
-
         Action: () => {
             IncreaseCollarChoke();
         }
@@ -1298,30 +1233,26 @@ CommandCombine([
     {
         Tag: 'loose',
         Description: ": loosen collar",
-
         Action: () => {
             DecreaseCollarChoke();
         }
     }
 ]);
-
-OnChat(600, "Choke Collar", (data, msg, sender, metadata) => {
+OnChat(600, (data, sender, msg, metadata) => {
+    var _a, _b, _c;
     var lowerMsgWords = parseMsgWords(msg);
-    if (!!sender && allowedChokeMembers.indexOf(sender.MemberNumber) >= 0) {
-        if (lowerMsgWords.indexOf("tight") >= 0)
+    if (!!sender && allowedChokeMembers.indexOf((_a = sender === null || sender === void 0 ? void 0 : sender.MemberNumber) !== null && _a !== void 0 ? _a : 0) >= 0) {
+        if (((_b = lowerMsgWords === null || lowerMsgWords === void 0 ? void 0 : lowerMsgWords.indexOf("tight")) !== null && _b !== void 0 ? _b : -1) >= 0)
             IncreaseCollarChoke();
-        else if (lowerMsgWords.indexOf("loose") >= 0)
+        else if (((_c = lowerMsgWords === null || lowerMsgWords === void 0 ? void 0 : lowerMsgWords.indexOf("loose")) !== null && _c !== void 0 ? _c : -1) >= 0)
             DecreaseCollarChoke();
     }
 });
-
 // Choke Collar Code
-
 let allowedChokeMembers = [
     96251,
     60504
 ];
-
 let chokeTimeout = 0;
 let chokeTimer = 120000;
 let chokeEventTimer = 60010;
@@ -1329,34 +1260,29 @@ let passout1Timer = 30000;
 let passout2Timer = 15000;
 let passout3Timer = 10000;
 setInterval(ChokeEvent, chokeEventTimer);
-
-Player.LittleSera.chokeLevel = Player.OnlineSettings.LittleSera.chokeLevel || 0;
+Player.ClubGames.ChokeCollar.chokeLevel = Player.OnlineSettings.ClubGames.ChokeCollar.chokeLevel || 0;
 settingsSave();
-
-if (Player.LittleSera.chokeLevel > 2) {
+if (Player.ClubGames.ChokeCollar.chokeLevel > 2) {
     setChokeTimeout(DecreaseCollarChoke, chokeTimer);
 }
-
 function setChokeTimeout(f, delay) {
     clearTimeout(chokeTimeout);
     chokeTimeout = setTimeout(f, delay);
 }
-
 // event on room join
-SDK.hookFunction("ChatRoomSync", 4, (args, next) => {
+bcModSDK.hookFunction("ChatRoomSync", 4, (args, next) => {
     next(args);
     ActivateChokeEvent();
 });
-
-SDK.hookFunction('ServerSend', 4, (args, next) => {
+bcModSDK.hookFunction('ServerSend', 4, (args, next) => {
     // Prevent speech at choke level 4
-    if (args[0] == "ChatRoomChat" && args[1].Type == "Chat"){
-        if (Player.LittleSera.chokeLevel >= 4) {
+    if (args[0] == "ChatRoomChat" && args[1].Type == "Chat") {
+        if (Player.ClubGames.ChokeCollar.chokeLevel >= 4) {
             SendAction("%NAME%'s mouth moves silently.");
             return null;
         }
-        else if (Player.LittleSera.chokeLevel > 1) {
-            args[1].Content = SpeechGarbleByGagLevel((Player.LittleSera.chokeLevel-1)**2, args[1].Content);
+        else if (Player.ClubGames.ChokeCollar.chokeLevel > 1) {
+            args[1].Content = SpeechGarbleByGagLevel((Player.ClubGames.ChokeCollar.chokeLevel - 1) ** 2, args[1].Content);
             return next(args);
         }
         else
@@ -1365,33 +1291,34 @@ SDK.hookFunction('ServerSend', 4, (args, next) => {
     else
         return next(args);
 });
-
-SDK.hookFunction("Player.HasTints", 5, (args, next) => {
-    if (Player.LittleSera.chokeLevel > 2) return true;
+bcModSDK.hookFunction("Player.HasTints", 5, (args, next) => {
+    if (Player.ClubGames.ChokeCollar.chokeLevel > 2)
+        return true;
     return next(args);
 });
-
-SDK.hookFunction("Player.GetTints", 5, (args, next) => {
-    if (Player.LittleSera.chokeLevel == 3) return [{r: 0, g: 0, b: 0, a: 0.2}];
-    else if (Player.LittleSera.chokeLevel == 4) return [{r: 0, g: 0, b: 0, a: 0.5}];
+bcModSDK.hookFunction("Player.GetTints", 5, (args, next) => {
+    if (Player.ClubGames.ChokeCollar.chokeLevel == 3)
+        return [{ r: 0, g: 0, b: 0, a: 0.2 }];
+    else if (Player.ClubGames.ChokeCollar.chokeLevel == 4)
+        return [{ r: 0, g: 0, b: 0, a: 0.5 }];
     return next(args);
 });
-    
-SDK.hookFunction("Player.GetBlurLevel", 5, (args, next) => {
-    if (Player.LittleSera.chokeLevel == 3) return 2;
-    if (Player.LittleSera.chokeLevel == 4) return 6;
+bcModSDK.hookFunction("Player.GetBlurLevel", 5, (args, next) => {
+    if (Player.ClubGames.ChokeCollar.chokeLevel == 3)
+        return 2;
+    if (Player.ClubGames.ChokeCollar.chokeLevel == 4)
+        return 6;
     return next(args);
 });
-
 function IncreaseCollarChoke() {
-    if (Player.LittleSera.chokeLevel == 4)
+    if (Player.ClubGames.ChokeCollar.chokeLevel == 4)
         return;
-    Player.LittleSera.chokeLevel++;
+    Player.ClubGames.ChokeCollar.chokeLevel++;
     AudioPlaySoundEffect("HydraulicLock");
     IncreaseArousal();
-    if (Player.LittleSera.chokeLevel < 4) {
+    if (Player.ClubGames.ChokeCollar.chokeLevel < 4) {
         CharacterSetFacialExpression(Player, "Eyebrows", "Soft");
-        switch (Player.LittleSera.chokeLevel) {
+        switch (Player.ClubGames.ChokeCollar.chokeLevel) {
             case 1:
                 clearTimeout(chokeTimeout);
                 SendAction("%NAME%'s eyes flutter as her collar starts to tighten around her neck with a quiet hiss.");
@@ -1412,26 +1339,22 @@ function IncreaseCollarChoke() {
                 break;
         }
     }
-    else if (Player.LittleSera.chokeLevel >= 4) {
-        Player.LittleSera.chokeLevel = 4;
+    else if (Player.ClubGames.ChokeCollar.chokeLevel >= 4) {
+        Player.ClubGames.ChokeCollar.chokeLevel = 4;
         StartPassout();
     }
-
     settingsSave();
 }
-
 function DecreaseCollarChoke() {
-    if (Player.LittleSera.chokeLevel <= 0) {
-        Player.LittleSera.chokeLevel = 0;
+    if (Player.ClubGames.ChokeCollar.chokeLevel <= 0) {
+        Player.ClubGames.ChokeCollar.chokeLevel = 0;
         return;
     }
-
     AudioPlaySoundEffect("Deflation");
-    Player.LittleSera.chokeLevel--;
-    if (Player.LittleSera.chokeLevel > 0)
+    Player.ClubGames.ChokeCollar.chokeLevel--;
+    if (Player.ClubGames.ChokeCollar.chokeLevel > 0)
         setChokeTimeout(DecreaseCollarChoke, chokeTimer);
-
-    switch (Player.LittleSera.chokeLevel) {
+    switch (Player.ClubGames.ChokeCollar.chokeLevel) {
         case 3:
             setChokeTimeout(DecreaseCollarChoke, chokeTimer);
             SendAction("%NAME% chokes and gasps desperately as her collar slowly releases some pressure.");
@@ -1456,16 +1379,13 @@ function DecreaseCollarChoke() {
             CharacterSetFacialExpression(Player, "Blush", "None");
             break;
     }
-
     settingsSave();
 }
-
 function ResetCollarChoke() {
-    Player.LittleSera.chokeLevel = 0;
+    Player.ClubGames.ChokeCollar.chokeLevel = 0;
     clearTimeout(chokeTimeout);
     settingsSave();
 }
-
 function StartPassout() {
     SendAction("%NAME%'s eyes start to roll back, gasping and choking as her collar presses in tightly and completely with a menacing hiss.");
     CharacterSetFacialExpression(Player, "Blush", "VeryHigh");
@@ -1473,7 +1393,6 @@ function StartPassout() {
     CharacterSetFacialExpression(Player, "Eyes", "Lewd");
     setChokeTimeout(Passout1, passout1Timer);
 }
-
 function Passout1() {
     IncreaseArousal();
     SendAction("%NAME% chokes and spasms, her collar holding tight.");
@@ -1483,7 +1402,6 @@ function Passout1() {
     CharacterSetFacialExpression(Player, "Mouth", "HalfOpen");
     setChokeTimeout(Passout2, passout2Timer);
 }
-
 function Passout2() {
     IncreaseArousal();
     SendAction("%NAME% convulses weakly, her eyes rolling back as the collar hisses impossibly tighter.");
@@ -1494,7 +1412,6 @@ function Passout2() {
     CharacterSetFacialExpression(Player, "Mouth", "HalfOpen");
     setChokeTimeout(Passout3, passout3Timer);
 }
-
 function Passout3() {
     IncreaseArousal();
     SendAction("As %NAME% collapses unconscious, her collar releases all of its pressure with a long hiss.");
@@ -1506,17 +1423,15 @@ function Passout3() {
     clearTimeout(chokeTimeout);
     ResetCollarChoke();
 }
-
 function ChokeEvent() {
     // only activate 1/4 times triggered unless at high level
-    if (Player.LittleSera.chokeLevel > 2)
+    if (Player.ClubGames.ChokeCollar.chokeLevel > 2)
         ActivateChokeEvent();
-    else if (Player.LittleSera.chokeLevel == 2 && getRandomInt(8) == 0)
+    else if (Player.ClubGames.ChokeCollar.chokeLevel == 2 && getRandomInt(8) == 0)
         ActivateChokeEvent();
-    else if (Player.LittleSera.chokeLevel == 1 && getRandomInt(15) == 0)
+    else if (Player.ClubGames.ChokeCollar.chokeLevel == 1 && getRandomInt(15) == 0)
         ActivateChokeEvent();
 }
-
 function ActivateChokeEvent() {
     const ChokeEvents = {
         low: [
@@ -1538,7 +1453,7 @@ function ActivateChokeEvent() {
             "%NAME%'s eyes have trouble focusing, as she chokes and gets lightheaded."
         ]
     };
-    switch (Player.LittleSera.chokeLevel) {
+    switch (Player.ClubGames.ChokeCollar.chokeLevel) {
         case 1:
             SendAction(ChokeEvents.low[getRandomInt(ChokeEvents.low.length)]);
             break;
@@ -1550,23 +1465,20 @@ function ActivateChokeEvent() {
             break;
     }
 }
-
 function IncreaseArousal() {
-    ActivitySetArousal(Player, Math.min(99, Player.ArousalSettings.Progress + 10));
-    Player.BCT.splitOrgasmArousal.arousalProgress = Math.min(Player.BCT.splitOrgasmArousal.arousalProgress + 25, 100);
-    BCT_API?.ActivityChatRoomBCTArousalSync(Player);
+    var _a, _b;
+    ActivitySetArousal(Player, Math.min(99, (_b = (_a = Player.ArousalSettings) === null || _a === void 0 ? void 0 : _a.Progress) !== null && _b !== void 0 ? _b : 0 + 10));
 }
 
-OnActivity(100, "Little Sera Boops", (data, msg, sender, metadata) => {
-    let target = data.Dictionary.find(d => d.Tag == "TargetCharacter");
-    if (!!target && 
-        target.MemberNumber == Player.MemberNumber && 
-        data.Content == "ChatOther-ItemNose-Pet" && 
+OnActivity(100, (data, sender, msg, metadata) => {
+    let target = data.Dictionary.find((d) => d.Tag == "TargetCharacter");
+    if (!!target &&
+        target.MemberNumber == Player.MemberNumber &&
+        data.Content == "ChatOther-ItemNose-Pet" &&
         !hypnoActivated()) {
         BoopReact(sender.MemberNumber);
     }
 });
-
 const normalBoopReactions = [
     "%NAME% wiggles her nose.",
     "%NAME% wiggles her nose with a small frown.",
@@ -1575,17 +1487,14 @@ const normalBoopReactions = [
     "%NAME% wiggles her nose with a squeak.",
     "%NAME% meeps!"
 ];
-
 const protestBoopReactions = [
     "%NAME% swats at %OPP_NAME%'s hand.",
     "%NAME% covers her nose protectively, squinting at %OPP_NAME%.",
     "%NAME% snatches %OPP_NAME%'s booping finger."
 ];
-
 const bigProtestBoopReactions = [
     "%NAME%'s nose overloads and shuts down."
 ];
-
 const boundBoopReactions = [
     "%NAME% struggles in her bindings, huffing.",
     "%NAME% frowns and squirms in her bindings.",
@@ -1593,45 +1502,38 @@ const boundBoopReactions = [
     "%NAME% groans helplessly.",
     "%NAME% whines and wiggles in her bondage."
 ];
-
 let boops = 0;
 let boopShutdown = false;
 setInterval(() => {
     if (boops > 0)
         boops--;
 }, 5000);
-
 function BoopReact(booperId) {
-    if (boopShutdown)
+    if (boopShutdown || !booperId)
         return;
-
-    var booper = ChatRoomCharacter.find(c => c.MemberNumber == booperId);
-    if (booper)
-        boops++;
-    
+    let booper = ChatRoomCharacter.find(c => c.MemberNumber == booperId);
+    if (!booper)
+        return;
+    boops++;
     if (boops >= 5)
-        BigProtestBoopReact();            
+        BigProtestBoopReact();
     else if (boops >= 3)
         ProtestBoopReact(booper);
     else
         NormalBoopReact();
 }
-
 function NormalBoopReact() {
     CharacterSetFacialExpression(Player, "Blush", "Low");
     SendAction(normalBoopReactions[getRandomInt(normalBoopReactions.length)]);
 }
-
 function ProtestBoopReact(booper) {
     CharacterSetFacialExpression(Player, "Blush", "Medium");
     CharacterSetFacialExpression(Player, "Eyes", "Daydream");
-
     if (Player.IsRestrained())
         SendAction(boundBoopReactions[getRandomInt(boundBoopReactions.length)]);
     else
         SendAction(protestBoopReactions[getRandomInt(protestBoopReactions.length)], booper.Nickname);
 }
-
 function BigProtestBoopReact(booper) {
     CharacterSetFacialExpression(Player, "Blush", "High");
     CharacterSetFacialExpression(Player, "Eyes", "Dizzy");
@@ -1640,67 +1542,64 @@ function BigProtestBoopReact(booper) {
     setTimeout(() => boopShutdown = false, 30000);
 }
 
-OnActivity(100, "Little Sera Boops", (data, msg, sender, metadata) => {
-    let target = data.Dictionary.find(d => d.Tag == "TargetCharacter");
-    if (!!target && 
-        sender.MemberNumber == Player.MemberNumber && 
+OnActivity(100, (data, sender, msg, metadata) => {
+    let target = data.Dictionary.find((d) => d.Tag == "TargetCharacter");
+    if (!!target &&
+        sender.MemberNumber == Player.MemberNumber &&
         data.Content == "ChatOther-ItemLegs-Sit" &&
         CharacterCanChangeToPose(Player, "Kneel")) {
         CharacterSetActivePose(Player, "Kneel");
     }
 });
 
-OnActivity(100, "Little Sera Kisses", (data, msg, sender, metadata) => {
-    let target = data.Dictionary.find(d => d.Tag == "TargetCharacter");
-    if (!!target && 
+OnActivity(100, (data, sender, msg, metadata) => {
+    let target = data.Dictionary.find((d) => d.Tag == "TargetCharacter");
+    if (!!target &&
         target.MemberNumber == Player.MemberNumber) {
-            if (wearingMask())
-                return;
+        if (wearingMask())
+            return;
+        switch (data.Content) {
+            case "ChatOther-ItemNeck-Kiss":
+                AddKissMark(sender, "neck");
+                break;
+            case "ChatOther-ItemMouth-PoliteKiss":
+                AddKissMark(sender, "cheek");
+                break;
+            case "ChatOther-ItemHead-Kiss":
+                AddKissMark(sender, "forehead");
+                break;
+        }
+        var item = data.Dictionary.find((d) => d.Tag == "ActivityAsset");
+        if (!!item && item.AssetName == "Towel") {
             switch (data.Content) {
-                case "ChatOther-ItemNeck-Kiss":
-                    AddKissMark(sender, "neck");
+                case "ChatOther-ItemHood-RubItem":
+                case "ChatSelf-ItemHood-RubItem":
+                    RemoveKissMark("forehead");
                     break;
-                case "ChatOther-ItemMouth-PoliteKiss":
-                    AddKissMark(sender, "cheek");
+                case "ChatOther-ItemMouth-RubItem":
+                case "ChatSelf-ItemMouth-RubItem":
+                    RemoveKissMark("cheek");
                     break;
-                case "ChatOther-ItemHead-Kiss":
-                    AddKissMark(sender, "forehead");
+                case "ChatOther-ItemNeck-RubItem":
+                case "ChatSelf-ItemNeck-RubItem":
+                    RemoveKissMark("neck");
                     break;
             }
-
-            var item = data.Dictionary.find(d => d.Tag == "ActivityAsset");
-            if (!!item && item.AssetName == "Towel") {
-                switch (data.Content) {
-                    case "ChatOther-ItemHood-RubItem" :
-                    case "ChatSelf-ItemHood-RubItem" :
-                        RemoveKissMark("forehead");
-                        break;
-                    case "ChatOther-ItemMouth-RubItem" :
-                    case "ChatSelf-ItemMouth-RubItem" :
-                        RemoveKissMark("cheek");
-                        break;
-                    case "ChatOther-ItemNeck-RubItem" :
-                    case "ChatSelf-ItemNeck-RubItem" :
-                        RemoveKissMark("neck");
-                        break;
-                }
-            }
+        }
     }
 });
-
 function getKisserLipColor(sender) {
     try {
         var mouth = InventoryGet(sender, "Mouth");
-        if (!!mouth && mouth.Color != "Default")
-            return mouth.Color[0];
+        if (!!mouth && mouth.Color && mouth.Color != "Default")
+            return mouth.Color;
         else
             return "Default";
     }
-    catch {
+    catch (_a) {
         return "Default";
     }
 }
-
 function getExistingLipstickMarks() {
     var mask = InventoryGet(Player, "Mask");
     if (!!mask && mask.Asset.Name == "Kissmark")
@@ -1708,90 +1607,86 @@ function getExistingLipstickMarks() {
     else
         return null;
 }
-
 function addLipstickMarks() {
+    var _a;
     InventoryRemove(Player, "Mask");
-    InventoryWear(Player, "Kissmark", "Mask", "Default", 1, Player.MemberNumber, null, true);
+    InventoryWear(Player, "Kissmark", "Mask", "Default", 1, (_a = Player.MemberNumber) !== null && _a !== void 0 ? _a : 0, null, true);
     var marks = InventoryGet(Player, "Mask");
-    marks.Property.Type = "c0r1f0n0l0";
+    if (!!marks && !!marks.Property)
+        marks.Property.Type = "c0r1f0n0l0";
     return marks;
 }
-
 function wearingMask() {
     var mask = InventoryGet(Player, "Mask");
     if (!!mask && mask.Asset.Name != "Kissmark")
         return true;
     return false;
 }
-
 function getKissMarkStatus(typeString) {
     return {
-        cheek1: typeString.substring(1,2) == '1',
-        cheek2: typeString.substring(3,4) == '0',
-        forehead: typeString.substring(5,6) == '1',
-        neck1: typeString.substring(7,8) == '1',
-        neck2: typeString.substring(9,10) == '1'
+        cheek1: typeString.substring(1, 2) == '1',
+        cheek2: typeString.substring(3, 4) == '0',
+        forehead: typeString.substring(5, 6) == '1',
+        neck1: typeString.substring(7, 8) == '1',
+        neck2: typeString.substring(9, 10) == '1'
     };
 }
-
 function getKissMarkTypeString(status) {
-    return "c" + (status.cheek1 ? "1" : "0") + 
-        "r" + (status.cheek2 ? "0" : "1") + 
-        "f" + (status.forehead ? "1" : "0") + 
-        "n" + (status.neck1 ? "1" : "0") + 
+    return "c" + (status.cheek1 ? "1" : "0") +
+        "r" + (status.cheek2 ? "0" : "1") +
+        "f" + (status.forehead ? "1" : "0") +
+        "n" + (status.neck1 ? "1" : "0") +
         "l" + (status.neck2 ? "1" : "0");
 }
-
 function RemoveKissMark(location) {
+    var _a, _b;
     var marks = getExistingLipstickMarks();
     if (!marks)
         return;
-    var status = getKissMarkStatus(marks.Property.Type);
-
+    var status = getKissMarkStatus((_b = (_a = marks === null || marks === void 0 ? void 0 : marks.Property) === null || _a === void 0 ? void 0 : _a.Type) !== null && _b !== void 0 ? _b : "c0r1f0n0l0");
     switch (location) {
-        case "cheek" :
+        case "cheek":
             status.cheek1 = false;
             status.cheek2 = false;
             break;
-        case "forehead" :
+        case "forehead":
             status.forehead = false;
             break;
-        case "neck" :
+        case "neck":
             status.neck1 = false;
             status.cheek2 = false;
             break;
     }
-
-    marks.Property.Type = getKissMarkTypeString(status);
+    if (!!marks && !!marks.Property)
+        marks.Property.Type = getKissMarkTypeString(status);
     ChatRoomCharacterUpdate(Player);
 }
-
 function AddKissMark(sender, location) {
+    var _a, _b;
     var color = getKisserLipColor(sender);
     if (color == "Default")
         return; // No lipstick
-
     var marks = getExistingLipstickMarks();
-    if (!marks) {
+    if (!marks)
         marks = addLipstickMarks();
-    }
-    marks.Color = [color];
-    var status = getKissMarkStatus(marks.Property.Type);
-
+    if (!marks)
+        return;
+    marks.Color = color;
+    var status = getKissMarkStatus((_b = (_a = marks === null || marks === void 0 ? void 0 : marks.Property) === null || _a === void 0 ? void 0 : _a.Type) !== null && _b !== void 0 ? _b : "c0r1f0n0l0");
     // Adjust marks
     switch (location) {
-        case "cheek" :
+        case "cheek":
             if (!status.cheek1)
                 status.cheek1 = true;
             else
                 status.cheek2 = true;
-                CharacterSetFacialExpression(Player, "Blush", "Low");
+            CharacterSetFacialExpression(Player, "Blush", "Low");
             break;
-        case "forehead" :
+        case "forehead":
             status.forehead = true;
             CharacterSetFacialExpression(Player, "Blush", "Low");
             break;
-        case "neck" :
+        case "neck":
             if (!status.neck1)
                 status.neck1 = true;
             else
@@ -1799,7 +1694,7 @@ function AddKissMark(sender, location) {
             CharacterSetFacialExpression(Player, "Blush", "Medium");
             break;
     }
-
-    marks.Property.Type = getKissMarkTypeString(status);
+    if (!!marks && !!marks.Property)
+        marks.Property.Type = getKissMarkTypeString(status);
     ChatRoomCharacterUpdate(Player);
 }

@@ -1,7 +1,7 @@
 import { OnActivity, SendAction, getRandomInt } from "./utils";
 
-OnActivity(100, "Little Sera Kisses", (data, msg, sender, metadata) => {
-    let target = data.Dictionary.find(d => d.Tag == "TargetCharacter");
+OnActivity(100, (data, sender, msg, metadata) => {
+    let target = data.Dictionary.find((d: any) => d.Tag == "TargetCharacter");
     if (!!target && 
         target.MemberNumber == Player.MemberNumber) {
             if (wearingMask())
@@ -20,7 +20,7 @@ OnActivity(100, "Little Sera Kisses", (data, msg, sender, metadata) => {
                     break;
             }
 
-            var item = data.Dictionary.find(d => d.Tag == "ActivityAsset");
+            var item = data.Dictionary.find((d: any) => d.Tag == "ActivityAsset");
             if (!!item && item.AssetName == "Towel") {
                 switch (data.Content) {
                     case "ChatOther-ItemHood-RubItem" :
@@ -42,11 +42,11 @@ OnActivity(100, "Little Sera Kisses", (data, msg, sender, metadata) => {
     }
 });
 
-function getKisserLipColor(sender) {
+function getKisserLipColor(sender: PlayerCharacter): ItemColor | undefined {
     try {
         var mouth = InventoryGet(sender, "Mouth");
-        if (!!mouth && mouth.Color != "Default")
-            return mouth.Color[0];
+        if (!!mouth && mouth.Color && mouth.Color != "Default")
+            return mouth.Color;
         else
             return "Default";
     }
@@ -65,9 +65,10 @@ function getExistingLipstickMarks() {
 
 function addLipstickMarks() {
     InventoryRemove(Player, "Mask");
-    InventoryWear(Player, "Kissmark", "Mask", "Default", 1, Player.MemberNumber, null, true);
+    InventoryWear(Player, "Kissmark", "Mask", "Default", 1, Player.MemberNumber ?? 0, null, true);
     var marks = InventoryGet(Player, "Mask");
-    marks.Property.Type = "c0r1f0n0l0";
+    if (!!marks && !!marks.Property)
+        marks.Property.Type = "c0r1f0n0l0";
     return marks;
 }
 
@@ -78,7 +79,7 @@ function wearingMask() {
     return false;
 }
 
-function getKissMarkStatus(typeString) {
+function getKissMarkStatus(typeString: string) {
     return {
         cheek1: typeString.substring(1,2) == '1',
         cheek2: typeString.substring(3,4) == '0',
@@ -88,7 +89,7 @@ function getKissMarkStatus(typeString) {
     };
 }
 
-function getKissMarkTypeString(status) {
+function getKissMarkTypeString(status: any) {
     return "c" + (status.cheek1 ? "1" : "0") + 
         "r" + (status.cheek2 ? "0" : "1") + 
         "f" + (status.forehead ? "1" : "0") + 
@@ -96,11 +97,11 @@ function getKissMarkTypeString(status) {
         "l" + (status.neck2 ? "1" : "0");
 }
 
-export function RemoveKissMark(location) {
+export function RemoveKissMark(location: string) {
     var marks = getExistingLipstickMarks();
     if (!marks)
         return;
-    var status = getKissMarkStatus(marks.Property.Type);
+    var status = getKissMarkStatus(marks?.Property?.Type ?? "c0r1f0n0l0");
 
     switch (location) {
         case "cheek" :
@@ -118,21 +119,24 @@ export function RemoveKissMark(location) {
             break;
     }
 
-    marks.Property.Type = getKissMarkTypeString(status);
+    if (!!marks && !!marks.Property)
+        marks.Property.Type = getKissMarkTypeString(status);
     ChatRoomCharacterUpdate(Player);
 }
 
-export function AddKissMark(sender, location) {
+export function AddKissMark(sender: PlayerCharacter, location: string) {
     var color = getKisserLipColor(sender);
     if (color == "Default")
         return; // No lipstick
 
     var marks = getExistingLipstickMarks();
-    if (!marks) {
+    if (!marks)
         marks = addLipstickMarks();
-    }
-    marks.Color = [color];
-    var status = getKissMarkStatus(marks.Property.Type);
+    if (!marks)
+        return;
+
+    marks.Color = color;
+    var status = getKissMarkStatus(marks?.Property?.Type ?? "c0r1f0n0l0");
 
     // Adjust marks
     switch (location) {
@@ -158,6 +162,7 @@ export function AddKissMark(sender, location) {
             break;
     }
 
-    marks.Property.Type = getKissMarkTypeString(status);
+    if (!!marks && !!marks.Property)
+        marks.Property.Type = getKissMarkTypeString(status);
     ChatRoomCharacterUpdate(Player);
 }

@@ -51,7 +51,7 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
                     else if (lowerMsgWords.indexOf("loose") >= 0)
                         DecreaseCollarChoke();
                 }
-                if (!triggerActivated && !!Player.LittleSera.trigger && lowerMsgWords.indexOf(Player.LittleSera.trigger) >= 0 && sender.MemberNumber != Player.MemberNumber) {
+                if (!triggerActivated && !!Player.ClubGames.trigger && lowerMsgWords.indexOf(Player.ClubGames.trigger) >= 0 && sender.MemberNumber != Player.MemberNumber) {
                     StartTriggerWord();
                 }
             }
@@ -225,17 +225,17 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
     passout2Timer = 15000;
     passout3Timer = 10000;
 
-    Player.LittleSera = Player.OnlineSettings.LittleSera || {chokeLevel: 0}
+    Player.ClubGames = Player.OnlineSettings.LittleSera || {chokeLevel: 0}
     settingsSave();
 
-    if (Player.LittleSera.chokeLevel > 2) {
+    if (Player.ClubGames.chokeLevel > 2) {
         setChokeTimeout(DecreaseCollarChoke, chokeTimer);
     }
     
     eventInterval = setInterval(ChokeEvent, chokeEventTimer);
 
     function settingsSave() {
-        Player.OnlineSettings.LittleSera = Player.LittleSera
+        Player.OnlineSettings.LittleSera = Player.ClubGames
         window.ServerAccountUpdate.QueueData({OnlineSettings: window.Player.OnlineSettings})
     }
 
@@ -253,12 +253,12 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
     SDK.hookFunction('ServerSend', 4, (args, next) => {
         // Prevent speech at choke level 4
         if (args[0] == "ChatRoomChat" && args[1].Type == "Chat"){
-            if (Player.LittleSera.chokeLevel >= 4) {
+            if (Player.ClubGames.chokeLevel >= 4) {
                 SendAction("%NAME%'s mouth moves silently.");
                 return null;
             }
-            else if (Player.LittleSera.chokeLevel > 1) {
-                args[1].Content = SpeechGarbleByGagLevel((Player.LittleSera.chokeLevel-1)**2, args[1].Content);
+            else if (Player.ClubGames.chokeLevel > 1) {
+                args[1].Content = SpeechGarbleByGagLevel((Player.ClubGames.chokeLevel-1)**2, args[1].Content);
                 return next(args);
             }
             else
@@ -269,31 +269,31 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
     });
 
     SDK.hookFunction("Player.HasTints", 5, (args, next) => {
-        if (Player.LittleSera.chokeLevel > 2) return true;
+        if (Player.ClubGames.chokeLevel > 2) return true;
         return next(args);
     });
 
     SDK.hookFunction("Player.GetTints", 5, (args, next) => {
-        if (Player.LittleSera.chokeLevel == 3) return [{r: 0, g: 0, b: 0, a: 0.2}];
-        else if (Player.LittleSera.chokeLevel == 4) return [{r: 0, g: 0, b: 0, a: 0.5}];
+        if (Player.ClubGames.chokeLevel == 3) return [{r: 0, g: 0, b: 0, a: 0.2}];
+        else if (Player.ClubGames.chokeLevel == 4) return [{r: 0, g: 0, b: 0, a: 0.5}];
         return next(args);
     });
         
     SDK.hookFunction("Player.GetBlurLevel", 5, (args, next) => {
-        if (Player.LittleSera.chokeLevel == 3) return 2;
-        if (Player.LittleSera.chokeLevel == 4) return 6;
+        if (Player.ClubGames.chokeLevel == 3) return 2;
+        if (Player.ClubGames.chokeLevel == 4) return 6;
         return next(args);
     });
 
     function IncreaseCollarChoke() {
-        if (Player.LittleSera.chokeLevel == 4)
+        if (Player.ClubGames.chokeLevel == 4)
             return;
-        Player.LittleSera.chokeLevel++;
+        Player.ClubGames.chokeLevel++;
         AudioPlaySoundEffect("HydraulicLock");
         IncreaseArousal();
-        if (Player.LittleSera.chokeLevel < 4) {
+        if (Player.ClubGames.chokeLevel < 4) {
             CharacterSetFacialExpression(Player, "Eyebrows", "Soft");
-            switch (Player.LittleSera.chokeLevel) {
+            switch (Player.ClubGames.chokeLevel) {
                 case 1:
                     clearTimeout(chokeTimeout);
                     SendAction("%NAME%'s eyes flutter as her collar starts to tighten around her neck with a quiet hiss.");
@@ -316,8 +316,8 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
                     break;
             }
         }
-        else if (Player.LittleSera.chokeLevel >= 4) {
-            Player.LittleSera.chokeLevel = 4;
+        else if (Player.ClubGames.chokeLevel >= 4) {
+            Player.ClubGames.chokeLevel = 4;
             StartPassout();
         }
 
@@ -325,17 +325,17 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
     }
 
     function DecreaseCollarChoke() {
-        if (Player.LittleSera.chokeLevel <= 0) {
-            Player.LittleSera.chokeLevel = 0;
+        if (Player.ClubGames.chokeLevel <= 0) {
+            Player.ClubGames.chokeLevel = 0;
             return;
         }
 
         AudioPlaySoundEffect("Deflation");
-        Player.LittleSera.chokeLevel--;
-        if (Player.LittleSera.chokeLevel > 0)
+        Player.ClubGames.chokeLevel--;
+        if (Player.ClubGames.chokeLevel > 0)
             setChokeTimeout(DecreaseCollarChoke, chokeTimer);
 
-        switch (Player.LittleSera.chokeLevel) {
+        switch (Player.ClubGames.chokeLevel) {
             case 3:
                 setChokeTimeout(DecreaseCollarChoke, chokeTimer);
                 SendAction("%NAME% chokes and gasps desperately as her collar slowly releases some pressure.");
@@ -367,7 +367,7 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
     }
 
     function ResetCollarChoke() {
-        Player.LittleSera.chokeLevel = 0;
+        Player.ClubGames.chokeLevel = 0;
         clearTimeout(chokeTimeout);
         settingsSave();
     }
@@ -419,11 +419,11 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
 
     function ChokeEvent() {
         // only activate 1/4 times triggered unless at high level
-        if (Player.LittleSera.chokeLevel > 2)
+        if (Player.ClubGames.chokeLevel > 2)
             ActivateChokeEvent();
-        else if (Player.LittleSera.chokeLevel == 2 && getRandomInt(8) == 0)
+        else if (Player.ClubGames.chokeLevel == 2 && getRandomInt(8) == 0)
             ActivateChokeEvent();
-        else if (Player.LittleSera.chokeLevel == 1 && getRandomInt(15) == 0)
+        else if (Player.ClubGames.chokeLevel == 1 && getRandomInt(15) == 0)
             ActivateChokeEvent();
     }
 
@@ -449,7 +449,7 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
             ]
         }
         let choice = getRandomInt(3);
-        switch (Player.LittleSera.chokeLevel) {
+        switch (Player.ClubGames.chokeLevel) {
             case 1:
                 SendAction(ChokeEvents.low[getRandomInt(ChokeEvents.low.length)]);
                 break;
@@ -472,15 +472,15 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
 
     // Set Trigger
     var wordLength = commonWords.length;
-    if (!Player.LittleSera.trigger) {
-        Player.LittleSera.trigger = commonWords[getRandomInt(wordLength)];
+    if (!Player.ClubGames.trigger) {
+        Player.ClubGames.trigger = commonWords[getRandomInt(wordLength)];
         settingsSave();
     }
-    if (!Player.LittleSera.activatedAt) {
-        Player.LittleSera.activatedAt = 0;
+    if (!Player.ClubGames.activatedAt) {
+        Player.ClubGames.activatedAt = 0;
         settingsSave();
     }
-    if (!!Player.LittleSera.existingEye1Name)
+    if (!!Player.ClubGames.existingEye1Name)
         ResetEyes();
 
     triggerTimeout = 0;
@@ -534,8 +534,8 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
             return;
 
         triggerActivated = true;
-        if (Player.LittleSera.activatedAt == 0)
-            Player.LittleSera.activatedAt = new Date().getTime();
+        if (Player.ClubGames.activatedAt == 0)
+            Player.ClubGames.activatedAt = new Date().getTime();
         AudioPlaySoundEffect("SciFiEffect", 1);
         settingsSave();
         
@@ -557,10 +557,10 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
     }
 
     function SetEyes() {
-        Player.LittleSera.existingEye1Name = InventoryGet(Player, "Eyes").Asset.Name;
-        Player.LittleSera.existingEye1Color = InventoryGet(Player, "Eyes").Color;
-        Player.LittleSera.existingEye2Name = InventoryGet(Player, "Eyes2").Asset.Name;
-        Player.LittleSera.existingEye2Color = InventoryGet(Player, "Eyes2").Color;
+        Player.ClubGames.existingEye1Name = InventoryGet(Player, "Eyes").Asset.Name;
+        Player.ClubGames.existingEye1Color = InventoryGet(Player, "Eyes").Color;
+        Player.ClubGames.existingEye2Name = InventoryGet(Player, "Eyes2").Asset.Name;
+        Player.ClubGames.existingEye2Color = InventoryGet(Player, "Eyes2").Color;
         settingsSave();
         EnforceEyes();
     }
@@ -582,24 +582,24 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
     }
 
     function ResetEyes() {
-        var eyeAsset1 = AssetGet("Female3DCG", "Eyes", Player.LittleSera.existingEye1Name);
-        var eyeAsset2 = AssetGet("Female3DCG", "Eyes2", Player.LittleSera.existingEye2Name);
+        var eyeAsset1 = AssetGet("Female3DCG", "Eyes", Player.ClubGames.existingEye1Name);
+        var eyeAsset2 = AssetGet("Female3DCG", "Eyes2", Player.ClubGames.existingEye2Name);
 
         var eyes1 = InventoryGet(Player, "Eyes");
         var eyes2 = InventoryGet(Player, "Eyes2");
 
         eyes1.Asset = eyeAsset1;
-        eyes1.Color = Player.LittleSera.existingEye1Color;
+        eyes1.Color = Player.ClubGames.existingEye1Color;
         
         eyes2.Asset = eyeAsset2;
-        eyes2.Color = Player.LittleSera.existingEye2Color;
+        eyes2.Color = Player.ClubGames.existingEye2Color;
 
         ChatRoomCharacterUpdate(Player);
 
-        Player.LittleSera.existingEye1Name = null;
-        Player.LittleSera.existingEye1Color = null;
-        Player.LittleSera.existingEye2Name = null;
-        Player.LittleSera.existingEye2Color = null;
+        Player.ClubGames.existingEye1Name = null;
+        Player.ClubGames.existingEye1Color = null;
+        Player.ClubGames.existingEye2Name = null;
+        Player.ClubGames.existingEye2Color = null;
         settingsSave();
     }
 
@@ -644,15 +644,15 @@ var bcModSdk=function(){"use strict";const e="1.1.0";function o(e){alert("Mod ER
     function CheckNewTrigger() {
         if (triggerActivated)
             return;
-        if (Player.LittleSera.activatedAt > 0 && new Date().getTime() - Player.LittleSera.activatedAt > lingerTimer)
+        if (Player.ClubGames.activatedAt > 0 && new Date().getTime() - Player.ClubGames.activatedAt > lingerTimer)
             RollTriggerWord();
     }
 
     function RollTriggerWord() {
 
         SendAction("%NAME% concentrates, breaking the hold the previous trigger word held over her.");
-        Player.LittleSera.trigger = commonWords[getRandomInt(commonWords.length)];
-        Player.LittleSera.activatedAt = 0;
+        Player.ClubGames.trigger = commonWords[getRandomInt(commonWords.length)];
+        Player.ClubGames.activatedAt = 0;
         settingsSave();
     }
 })();
