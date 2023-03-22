@@ -60,6 +60,7 @@ export function OnChat(priority: any, module: ModuleCategory, callback: (data: a
 		var sender = getCharacter(data.Sender);
         if (data.Type == "Chat")
             callback(data, sender, data.Content, data.Dictionary);
+		next(args);
     }, module);
 }
 
@@ -69,6 +70,7 @@ export function OnAction(priority: any, module: ModuleCategory, callback: (data:
 		var sender = getCharacter(data.Sender);
         if (data.Type == "Action" || data.Type == "Emote")
 			callback(data, sender, data.Content, data.Dictionary);
+		next(args);
     }, module);
 }
 
@@ -78,6 +80,7 @@ export function OnActivity(priority: any, module: ModuleCategory, callback: (dat
 		var sender = getCharacter(data.Sender);
         if (data.Type == "Activity")
 			callback(data, sender, data.Content, data.Dictionary);
+		next(args);
     }, module);
 }
 
