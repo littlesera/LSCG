@@ -1004,34 +1004,6 @@ var LSCG = (function (exports) {
 	    }
 	}
 
-	const modules = [];
-	function registerModule(module) {
-	    modules.push(module);
-	    return module;
-	}
-	function init_modules() {
-	    for (const m of modules) {
-	        m.init();
-	    }
-	    for (const m of modules) {
-	        m.load();
-	    }
-	    for (const m of modules) {
-	        m.run();
-	    }
-	    return true;
-	}
-	function unload_modules() {
-	    for (const m of modules) {
-	        m.unload();
-	    }
-	}
-	registerModule(new HypnoModule());
-	registerModule(new CollarModule());
-	registerModule(new BoopsModule());
-	registerModule(new MiscModule());
-	registerModule(new LipstickModule());
-
 	function getCurrentSubscreen() {
 	    return GUI.instance && GUI.instance.currentSubscreen;
 	}
@@ -1090,6 +1062,35 @@ var LSCG = (function (exports) {
 	        // Empty
 	    }
 	}
+
+	const modules = [];
+	function registerModule(module) {
+	    modules.push(module);
+	    return module;
+	}
+	function init_modules() {
+	    for (const m of modules) {
+	        m.init();
+	    }
+	    for (const m of modules) {
+	        m.load();
+	    }
+	    for (const m of modules) {
+	        m.run();
+	    }
+	    return true;
+	}
+	function unload_modules() {
+	    for (const m of modules) {
+	        m.unload();
+	    }
+	}
+	registerModule(new GUI());
+	registerModule(new HypnoModule());
+	registerModule(new CollarModule());
+	registerModule(new BoopsModule());
+	registerModule(new MiscModule());
+	registerModule(new LipstickModule());
 
 	class GuiBoops extends GuiSubscreen {
 	    constructor(character) {
