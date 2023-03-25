@@ -56,6 +56,7 @@ declare function CommandCombine(add: ICommand | ICommand[]): void;
 
 // Common.js
 declare const Player: PlayerCharacter;
+declare const PreferenceSubscreenList: any;
 declare var CurrentModule: any;
 declare var CurrentScreen: string;
 declare var KeyPress: number | string;

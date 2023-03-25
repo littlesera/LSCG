@@ -1032,6 +1032,80 @@ var LSCG = (function (exports) {
 	registerModule(new MiscModule());
 	registerModule(new LipstickModule());
 
+	function initSettings() {
+	    PreferenceSubscreenList.push("LSCGSettings");
+	    bcModSDK.hookFunction("TextGet", 2, (args, next) => {
+	        if (args[0] == "HomepageLSCGSettings")
+	            return "Club Games Settings";
+	        return next(args);
+	    });
+	    bcModSDK.hookFunction("DrawButton", 2, (args, next) => {
+	        if (args[6] == "Icons/LSCGSettings.png")
+	            args[6] = "Icons/Asylum.png";
+	        return next(args);
+	    });
+	    bcModSDK.hookFunction("PreferenceClick", 2, (args, next) => {
+	        console.info(args);
+	        return next(args);
+	    });
+	}
+	function getCurrentSubscreen() {
+	    return GUI.instance && GUI.instance.currentSubscreen;
+	}
+	function setSubscreen(subscreen) {
+	    if (!GUI.instance) {
+	        throw new Error("Attempt to set subscreen before init");
+	    }
+	    GUI.instance.currentSubscreen = subscreen;
+	}
+	class GUI extends BaseModule {
+	    get currentSubscreen() {
+	        return this._currentSubscreen;
+	    }
+	    set currentSubscreen(subscreen) {
+	        if (this._currentSubscreen) {
+	            this._currentSubscreen.Unload();
+	        }
+	        this._currentSubscreen = subscreen;
+	        if (this._currentSubscreen) {
+	            this._currentSubscreen.Load();
+	        }
+	        //ChatroomSM.UpdateStatus();
+	    }
+	    constructor() {
+	        super();
+	        this._currentSubscreen = null;
+	        if (GUI.instance) {
+	            throw new Error("Duplicate initialization");
+	        }
+	        GUI.instance = this;
+	    }
+	}
+	GUI.instance = null;
+	class GuiSubscreen {
+	    get active() {
+	        return getCurrentSubscreen() === this;
+	    }
+	    Load() {
+	        // Empty
+	    }
+	    Run() {
+	        // Empty
+	    }
+	    Click() {
+	        // Empty
+	    }
+	    Exit() {
+	        setSubscreen(null);
+	    }
+	    Unload() {
+	        // Empty
+	    }
+	    onChange(source) {
+	        // Empty
+	    }
+	}
+
 	function initWait() {
 	    console.debug("BCX: Init wait");
 	    if (CurrentScreen == null || CurrentScreen === "Login") {
@@ -1064,6 +1138,7 @@ var LSCG = (function (exports) {
 	        delete Player.OnlineSettings.LittleSera;
 	    Player.ClubGames = Player.OnlineSettings.ClubGames || {};
 	    settingsSave();
+	    initSettings();
 	    if (!init_modules()) {
 	        unload();
 	        return;
