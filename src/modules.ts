@@ -32,7 +32,9 @@ import { CollarModule } from './Modules/collar';
 import { BoopsModule } from './Modules/boops';
 import { MiscModule } from './Modules/misc';
 import { LipstickModule } from './Modules/lipstick';
+import { GUI } from "Settings/settingUtils";
 
+registerModule(new GUI());
 registerModule(new HypnoModule());
 registerModule(new CollarModule());
 registerModule(new BoopsModule());
