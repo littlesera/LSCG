@@ -1012,6 +1012,7 @@ var LSCG = (function (exports) {
 	        throw new Error("Attempt to set subscreen before init");
 	    }
 	    GUI.instance.currentSubscreen = subscreen;
+	    return subscreen;
 	}
 	class GUI extends BaseModule {
 	    get currentSubscreen() {
@@ -1024,7 +1025,6 @@ var LSCG = (function (exports) {
 	        this._currentSubscreen = subscreen;
 	        if (this._currentSubscreen) {
 	            this._currentSubscreen.Load();
-	            this._currentSubscreen.Run();
 	        }
 	        //ChatroomSM.UpdateStatus();
 	    }
@@ -1187,31 +1187,36 @@ var LSCG = (function (exports) {
 	    {
 	        module: ModuleCategory.Global,
 	        onclick: (C) => {
-	            setSubscreen(new GuiGlobal(C));
+	            var _a;
+	            (_a = setSubscreen(new GuiGlobal(C))) === null || _a === void 0 ? void 0 : _a.Run();
 	        }
 	    },
 	    {
 	        module: ModuleCategory.Collar,
 	        onclick: (C) => {
-	            setSubscreen(new GuiCollar(C));
+	            var _a;
+	            (_a = setSubscreen(new GuiCollar(C))) === null || _a === void 0 ? void 0 : _a.Run();
 	        }
 	    },
 	    {
 	        module: ModuleCategory.Hypno,
 	        onclick: (C) => {
-	            setSubscreen(new GuiHypno(C));
+	            var _a;
+	            (_a = setSubscreen(new GuiHypno(C))) === null || _a === void 0 ? void 0 : _a.Run();
 	        }
 	    },
 	    {
 	        module: ModuleCategory.Boops,
 	        onclick: (C) => {
-	            setSubscreen(new GuiBoops(C));
+	            var _a;
+	            (_a = setSubscreen(new GuiBoops(C))) === null || _a === void 0 ? void 0 : _a.Run();
 	        }
 	    },
 	    {
 	        module: ModuleCategory.Lipstick,
 	        onclick: (C) => {
-	            setSubscreen(new GuiLipstick(C));
+	            var _a;
+	            (_a = setSubscreen(new GuiLipstick(C))) === null || _a === void 0 ? void 0 : _a.Run();
 	        }
 	    }
 	];
@@ -1303,6 +1308,10 @@ var LSCG = (function (exports) {
 	    });
 	    window.PreferenceSubscreenLSCGSettingsLoad = function () {
 	        setSubscreen(new MainMenu(Player));
+	    };
+	    window.PreferenceSubscreenLSCGSettingsRun = function () {
+	        var _a;
+	        (_a = getCurrentSubscreen()) === null || _a === void 0 ? void 0 : _a.Run();
 	    };
 	}
 	function init() {

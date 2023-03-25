@@ -45,6 +45,9 @@ export function initSettings() {
 	(<any>window).PreferenceSubscreenLSCGSettingsLoad = function() {
 		setSubscreen(new MainMenu(Player));
 	};
+	(<any>window).PreferenceSubscreenLSCGSettingsRun = function() {
+		getCurrentSubscreen()?.Run();
+	};
 }
 
 export function init() {
