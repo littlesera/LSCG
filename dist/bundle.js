@@ -1032,23 +1032,6 @@ var LSCG = (function (exports) {
 	registerModule(new MiscModule());
 	registerModule(new LipstickModule());
 
-	function initSettings() {
-	    PreferenceSubscreenList.push("LSCGSettings");
-	    bcModSDK.hookFunction("TextGet", 2, (args, next) => {
-	        if (args[0] == "HomepageLSCGSettings")
-	            return "Club Games Settings";
-	        return next(args);
-	    });
-	    bcModSDK.hookFunction("DrawButton", 2, (args, next) => {
-	        if (args[6] == "Icons/LSCGSettings.png")
-	            args[6] = "Icons/Asylum.png";
-	        return next(args);
-	    });
-	    bcModSDK.hookFunction("PreferenceClick", 2, (args, next) => {
-	        console.info(args);
-	        return next(args);
-	    });
-	}
 	function getCurrentSubscreen() {
 	    return GUI.instance && GUI.instance.currentSubscreen;
 	}
@@ -1080,6 +1063,8 @@ var LSCG = (function (exports) {
 	        }
 	        GUI.instance = this;
 	    }
+	    load() {
+	    }
 	}
 	GUI.instance = null;
 	class GuiSubscreen {
@@ -1106,6 +1091,175 @@ var LSCG = (function (exports) {
 	    }
 	}
 
+	class GuiBoops extends GuiSubscreen {
+	    constructor(character) {
+	        super();
+	        this.character = character;
+	    }
+	    Run() {
+	        MainCanvas.textAlign = "center";
+	        DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png", "BCX main menu");
+	    }
+	    Click() {
+	        if (MouseIn(1815, 75, 90, 90))
+	            return this.Exit();
+	    }
+	    Exit() {
+	        setSubscreen(new MainMenu(this.character));
+	    }
+	}
+
+	class GuiCollar extends GuiSubscreen {
+	    constructor(character) {
+	        super();
+	        this.character = character;
+	    }
+	    Run() {
+	        MainCanvas.textAlign = "center";
+	        DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png", "BCX main menu");
+	    }
+	    Click() {
+	        if (MouseIn(1815, 75, 90, 90))
+	            return this.Exit();
+	    }
+	    Exit() {
+	        setSubscreen(new MainMenu(this.character));
+	    }
+	}
+
+	class GuiGlobal extends GuiSubscreen {
+	    constructor(character) {
+	        super();
+	        this.character = character;
+	    }
+	    Run() {
+	        MainCanvas.textAlign = "center";
+	        DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png", "BCX main menu");
+	    }
+	    Click() {
+	        if (MouseIn(1815, 75, 90, 90))
+	            return this.Exit();
+	    }
+	    Exit() {
+	        setSubscreen(new MainMenu(this.character));
+	    }
+	}
+
+	class GuiHypno extends GuiSubscreen {
+	    constructor(character) {
+	        super();
+	        this.character = character;
+	    }
+	    Run() {
+	        MainCanvas.textAlign = "center";
+	        DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png", "BCX main menu");
+	    }
+	    Click() {
+	        if (MouseIn(1815, 75, 90, 90))
+	            return this.Exit();
+	    }
+	    Exit() {
+	        setSubscreen(new MainMenu(this.character));
+	    }
+	}
+
+	class GuiLipstick extends GuiSubscreen {
+	    constructor(character) {
+	        super();
+	        this.character = character;
+	    }
+	    Run() {
+	        MainCanvas.textAlign = "center";
+	        DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png", "BCX main menu");
+	    }
+	    Click() {
+	        if (MouseIn(1815, 75, 90, 90))
+	            return this.Exit();
+	    }
+	    Exit() {
+	        setSubscreen(new MainMenu(this.character));
+	    }
+	}
+
+	const MAIN_MENU_ITEMS = [
+	    {
+	        module: ModuleCategory.Global,
+	        onclick: (C) => {
+	            setSubscreen(new GuiGlobal(C));
+	        }
+	    },
+	    {
+	        module: ModuleCategory.Collar,
+	        onclick: (C) => {
+	            setSubscreen(new GuiCollar(C));
+	        }
+	    },
+	    {
+	        module: ModuleCategory.Hypno,
+	        onclick: (C) => {
+	            setSubscreen(new GuiHypno(C));
+	        }
+	    },
+	    {
+	        module: ModuleCategory.Boops,
+	        onclick: (C) => {
+	            setSubscreen(new GuiBoops(C));
+	        }
+	    },
+	    {
+	        module: ModuleCategory.Lipstick,
+	        onclick: (C) => {
+	            setSubscreen(new GuiLipstick(C));
+	        }
+	    }
+	];
+	class MainMenu extends GuiSubscreen {
+	    constructor(C) {
+	        super();
+	        this.character = C;
+	    }
+	    Load() {
+	    }
+	    onChange(source) {
+	        if (source === this.character.MemberNumber) {
+	            this.Load();
+	        }
+	    }
+	    Run() {
+	        DrawText("- Club Games -", 125, 125, "Black", "Gray");
+	        DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png");
+	        for (let i = 0; i < MAIN_MENU_ITEMS.length; i++) {
+	            const e = MAIN_MENU_ITEMS[i];
+	            const PX = Math.floor(i / 6);
+	            const PY = i % 6;
+	            const isDisabled = e.module == ModuleCategory.Collar && this.character.MemberNumber != 74298; // DISABLE CHOKE COLLAR FOR NON-SERA PLAYERS...
+	            DrawButton(150 + 430 * PX, 190 + 120 * PY, 400, 90, "", isDisabled ? "#ddd" : "White", SETTING_ICONS[e.module], isDisabled ? "Setting is deactivated" : "", isDisabled);
+	            DrawTextFit(SETTING_NAMES[e.module], 250 + 430 * PX, 235 + 120 * PY, 310, "Black");
+	        }
+	        // Changelog button..
+	        // MainCanvas.textAlign = "center";
+	        // DrawButton(1450, 810, 400, 90, "", "White", "", "Open changelog on GitHub");
+	        // DrawText(`View changelog`, 1450 + 350 / 2, 855, "Black", "");
+	    }
+	    Click() {
+	        if (MouseIn(1815, 75, 90, 90))
+	            return this.Exit();
+	        // Changelog
+	        // if (MouseIn(1450, 810, 400, 90)) {
+	        // 	window.open(`https://github.com/littlesera/sera/CHANGELOG.md`, "_blank");
+	        // }
+	        for (let i = 0; i < MAIN_MENU_ITEMS.length; i++) {
+	            const e = MAIN_MENU_ITEMS[i];
+	            const PX = Math.floor(i / 6);
+	            const PY = i % 6;
+	            const isDisabled = e.module == ModuleCategory.Collar && this.character.MemberNumber != 74298; // DISABLE CHOKE COLLAR FOR NON-SERA PLAYERS...
+	            if (MouseIn(150 + 430 * PX, 190 + 120 * PY, 400, 90) && !isDisabled) {
+	                return e.onclick(this.character);
+	            }
+	        }
+	    }
+	}
+
 	function initWait() {
 	    console.debug("BCX: Init wait");
 	    if (CurrentScreen == null || CurrentScreen === "Login") {
@@ -1128,6 +1282,30 @@ var LSCG = (function (exports) {
 	    if (window.LSCG_Loaded)
 	        return;
 	    init();
+	}
+	function initSettings() {
+	    PreferenceSubscreenList.push("LSCGSettings");
+	    bcModSDK.hookFunction("TextGet", 2, (args, next) => {
+	        if (args[0] == "HomepageLSCGSettings")
+	            return "Club Games Settings";
+	        return next(args);
+	    });
+	    bcModSDK.hookFunction("DrawButton", 2, (args, next) => {
+	        if (args[6] == "Icons/LSCGSettings.png")
+	            args[6] = "Icons/Asylum.png";
+	        return next(args);
+	    });
+	    bcModSDK.hookFunction("PreferenceClick", 2, (args, next) => {
+	        console.info(args);
+	        return next(args);
+	    });
+	    window.PreferenceSubscreenLSCGSettingsLoad = function () {
+	        setSubscreen(new MainMenu(Player));
+	    };
+	    window.PreferenceSubscreenLSCGSettingsRun = function () {
+	        var _a;
+	        (_a = getCurrentSubscreen()) === null || _a === void 0 ? void 0 : _a.Run();
+	    };
 	}
 	function init() {
 	    var _a;
@@ -1167,6 +1345,7 @@ var LSCG = (function (exports) {
 	initWait();
 
 	exports.init = init;
+	exports.initSettings = initSettings;
 	exports.loginInit = loginInit;
 	exports.unload = unload;
 
