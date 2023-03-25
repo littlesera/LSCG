@@ -231,6 +231,7 @@ var LSCG = (function (exports) {
 	    ModuleCategory[ModuleCategory["Boops"] = 3] = "Boops";
 	    ModuleCategory[ModuleCategory["Lipstick"] = 4] = "Lipstick";
 	    ModuleCategory[ModuleCategory["Misc"] = 99] = "Misc";
+	    ModuleCategory[ModuleCategory["MainMenu"] = 100] = "MainMenu";
 	})(ModuleCategory || (ModuleCategory = {}));
 	const SETTING_NAMES = {
 	    [ModuleCategory.Global]: "Global",
@@ -238,7 +239,8 @@ var LSCG = (function (exports) {
 	    [ModuleCategory.Hypno]: "Hypno",
 	    [ModuleCategory.Boops]: "Boops",
 	    [ModuleCategory.Lipstick]: "Lipstick",
-	    [ModuleCategory.Misc]: "Miscellaneous"
+	    [ModuleCategory.Misc]: "Miscellaneous",
+	    [ModuleCategory.MainMenu]: "MainMenu"
 	};
 	const SETTING_ICONS = {
 	    [ModuleCategory.Global]: "Icons/General.png",
@@ -246,7 +248,8 @@ var LSCG = (function (exports) {
 	    [ModuleCategory.Hypno]: "Icons/Visibility.png",
 	    [ModuleCategory.Boops]: "Icons/Use.png",
 	    [ModuleCategory.Lipstick]: "Icons/Arousal.png",
-	    [ModuleCategory.Misc]: "Icons/ServiceBell.png"
+	    [ModuleCategory.Misc]: "Icons/ServiceBell.png",
+	    [ModuleCategory.MainMenu]: "Icons/General.pnbg"
 	};
 
 	class HypnoModule extends BaseModule {
@@ -1229,11 +1232,11 @@ var LSCG = (function (exports) {
 	        hookFunction("PreferenceSubscreenLSCGSettingsRun", 1, (args, next) => {
 	            this.Run();
 	            return next(args);
-	        });
+	        }, ModuleCategory.MainMenu);
 	        hookFunction("PreferenceSubscreenLSCGSettingsClick", 1, (args, next) => {
 	            this.Click();
 	            return next(args);
-	        });
+	        }, ModuleCategory.MainMenu);
 	    }
 	    onChange(source) {
 	        if (source === this.character.MemberNumber) {

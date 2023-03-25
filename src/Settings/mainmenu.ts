@@ -52,11 +52,11 @@ export class MainMenu extends GuiSubscreen {
 		hookFunction("PreferenceSubscreenLSCGSettingsRun", 1, (args, next) => {
 			this.Run();
 			return next(args);
-		});
+		}, ModuleCategory.MainMenu);
 		hookFunction("PreferenceSubscreenLSCGSettingsClick", 1, (args, next) => {
 			this.Click();
 			return next(args);
-		});
+		}, ModuleCategory.MainMenu);
 	}
 
 	onChange(source: number) {
