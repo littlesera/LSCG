@@ -1,9 +1,10 @@
+import { hookFunction } from "utils";
 import { GuiBoops } from "./boops";
 import { GuiCollar } from "./collar";
 import { GuiGlobal } from "./global";
 import { GuiHypno } from "./hypno";
 import { GuiLipstick } from "./lipstick";
-import { GuiSubscreen, setSubscreen } from "./settingUtils";
+import { getCurrentSubscreen, GuiSubscreen, setSubscreen } from "./settingUtils";
 import { ModuleCategory, SETTING_ICONS, SETTING_NAMES } from "./setting_definitions";
 
 const MAIN_MENU_ITEMS: { module: ModuleCategory; onclick: (C: PlayerCharacter) => void; }[] = [
@@ -48,7 +49,14 @@ export class MainMenu extends GuiSubscreen {
 	}
 
 	Load() {
-		
+		hookFunction("PreferenceSubscreenLSCGSettingsRun", 1, (args, next) => {
+			this.Run();
+			return next(args);
+		});
+		hookFunction("PreferenceSubscreenLSCGSettingsClick", 1, (args, next) => {
+			this.Click();
+			return next(args);
+		});
 	}
 
 	onChange(source: number) {
@@ -58,7 +66,7 @@ export class MainMenu extends GuiSubscreen {
 	}
 
 	Run() {
-		DrawText("- Club Games -", 125, 125, "Black", "Gray");
+		DrawText("- Club Games -", 225, 125, "Black", "Gray");
 		DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png");
 
 		for (let i = 0; i < MAIN_MENU_ITEMS.length; i++) {
