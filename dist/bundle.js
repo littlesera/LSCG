@@ -1024,6 +1024,7 @@ var LSCG = (function (exports) {
 	        this._currentSubscreen = subscreen;
 	        if (this._currentSubscreen) {
 	            this._currentSubscreen.Load();
+	            this._currentSubscreen.Run();
 	        }
 	        //ChatroomSM.UpdateStatus();
 	    }
@@ -1235,7 +1236,7 @@ var LSCG = (function (exports) {
 	            const PY = i % 6;
 	            const isDisabled = e.module == ModuleCategory.Collar && this.character.MemberNumber != 74298; // DISABLE CHOKE COLLAR FOR NON-SERA PLAYERS...
 	            DrawButton(150 + 430 * PX, 190 + 120 * PY, 400, 90, "", isDisabled ? "#ddd" : "White", SETTING_ICONS[e.module], isDisabled ? "Setting is deactivated" : "", isDisabled);
-	            DrawTextFit(SETTING_NAMES[e.module], 250 + 430 * PX, 235 + 120 * PY, 310, "Black");
+	            DrawTextFit(SETTING_NAMES[e.module], 350 + 430 * PX, 235 + 120 * PY, 310, "Black");
 	        }
 	        // Changelog button..
 	        // MainCanvas.textAlign = "center";
@@ -1302,10 +1303,6 @@ var LSCG = (function (exports) {
 	    });
 	    window.PreferenceSubscreenLSCGSettingsLoad = function () {
 	        setSubscreen(new MainMenu(Player));
-	    };
-	    window.PreferenceSubscreenLSCGSettingsRun = function () {
-	        var _a;
-	        (_a = getCurrentSubscreen()) === null || _a === void 0 ? void 0 : _a.Run();
 	    };
 	}
 	function init() {
