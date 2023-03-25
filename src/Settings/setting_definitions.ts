@@ -4,7 +4,8 @@ export enum ModuleCategory {
 	Hypno = 2,
 	Boops = 3,
 	Lipstick = 4,
-	Misc = 99
+	Misc = 99,
+    MainMenu = 100
 }
 
 export const SETTING_NAMES: Record<ModuleCategory, string> = {
@@ -13,7 +14,8 @@ export const SETTING_NAMES: Record<ModuleCategory, string> = {
     [ModuleCategory.Hypno]: "Hypno",
     [ModuleCategory.Boops]: "Boops",
     [ModuleCategory.Lipstick]: "Lipstick",
-    [ModuleCategory.Misc]: "Miscellaneous"
+    [ModuleCategory.Misc]: "Miscellaneous",
+    [ModuleCategory.MainMenu]: "MainMenu"
 };
 
 export const SETTING_ICONS: Record<ModuleCategory, string> = {
@@ -22,5 +24,6 @@ export const SETTING_ICONS: Record<ModuleCategory, string> = {
     [ModuleCategory.Hypno]: "Icons/Visibility.png",
     [ModuleCategory.Boops]: "Icons/Use.png",
     [ModuleCategory.Lipstick]: "Icons/Arousal.png",
-    [ModuleCategory.Misc]: "Icons/ServiceBell.png"
+    [ModuleCategory.Misc]: "Icons/ServiceBell.png",
+    [ModuleCategory.MainMenu]: "Icons/General.pnbg"
 };
