@@ -1,7 +1,8 @@
-import { hookFunction, isObject, settingsSave, VERSION } from './utils';
+import { bcModSDK, hookFunction, isObject, settingsSave, VERSION } from './utils';
 import { init_modules, unload_modules } from 'modules';
-import { initSettings } from 'Settings/settingUtils';
 import './modules';
+import { getCurrentSubscreen, setSubscreen } from 'Settings/settingUtils';
+import { MainMenu } from 'Settings/mainmenu';
 
 function initWait() {
 	console.debug("BCX: Init wait");
@@ -25,6 +26,28 @@ export function loginInit(C: any) {
 	if (window.LSCG_Loaded)
 		return;
 	init();
+}
+
+export function initSettings() {
+	PreferenceSubscreenList.push("LSCGSettings");
+	bcModSDK.hookFunction("TextGet", 2, (args: string[], next: (arg0: any) => any) => {
+		if (args[0] == "HomepageLSCGSettings") return "Club Games Settings";
+		return next(args);
+	});
+	bcModSDK.hookFunction("DrawButton", 2, (args: string[], next: (arg0: any) => any) => {
+		if (args[6] == "Icons/LSCGSettings.png") args[6] = "Icons/Asylum.png";
+		return next(args);
+	});
+	bcModSDK.hookFunction("PreferenceClick", 2, (args, next) => {
+		console.info(args);
+		return next(args);
+	});
+	(<any>window).PreferenceSubscreenLSCGSettingsLoad = function() {
+		setSubscreen(new MainMenu(Player));
+	};
+	(<any>window).PreferenceSubscreenLSCGSettingsRun = function() {
+		getCurrentSubscreen()?.Run();
+	};
 }
 
 export function init() {
