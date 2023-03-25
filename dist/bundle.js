@@ -1226,6 +1226,14 @@ var LSCG = (function (exports) {
 	        this.character = C;
 	    }
 	    Load() {
+	        hookFunction("PreferenceSubscreenLSCGSettingsRun", 1, (args, next) => {
+	            this.Run();
+	            return next(args);
+	        });
+	        hookFunction("PreferenceSubscreenLSCGSettingsClick", 1, (args, next) => {
+	            this.Click();
+	            return next(args);
+	        });
 	    }
 	    onChange(source) {
 	        if (source === this.character.MemberNumber) {
@@ -1233,7 +1241,7 @@ var LSCG = (function (exports) {
 	        }
 	    }
 	    Run() {
-	        DrawText("- Club Games -", 125, 125, "Black", "Gray");
+	        DrawText("- Club Games -", 225, 125, "Black", "Gray");
 	        DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png");
 	        for (let i = 0; i < MAIN_MENU_ITEMS.length; i++) {
 	            const e = MAIN_MENU_ITEMS[i];
@@ -1308,10 +1316,6 @@ var LSCG = (function (exports) {
 	    });
 	    window.PreferenceSubscreenLSCGSettingsLoad = function () {
 	        setSubscreen(new MainMenu(Player));
-	    };
-	    window.PreferenceSubscreenLSCGSettingsRun = function () {
-	        var _a;
-	        (_a = getCurrentSubscreen()) === null || _a === void 0 ? void 0 : _a.Run();
 	    };
 	}
 	function init() {
