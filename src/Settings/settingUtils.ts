@@ -28,6 +28,7 @@ export class GUI extends BaseModule {
 		this._currentSubscreen = subscreen;
 		if (this._currentSubscreen) {
 			this._currentSubscreen.Load();
+			this._currentSubscreen.Run();
 		}
 		//ChatroomSM.UpdateStatus();
 	}
