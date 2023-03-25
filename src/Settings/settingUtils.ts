@@ -1,4 +1,21 @@
+import { bcModSDK, hookFunction } from "utils";
 import { BaseModule } from "../base";
+
+export function initSettings() {
+	PreferenceSubscreenList.push("LSCGSettings");
+	bcModSDK.hookFunction("TextGet", 2, (args: string[], next: (arg0: any) => any) => {
+		if (args[0] == "HomepageLSCGSettings") return "Club Games Settings";
+		return next(args);
+	});
+	bcModSDK.hookFunction("DrawButton", 2, (args: string[], next: (arg0: any) => any) => {
+		if (args[6] == "Icons/LSCGSettings.png") args[6] = "Icons/Asylum.png";
+		return next(args);
+	});
+	bcModSDK.hookFunction("PreferenceClick", 2, (args, next) => {
+		console.info(args);
+		return next(args);
+	});
+}
 
 export function getCurrentSubscreen(): GuiSubscreen | null {
 	return GUI.instance && GUI.instance.currentSubscreen;

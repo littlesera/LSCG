@@ -1,5 +1,6 @@
 import { hookFunction, isObject, settingsSave, VERSION } from './utils';
 import { init_modules, unload_modules } from 'modules';
+import { initSettings } from 'Settings/settingUtils';
 import './modules';
 
 function initWait() {
@@ -36,6 +37,8 @@ export function init() {
 
     Player.ClubGames = Player.OnlineSettings.ClubGames || {};
 	settingsSave();
+
+	initSettings();
 
 	if (!init_modules()) {
 		unload();
