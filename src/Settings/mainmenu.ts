@@ -10,31 +10,31 @@ const MAIN_MENU_ITEMS: { module: ModuleCategory; onclick: (C: PlayerCharacter) =
 	{
 		module: ModuleCategory.Global,
 		onclick: (C) => {
-			setSubscreen(new GuiGlobal(C));
+			setSubscreen(new GuiGlobal(C))?.Run();
 		}
 	},
 	{
 		module: ModuleCategory.Collar,
 		onclick: (C) => {
-			setSubscreen(new GuiCollar(C));
+			setSubscreen(new GuiCollar(C))?.Run();
 		}
 	},
 	{
 		module: ModuleCategory.Hypno,
 		onclick: (C) => {
-			setSubscreen(new GuiHypno(C));
+			setSubscreen(new GuiHypno(C))?.Run();
 		}
 	},
 	{
 		module: ModuleCategory.Boops,
 		onclick: (C) => {
-			setSubscreen(new GuiBoops(C));
+			setSubscreen(new GuiBoops(C))?.Run();
 		}
 	},
 	{
 		module: ModuleCategory.Lipstick,
 		onclick: (C) => {
-			setSubscreen(new GuiLipstick(C));
+			setSubscreen(new GuiLipstick(C))?.Run();
 		}
 	}
 ];

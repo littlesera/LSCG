@@ -4,11 +4,12 @@ export function getCurrentSubscreen(): GuiSubscreen | null {
 	return GUI.instance && GUI.instance.currentSubscreen;
 }
 
-export function setSubscreen(subscreen: GuiSubscreen | null): void {
+export function setSubscreen(subscreen: GuiSubscreen | null): GuiSubscreen | null {
 	if (!GUI.instance) {
 		throw new Error("Attempt to set subscreen before init");
 	}
 	GUI.instance.currentSubscreen = subscreen;
+	return subscreen;
 }
 
 
@@ -28,7 +29,6 @@ export class GUI extends BaseModule {
 		this._currentSubscreen = subscreen;
 		if (this._currentSubscreen) {
 			this._currentSubscreen.Load();
-			this._currentSubscreen.Run();
 		}
 		//ChatroomSM.UpdateStatus();
 	}
