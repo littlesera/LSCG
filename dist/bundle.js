@@ -1229,14 +1229,12 @@ var LSCG = (function (exports) {
 	        this.character = C;
 	    }
 	    Load() {
-	        hookFunction("PreferenceSubscreenLSCGSettingsRun", 1, (args, next) => {
+	        window.PreferenceSubscreenLSCGSettingsRun = () => {
 	            this.Run();
-	            return next(args);
-	        }, ModuleCategory.MainMenu);
-	        hookFunction("PreferenceSubscreenLSCGSettingsClick", 1, (args, next) => {
+	        };
+	        window.PreferenceSubscreenLSCGSettingsClick = () => {
 	            this.Click();
-	            return next(args);
-	        }, ModuleCategory.MainMenu);
+	        };
 	    }
 	    onChange(source) {
 	        if (source === this.character.MemberNumber) {
