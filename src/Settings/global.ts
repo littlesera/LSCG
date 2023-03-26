@@ -1,5 +1,4 @@
-import { MainMenu } from "./mainmenu";
-import { GuiSubscreen, setSubscreen } from "./settingUtils";
+import { GuiSubscreen } from "./settingUtils";
 
 export class GuiGlobal extends GuiSubscreen {
     readonly character : PlayerCharacter;
@@ -16,9 +15,5 @@ export class GuiGlobal extends GuiSubscreen {
 
 	Click() {
 		if (MouseIn(1815, 75, 90, 90)) return this.Exit();
-	}
-
-	Exit() {
-		setSubscreen(new MainMenu(this.character));
 	}
 }

@@ -1,4 +1,6 @@
 import { BaseModule } from "../base";
+import { MainMenu } from "./mainmenu";
+import { MAIN_MENU_ITEMS, ModuleCategory } from "./setting_definitions";
 
 export function getCurrentSubscreen(): GuiSubscreen | null {
 	return GUI.instance && GUI.instance.currentSubscreen;
@@ -12,11 +14,24 @@ export function setSubscreen(subscreen: GuiSubscreen | null): GuiSubscreen | nul
 	return subscreen;
 }
 
-
 export class GUI extends BaseModule {
 	static instance: GUI | null = null;
+	static SETTING_FUNC_PREFIX: string = "PreferenceSubscreenLSCG";
+	static SETTING_FUNC_NAMES: string[] = [
+		"Load",
+		"Unload",
+		"Run",
+		"Click",
+		"Exit"
+	];
 
+	private _subscreens: GuiSubscreen[] | null = null;
+	private _mainMenu: MainMenu = new MainMenu(Player);
 	private _currentSubscreen: GuiSubscreen | null = null;
+
+	get mainMenu(): MainMenu {
+		return this._mainMenu;
+	}
 
 	get currentSubscreen(): GuiSubscreen | null {
 		return this._currentSubscreen;
@@ -30,7 +45,6 @@ export class GUI extends BaseModule {
 		if (this._currentSubscreen) {
 			this._currentSubscreen.Load();
 		}
-		//ChatroomSM.UpdateStatus();
 	}
 
 	constructor() {
@@ -38,6 +52,14 @@ export class GUI extends BaseModule {
 		if (GUI.instance) {
 			throw new Error("Duplicate initialization");
 		}
+
+		this._subscreens = [
+			this._mainMenu
+		];
+		MAIN_MENU_ITEMS.forEach(item => {
+			this._subscreens?.push(item.setting);
+		});
+
 		GUI.instance = this;
 	}
 
@@ -51,11 +73,20 @@ export abstract class GuiSubscreen {
 		return getCurrentSubscreen() === this;
 	}
 
+	static SETTING_FUNC_PREFIX: string = "PreferenceSubscreenLSCG";
+
 	constructor() {
-		(<any>window)["PreferenceSubscreenLSCG" + this.constructor.name + "Load"] = () => {
-			this.Run();
+		GUI.SETTING_FUNC_NAMES.forEach(name => {
+			if (typeof (<any>this)[name] === "function")
+				(<any>window)[GuiSubscreen.SETTING_FUNC_PREFIX + this.constructor.name + name] = () => {
+					(<any>this)[name]();
+				};
+		});
+
+		(<any>window)[GuiSubscreen.SETTING_FUNC_PREFIX + this.constructor.name + "Load"] = () => {
+			this.Load();
 		};
-		(<any>window)["PreferenceSubscreenLSCG" + this.constructor.name + "Run"] = () => {
+		(<any>window)[GuiSubscreen.SETTING_FUNC_PREFIX + this.constructor.name + "Run"] = () => {
 			this.Run();
 		};
 		(<any>window)["PreferenceSubscreenLSCG" + this.constructor.name + "Click"] = () => {
@@ -82,8 +113,9 @@ export abstract class GuiSubscreen {
 	}
 
 	Exit() {
-		setSubscreen(null);
-		PreferenceExit();
+		// Empty
+		PreferenceMessage = "LSCG Main Menu";
+		PreferenceSubscreen = "LSCGMainMenu";
 	}
 
 	Unload() {

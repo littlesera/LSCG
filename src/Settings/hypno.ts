@@ -1,5 +1,6 @@
 import { MainMenu } from "./mainmenu";
 import { GuiSubscreen, setSubscreen } from "./settingUtils";
+import { ModuleCategory } from "./setting_definitions";
 
 export class GuiHypno extends GuiSubscreen {
     readonly character : PlayerCharacter;
@@ -16,9 +17,5 @@ export class GuiHypno extends GuiSubscreen {
 
 	Click() {
 		if (MouseIn(1815, 75, 90, 90)) return this.Exit();
-	}
-
-	Exit() {
-		setSubscreen(new MainMenu(this.character));
 	}
 }
