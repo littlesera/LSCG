@@ -51,13 +51,26 @@ export abstract class GuiSubscreen {
 		return getCurrentSubscreen() === this;
 	}
 
-	Load() {
+	constructor() {
+		(<any>window)["PreferenceSubscreenLSCG" + this.constructor.name + "Load"] = () => {
+			this.Run();
+		};
 		(<any>window)["PreferenceSubscreenLSCG" + this.constructor.name + "Run"] = () => {
 			this.Run();
 		};
 		(<any>window)["PreferenceSubscreenLSCG" + this.constructor.name + "Click"] = () => {
 			this.Click();
 		};
+		(<any>window)["PreferenceSubscreenLSCG" + this.constructor.name + "Exit"] = () => {
+			this.Exit();
+		};
+		(<any>window)["PreferenceSubscreenLSCG" + this.constructor.name + "Unload"] = () => {
+			this.Unload();
+		};
+	}
+
+	Load() {
+		// Empty
 	}
 
 	Run() {
@@ -70,12 +83,10 @@ export abstract class GuiSubscreen {
 
 	Exit() {
 		setSubscreen(null);
+		PreferenceExit();
 	}
 
 	Unload() {
-		(<any>window)["PreferenceSubscreenLSCG" + this.constructor.name + "Run"] = undefined;
-		(<any>window)["PreferenceSubscreenLSCG" + this.constructor.name + "Click"] = undefined;
-		PreferenceExit();
 		// Empty
 	}
 

@@ -1048,13 +1048,25 @@ var LSCG = (function (exports) {
 	    get active() {
 	        return getCurrentSubscreen() === this;
 	    }
-	    Load() {
+	    constructor() {
+	        window["PreferenceSubscreenLSCG" + this.constructor.name + "Load"] = () => {
+	            this.Run();
+	        };
 	        window["PreferenceSubscreenLSCG" + this.constructor.name + "Run"] = () => {
 	            this.Run();
 	        };
 	        window["PreferenceSubscreenLSCG" + this.constructor.name + "Click"] = () => {
 	            this.Click();
 	        };
+	        window["PreferenceSubscreenLSCG" + this.constructor.name + "Exit"] = () => {
+	            this.Exit();
+	        };
+	        window["PreferenceSubscreenLSCG" + this.constructor.name + "Unload"] = () => {
+	            this.Unload();
+	        };
+	    }
+	    Load() {
+	        // Empty
 	    }
 	    Run() {
 	        // Empty
@@ -1064,11 +1076,9 @@ var LSCG = (function (exports) {
 	    }
 	    Exit() {
 	        setSubscreen(null);
+	        PreferenceExit();
 	    }
 	    Unload() {
-	        window["PreferenceSubscreenLSCG" + this.constructor.name + "Run"] = undefined;
-	        window["PreferenceSubscreenLSCG" + this.constructor.name + "Click"] = undefined;
-	        PreferenceExit();
 	        // Empty
 	    }
 	    onChange(source) {
