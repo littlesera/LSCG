@@ -302,11 +302,11 @@ var LSCG = (function (exports) {
 	    constructor() {
 	        super();
 	        this._subscreens = null;
-	        this._mainMenu = new MainMenu(Player);
 	        this._currentSubscreen = null;
 	        if (GUI.instance) {
 	            throw new Error("Duplicate initialization");
 	        }
+	        this._mainMenu = new MainMenu(Player);
 	        this._subscreens = [
 	            this._mainMenu
 	        ];
