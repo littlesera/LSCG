@@ -17,8 +17,4 @@ export class GuiLipstick extends GuiSubscreen {
 	Click() {
 		if (MouseIn(1815, 75, 90, 90)) return this.Exit();
 	}
-
-	Exit() {
-		setSubscreen(new MainMenu(this.character));
-	}
 }
