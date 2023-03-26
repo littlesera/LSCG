@@ -143,7 +143,7 @@ var LSCG = (function (exports) {
 	    const data = initPatchableFunction(target);
 	    if (data.hooks.some(h => h.hook === hook)) {
 	        console.error(`BCX: Duplicate hook for "${target}"`, hook);
-	        return;
+	        return () => null;
 	    }
 	    const removeCallback = bcModSDK.hookFunction(target, priority, hook);
 	    data.hooks.push({
@@ -153,6 +153,7 @@ var LSCG = (function (exports) {
 	        removeCallback
 	    });
 	    data.hooks.sort((a, b) => b.priority - a.priority);
+	    return removeCallback;
 	}
 	function removeHooksByModule(target, module) {
 	    const data = initPatchableFunction(target);
@@ -1048,7 +1049,12 @@ var LSCG = (function (exports) {
 	        return getCurrentSubscreen() === this;
 	    }
 	    Load() {
-	        // Empty
+	        window["PreferenceSubscreenLSCG" + this.constructor.name + "Run"] = () => {
+	            this.Run();
+	        };
+	        window["PreferenceSubscreenLSCG" + this.constructor.name + "Click"] = () => {
+	            this.Click();
+	        };
 	    }
 	    Run() {
 	        // Empty
@@ -1060,6 +1066,9 @@ var LSCG = (function (exports) {
 	        setSubscreen(null);
 	    }
 	    Unload() {
+	        window["PreferenceSubscreenLSCG" + this.constructor.name + "Run"] = undefined;
+	        window["PreferenceSubscreenLSCG" + this.constructor.name + "Click"] = undefined;
+	        PreferenceExit();
 	        // Empty
 	    }
 	    onChange(source) {
@@ -1228,14 +1237,6 @@ var LSCG = (function (exports) {
 	        super();
 	        this.character = C;
 	    }
-	    Load() {
-	        window.PreferenceSubscreenLSCGSettingsRun = () => {
-	            this.Run();
-	        };
-	        window.PreferenceSubscreenLSCGSettingsClick = () => {
-	            this.Click();
-	        };
-	    }
 	    onChange(source) {
 	        if (source === this.character.MemberNumber) {
 	            this.Load();
@@ -1300,22 +1301,26 @@ var LSCG = (function (exports) {
 	    init();
 	}
 	function initSettings() {
-	    PreferenceSubscreenList.push("LSCGSettings");
-	    bcModSDK.hookFunction("TextGet", 2, (args, next) => {
-	        if (args[0] == "HomepageLSCGSettings")
+	    PreferenceSubscreenList.push("LSCGMainMenu");
+	    hookFunction("TextGet", 2, (args, next) => {
+	        if (args[0] == "HomepageLSCGMainMenu")
 	            return "Club Games Settings";
 	        return next(args);
 	    });
-	    bcModSDK.hookFunction("DrawButton", 2, (args, next) => {
-	        if (args[6] == "Icons/LSCGSettings.png")
+	    hookFunction("DrawButton", 2, (args, next) => {
+	        if (args[6] == "Icons/LSCGMainMenu.png")
 	            args[6] = "Icons/Asylum.png";
 	        return next(args);
 	    });
-	    bcModSDK.hookFunction("PreferenceClick", 2, (args, next) => {
+	    hookFunction("PreferenceClick", 2, (args, next) => {
 	        console.info(args);
 	        return next(args);
 	    });
-	    window.PreferenceSubscreenLSCGSettingsLoad = function () {
+	    hookFunction("InformationSheetRun", 1, (args, next) => {
+	        console.info(args);
+	        return next(args);
+	    });
+	    window.PreferenceSubscreenLSCGMainMenuLoad = function () {
 	        setSubscreen(new MainMenu(Player));
 	    };
 	}
