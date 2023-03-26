@@ -271,6 +271,7 @@ declare function MouseXIn(Left: number, Width: number): boolean;
 declare function MouseYIn(Top: number, Height: number): boolean;
 
 // Preference.js
+declare function PreferenceExit(): void;
 declare var PreferenceDifficultyLevel: any;
 declare var PreferenceDifficultyAccept: boolean;
 

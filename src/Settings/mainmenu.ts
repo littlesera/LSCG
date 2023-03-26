@@ -48,15 +48,6 @@ export class MainMenu extends GuiSubscreen {
         this.character = C;
 	}
 
-	Load() {
-		(<any>window).PreferenceSubscreenLSCGSettingsRun = () => {
-			this.Run();
-		};
-		(<any>window).PreferenceSubscreenLSCGSettingsClick = () => {
-			this.Click();
-		};
-	}
-
 	onChange(source: number) {
 		if (source === this.character.MemberNumber) {
 			this.Load();
