@@ -335,25 +335,10 @@ var LSCG = (function (exports) {
 	    constructor() {
 	        GUI.SETTING_FUNC_NAMES.forEach(name => {
 	            if (typeof this[name] === "function")
-	                window[GuiSubscreen.SETTING_FUNC_PREFIX + this.constructor.name + name] = () => {
+	                window[GUI.SETTING_FUNC_PREFIX + this.constructor.name + name] = () => {
 	                    this[name]();
 	                };
 	        });
-	        window[GuiSubscreen.SETTING_FUNC_PREFIX + this.constructor.name + "Load"] = () => {
-	            this.Load();
-	        };
-	        window[GuiSubscreen.SETTING_FUNC_PREFIX + this.constructor.name + "Run"] = () => {
-	            this.Run();
-	        };
-	        window["PreferenceSubscreenLSCG" + this.constructor.name + "Click"] = () => {
-	            this.Click();
-	        };
-	        window["PreferenceSubscreenLSCG" + this.constructor.name + "Exit"] = () => {
-	            this.Exit();
-	        };
-	        window["PreferenceSubscreenLSCG" + this.constructor.name + "Unload"] = () => {
-	            this.Unload();
-	        };
 	    }
 	    Load() {
 	        // Empty
@@ -376,7 +361,6 @@ var LSCG = (function (exports) {
 	        // Empty
 	    }
 	}
-	GuiSubscreen.SETTING_FUNC_PREFIX = "PreferenceSubscreenLSCG";
 
 	class GuiBoops extends GuiSubscreen {
 	    constructor(character) {
@@ -1320,17 +1304,6 @@ var LSCG = (function (exports) {
 	            args[6] = "Icons/Asylum.png";
 	        return next(args);
 	    });
-	    hookFunction("PreferenceClick", 2, (args, next) => {
-	        console.info(args);
-	        return next(args);
-	    });
-	    hookFunction("InformationSheetRun", 1, (args, next) => {
-	        console.info(args);
-	        return next(args);
-	    });
-	    window.PreferenceSubscreenLSCGMainMenuLoad = function () {
-	        setSubscreen(new MainMenu(Player));
-	    };
 	}
 	function init() {
 	    var _a;
