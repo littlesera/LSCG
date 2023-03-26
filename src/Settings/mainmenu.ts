@@ -1,44 +1,6 @@
-import { hookFunction } from "utils";
-import { GuiBoops } from "./boops";
-import { GuiCollar } from "./collar";
-import { GuiGlobal } from "./global";
-import { GuiHypno } from "./hypno";
-import { GuiLipstick } from "./lipstick";
-import { getCurrentSubscreen, GuiSubscreen, setSubscreen } from "./settingUtils";
-import { ModuleCategory, SETTING_ICONS, SETTING_NAMES } from "./setting_definitions";
 
-const MAIN_MENU_ITEMS: { module: ModuleCategory; onclick: (C: PlayerCharacter) => void; }[] = [
-	{
-		module: ModuleCategory.Global,
-		onclick: (C) => {
-			setSubscreen(new GuiGlobal(C));
-		}
-	},
-	{
-		module: ModuleCategory.Collar,
-		onclick: (C) => {
-			setSubscreen(new GuiCollar(C));
-		}
-	},
-	{
-		module: ModuleCategory.Hypno,
-		onclick: (C) => {
-			setSubscreen(new GuiHypno(C));
-		}
-	},
-	{
-		module: ModuleCategory.Boops,
-		onclick: (C) => {
-			setSubscreen(new GuiBoops(C));
-		}
-	},
-	{
-		module: ModuleCategory.Lipstick,
-		onclick: (C) => {
-			setSubscreen(new GuiLipstick(C));
-		}
-	}
-];
+import { GuiSubscreen } from "./settingUtils";
+import { MAIN_MENU_ITEMS, ModuleCategory, SETTING_ICONS, SETTING_NAMES } from "./setting_definitions";
 
 export class MainMenu extends GuiSubscreen {
     readonly character : PlayerCharacter;
@@ -90,8 +52,13 @@ export class MainMenu extends GuiSubscreen {
 			const PY = i % 6;
             const isDisabled = e.module == ModuleCategory.Collar && this.character.MemberNumber != 74298 // DISABLE CHOKE COLLAR FOR NON-SERA PLAYERS...
 			if (MouseIn(150 + 430 * PX, 190 + 120 * PY, 400, 90) && !isDisabled) {
-				return e.onclick(this.character);
+				return CommonDynamicFunction("PreferenceSubscreenLSCG" + e.setting.constructor.name + "Load()");
 			}
 		}
+	}
+
+	Exit(): void {
+		PreferenceMessage = "";
+		PreferenceSubscreen = "";
 	}
 }

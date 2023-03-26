@@ -71,6 +71,7 @@ declare function CommonColorsEqual(C1: string | string[], C2: string | string[])
 declare function CommonArraysEqual(a1: any[], a2: any[]): boolean;
 declare function CommonSetScreen(NewModule: string, NewScreen: string): void;
 declare function CommonConvertStringToArray(s: string): number[];
+declare function CommonDynamicFunction(funcName: string): void;
 
 // FriendList.js
 declare var FriendListBeepTarget: number | null;
@@ -274,6 +275,8 @@ declare function MouseYIn(Top: number, Height: number): boolean;
 declare function PreferenceExit(): void;
 declare var PreferenceDifficultyLevel: any;
 declare var PreferenceDifficultyAccept: boolean;
+declare var PreferenceMessage: string;
+declare var PreferenceSubscreen: string;
 
 // Login.js
 declare function LoginMistressItems(): void;
