@@ -1209,36 +1209,31 @@ var LSCG = (function (exports) {
 	    {
 	        module: ModuleCategory.Global,
 	        onclick: (C) => {
-	            var _a;
-	            (_a = setSubscreen(new GuiGlobal(C))) === null || _a === void 0 ? void 0 : _a.Run();
+	            setSubscreen(new GuiGlobal(C));
 	        }
 	    },
 	    {
 	        module: ModuleCategory.Collar,
 	        onclick: (C) => {
-	            var _a;
-	            (_a = setSubscreen(new GuiCollar(C))) === null || _a === void 0 ? void 0 : _a.Run();
+	            setSubscreen(new GuiCollar(C));
 	        }
 	    },
 	    {
 	        module: ModuleCategory.Hypno,
 	        onclick: (C) => {
-	            var _a;
-	            (_a = setSubscreen(new GuiHypno(C))) === null || _a === void 0 ? void 0 : _a.Run();
+	            setSubscreen(new GuiHypno(C));
 	        }
 	    },
 	    {
 	        module: ModuleCategory.Boops,
 	        onclick: (C) => {
-	            var _a;
-	            (_a = setSubscreen(new GuiBoops(C))) === null || _a === void 0 ? void 0 : _a.Run();
+	            setSubscreen(new GuiBoops(C));
 	        }
 	    },
 	    {
 	        module: ModuleCategory.Lipstick,
 	        onclick: (C) => {
-	            var _a;
-	            (_a = setSubscreen(new GuiLipstick(C))) === null || _a === void 0 ? void 0 : _a.Run();
+	            setSubscreen(new GuiLipstick(C));
 	        }
 	    }
 	];
