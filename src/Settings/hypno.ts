@@ -1,6 +1,4 @@
-import { MainMenu } from "./mainmenu";
-import { GuiSubscreen, setSubscreen } from "./settingUtils";
-import { ModuleCategory } from "./setting_definitions";
+import { GuiSubscreen } from "./settingBase";
 
 export class GuiHypno extends GuiSubscreen {
     readonly character : PlayerCharacter;

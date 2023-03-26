@@ -328,6 +328,7 @@ var LSCG = (function (exports) {
 	    "Click",
 	    "Exit"
 	];
+
 	class GuiSubscreen {
 	    get active() {
 	        return getCurrentSubscreen() === this;

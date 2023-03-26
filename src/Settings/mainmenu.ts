@@ -1,5 +1,5 @@
 
-import { GuiSubscreen } from "./settingUtils";
+import { GuiSubscreen } from "./settingBase";
 import { MAIN_MENU_ITEMS, ModuleCategory, SETTING_ICONS, SETTING_NAMES } from "./setting_definitions";
 
 export class MainMenu extends GuiSubscreen {
