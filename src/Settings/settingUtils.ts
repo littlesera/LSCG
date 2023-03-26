@@ -73,31 +73,13 @@ export abstract class GuiSubscreen {
 		return getCurrentSubscreen() === this;
 	}
 
-	static SETTING_FUNC_PREFIX: string = "PreferenceSubscreenLSCG";
-
 	constructor() {
 		GUI.SETTING_FUNC_NAMES.forEach(name => {
 			if (typeof (<any>this)[name] === "function")
-				(<any>window)[GuiSubscreen.SETTING_FUNC_PREFIX + this.constructor.name + name] = () => {
+				(<any>window)[GUI.SETTING_FUNC_PREFIX + this.constructor.name + name] = () => {
 					(<any>this)[name]();
 				};
 		});
-
-		(<any>window)[GuiSubscreen.SETTING_FUNC_PREFIX + this.constructor.name + "Load"] = () => {
-			this.Load();
-		};
-		(<any>window)[GuiSubscreen.SETTING_FUNC_PREFIX + this.constructor.name + "Run"] = () => {
-			this.Run();
-		};
-		(<any>window)["PreferenceSubscreenLSCG" + this.constructor.name + "Click"] = () => {
-			this.Click();
-		};
-		(<any>window)["PreferenceSubscreenLSCG" + this.constructor.name + "Exit"] = () => {
-			this.Exit();
-		};
-		(<any>window)["PreferenceSubscreenLSCG" + this.constructor.name + "Unload"] = () => {
-			this.Unload();
-		};
 	}
 
 	Load() {

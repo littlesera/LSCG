@@ -1,8 +1,6 @@
-import { bcModSDK, hookFunction, isObject, settingsSave, VERSION } from './utils';
+import { hookFunction, isObject, settingsSave, VERSION } from './utils';
 import { init_modules, unload_modules } from 'modules';
 import './modules';
-import { getCurrentSubscreen, setSubscreen } from 'Settings/settingUtils';
-import { MainMenu } from 'Settings/mainmenu';
 
 function initWait() {
 	console.debug("BCX: Init wait");
@@ -38,18 +36,6 @@ export function initSettings() {
 		if (args[6] == "Icons/LSCGMainMenu.png") args[6] = "Icons/Asylum.png";
 		return next(args);
 	});
-	hookFunction("PreferenceClick", 2, (args, next) => {
-		console.info(args);
-		return next(args);
-	});
-	hookFunction("InformationSheetRun", 1, (args, next) => {
-		console.info(args);
-		return next(args);
-	});
-
-	(<any>window).PreferenceSubscreenLSCGMainMenuLoad = function() {
-		setSubscreen(new MainMenu(Player));
-	};
 }
 
 export function init() {
