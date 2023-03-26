@@ -29,20 +29,25 @@ export function loginInit(C: any) {
 }
 
 export function initSettings() {
-	PreferenceSubscreenList.push("LSCGSettings");
-	bcModSDK.hookFunction("TextGet", 2, (args: string[], next: (arg0: any) => any) => {
-		if (args[0] == "HomepageLSCGSettings") return "Club Games Settings";
+	PreferenceSubscreenList.push("LSCGMainMenu");
+	hookFunction("TextGet", 2, (args: string[], next: (arg0: any) => any) => {
+		if (args[0] == "HomepageLSCGMainMenu") return "Club Games Settings";
 		return next(args);
 	});
-	bcModSDK.hookFunction("DrawButton", 2, (args: string[], next: (arg0: any) => any) => {
-		if (args[6] == "Icons/LSCGSettings.png") args[6] = "Icons/Asylum.png";
+	hookFunction("DrawButton", 2, (args: string[], next: (arg0: any) => any) => {
+		if (args[6] == "Icons/LSCGMainMenu.png") args[6] = "Icons/Asylum.png";
 		return next(args);
 	});
-	bcModSDK.hookFunction("PreferenceClick", 2, (args, next) => {
+	hookFunction("PreferenceClick", 2, (args, next) => {
 		console.info(args);
 		return next(args);
 	});
-	(<any>window).PreferenceSubscreenLSCGSettingsLoad = function() {
+	hookFunction("InformationSheetRun", 1, (args, next) => {
+		console.info(args);
+		return next(args);
+	});
+
+	(<any>window).PreferenceSubscreenLSCGMainMenuLoad = function() {
 		setSubscreen(new MainMenu(Player));
 	};
 }

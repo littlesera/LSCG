@@ -52,7 +52,12 @@ export abstract class GuiSubscreen {
 	}
 
 	Load() {
-		// Empty
+		(<any>window)["PreferenceSubscreenLSCG" + this.constructor.name + "Run"] = () => {
+			this.Run();
+		};
+		(<any>window)["PreferenceSubscreenLSCG" + this.constructor.name + "Click"] = () => {
+			this.Click();
+		};
 	}
 
 	Run() {
@@ -68,6 +73,9 @@ export abstract class GuiSubscreen {
 	}
 
 	Unload() {
+		(<any>window)["PreferenceSubscreenLSCG" + this.constructor.name + "Run"] = undefined;
+		(<any>window)["PreferenceSubscreenLSCG" + this.constructor.name + "Click"] = undefined;
+		PreferenceExit();
 		// Empty
 	}
 

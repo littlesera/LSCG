@@ -96,12 +96,12 @@ function initPatchableFunction(target: string): IPatchedFunctionData {
 	return result;
 }
 
-export function hookFunction(target: string, priority: number, hook: PatchHook, module: ModuleCategory | null = null): void {
+export function hookFunction(target: string, priority: number, hook: PatchHook, module: ModuleCategory | null = null): () => void {
 	const data = initPatchableFunction(target);
 
 	if (data.hooks.some(h => h.hook === hook)) {
 		console.error(`BCX: Duplicate hook for "${target}"`, hook);
-		return;
+		return () => null;
 	}
 
 	const removeCallback = bcModSDK.hookFunction(target, priority, hook);
@@ -113,6 +113,7 @@ export function hookFunction(target: string, priority: number, hook: PatchHook, 
 		removeCallback
 	});
 	data.hooks.sort((a, b) => b.priority - a.priority);
+	return removeCallback;
 }
 
 export function removeHooksByModule(target: string, module: ModuleCategory): boolean {
