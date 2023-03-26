@@ -1,5 +1,4 @@
-import { MainMenu } from "./mainmenu";
-import { GuiSubscreen, setSubscreen } from "./settingUtils";
+import { GuiSubscreen } from "./settingBase";
 
 export class GuiLipstick extends GuiSubscreen {
     readonly character : PlayerCharacter;

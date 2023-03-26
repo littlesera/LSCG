@@ -1,4 +1,4 @@
-import { GuiSubscreen } from "./settingUtils";
+import { GuiSubscreen } from "./settingBase";
 
 export class GuiBoops extends GuiSubscreen {
     readonly character : PlayerCharacter;

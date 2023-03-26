@@ -3,7 +3,7 @@ import { GuiCollar } from "./collar";
 import { GuiGlobal } from "./global";
 import { GuiHypno } from "./hypno";
 import { GuiLipstick } from "./lipstick";
-import { GuiSubscreen } from "./settingUtils";
+import { GuiSubscreen } from "./settingBase";
 
 export enum ModuleCategory {
 	Global = 0,
