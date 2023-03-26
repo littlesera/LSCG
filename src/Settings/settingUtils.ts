@@ -26,7 +26,7 @@ export class GUI extends BaseModule {
 	];
 
 	private _subscreens: GuiSubscreen[] | null = null;
-	private _mainMenu: MainMenu = new MainMenu(Player);
+	private _mainMenu: MainMenu;
 	private _currentSubscreen: GuiSubscreen | null = null;
 
 	get mainMenu(): MainMenu {
@@ -53,6 +53,7 @@ export class GUI extends BaseModule {
 			throw new Error("Duplicate initialization");
 		}
 
+		this._mainMenu = new MainMenu(Player);
 		this._subscreens = [
 			this._mainMenu
 		];
