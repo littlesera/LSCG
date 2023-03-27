@@ -5,6 +5,15 @@ import { GuiHypno } from "./hypno";
 import { GuiLipstick } from "./lipstick";
 import { GuiSubscreen } from "./settingBase";
 
+export const SETTING_FUNC_PREFIX: string = "PreferenceSubscreenLSCG";
+export const SETTING_FUNC_NAMES: string[] = [
+    "Load",
+    "Unload",
+    "Run",
+    "Click",
+    "Exit"
+];
+
 export enum ModuleCategory {
 	Global = 0,
 	Collar = 1,
@@ -31,26 +40,3 @@ export const SETTING_ICONS: Record<ModuleCategory, string> = {
     [ModuleCategory.Lipstick]: "Icons/Arousal.png",
     [ModuleCategory.Misc]: "Icons/ServiceBell.png"
 };
-
-export const MAIN_MENU_ITEMS: { module: ModuleCategory; setting: GuiSubscreen; }[] = [
-	{
-		module: ModuleCategory.Global,
-		setting: new GuiGlobal(Player)
-	},
-	{
-		module: ModuleCategory.Collar,
-		setting: new GuiCollar(Player)
-	},
-	{
-		module: ModuleCategory.Hypno,
-		setting: new GuiHypno(Player)
-	},
-	{
-		module: ModuleCategory.Boops,
-		setting: new GuiBoops(Player)
-	},
-	{
-		module: ModuleCategory.Lipstick,
-		setting: new GuiLipstick(Player)
-	}
-];

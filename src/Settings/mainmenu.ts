@@ -1,6 +1,30 @@
 
+import { GuiBoops, GuiCollar, GuiGlobal, GuiHypno, GuiLipstick } from "./all";
 import { GuiSubscreen } from "./settingBase";
-import { MAIN_MENU_ITEMS, ModuleCategory, SETTING_ICONS, SETTING_NAMES } from "./setting_definitions";
+import { ModuleCategory, SETTING_ICONS, SETTING_NAMES } from "./setting_definitions";
+
+export const MAIN_MENU_ITEMS: { module: ModuleCategory; setting: GuiSubscreen; }[] = [
+	{
+		module: ModuleCategory.Global,
+		setting: new GuiGlobal(Player)
+	},
+	{
+		module: ModuleCategory.Collar,
+		setting: new GuiCollar(Player)
+	},
+	{
+		module: ModuleCategory.Hypno,
+		setting: new GuiHypno(Player)
+	},
+	{
+		module: ModuleCategory.Boops,
+		setting: new GuiBoops(Player)
+	},
+	{
+		module: ModuleCategory.Lipstick,
+		setting: new GuiLipstick(Player)
+	}
+];
 
 export class MainMenu extends GuiSubscreen {
     readonly character : PlayerCharacter;

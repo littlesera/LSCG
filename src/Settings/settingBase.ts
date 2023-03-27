@@ -1,14 +1,10 @@
-import { getCurrentSubscreen, GUI } from "./settingUtils";
+import { SETTING_FUNC_NAMES, SETTING_FUNC_PREFIX } from "./setting_definitions";
 
 export abstract class GuiSubscreen {
-	get active(): boolean {
-		return getCurrentSubscreen() === this;
-	}
-
 	constructor() {
-		GUI.SETTING_FUNC_NAMES.forEach(name => {
+		SETTING_FUNC_NAMES.forEach(name => {
 			if (typeof (<any>this)[name] === "function")
-				(<any>window)[GUI.SETTING_FUNC_PREFIX + this.constructor.name + name] = () => {
+				(<any>window)[SETTING_FUNC_PREFIX + this.constructor.name + name] = () => {
 					(<any>this)[name]();
 				};
 		});

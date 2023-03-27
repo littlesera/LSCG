@@ -224,220 +224,14 @@ var LSCG = (function (exports) {
 	    }
 	}
 
-	class MainMenu extends GuiSubscreen {
-	    constructor(C) {
-	        super();
-	        this.character = C;
-	    }
-	    onChange(source) {
-	        if (source === this.character.MemberNumber) {
-	            this.Load();
-	        }
-	    }
-	    Run() {
-	        DrawText("- Club Games -", 225, 125, "Black", "Gray");
-	        DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png");
-	        for (let i = 0; i < MAIN_MENU_ITEMS.length; i++) {
-	            const e = MAIN_MENU_ITEMS[i];
-	            const PX = Math.floor(i / 6);
-	            const PY = i % 6;
-	            const isDisabled = e.module == ModuleCategory.Collar && this.character.MemberNumber != 74298; // DISABLE CHOKE COLLAR FOR NON-SERA PLAYERS...
-	            DrawButton(150 + 430 * PX, 190 + 120 * PY, 400, 90, "", isDisabled ? "#ddd" : "White", SETTING_ICONS[e.module], isDisabled ? "Setting is deactivated" : "", isDisabled);
-	            DrawTextFit(SETTING_NAMES[e.module], 350 + 430 * PX, 235 + 120 * PY, 310, "Black");
-	        }
-	        // Changelog button..
-	        // MainCanvas.textAlign = "center";
-	        // DrawButton(1450, 810, 400, 90, "", "White", "", "Open changelog on GitHub");
-	        // DrawText(`View changelog`, 1450 + 350 / 2, 855, "Black", "");
-	    }
-	    Click() {
-	        if (MouseIn(1815, 75, 90, 90))
-	            return this.Exit();
-	        // Changelog
-	        // if (MouseIn(1450, 810, 400, 90)) {
-	        // 	window.open(`https://github.com/littlesera/sera/CHANGELOG.md`, "_blank");
-	        // }
-	        for (let i = 0; i < MAIN_MENU_ITEMS.length; i++) {
-	            const e = MAIN_MENU_ITEMS[i];
-	            const PX = Math.floor(i / 6);
-	            const PY = i % 6;
-	            const isDisabled = e.module == ModuleCategory.Collar && this.character.MemberNumber != 74298; // DISABLE CHOKE COLLAR FOR NON-SERA PLAYERS...
-	            if (MouseIn(150 + 430 * PX, 190 + 120 * PY, 400, 90) && !isDisabled) {
-	                return CommonDynamicFunction("PreferenceSubscreenLSCG" + e.setting.constructor.name + "Load()");
-	            }
-	        }
-	    }
-	    Exit() {
-	        PreferenceMessage = "";
-	        PreferenceSubscreen = "";
-	    }
-	}
-
-	function getCurrentSubscreen() {
-	    return GUI.instance && GUI.instance.currentSubscreen;
-	}
-	function setSubscreen(subscreen) {
-	    if (!GUI.instance) {
-	        throw new Error("Attempt to set subscreen before init");
-	    }
-	    GUI.instance.currentSubscreen = subscreen;
-	    return subscreen;
-	}
-	class GUI extends BaseModule {
-	    get mainMenu() {
-	        return this._mainMenu;
-	    }
-	    get currentSubscreen() {
-	        return this._currentSubscreen;
-	    }
-	    set currentSubscreen(subscreen) {
-	        if (this._currentSubscreen) {
-	            this._currentSubscreen.Unload();
-	        }
-	        this._currentSubscreen = subscreen;
-	        if (this._currentSubscreen) {
-	            this._currentSubscreen.Load();
-	        }
-	    }
-	    constructor() {
-	        super();
-	        this._subscreens = null;
-	        this._currentSubscreen = null;
-	        if (GUI.instance) {
-	            throw new Error("Duplicate initialization");
-	        }
-	        this._mainMenu = new MainMenu(Player);
-	        this._subscreens = [
-	            this._mainMenu
-	        ];
-	        MAIN_MENU_ITEMS.forEach(item => {
-	            var _a;
-	            (_a = this._subscreens) === null || _a === void 0 ? void 0 : _a.push(item.setting);
-	        });
-	        GUI.instance = this;
-	    }
-	    load() {
-	    }
-	}
-	GUI.instance = null;
-	GUI.SETTING_FUNC_PREFIX = "PreferenceSubscreenLSCG";
-	GUI.SETTING_FUNC_NAMES = [
+	const SETTING_FUNC_PREFIX = "PreferenceSubscreenLSCG";
+	const SETTING_FUNC_NAMES = [
 	    "Load",
 	    "Unload",
 	    "Run",
 	    "Click",
 	    "Exit"
 	];
-
-	class GuiSubscreen {
-	    get active() {
-	        return getCurrentSubscreen() === this;
-	    }
-	    constructor() {
-	        GUI.SETTING_FUNC_NAMES.forEach(name => {
-	            if (typeof this[name] === "function")
-	                window[GUI.SETTING_FUNC_PREFIX + this.constructor.name + name] = () => {
-	                    this[name]();
-	                };
-	        });
-	    }
-	    Load() {
-	        // Empty
-	    }
-	    Run() {
-	        // Empty
-	    }
-	    Click() {
-	        // Empty
-	    }
-	    Exit() {
-	        // Empty
-	        PreferenceMessage = "LSCG Main Menu";
-	        PreferenceSubscreen = "LSCGMainMenu";
-	    }
-	    Unload() {
-	        // Empty
-	    }
-	    onChange(source) {
-	        // Empty
-	    }
-	}
-
-	class GuiBoops extends GuiSubscreen {
-	    constructor(character) {
-	        super();
-	        this.character = character;
-	    }
-	    Run() {
-	        MainCanvas.textAlign = "center";
-	        DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png", "BCX main menu");
-	    }
-	    Click() {
-	        if (MouseIn(1815, 75, 90, 90))
-	            return this.Exit();
-	    }
-	}
-
-	class GuiCollar extends GuiSubscreen {
-	    constructor(character) {
-	        super();
-	        this.character = character;
-	    }
-	    Run() {
-	        MainCanvas.textAlign = "center";
-	        DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png", "BCX main menu");
-	    }
-	    Click() {
-	        if (MouseIn(1815, 75, 90, 90))
-	            return this.Exit();
-	    }
-	}
-
-	class GuiGlobal extends GuiSubscreen {
-	    constructor(character) {
-	        super();
-	        this.character = character;
-	    }
-	    Run() {
-	        MainCanvas.textAlign = "center";
-	        DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png", "BCX main menu");
-	    }
-	    Click() {
-	        if (MouseIn(1815, 75, 90, 90))
-	            return this.Exit();
-	    }
-	}
-
-	class GuiHypno extends GuiSubscreen {
-	    constructor(character) {
-	        super();
-	        this.character = character;
-	    }
-	    Run() {
-	        MainCanvas.textAlign = "center";
-	        DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png", "BCX main menu");
-	    }
-	    Click() {
-	        if (MouseIn(1815, 75, 90, 90))
-	            return this.Exit();
-	    }
-	}
-
-	class GuiLipstick extends GuiSubscreen {
-	    constructor(character) {
-	        super();
-	        this.character = character;
-	    }
-	    Run() {
-	        MainCanvas.textAlign = "center";
-	        DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png", "BCX main menu");
-	    }
-	    Click() {
-	        if (MouseIn(1815, 75, 90, 90))
-	            return this.Exit();
-	    }
-	}
-
 	var ModuleCategory;
 	(function (ModuleCategory) {
 	    ModuleCategory[ModuleCategory["Global"] = 0] = "Global";
@@ -463,28 +257,6 @@ var LSCG = (function (exports) {
 	    [ModuleCategory.Lipstick]: "Icons/Arousal.png",
 	    [ModuleCategory.Misc]: "Icons/ServiceBell.png"
 	};
-	const MAIN_MENU_ITEMS = [
-	    {
-	        module: ModuleCategory.Global,
-	        setting: new GuiGlobal(Player)
-	    },
-	    {
-	        module: ModuleCategory.Collar,
-	        setting: new GuiCollar(Player)
-	    },
-	    {
-	        module: ModuleCategory.Hypno,
-	        setting: new GuiHypno(Player)
-	    },
-	    {
-	        module: ModuleCategory.Boops,
-	        setting: new GuiBoops(Player)
-	    },
-	    {
-	        module: ModuleCategory.Lipstick,
-	        setting: new GuiLipstick(Player)
-	    }
-	];
 
 	class HypnoModule extends BaseModule {
 	    constructor() {
@@ -1240,6 +1012,231 @@ var LSCG = (function (exports) {
 	        ChatRoomCharacterUpdate(Player);
 	    }
 	}
+
+	class GuiSubscreen {
+	    constructor() {
+	        SETTING_FUNC_NAMES.forEach(name => {
+	            if (typeof this[name] === "function")
+	                window[SETTING_FUNC_PREFIX + this.constructor.name + name] = () => {
+	                    this[name]();
+	                };
+	        });
+	    }
+	    Load() {
+	        // Empty
+	    }
+	    Run() {
+	        // Empty
+	    }
+	    Click() {
+	        // Empty
+	    }
+	    Exit() {
+	        // Empty
+	        PreferenceMessage = "LSCG Main Menu";
+	        PreferenceSubscreen = "LSCGMainMenu";
+	    }
+	    Unload() {
+	        // Empty
+	    }
+	    onChange(source) {
+	        // Empty
+	    }
+	}
+
+	const MAIN_MENU_ITEMS = [
+	    {
+	        module: ModuleCategory.Global,
+	        setting: new GuiGlobal(Player)
+	    },
+	    {
+	        module: ModuleCategory.Collar,
+	        setting: new GuiCollar(Player)
+	    },
+	    {
+	        module: ModuleCategory.Hypno,
+	        setting: new GuiHypno(Player)
+	    },
+	    {
+	        module: ModuleCategory.Boops,
+	        setting: new GuiBoops(Player)
+	    },
+	    {
+	        module: ModuleCategory.Lipstick,
+	        setting: new GuiLipstick(Player)
+	    }
+	];
+	class MainMenu extends GuiSubscreen {
+	    constructor(C) {
+	        super();
+	        this.character = C;
+	    }
+	    onChange(source) {
+	        if (source === this.character.MemberNumber) {
+	            this.Load();
+	        }
+	    }
+	    Run() {
+	        DrawText("- Club Games -", 225, 125, "Black", "Gray");
+	        DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png");
+	        for (let i = 0; i < MAIN_MENU_ITEMS.length; i++) {
+	            const e = MAIN_MENU_ITEMS[i];
+	            const PX = Math.floor(i / 6);
+	            const PY = i % 6;
+	            const isDisabled = e.module == ModuleCategory.Collar && this.character.MemberNumber != 74298; // DISABLE CHOKE COLLAR FOR NON-SERA PLAYERS...
+	            DrawButton(150 + 430 * PX, 190 + 120 * PY, 400, 90, "", isDisabled ? "#ddd" : "White", SETTING_ICONS[e.module], isDisabled ? "Setting is deactivated" : "", isDisabled);
+	            DrawTextFit(SETTING_NAMES[e.module], 350 + 430 * PX, 235 + 120 * PY, 310, "Black");
+	        }
+	        // Changelog button..
+	        // MainCanvas.textAlign = "center";
+	        // DrawButton(1450, 810, 400, 90, "", "White", "", "Open changelog on GitHub");
+	        // DrawText(`View changelog`, 1450 + 350 / 2, 855, "Black", "");
+	    }
+	    Click() {
+	        if (MouseIn(1815, 75, 90, 90))
+	            return this.Exit();
+	        // Changelog
+	        // if (MouseIn(1450, 810, 400, 90)) {
+	        // 	window.open(`https://github.com/littlesera/sera/CHANGELOG.md`, "_blank");
+	        // }
+	        for (let i = 0; i < MAIN_MENU_ITEMS.length; i++) {
+	            const e = MAIN_MENU_ITEMS[i];
+	            const PX = Math.floor(i / 6);
+	            const PY = i % 6;
+	            const isDisabled = e.module == ModuleCategory.Collar && this.character.MemberNumber != 74298; // DISABLE CHOKE COLLAR FOR NON-SERA PLAYERS...
+	            if (MouseIn(150 + 430 * PX, 190 + 120 * PY, 400, 90) && !isDisabled) {
+	                return CommonDynamicFunction("PreferenceSubscreenLSCG" + e.setting.constructor.name + "Load()");
+	            }
+	        }
+	    }
+	    Exit() {
+	        PreferenceMessage = "";
+	        PreferenceSubscreen = "";
+	    }
+	}
+
+	class GuiBoops extends GuiSubscreen {
+	    constructor(character) {
+	        super();
+	        this.character = character;
+	    }
+	    Run() {
+	        MainCanvas.textAlign = "center";
+	        DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png", "BCX main menu");
+	    }
+	    Click() {
+	        if (MouseIn(1815, 75, 90, 90))
+	            return this.Exit();
+	    }
+	}
+
+	class GuiCollar extends GuiSubscreen {
+	    constructor(character) {
+	        super();
+	        this.character = character;
+	    }
+	    Run() {
+	        MainCanvas.textAlign = "center";
+	        DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png", "BCX main menu");
+	    }
+	    Click() {
+	        if (MouseIn(1815, 75, 90, 90))
+	            return this.Exit();
+	    }
+	}
+
+	class GuiGlobal extends GuiSubscreen {
+	    constructor(character) {
+	        super();
+	        this.character = character;
+	    }
+	    Run() {
+	        MainCanvas.textAlign = "center";
+	        DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png", "BCX main menu");
+	    }
+	    Click() {
+	        if (MouseIn(1815, 75, 90, 90))
+	            return this.Exit();
+	    }
+	}
+
+	class GuiHypno extends GuiSubscreen {
+	    constructor(character) {
+	        super();
+	        this.character = character;
+	    }
+	    Run() {
+	        MainCanvas.textAlign = "center";
+	        DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png", "BCX main menu");
+	    }
+	    Click() {
+	        if (MouseIn(1815, 75, 90, 90))
+	            return this.Exit();
+	    }
+	}
+
+	class GuiLipstick extends GuiSubscreen {
+	    constructor(character) {
+	        super();
+	        this.character = character;
+	    }
+	    Run() {
+	        MainCanvas.textAlign = "center";
+	        DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png", "BCX main menu");
+	    }
+	    Click() {
+	        if (MouseIn(1815, 75, 90, 90))
+	            return this.Exit();
+	    }
+	}
+
+	function getCurrentSubscreen() {
+	    return GUI.instance && GUI.instance.currentSubscreen;
+	}
+	function setSubscreen(subscreen) {
+	    if (!GUI.instance) {
+	        throw new Error("Attempt to set subscreen before init");
+	    }
+	    GUI.instance.currentSubscreen = subscreen;
+	    return subscreen;
+	}
+	class GUI extends BaseModule {
+	    get mainMenu() {
+	        return this._mainMenu;
+	    }
+	    get currentSubscreen() {
+	        return this._currentSubscreen;
+	    }
+	    set currentSubscreen(subscreen) {
+	        if (this._currentSubscreen) {
+	            this._currentSubscreen.Unload();
+	        }
+	        this._currentSubscreen = subscreen;
+	        if (this._currentSubscreen) {
+	            this._currentSubscreen.Load();
+	        }
+	    }
+	    constructor() {
+	        super();
+	        this._subscreens = null;
+	        this._currentSubscreen = null;
+	        if (GUI.instance) {
+	            throw new Error("Duplicate initialization");
+	        }
+	        this._mainMenu = new MainMenu(Player);
+	        this._subscreens = [
+	            this._mainMenu
+	        ];
+	        MAIN_MENU_ITEMS.forEach(item => {
+	            var _a;
+	            (_a = this._subscreens) === null || _a === void 0 ? void 0 : _a.push(item.setting);
+	        });
+	        GUI.instance = this;
+	    }
+	    load() {
+	    }
+	}
+	GUI.instance = null;
 
 	const modules = [];
 	function registerModule(module) {
