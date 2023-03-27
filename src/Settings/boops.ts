@@ -10,7 +10,7 @@ export class GuiBoops extends GuiSubscreen {
     }
 
 	get settings(): BaseSettingsModel {
-		return Player.LSCG.BoopsModule;
+		return Player.LSCG.BoopsModule ?? { enabled: false };
 	}
 
     Run() {
@@ -19,7 +19,7 @@ export class GuiBoops extends GuiSubscreen {
 		DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png", "BCX main menu");
 
 		// Enabled	[true/false]
-		DrawCheckbox(225, 190 + 120 * 1, 64, 64, "Enabled", this.settings.enabled);
+		DrawCheckbox(225, 190 + 120 * 1, 64, 64, "Enabled", this.settings.enabled ?? false);
 	}
 
 	Click() {

@@ -10,7 +10,7 @@ export class GuiHypno extends GuiSubscreen {
     }
 
 	get settings(): HypnoSettingsModel {
-		return Player.LSCG.HypnoModule;
+		return Player.LSCG.HypnoModule ?? { enabled: false };
 	}
 
     Run() {

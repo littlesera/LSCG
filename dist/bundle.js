@@ -1040,7 +1040,8 @@ var LSCG = (function (exports) {
 	        return SETTING_NAME_PREFIX + this.constructor.name;
 	    }
 	    get settings() {
-	        return Player.LSCG.GlobalModule;
+	        var _a;
+	        return (_a = Player.LSCG.GlobalModule) !== null && _a !== void 0 ? _a : { enabled: true };
 	    }
 	    Load() {
 	        PreferenceSubscreen = this.SubscreenName;
@@ -1142,14 +1143,16 @@ var LSCG = (function (exports) {
 	        this.character = character;
 	    }
 	    get settings() {
-	        return Player.LSCG.BoopsModule;
+	        var _a;
+	        return (_a = Player.LSCG.BoopsModule) !== null && _a !== void 0 ? _a : { enabled: false };
 	    }
 	    Run() {
+	        var _a;
 	        MainCanvas.textAlign = "center";
 	        DrawText("- LSCG Boops -", 225, 125, "Black", "Gray");
 	        DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png", "BCX main menu");
 	        // Enabled	[true/false]
-	        DrawCheckbox(225, 190 + 120 * 1, 64, 64, "Enabled", this.settings.enabled);
+	        DrawCheckbox(225, 190 + 120 * 1, 64, 64, "Enabled", (_a = this.settings.enabled) !== null && _a !== void 0 ? _a : false);
 	    }
 	    Click() {
 	        if (MouseIn(1815, 75, 90, 90))
@@ -1163,18 +1166,20 @@ var LSCG = (function (exports) {
 	        this.character = character;
 	    }
 	    get settings() {
-	        return Player.LSCG.CollarModule;
+	        var _a;
+	        return (_a = Player.LSCG.CollarModule) !== null && _a !== void 0 ? _a : { enabled: false };
 	    }
 	    Run() {
+	        var _a, _b;
 	        MainCanvas.textAlign = "center";
 	        DrawText("- LSCG Choking Collar -", 225, 125, "Black", "Gray");
 	        DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png", "BCX main menu");
 	        // Enabled 					[true/false]
 	        DrawText("Enabled:", 225, 190 + 120, "Black", "Gray");
-	        DrawCheckbox(500, 190 + 120, 64, 64, "Enabled", this.settings.enabled);
+	        DrawCheckbox(500, 190 + 120, 64, 64, "Enabled", (_a = this.settings.enabled) !== null && _a !== void 0 ? _a : false);
 	        // Allowed Members 			[ID list]
 	        DrawText("Allowed Members IDs:", 225, 190 + 120, "Black", "Gray");
-	        ElementCreateInput("collar_allowedMembers", "text", this.settings.allowedMembers, "255");
+	        ElementCreateInput("collar_allowedMembers", "text", (_b = this.settings.allowedMembers) !== null && _b !== void 0 ? _b : "", "255");
 	        ElementPosition("collar_allowedMembers", 500, 190 + 240, 200);
 	        // Set/Update Collar	 	[Custom??]
 	        DrawText("Update Collar:", 225, 190 + 360, "Black", "Gray");
@@ -1208,7 +1213,8 @@ var LSCG = (function (exports) {
 	        this.character = character;
 	    }
 	    get settings() {
-	        return Player.LSCG.HypnoModule;
+	        var _a;
+	        return (_a = Player.LSCG.HypnoModule) !== null && _a !== void 0 ? _a : { enabled: false };
 	    }
 	    Run() {
 	        var _a, _b, _c, _d, _e;
@@ -1244,14 +1250,16 @@ var LSCG = (function (exports) {
 	        this.character = character;
 	    }
 	    get settings() {
-	        return Player.LSCG.LipstickModule;
+	        var _a;
+	        return (_a = Player.LSCG.LipstickModule) !== null && _a !== void 0 ? _a : { enabled: false };
 	    }
 	    Run() {
+	        var _a;
 	        MainCanvas.textAlign = "center";
 	        DrawText("- LSCG Lipstick -", 225, 125, "Black", "Gray");
 	        DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png", "BCX main menu");
 	        // Enable	[true/false]
-	        DrawCheckbox(225, 190 + 120 * 1, 64, 64, "Enabled", this.settings.enabled);
+	        DrawCheckbox(225, 190 + 120 * 1, 64, 64, "Enabled", (_a = this.settings.enabled) !== null && _a !== void 0 ? _a : false);
 	    }
 	    Click() {
 	        if (MouseIn(1815, 75, 90, 90))

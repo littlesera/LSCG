@@ -9,7 +9,7 @@ export class GuiLipstick extends GuiSubscreen {
     }
 
 	get settings() {
-        return Player.LSCG.LipstickModule;
+        return Player.LSCG.LipstickModule  ?? { enabled: false };
     }
 
     Run() {
@@ -18,7 +18,7 @@ export class GuiLipstick extends GuiSubscreen {
 		DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png", "BCX main menu");
 
 		// Enable	[true/false]
-		DrawCheckbox(225, 190 + 120 * 1, 64, 64, "Enabled", this.settings.enabled);
+		DrawCheckbox(225, 190 + 120 * 1, 64, 64, "Enabled", this.settings.enabled ?? false);
 	}
 
 	Click() {
