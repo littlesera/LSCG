@@ -1,7 +1,6 @@
 import { BaseModule } from "../base";
-import { MainMenu } from "./mainmenu";
+import { MainMenu, MAIN_MENU_ITEMS } from "./all";
 import { GuiSubscreen } from "./settingBase";
-import { MAIN_MENU_ITEMS } from "./setting_definitions";
 
 export function getCurrentSubscreen(): GuiSubscreen | null {
 	return GUI.instance && GUI.instance.currentSubscreen;
@@ -17,14 +16,6 @@ export function setSubscreen(subscreen: GuiSubscreen | null): GuiSubscreen | nul
 
 export class GUI extends BaseModule {
 	static instance: GUI | null = null;
-	static SETTING_FUNC_PREFIX: string = "PreferenceSubscreenLSCG";
-	static SETTING_FUNC_NAMES: string[] = [
-		"Load",
-		"Unload",
-		"Run",
-		"Click",
-		"Exit"
-	];
 
 	private _subscreens: GuiSubscreen[] | null = null;
 	private _mainMenu: MainMenu;
