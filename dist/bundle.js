@@ -1185,7 +1185,11 @@ var LSCG = (function (exports) {
 	    }
 	    get settings() {
 	        var _a;
-	        Player.LSCG.CollarModule = (_a = Player.LSCG.CollarModule) !== null && _a !== void 0 ? _a : { enabled: false };
+	        Player.LSCG.CollarModule = (_a = Player.LSCG.CollarModule) !== null && _a !== void 0 ? _a : {
+	            enabled: false,
+	            allowedMembers: "",
+	            chokeLevel: 0
+	        };
 	        return Player.LSCG.CollarModule;
 	    }
 	    Load() {
@@ -1203,7 +1207,7 @@ var LSCG = (function (exports) {
 	        DrawCheckbox(GuiSubscreen.START_X + 600, this.getYPos(1) - 32, 64, 64, "", this.settings.enabled);
 	        // Allowed Members 			[ID list]
 	        DrawText("Allowed Members IDs:", GuiSubscreen.START_X, this.getYPos(2), "Black", "Gray");
-	        if (!this.settings.enabled) {
+	        if (this.settings.enabled) {
 	            ElementCreateInput("collar_allowedMembers", "text", this.settings.allowedMembers, "255");
 	            ElementPosition("collar_allowedMembers", GuiSubscreen.START_X + 1000, this.getYPos(2), 600);
 	        }
@@ -1248,7 +1252,14 @@ var LSCG = (function (exports) {
 	    }
 	    get settings() {
 	        var _a;
-	        Player.LSCG.HypnoModule = (_a = Player.LSCG.HypnoModule) !== null && _a !== void 0 ? _a : { enabled: false };
+	        Player.LSCG.HypnoModule = (_a = Player.LSCG.HypnoModule) !== null && _a !== void 0 ? _a : {
+	            enabled: false,
+	            activatedAt: 0,
+	            cycleTime: 30,
+	            enableCycle: true,
+	            overrideMemberIds: "",
+	            overrideWords: ""
+	        };
 	        return Player.LSCG.HypnoModule;
 	    }
 	    Load() {
@@ -1269,13 +1280,13 @@ var LSCG = (function (exports) {
 	        DrawCheckbox(GuiSubscreen.START_X + 600, this.getYPos(1) - 32, 64, 64, "", this.settings.enabled);
 	        // Override Trigger Words 	[Word List]
 	        DrawText("Override Trigger Words:", GuiSubscreen.START_X, this.getYPos(2), "Black", "Gray");
-	        if (!this.settings.enabled) {
+	        if (this.settings.enabled) {
 	            ElementCreateInput("hypno_overrideWords", "text", this.settings.overrideWords, "255");
 	            ElementPosition("hypno_overrideWords", GuiSubscreen.START_X + 900, this.getYPos(2), 600);
 	        }
 	        // Override allowed members	[Member ID List]
 	        DrawText("Override Allowed Member IDs:", 225, this.getYPos(3), "Black", "Gray");
-	        if (!this.settings.enabled) {
+	        if (this.settings.enabled) {
 	            ElementCreateInput("hypno_overrideMembers", "text", this.settings.overrideMemberIds, "255");
 	            ElementPosition("hypno_overrideMembers", GuiSubscreen.START_X + 900, this.getYPos(3), 600);
 	        }
@@ -1284,7 +1295,7 @@ var LSCG = (function (exports) {
 	        DrawCheckbox(GuiSubscreen.START_X + 600, this.getYPos(4) - 32, 64, 64, "", ((_a = this.settings.enableCycle) !== null && _a !== void 0 ? _a : true) || !this.settings.enabled);
 	        // Cycle Time				[Number of minutes (default 30)]
 	        DrawText("Trigger Cycle Time:", GuiSubscreen.START_X, this.getYPos(5), "Black", "Gray");
-	        if (!this.settings.enabled) {
+	        if (this.settings.enabled) {
 	            ElementCreateInput("hypno_cycleTime", "number", this.settings.cycleTime, "100");
 	            ElementPosition("hypno_cycleTime", GuiSubscreen.START_X + 700, this.getYPos(5), 200);
 	        }
