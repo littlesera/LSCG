@@ -17,19 +17,19 @@ export class GuiCollar extends GuiSubscreen {
 		var prev = MainCanvas.textAlign;
 		MainCanvas.textAlign = "left";
 
-		DrawText("- LSCG Choking Collar -", 225, 125, "Black", "Gray");
+		DrawText("- LSCG Choking Collar -", GuiSubscreen.START_X, 125, "Black", "Gray");
 		DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png", "BCX main menu");
 
 		// Enabled 					[true/false]
-		DrawText("Enabled:", 225, 190 + 120, "Black", "Gray");
-		DrawCheckbox(500, 190 + 120, 64, 64, "Enabled", this.settings.enabled ?? false);
+		DrawText("Enabled:", GuiSubscreen.START_X, 190 + 120, "Black", "Gray");
+		DrawCheckbox(GuiSubscreen.START_X + 800, 190 + 120, 64, 64, "Enabled", this.settings.enabled ?? false);
 		// Allowed Members 			[ID list]
-		DrawText("Allowed Members IDs:", 225, 190 + 120, "Black", "Gray");
+		DrawText("Allowed Members IDs:", GuiSubscreen.START_X, 190 + 240, "Black", "Gray");
 		ElementCreateInput("collar_allowedMembers", "text", this.settings.allowedMembers ?? "", "255");
-		ElementPosition("collar_allowedMembers", 500, 190 + 240, 200);
+		ElementPosition("collar_allowedMembers", GuiSubscreen.START_X + 800, 190 + 240, 200);
 		// Set/Update Collar	 	[Custom??]
-		DrawText("Update Collar:", 225, 190 + 360, "Black", "Gray");
-		DrawButton(500, 190 + 360, 200, 64, "Update", "White");
+		DrawText("Update Collar:", GuiSubscreen.START_X, 190 + 360, "Black", "Gray");
+		DrawButton(GuiSubscreen.START_X + 800, 190 + 360, 200, 64, "Update", "White");
 
 		MainCanvas.textAlign = prev;
 	}

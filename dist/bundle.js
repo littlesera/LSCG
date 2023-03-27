@@ -1066,7 +1066,7 @@ var LSCG = (function (exports) {
 	        // Empty
 	    }
 	}
-	GuiSubscreen.START_X = 250;
+	GuiSubscreen.START_X = 225;
 	GuiSubscreen.START_Y = 100;
 
 	class MenuItem {
@@ -1177,18 +1177,18 @@ var LSCG = (function (exports) {
 	        var _a, _b;
 	        var prev = MainCanvas.textAlign;
 	        MainCanvas.textAlign = "left";
-	        DrawText("- LSCG Choking Collar -", 225, 125, "Black", "Gray");
+	        DrawText("- LSCG Choking Collar -", GuiSubscreen.START_X, 125, "Black", "Gray");
 	        DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png", "BCX main menu");
 	        // Enabled 					[true/false]
-	        DrawText("Enabled:", 225, 190 + 120, "Black", "Gray");
-	        DrawCheckbox(500, 190 + 120, 64, 64, "Enabled", (_a = this.settings.enabled) !== null && _a !== void 0 ? _a : false);
+	        DrawText("Enabled:", GuiSubscreen.START_X, 190 + 120, "Black", "Gray");
+	        DrawCheckbox(GuiSubscreen.START_X + 800, 190 + 120, 64, 64, "Enabled", (_a = this.settings.enabled) !== null && _a !== void 0 ? _a : false);
 	        // Allowed Members 			[ID list]
-	        DrawText("Allowed Members IDs:", 225, 190 + 120, "Black", "Gray");
+	        DrawText("Allowed Members IDs:", GuiSubscreen.START_X, 190 + 240, "Black", "Gray");
 	        ElementCreateInput("collar_allowedMembers", "text", (_b = this.settings.allowedMembers) !== null && _b !== void 0 ? _b : "", "255");
-	        ElementPosition("collar_allowedMembers", 500, 190 + 240, 200);
+	        ElementPosition("collar_allowedMembers", GuiSubscreen.START_X + 800, 190 + 240, 200);
 	        // Set/Update Collar	 	[Custom??]
-	        DrawText("Update Collar:", 225, 190 + 360, "Black", "Gray");
-	        DrawButton(500, 190 + 360, 200, 64, "Update", "White");
+	        DrawText("Update Collar:", GuiSubscreen.START_X, 190 + 360, "Black", "Gray");
+	        DrawButton(GuiSubscreen.START_X + 800, 190 + 360, 200, 64, "Update", "White");
 	        MainCanvas.textAlign = prev;
 	    }
 	    Click() {
@@ -1231,30 +1231,31 @@ var LSCG = (function (exports) {
 	        var _a, _b, _c, _d, _e;
 	        var prev = MainCanvas.textAlign;
 	        MainCanvas.textAlign = "left";
-	        DrawText("- LSCG Hypnosis -", 225, 125, "Black", "Gray");
+	        DrawText("- LSCG Hypnosis -", GuiSubscreen.START_X, 125, "Black", "Gray");
 	        DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png", "BCX main menu");
 	        // Enabled 					[true/false]
-	        DrawCheckbox(225, 190 + 120 * 1, 64, 64, "Enabled", (_a = this.settings.enabled) !== null && _a !== void 0 ? _a : true);
+	        DrawCheckbox(GuiSubscreen.START_X, 190 + 120, 64, 64, "Enabled", (_a = this.settings.enabled) !== null && _a !== void 0 ? _a : true);
 	        // Override Trigger Words 	[Word List]
-	        DrawText("Override Trigger Words:", 225, 190 + 249, "Black", "Gray");
+	        DrawText("Override Trigger Words:", GuiSubscreen.START_X, 190 + 240, "Black", "Gray");
 	        ElementCreateInput("hypno_overrideWords", "text", (_b = this.settings.overrideWords) !== null && _b !== void 0 ? _b : "", "255");
-	        ElementPosition("hypno_overrideWords", 500, 190 + 240, 200);
+	        ElementPosition("hypno_overrideWords", GuiSubscreen.START_X + 800, 190 + 240, 200);
 	        // Override allowed members	[Member ID List]
 	        DrawText("Override Allowed Member IDs:", 225, 190 + 360, "Black", "Gray");
 	        ElementCreateInput("hypno_overrideMembers", "text", (_c = this.settings.overrideMemberIds) !== null && _c !== void 0 ? _c : "", "255");
-	        ElementPosition("hypno_overrideMembers", 500, 190 + 360, 200);
+	        ElementPosition("hypno_overrideMembers", GuiSubscreen.START_X + 800, 190 + 360, 200);
 	        // Enabled 					[true/false]
-	        DrawCheckbox(225, 190 + 120 * 1, 64, 64, "Enable Cycle", (_d = this.settings.enableCycle) !== null && _d !== void 0 ? _d : true);
+	        DrawCheckbox(GuiSubscreen.START_X, 190 + 480, 64, 64, "Enable Cycle", (_d = this.settings.enableCycle) !== null && _d !== void 0 ? _d : true);
 	        // Cycle Time				[Number of minutes (default 30)]
-	        DrawText("Trigger Cycle Time:", 225, 190 + 480, "Black", "Gray");
-	        ElementCreateInput("hypno_cycleTime", "text", (_e = this.settings.cycleTime) !== null && _e !== void 0 ? _e : "30", "100");
-	        ElementPosition("hypno_cycleTime", 500, 190 + 480, 200);
+	        DrawText("Trigger Cycle Time:", 225, 190 + 600, "Black", "Gray");
+	        ElementCreateInput("hypno_cycleTime", "number", (_e = this.settings.cycleTime) !== null && _e !== void 0 ? _e : "30", "100");
+	        ElementPosition("hypno_cycleTime", GuiSubscreen.START_X + 800, 190 + 600, 200);
 	        MainCanvas.textAlign = prev;
 	    }
-	    Unload() {
+	    Exit() {
 	        ElementRemove("hypno_overrideWords");
 	        ElementRemove("hypno_overrideMembers");
 	        ElementRemove("hypno_cycleTime");
+	        super.Exit();
 	    }
 	    Click() {
 	        if (MouseIn(1815, 75, 90, 90))
