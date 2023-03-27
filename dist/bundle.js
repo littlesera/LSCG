@@ -1044,27 +1044,26 @@ var LSCG = (function (exports) {
 	    }
 	}
 
-	const MAIN_MENU_ITEMS = [
-	    {
-	        module: ModuleCategory.Global,
-	        setting: new GuiGlobal(Player)
-	    },
-	    {
-	        module: ModuleCategory.Collar,
-	        setting: new GuiCollar(Player)
-	    },
-	    {
-	        module: ModuleCategory.Hypno,
-	        setting: new GuiHypno(Player)
-	    },
-	    {
-	        module: ModuleCategory.Boops,
-	        setting: new GuiBoops(Player)
-	    },
-	    {
-	        module: ModuleCategory.Lipstick,
-	        setting: new GuiLipstick(Player)
+	class MenuItem {
+	    get setting() {
+	        var _a;
+	        return (_a = this._setting) !== null && _a !== void 0 ? _a : this.settingCreate();
 	    }
+	    ;
+	    constructor(m, s) {
+	        this.module = ModuleCategory.Misc;
+	        this._setting = null;
+	        this.settingCreate = () => new MainMenu(Player);
+	        this.module = m;
+	        this.settingCreate = s;
+	    }
+	}
+	const MAIN_MENU_ITEMS = [
+	    new MenuItem(ModuleCategory.Global, () => new GuiGlobal(Player)),
+	    new MenuItem(ModuleCategory.Collar, () => new GuiCollar(Player)),
+	    new MenuItem(ModuleCategory.Hypno, () => new GuiHypno(Player)),
+	    new MenuItem(ModuleCategory.Boops, () => new GuiBoops(Player)),
+	    new MenuItem(ModuleCategory.Lipstick, () => new GuiLipstick(Player))
 	];
 	class MainMenu extends GuiSubscreen {
 	    constructor(C) {

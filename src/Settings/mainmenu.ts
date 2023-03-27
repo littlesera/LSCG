@@ -3,27 +3,25 @@ import { GuiBoops, GuiCollar, GuiGlobal, GuiHypno, GuiLipstick } from "./all";
 import { GuiSubscreen } from "./settingBase";
 import { ModuleCategory, SETTING_ICONS, SETTING_NAMES } from "./setting_definitions";
 
-export const MAIN_MENU_ITEMS: { module: ModuleCategory; setting: GuiSubscreen; }[] = [
-	{
-		module: ModuleCategory.Global,
-		setting: new GuiGlobal(Player)
-	},
-	{
-		module: ModuleCategory.Collar,
-		setting: new GuiCollar(Player)
-	},
-	{
-		module: ModuleCategory.Hypno,
-		setting: new GuiHypno(Player)
-	},
-	{
-		module: ModuleCategory.Boops,
-		setting: new GuiBoops(Player)
-	},
-	{
-		module: ModuleCategory.Lipstick,
-		setting: new GuiLipstick(Player)
+export class MenuItem {
+	module: ModuleCategory = ModuleCategory.Misc;
+	private _setting: GuiSubscreen | null = null;
+	get setting(): GuiSubscreen {
+		return this._setting ?? this.settingCreate();
+	};
+	settingCreate: () => GuiSubscreen = () => new MainMenu(Player);
+	constructor(m: ModuleCategory, s: () => GuiSubscreen) {
+		this.module = m;
+		this.settingCreate = s;
 	}
+}
+
+export const MAIN_MENU_ITEMS: MenuItem[] = [
+	new MenuItem(ModuleCategory.Global, () => new GuiGlobal(Player)),
+	new MenuItem(ModuleCategory.Collar, () => new GuiCollar(Player)),
+	new MenuItem(ModuleCategory.Hypno, () => new GuiHypno(Player)),
+	new MenuItem(ModuleCategory.Boops, () => new GuiBoops(Player)),
+	new MenuItem(ModuleCategory.Lipstick, () => new GuiLipstick(Player))
 ];
 
 export class MainMenu extends GuiSubscreen {
