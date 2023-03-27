@@ -1489,7 +1489,7 @@ var LSCG = (function (exports) {
 	                loginInit(args[0]);
 	            }
 	        });
-	        console.log(`ClubGames Ready!`);
+	        console.log(`LSCG Ready!`);
 	    }
 	    else {
 	        console.debug("LSCG: Already logged in, init");
