@@ -252,7 +252,7 @@ var LSCG = (function (exports) {
 	const SETTING_NAMES = {
 	    [ModuleCategory.Global]: "Global",
 	    [ModuleCategory.Collar]: "Choke Collar",
-	    [ModuleCategory.Hypno]: "Hypno",
+	    [ModuleCategory.Hypno]: "Hypnosis",
 	    [ModuleCategory.Boops]: "Boops",
 	    [ModuleCategory.Lipstick]: "Lipstick",
 	    [ModuleCategory.Misc]: "Miscellaneous"
@@ -1373,7 +1373,10 @@ var LSCG = (function (exports) {
 	        if (MouseIn(GuiSubscreen.START_X + 600, this.getYPos(1) - 32, 64, 64)) {
 	            this.settings.enabled = !this.settings.enabled;
 	        }
-	        //Enable Cycme Checkbox
+	        //Enable Cycle Checkbox
+	        if (MouseIn(GuiSubscreen.START_X + 600, this.getYPos(4) - 32, 64, 64)) {
+	            this.settings.enableCycle = !this.settings.enableCycle;
+	        }
 	    }
 	}
 
