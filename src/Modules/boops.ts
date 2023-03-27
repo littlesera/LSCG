@@ -11,6 +11,8 @@ export class BoopsModule extends BaseModule {
 
     load(): void {
         OnActivity(100, ModuleCategory.Boops, (data, sender, msg, metadata) => {
+            if (!this.Enabled)
+                return;
             let target = data.Dictionary.find((d: any) => d.Tag == "TargetCharacter");
             if (!!target && 
                 target.MemberNumber == Player.MemberNumber && 

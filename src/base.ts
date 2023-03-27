@@ -8,8 +8,8 @@ export abstract class BaseModule {
 		return (<any>Player.LSCG)[this.constructor.name];
 	}
 
-	get checkEnabled(): boolean {
-		return this.settings.enabled;
+	get Enabled(): boolean {
+		return (Player.LSCG.GlobalModule.enabled && this.settings.enabled);
 	}
 
 	init() {

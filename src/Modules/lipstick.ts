@@ -5,6 +5,8 @@ import { OnActivity, removeAllHooksByModule } from "../utils";
 export class LipstickModule extends BaseModule {
     load(): void {
         OnActivity(100, ModuleCategory.Lipstick, (data, sender, msg, metadata) => {
+            if (!this.Enabled)
+                return;
             let target = data.Dictionary.find((d: any) => d.Tag == "TargetCharacter");
             if (!!target && 
                 !!sender &&

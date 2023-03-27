@@ -17,6 +17,8 @@ export class CollarModule extends BaseModule {
                 Description: ": tighten collar",
 
                 Action: () => {
+                    if (!this.Enabled)
+                        return;
                     this.IncreaseCollarChoke();
                 }
             },
@@ -25,12 +27,16 @@ export class CollarModule extends BaseModule {
                 Description: ": loosen collar",
 
                 Action: () => {
+                    if (!this.Enabled)
+                        return;
                     this.DecreaseCollarChoke();
                 }
             }
         ])
 
         OnChat(600, ModuleCategory.Collar, (data, sender, msg, metadata) => {
+            if (!this.Enabled)
+                return;
             var lowerMsgWords = parseMsgWords(msg);
             if (!!sender && this.allowedChokeMembers.indexOf(sender?.MemberNumber ?? 0) >= 0) {
                 if ((lowerMsgWords?.indexOf("tight") ?? -1) >= 0)
@@ -43,10 +49,14 @@ export class CollarModule extends BaseModule {
         // event on room join
         hookFunction("ChatRoomSync", 4, (args, next) => {
             next(args);
+            if (!this.Enabled)
+                return;
             this.ActivateChokeEvent();
         }, ModuleCategory.Collar);
 
         hookFunction('ServerSend', 4, (args, next) => {
+            if (!this.Enabled)
+                return next(args);
             // Prevent speech at choke level 4
             if (args[0] == "ChatRoomChat" && args[1].Type == "Chat"){
                 if (this.settings.chokeLevel >= 4) {
@@ -65,17 +75,21 @@ export class CollarModule extends BaseModule {
         }, ModuleCategory.Collar);
 
         hookFunction("Player.HasTints", 5, (args, next) => {
-            if (this.settings.chokeLevel > 2) return true;
+            if (this.Enabled && this.settings.chokeLevel > 2) return true;
             return next(args);
         }, ModuleCategory.Collar);
 
         hookFunction("Player.GetTints", 5, (args, next) => {
+            if (!this.Enabled)
+                return next(args);
             if (this.settings.chokeLevel == 3) return [{r: 0, g: 0, b: 0, a: 0.2}];
             else if (this.settings.chokeLevel == 4) return [{r: 0, g: 0, b: 0, a: 0.5}];
             return next(args);
         }, ModuleCategory.Collar);
             
         hookFunction("Player.GetBlurLevel", 5, (args, next) => {
+            if (!this.Enabled)
+                return next(args);
             if (this.settings.chokeLevel == 3) return 2;
             if (this.settings.chokeLevel == 4) return 6;
             return next(args);

@@ -31,15 +31,20 @@ export class HypnoModule extends BaseModule {
         ]);
         
         OnChat(1000, ModuleCategory.Hypno, (data, sender, msg, metadata) => {
-            var lowerMsgWords = parseMsgWords(msg);
+            if (!this.Enabled)
+                return;
+            var lowerMsgWords = parseMsgWords(msg) ?? [];
             if (!hypnoActivated() && 
-                !!this.settings.trigger && 
-                (lowerMsgWords?.indexOf(this.settings.trigger) ?? -1) >= 0 && 
-                sender?.MemberNumber != Player.MemberNumber)
+                !!this.triggers && 
+                lowerMsgWords.filter(v => this.triggers.includes(v)).length > 0 && 
+                sender?.MemberNumber != Player.MemberNumber &&
+                this.allowedSpeaker(sender?.MemberNumber ?? 0))
                 this.StartTriggerWord();
         });
         
         OnAction(1000, ModuleCategory.Hypno, (data, sender, msg, metadata) => {
+            if (!this.Enabled)
+                return;
             var lowerMsgWords = parseMsgWords(msg);
             if ((lowerMsgWords?.indexOf("snaps") ?? -1) >= 0 && 
                 sender?.MemberNumber != Player.MemberNumber &&
@@ -49,6 +54,8 @@ export class HypnoModule extends BaseModule {
         });
         
         OnActivity(1000, ModuleCategory.Hypno, (data, sender, msg, metadata) => {
+            if (!this.Enabled)
+                return;
             let target = data.Dictionary.find((d: any) => d.Tag == "TargetCharacter");
             if (!!target && target.MemberNumber == Player.MemberNumber) {
                 if (data.Content == "ChatOther-ItemNose-Pet" && triggerActivated)
@@ -57,21 +64,29 @@ export class HypnoModule extends BaseModule {
         });
 
         hookFunction("Player.HasTints", 4, (args, next) => {
+            if (!this.Enabled)
+                return next(args);
             if (triggerActivated) return true;
             return next(args);
         }, ModuleCategory.Hypno);
         
         hookFunction("Player.GetTints", 4, (args, next) => {
+            if (!this.Enabled)
+                return next(args);
             if (triggerActivated) return [{r: 148, g: 0, b: 211, a: 0.4}];
             return next(args);
         }, ModuleCategory.Hypno);
             
         hookFunction("Player.GetBlurLevel", 4, (args, next) => {
+            if (!this.Enabled)
+                return next(args);
             if (triggerActivated) return 3;
             return next(args);
         }, ModuleCategory.Hypno);
 
         hookFunction('ServerSend', 5, (args, next) => {
+            if (!this.Enabled)
+                return next(args);
             // Prevent speech at choke level 4
             if (triggerActivated) {
                 var type = args[0];
@@ -85,10 +100,8 @@ export class HypnoModule extends BaseModule {
         }, ModuleCategory.Hypno);
 
         // Set Trigger
-        let wordLength: number = commonWords.length;
-        
         if (!this.settings.trigger) {
-            this.settings.trigger = commonWords[getRandomInt(wordLength)];
+            this.settings.trigger = this.getNewTriggerWord();
             settingsSave();
         }
         if (!this.settings.activatedAt) {
@@ -96,7 +109,7 @@ export class HypnoModule extends BaseModule {
             settingsSave();
         }
         if (!!this.settings.existingEye1Name)
-        this.ResetEyes();
+            this.ResetEyes();
 
         this.lingerInterval = setInterval(() => this.CheckNewTrigger(), 5000);
     }
@@ -109,6 +122,28 @@ export class HypnoModule extends BaseModule {
     triggerTimer: number = 300000; // 5 min
     lingerInterval: number = 0; // check if need to reroll every 5s    
     hornyTimeout: number = 0;
+
+    get triggers(): string[] {
+        var overrideWords = this.settings.overrideWords?.split(",") ?? [];
+        if (overrideWords.length > 0)
+            return this.settings.overrideWords.split(",");
+        else
+            return [this.settings.trigger];
+    }
+
+    getNewTriggerWord(): string {
+        var words = this.settings.overrideWords?.split(",") ?? [];
+        if (words.length <= 0)
+            words = commonWords;
+        return words[getRandomInt(words.length)];
+    }
+
+    allowedSpeaker(memberId: number): boolean {
+        var allowedMembers = this.settings.overrideMemberIds?.split(",").map(id => +id) ?? [];
+        if (allowedMembers.length <= 0)
+            return true;
+        else return allowedMembers.includes(memberId);
+    }
 
     hypnoBlockStrings = [
         "%NAME%'s eyelids flutter as a thought tries to enter her blank mind...",
@@ -137,9 +172,6 @@ export class HypnoModule extends BaseModule {
 
         clearTimeout(this.triggerTimeout);
         this.triggerTimeout = setTimeout(() => this.TriggerRestoreTimeout(), this.triggerTimer);
-
-        clearInterval(this.lingerInterval);
-        this.lingerInterval = setInterval(() => this.CheckNewTrigger(), 1000);
 
         clearInterval(this.hornyTimeout);
         this.hornyTimeout = setInterval(() => this.HypnoHorny(), this.triggerTimer / 100);
@@ -235,16 +267,15 @@ export class HypnoModule extends BaseModule {
     }
 
     CheckNewTrigger() {
-        if (triggerActivated)
+        if (triggerActivated || !this.settings.enableCycle)
             return;
-        if (this.settings.activatedAt > 0 && new Date().getTime() - this.settings.activatedAt > (Math.max(1, +this.settings.cycleTime || 0) * 60000))
+        if (this.settings.activatedAt > 0 && new Date().getTime() - this.settings.activatedAt > (Math.max(1, this.settings.cycleTime || 0) * 60000))
             this.RollTriggerWord();
     }
 
     RollTriggerWord() {
-
         SendAction("%NAME% concentrates, breaking the hold the previous trigger word held over her.");
-        this.settings.trigger = commonWords[getRandomInt(commonWords.length)];
+        this.settings.trigger = this.getNewTriggerWord();
         this.settings.activatedAt = 0;
         settingsSave();
     }
