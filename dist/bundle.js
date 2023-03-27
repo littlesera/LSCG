@@ -1243,6 +1243,12 @@ var LSCG = (function (exports) {
 	    return module;
 	}
 	function init_modules() {
+	    registerModule(new GUI());
+	    registerModule(new HypnoModule());
+	    registerModule(new CollarModule());
+	    registerModule(new BoopsModule());
+	    registerModule(new MiscModule());
+	    registerModule(new LipstickModule());
 	    for (const m of modules) {
 	        m.init();
 	    }
@@ -1259,12 +1265,6 @@ var LSCG = (function (exports) {
 	        m.unload();
 	    }
 	}
-	registerModule(new GUI());
-	registerModule(new HypnoModule());
-	registerModule(new CollarModule());
-	registerModule(new BoopsModule());
-	registerModule(new MiscModule());
-	registerModule(new LipstickModule());
 
 	function initWait() {
 	    console.debug("BCX: Init wait");
