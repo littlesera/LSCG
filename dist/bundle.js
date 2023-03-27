@@ -1126,6 +1126,7 @@ var LSCG = (function (exports) {
 	    }
 	    Run() {
 	        MainCanvas.textAlign = "center";
+	        DrawText("- LSCG Boops -", 225, 125, "Black", "Gray");
 	        DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png", "BCX main menu");
 	    }
 	    Click() {
@@ -1141,6 +1142,7 @@ var LSCG = (function (exports) {
 	    }
 	    Run() {
 	        MainCanvas.textAlign = "center";
+	        DrawText("- LSCG Choking Collar -", 225, 125, "Black", "Gray");
 	        DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png", "BCX main menu");
 	    }
 	    Click() {
@@ -1156,6 +1158,7 @@ var LSCG = (function (exports) {
 	    }
 	    Run() {
 	        MainCanvas.textAlign = "center";
+	        DrawText("- LSCG Global -", 225, 125, "Black", "Gray");
 	        DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png", "BCX main menu");
 	    }
 	    Click() {
@@ -1171,6 +1174,7 @@ var LSCG = (function (exports) {
 	    }
 	    Run() {
 	        MainCanvas.textAlign = "center";
+	        DrawText("- LSCG Hypnosis -", 225, 125, "Black", "Gray");
 	        DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png", "BCX main menu");
 	    }
 	    Click() {
@@ -1186,6 +1190,7 @@ var LSCG = (function (exports) {
 	    }
 	    Run() {
 	        MainCanvas.textAlign = "center";
+	        DrawText("- LSCG Lipstick -", 225, 125, "Black", "Gray");
 	        DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png", "BCX main menu");
 	    }
 	    Click() {
