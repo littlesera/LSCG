@@ -1216,6 +1216,8 @@ var LSCG = (function (exports) {
 	        this.character = character;
 	    }
 	    get settings() {
+	        var _a;
+	        Player.LSCG.BoopsModule = (_a = Player.LSCG.BoopsModule) !== null && _a !== void 0 ? _a : { enabled: true };
 	        return Player.LSCG.BoopsModule;
 	    }
 	    Run() {
@@ -1237,22 +1239,23 @@ var LSCG = (function (exports) {
 	        this.character = character;
 	    }
 	    get settings() {
-	        var _a;
+	        var _a, _b;
 	        if (Player.LSCG === undefined) {
 	            Player.LSCG = {};
 	        }
 	        if (Player.LSCG.CollarModule === undefined) {
 	            Player.LSCG.CollarModule = {
 	                enabled: false,
-	                allowedMembers: ((_a = Player.Owner) !== null && _a !== void 0 ? _a : ""),
+	                allowedMembers: (_b = ((_a = Player.Ownership) === null || _a === void 0 ? void 0 : _a.MemberNumber) + "") !== null && _b !== void 0 ? _b : "",
 	                chokeLevel: 0
 	            };
 	        }
 	        return Player.LSCG.CollarModule;
 	    }
 	    Load() {
+	        var _a, _b, _c;
 	        super.Load();
-	        ElementCreateInput("collar_allowedMembers", "text", this.settings.allowedMembers, "255");
+	        ElementCreateInput("collar_allowedMembers", "text", (_a = this.settings.allowedMembers) !== null && _a !== void 0 ? _a : ((_c = ((_b = Player.Ownership) === null || _b === void 0 ? void 0 : _b.MemberNumber) + "") !== null && _c !== void 0 ? _c : ""), "255");
 	    }
 	    Run() {
 	        var prev = MainCanvas.textAlign;
@@ -1272,8 +1275,8 @@ var LSCG = (function (exports) {
 	        MainCanvas.textAlign = prev;
 	    }
 	    Exit() {
-	        var _a, _b;
-	        this.settings.allowedMembers = (_a = ElementValue("collar_allowedMembers")) !== null && _a !== void 0 ? _a : ((_b = Player.Owner) !== null && _b !== void 0 ? _b : "");
+	        var _a, _b, _c;
+	        this.settings.allowedMembers = (_a = ElementValue("collar_allowedMembers")) !== null && _a !== void 0 ? _a : ((_c = ((_b = Player.Ownership) === null || _b === void 0 ? void 0 : _b.MemberNumber) + "") !== null && _c !== void 0 ? _c : "");
 	        ElementRemove("collar_allowedMembers");
 	        super.Exit();
 	    }
@@ -1388,7 +1391,9 @@ var LSCG = (function (exports) {
 	        this.character = character;
 	    }
 	    get settings() {
-	        return Player.LSCG.BoopsModule;
+	        var _a;
+	        Player.LSCG.LipstickModule = (_a = Player.LSCG.LipstickModule) !== null && _a !== void 0 ? _a : { enabled: true };
+	        return Player.LSCG.LipstickModule;
 	    }
 	    Run() {
 	        var _a;
