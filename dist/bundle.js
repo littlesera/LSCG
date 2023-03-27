@@ -1060,7 +1060,7 @@ var LSCG = (function (exports) {
 	        if (MouseIn(1815, 75, 90, 90))
 	            return this.Exit();
 	        // Enabled Checkbox
-	        if (MouseIn(GuiSubscreen.START_X + 600, 190, 64, 64)) {
+	        if (MouseIn(GuiSubscreen.START_X + 600, this.getYPos(1) - 32, 64, 64)) {
 	            this.settings.enabled = !this.settings.enabled;
 	        }
 	    }
@@ -1260,13 +1260,13 @@ var LSCG = (function (exports) {
 	        DrawText("Override Trigger Words:", GuiSubscreen.START_X, this.getYPos(2), "Black", "Gray");
 	        if (!this.settings.enabled) {
 	            ElementCreateInput("hypno_overrideWords", "text", (_b = this.settings.overrideWords) !== null && _b !== void 0 ? _b : "", "255");
-	            ElementPosition("hypno_overrideWords", GuiSubscreen.START_X + 600, this.getYPos(2), 600);
+	            ElementPosition("hypno_overrideWords", GuiSubscreen.START_X + 600, this.getYPos(2), 400);
 	        }
 	        // Override allowed members	[Member ID List]
 	        DrawText("Override Allowed Member IDs:", 225, this.getYPos(3), "Black", "Gray");
 	        if (!this.settings.enabled) {
 	            ElementCreateInput("hypno_overrideMembers", "text", (_c = this.settings.overrideMemberIds) !== null && _c !== void 0 ? _c : "", "255");
-	            ElementPosition("hypno_overrideMembers", GuiSubscreen.START_X + 600, this.getYPos(3), 600);
+	            ElementPosition("hypno_overrideMembers", GuiSubscreen.START_X + 600, this.getYPos(3), 800);
 	        }
 	        // Enabled 					[true/false]
 	        DrawText("Enable Cycle:", GuiSubscreen.START_X, this.getYPos(4), "Black", "Gray");
@@ -1289,7 +1289,7 @@ var LSCG = (function (exports) {
 	        if (MouseIn(1815, 75, 90, 90))
 	            return this.Exit();
 	        // Enabled Checkbox
-	        if (MouseIn(GuiSubscreen.START_X + 600, 190, 64, 64)) {
+	        if (MouseIn(GuiSubscreen.START_X + 600, this.getYPos(1) - 32, 64, 64)) {
 	            this.settings.enabled = !this.settings.enabled;
 	        }
 	        //Enable Cycme Checkbox
