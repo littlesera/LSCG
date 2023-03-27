@@ -1,4 +1,5 @@
 import { CollarSettingsModel } from "./Models/collar";
+import { SettingsModel } from "./Models/settings";
 import { GuiSubscreen } from "./settingBase";
 
 export class GuiCollar extends GuiSubscreen {
@@ -10,17 +11,20 @@ export class GuiCollar extends GuiSubscreen {
     }
 
 	get settings(): CollarSettingsModel {
-		Player.LSCG.CollarModule = Player.LSCG.CollarModule ?? 
-		{ 
-			enabled: false,
-			allowedMembers: "",
-			chokeLevel: 0
-		};
-		return Player.LSCG.CollarModule
+		if (Player.LSCG === undefined) {
+			Player.LSCG = <SettingsModel>{};
+		}
+		if (Player.LSCG.CollarModule === undefined) {
+			Player.LSCG.CollarModule = <CollarSettingsModel>{ 
+				enabled: false,
+				allowedMembers: "",
+				chokeLevel: 0
+			};
+		}
+		return Player.LSCG.CollarModule;		
 	}
 
 	Load(): void {
-		this.settings.allowedMembers = this.settings.allowedMembers ?? "";
 		super.Load();
 	}
 

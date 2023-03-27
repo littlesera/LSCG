@@ -54,7 +54,7 @@ export class MainMenu extends GuiSubscreen {
 
 			DrawButton(150 + 430 * PX, 190 + 120 * PY, 400, 90, "", isDisabled ? "#ddd" : "White", SETTING_ICONS[e.module],
 				isDisabled ? "Setting is deactivated" : "", isDisabled);
-			DrawTextFit(SETTING_NAMES[e.module], 350 + 430 * PX, 235 + 120 * PY, 310, "Black");
+			DrawTextFit(SETTING_NAMES[e.module], 355 + 430 * PX, 235 + 120 * PY, 310, "Black");
 		}
 
 		MainCanvas.textAlign = prev;

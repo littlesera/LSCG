@@ -1,3 +1,4 @@
+import { BaseSettingsModel } from "./Models/base";
 import { GuiSubscreen } from "./settingBase";
 
 export class GuiLipstick extends GuiSubscreen {
@@ -7,6 +8,10 @@ export class GuiLipstick extends GuiSubscreen {
 		super();
 		this.character = character;
     }
+
+	get settings(): BaseSettingsModel {
+		return Player.LSCG.BoopsModule;
+	}
 
     Run() {
 		var prev = MainCanvas.textAlign;

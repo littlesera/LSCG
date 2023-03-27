@@ -1124,7 +1124,7 @@ var LSCG = (function (exports) {
 	            const PY = i % 6;
 	            const isDisabled = e.module == ModuleCategory.Collar && this.character.MemberNumber != 74298; // DISABLE CHOKE COLLAR FOR NON-SERA PLAYERS...
 	            DrawButton(150 + 430 * PX, 190 + 120 * PY, 400, 90, "", isDisabled ? "#ddd" : "White", SETTING_ICONS[e.module], isDisabled ? "Setting is deactivated" : "", isDisabled);
-	            DrawTextFit(SETTING_NAMES[e.module], 350 + 430 * PX, 235 + 120 * PY, 310, "Black");
+	            DrawTextFit(SETTING_NAMES[e.module], 355 + 430 * PX, 235 + 120 * PY, 310, "Black");
 	        }
 	        MainCanvas.textAlign = prev;
 	        // Changelog button..
@@ -1161,8 +1161,6 @@ var LSCG = (function (exports) {
 	        this.character = character;
 	    }
 	    get settings() {
-	        var _a;
-	        Player.LSCG.BoopsModule = (_a = Player.LSCG.BoopsModule) !== null && _a !== void 0 ? _a : { enabled: false };
 	        return Player.LSCG.BoopsModule;
 	    }
 	    Run() {
@@ -1184,17 +1182,19 @@ var LSCG = (function (exports) {
 	        this.character = character;
 	    }
 	    get settings() {
-	        var _a;
-	        Player.LSCG.CollarModule = (_a = Player.LSCG.CollarModule) !== null && _a !== void 0 ? _a : {
-	            enabled: false,
-	            allowedMembers: "",
-	            chokeLevel: 0
-	        };
+	        if (Player.LSCG === undefined) {
+	            Player.LSCG = {};
+	        }
+	        if (Player.LSCG.CollarModule === undefined) {
+	            Player.LSCG.CollarModule = {
+	                enabled: false,
+	                allowedMembers: "",
+	                chokeLevel: 0
+	            };
+	        }
 	        return Player.LSCG.CollarModule;
 	    }
 	    Load() {
-	        var _a;
-	        this.settings.allowedMembers = (_a = this.settings.allowedMembers) !== null && _a !== void 0 ? _a : "";
 	        super.Load();
 	    }
 	    Run() {
@@ -1251,23 +1251,20 @@ var LSCG = (function (exports) {
 	        this.character = character;
 	    }
 	    get settings() {
-	        var _a;
-	        Player.LSCG.HypnoModule = (_a = Player.LSCG.HypnoModule) !== null && _a !== void 0 ? _a : {
-	            enabled: false,
-	            activatedAt: 0,
-	            cycleTime: 30,
-	            enableCycle: true,
-	            overrideMemberIds: "",
-	            overrideWords: ""
-	        };
+	        if (Player.LSCG === undefined) {
+	            Player.LSCG = {};
+	        }
+	        if (Player.LSCG.HypnoModule === undefined) {
+	            Player.LSCG.HypnoModule = {
+	                enabled: false,
+	                activatedAt: 0,
+	                cycleTime: "30",
+	                enableCycle: true,
+	                overrideMemberIds: "",
+	                overrideWords: ""
+	            };
+	        }
 	        return Player.LSCG.HypnoModule;
-	    }
-	    Load() {
-	        var _a, _b, _c;
-	        this.settings.overrideWords = (_a = this.settings.overrideWords) !== null && _a !== void 0 ? _a : "";
-	        this.settings.overrideMemberIds = (_b = this.settings.overrideMemberIds) !== null && _b !== void 0 ? _b : "";
-	        this.settings.cycleTime = (_c = this.settings.cycleTime) !== null && _c !== void 0 ? _c : 30;
-	        super.Load();
 	    }
 	    Run() {
 	        var _a;
@@ -1322,6 +1319,9 @@ var LSCG = (function (exports) {
 	    constructor(character) {
 	        super();
 	        this.character = character;
+	    }
+	    get settings() {
+	        return Player.LSCG.BoopsModule;
 	    }
 	    Run() {
 	        var _a;
