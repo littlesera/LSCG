@@ -1281,11 +1281,21 @@ var LSCG = (function (exports) {
 	        super.Exit();
 	    }
 	    Click() {
+	        var _a, _b, _c, _d;
 	        super.Click();
 	        // Update Collar Button
-	        if (MouseIn(GuiSubscreen.START_X + 600, 190 + 240, 200, 64)) {
-	            // Do Update.....
-	            console.info("Update Collar");
+	        if (MouseIn(GuiSubscreen.START_X + 600, this.getYPos(3) - 32, 200, 64)) {
+	            var collar = InventoryGet(Player, "ItemNeck");
+	            if (!collar) {
+	                PreferenceMessage = "No Collar Equipped";
+	            }
+	            else {
+	                PreferenceMessage = "Collar updated";
+	                this.settings.collar = {
+	                    name: (_b = (_a = collar.Craft) === null || _a === void 0 ? void 0 : _a.Name) !== null && _b !== void 0 ? _b : collar.Asset.Name,
+	                    creator: (_d = (_c = collar.Craft) === null || _c === void 0 ? void 0 : _c.MemberNumber) !== null && _d !== void 0 ? _d : 0
+	                };
+	            }
 	        }
 	    }
 	}
