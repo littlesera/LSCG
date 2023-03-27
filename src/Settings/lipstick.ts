@@ -8,10 +8,6 @@ export class GuiLipstick extends GuiSubscreen {
 		this.character = character;
     }
 
-	get settings() {
-        return Player.LSCG.LipstickModule  ?? { enabled: false };
-    }
-
     Run() {
 		var prev = MainCanvas.textAlign;
 		MainCanvas.textAlign = "left";
