@@ -26,6 +26,7 @@ export class GuiCollar extends GuiSubscreen {
 
 	Load(): void {
 		super.Load();
+		ElementCreateInput("collar_allowedMembers", "text", this.settings.allowedMembers, "255");
 	}
 
     Run() {
@@ -41,10 +42,8 @@ export class GuiCollar extends GuiSubscreen {
 
 		// Allowed Members 			[ID list]
 		DrawText("Allowed Members IDs:", GuiSubscreen.START_X, this.getYPos(2), "Black", "Gray");
-		if (this.settings.enabled) {
-			ElementCreateInput("collar_allowedMembers", "text", this.settings.allowedMembers, "255");
-			ElementPosition("collar_allowedMembers", GuiSubscreen.START_X + 1000, this.getYPos(2), 600);
-		}
+		ElementPosition("collar_allowedMembers", GuiSubscreen.START_X + 1000, this.getYPos(2), 600);
+		
 		// Set/Update Collar	 	[Custom??]
 		DrawText("Update Collar:", GuiSubscreen.START_X, this.getYPos(3), "Black", "Gray");
 		MainCanvas.textAlign = "center";
