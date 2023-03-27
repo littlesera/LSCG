@@ -3,7 +3,7 @@ import { BaseSettingsModel } from "./Models/base";
 import { SETTING_FUNC_NAMES, SETTING_FUNC_PREFIX, SETTING_NAMES, SETTING_NAME_PREFIX } from "./setting_definitions";
 
 export abstract class GuiSubscreen {
-    static START_X: number = 250;
+    static START_X: number = 225;
     static START_Y: number = 100;
 
 	constructor() {
