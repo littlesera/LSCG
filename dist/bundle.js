@@ -1177,7 +1177,7 @@ var LSCG = (function (exports) {
 	            const PY = i % 6;
 	            const isDisabled = e.module == ModuleCategory.Collar && this.character.MemberNumber != 74298; // DISABLE CHOKE COLLAR FOR NON-SERA PLAYERS...
 	            DrawButton(150 + 430 * PX, 190 + 120 * PY, 400, 90, "", isDisabled ? "#ddd" : "White", SETTING_ICONS[e.module], isDisabled ? "Setting is deactivated" : "", isDisabled);
-	            DrawTextFit(SETTING_NAMES[e.module], 355 + 430 * PX, 235 + 120 * PY, 310, "Black");
+	            DrawTextFit(SETTING_NAMES[e.module], 380 + 430 * PX, 235 + 120 * PY, 310, "Black");
 	        }
 	        MainCanvas.textAlign = prev;
 	        // Changelog button..
