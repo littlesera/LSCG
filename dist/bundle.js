@@ -211,8 +211,8 @@ var LSCG = (function (exports) {
 	        Player.LSCG[this.constructor.name] = Player.LSCG[this.constructor.name] || {};
 	        return Player.LSCG[this.constructor.name];
 	    }
-	    get checkEnabled() {
-	        return this.settings.enabled;
+	    get Enabled() {
+	        return (Player.LSCG.GlobalModule.enabled && this.settings.enabled);
 	    }
 	    init() {
 	        // Empty
@@ -304,16 +304,21 @@ var LSCG = (function (exports) {
 	            }
 	        ]);
 	        OnChat(1000, ModuleCategory.Hypno, (data, sender, msg, metadata) => {
-	            var _a;
-	            var lowerMsgWords = parseMsgWords(msg);
+	            var _a, _b;
+	            if (!this.Enabled)
+	                return;
+	            var lowerMsgWords = (_a = parseMsgWords(msg)) !== null && _a !== void 0 ? _a : [];
 	            if (!hypnoActivated() &&
-	                !!this.settings.trigger &&
-	                ((_a = lowerMsgWords === null || lowerMsgWords === void 0 ? void 0 : lowerMsgWords.indexOf(this.settings.trigger)) !== null && _a !== void 0 ? _a : -1) >= 0 &&
-	                (sender === null || sender === void 0 ? void 0 : sender.MemberNumber) != Player.MemberNumber)
+	                !!this.triggers &&
+	                lowerMsgWords.filter(v => this.triggers.includes(v)).length > 0 &&
+	                (sender === null || sender === void 0 ? void 0 : sender.MemberNumber) != Player.MemberNumber &&
+	                this.allowedSpeaker((_b = sender === null || sender === void 0 ? void 0 : sender.MemberNumber) !== null && _b !== void 0 ? _b : 0))
 	                this.StartTriggerWord();
 	        });
 	        OnAction(1000, ModuleCategory.Hypno, (data, sender, msg, metadata) => {
 	            var _a;
+	            if (!this.Enabled)
+	                return;
 	            var lowerMsgWords = parseMsgWords(msg);
 	            if (((_a = lowerMsgWords === null || lowerMsgWords === void 0 ? void 0 : lowerMsgWords.indexOf("snaps")) !== null && _a !== void 0 ? _a : -1) >= 0 &&
 	                (sender === null || sender === void 0 ? void 0 : sender.MemberNumber) != Player.MemberNumber &&
@@ -322,6 +327,8 @@ var LSCG = (function (exports) {
 	            }
 	        });
 	        OnActivity(1000, ModuleCategory.Hypno, (data, sender, msg, metadata) => {
+	            if (!this.Enabled)
+	                return;
 	            let target = data.Dictionary.find((d) => d.Tag == "TargetCharacter");
 	            if (!!target && target.MemberNumber == Player.MemberNumber) {
 	                if (data.Content == "ChatOther-ItemNose-Pet" && triggerActivated)
@@ -329,21 +336,29 @@ var LSCG = (function (exports) {
 	            }
 	        });
 	        hookFunction("Player.HasTints", 4, (args, next) => {
+	            if (!this.Enabled)
+	                return next(args);
 	            if (triggerActivated)
 	                return true;
 	            return next(args);
 	        }, ModuleCategory.Hypno);
 	        hookFunction("Player.GetTints", 4, (args, next) => {
+	            if (!this.Enabled)
+	                return next(args);
 	            if (triggerActivated)
 	                return [{ r: 148, g: 0, b: 211, a: 0.4 }];
 	            return next(args);
 	        }, ModuleCategory.Hypno);
 	        hookFunction("Player.GetBlurLevel", 4, (args, next) => {
+	            if (!this.Enabled)
+	                return next(args);
 	            if (triggerActivated)
 	                return 3;
 	            return next(args);
 	        }, ModuleCategory.Hypno);
 	        hookFunction('ServerSend', 5, (args, next) => {
+	            if (!this.Enabled)
+	                return next(args);
 	            // Prevent speech at choke level 4
 	            if (triggerActivated) {
 	                var type = args[0];
@@ -356,9 +371,8 @@ var LSCG = (function (exports) {
 	            return next(args);
 	        }, ModuleCategory.Hypno);
 	        // Set Trigger
-	        let wordLength = commonWords.length;
 	        if (!this.settings.trigger) {
-	            this.settings.trigger = commonWords[getRandomInt(wordLength)];
+	            this.settings.trigger = this.getNewTriggerWord();
 	            settingsSave();
 	        }
 	        if (!this.settings.activatedAt) {
@@ -371,6 +385,29 @@ var LSCG = (function (exports) {
 	    }
 	    unload() {
 	        removeAllHooksByModule(ModuleCategory.Hypno);
+	    }
+	    get triggers() {
+	        var _a, _b;
+	        var overrideWords = (_b = (_a = this.settings.overrideWords) === null || _a === void 0 ? void 0 : _a.split(",")) !== null && _b !== void 0 ? _b : [];
+	        if (overrideWords.length > 0)
+	            return this.settings.overrideWords.split(",");
+	        else
+	            return [this.settings.trigger];
+	    }
+	    getNewTriggerWord() {
+	        var _a, _b;
+	        var words = (_b = (_a = this.settings.overrideWords) === null || _a === void 0 ? void 0 : _a.split(",")) !== null && _b !== void 0 ? _b : [];
+	        if (words.length <= 0)
+	            words = commonWords;
+	        return words[getRandomInt(words.length)];
+	    }
+	    allowedSpeaker(memberId) {
+	        var _a, _b;
+	        var allowedMembers = (_b = (_a = this.settings.overrideMemberIds) === null || _a === void 0 ? void 0 : _a.split(",").map(id => +id)) !== null && _b !== void 0 ? _b : [];
+	        if (allowedMembers.length <= 0)
+	            return true;
+	        else
+	            return allowedMembers.includes(memberId);
 	    }
 	    StartTriggerWord() {
 	        if (triggerActivated)
@@ -388,8 +425,6 @@ var LSCG = (function (exports) {
 	        CharacterSetFacialExpression(Player, "Fluids", "DroolLow");
 	        clearTimeout(this.triggerTimeout);
 	        this.triggerTimeout = setTimeout(() => this.TriggerRestoreTimeout(), this.triggerTimer);
-	        clearInterval(this.lingerInterval);
-	        this.lingerInterval = setInterval(() => this.CheckNewTrigger(), 1000);
 	        clearInterval(this.hornyTimeout);
 	        this.hornyTimeout = setInterval(() => this.HypnoHorny(), this.triggerTimer / 100);
 	    }
@@ -470,14 +505,14 @@ var LSCG = (function (exports) {
 	        }
 	    }
 	    CheckNewTrigger() {
-	        if (triggerActivated)
+	        if (triggerActivated || !this.settings.enableCycle)
 	            return;
-	        if (this.settings.activatedAt > 0 && new Date().getTime() - this.settings.activatedAt > (Math.max(1, +this.settings.cycleTime || 0) * 60000))
+	        if (this.settings.activatedAt > 0 && new Date().getTime() - this.settings.activatedAt > (Math.max(1, this.settings.cycleTime || 0) * 60000))
 	            this.RollTriggerWord();
 	    }
 	    RollTriggerWord() {
 	        SendAction("%NAME% concentrates, breaking the hold the previous trigger word held over her.");
-	        this.settings.trigger = commonWords[getRandomInt(commonWords.length)];
+	        this.settings.trigger = this.getNewTriggerWord();
 	        this.settings.activatedAt = 0;
 	        settingsSave();
 	    }
@@ -512,6 +547,8 @@ var LSCG = (function (exports) {
 	                Tag: 'tight',
 	                Description: ": tighten collar",
 	                Action: () => {
+	                    if (!this.Enabled)
+	                        return;
 	                    this.IncreaseCollarChoke();
 	                }
 	            },
@@ -519,12 +556,16 @@ var LSCG = (function (exports) {
 	                Tag: 'loose',
 	                Description: ": loosen collar",
 	                Action: () => {
+	                    if (!this.Enabled)
+	                        return;
 	                    this.DecreaseCollarChoke();
 	                }
 	            }
 	        ]);
 	        OnChat(600, ModuleCategory.Collar, (data, sender, msg, metadata) => {
 	            var _a, _b, _c;
+	            if (!this.Enabled)
+	                return;
 	            var lowerMsgWords = parseMsgWords(msg);
 	            if (!!sender && this.allowedChokeMembers.indexOf((_a = sender === null || sender === void 0 ? void 0 : sender.MemberNumber) !== null && _a !== void 0 ? _a : 0) >= 0) {
 	                if (((_b = lowerMsgWords === null || lowerMsgWords === void 0 ? void 0 : lowerMsgWords.indexOf("tight")) !== null && _b !== void 0 ? _b : -1) >= 0)
@@ -536,9 +577,13 @@ var LSCG = (function (exports) {
 	        // event on room join
 	        hookFunction("ChatRoomSync", 4, (args, next) => {
 	            next(args);
+	            if (!this.Enabled)
+	                return;
 	            this.ActivateChokeEvent();
 	        }, ModuleCategory.Collar);
 	        hookFunction('ServerSend', 4, (args, next) => {
+	            if (!this.Enabled)
+	                return next(args);
 	            // Prevent speech at choke level 4
 	            if (args[0] == "ChatRoomChat" && args[1].Type == "Chat") {
 	                if (this.settings.chokeLevel >= 4) {
@@ -556,11 +601,13 @@ var LSCG = (function (exports) {
 	                return next(args);
 	        }, ModuleCategory.Collar);
 	        hookFunction("Player.HasTints", 5, (args, next) => {
-	            if (this.settings.chokeLevel > 2)
+	            if (this.Enabled && this.settings.chokeLevel > 2)
 	                return true;
 	            return next(args);
 	        }, ModuleCategory.Collar);
 	        hookFunction("Player.GetTints", 5, (args, next) => {
+	            if (!this.Enabled)
+	                return next(args);
 	            if (this.settings.chokeLevel == 3)
 	                return [{ r: 0, g: 0, b: 0, a: 0.2 }];
 	            else if (this.settings.chokeLevel == 4)
@@ -568,6 +615,8 @@ var LSCG = (function (exports) {
 	            return next(args);
 	        }, ModuleCategory.Collar);
 	        hookFunction("Player.GetBlurLevel", 5, (args, next) => {
+	            if (!this.Enabled)
+	                return next(args);
 	            if (this.settings.chokeLevel == 3)
 	                return 2;
 	            if (this.settings.chokeLevel == 4)
@@ -797,6 +846,8 @@ var LSCG = (function (exports) {
 	    }
 	    load() {
 	        OnActivity(100, ModuleCategory.Boops, (data, sender, msg, metadata) => {
+	            if (!this.Enabled)
+	                return;
 	            let target = data.Dictionary.find((d) => d.Tag == "TargetCharacter");
 	            if (!!target &&
 	                target.MemberNumber == Player.MemberNumber &&
@@ -869,6 +920,8 @@ var LSCG = (function (exports) {
 	class LipstickModule extends BaseModule {
 	    load() {
 	        OnActivity(100, ModuleCategory.Lipstick, (data, sender, msg, metadata) => {
+	            if (!this.Enabled)
+	                return;
 	            let target = data.Dictionary.find((d) => d.Tag == "TargetCharacter");
 	            if (!!target &&
 	                !!sender &&
