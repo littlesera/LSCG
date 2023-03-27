@@ -28,7 +28,7 @@ export class GuiHypno extends GuiSubscreen {
 		// Override Trigger Words 	[Word List]
 		DrawText("Override Trigger Words:", GuiSubscreen.START_X, this.getYPos(2), "Black", "Gray");
 		if (!this.settings.enabled) {
-			this.settings.cycleTime = this.settings.overrideWords ?? "";
+			this.settings.overrideWords = this.settings.overrideWords ?? "";
 			ElementCreateInput("hypno_overrideWords", "text", this.settings.overrideWords, "255");
 			ElementPosition("hypno_overrideWords", GuiSubscreen.START_X + 900, this.getYPos(2), 600);
 		}
@@ -36,7 +36,7 @@ export class GuiHypno extends GuiSubscreen {
 		// Override allowed members	[Member ID List]
 		DrawText("Override Allowed Member IDs:", 225, this.getYPos(3), "Black", "Gray");
 		if (!this.settings.enabled) {
-			this.settings.cycleTime = this.settings.overrideMemberIds ?? "";
+			this.settings.overrideMemberIds = this.settings.overrideMemberIds ?? "";
 			ElementCreateInput("hypno_overrideMembers", "text", this.settings.overrideMemberIds, "255");
 			ElementPosition("hypno_overrideMembers", GuiSubscreen.START_X + 900, this.getYPos(3), 600);
 		}

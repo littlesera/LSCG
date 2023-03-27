@@ -1260,14 +1260,14 @@ var LSCG = (function (exports) {
 	        // Override Trigger Words 	[Word List]
 	        DrawText("Override Trigger Words:", GuiSubscreen.START_X, this.getYPos(2), "Black", "Gray");
 	        if (!this.settings.enabled) {
-	            this.settings.cycleTime = (_b = this.settings.overrideWords) !== null && _b !== void 0 ? _b : "";
+	            this.settings.overrideWords = (_b = this.settings.overrideWords) !== null && _b !== void 0 ? _b : "";
 	            ElementCreateInput("hypno_overrideWords", "text", this.settings.overrideWords, "255");
 	            ElementPosition("hypno_overrideWords", GuiSubscreen.START_X + 900, this.getYPos(2), 600);
 	        }
 	        // Override allowed members	[Member ID List]
 	        DrawText("Override Allowed Member IDs:", 225, this.getYPos(3), "Black", "Gray");
 	        if (!this.settings.enabled) {
-	            this.settings.cycleTime = (_c = this.settings.overrideMemberIds) !== null && _c !== void 0 ? _c : "";
+	            this.settings.overrideMemberIds = (_c = this.settings.overrideMemberIds) !== null && _c !== void 0 ? _c : "";
 	            ElementCreateInput("hypno_overrideMembers", "text", this.settings.overrideMemberIds, "255");
 	            ElementPosition("hypno_overrideMembers", GuiSubscreen.START_X + 900, this.getYPos(3), 600);
 	        }
