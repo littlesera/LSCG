@@ -46,6 +46,8 @@ export function init() {
 		// clear any old settings.
 	if (!!(<any>Player.OnlineSettings)?.LittleSera)
 		delete (<any>Player.OnlineSettings).LittleSera;
+	if (!!(<any>Player.OnlineSettings)?.ClubGames)
+		delete (<any>Player.OnlineSettings).ClubGames;
 
     Player.LSCG = Player.OnlineSettings.LSCG || <SettingsModel>{};
 	settingsSave();

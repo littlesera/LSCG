@@ -1436,12 +1436,14 @@ var LSCG = (function (exports) {
 	    });
 	}
 	function init() {
-	    var _a;
+	    var _a, _b;
 	    if (window.LSCG_Loaded)
 	        return;
 	    // clear any old settings.
 	    if (!!((_a = Player.OnlineSettings) === null || _a === void 0 ? void 0 : _a.LittleSera))
 	        delete Player.OnlineSettings.LittleSera;
+	    if (!!((_b = Player.OnlineSettings) === null || _b === void 0 ? void 0 : _b.ClubGames))
+	        delete Player.OnlineSettings.ClubGames;
 	    Player.LSCG = Player.OnlineSettings.LSCG || {};
 	    settingsSave();
 	    initSettings();
