@@ -1312,10 +1312,6 @@ var LSCG = (function (exports) {
 	        super();
 	        this.character = character;
 	    }
-	    get settings() {
-	        var _a;
-	        return (_a = Player.LSCG.LipstickModule) !== null && _a !== void 0 ? _a : { enabled: false };
-	    }
 	    Run() {
 	        var _a;
 	        var prev = MainCanvas.textAlign;
