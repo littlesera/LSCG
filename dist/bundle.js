@@ -1244,13 +1244,13 @@ var LSCG = (function (exports) {
 	        DrawText("Override Trigger Words:", GuiSubscreen.START_X, 190 + 120, "Black", "Gray");
 	        if (!this.settings.enabled) {
 	            ElementCreateInput("hypno_overrideWords", "text", (_b = this.settings.overrideWords) !== null && _b !== void 0 ? _b : "", "255");
-	            ElementPosition("hypno_overrideWords", GuiSubscreen.START_X + 600, 190 + 120, 200);
+	            ElementPosition("hypno_overrideWords", GuiSubscreen.START_X + 600, 190 + 120, 600);
 	        }
 	        // Override allowed members	[Member ID List]
 	        DrawText("Override Allowed Member IDs:", 225, 190 + 240, "Black", "Gray");
 	        if (!this.settings.enabled) {
 	            ElementCreateInput("hypno_overrideMembers", "text", (_c = this.settings.overrideMemberIds) !== null && _c !== void 0 ? _c : "", "255");
-	            ElementPosition("hypno_overrideMembers", GuiSubscreen.START_X + 600, 190 + 240, 200);
+	            ElementPosition("hypno_overrideMembers", GuiSubscreen.START_X + 600, 190 + 240, 600);
 	        }
 	        // Enabled 					[true/false]
 	        DrawText("Enable Cycle:", GuiSubscreen.START_X, 190 + 360, "Black", "Gray");

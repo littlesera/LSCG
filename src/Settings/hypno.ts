@@ -28,14 +28,14 @@ export class GuiHypno extends GuiSubscreen {
 		DrawText("Override Trigger Words:", GuiSubscreen.START_X, 190 + 120, "Black", "Gray");
 		if (!this.settings.enabled) {
 			ElementCreateInput("hypno_overrideWords", "text", this.settings.overrideWords ?? "", "255");
-			ElementPosition("hypno_overrideWords", GuiSubscreen.START_X + 600, 190 + 120, 200);
+			ElementPosition("hypno_overrideWords", GuiSubscreen.START_X + 600, 190 + 120, 600);
 		}
 
 		// Override allowed members	[Member ID List]
 		DrawText("Override Allowed Member IDs:", 225, 190 + 240, "Black", "Gray");
 		if (!this.settings.enabled) {
 			ElementCreateInput("hypno_overrideMembers", "text", this.settings.overrideMemberIds ?? "", "255");
-			ElementPosition("hypno_overrideMembers", GuiSubscreen.START_X + 600, 190 + 240, 200);
+			ElementPosition("hypno_overrideMembers", GuiSubscreen.START_X + 600, 190 + 240, 600);
 		}
 
 		// Enabled 					[true/false]
