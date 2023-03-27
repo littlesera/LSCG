@@ -1194,14 +1194,13 @@ var LSCG = (function (exports) {
 	        super.Load();
 	    }
 	    Run() {
-	        var _a;
 	        var prev = MainCanvas.textAlign;
 	        MainCanvas.textAlign = "left";
 	        DrawText("- LSCG Choking Collar -", GuiSubscreen.START_X, this.getYPos(0), "Black", "Gray");
 	        DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png", "BCX main menu");
 	        // Enabled 					[true/false]
 	        DrawText("Enabled:", GuiSubscreen.START_X, this.getYPos(1), "Black", "Gray");
-	        DrawCheckbox(GuiSubscreen.START_X + 600, this.getYPos(1) - 32, 64, 64, "", (_a = this.settings.enabled) !== null && _a !== void 0 ? _a : true);
+	        DrawCheckbox(GuiSubscreen.START_X + 600, this.getYPos(1) - 32, 64, 64, "", this.settings.enabled);
 	        // Allowed Members 			[ID list]
 	        DrawText("Allowed Members IDs:", GuiSubscreen.START_X, this.getYPos(2), "Black", "Gray");
 	        if (!this.settings.enabled) {
@@ -1260,14 +1259,14 @@ var LSCG = (function (exports) {
 	        super.Load();
 	    }
 	    Run() {
-	        var _a, _b;
+	        var _a;
 	        var prev = MainCanvas.textAlign;
 	        MainCanvas.textAlign = "left";
 	        DrawText("- LSCG Hypnosis -", GuiSubscreen.START_X, this.getYPos(0), "Black", "Gray");
 	        DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png", "BCX main menu");
 	        // Enabled 					[true/false]
 	        DrawText("Enabled:", GuiSubscreen.START_X, this.getYPos(1), "Black", "Gray");
-	        DrawCheckbox(GuiSubscreen.START_X + 600, this.getYPos(1) - 32, 64, 64, "", (_a = this.settings.enabled) !== null && _a !== void 0 ? _a : true);
+	        DrawCheckbox(GuiSubscreen.START_X + 600, this.getYPos(1) - 32, 64, 64, "", this.settings.enabled);
 	        // Override Trigger Words 	[Word List]
 	        DrawText("Override Trigger Words:", GuiSubscreen.START_X, this.getYPos(2), "Black", "Gray");
 	        if (!this.settings.enabled) {
@@ -1282,7 +1281,7 @@ var LSCG = (function (exports) {
 	        }
 	        // Enabled 					[true/false]
 	        DrawText("Enable Cycle:", GuiSubscreen.START_X, this.getYPos(4), "Black", "Gray");
-	        DrawCheckbox(GuiSubscreen.START_X + 600, this.getYPos(4) - 32, 64, 64, "", ((_b = this.settings.enableCycle) !== null && _b !== void 0 ? _b : true) || !this.settings.enabled);
+	        DrawCheckbox(GuiSubscreen.START_X + 600, this.getYPos(4) - 32, 64, 64, "", ((_a = this.settings.enableCycle) !== null && _a !== void 0 ? _a : true) || !this.settings.enabled);
 	        // Cycle Time				[Number of minutes (default 30)]
 	        DrawText("Trigger Cycle Time:", GuiSubscreen.START_X, this.getYPos(5), "Black", "Gray");
 	        if (!this.settings.enabled) {
