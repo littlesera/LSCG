@@ -39,7 +39,7 @@ export class MainMenu extends GuiSubscreen {
 	}
 
 	Run() {
-		DrawText("- Club Games -", 225, 125, "Black", "Gray");
+		DrawText("- Little Sera's Club Games -", 225, 125, "Black", "Gray");
 		DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png");
 
 		for (let i = 0; i < MAIN_MENU_ITEMS.length; i++) {

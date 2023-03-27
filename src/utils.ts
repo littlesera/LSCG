@@ -169,7 +169,7 @@ export function getRandomInt(max: number) {
 }
 
 export function settingsSave() {
-    Player.OnlineSettings.ClubGames = Player.ClubGames
+    Player.OnlineSettings.LSCG = Player.LSCG
     window.ServerAccountUpdate.QueueData({OnlineSettings: Player.OnlineSettings})
 }
 

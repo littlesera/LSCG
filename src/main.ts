@@ -1,6 +1,7 @@
 import { hookFunction, isObject, settingsSave, VERSION } from './utils';
 import { init_modules, unload_modules } from 'modules';
 import './modules';
+import { SettingsModel } from 'Settings/Models/settings';
 
 function initWait() {
 	console.debug("BCX: Init wait");
@@ -29,7 +30,7 @@ export function loginInit(C: any) {
 export function initSettings() {
 	PreferenceSubscreenList.push("LSCGMainMenu");
 	hookFunction("TextGet", 2, (args: string[], next: (arg0: any) => any) => {
-		if (args[0] == "HomepageLSCGMainMenu") return "Club Games Settings";
+		if (args[0] == "HomepageLSCGMainMenu") return "LSCG Settings";
 		return next(args);
 	});
 	hookFunction("DrawButton", 2, (args: string[], next: (arg0: any) => any) => {
@@ -46,7 +47,7 @@ export function init() {
 	if (!!(<any>Player.OnlineSettings)?.LittleSera)
 		delete (<any>Player.OnlineSettings).LittleSera;
 
-    Player.ClubGames = Player.OnlineSettings.ClubGames || {};
+    Player.LSCG = Player.OnlineSettings.LSCG || <SettingsModel>{};
 	settingsSave();
 
 	initSettings();

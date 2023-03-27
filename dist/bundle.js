@@ -198,7 +198,7 @@ var LSCG = (function (exports) {
 	    return Math.floor(Math.random() * max);
 	}
 	function settingsSave() {
-	    Player.OnlineSettings.ClubGames = Player.ClubGames;
+	    Player.OnlineSettings.LSCG = Player.LSCG;
 	    window.ServerAccountUpdate.QueueData({ OnlineSettings: Player.OnlineSettings });
 	}
 	/** Checks if the `obj` is an object (not null, not array) */
@@ -207,6 +207,12 @@ var LSCG = (function (exports) {
 	}
 
 	class BaseModule {
+	    get settings() {
+	        return Player.LSCG[this.constructor.name] || {};
+	    }
+	    get checkEnabled() {
+	        return this.settings.enabled;
+	    }
 	    init() {
 	        // Empty
 	    }
@@ -275,6 +281,9 @@ var LSCG = (function (exports) {
 	            "%NAME% quivers, patiently awaiting something to fill her empty head..."
 	        ];
 	    }
+	    get settings() {
+	        return Player.LSCG[this.constructor.name] || {};
+	    }
 	    load() {
 	        CommandCombine([
 	            {
@@ -298,8 +307,8 @@ var LSCG = (function (exports) {
 	            var _a;
 	            var lowerMsgWords = parseMsgWords(msg);
 	            if (!hypnoActivated() &&
-	                !!Player.ClubGames.Hypno.trigger &&
-	                ((_a = lowerMsgWords === null || lowerMsgWords === void 0 ? void 0 : lowerMsgWords.indexOf(Player.ClubGames.Hypno.trigger)) !== null && _a !== void 0 ? _a : -1) >= 0 &&
+	                !!this.settings.trigger &&
+	                ((_a = lowerMsgWords === null || lowerMsgWords === void 0 ? void 0 : lowerMsgWords.indexOf(this.settings.trigger)) !== null && _a !== void 0 ? _a : -1) >= 0 &&
 	                (sender === null || sender === void 0 ? void 0 : sender.MemberNumber) != Player.MemberNumber)
 	                this.StartTriggerWord();
 	        });
@@ -348,16 +357,15 @@ var LSCG = (function (exports) {
 	        }, ModuleCategory.Hypno);
 	        // Set Trigger
 	        let wordLength = commonWords.length;
-	        Player.ClubGames.Hypno = Player.OnlineSettings.ClubGames.Hypno || {};
-	        if (!Player.ClubGames.Hypno.trigger) {
-	            Player.ClubGames.Hypno.trigger = commonWords[getRandomInt(wordLength)];
+	        if (!this.settings.trigger) {
+	            this.settings.trigger = commonWords[getRandomInt(wordLength)];
 	            settingsSave();
 	        }
-	        if (!Player.ClubGames.Hypno.activatedAt) {
-	            Player.ClubGames.Hypno.activatedAt = 0;
+	        if (!this.settings.activatedAt) {
+	            this.settings.activatedAt = 0;
 	            settingsSave();
 	        }
-	        if (!!Player.ClubGames.Hypno.existingEye1Name)
+	        if (!!this.settings.existingEye1Name)
 	            this.ResetEyes();
 	        this.lingerInterval = setInterval(() => this.CheckNewTrigger(), 5000);
 	    }
@@ -368,8 +376,8 @@ var LSCG = (function (exports) {
 	        if (triggerActivated)
 	            return;
 	        triggerActivated = true;
-	        if (Player.ClubGames.Hypno.activatedAt == 0)
-	            Player.ClubGames.Hypno.activatedAt = new Date().getTime();
+	        if (this.settings.activatedAt == 0)
+	            this.settings.activatedAt = new Date().getTime();
 	        AudioPlaySoundEffect("SciFiEffect", 1);
 	        settingsSave();
 	        SendAction("%NAME%'s eyes immediately unfocus, her posture slumping slightly as she loses control of her body at the utterance of a trigger word.");
@@ -387,10 +395,10 @@ var LSCG = (function (exports) {
 	    }
 	    SetEyes() {
 	        var _a, _b, _c, _d;
-	        Player.ClubGames.Hypno.existingEye1Name = (_a = InventoryGet(Player, "Eyes")) === null || _a === void 0 ? void 0 : _a.Asset.Name;
-	        Player.ClubGames.Hypno.existingEye1Color = (_b = InventoryGet(Player, "Eyes")) === null || _b === void 0 ? void 0 : _b.Color;
-	        Player.ClubGames.Hypno.existingEye2Name = (_c = InventoryGet(Player, "Eyes2")) === null || _c === void 0 ? void 0 : _c.Asset.Name;
-	        Player.ClubGames.Hypno.existingEye2Color = (_d = InventoryGet(Player, "Eyes2")) === null || _d === void 0 ? void 0 : _d.Color;
+	        this.settings.existingEye1Name = (_a = InventoryGet(Player, "Eyes")) === null || _a === void 0 ? void 0 : _a.Asset.Name;
+	        this.settings.existingEye1Color = (_b = InventoryGet(Player, "Eyes")) === null || _b === void 0 ? void 0 : _b.Color;
+	        this.settings.existingEye2Name = (_c = InventoryGet(Player, "Eyes2")) === null || _c === void 0 ? void 0 : _c.Asset.Name;
+	        this.settings.existingEye2Color = (_d = InventoryGet(Player, "Eyes2")) === null || _d === void 0 ? void 0 : _d.Color;
 	        settingsSave();
 	        this.EnforceEyes();
 	    }
@@ -411,23 +419,23 @@ var LSCG = (function (exports) {
 	    }
 	    ResetEyes() {
 	        var _a, _b;
-	        var eyeAsset1 = AssetGet("Female3DCG", "Eyes", (_a = Player.ClubGames.Hypno.existingEye1Name) !== null && _a !== void 0 ? _a : "Eyes5");
-	        var eyeAsset2 = AssetGet("Female3DCG", "Eyes2", (_b = Player.ClubGames.Hypno.existingEye2Name) !== null && _b !== void 0 ? _b : "Eyes5");
+	        var eyeAsset1 = AssetGet("Female3DCG", "Eyes", (_a = this.settings.existingEye1Name) !== null && _a !== void 0 ? _a : "Eyes5");
+	        var eyeAsset2 = AssetGet("Female3DCG", "Eyes2", (_b = this.settings.existingEye2Name) !== null && _b !== void 0 ? _b : "Eyes5");
 	        var eyes1 = InventoryGet(Player, "Eyes");
 	        var eyes2 = InventoryGet(Player, "Eyes2");
 	        if (!!eyes1) {
 	            eyes1.Asset = eyeAsset1 !== null && eyeAsset1 !== void 0 ? eyeAsset1 : {};
-	            eyes1.Color = Player.ClubGames.Hypno.existingEye1Color;
+	            eyes1.Color = this.settings.existingEye1Color;
 	        }
 	        if (!!eyes2) {
 	            eyes2.Asset = eyeAsset2 !== null && eyeAsset2 !== void 0 ? eyeAsset2 : {};
-	            eyes2.Color = Player.ClubGames.Hypno.existingEye2Color;
+	            eyes2.Color = this.settings.existingEye2Color;
 	        }
 	        ChatRoomCharacterUpdate(Player);
-	        Player.ClubGames.Hypno.existingEye1Name = undefined;
-	        Player.ClubGames.Hypno.existingEye1Color = undefined;
-	        Player.ClubGames.Hypno.existingEye2Name = undefined;
-	        Player.ClubGames.Hypno.existingEye2Color = undefined;
+	        this.settings.existingEye1Name = undefined;
+	        this.settings.existingEye1Color = undefined;
+	        this.settings.existingEye2Name = undefined;
+	        this.settings.existingEye2Color = undefined;
 	        settingsSave();
 	    }
 	    TriggerRestoreBoop() {
@@ -464,13 +472,13 @@ var LSCG = (function (exports) {
 	    CheckNewTrigger() {
 	        if (triggerActivated)
 	            return;
-	        if (Player.ClubGames.Hypno.activatedAt > 0 && new Date().getTime() - Player.ClubGames.Hypno.activatedAt > this.lingerTimer)
+	        if (this.settings.activatedAt > 0 && new Date().getTime() - this.settings.activatedAt > this.lingerTimer)
 	            this.RollTriggerWord();
 	    }
 	    RollTriggerWord() {
 	        SendAction("%NAME% concentrates, breaking the hold the previous trigger word held over her.");
-	        Player.ClubGames.Hypno.trigger = commonWords[getRandomInt(commonWords.length)];
-	        Player.ClubGames.Hypno.activatedAt = 0;
+	        this.settings.trigger = commonWords[getRandomInt(commonWords.length)];
+	        this.settings.activatedAt = 0;
 	        settingsSave();
 	    }
 	}
@@ -497,6 +505,9 @@ var LSCG = (function (exports) {
 	        this.passout2Timer = 15000;
 	        this.passout3Timer = 10000;
 	        this.eventInterval = 0;
+	    }
+	    get settings() {
+	        return Player.LSCG[this.constructor.name] || {};
 	    }
 	    load() {
 	        CommandCombine([
@@ -533,12 +544,12 @@ var LSCG = (function (exports) {
 	        hookFunction('ServerSend', 4, (args, next) => {
 	            // Prevent speech at choke level 4
 	            if (args[0] == "ChatRoomChat" && args[1].Type == "Chat") {
-	                if (Player.ClubGames.ChokeCollar.chokeLevel >= 4) {
+	                if (this.settings.chokeLevel >= 4) {
 	                    SendAction("%NAME%'s mouth moves silently.");
 	                    return null;
 	                }
-	                else if (Player.ClubGames.ChokeCollar.chokeLevel > 1) {
-	                    args[1].Content = SpeechGarbleByGagLevel((Player.ClubGames.ChokeCollar.chokeLevel - 1) ** 2, args[1].Content);
+	                else if (this.settings.chokeLevel > 1) {
+	                    args[1].Content = SpeechGarbleByGagLevel((this.settings.chokeLevel - 1) ** 2, args[1].Content);
 	                    return next(args);
 	                }
 	                else
@@ -548,28 +559,30 @@ var LSCG = (function (exports) {
 	                return next(args);
 	        }, ModuleCategory.Collar);
 	        hookFunction("Player.HasTints", 5, (args, next) => {
-	            if (Player.ClubGames.ChokeCollar.chokeLevel > 2)
+	            if (this.settings.chokeLevel > 2)
 	                return true;
 	            return next(args);
 	        }, ModuleCategory.Collar);
 	        hookFunction("Player.GetTints", 5, (args, next) => {
-	            if (Player.ClubGames.ChokeCollar.chokeLevel == 3)
+	            if (this.settings.chokeLevel == 3)
 	                return [{ r: 0, g: 0, b: 0, a: 0.2 }];
-	            else if (Player.ClubGames.ChokeCollar.chokeLevel == 4)
+	            else if (this.settings.chokeLevel == 4)
 	                return [{ r: 0, g: 0, b: 0, a: 0.5 }];
 	            return next(args);
 	        }, ModuleCategory.Collar);
 	        hookFunction("Player.GetBlurLevel", 5, (args, next) => {
-	            if (Player.ClubGames.ChokeCollar.chokeLevel == 3)
+	            if (this.settings.chokeLevel == 3)
 	                return 2;
-	            if (Player.ClubGames.ChokeCollar.chokeLevel == 4)
+	            if (this.settings.chokeLevel == 4)
 	                return 6;
 	            return next(args);
 	        }, ModuleCategory.Collar);
 	        this.eventInterval = setInterval(() => this.ChokeEvent(), this.chokeEventTimer);
-	        Player.ClubGames.ChokeCollar = Player.OnlineSettings.ClubGames.ChokeCollar || { chokeLevel: 0 };
-	        settingsSave();
-	        if (Player.ClubGames.ChokeCollar.chokeLevel > 2) {
+	        if (this.settings.chokeLevel == undefined) {
+	            this.settings.chokeLevel = 0;
+	            settingsSave();
+	        }
+	        if (this.settings.chokeLevel > 2) {
 	            this.setChokeTimeout(this.DecreaseCollarChoke, this.chokeTimer);
 	        }
 	    }
@@ -584,14 +597,14 @@ var LSCG = (function (exports) {
 	            this.chokeTimeout = setTimeout(() => f(), delay);
 	    }
 	    IncreaseCollarChoke() {
-	        if (Player.ClubGames.ChokeCollar.chokeLevel == 4)
+	        if (this.settings.chokeLevel == 4)
 	            return;
-	        Player.ClubGames.ChokeCollar.chokeLevel++;
+	        this.settings.chokeLevel++;
 	        AudioPlaySoundEffect("HydraulicLock");
 	        this.IncreaseArousal();
-	        if (Player.ClubGames.ChokeCollar.chokeLevel < 4) {
+	        if (this.settings.chokeLevel < 4) {
 	            CharacterSetFacialExpression(Player, "Eyebrows", "Soft");
-	            switch (Player.ClubGames.ChokeCollar.chokeLevel) {
+	            switch (this.settings.chokeLevel) {
 	                case 1:
 	                    clearTimeout(this.chokeTimeout);
 	                    SendAction("%NAME%'s eyes flutter as her collar starts to tighten around her neck with a quiet hiss.");
@@ -614,22 +627,22 @@ var LSCG = (function (exports) {
 	                    break;
 	            }
 	        }
-	        else if (Player.ClubGames.ChokeCollar.chokeLevel >= 4) {
-	            Player.ClubGames.ChokeCollar.chokeLevel = 4;
+	        else if (this.settings.chokeLevel >= 4) {
+	            this.settings.chokeLevel = 4;
 	            this.StartPassout();
 	        }
 	        settingsSave();
 	    }
 	    DecreaseCollarChoke() {
-	        if (Player.ClubGames.ChokeCollar.chokeLevel <= 0) {
-	            Player.ClubGames.ChokeCollar.chokeLevel = 0;
+	        if (this.settings.chokeLevel <= 0) {
+	            this.settings.chokeLevel = 0;
 	            return;
 	        }
 	        AudioPlaySoundEffect("Deflation");
-	        Player.ClubGames.ChokeCollar.chokeLevel--;
-	        if (Player.ClubGames.ChokeCollar.chokeLevel > 0)
+	        this.settings.chokeLevel--;
+	        if (this.settings.chokeLevel > 0)
 	            this.setChokeTimeout(this.DecreaseCollarChoke, this.chokeTimer);
-	        switch (Player.ClubGames.ChokeCollar.chokeLevel) {
+	        switch (this.settings.chokeLevel) {
 	            case 3:
 	                this.setChokeTimeout(this.DecreaseCollarChoke, this.chokeTimer);
 	                SendAction("%NAME% chokes and gasps desperately as her collar slowly releases some pressure.");
@@ -659,7 +672,7 @@ var LSCG = (function (exports) {
 	        settingsSave();
 	    }
 	    ResetCollarChoke() {
-	        Player.ClubGames.ChokeCollar.chokeLevel = 0;
+	        this.settings.chokeLevel = 0;
 	        clearTimeout(this.chokeTimeout);
 	        settingsSave();
 	    }
@@ -702,11 +715,11 @@ var LSCG = (function (exports) {
 	    }
 	    ChokeEvent() {
 	        // only activate 1/4 times triggered unless at high level
-	        if (Player.ClubGames.ChokeCollar.chokeLevel > 2)
+	        if (this.settings.chokeLevel > 2)
 	            this.ActivateChokeEvent();
-	        else if (Player.ClubGames.ChokeCollar.chokeLevel == 2 && getRandomInt(8) == 0)
+	        else if (this.settings.chokeLevel == 2 && getRandomInt(8) == 0)
 	            this.ActivateChokeEvent();
-	        else if (Player.ClubGames.ChokeCollar.chokeLevel == 1 && getRandomInt(15) == 0)
+	        else if (this.settings.chokeLevel == 1 && getRandomInt(15) == 0)
 	            this.ActivateChokeEvent();
 	    }
 	    ActivateChokeEvent() {
@@ -730,7 +743,7 @@ var LSCG = (function (exports) {
 	                "%NAME%'s eyes have trouble focusing, as she chokes and gets lightheaded."
 	            ]
 	        };
-	        switch (Player.ClubGames.ChokeCollar.chokeLevel) {
+	        switch (this.settings.chokeLevel) {
 	            case 1:
 	                SendAction(ChokeEvents.low[getRandomInt(ChokeEvents.low.length)]);
 	                break;
@@ -1026,6 +1039,9 @@ var LSCG = (function (exports) {
 	    get SubscreenName() {
 	        return SETTING_NAME_PREFIX + this.constructor.name;
 	    }
+	    get settings() {
+	        return Player.LSCG.GlobalModule;
+	    }
 	    Load() {
 	        PreferenceSubscreen = this.SubscreenName;
 	        PreferenceMessage = this.SubscreenName;
@@ -1040,6 +1056,7 @@ var LSCG = (function (exports) {
 	        // Empty
 	        PreferenceMessage = "LSCG Main Menu";
 	        PreferenceSubscreen = "LSCGMainMenu";
+	        settingsSave();
 	    }
 	    Unload() {
 	        // Empty
@@ -1081,7 +1098,7 @@ var LSCG = (function (exports) {
 	        }
 	    }
 	    Run() {
-	        DrawText("- Club Games -", 225, 125, "Black", "Gray");
+	        DrawText("- Little Sera's Club Games -", 225, 125, "Black", "Gray");
 	        DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png");
 	        for (let i = 0; i < MAIN_MENU_ITEMS.length; i++) {
 	            const e = MAIN_MENU_ITEMS[i];
@@ -1124,10 +1141,15 @@ var LSCG = (function (exports) {
 	        super();
 	        this.character = character;
 	    }
+	    get settings() {
+	        return Player.LSCG.BoopsModule;
+	    }
 	    Run() {
 	        MainCanvas.textAlign = "center";
 	        DrawText("- LSCG Boops -", 225, 125, "Black", "Gray");
 	        DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png", "BCX main menu");
+	        // Enabled	[true/false]
+	        DrawCheckbox(225, 190 + 120 * 1, 64, 64, "Enabled", this.settings.enabled);
 	    }
 	    Click() {
 	        if (MouseIn(1815, 75, 90, 90))
@@ -1140,10 +1162,23 @@ var LSCG = (function (exports) {
 	        super();
 	        this.character = character;
 	    }
+	    get settings() {
+	        return Player.LSCG.CollarModule;
+	    }
 	    Run() {
 	        MainCanvas.textAlign = "center";
 	        DrawText("- LSCG Choking Collar -", 225, 125, "Black", "Gray");
 	        DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png", "BCX main menu");
+	        // Enabled 					[true/false]
+	        DrawText("Enabled:", 225, 190 + 120, "Black", "Gray");
+	        DrawCheckbox(500, 190 + 120, 64, 64, "Enabled", this.settings.enabled);
+	        // Allowed Members 			[ID list]
+	        DrawText("Allowed Members IDs:", 225, 190 + 120, "Black", "Gray");
+	        ElementCreateInput("collar_allowedMembers", "text", this.settings.allowedMembers, "255");
+	        ElementPosition("collar_allowedMembers", 500, 190 + 240, 200);
+	        // Set/Update Collar	 	[Custom??]
+	        DrawText("Update Collar:", 225, 190 + 360, "Black", "Gray");
+	        DrawButton(500, 190 + 360, 200, 64, "Update", "White");
 	    }
 	    Click() {
 	        if (MouseIn(1815, 75, 90, 90))
@@ -1172,10 +1207,30 @@ var LSCG = (function (exports) {
 	        super();
 	        this.character = character;
 	    }
+	    get settings() {
+	        return Player.LSCG.HypnoModule;
+	    }
 	    Run() {
+	        var _a, _b, _c, _d, _e;
 	        MainCanvas.textAlign = "center";
 	        DrawText("- LSCG Hypnosis -", 225, 125, "Black", "Gray");
 	        DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png", "BCX main menu");
+	        // Enabled 					[true/false]
+	        DrawCheckbox(225, 190 + 120 * 1, 64, 64, "Enabled", (_a = this.settings.enabled) !== null && _a !== void 0 ? _a : true);
+	        // Override Trigger Words 	[Word List]
+	        DrawText("Override Trigger Words:", 225, 190 + 249, "Black", "Gray");
+	        ElementCreateInput("hypno_overrideWords", "text", (_b = this.settings.overrideWords) !== null && _b !== void 0 ? _b : "", "255");
+	        ElementPosition("hypno_overrideWords", 500, 190 + 240, 200);
+	        // Override allowed members	[Member ID List]
+	        DrawText("Override Allowed Member IDs:", 225, 190 + 360, "Black", "Gray");
+	        ElementCreateInput("hypno_overrideMembers", "text", (_c = this.settings.overrideMemberIds) !== null && _c !== void 0 ? _c : "", "255");
+	        ElementPosition("hypno_overrideMembers", 500, 190 + 360, 200);
+	        // Enabled 					[true/false]
+	        DrawCheckbox(225, 190 + 120 * 1, 64, 64, "Enable Cycle", (_d = this.settings.enableCycle) !== null && _d !== void 0 ? _d : true);
+	        // Cycle Time				[Number of minutes (default 30)]
+	        DrawText("Trigger Cycle Time:", 225, 190 + 480, "Black", "Gray");
+	        ElementCreateInput("hypno_cycleTime", "text", (_e = this.settings.cycleTime) !== null && _e !== void 0 ? _e : "30", "100");
+	        ElementPosition("hypno_overrideWords", 500, 190 + 480, 200);
 	    }
 	    Click() {
 	        if (MouseIn(1815, 75, 90, 90))
@@ -1188,10 +1243,15 @@ var LSCG = (function (exports) {
 	        super();
 	        this.character = character;
 	    }
+	    get settings() {
+	        return Player.LSCG.LipstickModule;
+	    }
 	    Run() {
 	        MainCanvas.textAlign = "center";
 	        DrawText("- LSCG Lipstick -", 225, 125, "Black", "Gray");
 	        DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png", "BCX main menu");
+	        // Enable	[true/false]
+	        DrawCheckbox(225, 190 + 120 * 1, 64, 64, "Enabled", this.settings.enabled);
 	    }
 	    Click() {
 	        if (MouseIn(1815, 75, 90, 90))
@@ -1303,7 +1363,7 @@ var LSCG = (function (exports) {
 	    PreferenceSubscreenList.push("LSCGMainMenu");
 	    hookFunction("TextGet", 2, (args, next) => {
 	        if (args[0] == "HomepageLSCGMainMenu")
-	            return "Club Games Settings";
+	            return "LSCG Settings";
 	        return next(args);
 	    });
 	    hookFunction("DrawButton", 2, (args, next) => {
@@ -1319,7 +1379,7 @@ var LSCG = (function (exports) {
 	    // clear any old settings.
 	    if (!!((_a = Player.OnlineSettings) === null || _a === void 0 ? void 0 : _a.LittleSera))
 	        delete Player.OnlineSettings.LittleSera;
-	    Player.ClubGames = Player.OnlineSettings.ClubGames || {};
+	    Player.LSCG = Player.OnlineSettings.LSCG || {};
 	    settingsSave();
 	    initSettings();
 	    if (!init_modules()) {

@@ -1605,7 +1605,7 @@ interface PlayerCharacter extends Character {
 		SendStatus?: boolean;
 		ShowStatus?: boolean;
 		EnableAfkTimer: boolean;
-		ClubGames: import("Settings/Models/settings").SettingsModel;
+		LSCG: import("Settings/Models/settings").SettingsModel;
 	};
 	GraphicsSettings?: {
 		Font: string;
@@ -1659,7 +1659,7 @@ interface PlayerCharacter extends Character {
 		HideShopItems: GenderSetting;
 		AutoJoinSearch: GenderSetting;
 	};
-	ClubGames: import("Settings/Models/settings").SettingsModel;
+	LSCG: import("Settings/Models/settings").SettingsModel;
 }
 
 /** Pandora Player extension */

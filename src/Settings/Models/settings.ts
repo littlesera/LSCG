@@ -1,7 +1,12 @@
+import { BaseSettingsModel } from "./base";
 import { CollarSettingsModel } from "./collar";
 import { HypnoSettingsModel } from "./hypno";
 
 export interface SettingsModel {
-    ChokeCollar: CollarSettingsModel;
-    Hypno: HypnoSettingsModel;
+    CollarModule: CollarSettingsModel;
+    HypnoModule: HypnoSettingsModel;
+    BoopsModule: BaseSettingsModel;
+    LipstickModule: BaseSettingsModel;
+    GlobalModule: BaseSettingsModel;
+    MiscModule: BaseSettingsModel;
 }
