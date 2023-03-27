@@ -10,7 +10,8 @@ export class GuiHypno extends GuiSubscreen {
     }
 
 	get settings(): HypnoSettingsModel {
-		return Player.LSCG.HypnoModule ?? { enabled: false };
+		Player.LSCG.HypnoModule = Player.LSCG.HypnoModule ?? { enabled: false };
+		return Player.LSCG.HypnoModule;
 	}
 
     Run() {
@@ -22,7 +23,7 @@ export class GuiHypno extends GuiSubscreen {
 
 		// Enabled 					[true/false]
 		DrawText("Enabled:", GuiSubscreen.START_X, 190, "Black", "Gray");
-		DrawCheckbox(GuiSubscreen.START_X + 600, 190, 64, 64, "", this.settings.enabled ?? true);
+		DrawCheckbox(GuiSubscreen.START_X + 600, 190 - 32, 64, 64, "", this.settings.enabled ?? true);
 		
 		// Override Trigger Words 	[Word List]
 		DrawText("Override Trigger Words:", GuiSubscreen.START_X, 190 + 120, "Black", "Gray");

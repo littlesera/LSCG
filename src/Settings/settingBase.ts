@@ -20,7 +20,8 @@ export abstract class GuiSubscreen {
     } 
 
     get settings(): BaseSettingsModel {
-        return Player.LSCG.GlobalModule ?? { enabled: true };
+        Player.LSCG.GlobalModule = Player.LSCG.GlobalModule ?? { enabled: true };
+        return Player.LSCG.GlobalModule
     }
 
 	Load() {

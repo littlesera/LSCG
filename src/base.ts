@@ -4,7 +4,8 @@ import { settingsSave } from "utils";
 export abstract class BaseModule {
 
 	get settings(): BaseSettingsModel {
-		return (<any>Player.LSCG)[this.constructor.name] || {};
+		(<any>Player.LSCG)[this.constructor.name] = (<any>Player.LSCG)[this.constructor.name] || {};
+		return (<any>Player.LSCG)[this.constructor.name];
 	}
 
 	get checkEnabled(): boolean {
