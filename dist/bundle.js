@@ -1330,10 +1330,11 @@ var LSCG = (function (exports) {
 	        return Player.LSCG.HypnoModule;
 	    }
 	    Load() {
+	        var _a, _b, _c;
 	        super.Load();
-	        ElementCreateInput("hypno_overrideWords", "text", this.settings.overrideWords, "255");
-	        ElementCreateInput("hypno_overrideMembers", "text", this.settings.overrideMemberIds, "255");
-	        ElementCreateInput("hypno_cycleTime", "number", "" + this.settings.cycleTime, "5");
+	        ElementCreateInput("hypno_overrideWords", "text", (_a = this.settings.overrideWords) !== null && _a !== void 0 ? _a : "", "255");
+	        ElementCreateInput("hypno_overrideMembers", "text", (_b = this.settings.overrideMemberIds) !== null && _b !== void 0 ? _b : "", "255");
+	        ElementCreateInput("hypno_cycleTime", "number", "" + ((_c = this.settings.cycleTime) !== null && _c !== void 0 ? _c : 30), "5");
 	    }
 	    Run() {
 	        var _a;

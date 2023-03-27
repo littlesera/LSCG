@@ -29,9 +29,9 @@ export class GuiHypno extends GuiSubscreen {
 
 	Load(): void {
 		super.Load();
-		ElementCreateInput("hypno_overrideWords", "text", this.settings.overrideWords, "255");
-		ElementCreateInput("hypno_overrideMembers", "text", this.settings.overrideMemberIds, "255");
-		ElementCreateInput("hypno_cycleTime", "number", "" + this.settings.cycleTime, "5");
+		ElementCreateInput("hypno_overrideWords", "text", this.settings.overrideWords ?? "", "255");
+		ElementCreateInput("hypno_overrideMembers", "text", this.settings.overrideMemberIds ?? "", "255");
+		ElementCreateInput("hypno_cycleTime", "number", "" + (this.settings.cycleTime ?? 30), "5");
 	}
 
     Run() {
