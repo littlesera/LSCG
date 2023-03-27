@@ -8,7 +8,7 @@ export abstract class BaseModule {
 	}
 
 	get Enabled(): boolean {
-		if (!!Player.LSCG.GlobalModule)
+		if (!Player.LSCG.GlobalModule)
 			Player.LSCG.GlobalModule = {enabled: true};
 		return (Player.LSCG.GlobalModule.enabled && this.settings.enabled);
 	}
