@@ -14,6 +14,11 @@ export class GuiCollar extends GuiSubscreen {
 		return Player.LSCG.CollarModule
 	}
 
+	Load(): void {
+		this.settings.allowedMembers = this.settings.allowedMembers ?? "";
+		super.Load();
+	}
+
     Run() {
 		var prev = MainCanvas.textAlign;
 		MainCanvas.textAlign = "left";
@@ -28,7 +33,6 @@ export class GuiCollar extends GuiSubscreen {
 		// Allowed Members 			[ID list]
 		DrawText("Allowed Members IDs:", GuiSubscreen.START_X, this.getYPos(2), "Black", "Gray");
 		if (!this.settings.enabled) {
-			this.settings.allowedMembers = this.settings.allowedMembers ?? "";
 			ElementCreateInput("collar_allowedMembers", "text", this.settings.allowedMembers, "255");
 			ElementPosition("collar_allowedMembers", GuiSubscreen.START_X + 1000, this.getYPos(2), 600);
 		}
