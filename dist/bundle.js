@@ -225,6 +225,7 @@ var LSCG = (function (exports) {
 	}
 
 	const SETTING_FUNC_PREFIX = "PreferenceSubscreenLSCG";
+	const SETTING_NAME_PREFIX = "LSCG";
 	const SETTING_FUNC_NAMES = [
 	    "Load",
 	    "Unload",
@@ -1017,13 +1018,17 @@ var LSCG = (function (exports) {
 	    constructor() {
 	        SETTING_FUNC_NAMES.forEach(name => {
 	            if (typeof this[name] === "function")
-	                window[SETTING_FUNC_PREFIX + this.constructor.name + name] = () => {
+	                window[SETTING_FUNC_PREFIX + SETTING_NAME_PREFIX + this.constructor.name + name] = () => {
 	                    this[name]();
 	                };
 	        });
 	    }
+	    get SubscreenName() {
+	        return SETTING_NAME_PREFIX + this.constructor.name;
+	    }
 	    Load() {
-	        // Empty
+	        PreferenceSubscreen = this.SubscreenName;
+	        PreferenceMessage = this.SubscreenName;
 	    }
 	    Run() {
 	        // Empty
