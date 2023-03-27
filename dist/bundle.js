@@ -1123,8 +1123,8 @@ var LSCG = (function (exports) {
 	            const PX = Math.floor(i / 6);
 	            const PY = i % 6;
 	            const isDisabled = e.module == ModuleCategory.Collar && this.character.MemberNumber != 74298; // DISABLE CHOKE COLLAR FOR NON-SERA PLAYERS...
-	            DrawButton(GuiSubscreen.START_X + 430 * PX, this.getYPos(PY), 400, 90, "", isDisabled ? "#ddd" : "White", SETTING_ICONS[e.module], isDisabled ? "Setting is deactivated" : "", isDisabled);
-	            DrawTextFit(SETTING_NAMES[e.module], GuiSubscreen.START_X + 630 * PX, this.getYPos(PY) + 45, 310, "Black");
+	            DrawButton(150 + 430 * PX, 190 + 120 * PY, 400, 90, "", isDisabled ? "#ddd" : "White", SETTING_ICONS[e.module], isDisabled ? "Setting is deactivated" : "", isDisabled);
+	            DrawTextFit(SETTING_NAMES[e.module], 350 + 430 * PX, 235 + 120 * PY, 310, "Black");
 	        }
 	        MainCanvas.textAlign = prev;
 	        // Changelog button..
@@ -1260,13 +1260,13 @@ var LSCG = (function (exports) {
 	        DrawText("Override Trigger Words:", GuiSubscreen.START_X, this.getYPos(2), "Black", "Gray");
 	        if (!this.settings.enabled) {
 	            ElementCreateInput("hypno_overrideWords", "text", (_b = this.settings.overrideWords) !== null && _b !== void 0 ? _b : "", "255");
-	            ElementPosition("hypno_overrideWords", GuiSubscreen.START_X + 600, this.getYPos(2), 400);
+	            ElementPosition("hypno_overrideWords", GuiSubscreen.START_X + 1000, this.getYPos(2), 600);
 	        }
 	        // Override allowed members	[Member ID List]
 	        DrawText("Override Allowed Member IDs:", 225, this.getYPos(3), "Black", "Gray");
 	        if (!this.settings.enabled) {
 	            ElementCreateInput("hypno_overrideMembers", "text", (_c = this.settings.overrideMemberIds) !== null && _c !== void 0 ? _c : "", "255");
-	            ElementPosition("hypno_overrideMembers", GuiSubscreen.START_X + 600, this.getYPos(3), 800);
+	            ElementPosition("hypno_overrideMembers", GuiSubscreen.START_X + 1000, this.getYPos(3), 600);
 	        }
 	        // Enabled 					[true/false]
 	        DrawText("Enable Cycle:", GuiSubscreen.START_X, this.getYPos(4), "Black", "Gray");
