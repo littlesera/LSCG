@@ -27,7 +27,7 @@ export enum ModuleCategory {
 export const SETTING_NAMES: Record<ModuleCategory, string> = {
     [ModuleCategory.Global]: "Global",
     [ModuleCategory.Collar]: "Choke Collar",
-    [ModuleCategory.Hypno]: "Hypno",
+    [ModuleCategory.Hypno]: "Hypnosis",
     [ModuleCategory.Boops]: "Boops",
     [ModuleCategory.Lipstick]: "Lipstick",
     [ModuleCategory.Misc]: "Miscellaneous"

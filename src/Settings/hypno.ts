@@ -87,6 +87,9 @@ export class GuiHypno extends GuiSubscreen {
 			this.settings.enabled = !this.settings.enabled;
 		}
 
-		//Enable Cycme Checkbox
+		//Enable Cycle Checkbox
+		if (MouseIn(GuiSubscreen.START_X + 600, this.getYPos(4) - 32, 64, 64)){
+			this.settings.enableCycle = !this.settings.enableCycle;
+		}
 	}
 }
