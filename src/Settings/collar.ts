@@ -10,7 +10,12 @@ export class GuiCollar extends GuiSubscreen {
     }
 
 	get settings(): CollarSettingsModel {
-		Player.LSCG.CollarModule = Player.LSCG.CollarModule  ?? { enabled: false };
+		Player.LSCG.CollarModule = Player.LSCG.CollarModule ?? 
+		{ 
+			enabled: false,
+			allowedMembers: "",
+			chokeLevel: 0
+		};
 		return Player.LSCG.CollarModule
 	}
 
@@ -32,7 +37,7 @@ export class GuiCollar extends GuiSubscreen {
 
 		// Allowed Members 			[ID list]
 		DrawText("Allowed Members IDs:", GuiSubscreen.START_X, this.getYPos(2), "Black", "Gray");
-		if (!this.settings.enabled) {
+		if (this.settings.enabled) {
 			ElementCreateInput("collar_allowedMembers", "text", this.settings.allowedMembers, "255");
 			ElementPosition("collar_allowedMembers", GuiSubscreen.START_X + 1000, this.getYPos(2), 600);
 		}
