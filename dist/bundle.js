@@ -1117,13 +1117,14 @@ var LSCG = (function (exports) {
 	        MainCanvas.textAlign = "left";
 	        DrawText("- Little Sera's Club Games -", GuiSubscreen.START_X, GuiSubscreen.START_Y, "Black", "Gray");
 	        DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png");
+	        MainCanvas.textAlign = "center";
 	        for (let i = 0; i < MAIN_MENU_ITEMS.length; i++) {
 	            const e = MAIN_MENU_ITEMS[i];
 	            const PX = Math.floor(i / 6);
 	            const PY = i % 6;
 	            const isDisabled = e.module == ModuleCategory.Collar && this.character.MemberNumber != 74298; // DISABLE CHOKE COLLAR FOR NON-SERA PLAYERS...
-	            DrawButton(150 + 430 * PX, 190 + 120 * PY, 400, 90, "", isDisabled ? "#ddd" : "White", SETTING_ICONS[e.module], isDisabled ? "Setting is deactivated" : "", isDisabled);
-	            DrawTextFit(SETTING_NAMES[e.module], 350 + 430 * PX, 235 + 120 * PY, 310, "Black");
+	            DrawButton(GuiSubscreen.START_X + 430 * PX, this.getYPos(PY), 400, 90, "", isDisabled ? "#ddd" : "White", SETTING_ICONS[e.module], isDisabled ? "Setting is deactivated" : "", isDisabled);
+	            DrawTextFit(SETTING_NAMES[e.module], GuiSubscreen.START_X + 630 * PX, this.getYPos(PY) + 45, 310, "Black");
 	        }
 	        MainCanvas.textAlign = prev;
 	        // Changelog button..
@@ -1204,6 +1205,7 @@ var LSCG = (function (exports) {
 	        }
 	        // Set/Update Collar	 	[Custom??]
 	        DrawText("Update Collar:", GuiSubscreen.START_X, this.getYPos(3), "Black", "Gray");
+	        MainCanvas.textAlign = "center";
 	        DrawButton(GuiSubscreen.START_X + 600, this.getYPos(3), 200, 64, "Update", "White", undefined, "Update Collar to Current", !this.settings.enabled);
 	        MainCanvas.textAlign = prev;
 	    }
