@@ -224,7 +224,7 @@ var LSCG = (function (exports) {
 	    }
 	}
 
-	const SETTING_FUNC_PREFIX = "PreferenceSubscreenLSCG";
+	const SETTING_FUNC_PREFIX = "PreferenceSubscreen";
 	const SETTING_NAME_PREFIX = "LSCG";
 	const SETTING_FUNC_NAMES = [
 	    "Load",

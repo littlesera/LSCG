@@ -5,7 +5,7 @@ import { GuiHypno } from "./hypno";
 import { GuiLipstick } from "./lipstick";
 import { GuiSubscreen } from "./settingBase";
 
-export const SETTING_FUNC_PREFIX: string = "PreferenceSubscreenLSCG";
+export const SETTING_FUNC_PREFIX: string = "PreferenceSubscreen";
 export const SETTING_NAME_PREFIX: string = "LSCG";
 export const SETTING_FUNC_NAMES: string[] = [
     "Load",
