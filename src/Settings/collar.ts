@@ -33,6 +33,7 @@ export class GuiCollar extends GuiSubscreen {
 		}
 		// Set/Update Collar	 	[Custom??]
 		DrawText("Update Collar:", GuiSubscreen.START_X, this.getYPos(3), "Black", "Gray");
+		MainCanvas.textAlign = "center";
 		DrawButton(GuiSubscreen.START_X + 600, this.getYPos(3), 200, 64, "Update", "White", undefined, "Update Collar to Current", !this.settings.enabled);
 
 		MainCanvas.textAlign = prev;

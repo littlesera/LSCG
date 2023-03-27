@@ -43,6 +43,7 @@ export class MainMenu extends GuiSubscreen {
 		MainCanvas.textAlign = "left";
 		DrawText("- Little Sera's Club Games -", GuiSubscreen.START_X, GuiSubscreen.START_Y, "Black", "Gray");
 		DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png");
+		MainCanvas.textAlign = "center";
 
 		for (let i = 0; i < MAIN_MENU_ITEMS.length; i++) {
 			const e = MAIN_MENU_ITEMS[i];
@@ -51,9 +52,9 @@ export class MainMenu extends GuiSubscreen {
 
 			const isDisabled = e.module == ModuleCategory.Collar && this.character.MemberNumber != 74298 // DISABLE CHOKE COLLAR FOR NON-SERA PLAYERS...
 
-			DrawButton(150 + 430 * PX, 190 + 120 * PY, 400, 90, "", isDisabled ? "#ddd" : "White", SETTING_ICONS[e.module],
+			DrawButton(GuiSubscreen.START_X + 430 * PX, this.getYPos(PY), 400, 90, "", isDisabled ? "#ddd" : "White", SETTING_ICONS[e.module],
 				isDisabled ? "Setting is deactivated" : "", isDisabled);
-			DrawTextFit(SETTING_NAMES[e.module], 350 + 430 * PX, 235 + 120 * PY, 310, "Black");
+			DrawTextFit(SETTING_NAMES[e.module], GuiSubscreen.START_X + 630 * PX, this.getYPos(PY) + 45, 310, "Black");
 		}
 
 		MainCanvas.textAlign = prev;
