@@ -1,4 +1,4 @@
-import { CollarSettingsModel } from "./Models/collar";
+import { CollarModel, CollarSettingsModel } from "./Models/collar";
 import { SettingsModel } from "./Models/settings";
 import { GuiSubscreen } from "./settingBase";
 
@@ -62,9 +62,18 @@ export class GuiCollar extends GuiSubscreen {
 		super.Click();
 
 		// Update Collar Button
-		if (MouseIn(GuiSubscreen.START_X + 600, 190 + 240, 200, 64)){
-			// Do Update.....
-			console.info("Update Collar");
+		if (MouseIn(GuiSubscreen.START_X + 600, this.getYPos(3) - 32, 200, 64)){
+			var collar = InventoryGet(Player, "ItemNeck");
+			if(!collar){
+				PreferenceMessage = "No Collar Equipped";
+			}
+			else{
+				PreferenceMessage = "Collar updated";
+				this.settings.collar = <CollarModel>{
+					name: collar.Craft?.Name ?? collar.Asset.Name,
+					creator: collar.Craft?.MemberNumber ?? 0
+				};
+			}
 		}
 	}
 }
