@@ -17,7 +17,7 @@ export class GuiCollar extends GuiSubscreen {
 		if (Player.LSCG.CollarModule === undefined) {
 			Player.LSCG.CollarModule = <CollarSettingsModel>{ 
 				enabled: false,
-				allowedMembers: (Player.Owner ?? ""),
+				allowedMembers: Player.Ownership?.MemberNumber+"" ?? "",
 				chokeLevel: 0
 			};
 		}
@@ -26,7 +26,7 @@ export class GuiCollar extends GuiSubscreen {
 
 	Load(): void {
 		super.Load();
-		ElementCreateInput("collar_allowedMembers", "text", this.settings.allowedMembers, "255");
+		ElementCreateInput("collar_allowedMembers", "text", this.settings.allowedMembers ?? (Player.Ownership?.MemberNumber+"" ?? ""), "255");
 	}
 
     Run() {
@@ -53,7 +53,7 @@ export class GuiCollar extends GuiSubscreen {
 	}
 
 	Exit(): void {
-		this.settings.allowedMembers = ElementValue("collar_allowedMembers") ?? (Player.Owner ?? "");
+		this.settings.allowedMembers = ElementValue("collar_allowedMembers") ?? (Player.Ownership?.MemberNumber+"" ?? "");
 		ElementRemove("collar_allowedMembers");
 		super.Exit();
 	}

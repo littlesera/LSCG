@@ -10,8 +10,9 @@ export class GuiBoops extends GuiSubscreen {
     }
 
 	get settings(): BaseSettingsModel {
-		return Player.LSCG.BoopsModule;
-	}
+        Player.LSCG.BoopsModule = Player.LSCG.BoopsModule ?? { enabled: true };
+        return Player.LSCG.BoopsModule
+    }
 
     Run() {
 		var prev = MainCanvas.textAlign;

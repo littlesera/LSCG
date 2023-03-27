@@ -10,8 +10,9 @@ export class GuiLipstick extends GuiSubscreen {
     }
 
 	get settings(): BaseSettingsModel {
-		return Player.LSCG.BoopsModule;
-	}
+        Player.LSCG.LipstickModule = Player.LSCG.LipstickModule ?? { enabled: true };
+        return Player.LSCG.LipstickModule
+    }
 
     Run() {
 		var prev = MainCanvas.textAlign;
