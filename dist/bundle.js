@@ -72,7 +72,7 @@ var LSCG = (function (exports) {
 	    name: "LSCG",
 	    fullName: "Little Sera's Club Games",
 	    version: "0.0.1",
-	    repository: "https://github.com/littlesera/sera"
+	    repository: "https://github.com/littlesera/LSCG"
 	});
 	function patchFunction(target, patches) {
 	    bcModSDK.patchFunction(target, patches);

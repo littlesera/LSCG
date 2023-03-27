@@ -20,7 +20,7 @@ export const bcModSDK = bcModSDKRef.registerMod({
 	name: "LSCG",
 	fullName: "Little Sera's Club Games",
 	version: "0.0.1",
-	repository: "https://github.com/littlesera/sera"
+	repository: "https://github.com/littlesera/LSCG"
 });
 
 export function patchFunction(target: string, patches: Record<string, string>): void {
