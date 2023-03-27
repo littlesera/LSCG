@@ -4,7 +4,7 @@ export interface HypnoSettingsModel extends BaseSettingsModel {
     trigger: string;
     activatedAt: number;
     enableCycle: boolean;
-    cycleTime: string;
+    cycleTime: number;
     overrideWords: string;
     overrideMemberIds: string;
     existingEye1Color: ItemColor | undefined;

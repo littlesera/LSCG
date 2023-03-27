@@ -17,7 +17,7 @@ export class GuiCollar extends GuiSubscreen {
 		if (Player.LSCG.CollarModule === undefined) {
 			Player.LSCG.CollarModule = <CollarSettingsModel>{ 
 				enabled: false,
-				allowedMembers: "",
+				allowedMembers: (Player.Owner ?? ""),
 				chokeLevel: 0
 			};
 		}
@@ -50,6 +50,12 @@ export class GuiCollar extends GuiSubscreen {
 		DrawButton(GuiSubscreen.START_X + 600, this.getYPos(3), 200, 64, "Update", "White", undefined, "Update Collar to Current", !this.settings.enabled);
 
 		MainCanvas.textAlign = prev;
+	}
+
+	Exit(): void {
+		this.settings.allowedMembers = ElementValue("collar_allowedMembers") ?? (Player.Owner ?? "");
+		ElementRemove("collar_allowedMembers");
+		super.Exit();
 	}
 
 	Click() {

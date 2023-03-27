@@ -18,7 +18,7 @@ export class GuiHypno extends GuiSubscreen {
 			Player.LSCG.HypnoModule = <HypnoSettingsModel>{ 
 				enabled: false,
 				activatedAt: 0,
-				cycleTime: "30",
+				cycleTime: 30,
 				enableCycle: true,
 				overrideMemberIds: "",
 				overrideWords: ""
@@ -31,7 +31,7 @@ export class GuiHypno extends GuiSubscreen {
 		super.Load();
 		ElementCreateInput("hypno_overrideWords", "text", this.settings.overrideWords, "255");
 		ElementCreateInput("hypno_overrideMembers", "text", this.settings.overrideMemberIds, "255");
-		ElementCreateInput("hypno_cycleTime", "number", this.settings.cycleTime, "100");
+		ElementCreateInput("hypno_cycleTime", "number", "" + this.settings.cycleTime, "5");
 	}
 
     Run() {
@@ -65,6 +65,14 @@ export class GuiHypno extends GuiSubscreen {
 	}
 
 	Exit(): void {
+		// && CommonIsNumeric(ElementValue("InputOrgasmDecayMultiplier"))){
+		// 	Player.BCT.bctSettings.arousalProgressMultiplier = ElementValue("InputArousalProgressMultiplier");
+		
+		this.settings.overrideWords = ElementValue("hypno_overrideWords") ?? "";
+		this.settings.overrideMemberIds = ElementValue("hypno_overrideMembers") ?? "";
+		if (CommonIsNumeric(ElementValue("hypno_cycleTime")))
+			this.settings.cycleTime = +(ElementValue("hypno_cycleTime") ?? "30");
+
 		ElementRemove("hypno_overrideWords");
 		ElementRemove("hypno_overrideMembers");
 		ElementRemove("hypno_cycleTime");

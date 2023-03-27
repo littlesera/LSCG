@@ -72,6 +72,7 @@ declare function CommonArraysEqual(a1: any[], a2: any[]): boolean;
 declare function CommonSetScreen(NewModule: string, NewScreen: string): void;
 declare function CommonConvertStringToArray(s: string): number[];
 declare function CommonDynamicFunction(funcName: string): void;
+declare function CommonIsNumeric(val: string | undefined): boolean;
 
 // FriendList.js
 declare var FriendListBeepTarget: number | null;
