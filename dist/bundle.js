@@ -212,6 +212,8 @@ var LSCG = (function (exports) {
 	        return Player.LSCG[this.constructor.name];
 	    }
 	    get Enabled() {
+	        if (!!Player.LSCG.GlobalModule)
+	            Player.LSCG.GlobalModule = { enabled: true };
 	        return (Player.LSCG.GlobalModule.enabled && this.settings.enabled);
 	    }
 	    init() {
