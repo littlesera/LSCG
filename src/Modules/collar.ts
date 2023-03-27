@@ -9,6 +9,20 @@ export class CollarModule extends BaseModule {
 		return super.settings as CollarSettingsModel;
 	}
 
+    get Enabled(): boolean {
+		return super.Enabled && this.wearingCorrectCollar;
+	}
+
+    get wearingCorrectCollar(): boolean {
+        if (!this.settings.collar || !this.settings.collar.name)
+            return true;
+
+        var collar = InventoryGet(Player, "ItemNeck");
+        var collarName = collar?.Craft?.Name ?? (collar?.Asset.Name ?? "");
+        var collarCreator = collar?.Craft?.MemberNumber ?? 0;
+        return collarName == this.settings.collar.name && collarCreator == this.settings.collar.creator;
+    }
+
     load(): void {
 
         CommandCombine([

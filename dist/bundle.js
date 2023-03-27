@@ -543,6 +543,18 @@ var LSCG = (function (exports) {
 	    get settings() {
 	        return super.settings;
 	    }
+	    get Enabled() {
+	        return super.Enabled && this.wearingCorrectCollar;
+	    }
+	    get wearingCorrectCollar() {
+	        var _a, _b, _c, _d, _e;
+	        if (!this.settings.collar || !this.settings.collar.name)
+	            return true;
+	        var collar = InventoryGet(Player, "ItemNeck");
+	        var collarName = (_b = (_a = collar === null || collar === void 0 ? void 0 : collar.Craft) === null || _a === void 0 ? void 0 : _a.Name) !== null && _b !== void 0 ? _b : ((_c = collar === null || collar === void 0 ? void 0 : collar.Asset.Name) !== null && _c !== void 0 ? _c : "");
+	        var collarCreator = (_e = (_d = collar === null || collar === void 0 ? void 0 : collar.Craft) === null || _d === void 0 ? void 0 : _d.MemberNumber) !== null && _e !== void 0 ? _e : 0;
+	        return collarName == this.settings.collar.name && collarCreator == this.settings.collar.creator;
+	    }
 	    load() {
 	        CommandCombine([
 	            {
