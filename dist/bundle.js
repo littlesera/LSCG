@@ -1267,11 +1267,11 @@ var LSCG = (function (exports) {
 	        DrawCheckbox(GuiSubscreen.START_X + 600, this.getYPos(1) - 32, 64, 64, "", this.settings.enabled);
 	        // Allowed Members 			[ID list]
 	        DrawText("Allowed Members IDs:", GuiSubscreen.START_X, this.getYPos(2), "Black", "Gray");
-	        ElementPosition("collar_allowedMembers", GuiSubscreen.START_X + 1000, this.getYPos(2), 600);
+	        ElementPosition("collar_allowedMembers", GuiSubscreen.START_X + 900, this.getYPos(2), 600);
 	        // Set/Update Collar	 	[Custom??]
 	        DrawText("Update Collar:", GuiSubscreen.START_X, this.getYPos(3), "Black", "Gray");
 	        MainCanvas.textAlign = "center";
-	        DrawButton(GuiSubscreen.START_X + 600, this.getYPos(3), 200, 64, "Update", "White", undefined, "Update Collar to Current", !this.settings.enabled);
+	        DrawButton(GuiSubscreen.START_X + 600, this.getYPos(3) - 32, 200, 64, "Update", "White", undefined, "Update Collar to Current", !this.settings.enabled);
 	        MainCanvas.textAlign = prev;
 	    }
 	    Exit() {
