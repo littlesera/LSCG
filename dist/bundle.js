@@ -1079,7 +1079,7 @@ var LSCG = (function (exports) {
 	}
 	GuiSubscreen.START_X = 225;
 	GuiSubscreen.START_Y = 125;
-	GuiSubscreen.Y_MOD = 120;
+	GuiSubscreen.Y_MOD = 100;
 
 	class MenuItem {
 	    get setting() {
