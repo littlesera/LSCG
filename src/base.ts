@@ -1,5 +1,4 @@
 import { BaseSettingsModel } from "Settings/Models/base";
-import { settingsSave } from "utils";
 
 export abstract class BaseModule {
 
