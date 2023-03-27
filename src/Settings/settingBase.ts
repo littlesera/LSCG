@@ -42,7 +42,7 @@ export abstract class GuiSubscreen {
 		if (MouseIn(1815, 75, 90, 90)) return this.Exit();
 
 		// Enabled Checkbox
-		if (MouseIn(GuiSubscreen.START_X + 600, 190, 64, 64)){
+		if (MouseIn(GuiSubscreen.START_X + 600, this.getYPos(1) - 32, 64, 64)){
 			this.settings.enabled = !this.settings.enabled;
 		}
 	}
