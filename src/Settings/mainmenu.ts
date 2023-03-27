@@ -41,7 +41,7 @@ export class MainMenu extends GuiSubscreen {
 	Run() {
 		var prev = MainCanvas.textAlign;
 		MainCanvas.textAlign = "left";
-		DrawText("- Little Sera's Club Games -", 225, 125, "Black", "Gray");
+		DrawText("- Little Sera's Club Games -", GuiSubscreen.START_X, GuiSubscreen.START_Y, "Black", "Gray");
 		DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png");
 
 		for (let i = 0; i < MAIN_MENU_ITEMS.length; i++) {

@@ -16,8 +16,8 @@ export class GuiGlobal extends GuiSubscreen {
 		DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png", "BCX main menu");
 
 		// Enabled	[true/false]
-		DrawText("Enabled:", GuiSubscreen.START_X, 190, "Black", "Gray");
-		DrawCheckbox(GuiSubscreen.START_X + 600, 190 - 32, 64, 64, "", this.settings.enabled ?? true);
+		DrawText("Enabled:", GuiSubscreen.START_X, this.getYPos(1), "Black", "Gray");
+		DrawCheckbox(GuiSubscreen.START_X + 600, this.getYPos(1) - 32, 64, 64, "", this.settings.enabled ?? true);
 
 		MainCanvas.textAlign = prev;
 	}
