@@ -61,5 +61,12 @@ export class GuiHypno extends GuiSubscreen {
 
 	Click() {
 		if (MouseIn(1815, 75, 90, 90)) return this.Exit();
+
+		// Enabled Checkbox
+		if (MouseIn(GuiSubscreen.START_X + 600, 190, 64, 64)){
+			this.settings.enabled = !this.settings.enabled;
+		}
+
+		//Enable Cycme Checkbox
 	}
 }

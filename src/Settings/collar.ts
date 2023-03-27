@@ -37,6 +37,12 @@ export class GuiCollar extends GuiSubscreen {
 	}
 
 	Click() {
-		if (MouseIn(1815, 75, 90, 90)) return this.Exit();
+		super.Click();
+
+		// Update Collar Button
+		if (MouseIn(GuiSubscreen.START_X + 600, 190 + 240, 200, 64)){
+			// Do Update.....
+			console.info("Update Collar");
+		}
 	}
 }

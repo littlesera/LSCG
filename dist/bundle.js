@@ -1052,7 +1052,12 @@ var LSCG = (function (exports) {
 	        // Empty
 	    }
 	    Click() {
-	        // Empty
+	        if (MouseIn(1815, 75, 90, 90))
+	            return this.Exit();
+	        // Enabled Checkbox
+	        if (MouseIn(GuiSubscreen.START_X + 600, 190, 64, 64)) {
+	            this.settings.enabled = !this.settings.enabled;
+	        }
 	    }
 	    Exit() {
 	        // Empty
@@ -1159,10 +1164,6 @@ var LSCG = (function (exports) {
 	        DrawCheckbox(225, 190, 64, 64, "Enabled", (_a = this.settings.enabled) !== null && _a !== void 0 ? _a : false);
 	        MainCanvas.textAlign = prev;
 	    }
-	    Click() {
-	        if (MouseIn(1815, 75, 90, 90))
-	            return this.Exit();
-	    }
 	}
 
 	class GuiCollar extends GuiSubscreen {
@@ -1195,8 +1196,12 @@ var LSCG = (function (exports) {
 	        MainCanvas.textAlign = prev;
 	    }
 	    Click() {
-	        if (MouseIn(1815, 75, 90, 90))
-	            return this.Exit();
+	        super.Click();
+	        // Update Collar Button
+	        if (MouseIn(GuiSubscreen.START_X + 600, 190 + 240, 200, 64)) {
+	            // Do Update.....
+	            console.info("Update Collar");
+	        }
 	    }
 	}
 
@@ -1214,10 +1219,6 @@ var LSCG = (function (exports) {
 	        // Enabled	[true/false]
 	        DrawCheckbox(225, 190 + 120 * 1, 64, 64, "Enabled", (_a = this.settings.enabled) !== null && _a !== void 0 ? _a : false);
 	        MainCanvas.textAlign = prev;
-	    }
-	    Click() {
-	        if (MouseIn(1815, 75, 90, 90))
-	            return this.Exit();
 	    }
 	}
 
@@ -1271,6 +1272,11 @@ var LSCG = (function (exports) {
 	    Click() {
 	        if (MouseIn(1815, 75, 90, 90))
 	            return this.Exit();
+	        // Enabled Checkbox
+	        if (MouseIn(GuiSubscreen.START_X + 600, 190, 64, 64)) {
+	            this.settings.enabled = !this.settings.enabled;
+	        }
+	        //Enable Cycme Checkbox
 	    }
 	}
 
@@ -1292,10 +1298,6 @@ var LSCG = (function (exports) {
 	        // Enable	[true/false]
 	        DrawCheckbox(225, 190 + 120 * 1, 64, 64, "Enabled", (_a = this.settings.enabled) !== null && _a !== void 0 ? _a : false);
 	        MainCanvas.textAlign = prev;
-	    }
-	    Click() {
-	        if (MouseIn(1815, 75, 90, 90))
-	            return this.Exit();
 	    }
 	}
 
