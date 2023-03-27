@@ -1109,6 +1109,8 @@ var LSCG = (function (exports) {
 	        }
 	    }
 	    Run() {
+	        var prev = MainCanvas.textAlign;
+	        MainCanvas.textAlign = "left";
 	        DrawText("- Little Sera's Club Games -", 225, 125, "Black", "Gray");
 	        DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png");
 	        for (let i = 0; i < MAIN_MENU_ITEMS.length; i++) {
@@ -1119,6 +1121,7 @@ var LSCG = (function (exports) {
 	            DrawButton(150 + 430 * PX, 190 + 120 * PY, 400, 90, "", isDisabled ? "#ddd" : "White", SETTING_ICONS[e.module], isDisabled ? "Setting is deactivated" : "", isDisabled);
 	            DrawTextFit(SETTING_NAMES[e.module], 350 + 430 * PX, 235 + 120 * PY, 310, "Black");
 	        }
+	        MainCanvas.textAlign = prev;
 	        // Changelog button..
 	        // MainCanvas.textAlign = "center";
 	        // DrawButton(1450, 810, 400, 90, "", "White", "", "Open changelog on GitHub");
