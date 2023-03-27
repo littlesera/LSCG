@@ -10,6 +10,7 @@ export class GuiBoops extends GuiSubscreen {
 
     Run() {
 		MainCanvas.textAlign = "center";
+		DrawText("- LSCG Boops -", 225, 125, "Black", "Gray");
 		DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png", "BCX main menu");
 	}
 
