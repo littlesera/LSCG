@@ -5,7 +5,7 @@ import { SETTING_FUNC_NAMES, SETTING_FUNC_PREFIX, SETTING_NAMES, SETTING_NAME_PR
 export abstract class GuiSubscreen {
     static START_X: number = 225;
     static START_Y: number = 125;
-    static Y_MOD: number = 120;
+    static Y_MOD: number = 100;
 
 	constructor() {
 		SETTING_FUNC_NAMES.forEach(name => {
