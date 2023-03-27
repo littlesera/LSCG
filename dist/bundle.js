@@ -1182,13 +1182,14 @@ var LSCG = (function (exports) {
 	        this.character = character;
 	    }
 	    get settings() {
+	        var _a;
 	        if (Player.LSCG === undefined) {
 	            Player.LSCG = {};
 	        }
 	        if (Player.LSCG.CollarModule === undefined) {
 	            Player.LSCG.CollarModule = {
 	                enabled: false,
-	                allowedMembers: "",
+	                allowedMembers: ((_a = Player.Owner) !== null && _a !== void 0 ? _a : ""),
 	                chokeLevel: 0
 	            };
 	        }
@@ -1214,6 +1215,12 @@ var LSCG = (function (exports) {
 	        MainCanvas.textAlign = "center";
 	        DrawButton(GuiSubscreen.START_X + 600, this.getYPos(3), 200, 64, "Update", "White", undefined, "Update Collar to Current", !this.settings.enabled);
 	        MainCanvas.textAlign = prev;
+	    }
+	    Exit() {
+	        var _a, _b;
+	        this.settings.allowedMembers = (_a = ElementValue("collar_allowedMembers")) !== null && _a !== void 0 ? _a : ((_b = Player.Owner) !== null && _b !== void 0 ? _b : "");
+	        ElementRemove("collar_allowedMembers");
+	        super.Exit();
 	    }
 	    Click() {
 	        super.Click();
@@ -1256,7 +1263,7 @@ var LSCG = (function (exports) {
 	            Player.LSCG.HypnoModule = {
 	                enabled: false,
 	                activatedAt: 0,
-	                cycleTime: "30",
+	                cycleTime: 30,
 	                enableCycle: true,
 	                overrideMemberIds: "",
 	                overrideWords: ""
@@ -1268,7 +1275,7 @@ var LSCG = (function (exports) {
 	        super.Load();
 	        ElementCreateInput("hypno_overrideWords", "text", this.settings.overrideWords, "255");
 	        ElementCreateInput("hypno_overrideMembers", "text", this.settings.overrideMemberIds, "255");
-	        ElementCreateInput("hypno_cycleTime", "number", this.settings.cycleTime, "100");
+	        ElementCreateInput("hypno_cycleTime", "number", "" + this.settings.cycleTime, "5");
 	    }
 	    Run() {
 	        var _a;
@@ -1294,6 +1301,13 @@ var LSCG = (function (exports) {
 	        MainCanvas.textAlign = prev;
 	    }
 	    Exit() {
+	        // && CommonIsNumeric(ElementValue("InputOrgasmDecayMultiplier"))){
+	        // 	Player.BCT.bctSettings.arousalProgressMultiplier = ElementValue("InputArousalProgressMultiplier");
+	        var _a, _b, _c;
+	        this.settings.overrideWords = (_a = ElementValue("hypno_overrideWords")) !== null && _a !== void 0 ? _a : "";
+	        this.settings.overrideMemberIds = (_b = ElementValue("hypno_overrideMembers")) !== null && _b !== void 0 ? _b : "";
+	        if (CommonIsNumeric(ElementValue("hypno_cycleTime")))
+	            this.settings.cycleTime = +((_c = ElementValue("hypno_cycleTime")) !== null && _c !== void 0 ? _c : "30");
 	        ElementRemove("hypno_overrideWords");
 	        ElementRemove("hypno_overrideMembers");
 	        ElementRemove("hypno_cycleTime");
