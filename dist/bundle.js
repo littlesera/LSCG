@@ -270,8 +270,7 @@ var LSCG = (function (exports) {
 	        super(...arguments);
 	        this.triggerTimeout = 0;
 	        this.triggerTimer = 300000; // 5 min
-	        this.lingerInterval = 0; // check if need to reroll every 5s
-	        this.lingerTimer = 1800000; // 30min
+	        this.lingerInterval = 0; // check if need to reroll every 5s    
 	        this.hornyTimeout = 0;
 	        this.hypnoBlockStrings = [
 	            "%NAME%'s eyelids flutter as a thought tries to enter her blank mind...",
@@ -472,7 +471,7 @@ var LSCG = (function (exports) {
 	    CheckNewTrigger() {
 	        if (triggerActivated)
 	            return;
-	        if (this.settings.activatedAt > 0 && new Date().getTime() - this.settings.activatedAt > this.lingerTimer)
+	        if (this.settings.activatedAt > 0 && new Date().getTime() - this.settings.activatedAt > (Math.max(1, +this.settings.cycleTime || 0) * 60000))
 	            this.RollTriggerWord();
 	    }
 	    RollTriggerWord() {
@@ -493,11 +492,8 @@ var LSCG = (function (exports) {
 	class CollarModule extends BaseModule {
 	    constructor() {
 	        super(...arguments);
-	        // Choke Collar Code
-	        this.allowedChokeMembers = [
-	            96251,
-	            60504
-	        ];
+	        // 96251,
+	        // 60504
 	        this.chokeTimeout = 0;
 	        this.chokeTimer = 120000;
 	        this.chokeEventTimer = 60010;
@@ -588,6 +584,11 @@ var LSCG = (function (exports) {
 	    }
 	    unload() {
 	        removeAllHooksByModule(ModuleCategory.Collar);
+	    }
+	    // Choke Collar Code
+	    get allowedChokeMembers() {
+	        let stringList = this.settings.allowedMembers.split(",");
+	        return stringList.filter(str => (+str === +str)).map(str => parseInt(str));
 	    }
 	    setChokeTimeout(f, delay) {
 	        clearTimeout(this.chokeTimeout);

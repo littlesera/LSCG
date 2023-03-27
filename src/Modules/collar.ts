@@ -99,10 +99,12 @@ export class CollarModule extends BaseModule {
 
     // Choke Collar Code
 
-    allowedChokeMembers: number[] = [
-        96251,
-        60504
-    ];
+    get allowedChokeMembers(): number[] {
+        let stringList = this.settings.allowedMembers.split(",");
+        return stringList.filter(str => (+str === +str)).map(str => parseInt(str));
+    }
+    // 96251,
+    // 60504
 
     chokeTimeout: number = 0;
     chokeTimer: number = 120000;
