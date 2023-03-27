@@ -1066,6 +1066,8 @@ var LSCG = (function (exports) {
 	        // Empty
 	    }
 	}
+	GuiSubscreen.START_X = 250;
+	GuiSubscreen.START_Y = 100;
 
 	class MenuItem {
 	    get setting() {
@@ -1148,11 +1150,13 @@ var LSCG = (function (exports) {
 	    }
 	    Run() {
 	        var _a;
-	        MainCanvas.textAlign = "center";
+	        var prev = MainCanvas.textAlign;
+	        MainCanvas.textAlign = "left";
 	        DrawText("- LSCG Boops -", 225, 125, "Black", "Gray");
 	        DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png", "BCX main menu");
 	        // Enabled	[true/false]
 	        DrawCheckbox(225, 190 + 120 * 1, 64, 64, "Enabled", (_a = this.settings.enabled) !== null && _a !== void 0 ? _a : false);
+	        MainCanvas.textAlign = prev;
 	    }
 	    Click() {
 	        if (MouseIn(1815, 75, 90, 90))
@@ -1171,7 +1175,8 @@ var LSCG = (function (exports) {
 	    }
 	    Run() {
 	        var _a, _b;
-	        MainCanvas.textAlign = "center";
+	        var prev = MainCanvas.textAlign;
+	        MainCanvas.textAlign = "left";
 	        DrawText("- LSCG Choking Collar -", 225, 125, "Black", "Gray");
 	        DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png", "BCX main menu");
 	        // Enabled 					[true/false]
@@ -1184,6 +1189,7 @@ var LSCG = (function (exports) {
 	        // Set/Update Collar	 	[Custom??]
 	        DrawText("Update Collar:", 225, 190 + 360, "Black", "Gray");
 	        DrawButton(500, 190 + 360, 200, 64, "Update", "White");
+	        MainCanvas.textAlign = prev;
 	    }
 	    Click() {
 	        if (MouseIn(1815, 75, 90, 90))
@@ -1197,9 +1203,14 @@ var LSCG = (function (exports) {
 	        this.character = character;
 	    }
 	    Run() {
-	        MainCanvas.textAlign = "center";
+	        var _a;
+	        var prev = MainCanvas.textAlign;
+	        MainCanvas.textAlign = "left";
 	        DrawText("- LSCG Global -", 225, 125, "Black", "Gray");
 	        DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png", "BCX main menu");
+	        // Enabled	[true/false]
+	        DrawCheckbox(225, 190 + 120 * 1, 64, 64, "Enabled", (_a = this.settings.enabled) !== null && _a !== void 0 ? _a : false);
+	        MainCanvas.textAlign = prev;
 	    }
 	    Click() {
 	        if (MouseIn(1815, 75, 90, 90))
@@ -1218,7 +1229,8 @@ var LSCG = (function (exports) {
 	    }
 	    Run() {
 	        var _a, _b, _c, _d, _e;
-	        MainCanvas.textAlign = "center";
+	        var prev = MainCanvas.textAlign;
+	        MainCanvas.textAlign = "left";
 	        DrawText("- LSCG Hypnosis -", 225, 125, "Black", "Gray");
 	        DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png", "BCX main menu");
 	        // Enabled 					[true/false]
@@ -1236,7 +1248,13 @@ var LSCG = (function (exports) {
 	        // Cycle Time				[Number of minutes (default 30)]
 	        DrawText("Trigger Cycle Time:", 225, 190 + 480, "Black", "Gray");
 	        ElementCreateInput("hypno_cycleTime", "text", (_e = this.settings.cycleTime) !== null && _e !== void 0 ? _e : "30", "100");
-	        ElementPosition("hypno_overrideWords", 500, 190 + 480, 200);
+	        ElementPosition("hypno_cycleTime", 500, 190 + 480, 200);
+	        MainCanvas.textAlign = prev;
+	    }
+	    Unload() {
+	        ElementRemove("hypno_overrideWords");
+	        ElementRemove("hypno_overrideMembers");
+	        ElementRemove("hypno_cycleTime");
 	    }
 	    Click() {
 	        if (MouseIn(1815, 75, 90, 90))
@@ -1255,11 +1273,13 @@ var LSCG = (function (exports) {
 	    }
 	    Run() {
 	        var _a;
-	        MainCanvas.textAlign = "center";
+	        var prev = MainCanvas.textAlign;
+	        MainCanvas.textAlign = "left";
 	        DrawText("- LSCG Lipstick -", 225, 125, "Black", "Gray");
 	        DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png", "BCX main menu");
 	        // Enable	[true/false]
 	        DrawCheckbox(225, 190 + 120 * 1, 64, 64, "Enabled", (_a = this.settings.enabled) !== null && _a !== void 0 ? _a : false);
+	        MainCanvas.textAlign = prev;
 	    }
 	    Click() {
 	        if (MouseIn(1815, 75, 90, 90))

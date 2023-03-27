@@ -14,7 +14,9 @@ export class GuiHypno extends GuiSubscreen {
 	}
 
     Run() {
-		MainCanvas.textAlign = "center";
+		var prev = MainCanvas.textAlign;
+		MainCanvas.textAlign = "left";
+
 		DrawText("- LSCG Hypnosis -", 225, 125, "Black", "Gray");
 		DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png", "BCX main menu");
 
@@ -37,7 +39,15 @@ export class GuiHypno extends GuiSubscreen {
 		// Cycle Time				[Number of minutes (default 30)]
 		DrawText("Trigger Cycle Time:", 225, 190 + 480, "Black", "Gray");
 		ElementCreateInput("hypno_cycleTime", "text", this.settings.cycleTime ?? "30", "100");
-		ElementPosition("hypno_overrideWords", 500, 190 + 480, 200);
+		ElementPosition("hypno_cycleTime", 500, 190 + 480, 200);
+
+		MainCanvas.textAlign = prev;
+	}
+
+	Unload(): void {
+		ElementRemove("hypno_overrideWords");
+		ElementRemove("hypno_overrideMembers");
+		ElementRemove("hypno_cycleTime");
 	}
 
 	Click() {
