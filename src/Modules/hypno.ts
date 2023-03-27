@@ -107,8 +107,7 @@ export class HypnoModule extends BaseModule {
 
     triggerTimeout: number = 0;
     triggerTimer: number = 300000; // 5 min
-    lingerInterval: number = 0; // check if need to reroll every 5s
-    lingerTimer: number = 1800000; // 30min
+    lingerInterval: number = 0; // check if need to reroll every 5s    
     hornyTimeout: number = 0;
 
     hypnoBlockStrings = [
@@ -238,7 +237,7 @@ export class HypnoModule extends BaseModule {
     CheckNewTrigger() {
         if (triggerActivated)
             return;
-        if (this.settings.activatedAt > 0 && new Date().getTime() - this.settings.activatedAt > this.lingerTimer)
+        if (this.settings.activatedAt > 0 && new Date().getTime() - this.settings.activatedAt > (Math.max(1, +this.settings.cycleTime || 0) * 60000))
             this.RollTriggerWord();
     }
 
