@@ -13,12 +13,16 @@ export class GuiLipstick extends GuiSubscreen {
     }
 
     Run() {
-		MainCanvas.textAlign = "center";
+		var prev = MainCanvas.textAlign;
+		MainCanvas.textAlign = "left";
+		
 		DrawText("- LSCG Lipstick -", 225, 125, "Black", "Gray");
 		DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png", "BCX main menu");
 
 		// Enable	[true/false]
 		DrawCheckbox(225, 190 + 120 * 1, 64, 64, "Enabled", this.settings.enabled ?? false);
+
+		MainCanvas.textAlign = prev;
 	}
 
 	Click() {
