@@ -5,7 +5,7 @@ import { settingsSave, parseMsgWords, OnChat, OnAction, OnActivity, SendAction, 
 
 export class HypnoModule extends BaseModule {
     get settings(): HypnoSettingsModel {
-		return (<any>Player.LSCG)[this.constructor.name] || {};
+		return super.settings as HypnoSettingsModel;
 	}
 
     load(): void {

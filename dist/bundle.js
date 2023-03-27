@@ -208,7 +208,8 @@ var LSCG = (function (exports) {
 
 	class BaseModule {
 	    get settings() {
-	        return Player.LSCG[this.constructor.name] || {};
+	        Player.LSCG[this.constructor.name] = Player.LSCG[this.constructor.name] || {};
+	        return Player.LSCG[this.constructor.name];
 	    }
 	    get checkEnabled() {
 	        return this.settings.enabled;
@@ -281,7 +282,7 @@ var LSCG = (function (exports) {
 	        ];
 	    }
 	    get settings() {
-	        return Player.LSCG[this.constructor.name] || {};
+	        return super.settings;
 	    }
 	    load() {
 	        CommandCombine([
@@ -503,7 +504,7 @@ var LSCG = (function (exports) {
 	        this.eventInterval = 0;
 	    }
 	    get settings() {
-	        return Player.LSCG[this.constructor.name] || {};
+	        return super.settings;
 	    }
 	    load() {
 	        CommandCombine([
@@ -1042,7 +1043,8 @@ var LSCG = (function (exports) {
 	    }
 	    get settings() {
 	        var _a;
-	        return (_a = Player.LSCG.GlobalModule) !== null && _a !== void 0 ? _a : { enabled: true };
+	        Player.LSCG.GlobalModule = (_a = Player.LSCG.GlobalModule) !== null && _a !== void 0 ? _a : { enabled: true };
+	        return Player.LSCG.GlobalModule;
 	    }
 	    Load() {
 	        PreferenceSubscreen = this.SubscreenName;
@@ -1152,7 +1154,8 @@ var LSCG = (function (exports) {
 	    }
 	    get settings() {
 	        var _a;
-	        return (_a = Player.LSCG.BoopsModule) !== null && _a !== void 0 ? _a : { enabled: false };
+	        Player.LSCG.BoopsModule = (_a = Player.LSCG.BoopsModule) !== null && _a !== void 0 ? _a : { enabled: false };
+	        return Player.LSCG.BoopsModule;
 	    }
 	    Run() {
 	        var _a;
@@ -1161,7 +1164,8 @@ var LSCG = (function (exports) {
 	        DrawText("- LSCG Boops -", 225, 125, "Black", "Gray");
 	        DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png", "BCX main menu");
 	        // Enabled	[true/false]
-	        DrawCheckbox(225, 190, 64, 64, "Enabled", (_a = this.settings.enabled) !== null && _a !== void 0 ? _a : false);
+	        DrawText("Enabled:", GuiSubscreen.START_X, 190, "Black", "Gray");
+	        DrawCheckbox(GuiSubscreen.START_X + 600, 190 - 32, 64, 64, "", (_a = this.settings.enabled) !== null && _a !== void 0 ? _a : true);
 	        MainCanvas.textAlign = prev;
 	    }
 	}
@@ -1173,7 +1177,8 @@ var LSCG = (function (exports) {
 	    }
 	    get settings() {
 	        var _a;
-	        return (_a = Player.LSCG.CollarModule) !== null && _a !== void 0 ? _a : { enabled: false };
+	        Player.LSCG.CollarModule = (_a = Player.LSCG.CollarModule) !== null && _a !== void 0 ? _a : { enabled: false };
+	        return Player.LSCG.CollarModule;
 	    }
 	    Run() {
 	        var _a, _b;
@@ -1183,7 +1188,7 @@ var LSCG = (function (exports) {
 	        DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png", "BCX main menu");
 	        // Enabled 					[true/false]
 	        DrawText("Enabled:", GuiSubscreen.START_X, 190, "Black", "Gray");
-	        DrawCheckbox(GuiSubscreen.START_X + 600, 190, 64, 64, "", (_a = this.settings.enabled) !== null && _a !== void 0 ? _a : false);
+	        DrawCheckbox(GuiSubscreen.START_X + 600, 190 - 32, 64, 64, "", (_a = this.settings.enabled) !== null && _a !== void 0 ? _a : true);
 	        // Allowed Members 			[ID list]
 	        DrawText("Allowed Members IDs:", GuiSubscreen.START_X, 190 + 120, "Black", "Gray");
 	        if (!this.settings.enabled) {
@@ -1217,7 +1222,8 @@ var LSCG = (function (exports) {
 	        DrawText("- LSCG Global -", 225, 125, "Black", "Gray");
 	        DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png", "BCX main menu");
 	        // Enabled	[true/false]
-	        DrawCheckbox(225, 190 + 120 * 1, 64, 64, "Enabled", (_a = this.settings.enabled) !== null && _a !== void 0 ? _a : false);
+	        DrawText("Enabled:", GuiSubscreen.START_X, 190, "Black", "Gray");
+	        DrawCheckbox(GuiSubscreen.START_X + 600, 190 - 32, 64, 64, "", (_a = this.settings.enabled) !== null && _a !== void 0 ? _a : true);
 	        MainCanvas.textAlign = prev;
 	    }
 	}
@@ -1229,7 +1235,8 @@ var LSCG = (function (exports) {
 	    }
 	    get settings() {
 	        var _a;
-	        return (_a = Player.LSCG.HypnoModule) !== null && _a !== void 0 ? _a : { enabled: false };
+	        Player.LSCG.HypnoModule = (_a = Player.LSCG.HypnoModule) !== null && _a !== void 0 ? _a : { enabled: false };
+	        return Player.LSCG.HypnoModule;
 	    }
 	    Run() {
 	        var _a, _b, _c, _d, _e;
@@ -1239,7 +1246,7 @@ var LSCG = (function (exports) {
 	        DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png", "BCX main menu");
 	        // Enabled 					[true/false]
 	        DrawText("Enabled:", GuiSubscreen.START_X, 190, "Black", "Gray");
-	        DrawCheckbox(GuiSubscreen.START_X + 600, 190, 64, 64, "", (_a = this.settings.enabled) !== null && _a !== void 0 ? _a : true);
+	        DrawCheckbox(GuiSubscreen.START_X + 600, 190 - 32, 64, 64, "", (_a = this.settings.enabled) !== null && _a !== void 0 ? _a : true);
 	        // Override Trigger Words 	[Word List]
 	        DrawText("Override Trigger Words:", GuiSubscreen.START_X, 190 + 120, "Black", "Gray");
 	        if (!this.settings.enabled) {
@@ -1296,7 +1303,8 @@ var LSCG = (function (exports) {
 	        DrawText("- LSCG Lipstick -", 225, 125, "Black", "Gray");
 	        DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png", "BCX main menu");
 	        // Enable	[true/false]
-	        DrawCheckbox(225, 190 + 120 * 1, 64, 64, "Enabled", (_a = this.settings.enabled) !== null && _a !== void 0 ? _a : false);
+	        DrawText("Enabled:", GuiSubscreen.START_X, 190, "Black", "Gray");
+	        DrawCheckbox(GuiSubscreen.START_X + 600, 190 - 32, 64, 64, "", (_a = this.settings.enabled) !== null && _a !== void 0 ? _a : true);
 	        MainCanvas.textAlign = prev;
 	    }
 	}

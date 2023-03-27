@@ -6,7 +6,7 @@ import { settingsSave, parseMsgWords, SendAction, OnChat, getRandomInt, hookFunc
 export class CollarModule extends BaseModule {
 
     get settings(): CollarSettingsModel {
-		return (<any>Player.LSCG)[this.constructor.name] || {};
+		return super.settings as CollarSettingsModel;
 	}
 
     load(): void {

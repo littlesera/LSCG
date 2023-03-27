@@ -10,7 +10,8 @@ export class GuiCollar extends GuiSubscreen {
     }
 
 	get settings(): CollarSettingsModel {
-		return Player.LSCG.CollarModule  ?? { enabled: false };
+		Player.LSCG.CollarModule = Player.LSCG.CollarModule  ?? { enabled: false };
+		return Player.LSCG.CollarModule
 	}
 
     Run() {
@@ -22,7 +23,8 @@ export class GuiCollar extends GuiSubscreen {
 
 		// Enabled 					[true/false]
 		DrawText("Enabled:", GuiSubscreen.START_X, 190, "Black", "Gray");
-		DrawCheckbox(GuiSubscreen.START_X + 600, 190, 64, 64, "", this.settings.enabled ?? false);
+		DrawCheckbox(GuiSubscreen.START_X + 600, 190 - 32, 64, 64, "", this.settings.enabled ?? true);
+
 		// Allowed Members 			[ID list]
 		DrawText("Allowed Members IDs:", GuiSubscreen.START_X, 190 + 120, "Black", "Gray");
 		if (!this.settings.enabled) {
