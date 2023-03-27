@@ -20,8 +20,4 @@ export class GuiGlobal extends GuiSubscreen {
 
 		MainCanvas.textAlign = prev;
 	}
-
-	Click() {
-		if (MouseIn(1815, 75, 90, 90)) return this.Exit();
-	}
 }
