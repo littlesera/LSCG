@@ -28,15 +28,15 @@ export class GuiHypno extends GuiSubscreen {
 		// Override Trigger Words 	[Word List]
 		DrawText("Override Trigger Words:", GuiSubscreen.START_X, this.getYPos(2), "Black", "Gray");
 		if (!this.settings.enabled) {
-			ElementCreateInput("hypno_overrideWords", "text", this.settings.overrideWords ?? "", "255");
-			ElementPosition("hypno_overrideWords", GuiSubscreen.START_X + 1000, this.getYPos(2), 600);
+			ElementCreateInput("hypno_overrideWords", "text", this.settings.overrideWords, "255");
+			ElementPosition("hypno_overrideWords", GuiSubscreen.START_X + 900, this.getYPos(2), 600);
 		}
 
 		// Override allowed members	[Member ID List]
 		DrawText("Override Allowed Member IDs:", 225, this.getYPos(3), "Black", "Gray");
 		if (!this.settings.enabled) {
-			ElementCreateInput("hypno_overrideMembers", "text", this.settings.overrideMemberIds ?? "", "255");
-			ElementPosition("hypno_overrideMembers", GuiSubscreen.START_X + 1000, this.getYPos(3), 600);
+			ElementCreateInput("hypno_overrideMembers", "text", this.settings.overrideMemberIds, "255");
+			ElementPosition("hypno_overrideMembers", GuiSubscreen.START_X + 900, this.getYPos(3), 600);
 		}
 
 		// Enabled 					[true/false]
@@ -46,7 +46,8 @@ export class GuiHypno extends GuiSubscreen {
 		// Cycle Time				[Number of minutes (default 30)]
 		DrawText("Trigger Cycle Time:", GuiSubscreen.START_X, this.getYPos(5), "Black", "Gray");
 		if (!this.settings.enabled) {
-			ElementCreateInput("hypno_cycleTime", "number", this.settings.cycleTime ?? "30", "100");
+			this.settings.cycleTime = this.settings.cycleTime ?? 30;
+			ElementCreateInput("hypno_cycleTime", "number", this.settings.cycleTime, "100");
 			ElementPosition("hypno_cycleTime", GuiSubscreen.START_X + 600, this.getYPos(5), 200);
 		}
 

@@ -1189,7 +1189,7 @@ var LSCG = (function (exports) {
 	        return Player.LSCG.CollarModule;
 	    }
 	    Run() {
-	        var _a, _b;
+	        var _a;
 	        var prev = MainCanvas.textAlign;
 	        MainCanvas.textAlign = "left";
 	        DrawText("- LSCG Choking Collar -", GuiSubscreen.START_X, this.getYPos(0), "Black", "Gray");
@@ -1200,7 +1200,7 @@ var LSCG = (function (exports) {
 	        // Allowed Members 			[ID list]
 	        DrawText("Allowed Members IDs:", GuiSubscreen.START_X, this.getYPos(2), "Black", "Gray");
 	        if (!this.settings.enabled) {
-	            ElementCreateInput("collar_allowedMembers", "text", (_b = this.settings.allowedMembers) !== null && _b !== void 0 ? _b : "", "255");
+	            ElementCreateInput("collar_allowedMembers", "text", this.settings.allowedMembers, "255");
 	            ElementPosition("collar_allowedMembers", GuiSubscreen.START_X + 600, this.getYPos(2), 600);
 	        }
 	        // Set/Update Collar	 	[Custom??]
@@ -1248,7 +1248,7 @@ var LSCG = (function (exports) {
 	        return Player.LSCG.HypnoModule;
 	    }
 	    Run() {
-	        var _a, _b, _c, _d, _e;
+	        var _a, _b, _c;
 	        var prev = MainCanvas.textAlign;
 	        MainCanvas.textAlign = "left";
 	        DrawText("- LSCG Hypnosis -", GuiSubscreen.START_X, this.getYPos(0), "Black", "Gray");
@@ -1259,22 +1259,23 @@ var LSCG = (function (exports) {
 	        // Override Trigger Words 	[Word List]
 	        DrawText("Override Trigger Words:", GuiSubscreen.START_X, this.getYPos(2), "Black", "Gray");
 	        if (!this.settings.enabled) {
-	            ElementCreateInput("hypno_overrideWords", "text", (_b = this.settings.overrideWords) !== null && _b !== void 0 ? _b : "", "255");
-	            ElementPosition("hypno_overrideWords", GuiSubscreen.START_X + 1000, this.getYPos(2), 600);
+	            ElementCreateInput("hypno_overrideWords", "text", this.settings.overrideWords, "255");
+	            ElementPosition("hypno_overrideWords", GuiSubscreen.START_X + 900, this.getYPos(2), 600);
 	        }
 	        // Override allowed members	[Member ID List]
 	        DrawText("Override Allowed Member IDs:", 225, this.getYPos(3), "Black", "Gray");
 	        if (!this.settings.enabled) {
-	            ElementCreateInput("hypno_overrideMembers", "text", (_c = this.settings.overrideMemberIds) !== null && _c !== void 0 ? _c : "", "255");
-	            ElementPosition("hypno_overrideMembers", GuiSubscreen.START_X + 1000, this.getYPos(3), 600);
+	            ElementCreateInput("hypno_overrideMembers", "text", this.settings.overrideMemberIds, "255");
+	            ElementPosition("hypno_overrideMembers", GuiSubscreen.START_X + 900, this.getYPos(3), 600);
 	        }
 	        // Enabled 					[true/false]
 	        DrawText("Enable Cycle:", GuiSubscreen.START_X, this.getYPos(4), "Black", "Gray");
-	        DrawCheckbox(GuiSubscreen.START_X + 600, this.getYPos(4) - 32, 64, 64, "", ((_d = this.settings.enableCycle) !== null && _d !== void 0 ? _d : true) || !this.settings.enabled);
+	        DrawCheckbox(GuiSubscreen.START_X + 600, this.getYPos(4) - 32, 64, 64, "", ((_b = this.settings.enableCycle) !== null && _b !== void 0 ? _b : true) || !this.settings.enabled);
 	        // Cycle Time				[Number of minutes (default 30)]
 	        DrawText("Trigger Cycle Time:", GuiSubscreen.START_X, this.getYPos(5), "Black", "Gray");
 	        if (!this.settings.enabled) {
-	            ElementCreateInput("hypno_cycleTime", "number", (_e = this.settings.cycleTime) !== null && _e !== void 0 ? _e : "30", "100");
+	            this.settings.cycleTime = (_c = this.settings.cycleTime) !== null && _c !== void 0 ? _c : 30;
+	            ElementCreateInput("hypno_cycleTime", "number", this.settings.cycleTime, "100");
 	            ElementPosition("hypno_cycleTime", GuiSubscreen.START_X + 600, this.getYPos(5), 200);
 	        }
 	        MainCanvas.textAlign = prev;
