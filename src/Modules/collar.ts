@@ -1,8 +1,14 @@
 import { BaseModule } from 'base';
+import { CollarSettingsModel } from 'Settings/Models/collar';
 import { ModuleCategory } from 'Settings/setting_definitions';
 import { settingsSave, parseMsgWords, SendAction, OnChat, getRandomInt, hookFunction, removeAllHooksByModule } from '../utils';
 
 export class CollarModule extends BaseModule {
+
+    get settings(): CollarSettingsModel {
+		return (<any>Player.LSCG)[this.constructor.name] || {};
+	}
+
     load(): void {
 
         CommandCombine([
@@ -43,12 +49,12 @@ export class CollarModule extends BaseModule {
         hookFunction('ServerSend', 4, (args, next) => {
             // Prevent speech at choke level 4
             if (args[0] == "ChatRoomChat" && args[1].Type == "Chat"){
-                if (Player.ClubGames.ChokeCollar.chokeLevel >= 4) {
+                if (this.settings.chokeLevel >= 4) {
                     SendAction("%NAME%'s mouth moves silently.");
                     return null;
                 }
-                else if (Player.ClubGames.ChokeCollar.chokeLevel > 1) {
-                    args[1].Content = SpeechGarbleByGagLevel((Player.ClubGames.ChokeCollar.chokeLevel-1)**2, args[1].Content);
+                else if (this.settings.chokeLevel > 1) {
+                    args[1].Content = SpeechGarbleByGagLevel((this.settings.chokeLevel-1)**2, args[1].Content);
                     return next(args);
                 }
                 else
@@ -59,28 +65,30 @@ export class CollarModule extends BaseModule {
         }, ModuleCategory.Collar);
 
         hookFunction("Player.HasTints", 5, (args, next) => {
-            if (Player.ClubGames.ChokeCollar.chokeLevel > 2) return true;
+            if (this.settings.chokeLevel > 2) return true;
             return next(args);
         }, ModuleCategory.Collar);
 
         hookFunction("Player.GetTints", 5, (args, next) => {
-            if (Player.ClubGames.ChokeCollar.chokeLevel == 3) return [{r: 0, g: 0, b: 0, a: 0.2}];
-            else if (Player.ClubGames.ChokeCollar.chokeLevel == 4) return [{r: 0, g: 0, b: 0, a: 0.5}];
+            if (this.settings.chokeLevel == 3) return [{r: 0, g: 0, b: 0, a: 0.2}];
+            else if (this.settings.chokeLevel == 4) return [{r: 0, g: 0, b: 0, a: 0.5}];
             return next(args);
         }, ModuleCategory.Collar);
             
         hookFunction("Player.GetBlurLevel", 5, (args, next) => {
-            if (Player.ClubGames.ChokeCollar.chokeLevel == 3) return 2;
-            if (Player.ClubGames.ChokeCollar.chokeLevel == 4) return 6;
+            if (this.settings.chokeLevel == 3) return 2;
+            if (this.settings.chokeLevel == 4) return 6;
             return next(args);
         }, ModuleCategory.Collar);
 
         this.eventInterval = setInterval(() => this.ChokeEvent(), this.chokeEventTimer);
 
-        Player.ClubGames.ChokeCollar = Player.OnlineSettings.ClubGames.ChokeCollar || {chokeLevel: 0};
-        settingsSave();
+        if (this.settings.chokeLevel == undefined) {
+            this.settings.chokeLevel = 0;
+            settingsSave();
+        }
 
-        if (Player.ClubGames.ChokeCollar.chokeLevel > 2) {
+        if (this.settings.chokeLevel > 2) {
             this.setChokeTimeout(this.DecreaseCollarChoke, this.chokeTimer);
         }
     }
@@ -113,14 +121,14 @@ export class CollarModule extends BaseModule {
     }
 
     IncreaseCollarChoke() {
-        if (Player.ClubGames.ChokeCollar.chokeLevel == 4)
+        if (this.settings.chokeLevel == 4)
             return;
-        Player.ClubGames.ChokeCollar.chokeLevel++;
+        this.settings.chokeLevel++;
         AudioPlaySoundEffect("HydraulicLock");
         this.IncreaseArousal();
-        if (Player.ClubGames.ChokeCollar.chokeLevel < 4) {
+        if (this.settings.chokeLevel < 4) {
             CharacterSetFacialExpression(Player, "Eyebrows", "Soft");
-            switch (Player.ClubGames.ChokeCollar.chokeLevel) {
+            switch (this.settings.chokeLevel) {
                 case 1:
                     clearTimeout(this.chokeTimeout);
                     SendAction("%NAME%'s eyes flutter as her collar starts to tighten around her neck with a quiet hiss.");
@@ -143,8 +151,8 @@ export class CollarModule extends BaseModule {
                     break;
             }
         }
-        else if (Player.ClubGames.ChokeCollar.chokeLevel >= 4) {
-            Player.ClubGames.ChokeCollar.chokeLevel = 4;
+        else if (this.settings.chokeLevel >= 4) {
+            this.settings.chokeLevel = 4;
             this.StartPassout();
         }
 
@@ -152,17 +160,17 @@ export class CollarModule extends BaseModule {
     }
 
     DecreaseCollarChoke() {
-        if (Player.ClubGames.ChokeCollar.chokeLevel <= 0) {
-            Player.ClubGames.ChokeCollar.chokeLevel = 0;
+        if (this.settings.chokeLevel <= 0) {
+            this.settings.chokeLevel = 0;
             return;
         }
 
         AudioPlaySoundEffect("Deflation");
-        Player.ClubGames.ChokeCollar.chokeLevel--;
-        if (Player.ClubGames.ChokeCollar.chokeLevel > 0)
+        this.settings.chokeLevel--;
+        if (this.settings.chokeLevel > 0)
         this.setChokeTimeout(this.DecreaseCollarChoke, this.chokeTimer);
 
-        switch (Player.ClubGames.ChokeCollar.chokeLevel) {
+        switch (this.settings.chokeLevel) {
             case 3:
                 this.setChokeTimeout(this.DecreaseCollarChoke, this.chokeTimer);
                 SendAction("%NAME% chokes and gasps desperately as her collar slowly releases some pressure.");
@@ -194,7 +202,7 @@ export class CollarModule extends BaseModule {
     }
 
     ResetCollarChoke() {
-        Player.ClubGames.ChokeCollar.chokeLevel = 0;
+        this.settings.chokeLevel = 0;
         clearTimeout(this.chokeTimeout);
         settingsSave();
     }
@@ -242,11 +250,11 @@ export class CollarModule extends BaseModule {
 
     ChokeEvent() {
         // only activate 1/4 times triggered unless at high level
-        if (Player.ClubGames.ChokeCollar.chokeLevel > 2)
+        if (this.settings.chokeLevel > 2)
             this.ActivateChokeEvent();
-        else if (Player.ClubGames.ChokeCollar.chokeLevel == 2 && getRandomInt(8) == 0)
+        else if (this.settings.chokeLevel == 2 && getRandomInt(8) == 0)
             this.ActivateChokeEvent();
-        else if (Player.ClubGames.ChokeCollar.chokeLevel == 1 && getRandomInt(15) == 0)
+        else if (this.settings.chokeLevel == 1 && getRandomInt(15) == 0)
             this.ActivateChokeEvent();
     }
 
@@ -271,7 +279,7 @@ export class CollarModule extends BaseModule {
                 "%NAME%'s eyes have trouble focusing, as she chokes and gets lightheaded."
             ]
         }
-        switch (Player.ClubGames.ChokeCollar.chokeLevel) {
+        switch (this.settings.chokeLevel) {
             case 1:
                 SendAction(ChokeEvents.low[getRandomInt(ChokeEvents.low.length)]);
                 break;

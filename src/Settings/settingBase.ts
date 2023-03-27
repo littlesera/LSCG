@@ -1,3 +1,5 @@
+import { settingsSave } from "utils";
+import { BaseSettingsModel } from "./Models/base";
 import { SETTING_FUNC_NAMES, SETTING_FUNC_PREFIX, SETTING_NAMES, SETTING_NAME_PREFIX } from "./setting_definitions";
 
 export abstract class GuiSubscreen {
@@ -13,6 +15,10 @@ export abstract class GuiSubscreen {
     get SubscreenName(): string {
         return SETTING_NAME_PREFIX + this.constructor.name;  
     } 
+
+    get settings(): BaseSettingsModel {
+        return Player.LSCG.GlobalModule;
+    }
 
 	Load() {
         PreferenceSubscreen = this.SubscreenName;
@@ -31,6 +37,7 @@ export abstract class GuiSubscreen {
 		// Empty
 		PreferenceMessage = "LSCG Main Menu";
 		PreferenceSubscreen = "LSCGMainMenu";
+        settingsSave();
 	}
 
 	Unload() {

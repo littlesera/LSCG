@@ -1,8 +1,13 @@
 import { BaseModule } from 'base';
+import { HypnoSettingsModel } from 'Settings/Models/hypno';
 import { ModuleCategory } from 'Settings/setting_definitions';
 import { settingsSave, parseMsgWords, OnChat, OnAction, OnActivity, SendAction, getRandomInt, hookFunction, removeAllHooksByModule } from '../utils';
 
 export class HypnoModule extends BaseModule {
+    get settings(): HypnoSettingsModel {
+		return (<any>Player.LSCG)[this.constructor.name] || {};
+	}
+
     load(): void {
         CommandCombine([
             {
@@ -28,8 +33,8 @@ export class HypnoModule extends BaseModule {
         OnChat(1000, ModuleCategory.Hypno, (data, sender, msg, metadata) => {
             var lowerMsgWords = parseMsgWords(msg);
             if (!hypnoActivated() && 
-                !!Player.ClubGames.Hypno.trigger && 
-                (lowerMsgWords?.indexOf(Player.ClubGames.Hypno.trigger) ?? -1) >= 0 && 
+                !!this.settings.trigger && 
+                (lowerMsgWords?.indexOf(this.settings.trigger) ?? -1) >= 0 && 
                 sender?.MemberNumber != Player.MemberNumber)
                 this.StartTriggerWord();
         });
@@ -81,16 +86,16 @@ export class HypnoModule extends BaseModule {
 
         // Set Trigger
         let wordLength: number = commonWords.length;
-        Player.ClubGames.Hypno = Player.OnlineSettings.ClubGames.Hypno || {};
-        if (!Player.ClubGames.Hypno.trigger) {
-            Player.ClubGames.Hypno.trigger = commonWords[getRandomInt(wordLength)];
+        
+        if (!this.settings.trigger) {
+            this.settings.trigger = commonWords[getRandomInt(wordLength)];
             settingsSave();
         }
-        if (!Player.ClubGames.Hypno.activatedAt) {
-            Player.ClubGames.Hypno.activatedAt = 0;
+        if (!this.settings.activatedAt) {
+            this.settings.activatedAt = 0;
             settingsSave();
         }
-        if (!!Player.ClubGames.Hypno.existingEye1Name)
+        if (!!this.settings.existingEye1Name)
         this.ResetEyes();
 
         this.lingerInterval = setInterval(() => this.CheckNewTrigger(), 5000);
@@ -119,8 +124,8 @@ export class HypnoModule extends BaseModule {
             return;
 
         triggerActivated = true;
-        if (Player.ClubGames.Hypno.activatedAt == 0)
-            Player.ClubGames.Hypno.activatedAt = new Date().getTime();
+        if (this.settings.activatedAt == 0)
+            this.settings.activatedAt = new Date().getTime();
         AudioPlaySoundEffect("SciFiEffect", 1);
         settingsSave();
         
@@ -142,10 +147,10 @@ export class HypnoModule extends BaseModule {
     }
 
     SetEyes() {
-        Player.ClubGames.Hypno.existingEye1Name = InventoryGet(Player, "Eyes")?.Asset.Name;
-        Player.ClubGames.Hypno.existingEye1Color = InventoryGet(Player, "Eyes")?.Color;
-        Player.ClubGames.Hypno.existingEye2Name = InventoryGet(Player, "Eyes2")?.Asset.Name;
-        Player.ClubGames.Hypno.existingEye2Color = InventoryGet(Player, "Eyes2")?.Color;
+        this.settings.existingEye1Name = InventoryGet(Player, "Eyes")?.Asset.Name;
+        this.settings.existingEye1Color = InventoryGet(Player, "Eyes")?.Color;
+        this.settings.existingEye2Name = InventoryGet(Player, "Eyes2")?.Asset.Name;
+        this.settings.existingEye2Color = InventoryGet(Player, "Eyes2")?.Color;
         settingsSave();
         this.EnforceEyes();
     }
@@ -170,27 +175,27 @@ export class HypnoModule extends BaseModule {
     }
 
     ResetEyes() {
-        var eyeAsset1 = AssetGet("Female3DCG", "Eyes", Player.ClubGames.Hypno.existingEye1Name ?? "Eyes5");
-        var eyeAsset2 = AssetGet("Female3DCG", "Eyes2", Player.ClubGames.Hypno.existingEye2Name ?? "Eyes5");
+        var eyeAsset1 = AssetGet("Female3DCG", "Eyes", this.settings.existingEye1Name ?? "Eyes5");
+        var eyeAsset2 = AssetGet("Female3DCG", "Eyes2", this.settings.existingEye2Name ?? "Eyes5");
 
         var eyes1 = InventoryGet(Player, "Eyes");
         var eyes2 = InventoryGet(Player, "Eyes2");
 
         if (!!eyes1) {
             eyes1.Asset = eyeAsset1 ?? <Asset>{};
-            eyes1.Color = Player.ClubGames.Hypno.existingEye1Color;
+            eyes1.Color = this.settings.existingEye1Color;
         }    
         if (!!eyes2) {
             eyes2.Asset = eyeAsset2  ?? <Asset>{};
-            eyes2.Color = Player.ClubGames.Hypno.existingEye2Color;
+            eyes2.Color = this.settings.existingEye2Color;
         }
 
         ChatRoomCharacterUpdate(Player);
 
-        Player.ClubGames.Hypno.existingEye1Name = undefined;
-        Player.ClubGames.Hypno.existingEye1Color = undefined;
-        Player.ClubGames.Hypno.existingEye2Name = undefined;
-        Player.ClubGames.Hypno.existingEye2Color = undefined;
+        this.settings.existingEye1Name = undefined;
+        this.settings.existingEye1Color = undefined;
+        this.settings.existingEye2Name = undefined;
+        this.settings.existingEye2Color = undefined;
         settingsSave();
     }
 
@@ -233,15 +238,15 @@ export class HypnoModule extends BaseModule {
     CheckNewTrigger() {
         if (triggerActivated)
             return;
-        if (Player.ClubGames.Hypno.activatedAt > 0 && new Date().getTime() - Player.ClubGames.Hypno.activatedAt > this.lingerTimer)
+        if (this.settings.activatedAt > 0 && new Date().getTime() - this.settings.activatedAt > this.lingerTimer)
             this.RollTriggerWord();
     }
 
     RollTriggerWord() {
 
         SendAction("%NAME% concentrates, breaking the hold the previous trigger word held over her.");
-        Player.ClubGames.Hypno.trigger = commonWords[getRandomInt(commonWords.length)];
-        Player.ClubGames.Hypno.activatedAt = 0;
+        this.settings.trigger = commonWords[getRandomInt(commonWords.length)];
+        this.settings.activatedAt = 0;
         settingsSave();
     }
 }

@@ -1,4 +1,15 @@
+import { BaseSettingsModel } from "Settings/Models/base";
+import { settingsSave } from "utils";
+
 export abstract class BaseModule {
+
+	get settings(): BaseSettingsModel {
+		return (<any>Player.LSCG)[this.constructor.name] || {};
+	}
+
+	get checkEnabled(): boolean {
+		return this.settings.enabled;
+	}
 
 	init() {
 		// Empty
