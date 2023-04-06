@@ -124,7 +124,7 @@ export class HypnoModule extends BaseModule {
     hornyTimeout: number = 0;
 
     get triggers(): string[] {
-        var overrideWords = this.settings.overrideWords?.split(",") ?? [];
+        var overrideWords = this.settings.overrideWords?.split(",")?.filter(word => !!word) ?? [];
         if (overrideWords.length > 0)
             return this.settings.overrideWords.split(",");
         else
