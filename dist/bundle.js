@@ -432,7 +432,7 @@ var LSCG = (function (exports) {
 	        CharacterSetFacialExpression(Player, "Eyebrows", "Lowered");
 	        CharacterSetFacialExpression(Player, "Eyes", "Dazed");
 	        CharacterSetFacialExpression(Player, "Fluids", "DroolLow");
-	        CharacterSetFacialExpression(Player, "Mouth", "Sad");
+	        CharacterSetFacialExpression(Player, "Mouth", null);
 	        clearTimeout(this.triggerTimeout);
 	        this.triggerTimeout = setTimeout(() => this.TriggerRestoreTimeout(), this.triggerTimer);
 	        clearInterval(this.hornyTimeout);
