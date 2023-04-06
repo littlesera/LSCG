@@ -405,7 +405,7 @@ var LSCG = (function (exports) {
 	    }
 	    allowedSpeaker(memberId) {
 	        var _a, _b;
-	        var allowedMembers = (_b = (_a = this.settings.overrideMemberIds) === null || _a === void 0 ? void 0 : _a.split(",").map(id => +id)) !== null && _b !== void 0 ? _b : [];
+	        var allowedMembers = (_b = (_a = this.settings.overrideMemberIds) === null || _a === void 0 ? void 0 : _a.split(",").map(id => +id).filter(id => id > 0)) !== null && _b !== void 0 ? _b : [];
 	        if (allowedMembers.length <= 0)
 	            return true;
 	        else
