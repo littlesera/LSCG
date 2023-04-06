@@ -303,6 +303,13 @@ var LSCG = (function (exports) {
 	                    if (triggerActivated)
 	                        this.TriggerRestoreTimeout();
 	                }
+	            },
+	            {
+	                Tag: "show-trigger",
+	                Description: ": reveal your current trigger word(s)",
+	                Action: () => {
+	                    alert(this.triggers);
+	                }
 	            }
 	        ]);
 	        OnChat(1000, ModuleCategory.Hypno, (data, sender, msg, metadata) => {
@@ -397,8 +404,8 @@ var LSCG = (function (exports) {
 	            return [this.settings.trigger];
 	    }
 	    getNewTriggerWord() {
-	        var _a, _b;
-	        var words = (_b = (_a = this.settings.overrideWords) === null || _a === void 0 ? void 0 : _a.split(",")) !== null && _b !== void 0 ? _b : [];
+	        var _a, _b, _c;
+	        var words = (_c = (_b = (_a = this.settings.overrideWords) === null || _a === void 0 ? void 0 : _a.split(",")) === null || _b === void 0 ? void 0 : _b.filter(word => !!word)) !== null && _c !== void 0 ? _c : [];
 	        if (words.length <= 0)
 	            words = commonWords;
 	        return words[getRandomInt(words.length)];

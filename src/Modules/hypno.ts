@@ -22,10 +22,16 @@ export class HypnoModule extends BaseModule {
             {
                 Tag: 'unzonk',
                 Description: ": unzonk self",
-        
                 Action: () => {
                     if (triggerActivated)
                         this.TriggerRestoreTimeout();
+                }
+            },
+            {
+                Tag: "show-trigger",
+                Description: ": reveal your current trigger word(s)",
+                Action: () => {
+                    alert(this.triggers);
                 }
             }
         ]);
@@ -132,7 +138,7 @@ export class HypnoModule extends BaseModule {
     }
 
     getNewTriggerWord(): string {
-        var words = this.settings.overrideWords?.split(",") ?? [];
+        var words = this.settings.overrideWords?.split(",")?.filter(word => !!word) ?? [];
         if (words.length <= 0)
             words = commonWords;
         return words[getRandomInt(words.length)];
