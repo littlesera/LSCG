@@ -389,8 +389,8 @@ var LSCG = (function (exports) {
 	        removeAllHooksByModule(ModuleCategory.Hypno);
 	    }
 	    get triggers() {
-	        var _a, _b;
-	        var overrideWords = (_b = (_a = this.settings.overrideWords) === null || _a === void 0 ? void 0 : _a.split(",")) !== null && _b !== void 0 ? _b : [];
+	        var _a, _b, _c;
+	        var overrideWords = (_c = (_b = (_a = this.settings.overrideWords) === null || _a === void 0 ? void 0 : _a.split(",")) === null || _b === void 0 ? void 0 : _b.filter(word => !!word)) !== null && _c !== void 0 ? _c : [];
 	        if (overrideWords.length > 0)
 	            return this.settings.overrideWords.split(",");
 	        else
