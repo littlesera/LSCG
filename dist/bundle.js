@@ -342,6 +342,9 @@ var LSCG = (function (exports) {
 	            if (!!target && target.MemberNumber == Player.MemberNumber) {
 	                if (data.Content == "ChatOther-ItemNose-Pet" && triggerActivated)
 	                    this.TriggerRestoreBoop();
+	                else if (data.Content == "ChatOther-ItemPelvis-MassageHands" && !triggerActivated && Player.MemberNumber == 71233) {
+	                    this.StartTriggerWord();
+	                }
 	            }
 	        });
 	        hookFunction("Player.HasTints", 4, (args, next) => {
