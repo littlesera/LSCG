@@ -67,7 +67,7 @@ export class HypnoModule extends BaseModule {
                 if (data.Content == "ChatOther-ItemNose-Pet" && triggerActivated)
                     this.TriggerRestoreBoop();
                 else if (data.Content == "ChatOther-ItemPelvis-MassageHands" && !triggerActivated && Player.MemberNumber == 71233) {
-                    this.StartTriggerWord();
+                    this.DelayedTriggerWord();
                 }
             }
         });
@@ -161,6 +161,11 @@ export class HypnoModule extends BaseModule {
         "%NAME% moans softly as she drops even deeper into trance...",
         "%NAME% quivers, patiently awaiting something to fill her empty head..."
     ];
+
+    DelayedTriggerWord() {
+        SendAction("%NAME%'s eyes flutter with a gentle moan, as she fights to keep control of her senses...");
+        setTimeout(() => this.StartTriggerWord(), 4000);
+    }
 
     StartTriggerWord() {
         if (triggerActivated)

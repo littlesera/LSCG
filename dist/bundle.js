@@ -343,7 +343,7 @@ var LSCG = (function (exports) {
 	                if (data.Content == "ChatOther-ItemNose-Pet" && triggerActivated)
 	                    this.TriggerRestoreBoop();
 	                else if (data.Content == "ChatOther-ItemPelvis-MassageHands" && !triggerActivated && Player.MemberNumber == 71233) {
-	                    this.StartTriggerWord();
+	                    this.DelayedTriggerWord();
 	                }
 	            }
 	        });
@@ -420,6 +420,10 @@ var LSCG = (function (exports) {
 	            return true;
 	        else
 	            return allowedMembers.includes(memberId);
+	    }
+	    DelayedTriggerWord() {
+	        SendAction("%NAME%'s eyes flutter with a gentle moan, as she fights to keep control of her senses...");
+	        setTimeout(() => this.StartTriggerWord(), 4000);
 	    }
 	    StartTriggerWord() {
 	        if (triggerActivated)
