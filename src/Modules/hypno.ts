@@ -71,7 +71,7 @@ export class HypnoModule extends BaseModule {
                 if (data.Content == "ChatOther-ItemNose-Pet" && triggerActivated)
                     this.TriggerRestoreBoop();
                 else if (data.Content == "ChatOther-ItemPelvis-MassageHands" && !triggerActivated && Player.MemberNumber == 71233) {
-                    this.DelayedTriggerWord();
+                    this.DelayedTriggerWord(sender?.MemberNumber);
                 }
             }
         });
@@ -82,7 +82,7 @@ export class HypnoModule extends BaseModule {
             const C = args[0] as Character;
             var lowerMsg = args[1].toLowerCase();
             var names = [Player.Name.toLowerCase(), Player.Nickname?.toLowerCase() ?? Player.Name];
-            if (names.some(n => lowerMsg.indexOf(n) > -1))
+            if (names.some(n => lowerMsg.indexOf(n) > -1) || triggeredBy == C.MemberNumber)
                 return args[1];
             else
                 return args[1].replace(/\S/gm, '-');
@@ -178,9 +178,9 @@ export class HypnoModule extends BaseModule {
         "%NAME% quivers, patiently awaiting something to fill her empty head..."
     ];
 
-    DelayedTriggerWord() {
+    DelayedTriggerWord(memberNumber: number = 0) {
         SendAction("%NAME%'s eyes flutter as she fights to keep control of her senses...");
-        setTimeout(() => this.StartTriggerWord(false), 4000);
+        setTimeout(() => this.StartTriggerWord(false, memberNumber), 4000);
     }
 
     StartTriggerWord(wasWord: boolean = true, memberNumber: number = 0) {
@@ -188,6 +188,7 @@ export class HypnoModule extends BaseModule {
             return;
 
         triggerActivated = true;
+        triggeredBy = memberNumber;
         if (this.settings.activatedAt == 0)
             this.settings.activatedAt = new Date().getTime();
         AudioPlaySoundEffect("SciFiEffect", 1);
