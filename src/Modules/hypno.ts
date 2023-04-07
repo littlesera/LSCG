@@ -78,7 +78,7 @@ export class HypnoModule extends BaseModule {
             const C = args[0] as Character;
             var lowerMsg = args[1].toLowerCase();
             var names = [Player.Name.toLowerCase(), Player.Nickname?.toLowerCase() ?? Player.Name];
-            if (names.some(n => lowerMsg.indexOf(n) > -1) || triggeredBy == C.MemberNumber)
+            if (names.some(n => lowerMsg.indexOf(n) > -1) || triggeredBy == C.MemberNumber || C.MemberNumber == Player.MemberNumber)
                 args[1] = args[1];
             else
                 args[1] =  args[1].replace(/\S/gm, '-');
