@@ -4,7 +4,9 @@
 name: Node.js CI
 permissions:
   id-token: write
+  pages: write
 on:
+  workflow_dispatch:
   push:
     branches: [ "main" ]
   pull_request:
@@ -15,14 +17,9 @@ jobs:
 
     runs-on: ubuntu-latest
 
-    strategy:
-      matrix:
-        node-version: [18.x]
-        # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
-
     steps:
     - uses: actions/checkout@v3
-    - name: Use Node.js ${{ matrix.node-version }}
+    - name: Use Node.js 18.x
       uses: actions/setup-node@v3
       with:
         node-version: ${{ matrix.node-version }}
