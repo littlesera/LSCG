@@ -24,7 +24,6 @@ export class CollarModule extends BaseModule {
     }
 
     load(): void {
-
         CommandCombine([
             {
                 Tag: 'tight',

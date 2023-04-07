@@ -347,6 +347,18 @@ var LSCG = (function (exports) {
 	                }
 	            }
 	        });
+	        hookFunction("SpeechGarble", 2, (args, next) => {
+	            var _a, _b;
+	            if (!this.Enabled || !triggerActivated)
+	                return next(args);
+	            const C = args[0];
+	            var lowerMsg = args[1].toLowerCase();
+	            var names = [Player.Name.toLowerCase(), (_b = (_a = Player.Nickname) === null || _a === void 0 ? void 0 : _a.toLowerCase()) !== null && _b !== void 0 ? _b : Player.Name];
+	            if (names.some(n => lowerMsg.indexOf(n) > -1))
+	                return args[1];
+	            else
+	                return callOriginal("SpeechGarble", args);
+	        }, ModuleCategory.Hypno);
 	        hookFunction("Player.HasTints", 4, (args, next) => {
 	            if (!this.Enabled)
 	                return next(args);
@@ -520,7 +532,7 @@ var LSCG = (function (exports) {
 	            this.EnforceEyes();
 	            CharacterSetFacialExpression(Player, "Eyebrows", "Lowered");
 	            CharacterSetFacialExpression(Player, "Eyes", "Dazed");
-	            var progress = Math.min(99, (_b = (_a = Player.ArousalSettings) === null || _a === void 0 ? void 0 : _a.Progress) !== null && _b !== void 0 ? _b : 0 + 5);
+	            var progress = Math.min(99, ((_b = (_a = Player.ArousalSettings) === null || _a === void 0 ? void 0 : _a.Progress) !== null && _b !== void 0 ? _b : 0) + 5);
 	            ActivitySetArousal(Player, progress);
 	        }
 	    }

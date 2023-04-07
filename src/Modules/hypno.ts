@@ -1,7 +1,7 @@
 import { BaseModule } from 'base';
 import { HypnoSettingsModel } from 'Settings/Models/hypno';
 import { ModuleCategory } from 'Settings/setting_definitions';
-import { settingsSave, parseMsgWords, OnChat, OnAction, OnActivity, SendAction, getRandomInt, hookFunction, removeAllHooksByModule } from '../utils';
+import { settingsSave, parseMsgWords, OnChat, OnAction, OnActivity, SendAction, getRandomInt, hookFunction, removeAllHooksByModule, callOriginal } from '../utils';
 
 export class HypnoModule extends BaseModule {
     get settings(): HypnoSettingsModel {
@@ -71,6 +71,18 @@ export class HypnoModule extends BaseModule {
                 }
             }
         });
+
+        hookFunction("SpeechGarble", 2, (args, next) => {
+            if (!this.Enabled || !triggerActivated)
+                return next(args);
+            const C = args[0] as Character;
+            var lowerMsg = args[1].toLowerCase();
+            var names = [Player.Name.toLowerCase(), Player.Nickname?.toLowerCase() ?? Player.Name];
+            if (names.some(n => lowerMsg.indexOf(n) > -1))
+                return args[1];
+            else
+                return callOriginal("SpeechGarble", args);
+        }, ModuleCategory.Hypno);
 
         hookFunction("Player.HasTints", 4, (args, next) => {
             if (!this.Enabled)
@@ -280,7 +292,7 @@ export class HypnoModule extends BaseModule {
             CharacterSetFacialExpression(Player, "Eyebrows", "Lowered");
             CharacterSetFacialExpression(Player, "Eyes", "Dazed");
 
-            var progress = Math.min(99, Player.ArousalSettings?.Progress ?? 0 + 5);
+            var progress = Math.min(99, (Player.ArousalSettings?.Progress ?? 0) + 5);
             ActivitySetArousal(Player, progress);
         }
     }
