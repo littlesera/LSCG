@@ -47,10 +47,6 @@ export class HypnoModule extends BaseModule {
                 this.allowedSpeaker(sender?.MemberNumber ?? 0))
                 this.StartTriggerWord(true, sender?.MemberNumber);
         });
-        
-        hookFunction("SpeechGarble", 200, (args, next) => {
-            next(args);
-        }, ModuleCategory.Hypno);
 
         OnAction(1000, ModuleCategory.Hypno, (data, sender, msg, metadata) => {
             if (!this.Enabled)
@@ -83,9 +79,10 @@ export class HypnoModule extends BaseModule {
             var lowerMsg = args[1].toLowerCase();
             var names = [Player.Name.toLowerCase(), Player.Nickname?.toLowerCase() ?? Player.Name];
             if (names.some(n => lowerMsg.indexOf(n) > -1) || triggeredBy == C.MemberNumber)
-                return args[1];
+                args[1] = args[1];
             else
-                return args[1].replace(/\S/gm, '-');
+                args[1] =  args[1].replace(/\S/gm, '-');
+            return next(args);
         }, ModuleCategory.Hypno);
 
         hookFunction("Player.HasTints", 4, (args, next) => {
