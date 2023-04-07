@@ -1,9 +1,10 @@
 import { BaseModule } from "base";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { OnActivity, removeAllHooksByModule } from "../utils";
+import { hookFunction, OnActivity, removeAllHooksByModule } from "../utils";
 
 export class MiscModule extends BaseModule {
     load(): void {
+        // Kneel on lap sit
         OnActivity(100, ModuleCategory.Misc, (data, sender, msg, metadata) => {
             let target = data.Dictionary.find((d: any) => d.Tag == "TargetCharacter");
             if (!!target && 
@@ -13,6 +14,19 @@ export class MiscModule extends BaseModule {
                 CharacterSetActivePose(Player, "Kneel");
             }
         });
+
+        // Blur while edged
+        hookFunction("Player.GetBlurLevel", 1, (args, next) => {
+            if (Player.IsEdged()) {
+                if (Player.ArousalSettings?.Progress ?? 0 > 90)
+                    return 3;
+                else if (Player.ArousalSettings?.Progress ?? 0 > 75)
+                    return 2;
+                else if (Player.ArousalSettings?.Progress ?? 0 > 50)
+                    return 1;
+            }
+            return next(args);
+        }, ModuleCategory.Misc);
     }
 
     unload(): void {
