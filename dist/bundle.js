@@ -422,10 +422,10 @@ var LSCG = (function (exports) {
 	            return allowedMembers.includes(memberId);
 	    }
 	    DelayedTriggerWord() {
-	        SendAction("%NAME%'s eyes flutter with a gentle moan, as she fights to keep control of her senses...");
-	        setTimeout(() => this.StartTriggerWord(), 4000);
+	        SendAction("%NAME%'s eyes flutter as she fights to keep control of her senses...");
+	        setTimeout(() => this.StartTriggerWord(false), 4000);
 	    }
-	    StartTriggerWord() {
+	    StartTriggerWord(wasWord = true) {
 	        if (triggerActivated)
 	            return;
 	        triggerActivated = true;
@@ -433,7 +433,10 @@ var LSCG = (function (exports) {
 	            this.settings.activatedAt = new Date().getTime();
 	        AudioPlaySoundEffect("SciFiEffect", 1);
 	        settingsSave();
-	        SendAction("%NAME%'s eyes immediately unfocus, her posture slumping slightly as she loses control of her body at the utterance of a trigger word.");
+	        if (wasWord)
+	            SendAction("%NAME%'s eyes immediately unfocus, her posture slumping slightly as she loses control of her body at the utterance of a trigger word.");
+	        else
+	            SendAction("%NAME%'s eyes glaze over, her posture slumping weakly as she loses control of her body.");
 	        this.SetEyes();
 	        CharacterSetFacialExpression(Player, "Blush", "Medium");
 	        CharacterSetFacialExpression(Player, "Eyebrows", "Lowered");
