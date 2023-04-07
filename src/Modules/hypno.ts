@@ -16,7 +16,7 @@ export class HypnoModule extends BaseModule {
         
                 Action: () => {
                     if (!triggerActivated)
-                        this.StartTriggerWord();
+                        this.StartTriggerWord(true, Player.MemberNumber);
                 }
             },
             {
@@ -45,9 +45,13 @@ export class HypnoModule extends BaseModule {
                 lowerMsgWords.filter(v => this.triggers.includes(v)).length > 0 && 
                 sender?.MemberNumber != Player.MemberNumber &&
                 this.allowedSpeaker(sender?.MemberNumber ?? 0))
-                this.StartTriggerWord();
+                this.StartTriggerWord(true, sender?.MemberNumber);
         });
         
+        hookFunction("SpeechGarble", 200, (args, next) => {
+            next(args);
+        }, ModuleCategory.Hypno);
+
         OnAction(1000, ModuleCategory.Hypno, (data, sender, msg, metadata) => {
             if (!this.Enabled)
                 return;
@@ -179,7 +183,7 @@ export class HypnoModule extends BaseModule {
         setTimeout(() => this.StartTriggerWord(false), 4000);
     }
 
-    StartTriggerWord(wasWord: boolean = true) {
+    StartTriggerWord(wasWord: boolean = true, memberNumber: number = 0) {
         if (triggerActivated)
             return;
 
@@ -320,6 +324,7 @@ const commonWords = [ "able", "about", "absolute", "accept", "account", "achieve
 // ****************** Functions *****************
 
 let triggerActivated = false;
+let triggeredBy = 0;
 export function hypnoActivated() {
     return triggerActivated;
 }
