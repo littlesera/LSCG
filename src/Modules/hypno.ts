@@ -16,7 +16,7 @@ export class HypnoModule extends BaseModule {
         
                 Action: () => {
                     if (!triggerActivated)
-                        this.StartTriggerWord();
+                        this.StartTriggerWord(true, Player.MemberNumber);
                 }
             },
             {
@@ -45,9 +45,13 @@ export class HypnoModule extends BaseModule {
                 lowerMsgWords.filter(v => this.triggers.includes(v)).length > 0 && 
                 sender?.MemberNumber != Player.MemberNumber &&
                 this.allowedSpeaker(sender?.MemberNumber ?? 0))
-                this.StartTriggerWord();
+                this.StartTriggerWord(true, sender?.MemberNumber);
         });
         
+        hookFunction("SpeechGarble", 200, (args, next) => {
+            next(args);
+        }, ModuleCategory.Hypno);
+
         OnAction(1000, ModuleCategory.Hypno, (data, sender, msg, metadata) => {
             if (!this.Enabled)
                 return;
@@ -67,7 +71,7 @@ export class HypnoModule extends BaseModule {
                 if (data.Content == "ChatOther-ItemNose-Pet" && triggerActivated)
                     this.TriggerRestoreBoop();
                 else if (data.Content == "ChatOther-ItemPelvis-MassageHands" && !triggerActivated && Player.MemberNumber == 71233) {
-                    this.DelayedTriggerWord();
+                    this.DelayedTriggerWord(sender?.MemberNumber);
                 }
             }
         });
@@ -78,7 +82,7 @@ export class HypnoModule extends BaseModule {
             const C = args[0] as Character;
             var lowerMsg = args[1].toLowerCase();
             var names = [Player.Name.toLowerCase(), Player.Nickname?.toLowerCase() ?? Player.Name];
-            if (names.some(n => lowerMsg.indexOf(n) > -1))
+            if (names.some(n => lowerMsg.indexOf(n) > -1) || triggeredBy == C.MemberNumber)
                 return args[1];
             else
                 return args[1].replace(/\S/gm, '-');
@@ -174,16 +178,17 @@ export class HypnoModule extends BaseModule {
         "%NAME% quivers, patiently awaiting something to fill her empty head..."
     ];
 
-    DelayedTriggerWord() {
+    DelayedTriggerWord(memberNumber: number = 0) {
         SendAction("%NAME%'s eyes flutter as she fights to keep control of her senses...");
-        setTimeout(() => this.StartTriggerWord(false), 4000);
+        setTimeout(() => this.StartTriggerWord(false, memberNumber), 4000);
     }
 
-    StartTriggerWord(wasWord: boolean = true) {
+    StartTriggerWord(wasWord: boolean = true, memberNumber: number = 0) {
         if (triggerActivated)
             return;
 
         triggerActivated = true;
+        triggeredBy = memberNumber;
         if (this.settings.activatedAt == 0)
             this.settings.activatedAt = new Date().getTime();
         AudioPlaySoundEffect("SciFiEffect", 1);
@@ -320,6 +325,7 @@ const commonWords = [ "able", "about", "absolute", "accept", "account", "achieve
 // ****************** Functions *****************
 
 let triggerActivated = false;
+let triggeredBy = 0;
 export function hypnoActivated() {
     return triggerActivated;
 }
