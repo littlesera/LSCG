@@ -117,7 +117,7 @@ export class CollarModule extends BaseModule {
         }
 
         if (this.settings.chokeLevel > 2) {
-            this.setChokeTimeout(this.DecreaseCollarChoke, this.chokeTimer);
+            this.setChokeTimeout(() => this.DecreaseCollarChoke(), this.chokeTimer);
         }
     }
 
@@ -172,7 +172,7 @@ export class CollarModule extends BaseModule {
                     CharacterSetFacialExpression(Player, "Eyes", "Surprised");
                     break;
                 case 3:
-                    this.setChokeTimeout(this.DecreaseCollarChoke, this.chokeTimer);
+                    this.setChokeTimeout(() => this.DecreaseCollarChoke(), this.chokeTimer);
                     SendAction("%NAME%'s face runs flush, choking as her collar hisses, barely allowing any air to her lungs.");
                     CharacterSetFacialExpression(Player, "Blush", "High");
                     CharacterSetFacialExpression(Player, "Eyes", "Scared");
@@ -198,11 +198,11 @@ export class CollarModule extends BaseModule {
         AudioPlaySoundEffect("Deflation");
         this.settings.chokeLevel--;
         if (this.settings.chokeLevel > 0)
-        this.setChokeTimeout(this.DecreaseCollarChoke, this.chokeTimer);
+        this.setChokeTimeout(() => this.DecreaseCollarChoke(), this.chokeTimer);
 
         switch (this.settings.chokeLevel) {
             case 3:
-                this.setChokeTimeout(this.DecreaseCollarChoke, this.chokeTimer);
+                this.setChokeTimeout(() => this.DecreaseCollarChoke(), this.chokeTimer);
                 SendAction("%NAME% chokes and gasps desperately as her collar slowly releases some pressure.");
                 CharacterSetFacialExpression(Player, "Blush", "High");
                 CharacterSetFacialExpression(Player, "Eyes", "Lewd");
@@ -242,7 +242,7 @@ export class CollarModule extends BaseModule {
         CharacterSetFacialExpression(Player, "Blush", "VeryHigh");
         CharacterSetFacialExpression(Player, "Eyebrows", "Soft");
         CharacterSetFacialExpression(Player, "Eyes", "Lewd");
-        this.setChokeTimeout(this.Passout1, this.passout1Timer);
+        this.setChokeTimeout(() => this.Passout1(), this.passout1Timer);
     }
 
     Passout1() {
@@ -252,7 +252,7 @@ export class CollarModule extends BaseModule {
         CharacterSetFacialExpression(Player, "Eyebrows", "Soft");
         CharacterSetFacialExpression(Player, "Eyes", "Lewd");
         CharacterSetFacialExpression(Player, "Mouth", "HalfOpen");
-        this.setChokeTimeout(this.Passout2, this.passout2Timer);
+        this.setChokeTimeout(() => this.Passout2(), this.passout2Timer);
     }
 
     Passout2() {
@@ -263,7 +263,7 @@ export class CollarModule extends BaseModule {
         CharacterSetFacialExpression(Player, "Eyebrows", "Soft");
         CharacterSetFacialExpression(Player, "Eyes", "VeryLewd");
         CharacterSetFacialExpression(Player, "Mouth", "HalfOpen");
-        this.setChokeTimeout(this.Passout3, this.passout3Timer);
+        this.setChokeTimeout(() => this.Passout3(), this.passout3Timer);
     }
 
     Passout3() {
