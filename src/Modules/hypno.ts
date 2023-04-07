@@ -81,7 +81,7 @@ export class HypnoModule extends BaseModule {
             if (names.some(n => lowerMsg.indexOf(n) > -1))
                 return args[1];
             else
-                return callOriginal("SpeechGarble", args);
+                return args[1].replace(/\S/gm, '-');
         }, ModuleCategory.Hypno);
 
         hookFunction("Player.HasTints", 4, (args, next) => {
