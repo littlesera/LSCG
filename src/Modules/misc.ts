@@ -17,7 +17,7 @@ export class MiscModule extends BaseModule {
 
         // Blur while edged
         hookFunction("Player.GetBlurLevel", 1, (args, next) => {
-            if (Player.IsEdged() && Player.MemberNumber != 54618) {
+            if (Player.IsEdged() && Player.MemberNumber != 54618 && Player.MemberNumber != 74298) {
                 if ((Player.ArousalSettings?.Progress ?? 0) > 90)
                     return 6;
                 else if ((Player.ArousalSettings?.Progress ?? 0) > 75)
