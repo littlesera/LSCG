@@ -324,6 +324,6 @@ export class CollarModule extends BaseModule {
     }
 
     IncreaseArousal() {
-        ActivitySetArousal(Player, Math.min(99, Player.ArousalSettings?.Progress ?? 0 + 10));
+        ActivitySetArousal(Player, Math.min(99, (Player.ArousalSettings?.Progress ?? 0) + 10));
     }
 }
