@@ -36,7 +36,7 @@ export class GuiGlobal extends GuiSubscreen {
 		super.Click();
 
 		// Edge Blur Checkbox
-		if (MouseIn(GuiSubscreen.START_X + 600, this.getYPos(1) - 32, 64, 64)){
+		if (MouseIn(GuiSubscreen.START_X + 600, this.getYPos(2) - 32, 64, 64)){
 			this.settings.edgeBlur = !this.settings.edgeBlur;
 		}
 	}
