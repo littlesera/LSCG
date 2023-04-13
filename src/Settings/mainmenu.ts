@@ -1,5 +1,6 @@
 
 import { GuiBoops, GuiCollar, GuiGlobal, GuiHypno, GuiLipstick } from "./all";
+import { GuiMisc } from "./misc";
 import { GuiSubscreen } from "./settingBase";
 import { ModuleCategory, SETTING_ICONS, SETTING_NAMES } from "./setting_definitions";
 
@@ -21,7 +22,8 @@ export const MAIN_MENU_ITEMS: MenuItem[] = [
 	new MenuItem(ModuleCategory.Collar, () => new GuiCollar(Player)),
 	new MenuItem(ModuleCategory.Hypno, () => new GuiHypno(Player)),
 	new MenuItem(ModuleCategory.Boops, () => new GuiBoops(Player)),
-	new MenuItem(ModuleCategory.Lipstick, () => new GuiLipstick(Player))
+	new MenuItem(ModuleCategory.Lipstick, () => new GuiLipstick(Player)),
+	new MenuItem(ModuleCategory.Misc, () => new GuiMisc(Player))
 ];
 
 export class MainMenu extends GuiSubscreen {

@@ -122,7 +122,7 @@ export class HypnoModule extends BaseModule {
             // Prevent speech at choke level 4
             if (triggerActivated) {
                 var type = args[0];
-                if (type == "ChatRoomChat" && args[1].Type == "Chat"){
+                if (type == "ChatRoomChat" && args[1].Type == "Chat" && args[1]?.Content[0] != "("){
                     SendAction(this.hypnoBlockStrings[getRandomInt(this.hypnoBlockStrings.length)]);
                     return null;
                 }

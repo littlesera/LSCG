@@ -1,4 +1,4 @@
-import { BaseSettingsModel, GlobalSettingsModel } from "./base";
+import { BaseSettingsModel, GlobalSettingsModel, MiscSettingsModel } from "./base";
 import { CollarSettingsModel } from "./collar";
 import { HypnoSettingsModel } from "./hypno";
 
@@ -8,5 +8,5 @@ export interface SettingsModel {
     BoopsModule: BaseSettingsModel;
     LipstickModule: BaseSettingsModel;
     GlobalModule: GlobalSettingsModel;
-    MiscModule: BaseSettingsModel;
+    MiscModule: MiscSettingsModel;
 }

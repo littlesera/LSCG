@@ -1,8 +1,14 @@
 import { BaseModule } from "base";
+import { MiscSettingsModel } from "Settings/Models/base";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { hookFunction, OnActivity, removeAllHooksByModule } from "../utils";
+import { getRandomInt, hookFunction, OnAction, OnActivity, removeAllHooksByModule, SendAction } from "../utils";
 
 export class MiscModule extends BaseModule {
+    get settings(): MiscSettingsModel {
+		(<any>Player.LSCG)[this.constructor.name] = (<any>Player.LSCG)[this.constructor.name] || {};
+		return (<any>Player.LSCG)[this.constructor.name];
+	}
+
     load(): void {
         // Kneel on lap sit
         OnActivity(100, ModuleCategory.Misc, (data, sender, msg, metadata) => {
@@ -27,9 +33,137 @@ export class MiscModule extends BaseModule {
             }
             return next(args);
         }, ModuleCategory.Misc);
+
+        // Set Chloroform'd state
+        OnAction(100, ModuleCategory.Misc, (data, sender, msg, metadata) => {
+            if (!data.Dictionary || !this.settings.chloroformEnabled)
+                return;
+            var isChloroformAction = data.Dictionary[3]?.AssetName == "ChloroformCloth";
+            if (isChloroformAction) {
+                if (msg == "ActionUse" && this.NumberChloroform() == 1) {
+                    this.AddChloroform();
+                }
+                else if (msg == "ActionRemove" && !this.IsWearingChloroform()) {
+                    this.RemoveChloroform();
+                }
+            }
+        })
+
+        // Set chloroform'd state on room join
+        hookFunction("ChatRoomSync", 4, (args, next) => {
+            next(args);
+            if (!this.settings.chloroformEnabled) {
+                return;
+            }
+            
+            this.isChloroformed = this.IsWearingChloroform();
+
+            if (this.isChloroformed) {
+                this.SetSleepExpression();
+            }
+        }, ModuleCategory.Misc);
+
+        // Block activity while choloform'd
+        hookFunction('ServerSend', 5, (args, next) => {
+            if (!this.settings.chloroformEnabled)
+                return next(args);
+            // Prevent speech while chloroformed
+            if (this.isChloroformed) {
+                var type = args[0];
+                if (type == "ChatRoomChat" && args[1].Type == "Chat" && args[1]?.Content[0] != "("){
+                    SendAction(this.chroloBlockStrings[getRandomInt(this.chroloBlockStrings.length)]);
+                    return null;
+                }
+                return next(args);
+            }
+            return next(args);
+        }, ModuleCategory.Misc);
     }
+
+    chroloBlockStrings = [
+        "%NAME%'s eyes move dreamily under her closed eyelids...",
+        "%NAME% takes another deep breath through her gag...",
+        "%NAME%'s muscles twitch weakly in their sleep...",
+        "%NAME% moans softly and relaxes..."
+    ];
+    eyesInterval: number = 0;
+    passoutTimer: number = 0;
+    isChloroformed: boolean = false;
 
     unload(): void {
         removeAllHooksByModule(ModuleCategory.Misc);
+    }
+
+    IsWearingChloroform() {
+        return [
+            InventoryGet(Player, "ItemMouth")?.Asset.Name,
+            InventoryGet(Player, "ItemMouth2")?.Asset.Name,
+            InventoryGet(Player, "ItemMouth3")?.Asset.Name
+        ].some(item => item == "ChloroformCloth")
+    }
+
+    NumberChloroform() {
+        return [
+            InventoryGet(Player, "ItemMouth")?.Asset.Name,
+            InventoryGet(Player, "ItemMouth2")?.Asset.Name,
+            InventoryGet(Player, "ItemMouth3")?.Asset.Name
+        ].filter(item => item == "ChloroformCloth").length;
+    }
+
+    AddChloroform() {
+        SendAction("%NAME% eyes go wide as the sweet smell of ether fills their nostrils.");
+        CharacterSetFacialExpression(Player, "Eyes", "Scared");
+        this.passoutTimer = setTimeout(() => this.StartPassout_1(), 20000);
+    }
+
+    StartPassout_1() {
+        SendAction("%NAME%, unable to continue holding their breath, takes a desparate gasp through the chemical-soaked cloth.");
+        CharacterSetFacialExpression(Player, "Eyes", "Lewd");
+        clearTimeout(this.passoutTimer);
+        this.passoutTimer = setTimeout(() => this.StartPassout_2(), 10000);
+    }
+
+    StartPassout_2() {
+        SendAction("%NAME%'s body trembles as the chloroform sinks deep into their mind.");
+        CharacterSetFacialExpression(Player, "Eyes", "VeryLewd");
+        clearTimeout(this.passoutTimer);
+        this.passoutTimer = setTimeout(() => this.Passout(), 5000);
+    }
+
+    Passout() {
+        SendAction("%NAME% slumps weakly as they slip into unconciousness.");
+        this.SetSleepExpression();
+        this.isChloroformed = true;
+        clearTimeout(this.passoutTimer);
+        this.eyesInterval = setInterval(() => this.SetSleepExpression(), 1000);
+    }
+
+    RemoveChloroform() {
+        if (this.isChloroformed) {
+            SendAction("%NAME% continues to sleep peacefully as the cloth is removed...");
+            setTimeout(() => this.RemoveChloroform_1(), 10000);
+        }
+        else {
+            SendAction("%NAME% gulps in fresh air as the cloth is removed...");
+            CharacterSetFacialExpression(Player, "Eyes", null);
+            clearTimeout(this.passoutTimer);
+        }
+    }
+
+    RemoveChloroform_1() {
+        SendAction("%NAME% starts to stir with a gentle moan...");
+        setTimeout(() => this.RemoveChloroform_2(), 5000);
+    }
+
+    RemoveChloroform_2() {
+        SendAction("%NAME%'s eyes flutter and start to open sleepily...");
+        this.isChloroformed = false;
+        clearInterval(this.eyesInterval);
+        CharacterSetFacialExpression(Player, "Eyes", "Dazed");
+        CharacterSetFacialExpression(Player, "Blush", "Medium");
+    }
+
+    SetSleepExpression() {
+        CharacterSetFacialExpression(Player, "Eyes", "Closed");
     }
 }
