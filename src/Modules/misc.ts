@@ -38,12 +38,20 @@ export class MiscModule extends BaseModule {
         OnAction(100, ModuleCategory.Misc, (data, sender, msg, metadata) => {
             if (!data.Dictionary || !this.settings.chloroformEnabled)
                 return;
+            if (msg == "ActionSwap") {
+                if (data.Dictionary[3]?.AssetName == "ChloroformCloth"  && !this.IsWearingChloroform()) {
+                    this.RemoveChloroform();
+                }
+                else if (data.Dictionary[4]?.AssetName == "ChloroformCloth" && this.NumberChloroform() == 1) {
+                    this.AddChloroform();
+                }
+            }
             var isChloroformAction = data.Dictionary[3]?.AssetName == "ChloroformCloth";
             if (isChloroformAction) {
                 if (msg == "ActionUse" && this.NumberChloroform() == 1) {
                     this.AddChloroform();
                 }
-                else if (msg == "ActionRemove" && !this.IsWearingChloroform()) {
+                else if ((msg == "ActionRemove" || msg == "ActionSwap") && !this.IsWearingChloroform()) {
                     this.RemoveChloroform();
                 }
             }
