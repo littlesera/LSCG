@@ -36,7 +36,7 @@ export class MiscModule extends BaseModule {
 
         // Set Chloroform'd state
         OnAction(100, ModuleCategory.Misc, (data, sender, msg, metadata) => {
-            if (!data.Dictionary || !this.settings.chloroformEnabled)
+            if (!data.Dictionary || !data.Dictionary[2] || !data.Dictionary[3] || !this.settings.chloroformEnabled)
                 return;
 
             var target = data.Dictionary[2].MemberNumber;
