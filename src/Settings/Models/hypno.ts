@@ -2,6 +2,7 @@ import { BaseSettingsModel } from "./base";
 
 export interface HypnoSettingsModel extends BaseSettingsModel {
     trigger: string;
+    triggerTime: number;
     activatedAt: number;
     enableCycle: boolean;
     cycleTime: number;
