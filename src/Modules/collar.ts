@@ -128,7 +128,7 @@ export class CollarModule extends BaseModule {
 
     get allowedChokeMembers(): number[] {
         let stringList = this.settings.allowedMembers.split(",");
-        return stringList.filter(str => (+str === +str)).map(str => parseInt(str));
+        return stringList.filter(str => !!str && (+str === +str)).map(str => parseInt(str));
     }
     // 96251,
     // 60504
