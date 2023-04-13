@@ -39,7 +39,7 @@ export class MiscModule extends BaseModule {
             if (!data.Dictionary || !data.Dictionary[2] || !data.Dictionary[3] || !this.settings.chloroformEnabled)
                 return;
 
-            var target = data.Dictionary[2].MemberNumber;
+            var target = data.Dictionary[2]?.MemberNumber;
             if (target != Player.MemberNumber)
                 return;
 
