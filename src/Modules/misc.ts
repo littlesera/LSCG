@@ -38,6 +38,11 @@ export class MiscModule extends BaseModule {
         OnAction(100, ModuleCategory.Misc, (data, sender, msg, metadata) => {
             if (!data.Dictionary || !this.settings.chloroformEnabled)
                 return;
+
+            var target = data.Dictionary[2].MemberNumber;
+            if (target != Player.MemberNumber)
+                return;
+
             if (msg == "ActionSwap") {
                 if (data.Dictionary[3]?.AssetName == "ChloroformCloth"  && !this.IsWearingChloroform()) {
                     this.RemoveChloroform();
