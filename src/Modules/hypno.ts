@@ -36,17 +36,17 @@ export class HypnoModule extends BaseModule {
             }
         ]);
         
-        OnChat(1000, ModuleCategory.Hypno, (data, sender, msg, metadata) => {
-            if (!this.Enabled)
-                return;
-            var lowerMsgWords = parseMsgWords(msg) ?? [];
-            if (!hypnoActivated() && 
-                !!this.triggers && 
-                lowerMsgWords.filter(v => this.triggers.includes(v)).length > 0 && 
-                sender?.MemberNumber != Player.MemberNumber &&
-                this.allowedSpeaker(sender?.MemberNumber ?? 0))
-                this.StartTriggerWord(true, sender?.MemberNumber);
-        });
+        // OnChat(1000, ModuleCategory.Hypno, (data, sender, msg, metadata) => {
+        //     if (!this.Enabled)
+        //         return;
+        //     var lowerMsgWords = parseMsgWords(msg) ?? [];
+        //     if (!hypnoActivated() && 
+        //         !!this.triggers && 
+        //         lowerMsgWords.filter(v => this.triggers.includes(v)).length > 0 && 
+        //         sender?.MemberNumber != Player.MemberNumber &&
+        //         this.allowedSpeaker(sender?.MemberNumber ?? 0))
+        //         this.StartTriggerWord(true, sender?.MemberNumber);
+        // });
 
         OnAction(1000, ModuleCategory.Hypno, (data, sender, msg, metadata) => {
             if (!this.Enabled)
@@ -73,9 +73,19 @@ export class HypnoModule extends BaseModule {
         });
 
         hookFunction("SpeechGarble", 2, (args, next) => {
-            if (!this.Enabled || !triggerActivated)
+            if (!this.Enabled)
                 return next(args);
+
             const C = args[0] as Character;
+
+            // Check for non-garbled trigger word, this means a trigger word could be set to what garbled speech produces >.>
+            if (!triggerActivated && !args[2]) {
+                let msg = callOriginal("SpeechGarble", args);
+                if (this.CheckTrigger(msg, C))
+                    this.StartTriggerWord(true, C.MemberNumber);
+                return next(args);
+            }
+
             var lowerMsg = args[1].toLowerCase();
             var names = [Player.Name.toLowerCase(), Player.Nickname?.toLowerCase() ?? Player.Name];
             if (names.some(n => lowerMsg.indexOf(n) > -1) || triggeredBy == C.MemberNumber || C.MemberNumber == Player.MemberNumber)
@@ -178,6 +188,15 @@ export class HypnoModule extends BaseModule {
     DelayedTriggerWord(memberNumber: number = 0) {
         SendAction("%NAME%'s eyes flutter as she fights to keep control of her senses...");
         setTimeout(() => this.StartTriggerWord(false, memberNumber), 4000);
+    }
+
+    CheckTrigger(msg: string, sender: Character): boolean {
+        var lowerMsgWords = parseMsgWords(msg) ?? [];
+        return (!hypnoActivated() && 
+            !!this.triggers && 
+            lowerMsgWords.filter(v => this.triggers.includes(v)).length > 0 && 
+            sender?.MemberNumber != Player.MemberNumber &&
+            this.allowedSpeaker(sender?.MemberNumber ?? 0))
     }
 
     StartTriggerWord(wasWord: boolean = true, memberNumber: number = 0) {
