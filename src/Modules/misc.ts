@@ -17,7 +17,7 @@ export class MiscModule extends BaseModule {
 
         // Blur while edged
         hookFunction("Player.GetBlurLevel", 1, (args, next) => {
-            if (Player.IsEdged()) {
+            if (Player.IsEdged() && Player.LSCG.GlobalModule.edgeBlur) {
                 if ((Player.ArousalSettings?.Progress ?? 0) > 90)
                     return 6;
                 else if ((Player.ArousalSettings?.Progress ?? 0) > 75)

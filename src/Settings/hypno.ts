@@ -32,6 +32,7 @@ export class GuiHypno extends GuiSubscreen {
 		ElementCreateInput("hypno_overrideWords", "text", this.settings.overrideWords ?? "", "255");
 		ElementCreateInput("hypno_overrideMembers", "text", this.settings.overrideMemberIds ?? "", "255");
 		ElementCreateInput("hypno_cycleTime", "number", "" + (this.settings.cycleTime ?? 30), "5");
+		ElementCreateInput("hypno_triggerTime", "number", "" + (this.settings.triggerTime ?? 5), "5");
 	}
 
     Run() {
@@ -58,8 +59,12 @@ export class GuiHypno extends GuiSubscreen {
 		DrawCheckbox(GuiSubscreen.START_X + 600, this.getYPos(4) - 32, 64, 64, "", (this.settings.enableCycle ?? true) || !this.settings.enabled);
 
 		// Cycle Time				[Number of minutes (default 30)]
-		DrawText("Trigger Cycle Time:", GuiSubscreen.START_X, this.getYPos(5), "Black", "Gray");
+		DrawText("Trigger Cycle Time (min.):", GuiSubscreen.START_X, this.getYPos(5), "Black", "Gray");
 		ElementPosition("hypno_cycleTime", GuiSubscreen.START_X + 700, this.getYPos(5), 200);
+
+		// Trigger Time				[Number of minutes (default 5)]
+		DrawText("Hypnosis Length (min.):", GuiSubscreen.START_X, this.getYPos(6), "Black", "Gray");
+		ElementPosition("hypno_triggerTime", GuiSubscreen.START_X + 700, this.getYPos(6), 200);
 
 		MainCanvas.textAlign = prev;
 	}
@@ -72,10 +77,13 @@ export class GuiHypno extends GuiSubscreen {
 		this.settings.overrideMemberIds = ElementValue("hypno_overrideMembers") ?? "";
 		if (CommonIsNumeric(ElementValue("hypno_cycleTime")))
 			this.settings.cycleTime = +(ElementValue("hypno_cycleTime") ?? "30");
+		if (CommonIsNumeric(ElementValue("hypno_triggerTime")))
+			this.settings.triggerTime = +(ElementValue("hypno_triggerTime") ?? "30");
 
 		ElementRemove("hypno_overrideWords");
 		ElementRemove("hypno_overrideMembers");
 		ElementRemove("hypno_cycleTime");
+		ElementRemove("hypno_triggerTime");
 		super.Exit();
 	}
 

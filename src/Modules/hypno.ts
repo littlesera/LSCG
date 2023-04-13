@@ -203,11 +203,17 @@ export class HypnoModule extends BaseModule {
         CharacterSetFacialExpression(Player, "Fluids", "DroolLow");    
         CharacterSetFacialExpression(Player, "Mouth", null);    
 
-        clearTimeout(this.triggerTimeout);
-        this.triggerTimeout = setTimeout(() => this.TriggerRestoreTimeout(), this.triggerTimer);
+        if (this.settings.triggerTime > 0) {
+            let triggerTimer = (this.settings.triggerTime ?? 5) * 60000;
 
-        clearInterval(this.hornyTimeout);
-        this.hornyTimeout = setInterval(() => this.HypnoHorny(), this.triggerTimer / 100);
+            clearTimeout(this.triggerTimeout);
+            this.triggerTimeout = setTimeout(() => this.TriggerRestoreTimeout(), triggerTimer);
+            clearInterval(this.hornyTimeout);
+            this.hornyTimeout = setInterval(() => this.HypnoHorny(), triggerTimer / 100);
+        } else {
+            clearInterval(this.hornyTimeout);
+            this.hornyTimeout = setInterval(() => this.HypnoHorny(), 10000);
+        }
     }
 
     SetEyes() {
