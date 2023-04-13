@@ -45,13 +45,14 @@ export class MiscModule extends BaseModule {
                 else if (data.Dictionary[4]?.AssetName == "ChloroformCloth" && this.NumberChloroform() == 1) {
                     this.AddChloroform();
                 }
+                return;
             }
             var isChloroformAction = data.Dictionary[3]?.AssetName == "ChloroformCloth";
             if (isChloroformAction) {
                 if (msg == "ActionUse" && this.NumberChloroform() == 1) {
                     this.AddChloroform();
                 }
-                else if ((msg == "ActionRemove" || msg == "ActionSwap") && !this.IsWearingChloroform()) {
+                else if (msg == "ActionRemove" && !this.IsWearingChloroform()) {
                     this.RemoveChloroform();
                 }
             }
