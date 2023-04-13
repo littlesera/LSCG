@@ -51,7 +51,7 @@ export class CollarModule extends BaseModule {
             if (!this.Enabled)
                 return;
             var lowerMsgWords = parseMsgWords(msg);
-            if (!!sender && this.allowedChokeMembers.indexOf(sender?.MemberNumber ?? 0) >= 0) {
+            if (!!sender && (this.allowedChokeMembers.length == 0 || this.allowedChokeMembers.indexOf(sender?.MemberNumber ?? 0) >= 0)) {
                 if ((lowerMsgWords?.indexOf("tight") ?? -1) >= 0)
                     this.IncreaseCollarChoke();
                 else if ((lowerMsgWords?.indexOf("loose") ?? -1) >= 0)
