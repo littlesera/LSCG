@@ -34,6 +34,7 @@ javascript:(()=>{fetch('https://littlesera.github.io/LSCG/bundle.js').then(r=>r.
 ### Chloroform
 - Having chloroform applied to your mouth will start a ~30s chain of events that will result in your unconsciousness
 - If you are able to remove the chloroform before fully passing out it will reset
+- Once asleep your chat will be blocked similarly to being under hypnosis
 - Removing chloroform after falling asleep will result in a gradual reawakening
 
 ### Boops
