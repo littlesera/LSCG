@@ -39,3 +39,6 @@ javascript:(()=>{fetch('https://littlesera.github.io/LSCG/bundle.js').then(r=>r.
 - Simple reactions to being booped in the nose
 - If booped too rapidly, reaction emotes will evolve to reflect this, respecting if you are bound or not
 - If continued to be booped your nose may 'overload' and pause reactions for a period of time
+
+### Choking Collar
+--COMING SOON--
