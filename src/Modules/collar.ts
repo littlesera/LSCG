@@ -1,7 +1,7 @@
 import { BaseModule } from 'base';
 import { CollarSettingsModel } from 'Settings/Models/collar';
 import { ModuleCategory } from 'Settings/setting_definitions';
-import { settingsSave, parseMsgWords, SendAction, OnChat, getRandomInt, hookFunction, removeAllHooksByModule } from '../utils';
+import { settingsSave, parseMsgWords, SendAction, OnChat, getRandomInt, hookFunction, removeAllHooksByModule, OnActivity } from '../utils';
 
 export class CollarModule extends BaseModule {
 
@@ -58,6 +58,12 @@ export class CollarModule extends BaseModule {
                     this.DecreaseCollarChoke();
             }
         });
+
+        // OnActivity(100, ModuleCategory.Collar, (data, sender, msg, meta) => {
+        //     if (!!data && data.Content == "ChatOther-ItemNeck-Choke") {
+        //         console.info("hand choke!")
+        //     }
+        // });
 
         // event on room join
         hookFunction("ChatRoomSync", 4, (args, next) => {
@@ -125,6 +131,12 @@ export class CollarModule extends BaseModule {
     }
 
     // Choke Collar Code
+
+    get allowedCollarUsers(): number[] {
+        return [
+            74298
+        ];
+    }
 
     get allowedChokeMembers(): number[] {
         let stringList = this.settings.allowedMembers.split(",");
