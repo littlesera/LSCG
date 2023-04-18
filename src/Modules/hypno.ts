@@ -156,9 +156,9 @@ export class HypnoModule extends BaseModule {
     hornyTimeout: number = 0;
 
     get triggers(): string[] {
-        var overrideWords = this.settings.overrideWords?.split(",")?.filter(word => !!word) ?? [];
+        var overrideWords = this.settings.overrideWords?.split(",")?.filter(word => !!word).map(word => word.toLocaleLowerCase()) ?? [];
         if (overrideWords.length > 0)
-            return this.settings.overrideWords.split(",");
+            return overrideWords;
         else
             return [this.settings.trigger];
     }
@@ -167,7 +167,7 @@ export class HypnoModule extends BaseModule {
         var words = this.settings.overrideWords?.split(",")?.filter(word => !!word) ?? [];
         if (words.length <= 0)
             words = commonWords;
-        return words[getRandomInt(words.length)];
+        return words[getRandomInt(words.length)]?.toLocaleLowerCase();
     }
 
     allowedSpeaker(memberId: number): boolean {
