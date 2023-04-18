@@ -31,7 +31,7 @@ export class HypnoModule extends BaseModule {
                 Tag: "show-trigger",
                 Description: ": reveal your current trigger word(s)",
                 Action: () => {
-                    alert(this.triggers);
+                    ChatRoomSendLocal("Your current triggers are: " + this.triggers);
                 }
             }
         ]);
@@ -48,7 +48,7 @@ export class HypnoModule extends BaseModule {
         //         this.StartTriggerWord(true, sender?.MemberNumber);
         // });
 
-        OnAction(1000, ModuleCategory.Hypno, (data, sender, msg, metadata) => {
+        OnAction(1, ModuleCategory.Hypno, (data, sender, msg, metadata) => {
             if (!this.Enabled)
                 return;
             var lowerMsgWords = parseMsgWords(msg);
@@ -59,7 +59,7 @@ export class HypnoModule extends BaseModule {
             }
         });
         
-        OnActivity(1000, ModuleCategory.Hypno, (data, sender, msg, metadata) => {
+        OnActivity(1, ModuleCategory.Hypno, (data, sender, msg, metadata) => {
             if (!this.Enabled)
                 return;
             let target = data.Dictionary.find((d: any) => d.Tag == "TargetCharacter");
@@ -96,7 +96,7 @@ export class HypnoModule extends BaseModule {
         }, ModuleCategory.Hypno);
 
         hookFunction("Player.HasTints", 4, (args, next) => {
-            if (!this.Enabled)
+            if (!this.Enabled || !Player.ImmersionSettings?.AllowTints)
                 return next(args);
             if (triggerActivated) return true;
             return next(args);
@@ -178,15 +178,15 @@ export class HypnoModule extends BaseModule {
     }
 
     hypnoBlockStrings = [
-        "%NAME%'s eyelids flutter as a thought tries to enter her blank mind...",
-        "%NAME% sways weakly in her place, drifting peacefully...",
+        "%NAME%'s eyelids flutter as a thought tries to enter %POSSESSIVE% blank mind...",
+        "%NAME% sways weakly in %POSSESSIVE% place, drifting peacefully...",
         "%NAME% trembles as something deep and forgotten fails to resurface...",
-        "%NAME% moans softly as she drops even deeper into trance...",
-        "%NAME% quivers, patiently awaiting something to fill her empty head..."
+        "%NAME% moans softly as %PRONOUN% drops even deeper into trance...",
+        "%NAME% quivers, patiently awaiting something to fill %POSSESSIVE% empty head..."
     ];
 
     DelayedTriggerWord(memberNumber: number = 0) {
-        SendAction("%NAME%'s eyes flutter as she fights to keep control of her senses...");
+        SendAction("%NAME%'s eyes flutter as %PRONOUN% fights to keep control of %POSSESSIVE% senses...");
         setTimeout(() => this.StartTriggerWord(false, memberNumber), 4000);
     }
 
@@ -211,9 +211,9 @@ export class HypnoModule extends BaseModule {
         settingsSave();
         
         if (wasWord)
-            SendAction("%NAME%'s eyes immediately unfocus, her posture slumping slightly as she loses control of her body at the utterance of a trigger word.");
+            SendAction("%NAME%'s eyes immediately unfocus, %POSSESSIVE% posture slumping slightly as %PRONOUN% loses control of %POSSESSIVE% body at the utterance of a trigger word.");
         else
-            SendAction("%NAME%'s eyes glaze over, her posture slumping weakly as she loses control of her body.");
+            SendAction("%NAME%'s eyes glaze over, %POSSESSIVE% posture slumping weakly as %PRONOUN% loses control of %POSSESSIVE% body.");
         
         this.SetEyes();
         CharacterSetFacialExpression(Player, "Blush", "Medium");
@@ -289,12 +289,12 @@ export class HypnoModule extends BaseModule {
     }
 
     TriggerRestoreBoop() {
-        SendAction("%NAME% reboots, blinking and gasping as she regains her senses.");
+        SendAction("%NAME% reboots, blinking and gasping as %PRONOUN% regains %POSSESSIVE% senses.");
         this.TriggerRestore();
     }
 
     TriggerRestoreSnap() {
-        SendAction("%NAME% blinks, shaking her head with confusion as she regains her senses.");
+        SendAction("%NAME% blinks, shaking %POSSESSIVE% head with confusion as %PRONOUN% regains %POSSESSIVE% senses.");
         this.TriggerRestore();
     }
 
@@ -332,7 +332,7 @@ export class HypnoModule extends BaseModule {
     }
 
     RollTriggerWord() {
-        SendAction("%NAME% concentrates, breaking the hold the previous trigger word held over her.");
+        SendAction("%NAME% concentrates, breaking the hold the previous trigger word held over %POSSESSIVE%.");
         this.settings.trigger = this.getNewTriggerWord();
         this.settings.activatedAt = 0;
         settingsSave();

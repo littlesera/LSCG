@@ -14,7 +14,7 @@ export class GuiHypno extends GuiSubscreen {
 		if (Player.LSCG === undefined) {
 			Player.LSCG = <SettingsModel>{};
 		}
-		if (Player.LSCG.HypnoModule === undefined) {
+		if (!Player.LSCG.HypnoModule) {
 			Player.LSCG.HypnoModule = <HypnoSettingsModel>{ 
 				enabled: false,
 				activatedAt: 0,
@@ -44,7 +44,7 @@ export class GuiHypno extends GuiSubscreen {
 
 		// Enabled 					[true/false]
 		DrawText("Enabled:", GuiSubscreen.START_X, this.getYPos(1), "Black", "Gray");
-		DrawCheckbox(GuiSubscreen.START_X + 600, this.getYPos(1) - 32, 64, 64, "", this.settings.enabled);
+		DrawCheckbox(GuiSubscreen.START_X + 600, this.getYPos(1) - 32, 64, 64, "", this.settings.enabled ?? false);
 		
 		// Override Trigger Words 	[Word List]
 		DrawText("Override Trigger Words:", GuiSubscreen.START_X, this.getYPos(2), "Black", "Gray");
@@ -56,7 +56,7 @@ export class GuiHypno extends GuiSubscreen {
 
 		// Enabled 					[true/false]
 		DrawText("Enable Cycle:", GuiSubscreen.START_X, this.getYPos(4), "Black", "Gray");
-		DrawCheckbox(GuiSubscreen.START_X + 600, this.getYPos(4) - 32, 64, 64, "", (this.settings.enableCycle ?? true) || !this.settings.enabled);
+		DrawCheckbox(GuiSubscreen.START_X + 600, this.getYPos(4) - 32, 64, 64, "", (this.settings.enableCycle ?? false));
 
 		// Cycle Time				[Number of minutes (default 30)]
 		DrawText("Trigger Cycle Time (min.):", GuiSubscreen.START_X, this.getYPos(5), "Black", "Gray");

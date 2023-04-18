@@ -34,17 +34,17 @@ export class BoopsModule extends BaseModule {
     }
 
     normalBoopReactions = [
-        "%NAME% wiggles her nose.",
-        "%NAME% wiggles her nose with a small frown.",
+        "%NAME% wiggles %POSSESSIVE% nose.",
+        "%NAME% wiggles %POSSESSIVE% nose with a small frown.",
         "%NAME% sneezes in surprise.",
-        "%NAME% looks crosseyed at her nose.",
-        "%NAME% wiggles her nose with a squeak.",
+        "%NAME% looks crosseyed at %POSSESSIVE% nose.",
+        "%NAME% wiggles %POSSESSIVE% nose with a squeak.",
         "%NAME% meeps!"
     ]
     
     protestBoopReactions = [
         "%NAME% swats at %OPP_NAME%'s hand.",
-        "%NAME% covers her nose protectively, squinting at %OPP_NAME%.",
+        "%NAME% covers %POSSESSIVE% nose protectively, squinting at %OPP_NAME%.",
         "%NAME% snatches %OPP_NAME%'s booping finger."
     ]
     
@@ -53,11 +53,11 @@ export class BoopsModule extends BaseModule {
     ]
     
     boundBoopReactions = [
-        "%NAME% struggles in her bindings, huffing.",
-        "%NAME% frowns and squirms in her bindings.",
-        "%NAME% whimpers in her bondage.",
+        "%NAME% struggles in %POSSESSIVE% bindings, huffing.",
+        "%NAME% frowns and squirms in %POSSESSIVE% bindings.",
+        "%NAME% whimpers in %POSSESSIVE% bondage.",
         "%NAME% groans helplessly.",
-        "%NAME% whines and wiggles in her bondage."
+        "%NAME% whines and wiggles in %POSSESSIVE% bondage."
     ]
     
     BoopReact(booperId: number | undefined) {
@@ -79,23 +79,23 @@ export class BoopsModule extends BaseModule {
     }
     
     NormalBoopReact() {
-        CharacterSetFacialExpression(Player, "Blush", "Low");
+        //CharacterSetFacialExpression(Player, "Blush", "Low");
         SendAction(this.normalBoopReactions[getRandomInt(this.normalBoopReactions.length)]);
     }
     
     ProtestBoopReact(booper: Character) {
-        CharacterSetFacialExpression(Player, "Blush", "Medium");
-        CharacterSetFacialExpression(Player, "Eyes", "Daydream");
+        // CharacterSetFacialExpression(Player, "Blush", "Medium");
+        // CharacterSetFacialExpression(Player, "Eyes", "Daydream");
     
         if (Player.IsRestrained())
             SendAction(this.boundBoopReactions[getRandomInt(this.boundBoopReactions.length)]);
         else
-            SendAction(this.protestBoopReactions[getRandomInt(this.protestBoopReactions.length)], booper.Nickname);
+            SendAction(this.protestBoopReactions[getRandomInt(this.protestBoopReactions.length)], booper);
     }
     
     BigProtestBoopReact(booper: Character) {
-        CharacterSetFacialExpression(Player, "Blush", "High");
-        CharacterSetFacialExpression(Player, "Eyes", "Dizzy");
+        // CharacterSetFacialExpression(Player, "Blush", "High");
+        // CharacterSetFacialExpression(Player, "Eyes", "Dizzy");
         SendAction(this.bigProtestBoopReactions[getRandomInt(this.bigProtestBoopReactions.length)]);
         this.boopShutdown = true;
         setTimeout(() => this.boopShutdown = false, 30000);

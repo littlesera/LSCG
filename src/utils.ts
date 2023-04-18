@@ -142,24 +142,36 @@ export function removeAllHooksByModule(module: ModuleCategory): boolean {
 	return true;
 }
 
-export function SendAction(action: string, senderName: string = '') {
-    ServerSend("ChatRoomChat", {Content: "Beep", Type: "Action", Dictionary: [{Tag: "Beep", Text: replace_template(action, senderName)}]});
+export function SendAction(action: string, sender: Character | null = null) {
+    ServerSend("ChatRoomChat", {Content: "Beep", Type: "Action", Dictionary: [{Tag: "Beep", Text: replace_template(action, sender)}]});
 }
 
 export function SendChat(msg: string) {
     ServerSend("ChatRoomChat", {Type: "Chat", Content: msg})
 }
 
-export function replace_template(text: string, source_name = '') {
-    let result = text
-    // result = result.replaceAll("%POSSESSIVE%", Player.BCAR.bcarSettings.genderDefault.capPossessive.toLocaleLowerCase())
-    // result = result.replaceAll("%CAP_POSSESSIVE%", Player.BCAR.bcarSettings.genderDefault.capPossessive)
-    // result = result.replaceAll("%PRONOUN%", Player.BCAR.bcarSettings.genderDefault.capPronoun.toLocaleLowerCase())
-    // result = result.replaceAll("%CAP_PRONOUN%", Player.BCAR.bcarSettings.genderDefault.capPronoun)
-    // result = result.replaceAll("%INTENSIVE%", Player.BCAR.bcarSettings.genderDefault.capIntensive.toLocaleLowerCase())
-    // result = result.replaceAll("%CAP_INTENSIVE%", Player.BCAR.bcarSettings.genderDefault.capIntensive)
+export function replace_template(text: string, source: Character | null = null) {
+    let result = text;
+	let pronounItem = InventoryGet(Player, "Pronouns");
+	let posessive = "Her";
+	let intensive = "Her"
+	let pronoun = "She";
+	if (pronounItem?.Asset.Name == "HeHim") {
+		posessive = "His";
+		intensive = "Him";
+		pronoun = "He";
+	}
+
+	let oppName = !!source ? CharacterNickname(source) : "";
+
+    result = result.replaceAll("%POSSESSIVE%", posessive.toLocaleLowerCase())
+    result = result.replaceAll("%CAP_POSSESSIVE%", posessive)
+    result = result.replaceAll("%PRONOUN%", pronoun.toLocaleLowerCase())
+    result = result.replaceAll("%CAP_PRONOUN%", pronoun)
+    result = result.replaceAll("%INTENSIVE%", intensive.toLocaleLowerCase())
+    result = result.replaceAll("%CAP_INTENSIVE%", intensive)
     result = result.replaceAll("%NAME%", CharacterNickname(Player)) //Does this works to print "Lilly"? -- it should, yes
-    result = result.replaceAll("%OPP_NAME%", source_name) // finally we can use the source name to make the substitution
+    result = result.replaceAll("%OPP_NAME%", oppName) // finally we can use the source name to make the substitution
 
     return result
 }

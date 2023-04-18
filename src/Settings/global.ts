@@ -23,11 +23,11 @@ export class GuiGlobal extends GuiSubscreen {
 
 		// Enabled	[true/false]
 		DrawText("Enabled:", GuiSubscreen.START_X, this.getYPos(1), "Black", "Gray");
-		DrawCheckbox(GuiSubscreen.START_X + 600, this.getYPos(1) - 32, 64, 64, "", this.settings.enabled ?? true);
+		DrawCheckbox(GuiSubscreen.START_X + 600, this.getYPos(1) - 32, 64, 64, "", this.settings.enabled ?? false);
 
 		// Blur While Edged	[true/false]
 		DrawText("Blur while edged:", GuiSubscreen.START_X, this.getYPos(2), "Black", "Gray");
-		DrawCheckbox(GuiSubscreen.START_X + 600, this.getYPos(2) - 32, 64, 64, "", this.settings.edgeBlur ?? true);
+		DrawCheckbox(GuiSubscreen.START_X + 600, this.getYPos(2) - 32, 64, 64, "", this.settings.edgeBlur ?? false);
 
 		MainCanvas.textAlign = prev;
 	}

@@ -1,7 +1,7 @@
 import { BaseModule } from 'base';
-import { CollarSettingsModel } from 'Settings/Models/collar';
+import { CollarModel, CollarSettingsModel } from 'Settings/Models/collar';
 import { ModuleCategory } from 'Settings/setting_definitions';
-import { settingsSave, parseMsgWords, SendAction, OnChat, getRandomInt, hookFunction, removeAllHooksByModule, OnActivity } from '../utils';
+import { settingsSave, parseMsgWords, SendAction, OnChat, getRandomInt, hookFunction, removeAllHooksByModule, OnActivity, OnAction } from '../utils';
 
 export class CollarModule extends BaseModule {
 
@@ -51,7 +51,7 @@ export class CollarModule extends BaseModule {
             if (!this.Enabled)
                 return;
             var lowerMsgWords = parseMsgWords(msg);
-            if (!!sender && (this.allowedChokeMembers.length == 0 || this.allowedChokeMembers.indexOf(sender?.MemberNumber ?? 0) >= 0)) {
+            if (this.CanActivate(sender)) {
                 if ((lowerMsgWords?.indexOf("tight") ?? -1) >= 0)
                     this.IncreaseCollarChoke();
                 else if ((lowerMsgWords?.indexOf("loose") ?? -1) >= 0)
@@ -59,11 +59,24 @@ export class CollarModule extends BaseModule {
             }
         });
 
-        // OnActivity(100, ModuleCategory.Collar, (data, sender, msg, meta) => {
-        //     if (!!data && data.Content == "ChatOther-ItemNeck-Choke") {
-        //         console.info("hand choke!")
-        //     }
-        // });
+        OnActivity(100, ModuleCategory.Collar, (data, sender, msg, meta) => {
+            if (!!data && data.Content == "ChatOther-ItemNeck-Choke" && Player.LSCG.MiscModule.handChokeEnabled) {
+                this.HandChoke(sender?.MemberNumber ?? 0);
+            }
+        });
+
+        OnAction(100, ModuleCategory.Collar, (data, sender, msg, meta) => {
+            if (!data.Dictionary || !data.Dictionary[2] || !data.Dictionary[3])
+                return;
+
+            var target = data.Dictionary[2]?.MemberNumber;
+            if (target != Player.MemberNumber)
+                return;
+
+            if ((msg == "ActionSwap" || "ActionRemove") && data.Dictionary[3]?.GroupName == "ItemNeck") {
+                this.ReleaseCollar();
+            }
+        })
 
         // event on room join
         hookFunction("ChatRoomSync", 4, (args, next) => {
@@ -94,7 +107,7 @@ export class CollarModule extends BaseModule {
         }, ModuleCategory.Collar);
 
         hookFunction("Player.HasTints", 5, (args, next) => {
-            if (this.Enabled && this.settings.chokeLevel > 2) return true;
+            if (this.Enabled && this.settings.chokeLevel > 2 && Player.ImmersionSettings?.AllowTints) return true;
             return next(args);
         }, ModuleCategory.Collar);
 
@@ -131,19 +144,10 @@ export class CollarModule extends BaseModule {
     }
 
     // Choke Collar Code
-
-    get allowedCollarUsers(): number[] {
-        return [
-            74298
-        ];
-    }
-
     get allowedChokeMembers(): number[] {
         let stringList = this.settings.allowedMembers.split(",");
         return stringList.filter(str => !!str && (+str === +str)).map(str => parseInt(str));
     }
-    // 96251,
-    // 60504
 
     chokeTimeout: number = 0;
     chokeTimer: number = 120000;
@@ -161,7 +165,37 @@ export class CollarModule extends BaseModule {
             this.chokeTimeout = setTimeout(() => f(), delay);
     }
 
+
+
+    handChokeTimeout: number = 0;
+    HandChoke(chokingMemberNumber: number) {
+        console.debug("Hand-choke event.. coming soon.");
+        return; // Not ready yet, needs big text refactor.
+        if (this.settings.chokeLevel == 4)
+            return;
+        else if (this.settings.chokeLevel < 1)
+            this.settings.chokeLevel == 1;
+        this.IncreaseCollarChoke();
+        this.handChokeTimeout = setTimeout(() => this.DecreaseCollarChoke(), 60000);
+    }
+
+    CanActivate(sender: Character | null) {
+        var currentCollarObj = InventoryGet(Player, "ItemNeck");
+        if (!currentCollarObj)
+            return false; // Cannot choke if no collar on
+        var currentCollar = <CollarModel>{
+            name: currentCollarObj.Craft?.Name ?? currentCollarObj.Asset.Name,
+            creator: currentCollarObj.Craft?.MemberNumber ?? 0
+        };
+        return !!sender &&
+                (this.allowedChokeMembers.length == 0 || this.allowedChokeMembers.indexOf(sender?.MemberNumber ?? 0) >= 0) &&
+                currentCollar.name == this.settings.collar?.name &&
+                currentCollar.creator == this.settings.collar?.creator
+    }
+
     IncreaseCollarChoke() {
+        if (isNaN(this.settings.chokeLevel))
+            this.settings.chokeLevel = 0;
         if (this.settings.chokeLevel == 4)
             return;
         this.settings.chokeLevel++;
@@ -172,19 +206,19 @@ export class CollarModule extends BaseModule {
             switch (this.settings.chokeLevel) {
                 case 1:
                     clearTimeout(this.chokeTimeout);
-                    SendAction("%NAME%'s eyes flutter as her collar starts to tighten around her neck with a quiet hiss.");
+                    SendAction("%NAME%'s eyes flutter as %POSSESSIVE% collar starts to tighten around %POSSESSIVE% neck with a quiet hiss.");
                     CharacterSetFacialExpression(Player, "Blush", "Low");
                     CharacterSetFacialExpression(Player, "Eyes", "Sad");
                     break;
                 case 2:
                     clearTimeout(this.chokeTimeout);
-                    SendAction("%NAME% gasps for air as her collar presses in around her neck with a hiss.");
+                    SendAction("%NAME% gasps for air as %POSSESSIVE% collar presses in around %POSSESSIVE% neck with a hiss.");
                     CharacterSetFacialExpression(Player, "Blush", "Medium");
                     CharacterSetFacialExpression(Player, "Eyes", "Surprised");
                     break;
                 case 3:
                     this.setChokeTimeout(() => this.DecreaseCollarChoke(), this.chokeTimer);
-                    SendAction("%NAME%'s face runs flush, choking as her collar hisses, barely allowing any air to her lungs.");
+                    SendAction("%NAME%'s face runs flush, choking as %POSSESSIVE% collar hisses, barely allowing any air to %POSSESSIVE% lungs.");
                     CharacterSetFacialExpression(Player, "Blush", "High");
                     CharacterSetFacialExpression(Player, "Eyes", "Scared");
                     break;
@@ -214,25 +248,25 @@ export class CollarModule extends BaseModule {
         switch (this.settings.chokeLevel) {
             case 3:
                 this.setChokeTimeout(() => this.DecreaseCollarChoke(), this.chokeTimer);
-                SendAction("%NAME% chokes and gasps desperately as her collar slowly releases some pressure.");
+                SendAction("%NAME% chokes and gasps desperately as %POSSESSIVE% collar slowly releases some pressure.");
                 CharacterSetFacialExpression(Player, "Blush", "High");
                 CharacterSetFacialExpression(Player, "Eyes", "Lewd");
                 break;
             case 2:
                 clearTimeout(this.chokeTimeout);
-                SendAction("%NAME%'s collar opens a little as she lets out a moan, gulping for air.");
+                SendAction("%NAME%'s collar opens a little as %PRONOUN% lets out a moan, gulping for air.");
                 CharacterSetFacialExpression(Player, "Blush", "Medium");
                 CharacterSetFacialExpression(Player, "Eyes", "Sad");
                 break;
             case 1:
                 clearTimeout(this.chokeTimeout);
-                SendAction("%NAME% whimpers thankfully as her collar reduces most of its pressure around her neck.");
+                SendAction("%NAME% whimpers thankfully as %POSSESSIVE% collar reduces most of its pressure around %POSSESSIVE% neck.");
                 CharacterSetFacialExpression(Player, "Blush", "Low");
                 CharacterSetFacialExpression(Player, "Eyes", "None");
                 break;
             case 0:
                 clearTimeout(this.chokeTimeout);
-                SendAction("%NAME% takes a deep breath as her collar releases its grip with a hiss.");
+                SendAction("%NAME% takes a deep breath as %POSSESSIVE% collar releases its grip with a hiss.");
                 CharacterSetFacialExpression(Player, "Blush", "None");
                 break;
             default:
@@ -242,6 +276,12 @@ export class CollarModule extends BaseModule {
         settingsSave();
     }
 
+    ReleaseCollar() {
+        if (this.settings.chokeLevel > 0)
+            SendAction("%NAME% gulps thankfully as the threat to %POSSESSIVE% airway is removed.")
+        this.ResetCollarChoke();
+    }
+
     ResetCollarChoke() {
         this.settings.chokeLevel = 0;
         clearTimeout(this.chokeTimeout);
@@ -249,7 +289,7 @@ export class CollarModule extends BaseModule {
     }
 
     StartPassout() {
-        SendAction("%NAME%'s eyes start to roll back, gasping and choking as her collar presses in tightly and completely with a menacing hiss.");
+        SendAction("%NAME%'s eyes start to roll back, gasping and choking as %POSSESSIVE% collar presses in tightly and completely with a menacing hiss.");
         CharacterSetFacialExpression(Player, "Blush", "VeryHigh");
         CharacterSetFacialExpression(Player, "Eyebrows", "Soft");
         CharacterSetFacialExpression(Player, "Eyes", "Lewd");
@@ -258,7 +298,7 @@ export class CollarModule extends BaseModule {
 
     Passout1() {
         this.IncreaseArousal();
-        SendAction("%NAME% chokes and spasms, her collar holding tight.");
+        SendAction("%NAME% chokes and spasms, %POSSESSIVE% collar holding tight.");
         CharacterSetFacialExpression(Player, "Blush", "Extreme");
         CharacterSetFacialExpression(Player, "Eyebrows", "Soft");
         CharacterSetFacialExpression(Player, "Eyes", "Lewd");
@@ -268,7 +308,7 @@ export class CollarModule extends BaseModule {
 
     Passout2() {
         this.IncreaseArousal();
-        SendAction("%NAME% convulses weakly, her eyes rolling back as the collar hisses impossibly tighter.");
+        SendAction("%NAME% convulses weakly, %POSSESSIVE% eyes rolling back as the collar hisses impossibly tighter.");
         AudioPlaySoundEffect("HydraulicLock");
         CharacterSetFacialExpression(Player, "Blush", "ShortBreath");
         CharacterSetFacialExpression(Player, "Eyebrows", "Soft");
@@ -279,7 +319,7 @@ export class CollarModule extends BaseModule {
 
     Passout3() {
         this.IncreaseArousal();
-        SendAction("As %NAME% collapses unconscious, her collar releases all of its pressure with a long hiss.");
+        SendAction("As %NAME% collapses unconscious, %POSSESSIVE% collar releases all of its pressure with a long hiss.");
         AudioPlaySoundEffect("Deflation");
         CharacterSetFacialExpression(Player, "Blush", "Medium");
         CharacterSetFacialExpression(Player, "Eyebrows", "Soft");
@@ -302,22 +342,22 @@ export class CollarModule extends BaseModule {
     ActivateChokeEvent() {
         const ChokeEvents = {
             low: [
-                "%NAME% coughs as her collar pushes against her throat.",
-                "%NAME% gulps as she feels the tight collar around her neck.",
-                "%NAME% shifts nervously in her tight collar.",
-                "%NAME% trembles, very conscious of the tight collar around her neck.",
-                "%NAME% huffs uncomfortably in her tight collar."
+                "%NAME% coughs as %POSSESSIVE% collar pushes against %POSSESSIVE% throat.",
+                "%NAME% gulps as %PRONOUN% feels the tight collar around %POSSESSIVE% neck.",
+                "%NAME% shifts nervously in %POSSESSIVE% tight collar.",
+                "%NAME% trembles, very conscious of the tight collar around %POSSESSIVE% neck.",
+                "%NAME% huffs uncomfortably in %POSSESSIVE% tight collar."
             ],
             mid: [
-                "%NAME% whimpers pleadingly as she struggles to take a full breath.",
-                "%NAME% chokes against her collar, moaning softly.",
-                "%NAME%'s eyes flutter weakly as her collar presses into her neck.",
-                "%NAME% tries to focus on breathing, each inhale an effort in her collar."
+                "%NAME% whimpers pleadingly as %PRONOUN% struggles to take a full breath.",
+                "%NAME% chokes against %POSSESSIVE% collar, moaning softly.",
+                "%NAME%'s eyes flutter weakly as %POSSESSIVE% collar presses into %POSSESSIVE% neck.",
+                "%NAME% tries to focus on breathing, each inhale an effort in %POSSESSIVE% collar."
             ],
             high: [
                 "%NAME% splutters and chokes, struggling to breath.",
                 "%NAME% grunts and moans, straining to breath.",
-                "%NAME%'s eyes have trouble focusing, as she chokes and gets lightheaded."
+                "%NAME%'s eyes have trouble focusing, as %PRONOUN% chokes and gets lightheaded."
             ]
         }
         switch (this.settings.chokeLevel) {

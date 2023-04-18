@@ -186,6 +186,7 @@ declare function ChatRoomPlayerIsAdmin(): boolean;
 declare function ChatRoomClearAllElements(): void;
 declare function ChatRoomListUpdate(list: number[], adding: boolean, number: number): void;
 declare function ChatRoomStart(Space: ChatRoomSpaceType, Game: string, LeaveRoom: string, LeaveSpace: string, Background: string, BackgroundTagList: any[]): void;
+declare function ChatRoomSendLocal(msg: string): void;
 
 // ChatAdmin.js
 declare var ChatAdminBackgroundIndex: number;

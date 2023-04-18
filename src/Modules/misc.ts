@@ -125,27 +125,27 @@ export class MiscModule extends BaseModule {
     }
 
     AddChloroform() {
-        SendAction("%NAME% eyes go wide as the sweet smell of ether fills their nostrils.");
+        SendAction("%NAME% eyes go wide as the sweet smell of ether fills %POSSESSIVE% nostrils.");
         CharacterSetFacialExpression(Player, "Eyes", "Scared");
         this.passoutTimer = setTimeout(() => this.StartPassout_1(), 20000);
     }
 
     StartPassout_1() {
-        SendAction("%NAME%, unable to continue holding their breath, takes a desparate gasp through the chemical-soaked cloth.");
+        SendAction("%NAME%, unable to continue holding %POSSESSIVE% breath, takes a desparate gasp through the chemical-soaked cloth.");
         CharacterSetFacialExpression(Player, "Eyes", "Lewd");
         clearTimeout(this.passoutTimer);
         this.passoutTimer = setTimeout(() => this.StartPassout_2(), 10000);
     }
 
     StartPassout_2() {
-        SendAction("%NAME%'s body trembles as the chloroform sinks deep into their mind.");
+        SendAction("%NAME%'s body trembles as the chloroform sinks deep into %POSSESSIVE% mind.");
         CharacterSetFacialExpression(Player, "Eyes", "VeryLewd");
         clearTimeout(this.passoutTimer);
         this.passoutTimer = setTimeout(() => this.Passout(), 5000);
     }
 
     Passout() {
-        SendAction("%NAME% slumps weakly as they slip into unconciousness.");
+        SendAction("%NAME% slumps weakly as %PRONOUN% slips into unconciousness.");
         this.SetSleepExpression();
         this.isChloroformed = true;
         clearTimeout(this.passoutTimer);
