@@ -23,7 +23,7 @@ export class GuiLipstick extends GuiSubscreen {
 
 		// Enable	[true/false]
 		DrawText("Enabled:", GuiSubscreen.START_X, this.getYPos(1), "Black", "Gray");
-		DrawCheckbox(GuiSubscreen.START_X + 600, this.getYPos(1) - 32, 64, 64, "", this.settings.enabled ?? true);
+		DrawCheckbox(GuiSubscreen.START_X + 600, this.getYPos(1) - 32, 64, 64, "", this.settings.enabled ?? false);
 
 		MainCanvas.textAlign = prev;
 	}

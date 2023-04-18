@@ -52,7 +52,7 @@ export class MainMenu extends GuiSubscreen {
 			const PX = Math.floor(i / 6);
 			const PY = i % 6;
 
-			const isDisabled = e.module == ModuleCategory.Collar && this.character.MemberNumber != 74298 // DISABLE CHOKE COLLAR FOR NON-SERA PLAYERS...
+			const isDisabled = e.module == ModuleCategory.Collar && this.allowedChokeMemberNumbers.indexOf(this.character.MemberNumber ?? 0) == -1;
 
 			if (!isDisabled) {
 				DrawButton(150 + 430 * PX, 190 + 120 * PY, 400, 90, "", isDisabled ? "#ddd" : "White", SETTING_ICONS[e.module],
@@ -69,6 +69,12 @@ export class MainMenu extends GuiSubscreen {
         // DrawText(`View changelog`, 1450 + 350 / 2, 855, "Black", "");
 	}
 
+	allowedChokeMemberNumbers = [
+		74298, // little sera
+		54618, // megg
+		122875 // fake sera
+	]
+
 	Click() {
 		if (MouseIn(1815, 75, 90, 90)) return this.Exit();
 
@@ -81,7 +87,7 @@ export class MainMenu extends GuiSubscreen {
 			const e = MAIN_MENU_ITEMS[i];
 			const PX = Math.floor(i / 6);
 			const PY = i % 6;
-            const isDisabled = e.module == ModuleCategory.Collar && this.character.MemberNumber != 74298 // DISABLE CHOKE COLLAR FOR NON-SERA PLAYERS...
+            const isDisabled = e.module == ModuleCategory.Collar && this.allowedChokeMemberNumbers.indexOf(this.character.MemberNumber ?? 0) == -1
 			if (MouseIn(150 + 430 * PX, 190 + 120 * PY, 400, 90) && !isDisabled) {
 				return CommonDynamicFunction("PreferenceSubscreenLSCG" + e.setting.constructor.name + "Load()");
 			}

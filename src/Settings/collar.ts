@@ -38,7 +38,7 @@ export class GuiCollar extends GuiSubscreen {
 
 		// Enabled 					[true/false]
 		DrawText("Enabled:", GuiSubscreen.START_X, this.getYPos(1), "Black", "Gray");
-		DrawCheckbox(GuiSubscreen.START_X + 600, this.getYPos(1) - 32, 64, 64, "", this.settings.enabled);
+		DrawCheckbox(GuiSubscreen.START_X + 600, this.getYPos(1) - 32, 64, 64, "", this.settings.enabled ?? false);
 
 		// Allowed Members 			[ID list]
 		DrawText("Allowed Members IDs:", GuiSubscreen.START_X, this.getYPos(2), "Black", "Gray");
@@ -55,6 +55,9 @@ export class GuiCollar extends GuiSubscreen {
 	Exit(): void {
 		this.settings.allowedMembers = ElementValue("collar_allowedMembers") ?? (Player.Ownership?.MemberNumber+"" ?? "");
 		ElementRemove("collar_allowedMembers");
+
+		if (!this.settings.chokeLevel)
+			this.settings.chokeLevel = 0;
 		super.Exit();
 	}
 
