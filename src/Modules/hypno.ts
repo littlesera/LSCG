@@ -33,6 +33,13 @@ export class HypnoModule extends BaseModule {
                 Action: () => {
                     ChatRoomSendLocal("Your current triggers are: " + this.triggers);
                 }
+            },
+            {
+                Tag: "cycle-trigger",
+                Description: ": force cycle to a new trigger word",
+                Action: () => {
+                    this.RollTriggerWord();
+                }
             }
         ]);
         
@@ -157,7 +164,7 @@ export class HypnoModule extends BaseModule {
 
     get triggers(): string[] {
         var overrideWords = this.settings.overrideWords?.split(",")?.filter(word => !!word).map(word => word.toLocaleLowerCase()) ?? [];
-        if (overrideWords.length > 0)
+        if (overrideWords.length > 0 && !this.settings.enableCycle)
             return overrideWords;
         else
             return [this.settings.trigger];
