@@ -240,6 +240,7 @@ export class HypnoModule extends BaseModule {
         this.settings.existingEye1Color = InventoryGet(Player, "Eyes")?.Color;
         this.settings.existingEye2Name = InventoryGet(Player, "Eyes2")?.Asset.Name;
         this.settings.existingEye2Color = InventoryGet(Player, "Eyes2")?.Color;
+        this.settings.existingEyeExpression = WardrobeGetExpression(Player)?.Eyes ?? null;
         settingsSave();
         this.EnforceEyes();
     }
@@ -278,6 +279,8 @@ export class HypnoModule extends BaseModule {
             eyes2.Asset = eyeAsset2  ?? <Asset>{};
             eyes2.Color = this.settings.existingEye2Color;
         }
+
+        CharacterSetFacialExpression(Player, "Eyes", this.settings.existingEyeExpression ?? null);
 
         ChatRoomCharacterUpdate(Player);
 

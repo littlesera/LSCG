@@ -132,6 +132,7 @@ declare function DialogInventoryBuild(C: Character, Offset?: number, redrawPrevi
 declare function DialogFindPlayer(KeyWord: string): string;
 declare function DialogDrawPoseMenu(): void;
 declare function DialogDrawExpressionMenu(): void;
+declare function WardrobeGetExpression(C: Character): ExpressionSet;
 
 // Drawing.js
 /** @deprecated */

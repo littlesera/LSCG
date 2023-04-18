@@ -1662,6 +1662,15 @@ interface PlayerCharacter extends Character {
 	LSCG: import("Settings/Models/settings").SettingsModel;
 }
 
+interface ExpressionSet {
+	Blush: string;
+	Emoticon: string;
+	Eyebrows: string;
+	Eyes: string;
+	Eyes2: string;
+	Fluids: string;
+}
+
 /** Pandora Player extension */
 interface PlayerCharacter {
 	Infiltration?: {

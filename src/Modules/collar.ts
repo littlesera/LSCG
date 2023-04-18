@@ -151,6 +151,10 @@ export class CollarModule extends BaseModule {
         return stringList.filter(str => !!str && (+str === +str)).map(str => parseInt(str));
     }
 
+    get totalChokeLevel(): number {
+        return Math.min(this.settings.chokeLevel + this.handChokeModifier, 4);
+    }
+
     chokeTimeout: number = 0;
     chokeTimer: number = 120000;
     chokeEventTimer: number = 60010;
@@ -158,6 +162,7 @@ export class CollarModule extends BaseModule {
     passout2Timer: number = 15000;
     passout3Timer: number = 10000;
     eventInterval: number = 0;
+    handChokeModifier: number = 0;
 
     setChokeTimeout(f: TimerHandler, delay: number | undefined) {
         clearTimeout(this.chokeTimeout);
@@ -167,51 +172,47 @@ export class CollarModule extends BaseModule {
             this.chokeTimeout = setTimeout(() => f(), delay);
     }
 
-
-
     handChokeTimeout: number = 0;
     HandChoke(chokingMember: Character) {
         console.debug("Hand-choke event.. coming soon.");
         
-        if (this.settings.chokeLevel == 4)
+        if (this.handChokeModifier >= 4)
             return;
-        else if (this.settings.chokeLevel < 1)
-            this.settings.chokeLevel = 1;
-        
-        this.settings.chokeLevel++;
+            
+        this.handChokeModifier = Math.min(this.handChokeModifier + 1, 4);
         this.IncreaseArousal();
         clearTimeout(this.handChokeTimeout);
         this.handChokeTimeout = setTimeout(() => this.ReleaseHandChoke(chokingMember), 60000);
 
-        if (this.settings.chokeLevel < 4) {
-            CharacterSetFacialExpression(Player, "Eyebrows", "Soft");
-            switch (this.settings.chokeLevel) {
-                case 2:
-                    clearTimeout(this.chokeTimeout);
-                    SendAction("%NAME% gasps for air as %OPP_NAME% tightens their grip on %POSSESSIVE% neck.", chokingMember);
-                    CharacterSetFacialExpression(Player, "Blush", "Medium");
-                    CharacterSetFacialExpression(Player, "Eyes", "Surprised");
-                    break;
-                case 3:
-                    this.setChokeTimeout(() => this.DecreaseCollarChoke(), this.chokeTimer);
-                    SendAction("%NAME%'s face runs flush, choking as %OPP_NAME% presses firmly against their neck, barely allowing any air to %POSSESSIVE% lungs.", chokingMember);
-                    CharacterSetFacialExpression(Player, "Blush", "High");
-                    CharacterSetFacialExpression(Player, "Eyes", "Scared");
-                    break;
-                default:
-                    break;
-            }
-        }
-        else if (this.settings.chokeLevel >= 4) {
-            this.settings.chokeLevel = 4;
-            this.StartPassout(false, chokingMember);
+        CharacterSetFacialExpression(Player, "Eyebrows", "Soft");
+        switch (this.totalChokeLevel) {
+            case 2:
+                clearTimeout(this.chokeTimeout);
+                SendAction("%NAME% gasps for air as %OPP_NAME% tightens their grip on %POSSESSIVE% neck.", chokingMember);
+                CharacterSetFacialExpression(Player, "Blush", "Medium");
+                CharacterSetFacialExpression(Player, "Eyes", "Surprised");
+                break;
+            case 3:
+                this.setChokeTimeout(() => this.DecreaseCollarChoke(), this.chokeTimer);
+                SendAction("%NAME%'s face runs flush, choking as %OPP_NAME% presses firmly against their neck, barely allowing any air to %POSSESSIVE% lungs.", chokingMember);
+                CharacterSetFacialExpression(Player, "Blush", "High");
+                CharacterSetFacialExpression(Player, "Eyes", "Scared");
+                break;
+            case 4:
+                this.StartPassout(false, chokingMember);
+                break;
+            default:
+                break;
         }
     }
 
-    ReleaseHandChoke(chokingMember: Character) {
-        if (this.settings.chokeLevel > 1) {
+    ReleaseHandChoke(chokingMember: Character | null) {
+        if (this.handChokeModifier > 0) {
             SendAction("%NAME% gasps in relief as %OPP_NAME% releases their pressure on %POSSESSIVE% neck.", chokingMember);
-            this.ResetChoke();
+            this.handChokeModifier = 0;
+            // If collar still tight, wait just a second and ping an event as a "helpful" reminder
+            if (this.settings.chokeLevel > 0)
+                setTimeout(() => this.ChokeEvent(), 1000);
         }
     }
 
@@ -234,37 +235,35 @@ export class CollarModule extends BaseModule {
             this.settings.chokeLevel = 0;
         if (this.settings.chokeLevel == 4)
             return;
-        this.settings.chokeLevel++;
+        this.settings.chokeLevel = Math.min(this.settings.chokeLevel + 1, 4);
         AudioPlaySoundEffect("HydraulicLock");
         this.IncreaseArousal();
-        if (this.settings.chokeLevel < 4) {
-            CharacterSetFacialExpression(Player, "Eyebrows", "Soft");
-            switch (this.settings.chokeLevel) {
-                case 1:
-                    clearTimeout(this.chokeTimeout);
-                    SendAction("%NAME%'s eyes flutter as %POSSESSIVE% collar starts to tighten around %POSSESSIVE% neck with a quiet hiss.");
-                    CharacterSetFacialExpression(Player, "Blush", "Low");
-                    CharacterSetFacialExpression(Player, "Eyes", "Sad");
-                    break;
-                case 2:
-                    clearTimeout(this.chokeTimeout);
-                    SendAction("%NAME% gasps for air as %POSSESSIVE% collar presses in around %POSSESSIVE% neck with a hiss.");
-                    CharacterSetFacialExpression(Player, "Blush", "Medium");
-                    CharacterSetFacialExpression(Player, "Eyes", "Surprised");
-                    break;
-                case 3:
-                    this.setChokeTimeout(() => this.DecreaseCollarChoke(), this.chokeTimer);
-                    SendAction("%NAME%'s face runs flush, choking as %POSSESSIVE% collar hisses, barely allowing any air to %POSSESSIVE% lungs.");
-                    CharacterSetFacialExpression(Player, "Blush", "High");
-                    CharacterSetFacialExpression(Player, "Eyes", "Scared");
-                    break;
-                default:
-                    break;
-            }
-        }
-        else if (this.settings.chokeLevel >= 4) {
-            this.settings.chokeLevel = 4;
-            this.StartPassout();
+
+        CharacterSetFacialExpression(Player, "Eyebrows", "Soft");
+        switch (this.totalChokeLevel) {
+            case 1:
+                clearTimeout(this.chokeTimeout);
+                SendAction("%NAME%'s eyes flutter as %POSSESSIVE% collar starts to tighten around %POSSESSIVE% neck with a quiet hiss.");
+                CharacterSetFacialExpression(Player, "Blush", "Low");
+                CharacterSetFacialExpression(Player, "Eyes", "Sad");
+                break;
+            case 2:
+                clearTimeout(this.chokeTimeout);
+                SendAction("%NAME% gasps for air as %POSSESSIVE% collar presses in around %POSSESSIVE% neck with a hiss.");
+                CharacterSetFacialExpression(Player, "Blush", "Medium");
+                CharacterSetFacialExpression(Player, "Eyes", "Surprised");
+                break;
+            case 3:
+                this.setChokeTimeout(() => this.DecreaseCollarChoke(), this.chokeTimer);
+                SendAction("%NAME%'s face runs flush, choking as %POSSESSIVE% collar hisses, barely allowing any air to %POSSESSIVE% lungs.");
+                CharacterSetFacialExpression(Player, "Blush", "High");
+                CharacterSetFacialExpression(Player, "Eyes", "Scared");
+                break;
+            case 4:
+                this.StartPassout();
+                break;
+            default:
+                break;
         }
 
         settingsSave();
@@ -281,7 +280,7 @@ export class CollarModule extends BaseModule {
         if (this.settings.chokeLevel > 0)
         this.setChokeTimeout(() => this.DecreaseCollarChoke(), this.chokeTimer);
 
-        switch (this.settings.chokeLevel) {
+        switch (this.totalChokeLevel) {
             case 3:
                 this.setChokeTimeout(() => this.DecreaseCollarChoke(), this.chokeTimer);
                 SendAction("%NAME% chokes and gasps desperately as %POSSESSIVE% collar slowly releases some pressure.");
@@ -368,15 +367,17 @@ export class CollarModule extends BaseModule {
         if (isCollar) {
             SendAction("As %NAME% collapses unconscious, %POSSESSIVE% collar releases all of its pressure with a long hiss.");
             AudioPlaySoundEffect("Deflation");
+            this.ResetChoke();
         }
-        else
+        else {
             SendAction("As %NAME% collapses unconscious, %OPP_NAME% releases %POSSESSIVE% neck.", chokingMember);
+            this.ReleaseHandChoke(chokingMember);
+        }
         CharacterSetFacialExpression(Player, "Blush", "Medium");
         CharacterSetFacialExpression(Player, "Eyebrows", "Soft");
         CharacterSetFacialExpression(Player, "Eyes", "Closed");
         CharacterSetFacialExpression(Player, "Mouth", "Closed");
         clearTimeout(this.chokeTimeout);
-        this.ResetChoke();
     }
 
     ChokeEvent() {
