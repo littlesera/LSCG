@@ -1,7 +1,7 @@
 import { BaseModule } from "base";
 import { BaseSettingsModel } from "Settings/Models/base";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule } from "../utils";
+import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, setOrIgnoreBlush } from "../utils";
 import { hypnoActivated } from "./hypno";
 
 export class BoopsModule extends BaseModule {
@@ -79,13 +79,13 @@ export class BoopsModule extends BaseModule {
     }
     
     NormalBoopReact() {
-        //CharacterSetFacialExpression(Player, "Blush", "Low");
+        setOrIgnoreBlush("Low");
         SendAction(this.normalBoopReactions[getRandomInt(this.normalBoopReactions.length)]);
     }
     
     ProtestBoopReact(booper: Character) {
-        // CharacterSetFacialExpression(Player, "Blush", "Medium");
         // CharacterSetFacialExpression(Player, "Eyes", "Daydream");
+        setOrIgnoreBlush("Medium");
     
         if (Player.IsRestrained())
             SendAction(this.boundBoopReactions[getRandomInt(this.boundBoopReactions.length)]);
@@ -94,8 +94,8 @@ export class BoopsModule extends BaseModule {
     }
     
     BigProtestBoopReact(booper: Character) {
-        // CharacterSetFacialExpression(Player, "Blush", "High");
         // CharacterSetFacialExpression(Player, "Eyes", "Dizzy");
+        setOrIgnoreBlush("High");
         SendAction(this.bigProtestBoopReactions[getRandomInt(this.bigProtestBoopReactions.length)]);
         this.boopShutdown = true;
         setTimeout(() => this.boopShutdown = false, 30000);

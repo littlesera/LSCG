@@ -1,7 +1,7 @@
 import { BaseModule } from 'base';
 import { CollarModel, CollarSettingsModel } from 'Settings/Models/collar';
 import { ModuleCategory } from 'Settings/setting_definitions';
-import { settingsSave, parseMsgWords, SendAction, OnChat, getRandomInt, hookFunction, removeAllHooksByModule, OnActivity, OnAction } from '../utils';
+import { settingsSave, parseMsgWords, SendAction, OnChat, getRandomInt, hookFunction, removeAllHooksByModule, OnActivity, OnAction, setOrIgnoreBlush } from '../utils';
 
 export class CollarModule extends BaseModule {
 
@@ -195,19 +195,19 @@ export class CollarModule extends BaseModule {
             case 1:
                 clearTimeout(this.chokeTimeout);
                 SendAction("%NAME%'s eyes flutter as %OPP_NAME% wraps their hand around %POSSESSIVE% neck.", chokingMember);
-                CharacterSetFacialExpression(Player, "Blush", "Low");
+                setOrIgnoreBlush("Low");
                 CharacterSetFacialExpression(Player, "Eyes", "Sad");
                 break;
             case 2:
                 clearTimeout(this.chokeTimeout);
                 SendAction("%NAME% gasps for air as %OPP_NAME% tightens their grip on %POSSESSIVE% neck.", chokingMember);
-                CharacterSetFacialExpression(Player, "Blush", "Medium");
+                setOrIgnoreBlush("Medium");
                 CharacterSetFacialExpression(Player, "Eyes", "Surprised");
                 break;
             case 3:
                 this.setChokeTimeout(() => this.DecreaseCollarChoke(), this.chokeTimer);
                 SendAction("%NAME%'s face runs flush, choking as %OPP_NAME% presses firmly against their neck, barely allowing any air to %POSSESSIVE% lungs.", chokingMember);
-                CharacterSetFacialExpression(Player, "Blush", "High");
+                setOrIgnoreBlush("High");
                 CharacterSetFacialExpression(Player, "Eyes", "Scared");
                 break;
             case 4:
@@ -256,19 +256,19 @@ export class CollarModule extends BaseModule {
             case 1:
                 clearTimeout(this.chokeTimeout);
                 SendAction("%NAME%'s eyes flutter as %POSSESSIVE% collar starts to tighten around %POSSESSIVE% neck with a quiet hiss.");
-                CharacterSetFacialExpression(Player, "Blush", "Low");
+                setOrIgnoreBlush("Low");
                 CharacterSetFacialExpression(Player, "Eyes", "Sad");
                 break;
             case 2:
                 clearTimeout(this.chokeTimeout);
                 SendAction("%NAME% gasps for air as %POSSESSIVE% collar presses in around %POSSESSIVE% neck with a hiss.");
-                CharacterSetFacialExpression(Player, "Blush", "Medium");
+                setOrIgnoreBlush("Medium");
                 CharacterSetFacialExpression(Player, "Eyes", "Surprised");
                 break;
             case 3:
                 this.setChokeTimeout(() => this.DecreaseCollarChoke(), this.chokeTimer);
                 SendAction("%NAME%'s face runs flush, choking as %POSSESSIVE% collar hisses, barely allowing any air to %POSSESSIVE% lungs.");
-                CharacterSetFacialExpression(Player, "Blush", "High");
+                setOrIgnoreBlush("High");
                 CharacterSetFacialExpression(Player, "Eyes", "Scared");
                 break;
             case 4:
@@ -296,25 +296,25 @@ export class CollarModule extends BaseModule {
             case 3:
                 this.setChokeTimeout(() => this.DecreaseCollarChoke(), this.chokeTimer);
                 SendAction("%NAME% chokes and gasps desperately as %POSSESSIVE% collar slowly releases some pressure.");
-                CharacterSetFacialExpression(Player, "Blush", "High");
+                setOrIgnoreBlush("High");
                 CharacterSetFacialExpression(Player, "Eyes", "Lewd");
                 break;
             case 2:
                 clearTimeout(this.chokeTimeout);
                 SendAction("%NAME%'s collar opens a little as %PRONOUN% lets out a moan, gulping for air.");
-                CharacterSetFacialExpression(Player, "Blush", "Medium");
+                setOrIgnoreBlush("Medium");
                 CharacterSetFacialExpression(Player, "Eyes", "Sad");
                 break;
             case 1:
                 clearTimeout(this.chokeTimeout);
                 SendAction("%NAME% whimpers thankfully as %POSSESSIVE% collar reduces most of its pressure around %POSSESSIVE% neck.");
-                CharacterSetFacialExpression(Player, "Blush", "Low");
+                setOrIgnoreBlush("Low");
                 CharacterSetFacialExpression(Player, "Eyes", "None");
                 break;
             case 0:
                 clearTimeout(this.chokeTimeout);
                 SendAction("%NAME% takes a deep breath as %POSSESSIVE% collar releases its grip with a hiss.");
-                CharacterSetFacialExpression(Player, "Blush", "None");
+                setOrIgnoreBlush("Default");
                 break;
             default:
                 break;
@@ -340,7 +340,7 @@ export class CollarModule extends BaseModule {
             SendAction("%NAME%'s eyes start to roll back, gasping and choking as %POSSESSIVE% collar presses in tightly and completely with a menacing hiss.");
         else
             SendAction("%NAME%'s eyes start to roll back with a groan as %OPP_NAME% completely closes %POSSESSIVE% airway with their hand.", chokingMember);
-        CharacterSetFacialExpression(Player, "Blush", "VeryHigh");
+        setOrIgnoreBlush("VeryHigh");
         CharacterSetFacialExpression(Player, "Eyebrows", "Soft");
         CharacterSetFacialExpression(Player, "Eyes", "Lewd");
         this.setChokeTimeout(() => this.Passout1(isCollar, chokingMember), this.passout1Timer);
@@ -352,7 +352,7 @@ export class CollarModule extends BaseModule {
             SendAction("%NAME% chokes and spasms, %POSSESSIVE% collar holding tight.");
         else
             SendAction("%NAME% chokes and spasms, %OPP_NAME% gripping %POSSESSIVE% throat relentlessly.", chokingMember);
-        CharacterSetFacialExpression(Player, "Blush", "Extreme");
+        setOrIgnoreBlush("Extreme");
         CharacterSetFacialExpression(Player, "Eyebrows", "Soft");
         CharacterSetFacialExpression(Player, "Eyes", "Lewd");
         CharacterSetFacialExpression(Player, "Mouth", "HalfOpen");
@@ -367,7 +367,7 @@ export class CollarModule extends BaseModule {
         }
         else
             SendAction("%NAME% convulses weakly with a moan, %POSSESSIVE% eyes rolling back as %OPP_NAME% clenches around their throat even tighter.", chokingMember);
-        CharacterSetFacialExpression(Player, "Blush", "ShortBreath");
+        setOrIgnoreBlush("ShortBreath");
         CharacterSetFacialExpression(Player, "Eyebrows", "Soft");
         CharacterSetFacialExpression(Player, "Eyes", "VeryLewd");
         CharacterSetFacialExpression(Player, "Mouth", "HalfOpen");
@@ -385,7 +385,7 @@ export class CollarModule extends BaseModule {
             SendAction("As %NAME% collapses unconscious, %OPP_NAME% releases %POSSESSIVE% neck.", chokingMember);
             this.ReleaseHandChoke(chokingMember);
         }
-        CharacterSetFacialExpression(Player, "Blush", "Medium");
+        setOrIgnoreBlush("Medium");
         CharacterSetFacialExpression(Player, "Eyebrows", "Soft");
         CharacterSetFacialExpression(Player, "Eyes", "Closed");
         CharacterSetFacialExpression(Player, "Mouth", "Closed");

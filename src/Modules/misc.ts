@@ -1,7 +1,7 @@
 import { BaseModule } from "base";
 import { MiscSettingsModel } from "Settings/Models/base";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { getRandomInt, hookFunction, OnAction, OnActivity, removeAllHooksByModule, SendAction } from "../utils";
+import { getRandomInt, hookFunction, OnAction, OnActivity, removeAllHooksByModule, SendAction, setOrIgnoreBlush } from "../utils";
 
 export class MiscModule extends BaseModule {
     get settings(): MiscSettingsModel {
@@ -174,7 +174,7 @@ export class MiscModule extends BaseModule {
         this.isChloroformed = false;
         clearInterval(this.eyesInterval);
         CharacterSetFacialExpression(Player, "Eyes", "Dazed");
-        CharacterSetFacialExpression(Player, "Blush", "Medium");
+        setOrIgnoreBlush("Medium");
     }
 
     SetSleepExpression() {
