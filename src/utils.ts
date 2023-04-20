@@ -54,6 +54,28 @@ export function getCharacter(memberNumber: number) {
 	return ChatRoomCharacter.find(c => c.MemberNumber == memberNumber) ?? null;
 }
 
+export function setOrIgnoreBlush(blushLevel: string) {
+	const blushLevels: string[] = [
+		"Default",
+		"Low",
+		"Medium",
+		"High",
+		"VeryHigh",
+		"Extreme",
+		"ShortBreath"
+	];
+
+	var currentBlush = WardrobeGetExpression(Player).Blush ?? "Default";
+	var ix = blushLevels.indexOf(currentBlush);
+	var newIx = blushLevels.indexOf(blushLevel);
+	if (newIx > ix) {
+		if (blushLevel == "Default")
+			CharacterSetFacialExpression(Player, "Blush", null);
+		else
+			CharacterSetFacialExpression(Player, "Blush", blushLevel);
+	}
+}
+
 export function OnChat(priority: any, module: ModuleCategory, callback: (data: any, sender: Character | null, msg: string, metadata: any) => void) {
     hookFunction("ChatRoomMessage", priority, (args, next) => {
         var data = args[0];

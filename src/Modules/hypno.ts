@@ -1,7 +1,7 @@
 import { BaseModule } from 'base';
 import { HypnoSettingsModel } from 'Settings/Models/hypno';
 import { ModuleCategory } from 'Settings/setting_definitions';
-import { settingsSave, parseMsgWords, OnChat, OnAction, OnActivity, SendAction, getRandomInt, hookFunction, removeAllHooksByModule, callOriginal } from '../utils';
+import { settingsSave, parseMsgWords, OnChat, OnAction, OnActivity, SendAction, getRandomInt, hookFunction, removeAllHooksByModule, callOriginal, setOrIgnoreBlush } from '../utils';
 
 export class HypnoModule extends BaseModule {
     get settings(): HypnoSettingsModel {
@@ -235,7 +235,7 @@ export class HypnoModule extends BaseModule {
             SendAction("%NAME%'s eyes glaze over, %POSSESSIVE% posture slumping weakly as %PRONOUN% loses control of %POSSESSIVE% body.");
         
         this.SetEyes();
-        CharacterSetFacialExpression(Player, "Blush", "Medium");
+        setOrIgnoreBlush("Medium");
         CharacterSetFacialExpression(Player, "Eyebrows", "Lowered");
         CharacterSetFacialExpression(Player, "Eyes", "Dazed");
         CharacterSetFacialExpression(Player, "Fluids", "DroolLow");    

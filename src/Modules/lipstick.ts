@@ -1,6 +1,6 @@
 import { BaseModule } from "base";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { OnActivity, removeAllHooksByModule } from "../utils";
+import { OnActivity, removeAllHooksByModule, setOrIgnoreBlush } from "../utils";
 
 export class LipstickModule extends BaseModule {
     load(): void {
@@ -157,18 +157,18 @@ export class LipstickModule extends BaseModule {
                     status.cheek1 = true;
                 else
                     status.cheek2 = true;
-                    CharacterSetFacialExpression(Player, "Blush", "Low");
+                    setOrIgnoreBlush("Low");
                 break;
             case "forehead" :
                 status.forehead = true;
-                CharacterSetFacialExpression(Player, "Blush", "Low");
+                setOrIgnoreBlush("Low");
                 break;
             case "neck" :
                 if (!status.neck1)
                     status.neck1 = true;
                 else
                     status.cheek2 = true;
-                CharacterSetFacialExpression(Player, "Blush", "Medium");
+                setOrIgnoreBlush("Medium");
                 break;
             default :
                 break;
