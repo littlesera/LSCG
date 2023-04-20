@@ -60,7 +60,13 @@ export class CollarModule extends BaseModule {
         });
 
         OnActivity(100, ModuleCategory.Collar, (data, sender, msg, meta) => {
-            if (!!data && !!sender && data.Content == "ChatOther-ItemNeck-Choke" && Player.LSCG.MiscModule.handChokeEnabled) {
+            let target = data.Dictionary.find((d: any) => d.Tag == "TargetCharacter");
+            if (!!data && 
+                !!sender && 
+                data.Content == "ChatOther-ItemNeck-Choke" && 
+                Player.LSCG.MiscModule.handChokeEnabled &&
+                !!target && 
+                target.MemberNumber == Player.MemberNumber) {
                 this.HandChoke(sender);
             }
         });
