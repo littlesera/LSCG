@@ -42,3 +42,9 @@ javascript:(()=>{fetch('https://littlesera.github.io/LSCG/bundle.js').then(r=>r.
 - Simple reactions to being booped in the nose
 - If booped too rapidly, reaction emotes will evolve to reflect this, respecting if you are bound or not
 - If continued to be booped your nose may 'overload' and pause reactions for a period of time
+
+### Hand Choking
+- Adds an escalating series of events if repeatedly choked by others.
+- Enabled under Miscellaneous, off by default.
+- Will automatically release after a minute if not choked further.
+- Repeated actions will lead to passout and release.
