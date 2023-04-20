@@ -192,6 +192,12 @@ export class CollarModule extends BaseModule {
 
         CharacterSetFacialExpression(Player, "Eyebrows", "Soft");
         switch (this.totalChokeLevel) {
+            case 1:
+                clearTimeout(this.chokeTimeout);
+                SendAction("%NAME%'s eyes flutter as %OPP_NAME% wraps their hand around %POSSESSIVE% neck.", chokingMember);
+                CharacterSetFacialExpression(Player, "Blush", "Low");
+                CharacterSetFacialExpression(Player, "Eyes", "Sad");
+                break;
             case 2:
                 clearTimeout(this.chokeTimeout);
                 SendAction("%NAME% gasps for air as %OPP_NAME% tightens their grip on %POSSESSIVE% neck.", chokingMember);
