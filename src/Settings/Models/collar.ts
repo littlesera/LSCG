@@ -4,6 +4,8 @@ export interface CollarSettingsModel extends BaseSettingsModel {
     chokeLevel: number;
     allowedMembers: string;
     collar: CollarModel;
+    tightTrigger: string;
+    looseTrigger: string;
 }
 
 export interface CollarModel {

@@ -52,9 +52,9 @@ export class CollarModule extends BaseModule {
                 return;
             var lowerMsgWords = parseMsgWords(msg);
             if (this.CanActivate(sender)) {
-                if ((lowerMsgWords?.indexOf("tight") ?? -1) >= 0)
+                if ((lowerMsgWords?.indexOf(this.settings.tightTrigger ?? "tight") ?? -1) >= 0)
                     this.IncreaseCollarChoke();
-                else if ((lowerMsgWords?.indexOf("loose") ?? -1) >= 0)
+                else if ((lowerMsgWords?.indexOf(this.settings.looseTrigger ?? "loose") ?? -1) >= 0)
                     this.DecreaseCollarChoke();
             }
         });
