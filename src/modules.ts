@@ -5,6 +5,7 @@ import { BoopsModule } from './Modules/boops';
 import { MiscModule } from './Modules/misc';
 import { LipstickModule } from './Modules/lipstick';
 import { GUI } from "Settings/settingUtils";
+import { ActivityModule } from "Modules/activities";
 
 const modules: BaseModule[] = [];
 
@@ -20,6 +21,7 @@ export function init_modules(): boolean {
 	registerModule(new BoopsModule());
 	registerModule(new MiscModule());
 	registerModule(new LipstickModule());
+	registerModule(new ActivityModule());
 
 	for (const m of modules) {
 		m.init();
