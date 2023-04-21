@@ -238,7 +238,7 @@ type AssetGroupItemName =
 	'ItemMouth3' | 'ItemNeck' | 'ItemNeckAccessories' | 'ItemNeckRestraints' |
 	'ItemNipples' | 'ItemNipplesPiercings' | 'ItemNose' | 'ItemPelvis' |
 	'ItemTorso' | 'ItemTorso2'| 'ItemVulva' | 'ItemVulvaPiercings' |
-	'ItemHandheld' | 'ItemScript' |
+	'ItemHandheld' | 'ItemScript' | 'ItemPenis' |
 
 	'ItemHidden' /* TODO: investigate, not a real group */
 	;

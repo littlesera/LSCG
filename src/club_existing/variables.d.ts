@@ -3,12 +3,15 @@
 
 // Female3DCG.js
 declare var PoseFemale3DCG: Pose[];
+declare var ActivityFemale3DCG: Activity[];
 
 // Activity.js
 declare var ActivityOrgasmRuined: boolean;
 declare var ActivityOrgasmGameResistCount: number;
+declare var ActivityDictionary: string[][];
 declare function ActivitySetArousal(C: Character, Progress: number): void;
 declare function ActivityOrgasmPrepare(C: Character, Bypass?: boolean): void;
+declare function ActivityDictionaryText(KeyWord: string): string;
 
 // AfkTimer.js
 declare var AfkTimerEventsList: string[];
@@ -73,6 +76,7 @@ declare function CommonSetScreen(NewModule: string, NewScreen: string): void;
 declare function CommonConvertStringToArray(s: string): number[];
 declare function CommonDynamicFunction(funcName: string): void;
 declare function CommonIsNumeric(val: string | undefined): boolean;
+declare function CommonStringSubstitute(msg: string, substitution: [string,string][]): string;
 
 // FriendList.js
 declare var FriendListBeepTarget: number | null;
@@ -188,6 +192,10 @@ declare function ChatRoomClearAllElements(): void;
 declare function ChatRoomListUpdate(list: number[], adding: boolean, number: number): void;
 declare function ChatRoomStart(Space: ChatRoomSpaceType, Game: string, LeaveRoom: string, LeaveSpace: string, Background: string, BackgroundTagList: any[]): void;
 declare function ChatRoomSendLocal(msg: string): void;
+declare function ChatRoomMessageRunExtractors(data: IChatRoomMessage, SenderCharacter: Character): {
+	metadata: IChatRoomMessageMetadata;
+	substitutions: [string, string][];
+};
 
 // ChatAdmin.js
 declare var ChatAdminBackgroundIndex: number;
