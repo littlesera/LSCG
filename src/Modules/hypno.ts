@@ -73,7 +73,8 @@ export class HypnoModule extends BaseModule {
             if (!!target && target.MemberNumber == Player.MemberNumber) {
                 if (data.Content == "ChatOther-ItemNose-Pet" && triggerActivated)
                     this.TriggerRestoreBoop();
-                else if (data.Content == "ChatOther-ItemPelvis-MassageHands" && !triggerActivated && Player.MemberNumber == 71233) {
+                // Special tummy rub hypno action for Bean
+                else if ((data.Content == "ChatOther-ItemPelvis-MassageHands" || data.Content == "ChatOther-ItemPelvis-Caress") && !triggerActivated && Player.MemberNumber == 71233) {
                     this.DelayedTriggerWord(sender?.MemberNumber);
                 }
             }
