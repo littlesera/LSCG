@@ -50,7 +50,7 @@ export class ActivityModule extends BaseModule {
             Activity: <Activity>{
                 Name: "Hug",
                 MaxProgress: 50,
-                Prerequisite: ["UseHands"]
+                Prerequisite: ["UseArms"]
             },
             Targets: [
                 <ActivityTarget>{
