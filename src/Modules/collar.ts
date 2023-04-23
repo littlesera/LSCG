@@ -1,7 +1,7 @@
 import { BaseModule } from 'base';
 import { CollarModel, CollarSettingsModel } from 'Settings/Models/collar';
 import { ModuleCategory } from 'Settings/setting_definitions';
-import { settingsSave, parseMsgWords, SendAction, OnChat, getRandomInt, hookFunction, removeAllHooksByModule, OnActivity, OnAction, setOrIgnoreBlush } from '../utils';
+import { settingsSave, parseMsgWords, SendAction, OnChat, getRandomInt, hookFunction, removeAllHooksByModule, OnActivity, OnAction, setOrIgnoreBlush, getCharacter } from '../utils';
 
 export class CollarModule extends BaseModule {
 
@@ -82,6 +82,21 @@ export class CollarModule extends BaseModule {
             if ((msg == "ActionSwap" || "ActionRemove") && data.Dictionary[3]?.GroupName == "ItemNeck") {
                 this.ReleaseCollar();
             }
+        })
+
+        // Detect if choking member is bound
+        OnAction(100, ModuleCategory.Misc, (data, sender, msg, metadata) => {
+            if (!data.Dictionary || !data.Dictionary[2] || !data.Dictionary[3])
+                return;
+
+            var target = data.Dictionary[2]?.MemberNumber;
+            var targetMember = getCharacter(target);
+            if (target == this.handChokingMember && msg == "ActionUse") {
+                if (data.Dictionary[3]?.GroupName == "ItemHands" || data.Dictionary[3]?.GroupName == "ItemArms") {
+                    this.ReleaseHandChoke(targetMember);
+                }                
+            }
+            return;
         })
 
         // event on room join
@@ -169,6 +184,7 @@ export class CollarModule extends BaseModule {
     passout3Timer: number = 10000;
     eventInterval: number = 0;
     handChokeModifier: number = 0;
+    handChokingMember: number = 0;
 
     setChokeTimeout(f: TimerHandler, delay: number | undefined) {
         clearTimeout(this.chokeTimeout);
@@ -185,6 +201,7 @@ export class CollarModule extends BaseModule {
         if (this.handChokeModifier >= 4)
             return;
             
+        this.handChokingMember = chokingMember.MemberNumber ?? 0;
         this.handChokeModifier = Math.min(this.handChokeModifier + 1, 4);
         this.IncreaseArousal();
         clearTimeout(this.handChokeTimeout);
@@ -222,6 +239,9 @@ export class CollarModule extends BaseModule {
         if (this.handChokeModifier > 0) {
             SendAction("%NAME% gasps in relief as %OPP_NAME% releases their pressure on %POSSESSIVE% neck.", chokingMember);
             this.handChokeModifier = 0;
+            if (this.totalChokeLevel < 4) {
+                clearTimeout(this.chokeTimeout);
+            }
             // If collar still tight, wait just a second and ping an event as a "helpful" reminder
             if (this.settings.chokeLevel > 0)
                 setTimeout(() => this.ChokeEvent(), 1000);
