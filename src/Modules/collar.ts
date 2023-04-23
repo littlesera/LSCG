@@ -99,12 +99,12 @@ export class CollarModule extends BaseModule {
             //     return next(args);
             // Prevent speech at choke level 4
             if (args[0] == "ChatRoomChat" && args[1].Type == "Chat"){
-                if (this.settings.chokeLevel >= 4) {
+                if (this.totalChokeLevel >= 4) {
                     SendAction("%NAME%'s mouth moves silently.");
                     return null;
                 }
-                else if (this.settings.chokeLevel > 1) {
-                    args[1].Content = SpeechGarbleByGagLevel((this.settings.chokeLevel-1)**2, args[1].Content);
+                else if (this.totalChokeLevel > 1) {
+                    args[1].Content = SpeechGarbleByGagLevel((this.totalChokeLevel - 1)**2, args[1].Content);
                     return next(args);
                 }
                 else
@@ -115,23 +115,23 @@ export class CollarModule extends BaseModule {
         }, ModuleCategory.Collar);
 
         hookFunction("Player.HasTints", 5, (args, next) => {
-            if (this.settings.chokeLevel > 2 && Player.ImmersionSettings?.AllowTints) return true;
+            if (this.totalChokeLevel > 2 && Player.ImmersionSettings?.AllowTints) return true;
             return next(args);
         }, ModuleCategory.Collar);
 
         hookFunction("Player.GetTints", 5, (args, next) => {
             // if (!this.Enabled)
             //     return next(args);
-            if (this.settings.chokeLevel == 3) return [{r: 0, g: 0, b: 0, a: 0.2}];
-            else if (this.settings.chokeLevel == 4) return [{r: 0, g: 0, b: 0, a: 0.6}];
+            if (this.totalChokeLevel == 3) return [{r: 0, g: 0, b: 0, a: 0.2}];
+            else if (this.totalChokeLevel == 4) return [{r: 0, g: 0, b: 0, a: 0.6}];
             return next(args);
         }, ModuleCategory.Collar);
             
         hookFunction("Player.GetBlurLevel", 5, (args, next) => {
             // if (!this.Enabled)
             //     return next(args);
-            if (this.settings.chokeLevel == 3) return 2;
-            if (this.settings.chokeLevel == 4) return 6;
+            if (this.totalChokeLevel == 3) return 2;
+            if (this.totalChokeLevel == 4) return 6;
             return next(args);
         }, ModuleCategory.Collar);
 
