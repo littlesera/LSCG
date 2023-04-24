@@ -80,7 +80,7 @@ export class ActivityModule extends BaseModule {
         this.AddActivity({
             Activity: <Activity> {
                 Name: "RubPenis",
-                MaxProgress: 80,
+                MaxProgress: 95,
                 Prerequisite: ["ZoneAccessible", "ZoneNaked", "CanUsePenis", "HasPenis", "Needs-PenetrateItem"]
             },
             Targets: [
@@ -142,10 +142,18 @@ export class ActivityModule extends BaseModule {
     }
 
     AddActivity(bundle: ActivityBundle) {
+        if (bundle.Targets.length <= 0)
+            return;
+
         let activity = bundle.Activity;
         activity.Target = activity.Target ?? [];
         activity.Prerequisite = activity.Prerequisite ?? [];
         activity.Name = "LSCG_" + activity.Name;
+
+        ActivityDictionary.push([
+            "Activity"+activity.Name,
+            bundle.Targets[0].TargetLabel ?? activity.Name.substring(5)
+        ])
 
         bundle.Targets.forEach(tgt => {
             tgt.TargetLabel = tgt.TargetLabel ?? activity.Name.substring(5);
