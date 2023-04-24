@@ -3,6 +3,12 @@ import { CollarModel, CollarSettingsModel } from 'Settings/Models/collar';
 import { ModuleCategory } from 'Settings/setting_definitions';
 import { settingsSave, parseMsgWords, SendAction, OnChat, getRandomInt, hookFunction, removeAllHooksByModule, OnActivity, OnAction, setOrIgnoreBlush, getCharacter } from '../utils';
 
+enum PassoutReason {
+    COLLAR,
+    HAND,
+    PLUGS
+}
+
 export class CollarModule extends BaseModule {
 
     get settings(): CollarSettingsModel {
@@ -60,7 +66,7 @@ export class CollarModule extends BaseModule {
         });
 
         OnActivity(100, ModuleCategory.Collar, (data, sender, msg, meta) => {
-            let target = data.Dictionary.find((d: any) => d.Tag == "TargetCharacter");
+            let target = data.Dictionary?.find((d: any) => d.Tag == "TargetCharacter");
             if (!!data && 
                 !!sender && 
                 data.Content == "ChatOther-ItemNeck-Choke" && 
@@ -95,6 +101,40 @@ export class CollarModule extends BaseModule {
                 if (data.Dictionary[3]?.GroupName == "ItemHands" || data.Dictionary[3]?.GroupName == "ItemArms") {
                     this.ReleaseHandChoke(targetMember);
                 }                
+            }
+            return;
+        })
+
+        // Check for heavy gag + nose plugs
+        OnAction(100, ModuleCategory.Misc, (data, sender, msg, metadata) => {
+            let airwaySlots = ["ItemMouth", "ItemMouth2", "ItemMouth3", "ItemNose"];
+            let messagesToCheck = [
+                "ActionUse",
+                "ActionSwap",
+                "ActionRemove",
+                "DildoPlugGagMouthSet",
+                "PlugGagMouthSet",
+                "PumpGagpumpsTo",
+                "ItemMouthFuturisticHarnessBallGagSet",
+                "ItemMouthFuturisticPanelGagSet"
+            ]
+            
+            var target = data.Dictionary?.find((dictItem: { Tag: string; }) => dictItem.Tag == "DestinationCharacter")?.MemberNumber;
+            var targetGroup = data.Dictionary?.find((dictItem: { Tag: string; }) => dictItem.Tag == "FocusAssetGroup")?.AssetGroupName;
+
+            if (target == Player.MemberNumber &&
+                (!targetGroup || airwaySlots.indexOf(targetGroup) > -1) &&
+                messagesToCheck.some(x => msg.startsWith(x))) {
+                let gagLevel = SpeechGetTotalGagLevel(Player, true);
+                let isNosePlugged = InventoryGet(Player, "ItemNose")?.Asset.Name == "NosePlugs";
+                if (gagLevel >= 8 && isNosePlugged) {
+                    this.isPluggedUp = true;
+                    this.StartPassout(PassoutReason.PLUGS);
+                } else {
+                    this.isPluggedUp = false;
+                    if (this.isPassingOut && this.settings.chokeLevel < 4)
+                        this.ResetPlugs();
+                }
             }
             return;
         })
@@ -173,7 +213,10 @@ export class CollarModule extends BaseModule {
     }
 
     get totalChokeLevel(): number {
-        return Math.min(this.settings.chokeLevel + this.handChokeModifier, 4);
+        if (this.isPluggedUp)
+            return 4;
+        else
+            return Math.min(this.settings.chokeLevel + this.handChokeModifier, 4);
     }
 
     chokeTimeout: number = 0;
@@ -185,6 +228,7 @@ export class CollarModule extends BaseModule {
     eventInterval: number = 0;
     handChokeModifier: number = 0;
     handChokingMember: number = 0;
+    isPluggedUp: boolean = false;
 
     setChokeTimeout(f: TimerHandler, delay: number | undefined) {
         clearTimeout(this.chokeTimeout);
@@ -228,7 +272,7 @@ export class CollarModule extends BaseModule {
                 CharacterSetFacialExpression(Player, "Eyes", "Scared");
                 break;
             case 4:
-                this.StartPassout(false, chokingMember);
+                this.StartPassout(PassoutReason.HAND, chokingMember);
                 break;
             default:
                 break;
@@ -241,11 +285,18 @@ export class CollarModule extends BaseModule {
             this.handChokeModifier = 0;
             if (this.totalChokeLevel < 4) {
                 clearTimeout(this.chokeTimeout);
+                this.isPassingOut = false;
             }
             // If collar still tight, wait just a second and ping an event as a "helpful" reminder
             if (this.settings.chokeLevel > 0)
                 setTimeout(() => this.ChokeEvent(), 1000);
         }
+    }
+
+    ForceReleasePlugs() {
+        Player.Appearance = Player.Appearance.filter(x => x?.Asset.Name != "NosePlugs");
+        this.isPluggedUp = false;
+        ChatRoomCharacterUpdate(Player);
     }
 
     CanActivate(sender: Character | null) {
@@ -307,6 +358,7 @@ export class CollarModule extends BaseModule {
             return;
         }
 
+        this.isPassingOut = false;
         AudioPlaySoundEffect("Deflation");
         this.settings.chokeLevel--;
         if (this.settings.chokeLevel > 0)
@@ -352,64 +404,96 @@ export class CollarModule extends BaseModule {
     ResetChoke() {
         this.settings.chokeLevel = 0;
         clearTimeout(this.chokeTimeout);
+        this.isPassingOut = false;
         settingsSave();
     }
 
-    StartPassout(isCollar: boolean = true, chokingMember: Character | null = null) {
-        if (isCollar)
-            SendAction("%NAME%'s eyes start to roll back, gasping and choking as %POSSESSIVE% collar presses in tightly and completely with a menacing hiss.");
-        else
-            SendAction("%NAME%'s eyes start to roll back with a groan as %OPP_NAME% completely closes %POSSESSIVE% airway with their hand.", chokingMember);
+    plugReleaseEmotes = [
+        "%NAME% gasps and gulps for air.",
+        "%NAME%'s lungs scream as %POSSESSIVE% gasps desparately.",
+        "%NAME% groans as air is allowed back into their lungs.",
+        "%NAME% gasps for air with a whimper."
+    ]
+
+    ResetPlugs() {
+        SendAction(this.plugReleaseEmotes[getRandomInt(this.plugReleaseEmotes.length)]);
+        clearTimeout(this.chokeTimeout);
+        this.isPassingOut = false;
+    }
+
+    isPassingOut: boolean = false;
+
+    StartPassout(reason: PassoutReason = PassoutReason.COLLAR, chokingMember: Character | null = null) {
+        this.isPassingOut = true;
         setOrIgnoreBlush("VeryHigh");
         CharacterSetFacialExpression(Player, "Eyebrows", "Soft");
         CharacterSetFacialExpression(Player, "Eyes", "Lewd");
-        this.setChokeTimeout(() => this.Passout1(isCollar, chokingMember), this.passout1Timer);
+        this.setChokeTimeout(() => this.Passout1(reason, chokingMember), this.passout1Timer);
+
+        if (reason == PassoutReason.COLLAR)
+            SendAction("%NAME%'s eyes start to roll back, gasping and choking as %POSSESSIVE% collar presses in tightly and completely with a menacing hiss.");
+        else if (reason == PassoutReason.HAND)
+            SendAction("%NAME%'s eyes start to roll back with a groan as %OPP_NAME% completely closes %POSSESSIVE% airway with their hand.", chokingMember);
+        else if (reason == PassoutReason.PLUGS)
+            SendAction("%NAME%'s eyes flutter with a groan, unable to get any air to %POSSESSIVE% lungs.");
     }
 
-    Passout1(isCollar: boolean = true, chokingMember: Character | null = null) {
+    Passout1(reason: PassoutReason = PassoutReason.COLLAR, chokingMember: Character | null = null) {
         this.IncreaseArousal();
-        if (isCollar)
-            SendAction("%NAME% chokes and spasms, %POSSESSIVE% collar holding tight.");
-        else
-            SendAction("%NAME% chokes and spasms, %OPP_NAME% gripping %POSSESSIVE% throat relentlessly.", chokingMember);
         setOrIgnoreBlush("Extreme");
         CharacterSetFacialExpression(Player, "Eyebrows", "Soft");
         CharacterSetFacialExpression(Player, "Eyes", "Lewd");
         CharacterSetFacialExpression(Player, "Mouth", "HalfOpen");
-        this.setChokeTimeout(() => this.Passout2(isCollar, chokingMember), this.passout2Timer);
+        this.setChokeTimeout(() => this.Passout2(reason, chokingMember), this.passout2Timer);
+
+        if (reason == PassoutReason.COLLAR)
+            SendAction("%NAME% chokes and spasms, %POSSESSIVE% collar holding tight.");
+        else if (reason == PassoutReason.HAND)
+            SendAction("%NAME% chokes and spasms, %OPP_NAME% gripping %POSSESSIVE% throat relentlessly.", chokingMember);
+        else if (reason == PassoutReason.PLUGS)
+            SendAction("%NAME% chokes and spasms, struggling in their gag.");
     }
 
-    Passout2(isCollar: boolean = true, chokingMember: Character | null = null) {
+    Passout2(reason: PassoutReason = PassoutReason.COLLAR, chokingMember: Character | null = null) {
         this.IncreaseArousal();
-        if (isCollar) {
-            SendAction("%NAME% convulses weakly with a moan, %POSSESSIVE% eyes rolling back as the collar hisses impossibly tighter.");
-            AudioPlaySoundEffect("HydraulicLock");
-        }
-        else
-            SendAction("%NAME% convulses weakly with a moan, %POSSESSIVE% eyes rolling back as %OPP_NAME% clenches around their throat even tighter.", chokingMember);
         setOrIgnoreBlush("ShortBreath");
         CharacterSetFacialExpression(Player, "Eyebrows", "Soft");
         CharacterSetFacialExpression(Player, "Eyes", "VeryLewd");
         CharacterSetFacialExpression(Player, "Mouth", "HalfOpen");
-        this.setChokeTimeout(() => this.Passout3(isCollar, chokingMember), this.passout3Timer);
+        this.setChokeTimeout(() => this.Passout3(reason, chokingMember), this.passout3Timer);
+
+        if (reason == PassoutReason.COLLAR) {
+            SendAction("%NAME% convulses weakly with a moan, %POSSESSIVE% eyes rolling back as the collar hisses impossibly tighter.");
+            AudioPlaySoundEffect("HydraulicLock");
+        }
+        else if (reason == PassoutReason.HAND)
+            SendAction("%NAME% convulses weakly with a moan, %POSSESSIVE% eyes rolling back as %OPP_NAME% clenches around their throat even tighter.", chokingMember);
+        else if (reason == PassoutReason.PLUGS)
+            SendAction("%NAME% convulses weakly with a moan, %POSSESSIVE% eyes rolling back as their lungs scream for air.", chokingMember);
     }
 
-    Passout3(isCollar: boolean = true, chokingMember: Character | null = null) {
+    Passout3(reason: PassoutReason = PassoutReason.COLLAR, chokingMember: Character | null = null) {
         this.IncreaseArousal();
-        if (isCollar) {
-            SendAction("As %NAME% collapses unconscious, %POSSESSIVE% collar releases all of its pressure with a long hiss.");
-            AudioPlaySoundEffect("Deflation");
-            this.ResetChoke();
-        }
-        else {
-            SendAction("As %NAME% collapses unconscious, %OPP_NAME% releases %POSSESSIVE% neck.", chokingMember);
-            this.ReleaseHandChoke(chokingMember);
-        }
-        setOrIgnoreBlush("Medium");
+        this.isPassingOut = false;
+        CharacterSetFacialExpression(Player, "Blush", "Medium");
         CharacterSetFacialExpression(Player, "Eyebrows", "Soft");
         CharacterSetFacialExpression(Player, "Eyes", "Closed");
         CharacterSetFacialExpression(Player, "Mouth", "Closed");
         clearTimeout(this.chokeTimeout);
+
+        if (reason == PassoutReason.COLLAR) {
+            SendAction("As %NAME% collapses unconscious, %POSSESSIVE% collar releases all of its pressure with a long hiss.");
+            AudioPlaySoundEffect("Deflation");
+            this.ResetChoke();
+        }
+        else if (reason == PassoutReason.HAND) {
+            SendAction("As %NAME% collapses unconscious, %OPP_NAME% releases %POSSESSIVE% neck.", chokingMember);
+            this.ReleaseHandChoke(chokingMember);
+        }
+        else if (reason == PassoutReason.PLUGS) {
+            SendAction("As %NAME% slumps unconscious, %POSSESSIVE% nose plugs fall out.", chokingMember);
+            this.ForceReleasePlugs();
+        }
     }
 
     ChokeEvent() {

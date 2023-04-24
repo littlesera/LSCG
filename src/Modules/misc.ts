@@ -12,7 +12,7 @@ export class MiscModule extends BaseModule {
     load(): void {
         // Kneel on lap sit
         OnActivity(100, ModuleCategory.Misc, (data, sender, msg, metadata) => {
-            let target = data.Dictionary.find((d: any) => d.Tag == "TargetCharacter");
+            let target = data.Dictionary?.find((d: any) => d.Tag == "TargetCharacter");
             if (!!target && 
                 sender?.MemberNumber == Player.MemberNumber && 
                 data.Content == "ChatOther-ItemLegs-Sit" &&

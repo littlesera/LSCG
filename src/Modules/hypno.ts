@@ -69,7 +69,7 @@ export class HypnoModule extends BaseModule {
         OnActivity(1, ModuleCategory.Hypno, (data, sender, msg, metadata) => {
             if (!this.Enabled)
                 return;
-            let target = data.Dictionary.find((d: any) => d.Tag == "TargetCharacter");
+            let target = data.Dictionary?.find((d: any) => d.Tag == "TargetCharacter");
             if (!!target && target.MemberNumber == Player.MemberNumber) {
                 if (data.Content == "ChatOther-ItemNose-Pet" && triggerActivated)
                     this.TriggerRestoreBoop();
