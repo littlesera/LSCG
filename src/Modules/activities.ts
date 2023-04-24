@@ -30,7 +30,12 @@ export class ActivityModule extends BaseModule {
                     let {metadata, substitutions} = ChatRoomMessageRunExtractors(data, Player)
                     let msg = ActivityDictionaryText(data.Content);
                     msg = CommonStringSubstitute(msg, substitutions)
-                    SendAction(msg, Player);
+                    data.Dictionary.push({
+                        Tag: "MISSING ACTIVITY DESCRIPTION FOR KEYWORD " + data.Content,
+                        Text: msg
+                    });
+                    return next(args);
+                    //SendAction(msg, Player);
                 }
                 else
                     return next(args);
@@ -38,12 +43,6 @@ export class ActivityModule extends BaseModule {
             else {
                 return next(args);
             }
-
-            // let act = args[1];
-            // if (!act)
-            //     return next(args);
-            
-            
         }, ModuleCategory.Activities);
 
         this.AddActivity({

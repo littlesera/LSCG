@@ -33,6 +33,7 @@ export function init_modules(): boolean {
 	for (const m of modules) {
 		m.run();
 	}
+	console.info("LSCG Modules Loaded.");
 	return true;
 }
 
