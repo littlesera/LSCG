@@ -310,7 +310,7 @@ export class CollarModule extends BaseModule {
     }
 
     ForceReleasePlugs() {
-        Player.Appearance = Player.Appearance.filter(x => x?.Asset.Name != "NosePlugs");
+        InventoryRemove(Player, "ItemNose");
         this.isPluggedUp = false;
         ChatRoomCharacterUpdate(Player);
     }
