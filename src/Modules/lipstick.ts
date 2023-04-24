@@ -7,7 +7,7 @@ export class LipstickModule extends BaseModule {
         OnActivity(100, ModuleCategory.Lipstick, (data, sender, msg, metadata) => {
             if (!this.Enabled)
                 return;
-            let target = data.Dictionary.find((d: any) => d.Tag == "TargetCharacter");
+            let target = data.Dictionary?.find((d: any) => d.Tag == "TargetCharacter");
             if (!!target && 
                 !!sender &&
                 target.MemberNumber == Player.MemberNumber) {
@@ -27,7 +27,7 @@ export class LipstickModule extends BaseModule {
                             break;
                     }
         
-                    var item = data.Dictionary.find((d: any) => d.Tag == "ActivityAsset");
+                    var item = data.Dictionary?.find((d: any) => d.Tag == "ActivityAsset");
                     if (!!item && item.AssetName == "Towel") {
                         switch (data.Content) {
                             case "ChatOther-ItemHood-RubItem" :

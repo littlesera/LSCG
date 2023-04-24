@@ -330,6 +330,7 @@ declare function ItemColorOnPickerChange(color: any): void;
 // Speech.js
 declare function SpeechGarbleByGagLevel(GagEffect: number, CD: string, IgnoreOOC: boolean): string;
 declare function SpeechGarbleByGagLevel(GagEffect: number, CD: string): string;
+declare function SpeechGetTotalGagLevel(C: Character, NoDeaf: boolean): number;
 
 // ChatSearch.js
 declare var ChatSearchMode: string;
