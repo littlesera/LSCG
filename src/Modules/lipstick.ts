@@ -23,6 +23,8 @@ export class LipstickModule extends BaseModule {
                         case "ChatOther-ItemHead-Kiss":
                             this.AddKissMark(sender, "forehead");
                             break;
+                        case "ChatOther-ItemMouth-GagKiss":
+                            this.AddGagKissMark(sender);
                         default:
                             break;
                     }
@@ -114,18 +116,19 @@ export class LipstickModule extends BaseModule {
         if (!marks)
             return;
         var status = this.getKissMarkStatus(marks?.Property?.Type ?? "c0r1f0n0l0");
-    
+
         switch (location) {
             case "cheek" :
                 status.cheek1 = false;
                 status.cheek2 = false;
+                this.removeGagKissMark();
                 break;
             case "forehead" :
                 status.forehead = false;
                 break;
             case "neck" :
                 status.neck1 = false;
-                status.cheek2 = false;
+                status.neck2 = false;
                 break;
             default :
                 break;
@@ -167,7 +170,7 @@ export class LipstickModule extends BaseModule {
                 if (!status.neck1)
                     status.neck1 = true;
                 else
-                    status.cheek2 = true;
+                    status.neck2 = true;
                 setOrIgnoreBlush("Medium");
                 break;
             default :
@@ -177,5 +180,33 @@ export class LipstickModule extends BaseModule {
         if (!!marks && !!marks.Property)
             marks.Property.Type = this.getKissMarkTypeString(status);
         ChatRoomCharacterUpdate(Player);
+    }
+
+    AddGagKissMark(sender: Character) {
+        var color = this.getKisserLipColor(sender);
+        if (color == "Default")
+            return; // No lipstick
+
+        var existingItem = InventoryGet(Player, "ItemMouth3");
+        if (!!existingItem && existingItem.Asset.Name != "Kissmark")
+            return;
+
+        if (!existingItem) {
+            InventoryWear(Player, "Kissmark", "ItemMouth3", "Default", 1, Player.MemberNumber ?? 0, null, true);
+            existingItem = InventoryGet(Player, "ItemMouth3");
+        }
+
+        if (!existingItem)
+            return;
+
+        existingItem.Color = color;
+
+        ChatRoomCharacterUpdate(Player);
+    }
+
+    removeGagKissMark() {
+        var gagKissmark = InventoryGet(Player, "ItemMouth3");
+        if (!!gagKissmark && gagKissmark.Asset.Name == "Kissmark")
+            InventoryRemove(Player, "ItemMouth3");
     }
 }
