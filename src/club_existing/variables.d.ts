@@ -4,6 +4,7 @@
 // Female3DCG.js
 declare var PoseFemale3DCG: Pose[];
 declare var ActivityFemale3DCG: Activity[];
+declare let ActivityFemale3DCGOrdering: string[];
 
 // Activity.js
 declare var ActivityOrgasmRuined: boolean;

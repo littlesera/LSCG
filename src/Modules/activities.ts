@@ -181,5 +181,6 @@ export class ActivityModule extends BaseModule {
         });
 
         ActivityFemale3DCG.push(activity);
+        ActivityFemale3DCGOrdering.push(activity.Name);
     }
 }
