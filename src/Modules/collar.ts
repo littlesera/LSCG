@@ -161,9 +161,9 @@ export class CollarModule extends BaseModule {
             // if (!this.Enabled && !Player.LSCG.MiscModule.handChokeEnabled)
             //     return next(args);
             // Prevent speech at choke level 4
-            if (args[0] == "ChatRoomChat" && args[1].Type == "Chat"){
+            if (args[0] == "ChatRoomChat" && args[1].Type == "Chat" && !args[1].Content?.startsWith("(")){
                 if (this.totalChokeLevel >= 4) {
-                    SendAction("%NAME%'s mouth moves silently.");
+                    SendAction(this.gagSpeechlessLines[getRandomInt(this.gagSpeechlessLines.length)]);
                     return null;
                 }
                 else if (this.totalChokeLevel > 1) {
@@ -237,6 +237,14 @@ export class CollarModule extends BaseModule {
     handChokeModifier: number = 0;
     handChokingMember: number = 0;
     isPluggedUp: boolean = false;
+
+    gagSpeechlessLines = [
+        "%NAME%'s mouth moves silently.",
+        "%NAME%'s mouth moves without a sound.",
+        "%NAME%'s whimpers inaudibly, unable to breath.",
+        "%NAME% groans and convulses.",
+        "%NAME% shudders as %POSSESSIVE% lungs burn."
+    ]
 
     setChokeTimeout(f: TimerHandler, delay: number | undefined) {
         clearTimeout(this.chokeTimeout);
