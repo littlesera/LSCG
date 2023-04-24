@@ -137,7 +137,7 @@ export class CollarModule extends BaseModule {
                         SendAction("%NAME%'s eyes widen as %POSSESSIVE% gag inflates to completely fill %POSSESSIVE% throat.");
                     }
                     this.isPluggedUp = true;
-                    this.StartPassout(PassoutReason.PLUGS);
+                    this.StartPassout(PassoutReason.PLUGS, sender, 125000); // just over 2 minutes to choke out
                 } else {
                     this.isPluggedUp = false;
                     if (this.isPassingOut && this.settings.chokeLevel < 4)
@@ -431,7 +431,12 @@ export class CollarModule extends BaseModule {
 
     isPassingOut: boolean = false;
 
-    StartPassout(reason: PassoutReason = PassoutReason.COLLAR, chokingMember: Character | null = null) {
+    StartPassout(reason: PassoutReason = PassoutReason.COLLAR, chokingMember: Character | null = null, totalTime: number = 60000) {
+        //console.info("Start Passout, " + totalTime + "ms total time. Date.now() = " + Date.now());
+        this.passout1Timer = totalTime * .5; // -- 1/4 of the total tiem in stage 1
+        this.passout2Timer = totalTime * .3; // -- 3/10 of the total tiem in stage 1
+        this.passout3Timer = totalTime * .2; // -- 1/5 of the total tiem in stage 1
+        //console.info("Timer1 = " + this.passout1Timer + " Timer2 = " + this.passout2Timer + " Timer3 = " + this.passout3Timer);
         this.isPassingOut = true;
         setOrIgnoreBlush("VeryHigh");
         CharacterSetFacialExpression(Player, "Eyebrows", "Soft");
@@ -447,6 +452,7 @@ export class CollarModule extends BaseModule {
     }
 
     Passout1(reason: PassoutReason = PassoutReason.COLLAR, chokingMember: Character | null = null) {
+        //console.info("Stage 2, timeout = " + this.passout1Timer + " Date.now() = " + Date.now());
         this.IncreaseArousal();
         setOrIgnoreBlush("Extreme");
         CharacterSetFacialExpression(Player, "Eyebrows", "Soft");
@@ -463,6 +469,7 @@ export class CollarModule extends BaseModule {
     }
 
     Passout2(reason: PassoutReason = PassoutReason.COLLAR, chokingMember: Character | null = null) {
+        //console.info("Stage 3, timeout = " + this.passout2Timer + " Date.now() = " + Date.now());
         this.IncreaseArousal();
         setOrIgnoreBlush("ShortBreath");
         CharacterSetFacialExpression(Player, "Eyebrows", "Soft");
@@ -481,6 +488,7 @@ export class CollarModule extends BaseModule {
     }
 
     Passout3(reason: PassoutReason = PassoutReason.COLLAR, chokingMember: Character | null = null) {
+        //console.info("Stage 4, timeout = " + this.passout3Timer + " Date.now() = " + Date.now());
         this.IncreaseArousal();
         this.isPassingOut = false;
         CharacterSetFacialExpression(Player, "Blush", "Medium");
@@ -488,6 +496,7 @@ export class CollarModule extends BaseModule {
         CharacterSetFacialExpression(Player, "Eyes", "Closed");
         CharacterSetFacialExpression(Player, "Mouth", "Closed");
         clearTimeout(this.chokeTimeout);
+        console.info("End Passout. Date.now() = " + Date.now());
 
         if (reason == PassoutReason.COLLAR) {
             SendAction("As %NAME% collapses unconscious, %POSSESSIVE% collar releases all of its pressure with a long hiss.");
