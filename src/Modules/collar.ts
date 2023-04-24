@@ -116,7 +116,9 @@ export class CollarModule extends BaseModule {
                 "PlugGagMouthSet",
                 "PumpGagpumpsTo",
                 "ItemMouthFuturisticHarnessBallGagSet",
-                "ItemMouthFuturisticPanelGagSet"
+                "ItemMouthFuturisticHarnessBallGagSetPumpInflate",
+                "ItemMouthFuturisticPanelGagSet",
+                "ItemMouthFuturisticPanelGagSetPumpInflate"
             ]
             
             var target = data.Dictionary?.find((dictItem: { Tag: string; }) => dictItem.Tag == "DestinationCharacter")?.MemberNumber;
@@ -128,6 +130,9 @@ export class CollarModule extends BaseModule {
                 let gagLevel = SpeechGetTotalGagLevel(Player, true);
                 let isNosePlugged = InventoryGet(Player, "ItemNose")?.Asset.Name == "NosePlugs";
                 if (gagLevel >= 8 && isNosePlugged) {
+                    if (msg.indexOf("PumpInflate") > -1) {
+                        SendAction("%NAME%'s eyes widen as %POSSESSIVE% gag inflates to completely fill %POSSESSIVE% throat.");
+                    }
                     this.isPluggedUp = true;
                     this.StartPassout(PassoutReason.PLUGS);
                 } else {
