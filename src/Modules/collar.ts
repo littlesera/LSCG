@@ -116,12 +116,15 @@ export class CollarModule extends BaseModule {
                 "PlugGagMouthSet",
                 "PumpGagpumpsTo",
                 "ItemMouthFuturisticHarnessBallGagSet",
-                "ItemMouthFuturisticHarnessBallGagSetPumpInflate",
-                "ItemMouthFuturisticPanelGagSet",
-                "ItemMouthFuturisticPanelGagSetPumpInflate"
+                "ItemMouthFuturisticPanelGagSet"
             ]
             
             var target = data.Dictionary?.find((dictItem: { Tag: string; }) => dictItem.Tag == "DestinationCharacter")?.MemberNumber;
+            if (!target)
+                var target = data.Dictionary?.find((dictItem: { Tag: string; }) => dictItem.Tag == "TargetCharacter")?.MemberNumber;
+            if (!target)
+                var target = data.Dictionary?.find((dictItem: { Tag: string; }) => dictItem.Tag == "TargetCharacterName")?.MemberNumber;
+            
             var targetGroup = data.Dictionary?.find((dictItem: { Tag: string; }) => dictItem.Tag == "FocusAssetGroup")?.AssetGroupName;
 
             if (target == Player.MemberNumber &&
