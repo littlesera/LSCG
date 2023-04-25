@@ -450,6 +450,7 @@ export class CollarModule extends BaseModule {
 
     ResetPlugs() {
         CharacterSetFacialExpression(Player, "Eyes", this.eyesAtTimeOfPassout);
+        CharacterSetFacialExpression(Player, "Blush", this.blushAtTimeOfPassout);
         SendAction(this.plugReleaseEmotes[getRandomInt(this.plugReleaseEmotes.length)]);
         clearTimeout(this.chokeTimeout);
         this.isPassingOut = false;
@@ -457,6 +458,7 @@ export class CollarModule extends BaseModule {
 
     isPassingOut: boolean = false;
     eyesAtTimeOfPassout: string = "Default";
+    blushAtTimeOfPassout: string = "Default";
 
     StartPassout(reason: PassoutReason = PassoutReason.COLLAR, chokingMember: Character | null = null, totalTime: number = 60000) {
         //console.info("Start Passout, " + totalTime + "ms total time. Date.now() = " + Date.now());
@@ -467,6 +469,7 @@ export class CollarModule extends BaseModule {
         this.isPassingOut = true;
         setOrIgnoreBlush("VeryHigh");
         this.eyesAtTimeOfPassout = WardrobeGetExpression(Player)?.Eyes;
+        this.blushAtTimeOfPassout = WardrobeGetExpression(Player)?.Blush;
         CharacterSetFacialExpression(Player, "Eyebrows", "Soft");
         CharacterSetFacialExpression(Player, "Eyes", "Lewd");
         this.setChokeTimeout(() => this.Passout1(reason, chokingMember), this.passout1Timer);
