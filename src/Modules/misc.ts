@@ -74,6 +74,7 @@ export class MiscModule extends BaseModule {
 
             if (this.isChloroformed) {
                 this.SetSleepExpression();
+                SendAction(this.chroloBlockStrings[getRandomInt(this.chroloBlockStrings.length)]);
             }
         }, ModuleCategory.Misc);
 
@@ -81,11 +82,17 @@ export class MiscModule extends BaseModule {
         hookFunction('ServerSend', 5, (args, next) => {
             if (!this.settings.chloroformEnabled)
                 return next(args);
-            // Prevent speech while chloroformed
+            
             if (this.isChloroformed) {
                 var type = args[0];
-                if (type == "ChatRoomChat" && args[1].Type == "Chat" && args[1]?.Content[0] != "("){
+                // Prevent speech while chloroformed
+                if ((type == "ChatRoomChat" && args[1].Type == "Chat" && args[1]?.Content[0] != "(")) {
                     SendAction(this.chroloBlockStrings[getRandomInt(this.chroloBlockStrings.length)]);
+                    this.SetSleepExpression();
+                    return null;
+                // Prevent changing eye expression while chloroformed
+                } else if (type == "ChatRoomCharacterExpressionUpdate" && (args[1]?.Group == "Eyes" || args[1]?.Group == "Eyes2")) {
+                    this.SetSleepExpression();
                     return null;
                 }
                 return next(args);
@@ -149,7 +156,7 @@ export class MiscModule extends BaseModule {
         this.SetSleepExpression();
         this.isChloroformed = true;
         clearTimeout(this.passoutTimer);
-        this.eyesInterval = setInterval(() => this.SetSleepExpression(), 1000);
+        //this.eyesInterval = setInterval(() => this.SetSleepExpression(), 1000);
     }
 
     RemoveChloroform() {

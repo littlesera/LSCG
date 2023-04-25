@@ -29,6 +29,10 @@ export class GuiMisc extends GuiSubscreen {
 		DrawText("Hand Choking Enabled:", GuiSubscreen.START_X, this.getYPos(2), "Black", "Gray");
 		DrawCheckbox(GuiSubscreen.START_X + 600, this.getYPos(2) - 32, 64, 64, "", this.settings.handChokeEnabled ?? false);
 
+		// Gag Choke Enabled	[true/false]
+		DrawText("Gag Suffocation Enabled:", GuiSubscreen.START_X, this.getYPos(3), "Black", "Gray");
+		DrawCheckbox(GuiSubscreen.START_X + 600, this.getYPos(3) - 32, 64, 64, "", this.settings.gagChokeEnabled ?? false);
+
 		MainCanvas.textAlign = prev;
 	}
 
@@ -43,6 +47,11 @@ export class GuiMisc extends GuiSubscreen {
 		// Hand Choke Enabled Checkbox
 		if (MouseIn(GuiSubscreen.START_X + 600, this.getYPos(2) - 32, 64, 64)){
 			this.settings.handChokeEnabled = !this.settings.handChokeEnabled;
+		}
+
+		// Gag Choke Enabled Checkbox
+		if (MouseIn(GuiSubscreen.START_X + 600, this.getYPos(3) - 32, 64, 64)){
+			this.settings.gagChokeEnabled = !this.settings.gagChokeEnabled;
 		}
 	}
 }

@@ -42,18 +42,6 @@ export class HypnoModule extends BaseModule {
                 }
             }
         ]);
-        
-        // OnChat(1000, ModuleCategory.Hypno, (data, sender, msg, metadata) => {
-        //     if (!this.Enabled)
-        //         return;
-        //     var lowerMsgWords = parseMsgWords(msg) ?? [];
-        //     if (!hypnoActivated() && 
-        //         !!this.triggers && 
-        //         lowerMsgWords.filter(v => this.triggers.includes(v)).length > 0 && 
-        //         sender?.MemberNumber != Player.MemberNumber &&
-        //         this.allowedSpeaker(sender?.MemberNumber ?? 0))
-        //         this.StartTriggerWord(true, sender?.MemberNumber);
-        // });
 
         OnAction(1, ModuleCategory.Hypno, (data, sender, msg, metadata) => {
             if (!this.Enabled)
