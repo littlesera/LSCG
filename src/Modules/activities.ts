@@ -48,7 +48,7 @@ export class ActivityModule extends BaseModule {
         this.AddActivity({
             Activity: <Activity>{
                 Name: "Hug",
-                MaxProgress: 50,
+                MaxProgress: 70,
                 Prerequisite: ["UseArms"]
             },
             Targets: [
@@ -57,6 +57,36 @@ export class ActivityModule extends BaseModule {
                     SelfAllowed: true,
                     TargetAction: "SourceCharacter wraps PronounPossessive arms around TargetCharacter in a big warm hug.",
                     TargetSelfAction: "SourceCharacter wraps TargetCharacter in a theraputic self-hug."
+                }
+            ]
+        });
+
+        this.AddActivity({
+            Activity: <Activity>{
+                Name: "Tackle",
+                MaxProgress: 50,
+                Prerequisite: ["UseArms"]
+            },
+            Targets: [
+                <ActivityTarget>{
+                    Name: "ItemArms",
+                    SelfAllowed: false,
+                    TargetAction: "SourceCharacter full body tackles TargetCharacter!"
+                }
+            ]
+        });
+
+        this.AddActivity({
+            Activity: <Activity>{
+                Name: "Flop",
+                MaxProgress: 50,
+                Prerequisite: ["UseLegs"]
+            },
+            Targets: [
+                <ActivityTarget>{
+                    Name: "ItemArms",
+                    SelfAllowed: false,
+                    TargetAction: "SourceCharacter flops on top of TargetCharacter!"
                 }
             ]
         });
