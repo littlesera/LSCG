@@ -107,6 +107,9 @@ export class CollarModule extends BaseModule {
 
         // Check for heavy gag + nose plugs
         OnAction(100, ModuleCategory.Misc, (data, sender, msg, metadata) => {
+            if (!Player.LSCG.MiscModule.gagChokeEnabled)
+                return;
+
             let airwaySlots = ["ItemMouth", "ItemMouth2", "ItemMouth3", "ItemNose"];
             let messagesToCheck = [
                 "ActionUse",
@@ -115,8 +118,10 @@ export class CollarModule extends BaseModule {
                 "DildoPlugGagMouthSet",
                 "PlugGagMouthSet",
                 "PumpGagpumpsTo",
+                "PumpGagdeflatesTo",
                 "ItemMouthFuturisticHarnessBallGagSet",
-                "ItemMouthFuturisticPanelGagSet"
+                "ItemMouthFuturisticPanelGagSet",
+                "ItemMouthPonyGagSet"
             ]
             
             var target = data.Dictionary?.find((dictItem: { Tag: string; }) => dictItem.Tag == "DestinationCharacter")?.MemberNumber;
@@ -127,12 +132,21 @@ export class CollarModule extends BaseModule {
             
             var targetGroup = data.Dictionary?.find((dictItem: { Tag: string; }) => dictItem.Tag == "FocusAssetGroup")?.AssetGroupName;
 
+            var chokeThreshold = 8;
+            var gaspThreshold = 5;
+
+            // slightly lower threshold for pump and pony gag to choke at max level...
+            if (msg.indexOf("PumpGag") > -1 || msg.indexOf("ItemMouthPonyGag") > -1) {
+                chokeThreshold = 7;
+            }
+
             if (target == Player.MemberNumber &&
                 (!targetGroup || airwaySlots.indexOf(targetGroup) > -1) &&
                 messagesToCheck.some(x => msg.startsWith(x))) {
                 let gagLevel = SpeechGetTotalGagLevel(Player, true);
                 let isNosePlugged = InventoryGet(Player, "ItemNose")?.Asset.Name == "NosePlugs";
-                if (gagLevel >= 8 && isNosePlugged) {
+                if (gagLevel >= chokeThreshold && isNosePlugged || 
+                    (msg.indexOf("PumpGagpumpsTo") > -1 && gagLevel >= 7)) { // allow lower threshold for pump gag, letting it choke when full.
                     if (msg.indexOf("PumpInflate") > -1) {
                         SendAction("%NAME%'s eyes widen as %POSSESSIVE% gag inflates to completely fill %POSSESSIVE% throat.");
                     }
@@ -142,6 +156,8 @@ export class CollarModule extends BaseModule {
                     this.isPluggedUp = false;
                     if (this.isPassingOut && this.settings.chokeLevel < 4)
                         this.ResetPlugs();
+                    else if (gagLevel >= gaspThreshold && isNosePlugged)
+                        SendAction("%NAME% splutters and gasps for air around %POSSESSIVE% gag.");
                 }
             }
             return;
@@ -426,18 +442,20 @@ export class CollarModule extends BaseModule {
 
     plugReleaseEmotes = [
         "%NAME% gasps and gulps for air.",
-        "%NAME%'s lungs scream as %POSSESSIVE% gasps desparately.",
+        "%NAME%'s lungs scream as %PRONOUN% gasps desparately.",
         "%NAME% groans as air is allowed back into their lungs.",
         "%NAME% gasps for air with a whimper."
     ]
 
     ResetPlugs() {
+        CharacterSetFacialExpression(Player, "Eyes", this.eyesAtTimeOfPassout);
         SendAction(this.plugReleaseEmotes[getRandomInt(this.plugReleaseEmotes.length)]);
         clearTimeout(this.chokeTimeout);
         this.isPassingOut = false;
     }
 
     isPassingOut: boolean = false;
+    eyesAtTimeOfPassout: string = "Default";
 
     StartPassout(reason: PassoutReason = PassoutReason.COLLAR, chokingMember: Character | null = null, totalTime: number = 60000) {
         //console.info("Start Passout, " + totalTime + "ms total time. Date.now() = " + Date.now());
@@ -447,6 +465,7 @@ export class CollarModule extends BaseModule {
         //console.info("Timer1 = " + this.passout1Timer + " Timer2 = " + this.passout2Timer + " Timer3 = " + this.passout3Timer);
         this.isPassingOut = true;
         setOrIgnoreBlush("VeryHigh");
+        this.eyesAtTimeOfPassout = WardrobeGetExpression(Player)?.Eyes;
         CharacterSetFacialExpression(Player, "Eyebrows", "Soft");
         CharacterSetFacialExpression(Player, "Eyes", "Lewd");
         this.setChokeTimeout(() => this.Passout1(reason, chokingMember), this.passout1Timer);
