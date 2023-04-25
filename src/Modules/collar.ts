@@ -304,7 +304,8 @@ export class CollarModule extends BaseModule {
                 CharacterSetFacialExpression(Player, "Eyes", "Scared");
                 break;
             case 4:
-                this.StartPassout(PassoutReason.HAND, chokingMember);
+                clearTimeout(this.handChokeTimeout);
+                this.StartPassout(PassoutReason.HAND, chokingMember, 30000);
                 break;
             default:
                 break;
