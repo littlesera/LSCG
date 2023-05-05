@@ -169,7 +169,7 @@ export class CollarModule extends BaseModule {
             if (!this.Enabled)
                 return;
             else
-                this.ResetChoke();
+                this.ReleaseHandChoke(null, false);
             this.ActivateChokeEvent();
         }, ModuleCategory.Collar);
 
@@ -191,6 +191,11 @@ export class CollarModule extends BaseModule {
             }
             else
                 return next(args);
+        }, ModuleCategory.Collar);
+
+        hookFunction("Player.CanWalk", 2, (args, next) => {
+            if (this.handChokeModifier > 0) return false;
+            return next(args);
         }, ModuleCategory.Collar);
 
         hookFunction("Player.HasTints", 5, (args, next) => {
@@ -312,16 +317,17 @@ export class CollarModule extends BaseModule {
         }
     }
 
-    ReleaseHandChoke(chokingMember: Character | null) {
+    ReleaseHandChoke(chokingMember: Character | null, showEmote: boolean = true) {
         if (this.handChokeModifier > 0) {
-            SendAction("%NAME% gasps in relief as %OPP_NAME% releases their pressure on %POSSESSIVE% neck.", chokingMember);
+            if (!!chokingMember && showEmote)
+                SendAction("%NAME% gasps in relief as %OPP_NAME% releases their pressure on %POSSESSIVE% neck.", chokingMember);
             this.handChokeModifier = 0;
             if (this.totalChokeLevel < 4) {
                 clearTimeout(this.chokeTimeout);
                 this.isPassingOut = false;
             }
             // If collar still tight, wait just a second and ping an event as a "helpful" reminder
-            if (this.settings.chokeLevel > 0)
+            if (this.settings.chokeLevel > 0 && showEmote)
                 setTimeout(() => this.ChokeEvent(), 1000);
         }
     }
