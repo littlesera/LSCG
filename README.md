@@ -54,3 +54,13 @@ javascript:(()=>{fetch('https://littlesera.github.io/LSCG/bundle.js').then(r=>r.
 - If you are sufficiently gagged (>8 gag level) and have nose plugs you will be unable to breath
 - After just over 2 minutes (to allow for futiristic play) you will passout
 - Note: the nose plugs will "fall out" when you lose consciousness, I am not interested in simulating full actual suffocation
+
+
+# Special Thanks
+
+ - Lilly ([@DrBranestawm](https://github.com/DrBranestawm/BCAR))
+    - Great help getting started and becoming familiar with the BCT api
+    - Excellent extension and examples
+    - Encouragement and collaborative ideas (special activities)
+ - Andrew, Bean, & Megg
+    - Testing and feedback
