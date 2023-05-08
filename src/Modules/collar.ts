@@ -420,7 +420,7 @@ export class CollarModule extends BaseModule {
                 clearTimeout(this.chokeTimeout);
                 SendAction("%NAME% whimpers thankfully as %POSSESSIVE% collar reduces most of its pressure around %POSSESSIVE% neck.");
                 setOrIgnoreBlush("Low");
-                CharacterSetFacialExpression(Player, "Eyes", "None");
+                CharacterSetFacialExpression(Player, "Eyes", null);
                 break;
             case 0:
                 clearTimeout(this.chokeTimeout);
