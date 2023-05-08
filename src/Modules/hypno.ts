@@ -317,7 +317,7 @@ export class HypnoModule extends BaseModule {
     TriggerRestore() {
         this.ResetEyes();
         AudioPlaySoundEffect("SpankSkin");
-        CharacterSetFacialExpression(Player, "Eyes", "None");
+        CharacterSetFacialExpression(Player, "Eyes", null);
         clearInterval(this.hornyTimeout);
         clearTimeout(this.triggerTimeout);
         triggerActivated = false;
