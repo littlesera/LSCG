@@ -211,3 +211,7 @@ export function settingsSave() {
 export function isObject(obj: unknown): obj is Record<string, any> {
 	return !!obj && typeof obj === "object" && !Array.isArray(obj);
 }
+
+export function escapeRegExp(string: string) {
+	return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
+}

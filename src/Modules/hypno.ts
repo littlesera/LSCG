@@ -1,7 +1,7 @@
 import { BaseModule } from 'base';
 import { HypnoSettingsModel } from 'Settings/Models/hypno';
 import { ModuleCategory } from 'Settings/setting_definitions';
-import { settingsSave, parseMsgWords, OnChat, OnAction, OnActivity, SendAction, getRandomInt, hookFunction, removeAllHooksByModule, callOriginal, setOrIgnoreBlush } from '../utils';
+import { settingsSave, parseMsgWords, OnChat, OnAction, OnActivity, SendAction, getRandomInt, hookFunction, removeAllHooksByModule, callOriginal, setOrIgnoreBlush, escapeRegExp } from '../utils';
 
 export class HypnoModule extends BaseModule {
     get settings(): HypnoSettingsModel {
@@ -199,10 +199,20 @@ export class HypnoModule extends BaseModule {
     }
 
     CheckTrigger(msg: string, sender: Character): boolean {
+        // Skip on OOC
+        if (msg.startsWith("(") || !this.triggers)
+            return false;
+
         var lowerMsgWords = parseMsgWords(msg) ?? [];
+
+        let matched = this.triggers.some(trigger => {
+            let phraseMatch = new RegExp("\\b" + escapeRegExp(trigger) + "\\b", "i");
+            return phraseMatch.test(msg);
+        })
+        
+
         return (!hypnoActivated() && 
-            !!this.triggers && 
-            lowerMsgWords.filter(v => this.triggers.includes(v)).length > 0 && 
+            matched && 
             sender?.MemberNumber != Player.MemberNumber &&
             this.allowedSpeaker(sender?.MemberNumber ?? 0))
     }
