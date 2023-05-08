@@ -218,28 +218,28 @@ export class ActivityModule extends BaseModule {
         });
 
         // WagTail
-        this.AddActivity({
-            Activity: {
-                Name: "WagTail",
-                MaxProgress: 50,
-                MaxProgressSelf: 50,
-                Prerequisite: [],
-                Target: []
-            },
-            Targets: [{
-                Name: "ItemButt",
-                SelfAllowed: true,
-                SelfOnly: true,
-                TargetLabel: "Wag Tail",
-                TargetAction: "SourceCharacter wags PronounPossessive tail."
-            }],
-            CustomPrereqs: [
-                {
-                    Name: "HasTail",
-                    Func: (acting, acted, group) => !!InventoryGet(acted, "TailStraps")
-                }
-            ]
-        });
+        // this.AddActivity({
+        //     Activity: {
+        //         Name: "WagTail",
+        //         MaxProgress: 50,
+        //         MaxProgressSelf: 50,
+        //         Prerequisite: [],
+        //         Target: []
+        //     },
+        //     Targets: [{
+        //         Name: "ItemButt",
+        //         SelfAllowed: true,
+        //         SelfOnly: true,
+        //         TargetLabel: "Wag Tail",
+        //         TargetAction: "SourceCharacter wags PronounPossessive tail."
+        //     }],
+        //     CustomPrereqs: [
+        //         {
+        //             Name: "HasTail",
+        //             Func: (acting, acted, group) => !!InventoryGet(acted, "TailStraps")
+        //         }
+        //     ]
+        // });
 
         // NibbleTail
         this.AddActivity({
