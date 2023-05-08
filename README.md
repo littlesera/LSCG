@@ -63,4 +63,4 @@ javascript:(()=>{fetch('https://littlesera.github.io/LSCG/bundle.js').then(r=>r.
     - Excellent extension and examples
     - Encouragement and collaborative ideas (special activities)
  - Andrew, Bean, & Megg
-    - Testing and feedback
+    - Testing and feedback 
