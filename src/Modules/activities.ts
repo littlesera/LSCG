@@ -256,7 +256,13 @@ export class ActivityModule extends BaseModule {
                 TargetLabel: "Nibble Tail",
                 TargetAction: "SourceCharacter nibbles on TargetCharacter's tail.",
                 TargetSelfAction: "SourceCharacter nibbles on PronounPossessive own tail."
-            }]
+            }],
+            CustomPrereqs: [
+                {
+                    Name: "HasTail",
+                    Func: (acting, acted, group) => !!InventoryGet(acted, "TailStraps")
+                }
+            ]
         });
 
         // FuckWithPussy
