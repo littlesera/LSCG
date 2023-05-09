@@ -195,7 +195,7 @@ export class HypnoModule extends BaseModule {
 
     DelayedTriggerWord(memberNumber: number = 0) {
         SendAction("%NAME%'s eyes flutter as %PRONOUN% fights to keep control of %POSSESSIVE% senses...");
-        setTimeout(() => this.StartTriggerWord(false, memberNumber), 4000);
+        setTimeout(() => this.StartTriggerWord(false, memberNumber), 10000);
     }
 
     CheckTrigger(msg: string, sender: Character): boolean {
