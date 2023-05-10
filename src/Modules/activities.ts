@@ -1,7 +1,7 @@
 import { BaseModule } from "base";
 import { BaseSettingsModel } from "Settings/Models/base";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, setOrIgnoreBlush, hookFunction } from "../utils";
+import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, setOrIgnoreBlush, hookFunction, ICONS } from "../utils";
 import { hypnoActivated } from "./hypno";
 
 export interface ActivityTarget {
@@ -19,10 +19,15 @@ export interface CustomPrerequisite {
     Func(acting: Character, acted: Character, group: AssetGroup): boolean;
 }
 
+export interface CustomReaction {
+    Func(sender: Character | null): void;
+}
+
 export interface ActivityBundle {
     Activity: Activity;
     Targets: ActivityTarget[];
     CustomPrereqs?: CustomPrerequisite[];
+    CustomReaction?: CustomReaction;
 }
 
 export class ActivityModule extends BaseModule {
@@ -66,7 +71,9 @@ export class ActivityModule extends BaseModule {
             }
             else
                 return next(args);
-        })
+        }, ModuleCategory.Activities)
+
+        this.InitTongueGrabHooks();
 
         // Hug
         this.AddActivity({
@@ -217,30 +224,6 @@ export class ActivityModule extends BaseModule {
             ]
         });
 
-        // WagTail
-        // this.AddActivity({
-        //     Activity: {
-        //         Name: "WagTail",
-        //         MaxProgress: 50,
-        //         MaxProgressSelf: 50,
-        //         Prerequisite: [],
-        //         Target: []
-        //     },
-        //     Targets: [{
-        //         Name: "ItemButt",
-        //         SelfAllowed: true,
-        //         SelfOnly: true,
-        //         TargetLabel: "Wag Tail",
-        //         TargetAction: "SourceCharacter wags PronounPossessive tail."
-        //     }],
-        //     CustomPrereqs: [
-        //         {
-        //             Name: "HasTail",
-        //             Func: (acting, acted, group) => !!InventoryGet(acted, "TailStraps")
-        //         }
-        //     ]
-        // });
-
         // NibbleTail
         this.AddActivity({
             Activity: {
@@ -271,7 +254,7 @@ export class ActivityModule extends BaseModule {
                 Name: "FuckWithPussy",
                 MaxProgress: 100,
                 MaxProgressSelf: 100,
-                Prerequisite: ["ZoneAccessible", "ZoneNaked", "HasVagina", "TargetHasPenis"]
+                Prerequisite: ["ZoneAccessible", "ZoneNaked", "HasVagina"]
             },
             Targets: [
                 {
@@ -284,12 +267,25 @@ export class ActivityModule extends BaseModule {
                     SelfAllowed: false,
                     TargetLabel: "Ride with Pussy",
                     TargetAction: "SourceCharacter fucks TargetCharacter's penis with PronounPossessive pussy, grinding up and down."
+                },
+                {
+                    Name: "ItemHead",
+                    SelfAllowed: false,
+                    TargetLabel: "Sit on Face",
+                    TargetAction: "SourceCharacter grinds PronounPossessive pussy against TargetCharacter's face."
                 }
             ],
             CustomPrereqs: [
                 {
-                    Name: "SourceVulvaEmpty",
-                    Func: (acting, acted, group) => !acting.IsVulvaFull()
+                    Name: "CanGrindWithPussy",
+                    Func: (acting, acted, group) => {
+                        if (group.Name == "ItemVulva" && acted.HasPenis()) {
+                            return !acting.IsVulvaFull();
+                        }
+                        else {
+                            return acted.ActivePose?.indexOf("Kneel") > -1 || acted.ActivePose?.indexOf("AllFours") > -1;
+                        }
+                    }
                 }
             ]
         });
@@ -322,13 +318,40 @@ export class ActivityModule extends BaseModule {
                 }
             ]
         });
+
+        // GrabTongue
+        this.AddActivity({
+            Activity: <Activity>{
+                Name: "GrabTongue",
+                MaxProgress: 75,
+                MaxProgressSelf: 30,
+                Prerequisite: ["ZoneAccessible", "UseHands", "TargetCanUseTongue"]
+            },
+            Targets: [
+                {
+                    Name: "ItemMouth",
+                    SelfAllowed: false,
+                    TargetLabel: "Grab Tongue",
+                    TargetAction: "SourceCharacter reaches in and grabs hold of TargetCharacter's tongue with PronounPossessive fingers."
+                }
+            ],
+            CustomReaction: <CustomReaction>{
+                Func: (sender) => {
+                    this.customGagged = Date.now() + 45000;
+                    CharacterSetFacialExpression(Player, "Mouth", "Ahegao");
+                }
+            }
+        });
     }
+
+    customGagged: number = 0;
 
     unload(): void {
         removeAllHooksByModule(ModuleCategory.Activities);
     }
 
     CustomPrerequisiteFuncs: Map<string, (acting: Character, acted: Character, group: AssetGroup) => boolean> = new Map<string, (acting: Character, acted: Character, group: AssetGroup) => boolean>();
+    CustomIncomingActivityReactions: Map<string, (sender: Character | null) => void> = new Map<string, (sender: Character | null) => void>();
 
     AddActivity(bundle: ActivityBundle) {
         if (bundle.Targets.length <= 0)
@@ -344,6 +367,11 @@ export class ActivityModule extends BaseModule {
             if (!this.CustomPrerequisiteFuncs.get(prereq.Name))
                 this.CustomPrerequisiteFuncs.set(prereq.Name, prereq.Func)
         })
+
+        if (!!bundle.CustomReaction) {
+            if (!this.CustomIncomingActivityReactions.get(activity.Name))
+                this.CustomIncomingActivityReactions.set(activity.Name, bundle.CustomReaction.Func)
+        }
 
         ActivityDictionary.push([
             "Activity"+activity.Name,
@@ -393,5 +421,76 @@ export class ActivityModule extends BaseModule {
 
         ActivityFemale3DCG.push(activity);
         ActivityFemale3DCGOrdering.push(activity.Name);
+    }
+
+    InitTongueGrabHooks(): void {
+        // Allow for similar "hand-gagging" when certain custom actions are done
+        hookFunction("SpeechGetTotalGagLevel", 6, (args, next) => {
+            let level = <number>next(args);
+            if (this.customGagged > Date.now())
+                level += 2;
+            return level;
+        }, ModuleCategory.Activities)
+
+        OnActivity(1, ModuleCategory.Activities, (data, sender, msg, metadata) => {
+            var dictionary = data?.Dictionary;
+            if (!dictionary || !dictionary[3])
+                return;
+            let target = dictionary?.find((d: any) => d.Tag == "TargetCharacter");
+            let activityName = dictionary[3]?.ActivityName;
+            if (target.MemberNumber == Player.MemberNumber && this.CustomIncomingActivityReactions.has(activityName)) {
+                var reactionFunc = this.CustomIncomingActivityReactions.get(activityName);
+                if (!!reactionFunc)
+                    reactionFunc(sender);
+            }
+        })
+
+        hookFunction(
+			"ChatRoomDrawCharacterOverlay",
+			1,
+			(args, next) => {
+				const ret = next(args);
+				const [C, CharX, CharY, Zoom] = args;
+				if (
+					typeof CharX === "number" &&
+					typeof CharY === "number" &&
+					typeof Zoom === "number" &&
+					ChatRoomHideIconState === 0 &&
+                    C.MemberNumber == Player.MemberNumber
+				) {
+					if (this.customGagged > Date.now()) {
+						DrawImageResize(
+							ICONS.TONGUE,
+							CharX + 125 * Zoom,
+							CharY + 50 * Zoom,
+							50 * Zoom,
+							50 * Zoom
+						);
+					}
+				}
+				return ret;
+			}
+		);
+
+        let failedLinkActions = [
+            "%NAME%'s whimpers, %POSSESSIVE% tongue held tightly.",
+            "%NAME% strains, trying to pull %POSSESSIVE% tongue free.",
+            "%NAME% starts to drool, %POSSESSIVE% tongue held fast."
+        ];             
+
+        hookFunction('ServerSend', 5, (args, next) => {
+            let sendType = args[0];
+            let data = args[1]; 
+            if (sendType == "ChatRoomChat" && data?.Type == "Activity" && !!data?.Dictionary && !!data?.Dictionary[3]){
+                var target = data?.Dictionary?.find((d: any) => d.Tag == "TargetCharacter");
+                var activityName = data?.Dictionary[3].ActivityName;
+                if (activityName == "Lick" && this.customGagged > Date.now())
+                    SendAction(failedLinkActions[getRandomInt(failedLinkActions.length)]);
+                else
+                    return next(args);
+            } else {
+                return next(args);
+            }
+        }, ModuleCategory.Activities);
     }
 }

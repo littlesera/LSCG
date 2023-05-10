@@ -158,6 +158,7 @@ declare function DrawButtonHover(Left: number, Top: number, Width: number, Heigh
 declare function DrawEmptyRect(Left: number, Top: number, Width: number, Height: number, Color: string, Thickness?: number): void;
 declare function DrawRect(Left: number, Top: number, Width: number, Height: number, Color: string): void;
 declare function DrawCharacter(C: Character, X: number, Y: number, Zoom: number, IsHeightResizeAllowed: boolean, DrawCanvas: CanvasRenderingContext2D): void;
+declare function DrawImageResize(image: string, x: number, y: number, w: number, h: number): boolean;
 
 // Cheat.js
 declare function CheatImport(): void;

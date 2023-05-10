@@ -22,7 +22,7 @@ export class GuiLipstick extends GuiSubscreen {
 		DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png", "BCX main menu");
 
 		// Enable	[true/false]
-		DrawText("Enabled:", GuiSubscreen.START_X, this.getYPos(1), "Black", "Gray");
+		DrawText("Enable Lipstick Marks:", GuiSubscreen.START_X, this.getYPos(1), "Black", "Gray");
 		DrawCheckbox(GuiSubscreen.START_X + 600, this.getYPos(1) - 32, 64, 64, "", this.settings.enabled ?? false);
 
 		MainCanvas.textAlign = prev;
