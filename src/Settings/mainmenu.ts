@@ -20,9 +20,9 @@ export class MenuItem {
 export const MAIN_MENU_ITEMS: MenuItem[] = [
 	new MenuItem(ModuleCategory.Global, () => new GuiGlobal(Player)),
 	new MenuItem(ModuleCategory.Hypno, () => new GuiHypno(Player)),
-	new MenuItem(ModuleCategory.Boops, () => new GuiBoops(Player)),
-	new MenuItem(ModuleCategory.Lipstick, () => new GuiLipstick(Player)),
-	new MenuItem(ModuleCategory.Misc, () => new GuiMisc(Player)),
+	//new MenuItem(ModuleCategory.Boops, () => new GuiBoops(Player)),
+	//new MenuItem(ModuleCategory.Lipstick, () => new GuiLipstick(Player)),
+	//new MenuItem(ModuleCategory.Misc, () => new GuiMisc(Player)),
 	new MenuItem(ModuleCategory.Collar, () => new GuiCollar(Player))
 ];
 

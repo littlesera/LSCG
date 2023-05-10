@@ -1,3 +1,4 @@
+import { ICONS } from "utils";
 import { GuiBoops } from "./boops";
 import { GuiCollar } from "./collar";
 import { GuiGlobal } from "./global";
@@ -26,7 +27,7 @@ export enum ModuleCategory {
 }
 
 export const SETTING_NAMES: Record<ModuleCategory, string> = {
-    [ModuleCategory.Global]: "Global",
+    [ModuleCategory.Global]: "General",
     [ModuleCategory.Collar]: "Choke Collar",
     [ModuleCategory.Hypno]: "Hypnosis",
     [ModuleCategory.Boops]: "Boops",
@@ -36,11 +37,11 @@ export const SETTING_NAMES: Record<ModuleCategory, string> = {
 };
 
 export const SETTING_ICONS: Record<ModuleCategory, string> = {
-    [ModuleCategory.Global]: "Icons/General.png",
-    [ModuleCategory.Collar]: "Icons/Restriction.png",
-    [ModuleCategory.Hypno]: "Icons/Visibility.png",
+    [ModuleCategory.Global]: ICONS.BDSM,//"Icons/General.png",
+    [ModuleCategory.Collar]: ICONS.COLLAR,// "Icons/Restriction.png",
+    [ModuleCategory.Hypno]: ICONS.HYPNO,//"Icons/Visibility.png",
     [ModuleCategory.Boops]: "Icons/Use.png",
     [ModuleCategory.Lipstick]: "Icons/Arousal.png",
     [ModuleCategory.Activities]: "Icons/FriendList.png",
-    [ModuleCategory.Misc]: "Icons/ServiceBell.png"
+    [ModuleCategory.Misc]: "Icons/General.png"
 };

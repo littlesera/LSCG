@@ -1,4 +1,4 @@
-import { hookFunction, isObject, settingsSave, VERSION } from './utils';
+import { hookFunction, ICONS, isObject, settingsSave, VERSION } from './utils';
 import { init_modules, unload_modules } from 'modules';
 import './modules';
 import { SettingsModel } from 'Settings/Models/settings';
@@ -34,7 +34,7 @@ export function initSettings() {
 		return next(args);
 	});
 	hookFunction("DrawButton", 2, (args: string[], next: (arg0: any) => any) => {
-		if (args[6] == "Icons/LSCGMainMenu.png") args[6] = "Icons/Asylum.png";
+		if (args[6] == "Icons/LSCGMainMenu.png") args[6] = ICONS.BOUND_GIRL;// "Icons/Asylum.png";
 		return next(args);
 	});
 }

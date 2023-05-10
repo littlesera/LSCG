@@ -52,6 +52,7 @@ export class GuiCollar extends GuiSubscreen {
 		DrawText("Update Collar:", GuiSubscreen.START_X, this.getYPos(3), "Black", "Gray");
 		MainCanvas.textAlign = "center";
 		DrawButton(GuiSubscreen.START_X + 600, this.getYPos(3) - 32, 200, 64, "Update", "White", undefined, "Update Collar to Current", !this.settings.enabled);
+		MainCanvas.textAlign = "left";
 
 		// Tighten Trigger 			[string]
 		DrawText("Tighten Trigger:", GuiSubscreen.START_X, this.getYPos(4), "Black", "Gray");
