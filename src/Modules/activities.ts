@@ -482,7 +482,6 @@ export class ActivityModule extends BaseModule {
             let sendType = args[0];
             let data = args[1]; 
             if (sendType == "ChatRoomChat" && data?.Type == "Activity" && !!data?.Dictionary && !!data?.Dictionary[3]){
-                var target = data?.Dictionary?.find((d: any) => d.Tag == "TargetCharacter");
                 var activityName = data?.Dictionary[3].ActivityName;
                 if (activityName == "Lick" && this.customGagged > Date.now())
                     SendAction(failedLinkActions[getRandomInt(failedLinkActions.length)]);
