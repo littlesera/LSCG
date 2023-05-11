@@ -28,6 +28,7 @@ export interface ActivityBundle {
     Targets: ActivityTarget[];
     CustomPrereqs?: CustomPrerequisite[];
     CustomReaction?: CustomReaction;
+    CustomImage?: string;
 }
 
 export class ActivityModule extends BaseModule {
@@ -73,6 +74,17 @@ export class ActivityModule extends BaseModule {
                 return next(args);
         }, ModuleCategory.Activities)
 
+        hookFunction("DrawImageResize", 1, (args, next) => {
+            var path = <string>args[0];
+            if (!!path && path.indexOf("LSCG_") > -1) {
+                var activityName = path.substring(path.indexOf("LSCG_"));
+                activityName = activityName.substring(0, activityName.indexOf(".png"))
+                if (this.CustomImages.has(activityName))
+                    args[0] = this.CustomImages.get(activityName);
+            }
+            return next(args);
+        })
+
         this.InitTongueGrabHooks();
 
         // Hug
@@ -90,7 +102,8 @@ export class ActivityModule extends BaseModule {
                     TargetAction: "SourceCharacter wraps PronounPossessive arms around TargetCharacter in a big warm hug.",
                     TargetSelfAction: "SourceCharacter wraps TargetCharacter in a theraputic self-hug."
                 }
-            ]
+            ],
+            CustomImage: ICONS.HUG
         });
 
         // Tackle
@@ -107,7 +120,8 @@ export class ActivityModule extends BaseModule {
                     SelfAllowed: false,
                     TargetAction: "SourceCharacter full body tackles TargetCharacter!"
                 }
-            ]
+            ],
+            CustomImage: "Assets/Female3DCG/Activity/Grope.png"
         });
 
         // Flop
@@ -124,7 +138,8 @@ export class ActivityModule extends BaseModule {
                     SelfAllowed: false,
                     TargetAction: "SourceCharacter flops on top of TargetCharacter!"
                 }
-            ]
+            ],
+            CustomImage: "Assets/Female3DCG/Activity/Cuddle.png"
         });
 
         // KissEyes
@@ -142,7 +157,8 @@ export class ActivityModule extends BaseModule {
                     TargetLabel: "Kiss Eyes",
                     TargetAction: "SourceCharacter gently kisses over TargetCharacter's eyes."
                 }
-            ]
+            ],
+            CustomImage: "Assets/Female3DCG/Activity/Kiss.png"
         });
 
         // RubPussy
@@ -160,7 +176,8 @@ export class ActivityModule extends BaseModule {
                     TargetLabel: "Rub Pussy",
                     TargetAction: "SourceCharacter grinds their pussy against TargetCharacter's penis."
                 }
-            ]
+            ],
+            CustomImage: "Assets/Female3DCG/Activity/MasturbateHand.png"
         });
 
         // RubPenis
@@ -245,7 +262,8 @@ export class ActivityModule extends BaseModule {
                     Name: "HasTail",
                     Func: (acting, acted, group) => !!InventoryGet(acted, "TailStraps")
                 }
-            ]
+            ],
+            CustomImage: "Assets/Female3DCG/Activity/Nibble.png"
         });
 
         // FuckWithPussy
@@ -287,7 +305,8 @@ export class ActivityModule extends BaseModule {
                         }
                     }
                 }
-            ]
+            ],
+            CustomImage: ICONS.PUSSY
         });
 
         // FuckWithAss
@@ -316,7 +335,8 @@ export class ActivityModule extends BaseModule {
                     Name: "SourceAssEmpty",
                     Func: (acting, acted, group) => !acting.IsPlugged()
                 }
-            ]
+            ],
+            CustomImage: ICONS.ASS
         });
 
         // GrabTongue
@@ -340,7 +360,8 @@ export class ActivityModule extends BaseModule {
                     this.customGagged = Date.now() + 45000;
                     CharacterSetFacialExpression(Player, "Mouth", "Ahegao");
                 }
-            }
+            },
+            CustomImage: "Assets/Female3DCG/Activity/Pinch.png"
         });
     }
 
@@ -352,6 +373,7 @@ export class ActivityModule extends BaseModule {
 
     CustomPrerequisiteFuncs: Map<string, (acting: Character, acted: Character, group: AssetGroup) => boolean> = new Map<string, (acting: Character, acted: Character, group: AssetGroup) => boolean>();
     CustomIncomingActivityReactions: Map<string, (sender: Character | null) => void> = new Map<string, (sender: Character | null) => void>();
+    CustomImages: Map<string, string> = new Map<string, string>;
 
     AddActivity(bundle: ActivityBundle) {
         if (bundle.Targets.length <= 0)
@@ -368,9 +390,12 @@ export class ActivityModule extends BaseModule {
                 this.CustomPrerequisiteFuncs.set(prereq.Name, prereq.Func)
         })
 
-        if (!!bundle.CustomReaction) {
-            if (!this.CustomIncomingActivityReactions.get(activity.Name))
-                this.CustomIncomingActivityReactions.set(activity.Name, bundle.CustomReaction.Func)
+        if (!!bundle.CustomReaction && !this.CustomIncomingActivityReactions.get(activity.Name)) {
+            this.CustomIncomingActivityReactions.set(activity.Name, bundle.CustomReaction.Func)
+        }
+
+        if (!!bundle.CustomImage && !this.CustomImages.get(activity.Name)) {
+            this.CustomImages.set(activity.Name, bundle.CustomImage);
         }
 
         ActivityDictionary.push([
