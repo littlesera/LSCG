@@ -1,8 +1,6 @@
 import { BaseModule } from "base";
-import { BaseSettingsModel } from "Settings/Models/base";
 import { ModuleCategory } from "Settings/setting_definitions";
 import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, setOrIgnoreBlush, hookFunction, ICONS } from "../utils";
-import { hypnoActivated } from "./hypno";
 
 export interface ActivityTarget {
     Name: AssetGroupItemName;

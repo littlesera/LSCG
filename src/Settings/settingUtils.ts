@@ -4,6 +4,7 @@ import { GuiGlobal } from "./global";
 import { MainMenu } from "./mainmenu";
 import { SETTING_NAME_PREFIX, Subscreen } from "./setting_definitions";
 import { modules } from "modules";
+import { GlobalSettingsModel } from "./Models/base";
 
 export class GUI extends BaseModule {
 	static instance: GUI | null = null;
@@ -53,6 +54,14 @@ export class GUI extends BaseModule {
 		return GuiGlobal;
 	}
 
+	get settings(): GlobalSettingsModel {
+		return super.settings as GlobalSettingsModel;
+	}
+
+	get settingsStorage(): string | null {
+		return "GlobalModule";
+	}
+
 	constructor() {
 		super();
 		if (GUI.instance) {
@@ -66,6 +75,13 @@ export class GUI extends BaseModule {
 
 		GUI.instance = this;
 	}
+
+	get defaultSettings(): GlobalSettingsModel {
+		return {
+			enabled: true,
+			edgeBlur: false
+		};
+    }
 
 	load(): void {
 		// At that point all other modules have been initialized, build the list of their screens

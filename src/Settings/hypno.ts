@@ -1,6 +1,5 @@
 import { ICONS } from "utils";
 import { HypnoSettingsModel } from "./Models/hypno";
-import { SettingsModel } from "./Models/settings";
 import { GuiSubscreen } from "./settingBase";
 
 export class GuiHypno extends GuiSubscreen {
@@ -14,20 +13,7 @@ export class GuiHypno extends GuiSubscreen {
 	}
 
 	get settings(): HypnoSettingsModel {
-		if (Player.LSCG === undefined) {
-			Player.LSCG = <SettingsModel>{};
-		}
-		if (!Player.LSCG.HypnoModule) {
-			Player.LSCG.HypnoModule = <HypnoSettingsModel>{ 
-				enabled: false,
-				activatedAt: 0,
-				cycleTime: 30,
-				enableCycle: true,
-				overrideMemberIds: "",
-				overrideWords: ""
-			};
-		}
-		return Player.LSCG.HypnoModule;
+		return super.settings as HypnoSettingsModel;
 	}
 
 	Load(): void {

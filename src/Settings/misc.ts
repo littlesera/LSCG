@@ -12,8 +12,7 @@ export class GuiMisc extends GuiSubscreen {
 	}
 
 	get settings(): MiscSettingsModel {
-        Player.LSCG.MiscModule = Player.LSCG.MiscModule ?? { enabled: true, chloroformEnabled: false };
-        return Player.LSCG.MiscModule
+		return super.settings as MiscSettingsModel;
     }
 
     Run() {

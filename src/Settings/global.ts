@@ -13,8 +13,7 @@ export class GuiGlobal extends GuiSubscreen {
 	}
 
 	get settings(): GlobalSettingsModel {
-        Player.LSCG.GlobalModule = Player.LSCG.GlobalModule ?? { enabled: true, edgeBlur: false };
-        return Player.LSCG.GlobalModule
+        return super.settings as GlobalSettingsModel;
     }
 
     Run() {
