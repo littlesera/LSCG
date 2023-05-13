@@ -11,7 +11,6 @@ enum PassoutReason {
 }
 
 export class CollarModule extends BaseModule {
-
     get settings(): CollarSettingsModel {
 		return super.settings as CollarSettingsModel;
 	}
@@ -32,6 +31,16 @@ export class CollarModule extends BaseModule {
 
     get settingsScreen(): Subscreen | null {
         return GuiCollar;
+    }
+
+    get defaultSettings() {
+		return <CollarSettingsModel>{
+            enabled: false,
+            allowedMembers: Player.Ownership?.MemberNumber + "" ?? "",
+            chokeLevel: 0,
+            tightTrigger: "tight",
+            looseTrigger: "loose"
+        };
     }
 
     load(): void {

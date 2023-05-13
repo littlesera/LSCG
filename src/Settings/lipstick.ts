@@ -1,4 +1,3 @@
-import { BaseSettingsModel } from "./Models/base";
 import { GuiSubscreen } from "./settingBase";
 
 export class GuiLipstick extends GuiSubscreen {
@@ -10,11 +9,6 @@ export class GuiLipstick extends GuiSubscreen {
 	get icon(): string {
 		return "Icons/Arousal.png";
 	}
-
-	get settings(): BaseSettingsModel {
-        Player.LSCG.LipstickModule = Player.LSCG.LipstickModule ?? { enabled: true };
-        return Player.LSCG.LipstickModule
-    }
 
     Run() {
 		var prev = MainCanvas.textAlign;

@@ -1,6 +1,5 @@
 import { hookFunction, ICONS, isObject, settingsSave, VERSION } from './utils';
 import { modules, registerModule } from 'modules';
-import './modules';
 import { SettingsModel } from 'Settings/Models/settings';
 import { HypnoModule } from './Modules/hypno';
 import { CollarModule } from './Modules/collar';
@@ -57,7 +56,6 @@ export function init() {
 		delete (<any>Player.OnlineSettings).ClubGames;
 
     Player.LSCG = Player.OnlineSettings.LSCG || <SettingsModel>{};
-	settingsSave();
 
 	initSettingsScreen();
 
@@ -65,6 +63,8 @@ export function init() {
 		unload();
 		return;
 	}
+
+	settingsSave();
 
 	const currentAccount = Player.MemberNumber;
 	if (currentAccount == null) {
@@ -100,9 +100,11 @@ function init_modules(): boolean {
 	for (const m of modules) {
 		m.load();
 	}
+
 	for (const m of modules) {
 		m.run();
 	}
+
 	console.info("LSCG Modules Loaded.");
 	return true;
 }

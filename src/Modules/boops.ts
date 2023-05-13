@@ -15,6 +15,12 @@ export class BoopsModule extends BaseModule {
     //     return GuiBoops;
     // }
 
+    get defaultSettings() {
+        return <BaseSettingsModel>{
+            enabled: true
+        };
+    }
+
     load(): void {
         OnActivity(100, ModuleCategory.Boops, (data, sender, msg, metadata) => {
             if (!this.Enabled)

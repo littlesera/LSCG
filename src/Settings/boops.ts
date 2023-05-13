@@ -12,8 +12,7 @@ export class GuiBoops extends GuiSubscreen {
 	}
 
 	get settings(): BaseSettingsModel {
-        Player.LSCG.BoopsModule = Player.LSCG.BoopsModule ?? { enabled: true };
-        return Player.LSCG.BoopsModule
+        return super.settings as BaseSettingsModel;
     }
 
     Run() {

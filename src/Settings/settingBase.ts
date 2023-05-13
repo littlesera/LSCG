@@ -55,10 +55,9 @@ export abstract class GuiSubscreen {
 		return setSubscreen(screen);
 	}
 
-    get settings(): BaseSettingsModel {
-        Player.LSCG.GlobalModule = Player.LSCG.GlobalModule ?? { enabled: true };
-        return Player.LSCG.GlobalModule
-    }
+	get settings(): BaseSettingsModel {
+		return this.module.settings as BaseSettingsModel;
+	}
 
 	get character(): Character {
 		// Because we're initialized by that instance, it must already exist

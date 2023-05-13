@@ -6,11 +6,22 @@ import { GuiHypno } from 'Settings/hypno';
 
 export class HypnoModule extends BaseModule {
     get settings(): HypnoSettingsModel {
-		return super.settings as HypnoSettingsModel;
+        return super.settings as HypnoSettingsModel;
 	}
 
     get settingsScreen(): Subscreen | null {
         return GuiHypno;
+    }
+
+    get defaultSettings(){
+        return <HypnoSettingsModel>{
+            enabled: false,
+            activatedAt: 0,
+            cycleTime: 30,
+            enableCycle: true,
+            overrideMemberIds: "",
+            overrideWords: ""
+        };
     }
 
     load(): void {

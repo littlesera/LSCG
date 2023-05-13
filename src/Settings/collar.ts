@@ -1,26 +1,8 @@
 import { ICONS } from "utils";
 import { CollarModel, CollarSettingsModel } from "./Models/collar";
-import { SettingsModel } from "./Models/settings";
 import { GuiSubscreen } from "./settingBase";
 
 export class GuiCollar extends GuiSubscreen {
-
-	get settings(): CollarSettingsModel {
-		if (Player.LSCG === undefined) {
-			Player.LSCG = <SettingsModel>{};
-		}
-		if (Player.LSCG.CollarModule === undefined) {
-			Player.LSCG.CollarModule = <CollarSettingsModel>{ 
-				enabled: false,
-				allowedMembers: Player.Ownership?.MemberNumber + "" ?? "",
-				chokeLevel: 0,
-				tightTrigger: "tight",
-				looseTrigger: "loose"
-			};
-		}
-		return Player.LSCG.CollarModule;		
-	}
-
 	get name(): string {
 		return "Choke Collar";
 	}
@@ -36,6 +18,10 @@ export class GuiCollar extends GuiSubscreen {
 			122875 // fake sera
 		];
 		return allowedChokeMemberNumbers.includes(this.character.MemberNumber ?? 0);
+	}
+
+	get settings(): CollarSettingsModel {
+		return super.settings as CollarSettingsModel;
 	}
 
 	Load(): void {
