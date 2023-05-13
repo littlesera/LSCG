@@ -1,6 +1,10 @@
 import { BaseSettingsModel } from "Settings/Models/base";
+import { Subscreen } from "Settings/setting_definitions";
 
 export abstract class BaseModule {
+	get settingsScreen() : Subscreen | null {
+		return null;
+	};
 
 	get settings(): BaseSettingsModel {
 		(<any>Player.LSCG)[this.constructor.name] = (<any>Player.LSCG)[this.constructor.name] || {};

@@ -1,8 +1,14 @@
 import { BaseModule } from "base";
-import { ModuleCategory } from "Settings/setting_definitions";
+import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
 import { OnActivity, removeAllHooksByModule, setOrIgnoreBlush } from "../utils";
+import { GuiLipstick } from "Settings/lipstick";
 
 export class LipstickModule extends BaseModule {
+    // Disabled as it's managed via General
+    // get settingsScreen(): Subscreen | null {
+    //     return GuiLipstick;
+    // }
+
     load(): void {
         OnActivity(100, ModuleCategory.Lipstick, (data, sender, msg, metadata) => {
             if (!this.Enabled)

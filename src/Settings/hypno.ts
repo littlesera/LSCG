@@ -1,14 +1,17 @@
+import { ICONS } from "utils";
 import { HypnoSettingsModel } from "./Models/hypno";
 import { SettingsModel } from "./Models/settings";
 import { GuiSubscreen } from "./settingBase";
 
 export class GuiHypno extends GuiSubscreen {
-    readonly character : PlayerCharacter;
 
-    constructor(character: PlayerCharacter) {
-		super();
-		this.character = character;
-    }
+	get name(): string {
+		return "Hypnosis";
+	}
+
+	get icon(): string {
+		return ICONS.HYPNO;
+	}
 
 	get settings(): HypnoSettingsModel {
 		if (Player.LSCG === undefined) {

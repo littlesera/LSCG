@@ -1,14 +1,9 @@
+import { ICONS } from "utils";
 import { CollarModel, CollarSettingsModel } from "./Models/collar";
 import { SettingsModel } from "./Models/settings";
 import { GuiSubscreen } from "./settingBase";
 
 export class GuiCollar extends GuiSubscreen {
-    readonly character : PlayerCharacter;
-
-    constructor(character: PlayerCharacter) {
-		super();
-		this.character = character;
-    }
 
 	get settings(): CollarSettingsModel {
 		if (Player.LSCG === undefined) {
@@ -24,6 +19,23 @@ export class GuiCollar extends GuiSubscreen {
 			};
 		}
 		return Player.LSCG.CollarModule;		
+	}
+
+	get name(): string {
+		return "Choke Collar";
+	}
+
+	get icon(): string {
+		return ICONS.COLLAR;
+	}
+
+	get enabled(): boolean {
+		const allowedChokeMemberNumbers = [
+			74298, // little sera
+			54618, // megg
+			122875 // fake sera
+		];
+		return allowedChokeMemberNumbers.includes(this.character.MemberNumber ?? 0);
 	}
 
 	Load(): void {
@@ -81,14 +93,20 @@ export class GuiCollar extends GuiSubscreen {
 	Click() {
 		super.Click();
 
+		// Enabled Checkbox
+		if (MouseIn(GuiSubscreen.START_X + 600, this.getYPos(1) - 32, 64, 64)){
+			this.settings.enabled = !this.settings.enabled;
+			return;
+		}
+
 		// Update Collar Button
 		if (MouseIn(GuiSubscreen.START_X + 600, this.getYPos(3) - 32, 200, 64)){
 			var collar = InventoryGet(Player, "ItemNeck");
 			if(!collar){
-				PreferenceMessage = "No Collar Equipped";
+				this.message = "No Collar Equipped";
 			}
 			else{
-				PreferenceMessage = "Collar updated";
+				this.message = "Collar updated";
 				this.settings.collar = <CollarModel>{
 					name: collar.Craft?.Name ?? collar.Asset.Name,
 					creator: collar.Craft?.MemberNumber ?? 0
