@@ -1,7 +1,8 @@
 import { BaseModule } from 'base';
 import { CollarModel, CollarSettingsModel } from 'Settings/Models/collar';
-import { ModuleCategory } from 'Settings/setting_definitions';
+import { ModuleCategory, Subscreen } from 'Settings/setting_definitions';
 import { settingsSave, parseMsgWords, SendAction, OnChat, getRandomInt, hookFunction, removeAllHooksByModule, OnActivity, OnAction, setOrIgnoreBlush, getCharacter } from '../utils';
+import { GuiCollar } from 'Settings/collar';
 
 enum PassoutReason {
     COLLAR,
@@ -27,6 +28,10 @@ export class CollarModule extends BaseModule {
         var collarName = collar?.Craft?.Name ?? (collar?.Asset.Name ?? "");
         var collarCreator = collar?.Craft?.MemberNumber ?? 0;
         return collarName == this.settings.collar.name && collarCreator == this.settings.collar.creator;
+    }
+
+    get settingsScreen(): Subscreen | null {
+        return GuiCollar;
     }
 
     load(): void {

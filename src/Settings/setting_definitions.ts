@@ -1,10 +1,6 @@
-import { ICONS } from "utils";
-import { GuiBoops } from "./boops";
-import { GuiCollar } from "./collar";
-import { GuiGlobal } from "./global";
-import { GuiHypno } from "./hypno";
-import { GuiLipstick } from "./lipstick";
+import { BaseModule } from "base";
 import { GuiSubscreen } from "./settingBase";
+import { GUI } from "./settingUtils";
 
 export const SETTING_FUNC_PREFIX: string = "PreferenceSubscreen";
 export const SETTING_NAME_PREFIX: string = "LSCG";
@@ -26,22 +22,16 @@ export enum ModuleCategory {
 	Misc = 99
 }
 
-export const SETTING_NAMES: Record<ModuleCategory, string> = {
-    [ModuleCategory.Global]: "General",
-    [ModuleCategory.Collar]: "Choke Collar",
-    [ModuleCategory.Hypno]: "Hypnosis",
-    [ModuleCategory.Boops]: "Boops",
-    [ModuleCategory.Lipstick]: "Lipstick",
-    [ModuleCategory.Activities]: "Activities",
-    [ModuleCategory.Misc]: "Miscellaneous"
-};
+export type Subscreen = (new (module: BaseModule) => GuiSubscreen);
 
-export const SETTING_ICONS: Record<ModuleCategory, string> = {
-    [ModuleCategory.Global]: ICONS.BDSM,//"Icons/General.png",
-    [ModuleCategory.Collar]: ICONS.COLLAR,// "Icons/Restriction.png",
-    [ModuleCategory.Hypno]: ICONS.HYPNO,//"Icons/Visibility.png",
-    [ModuleCategory.Boops]: "Icons/Use.png",
-    [ModuleCategory.Lipstick]: "Icons/Arousal.png",
-    [ModuleCategory.Activities]: "Icons/FriendList.png",
-    [ModuleCategory.Misc]: "Icons/General.png"
-};
+export function getCurrentSubscreen(): GuiSubscreen | null {
+	return GUI.instance && GUI.instance.currentSubscreen;
+}
+
+export function setSubscreen(subscreen: GuiSubscreen | string | null): GuiSubscreen | null {
+	if (!GUI.instance) {
+		throw new Error("Attempt to set subscreen before init");
+	}
+	GUI.instance.currentSubscreen = subscreen;
+	return GUI.instance.currentSubscreen;
+}

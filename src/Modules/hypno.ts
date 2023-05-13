@@ -1,12 +1,17 @@
 import { BaseModule } from 'base';
 import { HypnoSettingsModel } from 'Settings/Models/hypno';
-import { ModuleCategory } from 'Settings/setting_definitions';
+import { ModuleCategory, Subscreen } from 'Settings/setting_definitions';
 import { settingsSave, parseMsgWords, OnChat, OnAction, OnActivity, SendAction, getRandomInt, hookFunction, removeAllHooksByModule, callOriginal, setOrIgnoreBlush, escapeRegExp } from '../utils';
+import { GuiHypno } from 'Settings/hypno';
 
 export class HypnoModule extends BaseModule {
     get settings(): HypnoSettingsModel {
 		return super.settings as HypnoSettingsModel;
 	}
+
+    get settingsScreen(): Subscreen | null {
+        return GuiHypno;
+    }
 
     load(): void {
         CommandCombine([
