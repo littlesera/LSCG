@@ -11,6 +11,9 @@ export class GuiGlobal extends GuiSubscreen {
 
 	get settings(): GlobalSettingsModel {
         Player.LSCG.GlobalModule = Player.LSCG.GlobalModule ?? { enabled: true, edgeBlur: false };
+		Player.LSCG.LipstickModule = Player.LSCG.LipstickModule ?? { enabled: false };
+		Player.LSCG.BoopsModule = Player.LSCG.BoopsModule ?? { enabled: false };
+		Player.LSCG.MiscModule = Player.LSCG.MiscModule ?? { enabled: true, chloroformEnabled: false, gagChokeEnabled: false, handChokeEnabled: false };
         return Player.LSCG.GlobalModule
     }
 
