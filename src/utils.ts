@@ -118,6 +118,10 @@ function initPatchableFunction(target: string): IPatchedFunctionData {
 	return result;
 }
 
+export function hookBCXCurse(trigger: "curseTrigger", listener: (v: { action: "remove" | "add" | "swap" | "update" | "color" | "autoremove"; group: string; }) => void) {
+	window.bcx?.getModApi("LSCG").on?.(trigger, listener);
+}
+
 export function hookFunction(target: string, priority: number, hook: PatchHook, module: ModuleCategory | null = null): () => void {
 	const data = initPatchableFunction(target);
 
