@@ -17,6 +17,7 @@ export class MiscModule extends BaseModule {
         return <MiscSettingsModel>{
             enabled: true,
             chloroformEnabled: false,
+            immersiveChloroform: false,
             handChokeEnabled: false,
             gagChokeEnabled: false
         };
@@ -87,7 +88,7 @@ export class MiscModule extends BaseModule {
 
             if (this.isChloroformed) {
                 this.SetSleepExpression();
-                SendAction(this.chroloBlockStrings[getRandomInt(this.chroloBlockStrings.length)]);
+                this.ActivateChloroEvent();
             }
         }, ModuleCategory.Misc);
 
@@ -96,11 +97,11 @@ export class MiscModule extends BaseModule {
             if (!this.settings.chloroformEnabled)
                 return next(args);
             
-            if (this.isChloroformed) {
+            if (this.isChloroformed && this.settings.immersiveChloroform) {
                 var type = args[0];
                 // Prevent speech while chloroformed
                 if ((type == "ChatRoomChat" && args[1].Type == "Chat" && args[1]?.Content[0] != "(")) {
-                    SendAction(this.chroloBlockStrings[getRandomInt(this.chroloBlockStrings.length)]);
+                    this.ActivateChloroEvent();
                     this.SetSleepExpression();
                     return null;
                 // Prevent changing eye expression while chloroformed
@@ -112,6 +113,42 @@ export class MiscModule extends BaseModule {
             }
             return next(args);
         }, ModuleCategory.Misc);
+
+        hookFunction('Player.CanChangeOwnClothes', 5, (args, next) => {
+            if (!this.settings.chloroformEnabled || !this.settings.immersiveChloroform)
+                return next(args);
+            else if (this.isChloroformed)
+                return false;
+            else
+                return next(args);
+        }, ModuleCategory.Misc);
+
+        hookFunction('Player.IsDeaf', 5, (args, next) => {
+            if (!this.settings.chloroformEnabled || !this.settings.immersiveChloroform)
+                return next(args);
+            else if (this.isChloroformed)
+                return true;
+            else
+                return next(args);
+        }, ModuleCategory.Misc);
+
+        hookFunction('Player.IsBlind', 5, (args, next) => {
+            if (!this.settings.chloroformEnabled || !this.settings.immersiveChloroform)
+                return next(args);
+            else if (this.isChloroformed)
+                return true;
+            else
+                return next(args);
+        }, ModuleCategory.Misc);
+
+        hookFunction('Player.CanWalk', 5, (args, next) => {
+            if (!this.settings.chloroformEnabled || !this.settings.immersiveChloroform)
+                return next(args);
+            else if (this.isChloroformed)
+                return false;
+            else
+                return next(args);
+        }, ModuleCategory.Misc);
     }
 
     chroloBlockStrings = [
@@ -120,9 +157,37 @@ export class MiscModule extends BaseModule {
         "%NAME%'s muscles twitch weakly in their sleep...",
         "%NAME% moans softly and relaxes..."
     ];
+    chloroEventInterval: number = 0;
     eyesInterval: number = 0;
     passoutTimer: number = 0;
-    isChloroformed: boolean = false;
+    _isChloroformed: boolean = false;
+
+    set isChloroformed(value: boolean) {
+        clearInterval(this.chloroEventInterval)
+        if (value) {
+            this.SetSleepExpression();
+            this.chloroEventInterval = setInterval(() => {
+                this.ChloroEvent();
+            }, 60010)
+        }
+        this._isChloroformed = value;
+    }
+
+    get isChloroformed(): boolean {
+        return this._isChloroformed;
+    }
+
+    ChloroEvent() {
+        if (!this.isChloroformed)
+            return;
+        // only activate on average once every 10 minutes
+        else if (getRandomInt(10) == 0)
+            this.ActivateChloroEvent();
+    }
+
+    ActivateChloroEvent() {
+        SendAction(this.chroloBlockStrings[getRandomInt(this.chroloBlockStrings.length)]);
+    }
 
     unload(): void {
         removeAllHooksByModule(ModuleCategory.Misc);
@@ -199,5 +264,6 @@ export class MiscModule extends BaseModule {
 
     SetSleepExpression() {
         CharacterSetFacialExpression(Player, "Eyes", "Closed");
+        CharacterSetFacialExpression(Player, "Emoticon", "Sleep");
     }
 }

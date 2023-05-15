@@ -7,7 +7,7 @@ import { GUI } from "./settingUtils";
 export abstract class GuiSubscreen {
     static START_X: number = 225;
     static START_Y: number = 125;
-    static Y_MOD: number = 100;
+    static Y_MOD: number = 80;
 	readonly module: BaseModule;
 
 	constructor(module: BaseModule) {

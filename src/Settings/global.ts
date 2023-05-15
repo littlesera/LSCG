@@ -43,13 +43,17 @@ export class GuiGlobal extends GuiSubscreen {
 		DrawText("Enable Chloroform:", GuiSubscreen.START_X, this.getYPos(5), "Black", "Gray");
 		DrawCheckbox(GuiSubscreen.START_X + 600, this.getYPos(5) - 32, 64, 64, "", Player.LSCG.MiscModule.chloroformEnabled ?? false);
 
+		// Immersive Chloroform	[true/false]
+		DrawText("Immersive Chloroform:", GuiSubscreen.START_X, this.getYPos(6), "Black", "Gray");
+		DrawCheckbox(GuiSubscreen.START_X + 600, this.getYPos(6) - 32, 64, 64, "", Player.LSCG.MiscModule.immersiveChloroform ?? false);
+
 		// Hand Choke Enabled	[true/false]
-		DrawText("Enable Hand Choking:", GuiSubscreen.START_X, this.getYPos(6), "Black", "Gray");
-		DrawCheckbox(GuiSubscreen.START_X + 600, this.getYPos(6) - 32, 64, 64, "", Player.LSCG.MiscModule.handChokeEnabled ?? false);
+		DrawText("Enable Hand Choking:", GuiSubscreen.START_X, this.getYPos(7), "Black", "Gray");
+		DrawCheckbox(GuiSubscreen.START_X + 600, this.getYPos(7) - 32, 64, 64, "", Player.LSCG.MiscModule.handChokeEnabled ?? false);
 
 		// Gag Choke Enabled	[true/false]
-		DrawText("Enable Gag Suffocation:", GuiSubscreen.START_X, this.getYPos(7), "Black", "Gray");
-		DrawCheckbox(GuiSubscreen.START_X + 600, this.getYPos(7) - 32, 64, 64, "", Player.LSCG.MiscModule.gagChokeEnabled ?? false);
+		DrawText("Enable Gag Suffocation:", GuiSubscreen.START_X, this.getYPos(8), "Black", "Gray");
+		DrawCheckbox(GuiSubscreen.START_X + 600, this.getYPos(8) - 32, 64, 64, "", Player.LSCG.MiscModule.gagChokeEnabled ?? false);
 
 		MainCanvas.textAlign = prev;
 	}
@@ -82,13 +86,18 @@ export class GuiGlobal extends GuiSubscreen {
 			Player.LSCG.MiscModule.chloroformEnabled = !Player.LSCG.MiscModule.chloroformEnabled;
 		}
 
-		// Hand Choke Enabled Checkbox
+		// Immersive Chloroform Checkbox
 		if (MouseIn(GuiSubscreen.START_X + 600, this.getYPos(6) - 32, 64, 64)){
+			Player.LSCG.MiscModule.immersiveChloroform = !Player.LSCG.MiscModule.immersiveChloroform;
+		}
+
+		// Hand Choke Enabled Checkbox
+		if (MouseIn(GuiSubscreen.START_X + 600, this.getYPos(7) - 32, 64, 64)){
 			Player.LSCG.MiscModule.handChokeEnabled = !Player.LSCG.MiscModule.handChokeEnabled;
 		}
 
 		// Gag Choke Enabled Checkbox
-		if (MouseIn(GuiSubscreen.START_X + 600, this.getYPos(7) - 32, 64, 64)){
+		if (MouseIn(GuiSubscreen.START_X + 600, this.getYPos(8) - 32, 64, 64)){
 			Player.LSCG.MiscModule.gagChokeEnabled = !Player.LSCG.MiscModule.gagChokeEnabled;
 		}
 	}

@@ -8,6 +8,7 @@ export interface GlobalSettingsModel extends BaseSettingsModel {
 
 export interface MiscSettingsModel extends BaseSettingsModel {
     chloroformEnabled: boolean;
+    immersiveChloroform: boolean;
     handChokeEnabled: boolean;
     gagChokeEnabled: boolean;
 }
