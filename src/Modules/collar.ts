@@ -1,7 +1,7 @@
 import { BaseModule } from 'base';
 import { CollarModel, CollarSettingsModel } from 'Settings/Models/collar';
 import { ModuleCategory, Subscreen } from 'Settings/setting_definitions';
-import { settingsSave, parseMsgWords, SendAction, OnChat, getRandomInt, hookFunction, removeAllHooksByModule, OnActivity, OnAction, setOrIgnoreBlush, getCharacter } from '../utils';
+import { settingsSave, parseMsgWords, SendAction, OnChat, getRandomInt, hookFunction, removeAllHooksByModule, OnActivity, OnAction, setOrIgnoreBlush, getCharacter, hookBCXCurse } from '../utils';
 import { GuiCollar } from 'Settings/collar';
 
 enum PassoutReason {
@@ -146,36 +146,25 @@ export class CollarModule extends BaseModule {
             
             var targetGroup = data.Dictionary?.find((dictItem: { Tag: string; }) => dictItem.Tag == "FocusAssetGroup")?.AssetGroupName;
 
-            var chokeThreshold = 8;
-            var gaspThreshold = 5;
-
-            // slightly lower threshold for pump and pony gag to choke at max level...
-            if (msg.indexOf("PumpGag") > -1 || msg.indexOf("ItemMouthPonyGag") > -1) {
-                chokeThreshold = 7;
-            }
-
             if (target == Player.MemberNumber &&
                 (!targetGroup || airwaySlots.indexOf(targetGroup) > -1) &&
                 messagesToCheck.some(x => msg.startsWith(x))) {
-                let gagLevel = SpeechGetTotalGagLevel(Player, true);
-                let isNosePlugged = InventoryGet(Player, "ItemNose")?.Asset.Name == "NosePlugs";
-                if (gagLevel >= chokeThreshold && isNosePlugged || 
-                    (msg.indexOf("PumpGagpumpsTo") > -1 && gagLevel >= 7)) { // allow lower threshold for pump gag, letting it choke when full.
-                    if (msg.indexOf("PumpInflate") > -1) {
-                        SendAction("%NAME%'s eyes widen as %POSSESSIVE% gag inflates to completely fill %POSSESSIVE% throat.");
-                    }
-                    this.isPluggedUp = true;
-                    this.StartPassout(PassoutReason.PLUGS, sender, 125000); // just over 2 minutes to choke out
-                } else {
-                    this.isPluggedUp = false;
-                    if (this.isPassingOut && this.settings.chokeLevel < 4)
-                        this.ResetPlugs();
-                    else if (gagLevel >= gaspThreshold && isNosePlugged)
-                        SendAction("%NAME% splutters and gasps for air around %POSSESSIVE% gag.");
-                }
+                this.CheckGagSuffocate(msg, sender);
             }
             return;
         })
+
+        hookBCXCurse("curseTrigger", (evt) => {
+            if (evt.group == "ItemNose")
+                setTimeout(() => {
+                    this.CheckGagSuffocate("CurseUpdate", Player);
+                }, 2000);
+        })
+
+        // setTimeout(() => {
+        //     window.bcx?.getModApi("LSCG").on?.("curseTrigger", (event) => {
+        //         console.log("I see a curse event!", event);
+        //     })}, 10000);
 
         // event on room join
         hookFunction("ChatRoomSync", 4, (args, next) => {
@@ -185,6 +174,7 @@ export class CollarModule extends BaseModule {
             else
                 this.ReleaseHandChoke(null, false);
             this.ActivateChokeEvent();
+            this.CheckGagSuffocate("ChatRoomSync", Player);
         }, ModuleCategory.Collar);
 
         hookFunction('ServerSend', 4, (args, next) => {
@@ -280,6 +270,33 @@ export class CollarModule extends BaseModule {
         "%NAME% groans and convulses.",
         "%NAME% shudders as %POSSESSIVE% lungs burn."
     ]
+
+    CheckGagSuffocate(msg: string, sender: Character | null) {
+        var chokeThreshold = 8;
+        var gaspThreshold = 5;
+
+        // slightly lower threshold for pump and pony gag to choke at max level...
+        if (msg.indexOf("PumpGag") > -1 || msg.indexOf("ItemMouthPonyGag") > -1) {
+            chokeThreshold = 7;
+        }
+
+        let gagLevel = SpeechGetTotalGagLevel(Player, true);
+        let isNosePlugged = InventoryGet(Player, "ItemNose")?.Asset.Name == "NosePlugs";
+        if (gagLevel >= chokeThreshold && isNosePlugged || 
+            (msg.indexOf("PumpGagpumpsTo") > -1 && gagLevel >= 7)) { // allow lower threshold for pump gag, letting it choke when full.
+            if (msg.indexOf("PumpInflate") > -1) {
+                SendAction("%NAME%'s eyes widen as %POSSESSIVE% gag inflates to completely fill %POSSESSIVE% throat.");
+            }
+            this.isPluggedUp = true;
+            this.StartPassout(PassoutReason.PLUGS, sender, 125000); // just over 2 minutes to choke out
+        } else {
+            this.isPluggedUp = false;
+            if (this.isPassingOut && this.settings.chokeLevel < 4)
+                this.ResetPlugs();
+            else if (gagLevel >= gaspThreshold && isNosePlugged)
+                SendAction("%NAME% splutters and gasps for air around %POSSESSIVE% gag.");
+        }
+    }
 
     setChokeTimeout(f: TimerHandler, delay: number | undefined) {
         clearTimeout(this.chokeTimeout);
