@@ -1,13 +1,25 @@
 import { BaseModule } from "base";
 import { BaseSettingsModel } from "Settings/Models/base";
-import { ModuleCategory } from "Settings/setting_definitions";
+import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
 import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, setOrIgnoreBlush } from "../utils";
 import { hypnoActivated } from "./hypno";
+import { GuiBoops } from "Settings/boops";
 
 export class BoopsModule extends BaseModule {
     boops: number = 0;
     boopShutdown: boolean = false;
     boopDecreaseLoop: number = 0;
+
+    // Disabled as it's managed via General
+    // get settingsScreen(): Subscreen | null {
+    //     return GuiBoops;
+    // }
+
+    get defaultSettings() {
+        return <BaseSettingsModel>{
+            enabled: true
+        };
+    }
 
     load(): void {
         OnActivity(100, ModuleCategory.Boops, (data, sender, msg, metadata) => {

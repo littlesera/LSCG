@@ -1,20 +1,19 @@
+import { ICONS } from "utils";
 import { GlobalSettingsModel } from "./Models/base";
 import { GuiSubscreen } from "./settingBase";
 
 export class GuiGlobal extends GuiSubscreen {
-    readonly character : PlayerCharacter;
 
-    constructor(character: PlayerCharacter) {
-		super();
-		this.character = character;
-    }
+	get name(): string {
+		return "General";
+	}
+
+	get icon(): string {
+		return ICONS.BDSM;
+	}
 
 	get settings(): GlobalSettingsModel {
-        Player.LSCG.GlobalModule = Player.LSCG.GlobalModule ?? { enabled: true, edgeBlur: false };
-		Player.LSCG.LipstickModule = Player.LSCG.LipstickModule ?? { enabled: false };
-		Player.LSCG.BoopsModule = Player.LSCG.BoopsModule ?? { enabled: false };
-		Player.LSCG.MiscModule = Player.LSCG.MiscModule ?? { enabled: true, chloroformEnabled: false, gagChokeEnabled: false, handChokeEnabled: false };
-        return Player.LSCG.GlobalModule
+        return super.settings as GlobalSettingsModel;
     }
 
     Run() {
@@ -57,6 +56,11 @@ export class GuiGlobal extends GuiSubscreen {
 
 	Click() {
 		super.Click();
+
+		// Enabled Checkbox
+		if (MouseIn(GuiSubscreen.START_X + 600, this.getYPos(1) - 32, 64, 64)){
+			this.settings.enabled = !this.settings.enabled;
+		}
 
 		// Edge Blur Checkbox
 		if (MouseIn(GuiSubscreen.START_X + 600, this.getYPos(2) - 32, 64, 64)){

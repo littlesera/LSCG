@@ -1,17 +1,18 @@
-import { BaseSettingsModel, MiscSettingsModel } from "./Models/base";
+import { MiscSettingsModel } from "./Models/base";
 import { GuiSubscreen } from "./settingBase";
 
 export class GuiMisc extends GuiSubscreen {
-    readonly character : PlayerCharacter;
 
-    constructor(character: PlayerCharacter) {
-		super();
-		this.character = character;
-    }
+	get name(): string {
+		return "Miscellaneous";
+	}
+
+	get icon(): string {
+		return "Icons/General.png";
+	}
 
 	get settings(): MiscSettingsModel {
-        Player.LSCG.MiscModule = Player.LSCG.MiscModule ?? { enabled: true, chloroformEnabled: false };
-        return Player.LSCG.MiscModule
+		return super.settings as MiscSettingsModel;
     }
 
     Run() {

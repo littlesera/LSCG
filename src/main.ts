@@ -1,7 +1,13 @@
 import { hookFunction, ICONS, isObject, settingsSave, VERSION } from './utils';
-import { init_modules, unload_modules } from 'modules';
-import './modules';
+import { modules, registerModule } from 'modules';
 import { SettingsModel } from 'Settings/Models/settings';
+import { HypnoModule } from './Modules/hypno';
+import { CollarModule } from './Modules/collar';
+import { BoopsModule } from './Modules/boops';
+import { MiscModule } from './Modules/misc';
+import { LipstickModule } from './Modules/lipstick';
+import { GUI } from "Settings/settingUtils";
+import { ActivityModule } from "Modules/activities";
 
 function initWait() {
 	console.debug("BCX: Init wait");
@@ -27,7 +33,7 @@ export function loginInit(C: any) {
 	init();
 }
 
-export function initSettings() {
+export function initSettingsScreen() {
 	PreferenceSubscreenList.push("LSCGMainMenu");
 	hookFunction("TextGet", 2, (args: string[], next: (arg0: any) => any) => {
 		if (args[0] == "HomepageLSCGMainMenu") return "LSCG Settings";
@@ -43,21 +49,22 @@ export function init() {
 	if (window.LSCG_Loaded)
 		return;
 	
-		// clear any old settings.
+	// clear any old settings.
 	if (!!(<any>Player.OnlineSettings)?.LittleSera)
 		delete (<any>Player.OnlineSettings).LittleSera;
 	if (!!(<any>Player.OnlineSettings)?.ClubGames)
 		delete (<any>Player.OnlineSettings).ClubGames;
 
     Player.LSCG = Player.OnlineSettings.LSCG || <SettingsModel>{};
-	settingsSave();
 
-	initSettings();
+	initSettingsScreen();
 
 	if (!init_modules()) {
 		unload();
 		return;
 	}
+
+	settingsSave();
 
 	const currentAccount = Player.MemberNumber;
 	if (currentAccount == null) {
@@ -77,12 +84,43 @@ export function init() {
 	console.log(`LSCG loaded! Version: ${VERSION}`);
 }
 
+function init_modules(): boolean {
+	registerModule(new GUI());
+	registerModule(new HypnoModule());
+	registerModule(new CollarModule());
+	registerModule(new BoopsModule());
+	registerModule(new MiscModule());
+	registerModule(new LipstickModule());
+	registerModule(new ActivityModule());
+
+	for (const m of modules) {
+		m.init();
+	}
+
+	for (const m of modules) {
+		m.load();
+	}
+
+	for (const m of modules) {
+		m.run();
+	}
+
+	console.info("LSCG Modules Loaded.");
+	return true;
+}
+
 export function unload(): true {
 	unload_modules();
 
 	delete window.LSCG_Loaded;
 	console.log("LSCG: Unloaded.");
 	return true;
+}
+
+function unload_modules() {
+	for (const m of modules) {
+		m.unload();
+	}
 }
 
 initWait();

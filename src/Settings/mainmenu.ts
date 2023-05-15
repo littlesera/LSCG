@@ -1,43 +1,32 @@
-
-import { GuiBoops, GuiCollar, GuiGlobal, GuiHypno, GuiLipstick } from "./all";
-import { GuiMisc } from "./misc";
 import { GuiSubscreen } from "./settingBase";
-import { ModuleCategory, SETTING_ICONS, SETTING_NAMES } from "./setting_definitions";
-
-export class MenuItem {
-	module: ModuleCategory = ModuleCategory.Misc;
-	private _setting: GuiSubscreen | null = null;
-	get setting(): GuiSubscreen {
-		return this._setting ?? this.settingCreate();
-	};
-	settingCreate: () => GuiSubscreen = () => new MainMenu(Player);
-	constructor(m: ModuleCategory, s: () => GuiSubscreen) {
-		this.module = m;
-		this.settingCreate = s;
-	}
-}
-
-export const MAIN_MENU_ITEMS: MenuItem[] = [
-	new MenuItem(ModuleCategory.Global, () => new GuiGlobal(Player)),
-	new MenuItem(ModuleCategory.Hypno, () => new GuiHypno(Player)),
-	//new MenuItem(ModuleCategory.Boops, () => new GuiBoops(Player)),
-	//new MenuItem(ModuleCategory.Lipstick, () => new GuiLipstick(Player)),
-	//new MenuItem(ModuleCategory.Misc, () => new GuiMisc(Player)),
-	new MenuItem(ModuleCategory.Collar, () => new GuiCollar(Player))
-];
+import { GUI } from "./settingUtils";
 
 export class MainMenu extends GuiSubscreen {
-    readonly character : PlayerCharacter;
+	subscreens: GuiSubscreen[] = [];
 
-	constructor(C: PlayerCharacter) {
-		super();
-        this.character = C;
+	get name(): string {
+		return "MainMenu";
+	}
+
+	get enabled(): boolean {
+		return false;
 	}
 
 	onChange(source: number) {
 		if (source === this.character.MemberNumber) {
 			this.Load();
 		}
+	}
+
+	Load(): void {
+		// As that Load call was made automatically by BC (though PreferenceSubscreenList) we're not setup fully yet.
+		// Set and bail out, as we're gonna get called again.
+		if (!GUI.instance?.currentSubscreen) {
+			this.setSubscreen(this);
+			return;
+		}
+
+		super.Load();
 	}
 
 	Run() {
@@ -47,18 +36,21 @@ export class MainMenu extends GuiSubscreen {
 		DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png");
 		MainCanvas.textAlign = "center";
 		
-		for (let i = 0; i < MAIN_MENU_ITEMS.length; i++) {
-			const e = MAIN_MENU_ITEMS[i];
+		let i = 0;
+		for (const screen of this.subscreens) {
 			const PX = Math.floor(i / 6);
 			const PY = i % 6;
 
-			const isDisabled = e.module == ModuleCategory.Collar && this.allowedChokeMemberNumbers.indexOf(this.character.MemberNumber ?? 0) == -1;
+			const isDisabled = !screen.enabled;
 
-			if (!isDisabled) {
-				DrawButton(150 + 430 * PX, 190 + 120 * PY, 400, 90, "", isDisabled ? "#ddd" : "White", SETTING_ICONS[e.module],
-					isDisabled ? "Setting is deactivated" : "", isDisabled);
-				DrawTextFit(SETTING_NAMES[e.module], 380 + 430 * PX, 235 + 120 * PY, 310, "Black");
-			}
+			// Skip disabled screens for the time being
+			if (isDisabled) continue;
+
+			DrawButton(150 + 430 * PX, 190 + 120 * PY, 400, 90, "", isDisabled ? "#ddd" : "White", screen.icon,
+				isDisabled ? "Setting is deactivated" : "", isDisabled);
+			DrawTextFit(screen.name, 380 + 430 * PX, 235 + 120 * PY, 310, "Black");
+
+			i++;
 		}
 
 		MainCanvas.textAlign = prev;
@@ -69,12 +61,6 @@ export class MainMenu extends GuiSubscreen {
         // DrawText(`View changelog`, 1450 + 350 / 2, 855, "Black", "");
 	}
 
-	allowedChokeMemberNumbers = [
-		74298, // little sera
-		54618, // megg
-		122875 // fake sera
-	]
-
 	Click() {
 		if (MouseIn(1815, 75, 90, 90)) return this.Exit();
 
@@ -83,19 +69,23 @@ export class MainMenu extends GuiSubscreen {
 		// 	window.open(`https://github.com/littlesera/sera/CHANGELOG.md`, "_blank");
 		// }
 
-		for (let i = 0; i < MAIN_MENU_ITEMS.length; i++) {
-			const e = MAIN_MENU_ITEMS[i];
+		let i = 0
+		for (const screen of this.subscreens) {
 			const PX = Math.floor(i / 6);
 			const PY = i % 6;
-            const isDisabled = e.module == ModuleCategory.Collar && this.allowedChokeMemberNumbers.indexOf(this.character.MemberNumber ?? 0) == -1
-			if (MouseIn(150 + 430 * PX, 190 + 120 * PY, 400, 90) && !isDisabled) {
-				return CommonDynamicFunction("PreferenceSubscreenLSCG" + e.setting.constructor.name + "Load()");
+
+            const isDisabled = !screen.enabled;
+			if (isDisabled) continue;
+
+			if (MouseIn(150 + 430 * PX, 190 + 120 * PY, 400, 90)) {
+				this.setSubscreen(screen);
+				return;
 			}
+			i++;
 		}
 	}
 
 	Exit(): void {
-		PreferenceMessage = "";
-		PreferenceSubscreen = "";
+		this.setSubscreen(null);
 	}
 }

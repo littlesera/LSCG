@@ -1,12 +1,28 @@
 import { BaseModule } from 'base';
 import { HypnoSettingsModel } from 'Settings/Models/hypno';
-import { ModuleCategory } from 'Settings/setting_definitions';
+import { ModuleCategory, Subscreen } from 'Settings/setting_definitions';
 import { settingsSave, parseMsgWords, OnChat, OnAction, OnActivity, SendAction, getRandomInt, hookFunction, removeAllHooksByModule, callOriginal, setOrIgnoreBlush, escapeRegExp } from '../utils';
+import { GuiHypno } from 'Settings/hypno';
 
 export class HypnoModule extends BaseModule {
     get settings(): HypnoSettingsModel {
-		return super.settings as HypnoSettingsModel;
+        return super.settings as HypnoSettingsModel;
 	}
+
+    get settingsScreen(): Subscreen | null {
+        return GuiHypno;
+    }
+
+    get defaultSettings(){
+        return <HypnoSettingsModel>{
+            enabled: false,
+            activatedAt: 0,
+            cycleTime: 30,
+            enableCycle: true,
+            overrideMemberIds: "",
+            overrideWords: ""
+        };
+    }
 
     load(): void {
         CommandCombine([

@@ -2,16 +2,17 @@ import { BaseSettingsModel } from "./Models/base";
 import { GuiSubscreen } from "./settingBase";
 
 export class GuiBoops extends GuiSubscreen {
-    readonly character : PlayerCharacter;
 
-    constructor(character: PlayerCharacter) {
-		super();
-		this.character = character;
-    }
+	get name(): string {
+		return "Boops";
+	}
+
+	get icon(): string {
+		return "Icons/Use.png";
+	}
 
 	get settings(): BaseSettingsModel {
-        Player.LSCG.BoopsModule = Player.LSCG.BoopsModule ?? { enabled: true };
-        return Player.LSCG.BoopsModule
+        return super.settings as BaseSettingsModel;
     }
 
     Run() {
@@ -26,5 +27,16 @@ export class GuiBoops extends GuiSubscreen {
 		DrawCheckbox(GuiSubscreen.START_X + 600, this.getYPos(1) - 32, 64, 64, "", this.settings.enabled ?? false);
 
 		MainCanvas.textAlign = prev;
+	}
+
+	Click(): void {
+		super.Click();
+
+		// Enabled Checkbox
+		if (MouseIn(GuiSubscreen.START_X + 600, this.getYPos(1) - 32, 64, 64)){
+			this.settings.enabled = !this.settings.enabled;
+			return;
+		}
+
 	}
 }

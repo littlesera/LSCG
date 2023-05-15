@@ -1,23 +1,15 @@
 import { BaseModule } from "../base";
-import { MainMenu, MAIN_MENU_ITEMS } from "./all";
 import { GuiSubscreen } from "./settingBase";
-
-export function getCurrentSubscreen(): GuiSubscreen | null {
-	return GUI.instance && GUI.instance.currentSubscreen;
-}
-
-export function setSubscreen(subscreen: GuiSubscreen | null): GuiSubscreen | null {
-	if (!GUI.instance) {
-		throw new Error("Attempt to set subscreen before init");
-	}
-	GUI.instance.currentSubscreen = subscreen;
-	return subscreen;
-}
+import { GuiGlobal } from "./global";
+import { MainMenu } from "./mainmenu";
+import { SETTING_NAME_PREFIX, Subscreen } from "./setting_definitions";
+import { modules } from "modules";
+import { GlobalSettingsModel } from "./Models/base";
 
 export class GUI extends BaseModule {
 	static instance: GUI | null = null;
 
-	private _subscreens: GuiSubscreen[] | null = null;
+	private _subscreens: GuiSubscreen[];
 	private _mainMenu: MainMenu;
 	private _currentSubscreen: GuiSubscreen | null = null;
 
@@ -29,14 +21,45 @@ export class GUI extends BaseModule {
 		return this._currentSubscreen;
 	}
 
-	set currentSubscreen(subscreen: GuiSubscreen | null) {
+	set currentSubscreen(subscreen: GuiSubscreen | string | null) {
 		if (this._currentSubscreen) {
 			this._currentSubscreen.Unload();
 		}
-		this._currentSubscreen = subscreen;
+		if (typeof subscreen === "string") {
+			const scr = this._subscreens?.find(s => s.name === subscreen);
+			if (!scr) throw `Failed to find screen name ${subscreen}`;
+			this._currentSubscreen = scr;
+		} else {
+			this._currentSubscreen = subscreen;
+		}
+
+		// Reset that first, in case it gets set in the screen's Load callback
+		PreferenceMessage = "";
+
+		let subscreenName = "";
 		if (this._currentSubscreen) {
+			subscreenName = SETTING_NAME_PREFIX + this._currentSubscreen?.name;
 			this._currentSubscreen.Load();
 		}
+
+		// Get BC to render the new screen
+		PreferenceSubscreen = subscreenName;
+	}
+
+	get currentCharacter(): Character {
+		return Player;
+	}
+
+	get settingsScreen(): Subscreen | null {
+		return GuiGlobal;
+	}
+
+	get settings(): GlobalSettingsModel {
+		return super.settings as GlobalSettingsModel;
+	}
+
+	get settingsStorage(): string | null {
+		return "GlobalModule";
 	}
 
 	constructor() {
@@ -45,18 +68,29 @@ export class GUI extends BaseModule {
 			throw new Error("Duplicate initialization");
 		}
 
-		this._mainMenu = new MainMenu(Player);
+		this._mainMenu = new MainMenu(this);
 		this._subscreens = [
 			this._mainMenu
 		];
-		MAIN_MENU_ITEMS.forEach(item => {
-			this._subscreens?.push(item.setting);
-		});
 
 		GUI.instance = this;
 	}
 
+	get defaultSettings(): GlobalSettingsModel {
+		return {
+			enabled: true,
+			edgeBlur: false
+		};
+    }
+
 	load(): void {
-		
+		// At that point all other modules have been initialized, build the list of their screens
+		for (const module of modules) {
+			if (!module.settingsScreen) continue;
+
+			this._subscreens.push(new module.settingsScreen(module));
+		}
+
+		this._mainMenu.subscreens = this._subscreens;
 	}
 }

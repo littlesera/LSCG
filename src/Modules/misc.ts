@@ -1,13 +1,26 @@
 import { BaseModule } from "base";
 import { MiscSettingsModel } from "Settings/Models/base";
-import { ModuleCategory } from "Settings/setting_definitions";
+import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
 import { getRandomInt, hookFunction, OnAction, OnActivity, removeAllHooksByModule, SendAction, setOrIgnoreBlush } from "../utils";
 
 export class MiscModule extends BaseModule {
     get settings(): MiscSettingsModel {
-		(<any>Player.LSCG)[this.constructor.name] = (<any>Player.LSCG)[this.constructor.name] || {};
-		return (<any>Player.LSCG)[this.constructor.name];
+        return super.settings as MiscSettingsModel;
 	}
+
+    // Disabled as it's managed via General
+    // get settingsScreen(): Subscreen | null {
+    //     return GuiMisc;
+    // }
+
+    get defaultSettings() {
+        return <MiscSettingsModel>{
+            enabled: true,
+            chloroformEnabled: false,
+            handChokeEnabled: false,
+            gagChokeEnabled: false
+        };
+    }
 
     load(): void {
         // Kneel on lap sit

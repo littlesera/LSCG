@@ -1,37 +1,75 @@
 import { settingsSave } from "utils";
 import { BaseSettingsModel } from "./Models/base";
-import { SETTING_FUNC_NAMES, SETTING_FUNC_PREFIX, SETTING_NAMES, SETTING_NAME_PREFIX } from "./setting_definitions";
+import { SETTING_FUNC_NAMES, SETTING_FUNC_PREFIX, SETTING_NAME_PREFIX, setSubscreen } from "./setting_definitions";
+import { BaseModule } from "base";
+import { GUI } from "./settingUtils";
 
 export abstract class GuiSubscreen {
     static START_X: number = 225;
     static START_Y: number = 125;
     static Y_MOD: number = 100;
+	readonly module: BaseModule;
 
-	constructor() {
+	constructor(module: BaseModule) {
+		this.module = module;
+
+		// create each handler for a new preference subscreen
 		SETTING_FUNC_NAMES.forEach(name => {
-			if (typeof (<any>this)[name] === "function")
-				(<any>window)[SETTING_FUNC_PREFIX + SETTING_NAME_PREFIX + this.constructor.name + name] = () => {
+			const fName = SETTING_FUNC_PREFIX + SETTING_NAME_PREFIX + this.name + name;
+			if (typeof (<any>this)[name] === "function" && typeof (<any>window)[fName] !== "function")
+				(<any>window)[fName] = () => {
 					(<any>this)[name]();
 				};
 		});
 	}
 
+	get name(): string {
+		throw "Override name in your subscreen class";
+	}
+
+	get icon(): string {
+		throw "Override icon in your subscreen class";
+	}
+
+	get label(): string {
+		throw "Override icon in your subscreen class";
+	}
+
+	get enabled(): boolean {
+		return true;
+	}
+
+	get message(): string {
+		return PreferenceMessage;
+	}
+
+	set message(s: string) {
+		PreferenceMessage = s;
+	}
+
     get SubscreenName(): string {
         return SETTING_NAME_PREFIX + this.constructor.name;  
-    } 
-
-    get settings(): BaseSettingsModel {
-        Player.LSCG.GlobalModule = Player.LSCG.GlobalModule ?? { enabled: true };
-        return Player.LSCG.GlobalModule
     }
+
+	setSubscreen(screen: GuiSubscreen | string | null) {
+		return setSubscreen(screen);
+	}
+
+	get settings(): BaseSettingsModel {
+		return this.module.settings as BaseSettingsModel;
+	}
+
+	get character(): Character {
+		// Because we're initialized by that instance, it must already exist
+		return GUI.instance?.currentCharacter as Character;
+	}
 
     getYPos(ix: number) {
         return GuiSubscreen.START_Y + (GuiSubscreen.Y_MOD * ix);
     }
 
 	Load() {
-        PreferenceSubscreen = this.SubscreenName;
-        PreferenceMessage = this.SubscreenName;
+        // Empty
 	}
 
 	Run() {
@@ -40,18 +78,11 @@ export abstract class GuiSubscreen {
 
 	Click() {
 		if (MouseIn(1815, 75, 90, 90)) return this.Exit();
-
-		// Enabled Checkbox
-		if (MouseIn(GuiSubscreen.START_X + 600, this.getYPos(1) - 32, 64, 64)){
-			this.settings.enabled = !this.settings.enabled;
-		}
 	}
 
 	Exit() {
-		// Empty
-		PreferenceMessage = "LSCG Main Menu";
-		PreferenceSubscreen = "LSCGMainMenu";
-        settingsSave();
+		setSubscreen("MainMenu");
+		settingsSave();
 	}
 
 	Unload() {
