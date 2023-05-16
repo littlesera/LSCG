@@ -99,7 +99,9 @@ export class HypnoModule extends BaseModule {
             }
 
             var lowerMsg = args[1].toLowerCase();
-            var names = [Player.Name.toLowerCase(), Player.Nickname?.toLowerCase() ?? Player.Name];
+            var names = [Player.Name.toLowerCase()]
+            if (!!Player.Nickname && Player.Nickname.length > 0)
+                names.push(Player.Nickname.toLowerCase());
             if (names.some(n => lowerMsg.indexOf(n) > -1) || triggeredBy == C.MemberNumber || C.MemberNumber == Player.MemberNumber)
                 args[1] = args[1];
             else
