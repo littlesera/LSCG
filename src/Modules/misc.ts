@@ -114,40 +114,28 @@ export class MiscModule extends BaseModule {
             return next(args);
         }, ModuleCategory.Misc);
 
-        hookFunction('Player.CanChangeOwnClothes', 5, (args, next) => {
-            if (!this.settings.chloroformEnabled || !this.settings.immersiveChloroform)
-                return next(args);
-            else if (this.isChloroformed)
+        hookFunction('Player.CanChangeOwnClothes', 1, (args, next) => {
+            if (this.settings.chloroformEnabled && this.settings.immersiveChloroform && this._isChloroformed)
                 return false;
-            else
-                return next(args);
+            return next(args);
         }, ModuleCategory.Misc);
 
-        hookFunction('Player.IsDeaf', 5, (args, next) => {
-            if (!this.settings.chloroformEnabled || !this.settings.immersiveChloroform)
-                return next(args);
-            else if (this.isChloroformed)
+        hookFunction('Player.IsDeaf', 1, (args, next) => {
+            if (this.settings.chloroformEnabled && this.settings.immersiveChloroform && this._isChloroformed)
                 return true;
-            else
-                return next(args);
+            return next(args);
         }, ModuleCategory.Misc);
 
-        hookFunction('Player.IsBlind', 5, (args, next) => {
-            if (!this.settings.chloroformEnabled || !this.settings.immersiveChloroform)
-                return next(args);
-            else if (this.isChloroformed)
+        hookFunction('Player.IsBlind', 1, (args, next) => {
+            if (this.settings.chloroformEnabled && this.settings.immersiveChloroform && this._isChloroformed)
                 return true;
-            else
-                return next(args);
+            return next(args);
         }, ModuleCategory.Misc);
 
-        hookFunction('Player.CanWalk', 5, (args, next) => {
-            if (!this.settings.chloroformEnabled || !this.settings.immersiveChloroform)
-                return next(args);
-            else if (this.isChloroformed)
+        hookFunction('Player.CanWalk', 1, (args, next) => {
+            if (this.settings.chloroformEnabled && this.settings.immersiveChloroform && this._isChloroformed)
                 return false;
-            else
-                return next(args);
+            return next(args);
         }, ModuleCategory.Misc);
     }
 
