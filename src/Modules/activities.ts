@@ -468,32 +468,32 @@ export class ActivityModule extends BaseModule {
             }
         })
 
-        // hookFunction(
-		// 	"ChatRoomDrawCharacterOverlay",
-		// 	1,
-		// 	(args, next) => {
-		// 		const ret = next(args);
-		// 		const [C, CharX, CharY, Zoom] = args;
-		// 		if (
-		// 			typeof CharX === "number" &&
-		// 			typeof CharY === "number" &&
-		// 			typeof Zoom === "number" &&
-		// 			ChatRoomHideIconState === 0 &&
-        //             C.MemberNumber == Player.MemberNumber
-		// 		) {
-		// 			if (this.customGagged > Date.now()) {
-		// 				DrawImageResize(
-		// 					ICONS.TONGUE,
-		// 					CharX + 125 * Zoom,
-		// 					CharY + 50 * Zoom,
-		// 					50 * Zoom,
-		// 					50 * Zoom
-		// 				);
-		// 			}
-		// 		}
-		// 		return ret;
-		// 	}
-		// );
+        hookFunction(
+			"ChatRoomDrawCharacterOverlay",
+			1,
+			(args, next) => {
+				const ret = next(args);
+				const [C, CharX, CharY, Zoom] = args;
+				if (
+					typeof CharX === "number" &&
+					typeof CharY === "number" &&
+					typeof Zoom === "number" &&
+					ChatRoomHideIconState === 0 &&
+                    C.MemberNumber == Player.MemberNumber
+				) {
+					if (this.customGagged > Date.now()) {
+						DrawImageResize(
+							ICONS.TONGUE,
+							CharX + 125 * Zoom,
+							CharY + 50 * Zoom,
+							50 * Zoom,
+							50 * Zoom
+						);
+					}
+				}
+				return ret;
+			}
+		);
 
         let failedLinkActions = [
             "%NAME%'s whimpers, %POSSESSIVE% tongue held tightly.",
