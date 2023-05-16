@@ -299,7 +299,10 @@ export class ActivityModule extends BaseModule {
                             return !acting.IsVulvaFull();
                         }
                         else {
-                            return acted.ActivePose?.indexOf("Kneel") > -1 || acted.ActivePose?.indexOf("AllFours") > -1;
+                            return acted.ActivePose?.indexOf("Kneel") > -1 || 
+                                acted.ActivePose?.indexOf("KneelSpread") > -1 ||
+                                acted.ActivePose?.indexOf("BellyLie") > -1 ||
+                                acted.ActivePose?.indexOf("AllFours") > -1;
                         }
                     }
                 }
