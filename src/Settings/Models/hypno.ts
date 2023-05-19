@@ -12,5 +12,5 @@ export interface HypnoSettingsModel extends BaseSettingsModel {
     existingEye1Name: string | undefined;
     existingEye2Color: ItemColor | undefined;
     existingEye2Name: string | undefined;
-    existingEyeExpression: string | undefined;
+    existingEyeExpression: ExpressionName | null;
 }

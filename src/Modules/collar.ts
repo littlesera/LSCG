@@ -456,7 +456,7 @@ export class CollarModule extends BaseModule {
             case 0:
                 clearTimeout(this.chokeTimeout);
                 SendAction("%NAME% takes a deep breath as %POSSESSIVE% collar releases its grip with a hiss.");
-                setOrIgnoreBlush("Default");
+                setOrIgnoreBlush(null);
                 break;
             default:
                 break;
@@ -494,8 +494,8 @@ export class CollarModule extends BaseModule {
     }
 
     isPassingOut: boolean = false;
-    eyesAtTimeOfPassout: string = "Default";
-    blushAtTimeOfPassout: string = "Default";
+    eyesAtTimeOfPassout: ExpressionName | null = null;
+    blushAtTimeOfPassout: ExpressionName | null = null;
 
     StartPassout(reason: PassoutReason = PassoutReason.COLLAR, chokingMember: Character | null = null, totalTime: number = 60000) {
         //console.info("Start Passout, " + totalTime + "ms total time. Date.now() = " + Date.now());
@@ -505,8 +505,8 @@ export class CollarModule extends BaseModule {
         //console.info("Timer1 = " + this.passout1Timer + " Timer2 = " + this.passout2Timer + " Timer3 = " + this.passout3Timer);
         this.isPassingOut = true;
         setOrIgnoreBlush("VeryHigh");
-        this.eyesAtTimeOfPassout = WardrobeGetExpression(Player)?.Eyes;
-        this.blushAtTimeOfPassout = WardrobeGetExpression(Player)?.Blush;
+        this.eyesAtTimeOfPassout = WardrobeGetExpression(Player)?.Eyes ?? null;
+        this.blushAtTimeOfPassout = WardrobeGetExpression(Player)?.Blush ?? null;
         CharacterSetFacialExpression(Player, "Eyebrows", "Soft");
         CharacterSetFacialExpression(Player, "Eyes", "Lewd");
         this.setChokeTimeout(() => this.Passout1(reason, chokingMember), this.passout1Timer);

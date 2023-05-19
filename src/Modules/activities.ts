@@ -1,6 +1,6 @@
 import { BaseModule } from "base";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, setOrIgnoreBlush, hookFunction, ICONS } from "../utils";
+import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, setOrIgnoreBlush, hookFunction, ICONS, getCharacter, isHandLeashed, allowHandLeashEffect, DoHandHold, StopHandHold, removeCustomEffect, addCustomEffect } from "../utils";
 
 export interface ActivityTarget {
     Name: AssetGroupItemName;
@@ -21,11 +21,16 @@ export interface CustomReaction {
     Func(sender: Character | null): void;
 }
 
+export interface CustomAction {
+    Func(target: Character | null, args: any[], next: (args: any[]) => any): any;
+}
+
 export interface ActivityBundle {
     Activity: Activity;
     Targets: ActivityTarget[];
     CustomPrereqs?: CustomPrerequisite[];
     CustomReaction?: CustomReaction;
+    CustomAction?: CustomAction;
     CustomImage?: string;
 }
 
@@ -33,19 +38,24 @@ export class ActivityModule extends BaseModule {
     load(): void {
         hookFunction("ServerSend", 100, (args, next) => {
             if (args[0] == "ChatRoomChat" && args[1]?.Type == "Activity"){
-                console.info("Activity ServerSend");
                 let data = args[1];
                 let actName = data.Dictionary[3]?.ActivityName ?? "";
                 if (actName.indexOf("LSCG_") == 0) {
+                    let target = data.Dictionary?.find((d: any) => d.Tag == "TargetCharacter");
+                    var targetChar = getCharacter(target.MemberNumber);
                     // Intercept custom activity send and just do a custom action instead..
                     let {metadata, substitutions} = ChatRoomMessageRunExtractors(data, Player)
                     let msg = ActivityDictionaryText(data.Content);
-                    msg = CommonStringSubstitute(msg, substitutions)
+                    msg = CommonStringSubstitute(msg, substitutions ?? [])
                     data.Dictionary.push({
                         Tag: "MISSING ACTIVITY DESCRIPTION FOR KEYWORD " + data.Content,
                         Text: msg
                     });
-                    return next(args);
+                    var customAction = this.CustomActionCallbacks.get(actName);
+                    if (!customAction)
+                        return next(args);
+                    else
+                        return customAction(targetChar, args, next);
                 }
                 else
                     return next(args);
@@ -84,7 +94,11 @@ export class ActivityModule extends BaseModule {
         })
 
         this.InitTongueGrabHooks();
+        this.InitHandHoldHooks();
+        this.RegisterActivities();
+    }
 
+    RegisterActivities(): void{
         // Hug
         this.AddActivity({
             Activity: <Activity>{
@@ -300,8 +314,8 @@ export class ActivityModule extends BaseModule {
                         }
                         else {
                             return acted.ActivePose?.indexOf("Kneel") > -1 || 
-                                acted.ActivePose?.indexOf("KneelSpread") > -1 ||
-                                acted.ActivePose?.indexOf("BellyLie") > -1 ||
+                                acted.ActivePose?.indexOf("KneelingSpread") > -1 ||
+                                acted.ActivePose?.indexOf("Hogtied") > -1 ||
                                 acted.ActivePose?.indexOf("AllFours") > -1;
                         }
                     }
@@ -364,6 +378,88 @@ export class ActivityModule extends BaseModule {
             },
             CustomImage: "Assets/Female3DCG/Activity/Pinch.png"
         });
+
+        // HoldHand
+        this.AddActivity({
+            Activity: <Activity>{
+                Name: "HoldHand",
+                MaxProgress: 75,
+                MaxProgressSelf: 30,
+                Prerequisite: ["ZoneAccessible", "UseHands"]
+            },
+            Targets: [
+                {
+                    Name: "ItemHands",
+                    SelfAllowed: false,
+                    TargetLabel: "Hold Hands",
+                    TargetAction: "SourceCharacter takes TargetCharacter's hand."
+                }
+            ],
+            CustomPrereqs: [
+                // {
+                //     Name: "LeashingAllowed",
+                //     Func: (acting, acted, group) => {
+                //         return (!ChatRoomData || !ChatRoomData.BlockCategory || ChatRoomData.BlockCategory.indexOf("Leashing") < 0);
+                //     }
+                // },
+                {
+                    Name: "TargetIsHandUnleashed",
+                    Func: (acting, acted, group) => {
+                        return !isHandLeashed(acted);
+                    }
+                }
+            ],
+            CustomReaction: <CustomReaction>{
+                Func: (sender) => addCustomEffect(Player, "HandHold")
+            },
+            CustomAction: <CustomAction>{
+                Func: (target, args, next) => {
+                    let ret = next(args);
+                    if (!!target)
+                        DoHandHold(target);
+                    return ret;
+                }
+            },
+            CustomImage: ICONS.HOLD_HANDS
+        });
+
+        // ReleaseHand
+        this.AddActivity({
+            Activity: <Activity>{
+                Name: "ReleaseHand",
+                MaxProgress: 75,
+                MaxProgressSelf: 30,
+                Prerequisite: ["ZoneAccessible", "UseHands"]
+            },
+            Targets: [
+                {
+                    Name: "ItemHands",
+                    SelfAllowed: false,
+                    TargetLabel: "Release Hand",
+                    TargetAction: "SourceCharacter lets go of TargetCharacter's hand."
+                }
+            ],
+            CustomPrereqs: [
+                {
+                    Name: "TargetIsHandLeashed",
+                    Func: (acting, acted, group) => {
+                        return isHandLeashed(acted);
+                    }
+                }
+            ],
+            CustomReaction: <CustomReaction>{
+                Func: (sender) => removeCustomEffect(Player, "HandHold")
+            },
+            CustomAction: <CustomAction>{
+                Func: (target, args, next) => {
+                    let ret = next(args);
+                    if (!!target)
+                        StopHandHold(target);
+                    return ret;
+                }
+            },
+            CustomImage: ICONS.HOLD_HANDS
+        });
     }
 
     customGagged: number = 0;
@@ -374,6 +470,7 @@ export class ActivityModule extends BaseModule {
 
     CustomPrerequisiteFuncs: Map<string, (acting: Character, acted: Character, group: AssetGroup) => boolean> = new Map<string, (acting: Character, acted: Character, group: AssetGroup) => boolean>();
     CustomIncomingActivityReactions: Map<string, (sender: Character | null) => void> = new Map<string, (sender: Character | null) => void>();
+    CustomActionCallbacks: Map<string, (target: Character | null, args: any[], next: (args: any[]) => any) => any> = new Map<string, (sender: Character | null, args: any[], next: (args: any[]) => any) => any>();
     CustomImages: Map<string, string> = new Map<string, string>;
 
     AddActivity(bundle: ActivityBundle) {
@@ -399,7 +496,10 @@ export class ActivityModule extends BaseModule {
             this.CustomImages.set(activity.Name, bundle.CustomImage);
         }
 
-        ActivityDictionary.push([
+        if (!!bundle.CustomAction && !this.CustomActionCallbacks.get(activity.Name))
+            this.CustomActionCallbacks.set(activity.Name, bundle.CustomAction.Func);
+
+        ActivityDictionary?.push([
             "Activity"+activity.Name,
             bundle.Targets[0].TargetLabel ?? activity.Name.substring(5)
         ])
@@ -424,21 +524,21 @@ export class ActivityModule extends BaseModule {
                 }            
             }
 
-            ActivityDictionary.push([
+            ActivityDictionary?.push([
                 "Label-ChatOther-" + tgt.Name + "-" + activity.Name,
                 tgt.TargetLabel
             ]);
-            ActivityDictionary.push([
+            ActivityDictionary?.push([
                 "ChatOther-" + tgt.Name + "-" + activity.Name,
                 tgt.TargetAction
             ]);
 
             if (tgt.SelfAllowed) {
-                ActivityDictionary.push([
+                ActivityDictionary?.push([
                     "Label-ChatSelf-" + tgt.Name + "-" + activity.Name,
                     tgt.TargetSelfLabel ?? tgt.TargetLabel
                 ]);
-                ActivityDictionary.push([
+                ActivityDictionary?.push([
                     "ChatSelf-" + tgt.Name + "-" + activity.Name,
                     tgt.TargetSelfAction ?? tgt.TargetAction
                 ]);
@@ -517,5 +617,45 @@ export class ActivityModule extends BaseModule {
                 return next(args);
             }
         }, ModuleCategory.Activities);
+    }
+
+    InitHandHoldHooks(): void {
+        hookFunction("ChatRoomCanBeLeashedBy", 1, (args, next) => {
+            let sourceMemberNumber = args[0];
+            let C = args[1];
+            
+            if (isHandLeashed(Player)) {
+                if ((ChatRoomData && ChatRoomData.BlockCategory && ChatRoomData.BlockCategory.indexOf("Leashing") < 0) || !ChatRoomData) {
+                    // Have to not be tethered, and need a leash
+                    var canLeash = false;
+                    var isTrapped = false;
+                    var neckLock = null;
+                    for (let A = 0; A < C.Appearance.length; A++)
+                        if ((C.Appearance[A].Asset != null) && (C.Appearance[A].Asset.Group.Family == C.AssetFamily)) {
+                            if (InventoryItemHasEffect(C.Appearance[A], "Leash", true) || InventoryItemHasEffect(C.Appearance[A], "HandHold", true)) {
+                                canLeash = true;
+                                if (C.Appearance[A].Asset.Group.Name == "ItemNeckRestraints")
+                                    neckLock = InventoryGetLock(C.Appearance[A]);
+                            } else if (InventoryItemHasEffect(C.Appearance[A], "Tethered", true) || InventoryItemHasEffect(C.Appearance[A], "Mounted", true) || InventoryItemHasEffect(C.Appearance[A], "Enclose", true) || InventoryItemHasEffect(C.Appearance[A], "OneWayEnclose", true)){
+                                isTrapped = true;
+                            }
+                        }
+            
+                    if (canLeash && !isTrapped) {
+                        if (sourceMemberNumber == 0 || !neckLock || (!neckLock.Asset.OwnerOnly && !neckLock.Asset.LoverOnly && !neckLock.Asset.FamilyOnly) ||
+                            (neckLock.Asset.OwnerOnly && C.IsOwnedByMemberNumber(sourceMemberNumber)) ||
+                            (neckLock.Asset.FamilyOnly && C.IsFamilyOfPlayer()) ||
+                            (neckLock.Asset.LoverOnly && C.IsLoverOfMemberNumber(sourceMemberNumber))) {
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            }
+            else    
+                return next(args);
+        }, ModuleCategory.Activities);
+
+        allowHandLeashEffect();
     }
 }
