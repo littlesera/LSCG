@@ -316,6 +316,8 @@ export class ActivityModule extends BaseModule {
                             return acted.ActivePose?.indexOf("Kneel") > -1 || 
                                 acted.ActivePose?.indexOf("KneelingSpread") > -1 ||
                                 acted.ActivePose?.indexOf("Hogtied") > -1 ||
+                                acted.ActivePose?.indexOf("KneelingSpread") > -1 ||
+                                acted.ActivePose?.indexOf("Hogtied") > -1 ||
                                 acted.ActivePose?.indexOf("AllFours") > -1;
                         }
                     }
