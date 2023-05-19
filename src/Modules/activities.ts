@@ -300,8 +300,8 @@ export class ActivityModule extends BaseModule {
                         }
                         else {
                             return acted.ActivePose?.indexOf("Kneel") > -1 || 
-                                acted.ActivePose?.indexOf("KneelSpread") > -1 ||
-                                acted.ActivePose?.indexOf("BellyLie") > -1 ||
+                                acted.ActivePose?.indexOf("KneelingSpread") > -1 ||
+                                acted.ActivePose?.indexOf("Hogtied") > -1 ||
                                 acted.ActivePose?.indexOf("AllFours") > -1;
                         }
                     }
