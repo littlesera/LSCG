@@ -39,6 +39,10 @@ export class HypnoModule extends BaseModule {
                 Tag: 'unzonk',
                 Description: ": unzonk self",
                 Action: () => {
+                    if (triggerActivated && this.settings.immersive) {
+                        ChatRoomSendLocal("/unzonk disabled while immersive");
+                        return;
+                    }
                     if (triggerActivated)
                         this.TriggerRestoreTimeout();
                 }
@@ -47,6 +51,10 @@ export class HypnoModule extends BaseModule {
                 Tag: "show-trigger",
                 Description: ": reveal your current trigger word(s)",
                 Action: () => {
+                    if (triggerActivated && this.settings.immersive) {
+                        ChatRoomSendLocal("/show-trigger disabled while immersive");
+                        return;
+                    }
                     ChatRoomSendLocal("Your current triggers are: " + this.triggers);
                 }
             },
@@ -127,6 +135,12 @@ export class HypnoModule extends BaseModule {
             if (!this.Enabled)
                 return next(args);
             if (triggerActivated) return 3;
+            return next(args);
+        }, ModuleCategory.Hypno);
+
+        hookFunction('Player.CanWalk', 1, (args, next) => {
+            if (this.settings.enabled && this.settings.immersive && triggerActivated)
+                return false;
             return next(args);
         }, ModuleCategory.Hypno);
 

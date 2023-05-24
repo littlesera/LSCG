@@ -35,25 +35,29 @@ export class GuiHypno extends GuiSubscreen {
 		DrawText("Enabled:", GuiSubscreen.START_X, this.getYPos(1), "Black", "Gray");
 		DrawCheckbox(GuiSubscreen.START_X + 600, this.getYPos(1) - 32, 64, 64, "", this.settings.enabled ?? false);
 		
+		// Immersive Hypnosis		[true/false]
+		DrawText("Immersive Hypnosis:", GuiSubscreen.START_X, this.getYPos(2), "Black", "Gray");
+		DrawCheckbox(GuiSubscreen.START_X + 600, this.getYPos(2) - 32, 64, 64, "", Player.LSCG.HypnoModule.immersive ?? false);
+
 		// Override Trigger Words 	[Word List]
-		DrawText("Override Trigger Words:", GuiSubscreen.START_X, this.getYPos(2), "Black", "Gray");
-		ElementPosition("hypno_overrideWords", GuiSubscreen.START_X + 900, this.getYPos(2), 600);
+		DrawText("Override Trigger Words:", GuiSubscreen.START_X, this.getYPos(3), "Black", "Gray");
+		ElementPosition("hypno_overrideWords", GuiSubscreen.START_X + 900, this.getYPos(3), 600);
 
 		// Override allowed members	[Member ID List]
-		DrawText("Override Allowed Member IDs:", 225, this.getYPos(3), "Black", "Gray");
-		ElementPosition("hypno_overrideMembers", GuiSubscreen.START_X + 900, this.getYPos(3), 600);
+		DrawText("Override Allowed Member IDs:", 225, this.getYPos(4), "Black", "Gray");
+		ElementPosition("hypno_overrideMembers", GuiSubscreen.START_X + 900, this.getYPos(4), 600);
 
 		// Enabled 					[true/false]
-		DrawText("Enable Cycle:", GuiSubscreen.START_X, this.getYPos(4), "Black", "Gray");
-		DrawCheckbox(GuiSubscreen.START_X + 600, this.getYPos(4) - 32, 64, 64, "", (this.settings.enableCycle ?? false));
+		DrawText("Enable Cycle:", GuiSubscreen.START_X, this.getYPos(5), "Black", "Gray");
+		DrawCheckbox(GuiSubscreen.START_X + 600, this.getYPos(5) - 32, 64, 64, "", (this.settings.enableCycle ?? false));
 
 		// Cycle Time				[Number of minutes (default 30)]
-		DrawText("Trigger Cycle Time (min.):", GuiSubscreen.START_X, this.getYPos(5), "Black", "Gray");
-		ElementPosition("hypno_cycleTime", GuiSubscreen.START_X + 700, this.getYPos(5), 200);
+		DrawText("Trigger Cycle Time (min.):", GuiSubscreen.START_X, this.getYPos(6), "Black", "Gray");
+		ElementPosition("hypno_cycleTime", GuiSubscreen.START_X + 700, this.getYPos(6), 200);
 
 		// Trigger Time				[Number of minutes (default 5)]
-		DrawText("Hypnosis Length (min.):", GuiSubscreen.START_X, this.getYPos(6), "Black", "Gray");
-		ElementPosition("hypno_triggerTime", GuiSubscreen.START_X + 700, this.getYPos(6), 200);
+		DrawText("Hypnosis Length (min.):", GuiSubscreen.START_X, this.getYPos(7), "Black", "Gray");
+		ElementPosition("hypno_triggerTime", GuiSubscreen.START_X + 700, this.getYPos(7), 200);
 
 		MainCanvas.textAlign = prev;
 	}
@@ -84,8 +88,13 @@ export class GuiHypno extends GuiSubscreen {
 			this.settings.enabled = !this.settings.enabled;
 		}
 
+		// Immersive Hypnosis Checkbox
+		if (MouseIn(GuiSubscreen.START_X + 600, this.getYPos(2) - 32, 64, 64)){
+			Player.LSCG.HypnoModule.immersive = !Player.LSCG.HypnoModule.immersive;
+		}
+
 		//Enable Cycle Checkbox
-		if (MouseIn(GuiSubscreen.START_X + 600, this.getYPos(4) - 32, 64, 64)){
+		if (MouseIn(GuiSubscreen.START_X + 600, this.getYPos(5) - 32, 64, 64)){
 			this.settings.enableCycle = !this.settings.enableCycle;
 		}
 	}

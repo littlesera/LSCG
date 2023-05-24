@@ -55,7 +55,7 @@ export function init() {
 	if (!!(<any>Player.OnlineSettings)?.ClubGames)
 		delete (<any>Player.OnlineSettings).ClubGames;
 
-    Player.LSCG = Player.OnlineSettings.LSCG || <SettingsModel>{};
+    Player.LSCG = Player.OnlineSettings?.LSCG || <SettingsModel>{};
 
 	initSettingsScreen();
 
@@ -93,15 +93,15 @@ function init_modules(): boolean {
 	registerModule(new LipstickModule());
 	registerModule(new ActivityModule());
 
-	for (const m of modules) {
+	for (const m of modules()) {
 		m.init();
 	}
 
-	for (const m of modules) {
+	for (const m of modules()) {
 		m.load();
 	}
 
-	for (const m of modules) {
+	for (const m of modules()) {
 		m.run();
 	}
 
@@ -118,7 +118,7 @@ export function unload(): true {
 }
 
 function unload_modules() {
-	for (const m of modules) {
+	for (const m of modules()) {
 		m.unload();
 	}
 }

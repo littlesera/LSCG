@@ -1,3 +1,6 @@
+import { getModule } from "modules";
+import { hypnoActivated, HypnoModule } from "Modules/hypno";
+import { MiscModule } from "Modules/misc";
 import { GuiSubscreen } from "./settingBase";
 import { GUI } from "./settingUtils";
 
@@ -10,6 +13,12 @@ export class MainMenu extends GuiSubscreen {
 
 	get enabled(): boolean {
 		return false;
+	}
+
+	get immersiveBlock(): boolean {
+		var hypnoBlock = Player.LSCG.HypnoModule?.immersive && hypnoActivated();
+		var chloroformBlock = Player.LSCG.MiscModule?.immersiveChloroform &&  getModule<MiscModule>("MiscModule")?.isChloroformed;
+		return (hypnoBlock || chloroformBlock);
 	}
 
 	onChange(source: number) {
@@ -34,23 +43,27 @@ export class MainMenu extends GuiSubscreen {
 		MainCanvas.textAlign = "left";
 		DrawText("- Little Sera's Club Games -", GuiSubscreen.START_X, GuiSubscreen.START_Y, "Black", "Gray");
 		DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png");
-		MainCanvas.textAlign = "center";
 		
-		let i = 0;
-		for (const screen of this.subscreens) {
-			const PX = Math.floor(i / 6);
-			const PY = i % 6;
+		if (!this.immersiveBlock) {
+			MainCanvas.textAlign = "center";
+			let i = 0;
+			for (const screen of this.subscreens) {
+				const PX = Math.floor(i / 6);
+				const PY = i % 6;
 
-			const isDisabled = !screen.enabled;
+				const isDisabled = !screen.enabled;
 
-			// Skip disabled screens for the time being
-			if (isDisabled) continue;
+				// Skip disabled screens for the time being
+				if (isDisabled) continue;
 
-			DrawButton(150 + 430 * PX, 190 + 120 * PY, 400, 90, "", isDisabled ? "#ddd" : "White", screen.icon,
-				isDisabled ? "Setting is deactivated" : "", isDisabled);
-			DrawTextFit(screen.name, 380 + 430 * PX, 235 + 120 * PY, 310, "Black");
+				DrawButton(150 + 430 * PX, 190 + 120 * PY, 400, 90, "", isDisabled ? "#ddd" : "White", screen.icon,
+					isDisabled ? "Setting is deactivated" : "", isDisabled);
+				DrawTextFit(screen.name, 380 + 430 * PX, 235 + 120 * PY, 310, "Black");
 
-			i++;
+				i++;
+			}
+		} else {
+			DrawText("Settings disabled while incapacitated and immersive", 150, 190, "Black", "Gray");
 		}
 
 		MainCanvas.textAlign = prev;
@@ -69,19 +82,21 @@ export class MainMenu extends GuiSubscreen {
 		// 	window.open(`https://github.com/littlesera/sera/CHANGELOG.md`, "_blank");
 		// }
 
-		let i = 0
-		for (const screen of this.subscreens) {
-			const PX = Math.floor(i / 6);
-			const PY = i % 6;
+		if (!this.immersiveBlock) {
+			let i = 0
+			for (const screen of this.subscreens) {
+				const PX = Math.floor(i / 6);
+				const PY = i % 6;
 
-            const isDisabled = !screen.enabled;
-			if (isDisabled) continue;
+				const isDisabled = !screen.enabled;
+				if (isDisabled) continue;
 
-			if (MouseIn(150 + 430 * PX, 190 + 120 * PY, 400, 90)) {
-				this.setSubscreen(screen);
-				return;
+				if (MouseIn(150 + 430 * PX, 190 + 120 * PY, 400, 90)) {
+					this.setSubscreen(screen);
+					return;
+				}
+				i++;
 			}
-			i++;
 		}
 	}
 

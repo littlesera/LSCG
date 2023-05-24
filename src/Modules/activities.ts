@@ -91,7 +91,7 @@ export class ActivityModule extends BaseModule {
                     args[0] = this.CustomImages.get(activityName);
             }
             return next(args);
-        })
+        }, ModuleCategory.Activities)
 
         this.InitTongueGrabHooks();
         this.InitHandHoldHooks();

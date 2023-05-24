@@ -92,7 +92,7 @@ export class LipstickModule extends BaseModule {
     
     addLipstickMarks() {
         InventoryRemove(Player, "Mask");
-        InventoryWear(Player, "Kissmark", "Mask", "Default", 1, Player.MemberNumber ?? 0, null, true);
+        InventoryWear(Player, "Kissmark", "Mask", "Default", 1, Player.MemberNumber ?? 0, undefined, true);
         var marks = InventoryGet(Player, "Mask");
         if (!!marks && !!marks.Property)
             marks.Property.Type = "c0r1f0n0l0";
@@ -205,7 +205,7 @@ export class LipstickModule extends BaseModule {
             return;
 
         if (!existingItem) {
-            InventoryWear(Player, "Kissmark", "ItemMouth3", "Default", 1, Player.MemberNumber ?? 0, null, true);
+            InventoryWear(Player, "Kissmark", "ItemMouth3", "Default", 1, Player.MemberNumber ?? 0, undefined, true);
             existingItem = InventoryGet(Player, "ItemMouth3");
         }
 

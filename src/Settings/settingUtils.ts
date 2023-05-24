@@ -85,7 +85,7 @@ export class GUI extends BaseModule {
 
 	load(): void {
 		// At that point all other modules have been initialized, build the list of their screens
-		for (const module of modules) {
+		for (const module of modules()) {
 			if (!module.settingsScreen) continue;
 
 			this._subscreens.push(new module.settingsScreen(module));

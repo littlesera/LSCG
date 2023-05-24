@@ -62,14 +62,14 @@ export class MiscModule extends BaseModule {
                     this.RemoveChloroform();
                 }
                 else if (data.Dictionary[4]?.AssetName == "ChloroformCloth" && this.NumberChloroform() == 1) {
-                    this.AddChloroform();
+                    this.AddChloroform(sender);
                 }
                 return;
             }
             var isChloroformAction = data.Dictionary[3]?.AssetName == "ChloroformCloth";
             if (isChloroformAction) {
                 if (msg == "ActionUse" && this.NumberChloroform() == 1) {
-                    this.AddChloroform();
+                    this.AddChloroform(sender);
                 }
                 else if (msg == "ActionRemove" && !this.IsWearingChloroform()) {
                     this.RemoveChloroform();
@@ -137,6 +137,14 @@ export class MiscModule extends BaseModule {
                 return false;
             return next(args);
         }, ModuleCategory.Misc);
+
+        hookFunction('ChatRoomFocusCharacter', 6, (args, next) => {
+            if (this.settings.chloroformEnabled && this.settings.immersiveChloroform && this._isChloroformed) {
+                ChatRoomSendLocal("Character access blocked while immersively chloroformed.", 5000);
+                return;
+            }
+            return next(args);
+        }, ModuleCategory.Misc)
     }
 
     chroloBlockStrings = [
@@ -197,8 +205,10 @@ export class MiscModule extends BaseModule {
         ].filter(item => item == "ChloroformCloth").length;
     }
 
-    AddChloroform() {
+    AddChloroform(sender: Character | null) {
         SendAction("%NAME% eyes go wide as the sweet smell of ether fills %POSSESSIVE% nostrils.");
+        if (!!sender && sender.MemberNumber != Player.MemberNumber)
+            ChatRoomSendLocal((sender.Nickname ?? sender.Name) + " has forced chloroform over your mouth, you will passout if it is not removed soon!", 30000);
         CharacterSetFacialExpression(Player, "Eyes", "Scared");
         this.passoutTimer = setTimeout(() => this.StartPassout_1(), 20000);
     }

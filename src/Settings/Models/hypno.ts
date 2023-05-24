@@ -5,6 +5,7 @@ export interface HypnoSettingsModel extends BaseSettingsModel {
     triggerTime: number;
     activatedAt: number;
     enableCycle: boolean;
+    immersive: boolean;
     cycleTime: number;
     overrideWords: string;
     overrideMemberIds: string;
