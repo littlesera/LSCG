@@ -31,6 +31,10 @@ export class HypnoModule extends BaseModule {
                 Description: ": zonk self",
         
                 Action: () => {
+                    if (this.settings.immersive) {
+                        ChatRoomSendLocal("/zonk disabled while immersive", 5000);
+                        return;
+                    }
                     if (!triggerActivated)
                         this.StartTriggerWord(true, Player.MemberNumber);
                 }
@@ -40,7 +44,7 @@ export class HypnoModule extends BaseModule {
                 Description: ": unzonk self",
                 Action: () => {
                     if (triggerActivated && this.settings.immersive) {
-                        ChatRoomSendLocal("/unzonk disabled while immersive");
+                        ChatRoomSendLocal("/unzonk disabled while immersive", 5000);
                         return;
                     }
                     if (triggerActivated)
@@ -51,8 +55,8 @@ export class HypnoModule extends BaseModule {
                 Tag: "show-trigger",
                 Description: ": reveal your current trigger word(s)",
                 Action: () => {
-                    if (triggerActivated && this.settings.immersive) {
-                        ChatRoomSendLocal("/show-trigger disabled while immersive");
+                    if (this.settings.immersive) {
+                        ChatRoomSendLocal("/show-trigger disabled while immersive", 5000);
                         return;
                     }
                     ChatRoomSendLocal("Your current triggers are: " + this.triggers);
@@ -62,6 +66,10 @@ export class HypnoModule extends BaseModule {
                 Tag: "cycle-trigger",
                 Description: ": force cycle to a new trigger word",
                 Action: () => {
+                    if (this.settings.immersive) {
+                        ChatRoomSendLocal("/cycle-trigger disabled while immersive", 5000);
+                        return;
+                    }
                     this.RollTriggerWord();
                 }
             }
