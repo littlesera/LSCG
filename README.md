@@ -26,6 +26,10 @@ javascript:(()=>{fetch('https://littlesera.github.io/LSCG/bundle.js').then(r=>r.
 - While hypnotized, you will be unable to unable to speak, but other actions allowed for RP purposes
 - While hypnotized incoming speech will be blanked unless spoken by whoever triggered you or if the speaker says your name
   - Note: anti-garble cheats still work here
+#### Immersive Hypnosis:
+- Will prevent LSCG settings access while hypnotized
+- Disables hypno console commands
+- Prevents leaving rooms while hypnotized
 
 ### Lipstick Kisses
 - Currently just uses the Mask slot and will not replace any existing masks (including Glitter)
@@ -37,6 +41,10 @@ javascript:(()=>{fetch('https://littlesera.github.io/LSCG/bundle.js').then(r=>r.
 - If you are able to remove the chloroform before fully passing out it will reset
 - Once asleep your chat will be blocked similarly to being under hypnosis
 - Removing chloroform after falling asleep will result in a gradual reawakening
+#### Immersive Chloroform:
+- Will prevent LSCG settings access while asleep
+- Prevents self or other character access, leaving rooms, accessing wardrobe while asleep
+- Blinds and deafens while asleep
 
 ### Boops
 - Simple reactions to being booped in the nose
