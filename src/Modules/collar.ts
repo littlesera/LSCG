@@ -210,6 +210,8 @@ export class CollarModule extends BaseModule {
         hookFunction("Player.GetTints", 5, (args, next) => {
             // if (!this.Enabled)
             //     return next(args);
+            if (!Player.ImmersionSettings?.AllowTints)
+                return next(args);
             if (this.totalChokeLevel == 3) return [{r: 0, g: 0, b: 0, a: 0.2}];
             else if (this.totalChokeLevel == 4) return [{r: 0, g: 0, b: 0, a: 0.6}];
             return next(args);
@@ -218,6 +220,8 @@ export class CollarModule extends BaseModule {
         hookFunction("Player.GetBlurLevel", 5, (args, next) => {
             // if (!this.Enabled)
             //     return next(args);
+            if (!Player.ImmersionSettings?.AllowTints)
+                return next(args);
             if (this.totalChokeLevel == 3) return 2;
             if (this.totalChokeLevel == 4) return 6;
             return next(args);

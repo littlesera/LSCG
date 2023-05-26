@@ -133,14 +133,14 @@ export class HypnoModule extends BaseModule {
         }, ModuleCategory.Hypno);
         
         hookFunction("Player.GetTints", 4, (args, next) => {
-            if (!this.Enabled)
+            if (!this.Enabled || !Player.ImmersionSettings?.AllowTints)
                 return next(args);
             if (triggerActivated) return [{r: 148, g: 0, b: 211, a: 0.4}];
             return next(args);
         }, ModuleCategory.Hypno);
             
         hookFunction("Player.GetBlurLevel", 4, (args, next) => {
-            if (!this.Enabled)
+            if (!this.Enabled || !Player.ImmersionSettings?.AllowTints)
                 return next(args);
             if (triggerActivated) return 3;
             return next(args);
