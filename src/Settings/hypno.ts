@@ -59,6 +59,10 @@ export class GuiHypno extends GuiSubscreen {
 		DrawText("Hypnosis Length (min.):", GuiSubscreen.START_X, this.getYPos(7), "Black", "Gray");
 		ElementPosition("hypno_triggerTime", GuiSubscreen.START_X + 700, this.getYPos(7), 200);
 
+		// Arousal 					[true/false]
+		DrawText("Build arousal while hypnotized:", GuiSubscreen.START_X, this.getYPos(8), "Black", "Gray");
+		DrawCheckbox(GuiSubscreen.START_X + 600, this.getYPos(8) - 32, 64, 64, "", (this.settings.enableArousal ?? false));
+
 		MainCanvas.textAlign = prev;
 	}
 
@@ -96,6 +100,11 @@ export class GuiHypno extends GuiSubscreen {
 		//Enable Cycle Checkbox
 		if (MouseIn(GuiSubscreen.START_X + 600, this.getYPos(5) - 32, 64, 64)){
 			this.settings.enableCycle = !this.settings.enableCycle;
+		}
+
+		//Arousal Checkbox
+		if (MouseIn(GuiSubscreen.START_X + 600, this.getYPos(8) - 32, 64, 64)){
+			this.settings.enableArousal = !this.settings.enableArousal;
 		}
 	}
 }

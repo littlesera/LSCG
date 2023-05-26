@@ -380,8 +380,10 @@ export class HypnoModule extends BaseModule {
             CharacterSetFacialExpression(Player, "Eyebrows", "Lowered");
             CharacterSetFacialExpression(Player, "Eyes", "Dazed");
 
-            var progress = Math.min(99, (Player.ArousalSettings?.Progress ?? 0) + 5);
-            ActivitySetArousal(Player, progress);
+            if (this.settings.enableArousal) {
+                var progress = Math.min(99, (Player.ArousalSettings?.Progress ?? 0) + 5);
+                ActivitySetArousal(Player, progress);
+            }
         }
     }
 

@@ -14,4 +14,5 @@ export interface HypnoSettingsModel extends BaseSettingsModel {
     existingEye2Color: ItemColor | undefined;
     existingEye2Name: string | undefined;
     existingEyeExpression: ExpressionName | null;
+    enableArousal: boolean;
 }
