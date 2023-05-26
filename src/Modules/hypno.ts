@@ -225,6 +225,11 @@ export class HypnoModule extends BaseModule {
 
     allowedSpeaker(memberId: number): boolean {
         var allowedMembers = this.settings.overrideMemberIds?.split(",").map(id => +id).filter(id => id > 0) ?? [];
+        if (allowedMembers.length <= 0 && this.settings.whitelistLimit) {
+            allowedMembers = Player.WhiteList ?? [];
+            if (allowedMembers.length <= 0)
+                return false;
+        }
         if (allowedMembers.length <= 0)
             return true;
         else return allowedMembers.includes(memberId);
