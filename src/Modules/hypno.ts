@@ -212,9 +212,14 @@ export class HypnoModule extends BaseModule {
     }
 
     getNewTriggerWord(): string {
-        var words = this.settings.overrideWords?.split(",")?.filter(word => !!word) ?? [];
+        var currentTrigger = this.settings.trigger;
+        var words = this.settings.overrideWords?.split(",")?.filter((word, ix, arr) => !!word && arr.indexOf(word) == ix) ?? [];
         if (words.length <= 0)
             words = commonWords;
+
+        if (words.length > 1 && words.indexOf(currentTrigger) > -1)
+            words = words.filter(val => val != currentTrigger);
+
         return words[getRandomInt(words.length)]?.toLocaleLowerCase();
     }
 
@@ -395,8 +400,10 @@ export class HypnoModule extends BaseModule {
     }
 
     RollTriggerWord() {
-        SendAction("%NAME% concentrates, breaking the hold the previous trigger word held over %POSSESSIVE%.");
-        this.settings.trigger = this.getNewTriggerWord();
+        var newTrigger = this.getNewTriggerWord();
+        if (newTrigger != this.settings.trigger)
+            SendAction("%NAME% concentrates, breaking the hold the previous trigger word held over %POSSESSIVE%.");
+        this.settings.trigger = newTrigger;
         this.settings.activatedAt = 0;
         settingsSave();
     }
