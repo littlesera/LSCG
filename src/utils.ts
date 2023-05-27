@@ -123,7 +123,7 @@ export function hookFunction(target: string, priority: number, hook: PatchHook, 
 	const data = initPatchableFunction(target);
 
 	if (data.hooks.some(h => h.hook === hook)) {
-		console.error(`BCX: Duplicate hook for "${target}"`, hook);
+		console.error(`LSCG: Duplicate hook for "${target}"`, hook);
 		return () => null;
 	}
 

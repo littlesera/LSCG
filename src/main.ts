@@ -10,10 +10,10 @@ import { GUI } from "Settings/settingUtils";
 import { ActivityModule } from "Modules/activities";
 
 function initWait() {
-	console.debug("BCX: Init wait");
+	console.debug("LSCG: Init wait");
 	if (CurrentScreen == null || CurrentScreen === "Login") {
 		hookFunction("LoginResponse", 0, (args, next) => {
-			console.debug("BCX: Init LoginResponse caught", args);
+			console.debug("LSCG: Init LoginResponse caught", args);
 			next(args);
 			const response = args[0];
 			if (isObject(response) && typeof response.Name === "string" && typeof response.AccountName === "string") {

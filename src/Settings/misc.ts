@@ -20,7 +20,7 @@ export class GuiMisc extends GuiSubscreen {
 		MainCanvas.textAlign = "left";
 		
 		DrawText("- LSCG Miscellaneous -", GuiSubscreen.START_X, this.getYPos(0), "Black", "Gray");
-		DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png", "BCX main menu");
+		DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png", "LSCG main menu");
 
 		// Chloroform Enabled	[true/false]
 		DrawText("Chloroform Enabled:", GuiSubscreen.START_X, this.getYPos(1), "Black", "Gray");

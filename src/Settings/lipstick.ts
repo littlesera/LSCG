@@ -15,7 +15,7 @@ export class GuiLipstick extends GuiSubscreen {
 		MainCanvas.textAlign = "left";
 		
 		DrawText("- LSCG Lipstick -", 225, 125, "Black", "Gray");
-		DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png", "BCX main menu");
+		DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png", "LSCG main menu");
 
 		// Enable	[true/false]
 		DrawText("Enable Lipstick Marks:", GuiSubscreen.START_X, this.getYPos(1), "Black", "Gray");
