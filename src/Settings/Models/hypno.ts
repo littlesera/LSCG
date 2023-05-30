@@ -15,5 +15,4 @@ export interface HypnoSettingsModel extends BaseSettingsModel {
     existingEye2Name: string | undefined;
     existingEyeExpression: ExpressionName | null;
     enableArousal: boolean;
-    whitelistLimit: boolean;
 }

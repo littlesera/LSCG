@@ -63,10 +63,6 @@ export class GuiHypno extends GuiSubscreen {
 		DrawText("Build arousal while hypnotized:", GuiSubscreen.START_X, this.getYPos(8), "Black", "Gray");
 		DrawCheckbox(GuiSubscreen.START_X + 600, this.getYPos(8) - 32, 64, 64, "", (this.settings.enableArousal ?? false));
 
-		// Limit To Whitelist	[true/false]
-		DrawText("Limit all to Whitelist:", GuiSubscreen.START_X, this.getYPos(9), "Black", "Gray");
-		DrawCheckbox(GuiSubscreen.START_X + 600, this.getYPos(9) - 32, 64, 64, "", this.settings.whitelistLimit ?? false);
-
 		MainCanvas.textAlign = prev;
 	}
 
@@ -109,11 +105,6 @@ export class GuiHypno extends GuiSubscreen {
 		//Arousal Checkbox
 		if (MouseIn(GuiSubscreen.START_X + 600, this.getYPos(8) - 32, 64, 64)){
 			this.settings.enableArousal = !this.settings.enableArousal;
-		}
-
-		// Limit All to Whitelist
-		if (MouseIn(GuiSubscreen.START_X + 600, this.getYPos(9) - 32, 64, 64)){
-			this.settings.whitelistLimit = !this.settings.whitelistLimit;
 		}
 	}
 }

@@ -1,7 +1,7 @@
 import { BaseModule } from 'base';
 import { HypnoSettingsModel } from 'Settings/Models/hypno';
 import { ModuleCategory, Subscreen } from 'Settings/setting_definitions';
-import { settingsSave, parseMsgWords, OnChat, OnAction, OnActivity, SendAction, getRandomInt, hookFunction, removeAllHooksByModule, callOriginal, setOrIgnoreBlush, escapeRegExp } from '../utils';
+import { settingsSave, parseMsgWords, OnChat, OnAction, OnActivity, SendAction, getRandomInt, hookFunction, removeAllHooksByModule, callOriginal, setOrIgnoreBlush, escapeRegExp, isAllowedMember } from '../utils';
 import { GuiHypno } from 'Settings/hypno';
 
 export class HypnoModule extends BaseModule {
@@ -223,15 +223,11 @@ export class HypnoModule extends BaseModule {
         return words[getRandomInt(words.length)]?.toLocaleLowerCase();
     }
 
-    allowedSpeaker(memberId: number): boolean {
+    allowedSpeaker(speaker: Character | undefined): boolean {
+        var memberId = speaker?.MemberNumber ?? 0;
         var allowedMembers = this.settings.overrideMemberIds?.split(",").map(id => +id).filter(id => id > 0) ?? [];
-        if (allowedMembers.length <= 0 && this.settings.whitelistLimit) {
-            allowedMembers = Player.WhiteList ?? [];
-            if (allowedMembers.length <= 0)
-                return false;
-        }
         if (allowedMembers.length <= 0)
-            return true;
+            return isAllowedMember(speaker);
         else return allowedMembers.includes(memberId);
     }
 
@@ -264,7 +260,7 @@ export class HypnoModule extends BaseModule {
         return (!hypnoActivated() && 
             matched && 
             sender?.MemberNumber != Player.MemberNumber &&
-            this.allowedSpeaker(sender?.MemberNumber ?? 0))
+            this.allowedSpeaker(sender))
     }
 
     StartTriggerWord(wasWord: boolean = true, memberNumber: number = 0) {
