@@ -15,6 +15,10 @@ export class MainMenu extends GuiSubscreen {
 		return false;
 	}
 
+	get hidden(): boolean {
+		return true;
+	}
+
 	get immersiveBlock(): boolean {
 		var hypnoBlock = Player.LSCG.HypnoModule?.immersive && hypnoActivated();
 		var chloroformBlock = Player.LSCG.MiscModule?.immersiveChloroform &&  getModule<MiscModule>("MiscModule")?.isChloroformed;
@@ -54,7 +58,7 @@ export class MainMenu extends GuiSubscreen {
 				const isDisabled = !screen.enabled;
 
 				// Skip disabled screens for the time being
-				if (isDisabled) continue;
+				if (screen.name == "MainMenu" || screen.hidden) continue;
 
 				DrawButton(150 + 430 * PX, 190 + 120 * PY, 400, 90, "", isDisabled ? "#ddd" : "White", screen.icon,
 					isDisabled ? "Setting is deactivated" : "", isDisabled);

@@ -4,6 +4,7 @@ export interface HypnoSettingsModel extends BaseSettingsModel {
     trigger: string;
     triggerTime: number;
     activatedAt: number;
+    recoveredAt: number;
     enableCycle: boolean;
     immersive: boolean;
     cycleTime: number;
@@ -15,4 +16,5 @@ export interface HypnoSettingsModel extends BaseSettingsModel {
     existingEye2Name: string | undefined;
     existingEyeExpression: ExpressionName | null;
     enableArousal: boolean;
+    cooldownTime: number;
 }

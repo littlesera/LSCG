@@ -14,12 +14,12 @@ export default {
     sourcemap: true,
 		banner: `// LSCG: Little Sera's Club Games
 if (typeof window.ImportBondageCollege !== "function") {
-	alert("Club not detected! Please only use this while you have Club open!");
-	throw "Dependency not met";
+  alert("Club not detected! Please only use this while you have Club open!");
+  throw "Dependency not met";
 }
 if (window.LSCG_Loaded !== undefined) {
-	alert("LSCG is already detected in current window. To reload, please refresh the window.");
-	throw "Already loaded";
+  alert("LSCG is already detected in current window. To reload, please refresh the window.");
+  throw "Already loaded";
 }
 window.LSCG_Loaded = false;
 console.debug("LSCG: Parse start...");

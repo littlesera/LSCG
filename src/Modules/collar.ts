@@ -1,7 +1,7 @@
 import { BaseModule } from 'base';
 import { CollarModel, CollarSettingsModel } from 'Settings/Models/collar';
 import { ModuleCategory, Subscreen } from 'Settings/setting_definitions';
-import { settingsSave, parseMsgWords, SendAction, OnChat, getRandomInt, hookFunction, removeAllHooksByModule, OnActivity, OnAction, setOrIgnoreBlush, getCharacter, hookBCXCurse } from '../utils';
+import { settingsSave, parseMsgWords, SendAction, OnChat, getRandomInt, hookFunction, removeAllHooksByModule, OnActivity, OnAction, setOrIgnoreBlush, getCharacter, hookBCXCurse, escapeRegExp } from '../utils';
 import { GuiCollar } from 'Settings/collar';
 
 enum PassoutReason {
@@ -70,13 +70,7 @@ export class CollarModule extends BaseModule {
         OnChat(600, ModuleCategory.Collar, (data, sender, msg, metadata) => {
             if (!this.Enabled)
                 return;
-            var lowerMsgWords = parseMsgWords(msg);
-            if (this.CanActivate(sender)) {
-                if ((lowerMsgWords?.indexOf(this.settings.tightTrigger ?? "tight") ?? -1) >= 0)
-                    this.IncreaseCollarChoke();
-                else if ((lowerMsgWords?.indexOf(this.settings.looseTrigger ?? "loose") ?? -1) >= 0)
-                    this.DecreaseCollarChoke();
-            }
+            this.CheckForTriggers(msg, sender);
         });
 
         OnActivity(100, ModuleCategory.Collar, (data, sender, msg, meta) => {
@@ -382,9 +376,32 @@ export class CollarModule extends BaseModule {
             creator: currentCollarObj.Craft?.MemberNumber ?? 0
         };
         return !!sender &&
-                (this.allowedChokeMembers.length == 0 || this.allowedChokeMembers.indexOf(sender?.MemberNumber ?? 0) >= 0) &&
+                this.AllowedMember(sender) &&
                 currentCollar.name == this.settings.collar?.name &&
                 currentCollar.creator == this.settings.collar?.creator
+    }
+
+    AllowedMember(member: Character | undefined): boolean {
+        if (!member || member.MemberNumber == Player.MemberNumber)
+            return false;
+        if (this.allowedChokeMembers.length > 0)
+            return this.allowedChokeMembers.indexOf(member.MemberNumber ?? 0) >= 0;
+        else
+            return ServerChatRoomGetAllowItem(member, Player);
+    }
+
+    CheckForTriggers(msg: string, sender: Character | null): void {
+        // Skip on invalid sender, OOC, or invalid triggers.
+        if (!this.CanActivate(sender) || msg.startsWith("(") || !this.settings.tightTrigger || !this.settings.looseTrigger)
+            return;
+
+        let tightenPhraseMatch = new RegExp("\\b" + escapeRegExp(this.settings.tightTrigger) + "\\b", "i");
+        let loosenPhraseMatch = new RegExp("\\b" + escapeRegExp(this.settings.looseTrigger) + "\\b", "i");
+
+        if (tightenPhraseMatch.test(msg))
+            this.IncreaseCollarChoke();
+        else if (loosenPhraseMatch.test(msg))
+            this.DecreaseCollarChoke();
     }
 
     IncreaseCollarChoke() {

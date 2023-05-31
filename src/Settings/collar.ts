@@ -1,6 +1,6 @@
 import { ICONS } from "utils";
 import { CollarModel, CollarSettingsModel } from "./Models/collar";
-import { GuiSubscreen } from "./settingBase";
+import { GuiSubscreen, Setting } from "./settingBase";
 
 export class GuiCollar extends GuiSubscreen {
 	get name(): string {
@@ -20,57 +20,68 @@ export class GuiCollar extends GuiSubscreen {
 		return allowedChokeMemberNumbers.includes(this.character.MemberNumber ?? 0);
 	}
 
+	get hidden(): boolean {
+		return !this.enabled;
+	}
+
 	get settings(): CollarSettingsModel {
 		return super.settings as CollarSettingsModel;
 	}
 
-	Load(): void {
-		super.Load();
-		ElementCreateInput("collar_allowedMembers", "text", this.settings.allowedMembers ?? (Player.Ownership?.MemberNumber+"" ?? ""), "255");
-		ElementCreateInput("collar_tightTrigger", "text", this.settings.tightTrigger ?? "tight", "255");
-		ElementCreateInput("collar_looseTrigger", "text", this.settings.looseTrigger ?? "loose", "255");
+	get structure(): Setting[] {
+		return [
+			<Setting>{
+				type: "checkbox",
+				label: "Enabled:",
+				description: "Enabled the Choking Collar Features.",
+				setting: () => this.settings.enabled ?? false,
+				setSetting: (val) => this.settings.enabled = val
+			},<Setting>{
+				type: "text",
+				id: "collar_allowedMembers",
+				label: "Allowed Members IDs:",
+				description: "Comma separated list of member IDs who can activate the collar. Leave empty for item permissions.",
+				setting: () => this.settings.allowedMembers ?? (Player.Ownership?.MemberNumber+"" ?? ""),
+				setSetting: (val) => this.settings.allowedMembers = val
+			},
+			// BUTTON HERE
+			<Setting>{
+				type: "text",
+				id: "collar_tightTrigger",
+				label: "Tighten Trigger:",
+				description: "Word or phrase that, if spoken, will tighten the collar.",
+				setting: () => this.settings.tightTrigger ?? false,
+				setSetting: (val) => this.settings.tightTrigger = val
+			},<Setting>{
+				type: "text",
+				id: "collar_looseTrigger",
+				label: "Loosen Trigger:",
+				description: "Word or phrase that, if spoken, will loosen the collar.",
+				setting: () => this.settings.looseTrigger ?? false,
+				setSetting: (val) => this.settings.looseTrigger = val
+			},
+		]
 	}
 
     Run() {
+		super.Run();
 		var prev = MainCanvas.textAlign;
 		MainCanvas.textAlign = "left";
 
-		DrawText("- LSCG Choking Collar -", GuiSubscreen.START_X, this.getYPos(0), "Black", "Gray");
-		DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png", "LSCG main menu");
-
-		// Enabled 					[true/false]
-		DrawText("Enabled:", GuiSubscreen.START_X, this.getYPos(1), "Black", "Gray");
-		DrawCheckbox(GuiSubscreen.START_X + 600, this.getYPos(1) - 32, 64, 64, "", this.settings.enabled ?? false);
-
-		// Allowed Members 			[ID list]
-		DrawText("Allowed Members IDs:", GuiSubscreen.START_X, this.getYPos(2), "Black", "Gray");
-		ElementPosition("collar_allowedMembers", GuiSubscreen.START_X + 900, this.getYPos(2), 600);
-		
 		// Set/Update Collar	 	[Custom??]
-		DrawText("Update Collar:", GuiSubscreen.START_X, this.getYPos(3), "Black", "Gray");
+		DrawText("Update Collar:", GuiSubscreen.START_X, this.getYPos(6), "Black", "Gray");
 		MainCanvas.textAlign = "center";
-		DrawButton(GuiSubscreen.START_X + 600, this.getYPos(3) - 32, 200, 64, "Update", "White", undefined, "Update Collar to Current", !this.settings.enabled);
+		DrawButton(GuiSubscreen.START_X + 600, this.getYPos(6) - 32, 200, 64, "Update", "White", undefined, "Update Collar to Current", !this.settings.enabled);
+
 		MainCanvas.textAlign = "left";
-
-		// Tighten Trigger 			[string]
-		DrawText("Tighten Trigger:", GuiSubscreen.START_X, this.getYPos(4), "Black", "Gray");
-		ElementPosition("collar_tightTrigger", GuiSubscreen.START_X + 900, this.getYPos(4), 600);
-
-		// Loosen Trigger 			[string]
-		DrawText("Loosen Trigger:", GuiSubscreen.START_X, this.getYPos(5), "Black", "Gray");
-		ElementPosition("collar_looseTrigger", GuiSubscreen.START_X + 900, this.getYPos(5), 600);
-
+		DrawText("Current Name: " + this.settings.collar.name, GuiSubscreen.START_X + 600, this.getYPos(6) + 60, "Gray", "Gray");
+		if (!!this.settings.collar.creator && this.settings.collar.creator > 0)
+			DrawText("Current Crafter: " + this.settings.collar.creator, GuiSubscreen.START_X + 600, this.getYPos(6) + 110, "Gray", "Gray");
+		
 		MainCanvas.textAlign = prev;
 	}
 
 	Exit(): void {
-		this.settings.allowedMembers = ElementValue("collar_allowedMembers") ?? (Player.Ownership?.MemberNumber+"" ?? "");
-		this.settings.tightTrigger = ElementValue("collar_tightTrigger") ?? "tight";
-		this.settings.looseTrigger = ElementValue("collar_looseTrigger") ?? "loose";
-		ElementRemove("collar_allowedMembers");
-		ElementRemove("collar_tightTrigger");
-		ElementRemove("collar_looseTrigger");
-
 		if (!this.settings.chokeLevel)
 			this.settings.chokeLevel = 0;
 		super.Exit();
@@ -79,14 +90,8 @@ export class GuiCollar extends GuiSubscreen {
 	Click() {
 		super.Click();
 
-		// Enabled Checkbox
-		if (MouseIn(GuiSubscreen.START_X + 600, this.getYPos(1) - 32, 64, 64)){
-			this.settings.enabled = !this.settings.enabled;
-			return;
-		}
-
 		// Update Collar Button
-		if (MouseIn(GuiSubscreen.START_X + 600, this.getYPos(3) - 32, 200, 64)){
+		if (MouseIn(GuiSubscreen.START_X + 600, this.getYPos(6) - 32, 200, 64)){
 			var collar = InventoryGet(Player, "ItemNeck");
 			if(!collar){
 				this.message = "No Collar Equipped";

@@ -1,6 +1,6 @@
 import { ICONS } from "utils";
 import { HypnoSettingsModel } from "./Models/hypno";
-import { GuiSubscreen } from "./settingBase";
+import { GuiSubscreen, Setting } from "./settingBase";
 
 export class GuiHypno extends GuiSubscreen {
 
@@ -16,95 +16,68 @@ export class GuiHypno extends GuiSubscreen {
 		return super.settings as HypnoSettingsModel;
 	}
 
-	Load(): void {
-		super.Load();
-		ElementCreateInput("hypno_overrideWords", "text", this.settings.overrideWords ?? "", "255");
-		ElementCreateInput("hypno_overrideMembers", "text", this.settings.overrideMemberIds ?? "", "255");
-		ElementCreateInput("hypno_cycleTime", "number", "" + (this.settings.cycleTime ?? 30), "5");
-		ElementCreateInput("hypno_triggerTime", "number", "" + (this.settings.triggerTime ?? 5), "5");
-	}
-
-    Run() {
-		var prev = MainCanvas.textAlign;
-		MainCanvas.textAlign = "left";
-
-		DrawText("- LSCG Hypnosis -", GuiSubscreen.START_X, this.getYPos(0), "Black", "Gray");
-		DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png", "LSCG main menu");
-
-		// Enabled 					[true/false]
-		DrawText("Enabled:", GuiSubscreen.START_X, this.getYPos(1), "Black", "Gray");
-		DrawCheckbox(GuiSubscreen.START_X + 600, this.getYPos(1) - 32, 64, 64, "", this.settings.enabled ?? false);
-		
-		// Immersive Hypnosis		[true/false]
-		DrawText("Immersive Hypnosis:", GuiSubscreen.START_X, this.getYPos(2), "Black", "Gray");
-		DrawCheckbox(GuiSubscreen.START_X + 600, this.getYPos(2) - 32, 64, 64, "", Player.LSCG.HypnoModule.immersive ?? false);
-
-		// Override Trigger Words 	[Word List]
-		DrawText("Override Trigger Words:", GuiSubscreen.START_X, this.getYPos(3), "Black", "Gray");
-		ElementPosition("hypno_overrideWords", GuiSubscreen.START_X + 900, this.getYPos(3), 600);
-
-		// Override allowed members	[Member ID List]
-		DrawText("Override Allowed Member IDs:", 225, this.getYPos(4), "Black", "Gray");
-		ElementPosition("hypno_overrideMembers", GuiSubscreen.START_X + 900, this.getYPos(4), 600);
-
-		// Enabled 					[true/false]
-		DrawText("Enable Cycle:", GuiSubscreen.START_X, this.getYPos(5), "Black", "Gray");
-		DrawCheckbox(GuiSubscreen.START_X + 600, this.getYPos(5) - 32, 64, 64, "", (this.settings.enableCycle ?? false));
-
-		// Cycle Time				[Number of minutes (default 30)]
-		DrawText("Trigger Cycle Time (min.):", GuiSubscreen.START_X, this.getYPos(6), "Black", "Gray");
-		ElementPosition("hypno_cycleTime", GuiSubscreen.START_X + 700, this.getYPos(6), 200);
-
-		// Trigger Time				[Number of minutes (default 5)]
-		DrawText("Hypnosis Length (min.):", GuiSubscreen.START_X, this.getYPos(7), "Black", "Gray");
-		ElementPosition("hypno_triggerTime", GuiSubscreen.START_X + 700, this.getYPos(7), 200);
-
-		// Arousal 					[true/false]
-		DrawText("Build arousal while hypnotized:", GuiSubscreen.START_X, this.getYPos(8), "Black", "Gray");
-		DrawCheckbox(GuiSubscreen.START_X + 600, this.getYPos(8) - 32, 64, 64, "", (this.settings.enableArousal ?? false));
-
-		MainCanvas.textAlign = prev;
-	}
-
-	Exit(): void {
-		// && CommonIsNumeric(ElementValue("InputOrgasmDecayMultiplier"))){
-		// 	Player.BCT.bctSettings.arousalProgressMultiplier = ElementValue("InputArousalProgressMultiplier");
-		
-		this.settings.overrideWords = ElementValue("hypno_overrideWords") ?? "";
-		this.settings.overrideMemberIds = ElementValue("hypno_overrideMembers") ?? "";
-		if (CommonIsNumeric(ElementValue("hypno_cycleTime")))
-			this.settings.cycleTime = +(ElementValue("hypno_cycleTime") ?? "30");
-		if (CommonIsNumeric(ElementValue("hypno_triggerTime")))
-			this.settings.triggerTime = +(ElementValue("hypno_triggerTime") ?? "30");
-
-		ElementRemove("hypno_overrideWords");
-		ElementRemove("hypno_overrideMembers");
-		ElementRemove("hypno_cycleTime");
-		ElementRemove("hypno_triggerTime");
-		super.Exit();
-	}
-
-	Click() {
-		if (MouseIn(1815, 75, 90, 90)) return this.Exit();
-
-		// Enabled Checkbox
-		if (MouseIn(GuiSubscreen.START_X + 600, this.getYPos(1) - 32, 64, 64)){
-			this.settings.enabled = !this.settings.enabled;
-		}
-
-		// Immersive Hypnosis Checkbox
-		if (MouseIn(GuiSubscreen.START_X + 600, this.getYPos(2) - 32, 64, 64)){
-			Player.LSCG.HypnoModule.immersive = !Player.LSCG.HypnoModule.immersive;
-		}
-
-		//Enable Cycle Checkbox
-		if (MouseIn(GuiSubscreen.START_X + 600, this.getYPos(5) - 32, 64, 64)){
-			this.settings.enableCycle = !this.settings.enableCycle;
-		}
-
-		//Arousal Checkbox
-		if (MouseIn(GuiSubscreen.START_X + 600, this.getYPos(8) - 32, 64, 64)){
-			this.settings.enableArousal = !this.settings.enableArousal;
-		}
+	get structure(): Setting[] {
+		return [
+			<Setting>{
+				type: "checkbox",
+				label: "Enabled:",
+				description: "Enabled the Hypnosis Features.",
+				setting: () => this.settings.enabled ?? false,
+				setSetting: (val) => this.settings.enabled = val
+			},<Setting>{
+				type: "checkbox",
+				label: "Immersive Hypnosis:",
+				description: "Makes the hypnotized experience more restrictive. LSCG settings will be unavailable while hypnotized.",
+				setting: () => this.settings.immersive ?? false,
+				setSetting: (val) => this.settings.immersive = val
+			},<Setting>{
+				type: "text",
+				id: "hypno_overrideWords",
+				label: "Override Trigger Words:",
+				description: "Custom list of words and/or phrases as hypnisis triggers. Separated by a comma.",
+				setting: () => this.settings.overrideWords ?? "",
+				setSetting: (val) => this.settings.overrideWords = val
+			},<Setting>{
+				type: "text",
+				id: "hypno_overrideMembers",
+				label: "Override Allowed Member IDs:",
+				description: "Comma separated list of member IDs. If empty will use standard Item Permissions.",
+				setting: () => this.settings.overrideMemberIds ?? "",
+				setSetting: (val) => this.settings.overrideMemberIds = val
+			},<Setting>{
+				type: "checkbox",
+				label: "Enable Cycle:",
+				description: "If checked, only one trigger will be active at a time and will cycle after use.",
+				setting: () => this.settings.enableCycle ?? false,
+				setSetting: (val) => this.settings.enableCycle = val
+			},<Setting>{
+				type: "number",
+				id: "hypno_cycleTime",
+				label: "Trigger Cycle Time (min.):",
+				description: "Number of minutes after activation to wait before cycling to a new trigger.",
+				setting: () => (this.settings.cycleTime ?? 30),
+				setSetting: (val) => this.settings.cycleTime = val
+			},<Setting>{
+				type: "number",
+				id: "hypno_triggerTime",
+				label: "Hypnosis Length (min.):",
+				description: "Length of hypnosis time (in minutes) before automatically recovering. Set to 0 for indefinite.",
+				setting: () => (this.settings.triggerTime ?? 5),
+				setSetting: (val) => this.settings.triggerTime = val
+			},<Setting>{
+				type: "checkbox",
+				label: "Build arousal while hypnotized:",
+				description: "If checked being hypnotized will increase arousal.",
+				setting: () => this.settings.enableArousal ?? false,
+				setSetting: (val) => this.settings.enableArousal = val
+			},<Setting>{
+				type: "number",
+				id: "hypno_cooldownTime",
+				label: "Cooldown (sec.):",
+				description: "Cooldown time (in seconds) before you can be hypnotized again.",
+				setting: () => (this.settings.cooldownTime ?? 0),
+				setSetting: (val) => this.settings.cooldownTime = val
+			}
+		]
 	}
 }

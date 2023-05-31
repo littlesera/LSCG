@@ -3,7 +3,6 @@ import { BaseSettingsModel } from "Settings/Models/base";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
 import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, setOrIgnoreBlush } from "../utils";
 import { hypnoActivated } from "./hypno";
-import { GuiBoops } from "Settings/boops";
 
 export class BoopsModule extends BaseModule {
     boops: number = 0;

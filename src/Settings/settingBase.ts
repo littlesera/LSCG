@@ -1,13 +1,22 @@
-import { settingsSave } from "utils";
+import { ICONS, settingsSave } from "utils";
 import { BaseSettingsModel } from "./Models/base";
 import { SETTING_FUNC_NAMES, SETTING_FUNC_PREFIX, SETTING_NAME_PREFIX, setSubscreen } from "./setting_definitions";
 import { BaseModule } from "base";
-import { GUI } from "./settingUtils";
+import { drawTooltip, GUI } from "./settingUtils";
+
+export interface Setting {
+	type: string;
+	id: string;
+	label: string;
+	description: string;
+	setting(): any;
+	setSetting(val: any): void;
+}
 
 export abstract class GuiSubscreen {
-    static START_X: number = 225;
-    static START_Y: number = 125;
-    static Y_MOD: number = 80;
+    static START_X: number = 220;
+    static START_Y: number = 120;
+    static Y_MOD: number = 75;
 	readonly module: BaseModule;
 
 	constructor(module: BaseModule) {
@@ -24,15 +33,19 @@ export abstract class GuiSubscreen {
 	}
 
 	get name(): string {
-		throw "Override name in your subscreen class";
+		return "UNKNOWN";
 	}
 
 	get icon(): string {
-		throw "Override icon in your subscreen class";
+		return ICONS.BOUND_GIRL;
 	}
 
 	get label(): string {
-		throw "Override icon in your subscreen class";
+		return "UNDEFINED SETTING SCREEN"
+	}
+
+	get hidden(): boolean {
+		return false;
 	}
 
 	get enabled(): boolean {
@@ -59,6 +72,10 @@ export abstract class GuiSubscreen {
 		return this.module.settings as BaseSettingsModel;
 	}
 
+	get structure(): Setting[] {
+		return [];
+	}
+
 	get character(): Character {
 		// Because we're initialized by that instance, it must already exist
 		return GUI.instance?.currentCharacter as Character;
@@ -69,18 +86,69 @@ export abstract class GuiSubscreen {
     }
 
 	Load() {
-        // Empty
+        this.structure.forEach(item => {
+			switch (item.type) {
+				case "text":
+					ElementCreateInput(item.id, "text", item.setting(), "255");
+					break;
+				case "number":
+					ElementCreateInput(item.id, "number", item.setting(), "255");
+					break;			
+			}
+		});
 	}
 
 	Run() {
-		// Empty
+		var prev = MainCanvas.textAlign;
+		MainCanvas.textAlign = "left";
+
+		DrawText("- LSCG " + this.name + " -", GuiSubscreen.START_X, this.getYPos(0), "Black", "Gray");
+		DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png", "LSCG main menu");
+
+		this.structure.forEach((item, ix, arr) => {
+			switch(item.type) {
+				case "checkbox":
+					this.DrawCheckbox(item.label, item.description, item.setting(), ix + 1);
+					break;
+				case "text":
+				case "number":
+					this.ElementPosition(item.id, item.label, item.description, ix + 1);
+					break;
+			}
+		});
+		
+		MainCanvas.textAlign = prev;
 	}
 
 	Click() {
 		if (MouseIn(1815, 75, 90, 90)) return this.Exit();
+
+		this.structure.forEach((item, ix, arr) => {
+			switch (item.type) {
+				case "checkbox":
+					if (MouseIn(GuiSubscreen.START_X + 600, this.getYPos(ix + 1) - 32, 64, 64)){
+						item.setSetting(!item.setting());
+					}
+					break;
+			}
+		});
 	}
 
 	Exit() {
+		this.structure.forEach(item => {
+			switch (item.type) {
+				case "number":
+					if (!CommonIsNumeric(ElementValue(item.id))) {
+						ElementRemove(item.id);
+						break;
+					}
+				case "text":
+					item.setSetting(ElementValue(item.id));
+					ElementRemove(item.id);
+					break;
+			}
+		});
+
 		setSubscreen("MainMenu");
 		settingsSave();
 	}
@@ -91,5 +159,27 @@ export abstract class GuiSubscreen {
 
 	onChange(source: number) {
 		// Empty
+	}
+
+	Tooltip(text: string) {
+		drawTooltip(300,
+			850,
+			1400,
+			text,
+			"left");
+	}
+
+	DrawCheckbox(label: string, description: string, value: boolean, order: number) {
+		var isHovering = MouseIn(GuiSubscreen.START_X, this.getYPos(order) - 32, 600, 64);
+		DrawText(label, GuiSubscreen.START_X, this.getYPos(order), isHovering ? "Red" : "Black", "Gray");
+		DrawCheckbox(GuiSubscreen.START_X + 600, this.getYPos(order) - 32, 64, 64, "", value ?? false);
+		if (isHovering) this.Tooltip(description);
+	}
+
+	ElementPosition(elementId: string, label: string, description: string, order: number) {
+		var isHovering = MouseIn(GuiSubscreen.START_X, this.getYPos(order) - 32, 600, 64);
+		DrawText(label, GuiSubscreen.START_X, this.getYPos(order), isHovering ? "Red" : "Black", "Gray");
+		ElementPosition(elementId, GuiSubscreen.START_X + 900, this.getYPos(order), 600);
+		if (isHovering) this.Tooltip(description);
 	}
 }

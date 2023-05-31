@@ -17,6 +17,7 @@ export class HypnoModule extends BaseModule {
         return <HypnoSettingsModel>{
             enabled: false,
             activatedAt: 0,
+            recoveredAt: 0,
             cycleTime: 30,
             enableCycle: true,
             overrideMemberIds: "",
@@ -94,7 +95,7 @@ export class HypnoModule extends BaseModule {
                 if (data.Content == "ChatOther-ItemNose-Pet" && triggerActivated)
                     this.TriggerRestoreBoop();
                 // Special tummy rub hypno action for Bean
-                else if ((data.Content == "ChatOther-ItemPelvis-MassageHands" || data.Content == "ChatOther-ItemPelvis-Caress") && !triggerActivated && Player.MemberNumber == 71233) {
+                else if ((data.Content == "ChatOther-ItemPelvis-MassageHands" || data.Content == "ChatOther-ItemPelvis-Caress") && !triggerActivated && Player.MemberNumber == 71233 && !this.IsOnCooldown()) {
                     this.DelayedTriggerWord(sender?.MemberNumber);
                 }
             }
@@ -109,7 +110,7 @@ export class HypnoModule extends BaseModule {
             // Check for non-garbled trigger word, this means a trigger word could be set to what garbled speech produces >.>
             if (!triggerActivated && !args[2]) {
                 let msg = callOriginal("SpeechGarble", args);
-                if (this.CheckTrigger(msg, C))
+                if (this.CheckTrigger(msg, C) && !this.IsOnCooldown())
                     this.StartTriggerWord(true, C.MemberNumber);
                 return next(args);
             }
@@ -174,6 +175,7 @@ export class HypnoModule extends BaseModule {
         }
         if (!this.settings.activatedAt) {
             this.settings.activatedAt = 0;
+            this.settings.recoveredAt = 0;
             settingsSave();
         }
         if (!!this.settings.existingEye1Name)
@@ -263,11 +265,25 @@ export class HypnoModule extends BaseModule {
             this.allowedSpeaker(sender))
     }
 
+    IsOnCooldown(): boolean {
+        var now = new Date().getTime();
+        if ((now - (this.settings.cooldownTime * 1000)) < this.settings.recoveredAt) {
+            // Triggered during cooldown...
+            if (!cooldownMsgSent){
+                SendAction("%NAME%'s frowns as %PRONOUN% fights to remain conscious.");
+                cooldownMsgSent = true;
+            }
+            return true;
+        }
+        return false;
+    }
+
     StartTriggerWord(wasWord: boolean = true, memberNumber: number = 0) {
         if (triggerActivated)
             return;
 
         triggerActivated = true;
+        cooldownMsgSent = false;
         triggeredBy = memberNumber;
         if (this.settings.activatedAt == 0)
             this.settings.activatedAt = new Date().getTime();
@@ -377,6 +393,7 @@ export class HypnoModule extends BaseModule {
         clearInterval(this.hornyTimeout);
         clearTimeout(this.triggerTimeout);
         triggerActivated = false;
+        this.settings.recoveredAt = new Date().getTime();
     }
 
     HypnoHorny() {
@@ -419,6 +436,7 @@ const commonWords = [ "able", "about", "absolute", "accept", "account", "achieve
 
 let triggerActivated = false;
 let triggeredBy = 0;
+let cooldownMsgSent = false;
 export function hypnoActivated() {
     return triggerActivated;
 }

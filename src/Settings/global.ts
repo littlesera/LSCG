@@ -1,6 +1,6 @@
 import { ICONS } from "utils";
 import { GlobalSettingsModel } from "./Models/base";
-import { GuiSubscreen } from "./settingBase";
+import { GuiSubscreen, Setting } from "./settingBase";
 
 export class GuiGlobal extends GuiSubscreen {
 
@@ -16,89 +16,57 @@ export class GuiGlobal extends GuiSubscreen {
         return super.settings as GlobalSettingsModel;
     }
 
-    Run() {
-		var prev = MainCanvas.textAlign;
-		MainCanvas.textAlign = "left";
-
-		DrawText("- LSCG General -", 225, 125, "Black", "Gray");
-		DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png", "LSCG main menu");
-
-		// Enabled	[true/false]
-		DrawText("LSCG Scripts Enabled:", GuiSubscreen.START_X, this.getYPos(1), "Black", "Gray");
-		DrawCheckbox(GuiSubscreen.START_X + 600, this.getYPos(1) - 32, 64, 64, "", this.settings.enabled ?? false);
-
-		// Blur While Edged	[true/false]
-		DrawText("Blur While Edged:", GuiSubscreen.START_X, this.getYPos(2), "Black", "Gray");
-		DrawCheckbox(GuiSubscreen.START_X + 600, this.getYPos(2) - 32, 64, 64, "", this.settings.edgeBlur ?? false);
-
-		// Enable Kissmarks	[true/false]
-		DrawText("Enable Lipstick Marks:", GuiSubscreen.START_X, this.getYPos(3), "Black", "Gray");
-		DrawCheckbox(GuiSubscreen.START_X + 600, this.getYPos(3) - 32, 64, 64, "", Player.LSCG.LipstickModule.enabled ?? false);
-
-		// Enabled Boops	[true/false]
-		DrawText("Enable Boop Reactions:", GuiSubscreen.START_X, this.getYPos(4), "Black", "Gray");
-		DrawCheckbox(GuiSubscreen.START_X + 600, this.getYPos(4) - 32, 64, 64, "", Player.LSCG.BoopsModule.enabled ?? false);
-
-		// Chloroform Enabled	[true/false]
-		DrawText("Enable Chloroform:", GuiSubscreen.START_X, this.getYPos(5), "Black", "Gray");
-		DrawCheckbox(GuiSubscreen.START_X + 600, this.getYPos(5) - 32, 64, 64, "", Player.LSCG.MiscModule.chloroformEnabled ?? false);
-
-		// Immersive Chloroform	[true/false]
-		DrawText("Immersive Chloroform:", GuiSubscreen.START_X, this.getYPos(6), "Black", "Gray");
-		DrawCheckbox(GuiSubscreen.START_X + 600, this.getYPos(6) - 32, 64, 64, "", Player.LSCG.MiscModule.immersiveChloroform ?? false);
-
-		// Hand Choke Enabled	[true/false]
-		DrawText("Enable Hand Choking:", GuiSubscreen.START_X, this.getYPos(7), "Black", "Gray");
-		DrawCheckbox(GuiSubscreen.START_X + 600, this.getYPos(7) - 32, 64, 64, "", Player.LSCG.MiscModule.handChokeEnabled ?? false);
-
-		// Gag Choke Enabled	[true/false]
-		DrawText("Enable Gag Suffocation:", GuiSubscreen.START_X, this.getYPos(8), "Black", "Gray");
-		DrawCheckbox(GuiSubscreen.START_X + 600, this.getYPos(8) - 32, 64, 64, "", Player.LSCG.MiscModule.gagChokeEnabled ?? false);
-
-		MainCanvas.textAlign = prev;
-	}
-
-	Click() {
-		super.Click();
-
-		// Enabled Checkbox
-		if (MouseIn(GuiSubscreen.START_X + 600, this.getYPos(1) - 32, 64, 64)){
-			this.settings.enabled = !this.settings.enabled;
-		}
-
-		// Edge Blur Checkbox
-		if (MouseIn(GuiSubscreen.START_X + 600, this.getYPos(2) - 32, 64, 64)){
-			this.settings.edgeBlur = !this.settings.edgeBlur;
-		}
-
-		// Kissmark Checkbox
-		if (MouseIn(GuiSubscreen.START_X + 600, this.getYPos(3) - 32, 64, 64)){
-			Player.LSCG.LipstickModule.enabled = !Player.LSCG.LipstickModule.enabled;
-		}
-
-		// Boops Checkbox
-		if (MouseIn(GuiSubscreen.START_X + 600, this.getYPos(4) - 32, 64, 64)){
-			Player.LSCG.BoopsModule.enabled = !Player.LSCG.BoopsModule.enabled;
-		}
-
-		// Chloroform Enabled Checkbox
-		if (MouseIn(GuiSubscreen.START_X + 600, this.getYPos(5) - 32, 64, 64)){
-			Player.LSCG.MiscModule.chloroformEnabled = !Player.LSCG.MiscModule.chloroformEnabled;
-		}
-
-		// Immersive Chloroform Checkbox
-		if (MouseIn(GuiSubscreen.START_X + 600, this.getYPos(6) - 32, 64, 64)){
-			Player.LSCG.MiscModule.immersiveChloroform = !Player.LSCG.MiscModule.immersiveChloroform;
-		}
-
-		// Hand Choke Enabled Checkbox
-		if (MouseIn(GuiSubscreen.START_X + 600, this.getYPos(7) - 32, 64, 64)){
-			Player.LSCG.MiscModule.handChokeEnabled = !Player.LSCG.MiscModule.handChokeEnabled;
-		}
-
-		// Gag Choke Enabled Checkbox
-		if (MouseIn(GuiSubscreen.START_X + 600, this.getYPos(8) - 32, 64, 64)){
-			Player.LSCG.MiscModule.gagChokeEnabled = !Player.LSCG.MiscModule.gagChokeEnabled;
-		}
+	get structure(): Setting[] {
+		return [
+			<Setting>{
+				type: "checkbox",
+				label: "LSCG Scripts Enabled:",
+				description: "Enable LSCG Features.",
+				setting: () => this.settings.enabled ?? false,
+				setSetting: (val) => this.settings.enabled = val
+			},<Setting>{
+				type: "checkbox",
+				label: "Blur While Edged:",
+				description: "Apply extra blurring to the screen while edging.",
+				setting: () => this.settings.edgeBlur ?? false,
+				setSetting: (val) => this.settings.edgeBlur = val
+			},<Setting>{
+				type: "checkbox",
+				label: "Enable Lipstick Marks:",
+				description: "Apply kiss marks when lipstick-wearing people kiss you on the cheek/forehead/neck.",
+				setting: () => Player.LSCG.LipstickModule.enabled ?? false,
+				setSetting: (val) => Player.LSCG.LipstickModule.enabled = val
+			},<Setting>{
+				type: "checkbox",
+				label: "Enable Boop Reactions:",
+				description: "Auto-react when booped.",
+				setting: () => Player.LSCG.BoopsModule.enabled ?? false,
+				setSetting: (val) => Player.LSCG.BoopsModule.enabled = val
+			},<Setting>{
+				type: "checkbox",
+				label: "Enable Chloroform:",
+				description: "Fall asleep if chloroformed.",
+				setting: () => Player.LSCG.MiscModule.chloroformEnabled ?? false,
+				setSetting: (val) => Player.LSCG.MiscModule.chloroformEnabled = val
+			},<Setting>{
+				type: "checkbox",
+				label: "Immersive Chloroform:",
+				description: "Enforce chloroform with more restrictive measures. LSCG settings will be unavailable while asleep.",
+				setting: () => Player.LSCG.MiscModule.immersiveChloroform ?? false,
+				setSetting: (val) => Player.LSCG.MiscModule.immersiveChloroform = val
+			},<Setting>{
+				type: "checkbox",
+				label: "Enable Hand Choking:",
+				description: "Enables breathplay using \"Choke Neck\" activity. If done repeatedly will cause blackout.",
+				setting: () => Player.LSCG.MiscModule.handChokeEnabled ?? false,
+				setSetting: (val) => Player.LSCG.MiscModule.handChokeEnabled = val
+			},<Setting>{
+				type: "checkbox",
+				label: "Enable Gag Suffocation:",
+				description: "Enabled breathplay using nose plugs and sufficient gags.",
+				setting: () => Player.LSCG.MiscModule.gagChokeEnabled ?? false,
+				setSetting: (val) => Player.LSCG.MiscModule.gagChokeEnabled = val
+			},
+		]
 	}
 }
