@@ -63,6 +63,16 @@ javascript:(()=>{fetch('https://littlesera.github.io/LSCG/bundle.js').then(r=>r.
 - After just over 2 minutes (to allow for futiristic play) you will passout
 - Note: the nose plugs will "fall out" when you lose consciousness, I am not interested in simulating full actual suffocation
 
+### Custom Activities
+Currently all enabled, potential toggles coming. These all behave like normal activities, respecting item permissions and can be configured with arousal in BC standard settings (further testing needed to make sure configured arousal works ok).
+#### Basic Activities (Simple action emotes)
+- Hug, Tackle, Flop, Kiss Eyes, Rub Pussy/Penis, Nibble Tail, Fuck with Pussy, Fuck with Ass
+#### Special Activities
+- Grab Tongue
+  - If reciever is also using LSCG, grabbing will garble their speech for 45 seconds, similar to FBC's hand clamping
+- Hold/Release Hand
+  - If the reciever is also using LSCG, will behave like a leash. Holder can "Release Hand" or use vanilla "let go of leash" to release leashing.
+
 
 # Special Thanks
 
