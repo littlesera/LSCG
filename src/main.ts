@@ -8,6 +8,7 @@ import { MiscModule } from './Modules/misc';
 import { LipstickModule } from './Modules/lipstick';
 import { GUI } from "Settings/settingUtils";
 import { ActivityModule } from "Modules/activities";
+import { InjectorModule } from 'Modules/injector';
 
 function initWait() {
 	console.debug("LSCG: Init wait");
@@ -92,6 +93,7 @@ function init_modules(): boolean {
 	registerModule(new MiscModule());
 	registerModule(new LipstickModule());
 	registerModule(new ActivityModule());
+	registerModule(new InjectorModule());
 
 	for (const m of modules()) {
 		m.init();

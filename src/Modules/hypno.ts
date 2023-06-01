@@ -256,8 +256,7 @@ export class HypnoModule extends BaseModule {
         let matched = this.triggers.some(trigger => {
             let phraseMatch = new RegExp("\\b" + escapeRegExp(trigger) + "\\b", "i");
             return phraseMatch.test(msg);
-        })
-        
+        })        
 
         return (!hypnoActivated() && 
             matched && 

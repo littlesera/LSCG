@@ -151,9 +151,9 @@ export class MiscModule extends BaseModule {
     }
 
     chroloBlockStrings = [
-        "%NAME%'s eyes move dreamily under her closed eyelids...",
-        "%NAME% takes another deep breath through her gag...",
-        "%NAME%'s muscles twitch weakly in their sleep...",
+        "%NAME%'s eyes move dreamily under %POSSESSIVE% closed eyelids...",
+        "%NAME% takes another deep breath through %POSSESSIVE% gag...",
+        "%NAME%'s muscles twitch weakly in %POSSESSIVE% sleep...",
         "%NAME% moans softly and relaxes..."
     ];
     chloroEventInterval: number = 0;

@@ -219,6 +219,11 @@ export function escapeRegExp(string: string) {
 	return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // $& means the whole matched string
 }
 
+export function isPhraseInString(string: string, phrase: string) {
+	let praseMatch = new RegExp("\\b" + escapeRegExp(phrase) + "\\b", "i");
+	return praseMatch.test(string);
+}
+
 export function DoHandHold(target: Character) {	
 	const Dictionary = new DictionaryBuilder()
 		.sourceCharacter(Player)
