@@ -287,7 +287,7 @@ export class HypnoModule extends BaseModule {
         if (this.settings.activatedAt == 0)
             this.settings.activatedAt = new Date().getTime();
         AudioPlaySoundEffect("SciFiEffect", 1);
-        settingsSave();
+        settingsSave(true);
         
         if (wasWord)
             SendAction("%NAME%'s eyes immediately unfocus, %POSSESSIVE% posture slumping slightly as %PRONOUN% loses control of %POSSESSIVE% body at the utterance of a trigger word.");
@@ -393,6 +393,7 @@ export class HypnoModule extends BaseModule {
         clearTimeout(this.triggerTimeout);
         triggerActivated = false;
         this.settings.recoveredAt = new Date().getTime();
+        settingsSave(true);
     }
 
     HypnoHorny() {

@@ -1,10 +1,8 @@
 import { BaseSettingsModel } from "./base";
 
-export interface HypnoSettingsModel extends BaseSettingsModel {
+export interface HypnoSettingsModel extends HypnoPublicSettingsModel {
     trigger: string;
     triggerTime: number;
-    activatedAt: number;
-    recoveredAt: number;
     enableCycle: boolean;
     immersive: boolean;
     cycleTime: number;
@@ -17,4 +15,9 @@ export interface HypnoSettingsModel extends BaseSettingsModel {
     existingEyeExpression: ExpressionName | null;
     enableArousal: boolean;
     cooldownTime: number;
+}
+
+export interface HypnoPublicSettingsModel extends BaseSettingsModel {
+    activatedAt: number;
+    recoveredAt: number;
 }

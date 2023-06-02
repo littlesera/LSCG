@@ -727,7 +727,8 @@ type ChatMessageDictionaryEntry =
 	| AutomaticEventDictionaryEntry
 	| ActivityCounterDictionaryEntry
 	| AssetGroupNameDictionaryEntry
-	| ActivityNameDictionaryEntry;
+	| ActivityNameDictionaryEntry
+	| LSCGMessageDictionaryEntry;
 
 type ChatMessageDictionary = ChatMessageDictionaryEntry[];
 

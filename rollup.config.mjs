@@ -4,6 +4,7 @@ import json from '@rollup/plugin-json';
 import typescript from '@rollup/plugin-typescript';
 import resolve from "@rollup/plugin-node-resolve";
 import progress from 'rollup-plugin-progress';
+import packageJson from "./package.json" assert { type: "json" };
 
 export default {
   input: 'src/main.ts',
@@ -23,7 +24,11 @@ if (window.LSCG_Loaded !== undefined) {
 }
 window.LSCG_Loaded = false;
 console.debug("LSCG: Parse start...");
-`
+`,
+    intro: async () => {
+      let LSCG_VERSION = packageJson.version;
+      return `const LSCG_VERSION="${LSCG_VERSION}";`;
+    }
   },
   treeshake: false,
   plugins: [

@@ -6,10 +6,16 @@ import { getModule } from "modules";
 import { BaseSettingsModel } from "Settings/Models/base";
 import { InjectorSettingsModel } from "Settings/Models/injector";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
-import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, setOrIgnoreBlush, isPhraseInString, settingsSave, hookFunction, ICONS } from "../utils";
+import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, setOrIgnoreBlush, isPhraseInString, settingsSave, hookFunction, ICONS, getCharacter } from "../utils";
 import { ActivityBundle, ActivityModule, CustomAction, CustomPrerequisite } from "./activities";
 import { HypnoModule } from "./hypno";
 import { MiscModule } from "./misc";
+
+export interface DrugLevel {
+    type: "sedative" | "mindcontrol" | "horny";
+    level: number;
+    max: number;
+}
 
 export class InjectorModule extends BaseModule {
     
@@ -28,10 +34,18 @@ export class InjectorModule extends BaseModule {
             cureKeywords: ["antidote", "healing", "curing"],
             netgunKeywords: ["net gun", "netgun"],
             netgunIsChaotic: false,
-            tickLength: 5000,
+            hornyTickTime: 5000,
             sedativeCooldown: 120000, // 2 minutes
             mindControlCooldown: 120000, // 2 minutes
-            hornyCooldown: 300000 // 5 minutes
+            hornyCooldown: 300000, // 5 minutes
+            showDrugLevels: true,
+            sedativeLevel: 0,
+            mindControlLevel: 0,
+            hornyLevel: 0,
+            drugLevelMultiplier: 100,
+            sedativeMax: 5,
+            mindControlMax: 5,
+            hornyLevelMax: 5
         };
     }
 
@@ -47,9 +61,29 @@ export class InjectorModule extends BaseModule {
         this.settings.hornyKeywords = d.hornyKeywords;
         this.settings.cureKeywords = d.cureKeywords;
         this.settings.netgunKeywords = d.netgunKeywords;
-        this.settings.tickLength = d.tickLength;
+        this.settings.hornyTickTime = d.hornyTickTime;
         this.settings.sedativeCooldown = d.sedativeCooldown;
         settingsSave();
+
+        CommandCombine([
+            {
+                Tag: 'max-sedative',
+                Description: ": max sedative",
+                Action: () => { this.sedativeLevel = this.sedativeMax * this.drugLevelMultiplier; }
+            }, {
+                Tag: 'max-control',
+                Description: ": max mind control",
+                Action: () => { this.mindControlLevel = this.mindControlMax * this.drugLevelMultiplier; }
+            }, {
+                Tag: 'max-horny',
+                Description: ": max horny",
+                Action: () => { this.hornyLevel = this.hornyLevelMax * this.drugLevelMultiplier; }
+            }, {
+                Tag: 'cure-all',
+                Description: ": cure all",
+                Action: () => { this.InjectCure(Player, "ItemArms"); }
+            }
+        ]);
 
         OnActivity(10, ModuleCategory.Injector, (data, sender, msg, megadata) => {
             var activityName = data.Dictionary[3]?.ActivityName;
@@ -65,14 +99,47 @@ export class InjectorModule extends BaseModule {
             }
         });
 
+        hookFunction("DrawArousalMeter", 1, (args, next) => {
+            if (!this.settings.showDrugLevels)
+                return next(args);
+            let [Char, CharX, CharY, Zoom] = args as [Character, number, number, number];
+            var charSettings = (getCharacter(Char.MemberNumber!) as OtherCharacter)?.LSCG?.InjectorModule;
+            if (!charSettings)
+                return next(args);
+
+            if (charSettings.sedativeLevel + charSettings.mindControlLevel + charSettings.hornyLevel > 0) {
+                let bars: DrugLevel[] = [];
+                if (charSettings.sedativeLevel > 0)
+                    bars.push(<DrugLevel>{
+                        type: "sedative",
+                        level: charSettings.sedativeLevel,
+                        max: charSettings.sedativeMax * charSettings.drugLevelMultiplier
+                    });
+                if (charSettings.mindControlLevel > 0)
+                    bars.push(<DrugLevel>{
+                        type: "mindcontrol",
+                        level: charSettings.mindControlLevel,
+                        max: charSettings.mindControlMax * charSettings.drugLevelMultiplier
+                    });
+                if (charSettings.hornyLevel > 0)
+                    bars.push(<DrugLevel>{
+                        type: "horny",
+                        level: charSettings.hornyLevel,
+                        max: charSettings.hornyLevelMax * charSettings.drugLevelMultiplier
+                    });
+                this.DrawBars(Char, CharX, CharY, Zoom, bars);
+            }
+            return next(args);
+        }, ModuleCategory.Injector);
+
         this.InitializeRestrictiveHooks();
 
         (<any>window).LSCG_InjectEnd_Sedative = () => this.MiniGameEnd("sedative", MiniGameVictory);
         (<any>window).LSCG_InjectEnd_Brainwash = () => this.MiniGameEnd("mindcontrol", MiniGameVictory);
 
-        this.sedativeCooldownInterval = setInterval(() => this.SedativeCooldown(), this.settings.sedativeCooldown);
-        this.mindControlCooldownInterval = setInterval(() => this.MindControlCooldown(), this.settings.mindControlCooldown);
-        this.hornyCooldownInterval = setInterval(() => this.HornyCooldown(), this.settings.hornyCooldown);
+        this.sedativeCooldownInterval = setInterval(() => this.SedativeCooldown(), this.cooldownTickMs);
+        this.mindControlCooldownInterval = setInterval(() => this.MindControlCooldown(), this.cooldownTickMs);
+        this.hornyCooldownInterval = setInterval(() => this.HornyCooldown(), this.cooldownTickMs);
     }
 
     run(): void {
@@ -186,7 +253,7 @@ export class InjectorModule extends BaseModule {
 
         hookFunction('ChatRoomFocusCharacter', 6, (args, next) => {
             if (this.Enabled && this.asleep) {
-                ChatRoomSendLocal("Character access blocked while drugged asleep. Current level of sedative: " + this.sedativeLevel, 5000);
+                ChatRoomSendLocal("Character access blocked while drugged asleep.", 5000);
                 return;
             }
             return next(args);
@@ -203,7 +270,7 @@ export class InjectorModule extends BaseModule {
             if (!this.Enabled || !Player.ImmersionSettings?.AllowTints)
                 return next(args);
             if (this.brainwashed) return [{r: 148, g: 0, b: 211, a: 0.4}];
-            else if (this.hornyLevel > 0) return [{r: 254, g: 44, b: 84, a: (this.hornyLevel/(this.hornyLevelMax*2))}];
+            else if (this.hornyLevel > 0) return [{r: 254, g: 44, b: 84, a: (this.hornyLevel/(this.hornyLevelMax*this.drugLevelMultiplier*2))}];
             return next(args);
         }, ModuleCategory.Injector);
 
@@ -211,12 +278,12 @@ export class InjectorModule extends BaseModule {
             if (!this.Enabled || !Player.ImmersionSettings?.AllowTints)
                 return next(args);
             if (this.brainwashed) return 3;
-            else if (this.hornyLevel > 0) return this.hornyLevel - 1;
+            else if (this.hornyLevel > 0) return Math.max(0, (this.hornyLevel / this.drugLevelMultiplier) - 1);
             return next(args);
         }, ModuleCategory.Injector);
 
         hookFunction('TimerProcess', 1, (args, next) => {
-            if (ActivityAllowed() && this.hornyLevel > 0 && this.hornyLastBumped + 5000 < CurrentTime) {
+            if (ActivityAllowed() && this.hornyLevel > 0 && this.hornyLastBumped + this.settings.hornyTickTime < CurrentTime) {
                 this.hornyLastBumped = CurrentTime;
                 var progress = Math.min(99, (Player.ArousalSettings?.Progress ?? 0) + this.hornyLevel * 4);
                 ActivitySetArousal(Player, progress);
@@ -236,25 +303,37 @@ export class InjectorModule extends BaseModule {
         }, ModuleCategory.Injector);
     }
 
-    asleep: boolean = false;
-    brainwashed: boolean = false;
-
     sleepTotalTicks = 12;
     sleepTimer: number = 0;
     hypnoTimer: number = 0;
 
-    sedativeLevel: number = 0;
-    mindControlLevel: number = 0;
-    hornyLevel: number = 0;
+    get asleep(): boolean { return this.settings.asleep };
+    set asleep(val: boolean) {this.settings.asleep = val; settingsSave(true);}
+    get brainwashed(): boolean { return this.settings.brainwashed };
+    set brainwashed(val: boolean) {this.settings.brainwashed = val; settingsSave(true);}
 
-    sedativeMax: number = 5;
-    mindControlMax: number = 5;
-    hornyLevelMax: number = 5;
+    get sedativeLevel(): number {return this.settings.sedativeLevel};
+    set sedativeLevel(val: number) {this.settings.sedativeLevel = val; settingsSave(true);}
+    get mindControlLevel(): number {return this.settings.mindControlLevel};
+    set mindControlLevel(val: number) {this.settings.mindControlLevel = val; settingsSave(true);}
+    get hornyLevel(): number {return this.settings.hornyLevel};
+    set hornyLevel(val: number) {this.settings.hornyLevel = val; settingsSave(true);}
+
+    get drugLevelMultiplier(): number {return this.settings.drugLevelMultiplier};
+    set drugLevelMultiplier(val: number) {this.settings.drugLevelMultiplier = val; settingsSave(true);}
+
+    get sedativeMax(): number {return this.settings.sedativeMax};
+    set sedativeMax(val: number) {this.settings.sedativeMax = val; settingsSave(true);}
+    get mindControlMax(): number {return this.settings.mindControlMax};
+    set mindControlMax(val: number) {this.settings.mindControlMax = val; settingsSave(true);}
+    get hornyLevelMax(): number {return this.settings.hornyLevelMax};
+    set hornyLevelMax(val: number) {this.settings.hornyLevelMax = val; settingsSave(true);}
 
     sedativeCooldownInterval: number = 0;
     mindControlCooldownInterval: number = 0;
     hornyCooldownInterval: number = 0;
     hornyLastBumped: number = 0;
+    cooldownTickMs: number = 5000;
 
     ProcessInjection(sender: Character, location: AssetGroupItemName) {
         var asset = InventoryGet(sender, "ItemHandheld");
@@ -265,10 +344,10 @@ export class InjectorModule extends BaseModule {
         var description = asset.Craft.Description;
         var totalString = name + " | " + description;
 
-        var isSedative = this.settings.sedativeKeywords.some(ph => isPhraseInString(totalString, ph));
-        var isMindControl = this.settings.mindControlKeywords.some(ph => isPhraseInString(totalString, ph));
-        var isHorny = this.settings.hornyKeywords.some(ph => isPhraseInString(totalString, ph));
-        var isCure = this.settings.cureKeywords.some(ph => isPhraseInString(totalString, ph));
+        var isSedative = this.settings.sedativeKeywords?.some(ph => isPhraseInString(totalString, ph));
+        var isMindControl = this.settings.mindControlKeywords?.some(ph => isPhraseInString(totalString, ph));
+        var isHorny = this.settings.hornyKeywords?.some(ph => isPhraseInString(totalString, ph));
+        var isCure = this.settings.cureKeywords?.some(ph => isPhraseInString(totalString, ph));
 
         if (isSedative)
             this.InjectSedative(sender, location);
@@ -284,14 +363,14 @@ export class InjectorModule extends BaseModule {
         "%NAME% sighs as a cool relaxing calm glides through %POSSESSIVE% body, fighting to keep %POSSESSIVE% eyes open.",
         "%NAME%'s muscle relax as %OPP_NAME%'s sedative courses through %POSSESSIVE% body",
         "%NAME% fights to stay conscious against the relentless weight of %OPP_NAME%'s drug."
-    ];
+    ];    
 
     InjectSedative(sender: Character, location: AssetGroupItemName) {
-        this.sedativeLevel = Math.min(this.sedativeLevel + 1, this.sedativeMax);
+        this.sedativeLevel = Math.min(this.sedativeLevel + this.drugLevelMultiplier, this.sedativeMax * this.drugLevelMultiplier);
         SendAction(this.sedativeInjectStr[getRandomInt(this.sedativeInjectStr.length)], sender);
         console.info("Sedative Injected by " + sender.Nickname + " in the " + location + ". level: " + this.sedativeLevel);
         if (!this.asleep) {
-            MiniGameStart(this.sleepyGame.name, (this.sedativeLevel * 8), "LSCG_InjectEnd_Sedative");
+            MiniGameStart(this.sleepyGame.name, ((this.sedativeLevel / this.drugLevelMultiplier) * 8), "LSCG_InjectEnd_Sedative");
         }
         CurrentModule = "Online";
     }
@@ -303,11 +382,11 @@ export class InjectorModule extends BaseModule {
     ];
 
     InjectMindControl(sender: Character, location: AssetGroupItemName) {
-        this.mindControlLevel = Math.min(this.mindControlLevel + 1, this.mindControlMax);
+        this.mindControlLevel = Math.min(this.mindControlLevel + this.drugLevelMultiplier, this.mindControlMax * this.drugLevelMultiplier);
         SendAction(this.brainwashInjectStr[getRandomInt(this.brainwashInjectStr.length)], sender);
         console.info("Mind Control Injected by " + sender.Nickname + " in the " + location + ". level: " + this.mindControlLevel);
         if (!this.brainwashed) {
-            MiniGameStart(this.brainWashGame.name, (this.mindControlLevel * 8), "LSCG_InjectEnd_Brainwash");
+            MiniGameStart(this.brainWashGame.name, ((this.mindControlLevel / this.drugLevelMultiplier) * 8), "LSCG_InjectEnd_Brainwash");
         }
         CurrentModule = "Online";
     }
@@ -319,7 +398,7 @@ export class InjectorModule extends BaseModule {
     ];
 
     InjectHorny(sender: Character, location: AssetGroupItemName) {
-        this.hornyLevel = Math.min(this.hornyLevel + 1, this.hornyLevelMax);
+        this.hornyLevel = Math.min(this.hornyLevel + this.drugLevelMultiplier, this.hornyLevelMax * this.drugLevelMultiplier);
         SendAction(this.hornyInjectStr[getRandomInt(this.hornyInjectStr.length)], sender);
         console.info("Horny Injected by " + sender.Nickname + " in the " + location + ". level: " + this.hornyLevel);
         if (!!(<any>Player).BCT?.splitOrgasmArousal?.arousalProgress) {
@@ -342,20 +421,27 @@ export class InjectorModule extends BaseModule {
         if (this.brainwashed) this.SnapBack();
     }
 
+    // Cooldown func fires every cooldownTickMs
     SedativeCooldown() {
-        this.sedativeLevel = Math.max(0, this.sedativeLevel - 1);
+        // subtractive will be mow much of the multiplier to subtract per tick to reduce by full multiplier every setting cooldown.
+        let subtractive = this.drugLevelMultiplier / (this.settings.sedativeCooldown / this.cooldownTickMs)
+        this.sedativeLevel = Math.max(0, this.sedativeLevel - subtractive);
         if (this.sedativeLevel <= 0 && this.asleep)
             this.Wake();
     }
 
     MindControlCooldown() {
-        this.mindControlLevel = Math.max(0, this.mindControlLevel - 1);
+        // subtractive will be mow much of the multiplier to subtract per tick to reduce by full multiplier every setting cooldown.
+        let subtractive = this.drugLevelMultiplier / (this.settings.mindControlCooldown / this.cooldownTickMs)
+        this.mindControlLevel = Math.max(0, this.mindControlLevel - subtractive);
         if (this.mindControlLevel <= 0 && this.brainwashed)
             this.SnapBack();
     }
 
     HornyCooldown() {
-        this.hornyLevel = Math.max(0, this.hornyLevel - 1);
+        // subtractive will be mow much of the multiplier to subtract per tick to reduce by full multiplier every setting cooldown.
+        let subtractive = this.drugLevelMultiplier / (this.settings.hornyCooldown / this.cooldownTickMs)
+        this.hornyLevel = Math.max(0, this.hornyLevel - subtractive);
     }
 
     MiniGameEnd(type: "sedative" | "mindcontrol", success: boolean) {
@@ -375,7 +461,7 @@ export class InjectorModule extends BaseModule {
     }
 
     Sleep() {
-        this.sedativeLevel = this.sedativeMax;
+        this.sedativeLevel = this.sedativeMax * this.drugLevelMultiplier;
         this.asleep = true;
         SendAction("%NAME% moans weakly as %PRONOUN% succumbs to unconciousness.");
         CharacterSetFacialExpression(Player, "Eyes", "Closed");
@@ -391,8 +477,9 @@ export class InjectorModule extends BaseModule {
     }
 
     Brainwash() {
-        this.mindControlLevel = this.mindControlMax;
+        this.mindControlLevel = this.mindControlMax * this.drugLevelMultiplier;
         this.brainwashed = true;
+        SendAction("%NAME%'s body goes limp as %POSSESSIVE% mind empties and %PRONOUN% awaits a commands.");
         if (!!this.hypnoModule)
             this.hypnoModule.SetEyes();
     }
@@ -442,7 +529,7 @@ export class InjectorModule extends BaseModule {
         var description = asset.Craft.Description;
         var totalString = name + " " + description;
 
-        var isNetgun = this.settings.netgunKeywords.some(ph => isPhraseInString(totalString, ph));
+        var isNetgun = this.settings.netgunKeywords?.some(ph => isPhraseInString(totalString, ph));
         return isNetgun;
     }
 
@@ -480,5 +567,29 @@ export class InjectorModule extends BaseModule {
         }
         ChatRoomCharacterItemUpdate(target, "ItemDevices");
         SendAction("%NAME%'s net engulfs %OPP_NAME%.", target);
+    }
+
+    /**
+     * Draws Drug Level Bars
+     * @param C Character for which to draw
+     * @param X 
+     * @param Y 
+     * @param Zoom 
+     */
+    DrawBars(C: Character, X: number, Y: number, Zoom: number, bars: DrugLevel[]) {
+        //Zoom = Zoom * .2;
+        bars?.forEach((bar, ix, arr) => {
+            //X + (30 * Zoom), Y + (15 * Zoom)
+            let barX = X + (380 * Zoom) + (15 * ix * Zoom);
+            let barY = Y + (540 * Zoom);
+            let barZoom = Zoom * .2
+            let barProgress = Math.max(0, Math.min(100, bar.level / bar.max)) * 100;
+            let color = "#5C5CFF";
+            if (bar.type == "mindcontrol") color = "#A020F0";
+            else if (bar.type == "horny") color = "#FF647F";
+            DrawRect(barX, barY, (40 * barZoom), (Math.round(400 * barZoom)), "Black");
+            DrawRect(barX, barY + (Math.round((100 - barProgress) * 4 * barZoom)), (40 * barZoom), (Math.round(barProgress * 4 * barZoom)), color);
+            DrawEmptyRect(barX, barY, (40 * barZoom), (Math.round(400 * barZoom)), color);
+        });
     }
 }
