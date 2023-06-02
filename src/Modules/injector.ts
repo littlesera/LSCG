@@ -343,26 +343,26 @@ export class InjectorModule extends BaseModule {
     hypnoTimer: number = 0;
 
     get asleep(): boolean { return this.settings.asleep };
-    set asleep(val: boolean) {this.settings.asleep = val; settingsSave(true);}
+    set asleep(val: boolean) { if (this.settings.asleep != val){ this.settings.asleep = val; settingsSave(true);}}
     get brainwashed(): boolean { return this.settings.brainwashed };
-    set brainwashed(val: boolean) {this.settings.brainwashed = val; settingsSave(true);}
+    set brainwashed(val: boolean) { if (this.settings.brainwashed != val) {this.settings.brainwashed = val; settingsSave(true);}}
 
     get sedativeLevel(): number {return this.settings.sedativeLevel};
-    set sedativeLevel(val: number) {this.settings.sedativeLevel = val; settingsSave(true);}
+    set sedativeLevel(val: number) {if (this.settings.sedativeLevel != val) {this.settings.sedativeLevel = val; settingsSave(true);}}
     get mindControlLevel(): number {return this.settings.mindControlLevel};
-    set mindControlLevel(val: number) {this.settings.mindControlLevel = val; settingsSave(true);}
+    set mindControlLevel(val: number) {if (this.settings.mindControlLevel != val) {this.settings.mindControlLevel = val; settingsSave(true);}}
     get hornyLevel(): number {return this.settings.hornyLevel};
-    set hornyLevel(val: number) {this.settings.hornyLevel = val; settingsSave(true);}
+    set hornyLevel(val: number) {if (this.settings.hornyLevel != val) {this.settings.hornyLevel = val; settingsSave(true);}}
 
     get drugLevelMultiplier(): number {return this.settings.drugLevelMultiplier};
-    set drugLevelMultiplier(val: number) {this.settings.drugLevelMultiplier = val; settingsSave(true);}
+    set drugLevelMultiplier(val: number) {if (this.settings.drugLevelMultiplier != val) {this.settings.drugLevelMultiplier = val; settingsSave(true);}}
 
     get sedativeMax(): number {return this.settings.sedativeMax};
-    set sedativeMax(val: number) {this.settings.sedativeMax = val; settingsSave(true);}
+    set sedativeMax(val: number) {if (this.settings.sedativeMax != val) {this.settings.sedativeMax = val; settingsSave(true);}}
     get mindControlMax(): number {return this.settings.mindControlMax};
-    set mindControlMax(val: number) {this.settings.mindControlMax = val; settingsSave(true);}
+    set mindControlMax(val: number) {if (this.settings.mindControlMax != val) {this.settings.mindControlMax = val; settingsSave(true);}}
     get hornyLevelMax(): number {return this.settings.hornyLevelMax};
-    set hornyLevelMax(val: number) {this.settings.hornyLevelMax = val; settingsSave(true);}
+    set hornyLevelMax(val: number) {if (this.settings.hornyLevelMax != val) {this.settings.hornyLevelMax = val; settingsSave(true);}}
 
     sedativeCooldownInterval: number = 0;
     mindControlCooldownInterval: number = 0;
@@ -470,6 +470,8 @@ export class InjectorModule extends BaseModule {
 
     // Cooldown func fires every cooldownTickMs
     SedativeCooldown() {
+        if (this.sedativeLevel <= 0)
+            return;
         // subtractive will be mow much of the multiplier to subtract per tick to reduce by full multiplier every setting cooldown.
         let subtractive = this.drugLevelMultiplier / (this.settings.sedativeCooldown / this.cooldownTickMs)
         this.sedativeLevel = Math.max(0, this.sedativeLevel - subtractive);
@@ -478,6 +480,8 @@ export class InjectorModule extends BaseModule {
     }
 
     MindControlCooldown() {
+        if (this.mindControlLevel <= 0)
+            return;
         // subtractive will be mow much of the multiplier to subtract per tick to reduce by full multiplier every setting cooldown.
         let subtractive = this.drugLevelMultiplier / (this.settings.mindControlCooldown / this.cooldownTickMs)
         this.mindControlLevel = Math.max(0, this.mindControlLevel - subtractive);
@@ -486,6 +490,8 @@ export class InjectorModule extends BaseModule {
     }
 
     HornyCooldown() {
+        if (this.hornyLevel <= 0)
+            return;
         // subtractive will be mow much of the multiplier to subtract per tick to reduce by full multiplier every setting cooldown.
         let subtractive = this.drugLevelMultiplier / (this.settings.hornyCooldown / this.cooldownTickMs)
         this.hornyLevel = Math.max(0, this.hornyLevel - subtractive);
