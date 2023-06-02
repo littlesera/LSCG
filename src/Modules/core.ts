@@ -59,7 +59,7 @@ export class CoreModule extends BaseModule {
     }
 
     SendPublicPacket(replyRequested: boolean, type: LSCGMessageModelType = "init") {
-        const bctInitilizationMessage = <IChatRoomMessage>{
+        const packet = <IChatRoomMessage>{
 			Type: "Hidden",
 			Content: "LSCGMsg",
 			Sender: Player.MemberNumber,
@@ -76,7 +76,7 @@ export class CoreModule extends BaseModule {
 			],
 		};
 		
-		ServerSend("ChatRoomChat", bctInitilizationMessage);
+		ServerSend("ChatRoomChat", packet);
     }
 
     CheckForPublicPacket(data: IChatRoomMessage) {
