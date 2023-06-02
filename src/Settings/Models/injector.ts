@@ -1,6 +1,10 @@
 import { BaseSettingsModel } from "./base";
 
 export interface InjectorSettingsModel extends InjectorPublicSettingsModel {
+    immersive: boolean;
+    enableSedative: boolean;
+    enableMindControl: boolean;
+    enableHorny: boolean;
     sedativeKeywords: string[];
     mindControlKeywords: string[];
     hornyKeywords: string[];

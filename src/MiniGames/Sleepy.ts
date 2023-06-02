@@ -1,5 +1,5 @@
 import { InjectorModule } from "Modules/injector";
-import { hookFunction, ICONS } from "utils";
+import { getRandomInt, hookFunction, ICONS } from "utils";
 import { BaseMiniGame } from "./minigames";
 
 export interface SleepyMiniGameOptions {
@@ -127,7 +127,7 @@ export class SleepyMiniGame extends BaseMiniGame {
         // Adjust acceleration every .4s ticks
         if (CommonTime() > this.SleepyNextTick) {
             this.SleepyNextTick = CommonTime() + 400;
-            this.SleepyAcceleration = -(this.SleepyChallenge*1.5) - timeElapsed*Math.random();
+            this.SleepyAcceleration = -(this.SleepyChallenge*1.25) - timeElapsed*Math.random();
             this.UpdateEyes();
         }
         this.SleepyVelocity = Math.min(this.SleepyVelocity, this.SleepyVelocity + this.SleepyAcceleration * 0.25);
@@ -182,6 +182,6 @@ export class SleepyMiniGame extends BaseMiniGame {
     Click() {
         //CommonIsMobile
         if (this.IsGameActive)
-            this.SleepyVelocity = Math.max(this.SleepyVelocity + 10, 20);
+            this.SleepyVelocity = Math.max(this.SleepyVelocity + (getRandomInt(11)+5), 20);
     }
 }

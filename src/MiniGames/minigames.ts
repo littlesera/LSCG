@@ -28,7 +28,6 @@ export function getMiniGame<T extends BaseMiniGame>(miniGameType: string): T {
 }
 
 hookFunction("TextLoad", 5, (args, next) => {
-    console.info(args);
     if (CurrentScreen.startsWith("LSCG_"))
         return;
     else

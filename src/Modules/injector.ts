@@ -3,6 +3,7 @@ import { BrainwashMiniGame } from "MiniGames/Brainwash";
 import { registerMiniGame } from "MiniGames/minigames";
 import { SleepyMiniGame, SleepyMiniGameOptions } from "MiniGames/Sleepy";
 import { getModule } from "modules";
+import { GuiInjector } from "Settings/injector";
 import { BaseSettingsModel } from "Settings/Models/base";
 import { InjectorSettingsModel } from "Settings/Models/injector";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
@@ -28,8 +29,12 @@ export class InjectorModule extends BaseModule {
     get defaultSettings() {
         return <InjectorSettingsModel>{
             enabled: false,
+            immersive: false,
+            enableSedative: false,
+            enableMindControl: false,
+            enableHorny: false,
             sedativeKeywords: ["tranquilizer","sedative"],
-            mindControlKeywords: ["mind control", "hypnotizing"],
+            mindControlKeywords: ["mind control", "hypnotizing", "brainwashing"],
             hornyKeywords: ["horny", "aphrodisiac"],
             cureKeywords: ["antidote", "healing", "curing"],
             netgunKeywords: ["net gun", "netgun"],
@@ -54,40 +59,36 @@ export class InjectorModule extends BaseModule {
 		return (<any>Player.LSCG)[this.settingsStorage];
 	}
 
+    get settingsScreen(): Subscreen | null {
+        return GuiInjector;
+    }
+    
     load(): void {
-        var d = this.defaultSettings;
-        this.settings.sedativeKeywords = d.sedativeKeywords;
-        this.settings.mindControlKeywords = d.mindControlKeywords;
-        this.settings.hornyKeywords = d.hornyKeywords;
-        this.settings.cureKeywords = d.cureKeywords;
-        this.settings.netgunKeywords = d.netgunKeywords;
-        this.settings.hornyTickTime = d.hornyTickTime;
-        this.settings.sedativeCooldown = d.sedativeCooldown;
-        settingsSave();
-
-        CommandCombine([
-            {
-                Tag: 'max-sedative',
-                Description: ": max sedative",
-                Action: () => { this.sedativeLevel = this.sedativeMax * this.drugLevelMultiplier; }
-            }, {
-                Tag: 'max-control',
-                Description: ": max mind control",
-                Action: () => { this.mindControlLevel = this.mindControlMax * this.drugLevelMultiplier; }
-            }, {
-                Tag: 'max-horny',
-                Description: ": max horny",
-                Action: () => { this.hornyLevel = this.hornyLevelMax * this.drugLevelMultiplier; }
-            }, {
-                Tag: 'cure-all',
-                Description: ": cure all",
-                Action: () => { this.InjectCure(Player, "ItemArms"); }
-            }
-        ]);
+        // CommandCombine([
+        //     {
+        //         Tag: 'max-sedative',
+        //         Description: ": max sedative",
+        //         Action: () => { this.sedativeLevel = this.sedativeMax * this.drugLevelMultiplier; }
+        //     }, {
+        //         Tag: 'max-control',
+        //         Description: ": max mind control",
+        //         Action: () => { this.mindControlLevel = this.mindControlMax * this.drugLevelMultiplier; }
+        //     }, {
+        //         Tag: 'max-horny',
+        //         Description: ": max horny",
+        //         Action: () => { this.hornyLevel = this.hornyLevelMax * this.drugLevelMultiplier; }
+        //     }, {
+        //         Tag: 'cure-all',
+        //         Description: ": cure all",
+        //         Action: () => { this.InjectCure(Player, "ItemArms"); }
+        //     }
+        // ]);
 
         OnActivity(10, ModuleCategory.Injector, (data, sender, msg, megadata) => {
             var activityName = data.Dictionary[3]?.ActivityName;
             var target = data.Dictionary.find((d: { Tag: string; }) => d.Tag == "TargetCharacter")?.MemberNumber;
+            if (!this.Enabled)
+                return;
             if (target == Player.MemberNumber && activityName == "Inject" && !!sender) {
                 var location = <AssetGroupItemName>data.Dictionary[2]?.FocusGroupName;
                 this.ProcessInjection(sender, location);
@@ -100,7 +101,7 @@ export class InjectorModule extends BaseModule {
         });
 
         hookFunction("DrawArousalMeter", 1, (args, next) => {
-            if (!this.settings.showDrugLevels)
+            if (!this.Enabled || !this.settings.showDrugLevels)
                 return next(args);
             let [Char, CharX, CharY, Zoom] = args as [Character, number, number, number];
             var charSettings = (getCharacter(Char.MemberNumber!) as OtherCharacter)?.LSCG?.InjectorModule;
@@ -349,11 +350,11 @@ export class InjectorModule extends BaseModule {
         var isHorny = this.settings.hornyKeywords?.some(ph => isPhraseInString(totalString, ph));
         var isCure = this.settings.cureKeywords?.some(ph => isPhraseInString(totalString, ph));
 
-        if (isSedative)
+        if (isSedative && this.settings.enableSedative)
             this.InjectSedative(sender, location);
-        if (isMindControl)
+        if (isMindControl && this.settings.enableMindControl)
             this.InjectMindControl(sender, location);
-        if (isHorny)
+        if (isHorny && this.settings.enableHorny)
             this.InjectHorny(sender, location);
         if (isCure)
             this.InjectCure(sender, location);
@@ -550,8 +551,15 @@ export class InjectorModule extends BaseModule {
         }
     }
 
-    GetChaoticNetTarget(intentedTarget: Character) {
-        return ChatRoomCharacterDrawlist[getRandomInt(ChatRoomCharacterDrawlist.length)];
+    GetChaoticNetTarget(intendedTarget: Character) {
+        // 50/50 chance to hit intended target..
+        if (getRandomInt(2) == 1)
+            return intendedTarget;
+        var filteredList = ChatRoomCharacterDrawlist.filter(c => !InventoryGet(c, "ItemDevices"));
+        if (filteredList.length <= 0)
+            return intendedTarget; // Also hit the intended target if they're the _only_ one who has no devices already equipped
+
+        return filteredList[getRandomInt(filteredList.length)];
     }
 
     ApplyNet(target: Character) {
@@ -577,9 +585,7 @@ export class InjectorModule extends BaseModule {
      * @param Zoom 
      */
     DrawBars(C: Character, X: number, Y: number, Zoom: number, bars: DrugLevel[]) {
-        //Zoom = Zoom * .2;
         bars?.forEach((bar, ix, arr) => {
-            //X + (30 * Zoom), Y + (15 * Zoom)
             let barX = X + (380 * Zoom) + (15 * ix * Zoom);
             let barY = Y + (540 * Zoom);
             let barZoom = Zoom * .2
