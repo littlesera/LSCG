@@ -33,20 +33,21 @@ export class InjectorModule extends BaseModule {
             enableSedative: false,
             enableMindControl: false,
             enableHorny: false,
+            netgunIsChaotic: false,
+            showDrugLevels: true,
+            sedativeLevel: 0,
+            mindControlLevel: 0,
+            hornyLevel: 0,
+            
             sedativeKeywords: ["tranquilizer","sedative"],
             mindControlKeywords: ["mind control", "hypnotizing", "brainwashing"],
             hornyKeywords: ["horny", "aphrodisiac"],
             cureKeywords: ["antidote", "healing", "curing"],
             netgunKeywords: ["net gun", "netgun"],
-            netgunIsChaotic: false,
             hornyTickTime: 5000,
             sedativeCooldown: 120000, // 2 minutes
-            mindControlCooldown: 120000, // 2 minutes
+            mindControlCooldown: 180000, // 3 minutes
             hornyCooldown: 300000, // 5 minutes
-            showDrugLevels: true,
-            sedativeLevel: 0,
-            mindControlLevel: 0,
-            hornyLevel: 0,
             drugLevelMultiplier: 100,
             sedativeMax: 5,
             mindControlMax: 5,
@@ -83,6 +84,22 @@ export class InjectorModule extends BaseModule {
         //         Action: () => { this.InjectCure(Player, "ItemArms"); }
         //     }
         // ]);
+
+        // Override these with defaults. Remove from here if opened to user configuration later.
+        let d = this.defaultSettings;
+        this.settings.sedativeKeywords = d.sedativeKeywords;
+        this.settings.mindControlKeywords = d.mindControlKeywords;
+        this.settings.hornyKeywords = d.hornyKeywords;
+        this.settings.cureKeywords = d.cureKeywords;
+        this.settings.netgunKeywords = d.netgunKeywords;
+        this.settings.hornyTickTime = d.hornyTickTime;
+        this.settings.sedativeCooldown = d.sedativeCooldown;
+        this.settings.mindControlCooldown = d.mindControlCooldown;
+        this.settings.hornyCooldown = d.hornyCooldown;
+        this.settings.drugLevelMultiplier = d.drugLevelMultiplier;
+        this.settings.sedativeMax = d.sedativeMax;
+        this.settings.mindControlMax = d.mindControlMax;
+        this.settings.hornyLevelMax = d.hornyLevelMax;
 
         OnActivity(10, ModuleCategory.Injector, (data, sender, msg, megadata) => {
             var activityName = data.Dictionary[3]?.ActivityName;
@@ -271,7 +288,7 @@ export class InjectorModule extends BaseModule {
             if (!this.Enabled || !Player.ImmersionSettings?.AllowTints)
                 return next(args);
             if (this.brainwashed) return [{r: 148, g: 0, b: 211, a: 0.4}];
-            else if (this.hornyLevel > 0) return [{r: 254, g: 44, b: 84, a: (this.hornyLevel/(this.hornyLevelMax*this.drugLevelMultiplier*2))}];
+            else if (this.hornyLevel > 0) return [{r: 254, g: 44, b: 84, a: (this.hornyLevel/(this.hornyLevelMax*this.drugLevelMultiplier*4))}];
             return next(args);
         }, ModuleCategory.Injector);
 
@@ -286,8 +303,11 @@ export class InjectorModule extends BaseModule {
         hookFunction('TimerProcess', 1, (args, next) => {
             if (ActivityAllowed() && this.hornyLevel > 0 && this.hornyLastBumped + this.settings.hornyTickTime < CurrentTime) {
                 this.hornyLastBumped = CurrentTime;
-                var progress = Math.min(99, (Player.ArousalSettings?.Progress ?? 0) + this.hornyLevel * 4);
-                ActivitySetArousal(Player, progress);
+                var newProgress = (Player.ArousalSettings?.Progress ?? 0) + (this.hornyLevel/this.drugLevelMultiplier) * 4;
+                newProgress = Math.min(99, newProgress);
+                if (getRandomInt(2) == 0)
+                    DrawFlashScreen("#FF647F", 1000, this.hornyLevel);
+                ActivitySetArousal(Player, newProgress);
             }
             return next(args);
         }, ModuleCategory.Injector);
@@ -302,6 +322,14 @@ export class InjectorModule extends BaseModule {
 
             return next(args);
         }, ModuleCategory.Injector);
+
+        hookFunction('ChatRoomSync', 1, (args, next) => {
+            if (this.brainwashed)
+                this.hypnoModule?.EnforceEyes();
+            else if (this.asleep)
+                CharacterSetFacialExpression(Player, "Eyes", "Closed");
+            return next(args);
+        })
     }
 
     sleepTotalTicks = 12;
@@ -369,7 +397,8 @@ export class InjectorModule extends BaseModule {
     InjectSedative(sender: Character, location: AssetGroupItemName) {
         this.sedativeLevel = Math.min(this.sedativeLevel + this.drugLevelMultiplier, this.sedativeMax * this.drugLevelMultiplier);
         SendAction(this.sedativeInjectStr[getRandomInt(this.sedativeInjectStr.length)], sender);
-        console.info("Sedative Injected by " + sender.Nickname + " in the " + location + ". level: " + this.sedativeLevel);
+        DrawFlashScreen("#5C5CFF", 1000, this.sedativeLevel * 2);
+
         if (!this.asleep) {
             MiniGameStart(this.sleepyGame.name, ((this.sedativeLevel / this.drugLevelMultiplier) * 8), "LSCG_InjectEnd_Sedative");
         }
@@ -385,7 +414,8 @@ export class InjectorModule extends BaseModule {
     InjectMindControl(sender: Character, location: AssetGroupItemName) {
         this.mindControlLevel = Math.min(this.mindControlLevel + this.drugLevelMultiplier, this.mindControlMax * this.drugLevelMultiplier);
         SendAction(this.brainwashInjectStr[getRandomInt(this.brainwashInjectStr.length)], sender);
-        console.info("Mind Control Injected by " + sender.Nickname + " in the " + location + ". level: " + this.mindControlLevel);
+        DrawFlashScreen("#A020F0", 1000, this.mindControlLevel * 2);
+
         if (!this.brainwashed) {
             MiniGameStart(this.brainWashGame.name, ((this.mindControlLevel / this.drugLevelMultiplier) * 8), "LSCG_InjectEnd_Brainwash");
         }
@@ -399,9 +429,17 @@ export class InjectorModule extends BaseModule {
     ];
 
     InjectHorny(sender: Character, location: AssetGroupItemName) {
-        this.hornyLevel = Math.min(this.hornyLevel + this.drugLevelMultiplier, this.hornyLevelMax * this.drugLevelMultiplier);
+        let newLevelActual = this.hornyLevel + this.drugLevelMultiplier;
+        this.hornyLevel = Math.min(newLevelActual, this.hornyLevelMax * this.drugLevelMultiplier);
+        
         SendAction(this.hornyInjectStr[getRandomInt(this.hornyInjectStr.length)], sender);
-        console.info("Horny Injected by " + sender.Nickname + " in the " + location + ". level: " + this.hornyLevel);
+        DrawFlashScreen("#FF647F", 1000, this.hornyLevel * 2);
+        
+        if (newLevelActual >= this.hornyLevelMax * this.drugLevelMultiplier && Player.ArousalSettings?.Progress! > 50) {
+            ActivityOrgasmPrepare(Player);
+            this.hornyLevel -= this.drugLevelMultiplier;
+        }
+
         if (!!(<any>Player).BCT?.splitOrgasmArousal?.arousalProgress) {
             (<any>Player).BCT.splitOrgasmArousal.arousalProgress = 100;
         }
@@ -462,14 +500,12 @@ export class InjectorModule extends BaseModule {
     }
 
     Sleep() {
-        this.sedativeLevel = this.sedativeMax * this.drugLevelMultiplier;
         this.asleep = true;
         SendAction("%NAME% moans weakly as %PRONOUN% succumbs to unconciousness.");
         CharacterSetFacialExpression(Player, "Eyes", "Closed");
     }
 
     Wake() {
-        this.sedativeLevel = 0;
         if (this.asleep) {
             this.asleep = false;
             SendAction("%NAME%'s eyelids flutter and start to open sleepily...");
@@ -478,7 +514,6 @@ export class InjectorModule extends BaseModule {
     }
 
     Brainwash() {
-        this.mindControlLevel = this.mindControlMax * this.drugLevelMultiplier;
         this.brainwashed = true;
         SendAction("%NAME%'s body goes limp as %POSSESSIVE% mind empties and %PRONOUN% awaits a commands.");
         if (!!this.hypnoModule)
@@ -486,7 +521,6 @@ export class InjectorModule extends BaseModule {
     }
 
     SnapBack() {
-        this.mindControlLevel = 0;
         if (this.brainwashed) {
             this.brainwashed = false;
             SendAction("%NAME% gasps, snapping back into their senses confused and blushing.");
