@@ -7,7 +7,7 @@ import { GuiInjector } from "Settings/injector";
 import { BaseSettingsModel } from "Settings/Models/base";
 import { InjectorSettingsModel } from "Settings/Models/injector";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
-import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, setOrIgnoreBlush, isPhraseInString, settingsSave, hookFunction, ICONS, getCharacter } from "../utils";
+import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, setOrIgnoreBlush, isPhraseInString, settingsSave, hookFunction, ICONS, getCharacter, AUDIO, getPlayerVolume } from "../utils";
 import { ActivityBundle, ActivityModule, CustomAction, CustomPrerequisite } from "./activities";
 import { HypnoModule } from "./hypno";
 import { MiscModule } from "./misc";
@@ -25,6 +25,7 @@ export class InjectorModule extends BaseModule {
 
     hypnoModule: HypnoModule | undefined;
     activityModule: ActivityModule | undefined;
+    miscModule: MiscModule | undefined;
 
     get defaultSettings() {
         return <InjectorSettingsModel>{
@@ -35,10 +36,11 @@ export class InjectorModule extends BaseModule {
             enableHorny: false,
             netgunIsChaotic: false,
             showDrugLevels: true,
+            allowBoopRestore: true,
             sedativeLevel: 0,
             mindControlLevel: 0,
             hornyLevel: 0,
-            
+
             sedativeKeywords: ["tranquilizer","sedative"],
             mindControlKeywords: ["mind control", "hypnotizing", "brainwashing"],
             hornyKeywords: ["horny", "aphrodisiac"],
@@ -51,7 +53,8 @@ export class InjectorModule extends BaseModule {
             drugLevelMultiplier: 100,
             sedativeMax: 5,
             mindControlMax: 5,
-            hornyLevelMax: 5
+            hornyLevelMax: 5,
+            heartbeat: true
         };
     }
 
@@ -110,7 +113,7 @@ export class InjectorModule extends BaseModule {
                 var location = <AssetGroupItemName>data.Dictionary[2]?.FocusGroupName;
                 this.ProcessInjection(sender, location);
             } else if (target == Player.MemberNumber) {
-                if (data.Content == "ChatOther-ItemNose-Pet") {
+                if (data.Content == "ChatOther-ItemNose-Pet" && this.settings.allowBoopRestore) {
                     if (this.asleep) this.Wake();
                     if (this.brainwashed) this.SnapBack();
                 }
@@ -163,6 +166,7 @@ export class InjectorModule extends BaseModule {
     run(): void {
         this.hypnoModule = getModule<HypnoModule>("HypnoModule");
         this.activityModule = getModule<ActivityModule>("ActivityModule");
+        this.miscModule = getModule<MiscModule>("MiscModule");
 
         if (!!this.activityModule) {
             this.activityModule.AddActivity({
@@ -305,8 +309,10 @@ export class InjectorModule extends BaseModule {
                 this.hornyLastBumped = CurrentTime;
                 var newProgress = (Player.ArousalSettings?.Progress ?? 0) + (this.hornyLevel/this.drugLevelMultiplier) * 4;
                 newProgress = Math.min(99, newProgress);
-                if (getRandomInt(2) == 0)
+                if (getRandomInt(this.hornyLevelMax) <= Math.floor(this.hornyLevel/this.drugLevelMultiplier)) {
+                    if (this.settings.heartbeat) AudioPlayInstantSound(AUDIO.HEARTBEAT, getPlayerVolume(0));
                     DrawFlashScreen("#FF647F", 1000, this.hornyLevel);
+                }
                 ActivitySetArousal(Player, newProgress);
             }
             return next(args);
@@ -327,7 +333,7 @@ export class InjectorModule extends BaseModule {
             if (this.brainwashed)
                 this.hypnoModule?.EnforceEyes();
             else if (this.asleep)
-                CharacterSetFacialExpression(Player, "Eyes", "Closed");
+                this.miscModule?.SetSleepExpression();
             return next(args);
         })
     }
@@ -377,6 +383,8 @@ export class InjectorModule extends BaseModule {
         var isMindControl = this.settings.mindControlKeywords?.some(ph => isPhraseInString(totalString, ph));
         var isHorny = this.settings.hornyKeywords?.some(ph => isPhraseInString(totalString, ph));
         var isCure = this.settings.cureKeywords?.some(ph => isPhraseInString(totalString, ph));
+
+        AudioPlayInstantSound(AUDIO.INJECTION, getPlayerVolume(0));
 
         if (isSedative && this.settings.enableSedative)
             this.InjectSedative(sender, location);
@@ -502,7 +510,7 @@ export class InjectorModule extends BaseModule {
     Sleep() {
         this.asleep = true;
         SendAction("%NAME% moans weakly as %PRONOUN% succumbs to unconciousness.");
-        CharacterSetFacialExpression(Player, "Eyes", "Closed");
+        this.miscModule?.SetSleepExpression();
     }
 
     Wake() {
@@ -510,6 +518,8 @@ export class InjectorModule extends BaseModule {
             this.asleep = false;
             SendAction("%NAME%'s eyelids flutter and start to open sleepily...");
             CharacterSetFacialExpression(Player, "Eyes", "Dazed");
+            if (WardrobeGetExpression(Player)?.Emoticon == "Sleep")
+                CharacterSetFacialExpression(Player, "Emoticon", null);
         }
     }
 
@@ -633,3 +643,4 @@ export class InjectorModule extends BaseModule {
         });
     }
 }
+

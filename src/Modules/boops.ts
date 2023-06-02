@@ -1,8 +1,10 @@
 import { BaseModule } from "base";
+import { getModule } from "modules";
 import { BaseSettingsModel } from "Settings/Models/base";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
 import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, setOrIgnoreBlush } from "../utils";
-import { hypnoActivated } from "./hypno";
+import { hypnoActivated, HypnoModule } from "./hypno";
+import { InjectorModule } from "./injector";
 
 export class BoopsModule extends BaseModule {
     boops: number = 0;
@@ -28,7 +30,7 @@ export class BoopsModule extends BaseModule {
             if (!!target && 
                 target.MemberNumber == Player.MemberNumber && 
                 data.Content == "ChatOther-ItemNose-Pet" && 
-                !hypnoActivated()) {
+                !this.IsIncapacitated) {
                 this.BoopReact(sender?.MemberNumber);
             }
         });
@@ -42,6 +44,10 @@ export class BoopsModule extends BaseModule {
     unload(): void {
         removeAllHooksByModule(ModuleCategory.Boops);
         clearInterval(this.boopDecreaseLoop);
+    }
+
+    get IsIncapacitated(): boolean {
+        return hypnoActivated() || Player.LSCG?.InjectorModule?.asleep || Player.LSCG?.InjectorModule?.brainwashed;
     }
 
     normalBoopReactions = [

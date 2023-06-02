@@ -51,10 +51,22 @@ export class GuiInjector extends GuiSubscreen {
 				setSetting: (val) => this.settings.enableHorny = val
 			},<Setting>{
 				type: "checkbox",
+				label: "Heartbeat Sound:",
+				description: "If true, enables an occasional heartbeat sound while under the influence of aphrodisiac.",
+				setting: () => this.settings.heartbeat ?? true,
+				setSetting: (val) => this.settings.heartbeat = val
+			},<Setting>{
+				type: "checkbox",
 				label: "Show Drug Levels:",
 				description: "If true, will display bars showing the level of each drug type.",
 				setting: () => this.settings.showDrugLevels ?? true,
 				setSetting: (val) => this.settings.showDrugLevels = val
+			},<Setting>{
+				type: "checkbox",
+				label: "Allow Boop Awake:",
+				description: "If true, will awaken from drugged sleep or trance when booped.",
+				setting: () => this.settings.allowBoopRestore ?? true,
+				setSetting: (val) => this.settings.allowBoopRestore = val
 			},<Setting>{
 				type: "checkbox",
 				label: "Chaotic Net Gun:",

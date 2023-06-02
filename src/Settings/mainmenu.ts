@@ -65,7 +65,7 @@ export class MainMenu extends GuiSubscreen {
 				DrawButton(150 + 430 * PX, 190 + 120 * PY, 450, 90, "", isDisabled ? "#ddd" : "White", screen.icon,
 					isDisabled ? "Setting is deactivated" : "", isDisabled);
 				MainCanvas.textAlign = "left";
-				DrawTextFit(screen.name, 250 + 430 * PX, 235 + 120 * PY, 350, "Black");
+				DrawTextFit(screen.name, 250 + 430 * PX, 235 + 120 * PY, 340, "Black");
 				MainCanvas.textAlign = "center";
 
 				i++;
@@ -75,20 +75,10 @@ export class MainMenu extends GuiSubscreen {
 		}
 
 		MainCanvas.textAlign = prev;
-
-        // Changelog button..
-		// MainCanvas.textAlign = "center";
-        // DrawButton(1450, 810, 400, 90, "", "White", "", "Open changelog on GitHub");
-        // DrawText(`View changelog`, 1450 + 350 / 2, 855, "Black", "");
 	}
 
 	Click() {
 		if (MouseIn(1815, 75, 90, 90)) return this.Exit();
-
-		// Changelog
-		// if (MouseIn(1450, 810, 400, 90)) {
-		// 	window.open(`https://github.com/littlesera/sera/CHANGELOG.md`, "_blank");
-		// }
 
 		if (!this.immersiveBlock) {
 			let i = 0

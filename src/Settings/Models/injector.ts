@@ -11,11 +11,13 @@ export interface InjectorSettingsModel extends InjectorPublicSettingsModel {
     netgunKeywords: string[];
     cureKeywords: string[];
     hornyTickTime: number;
+    heartbeat: boolean;
     sedativeCooldown: number;
     mindControlCooldown: number;
     hornyCooldown: number;
     netgunIsChaotic: boolean;
     showDrugLevels: boolean;
+    allowBoopRestore: boolean;
 }
 
 export interface InjectorPublicSettingsModel extends BaseSettingsModel {
