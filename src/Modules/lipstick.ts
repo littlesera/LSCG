@@ -201,6 +201,7 @@ export class LipstickModule extends BaseModule {
 
         if (!existingItem) {
             InventoryWear(Player, "Kissmark", "ItemMouth3", "Default", 1, Player.MemberNumber ?? 0, undefined, true);
+            ChatRoomCharacterItemUpdate(Player, "ItemMouth3");
             existingItem = InventoryGet(Player, "ItemMouth3");
         }
 

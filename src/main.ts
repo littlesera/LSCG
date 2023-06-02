@@ -1,4 +1,4 @@
-import { hookFunction, ICONS, isObject, settingsSave, VERSION } from './utils';
+import { hookFunction, ICONS, isObject, settingsSave } from './utils';
 import { modules, registerModule } from 'modules';
 import { SettingsModel } from 'Settings/Models/settings';
 import { HypnoModule } from './Modules/hypno';
@@ -8,6 +8,8 @@ import { MiscModule } from './Modules/misc';
 import { LipstickModule } from './Modules/lipstick';
 import { GUI } from "Settings/settingUtils";
 import { ActivityModule } from "Modules/activities";
+import { InjectorModule } from 'Modules/injector';
+import { CoreModule } from 'Modules/core';
 
 function initWait() {
 	console.debug("LSCG: Init wait");
@@ -81,10 +83,11 @@ export function init() {
 	});
 
 	window.LSCG_Loaded = true;
-	console.log(`LSCG loaded! Version: ${VERSION}`);
+	console.log(`LSCG loaded! Version: ${LSCG_VERSION}`);
 }
 
 function init_modules(): boolean {
+	registerModule(new CoreModule());
 	registerModule(new GUI());
 	registerModule(new HypnoModule());
 	registerModule(new CollarModule());
@@ -92,6 +95,7 @@ function init_modules(): boolean {
 	registerModule(new MiscModule());
 	registerModule(new LipstickModule());
 	registerModule(new ActivityModule());
+	registerModule(new InjectorModule());
 
 	for (const m of modules()) {
 		m.init();

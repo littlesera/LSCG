@@ -1,5 +1,6 @@
 import { getModule } from "modules";
 import { hypnoActivated, HypnoModule } from "Modules/hypno";
+import { InjectorModule } from "Modules/injector";
 import { MiscModule } from "Modules/misc";
 import { GuiSubscreen } from "./settingBase";
 import { GUI } from "./settingUtils";
@@ -21,8 +22,9 @@ export class MainMenu extends GuiSubscreen {
 
 	get immersiveBlock(): boolean {
 		var hypnoBlock = Player.LSCG.HypnoModule?.immersive && hypnoActivated();
-		var chloroformBlock = Player.LSCG.MiscModule?.immersiveChloroform &&  getModule<MiscModule>("MiscModule")?.isChloroformed;
-		return (hypnoBlock || chloroformBlock);
+		var chloroformBlock = Player.LSCG.MiscModule?.immersiveChloroform && getModule<MiscModule>("MiscModule")?.isChloroformed;
+		var drugBlock = Player.LSCG.InjectorModule?.immersive && (Player.LSCG.InjectorModule?.asleep || Player.LSCG.InjectorModule?.brainwashed)
+		return (hypnoBlock || chloroformBlock || drugBlock);
 	}
 
 	onChange(source: number) {
@@ -60,9 +62,11 @@ export class MainMenu extends GuiSubscreen {
 				// Skip disabled screens for the time being
 				if (screen.name == "MainMenu" || screen.hidden) continue;
 
-				DrawButton(150 + 430 * PX, 190 + 120 * PY, 400, 90, "", isDisabled ? "#ddd" : "White", screen.icon,
+				DrawButton(150 + 430 * PX, 190 + 120 * PY, 450, 90, "", isDisabled ? "#ddd" : "White", screen.icon,
 					isDisabled ? "Setting is deactivated" : "", isDisabled);
-				DrawTextFit(screen.name, 380 + 430 * PX, 235 + 120 * PY, 310, "Black");
+				MainCanvas.textAlign = "left";
+				DrawTextFit(screen.name, 250 + 430 * PX, 235 + 120 * PY, 340, "Black");
+				MainCanvas.textAlign = "center";
 
 				i++;
 			}
@@ -71,20 +75,10 @@ export class MainMenu extends GuiSubscreen {
 		}
 
 		MainCanvas.textAlign = prev;
-
-        // Changelog button..
-		// MainCanvas.textAlign = "center";
-        // DrawButton(1450, 810, 400, 90, "", "White", "", "Open changelog on GitHub");
-        // DrawText(`View changelog`, 1450 + 350 / 2, 855, "Black", "");
 	}
 
 	Click() {
 		if (MouseIn(1815, 75, 90, 90)) return this.Exit();
-
-		// Changelog
-		// if (MouseIn(1450, 810, 400, 90)) {
-		// 	window.open(`https://github.com/littlesera/sera/CHANGELOG.md`, "_blank");
-		// }
 
 		if (!this.immersiveBlock) {
 			let i = 0
@@ -95,7 +89,7 @@ export class MainMenu extends GuiSubscreen {
 				const isDisabled = !screen.enabled;
 				if (isDisabled) continue;
 
-				if (MouseIn(150 + 430 * PX, 190 + 120 * PY, 400, 90)) {
+				if (MouseIn(150 + 430 * PX, 190 + 120 * PY, 450, 90)) {
 					this.setSubscreen(screen);
 					return;
 				}

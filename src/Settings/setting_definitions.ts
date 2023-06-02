@@ -13,12 +13,14 @@ export const SETTING_FUNC_NAMES: string[] = [
 ];
 
 export enum ModuleCategory {
+	Core = -1,
 	Global = 0,
 	Collar = 1,
 	Hypno = 2,
 	Boops = 3,
 	Lipstick = 4,
     Activities = 5,
+	Injector = 6,
 	Misc = 99
 }
 

@@ -475,6 +475,11 @@ export class ActivityModule extends BaseModule {
     CustomActionCallbacks: Map<string, (target: Character | null, args: any[], next: (args: any[]) => any) => any> = new Map<string, (sender: Character | null, args: any[], next: (args: any[]) => any) => any>();
     CustomImages: Map<string, string> = new Map<string, string>;
 
+    AddCustomPrereq(prereq: CustomPrerequisite) {
+        if (!this.CustomPrerequisiteFuncs.get(prereq.Name))
+            this.CustomPrerequisiteFuncs.set(prereq.Name, prereq.Func)
+    }
+
     AddActivity(bundle: ActivityBundle) {
         if (bundle.Targets.length <= 0)
             return;
@@ -486,8 +491,7 @@ export class ActivityModule extends BaseModule {
 
         bundle.CustomPrereqs?.forEach(prereq => {
             activity.Prerequisite.push(prereq.Name);
-            if (!this.CustomPrerequisiteFuncs.get(prereq.Name))
-                this.CustomPrerequisiteFuncs.set(prereq.Name, prereq.Func)
+            this.AddCustomPrereq(prereq);
         })
 
         if (!!bundle.CustomReaction && !this.CustomIncomingActivityReactions.get(activity.Name)) {
