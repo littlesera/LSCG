@@ -214,7 +214,7 @@ export class CollarModule extends BaseModule {
         hookFunction("Player.GetBlurLevel", 5, (args, next) => {
             // if (!this.Enabled)
             //     return next(args);
-            if (!Player.ImmersionSettings?.AllowTints)
+            if (!Player.GraphicsSettings?.AllowBlur)
                 return next(args);
             if (this.totalChokeLevel == 3) return 2;
             if (this.totalChokeLevel == 4) return 6;
@@ -410,7 +410,8 @@ export class CollarModule extends BaseModule {
         if (this.settings.chokeLevel == 4)
             return;
         this.settings.chokeLevel = Math.min(this.settings.chokeLevel + 1, 4);
-        AudioPlaySoundEffect("HydraulicLock");
+        if (!AudioShouldSilenceSound(true))
+            AudioPlaySoundEffect("HydraulicLock");
         this.IncreaseArousal();
 
         CharacterSetFacialExpression(Player, "Eyebrows", "Soft");
@@ -450,7 +451,8 @@ export class CollarModule extends BaseModule {
         }
 
         this.isPassingOut = false;
-        AudioPlaySoundEffect("Deflation");
+        if (!AudioShouldSilenceSound(true))
+            AudioPlaySoundEffect("Deflation");
         this.settings.chokeLevel--;
         if (this.settings.chokeLevel > 0)
         this.setChokeTimeout(() => this.DecreaseCollarChoke(), this.chokeTimer);
@@ -568,7 +570,8 @@ export class CollarModule extends BaseModule {
 
         if (reason == PassoutReason.COLLAR) {
             SendAction("%NAME% convulses weakly with a moan, %POSSESSIVE% eyes rolling back as the collar hisses impossibly tighter.");
-            AudioPlaySoundEffect("HydraulicLock");
+            if (!AudioShouldSilenceSound(true))
+                AudioPlaySoundEffect("HydraulicLock");
         }
         else if (reason == PassoutReason.HAND)
             SendAction("%NAME% convulses weakly with a moan, %POSSESSIVE% eyes rolling back as %OPP_NAME% clenches around their throat even tighter.", chokingMember);
@@ -589,7 +592,8 @@ export class CollarModule extends BaseModule {
 
         if (reason == PassoutReason.COLLAR) {
             SendAction("As %NAME% collapses unconscious, %POSSESSIVE% collar releases all of its pressure with a long hiss.");
-            AudioPlaySoundEffect("Deflation");
+            if (!AudioShouldSilenceSound(true))
+                AudioPlaySoundEffect("Deflation");
             this.ResetChoke();
         }
         else if (reason == PassoutReason.HAND) {

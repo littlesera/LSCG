@@ -37,7 +37,7 @@ export class MiscModule extends BaseModule {
 
         // Blur while edged
         hookFunction("Player.GetBlurLevel", 1, (args, next) => {
-            if (!Player.ImmersionSettings?.AllowTints)
+            if (!Player.GraphicsSettings?.AllowBlur)
                 return next(args);
                 
             if (Player.IsEdged() && Player.LSCG.GlobalModule.edgeBlur) {

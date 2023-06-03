@@ -296,7 +296,7 @@ export class InjectorModule extends BaseModule {
         }, ModuleCategory.Injector);
 
         hookFunction("Player.GetBlurLevel", 4, (args, next) => {
-            if (!this.Enabled || !Player.ImmersionSettings?.AllowTints)
+            if (!this.Enabled || !Player.GraphicsSettings!.AllowBlur)
                 return next(args);
             if (this.brainwashed) return 3;
             else if (this.hornyLevel > 0) return Math.max(0, (this.hornyLevel / this.drugLevelMultiplier) - 1);
@@ -309,7 +309,7 @@ export class InjectorModule extends BaseModule {
                 var newProgress = (Player.ArousalSettings?.Progress ?? 0) + (this.hornyLevel/this.drugLevelMultiplier) * 4;
                 newProgress = Math.min(99, newProgress);
                 if (getRandomInt(this.hornyLevelMax) <= Math.floor(this.hornyLevel/this.drugLevelMultiplier)) {
-                    if (this.settings.heartbeat) AudioPlayInstantSound(AUDIO.HEARTBEAT, getPlayerVolume(0));
+                    if (this.settings.heartbeat && !AudioShouldSilenceSound(true)) AudioPlayInstantSound(AUDIO.HEARTBEAT, getPlayerVolume(0));
                     DrawFlashScreen("#FF647F", 1000, this.hornyLevel);
                 }
                 ActivitySetArousal(Player, newProgress);
@@ -383,7 +383,8 @@ export class InjectorModule extends BaseModule {
         var isHorny = this.settings.hornyKeywords?.some(ph => isPhraseInString(totalString, ph));
         var isCure = this.settings.cureKeywords?.some(ph => isPhraseInString(totalString, ph));
 
-        AudioPlayInstantSound(AUDIO.INJECTION, getPlayerVolume(0));
+        if (!AudioShouldSilenceSound(true))
+            AudioPlayInstantSound(AUDIO.INJECTION, getPlayerVolume(0));
 
         if (isSedative && this.settings.enableSedative)
             this.InjectSedative(sender, location);

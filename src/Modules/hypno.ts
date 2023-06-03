@@ -141,7 +141,7 @@ export class HypnoModule extends BaseModule {
         }, ModuleCategory.Hypno);
             
         hookFunction("Player.GetBlurLevel", 4, (args, next) => {
-            if (!this.Enabled || !Player.ImmersionSettings?.AllowTints)
+            if (!this.Enabled || !Player.GraphicsSettings?.AllowBlur)
                 return next(args);
             if (triggerActivated) return 3;
             return next(args);
@@ -286,7 +286,8 @@ export class HypnoModule extends BaseModule {
         triggeredBy = memberNumber;
         if (this.settings.activatedAt == 0)
             this.settings.activatedAt = new Date().getTime();
-        AudioPlaySoundEffect("SciFiEffect", 1);
+        if (!AudioShouldSilenceSound(true))
+            AudioPlaySoundEffect("SciFiEffect", 1);
         settingsSave(true);
         
         if (wasWord)
@@ -387,7 +388,8 @@ export class HypnoModule extends BaseModule {
 
     TriggerRestore() {
         this.ResetEyes();
-        AudioPlaySoundEffect("SpankSkin");
+        if (!AudioShouldSilenceSound(true))
+            AudioPlaySoundEffect("SpankSkin");
         CharacterSetFacialExpression(Player, "Eyes", null);
         clearInterval(this.hornyTimeout);
         clearTimeout(this.triggerTimeout);

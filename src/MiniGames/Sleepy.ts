@@ -81,7 +81,7 @@ export class SleepyMiniGame extends BaseMiniGame {
             }
             var maxBlur = 20;
             var progBlurLevel = (1 - (this.SleepyPosition/this.SleepyMaxPosition)) * maxBlur;
-            return Player.ImmersionSettings?.AllowTints ? (next(args) + progBlurLevel) : next(args);
+            return Player.GraphicsSettings?.AllowBlur ? (next(args) + progBlurLevel) : next(args);
         });
         this.removeHasTintHook = hookFunction("Player.HasTints", 10, (args, next) => {
             return Player.ImmersionSettings?.AllowTints ? true : next(args);
