@@ -17,6 +17,8 @@ export abstract class BaseModule {
 	}
 
 	get Enabled(): boolean {
+		if (!Player.LSCG || !Player.LSCG.GlobalModule)
+			return false;
 		return (Player.LSCG.GlobalModule.enabled && this.settings.enabled && CurrentModule == "Online");
 	}
 
