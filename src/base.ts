@@ -1,4 +1,5 @@
 import { BaseSettingsModel } from "Settings/Models/base";
+import { SettingsModel } from "Settings/Models/settings";
 import { Subscreen } from "Settings/setting_definitions";
 
 export abstract class BaseModule {
@@ -13,6 +14,12 @@ export abstract class BaseModule {
 
 	get settings(): BaseSettingsModel {
 		if (!this.settingsStorage) return {} as BaseSettingsModel;
+		if (!Player.LSCG) {
+			Player.LSCG = <SettingsModel>{};
+			this.registerDefaultSettings();
+		}
+		else if (!(<any>Player.LSCG)[this.settingsStorage])
+			this.registerDefaultSettings();
 		return (<any>Player.LSCG)[this.settingsStorage];
 	}
 

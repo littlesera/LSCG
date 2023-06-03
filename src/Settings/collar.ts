@@ -74,10 +74,11 @@ export class GuiCollar extends GuiSubscreen {
 		DrawButton(GuiSubscreen.START_X + 600, this.getYPos(6) - 32, 200, 64, "Update", "White", undefined, "Update Collar to Current", !this.settings.enabled);
 
 		MainCanvas.textAlign = "left";
-		DrawText("Current Name: " + this.settings.collar.name, GuiSubscreen.START_X + 600, this.getYPos(6) + 60, "Gray", "Gray");
-		if (!!this.settings.collar.creator && this.settings.collar.creator > 0)
-			DrawText("Current Crafter: " + this.settings.collar.creator, GuiSubscreen.START_X + 600, this.getYPos(6) + 110, "Gray", "Gray");
-		
+		if (!!this.settings.collar) {
+			DrawText("Current Name: " + this.settings.collar.name, GuiSubscreen.START_X + 600, this.getYPos(6) + 60, "Gray", "Gray");
+			if (!!this.settings.collar.creator && this.settings.collar.creator > 0)
+				DrawText("Current Crafter: " + this.settings.collar.creator, GuiSubscreen.START_X + 600, this.getYPos(6) + 110, "Gray", "Gray");
+		}
 		MainCanvas.textAlign = prev;
 	}
 

@@ -18,7 +18,7 @@ export class BoopsModule extends BaseModule {
 
     get defaultSettings() {
         return <BaseSettingsModel>{
-            enabled: true
+            enabled: false
         };
     }
 

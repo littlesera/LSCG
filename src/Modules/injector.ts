@@ -59,8 +59,7 @@ export class InjectorModule extends BaseModule {
     }
 
     get settings(): InjectorSettingsModel {
-		if (!this.settingsStorage) return {} as InjectorSettingsModel;
-		return (<any>Player.LSCG)[this.settingsStorage];
+        return super.settings as InjectorSettingsModel;
 	}
 
     get settingsScreen(): Subscreen | null {

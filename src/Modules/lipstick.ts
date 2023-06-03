@@ -7,7 +7,7 @@ export class LipstickModule extends BaseModule {
 
     get defaultSettings() {
         return <BaseSettingsModel>{
-            enabled: true
+            enabled: false
         };
     }
 

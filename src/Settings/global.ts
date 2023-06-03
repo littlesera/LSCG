@@ -1,3 +1,7 @@
+import { getModule } from "modules";
+import { BoopsModule } from "Modules/boops";
+import { LipstickModule } from "Modules/lipstick";
+import { MiscModule } from "Modules/misc";
 import { ICONS } from "utils";
 import { GlobalSettingsModel } from "./Models/base";
 import { GuiSubscreen, Setting } from "./settingBase";
@@ -68,5 +72,12 @@ export class GuiGlobal extends GuiSubscreen {
 				setSetting: (val) => Player.LSCG.MiscModule.gagChokeEnabled = val
 			},
 		]
+	}
+
+	Load(): void {
+		// Load up module settings to ensure defaults..
+		getModule<MiscModule>("MiscModule")?.settings;
+		getModule<LipstickModule>("LipstickModule")?.settings;
+		getModule<BoopsModule>("BoopsModule")?.settings;
 	}
 }
