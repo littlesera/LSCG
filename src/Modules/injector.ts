@@ -18,7 +18,7 @@ export interface DrugLevel {
     max: number;
 }
 
-const aphrodisiacWeights = {
+const locationObj = {
     "ItemNeck": 2, 
     "ItemBreast": 1.8, 
     "ItemArms": 1.2, 
