@@ -867,6 +867,14 @@ export class ActivityModule extends BaseModule {
             }
         }, ModuleCategory.Activities);
 
+        hookFunction("ChatRoomSync", 1, (args, next) => {
+            var ret = next(args) as any;
+            var currentRoomIds = ChatRoomCharacter.map(c => c.MemberNumber!);
+            this.allCustomLedMembers.filter(id => currentRoomIds.indexOf(id) == -1).forEach(memberNumber => {
+                ServerSend("AccountBeep", { MemberNumber: memberNumber, BeepType: "Leash"});
+            });
+        }, ModuleCategory.Activities);
+
         OnAction(1, ModuleCategory.Activities, (data, sender, msg, metadata) => {
             if (data?.Content == "ServerDisconnect") {
                 this.removeHandHold(sender!);
