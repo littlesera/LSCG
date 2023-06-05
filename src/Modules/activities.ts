@@ -837,7 +837,7 @@ export class ActivityModule extends BaseModule {
 
     DoGrab(target: Character, type: GrabType) {
         // Only bother custom grabbing other LSCG users, vanilla won't follow.
-        if (!(target as OtherCharacter).LSCG)
+        if (!(target as OtherCharacter).LSCG || target.MemberNumber == Player.MemberNumber)
             return;
 
         sendLSCGMessage(<LSCGMessageModel>{
