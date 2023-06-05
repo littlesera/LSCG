@@ -18,6 +18,16 @@ export interface DrugLevel {
     max: number;
 }
 
+const aphrodisiacWeights = {
+    "ItemNeck": 2, 
+    "ItemBreast": 1.8, 
+    "ItemArms": 1.2, 
+    "ItemButt": 1.5, 
+    "ItemVulvaPiercings": 2.2,
+    "ItemLegs": 1, 
+    "ItemFeet": .8
+};
+
 export class InjectorModule extends BaseModule {
     
     sleepyGame: SleepyMiniGame = registerMiniGame(new SleepyMiniGame(this));
@@ -51,9 +61,9 @@ export class InjectorModule extends BaseModule {
             mindControlCooldown: 180000, // 3 minutes
             hornyCooldown: 300000, // 5 minutes
             drugLevelMultiplier: 100,
-            sedativeMax: 3,
-            mindControlMax: 3,
-            hornyLevelMax: 3,
+            sedativeMax: 4,
+            mindControlMax: 4,
+            hornyLevelMax: 4,
             heartbeat: true
         };
     }
@@ -369,6 +379,8 @@ export class InjectorModule extends BaseModule {
     hornyLastBumped: number = 0;
     cooldownTickMs: number = 5000;
 
+    InjectionLocationTable: Map<string, number> = new Map<string, number>(Object.entries(locationObj))
+
     ProcessInjection(sender: Character, location: AssetGroupItemName) {
         var asset = InventoryGet(sender, "ItemHandheld");
         if (!asset?.Craft)
@@ -403,7 +415,8 @@ export class InjectorModule extends BaseModule {
     ];    
 
     InjectSedative(sender: Character, location: AssetGroupItemName) {
-        this.sedativeLevel = Math.min(this.sedativeLevel + this.drugLevelMultiplier, this.sedativeMax * this.drugLevelMultiplier);
+        var additive = this.drugLevelMultiplier * (this.InjectionLocationTable.get(location) ?? 1)
+        this.sedativeLevel = Math.min(this.sedativeLevel + additive, this.sedativeMax * this.drugLevelMultiplier);
         SendAction(this.sedativeInjectStr[getRandomInt(this.sedativeInjectStr.length)], sender);
         DrawFlashScreen("#5C5CFF", 1000, this.sedativeLevel * 2);
 
@@ -420,7 +433,8 @@ export class InjectorModule extends BaseModule {
     ];
 
     InjectMindControl(sender: Character, location: AssetGroupItemName) {
-        this.mindControlLevel = Math.min(this.mindControlLevel + this.drugLevelMultiplier, this.mindControlMax * this.drugLevelMultiplier);
+        var additive = this.drugLevelMultiplier * (this.InjectionLocationTable.get(location) ?? 1)
+        this.mindControlLevel = Math.min(this.mindControlLevel + additive, this.mindControlMax * this.drugLevelMultiplier);
         SendAction(this.brainwashInjectStr[getRandomInt(this.brainwashInjectStr.length)], sender);
         DrawFlashScreen("#A020F0", 1000, this.mindControlLevel * 2);
 
@@ -437,7 +451,8 @@ export class InjectorModule extends BaseModule {
     ];
 
     InjectHorny(sender: Character, location: AssetGroupItemName) {
-        let newLevelActual = this.hornyLevel + this.drugLevelMultiplier;
+        var additive = this.drugLevelMultiplier * (this.InjectionLocationTable.get(location) ?? 1)
+        let newLevelActual = this.hornyLevel + additive;
         this.hornyLevel = Math.min(newLevelActual, this.hornyLevelMax * this.drugLevelMultiplier);
         
         SendAction(this.hornyInjectStr[getRandomInt(this.hornyInjectStr.length)], sender);
