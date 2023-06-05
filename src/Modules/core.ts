@@ -101,7 +101,7 @@ export class CoreModule extends BaseModule {
     }
 
     Command(Sender: OtherCharacter | null, msg: LSCGMessageModel) {
-        if (!msg.command)
+        if (!msg.command || msg.target != Player.MemberNumber)
             return;
         switch (msg.command!.name) {
             case "grab":

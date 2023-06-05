@@ -639,7 +639,7 @@ export class ActivityModule extends BaseModule {
         }, ModuleCategory.Activities);
 
         hookFunction("ChatRoomDrawCharacterOverlay", 1, (args, next) => {
-            const ret = next(args);
+            const ret = next(args) as any;
             const [C, CharX, CharY, Zoom] = args;
             if (
                 typeof CharX === "number" &&
@@ -707,7 +707,7 @@ export class ActivityModule extends BaseModule {
                 if (this.isPlayerPinchedBy(C.MemberNumber) || this.isPlayerPinching(C.MemberNumber)) {
                     DrawCircle(CharX + 420 * Zoom, CharY + 60 * Zoom, 20 * Zoom, 1, "Black", "White")
                     DrawImageResize(
-                        ICONS.EAR,
+                        this.isPlayerPinching(C.MemberNumber) ? ICONS.EAR : ICONS.PINCH,
                         CharX + 405 * Zoom, CharY + 45 * Zoom, 30 * Zoom, 30 * Zoom
                     );
                 }
