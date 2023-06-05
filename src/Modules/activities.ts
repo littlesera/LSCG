@@ -26,7 +26,6 @@ export interface CustomAction {
 }
 
 export interface ActivityBundleBase {
-    Targets?: ActivityTarget[];
     CustomPrereqs?: CustomPrerequisite[];
     CustomReaction?: CustomReaction;
     CustomAction?: CustomAction;
@@ -35,13 +34,16 @@ export interface ActivityBundleBase {
 
 export interface ActivityPatch extends ActivityBundleBase {
     ActivityName: string;
+    RemovedTargets: string[];
+    AddedTargets: ActivityTarget[];
 }
 
 export interface ActivityBundle extends ActivityBundleBase {
     Activity: Activity;
+    Targets?: ActivityTarget[];
 }
 
-export type GrabType = "hand"  | "ear"
+export type GrabType = "hand"  | "ear" | "tongue"
 
 export class ActivityModule extends BaseModule {
     load(): void {
@@ -51,8 +53,8 @@ export class ActivityModule extends BaseModule {
                 let actName = data.Dictionary[3]?.ActivityName ?? "";
                 let target = data.Dictionary?.find((d: any) => d.Tag == "TargetCharacter");
                 var targetChar = getCharacter(target.MemberNumber);
-                if (actName.indexOf("LSCG_") == 0) {
-                    // Intercept custom activity send and just do a custom action instead..
+                var isPatched = this.CheckForPatchedActivity(actName, data.Content);
+                if (actName.indexOf("LSCG_") == 0 || isPatched) {
                     let {metadata, substitutions} = ChatRoomMessageRunExtractors(data, Player)
                     let msg = ActivityDictionaryText(data.Content);
                     msg = CommonStringSubstitute(msg, substitutions ?? [])
@@ -61,6 +63,7 @@ export class ActivityModule extends BaseModule {
                         Text: msg
                     });
                 }
+                // If action name has a custom action, run it as part of the chain
                 var customAction = this.CustomActionCallbacks.get(actName);
                 if (!customAction)
                     return next(args);
@@ -469,6 +472,15 @@ export class ActivityModule extends BaseModule {
 
         this.PatchActivity(<ActivityPatch>{
             ActivityName: "Pinch",
+            AddedTargets: [
+                {
+                    Name: "ItemButt",
+                    SelfAllowed: true,
+                    TargetLabel: "Pinch Butt",
+                    TargetAction: "SourceCharacter pinches TargetCharacter's butt.",
+                    TargetSelfAction: "SourceCharacter pinches PronounPossessive own butt."
+                }
+            ],
             CustomPrereqs: [
                 {
                     Name: "TargetIsEarAvailable",
@@ -535,6 +547,7 @@ export class ActivityModule extends BaseModule {
     CustomIncomingActivityReactions: Map<string, (sender: Character | null) => void> = new Map<string, (sender: Character | null) => void>();
     CustomActionCallbacks: Map<string, (target: Character | null, args: any[], next: (args: any[]) => any) => any> = new Map<string, (sender: Character | null, args: any[], next: (args: any[]) => any) => any>();
     CustomImages: Map<string, string> = new Map<string, string>;
+    PatchedActivities: string[] = [];
 
     AddCustomPrereq(prereq: CustomPrerequisite) {
         if (!this.CustomPrerequisiteFuncs.get(prereq.Name))
@@ -560,12 +573,65 @@ export class ActivityModule extends BaseModule {
             this.CustomActionCallbacks.set(activity.Name, bundle.CustomAction.Func);
     }
 
-    PatchActivity(bundle: ActivityPatch) {
-        var existingActivity = ActivityFemale3DCG.find(a => a.Name == bundle.ActivityName);
-        if (!existingActivity)
+    CheckForPatchedActivity(activityName: string, activityMsg: string): boolean {
+        return this.PatchedActivities.indexOf(activityName) > -1 && !!ActivityDictionaryText(activityMsg);
+    }
+
+    PatchActivity(patch: ActivityPatch) {
+        var activity = ActivityFemale3DCG.find(a => a.Name == patch.ActivityName);
+        if (!activity)
             return;
 
-        this.RegisterCustomFuncs(bundle, existingActivity!);
+        if (!!patch.AddedTargets) {
+            patch.AddedTargets.forEach(tgt => {
+                this.AddTargetToActivity(activity!, tgt);
+            });
+        }
+
+        this.RegisterCustomFuncs(patch, activity!);
+
+        this.PatchedActivities.push(patch.ActivityName);
+    }
+
+    AddTargetToActivity(activity: Activity, tgt: ActivityTarget) {
+        tgt.TargetLabel = tgt.TargetLabel ?? activity.Name.substring(5);
+
+        if (tgt.SelfAllowed) {
+            if (!activity.TargetSelf)
+                activity.TargetSelf = [];
+            if (typeof activity.TargetSelf != "boolean" && (<AssetGroupItemName[]>activity.TargetSelf).indexOf(tgt.Name) == -1) {
+                (<AssetGroupItemName[]>activity.TargetSelf).push(tgt.Name);
+            }
+        }
+
+        if (!tgt.SelfOnly) {
+            if (!activity.Target)
+                activity.Target = [];
+
+            if (activity.Target.indexOf(tgt.Name) == -1) {
+                activity.Target.push(tgt.Name);
+            }            
+        }
+
+        ActivityDictionary?.push([
+            "Label-ChatOther-" + tgt.Name + "-" + activity.Name,
+            tgt.TargetLabel
+        ]);
+        ActivityDictionary?.push([
+            "ChatOther-" + tgt.Name + "-" + activity.Name,
+            tgt.TargetAction
+        ]);
+
+        if (tgt.SelfAllowed) {
+            ActivityDictionary?.push([
+                "Label-ChatSelf-" + tgt.Name + "-" + activity.Name,
+                tgt.TargetSelfLabel ?? tgt.TargetLabel
+            ]);
+            ActivityDictionary?.push([
+                "ChatSelf-" + tgt.Name + "-" + activity.Name,
+                tgt.TargetSelfAction ?? tgt.TargetAction
+            ]);
+        }
     }
 
     AddActivity(bundle: ActivityBundle) {
@@ -585,44 +651,7 @@ export class ActivityModule extends BaseModule {
         ])
 
         bundle.Targets.forEach(tgt => {
-            tgt.TargetLabel = tgt.TargetLabel ?? activity.Name.substring(5);
-
-            if (tgt.SelfAllowed) {
-                if (!activity.TargetSelf)
-                    activity.TargetSelf = [];
-                if ((<AssetGroupItemName[]>activity.TargetSelf).indexOf(tgt.Name) == -1) {
-                    (<AssetGroupItemName[]>activity.TargetSelf).push(tgt.Name);
-                }
-            }
-
-            if (!tgt.SelfOnly) {
-                if (!activity.Target)
-                    activity.Target = [];
-
-                if (activity.Target.indexOf(tgt.Name) == -1) {
-                    activity.Target.push(tgt.Name);
-                }            
-            }
-
-            ActivityDictionary?.push([
-                "Label-ChatOther-" + tgt.Name + "-" + activity.Name,
-                tgt.TargetLabel
-            ]);
-            ActivityDictionary?.push([
-                "ChatOther-" + tgt.Name + "-" + activity.Name,
-                tgt.TargetAction
-            ]);
-
-            if (tgt.SelfAllowed) {
-                ActivityDictionary?.push([
-                    "Label-ChatSelf-" + tgt.Name + "-" + activity.Name,
-                    tgt.TargetSelfLabel ?? tgt.TargetLabel
-                ]);
-                ActivityDictionary?.push([
-                    "ChatSelf-" + tgt.Name + "-" + activity.Name,
-                    tgt.TargetSelfAction ?? tgt.TargetAction
-                ]);
-            }
+            this.AddTargetToActivity(activity, tgt);
         });
 
         ActivityFemale3DCG.push(activity);
