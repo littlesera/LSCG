@@ -51,10 +51,10 @@ export class ActivityModule extends BaseModule {
             if (args[0] == "ChatRoomChat" && args[1]?.Type == "Activity"){
                 let data = args[1];
                 let actName = data.Dictionary[3]?.ActivityName ?? "";
-                let target = data.Dictionary?.find((d: any) => d.Tag == "TargetCharacter");
-                var targetChar = getCharacter(target.MemberNumber);
                 var isPatched = this.CheckForPatchedActivity(actName, data.Content);
                 if (actName.indexOf("LSCG_") == 0 || isPatched) {
+                    let target = data.Dictionary?.find((d: any) => d.Tag == "TargetCharacter");
+                    var targetChar = getCharacter(target.MemberNumber);
                     let {metadata, substitutions} = ChatRoomMessageRunExtractors(data, Player)
                     let msg = ActivityDictionaryText(data.Content);
                     msg = CommonStringSubstitute(msg, substitutions ?? [])
@@ -62,13 +62,16 @@ export class ActivityModule extends BaseModule {
                         Tag: "MISSING ACTIVITY DESCRIPTION FOR KEYWORD " + data.Content,
                         Text: msg
                     });
+
+                    // If action name has a custom action, run it as part of the chain
+                    var customAction = this.CustomActionCallbacks.get(actName);
+                    if (!customAction)
+                        return next(args);
+                    else
+                        return customAction(targetChar, args, next);
                 }
-                // If action name has a custom action, run it as part of the chain
-                var customAction = this.CustomActionCallbacks.get(actName);
-                if (!customAction)
-                    return next(args);
                 else
-                    return customAction(targetChar, args, next);
+                    return next(args);
             }
             else {
                 return next(args);
@@ -98,7 +101,7 @@ export class ActivityModule extends BaseModule {
                 return;
             let target = dictionary?.find((d: any) => d.Tag == "TargetCharacter");
             let activityName = dictionary[3]?.ActivityName;
-            if (target.MemberNumber == Player.MemberNumber && this.CustomIncomingActivityReactions.has(activityName)) {
+            if (target?.MemberNumber == Player.MemberNumber && this.CustomIncomingActivityReactions.has(activityName)) {
                 var reactionFunc = this.CustomIncomingActivityReactions.get(activityName);
                 if (!!reactionFunc)
                     reactionFunc(sender);
