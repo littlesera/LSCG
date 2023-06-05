@@ -615,7 +615,7 @@ export class InjectorModule extends BaseModule {
     ApplyNet(target: Character) {
         var net = InventoryWear(target, "Net", "ItemDevices", "Default", 8, Player.MemberNumber, <CraftingItem>{
             MemberNumber: Player.MemberNumber,
-            MemberName: Player.Nickname,
+            MemberName: Player.Nickname ?? Player.Name,
             Name: "Net Gun Net",
             Description: "A lightweight net designed to be shot from a handheld launcher."
         }, true);

@@ -16,10 +16,16 @@ interface LSCGMessageDictionaryEntry {
 
 type LSCGMessageModelType = "init" | "sync" | "command";
 
+type LSCGCommandName = "grab" | "release";
+
 interface LSCGMessageModel {
     type: LSCGMessageModelType;
     version: string;
-    settings: import("Settings/Models/settings").IPublicSettingsModel,
+    settings: import("Settings/Models/settings").IPublicSettingsModel | null,
     target: number | null,
-    reply: boolean
+    reply: boolean,
+    command?: {
+        name: LSCGCommandName,
+        args: {name: string, value: any}[]
+    }
 }

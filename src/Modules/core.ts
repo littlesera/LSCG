@@ -6,7 +6,8 @@ import { HypnoPublicSettingsModel } from "Settings/Models/hypno";
 import { InjectorPublicSettingsModel, InjectorSettingsModel } from "Settings/Models/injector";
 import { IPublicSettingsModel, PublicSettingsModel } from "Settings/Models/settings";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
-import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, setOrIgnoreBlush, isPhraseInString, hookFunction, getCharacter, drawSvg, SVG_ICONS, patchFunction } from "../utils";
+import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, setOrIgnoreBlush, isPhraseInString, hookFunction, getCharacter, drawSvg, SVG_ICONS, patchFunction, sendLSCGMessage } from "../utils";
+import { ActivityModule, GrabType } from "./activities";
 
 // Core Module that can handle basic functionality like server handshakes etc.
 // Maybe can consolidate things like hypnosis/suffocation basic state handling too..
@@ -59,24 +60,13 @@ export class CoreModule extends BaseModule {
     }
 
     SendPublicPacket(replyRequested: boolean, type: LSCGMessageModelType = "init") {
-        const packet = <IChatRoomMessage>{
-			Type: "Hidden",
-			Content: "LSCGMsg",
-			Sender: Player.MemberNumber,
-			Dictionary: [
-				<LSCGMessageDictionaryEntry>{
-					message: <LSCGMessageModel>{
-						version: LSCG_VERSION,
-                        type: type,
-                        settings: this.publicSettings,
-                        target: null,
-                        reply: replyRequested
-					},
-				},
-			],
-		};
-		
-		ServerSend("ChatRoomChat", packet);
+        sendLSCGMessage(<LSCGMessageModel>{
+            version: LSCG_VERSION,
+            type: type,
+            settings: this.publicSettings,
+            target: null,
+            reply: replyRequested
+        });
     }
 
     CheckForPublicPacket(data: IChatRoomMessage) {
@@ -94,9 +84,6 @@ export class CoreModule extends BaseModule {
                     this.Command(C, msg);
                     break;
             }
-            if (msg.reply && msg.type != "command") {
-                this.SendPublicPacket(false, msg.type);
-            }
         }
     }
 
@@ -107,11 +94,22 @@ export class CoreModule extends BaseModule {
     Sync(Sender: OtherCharacter | null, msg: LSCGMessageModel) {
         if (!Sender)
             return;
-        Sender.LSCG = msg.settings;
-
+        Sender.LSCG = Object.assign(Sender.LSCG ?? {}, msg.settings ?? {});
+        if (msg.reply) {
+            this.SendPublicPacket(false, msg.type);
+        }
     }
 
     Command(Sender: OtherCharacter | null, msg: LSCGMessageModel) {
-
+        if (!msg.command)
+            return;
+        switch (msg.command!.name) {
+            case "grab":
+                getModule<ActivityModule>("ActivityModule")?.IncomingGrab(Sender!, msg.command.args.find(a => a.name == "type")?.value as GrabType);
+                break;
+            case "release":
+                getModule<ActivityModule>("ActivityModule")?.IncomingRelease(Sender!, msg.command.args.find(a => a.name == "type")?.value as GrabType);
+                break;
+        }
     }
 }

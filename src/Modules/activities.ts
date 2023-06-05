@@ -1,6 +1,6 @@
 import { BaseModule } from "base";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, setOrIgnoreBlush, hookFunction, ICONS, getCharacter, isHandLeashed, allowHandLeashEffect, DoHandHold, StopHandHold, removeCustomEffect, addCustomEffect } from "../utils";
+import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, setOrIgnoreBlush, hookFunction, ICONS, getCharacter, sendLSCGMessage, OnAction } from "../utils";
 
 export interface ActivityTarget {
     Name: AssetGroupItemName;
@@ -25,14 +25,23 @@ export interface CustomAction {
     Func(target: Character | null, args: any[], next: (args: any[]) => any): any;
 }
 
-export interface ActivityBundle {
-    Activity: Activity;
-    Targets: ActivityTarget[];
+export interface ActivityBundleBase {
+    Targets?: ActivityTarget[];
     CustomPrereqs?: CustomPrerequisite[];
     CustomReaction?: CustomReaction;
     CustomAction?: CustomAction;
     CustomImage?: string;
 }
+
+export interface ActivityPatch extends ActivityBundleBase {
+    ActivityName: string;
+}
+
+export interface ActivityBundle extends ActivityBundleBase {
+    Activity: Activity;
+}
+
+export type GrabType = "hand"  | "ear"
 
 export class ActivityModule extends BaseModule {
     load(): void {
@@ -40,9 +49,9 @@ export class ActivityModule extends BaseModule {
             if (args[0] == "ChatRoomChat" && args[1]?.Type == "Activity"){
                 let data = args[1];
                 let actName = data.Dictionary[3]?.ActivityName ?? "";
+                let target = data.Dictionary?.find((d: any) => d.Tag == "TargetCharacter");
+                var targetChar = getCharacter(target.MemberNumber);
                 if (actName.indexOf("LSCG_") == 0) {
-                    let target = data.Dictionary?.find((d: any) => d.Tag == "TargetCharacter");
-                    var targetChar = getCharacter(target.MemberNumber);
                     // Intercept custom activity send and just do a custom action instead..
                     let {metadata, substitutions} = ChatRoomMessageRunExtractors(data, Player)
                     let msg = ActivityDictionaryText(data.Content);
@@ -51,14 +60,12 @@ export class ActivityModule extends BaseModule {
                         Tag: "MISSING ACTIVITY DESCRIPTION FOR KEYWORD " + data.Content,
                         Text: msg
                     });
-                    var customAction = this.CustomActionCallbacks.get(actName);
-                    if (!customAction)
-                        return next(args);
-                    else
-                        return customAction(targetChar, args, next);
                 }
-                else
+                var customAction = this.CustomActionCallbacks.get(actName);
+                if (!customAction)
                     return next(args);
+                else
+                    return customAction(targetChar, args, next);
             }
             else {
                 return next(args);
@@ -81,6 +88,19 @@ export class ActivityModule extends BaseModule {
             else
                 return next(args);
         }, ModuleCategory.Activities)
+
+        OnActivity(1, ModuleCategory.Activities, (data, sender, msg, metadata) => {
+            var dictionary = data?.Dictionary;
+            if (!dictionary || !dictionary[3])
+                return;
+            let target = dictionary?.find((d: any) => d.Tag == "TargetCharacter");
+            let activityName = dictionary[3]?.ActivityName;
+            if (target.MemberNumber == Player.MemberNumber && this.CustomIncomingActivityReactions.has(activityName)) {
+                var reactionFunc = this.CustomIncomingActivityReactions.get(activityName);
+                if (!!reactionFunc)
+                    reactionFunc(sender);
+            }
+        })
 
         hookFunction("DrawImageResize", 1, (args, next) => {
             var path = <string>args[0];
@@ -386,7 +406,6 @@ export class ActivityModule extends BaseModule {
             Activity: <Activity>{
                 Name: "HoldHand",
                 MaxProgress: 75,
-                MaxProgressSelf: 30,
                 Prerequisite: ["ZoneAccessible", "UseHands"]
             },
             Targets: [
@@ -398,28 +417,18 @@ export class ActivityModule extends BaseModule {
                 }
             ],
             CustomPrereqs: [
-                // {
-                //     Name: "LeashingAllowed",
-                //     Func: (acting, acted, group) => {
-                //         return (!ChatRoomData || !ChatRoomData.BlockCategory || ChatRoomData.BlockCategory.indexOf("Leashing") < 0);
-                //     }
-                // },
                 {
                     Name: "TargetIsHandUnleashed",
                     Func: (acting, acted, group) => {
-                        return !isHandLeashed(acted);
+                        return !this.isHandLeashed(acted);
                     }
                 }
             ],
-            CustomReaction: <CustomReaction>{
-                Func: (sender) => addCustomEffect(Player, "HandHold")
-            },
             CustomAction: <CustomAction>{
                 Func: (target, args, next) => {
-                    let ret = next(args);
                     if (!!target)
-                        DoHandHold(target);
-                    return ret;
+                        this.DoGrab(target, "hand");
+                    return next(args);
                 }
             },
             CustomImage: ICONS.HOLD_HANDS
@@ -429,8 +438,7 @@ export class ActivityModule extends BaseModule {
         this.AddActivity({
             Activity: <Activity>{
                 Name: "ReleaseHand",
-                MaxProgress: 75,
-                MaxProgressSelf: 30,
+                MaxProgress: 20,
                 Prerequisite: ["ZoneAccessible", "UseHands"]
             },
             Targets: [
@@ -445,22 +453,75 @@ export class ActivityModule extends BaseModule {
                 {
                     Name: "TargetIsHandLeashed",
                     Func: (acting, acted, group) => {
-                        return isHandLeashed(acted);
+                        return this.isHandLeashed(acted);
                     }
                 }
             ],
-            CustomReaction: <CustomReaction>{
-                Func: (sender) => removeCustomEffect(Player, "HandHold")
-            },
             CustomAction: <CustomAction>{
                 Func: (target, args, next) => {
-                    let ret = next(args);
                     if (!!target)
-                        StopHandHold(target);
-                    return ret;
+                        this.DoRelease(target, "hand");
+                    return next(args);
                 }
             },
             CustomImage: ICONS.HOLD_HANDS
+        });
+
+        this.PatchActivity(<ActivityPatch>{
+            ActivityName: "Pinch",
+            CustomPrereqs: [
+                {
+                    Name: "TargetIsEarAvailable",
+                    Func: (acting, acted, group) => {
+                        if (group.Name == "ItemEars")
+                            return !this.isPlayerPinching(acted.MemberNumber ?? 0) && this.earPinchingMemberList.length < 2;
+                        return true;
+                    }
+                }
+            ],
+            CustomAction: <CustomAction>{
+                Func: (target, args, next) => {
+                    var location = args[1]?.Dictionary[2]?.FocusGroupName;
+                    if (!!target && !!location && location == "ItemEars")
+                        this.DoGrab(target, "ear");
+                    return next(args);
+                }
+            },
+        });
+
+        // ReleaseEar
+        this.AddActivity({
+            Activity: <Activity>{
+                Name: "ReleaseEar",
+                MaxProgress: 30,
+                Prerequisite: ["ZoneAccessible", "UseHands"]
+            },
+            Targets: [
+                {
+                    Name: "ItemEars",
+                    SelfAllowed: false,
+                    TargetLabel: "Release Ear",
+                    TargetAction: "SourceCharacter releases TargetCharacter's ear."
+                }
+            ],
+            CustomPrereqs: [
+                {
+                    Name: "TargetIsEarPinched",
+                    Func: (acting, acted, group) => {
+                        if (group.Name == "ItemEars")
+                            return this.isPlayerPinching(acted.MemberNumber ?? 0);
+                        return false;
+                    }
+                }
+            ],
+            CustomAction: <CustomAction>{
+                Func: (target, args, next) => {
+                    if (!!target)
+                        this.DoRelease(target, "ear");
+                    return next(args);
+                }
+            },
+            CustomImage: "Assets/Female3DCG/Activity/Pinch.png"
         });
     }
 
@@ -480,17 +541,10 @@ export class ActivityModule extends BaseModule {
             this.CustomPrerequisiteFuncs.set(prereq.Name, prereq.Func)
     }
 
-    AddActivity(bundle: ActivityBundle) {
-        if (bundle.Targets.length <= 0)
-            return;
-
-        let activity = bundle.Activity;
-        activity.Target = activity.Target ?? [];
-        activity.Prerequisite = activity.Prerequisite ?? [];
-        activity.Name = "LSCG_" + activity.Name;
-
+    RegisterCustomFuncs(bundle: ActivityBundleBase, activity: Activity) {
         bundle.CustomPrereqs?.forEach(prereq => {
-            activity.Prerequisite.push(prereq.Name);
+            if (activity!.Prerequisite.indexOf(prereq.Name) == -1)
+                activity!.Prerequisite.push(prereq.Name);
             this.AddCustomPrereq(prereq);
         })
 
@@ -504,6 +558,26 @@ export class ActivityModule extends BaseModule {
 
         if (!!bundle.CustomAction && !this.CustomActionCallbacks.get(activity.Name))
             this.CustomActionCallbacks.set(activity.Name, bundle.CustomAction.Func);
+    }
+
+    PatchActivity(bundle: ActivityPatch) {
+        var existingActivity = ActivityFemale3DCG.find(a => a.Name == bundle.ActivityName);
+        if (!existingActivity)
+            return;
+
+        this.RegisterCustomFuncs(bundle, existingActivity!);
+    }
+
+    AddActivity(bundle: ActivityBundle) {
+        if (!bundle.Targets || bundle.Targets.length <= 0)
+            return;
+
+        let activity = bundle.Activity;
+        activity.Target = activity.Target ?? [];
+        activity.Prerequisite = activity.Prerequisite ?? [];
+        activity.Name = "LSCG_" + activity.Name;
+
+        this.RegisterCustomFuncs(bundle, bundle.Activity);
 
         ActivityDictionary?.push([
             "Activity"+activity.Name,
@@ -562,47 +636,31 @@ export class ActivityModule extends BaseModule {
             if (this.customGagged > Date.now())
                 level += 2;
             return level;
-        }, ModuleCategory.Activities)
+        }, ModuleCategory.Activities);
 
-        OnActivity(1, ModuleCategory.Activities, (data, sender, msg, metadata) => {
-            var dictionary = data?.Dictionary;
-            if (!dictionary || !dictionary[3])
-                return;
-            let target = dictionary?.find((d: any) => d.Tag == "TargetCharacter");
-            let activityName = dictionary[3]?.ActivityName;
-            if (target.MemberNumber == Player.MemberNumber && this.CustomIncomingActivityReactions.has(activityName)) {
-                var reactionFunc = this.CustomIncomingActivityReactions.get(activityName);
-                if (!!reactionFunc)
-                    reactionFunc(sender);
+        hookFunction("ChatRoomDrawCharacterOverlay", 1, (args, next) => {
+            const ret = next(args);
+            const [C, CharX, CharY, Zoom] = args;
+            if (
+                typeof CharX === "number" &&
+                typeof CharY === "number" &&
+                typeof Zoom === "number" &&
+                ChatRoomHideIconState === 0 &&
+                C.MemberNumber == Player.MemberNumber
+            ) {
+                if (this.customGagged > Date.now()) {
+                    DrawCircle(CharX + 140 * Zoom, CharY + 60 * Zoom, 20 * Zoom, 1, "Black", "White")
+                    DrawImageResize(
+                        ICONS.TONGUE,
+                        CharX + 125 * Zoom,
+                        CharY + 45 * Zoom,
+                        30 * Zoom,
+                        30 * Zoom
+                    );
+                }
             }
-        })
-
-        hookFunction(
-			"ChatRoomDrawCharacterOverlay",
-			1,
-			(args, next) => {
-				const ret = next(args);
-				const [C, CharX, CharY, Zoom] = args;
-				if (
-					typeof CharX === "number" &&
-					typeof CharY === "number" &&
-					typeof Zoom === "number" &&
-					ChatRoomHideIconState === 0 &&
-                    C.MemberNumber == Player.MemberNumber
-				) {
-					if (this.customGagged > Date.now()) {
-						DrawImageResize(
-							ICONS.TONGUE,
-							CharX + 125 * Zoom,
-							CharY + 50 * Zoom,
-							50 * Zoom,
-							50 * Zoom
-						);
-					}
-				}
-				return ret;
-			}
-		);
+            return ret;
+        }, ModuleCategory.Activities);
 
         let failedLinkActions = [
             "%NAME%'s whimpers, %POSSESSIVE% tongue held tightly.",
@@ -626,42 +684,252 @@ export class ActivityModule extends BaseModule {
     }
 
     InitHandHoldHooks(): void {
+        hookFunction("ChatRoomLeave", 1, (args, next) => {
+            if (this.earPinchingMemberList.length > 0) {
+                var chars = this.earPinchingMemberList.map(id => getCharacter(id));
+                if (chars.length == 1)
+                    SendAction("%NAME% leads %OPP_NAME% out of the room by the ear.", chars[0]);
+                else
+                    SendAction("%NAME% leads " + chars[0]?.Nickname ?? chars[0]?.Name + " and " + chars[1]?.Nickname ?? chars[1]?.Name + " out of the room by the ear.");
+            }
+            return next(args);
+        }, ModuleCategory.Activities);
+
+        hookFunction("ChatRoomDrawCharacterOverlay", 1, (args, next) => {
+            const ret = next(args) as any;
+            const [C, CharX, CharY, Zoom] = args;
+            if (
+                typeof CharX === "number" &&
+                typeof CharY === "number" &&
+                typeof Zoom === "number" &&
+                ChatRoomHideIconState === 0
+            ) {
+                if (this.isPlayerPinchedBy(C.MemberNumber) || this.isPlayerPinching(C.MemberNumber)) {
+                    DrawCircle(CharX + 420 * Zoom, CharY + 60 * Zoom, 20 * Zoom, 1, "Black", "White")
+                    DrawImageResize(
+                        ICONS.EAR,
+                        CharX + 405 * Zoom, CharY + 45 * Zoom, 30 * Zoom, 30 * Zoom
+                    );
+                }
+                else if (this.isHandLeashed(C)) {
+                    DrawCircle(CharX + 420 * Zoom, CharY + 60 * Zoom, 20 * Zoom, 1, "Black", "White")
+                    DrawImageResize(
+                        ICONS.HOLD_HANDS,
+                        CharX + 400 * Zoom, CharY + 40 * Zoom, 40 * Zoom, 40 * Zoom
+                    );
+                }
+            }
+            return ret;
+        }, ModuleCategory.Activities);
+
         hookFunction("ChatRoomCanBeLeashedBy", 1, (args, next) => {
             let sourceMemberNumber = args[0];
             let C = args[1];
-            
-            if (isHandLeashed(Player)) {
-                if ((ChatRoomData && ChatRoomData.BlockCategory && ChatRoomData.BlockCategory.indexOf("Leashing") < 0) || !ChatRoomData) {
-                    // Have to not be tethered, and need a leash
-                    var canLeash = false;
-                    var isTrapped = false;
-                    var neckLock = null;
-                    for (let A = 0; A < C.Appearance.length; A++)
-                        if ((C.Appearance[A].Asset != null) && (C.Appearance[A].Asset.Group.Family == C.AssetFamily)) {
-                            if (InventoryItemHasEffect(C.Appearance[A], "Leash", true) || InventoryItemHasEffect(C.Appearance[A], "HandHold", true)) {
-                                canLeash = true;
-                                if (C.Appearance[A].Asset.Group.Name == "ItemNeckRestraints")
-                                    neckLock = InventoryGetLock(C.Appearance[A]);
-                            } else if (InventoryItemHasEffect(C.Appearance[A], "Tethered", true) || InventoryItemHasEffect(C.Appearance[A], "Mounted", true) || InventoryItemHasEffect(C.Appearance[A], "Enclose", true) || InventoryItemHasEffect(C.Appearance[A], "OneWayEnclose", true)){
-                                isTrapped = true;
-                            }
-                        }
-            
-                    if (canLeash && !isTrapped) {
-                        if (sourceMemberNumber == 0 || !neckLock || (!neckLock.Asset.OwnerOnly && !neckLock.Asset.LoverOnly && !neckLock.Asset.FamilyOnly) ||
-                            (neckLock.Asset.OwnerOnly && C.IsOwnedByMemberNumber(sourceMemberNumber)) ||
-                            (neckLock.Asset.FamilyOnly && C.IsFamilyOfPlayer()) ||
-                            (neckLock.Asset.LoverOnly && C.IsLoverOfMemberNumber(sourceMemberNumber))) {
-                            return true;
+            let roomAllowsLeashing = (ChatRoomData && ChatRoomData.BlockCategory && ChatRoomData.BlockCategory.indexOf("Leashing") < 0) || !ChatRoomData;
+
+            if (this.isPlayerHoldingHandsWith(sourceMemberNumber) && roomAllowsLeashing) {
+                // Have to not be tethered, and need a leash
+                var isTrapped = false;
+                var neckLock = null;
+                for (let A = 0; A < C.Appearance.length; A++)
+                    if ((C.Appearance[A].Asset != null) && (C.Appearance[A].Asset.Group.Family == C.AssetFamily)) {
+                        if (InventoryItemHasEffect(C.Appearance[A], "Leash", true) && C.Appearance[A].Asset.Group.Name == "ItemNeckRestraints") {
+                            neckLock = InventoryGetLock(C.Appearance[A]);
+                        } else if (InventoryItemHasEffect(C.Appearance[A], "Tethered", true) || InventoryItemHasEffect(C.Appearance[A], "Mounted", true) || InventoryItemHasEffect(C.Appearance[A], "Enclose", true) || InventoryItemHasEffect(C.Appearance[A], "OneWayEnclose", true)){
+                            isTrapped = true;
                         }
                     }
+        
+                if (!isTrapped) {
+                    if (sourceMemberNumber == 0 || !neckLock || (!neckLock.Asset.OwnerOnly && !neckLock.Asset.LoverOnly && !neckLock.Asset.FamilyOnly) ||
+                        (neckLock.Asset.OwnerOnly && C.IsOwnedByMemberNumber(sourceMemberNumber)) ||
+                        (neckLock.Asset.FamilyOnly && C.IsFamilyOfPlayer()) ||
+                        (neckLock.Asset.LoverOnly && C.IsLoverOfMemberNumber(sourceMemberNumber))) {
+                        return true;
+                    }
                 }
-                return false;
             }
             else    
                 return next(args);
         }, ModuleCategory.Activities);
 
-        allowHandLeashEffect();
+        hookFunction("ChatRoomPingLeashedPlayers", 1, (args, next) => {
+            next(args);
+            if (this.allCustomLedMembers && this.allCustomLedMembers.length > 0) {
+                this.allCustomLedMembers.forEach(memberNumber => {
+                    ServerSend("ChatRoomChat", { Content: "PingHoldLeash", Type: "Hidden", Target: memberNumber });
+                    ServerSend("AccountBeep", { MemberNumber: memberNumber, BeepType: "Leash"});
+                });
+            }
+        }, ModuleCategory.Activities);
+
+        hookFunction("ChatRoomDoPingLeashedPlayers", 1, (args, next) => {
+            next(args);
+            let SenderCharacter = args[0];
+            if (this.handHoldingMemberList.indexOf(SenderCharacter.MemberNumber) == -1 || !ChatRoomCanBeLeashedBy(SenderCharacter.MemberNumber, Player)) {
+                this.DoRelease(SenderCharacter, "hand");
+            }
+            if (this.earPinchedByMember == SenderCharacter.MemberNumber || !ChatRoomCanBeLeashedBy(SenderCharacter.MemberNumber, Player)) {
+                this.DoRelease(SenderCharacter, "ear");
+            }
+        }, ModuleCategory.Activities)
+
+        hookFunction("ServerAccountBeep", 1, (args, next) => {
+            next(args);
+            let data = args[0];
+            if (data.BeepType == "Leash" && this.allCustomHeldBy.indexOf(data.MemberNumber) > -1 && data.ChatRoomName) {
+                if (Player.OnlineSharedSettings && Player.OnlineSharedSettings.AllowPlayerLeashing != false && ( CurrentScreen != "ChatRoom" || !ChatRoomData || (CurrentScreen == "ChatRoom" && ChatRoomData.Name != data.ChatRoomName))) {
+                    if (ChatRoomCanBeLeashedBy(data.MemberNumber, Player) && ChatSelectGendersAllowed(data.ChatRoomSpace, Player.GetGenders())) {
+                        ChatRoomJoinLeash = data.ChatRoomName;
+    
+                        DialogLeave();
+                        ChatRoomClearAllElements();
+                        if (CurrentScreen == "ChatRoom") {
+                            ServerSend("ChatRoomLeave", "");
+                            CommonSetScreen("Online", "ChatSearch");
+                        }
+                        else ChatRoomStart(data.ChatRoomSpace, "", null, null, "Introduction", BackgroundsTagList); //CommonSetScreen("Room", "ChatSearch")
+                    } else {
+                        // If the leading character is no longer allowed or goes somewhere blocked, remove them from our leading lists.
+                        this.handHoldingMemberList = this.handHoldingMemberList.filter(num => num != data.MemberNumber!);
+                        this.earPinchingMemberList = this.earPinchingMemberList.filter(num => num != data.MemberNumber!);
+                    }
+                }
+            }
+        }, ModuleCategory.Activities);
+
+        OnAction(1, ModuleCategory.Activities, (data, sender, msg, metadata) => {
+            if (data?.Content == "ServerDisconnect" && this.handHoldingMemberList.indexOf(sender?.MemberNumber ?? 0))
+                this.removeHandHold(sender!);
+        });
+    }
+
+    earPinchedByMember: number | null = null;
+    earPinchingMemberList: number[] = [];
+    handHoldingMemberList: number[] = [];
+
+    get allCustomHeldBy(): number[] {
+        return this.handHoldingMemberList.concat(this.earPinchedByMember!);
+    }
+
+    get allCustomLedMembers(): number[] {
+        return this.handHoldingMemberList.concat(this.earPinchingMemberList);
+    }
+
+    isPlayerHoldingHandsWith(holdingMemberNumber: number) {
+        return this.handHoldingMemberList.indexOf(holdingMemberNumber!) > -1;
+    }
+    
+    isPlayerPinchedBy(member: number) {
+        return this.earPinchedByMember == member;
+    }
+
+    isPlayerPinching(member: number) {
+        return this.earPinchingMemberList.indexOf(member) > -1;
+    }
+
+    isHandLeashed(C: Character | null) {
+        if (!C) {
+            return this.handHoldingMemberList.length > 0;
+        }
+        return this.isPlayerHoldingHandsWith(C.MemberNumber!);
+    }
+
+    DoGrab(target: Character, type: GrabType) {
+        // Only bother custom grabbing other LSCG users, vanilla won't follow.
+        if (!(target as OtherCharacter).LSCG)
+            return;
+
+        sendLSCGMessage(<LSCGMessageModel>{
+            type: "command",
+            reply: false,
+            settings: null,
+            target: target.MemberNumber!,
+            version: LSCG_VERSION,
+            command: {
+                name: "grab",
+                args: [{
+                    name: "type",
+                    value: type
+                }]
+            }
+        });
+        
+        switch (type) {
+            case "hand":
+                this.removeEarPinch(target);
+                this.addHandHold(target);
+                break;
+            case "ear":
+                this.removeHandHold(target);
+                this.addEarPinch(target);
+                break;
+        }
+    };
+
+    DoRelease(target: Character, type: GrabType) {
+        sendLSCGMessage(<LSCGMessageModel>{
+            type: "command",
+            reply: false,
+            settings: null,
+            target: target.MemberNumber!,
+            version: LSCG_VERSION,
+            command: {
+                name: "release",
+                args: [{
+                    name: "type",
+                    value: type
+                }]
+            }
+        });
+     
+        switch (type) {
+            case "hand":
+                this.removeHandHold(target);
+                break;
+            case "ear":
+                this.removeEarPinch(target);
+                break;
+        }
+    }
+
+    addHandHold(sender: Character) {
+        this.handHoldingMemberList.push(sender.MemberNumber!);
+        this.handHoldingMemberList = this.handHoldingMemberList.filter((num, ix, arr) => arr.indexOf(num) == ix);
+    }
+
+    removeHandHold(sender: Character) {
+        this.handHoldingMemberList = this.handHoldingMemberList.filter(num => num != sender.MemberNumber!);
+    }
+
+    addEarPinch(sender: Character) {
+        this.earPinchingMemberList.push(sender.MemberNumber!);
+        this.earPinchingMemberList = this.earPinchingMemberList.filter((num, ix, arr) => arr.indexOf(num) == ix);
+    }
+
+    removeEarPinch(sender: Character) {
+        this.earPinchingMemberList = this.earPinchingMemberList.filter(num => num != sender.MemberNumber!);
+    }
+
+    IncomingGrab(sender: Character, grabType: GrabType) {
+        switch (grabType) {
+            case "hand":
+                this.addHandHold(sender);
+                break;
+            case "ear":
+                this.earPinchedByMember = sender.MemberNumber!
+                break;
+        }
+    }
+
+    IncomingRelease(sender: OtherCharacter, grabType: GrabType) {
+        switch (grabType) {
+            case "hand":
+                this.removeHandHold(sender);
+                break;
+            case "ear":
+                this.earPinchedByMember = null;
+                break;
+        }
     }
 }
