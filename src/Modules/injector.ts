@@ -51,9 +51,9 @@ export class InjectorModule extends BaseModule {
             mindControlCooldown: 180000, // 3 minutes
             hornyCooldown: 300000, // 5 minutes
             drugLevelMultiplier: 100,
-            sedativeMax: 5,
-            mindControlMax: 5,
-            hornyLevelMax: 5,
+            sedativeMax: 3,
+            mindControlMax: 3,
+            hornyLevelMax: 3,
             heartbeat: true
         };
     }
