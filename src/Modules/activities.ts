@@ -523,6 +523,12 @@ export class ActivityModule extends BaseModule {
                     TargetLabel: "Pinch Butt",
                     TargetAction: "SourceCharacter pinches TargetCharacter's butt.",
                     TargetSelfAction: "SourceCharacter pinches PronounPossessive own butt."
+                }, {
+                    Name: "ItemMouth",
+                    SelfAllowed: true,
+                    TargetLabel: "Pinch Cheek",
+                    TargetAction: "SourceCharacter pinches TargetCharacter's cheek.",
+                    TargetSelfAction: "SourceCharacter pinches PronounPossessive own cheek."
                 }
             ],
             CustomPrereqs: [
