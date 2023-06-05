@@ -395,10 +395,53 @@ export class ActivityModule extends BaseModule {
                     TargetAction: "SourceCharacter reaches in and grabs hold of TargetCharacter's tongue with PronounPossessive fingers."
                 }
             ],
-            CustomReaction: <CustomReaction>{
-                Func: (sender) => {
-                    this.customGagged = Date.now() + 45000;
-                    CharacterSetFacialExpression(Player, "Mouth", "Ahegao");
+            CustomPrereqs: [
+                {
+                    Name: "TargetTongueIsNotGrabbed",
+                    Func: (acting, acted, group) => {
+                        return this.tongueGrabbedMember != acted.MemberNumber!;
+                    }
+                }
+            ],
+            CustomAction: {
+                Func: (target, args, next) => {
+                    if (!!target)
+                        this.DoGrab(target, "tongue");
+                    return next(args);
+                }
+            },
+            CustomImage: "Assets/Female3DCG/Activity/Pinch.png"
+        });
+
+        // ReleaseTongue
+        this.AddActivity({
+            Activity: <Activity>{
+                Name: "ReleaseTongue",
+                MaxProgress: 20,
+                MaxProgressSelf: 20,
+                Prerequisite: ["ZoneAccessible", "UseHands"]
+            },
+            Targets: [
+                {
+                    Name: "ItemMouth",
+                    SelfAllowed: false,
+                    TargetLabel: "Release Tongue",
+                    TargetAction: "SourceCharacter lets go of TargetCharacter's tongue."
+                }
+            ],
+            CustomPrereqs: [
+                {
+                    Name: "TargetTongueIsGrabbed",
+                    Func: (acting, acted, group) => {
+                        return this.tongueGrabbedMember == acted.MemberNumber!;
+                    }
+                }
+            ],
+            CustomAction: {
+                Func: (target, args, next) => {
+                    if (!!target)
+                        this.DoRelease(target, "tongue");
+                    return next(args);
                 }
             },
             CustomImage: "Assets/Female3DCG/Activity/Pinch.png"
@@ -470,6 +513,7 @@ export class ActivityModule extends BaseModule {
             CustomImage: ICONS.HOLD_HANDS
         });
 
+        // Patch Pinch
         this.PatchActivity(<ActivityPatch>{
             ActivityName: "Pinch",
             AddedTargets: [
@@ -537,7 +581,8 @@ export class ActivityModule extends BaseModule {
         });
     }
 
-    customGagged: number = 0;
+    customGagged: boolean = false;
+    prevMouth: ExpressionName | null = null;
 
     unload(): void {
         removeAllHooksByModule(ModuleCategory.Activities);
@@ -662,33 +707,9 @@ export class ActivityModule extends BaseModule {
         // Allow for similar "hand-gagging" when certain custom actions are done
         hookFunction("SpeechGetTotalGagLevel", 6, (args, next) => {
             let level = <number>next(args);
-            if (this.customGagged > Date.now())
+            if (this.customGagged)
                 level += 2;
             return level;
-        }, ModuleCategory.Activities);
-
-        hookFunction("ChatRoomDrawCharacterOverlay", 1, (args, next) => {
-            const ret = next(args) as any;
-            const [C, CharX, CharY, Zoom] = args;
-            if (
-                typeof CharX === "number" &&
-                typeof CharY === "number" &&
-                typeof Zoom === "number" &&
-                ChatRoomHideIconState === 0 &&
-                C.MemberNumber == Player.MemberNumber
-            ) {
-                if (this.customGagged > Date.now()) {
-                    DrawCircle(CharX + 140 * Zoom, CharY + 60 * Zoom, 20 * Zoom, 1, "Black", "White")
-                    DrawImageResize(
-                        ICONS.TONGUE,
-                        CharX + 125 * Zoom,
-                        CharY + 45 * Zoom,
-                        30 * Zoom,
-                        30 * Zoom
-                    );
-                }
-            }
-            return ret;
         }, ModuleCategory.Activities);
 
         let failedLinkActions = [
@@ -702,7 +723,7 @@ export class ActivityModule extends BaseModule {
             let data = args[1]; 
             if (sendType == "ChatRoomChat" && data?.Type == "Activity" && !!data?.Dictionary && !!data?.Dictionary[3]){
                 var activityName = data?.Dictionary[3].ActivityName;
-                if (activityName == "Lick" && this.customGagged > Date.now())
+                if (activityName == "Lick" && this.customGagged)
                     SendAction(failedLinkActions[getRandomInt(failedLinkActions.length)]);
                 else
                     return next(args);
@@ -745,6 +766,16 @@ export class ActivityModule extends BaseModule {
                     DrawImageResize(
                         ICONS.HOLD_HANDS,
                         CharX + 400 * Zoom, CharY + 40 * Zoom, 40 * Zoom, 40 * Zoom
+                    );
+                }
+                else if (this.tongueGrabbedMember == C.MemberNumber! || (this.customGagged && C.IsPlayer())) {
+                    DrawCircle(CharX + 140 * Zoom, CharY + 60 * Zoom, 20 * Zoom, 1, "Black", "White")
+                    DrawImageResize(
+                        ICONS.TONGUE,
+                        CharX + 125 * Zoom,
+                        CharY + 45 * Zoom,
+                        30 * Zoom,
+                        30 * Zoom
                     );
                 }
             }
@@ -828,14 +859,21 @@ export class ActivityModule extends BaseModule {
         }, ModuleCategory.Activities);
 
         OnAction(1, ModuleCategory.Activities, (data, sender, msg, metadata) => {
-            if (data?.Content == "ServerDisconnect" && this.handHoldingMemberList.indexOf(sender?.MemberNumber ?? 0))
+            if (data?.Content == "ServerDisconnect") {
                 this.removeHandHold(sender!);
+                this.removeEarPinch(sender!);
+                if (this.earPinchedByMember == sender?.MemberNumber)
+                    this.earPinchedByMember = null;
+                if (this.tongueGrabbedMember == sender?.MemberNumber)
+                    this.tongueGrabbedMember = null;
+            }
         });
     }
 
     earPinchedByMember: number | null = null;
     earPinchingMemberList: number[] = [];
     handHoldingMemberList: number[] = [];
+    tongueGrabbedMember: number | null = null;
 
     get allCustomHeldBy(): number[] {
         return this.handHoldingMemberList.concat(this.earPinchedByMember!);
@@ -882,16 +920,23 @@ export class ActivityModule extends BaseModule {
                     value: type
                 }]
             }
-        });
-        
+        });        
+
         switch (type) {
             case "hand":
+                this.tongueGrabbedMember = null;
                 this.removeEarPinch(target);
                 this.addHandHold(target);
                 break;
             case "ear":
+                this.tongueGrabbedMember = null;
                 this.removeHandHold(target);
                 this.addEarPinch(target);
+                break;
+            case "tongue":
+                this.removeEarPinch(target);
+                this.removeHandHold(target);
+                this.tongueGrabbedMember = target.MemberNumber!;
                 break;
         }
     };
@@ -918,6 +963,9 @@ export class ActivityModule extends BaseModule {
                 break;
             case "ear":
                 this.removeEarPinch(target);
+                break;
+            case "tongue":
+                this.tongueGrabbedMember = null;
                 break;
         }
     }
@@ -948,6 +996,11 @@ export class ActivityModule extends BaseModule {
             case "ear":
                 this.earPinchedByMember = sender.MemberNumber!
                 break;
+            case "tongue":
+                this.customGagged = true;
+                this.prevMouth = WardrobeGetExpression(Player)?.Mouth ?? null;
+                CharacterSetFacialExpression(Player, "Mouth", "Ahegao");
+                break;
         }
     }
 
@@ -958,6 +1011,11 @@ export class ActivityModule extends BaseModule {
                 break;
             case "ear":
                 this.earPinchedByMember = null;
+                break;
+            case "tongue":
+                this.customGagged = false;
+                CharacterSetFacialExpression(Player, "Mouth", this.prevMouth);
+                this.prevMouth = null;
                 break;
         }
     }
