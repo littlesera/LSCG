@@ -75,6 +75,16 @@ export function setOrIgnoreBlush(blushLevel: ExpressionName | null) {
 	}
 }
 
+export function OnWhisper(priority: number, module: ModuleCategory, callback: (data: any, sender: Character | null, msg: string, metadata: any) => void) {
+	hookFunction("ChatRoomMessage", priority, (args, next) => {
+        var data = args[0];
+		var sender = getCharacter(data.Sender);
+        if (data.Type == "Whisper")
+            callback(data, sender, data.Content, data.Dictionary);
+		next(args);
+    }, module);
+}
+
 export function OnChat(priority: any, module: ModuleCategory, callback: (data: any, sender: Character | null, msg: string, metadata: any) => void) {
     hookFunction("ChatRoomMessage", priority, (args, next) => {
         var data = args[0];
@@ -220,7 +230,7 @@ export function isObject(obj: unknown): obj is Record<string, any> {
 }
 
 export function escapeRegExp(string: string) {
-	return string?.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') ?? ""; // $& means the whole matched string
+	return string?.toLocaleLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&') ?? ""; // $& means the whole matched string
 }
 
 export function isPhraseInString(string: string, phrase: string) {

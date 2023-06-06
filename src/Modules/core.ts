@@ -8,6 +8,7 @@ import { IPublicSettingsModel, PublicSettingsModel } from "Settings/Models/setti
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
 import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, setOrIgnoreBlush, isPhraseInString, hookFunction, getCharacter, drawSvg, SVG_ICONS, patchFunction, sendLSCGMessage, settingsSave } from "../utils";
 import { ActivityModule, GrabType } from "./activities";
+import { HypnoModule } from "./hypno";
 
 // Core Module that can handle basic functionality like server handshakes etc.
 // Maybe can consolidate things like hypnosis/suffocation basic state handling too..
@@ -132,6 +133,7 @@ export class CoreModule extends BaseModule {
             case "remote":
                 if (Player.LSCG?.HypnoModule.remoteAccess) {
                     Object.assign(Player.LSCG.HypnoModule, msg.settings?.HypnoModule);
+                    getModule<HypnoModule>("HypnoModule")?.initializeTriggerWord();
                     settingsSave(true);
                 }
                 break;

@@ -1,7 +1,7 @@
 import { BaseModule } from 'base';
 import { HypnoSettingsModel } from 'Settings/Models/hypno';
 import { ModuleCategory, Subscreen } from 'Settings/setting_definitions';
-import { settingsSave, parseMsgWords, OnChat, OnAction, OnActivity, SendAction, getRandomInt, hookFunction, removeAllHooksByModule, callOriginal, setOrIgnoreBlush, escapeRegExp, isAllowedMember } from '../utils';
+import { settingsSave, parseMsgWords, OnChat, OnAction, OnActivity, SendAction, getRandomInt, hookFunction, removeAllHooksByModule, callOriginal, setOrIgnoreBlush, escapeRegExp, isAllowedMember, OnWhisper } from '../utils';
 import { GuiHypno } from 'Settings/hypno';
 
 export class HypnoModule extends BaseModule {
@@ -122,6 +122,14 @@ export class HypnoModule extends BaseModule {
             }
         }, ModuleCategory.Hypno);
 
+        OnWhisper(5, ModuleCategory.Hypno, (data, sender, msg, metadata) => {
+            // Check for non-garbled trigger word, this means a trigger word could be set to what garbled speech produces >.>
+            if (!this.hypnoActivated) {
+                if (this.CheckTrigger(msg, sender!) && !this.IsOnCooldown())
+                    this.StartTriggerWord(true, sender!.MemberNumber);
+            }
+        });
+
         hookFunction("SpeechGarble", 2, (args, next) => {
             if (!this.Enabled)
                 return next(args);
@@ -129,7 +137,7 @@ export class HypnoModule extends BaseModule {
             const C = args[0] as Character;
 
             // Check for non-garbled trigger word, this means a trigger word could be set to what garbled speech produces >.>
-            if (!this.hypnoActivated && !args[2]) {
+            if (!this.hypnoActivated) {
                 let msg = callOriginal("SpeechGarble", args);
                 if (this.CheckTrigger(msg, C) && !this.IsOnCooldown())
                     this.StartTriggerWord(true, C.MemberNumber);

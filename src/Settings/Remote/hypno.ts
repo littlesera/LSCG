@@ -19,17 +19,16 @@ export class RemoteHypno extends RemoteGuiSubscreen {
 		var memberIdIsAllowed = ServerChatRoomGetAllowItem(Player, this.Character);
 		if (this.overrideMemberIds.length > 0)
 			memberIdIsAllowed = this.overrideMemberIds.indexOf(Player.MemberNumber!) > -1;
-		if (this.Character.IsOwnedByPlayer())
-			memberIdIsAllowed = true;
 
 		var passTranceReq = (this.settings.remoteAccessRequiredTrance && this.settings.hypnotized) || !this.settings.remoteAccessRequiredTrance;
 		var passHypnotizerReq = (this.settings.limitRemoteAccessToHypnotizer && this.settings.hypnotizedBy == Player.MemberNumber) || !this.settings.limitRemoteAccessToHypnotizer;
 
-		return this.settings.enabled && 
+		return this.Character.IsOwnedByPlayer() ||
+			(this.settings.enabled && 
 			this.settings.remoteAccess &&
 			memberIdIsAllowed &&
 			passTranceReq &&
-			passHypnotizerReq
+			passHypnotizerReq)
 	}
 
 	get icon(): string {
