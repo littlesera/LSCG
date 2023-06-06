@@ -21,7 +21,15 @@ export class HypnoModule extends BaseModule {
             cycleTime: 30,
             enableCycle: true,
             overrideMemberIds: "",
-            overrideWords: ""
+            overrideWords: "",
+            allowLocked: false,
+            remoteAccess: false,
+            cooldownTime: 0,
+            enableArousal: false,
+            immersive: false,
+            trigger: "",
+            triggerTime: 5,
+            locked: false
         };
     }
 

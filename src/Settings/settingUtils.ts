@@ -13,6 +13,8 @@ export class GUI extends BaseModule {
 	private _mainMenu: MainMenu;
 	private _currentSubscreen: GuiSubscreen | null = null;
 
+	get subscreens() : GuiSubscreen[] { return this._subscreens; }
+
 	get mainMenu(): MainMenu {
 		return this._mainMenu;
 	}

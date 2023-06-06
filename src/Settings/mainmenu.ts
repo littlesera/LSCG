@@ -27,6 +27,12 @@ export class MainMenu extends GuiSubscreen {
 		return (hypnoBlock || chloroformBlock || drugBlock);
 	}
 
+	constructor(module: GUI) {
+		super(module);
+
+		this.subscreens = module.subscreens;
+	}
+
 	onChange(source: number) {
 		if (source === this.character.MemberNumber) {
 			this.Load();

@@ -5,8 +5,9 @@ import { BaseModule } from "base";
 import { drawTooltip, GUI } from "./settingUtils";
 
 export interface Setting {
-	type: string;
+	type: "checkbox" | "text" | "number" | "label";
 	id: string;
+	disabled: boolean;
 	label: string;
 	description: string;
 	setting(): any;
@@ -14,9 +15,10 @@ export interface Setting {
 }
 
 export abstract class GuiSubscreen {
-    static START_X: number = 220;
+    static START_X: number = 180;
     static START_Y: number = 120;
-    static Y_MOD: number = 75;
+    static X_MOD: number = 950;
+	static Y_MOD: number = 75;
 	readonly module: BaseModule;
 
 	constructor(module: BaseModule) {
@@ -82,8 +84,12 @@ export abstract class GuiSubscreen {
 	}
 
     getYPos(ix: number) {
-        return GuiSubscreen.START_Y + (GuiSubscreen.Y_MOD * ix);
+        return GuiSubscreen.START_Y + (GuiSubscreen.Y_MOD * (ix % 10));
     }
+
+	getXPos(ix: number) {
+		return GuiSubscreen.START_X + (GuiSubscreen.X_MOD * Math.floor(ix / 10));
+	}
 
 	Load() {
         this.structure.forEach(item => {
@@ -102,17 +108,20 @@ export abstract class GuiSubscreen {
 		var prev = MainCanvas.textAlign;
 		MainCanvas.textAlign = "left";
 
-		DrawText("- LSCG " + this.name + " -", GuiSubscreen.START_X, this.getYPos(0), "Black", "Gray");
+		DrawText("- LSCG " + this.name + " -", this.getXPos(0), this.getYPos(0), "Black", "Gray");
 		DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png", "LSCG main menu");
 
 		this.structure.forEach((item, ix, arr) => {
 			switch(item.type) {
 				case "checkbox":
-					this.DrawCheckbox(item.label, item.description, item.setting(), ix + 1);
+					this.DrawCheckbox(item.label, item.description, item.setting(), ix + 1, item.disabled);
 					break;
 				case "text":
 				case "number":
 					this.ElementPosition(item.id, item.label, item.description, ix + 1);
+					break;
+				case "label":
+					this.DrawLabel(item.label, item.description, ix + 1);
 					break;
 			}
 		});
@@ -126,7 +135,7 @@ export abstract class GuiSubscreen {
 		this.structure.forEach((item, ix, arr) => {
 			switch (item.type) {
 				case "checkbox":
-					if (MouseIn(GuiSubscreen.START_X + 600, this.getYPos(ix + 1) - 32, 64, 64)){
+					if (MouseIn(this.getXPos(ix + 1) + 600, this.getYPos(ix + 1) - 32, 64, 64) && !item.disabled){
 						item.setSetting(!item.setting());
 					}
 					break;
@@ -150,7 +159,7 @@ export abstract class GuiSubscreen {
 		});
 
 		setSubscreen("MainMenu");
-		settingsSave();
+		settingsSave(true);
 	}
 
 	Unload() {
@@ -169,17 +178,23 @@ export abstract class GuiSubscreen {
 			"left");
 	}
 
-	DrawCheckbox(label: string, description: string, value: boolean, order: number) {
-		var isHovering = MouseIn(GuiSubscreen.START_X, this.getYPos(order) - 32, 600, 64);
-		DrawText(label, GuiSubscreen.START_X, this.getYPos(order), isHovering ? "Red" : "Black", "Gray");
-		DrawCheckbox(GuiSubscreen.START_X + 600, this.getYPos(order) - 32, 64, 64, "", value ?? false);
+	DrawCheckbox(label: string, description: string, value: boolean, order: number, disabled: boolean = false) {
+		var isHovering = MouseIn(this.getXPos(order), this.getYPos(order) - 32, 600, 64);
+		DrawText(label, this.getXPos(order), this.getYPos(order), isHovering ? "Red" : "Black", "Gray");
+		DrawCheckbox(this.getXPos(order) + 600, this.getYPos(order) - 32, 64, 64, "", value ?? false, disabled);
 		if (isHovering) this.Tooltip(description);
 	}
 
 	ElementPosition(elementId: string, label: string, description: string, order: number) {
-		var isHovering = MouseIn(GuiSubscreen.START_X, this.getYPos(order) - 32, 600, 64);
-		DrawText(label, GuiSubscreen.START_X, this.getYPos(order), isHovering ? "Red" : "Black", "Gray");
-		ElementPosition(elementId, GuiSubscreen.START_X + 900, this.getYPos(order), 600);
+		var isHovering = MouseIn(this.getXPos(order), this.getYPos(order) - 32, 600, 64);
+		DrawText(label, this.getXPos(order), this.getYPos(order), isHovering ? "Red" : "Black", "Gray");
+		ElementPosition(elementId, this.getXPos(order) + 900, this.getYPos(order), 600);
+		if (isHovering) this.Tooltip(description);
+	}
+
+	DrawLabel(name: string, description: string, order: number) {
+		var isHovering = MouseIn(this.getXPos(order), this.getYPos(order) - 32, 600, 64);
+		DrawText(name, this.getXPos(order), this.getYPos(order), isHovering ? "Red" : "Black", "Gray");
 		if (isHovering) this.Tooltip(description);
 	}
 }
