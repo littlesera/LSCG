@@ -21,6 +21,11 @@ export interface HypnoPublicSettingsModel extends BaseSettingsModel {
     activatedAt: number;
     recoveredAt: number;
     remoteAccess: boolean;
+    remoteAccessRequiredTrance: boolean;
+    limitRemoteAccessToHypnotizer: boolean;
+    allowRemoteModificationOfMemberOverride: boolean;
     allowLocked: boolean;
     locked: boolean;
+    hypnotized: boolean;
+    hypnotizedBy: number;
 }

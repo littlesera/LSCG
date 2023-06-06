@@ -16,9 +16,20 @@ export class RemoteHypno extends RemoteGuiSubscreen {
 	}
 
 	get enabled(): boolean {
+		var memberIdIsAllowed = ServerChatRoomGetAllowItem(Player, this.Character);
+		if (this.overrideMemberIds.length > 0)
+			memberIdIsAllowed = this.overrideMemberIds.indexOf(Player.MemberNumber!) > -1;
+		if (this.Character.IsOwnedByPlayer())
+			memberIdIsAllowed = true;
+
+		var passTranceReq = (this.settings.remoteAccessRequiredTrance && this.settings.hypnotized) || !this.settings.remoteAccessRequiredTrance;
+		var passHypnotizerReq = (this.settings.limitRemoteAccessToHypnotizer && this.settings.hypnotizedBy == Player.MemberNumber) || !this.settings.limitRemoteAccessToHypnotizer;
+
 		return this.settings.enabled && 
 			this.settings.remoteAccess &&
-			(this.overrideMemberIds.indexOf(Player.MemberNumber!) > -1 || ServerChatRoomGetAllowItem(Player, this.Character))
+			memberIdIsAllowed &&
+			passTranceReq &&
+			passHypnotizerReq
 	}
 
 	get icon(): string {
@@ -32,12 +43,6 @@ export class RemoteHypno extends RemoteGuiSubscreen {
 	get structure(): Setting[] {
 		return [
 			<Setting>{
-				type: "checkbox",
-				label: "Enabled:",
-				description: "Enabled the Hypnosis Features.",
-				setting: () => this.settings.enabled ?? false,
-				setSetting: (val) => this.settings.enabled = val
-			},<Setting>{
 				type: "checkbox",
 				label: "Immersive Hypnosis:",
 				description: "Makes the hypnotized experience more restrictive. LSCG settings will be unavailable while hypnotized.",
@@ -55,6 +60,7 @@ export class RemoteHypno extends RemoteGuiSubscreen {
 				id: "hypno_overrideMembers",
 				label: "Override Allowed Member IDs:",
 				description: "Comma separated list of member IDs. If empty will use standard Item Permissions.",
+				disabled: !(this.settings.allowRemoteModificationOfMemberOverride || this.Character.IsOwnedByPlayer()),
 				setting: () => this.settings.overrideMemberIds ?? "",
 				setSetting: (val) => this.settings.overrideMemberIds = val
 			},<Setting>{
@@ -84,6 +90,26 @@ export class RemoteHypno extends RemoteGuiSubscreen {
 				description: "Cooldown time (in seconds) before you can be hypnotized again.",
 				setting: () => (this.settings.cooldownTime ?? 0),
 				setSetting: (val) => this.settings.cooldownTime = val
+			},<Setting>{
+				type: "label",
+				label: "",
+				description: ""
+			},<Setting>{
+				type: "label",
+				label: "",
+				description: ""
+			},<Setting>{
+				type: "checkbox",
+				label: "Remote Access Requires Trance:",
+				description: "If checked, remote access is only possible while actively hypnotized.",
+				setting: () => this.settings.remoteAccessRequiredTrance ?? true,
+				setSetting: (val) => this.settings.remoteAccessRequiredTrance = val
+			},<Setting>{
+				type: "checkbox",
+				label: "Remote Access Limited to Hypnotizer:",
+				description: "If checked, only the user who hypnotized you can access your settings (after matching other conditions).",
+				setting: () => this.settings.limitRemoteAccessToHypnotizer ?? true,
+				setSetting: (val) => this.settings.limitRemoteAccessToHypnotizer = val
 			},<Setting>{
 				type: "checkbox",
 				label: "Locked:",

@@ -61,7 +61,7 @@ export class RemoteUIModule extends BaseModule {
 
 			next(args);
 			const C = this.getInformationSheetCharacter();
-            if (!!C && this.characterHasMod(C as OtherCharacter)) {
+            if (!!C && this.characterHasMod(C as OtherCharacter) && !C.IsPlayer()) {
                 const playerHasAccessToCharacter = this.playerHasAccessToCharacter(C as OtherCharacter);
                 DrawButton(90, 60, 45, 45, "", playerHasAccessToCharacter ? "White" : "#ddd", "", playerHasAccessToCharacter ? "LSCG Remote Settings" : "Needs BC item permission", !playerHasAccessToCharacter);
                 DrawImageResize(ICONS.REMOTE, 90, 60, 45, 45);

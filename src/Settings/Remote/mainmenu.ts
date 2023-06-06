@@ -1,5 +1,5 @@
 import { getModule } from "modules";
-import { hypnoActivated, HypnoModule } from "Modules/hypno";
+import { HypnoModule } from "Modules/hypno";
 import { InjectorModule } from "Modules/injector";
 import { MiscModule } from "Modules/misc";
 import { RemoteUIModule } from "Modules/remoteUI";

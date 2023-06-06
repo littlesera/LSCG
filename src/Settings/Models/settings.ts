@@ -40,11 +40,16 @@ export class PublicSettingsModel implements IPublicSettingsModel {
         overrideWords: "",
         allowLocked: false,
         remoteAccess: false,
+        remoteAccessRequiredTrance: true,
+        limitRemoteAccessToHypnotizer: true,
+        allowRemoteModificationOfMemberOverride: false,
         cooldownTime: 0,
         enableArousal: false,
         immersive: false,
         triggerTime: 5,
-        locked: false
+        locked: false,
+        hypnotized: false,
+        hypnotizedBy: 0,
     };
     BoopsModule: BaseSettingsModel = <BaseSettingsModel>{enabled: false};
     LipstickModule: BaseSettingsModel = <BaseSettingsModel>{enabled: false};

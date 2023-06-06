@@ -1,5 +1,5 @@
 import { getModule } from "modules";
-import { hypnoActivated, HypnoModule } from "Modules/hypno";
+import { HypnoModule } from "Modules/hypno";
 import { InjectorModule } from "Modules/injector";
 import { MiscModule } from "Modules/misc";
 import { GuiSubscreen } from "./settingBase";
@@ -21,7 +21,7 @@ export class MainMenu extends GuiSubscreen {
 	}
 
 	get immersiveBlock(): boolean {
-		var hypnoBlock = Player.LSCG.HypnoModule?.immersive && hypnoActivated();
+		var hypnoBlock = Player.LSCG.HypnoModule?.immersive && Player.LSCG.HypnoModule?.hypnotized;
 		var chloroformBlock = Player.LSCG.MiscModule?.immersiveChloroform && getModule<MiscModule>("MiscModule")?.isChloroformed;
 		var drugBlock = Player.LSCG.InjectorModule?.immersive && (Player.LSCG.InjectorModule?.asleep || Player.LSCG.InjectorModule?.brainwashed)
 		return (hypnoBlock || chloroformBlock || drugBlock);

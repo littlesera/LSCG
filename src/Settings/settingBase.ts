@@ -118,7 +118,7 @@ export abstract class GuiSubscreen {
 					break;
 				case "text":
 				case "number":
-					this.ElementPosition(item.id, item.label, item.description, ix + 1);
+					this.ElementPosition(item.id, item.label, item.description, ix + 1, item.disabled);
 					break;
 				case "label":
 					this.DrawLabel(item.label, item.description, ix + 1);
@@ -180,21 +180,26 @@ export abstract class GuiSubscreen {
 
 	DrawCheckbox(label: string, description: string, value: boolean, order: number, disabled: boolean = false) {
 		var isHovering = MouseIn(this.getXPos(order), this.getYPos(order) - 32, 600, 64);
-		DrawText(label, this.getXPos(order), this.getYPos(order), isHovering ? "Red" : "Black", "Gray");
+		DrawTextFit(label, this.getXPos(order), this.getYPos(order), 600, isHovering ? "Red" : "Black", "Gray");
 		DrawCheckbox(this.getXPos(order) + 600, this.getYPos(order) - 32, 64, 64, "", value ?? false, disabled);
 		if (isHovering) this.Tooltip(description);
 	}
 
-	ElementPosition(elementId: string, label: string, description: string, order: number) {
+	ElementPosition(elementId: string, label: string, description: string, order: number, disabled: boolean = false) {
 		var isHovering = MouseIn(this.getXPos(order), this.getYPos(order) - 32, 600, 64);
-		DrawText(label, this.getXPos(order), this.getYPos(order), isHovering ? "Red" : "Black", "Gray");
-		ElementPosition(elementId, this.getXPos(order) + 900, this.getYPos(order), 600);
+		DrawTextFit(label, this.getXPos(order), this.getYPos(order), 600, isHovering ? "Red" : "Black", "Gray");
+		ElementPosition(elementId, this.getXPos(order) + 750, this.getYPos(order), 300);
+		if (disabled)
+			ElementSetAttribute(elementId, "disabled", "true");
+		else{
+			document.getElementById(elementId)?.removeAttribute("disabled");
+		}
 		if (isHovering) this.Tooltip(description);
 	}
 
 	DrawLabel(name: string, description: string, order: number) {
 		var isHovering = MouseIn(this.getXPos(order), this.getYPos(order) - 32, 600, 64);
-		DrawText(name, this.getXPos(order), this.getYPos(order), isHovering ? "Red" : "Black", "Gray");
+		DrawTextFit(name, this.getXPos(order), this.getYPos(order), 600, isHovering ? "Red" : "Black", "Gray");
 		if (isHovering) this.Tooltip(description);
 	}
 }
