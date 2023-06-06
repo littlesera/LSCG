@@ -233,6 +233,7 @@ export class MiscModule extends BaseModule {
     Passout() {
         SendAction("%NAME% slumps weakly as %PRONOUN% slips into unconciousness.");
         this.SetSleepExpression();
+        this.FallDownIfPoissible();
         this.isChloroformed = true;
         clearTimeout(this.passoutTimer);
         //this.eyesInterval = setInterval(() => this.SetSleepExpression(), 1000);
@@ -266,5 +267,16 @@ export class MiscModule extends BaseModule {
     SetSleepExpression() {
         CharacterSetFacialExpression(Player, "Eyes", "Closed");
         CharacterSetFacialExpression(Player, "Emoticon", "Sleep");
+    }
+
+    FallDownIfPoissible() {
+        var isStanding = Player.Pose != null && 
+            (Player.Pose.length == 0 ||
+            Player.Pose.includes("BaseLower") || 
+            Player.Pose.includes("LegsOpen") ||
+            Player.Pose.includes("LegsClosed") ||
+            Player.Pose.includes("Spread"));
+        if (Player.CanKneel() && isStanding)
+            CharacterSetActivePose(Player, "Kneel");
     }
 }

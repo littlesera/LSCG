@@ -532,6 +532,7 @@ export class InjectorModule extends BaseModule {
         this.asleep = true;
         SendAction("%NAME% moans weakly as %PRONOUN% succumbs to unconciousness.");
         this.miscModule?.SetSleepExpression();
+        this.miscModule?.FallDownIfPoissible();
     }
 
     Wake() {
