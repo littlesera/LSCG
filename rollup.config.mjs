@@ -5,6 +5,7 @@ import typescript from '@rollup/plugin-typescript';
 import resolve from "@rollup/plugin-node-resolve";
 import progress from 'rollup-plugin-progress';
 import packageJson from "./package.json" assert { type: "json" };
+import simpleGit from "simple-git";
 
 export default {
   input: 'src/main.ts',
@@ -26,7 +27,14 @@ window.LSCG_Loaded = false;
 console.debug("LSCG: Parse start...");
 `,
     intro: async () => {
+      const git = simpleGit();
       let LSCG_VERSION = packageJson.version;
+      await git.tags((err, tags) => {
+        if (!!tags.latest) {
+          console.log('\nUsing tag version: %s\n', tags.latest);
+          LSCG_VERSION = tags.latest;
+        }
+      });
       return `const LSCG_VERSION="${LSCG_VERSION}";`;
     }
   },
