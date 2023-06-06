@@ -199,11 +199,11 @@ export class HypnoModule extends BaseModule {
                     // Hypno Timeout --
                     this.TriggerRestoreTimeout();
                 }
-                if ((lastHornyCheck + triggerTimer/100) > CurrentTime) {
+                if (this.hypnoActivated && (lastHornyCheck + triggerTimer/100) > CurrentTime) {
                     lastHornyCheck = CurrentTime;
                     this.HypnoHorny();
                 }
-                if ((lastCycleCheck + 5000) > CurrentTime) {
+                if (!this.hypnoActivated && (lastCycleCheck + 5000) > CurrentTime) {
                     lastCycleCheck = CurrentTime;
                     this.CheckNewTrigger();
                 }

@@ -50,7 +50,11 @@ export class CoreModule extends BaseModule {
             const Ghosted = (Player.GhostList ?? []).includes(C.MemberNumber!);
             const isAdmin = (Array.isArray(ChatRoomData?.Admin) && ChatRoomData?.Admin.includes(C.MemberNumber!))
             if (ModUser && ChatRoomHideIconState === 0 && !Ghosted) {
-                drawSvg(MainCanvas, SVG_ICONS.STAR, CharX + 410 * Zoom, CharY + 8 * Zoom, 40 * Zoom, 40 * Zoom, 50, 0.8, 1, isAdmin ? "#008080" : "#00AEAE");
+                var version = C.IsPlayer() ? LSCG_VERSION : (C as OtherCharacter).LSCG?.Version;
+                var starColor = isAdmin ? "#008080" : "#00AEAE";
+                if (version != LSCG_VERSION)
+                    starColor = "#ff4545";
+                drawSvg(MainCanvas, SVG_ICONS.STAR, CharX + 410 * Zoom, CharY + 8 * Zoom, 40 * Zoom, 40 * Zoom, 50, 0.8, 1, starColor);
                 if (MouseIn(CharX + 405 * Zoom, CharY + 3 * Zoom, 50 * Zoom, 50 * Zoom)) {
                     var prevAlign = MainCanvas.textAlign;
                     var prevFont = MainCanvas.font;
@@ -59,7 +63,6 @@ export class CoreModule extends BaseModule {
                     var TextY = CharY + 50 * Zoom;
                     MainCanvas.textAlign = "left";
                     MainCanvas.font = '16px Arial, sans-serif'
-                    var version = C.IsPlayer() ? LSCG_VERSION : (C as OtherCharacter).LSCG?.Version;
                     var size = MainCanvas.measureText(version);
                     DrawRect(TextX - size.actualBoundingBoxLeft - pad, TextY - size.actualBoundingBoxAscent - pad, size.actualBoundingBoxRight - size.actualBoundingBoxLeft + 2 * pad, size.actualBoundingBoxDescent + size.actualBoundingBoxAscent + 2 * pad, "#D7F6E9");
                     DrawText(version, TextX, TextY, "Black");
