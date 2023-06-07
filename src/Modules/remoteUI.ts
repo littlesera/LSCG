@@ -34,6 +34,8 @@ export class RemoteUIModule extends BaseModule {
     getInformationSheetCharacter(): OtherCharacter | PlayerCharacter | null {
 		const C = InformationSheetSelection;
 		if (!C || typeof C.MemberNumber !== "number") return null;
+		if (C.IsPlayer())
+			return Player as PlayerCharacter;
 		return getCharacter(C.MemberNumber) as OtherCharacter;
 	}
 
@@ -42,7 +44,7 @@ export class RemoteUIModule extends BaseModule {
 	}
 
 	playerHasAccessToCharacter(C: OtherCharacter): boolean {
-		return !C.IsPlayer() && ServerChatRoomGetAllowItem(Player, C) && C.LSCG?.GlobalModule.enabled;
+		return !!C && !C.IsPlayer() && ServerChatRoomGetAllowItem(Player, C) && C.LSCG?.GlobalModule.enabled;
 	}
 
     characterHasMod(C: OtherCharacter): boolean {
