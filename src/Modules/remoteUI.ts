@@ -94,6 +94,6 @@ export class RemoteUIModule extends BaseModule {
     }
 
     unload(): void {
-        removeAllHooksByModule(ModuleCategory.Core);
+        removeAllHooksByModule(ModuleCategory.RemoteUI);
     }
 }

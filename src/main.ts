@@ -11,6 +11,7 @@ import { ActivityModule } from "Modules/activities";
 import { InjectorModule } from 'Modules/injector';
 import { CoreModule } from 'Modules/core';
 import { RemoteUIModule } from 'Modules/remoteUI';
+import { CommandModule } from 'Modules/commands';
 
 function initWait() {
 	console.debug("LSCG: Init wait");
@@ -98,6 +99,7 @@ function init_modules(): boolean {
 	registerModule(new ActivityModule());
 	registerModule(new InjectorModule());
 	registerModule(new RemoteUIModule());
+	registerModule(new CommandModule());
 
 	for (const m of modules()) {
 		m.init();

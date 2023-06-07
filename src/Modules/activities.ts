@@ -756,7 +756,7 @@ export class ActivityModule extends BaseModule {
                 if (chars.length == 1)
                     SendAction("%NAME% leads %OPP_NAME% out of the room by the ear.", chars[0]);
                 else
-                    SendAction("%NAME% leads " + chars[0]?.Nickname ?? chars[0]?.Name + " and " + chars[1]?.Nickname ?? chars[1]?.Name + " out of the room by the ear.");
+                    SendAction("%NAME% leads " + CharacterNickname(chars[0]!) + " and " + CharacterNickname(chars[1]!) + " out of the room by the ear.");
             }
             return next(args);
         }, ModuleCategory.Activities);

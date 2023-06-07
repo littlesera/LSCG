@@ -179,18 +179,15 @@ export class LipstickModule extends BaseModule {
                     status.cheek1 = true;
                 else
                     status.cheek2 = true;
-                    setOrIgnoreBlush("Low");
                 break;
             case "forehead" :
                 status.forehead = true;
-                setOrIgnoreBlush("Low");
                 break;
             case "neck" :
                 if (!status.neck1)
                     status.neck1 = true;
                 else
                     status.neck2 = true;
-                setOrIgnoreBlush("Medium");
                 break;
             default :
                 break;

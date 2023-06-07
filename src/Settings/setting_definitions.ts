@@ -22,7 +22,8 @@ export enum ModuleCategory {
     Activities = 5,
 	Injector = 6,
 	RemoteUI = 98,
-	Misc = 99
+	Misc = 99,
+	Commands = 100
 }
 
 export type Subscreen = (new (module: BaseModule) => GuiSubscreen);

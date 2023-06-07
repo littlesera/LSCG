@@ -40,56 +40,6 @@ export class HypnoModule extends BaseModule {
     }
 
     load(): void {
-        CommandCombine([
-            {
-                Tag: 'zonk',
-                Description: ": zonk self",
-        
-                Action: () => {
-                    if (this.settings.immersive) {
-                        ChatRoomSendLocal("/zonk disabled while immersive", 5000);
-                        return;
-                    }
-                    if (!this.hypnoActivated)
-                        this.StartTriggerWord(true, Player.MemberNumber);
-                }
-            },
-            {
-                Tag: 'unzonk',
-                Description: ": unzonk self",
-                Action: () => {
-                    if (this.hypnoActivated && this.settings.immersive) {
-                        ChatRoomSendLocal("/unzonk disabled while immersive", 5000);
-                        return;
-                    }
-                    if (this.hypnoActivated)
-                        this.TriggerRestoreTimeout();
-                }
-            },
-            {
-                Tag: "show-trigger",
-                Description: ": reveal your current trigger word(s)",
-                Action: () => {
-                    if (this.settings.immersive) {
-                        ChatRoomSendLocal("/show-trigger disabled while immersive", 5000);
-                        return;
-                    }
-                    ChatRoomSendLocal("Your current triggers are: " + this.triggers);
-                }
-            },
-            {
-                Tag: "cycle-trigger",
-                Description: ": force cycle to a new trigger word",
-                Action: () => {
-                    if (this.settings.immersive) {
-                        ChatRoomSendLocal("/cycle-trigger disabled while immersive", 5000);
-                        return;
-                    }
-                    this.RollTriggerWord();
-                }
-            }
-        ]);
-
         OnAction(1, ModuleCategory.Hypno, (data, sender, msg, metadata) => {
             if (!this.Enabled)
                 return;
@@ -149,9 +99,7 @@ export class HypnoModule extends BaseModule {
             }
 
             var lowerMsg = args[1].toLowerCase();
-            var names = [Player.Name.toLowerCase()]
-            if (!!Player.Nickname && Player.Nickname.length > 0)
-                names.push(Player.Nickname.toLowerCase());
+            var names = [CharacterNickname(Player)];
             if (names.some(n => lowerMsg.indexOf(n) > -1) || this.settings.hypnotizedBy == C.MemberNumber || C.MemberNumber == Player.MemberNumber)
                 args[1] = args[1];
             else
