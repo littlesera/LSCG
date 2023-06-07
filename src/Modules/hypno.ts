@@ -1,7 +1,7 @@
 import { BaseModule } from 'base';
 import { HypnoSettingsModel } from 'Settings/Models/hypno';
 import { ModuleCategory, Subscreen } from 'Settings/setting_definitions';
-import { settingsSave, parseMsgWords, OnChat, OnAction, OnActivity, SendAction, getRandomInt, hookFunction, removeAllHooksByModule, callOriginal, setOrIgnoreBlush, escapeRegExp, isAllowedMember } from '../utils';
+import { settingsSave, parseMsgWords, OnChat, OnAction, OnActivity, SendAction, getRandomInt, hookFunction, removeAllHooksByModule, callOriginal, setOrIgnoreBlush, escapeRegExp, isAllowedMember, OnWhisper } from '../utils';
 import { GuiHypno } from 'Settings/hypno';
 
 export class HypnoModule extends BaseModule {
@@ -21,7 +21,17 @@ export class HypnoModule extends BaseModule {
             cycleTime: 30,
             enableCycle: true,
             overrideMemberIds: "",
-            overrideWords: ""
+            overrideWords: "",
+            allowLocked: false,
+            remoteAccess: false,
+            remoteAccessRequiredTrance: true,
+            allowRemoteModificationOfMemberOverride: false,
+            cooldownTime: 0,
+            enableArousal: false,
+            immersive: false,
+            trigger: "",
+            triggerTime: 5,
+            locked: false
         };
     }
 
@@ -36,7 +46,7 @@ export class HypnoModule extends BaseModule {
                         ChatRoomSendLocal("/zonk disabled while immersive", 5000);
                         return;
                     }
-                    if (!triggerActivated)
+                    if (!this.hypnoActivated)
                         this.StartTriggerWord(true, Player.MemberNumber);
                 }
             },
@@ -44,11 +54,11 @@ export class HypnoModule extends BaseModule {
                 Tag: 'unzonk',
                 Description: ": unzonk self",
                 Action: () => {
-                    if (triggerActivated && this.settings.immersive) {
+                    if (this.hypnoActivated && this.settings.immersive) {
                         ChatRoomSendLocal("/unzonk disabled while immersive", 5000);
                         return;
                     }
-                    if (triggerActivated)
+                    if (this.hypnoActivated)
                         this.TriggerRestoreTimeout();
                 }
             },
@@ -82,7 +92,7 @@ export class HypnoModule extends BaseModule {
             var lowerMsgWords = parseMsgWords(msg);
             if ((lowerMsgWords?.indexOf("snaps") ?? -1) >= 0 && 
                 sender?.MemberNumber != Player.MemberNumber &&
-                hypnoActivated()) {
+                this.hypnoActivated) {
                 this.TriggerRestoreSnap();
             }
         });
@@ -92,12 +102,31 @@ export class HypnoModule extends BaseModule {
                 return;
             let target = data.Dictionary?.find((d: any) => d.Tag == "TargetCharacter");
             if (!!target && target.MemberNumber == Player.MemberNumber) {
-                if (data.Content == "ChatOther-ItemNose-Pet" && triggerActivated)
+                if (data.Content == "ChatOther-ItemNose-Pet" && this.hypnoActivated)
                     this.TriggerRestoreBoop();
                 // Special tummy rub hypno action for Bean
-                else if ((data.Content == "ChatOther-ItemPelvis-MassageHands" || data.Content == "ChatOther-ItemPelvis-Caress") && !triggerActivated && Player.MemberNumber == 71233 && !this.IsOnCooldown()) {
+                else if ((data.Content == "ChatOther-ItemPelvis-MassageHands" || data.Content == "ChatOther-ItemPelvis-Caress") && !this.hypnoActivated && Player.MemberNumber == 71233 && !this.IsOnCooldown()) {
                     this.DelayedTriggerWord(sender?.MemberNumber);
                 }
+            }
+        });
+
+        hookFunction("ChatRoomSync", 4, (args, next) => {
+            next(args);
+            if (!this.Enabled)
+                return;
+            
+            if (this.hypnoActivated) {
+                this.CheckHypnotizedState();
+                SendAction(this.hypnoBlockStrings[getRandomInt(this.hypnoBlockStrings.length)]);
+            }
+        }, ModuleCategory.Hypno);
+
+        OnWhisper(5, ModuleCategory.Hypno, (data, sender, msg, metadata) => {
+            // Check for non-garbled trigger word, this means a trigger word could be set to what garbled speech produces >.>
+            if (!this.hypnoActivated) {
+                if (this.CheckTrigger(msg, sender!) && !this.IsOnCooldown())
+                    this.StartTriggerWord(true, sender!.MemberNumber);
             }
         });
 
@@ -108,7 +137,7 @@ export class HypnoModule extends BaseModule {
             const C = args[0] as Character;
 
             // Check for non-garbled trigger word, this means a trigger word could be set to what garbled speech produces >.>
-            if (!triggerActivated && !args[2]) {
+            if (!this.hypnoActivated) {
                 let msg = callOriginal("SpeechGarble", args);
                 if (this.CheckTrigger(msg, C) && !this.IsOnCooldown())
                     this.StartTriggerWord(true, C.MemberNumber);
@@ -119,7 +148,7 @@ export class HypnoModule extends BaseModule {
             var names = [Player.Name.toLowerCase()]
             if (!!Player.Nickname && Player.Nickname.length > 0)
                 names.push(Player.Nickname.toLowerCase());
-            if (names.some(n => lowerMsg.indexOf(n) > -1) || triggeredBy == C.MemberNumber || C.MemberNumber == Player.MemberNumber)
+            if (names.some(n => lowerMsg.indexOf(n) > -1) || this.settings.hypnotizedBy == C.MemberNumber || C.MemberNumber == Player.MemberNumber)
                 args[1] = args[1];
             else
                 args[1] =  args[1].replace(/\S/gm, '-');
@@ -129,26 +158,26 @@ export class HypnoModule extends BaseModule {
         hookFunction("Player.HasTints", 4, (args, next) => {
             if (!this.Enabled || !Player.ImmersionSettings?.AllowTints)
                 return next(args);
-            if (triggerActivated) return true;
+            if (this.hypnoActivated) return true;
             return next(args);
         }, ModuleCategory.Hypno);
         
         hookFunction("Player.GetTints", 4, (args, next) => {
             if (!this.Enabled || !Player.ImmersionSettings?.AllowTints)
                 return next(args);
-            if (triggerActivated) return [{r: 148, g: 0, b: 211, a: 0.4}];
+            if (this.hypnoActivated) return [{r: 148, g: 0, b: 211, a: 0.4}];
             return next(args);
         }, ModuleCategory.Hypno);
             
         hookFunction("Player.GetBlurLevel", 4, (args, next) => {
             if (!this.Enabled || !Player.GraphicsSettings?.AllowBlur)
                 return next(args);
-            if (triggerActivated) return 3;
+            if (this.hypnoActivated) return 3;
             return next(args);
         }, ModuleCategory.Hypno);
 
         hookFunction('Player.CanWalk', 1, (args, next) => {
-            if (this.settings.enabled && this.settings.immersive && triggerActivated)
+            if (this.settings.enabled && this.settings.immersive && this.hypnoActivated)
                 return false;
             return next(args);
         }, ModuleCategory.Hypno);
@@ -157,7 +186,7 @@ export class HypnoModule extends BaseModule {
             if (!this.Enabled)
                 return next(args);
             // Prevent speech at choke level 4
-            if (triggerActivated) {
+            if (this.hypnoActivated) {
                 var type = args[0];
                 if (type == "ChatRoomChat" && args[1].Type == "Chat" && args[1]?.Content[0] != "("){
                     SendAction(this.hypnoBlockStrings[getRandomInt(this.hypnoBlockStrings.length)]);
@@ -167,6 +196,28 @@ export class HypnoModule extends BaseModule {
             }
             return next(args);
         }, ModuleCategory.Hypno);
+
+        let lastHornyCheck = 0;
+        let lastCycleCheck = 0;
+        hookFunction('TimerProcess', 1, (args, next) => {
+            if (ActivityAllowed()) {
+                let triggerTimer = (this.settings.triggerTime ?? 5) * 60000;
+                let hypnoEnd = this.settings.activatedAt + triggerTimer;
+                if (this.hypnoActivated && this.settings.triggerTime > 0 && hypnoEnd < CurrentTime) {
+                    // Hypno Timeout --
+                    this.TriggerRestoreTimeout();
+                }
+                if (this.hypnoActivated && (lastHornyCheck + triggerTimer/100) > CurrentTime) {
+                    lastHornyCheck = CurrentTime;
+                    this.HypnoHorny();
+                }
+                if (!this.hypnoActivated && (lastCycleCheck + 5000) > CurrentTime) {
+                    lastCycleCheck = CurrentTime;
+                    this.CheckNewTrigger();
+                }
+            }
+            return next(args);
+        }, ModuleCategory.Injector);
 
         // Set Trigger
         if (!this.settings.trigger) {
@@ -180,12 +231,11 @@ export class HypnoModule extends BaseModule {
         }
         if (!!this.settings.existingEye1Name)
             this.ResetEyes();
-
-        this.lingerInterval = setInterval(() => this.CheckNewTrigger(), 5000);
     }
 
     initializeTriggerWord() {
-        if (!this.settings.trigger) {
+        var recycleFromCommon = !this.settings.overrideWords && (!this.settings.trigger || commonWords.indexOf(this.settings.trigger) > -1);
+        if (recycleFromCommon) {
             this.settings.trigger = this.getNewTriggerWord();
             settingsSave();
         }
@@ -199,11 +249,6 @@ export class HypnoModule extends BaseModule {
     unload(): void {
         removeAllHooksByModule(ModuleCategory.Hypno);
     }
-
-    triggerTimeout: number = 0;
-    triggerTimer: number = 300000; // 5 min
-    lingerInterval: number = 0; // check if need to reroll every 5s    
-    hornyTimeout: number = 0;
 
     get triggers(): string[] {
         var overrideWords = this.settings.overrideWords?.split(",")?.filter(word => !!word).map(word => word.toLocaleLowerCase()) ?? [];
@@ -258,7 +303,7 @@ export class HypnoModule extends BaseModule {
             return phraseMatch.test(msg);
         })        
 
-        return (!hypnoActivated() && 
+        return (!this.hypnoActivated && 
             matched && 
             sender?.MemberNumber != Player.MemberNumber &&
             this.allowedSpeaker(sender))
@@ -268,9 +313,9 @@ export class HypnoModule extends BaseModule {
         var now = new Date().getTime();
         if ((now - (this.settings.cooldownTime * 1000)) < this.settings.recoveredAt) {
             // Triggered during cooldown...
-            if (!cooldownMsgSent){
+            if (!this.cooldownMsgSent){
                 SendAction("%NAME%'s frowns as %PRONOUN% fights to remain conscious.");
-                cooldownMsgSent = true;
+                this.cooldownMsgSent = true;
             }
             return true;
         }
@@ -278,40 +323,33 @@ export class HypnoModule extends BaseModule {
     }
 
     StartTriggerWord(wasWord: boolean = true, memberNumber: number = 0) {
-        if (triggerActivated)
+        if (this.hypnoActivated)
             return;
 
-        triggerActivated = true;
-        cooldownMsgSent = false;
-        triggeredBy = memberNumber;
+        this.cooldownMsgSent = false;
+        this.settings.hypnotizedBy = memberNumber;
         if (this.settings.activatedAt == 0)
-            this.settings.activatedAt = new Date().getTime();
+            this.settings.activatedAt = CurrentTime;
         if (!AudioShouldSilenceSound(true))
             AudioPlaySoundEffect("SciFiEffect", 1);
-        settingsSave(true);
-        
+        this.hypnoActivated = true;
+
         if (wasWord)
             SendAction("%NAME%'s eyes immediately unfocus, %POSSESSIVE% posture slumping slightly as %PRONOUN% loses control of %POSSESSIVE% body at the utterance of a trigger word.");
         else
             SendAction("%NAME%'s eyes glaze over, %POSSESSIVE% posture slumping weakly as %PRONOUN% loses control of %POSSESSIVE% body.");
         
-        this.SetEyes();
-        setOrIgnoreBlush("Medium");
-        CharacterSetFacialExpression(Player, "Eyebrows", "Lowered");
-        CharacterSetFacialExpression(Player, "Eyes", "Dazed");
-        CharacterSetFacialExpression(Player, "Fluids", "DroolLow");    
-        CharacterSetFacialExpression(Player, "Mouth", null);    
+        this.CheckHypnotizedState();
+    }
 
-        if (this.settings.triggerTime > 0) {
-            let triggerTimer = (this.settings.triggerTime ?? 5) * 60000;
-
-            clearTimeout(this.triggerTimeout);
-            this.triggerTimeout = setTimeout(() => this.TriggerRestoreTimeout(), triggerTimer);
-            clearInterval(this.hornyTimeout);
-            this.hornyTimeout = setInterval(() => this.HypnoHorny(), triggerTimer / 100);
-        } else {
-            clearInterval(this.hornyTimeout);
-            this.hornyTimeout = setInterval(() => this.HypnoHorny(), 10000);
+    CheckHypnotizedState() {
+        if (this.hypnoActivated) {
+            this.SetEyes();
+            setOrIgnoreBlush("Medium");
+            CharacterSetFacialExpression(Player, "Eyebrows", "Lowered");
+            CharacterSetFacialExpression(Player, "Eyes", "Dazed");
+            CharacterSetFacialExpression(Player, "Fluids", "DroolLow");    
+            CharacterSetFacialExpression(Player, "Mouth", null);   
         }
     }
 
@@ -391,15 +429,13 @@ export class HypnoModule extends BaseModule {
         if (!AudioShouldSilenceSound(true))
             AudioPlaySoundEffect("SpankSkin");
         CharacterSetFacialExpression(Player, "Eyes", null);
-        clearInterval(this.hornyTimeout);
-        clearTimeout(this.triggerTimeout);
-        triggerActivated = false;
+        this.hypnoActivated = false;
         this.settings.recoveredAt = new Date().getTime();
         settingsSave(true);
     }
 
     HypnoHorny() {
-        if (triggerActivated) {
+        if (this.hypnoActivated) {
             // enforce eye expression
             this.EnforceEyes();
             CharacterSetFacialExpression(Player, "Eyebrows", "Lowered");
@@ -413,9 +449,9 @@ export class HypnoModule extends BaseModule {
     }
 
     CheckNewTrigger() {
-        if (triggerActivated || !this.settings.enableCycle)
+        if (this.hypnoActivated || !this.settings.enableCycle)
             return;
-        if (this.settings.activatedAt > 0 && new Date().getTime() - this.settings.activatedAt > (Math.max(1, this.settings.cycleTime || 0) * 60000))
+        if (this.settings.activatedAt > 0 && CurrentTime - this.settings.activatedAt > (Math.max(1, this.settings.cycleTime || 0) * 60000))
             this.RollTriggerWord();
     }
 
@@ -427,6 +463,15 @@ export class HypnoModule extends BaseModule {
         this.settings.activatedAt = 0;
         settingsSave();
     }
+
+    cooldownMsgSent = false;
+    get hypnoActivated(): boolean {
+        return this.settings.hypnotized;
+    }
+    set hypnoActivated(val) {
+        this.settings.hypnotized = val;
+        settingsSave(true);
+    }
 }
 
 // Trigger Words
@@ -436,9 +481,5 @@ const commonWords = [ "able", "about", "absolute", "accept", "account", "achieve
 
 // ****************** Functions *****************
 
-let triggerActivated = false;
-let triggeredBy = 0;
-let cooldownMsgSent = false;
-export function hypnoActivated() {
-    return triggerActivated;
-}
+//let triggerActivated = false;
+//let triggeredBy = 0;

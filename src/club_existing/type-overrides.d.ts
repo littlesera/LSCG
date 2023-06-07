@@ -16,7 +16,7 @@ interface LSCGMessageDictionaryEntry {
 
 type LSCGMessageModelType = "init" | "sync" | "command";
 
-type LSCGCommandName = "grab" | "release";
+type LSCGCommandName = "grab" | "release" | "remote";
 
 interface LSCGMessageModel {
     type: LSCGMessageModelType;

@@ -16,6 +16,7 @@ export interface SettingsModel {
 }
 
 export interface IPublicSettingsModel extends BaseSettingsModel {
+    Version: string;
     CollarModule: CollarPublicSettingsModel;
     HypnoModule: HypnoPublicSettingsModel;
     BoopsModule: BaseSettingsModel;
@@ -27,8 +28,29 @@ export interface IPublicSettingsModel extends BaseSettingsModel {
 
 export class PublicSettingsModel implements IPublicSettingsModel {
     enabled: boolean = false;
+    Version: string = LSCG_VERSION;
     CollarModule: CollarPublicSettingsModel = <CollarPublicSettingsModel>{chokeLevel: 0, enabled: false};
-    HypnoModule: HypnoPublicSettingsModel = <HypnoPublicSettingsModel>{activatedAt: 0, recoveredAt: 0, enabled: false};
+    HypnoModule: HypnoPublicSettingsModel = <HypnoPublicSettingsModel>{
+        enabled: false,
+        activatedAt: 0,
+        recoveredAt: 0,
+        cycleTime: 30,
+        enableCycle: true,
+        overrideMemberIds: "",
+        overrideWords: "",
+        allowLocked: false,
+        remoteAccess: false,
+        remoteAccessRequiredTrance: true,
+        limitRemoteAccessToHypnotizer: true,
+        allowRemoteModificationOfMemberOverride: false,
+        cooldownTime: 0,
+        enableArousal: false,
+        immersive: false,
+        triggerTime: 5,
+        locked: false,
+        hypnotized: false,
+        hypnotizedBy: 0,
+    };
     BoopsModule: BaseSettingsModel = <BaseSettingsModel>{enabled: false};
     LipstickModule: BaseSettingsModel = <BaseSettingsModel>{enabled: false};
     GlobalModule: BaseSettingsModel = <BaseSettingsModel>{enabled: false};

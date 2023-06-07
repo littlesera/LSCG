@@ -6,8 +6,9 @@ import { HypnoPublicSettingsModel } from "Settings/Models/hypno";
 import { InjectorPublicSettingsModel, InjectorSettingsModel } from "Settings/Models/injector";
 import { IPublicSettingsModel, PublicSettingsModel } from "Settings/Models/settings";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
-import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, setOrIgnoreBlush, isPhraseInString, hookFunction, getCharacter, drawSvg, SVG_ICONS, patchFunction, sendLSCGMessage } from "../utils";
+import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, setOrIgnoreBlush, isPhraseInString, hookFunction, getCharacter, drawSvg, SVG_ICONS, patchFunction, sendLSCGMessage, settingsSave } from "../utils";
 import { ActivityModule, GrabType } from "./activities";
+import { HypnoModule } from "./hypno";
 
 // Core Module that can handle basic functionality like server handshakes etc.
 // Maybe can consolidate things like hypnosis/suffocation basic state handling too..
@@ -50,7 +51,26 @@ export class CoreModule extends BaseModule {
             const Ghosted = (Player.GhostList ?? []).includes(C.MemberNumber!);
             const isAdmin = (Array.isArray(ChatRoomData?.Admin) && ChatRoomData?.Admin.includes(C.MemberNumber!))
             if (ModUser && ChatRoomHideIconState === 0 && !Ghosted) {
-                drawSvg(MainCanvas, SVG_ICONS.STAR, CharX + 410 * Zoom, CharY + 8 * Zoom, 40 * Zoom, 40 * Zoom, 50, 0.8, 1, isAdmin ? "#008080" : "#00AEAE");
+                var version = C.IsPlayer() ? LSCG_VERSION : (C as OtherCharacter).LSCG?.Version;
+                var starColor = isAdmin ? "#008080" : "#00AEAE";
+                if (version != LSCG_VERSION)
+                    starColor = "#ff4545";
+                drawSvg(MainCanvas, SVG_ICONS.STAR, CharX + 410 * Zoom, CharY + 8 * Zoom, 40 * Zoom, 40 * Zoom, 50, 0.8, 1, starColor);
+                if (MouseIn(CharX + 405 * Zoom, CharY + 3 * Zoom, 50 * Zoom, 50 * Zoom)) {
+                    var prevAlign = MainCanvas.textAlign;
+                    var prevFont = MainCanvas.font;
+                    var pad = 5;
+                    var TextX = CharX + 400 * Zoom;
+                    var TextY = CharY + 50 * Zoom;
+                    MainCanvas.textAlign = "left";
+                    MainCanvas.font = '16px Arial, sans-serif'
+                    var size = MainCanvas.measureText(version);
+                    DrawRect(TextX - size.actualBoundingBoxLeft - pad, TextY - size.actualBoundingBoxAscent - pad, size.actualBoundingBoxRight - size.actualBoundingBoxLeft + 2 * pad, size.actualBoundingBoxDescent + size.actualBoundingBoxAscent + 2 * pad, "#D7F6E9");
+                    DrawText(version, TextX, TextY, "Black");
+                    //MainCanvas.fillText(version, CharX + 420 * Zoom, CharY + 50*Zoom, 100*Zoom);
+                    MainCanvas.textAlign = prevAlign;
+                    MainCanvas.font = prevFont;
+                }
             }
         }, ModuleCategory.Core);
     }
@@ -109,6 +129,13 @@ export class CoreModule extends BaseModule {
                 break;
             case "release":
                 getModule<ActivityModule>("ActivityModule")?.IncomingRelease(Sender!, msg.command.args.find(a => a.name == "type")?.value as GrabType);
+                break;
+            case "remote":
+                if (Player.LSCG?.HypnoModule.remoteAccess) {
+                    Object.assign(Player.LSCG.HypnoModule, msg.settings?.HypnoModule);
+                    getModule<HypnoModule>("HypnoModule")?.initializeTriggerWord();
+                    settingsSave(true);
+                }
                 break;
         }
     }

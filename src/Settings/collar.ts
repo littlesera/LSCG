@@ -69,15 +69,15 @@ export class GuiCollar extends GuiSubscreen {
 		MainCanvas.textAlign = "left";
 
 		// Set/Update Collar	 	[Custom??]
-		DrawText("Update Collar:", GuiSubscreen.START_X, this.getYPos(6), "Black", "Gray");
+		DrawText("Update Collar:", this.getXPos(6), this.getYPos(6), "Black", "Gray");
 		MainCanvas.textAlign = "center";
-		DrawButton(GuiSubscreen.START_X + 600, this.getYPos(6) - 32, 200, 64, "Update", "White", undefined, "Update Collar to Current", !this.settings.enabled);
+		DrawButton(this.getXPos(6) + 600, this.getYPos(6) - 32, 200, 64, "Update", "White", undefined, "Update Collar to Current", !this.settings.enabled);
 
 		MainCanvas.textAlign = "left";
 		if (!!this.settings.collar) {
-			DrawText("Current Name: " + this.settings.collar.name, GuiSubscreen.START_X + 600, this.getYPos(6) + 60, "Gray", "Gray");
+			DrawText("Current Name: " + this.settings.collar.name, this.getXPos(6) + 600, this.getYPos(6) + 60, "Gray", "Gray");
 			if (!!this.settings.collar.creator && this.settings.collar.creator > 0)
-				DrawText("Current Crafter: " + this.settings.collar.creator, GuiSubscreen.START_X + 600, this.getYPos(6) + 110, "Gray", "Gray");
+				DrawText("Current Crafter: " + this.settings.collar.creator, this.getXPos(6) + 600, this.getYPos(6) + 110, "Gray", "Gray");
 		}
 		MainCanvas.textAlign = prev;
 	}
@@ -92,7 +92,7 @@ export class GuiCollar extends GuiSubscreen {
 		super.Click();
 
 		// Update Collar Button
-		if (MouseIn(GuiSubscreen.START_X + 600, this.getYPos(6) - 32, 200, 64)){
+		if (MouseIn(this.getXPos(6) + 600, this.getYPos(6) - 32, 200, 64)){
 			var collar = InventoryGet(Player, "ItemNeck");
 			if(!collar){
 				this.message = "No Collar Equipped";
