@@ -33,6 +33,8 @@ console.debug("LSCG: Parse start...");
         if (!!tags.latest) {
           console.log('\nUsing tag version: %s\n', tags.latest);
           LSCG_VERSION = tags.latest;
+        } else {
+          console.log('\nUnable to determine latest tag: %s\n', tags.latest);
         }
       });
       return `const LSCG_VERSION="${LSCG_VERSION}";`;
