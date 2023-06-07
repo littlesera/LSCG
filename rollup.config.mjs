@@ -28,6 +28,7 @@ console.debug("LSCG: Parse start...");
 `,
     intro: async () => {
       const git = simpleGit();
+      console.log(await git.status());
       let LSCG_VERSION = packageJson.version;
       await git.pull().tags((err, tags) => {
         if (!!tags.latest) {
