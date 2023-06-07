@@ -23,12 +23,12 @@ export class RemoteHypno extends RemoteGuiSubscreen {
 		var passTranceReq = (this.settings.remoteAccessRequiredTrance && this.settings.hypnotized) || !this.settings.remoteAccessRequiredTrance;
 		var passHypnotizerReq = (this.settings.limitRemoteAccessToHypnotizer && this.settings.hypnotizedBy == Player.MemberNumber) || !this.settings.limitRemoteAccessToHypnotizer;
 
-		return this.Character.IsOwnedByPlayer() ||
-			(this.settings.enabled && 
-			this.settings.remoteAccess &&
-			memberIdIsAllowed &&
-			passTranceReq &&
-			passHypnotizerReq)
+		return this.settings.remoteAccess && 
+				(this.Character.IsOwnedByPlayer() ||
+					(this.settings.enabled &&
+					memberIdIsAllowed &&
+					passTranceReq &&
+					passHypnotizerReq))
 	}
 
 	get icon(): string {
