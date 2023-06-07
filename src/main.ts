@@ -13,6 +13,7 @@ import { CoreModule } from 'Modules/core';
 import { RemoteUIModule } from 'Modules/remoteUI';
 import { CommandModule } from 'Modules/commands';
 import { ItemUseModule } from 'Modules/item-use';
+import { CommandModule } from 'Modules/commands';
 
 function initWait() {
 	console.debug("LSCG: Init wait");
