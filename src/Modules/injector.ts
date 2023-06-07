@@ -547,7 +547,7 @@ export class InjectorModule extends BaseModule {
 
     Brainwash() {
         this.brainwashed = true;
-        SendAction("%NAME%'s body goes limp as %POSSESSIVE% mind empties and %PRONOUN% awaits a commands.");
+        SendAction("%NAME%'s body goes limp as %POSSESSIVE% mind empties and %PRONOUN% awaits a command.");
         if (!!this.hypnoModule)
             this.hypnoModule.SetEyes();
     }
