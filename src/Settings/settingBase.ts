@@ -50,6 +50,10 @@ export abstract class GuiSubscreen {
 		return false;
 	}
 
+	get disabledReason(): string {
+		return "Setting is unavailable."
+	}
+
 	get enabled(): boolean {
 		return true;
 	}

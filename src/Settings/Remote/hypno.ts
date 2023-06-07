@@ -15,6 +15,24 @@ export class RemoteHypno extends RemoteGuiSubscreen {
 		return this.settings.overrideMemberIds?.split(",").map(id => +id).filter(id => id > 0) ?? [];
 	}
 
+	get disabledReason(): string {
+		var memberIdIsAllowed = ServerChatRoomGetAllowItem(Player, this.Character);
+		if (this.overrideMemberIds.length > 0)
+			memberIdIsAllowed = this.overrideMemberIds.indexOf(Player.MemberNumber!) > -1;
+
+		var passTranceReq = (this.settings.remoteAccessRequiredTrance && this.settings.hypnotized) || !this.settings.remoteAccessRequiredTrance;
+		var passHypnotizerReq = (this.settings.limitRemoteAccessToHypnotizer && this.settings.hypnotizedBy == Player.MemberNumber) || !this.settings.limitRemoteAccessToHypnotizer;
+
+		if (!memberIdIsAllowed)
+			return "You do not have access to their mind...";
+		if (!passTranceReq)
+			return "They have too much willpower to let you in...";
+		if (!passHypnotizerReq)
+			return "Someone else seems to have a firm grip on them for now...";
+		else
+			return "Setting is Unavailable";
+	}
+
 	get enabled(): boolean {
 		var memberIdIsAllowed = ServerChatRoomGetAllowItem(Player, this.Character);
 		if (this.overrideMemberIds.length > 0)

@@ -201,18 +201,19 @@ export class HypnoModule extends BaseModule {
         let lastCycleCheck = 0;
         hookFunction('TimerProcess', 1, (args, next) => {
             if (ActivityAllowed()) {
+                var now = CommonTime();
                 let triggerTimer = (this.settings.triggerTime ?? 5) * 60000;
                 let hypnoEnd = this.settings.activatedAt + triggerTimer;
-                if (this.hypnoActivated && this.settings.triggerTime > 0 && hypnoEnd < CurrentTime) {
+                if (this.hypnoActivated && this.settings.triggerTime > 0 && hypnoEnd < now) {
                     // Hypno Timeout --
                     this.TriggerRestoreTimeout();
                 }
-                if (this.hypnoActivated && (lastHornyCheck + triggerTimer/100) > CurrentTime) {
-                    lastHornyCheck = CurrentTime;
+                if (this.hypnoActivated && (lastHornyCheck + triggerTimer/100) > now) {
+                    lastHornyCheck = now;
                     this.HypnoHorny();
                 }
-                if (!this.hypnoActivated && (lastCycleCheck + 5000) > CurrentTime) {
-                    lastCycleCheck = CurrentTime;
+                if (!this.hypnoActivated && (lastCycleCheck + 5000) > now) {
+                    lastCycleCheck = now;
                     this.CheckNewTrigger();
                 }
             }
@@ -328,8 +329,7 @@ export class HypnoModule extends BaseModule {
 
         this.cooldownMsgSent = false;
         this.settings.hypnotizedBy = memberNumber;
-        if (this.settings.activatedAt == 0)
-            this.settings.activatedAt = CurrentTime;
+        this.settings.activatedAt = CommonTime();
         if (!AudioShouldSilenceSound(true))
             AudioPlaySoundEffect("SciFiEffect", 1);
         this.hypnoActivated = true;
@@ -420,7 +420,7 @@ export class HypnoModule extends BaseModule {
     }
 
     TriggerRestoreTimeout() {
-        SendAction("%NAME% gasps, blinking with confusion and blushing.");
+        SendAction("%NAME% gasps, blinking and blushing with confusion.");
         this.TriggerRestore();
     }
 
@@ -451,7 +451,8 @@ export class HypnoModule extends BaseModule {
     CheckNewTrigger() {
         if (this.hypnoActivated || !this.settings.enableCycle)
             return;
-        if (this.settings.activatedAt > 0 && CurrentTime - this.settings.activatedAt > (Math.max(1, this.settings.cycleTime || 0) * 60000))
+        var cycleAtTime = Math.max(this.settings.activatedAt, this.settings.recoveredAt) + (Math.max(1, this.settings.cycleTime || 0) * 60000)
+        if (cycleAtTime < CommonTime())
             this.RollTriggerWord();
     }
 
@@ -460,7 +461,6 @@ export class HypnoModule extends BaseModule {
         if (newTrigger != this.settings.trigger)
             SendAction("%NAME% concentrates, breaking the hold the previous trigger word held over %POSSESSIVE%.");
         this.settings.trigger = newTrigger;
-        this.settings.activatedAt = 0;
         settingsSave();
     }
 

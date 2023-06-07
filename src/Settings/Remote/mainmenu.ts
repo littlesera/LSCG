@@ -51,12 +51,13 @@ export class RemoteMainMenu extends RemoteGuiSubscreen {
 			const PY = i % 6;
 
 			const isDisabled = !screen.enabled;
+			const reason = screen.disabledReason;
 
 			// Skip disabled screens for the time being
 			if (screen.name == "MainMenu" || screen.hidden) continue;
 
 			DrawButton(150 + 430 * PX, 190 + 120 * PY, 450, 90, "", isDisabled ? "#ddd" : "White", screen.icon,
-				isDisabled ? "Setting is deactivated" : "", isDisabled);
+				isDisabled ? reason : "", isDisabled);
 			MainCanvas.textAlign = "left";
 			DrawTextFit(screen.name, 250 + 430 * PX, 235 + 120 * PY, 340, "Black");
 			MainCanvas.textAlign = "center";
