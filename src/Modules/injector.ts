@@ -429,7 +429,7 @@ export class InjectorModule extends BaseModule {
     brainwashInjectStr = [
         "%NAME% whimpers and struggles to keep control of %POSSESSIVE% mind.",
         "%NAME% gasps weakly as %OPP_NAME%'s drug slowly erases %POSSESSIVE% free will.",
-        "%NAME%'s eyes struggle to focus as %OPP_NAME%'s drug makes %POSSESSIVE% more suggestable"
+        "%NAME%'s eyes struggle to focus as %OPP_NAME%'s drug makes %POSSESSIVE% more suggestable."
     ];
 
     InjectMindControl(sender: Character, location: AssetGroupItemName) {
