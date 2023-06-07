@@ -43,6 +43,11 @@ export class CollarModule extends BaseModule {
         };
     }
 
+    safeword(): void {
+        this.handChokeModifier = 0;
+        this.ResetChoke();
+    }
+
     load(): void {
         CommandCombine([
             {

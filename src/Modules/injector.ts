@@ -76,6 +76,10 @@ export class InjectorModule extends BaseModule {
         return GuiInjector;
     }
     
+    safeword(): void {
+        this._doCure();
+    }
+
     load(): void {
         // CommandCombine([
         //     {
@@ -340,9 +344,9 @@ export class InjectorModule extends BaseModule {
 
         hookFunction('ChatRoomSync', 1, (args, next) => {
             if (this.brainwashed)
-                this.hypnoModule?.EnforceEyes();
+                setTimeout(() => this.hypnoModule?.EnforceEyes());
             else if (this.asleep)
-                this.miscModule?.SetSleepExpression();
+                setTimeout(() => this.miscModule?.SetSleepExpression());
             return next(args);
         })
     }
@@ -475,10 +479,14 @@ export class InjectorModule extends BaseModule {
     ];
 
     InjectCure(sender: Character, location: AssetGroupItemName) {
+        SendAction(this.cureInjectStr[getRandomInt(this.cureInjectStr.length)], sender);
+        this._doCure();
+    }
+
+    _doCure() {
         this.sedativeLevel = 0;
         this.mindControlLevel = 0;
         this.hornyLevel = 0;
-        SendAction(this.cureInjectStr[getRandomInt(this.cureInjectStr.length)], sender);
         if (this.asleep) this.Wake();
         if (this.brainwashed) this.SnapBack();
     }

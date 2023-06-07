@@ -46,6 +46,13 @@ export interface ActivityBundle extends ActivityBundleBase {
 export type GrabType = "hand"  | "ear" | "tongue"
 
 export class ActivityModule extends BaseModule {
+    safeword(): void {
+        this.earPinchedByMember = null;
+        this.earPinchingMemberList = [];
+        this.handHoldingMemberList = [];
+        this.customGagged = false;
+    }
+
     load(): void {
         hookFunction("ServerSend", 100, (args, next) => {
             if (args[0] == "ChatRoomChat" && args[1]?.Type == "Activity"){

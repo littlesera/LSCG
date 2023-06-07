@@ -60,4 +60,8 @@ export abstract class BaseModule {
 	reload() {
 		// Empty
 	}
+
+	safeword() {
+		// Empty
+	}
 }

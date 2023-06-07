@@ -23,6 +23,10 @@ export class MiscModule extends BaseModule {
         };
     }
 
+    safeword(): void {
+        this._removeChloroform();
+    }
+
     load(): void {
         // Kneel on lap sit
         OnActivity(100, ModuleCategory.Misc, (data, sender, msg, metadata) => {
@@ -258,9 +262,14 @@ export class MiscModule extends BaseModule {
 
     RemoveChloroform_2() {
         SendAction("%NAME%'s eyes flutter and start to open sleepily...");
+        this._removeChloroform();
+    }
+
+    _removeChloroform() {
         this.isChloroformed = false;
         clearInterval(this.eyesInterval);
         CharacterSetFacialExpression(Player, "Eyes", "Dazed");
+        CharacterSetFacialExpression(Player, "Emoticon", null);
         setOrIgnoreBlush("Medium");
     }
 

@@ -111,6 +111,20 @@ function init_modules(): boolean {
 		m.run();
 	}
 
+	hookFunction("ChatRoomSafewordRevert", 1, (args, next) => {
+		for (const m of modules()) {
+			m.safeword();
+		}
+		return next(args);
+	});
+
+	hookFunction("ChatRoomSafewordRelease", 1, (args, next) => {
+		for (const m of modules()) {
+			m.safeword();
+		}
+		return next(args);
+	});
+
 	console.info("LSCG Modules Loaded.");
 	return true;
 }

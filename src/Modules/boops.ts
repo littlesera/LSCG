@@ -4,6 +4,7 @@ import { BaseSettingsModel } from "Settings/Models/base";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
 import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, setOrIgnoreBlush } from "../utils";
 import { HypnoModule } from "./hypno";
+import { MiscModule } from "./misc";
 
 export class BoopsModule extends BaseModule {
     boops: number = 0;
@@ -46,7 +47,7 @@ export class BoopsModule extends BaseModule {
     }
 
     get IsIncapacitated(): boolean {
-        return Player.LSCG?.HypnoModule?.hypnotized || Player.LSCG?.InjectorModule?.asleep || Player.LSCG?.InjectorModule?.brainwashed;
+        return Player.LSCG?.HypnoModule?.hypnotized || Player.LSCG?.InjectorModule?.asleep || Player.LSCG?.InjectorModule?.brainwashed || getModule<MiscModule>("MiscModule")?.isChloroformed;
     }
 
     normalBoopReactions = [

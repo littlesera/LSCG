@@ -11,6 +11,10 @@ export class LipstickModule extends BaseModule {
         };
     }
 
+    safeword(): void {
+        this.RemoveKissMark("all");
+    }
+
     load(): void {
         OnActivity(100, ModuleCategory.Lipstick, (data, sender, msg, metadata) => {
             if (!this.Enabled)
@@ -117,9 +121,9 @@ export class LipstickModule extends BaseModule {
             "f" + (status.forehead ? "1" : "0") + 
             "n" + (status.neck1 ? "1" : "0") + 
             "l" + (status.neck2 ? "1" : "0");
-    }
-    
-    RemoveKissMark(location: string) {
+    }    
+
+    RemoveKissMark(location: "cheek" | "forehead" | "neck" | "all") {
         var marks = this.getExistingLipstickMarks();
         if (!marks)
             return;
@@ -138,6 +142,13 @@ export class LipstickModule extends BaseModule {
                 status.neck1 = false;
                 status.neck2 = false;
                 break;
+            case "all" :
+                this.removeGagKissMark();
+                status.cheek1 = false;
+                status.cheek2 = false;
+                status.forehead = false;
+                status.neck1 = false;
+                status.neck2 = false;
             default :
                 break;
         }

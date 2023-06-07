@@ -35,6 +35,10 @@ export class HypnoModule extends BaseModule {
         };
     }
 
+    safeword(): void {
+        this._resetHypno();
+    }
+
     load(): void {
         CommandCombine([
             {
@@ -424,10 +428,14 @@ export class HypnoModule extends BaseModule {
         this.TriggerRestore();
     }
 
-    TriggerRestore() {
-        this.ResetEyes();
+    TriggerRestore() {        
         if (!AudioShouldSilenceSound(true))
             AudioPlaySoundEffect("SpankSkin");
+        this._resetHypno();
+    }
+
+    _resetHypno() {
+        this.ResetEyes();
         CharacterSetFacialExpression(Player, "Eyes", null);
         this.hypnoActivated = false;
         this.settings.recoveredAt = new Date().getTime();
