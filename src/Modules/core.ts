@@ -60,7 +60,7 @@ export class CoreModule extends BaseModule {
                     var prevAlign = MainCanvas.textAlign;
                     var prevFont = MainCanvas.font;
                     var pad = 5;
-                    var TextX = CharX + 400 * Zoom;
+                    var TextX = CharX + 390 * Zoom;
                     var TextY = CharY + 50 * Zoom;
                     MainCanvas.textAlign = "left";
                     MainCanvas.font = '16px Arial, sans-serif'
