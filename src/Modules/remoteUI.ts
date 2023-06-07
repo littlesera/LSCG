@@ -65,8 +65,8 @@ export class RemoteUIModule extends BaseModule {
 			const C = this.getInformationSheetCharacter();
             if (!!C && this.characterHasMod(C as OtherCharacter) && !C.IsPlayer()) {
                 const playerHasAccessToCharacter = this.playerHasAccessToCharacter(C as OtherCharacter);
-                DrawButton(90, 60, 45, 45, "", playerHasAccessToCharacter ? "White" : "#ddd", "", playerHasAccessToCharacter ? "LSCG Remote Settings" : "Needs BC item permission", !playerHasAccessToCharacter);
-                DrawImageResize(ICONS.REMOTE, 90, 60, 45, 45);
+                DrawButton(90, 60, 60, 60, "", playerHasAccessToCharacter ? "White" : "#ddd", "", playerHasAccessToCharacter ? "LSCG Remote Settings" : "Needs BC item permission", !playerHasAccessToCharacter);
+                DrawImageResize(ICONS.REMOTE, 95, 65, 50, 50);
             }
 		}, ModuleCategory.RemoteUI);
 
@@ -77,7 +77,7 @@ export class RemoteUIModule extends BaseModule {
 
 			const C = this.getInformationSheetCharacter();
             const playerHasAccessToCharacter = this.playerHasAccessToCharacter(C as OtherCharacter);
-			if (MouseIn(90, 60, 45, 45) && playerHasAccessToCharacter) {
+			if (MouseIn(90, 60, 60, 60) && playerHasAccessToCharacter) {
                 this.currentSubscreen = new RemoteMainMenu(this, C as OtherCharacter);
 			} else {
 				return next(args);
