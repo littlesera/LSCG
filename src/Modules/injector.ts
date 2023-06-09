@@ -28,6 +28,8 @@ const locationObj = {
     "ItemFeet": .8
 };
 
+type GagDrinkAccess = "nothing" | "blocked" | "open";
+
 export class InjectorModule extends BaseModule {
     
     sleepyGame: SleepyMiniGame = registerMiniGame(new SleepyMiniGame(this));
@@ -229,7 +231,63 @@ export class InjectorModule extends BaseModule {
                 },
                 CustomImage: "Assets/Female3DCG/ItemDevices/Preview/Net.png"
             });
-        }
+
+            this.activityModule.AddActivity({
+                Activity: <Activity>{
+                    Name: "ForceDrink",
+                    MaxProgress: 50,
+                    MaxProgressSelf: 50,
+                    Prerequisite: ["UseHands"]
+                },
+                Targets: [
+                    {
+                        Name: "ItemArms",
+                        SelfAllowed: true,
+                        TargetLabel: "Shoot Netgun",
+                        TargetAction: "SourceCharacter takes aim at TargetCharacter with their net gun.",
+                        TargetSelfAction: "SourceCharacter turns their netgun on themselves!"
+                    }
+                ],
+                CustomPrereqs: [
+                    {
+                        Name: "TargetCanDrink",
+                        Func: (acting, acted, group) => {
+                            // var mouthItems = [
+                            //     InventoryGet(acted, "ItemMouth"),
+                            //     InventoryGet(acted, "ItemMouth2"),
+                            //     InventoryGet(acted, "ItemMouth3"),
+                            // ].filter(g => !!g);
+                            // let stuffedGags = [
+                            //     "ClothStuffing",
+                            //     "PantyStuffing",
+                            //     "SockStuffing",
+                            //     "LargeDildo"
+                            // ];
+                            // let drankableGags = [
+                            //     ["LipGag"],
+                            //     ["RingGag"],
+                            //     ["SpiderGag"],
+                            //     ["FunnelGag", "Funnel"],
+                            //     ["DildoPlugGag", null],
+                            //     ["OTNPlugGag", null],
+                            //     ["DentalGag", null],
+                            //     ["PlugGag", null],
+
+                            // ];
+                            return this.GetGagDrinkAccess(acted) == "open" || this.GetGagDrinkAccess(acted) == "nothing";
+                        }
+                    }
+                ],
+                CustomAction: <CustomAction>{
+                    Func: (target, args, next) => {
+                        if (!target || this.GetGagDrinkAccess(target) == "blocked")
+                            return next(args);
+                        //this.gat
+                    }
+                },
+                CustomImage: "Assets/Female3DCG/ItemHandheld/Preview/GlassFilled.png"
+            });
+        }        
 
         this.activityModule.AddCustomPrereq(<CustomPrerequisite>{
             Name: "InjectorIsNotNetgun", 
@@ -241,6 +299,33 @@ export class InjectorModule extends BaseModule {
 
     unload(): void {
         removeAllHooksByModule(ModuleCategory.Injector);
+    }
+
+    GetGagDrinkAccess(C: Character): GagDrinkAccess {
+        var mouthItems = [
+            InventoryGet(C, "ItemMouth"),
+            InventoryGet(C, "ItemMouth2"),
+            InventoryGet(C, "ItemMouth3"),
+        ].filter(g => !!g);
+        let gagOverrideAllowChecks = [
+            ["FunnelGag", "Funnel"]
+        ];
+
+        var overrideGag = mouthItems.find(gag => gagOverrideAllowChecks.map(o => o[0]).indexOf(gag?.Asset.Name!) > -1);
+        if (!!overrideGag) {
+            let check = gagOverrideAllowChecks.find(x => x[0] == overrideGag?.Asset.Name);
+            if (!!check && (check.length == 1 || check[1] == overrideGag.Property?.Type))
+                return "open";
+        }
+
+        let blocked = C.IsMouthBlocked();
+        let isOpen = C.IsMouthOpen();
+        if (blocked)
+            return "blocked";
+        else if (!blocked && isOpen)
+            return "open";
+        else
+            return "nothing";        
     }
 
     InitializeRestrictiveHooks() {
