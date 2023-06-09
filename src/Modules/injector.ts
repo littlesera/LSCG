@@ -11,9 +11,12 @@ import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, setOrIgno
 import { ActivityBundle, ActivityModule, CustomAction, CustomPrerequisite } from "./activities";
 import { HypnoModule } from "./hypno";
 import { MiscModule } from "./misc";
+import { ItemUseModule } from "./item-use";
+
+type DrugType = "sedative" | "mindcontrol" | "horny" | "antidote";
 
 export interface DrugLevel {
-    type: "sedative" | "mindcontrol" | "horny";
+    type: DrugType;
     level: number;
     max: number;
 }
@@ -27,6 +30,8 @@ const locationObj = {
     "ItemLegs": 1, 
     "ItemFeet": .8
 };
+
+type GagDrinkAccess = "nothing" | "blocked" | "open";
 
 export class InjectorModule extends BaseModule {
     
@@ -77,7 +82,7 @@ export class InjectorModule extends BaseModule {
     }
     
     safeword(): void {
-        this._doCure();
+        this.DoCure();
     }
 
     load(): void {
@@ -125,6 +130,14 @@ export class InjectorModule extends BaseModule {
             if (target == Player.MemberNumber && activityName == "Inject" && !!sender) {
                 var location = <AssetGroupItemName>data.Dictionary[2]?.FocusGroupName;
                 this.ProcessInjection(sender, location);
+            }
+            else if (target == Player.MemberNumber && activityName == "SipItem" && !!sender) {
+                let gagType = this.GetGagDrinkAccess(Player);
+                if (gagType == "nothing" && sender.MemberNumber != Player.MemberNumber && this.IsDrugAllowed(sender)) {
+                    this.TryForceDrink(sender);
+                } else {
+                    this.ProcessDruggedDrink(sender);
+                }
             } else if (target == Player.MemberNumber) {
                 if (data.Content == "ChatOther-ItemNose-Pet" && this.settings.allowBoopRestore) {
                     if (this.asleep) this.Wake();
@@ -229,7 +242,7 @@ export class InjectorModule extends BaseModule {
                 },
                 CustomImage: "Assets/Female3DCG/ItemDevices/Preview/Net.png"
             });
-        }
+        }        
 
         this.activityModule.AddCustomPrereq(<CustomPrerequisite>{
             Name: "InjectorIsNotNetgun", 
@@ -317,9 +330,11 @@ export class InjectorModule extends BaseModule {
             return next(args);
         }, ModuleCategory.Injector);
 
+        let _lastTick: number = CommonTime();
         hookFunction('TimerProcess', 1, (args, next) => {
-            if (ActivityAllowed() && this.hornyLevel > 0 && this.hornyLastBumped + this.settings.hornyTickTime < CurrentTime) {
-                this.hornyLastBumped = CurrentTime;
+            let now = CommonTime();
+            if (ActivityAllowed() && this.hornyLevel > 0 && this.hornyLastBumped + this.settings.hornyTickTime < now) {
+                this.hornyLastBumped = now;
                 var newProgress = (Player.ArousalSettings?.Progress ?? 0) + (this.hornyLevel/this.drugLevelMultiplier) * 4;
                 newProgress = Math.min(99, newProgress);
                 if (getRandomInt(this.hornyLevelMax) <= Math.floor(this.hornyLevel/this.drugLevelMultiplier)) {
@@ -328,6 +343,10 @@ export class InjectorModule extends BaseModule {
                 }
                 ActivitySetArousal(Player, newProgress);
             }
+            // if (_lastTick + 400 < now) {
+            //     _lastTick = now;
+            //     this.ProcessGradualLevels();
+            // }
             return next(args);
         }, ModuleCategory.Injector);
 
@@ -377,6 +396,13 @@ export class InjectorModule extends BaseModule {
     get hornyLevelMax(): number {return this.settings.hornyLevelMax};
     set hornyLevelMax(val: number) {if (this.settings.hornyLevelMax != val) {this.settings.hornyLevelMax = val; settingsSave(true);}}
 
+    _targetSedativeLevel: number = 0;
+    get targetSedativeLevel(): number {return Math.max(this.sedativeLevel, this._targetSedativeLevel)};
+    _targetMindControlLevel: number = 0;
+    get targetMindControlLevel(): number {return Math.max(this.mindControlLevel, this._targetMindControlLevel)};
+    _targetHornyLevel: number = 0;
+    get targetHornyLevel(): number {return Math.max(this.hornyLevel, this._targetHornyLevel)};
+
     sedativeCooldownInterval: number = 0;
     mindControlCooldownInterval: number = 0;
     hornyCooldownInterval: number = 0;
@@ -385,49 +411,111 @@ export class InjectorModule extends BaseModule {
 
     InjectionLocationTable: Map<string, number> = new Map<string, number>(Object.entries(locationObj))
 
+    GetDrugTypes(item: CraftingItem): DrugType[] {
+        var name = item.Name;
+        var description = item.Description;
+        var totalString = name + " | " + description;
+
+        var types: DrugType[] = [];
+
+        if (this.settings.sedativeKeywords?.some(ph => isPhraseInString(totalString, ph)))
+            types.push("sedative");
+        if (this.settings.mindControlKeywords?.some(ph => isPhraseInString(totalString, ph)))
+            types.push("mindcontrol");
+        if (this.settings.hornyKeywords?.some(ph => isPhraseInString(totalString, ph)))
+            types.push("horny");
+        if (this.settings.cureKeywords?.some(ph => isPhraseInString(totalString, ph)))
+            types.push("antidote");
+
+        return types;
+    }
+
+    IsDrugAllowed(sender: Character): boolean {
+        var asset = InventoryGet(sender, "ItemHandheld");
+        if (!asset?.Craft)
+            return false;
+        let types = this.GetDrugTypes(asset.Craft!);
+        if ((types.indexOf("sedative") > -1 && this.settings.enableSedative) ||
+            (types.indexOf("mindcontrol") > -1 && this.settings.enableMindControl) ||
+            (types.indexOf("horny") > -1 && this.settings.enableHorny) ||
+            (types.indexOf("antidote") > -1))
+            return true;
+        
+        return false;
+    }
+
+    ProcessDruggedDrink(sender: Character) {
+        var asset = InventoryGet(sender, "ItemHandheld");
+        if (!asset?.Craft)
+            return;
+        let types = this.GetDrugTypes(asset.Craft!);
+        if (types.indexOf("sedative") > -1 && this.settings.enableSedative)
+            this.DrinkSedative(sender);
+        if (types.indexOf("mindcontrol") > -1 && this.settings.enableMindControl)
+            this.DrinkMindContrll(sender);
+        if (types.indexOf("horny") > -1 && this.settings.enableHorny)
+            this.DrinkHorny(sender);
+        if (types.indexOf("antidote") > -1)
+            this.DrinkCure(sender);
+    }
+
     ProcessInjection(sender: Character, location: AssetGroupItemName) {
         var asset = InventoryGet(sender, "ItemHandheld");
         if (!asset?.Craft)
             return;
+
+        let types = this.GetDrugTypes(asset.Craft!);
         
-        var name = asset.Craft.Name;
-        var description = asset.Craft.Description;
-        var totalString = name + " | " + description;
-
-        var isSedative = this.settings.sedativeKeywords?.some(ph => isPhraseInString(totalString, ph));
-        var isMindControl = this.settings.mindControlKeywords?.some(ph => isPhraseInString(totalString, ph));
-        var isHorny = this.settings.hornyKeywords?.some(ph => isPhraseInString(totalString, ph));
-        var isCure = this.settings.cureKeywords?.some(ph => isPhraseInString(totalString, ph));
-
-        if (!AudioShouldSilenceSound(true))
+        if (!AudioShouldSilenceSound(true) && types.length > 0)
             AudioPlayInstantSound(AUDIO.INJECTION, getPlayerVolume(0));
 
-        if (isSedative && this.settings.enableSedative)
+        if (types.indexOf("sedative") > -1 && this.settings.enableSedative)
             this.InjectSedative(sender, location);
-        if (isMindControl && this.settings.enableMindControl)
+        if (types.indexOf("mindcontrol") > -1 && this.settings.enableMindControl)
             this.InjectMindControl(sender, location);
-        if (isHorny && this.settings.enableHorny)
+        if (types.indexOf("horny") > -1 && this.settings.enableHorny)
             this.InjectHorny(sender, location);
-        if (isCure)
+        if (types.indexOf("antidote") > -1)
             this.InjectCure(sender, location);
     }
 
     sedativeInjectStr = [
-        "%NAME% sighs as a cool relaxing calm glides through %POSSESSIVE% body, fighting to keep %POSSESSIVE% eyes open.",
-        "%NAME%'s muscle relax as %OPP_NAME%'s sedative courses through %POSSESSIVE% body",
+        "%NAME% gulps and swallows %OPP_NAME%'s drink, a cool relaxing feeling starting to spread through %POSSESSIVE% body.",
+        "%NAME%'s muscle relax as %OPP_NAME%'s sedative courses through %POSSESSIVE% body.",
         "%NAME% fights to stay conscious against the relentless weight of %OPP_NAME%'s drug."
-    ];    
+    ];
 
-    InjectSedative(sender: Character, location: AssetGroupItemName) {
-        var additive = this.drugLevelMultiplier * (this.InjectionLocationTable.get(location) ?? 1)
-        this.sedativeLevel = Math.min(this.sedativeLevel + additive, this.sedativeMax * this.drugLevelMultiplier);
-        SendAction(this.sedativeInjectStr[getRandomInt(this.sedativeInjectStr.length)], sender);
-        DrawFlashScreen("#5C5CFF", 1000, this.sedativeLevel * 2);
+    sedativeDrinkStr = [
+        "%NAME% sighs as a cool relaxing calm glides down %POSSESSIVE% throat, fighting to keep %POSSESSIVE% eyes open.",
+        "%NAME%'s muscle relax as %OPP_NAME%'s sedative pours down %POSSESSIVE% throat and starts to take effect.",
+        "%NAME%'s eyes droop as %POSSESSIVE% fights to stay conscious against the cool, welcoming weight of %OPP_NAME%'s drug."
+    ];
+
+    AddSedative(multiplier: number, gradual: boolean = false) {
+        var additive = this.drugLevelMultiplier * multiplier;
+        var newLevel = Math.min(this.sedativeLevel + additive, this.sedativeMax * this.drugLevelMultiplier);
+        // if (gradual)
+        //     this._targetSedativeLevel = newLevel;
+        // else
+        this.sedativeLevel = newLevel;
 
         if (!this.asleep) {
             MiniGameStart(this.sleepyGame.name, ((this.sedativeLevel / this.drugLevelMultiplier) * 8), "LSCG_InjectEnd_Sedative");
         }
         CurrentModule = "Online";
+    }
+
+    DrinkSedative(sender: Character) {
+        this.AddSedative(2, true);
+        SendAction(this.sedativeDrinkStr[getRandomInt(this.sedativeDrinkStr.length)], sender);
+    }
+
+    InjectSedative(sender: Character, location: AssetGroupItemName) {
+        this.AddSedative(this.InjectionLocationTable.get(location) ?? 1);
+        SendAction(this.sedativeInjectStr[getRandomInt(this.sedativeInjectStr.length)], sender);
+        DrawFlashScreen("#5C5CFF", 1000, this.sedativeLevel * 2);
+
+        
     }
 
     brainwashInjectStr = [
@@ -436,16 +524,35 @@ export class InjectorModule extends BaseModule {
         "%NAME%'s eyes struggle to focus as %OPP_NAME%'s drug makes %POSSESSIVE% more suggestable."
     ];
 
-    InjectMindControl(sender: Character, location: AssetGroupItemName) {
-        var additive = this.drugLevelMultiplier * (this.InjectionLocationTable.get(location) ?? 1)
-        this.mindControlLevel = Math.min(this.mindControlLevel + additive, this.mindControlMax * this.drugLevelMultiplier);
-        SendAction(this.brainwashInjectStr[getRandomInt(this.brainwashInjectStr.length)], sender);
-        DrawFlashScreen("#A020F0", 1000, this.mindControlLevel * 2);
+    brainwashDrinkStr = [
+        "%NAME% starts to drift dreamily as they swallow %OPP_NAME%'s drink.",
+        "%NAME% gasps weakly and starts to lose focus as %OPP_NAME%'s drug warms %POSSESSIVE% comfortably.",
+        "%NAME%'s eyes flutter and unfocus as %OPP_NAME%'s drink slides warmly down %POSSESSIVE% throat."
+    ];
+
+    AddMindControl(multiplier: number, gradual: boolean = false) {
+        var additive = this.drugLevelMultiplier * multiplier
+        var newLevel = Math.min(this.mindControlLevel + additive, this.mindControlMax * this.drugLevelMultiplier);
+        // if (gradual)
+        //     this._targetMindControlLevel = newLevel;
+        // else
+        this.mindControlLevel = newLevel;
 
         if (!this.brainwashed) {
             MiniGameStart(this.brainWashGame.name, ((this.mindControlLevel / this.drugLevelMultiplier) * 8), "LSCG_InjectEnd_Brainwash");
         }
         CurrentModule = "Online";
+    }
+
+    DrinkMindContrll(sender: Character) {
+        this.AddMindControl(2, true);
+        SendAction(this.brainwashDrinkStr[getRandomInt(this.brainwashDrinkStr.length)], sender);
+    }
+
+    InjectMindControl(sender: Character, location: AssetGroupItemName) {
+        this.AddMindControl(this.InjectionLocationTable.get(location) ?? 1);
+        SendAction(this.brainwashInjectStr[getRandomInt(this.brainwashInjectStr.length)], sender);
+        DrawFlashScreen("#A020F0", 1000, this.mindControlLevel * 2);
     }
 
     hornyInjectStr = [
@@ -454,22 +561,39 @@ export class InjectorModule extends BaseModule {
         "%NAME% quivers as %POSSESSIVE% body is flooded with %OPP_NAME%'s aphrodisiac." 
     ];
 
-    InjectHorny(sender: Character, location: AssetGroupItemName) {
-        var additive = this.drugLevelMultiplier * (this.InjectionLocationTable.get(location) ?? 1)
+    hornyDrinkStr = [
+        "%NAME% lets out a long low moan as %OPP_NAME%'s drink burns pleasurably down their throat.",
+        "%NAME%'s eyes roll back as a wave of pleasure eminates from %POSSESSIVE% belly.",
+        "%NAME% gulps and quivers as %POSSESSIVE% body is slowly flooded with %OPP_NAME%'s aphrodisiac." 
+    ];
+
+    AddHorny(multiplier: number, gradual: boolean = false) {
+        var additive = this.drugLevelMultiplier * multiplier
         let newLevelActual = this.hornyLevel + additive;
+        // if (gradual)
+        //     this._targetHornyLevel = newLevelActual;
+        // else {
         this.hornyLevel = Math.min(newLevelActual, this.hornyLevelMax * this.drugLevelMultiplier);
-        
-        SendAction(this.hornyInjectStr[getRandomInt(this.hornyInjectStr.length)], sender);
-        DrawFlashScreen("#FF647F", 1000, this.hornyLevel * 2);
-        
-        if (newLevelActual >= this.hornyLevelMax * this.drugLevelMultiplier && Player.ArousalSettings?.Progress! > 50) {
+        if (newLevelActual >= this.hornyLevelMax * this.drugLevelMultiplier) {
             ActivityOrgasmPrepare(Player);
             this.hornyLevel -= this.drugLevelMultiplier;
-        }
+            }
+        //}
 
         if (!!(<any>Player).BCT?.splitOrgasmArousal?.arousalProgress) {
             (<any>Player).BCT.splitOrgasmArousal.arousalProgress = 100;
         }
+    }
+
+    DrinkHorny(sender: Character) {
+        this.AddHorny(2);
+        SendAction(this.hornyDrinkStr[getRandomInt(this.hornyDrinkStr.length)], sender);
+    }
+
+    InjectHorny(sender: Character, location: AssetGroupItemName) {
+        this.AddHorny(this.InjectionLocationTable.get(location) ?? 1);
+        SendAction(this.hornyInjectStr[getRandomInt(this.hornyInjectStr.length)], sender);
+        DrawFlashScreen("#FF647F", 1000, this.hornyLevel * 2);
     }
 
     cureInjectStr = [
@@ -478,12 +602,23 @@ export class InjectorModule extends BaseModule {
         "%OPP_NAME%'s drug rushes warmly through %NAME%'s body, curing what ailes %POSSESSIVE%." 
     ];
 
-    InjectCure(sender: Character, location: AssetGroupItemName) {
-        SendAction(this.cureInjectStr[getRandomInt(this.cureInjectStr.length)], sender);
-        this._doCure();
+    cureDrinkStr = [
+        "%NAME% gulps thankfully as %OPP_NAME%'s medicine slowly heals %POSSESSIVE%.",
+        "%NAME%'s body glows slightly as %OPP_NAME%'s cure glides warmly through %POSSESSIVE%.",
+        "%OPP_NAME%'s antidote slowly washes through %NAME%'s body, curing what ailes %POSSESSIVE%." 
+    ];
+
+    DrinkCure(sender: Character) {
+        SendAction(this.cureDrinkStr[getRandomInt(this.cureDrinkStr.length)], sender);
+        this.DoCure();
     }
 
-    _doCure() {
+    InjectCure(sender: Character, location: AssetGroupItemName) {
+        SendAction(this.cureInjectStr[getRandomInt(this.cureInjectStr.length)], sender);
+        this.DoCure();
+    }
+
+    DoCure(gradual: boolean = false) {
         this.sedativeLevel = 0;
         this.mindControlLevel = 0;
         this.hornyLevel = 0;
@@ -671,6 +806,100 @@ export class InjectorModule extends BaseModule {
             DrawRect(barX, barY + (Math.round((100 - barProgress) * 4 * barZoom)), (40 * barZoom), (Math.round(barProgress * 4 * barZoom)), color);
             DrawEmptyRect(barX, barY, (40 * barZoom), (Math.round(400 * barZoom)), color);
         });
+    }
+
+    ProcessGradualLevels() {
+        if (this._targetHornyLevel > 0){
+            if (this.targetHornyLevel > this.hornyLevel) {
+                let newHorny = Math.max(this.targetHornyLevel, this.hornyLevel + this.drugLevelMultiplier / 10);
+                if (newHorny > this.hornyLevelMax * this.drugLevelMultiplier && Player.ArousalSettings?.Progress! > 50) {
+                    ActivityOrgasmPrepare(Player);
+                    this.hornyLevel -= this.drugLevelMultiplier;
+                    this._targetHornyLevel = 0;
+                }
+                this.hornyLevel = newHorny;
+            }
+            else
+                this._targetHornyLevel = 0;
+        }
+
+        if (this._targetMindControlLevel > 0){
+            if (this.targetMindControlLevel > this.mindControlLevel) {
+                this.mindControlLevel = Math.max(this.targetMindControlLevel, this.mindControlLevel + this.drugLevelMultiplier / 10);
+                if (this.mindControlLevel == this.targetMindControlLevel) {
+                    if (!this.brainwashed) {
+                        MiniGameStart(this.brainWashGame.name, ((this.mindControlLevel / this.drugLevelMultiplier) * 8), "LSCG_InjectEnd_Brainwash");
+                    }
+                    CurrentModule = "Online";
+                }
+            }
+            else
+                this._targetMindControlLevel = 0;
+        }
+
+        if (this._targetSedativeLevel > 0){
+            if (this.targetSedativeLevel > this.sedativeLevel) {
+                this.sedativeLevel = Math.max(this.targetSedativeLevel, this.sedativeLevel + this.drugLevelMultiplier / 10);
+                if (this.sedativeLevel == this.targetSedativeLevel) {
+                    if (!this.asleep) {
+                        MiniGameStart(this.sleepyGame.name, ((this.sedativeLevel / this.drugLevelMultiplier) * 8), "LSCG_InjectEnd_Sedative");
+                    }
+                    CurrentModule = "Online";
+                }
+            }
+            else
+                this._targetSedativeLevel = 0;
+        }
+    }
+
+    HoldingDruggedDrink(C: Character): boolean {
+        var item = InventoryGet(C, "Handheld");
+        if (!item || (item.Asset.Name != "GlassFilled" && item.Asset.Name != "Mug") || !item.Craft)
+            return false;
+        var drugTypes = this.GetDrugTypes(item.Craft!);
+        return drugTypes.length > 0;
+    }
+
+    GetGagDrinkAccess(C: Character): GagDrinkAccess {
+        var mouthItems = [
+            InventoryGet(C, "ItemMouth"),
+            InventoryGet(C, "ItemMouth2"),
+            InventoryGet(C, "ItemMouth3"),
+        ].filter(g => !!g);
+        let gagOverrideAllowChecks = [
+            ["FunnelGag", "Funnel"]
+        ];
+
+        var overrideGag = mouthItems.find(gag => gagOverrideAllowChecks.map(o => o[0]).indexOf(gag?.Asset.Name!) > -1);
+        if (!!overrideGag) {
+            let check = gagOverrideAllowChecks.find(x => x[0] == overrideGag?.Asset.Name);
+            if (!!check && (check.length == 1 || check[1] == overrideGag.Property?.Type))
+                return "open";
+        }
+
+        let blocked = C.IsMouthBlocked();
+        let isOpen = C.IsMouthOpen();
+        if (blocked)
+            return "blocked";
+        else if (!blocked && isOpen)
+            return "open";
+        else
+            return "nothing";        
+    }
+
+    TryForceDrink(sender: Character) {
+        let itemUseModule = getModule<ItemUseModule>("ItemUseModule");
+        if (!itemUseModule) {
+            return this.ProcessDruggedDrink(sender);
+        }
+        var itemName = itemUseModule.getItemName(InventoryGet(sender, "ItemHandheld")!);
+        let check = getModule<ItemUseModule>("ItemUseModule")?.MakeActivityCheck(sender, Player);
+        if (check.AttackerRoll.Total >= check.DefenderRoll.Total) {
+            SendAction(`${CharacterNickname(sender)} ${check.AttackerRoll.TotalStr}manages to get their ${itemName} past ${CharacterNickname(Player)}'s ${check.DefenderRoll.TotalStr}lips, forcing %POSSESSIVE% to swallow.`);
+            setTimeout(() => this.ProcessDruggedDrink(sender), 5000);
+        } else {
+            SendAction(`${CharacterNickname(Player)} ${check.DefenderRoll.TotalStr}successfully defends against ${CharacterNickname(sender)}'s ${check.AttackerRoll.TotalStr}attempt to force %POSSESSIVE% to drink their ${itemName}.`);
+        }
     }
 }
 

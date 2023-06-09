@@ -4,6 +4,7 @@ export interface BaseSettingsModel {
 
 export interface GlobalSettingsModel extends BaseSettingsModel {
     edgeBlur: boolean;
+    showCheckRolls: boolean;
 }
 
 export interface MiscSettingsModel extends BaseSettingsModel {
