@@ -81,7 +81,8 @@ export class GUI extends BaseModule {
 	get defaultSettings(): GlobalSettingsModel {
 		return {
 			enabled: true,
-			edgeBlur: false
+			edgeBlur: false,
+			showCheckRolls: true
 		};
     }
 

@@ -70,7 +70,13 @@ export class GuiGlobal extends GuiSubscreen {
 				description: "Enabled breathplay using nose plugs and sufficient gags.",
 				setting: () => Player.LSCG.MiscModule.gagChokeEnabled ?? false,
 				setSetting: (val) => Player.LSCG.MiscModule.gagChokeEnabled = val
-			},
+			},<Setting>{
+				type: "checkbox",
+				label: "Show Check Rolls:",
+				description: "If enabled, will display the attacker/defender roll values for activity checks.",
+				setting: () => this.settings.showCheckRolls ?? true,
+				setSetting: (val) => this.settings.showCheckRolls = val
+			}
 		]
 	}
 

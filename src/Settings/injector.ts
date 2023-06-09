@@ -6,7 +6,7 @@ import { GuiSubscreen, Setting } from "./settingBase";
 export class GuiInjector extends GuiSubscreen {
 
 	get name(): string {
-		return "Injector Enhancements";
+		return "Drug Enhancements";
 	}
 
 	get icon(): string {

@@ -21,6 +21,7 @@ export enum ModuleCategory {
 	Lipstick = 4,
     Activities = 5,
 	Injector = 6,
+	ItemUse = 7,
 	RemoteUI = 98,
 	Misc = 99,
 	Commands = 100
