@@ -14,6 +14,26 @@ import { HypnoModule } from "./hypno";
 import { InjectorModule } from "./injector";
 import { MiscModule } from "./misc";
 
+export class ActivityRoll {
+	constructor(raw: number, mod: number) {
+		this.Raw = raw;
+		this.Modifier = mod;
+	}
+	Raw: number = 0;
+	Modifier: number = 0;
+	get Total(): number { return Math.max(0, this.Raw + this.Modifier); }
+	get TotalStr(): string { 
+		if (!Player.LSCG?.GlobalModule?.showCheckRolls)
+			return "";
+		return `[${this.Raw + (this.Modifier < 0 ? "" : "+") + this.Modifier }] `;
+	}
+}
+
+export interface ActivityCheck {
+	AttackerRoll: ActivityRoll;
+	DefenderRoll: ActivityRoll;
+}
+
 // Remote UI Module to handle configuration on other characters
 // Can be used to "program" another character's hypnosis, collar, etc.
 // Framework inspired from BCX
@@ -306,6 +326,51 @@ export class ItemUseModule extends BaseModule {
         removeAllHooksByModule(ModuleCategory.ItemUse);
     }
 
+	get d20(): number {
+		return getRandomInt(20) + 1;
+	}
+	
+	getDominance(C: Character) {
+		return C.Reputation.find(r => r.Type == "Dominant")?.Value ?? 0;
+	};
+	
+	getSkill(C: Character, skillName: string): number {
+		let skill = C.Skill.find(r => r.Type == skillName);
+		return ((skill?.Level ?? 0) * (skill?.Ratio ?? 1));
+	}
+	
+	getRollMod(C: Character, Opponent: Character, isAggressor: boolean = false): number {
+		// Dominant vs Submissive ==> -3 to +3 modifier
+		let dominanceMod = Math.floor(this.getDominance(C) / 33);
+		// +5 if we own our opponent
+		let ownershipMod = Opponent.IsOwnedByMemberNumber(C.MemberNumber!) ? 5 : 0;
+		// -4 if we're restrained
+		let restrainedMod = C.IsRestrained() ? -4 : 0;
+		// If edged, -0 to -4 based on arousal
+		let edgingMod = C.IsEdged() ? (Math.floor(C.ArousalSettings?.Progress ?? 0 / 25) * -1) : 0;
+		// -5 if we're incapacitated, automatic failure if we're also defending
+		let incapacitatedMod = getModule<BoopsModule>("BoopsModule")?.IsIncapacitated ? (isAggressor ? 5 : 100) * -1 : 0;
+		
+		let finalMod = dominanceMod + ownershipMod + restrainedMod + edgingMod + incapacitatedMod;
+	
+		console.debug(`${CharacterNickname(C)} is ${isAggressor ? 'stealing from' : 'defending against'} ${CharacterNickname(Opponent)} [${finalMod}] --
+		dominanceMod: ${dominanceMod}
+		ownershipMod: ${ownershipMod}
+		restrainedMod: ${restrainedMod}
+		edgingMod: ${edgingMod}
+		incapacitatedMod: ${incapacitatedMod}
+		`);
+	
+		return finalMod;
+	}
+
+	MakeActivityCheck(attacker: Character, defender: Character): ActivityCheck {
+		return <ActivityCheck>{
+			AttackerRoll: new ActivityRoll(this.d20, this.getRollMod(attacker, defender, true)),
+			DefenderRoll: new ActivityRoll(this.d20, this.getRollMod(defender, attacker, false))
+		}
+	}
+
 	GetHempRopeLocations(): string[] {
 		return AssetFemale3DCG.filter(g => g.Asset.some(a => (a as AssetDefinition)?.Name == "HempRope")).map(g => g.Group);
 	}
@@ -366,64 +431,18 @@ export class ItemUseModule extends BaseModule {
 		setTimeout(() => this.Steal_Roll(target, source, item), 5000);
 	}
 
-	get d20(): number {
-		return getRandomInt(20) + 1;
-	}
-
-	getDominance(C: Character) {
-		return C.Reputation.find(r => r.Type == "Dominant")?.Value ?? 0;
-	};
-
-	getSkill(C: Character, skillName: string): number {
-		let skill = C.Skill.find(r => r.Type == skillName);
-		return ((skill?.Level ?? 0) * (skill?.Ratio ?? 1));
-	}
-
-	getRollMod(C: Character, Opponent: Character, isThief: boolean = false): number {
-		// Dominant vs Submissive ==> -3 to +3 modifier
-		let dominanceMod = Math.floor(this.getDominance(C) / 33);
-		// +5 if we own our opponent
-		let ownershipMod = Opponent.IsOwnedByMemberNumber(C.MemberNumber!) ? 5 : 0;
-		// -4 if we're restrained
-		let restrainedMod = C.IsRestrained() ? -4 : 0;
-		// If edged, -0 to -4 based on arousal
-		let edgingMod = C.IsEdged() ? (Math.floor(C.ArousalSettings?.Progress ?? 0 / 25) * -1) : 0;
-		// -5 if we're incapacitated, automatic failure if we're also defending
-		let incapacitatedMod = getModule<BoopsModule>("BoopsModule")?.IsIncapacitated ? (isThief ? 5 : 100) * -1 : 0;
-		
-		let finalMod = dominanceMod + ownershipMod + restrainedMod + edgingMod + incapacitatedMod;
-
-		console.debug(`${CharacterNickname(C)} is ${isThief ? 'stealing from' : 'defending against'} ${CharacterNickname(Opponent)} [${finalMod}] --
-		dominanceMod: ${dominanceMod}
-		ownershipMod: ${ownershipMod}
-		restrainedMod: ${restrainedMod}
-		edgingMod: ${edgingMod}
-		incapacitatedMod: ${incapacitatedMod}
-		`);
-
-		return finalMod;
-	}
-
 	Steal_Roll(target: Character, source: Character, item: Item) {
-		let targetD20 = this.d20;
-		let targetMod = this.getRollMod(target, source, false);
-		let targetRoll = Math.max(0, targetD20 + targetMod);
-		let targetRollStr = targetD20 + (targetMod < 0 ? "" : "+") + targetMod;
+		let check = this.MakeActivityCheck(source, target);
 
-		let sourceD20 = this.d20;
-		let sourceMod = this.getRollMod(source, target, true);
-		let sourceRoll = Math.max(0, sourceD20 + sourceMod);
-		let sourceRollStr = sourceD20 + (sourceMod < 0 ? "" : "+") + sourceMod;
-
-		if (sourceRoll >= targetRoll) {
-			SendAction(`${CharacterNickname(source)} [${sourceRollStr}] manages to wrest ${CharacterNickname(target)}'s [${targetRollStr}] ${this.getItemName(item)} out of their grasp!`);
+		if (check.AttackerRoll.Total >= check.AttackerRoll.Total) {
+			SendAction(`${CharacterNickname(source)} ${check.AttackerRoll.TotalStr}manages to wrest ${CharacterNickname(target)}'s ${check.DefenderRoll.TotalStr}${this.getItemName(item)} out of their grasp!`);
 			InventoryRemove(target, "ItemHandheld", true);
 			InventoryWear(source, item.Asset.Name, "ItemHandheld", item.Color, item.Difficulty, source.MemberNumber, item.Craft, true);
 			setTimeout(() => ChatRoomCharacterItemUpdate(source, "ItemHandheld"));
 			setTimeout(() => ChatRoomCharacterItemUpdate(target, "ItemHandheld"));
 		}
 		else {
-			SendAction(`${CharacterNickname(source)} [${sourceRollStr}] fails to steal ${CharacterNickname(target)}'s [${targetRollStr}] ${this.getItemName(item)} and is dazed from the attempt!`);
+			SendAction(`${CharacterNickname(source)} ${check.AttackerRoll.TotalStr}fails to steal ${CharacterNickname(target)}'s ${check.DefenderRoll.TotalStr}${this.getItemName(item)} and is dazed from the attempt!`);
 			this.failedStealTime = CommonTime();
 		}
 	}

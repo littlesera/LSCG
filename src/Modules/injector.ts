@@ -11,6 +11,7 @@ import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, setOrIgno
 import { ActivityBundle, ActivityModule, CustomAction, CustomPrerequisite } from "./activities";
 import { HypnoModule } from "./hypno";
 import { MiscModule } from "./misc";
+import { ItemUseModule } from "./item-use";
 
 type DrugType = "sedative" | "mindcontrol" | "horny" | "antidote";
 
@@ -131,7 +132,12 @@ export class InjectorModule extends BaseModule {
                 this.ProcessInjection(sender, location);
             }
             else if (target == Player.MemberNumber && activityName == "SipItem" && !!sender) {
-                this.ProcessDruggedDrink(sender);
+                let gagType = this.GetGagDrinkAccess(Player);
+                if (gagType == "nothing" && sender.MemberNumber != Player.MemberNumber && this.IsDrugAllowed(sender)) {
+                    this.TryForceDrink(sender);
+                } else {
+                    this.ProcessDruggedDrink(sender);
+                }
             } else if (target == Player.MemberNumber) {
                 if (data.Content == "ChatOther-ItemNose-Pet" && this.settings.allowBoopRestore) {
                     if (this.asleep) this.Wake();
@@ -236,63 +242,6 @@ export class InjectorModule extends BaseModule {
                 },
                 CustomImage: "Assets/Female3DCG/ItemDevices/Preview/Net.png"
             });
-
-            // this.activityModule.AddActivity({
-            //     Activity: <Activity>{
-            //         Name: "ForceDrink",
-            //         MaxProgress: 50,
-            //         MaxProgressSelf: 50,
-            //         Prerequisite: ["UseHands"]
-            //     },
-            //     Targets: [
-            //         {
-            //             Name: "ItemArms",
-            //             SelfAllowed: true,
-            //             TargetLabel: "Shoot Netgun",
-            //             TargetAction: "SourceCharacter takes aim at TargetCharacter with their net gun.",
-            //             TargetSelfAction: "SourceCharacter turns their netgun on themselves!"
-            //         }
-            //     ],
-            //     CustomPrereqs: [
-            //         {
-            //             Name: "TargetCanDrink",
-            //             Func: (acting, acted, group) => {
-            //                 // var mouthItems = [
-            //                 //     InventoryGet(acted, "ItemMouth"),
-            //                 //     InventoryGet(acted, "ItemMouth2"),
-            //                 //     InventoryGet(acted, "ItemMouth3"),
-            //                 // ].filter(g => !!g);
-            //                 // let stuffedGags = [
-            //                 //     "ClothStuffing",
-            //                 //     "PantyStuffing",
-            //                 //     "SockStuffing",
-            //                 //     "LargeDildo"
-            //                 // ];
-            //                 // let drankableGags = [
-            //                 //     ["LipGag"],
-            //                 //     ["RingGag"],
-            //                 //     ["SpiderGag"],
-            //                 //     ["FunnelGag", "Funnel"],
-            //                 //     ["DildoPlugGag", null],
-            //                 //     ["OTNPlugGag", null],
-            //                 //     ["DentalGag", null],
-            //                 //     ["PlugGag", null],
-
-            //                 // ];
-                            
-            //                 return this.HoldingDruggedDrink(acting) && (this.GetGagDrinkAccess(acted) == "open" || this.GetGagDrinkAccess(acted) == "nothing");
-            //             }
-            //         }
-            //     ],
-            //     CustomAction: <CustomAction>{
-            //         Func: (target, args, next) => {
-            //             if (!target || this.GetGagDrinkAccess(target) == "blocked")
-            //                 return next(args);
-            //             this.TryForceDrink(target);
-            //         }
-            //     },
-            //     CustomImage: "Assets/Female3DCG/ItemHandheld/Preview/GlassFilled.png"
-            // });
         }        
 
         this.activityModule.AddCustomPrereq(<CustomPrerequisite>{
@@ -481,6 +430,20 @@ export class InjectorModule extends BaseModule {
         return types;
     }
 
+    IsDrugAllowed(sender: Character): boolean {
+        var asset = InventoryGet(sender, "ItemHandheld");
+        if (!asset?.Craft)
+            return false;
+        let types = this.GetDrugTypes(asset.Craft!);
+        if ((types.indexOf("sedative") > -1 && this.settings.enableSedative) ||
+            (types.indexOf("mindcontrol") > -1 && this.settings.enableMindControl) ||
+            (types.indexOf("horny") > -1 && this.settings.enableHorny) ||
+            (types.indexOf("antidote") > -1))
+            return true;
+        
+        return false;
+    }
+
     ProcessDruggedDrink(sender: Character) {
         var asset = InventoryGet(sender, "ItemHandheld");
         if (!asset?.Craft)
@@ -611,7 +574,7 @@ export class InjectorModule extends BaseModule {
         //     this._targetHornyLevel = newLevelActual;
         // else {
         this.hornyLevel = Math.min(newLevelActual, this.hornyLevelMax * this.drugLevelMultiplier);
-        if (newLevelActual >= this.hornyLevelMax * this.drugLevelMultiplier && Player.ArousalSettings?.Progress! > 50) {
+        if (newLevelActual >= this.hornyLevelMax * this.drugLevelMultiplier) {
             ActivityOrgasmPrepare(Player);
             this.hornyLevel -= this.drugLevelMultiplier;
             }
@@ -924,8 +887,19 @@ export class InjectorModule extends BaseModule {
             return "nothing";        
     }
 
-    TryForceDrink(target: Character) {
-        
+    TryForceDrink(sender: Character) {
+        let itemUseModule = getModule<ItemUseModule>("ItemUseModule");
+        if (!itemUseModule) {
+            return this.ProcessDruggedDrink(sender);
+        }
+        var itemName = itemUseModule.getItemName(InventoryGet(sender, "ItemHandheld")!);
+        let check = getModule<ItemUseModule>("ItemUseModule")?.MakeActivityCheck(sender, Player);
+        if (check.AttackerRoll.Total >= check.DefenderRoll.Total) {
+            SendAction(`${CharacterNickname(sender)} ${check.AttackerRoll.TotalStr}manages to get their ${itemName} past ${CharacterNickname(Player)}'s ${check.DefenderRoll.TotalStr}lips, forcing %POSSESSIVE% to swallow.`);
+            setTimeout(() => this.ProcessDruggedDrink(sender), 5000);
+        } else {
+            SendAction(`${CharacterNickname(Player)} ${check.DefenderRoll.TotalStr}successfully defends against ${CharacterNickname(sender)}'s ${check.AttackerRoll.TotalStr}attempt to force %POSSESSIVE% to drink their ${itemName}.`);
+        }
     }
 }
 

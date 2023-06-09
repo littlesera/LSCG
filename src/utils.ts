@@ -1,6 +1,7 @@
 import bcModSDKRef from "bondage-club-mod-sdk";
 import { getModule } from "modules";
 import { ActivityModule } from "Modules/activities";
+import { BoopsModule } from "Modules/boops";
 import { CoreModule } from "Modules/core";
 import { IPublicSettingsModel } from "Settings/Models/settings";
 import { ModuleCategory } from "Settings/setting_definitions";
