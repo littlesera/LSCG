@@ -22,7 +22,17 @@ export class ItemUseModule extends BaseModule {
 	failedStealTime: number = 0;
 
     load(): void {
-        
+        hookFunction("CharacterItemsForActivity", 1, (args, next) => {
+			let C = args[0];
+			let itemType = args[1];
+			let results = next(args);
+			if (itemType == "AnyItem") {
+				let item = InventoryGet(C, "ItemHandheld");
+				if (!!item)
+					results.push(item)
+			}
+			return results;
+		}, ModuleCategory.ItemUse);
     }
 
 	run(): void {
@@ -191,12 +201,6 @@ export class ItemUseModule extends BaseModule {
 						TargetLabel: "Tie Up",
 						TargetAction: `SourceCharacter swiftly wraps PronounPossessive rope around TargetCharacter's ${loc.substring(4).toLocaleLowerCase()}, binding TargetPronounPossessive tightly.`
 					}),
-			// 	<ActivityTarget>{
-			// 		Name: "ItemArms",
-			// 		TargetLabel: "Tie Up",
-			// 		TargetAction: "SourceCharacter swiftly wraps PronounPossessive rope around TargetCharacter's arms and torso, binding TargetPronounPossessive tightly."
-			// 	}
-			// ],
 			CustomPrereqs: [
 				{
 					Name: "HasCoiledRope",
@@ -224,7 +228,8 @@ export class ItemUseModule extends BaseModule {
 				Name: "Steal",
 				MaxProgress: 50,
 				MaxProgressSelf: 50,
-				Prerequisite: ["UseHands", "ZoneAccessible"]
+				Prerequisite: ["Needs-AnyItem"],
+				Reverse: true // acting and acted are flipped!
 			},
 			Targets: [
 				<ActivityTarget>{
@@ -237,7 +242,7 @@ export class ItemUseModule extends BaseModule {
 			CustomPrereqs: [
 				{
 					Name: "CanSteal",
-					Func: (acting, acted, group) => {
+					Func: (acted, acting, group) => { // Clip acting and acted here due to reverse == true
 						if (acted.FocusGroup?.Name != "ItemHandheld")
 							return false;
 						var item = InventoryGet(acted, "ItemHandheld");
@@ -256,8 +261,44 @@ export class ItemUseModule extends BaseModule {
 						return;
 					this.TrySteal(target, Player, InventoryGet(target, "ItemHandheld")!);
 				}
+			}
+		});
+
+		// Give
+		this.activities.AddActivity(<ActivityBundle>{
+			Activity: <Activity>{
+				Name: "Give",
+				MaxProgress: 50,
+				MaxProgressSelf: 50,
+				Prerequisite: ["UseHands", "ZoneAccessible", "Needs-AnyItem"]
 			},
-			CustomImage: "Assets/Female3DCG/ItemArms/Preview/HempRope.png"
+			Targets: [
+				<ActivityTarget>{
+					Name: "ItemHands",
+					TargetLabel: "Give Item",
+					TargetAction: "SourceCharacter grabs at TargetCharacters hands, trying to steal TargetPronounPossessive item!",
+					SelfAllowed: false
+				}
+			],
+			CustomPrereqs: [
+				{
+					Name: "CanGive",
+					Func: (acting, acted, group) => {
+						if (acted.FocusGroup?.Name != "ItemHandheld")
+							return false;
+						var emptyTargetHands = !InventoryGet(acted, "ItemHandheld");
+						var sourceItem = InventoryGet(acting, "ItemHandheld");
+						return emptyTargetHands && !!sourceItem;
+					}
+				}
+			],
+			CustomAction: {
+				Func: (target, args, next) => {
+					if (!target)
+						return;
+					this.GiveItem(target, Player);
+				}
+			}
 		});
 	}
 
@@ -309,8 +350,19 @@ export class ItemUseModule extends BaseModule {
 		return item.Craft?.Name ?? item.Asset.Description.toLocaleLowerCase();
 	}
 
+	GiveItem(target: Character, source: Character) {
+		var item = InventoryGet(source, "ItemHandheld");
+		if (!item)
+			return;
+			SendAction(`${CharacterNickname(source)} gives %POSSESSIVE% ${this.getItemName(item)} to ${CharacterNickname(target)}.`);
+		InventoryRemove(source, "ItemHandheld", true);
+		InventoryWear(target, item?.Asset.Name!, "ItemHandheld", item?.Color, item?.Difficulty, source.MemberNumber, item?.Craft, true);
+		setTimeout(() => ChatRoomCharacterItemUpdate(source, "ItemHandheld"));
+		setTimeout(() => ChatRoomCharacterItemUpdate(target, "ItemHandheld"));
+	}
+
 	TrySteal(target: Character, source: Character, item: Item) {
-		SendAction(`${CharacterNickname(source)} grabs at ${CharacterNickname(source)}'s ${this.getItemName(item)}, trying to steal it!`);
+		SendAction(`${CharacterNickname(source)} grabs at ${CharacterNickname(target)}'s ${this.getItemName(item)}, trying to steal it!`);
 		setTimeout(() => this.Steal_Roll(target, source, item), 5000);
 	}
 
@@ -356,20 +408,22 @@ export class ItemUseModule extends BaseModule {
 		let targetD20 = this.d20;
 		let targetMod = this.getRollMod(target, source, false);
 		let targetRoll = Math.max(0, targetD20 + targetMod);
+		let targetRollStr = targetD20 + (targetMod < 0 ? "" : "+") + targetMod;
 
 		let sourceD20 = this.d20;
 		let sourceMod = this.getRollMod(source, target, true);
 		let sourceRoll = Math.max(0, sourceD20 + sourceMod);
+		let sourceRollStr = sourceD20 + (sourceMod < 0 ? "" : "+") + sourceMod;
 
 		if (sourceRoll >= targetRoll) {
-			SendAction(`${CharacterNickname(source)} [${sourceD20}+${sourceMod}] manages to wrest ${CharacterNickname(target)}'s [${targetD20}+${targetMod}] ${this.getItemName(item)} out of their grasp!`);
+			SendAction(`${CharacterNickname(source)} [${sourceRollStr}] manages to wrest ${CharacterNickname(target)}'s [${targetRollStr}] ${this.getItemName(item)} out of their grasp!`);
 			InventoryRemove(target, "ItemHandheld", true);
 			InventoryWear(source, item.Asset.Name, "ItemHandheld", item.Color, item.Difficulty, source.MemberNumber, item.Craft, true);
 			setTimeout(() => ChatRoomCharacterItemUpdate(source, "ItemHandheld"));
 			setTimeout(() => ChatRoomCharacterItemUpdate(target, "ItemHandheld"));
 		}
 		else {
-			SendAction(`${CharacterNickname(source)} fails to steal ${CharacterNickname(target)}'s ${this.getItemName(item)} and is dazed from the attempt!`);
+			SendAction(`${CharacterNickname(source)} [${sourceRollStr}] fails to steal ${CharacterNickname(target)}'s [${targetRollStr}] ${this.getItemName(item)} and is dazed from the attempt!`);
 			this.failedStealTime = CommonTime();
 		}
 	}
