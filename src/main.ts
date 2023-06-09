@@ -11,6 +11,7 @@ import { ActivityModule } from "Modules/activities";
 import { InjectorModule } from 'Modules/injector';
 import { CoreModule } from 'Modules/core';
 import { RemoteUIModule } from 'Modules/remoteUI';
+import { CommandModule } from 'Modules/commands';
 import { ItemUseModule } from 'Modules/item-use';
 
 function initWait() {
@@ -100,6 +101,7 @@ function init_modules(): boolean {
 	registerModule(new InjectorModule());
 	registerModule(new ItemUseModule());
 	registerModule(new RemoteUIModule());
+	registerModule(new CommandModule());
 
 	for (const m of modules()) {
 		m.init();

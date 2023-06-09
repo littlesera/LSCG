@@ -215,7 +215,7 @@ export class MiscModule extends BaseModule {
     AddChloroform(sender: Character | null) {
         SendAction("%NAME% eyes go wide as the sweet smell of ether fills %POSSESSIVE% nostrils.");
         if (!!sender && sender.MemberNumber != Player.MemberNumber)
-            ChatRoomSendLocal((sender.Nickname ?? sender.Name) + " has forced chloroform over your mouth, you will passout if it is not removed soon!", 30000);
+            ChatRoomSendLocal(CharacterNickname(sender) + " has forced chloroform over your mouth, you will passout if it is not removed soon!", 30000);
         CharacterSetFacialExpression(Player, "Eyes", "Scared");
         this.passoutTimer = setTimeout(() => this.StartPassout_1(), 20000);
     }

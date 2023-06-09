@@ -49,28 +49,28 @@ export class CollarModule extends BaseModule {
     }
 
     load(): void {
-        CommandCombine([
-            {
-                Tag: 'tight',
-                Description: ": tighten collar",
+        // CommandCombine([
+        //     {
+        //         Tag: 'tight',
+        //         Description: ": tighten collar",
 
-                Action: () => {
-                    if (!this.Enabled)
-                        return;
-                    this.IncreaseCollarChoke();
-                }
-            },
-            {
-                Tag: 'loose',
-                Description: ": loosen collar",
+        //         Action: () => {
+        //             if (!this.Enabled)
+        //                 return;
+        //             this.IncreaseCollarChoke();
+        //         }
+        //     },
+        //     {
+        //         Tag: 'loose',
+        //         Description: ": loosen collar",
 
-                Action: () => {
-                    if (!this.Enabled)
-                        return;
-                    this.DecreaseCollarChoke();
-                }
-            }
-        ])
+        //         Action: () => {
+        //             if (!this.Enabled)
+        //                 return;
+        //             this.DecreaseCollarChoke();
+        //         }
+        //     }
+        // ])
 
         OnChat(600, ModuleCategory.Collar, (data, sender, msg, metadata) => {
             if (!this.Enabled)
