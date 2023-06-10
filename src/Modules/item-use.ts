@@ -122,7 +122,7 @@ export class ItemUseModule extends BaseModule {
 					Func: (acting, acted, group) => {
 						var location = acted.FocusGroup?.Name!;
 						var item = InventoryGet(acted, location);
-						if (item!.Property!.Effect!.indexOf("Lock") > -1)
+						if (!!item && !!item.Property && item.Property.Effect && item.Property.Effect.indexOf("Lock") > -1)
 							return false;
 						return !InventoryGet(acting, "ItemHandheld") && item?.Asset.Name! == "BallGag";
 					}
@@ -204,7 +204,7 @@ export class ItemUseModule extends BaseModule {
 					Func: (acting, acted, group) => {
 						var location = acted.FocusGroup?.Name!;
 						var item = InventoryGet(acted, location);
-						if (item!.Property!.Effect!.indexOf("Lock") > -1)
+						if (!!item && !!item.Property && item.Property.Effect && item.Property.Effect.indexOf("Lock") > -1)
 							return false;
 						return !InventoryGet(acting, "ItemHandheld") && InventoryGet(acted, location)?.Asset.Name! == "PantyStuffing";
 					}
