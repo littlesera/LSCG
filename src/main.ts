@@ -123,10 +123,11 @@ function init_modules(): boolean {
 	});
 
 	hookFunction("ChatRoomSafewordRelease", 1, (args, next) => {
+		var ret = next(args);
 		for (const m of modules()) {
 			m.safeword();
 		}
-		return next(args);
+		return ret;
 	});
 
 	console.info("LSCG Modules Loaded.");
