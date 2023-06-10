@@ -434,7 +434,7 @@ export class ItemUseModule extends BaseModule {
 	Steal_Roll(target: Character, source: Character, item: Item) {
 		let check = this.MakeActivityCheck(source, target);
 
-		if (check.AttackerRoll.Total >= check.AttackerRoll.Total) {
+		if (check.AttackerRoll.Total >= check.DefenderRoll.Total) {
 			SendAction(`${CharacterNickname(source)} ${check.AttackerRoll.TotalStr}manages to wrest ${CharacterNickname(target)}'s ${check.DefenderRoll.TotalStr}${this.getItemName(item)} out of their grasp!`);
 			InventoryRemove(target, "ItemHandheld", true);
 			InventoryWear(source, item.Asset.Name, "ItemHandheld", item.Color, item.Difficulty, source.MemberNumber, item.Craft, true);
