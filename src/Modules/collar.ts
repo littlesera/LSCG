@@ -1,7 +1,7 @@
 import { BaseModule } from 'base';
 import { CollarModel, CollarSettingsModel } from 'Settings/Models/collar';
 import { ModuleCategory, Subscreen } from 'Settings/setting_definitions';
-import { settingsSave, parseMsgWords, SendAction, OnChat, getRandomInt, hookFunction, removeAllHooksByModule, OnActivity, OnAction, setOrIgnoreBlush, getCharacter, hookBCXCurse, escapeRegExp } from '../utils';
+import { settingsSave, parseMsgWords, SendAction, OnChat, getRandomInt, hookFunction, removeAllHooksByModule, OnActivity, OnAction, setOrIgnoreBlush, getCharacter, hookBCXCurse, escapeRegExp, isPhraseInString } from '../utils';
 import { GuiCollar } from 'Settings/collar';
 
 enum PassoutReason {
@@ -284,8 +284,7 @@ export class CollarModule extends BaseModule {
         }
 
         let gagLevel = SpeechGetTotalGagLevel(Player, true);
-        let isNosePlugged = InventoryGet(Player, "ItemNose")?.Asset.Name == "NosePlugs";
-        if (gagLevel >= chokeThreshold && isNosePlugged || 
+        if (gagLevel >= chokeThreshold && this.IsNosePlugged || 
             (msg.indexOf("PumpGagpumpsTo") > -1 && gagLevel >= 7)) { // allow lower threshold for pump gag, letting it choke when full.
             if (msg.indexOf("PumpInflate") > -1) {
                 SendAction("%NAME%'s eyes widen as %POSSESSIVE% gag inflates to completely fill %POSSESSIVE% throat.");
@@ -296,8 +295,28 @@ export class CollarModule extends BaseModule {
             this.isPluggedUp = false;
             if (this.isPassingOut && this.settings.chokeLevel < 4)
                 this.ResetPlugs();
-            else if (gagLevel >= gaspThreshold && isNosePlugged)
+            else if (gagLevel >= gaspThreshold && this.IsNosePlugged)
                 SendAction("%NAME% splutters and gasps for air around %POSSESSIVE% gag.");
+        }
+    }
+
+    get IsNosePlugged(): boolean {
+        var item = InventoryGet(Player, "ItemNose");
+        if (!item)
+            return false;
+        
+        if (item.Asset.Name == "NosePlugs") {
+            if (!item.Craft)
+                return true;
+            else {
+                var name = item.Craft.Name;
+                var description = item.Craft.Description;
+                var totalString = name + " | " + description;
+        
+                return !isPhraseInString(totalString, "breathable");
+            }
+        } else {
+            return false;
         }
     }
 
