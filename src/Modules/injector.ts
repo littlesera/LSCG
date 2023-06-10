@@ -867,7 +867,8 @@ export class InjectorModule extends BaseModule {
             InventoryGet(C, "ItemMouth3"),
         ].filter(g => !!g);
         let gagOverrideAllowChecks = [
-            ["FunnelGag", "Funnel"]
+            ["FunnelGag", "Funnel"],
+            ["RingGag"]
         ];
 
         var overrideGag = mouthItems.find(gag => gagOverrideAllowChecks.map(o => o[0]).indexOf(gag?.Asset.Name!) > -1);
