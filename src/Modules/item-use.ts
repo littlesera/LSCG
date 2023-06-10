@@ -79,6 +79,10 @@ export class ItemUseModule extends BaseModule {
 				{
 					Name: "HoldingBallgag",
 					Func: (acting, acted, group) => {
+						var location = acted.FocusGroup?.Name!;
+						var existing = InventoryGet(acted, location);
+						if (!!existing)
+							return false;
 						return InventoryGet(acting, "ItemHandheld")?.Asset.Name! == "Ballgag";
 					}
 				}
@@ -117,7 +121,10 @@ export class ItemUseModule extends BaseModule {
 					Name: "Ballgagged",
 					Func: (acting, acted, group) => {
 						var location = acted.FocusGroup?.Name!;
-						return !InventoryGet(acting, "ItemHandheld") && InventoryGet(acted, location)?.Asset.Name! == "BallGag";
+						var item = InventoryGet(acted, location);
+						if (item!.Property!.Effect!.indexOf("Lock") > -1)
+							return false;
+						return !InventoryGet(acting, "ItemHandheld") && item?.Asset.Name! == "BallGag";
 					}
 				}
 			],
@@ -154,6 +161,10 @@ export class ItemUseModule extends BaseModule {
 				{
 					Name: "HoldingPanties",
 					Func: (acting, acted, group) => {
+						var location = acted.FocusGroup?.Name!;
+						var existing = InventoryGet(acted, location);
+						if (!!existing)
+							return false;
 						return InventoryGet(acting, "ItemHandheld")?.Asset.Name! == "Panties";
 					}
 				}
@@ -192,6 +203,9 @@ export class ItemUseModule extends BaseModule {
 					Name: "PantyStuffed",
 					Func: (acting, acted, group) => {
 						var location = acted.FocusGroup?.Name!;
+						var item = InventoryGet(acted, location);
+						if (item!.Property!.Effect!.indexOf("Lock") > -1)
+							return false;
 						return !InventoryGet(acting, "ItemHandheld") && InventoryGet(acted, location)?.Asset.Name! == "PantyStuffing";
 					}
 				}
