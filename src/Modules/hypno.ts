@@ -76,14 +76,6 @@ export class HypnoModule extends BaseModule {
             }
         }, ModuleCategory.Hypno);
 
-        OnWhisper(5, ModuleCategory.Hypno, (data, sender, msg, metadata) => {
-            // Check for non-garbled trigger word, this means a trigger word could be set to what garbled speech produces >.>
-            if (!this.hypnoActivated) {
-                if (this.CheckTrigger(msg, sender!) && !this.IsOnCooldown())
-                    this.StartTriggerWord(true, sender!.MemberNumber);
-            }
-        });
-
         hookFunction("SpeechGarble", 2, (args, next) => {
             if (!this.Enabled)
                 return next(args);
