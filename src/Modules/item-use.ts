@@ -409,7 +409,8 @@ export class ItemUseModule extends BaseModule {
 		if (ValidationCanRemoveItem(gag!, validParams, false)) {
 			InventoryRemove(target, location, true);
 			var craft = gag.Craft;
-			craft!.Lock = "";
+			if (!!craft)
+				craft.Lock = "";
 			InventoryWear(source, handItemName, "ItemHandheld", gag.Color, undefined, source.MemberNumber, craft, true);
 			setTimeout(() => ChatRoomCharacterItemUpdate(target, location));
 		}
