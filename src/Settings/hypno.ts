@@ -51,12 +51,36 @@ export class GuiHypno extends GuiSubscreen {
 					setSetting: (val) => this.settings.overrideWords = val
 				},<Setting>{
 					type: "text",
+					id: "hypno_overrideAwakeners",
+					label: "Override Awaken Words:",
+					description: "Custom list of words and/or phrases as awakener triggers. Separated by a comma.",
+					disabled: !this.settings.enabled,
+					setting: () => this.settings.awakeners ?? "",
+					setSetting: (val) => this.settings.awakeners = val
+				},<Setting>{
+					type: "text",
 					id: "hypno_overrideMembers",
 					label: "Override Allowed Member IDs:",
 					description: "Comma separated list of member IDs. If empty will use standard Item Permissions.",
 					disabled: !this.settings.enabled,
 					setting: () => this.settings.overrideMemberIds ?? "",
 					setSetting: (val) => this.settings.overrideMemberIds = val
+				},<Setting>{
+					type: "number",
+					id: "hypno_triggerTime",
+					label: "Hypnosis Length (min.):",
+					description: "Length of hypnosis time (in minutes) before automatically recovering. Set to 0 for indefinite.",
+					disabled: !this.settings.enabled,
+					setting: () => (this.settings.triggerTime ?? 5),
+					setSetting: (val) => this.settings.triggerTime = val
+				},<Setting>{
+					type: "number",
+					id: "hypno_cooldownTime",
+					label: "Cooldown (sec.):",
+					description: "Cooldown time (in seconds) before you can be hypnotized again.",
+					disabled: !this.settings.enabled,
+					setting: () => (this.settings.cooldownTime ?? 0),
+					setSetting: (val) => this.settings.cooldownTime = val
 				},<Setting>{
 					type: "checkbox",
 					label: "Enable Cycle:",
@@ -73,28 +97,12 @@ export class GuiHypno extends GuiSubscreen {
 					setting: () => (this.settings.cycleTime ?? 30),
 					setSetting: (val) => this.settings.cycleTime = val
 				},<Setting>{
-					type: "number",
-					id: "hypno_triggerTime",
-					label: "Hypnosis Length (min.):",
-					description: "Length of hypnosis time (in minutes) before automatically recovering. Set to 0 for indefinite.",
-					disabled: !this.settings.enabled,
-					setting: () => (this.settings.triggerTime ?? 5),
-					setSetting: (val) => this.settings.triggerTime = val
-				},<Setting>{
 					type: "checkbox",
 					label: "Build arousal while hypnotized:",
 					description: "If checked being hypnotized will increase arousal.",
 					disabled: !this.settings.enabled,
 					setting: () => this.settings.enableArousal ?? false,
 					setSetting: (val) => this.settings.enableArousal = val
-				},<Setting>{
-					type: "number",
-					id: "hypno_cooldownTime",
-					label: "Cooldown (sec.):",
-					description: "Cooldown time (in seconds) before you can be hypnotized again.",
-					disabled: !this.settings.enabled,
-					setting: () => (this.settings.cooldownTime ?? 0),
-					setSetting: (val) => this.settings.cooldownTime = val
 				},<Setting>{
 					type: "checkbox",
 					label: "Allow Remote Access:",

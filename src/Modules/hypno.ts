@@ -91,17 +91,18 @@ export class HypnoModule extends BaseModule {
             const C = args[0] as Character;
 
             // Check for non-garbled trigger word, this means a trigger word could be set to what garbled speech produces >.>
-            if (!this.hypnoActivated) {
-                let msg = callOriginal("SpeechGarble", args);
-                if (this.CheckTrigger(msg, C) && !this.IsOnCooldown())
-                    this.StartTriggerWord(true, C.MemberNumber);
+            let msg = callOriginal("SpeechGarble", args);
+            if (this.CheckTrigger(msg, C) && !this.IsOnCooldown()) {
+                this.StartTriggerWord(true, C.MemberNumber);
                 return next(args);
             }
 
             var lowerMsg = args[1].toLowerCase();
             var names = [CharacterNickname(Player)];
-            if (names.some(n => lowerMsg.indexOf(n) > -1) || this.settings.hypnotizedBy == C.MemberNumber || C.MemberNumber == Player.MemberNumber)
+            if (names.some(n => lowerMsg.indexOf(n) > -1) || this.settings.hypnotizedBy == C.MemberNumber || C.MemberNumber == Player.MemberNumber) {
                 args[1] = args[1];
+                if (this.CheckAwakener(msg, C)) this.TriggerRestoreWord(C);
+            }
             else
                 args[1] =  args[1].replace(/\S/gm, '-');
             return next(args);
@@ -203,6 +204,10 @@ export class HypnoModule extends BaseModule {
         removeAllHooksByModule(ModuleCategory.Hypno);
     }
 
+    get awakeners(): string[] {
+        return this.settings.awakeners?.split(",")?.filter(word => !!word).map(word => word.toLocaleLowerCase()) ?? [];
+    }
+
     get triggers(): string[] {
         var overrideWords = this.settings.overrideWords?.split(",")?.filter(word => !!word).map(word => word.toLocaleLowerCase()) ?? [];
         if (overrideWords.length > 0 && !this.settings.enableCycle)
@@ -224,6 +229,8 @@ export class HypnoModule extends BaseModule {
     }
 
     allowedSpeaker(speaker: Character | undefined): boolean {
+        if (speaker?.MemberNumber == Player.MemberNumber)
+            return false;
         var memberId = speaker?.MemberNumber ?? 0;
         var allowedMembers = this.settings.overrideMemberIds?.split(",").map(id => +id).filter(id => id > 0) ?? [];
         if (allowedMembers.length <= 0)
@@ -244,21 +251,26 @@ export class HypnoModule extends BaseModule {
         setTimeout(() => this.StartTriggerWord(false, memberNumber), 10000);
     }
 
+    CheckAwakener(msg: string, sender: Character) {
+        return this._CheckForTriggers(msg, sender, this.awakeners, true);
+    }
+
     CheckTrigger(msg: string, sender: Character): boolean {
+        return this._CheckForTriggers(msg, sender, this.triggers);
+    }
+
+    _CheckForTriggers(msg: string, sender: Character, triggers: string[], awakener: boolean = false) {
         // Skip on OOC
-        if (msg.startsWith("(") || !this.triggers)
+        if (msg.startsWith("(") || !triggers)
             return false;
 
-        var lowerMsgWords = parseMsgWords(msg) ?? [];
-
-        let matched = this.triggers.some(trigger => {
+        let matched = triggers.some(trigger => {
             let phraseMatch = new RegExp("\\b" + escapeRegExp(trigger) + "\\b", "i");
             return phraseMatch.test(msg);
         })        
 
-        return (!this.hypnoActivated && 
-            matched && 
-            sender?.MemberNumber != Player.MemberNumber &&
+        return (matched && 
+            (awakener ? this.hypnoActivated : !this.hypnoActivated) &&
             this.allowedSpeaker(sender))
     }
 
@@ -291,12 +303,13 @@ export class HypnoModule extends BaseModule {
         else
             SendAction("%NAME%'s eyes glaze over, %POSSESSIVE% posture slumping weakly as %PRONOUN% loses control of %POSSESSIVE% body.");
         
+        this.SetEyes();
         this.CheckHypnotizedState();
     }
 
     CheckHypnotizedState() {
         if (this.hypnoActivated) {
-            this.SetEyes();
+            this.EnforceEyes();
             setOrIgnoreBlush("Medium");
             CharacterSetFacialExpression(Player, "Eyebrows", "Lowered");
             CharacterSetFacialExpression(Player, "Eyes", "Dazed");
@@ -359,6 +372,11 @@ export class HypnoModule extends BaseModule {
         this.settings.existingEye2Name = undefined;
         this.settings.existingEye2Color = undefined;
         settingsSave();
+    }
+
+    TriggerRestoreWord(speaker: Character) {
+        SendAction("%NAME% snaps back into their senses at %OPP_NAME%'s voice.", speaker);
+        this.TriggerRestore();
     }
 
     TriggerRestoreBoop() {

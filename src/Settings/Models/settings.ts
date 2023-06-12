@@ -38,6 +38,7 @@ export class PublicSettingsModel implements IPublicSettingsModel {
         enableCycle: true,
         overrideMemberIds: "",
         overrideWords: "",
+        awakeners: "",
         allowLocked: false,
         remoteAccess: false,
         remoteAccessRequiredTrance: true,

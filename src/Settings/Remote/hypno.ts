@@ -74,25 +74,20 @@ export class RemoteHypno extends RemoteGuiSubscreen {
 				setSetting: (val) => this.settings.overrideWords = val
 			},<Setting>{
 				type: "text",
+				id: "hypno_overrideAwakeners",
+				label: "Override Awaken Words:",
+				description: "Custom list of words and/or phrases as awakener triggers. Separated by a comma.",
+				disabled: !this.settings.enabled,
+				setting: () => this.settings.awakeners ?? "",
+				setSetting: (val) => this.settings.awakeners = val
+			},<Setting>{
+				type: "text",
 				id: "hypno_overrideMembers",
 				label: "Override Allowed Member IDs:",
 				description: "Comma separated list of member IDs. If empty will use standard Item Permissions.",
 				disabled: !(this.settings.allowRemoteModificationOfMemberOverride || this.Character.IsOwnedByPlayer()),
 				setting: () => this.settings.overrideMemberIds ?? "",
 				setSetting: (val) => this.settings.overrideMemberIds = val
-			},<Setting>{
-				type: "checkbox",
-				label: "Enable Cycle:",
-				description: "If checked, only one trigger will be active at a time and will cycle after use.",
-				setting: () => this.settings.enableCycle ?? false,
-				setSetting: (val) => this.settings.enableCycle = val
-			},<Setting>{
-				type: "number",
-				id: "hypno_cycleTime",
-				label: "Trigger Cycle Time (min.):",
-				description: "Number of minutes after activation to wait before cycling to a new trigger.",
-				setting: () => (this.settings.cycleTime ?? 30),
-				setSetting: (val) => this.settings.cycleTime = val
 			},<Setting>{
 				type: "number",
 				id: "hypno_triggerTime",
@@ -107,6 +102,19 @@ export class RemoteHypno extends RemoteGuiSubscreen {
 				description: "Cooldown time (in seconds) before you can be hypnotized again.",
 				setting: () => (this.settings.cooldownTime ?? 0),
 				setSetting: (val) => this.settings.cooldownTime = val
+			},<Setting>{
+				type: "checkbox",
+				label: "Enable Cycle:",
+				description: "If checked, only one trigger will be active at a time and will cycle after use.",
+				setting: () => this.settings.enableCycle ?? false,
+				setSetting: (val) => this.settings.enableCycle = val
+			},<Setting>{
+				type: "number",
+				id: "hypno_cycleTime",
+				label: "Trigger Cycle Time (min.):",
+				description: "Number of minutes after activation to wait before cycling to a new trigger.",
+				setting: () => (this.settings.cycleTime ?? 30),
+				setSetting: (val) => this.settings.cycleTime = val
 			},<Setting>{
 				type: "label",
 				label: "",
