@@ -1,0 +1,37 @@
+# This workflow will do a clean installation of node dependencies, cache/restore them, build the source code and run tests across different versions of node
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-nodejs
+
+name: Dev LSCG
+permissions:
+  id-token: write
+  pages: write
+on:
+  workflow_dispatch:
+  push:
+    branches: [ "dev" ]
+  pull_request:
+    branches: [ "dev" ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Use Node.js 18.x
+      uses: actions/setup-node@v3
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+    - run: npm ci
+    - run: npm run build --if-present
+    #- run: npm test
+
+    #- name: Upload GitHub Pages artifact
+    #  uses: actions/upload-pages-artifact@v1.0.8
+    #  with:
+    #    path: dist/
+
+    #- name: Deploy GitHub Pages site
+    #  uses: actions/deploy-pages@v2.0.0
