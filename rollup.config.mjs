@@ -38,6 +38,7 @@ console.debug("LSCG: Parse start...");
           console.log('\nUnable to determine latest tag: %s\n', tags.latest);
         }
       });
+      LSCG_VERSION = (LSCG_VERSION.length > 0 && LSCG_VERSION[0] == 'v') ? LSCG_VERSION : "v" + LSCG_VERSION;
       return `const LSCG_VERSION="${LSCG_VERSION}";`;
     }
   },
