@@ -97,14 +97,17 @@ export class HypnoModule extends BaseModule {
                 return next(args);
             }
 
-            var lowerMsg = args[1].toLowerCase();
-            var names = [CharacterNickname(Player)];
-            if (names.some(n => lowerMsg.indexOf(n) > -1) || this.settings.hypnotizedBy == C.MemberNumber || C.MemberNumber == Player.MemberNumber) {
-                args[1] = args[1];
-                if (this.CheckAwakener(msg, C)) this.TriggerRestoreWord(C);
+            if (this.hypnoActivated) {
+                var lowerMsg = args[1].toLowerCase();
+                var names = [CharacterNickname(Player)];
+                if (names.some(n => lowerMsg.indexOf(n) > -1) || this.settings.hypnotizedBy == C.MemberNumber || C.MemberNumber == Player.MemberNumber) {
+                    args[1] = args[1];
+                    if (this.CheckAwakener(msg, C)) this.TriggerRestoreWord(C);
+                }
+                else
+                    args[1] =  args[1].replace(/\S/gm, '-');
             }
-            else
-                args[1] =  args[1].replace(/\S/gm, '-');
+            
             return next(args);
         }, ModuleCategory.Hypno);
 
