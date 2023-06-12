@@ -38,10 +38,15 @@ export class RemoteMainMenu extends RemoteGuiSubscreen {
 		this.subscreens = [new RemoteHypno(getModule<HypnoModule>("HypnoModule"), this.Character)];
 	}
 
+	get character(): Character {
+		// Because we're initialized by that instance, it must already exist
+		return this.Character as Character;
+	}
+
 	Run() {
 		var prev = MainCanvas.textAlign;
 		MainCanvas.textAlign = "left";
-		DrawText("- Little Sera's Club Games -", GuiSubscreen.START_X, GuiSubscreen.START_Y, "Black", "Gray");
+		DrawText(`- Little Sera's Club Games ${(this.Character as OtherCharacter).LSCG?.Version ?? "?.?.?"} -`, GuiSubscreen.START_X, GuiSubscreen.START_Y, "Black", "Gray");
 		DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png");
 		
 		MainCanvas.textAlign = "center";
@@ -64,6 +69,11 @@ export class RemoteMainMenu extends RemoteGuiSubscreen {
 
 			i++;
 		}
+
+		MainCanvas.textAlign = "left";
+		DrawButton(1500, 820, 400, 80, "", "White", "", "Open LSCG Wiki on GitHub.", false);
+		DrawImageResize("Icons/Introduction.png", 1510, 830, 60, 60);
+        DrawTextFit("Open Help", 1580, 860, 320, "Black");
 		
 		MainCanvas.textAlign = prev;
 	}
@@ -85,6 +95,9 @@ export class RemoteMainMenu extends RemoteGuiSubscreen {
 			}
 			i++;
 		}
+
+		if (MouseIn(1500, 820, 400, 80))
+            window.open('https://github.com/littlesera/LSCG/wiki', '_blank');
 	}
 
 	Exit(): void {
