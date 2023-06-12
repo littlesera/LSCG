@@ -7,8 +7,9 @@ import { RemoteGuiSubscreen } from "Settings/Remote/remoteBase";
 import { GuiSubscreen } from "Settings/settingBase";
 import { GUI } from "Settings/settingUtils";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { getCharacter, hookFunction, ICONS, removeAllHooksByModule } from "../utils";
+import { getCharacter, hookFunction, ICONS, removeAllHooksByModule, SendAction } from "../utils";
 import { HypnoModule } from "./hypno";
+import { ItemUseModule } from "./item-use";
 
 // Remote UI Module to handle configuration on other characters
 // Can be used to "program" another character's hypnosis, collar, etc.
@@ -32,7 +33,7 @@ export class CommandModule extends BaseModule {
 			},
 		}, {
 			Tag: 'zonk',
-			Description: ": hypnotize yourself",
+			Description: ": Hypnotize yourself",
 			Action: () => {
 				if (this.hypno.settings.immersive) {
 					ChatRoomSendLocal("/zonk disabled while immersive", 5000);
@@ -43,7 +44,7 @@ export class CommandModule extends BaseModule {
 			}
 		}, {
 			Tag: 'unzonk',
-			Description: ": unzonk yourself",
+			Description: ": Awaken yourself",
 			Action: () => {
 				if (this.hypno.hypnoActivated && this.hypno.settings.immersive) {
 					ChatRoomSendLocal("/unzonk disabled while immersive", 5000);
@@ -54,7 +55,7 @@ export class CommandModule extends BaseModule {
 			}
 		}, {
 			Tag: "show-trigger",
-			Description: ": reveal your current trigger word(s) to yourself",
+			Description: ": Reveal your current trigger word(s) to yourself",
 			Action: () => {
 				if (this.hypno.settings.immersive) {
 					ChatRoomSendLocal("/show-trigger disabled while immersive", 5000);
@@ -64,7 +65,7 @@ export class CommandModule extends BaseModule {
 			}
 		}, {
 			Tag: "cycle-trigger",
-			Description: ": force a cycle to a new trigger word if enabled",
+			Description: ": Force a cycle to a new trigger word if enabled",
 			Action: () => {
 				if (this.hypno.settings.immersive) {
 					ChatRoomSendLocal("/cycle-trigger disabled while immersive", 5000);
@@ -72,6 +73,47 @@ export class CommandModule extends BaseModule {
 				}
 				if (this.hypno.settings.enableCycle)
 					this.hypno.RollTriggerWord();
+			}
+		}, {
+			Tag: "roll",
+			Description: ": Make an unopposed activity roll and display the results.",
+			Action: (args, msg, parsed) => {
+				let roll = getModule<ItemUseModule>("ItemUseModule")?.UnopposedActivityRoll(Player);
+				SendAction(`${CharacterNickname(Player)} makes an activity roll and gets: ${roll.Total} ${roll.TotalStr}`);
+			}
+		}, {
+			Tag: "roll-attack",
+			Description: "[defender] : Make a contested activity roll against another user where you are the attacker.",
+			Action: (args, msg, parsed) => {
+				if (parsed.length <= 0) {
+					ChatRoomSendLocal("Please specify a defender for your roll.", 10000);
+					return;
+				}
+				let tgt = this.getCharacterByNicknameOrMemberNumber(parsed[0]);
+				if (!tgt) {
+					ChatRoomSendLocal(`Defender ${tgt} not found.`, 10000);
+					return;
+				}
+				let check = getModule<ItemUseModule>("ItemUseModule")?.MakeActivityCheck(Player, tgt);
+				SendAction(`${CharacterNickname(Player)} makes an activity check attack against ${CharacterNickname(tgt)}!`);
+				SendAction(`${CharacterNickname(Player)}: ${check.AttackerRoll.Total} ${check.AttackerRoll.TotalStr}-- ${CharacterNickname(tgt)}: ${check.DefenderRoll.Total} ${check.DefenderRoll.TotalStr}`)
+			}
+		}, {
+			Tag: "roll-defend",
+			Description: "[attacker] : Make a contested activity roll where you are defending against another user.",
+			Action: (args, msg, parsed) => {
+				if (parsed.length <= 0) {
+					ChatRoomSendLocal("Please specify an attacker for your roll.", 10000);
+					return;
+				}
+				let tgt = this.getCharacterByNicknameOrMemberNumber(parsed[0]);
+				if (!tgt) {
+					ChatRoomSendLocal(`Attacker ${tgt} not found.`, 10000);
+					return;
+				}
+				let check = getModule<ItemUseModule>("ItemUseModule")?.MakeActivityCheck(tgt, Player);
+				SendAction(`${CharacterNickname(Player)} makes an activity check defending from ${CharacterNickname(tgt)}!`);
+				SendAction(`${CharacterNickname(Player)}: ${check.AttackerRoll.Total} ${check.AttackerRoll.TotalStr}-- ${CharacterNickname(tgt)}: ${check.DefenderRoll.Total} ${check.DefenderRoll.TotalStr}`)
 			}
 		}
 	]
@@ -88,6 +130,17 @@ export class CommandModule extends BaseModule {
 
 	getSubcommand(name: string): ICommand | undefined {
 		return this.lscgCommands.find(c => c.Tag.toLocaleLowerCase() == name.toLocaleLowerCase());
+	}
+
+	getCharacterByNicknameOrMemberNumber(tgt: string): Character | undefined {
+		tgt = tgt.toLocaleLowerCase();
+		let tgtC: Character | undefined | null;
+		if (CommonIsNumeric(tgt))
+			tgtC = getCharacter(+tgt);
+		if (!tgtC) {
+			tgtC = ChatRoomCharacter.find(c => CharacterNickname(c).toLocaleLowerCase() == tgt);
+		}
+		return tgtC;
 	}
 
     load(): void {
