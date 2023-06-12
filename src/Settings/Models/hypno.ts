@@ -16,6 +16,7 @@ export interface HypnoPublicSettingsModel extends BaseSettingsModel {
     cooldownTime: number;
     enableCycle: boolean;
     cycleTime: number;
+    awakeners: string;
     overrideWords: string;
     overrideMemberIds: string;
     activatedAt: number;
