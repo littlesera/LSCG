@@ -353,21 +353,21 @@ export class ItemUseModule extends BaseModule {
 		return ((skill?.Level ?? 0) * (skill?.Ratio ?? 1));
 	}
 	
-	getRollMod(C: Character, Opponent: Character, isAggressor: boolean = false): number {
+	getRollMod(C: Character, Opponent?: Character, isAggressor: boolean = false): number {
 		// Dominant vs Submissive ==> -3 to +3 modifier
 		let dominanceMod = Math.floor(this.getDominance(C) / 33);
 		// +5 if we own our opponent
-		let ownershipMod = Opponent.IsOwnedByMemberNumber(C.MemberNumber!) ? 5 : 0;
+		let ownershipMod = Opponent?.IsOwnedByMemberNumber(C.MemberNumber!) ? 5 : 0 ?? 0;
 		// -4 if we're restrained
 		let restrainedMod = C.IsRestrained() ? -4 : 0;
 		// If edged, -0 to -4 based on arousal
-		let edgingMod = C.IsEdged() ? (Math.floor(C.ArousalSettings?.Progress ?? 0 / 25) * -1) : 0;
+		let edgingMod = C.IsEdged() ? (Math.floor((C.ArousalSettings?.Progress ?? 0) / 25) * -1) : 0;
 		// -5 if we're incapacitated, automatic failure if we're also defending
 		let incapacitatedMod = getModule<BoopsModule>("BoopsModule")?.IsIncapacitated ? (isAggressor ? 5 : 100) * -1 : 0;
 		
 		let finalMod = dominanceMod + ownershipMod + restrainedMod + edgingMod + incapacitatedMod;
 	
-		console.debug(`${CharacterNickname(C)} is ${isAggressor ? 'stealing from' : 'defending against'} ${CharacterNickname(Opponent)} [${finalMod}] --
+		console.debug(`${CharacterNickname(C)} is ${isAggressor ? 'rolling against' : 'defending against'} ${!Opponent ? "nobody" : CharacterNickname(Opponent)} [${finalMod}] --
 		dominanceMod: ${dominanceMod}
 		ownershipMod: ${ownershipMod}
 		restrainedMod: ${restrainedMod}
@@ -376,6 +376,10 @@ export class ItemUseModule extends BaseModule {
 		`);
 	
 		return finalMod;
+	}
+
+	UnopposedActivityRoll(C: Character) {
+		return new ActivityRoll(this.d20, this.getRollMod(C));
 	}
 
 	MakeActivityCheck(attacker: Character, defender: Character): ActivityCheck {
