@@ -1,6 +1,6 @@
 import { BaseModule } from "base";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, setOrIgnoreBlush, hookFunction, ICONS, getCharacter, sendLSCGMessage, OnAction } from "../utils";
+import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, setOrIgnoreBlush, hookFunction, ICONS, getCharacter, sendLSCGMessage, OnAction, callOriginal } from "../utils";
 
 export interface ActivityTarget {
     Name: AssetGroupItemName;
@@ -723,10 +723,19 @@ export class ActivityModule extends BaseModule {
         // Allow for similar "hand-gagging" when certain custom actions are done
         hookFunction("SpeechGetTotalGagLevel", 6, (args, next) => {
             let level = <number>next(args);
-            if (this.customGagged)
+            if (this.customGagged && (args[0] as Character).IsPlayer())
                 level += 2;
             return level;
         }, ModuleCategory.Activities);
+
+        hookFunction("ServerSend", 1, (args, next) => {
+            if (args[0] == "ChatRoomChat" && args[1]?.Type == "Chat"){
+                if (this.customGagged) {
+                    args[1].Content = callOriginal("SpeechGarble", [Player, args[1].Content, true])
+                }
+            }
+            next(args);
+        })
 
         let failedLinkActions = [
             "%NAME%'s whimpers, %POSSESSIVE% tongue held tightly.",
