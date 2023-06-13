@@ -782,7 +782,7 @@ export class InjectorModule extends BaseModule {
             net.Difficulty = 8;
             net.Property.Difficulty = 8;
         }
-        ChatRoomCharacterItemUpdate(target, "ItemDevices");
+        ChatRoomCharacterUpdate(target);
         SendAction("%NAME%'s net engulfs %OPP_NAME%.", target);
     }
 

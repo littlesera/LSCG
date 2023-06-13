@@ -34,6 +34,14 @@ export interface ActivityCheck {
 	DefenderRoll: ActivityRoll;
 }
 
+export interface GagTarget {
+	MouthItemName: string;
+	HandItemName: string;
+	LeaveHandItem?: boolean;
+	CraftedKeys?: string[];
+	PreferredTypes?: {Location: string, Type: string}[];
+}
+
 // Remote UI Module to handle configuration on other characters
 // Can be used to "program" another character's hypnosis, collar, etc.
 // Framework inspired from BCX
@@ -41,15 +49,68 @@ export class ItemUseModule extends BaseModule {
 	activities: ActivityModule | undefined;
 	failedStealTime: number = 0;
 
+	GagTargets: GagTarget[] = [
+		{
+			HandItemName: "Ballgag",
+			MouthItemName: "BallGag",
+			PreferredTypes: [{Location: "ItemMouth", Type: "Tight"}]
+		},{
+			HandItemName: "Panties",
+			MouthItemName: "PantyStuffing"
+		},{
+			HandItemName: "LargeDildo",
+			MouthItemName: "LargeDildo"
+		},{
+			HandItemName: "Cane",
+			MouthItemName: "CaneGag"
+		},{
+			HandItemName: "Crop",
+			MouthItemName: "CropGag"
+		},{
+			HandItemName: "LongSock",
+			MouthItemName: "SockStuffing"
+		},{
+			HandItemName: "Towel",
+			MouthItemName: "ClothStuffing"
+		},{
+			HandItemName: "RopeCoilShort",
+			MouthItemName: "RopeGag",
+			LeaveHandItem: true
+		},{
+			HandItemName: "RopeCoilLong",
+			MouthItemName: "RopeBallGag",
+			LeaveHandItem: true,
+			PreferredTypes: [{Location: "ItemMouth", Type: "Tight"}]
+		},{
+			HandItemName: "TapeRoll",
+			MouthItemName: "DuctTape",
+			LeaveHandItem: true,
+			PreferredTypes: [
+				{Location: "ItemMouth", Type: "Crossed"},
+				{Location: "ItemMouth2", Type: "Double"},
+				{Location: "ItemMouth3", Type: "Cover"}
+			]
+		}
+	]
+
     load(): void {
         hookFunction("CharacterItemsForActivity", 1, (args, next) => {
 			let C = args[0];
 			let itemType = args[1];
 			let results = next(args);
+			var focusGroup = C?.FocusGroup?.Name ?? undefined;
 			if (itemType == "AnyItem") {
 				let item = InventoryGet(C, "ItemHandheld");
 				if (!!item)
 					results.push(item)
+			} else if (itemType == "GagTakeItem") {
+				let item = InventoryGet(C, focusGroup);	
+				if (this.GagTargets.flatMap(t => [t.HandItemName, t.MouthItemName]).indexOf(item?.Asset.Name ?? "") > -1)
+					results.push(item);
+			} else if (itemType == "GagGiveItem") {
+				let item = InventoryGet(Player, "ItemHandheld");
+				if (this.GagTargets.flatMap(t => [t.HandItemName, t.MouthItemName]).indexOf(item?.Asset.Name ?? "") > -1)
+					results.push(item);
 			}
 			return results;
 		}, ModuleCategory.ItemUse);
@@ -58,32 +119,40 @@ export class ItemUseModule extends BaseModule {
 	run(): void {
 		this.activities = getModule<ActivityModule>("ActivityModule")
 
-		// Ballgag Mouth
+		// Gag Mouth
 		this.activities.AddActivity(<ActivityBundle>{
 			Activity: <Activity>{
-				Name: "UseBallgag",
+				Name: "UseGag",
 				MaxProgress: 50,
 				MaxProgressSelf: 80,
-				Prerequisite: ["ZoneAccessible", "ZoneNaked", "UseHands"]
+				Prerequisite: ["ZoneAccessible", "ZoneNaked", "UseHands", "Needs-GagGiveItem"]
 			},
 			Targets: [
 				<ActivityTarget>{
 					Name: "ItemMouth",
 					TargetLabel: "Gag Mouth",
-					TargetAction: "SourceCharacter pushes PronounPossessive gag into TargetCharacter's mouth, latching it behind their head.",
-					TargetSelfAction: "SourceCharacter gags themselves.",
+					TargetAction: "SourceCharacter pushes PronounPossessive UsedAsset into TargetCharacter's mouth.",
+					TargetSelfAction: "SourceCharacter gags themselves with their own UsedAsset.",
 					SelfAllowed: true
 				}
 			],
 			CustomPrereqs: [
 				{
-					Name: "HoldingBallgag",
+					Name: "HoldingGag",
 					Func: (acting, acted, group) => {
 						var location = acted.FocusGroup?.Name!;
 						var existing = InventoryGet(acted, location);
 						if (!!existing)
 							return false;
-						return InventoryGet(acting, "ItemHandheld")?.Asset.Name! == "Ballgag";
+						let heldItemName = InventoryGet(acting, "ItemHandheld")?.Asset.Name ?? "";
+						let gagTarget = this.GagTargets.find(t => t.HandItemName == heldItemName);
+						if (!gagTarget)
+							return false;
+						let mouthItemName = gagTarget.MouthItemName ?? "";
+						let assetGroup = AssetFemale3DCG.find(a => a.Group == location);
+						let allowedAssetNames = assetGroup?.Asset.map(a => (<AssetDefinition>a)?.Name ?? a);
+						let targetMouthAssetAllowed = (allowedAssetNames?.indexOf(mouthItemName) ?? -1) > -1;
+						return targetMouthAssetAllowed;
 					}
 				}
 			],
@@ -92,39 +161,42 @@ export class ItemUseModule extends BaseModule {
 					if (!target)
 						return;
 					var location = target.FocusGroup?.Name!;
-					this.ApplyGag(target, Player, "Ballgag", "BallGag", location)
+					let heldItemName = InventoryGet(Player, "ItemHandheld")?.Asset.Name ?? "";
+					let gagTarget = this.GagTargets.find(t => t.HandItemName == heldItemName);
+					if (!!gagTarget) {
+						this.ApplyGag(target, Player, gagTarget, location);
+					}
 					return next(args);
 				}
-			},
-			CustomImage: "Assets/Female3DCG/ItemMouth/Preview/BallGag.png"
+			}
 		});
 
-		// Take Ballgag
+		// Take Gag
 		this.activities.AddActivity(<ActivityBundle>{
 			Activity: <Activity>{
 				Name: "TakeBallgag",
 				MaxProgress: 50,
 				MaxProgressSelf: 80,
-				Prerequisite: ["UseHands"]
+				Prerequisite: ["UseHands", "Needs-GagTakeItem"]
 			},
 			Targets: [
 				<ActivityTarget>{
 					Name: "ItemMouth",
 					TargetLabel: "Take Gag",
-					TargetAction: "SourceCharacter unlatches and removes TargetCharacter's ballgag.",
-					TargetSelfAction: "SourceCharacter pulls the ballgag out of PronounPossessive mouth.",
+					TargetAction: "SourceCharacter removes TargetCharacter's UsedAsset.",
+					TargetSelfAction: "SourceCharacter pulls the UsedAsset out of PronounPossessive mouth.",
 					SelfAllowed: true
 				}
 			],
 			CustomPrereqs: [
 				{
-					Name: "Ballgagged",
+					Name: "TargetIsGagged",
 					Func: (acting, acted, group) => {
 						var location = acted.FocusGroup?.Name!;
 						var item = InventoryGet(acted, location);
 						if (!!item && !!item.Property && item.Property.Effect && item.Property.Effect.indexOf("Lock") > -1)
 							return false;
-						return !InventoryGet(acting, "ItemHandheld") && item?.Asset.Name! == "BallGag";
+						return !InventoryGet(acting, "ItemHandheld") && this.GagTargets.map(t => t.MouthItemName).indexOf(item?.Asset.Name ?? "") > -1;
 					}
 				}
 			],
@@ -133,93 +205,13 @@ export class ItemUseModule extends BaseModule {
 					if (!target)
 						return;
 					var location = target.FocusGroup?.Name!;
-					this.TakeGag(target, Player, "Ballgag", "BallGag", location);
+					let mouthItemName = InventoryGet(Player, location)?.Asset.Name ?? "";
+					let gagTarget = this.GagTargets.find(t => t.MouthItemName == mouthItemName);
+					if (!!gagTarget)
+						this.TakeGag(target, Player, gagTarget, location);
 					return next(args);
 				}
-			},
-			CustomImage: "Assets/Female3DCG/ItemMouth/Preview/BallGag.png"
-		});
-
-		// Gag Mouth with Panties
-		this.activities.AddActivity(<ActivityBundle>{
-			Activity: <Activity>{
-				Name: "UsePanties",
-				MaxProgress: 50,
-				MaxProgressSelf: 80,
-				Prerequisite: ["ZoneAccessible", "ZoneNaked", "UseHands"]
-			},
-			Targets: [
-				<ActivityTarget>{
-					Name: "ItemMouth",
-					TargetLabel: "Gag Mouth",
-					TargetAction: "SourceCharacter stuffs PronounPossessive panties into TargetCharacter's mouth, filling it.",
-					TargetSelfAction: "SourceCharacter stuffs PronounPossessive panties into PronounPossessive own mouth.",
-					SelfAllowed: true
-				}
-			],
-			CustomPrereqs: [
-				{
-					Name: "HoldingPanties",
-					Func: (acting, acted, group) => {
-						var location = acted.FocusGroup?.Name!;
-						var existing = InventoryGet(acted, location);
-						if (!!existing)
-							return false;
-						return InventoryGet(acting, "ItemHandheld")?.Asset.Name! == "Panties";
-					}
-				}
-			],
-			CustomAction: {
-				Func: (target, args, next) => {
-					if (!target)
-						return;
-					var location = target.FocusGroup?.Name!;
-					this.ApplyGag(target, Player, "Panties", "PantyStuffing", location);
-					return next(args);
-				}
-			},
-			CustomImage: "Assets/Female3DCG/ItemMouth/Preview/PantyStuffing.png"
-		});
-
-		// Take Panties
-		this.activities.AddActivity(<ActivityBundle>{
-			Activity: <Activity>{
-				Name: "TakePanties",
-				MaxProgress: 50,
-				MaxProgressSelf: 80,
-				Prerequisite: ["UseHands"]
-			},
-			Targets: [
-				<ActivityTarget>{
-					Name: "ItemMouth",
-					TargetLabel: "Take Gag",
-					TargetAction: "SourceCharacter takes the panty stuffing from TargetCharacter's mouth.",
-					TargetSelfAction: "SourceCharacter pulls the panties out of PronounPossessive own mouth.",
-					SelfAllowed: true
-				}
-			],
-			CustomPrereqs: [
-				{
-					Name: "PantyStuffed",
-					Func: (acting, acted, group) => {
-						var location = acted.FocusGroup?.Name!;
-						var item = InventoryGet(acted, location);
-						if (!!item && !!item.Property && item.Property.Effect && item.Property.Effect.indexOf("Lock") > -1)
-							return false;
-						return !InventoryGet(acting, "ItemHandheld") && InventoryGet(acted, location)?.Asset.Name! == "PantyStuffing";
-					}
-				}
-			],
-			CustomAction: {
-				Func: (target, args, next) => {
-					if (!target)
-						return;
-					var location = target.FocusGroup?.Name!;
-					this.TakeGag(target, Player, "Panties", "PantyStuffing", location);
-					return next(args);
-				}
-			},
-			CustomImage: "Assets/Female3DCG/ItemMouth/Preview/PantyStuffing.png"
+			}
 		});
 
 		// Tie Up
@@ -393,21 +385,23 @@ export class ItemUseModule extends BaseModule {
 		return AssetFemale3DCG.filter(g => g.Asset.some(a => (a as AssetDefinition)?.Name == "HempRope")).map(g => g.Group);
 	}
 
-	ApplyGag(target: Character, source: Character, handItemName: string, gagItemName: string, location: string) {
+	ApplyGag(target: Character, source: Character, gagTarget: GagTarget, location: string) {
 		var gagItem = InventoryGet(source, "ItemHandheld");
-		if (gagItem?.Asset.Name == handItemName) {
-			InventoryRemove(source, "ItemHandheld", true);
-			var gag = InventoryWear(target, gagItemName, location, gagItem?.Color, undefined, source.MemberNumber, gagItem?.Craft, true);
-			if (gagItemName == "BallGag")
-				gag!.Property!.Type = "Tight";
-			setTimeout(() => ChatRoomCharacterItemUpdate(target, location));
+		if (gagItem?.Asset.Name == gagTarget.HandItemName) {
+			if (!gagTarget.LeaveHandItem) InventoryRemove(source, "ItemHandheld", true);
+			var gag = InventoryWear(target, gagTarget.MouthItemName, location, gagItem?.Color, undefined, source.MemberNumber, gagItem?.Craft, true);
+			if (!!gagTarget.PreferredTypes && gagTarget.PreferredTypes.length > 0) {
+				var prefType = gagTarget.PreferredTypes.find(tgt => tgt.Location == location) ?? gagTarget.PreferredTypes[0];
+				gag!.Property!.Type = prefType.Type;
+			}
+			setTimeout(() => ChatRoomCharacterUpdate(target));
 		}
     }
 
-	TakeGag(target: Character, source: Character, handItemName: string, gagItemName: string, location: string) {
+	TakeGag(target: Character, source: Character, gagTarget: GagTarget, location: string) {
 		var gag = InventoryGet(target, location);
 		var existingHand = InventoryGet(source, "ItemHandheld");
-		if (!gag || !!existingHand || gag.Asset.Name != gagItemName)
+		if (!gag || !!existingHand || gag.Asset.Name != gagTarget.MouthItemName)
 			return;
 		var validParams = ValidationCreateDiffParams(target, source.MemberNumber!);
 		if (ValidationCanRemoveItem(gag!, validParams, false)) {
@@ -415,8 +409,8 @@ export class ItemUseModule extends BaseModule {
 			var craft = gag.Craft;
 			if (!!craft)
 				craft.Lock = "";
-			InventoryWear(source, handItemName, "ItemHandheld", gag.Color, undefined, source.MemberNumber, craft, true);
-			setTimeout(() => ChatRoomCharacterItemUpdate(target, location));
+			InventoryWear(source, gagTarget.HandItemName, "ItemHandheld", gag.Color, undefined, source.MemberNumber, craft, true);
+			setTimeout(() => ChatRoomCharacterUpdate(target));
 		}
 	}
 
@@ -426,7 +420,7 @@ export class ItemUseModule extends BaseModule {
 			var ropeTie = InventoryWear(target, "HempRope", location, handRope?.Color, undefined, source.MemberNumber, handRope?.Craft, true);
 			if (location == "ItemArms")
 				(<any>ropeTie!.Property!.Type!) = null;
-			setTimeout(() => ChatRoomCharacterItemUpdate(target, location));
+			setTimeout(() => ChatRoomCharacterUpdate(target));
 		}
 	}
 
@@ -441,8 +435,8 @@ export class ItemUseModule extends BaseModule {
 			SendAction(`${CharacterNickname(source)} gives %POSSESSIVE% ${this.getItemName(item)} to ${CharacterNickname(target)}.`);
 		InventoryRemove(source, "ItemHandheld", true);
 		InventoryWear(target, item?.Asset.Name!, "ItemHandheld", item?.Color, item?.Difficulty, source.MemberNumber, item?.Craft, true);
-		setTimeout(() => ChatRoomCharacterItemUpdate(source, "ItemHandheld"));
-		setTimeout(() => ChatRoomCharacterItemUpdate(target, "ItemHandheld"));
+		setTimeout(() => ChatRoomCharacterUpdate(source));
+		setTimeout(() => ChatRoomCharacterUpdate(target));
 	}
 
 	TrySteal(target: Character, source: Character, item: Item) {
@@ -457,8 +451,8 @@ export class ItemUseModule extends BaseModule {
 			SendAction(`${CharacterNickname(source)} ${check.AttackerRoll.TotalStr}manages to wrest ${CharacterNickname(target)}'s ${check.DefenderRoll.TotalStr}${this.getItemName(item)} out of their grasp!`);
 			InventoryRemove(target, "ItemHandheld", true);
 			InventoryWear(source, item.Asset.Name, "ItemHandheld", item.Color, item.Difficulty, source.MemberNumber, item.Craft, true);
-			setTimeout(() => ChatRoomCharacterItemUpdate(source, "ItemHandheld"));
-			setTimeout(() => ChatRoomCharacterItemUpdate(target, "ItemHandheld"));
+			setTimeout(() => ChatRoomCharacterUpdate(source));
+			setTimeout(() => ChatRoomCharacterUpdate(target));
 		}
 		else {
 			SendAction(`${CharacterNickname(source)} ${check.AttackerRoll.TotalStr}fails to steal ${CharacterNickname(target)}'s ${check.DefenderRoll.TotalStr}${this.getItemName(item)} and is dazed from the attempt!`);
