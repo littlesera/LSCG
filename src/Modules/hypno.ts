@@ -183,7 +183,7 @@ export class HypnoModule extends BaseModule {
     }
 
     initializeTriggerWord() {
-        var recycleFromCommon = !this.settings.overrideWords && (!this.settings.trigger || commonWords.indexOf(this.settings.trigger) > -1);
+        var recycleFromCommon = !this.settings.overrideWords && (!this.settings.trigger || commonWords.indexOf(this.settings.trigger) == -1);
         if (recycleFromCommon) {
             this.settings.trigger = this.getNewTriggerWord();
             settingsSave();
