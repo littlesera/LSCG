@@ -20,7 +20,8 @@ export class RemoteHypno extends RemoteGuiSubscreen {
 		if (this.overrideMemberIds.length > 0)
 			memberIdIsAllowed = this.overrideMemberIds.indexOf(Player.MemberNumber!) > -1;
 
-		var passTranceReq = (this.settings.remoteAccessRequiredTrance && this.settings.hypnotized) || !this.settings.remoteAccessRequiredTrance;
+		var isTrance = this.settings.hypnotized || this.Character?.LSCG?.InjectorModule?.brainwashed;
+		var passTranceReq = (this.settings.remoteAccessRequiredTrance && isTrance) || !this.settings.remoteAccessRequiredTrance;
 		var passHypnotizerReq = (this.settings.limitRemoteAccessToHypnotizer && this.settings.hypnotizedBy == Player.MemberNumber) || !this.settings.limitRemoteAccessToHypnotizer;
 
 		if (!memberIdIsAllowed)
@@ -28,7 +29,7 @@ export class RemoteHypno extends RemoteGuiSubscreen {
 		if (!passTranceReq)
 			return "They have too much willpower to let you in...";
 		if (!passHypnotizerReq)
-			return "Someone else seems to have a firm grip on them for now...";
+			return "They seem suggestable, but not to you...";
 		else
 			return "Setting is Unavailable";
 	}
@@ -38,7 +39,8 @@ export class RemoteHypno extends RemoteGuiSubscreen {
 		if (this.overrideMemberIds.length > 0)
 			memberIdIsAllowed = this.overrideMemberIds.indexOf(Player.MemberNumber!) > -1;
 
-		var passTranceReq = (this.settings.remoteAccessRequiredTrance && this.settings.hypnotized) || !this.settings.remoteAccessRequiredTrance;
+		var isTrance = this.settings.hypnotized || this.Character?.LSCG?.InjectorModule?.brainwashed;
+		var passTranceReq = (this.settings.remoteAccessRequiredTrance && isTrance) || !this.settings.remoteAccessRequiredTrance;
 		var passHypnotizerReq = (this.settings.limitRemoteAccessToHypnotizer && this.settings.hypnotizedBy == Player.MemberNumber) || !this.settings.limitRemoteAccessToHypnotizer;
 
 		return this.settings.remoteAccess && 
