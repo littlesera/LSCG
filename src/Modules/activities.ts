@@ -462,7 +462,7 @@ export class ActivityModule extends BaseModule {
             Activity: <Activity>{
                 Name: "HoldHand",
                 MaxProgress: 75,
-                Prerequisite: ["ZoneAccessible", "UseHands"]
+                Prerequisite: ["ZoneAccessible", "TargetZoneAccessible", "UseHands"]
             },
             Targets: [
                 {
@@ -476,7 +476,7 @@ export class ActivityModule extends BaseModule {
                 {
                     Name: "TargetIsHandUnleashed",
                     Func: (acting, acted, group) => {
-                        return !this.isHandLeashed(acted);
+                        return !this.isHandLeashed(acted) && InventoryGet(acted, "ItemHands") == null && this.handHoldingMemberList.length < 2;
                     }
                 }
             ],
@@ -594,6 +594,64 @@ export class ActivityModule extends BaseModule {
                 }
             },
             CustomImage: "Assets/Female3DCG/Activity/Pinch.png"
+        });
+
+        // Patch Grab Arm
+        this.PatchActivity(<ActivityPatch>{
+            ActivityName: "Grope",
+            CustomPrereqs: [
+                {
+                    Name: "TargetIsArmAvailable",
+                    Func: (acting, acted, group) => {
+                        if (group.Name == "ItemArms")
+                            return !this.isPlayerHoldingHandsWith(acted.MemberNumber ?? 0) && this.handHoldingMemberList.length < 2;
+                        return true;
+                    }
+                }
+            ],
+            CustomAction: <CustomAction>{
+                Func: (target, args, next) => {
+                    var location = args[1]?.Dictionary[2]?.FocusGroupName;
+                    if (!!target && !!location && location == "ItemArms")
+                        this.DoGrab(target, "hand");
+                    return next(args);
+                }
+            },
+        });
+
+        // Release Arm
+        this.AddActivity({
+            Activity: <Activity>{
+                Name: "ReleaseArm",
+                MaxProgress: 30,
+                Prerequisite: [""]
+            },
+            Targets: [
+                {
+                    Name: "ItemArms",
+                    SelfAllowed: false,
+                    TargetLabel: "Release Arm",
+                    TargetAction: "SourceCharacter releases TargetCharacter's arm."
+                }
+            ],
+            CustomPrereqs: [
+                {
+                    Name: "TargetIsArmGrabbed",
+                    Func: (acting, acted, group) => {
+                        if (group.Name == "ItemArms")
+                            return this.isPlayerHoldingHandsWith(acted.MemberNumber ?? 0);
+                        return false;
+                    }
+                }
+            ],
+            CustomAction: <CustomAction>{
+                Func: (target, args, next) => {
+                    if (!!target)
+                        this.DoRelease(target, "hand");
+                    return next(args);
+                }
+            },
+            CustomImage: "Assets/Female3DCG/Activity/Grope.png"
         });
     }
 
@@ -906,14 +964,19 @@ export class ActivityModule extends BaseModule {
     earPinchedByMember: number | null = null;
     earPinchingMemberList: number[] = [];
     handHoldingMemberList: number[] = [];
+    armGrabbingMemberList: number[] = [];
     tongueGrabbedMember: number | null = null;
 
+    get totalHeldByHandList(): number[] {
+        return this.handHoldingMemberList.concat(this.armGrabbingMemberList);
+    }
+
     get allCustomHeldBy(): number[] {
-        return this.handHoldingMemberList.concat(this.earPinchedByMember!);
+        return this.totalHeldByHandList.concat(this.earPinchedByMember!);
     }
 
     get allCustomLedMembers(): number[] {
-        return this.handHoldingMemberList.concat(this.earPinchingMemberList);
+        return this.totalHeldByHandList.concat(this.earPinchingMemberList);
     }
 
     isPlayerHoldingHandsWith(holdingMemberNumber: number) {
