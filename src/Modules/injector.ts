@@ -480,12 +480,14 @@ export class InjectorModule extends BaseModule {
     }
 
     sedativeInjectStr = [
-        "%NAME% gulps and swallows %OPP_NAME%'s drink, a cool relaxing feeling starting to spread through %POSSESSIVE% body.",
-        "%NAME%'s muscle relax as %OPP_NAME%'s sedative courses through %POSSESSIVE% body.",
-        "%NAME% fights to stay conscious against the relentless weight of %OPP_NAME%'s drug."
+        "%NAME% sighs as a cool relaxing calm glides through %POSSESSIVE% body, fighting to keep %POSSESSIVE% eyes open.",
+        "%NAME%'s muscle relax as %OPP_NAME%'s sedative courses through %POSSESSIVE% body",
+        "%NAME% fights to stay conscious against the relentless weight of %OPP_NAME%'s drug.",
+        "%NAME%'s eyes droop as %POSSESSIVE% fights to stay conscious against the cool, welcoming weight of %OPP_NAME%'s drug."
     ];
 
     sedativeDrinkStr = [
+        "%NAME% gulps and swallows %OPP_NAME%'s drink, a cool relaxing feeling starting to spread through %POSSESSIVE% body.",
         "%NAME% sighs as a cool relaxing calm glides down %POSSESSIVE% throat, fighting to keep %POSSESSIVE% eyes open.",
         "%NAME%'s muscle relax as %OPP_NAME%'s sedative pours down %POSSESSIVE% throat and starts to take effect.",
         "%NAME%'s eyes droop as %POSSESSIVE% fights to stay conscious against the cool, welcoming weight of %OPP_NAME%'s drug."
