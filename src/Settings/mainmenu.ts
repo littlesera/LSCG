@@ -4,6 +4,7 @@ import { InjectorModule } from "Modules/injector";
 import { MiscModule } from "Modules/misc";
 import { GuiSubscreen } from "./settingBase";
 import { GUI } from "./settingUtils";
+import { LSCG_CHANGES } from "utils";
 
 export class MainMenu extends GuiSubscreen {
 	subscreens: GuiSubscreen[] = [];
@@ -113,7 +114,7 @@ export class MainMenu extends GuiSubscreen {
 		}
 
 		if (MouseIn(1500, 720, 400, 80))
-            window.open('https://github.com/littlesera/LSCG/releases/latest', '_blank');
+            window.open(LSCG_CHANGES, '_blank');
 
 		if (MouseIn(1500, 820, 400, 80))
             window.open('https://github.com/littlesera/LSCG/wiki', '_blank');

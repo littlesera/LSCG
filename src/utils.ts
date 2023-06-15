@@ -6,6 +6,8 @@ import { CoreModule } from "Modules/core";
 import { IPublicSettingsModel } from "Settings/Models/settings";
 import { ModuleCategory } from "Settings/setting_definitions";
 
+export const LSCG_CHANGES: string = "https://github.com/littlesera/LSCG/releases/latest";
+
 type PatchHook = (args: any[], next: (args: any[]) => any) => any;
 interface IPatchedFunctionData {
 	name: string;
@@ -334,6 +336,12 @@ export function sendLSCGMessage(msg: LSCGMessageModel) {
 	};
 	
 	ServerSend("ChatRoomChat", packet);
+}
+
+export function LSCG_SendLocal(msg: string, time?: number) {
+	var bgColor = (Player.ChatSettings!.ColorTheme!.indexOf("Light") > -1) ? "#D7F6E9" : "#23523E";
+	let text = `<p style='background-color:${bgColor};'>${msg}</p>`;
+	ChatRoomSendLocal(text);
 }
 
 // ICONS

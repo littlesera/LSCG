@@ -8,6 +8,7 @@ import { GUI } from "../settingUtils";
 import { GuiSubscreen } from "Settings/settingBase";
 import { GuiHypno } from "Settings/hypno";
 import { RemoteHypno } from "./hypno";
+import { LSCG_CHANGES } from "utils";
 
 export class RemoteMainMenu extends RemoteGuiSubscreen {
 	subscreens: RemoteGuiSubscreen[] = [];
@@ -102,7 +103,7 @@ export class RemoteMainMenu extends RemoteGuiSubscreen {
 		}
 
 		if (MouseIn(1500, 720, 400, 80))
-            window.open('https://github.com/littlesera/LSCG/releases/latest', '_blank');
+            window.open(LSCG_CHANGES, '_blank');
 
 		if (MouseIn(1500, 820, 400, 80))
             window.open('https://github.com/littlesera/LSCG/wiki', '_blank');
