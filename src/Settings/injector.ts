@@ -34,19 +34,19 @@ export class GuiInjector extends GuiSubscreen {
 			},<Setting>{
 				type: "checkbox",
 				label: "Enable Sedative:",
-				description: "Activates for any injector with \"sedative\" or \"tranquilizer\" in its crafted name or description.",
+				description: "Activates for any injector or drink with \"sedative\" or \"tranquilizer\" in its crafted name or description.",
 				setting: () => this.settings.enableSedative ?? false,
 				setSetting: (val) => this.settings.enableSedative = val
 			},<Setting>{
 				type: "checkbox",
 				label: "Enable Brainwash Drug:",
-				description: "Activates for any injector with \"mind control,\" \"hypnotizing,\" or \"brainwashing\" in its crafted name ordescription.",
+				description: "Activates for any injector or drink with \"mind control,\" \"hypnotizing,\" or \"brainwashing\" in its crafted name ordescription.",
 				setting: () => this.settings.enableMindControl ?? false,
 				setSetting: (val) => this.settings.enableMindControl = val
 			},<Setting>{
 				type: "checkbox",
 				label: "Enable Aphrodisiac:",
-				description: "Activates for any injector with \"horny\" or \"aphrodisiac\" in its crafted name or description.",
+				description: "Activates for any injector or drink with \"horny\" or \"aphrodisiac\" in its crafted name or description.",
 				setting: () => this.settings.enableHorny ?? false,
 				setSetting: (val) => this.settings.enableHorny = val
 			},<Setting>{

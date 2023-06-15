@@ -4,9 +4,9 @@ import { BaseSettingsModel } from "Settings/Models/base";
 import { CollarPublicSettingsModel } from "Settings/Models/collar";
 import { HypnoPublicSettingsModel } from "Settings/Models/hypno";
 import { InjectorPublicSettingsModel, InjectorSettingsModel } from "Settings/Models/injector";
-import { IPublicSettingsModel, PublicSettingsModel } from "Settings/Models/settings";
+import { IPublicSettingsModel, PublicSettingsModel, SettingsModel } from "Settings/Models/settings";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
-import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, setOrIgnoreBlush, isPhraseInString, hookFunction, getCharacter, drawSvg, SVG_ICONS, patchFunction, sendLSCGMessage, settingsSave } from "../utils";
+import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, setOrIgnoreBlush, isPhraseInString, hookFunction, getCharacter, drawSvg, SVG_ICONS, patchFunction, sendLSCGMessage, settingsSave, LSCG_CHANGES, LSCG_SendLocal } from "../utils";
 import { ActivityModule, GrabType } from "./activities";
 import { HypnoModule } from "./hypno";
 
@@ -33,6 +33,7 @@ export class CoreModule extends BaseModule {
 
     load(): void {
         hookFunction("ChatRoomSync", 1, (args, next) => {
+            this.CheckVersionUpdate();
             this.SendPublicPacket(true);
             return next(args);
         }, ModuleCategory.Core);
@@ -77,6 +78,19 @@ export class CoreModule extends BaseModule {
 
     unload(): void {
         removeAllHooksByModule(ModuleCategory.Core);
+    }
+
+    CheckVersionUpdate() {
+        var previousVersion = Player.LSCG?.Version;
+        if (!previousVersion || previousVersion != LSCG_VERSION) {
+            this.ShowChangelog();
+            if (!Player.LSCG) {
+                Player.LSCG = <SettingsModel>{};
+                this.registerDefaultSettings();
+            }
+            Player.LSCG.Version = LSCG_VERSION;
+            settingsSave();
+        }
     }
 
     SendPublicPacket(replyRequested: boolean, type: LSCGMessageModelType = "init") {
@@ -138,5 +152,20 @@ export class CoreModule extends BaseModule {
                 }
                 break;
         }
+    }
+
+    ShowChangelog(): void {
+        const message = `New LSCG version: ${LSCG_VERSION}
+See below for the latest changes:
+${LSCG_CHANGES}`;
+        ServerAccountBeep({
+            MemberNumber: Player.MemberNumber,
+            MemberName: "LSCG",
+            ChatRoomName: "LSCG Update",
+            Private: true,
+            Message: message,
+            ChatRoomSpace: "",
+        });
+        console.info(`LSCG Updated:${LSCG_CHANGES}`);
     }
 }

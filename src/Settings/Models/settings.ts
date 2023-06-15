@@ -6,6 +6,7 @@ import { HypnoPublicSettingsModel, HypnoSettingsModel } from "./hypno";
 import { InjectorPublicSettingsModel, InjectorSettingsModel } from "./injector";
 
 export interface SettingsModel {
+    Version: string;
     CollarModule: CollarSettingsModel;
     HypnoModule: HypnoSettingsModel;
     BoopsModule: BaseSettingsModel;

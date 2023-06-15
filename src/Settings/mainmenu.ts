@@ -4,6 +4,7 @@ import { InjectorModule } from "Modules/injector";
 import { MiscModule } from "Modules/misc";
 import { GuiSubscreen } from "./settingBase";
 import { GUI } from "./settingUtils";
+import { LSCG_CHANGES } from "utils";
 
 export class MainMenu extends GuiSubscreen {
 	subscreens: GuiSubscreen[] = [];
@@ -68,8 +69,8 @@ export class MainMenu extends GuiSubscreen {
 				// Skip disabled screens for the time being
 				if (screen.name == "MainMenu" || screen.hidden) continue;
 
-				DrawButton(150 + 430 * PX, 190 + 120 * PY, 450, 90, "", isDisabled ? "#ddd" : "White", screen.icon,
-					isDisabled ? "Setting is deactivated" : "", isDisabled);
+				DrawButton(150 + 430 * PX, 190 + 120 * PY, 450, 90, "", isDisabled ? "#ddd" : "White", "", isDisabled ? "Setting is deactivated" : "", isDisabled);
+				DrawImageResize(screen.icon, 150 + 430 * PX + 10, 190 + 120 * PY + 10, 70, 70);
 				MainCanvas.textAlign = "left";
 				DrawTextFit(screen.name, 250 + 430 * PX, 235 + 120 * PY, 340, "Black");
 				MainCanvas.textAlign = "center";
@@ -81,6 +82,10 @@ export class MainMenu extends GuiSubscreen {
 		}
 
 		MainCanvas.textAlign = "left";
+		DrawButton(1500, 720, 400, 80, "", "White", "", "Open LSCG Latest Release on Github.", false);
+		DrawImageResize("Icons/Changelog.png", 1510, 730, 60, 60);
+        DrawTextFit("Latest Changes", 1580, 760, 320, "Black");
+
 		DrawButton(1500, 820, 400, 80, "", "White", "", "Open LSCG Wiki on GitHub.", false);
 		DrawImageResize("Icons/Introduction.png", 1510, 830, 60, 60);
         DrawTextFit("Open Help", 1580, 860, 320, "Black");
@@ -107,6 +112,9 @@ export class MainMenu extends GuiSubscreen {
 				i++;
 			}
 		}
+
+		if (MouseIn(1500, 720, 400, 80))
+            window.open(LSCG_CHANGES, '_blank');
 
 		if (MouseIn(1500, 820, 400, 80))
             window.open('https://github.com/littlesera/LSCG/wiki', '_blank');
