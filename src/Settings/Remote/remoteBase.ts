@@ -1,14 +1,11 @@
-import { ICONS, sendLSCGMessage, settingsSave } from "utils";
+import { sendLSCGMessage } from "utils";
 import { BaseSettingsModel } from "../Models/base";
-import { SETTING_FUNC_NAMES, SETTING_FUNC_PREFIX, SETTING_NAME_PREFIX, setSubscreen } from "../setting_definitions";
+import { SETTING_NAME_PREFIX } from "../setting_definitions";
 import { BaseModule } from "base";
-import { drawTooltip, GUI } from "../settingUtils";
-import { GuiSubscreen, Setting } from "Settings/settingBase";
+import { GuiSubscreen } from "Settings/settingBase";
 import { getModule } from "modules";
 import { RemoteUIModule } from "Modules/remoteUI";
 import { RemoteMainMenu } from "./mainmenu";
-import { IPublicSettingsModel, PublicSettingsModel, SettingsModel } from "Settings/Models/settings";
-import { CoreModule } from "Modules/core";
 
 export abstract class RemoteGuiSubscreen extends GuiSubscreen {
 

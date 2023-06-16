@@ -1,5 +1,4 @@
 import { ICONS } from "utils";
-import { HypnoSettingsModel } from "./Models/hypno";
 import { InjectorSettingsModel } from "./Models/injector";
 import { GuiSubscreen, Setting } from "./settingBase";
 

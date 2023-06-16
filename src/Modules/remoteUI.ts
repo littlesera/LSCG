@@ -1,14 +1,8 @@
 import { BaseModule } from "base";
-import { getModule } from "modules";
-import { GuiHypno } from "Settings/hypno";
-import { MainMenu } from "Settings/mainmenu";
 import { RemoteMainMenu } from "Settings/Remote/mainmenu";
 import { RemoteGuiSubscreen } from "Settings/Remote/remoteBase";
-import { GuiSubscreen } from "Settings/settingBase";
-import { GUI } from "Settings/settingUtils";
 import { ModuleCategory } from "Settings/setting_definitions";
 import { getCharacter, hookFunction, ICONS, removeAllHooksByModule } from "../utils";
-import { HypnoModule } from "./hypno";
 
 // Remote UI Module to handle configuration on other characters
 // Can be used to "program" another character's hypnosis, collar, etc.

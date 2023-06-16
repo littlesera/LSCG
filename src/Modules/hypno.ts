@@ -1,7 +1,7 @@
 import { BaseModule } from 'base';
 import { HypnoSettingsModel } from 'Settings/Models/hypno';
 import { ModuleCategory, Subscreen } from 'Settings/setting_definitions';
-import { settingsSave, parseMsgWords, OnChat, OnAction, OnActivity, SendAction, getRandomInt, hookFunction, removeAllHooksByModule, callOriginal, setOrIgnoreBlush, escapeRegExp, isAllowedMember, OnWhisper } from '../utils';
+import { settingsSave, parseMsgWords, OnAction, OnActivity, SendAction, getRandomInt, hookFunction, removeAllHooksByModule, callOriginal, setOrIgnoreBlush, isAllowedMember, isPhraseInString } from '../utils';
 import { GuiHypno } from 'Settings/hypno';
 
 export class HypnoModule extends BaseModule {
@@ -260,8 +260,7 @@ export class HypnoModule extends BaseModule {
             return false;
 
         let matched = triggers.some(trigger => {
-            let phraseMatch = new RegExp("\\b" + escapeRegExp(trigger) + "\\b", "i");
-            return phraseMatch.test(msg);
+            return isPhraseInString(msg, trigger);
         })        
 
         return (matched && 

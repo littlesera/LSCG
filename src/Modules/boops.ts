@@ -1,9 +1,8 @@
 import { BaseModule } from "base";
 import { getModule } from "modules";
 import { BaseSettingsModel } from "Settings/Models/base";
-import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
+import { ModuleCategory } from "Settings/setting_definitions";
 import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, setOrIgnoreBlush } from "../utils";
-import { HypnoModule } from "./hypno";
 import { MiscModule } from "./misc";
 
 export class BoopsModule extends BaseModule {

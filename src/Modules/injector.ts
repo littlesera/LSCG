@@ -1,14 +1,13 @@
 import { BaseModule } from "base";
 import { BrainwashMiniGame } from "MiniGames/Brainwash";
 import { registerMiniGame } from "MiniGames/minigames";
-import { SleepyMiniGame, SleepyMiniGameOptions } from "MiniGames/Sleepy";
+import { SleepyMiniGame } from "MiniGames/Sleepy";
 import { getModule } from "modules";
 import { GuiInjector } from "Settings/injector";
-import { BaseSettingsModel } from "Settings/Models/base";
 import { InjectorSettingsModel } from "Settings/Models/injector";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
-import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, setOrIgnoreBlush, isPhraseInString, settingsSave, hookFunction, ICONS, getCharacter, AUDIO, getPlayerVolume } from "../utils";
-import { ActivityBundle, ActivityModule, CustomAction, CustomPrerequisite } from "./activities";
+import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, setOrIgnoreBlush, isPhraseInString, settingsSave, hookFunction, getCharacter, AUDIO, getPlayerVolume } from "../utils";
+import { ActivityModule, CustomAction, CustomPrerequisite } from "./activities";
 import { HypnoModule } from "./hypno";
 import { MiscModule } from "./misc";
 import { ItemUseModule } from "./item-use";
@@ -418,13 +417,13 @@ export class InjectorModule extends BaseModule {
 
         var types: DrugType[] = [];
 
-        if (this.settings.sedativeKeywords?.some(ph => isPhraseInString(totalString, ph)))
+        if (this.settings.sedativeKeywords?.some(ph => isPhraseInString(totalString, ph, true)))
             types.push("sedative");
-        if (this.settings.mindControlKeywords?.some(ph => isPhraseInString(totalString, ph)))
+        if (this.settings.mindControlKeywords?.some(ph => isPhraseInString(totalString, ph, true)))
             types.push("mindcontrol");
-        if (this.settings.hornyKeywords?.some(ph => isPhraseInString(totalString, ph)))
+        if (this.settings.hornyKeywords?.some(ph => isPhraseInString(totalString, ph, true)))
             types.push("horny");
-        if (this.settings.cureKeywords?.some(ph => isPhraseInString(totalString, ph)))
+        if (this.settings.cureKeywords?.some(ph => isPhraseInString(totalString, ph, true)))
             types.push("antidote");
 
         return types;
@@ -741,7 +740,7 @@ export class InjectorModule extends BaseModule {
         var description = asset.Craft.Description;
         var totalString = name + " " + description;
 
-        var isNetgun = this.settings.netgunKeywords?.some(ph => isPhraseInString(totalString, ph));
+        var isNetgun = this.settings.netgunKeywords?.some(ph => isPhraseInString(totalString, ph, true));
         return isNetgun;
     }
 
