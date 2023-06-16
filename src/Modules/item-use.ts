@@ -43,8 +43,10 @@ export interface RopeTarget {
 
 export interface GagTarget {
 	MouthItemName: string;
-	SourceItemName: string;
-	SourceLocation?: string;
+	HandItemName?: string;
+	NeckItemName?: string;
+	//SourceItemName: string;
+	OverrideNeckLocation?: string;
 	LeaveHandItem?: boolean;
 	CraftedKeys?: string[];
 	PreferredTypes?: {Location: string, Type: string}[];
@@ -57,72 +59,65 @@ export class ItemUseModule extends BaseModule {
 	activities: ActivityModule | undefined;
 	failedStealTime: number = 0;
 
-	NeckTargets: GagTarget[] = [
-		{
-			SourceItemName: "NecklaceRope",
-			MouthItemName: "RopeBallGag",
-			PreferredTypes: [{Location: "ItemMouth", Type: "Tight"},
-							{Location: "Necklace", Type: "Long"}]
-		},{
-			SourceItemName: "NecklaceBallGag",
-			MouthItemName: "BallGag",
-			PreferredTypes: [{Location: "ItemMouth", Type: "Tight"}]
-		},{
-			SourceItemName: "Bandana",
-			MouthItemName: "ScarfGag",
-			PreferredTypes: [{Location: "ItemMouth", Type: "OTN"}]
-		},{
-			SourceItemName: "Scarf",
-			SourceLocation: "ClothAccessory",
-			MouthItemName: "ClothGag",
-			PreferredTypes: [{Location: "ItemMouth", Type: "OTM"}]
-		},{
-			SourceItemName: "FurScarf",
-			MouthItemName: "FurScarf"
-		}
-	]
-
 	GagTargets: GagTarget[] = [
 		{
-			SourceItemName: "Ballgag",
 			MouthItemName: "BallGag",
+			HandItemName: "Ballgag",
+			NeckItemName: "NecklaceBallGag",
 			PreferredTypes: [{Location: "ItemMouth", Type: "Tight"}]
 		},{
-			SourceItemName: "Panties",
-			MouthItemName: "PantyStuffing"
+			MouthItemName: "PantyStuffing",
+			HandItemName: "Panties"
 		},{
-			SourceItemName: "LargeDildo",
-			MouthItemName: "LargeDildo"
+			MouthItemName: "LargeDildo",
+			HandItemName: "LargeDildo"
 		},{
-			SourceItemName: "Cane",
-			MouthItemName: "CaneGag"
+			MouthItemName: "CaneGag",
+			HandItemName: "Cane"
 		},{
-			SourceItemName: "Crop",
-			MouthItemName: "CropGag"
+			MouthItemName: "CropGag",
+			HandItemName: "Crop"
 		},{
-			SourceItemName: "LongSock",
-			MouthItemName: "SockStuffing"
+			MouthItemName: "SockStuffing",
+			HandItemName: "LongSock"
 		},{
-			SourceItemName: "Towel",
-			MouthItemName: "ClothStuffing"
+			MouthItemName: "ClothStuffing",
+			HandItemName: "Towel"
 		},{
-			SourceItemName: "RopeCoilShort",
-			MouthItemName: "RopeGag",
-			LeaveHandItem: true
-		},{
-			SourceItemName: "RopeCoilLong",
 			MouthItemName: "RopeBallGag",
-			LeaveHandItem: true,
-			PreferredTypes: [{Location: "ItemMouth", Type: "Tight"}]
+			HandItemName: "RopeCoilLong",	
+			NeckItemName: "NecklaceRope",
+			//LeaveHandItem: true,
+			PreferredTypes: [
+				{Location: "ItemMouth", Type: "Tight"},
+				{Location: "Necklace", Type: "Long"}
+			]
 		},{
-			SourceItemName: "TapeRoll",
+			MouthItemName: "RopeGag",
+			HandItemName: "RopeCoilShort",
+			NeckItemName: "NecklaceRope",
+			//LeaveHandItem: true
+		},{
 			MouthItemName: "DuctTape",
+			HandItemName: "TapeRoll",
 			LeaveHandItem: true,
 			PreferredTypes: [
 				{Location: "ItemMouth", Type: "Crossed"},
 				{Location: "ItemMouth2", Type: "Double"},
 				{Location: "ItemMouth3", Type: "Cover"}
 			]
+		},{
+			MouthItemName: "ScarfGag",
+			NeckItemName: "Bandana",			
+			PreferredTypes: [{Location: "ItemMouth", Type: "OTN"}]
+		},{
+			MouthItemName: "ClothGag",
+			NeckItemName: "Scarf",
+			OverrideNeckLocation: "ClothAccessory",
+			PreferredTypes: [{Location: "ItemMouth", Type: "OTM"}]
+		},{
+			MouthItemName: "FurScarf",
+			NeckItemName: "FurScarf"
 		}
 	]
 
@@ -134,8 +129,11 @@ export class ItemUseModule extends BaseModule {
 			let needsItem = args[3];
 			let activity = args[4];
 			let ret = false;
+			var focusGroup = acted?.FocusGroup?.Name ?? undefined;
 
-			if (needsItem == "GagToNecklace" || needsItem == "NecklaceToGag") {
+			if (needsItem == "GagToNecklace"	|| 
+				needsItem == "NecklaceToGag"	||
+				(focusGroup == "ItemNeck" && needsItem == "GagTakeItem")) {
 				return this.ManualGenerateItemActivitiesForNecklaceActivity(allowed, acting, acted, needsItem, activity);
 			} else {
 				return next(args);
@@ -148,25 +146,34 @@ export class ItemUseModule extends BaseModule {
 			let results = next(args);
 			var focusGroup = C?.FocusGroup?.Name ?? undefined;
 
-			let gagTargets = this.GagTargets.flatMap(t => [t.SourceItemName, t.MouthItemName]);
-			let neckTargets = this.NeckTargets.flatMap(t => [t.SourceItemName, t.MouthItemName]);
+			let gagTargets = this.GagTargets.filter(t => !!t.MouthItemName).map(t => t.MouthItemName!);
+			let neckTargets = this.GagTargets.filter(t => !!t.NeckItemName).map(t => t.NeckItemName!);
+			let handTargets = this.GagTargets.filter(t => !!t.HandItemName).map(t => t.HandItemName!);
 
 			if (itemType == "AnyItem") {
 				let item = InventoryGet(C, "ItemHandheld");
-				if (!!item)
-					results.push(item)
+				if (!!item) results.push(item);
 			} else if (itemType == "GagTakeItem") {
 				let item = InventoryGet(C, focusGroup);	
-				if (gagTargets.indexOf(item?.Asset.Name ?? "") > -1)
-					results.push(item);
+				if (focusGroup == "ItemNeck") {
+					focusGroup = "Necklace";
+					item = InventoryGet(C, focusGroup);
+					if (!item || neckTargets.indexOf(item?.Asset.Name ?? "") == -1) {
+						focusGroup = "ClothAccessory";
+						item = InventoryGet(C, focusGroup);
+					}
+					if (neckTargets.indexOf(item?.Asset.Name ?? "") > -1)
+						results.push(item);
+				} else {
+					if (gagTargets.indexOf(item?.Asset.Name ?? "") > -1)
+						results.push(item);
+				}
 			} else if (itemType == "GagGiveItem") {
 				let item = InventoryGet(C, "ItemHandheld");
-				if (gagTargets.indexOf(item?.Asset.Name ?? "") > -1)
-					results.push(item);
+				if (handTargets.indexOf(item?.Asset.Name ?? "") > -1) results.push(item);
 			}else if (itemType == "GagToNecklace") {
-				let item = InventoryGet(C, focusGroup);	
-				if (neckTargets.indexOf(item?.Asset.Name ?? "") > -1)
-					results.push(item);
+				let item = InventoryGet(C, focusGroup);
+				if (gagTargets.indexOf(item?.Asset.Name ?? "") > -1) results.push(item);
 			} else if (itemType == "NecklaceToGag") {
 				let item = InventoryGet(C, "Necklace");
 				let altItem = InventoryGet(C, "ClothAccessory");
@@ -186,7 +193,7 @@ export class ItemUseModule extends BaseModule {
 	run(): void {
 		this.activities = getModule<ActivityModule>("ActivityModule")
 
-		// Gag Mouth
+		// Put gag on mouth or neck
 		this.activities.AddActivity(<ActivityBundle>{
 			Activity: <Activity>{
 				Name: "UseGag",
@@ -198,8 +205,14 @@ export class ItemUseModule extends BaseModule {
 				<ActivityTarget>{
 					Name: "ItemMouth",
 					TargetLabel: "Gag Mouth",
-					TargetAction: "SourceCharacter pushes PronounPossessive UsedAsset into TargetCharacter's mouth.",
+					TargetAction: "SourceCharacter gags TargetCharacter with PronounPossessive UsedAsset.",
 					TargetSelfAction: "SourceCharacter gags themselves with their own UsedAsset.",
+					SelfAllowed: true
+				},<ActivityTarget>{
+					Name: "ItemNeck",
+					TargetLabel: "Place around Neck",
+					TargetAction: "SourceCharacter places PronounPossessive UsedAsset around TargetCharacter's neck.",
+					TargetSelfAction: "SourceCharacter places PronounPossessive UsedAsset around PronounPossessive own neck.",
 					SelfAllowed: true
 				}
 			],
@@ -208,23 +221,32 @@ export class ItemUseModule extends BaseModule {
 					Name: "HoldingGag",
 					Func: (acting, acted, group) => {
 						var location = acted.FocusGroup?.Name!;
-						var existing = InventoryGet(acted, location);
-						if (!!existing)
-							return false;
 						let heldItemName = InventoryGet(acting, "ItemHandheld")?.Asset.Name ?? "";
-						let gagTarget = this.GagTargets.find(t => t.SourceItemName == heldItemName);
+						let gagTarget = this.GagTargets.find(t => t.HandItemName == heldItemName);
+						
 						if (!gagTarget)
 							return false;
-						let mouthItemName = gagTarget.MouthItemName ?? "";
-						let assetGroup = AssetFemale3DCG.find(a => a.Group == location);
-						let allowedAssetNames = assetGroup?.Asset.map(a => (<AssetDefinition>a)?.Name ?? a);
-						let targetMouthAssetAllowed = (allowedAssetNames?.indexOf(mouthItemName) ?? -1) > -1;
 
-						var itemAlreadyInMouth = InventoryGet(acted, "ItemMouth")?.Asset.Name == gagTarget.MouthItemName ||
-													InventoryGet(acted, "ItemMouth2")?.Asset.Name == gagTarget.MouthItemName ||
-													InventoryGet(acted, "ItemMouth3")?.Asset.Name == gagTarget.MouthItemName;
+						if (group.Name == "ItemMouth") {
+							var existing = InventoryGet(acted, location);
+							if (!!existing)
+								return false;
 
-						return targetMouthAssetAllowed && !itemAlreadyInMouth;
+							let mouthItemName = gagTarget.MouthItemName ?? "";
+							let assetGroup = AssetFemale3DCG.find(a => a.Group == location);
+							let allowedAssetNames = assetGroup?.Asset.map(a => (<AssetDefinition>a)?.Name ?? a);
+							let targetMouthAssetAllowed = (allowedAssetNames?.indexOf(mouthItemName) ?? -1) > -1;
+
+							var itemAlreadyInMouth = InventoryGet(acted, "ItemMouth")?.Asset.Name == gagTarget.MouthItemName 	||
+								InventoryGet(acted, "ItemMouth2")?.Asset.Name == gagTarget.MouthItemName 						||
+								InventoryGet(acted, "ItemMouth3")?.Asset.Name == gagTarget.MouthItemName;
+
+							return targetMouthAssetAllowed && !itemAlreadyInMouth;
+						} else if (group.Name == "ItemNeck") {
+							var existing = InventoryGet(acted, gagTarget.OverrideNeckLocation ?? "Necklace");
+							return !existing && !!gagTarget.NeckItemName;
+						}
+						return false;
 					}
 				}
 			],
@@ -234,8 +256,10 @@ export class ItemUseModule extends BaseModule {
 						return;
 					var location = target.FocusGroup?.Name!;
 					let heldItemName = InventoryGet(Player, "ItemHandheld")?.Asset.Name ?? "";
-					let gagTarget = this.GagTargets.find(t => t.SourceItemName == heldItemName);
+					let gagTarget = this.GagTargets.find(t => t.HandItemName == heldItemName);
 					if (!!gagTarget) {
+						if (location == "ItemNeck")
+							location = gagTarget.OverrideNeckLocation ?? "Necklace";
 						this.ApplyGag(target, Player, gagTarget, location);
 					}
 					return next(args);
@@ -257,7 +281,13 @@ export class ItemUseModule extends BaseModule {
 					Name: "ItemMouth",
 					TargetLabel: "Take Gag",
 					TargetAction: "SourceCharacter removes TargetCharacter's UsedAsset.",
-					TargetSelfAction: "SourceCharacter pulls the UsedAsset out of PronounPossessive mouth.",
+					TargetSelfAction: "SourceCharacter pulls the UsedAsset from PronounPossessive mouth.",
+					SelfAllowed: true
+				}, <ActivityTarget>{
+					Name: "ItemNeck",
+					TargetLabel: "Take Gag",
+					TargetAction: "SourceCharacter takes TargetCharacter's UsedAsset from around TargetPronounPossessive neck.",
+					TargetSelfAction: "SourceCharacter takes PronounPossessive own UsedAsset from around PronounPossessive neck.",
 					SelfAllowed: true
 				}
 			],
@@ -265,10 +295,24 @@ export class ItemUseModule extends BaseModule {
 				{
 					Name: "TargetIsGagged",
 					Func: (acted, acting, group) => {
-						var location = acted.FocusGroup?.Name!;
-						var item = InventoryGet(acted, location);
+						let location = acted.FocusGroup?.Name!;
+						let item: Item | null;
+						let gagTarget: GagTarget | undefined;
+						if (location == "ItemNeck") {
+							location = "Necklace";
+							item = InventoryGet(acted, location);
+							gagTarget = this.GagTargets.find(t => !!item && t.NeckItemName == item?.Asset.Name && !!t.HandItemName);
+							if (!gagTarget) {
+								location = "ClothAccessory";
+								item = InventoryGet(acted, location);
+								gagTarget = this.GagTargets.find(t => !!item && t.NeckItemName == item?.Asset.Name && !!t.HandItemName);
+							}
+						} else {
+							item = InventoryGet(acted, location);
+							gagTarget = this.GagTargets.find(t => !!item && t.MouthItemName == item?.Asset.Name && !!t.HandItemName);
+						}
 						
-						if (!!item) {
+						if (!!item && !!gagTarget) {
 							if (!!item.Property && item.Property.Effect && item.Property.Effect.indexOf("Lock") > -1)
 								return false;
 
@@ -277,7 +321,7 @@ export class ItemUseModule extends BaseModule {
 								return false;
 						}
 
-						return !InventoryGet(acting, "ItemHandheld") && this.GagTargets.map(t => t.MouthItemName).indexOf(item?.Asset.Name ?? "") > -1;
+						return !InventoryGet(acting, "ItemHandheld") && !!gagTarget;
 					}
 				}
 			],
@@ -285,9 +329,23 @@ export class ItemUseModule extends BaseModule {
 				Func: (target, args, next) => {
 					if (!target)
 						return;
-					var location = target.FocusGroup?.Name!;
-					let mouthItemName = InventoryGet(target, location)?.Asset.Name ?? "";
-					let gagTarget = this.GagTargets.find(t => t.MouthItemName == mouthItemName);
+					let location = target.FocusGroup?.Name!;
+					let itemName: string | undefined;
+					let gagTarget: GagTarget | undefined;
+					if (location == "ItemNeck") {
+						location = "Necklace";
+						itemName = InventoryGet(target, location)?.Asset.Name ?? undefined;
+						gagTarget = this.GagTargets.find(t => !!itemName && t.NeckItemName == itemName);
+						if (!gagTarget) {
+							location = "ClothAccessory";
+							itemName = InventoryGet(target, location)?.Asset.Name ?? undefined;
+							gagTarget = this.GagTargets.find(t => !!itemName && t.NeckItemName == itemName);
+						}
+					} else {
+						itemName = InventoryGet(target, location)?.Asset.Name ?? undefined;
+						gagTarget = this.GagTargets.find(t => !!itemName && t.MouthItemName == itemName);
+					}
+
 					if (!!gagTarget)
 						this.TakeGag(target, Player, gagTarget, location);
 					return next(args);
@@ -307,8 +365,8 @@ export class ItemUseModule extends BaseModule {
 				<ActivityTarget>{
 					Name: "ItemMouth",
 					TargetLabel: "Move to Mouth",
-					TargetAction: "SourceCharacter moves TargetCharacter's UsedAsset up and puts it in their mouth.",
-					TargetSelfAction: "SourceCharacter moves their own UsedAsset up into PronounPossessive mouth.",
+					TargetAction: "SourceCharacter moves TargetCharacter's UsedAsset up to their mouth.",
+					TargetSelfAction: "SourceCharacter moves their own UsedAsset up to PronounPossessive mouth.",
 					SelfAllowed: true
 				},
 			],
@@ -320,8 +378,8 @@ export class ItemUseModule extends BaseModule {
 						var existing = InventoryGet(acted, location);
 						if (!!existing)
 							return false;
-						let gagTarget = this.NeckTargets.find(t => t.SourceItemName == (InventoryGet(acted, "Necklace")?.Asset.Name ?? ""));
-						if (!gagTarget) gagTarget = this.NeckTargets.find(t => t.SourceItemName == (InventoryGet(acted, "ClothAccessory")?.Asset.Name ?? "") && t.SourceLocation == "ClothAccessory");
+						let gagTarget = this.GagTargets.find(t => t.NeckItemName == (InventoryGet(acted, "Necklace")?.Asset.Name ?? ""));
+						if (!gagTarget) gagTarget = this.GagTargets.find(t => t.NeckItemName == (InventoryGet(acted, "ClothAccessory")?.Asset.Name ?? "") && t.OverrideNeckLocation == "ClothAccessory");
 						if (!gagTarget)
 							return false;
 						let mouthItemName = gagTarget.MouthItemName ?? "";
@@ -338,10 +396,10 @@ export class ItemUseModule extends BaseModule {
 						return;
 					var location = target.FocusGroup?.Name!;
 					let heldItemName = InventoryGet(target, "Necklace")?.Asset.Name ?? "";
-					let gagTarget = this.NeckTargets.find(t => t.SourceItemName == heldItemName);
-					if (!gagTarget) gagTarget = this.NeckTargets.find(t => t.SourceItemName == (InventoryGet(target, "ClothAccessory")?.Asset.Name ?? "") && t.SourceLocation == "ClothAccessory");
+					let gagTarget = this.GagTargets.find(t => t.NeckItemName == heldItemName);
+					if (!gagTarget) gagTarget = this.GagTargets.find(t => t.NeckItemName == (InventoryGet(target, "ClothAccessory")?.Asset.Name ?? "") && t.OverrideNeckLocation == "ClothAccessory");
 					if (!!gagTarget) {
-						this.ApplyGag(target, target, gagTarget, location, gagTarget.SourceLocation ?? "Necklace");
+						this.ApplyGag(target, target, gagTarget, location, gagTarget.OverrideNeckLocation ?? "Necklace");
 					}
 					return next(args);
 				}
@@ -381,9 +439,11 @@ export class ItemUseModule extends BaseModule {
 								return false;
 						}
 
-						var gagTarget = this.NeckTargets.find(t => t.MouthItemName == item?.Asset.Name);
+						var gagTarget = this.GagTargets.find(t => t.MouthItemName == item?.Asset.Name && !!t.NeckItemName);
 
-						return !InventoryGet(acted, gagTarget?.SourceLocation ?? "Necklace") && this.NeckTargets.map(t => t.MouthItemName).indexOf(item?.Asset.Name ?? "") > -1;
+						return !!gagTarget && 
+						!InventoryGet(acted, gagTarget?.OverrideNeckLocation ?? "Necklace") && 
+						this.GagTargets.map(t => t.MouthItemName).indexOf(item?.Asset.Name ?? "") > -1;
 					}
 				}
 			],
@@ -393,9 +453,9 @@ export class ItemUseModule extends BaseModule {
 						return;
 					var location = target.FocusGroup?.Name!;
 					let mouthItemName = InventoryGet(target, location)?.Asset.Name ?? "";
-					let gagTarget = this.NeckTargets.find(t => t.MouthItemName == mouthItemName);
+					let gagTarget = this.GagTargets.find(t => t.MouthItemName == mouthItemName);
 					if (!!gagTarget)
-						this.TakeGag(target, target, gagTarget, location, gagTarget?.SourceLocation ?? "Necklace");
+						this.TakeGag(target, target, gagTarget, location, gagTarget?.OverrideNeckLocation ?? "Necklace");
 					return next(args);
 				}
 			}
@@ -610,20 +670,6 @@ export class ItemUseModule extends BaseModule {
 		]);
 	}
 
-	ApplyGag(target: Character, source: Character, gagTarget: GagTarget, location: string, sourceLocation: string = "ItemHandheld") {
-		var gagItem = InventoryGet(source, sourceLocation);
-		if (gagItem?.Asset.Name == gagTarget.SourceItemName) {
-			if (!gagTarget.LeaveHandItem) InventoryRemove(source, sourceLocation, true);
-			var color = this._handleWeirdColorStuff(gagItem, gagTarget, sourceLocation, location);
-			var gag = InventoryWear(target, gagTarget.MouthItemName, location, color, undefined, source.MemberNumber, gagItem?.Craft, true);
-			if (!!gagTarget.PreferredTypes && gagTarget.PreferredTypes.length > 0) {
-				var prefType = gagTarget.PreferredTypes.find(tgt => tgt.Location == location) ?? gagTarget.PreferredTypes[0];
-				gag!.Property!.Type = prefType.Type;
-			}
-			setTimeout(() => ChatRoomCharacterUpdate(target));
-		}
-    }
-
 	_handleWeirdColorStuff(itemToMove: Item, gagTarget: GagTarget, sourceLocation: string, targetLocation: string): ItemColor | undefined {
 		var color = itemToMove?.Color;
 		// BallGag necklace + mouth gag alternate order...
@@ -635,22 +681,46 @@ export class ItemUseModule extends BaseModule {
 		return color;
 	}
 
-	TakeGag(target: Character, source: Character, gagTarget: GagTarget, location: string, targetLocation: string = "ItemHandheld") {
-		var gag = InventoryGet(target, location);
+	ApplyGag(target: Character, source: Character, gagTarget: GagTarget, targetLocation: string, sourceLocation: string = "ItemHandheld") {
+		var gagItem = InventoryGet(source, sourceLocation);
+		let sourceItemName = (sourceLocation == "ItemHandheld" ? gagTarget.HandItemName : gagTarget.NeckItemName) ?? "";
+		let targetItemName = (targetLocation.startsWith("ItemMouth") ? gagTarget.MouthItemName : gagTarget.NeckItemName) ?? "";
+		if (!!gagItem && gagItem.Asset.Name == sourceItemName) {
+			if (!(gagTarget.LeaveHandItem && sourceLocation == "ItemHandheld")) InventoryRemove(source, sourceLocation, true);
+			var color = this._handleWeirdColorStuff(gagItem, gagTarget, sourceLocation, targetLocation);
+			var gag = InventoryWear(target, targetItemName, targetLocation, color, undefined, source.MemberNumber, gagItem?.Craft, true);
+			if (!!gagTarget.PreferredTypes && gagTarget.PreferredTypes.length > 0) {
+				var prefType = gagTarget.PreferredTypes.find(tgt => tgt.Location == targetLocation) ?? gagTarget.PreferredTypes.find(tgt => targetLocation.startsWith(tgt.Location));
+				if (!!gag && !!prefType) {
+					if (!gag.Property) gag.Property = {};
+					gag!.Property!.Type = prefType.Type;
+				}
+			}
+			setTimeout(() => ChatRoomCharacterUpdate(target));
+		}
+    }
+
+	TakeGag(target: Character, source: Character, gagTarget: GagTarget, sourceLocation: string, targetLocation: string = "ItemHandheld") {
+		var gag = InventoryGet(target, sourceLocation);
 		var existing = InventoryGet(source, targetLocation);
-		if (!gag || !!existing || gag.Asset.Name != gagTarget.MouthItemName)
+		let sourceItemName = (sourceLocation.startsWith("ItemMouth") ? gagTarget.MouthItemName : gagTarget.NeckItemName) ?? "";
+		let targetItemName = (targetLocation == "ItemHandheld" ? gagTarget.HandItemName : gagTarget.NeckItemName) ?? "";
+		if (!gag || !!existing || gag.Asset.Name != sourceItemName)
 			return;
 		var validParams = ValidationCreateDiffParams(target, source.MemberNumber!);
 		if (ValidationCanRemoveItem(gag!, validParams, false)) {
-			InventoryRemove(target, location, true);
+			InventoryRemove(target, sourceLocation, true);
 			var craft = gag.Craft;
 			if (!!craft)
 				craft.Lock = "";
-			var color = this._handleWeirdColorStuff(gag, gagTarget, location, targetLocation);
-			let item = InventoryWear(source, gagTarget.SourceItemName, targetLocation, color, undefined, source.MemberNumber, craft, true);
+			var color = this._handleWeirdColorStuff(gag, gagTarget, sourceLocation, targetLocation);
+			let item = InventoryWear(source, targetItemName, targetLocation, color, undefined, source.MemberNumber, craft, true);
 			if (!!gagTarget.PreferredTypes && gagTarget.PreferredTypes.length > 0) {
-				var prefType = gagTarget.PreferredTypes.find(tgt => tgt.Location == targetLocation) ?? gagTarget.PreferredTypes[0];
-				item!.Property!.Type = prefType.Type;
+				var prefType = gagTarget.PreferredTypes.find(tgt => tgt.Location == targetLocation) ?? gagTarget.PreferredTypes.find(tgt => targetLocation.startsWith(tgt.Location));
+				if (!!item && !!prefType) {
+					if (!item.Property) item.Property = {};
+					item!.Property!.Type = prefType.Type;
+				}
 			}
 			setTimeout(() => ChatRoomCharacterUpdate(target));
 		}
