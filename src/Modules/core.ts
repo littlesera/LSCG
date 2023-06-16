@@ -58,13 +58,13 @@ export class CoreModule extends BaseModule {
                     var prevAlign = MainCanvas.textAlign;
                     var prevFont = MainCanvas.font;
                     var pad = 5;
-                    var TextX = CharX + 390 * Zoom;
+                    var TextX = CharX + 425 * Zoom;
                     var TextY = CharY + 50 * Zoom;
                     MainCanvas.textAlign = "left";
                     MainCanvas.font = '16px Arial, sans-serif'
                     var size = MainCanvas.measureText(version);
-                    DrawRect(TextX - size.actualBoundingBoxLeft - pad, TextY - size.actualBoundingBoxAscent - pad, size.actualBoundingBoxRight - size.actualBoundingBoxLeft + 2 * pad, size.actualBoundingBoxDescent + size.actualBoundingBoxAscent + 2 * pad, "#D7F6E9");
-                    DrawText(version, TextX, TextY, "Black");
+                    DrawRect(TextX - size.width - pad, TextY - size.actualBoundingBoxAscent - pad, size.actualBoundingBoxRight - size.actualBoundingBoxLeft + 2 * pad, size.actualBoundingBoxDescent + size.actualBoundingBoxAscent + 2 * pad, "#D7F6E9");
+                    DrawText(version, TextX - size.width, TextY, "Black");
                     //MainCanvas.fillText(version, CharX + 420 * Zoom, CharY + 50*Zoom, 100*Zoom);
                     MainCanvas.textAlign = prevAlign;
                     MainCanvas.font = prevFont;
