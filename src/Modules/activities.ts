@@ -1,6 +1,8 @@
 import { BaseModule } from "base";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, setOrIgnoreBlush, hookFunction, ICONS, getCharacter, sendLSCGMessage, OnAction, callOriginal } from "../utils";
+import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, setOrIgnoreBlush, hookFunction, ICONS, getCharacter, sendLSCGMessage, OnAction, callOriginal, LSCG_SendLocal } from "../utils";
+import { getModule } from "modules";
+import { ItemUseModule } from "./item-use";
 
 export interface ActivityTarget {
     Name: AssetGroupItemName;
@@ -50,13 +52,15 @@ export interface ActivityBundle extends ActivityBundleBase {
     Targets?: ActivityTarget[];
 }
 
-export type GrabType = "hand"  | "ear" | "tongue"
+export type GrabType = "hand"  | "ear" | "tongue" | "arm"
 
 export class ActivityModule extends BaseModule {
     safeword(): void {
         this.earPinchedByMember = null;
         this.earPinchingMemberList = [];
         this.handHoldingMemberList = [];
+        this.armGrabbedByMember = null;
+        this.armGrabbingMemberList = [];
         this.customGagged = false;
     }
 
@@ -630,7 +634,7 @@ export class ActivityModule extends BaseModule {
                     Name: "TargetIsArmAvailable",
                     Func: (acting, acted, group) => {
                         if (group.Name == "ItemArms")
-                            return !this.isPlayerHoldingHandsWith(acted.MemberNumber ?? 0) && this.handHoldingMemberList.length < 2;
+                            return !this.isPlayerGrabbing(acted.MemberNumber ?? 0) && this.armGrabbingMemberList.length < 2;
                         return true;
                     }
                 }
@@ -639,7 +643,7 @@ export class ActivityModule extends BaseModule {
                 Func: (target, args, next) => {
                     var location = args[1]?.Dictionary[2]?.FocusGroupName;
                     if (!!target && !!location && location == "ItemArms")
-                        this.DoGrab(target, "hand");
+                        this.DoGrab(target, "arm");
                     return next(args);
                 }
             },
@@ -665,7 +669,7 @@ export class ActivityModule extends BaseModule {
                     Name: "TargetIsArmGrabbed",
                     Func: (acting, acted, group) => {
                         if (group.Name == "ItemArms")
-                            return this.isPlayerHoldingHandsWith(acted.MemberNumber ?? 0);
+                            return this.isPlayerGrabbing(acted.MemberNumber ?? 0);
                         return false;
                     }
                 }
@@ -673,7 +677,7 @@ export class ActivityModule extends BaseModule {
             CustomAction: <CustomAction>{
                 Func: (target, args, next) => {
                     if (!!target)
-                        this.DoRelease(target, "hand");
+                        this.DoRelease(target, "arm");
                     return next(args);
                 }
             },
@@ -845,6 +849,12 @@ export class ActivityModule extends BaseModule {
     }
 
     InitHandHoldHooks(): void {
+        hookFunction('Player.CanWalk', 1, (args, next) => {
+            if (!!this.earPinchedByMember || !!this.armGrabbedByMember)
+                return false;
+            return next(args);
+        }, ModuleCategory.Activities);
+        
         hookFunction("ChatRoomLeave", 1, (args, next) => {
             if (this.earPinchingMemberList.length > 0) {
                 var chars = this.earPinchingMemberList.map(id => getCharacter(id));
@@ -852,6 +862,12 @@ export class ActivityModule extends BaseModule {
                     SendAction("%NAME% leads %OPP_NAME% out of the room by the ear.", chars[0]);
                 else
                     SendAction("%NAME% leads " + CharacterNickname(chars[0]!) + " and " + CharacterNickname(chars[1]!) + " out of the room by the ear.");
+            } else if (this.armGrabbingMemberList.length > 0) {
+                var chars = this.armGrabbingMemberList.map(id => getCharacter(id));
+                if (chars.length == 1)
+                    SendAction("%NAME% roughly pulls %OPP_NAME% out of the room by the arm.", chars[0]);
+                else
+                    SendAction("%NAME% roughly pulls " + CharacterNickname(chars[0]!) + " and " + CharacterNickname(chars[1]!) + " out of the room by the arm.");
             }
             return next(args);
         }, ModuleCategory.Activities);
@@ -878,6 +894,20 @@ export class ActivityModule extends BaseModule {
                         ICONS.HOLD_HANDS,
                         CharX + 400 * Zoom, CharY + 40 * Zoom, 40 * Zoom, 40 * Zoom
                     );
+                }
+                // ROTATE CANVAS TO DRAW ICON IN HERE, if it works it works, if it doesn't -- HO BOY!
+                else if (this.isPlayerGrabbedBy(C.MemberNumber) || this.isPlayerGrabbing(C.MemberNumber)) {
+                    DrawCircle(CharX + 420 * Zoom, CharY + 60 * Zoom, 20 * Zoom, 1, "Black", "White");
+                    MainCanvas.translate(CharX + 420 * Zoom, CharY + 60 * Zoom);
+                    MainCanvas.rotate(-Math.PI/2);
+                    MainCanvas.translate(-(CharX + 420 * Zoom), -(CharY + 60 * Zoom));
+                    DrawImageResize(
+                        "Icons/Battle.png",
+                        CharX + 405 * Zoom, CharY + 45 * Zoom, 30 * Zoom, 30 * Zoom
+                    );
+                    MainCanvas.translate(CharX + 420 * Zoom, CharY + 60 * Zoom);
+                    MainCanvas.rotate(Math.PI/2);
+                    MainCanvas.translate(-(CharX + 420 * Zoom), -(CharY + 60 * Zoom));
                 }
                 else if (this.tongueGrabbedMember == C.MemberNumber! || (this.customGagged && C.IsPlayer())) {
                     DrawCircle(CharX + 140 * Zoom, CharY + 60 * Zoom, 20 * Zoom, 1, "Black", "White")
@@ -943,6 +973,9 @@ export class ActivityModule extends BaseModule {
             if (this.earPinchedByMember == SenderCharacter.MemberNumber || !ChatRoomCanBeLeashedBy(SenderCharacter.MemberNumber, Player)) {
                 this.DoRelease(SenderCharacter, "ear");
             }
+            if (this.armGrabbedByMember == SenderCharacter.MemberNumber || !ChatRoomCanBeLeashedBy(SenderCharacter.MemberNumber, Player)) {
+                this.DoRelease(SenderCharacter, "arm");
+            }
         }, ModuleCategory.Activities)
 
         hookFunction("ServerAccountBeep", 1, (args, next) => {
@@ -964,6 +997,7 @@ export class ActivityModule extends BaseModule {
                         // If the leading character is no longer allowed or goes somewhere blocked, remove them from our leading lists.
                         this.handHoldingMemberList = this.handHoldingMemberList.filter(num => num != data.MemberNumber!);
                         this.earPinchingMemberList = this.earPinchingMemberList.filter(num => num != data.MemberNumber!);
+                        this.armGrabbingMemberList = this.armGrabbingMemberList.filter(num => num != data.MemberNumber!);
                     }
                 }
             }
@@ -981,30 +1015,40 @@ export class ActivityModule extends BaseModule {
             if (data?.Content == "ServerDisconnect") {
                 this.removeHandHold(sender!);
                 this.removeEarPinch(sender!);
+                this.removeArmGrab(sender!);
                 if (this.earPinchedByMember == sender?.MemberNumber)
                     this.earPinchedByMember = null;
                 if (this.tongueGrabbedMember == sender?.MemberNumber)
                     this.tongueGrabbedMember = null;
+                if (this.armGrabbedByMember == sender?.MemberNumber)
+                    this.armGrabbedByMember = null;
             }
         });
     }
 
     earPinchedByMember: number | null = null;
     earPinchingMemberList: number[] = [];
-    handHoldingMemberList: number[] = [];
+    armGrabbedByMember: number | null = null;
     armGrabbingMemberList: number[] = [];
+    handHoldingMemberList: number[] = [];
     tongueGrabbedMember: number | null = null;
 
+    get usedHandsCount(): number {
+        return this.totalHeldByHandList.length;
+    }
+
     get totalHeldByHandList(): number[] {
-        return this.handHoldingMemberList.concat(this.armGrabbingMemberList);
+        return this.handHoldingMemberList
+            .concat(this.earPinchingMemberList)
+            .concat(this.armGrabbingMemberList);
     }
 
     get allCustomHeldBy(): number[] {
-        return this.totalHeldByHandList.concat(this.earPinchedByMember!);
+        return this.handHoldingMemberList.concat(this.earPinchedByMember!).concat(this.armGrabbedByMember!);
     }
 
     get allCustomLedMembers(): number[] {
-        return this.totalHeldByHandList.concat(this.earPinchingMemberList);
+        return this.totalHeldByHandList;
     }
 
     isPlayerHoldingHandsWith(holdingMemberNumber: number) {
@@ -1017,6 +1061,14 @@ export class ActivityModule extends BaseModule {
 
     isPlayerPinching(member: number) {
         return this.earPinchingMemberList.indexOf(member) > -1;
+    }
+
+    isPlayerGrabbedBy(member: number) {
+        return this.armGrabbedByMember == member;
+    }
+
+    isPlayerGrabbing(member: number) {
+        return this.armGrabbingMemberList.indexOf(member) > -1;
     }
 
     isHandLeashed(C: Character | null) {
@@ -1050,18 +1102,26 @@ export class ActivityModule extends BaseModule {
             case "hand":
                 this.tongueGrabbedMember = null;
                 this.removeEarPinch(target);
+                this.removeArmGrab(target);
                 this.addHandHold(target);
                 break;
             case "ear":
                 this.tongueGrabbedMember = null;
                 this.removeHandHold(target);
+                this.removeArmGrab(target);
                 this.addEarPinch(target);
                 break;
             case "tongue":
                 this.removeEarPinch(target);
                 this.removeHandHold(target);
+                this.removeArmGrab(target);
                 this.tongueGrabbedMember = target.MemberNumber!;
                 break;
+            case "arm":
+                this.tongueGrabbedMember = null;
+                this.removeEarPinch(target);
+                this.removeHandHold(target);
+                this.addArmGrab(target);
         }
     };
 
@@ -1091,6 +1151,8 @@ export class ActivityModule extends BaseModule {
             case "tongue":
                 this.tongueGrabbedMember = null;
                 break;
+            case "arm":
+                this.removeArmGrab(target);
         }
     }
 
@@ -1112,6 +1174,15 @@ export class ActivityModule extends BaseModule {
         this.earPinchingMemberList = this.earPinchingMemberList.filter(num => num != sender.MemberNumber!);
     }
 
+    addArmGrab(sender: Character) {
+        this.armGrabbingMemberList.push(sender.MemberNumber!);
+        this.armGrabbingMemberList = this.armGrabbingMemberList.filter((num, ix, arr) => arr.indexOf(num) == ix);
+    }
+
+    removeArmGrab(sender: Character) {
+        this.armGrabbingMemberList = this.armGrabbingMemberList.filter(num => num != sender.MemberNumber!);
+    }
+
     IncomingGrab(sender: Character, grabType: GrabType) {
         switch (grabType) {
             case "hand":
@@ -1125,7 +1196,12 @@ export class ActivityModule extends BaseModule {
                 this.prevMouth = WardrobeGetExpression(Player)?.Mouth ?? null;
                 CharacterSetFacialExpression(Player, "Mouth", "Ahegao");
                 break;
+            case "arm":
+                this.armGrabbedByMember = sender.MemberNumber!;
+                break;
         }
+
+        this.NotifyAboutEscapeCommand(sender, grabType);
     }
 
     IncomingRelease(sender: OtherCharacter, grabType: GrabType) {
@@ -1141,6 +1217,72 @@ export class ActivityModule extends BaseModule {
                 CharacterSetFacialExpression(Player, "Mouth", this.prevMouth);
                 this.prevMouth = null;
                 break;
+            case "arm":
+                this.armGrabbedByMember = null;
         }
+    }
+
+    IncomingEscape(sender: OtherCharacter, escapeFromMemberNumber: number) {
+        if (escapeFromMemberNumber == Player.MemberNumber) {
+            this.removeArmGrab(sender);
+            this.removeEarPinch(sender);
+        }
+    }
+
+    NotifyAboutEscape(escapee: Character) {
+        LSCG_SendLocal(`${CharacterNickname(escapee)} has escaped from your grasp!`);
+    }
+
+    NotifyAboutEscapeCommand(grabber: Character, type: GrabType) {
+        LSCG_SendLocal(`Your ${type} has been grabbed by ${CharacterNickname(grabber)}! <br>[You can try '/lscg escape' to try and break free]`);
+    }
+
+    escapeAttempted: number = 0;
+    escapeCooldown: number = 120000;
+    TryEscape() {
+        if (this.escapeAttempted > 0) {
+            if (CommonTime() < (this.escapeAttempted + this.escapeCooldown)) {
+                LSCG_SendLocal(`You are too tired from your last escape attempt!`);
+                return;
+            } else {
+                this.escapeAttempted = 0;
+            }
+        }
+        let grabbingMemberNumber = this.earPinchedByMember ?? this.armGrabbedByMember ?? -1;
+        if (grabbingMemberNumber < 0) {
+            LSCG_SendLocal(`Unable to escape, you are not grabbed by anyone!`);
+            return;
+        }
+
+        var grabber = getCharacter(grabbingMemberNumber);
+        if (!grabber) {
+            LSCG_SendLocal(`Unable to escape, cannot locate grabber! [Try refreshing if they DC'd]`);
+            return;
+        }
+
+        SendAction(`${CharacterNickname(Player)} tries their best to escape from ${CharacterNickname(grabber)}'s grip...`);
+        setTimeout(() => {
+            if (!grabber)
+                return;
+            let check = getModule<ItemUseModule>("ItemUseModule")?.MakeActivityCheck(Player, grabber);
+            if (check.AttackerRoll.Total >= check.DefenderRoll.Total) {
+                SendAction(`${CharacterNickname(Player)} ${check.AttackerRoll.TotalStr}successfully breaks free from ${CharacterNickname(grabber)}'s ${check.DefenderRoll.TotalStr}grasp!`);
+                this.earPinchedByMember = null;
+                this.armGrabbedByMember = null;
+                sendLSCGMessage(<LSCGMessageModel>{
+                    type: "command",
+                    reply: false,
+                    settings: null,
+                    target: grabber.MemberNumber!,
+                    version: LSCG_VERSION,
+                    command: {
+                        name: "escape"
+                    }
+                });
+            } else {
+                SendAction(`${CharacterNickname(Player)} ${check.AttackerRoll.TotalStr}squirms and wriggles but fails to escape from ${CharacterNickname(grabber)}'s ${check.DefenderRoll.TotalStr}grasp!`);
+                this.escapeAttempted = CommonTime();
+            }
+        }, 4000);
     }
 }

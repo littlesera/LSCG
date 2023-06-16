@@ -1,9 +1,10 @@
 import { BaseModule } from "base";
 import { getModule } from "modules";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { getCharacter, removeAllHooksByModule, SendAction } from "../utils";
+import { getCharacter, LSCG_SendLocal, removeAllHooksByModule, SendAction } from "../utils";
 import { HypnoModule } from "./hypno";
 import { ItemUseModule } from "./item-use";
+import { ActivityModule } from "./activities";
 
 // Remote UI Module to handle configuration on other characters
 // Can be used to "program" another character's hypnosis, collar, etc.
@@ -108,6 +109,16 @@ export class CommandModule extends BaseModule {
 				let check = getModule<ItemUseModule>("ItemUseModule")?.MakeActivityCheck(tgt, Player);
 				SendAction(`${CharacterNickname(Player)} makes an activity check defending from ${CharacterNickname(tgt)}!`);
 				SendAction(`${CharacterNickname(Player)}: ${check.DefenderRoll.Total} ${check.DefenderRoll.TotalStr}-- ${CharacterNickname(tgt)}: ${check.AttackerRoll.Total} ${check.AttackerRoll.TotalStr}`)
+			}
+		}, {
+			Tag: "escape",
+			Description: " : If you are arm-grabbed or ear-pinched, will attempt to escape from their grip.",
+			Action: (args, msg, parsed) => {
+				var module = getModule<ActivityModule>("ActivityModule");
+				if (!module)
+					return;
+
+				module.TryEscape();
 			}
 		}
 	]

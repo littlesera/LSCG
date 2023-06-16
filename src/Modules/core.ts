@@ -141,6 +141,9 @@ export class CoreModule extends BaseModule {
             case "release":
                 getModule<ActivityModule>("ActivityModule")?.IncomingRelease(Sender!, msg.command.args.find(a => a.name == "type")?.value as GrabType);
                 break;
+            case "escape":
+                getModule<ActivityModule>("ActivityModule")?.IncomingEscape(Sender!, msg.target);
+                break;
             case "remote":
                 if (Player.LSCG?.HypnoModule.remoteAccess) {
                     Object.assign(Player.LSCG.HypnoModule, msg.settings?.HypnoModule);
