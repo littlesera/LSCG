@@ -1,7 +1,7 @@
 import { BaseModule } from 'base';
 import { CollarModel, CollarSettingsModel } from 'Settings/Models/collar';
 import { ModuleCategory, Subscreen } from 'Settings/setting_definitions';
-import { settingsSave, parseMsgWords, SendAction, OnChat, getRandomInt, hookFunction, removeAllHooksByModule, OnActivity, OnAction, setOrIgnoreBlush, getCharacter, hookBCXCurse, escapeRegExp, isPhraseInString } from '../utils';
+import { settingsSave, SendAction, OnChat, getRandomInt, hookFunction, removeAllHooksByModule, OnActivity, OnAction, setOrIgnoreBlush, getCharacter, hookBCXCurse, isPhraseInString } from '../utils';
 import { GuiCollar } from 'Settings/collar';
 
 enum PassoutReason {
@@ -419,12 +419,9 @@ export class CollarModule extends BaseModule {
         if (!this.CanActivate(sender) || msg.startsWith("(") || !this.settings.tightTrigger || !this.settings.looseTrigger)
             return;
 
-        let tightenPhraseMatch = new RegExp("\\b" + escapeRegExp(this.settings.tightTrigger) + "\\b", "i");
-        let loosenPhraseMatch = new RegExp("\\b" + escapeRegExp(this.settings.looseTrigger) + "\\b", "i");
-
-        if (tightenPhraseMatch.test(msg))
+        if (isPhraseInString(msg, this.settings.tightTrigger))
             this.IncreaseCollarChoke();
-        else if (loosenPhraseMatch.test(msg))
+        else if (isPhraseInString(msg, this.settings.looseTrigger))
             this.DecreaseCollarChoke();
     }
 

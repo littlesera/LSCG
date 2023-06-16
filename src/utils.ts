@@ -1,9 +1,6 @@
 import bcModSDKRef from "bondage-club-mod-sdk";
 import { getModule } from "modules";
-import { ActivityModule } from "Modules/activities";
-import { BoopsModule } from "Modules/boops";
 import { CoreModule } from "Modules/core";
-import { IPublicSettingsModel } from "Settings/Models/settings";
 import { ModuleCategory } from "Settings/setting_definitions";
 
 export const LSCG_CHANGES: string = "https://github.com/littlesera/LSCG/releases/latest";
@@ -236,11 +233,12 @@ export function escapeRegExp(string: string) {
 	return string?.toLocaleLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&') ?? ""; // $& means the whole matched string
 }
 
-export function isPhraseInString(string: string, phrase: string) {
+export function isPhraseInString(string: string, phrase: string, ignoreOOC: boolean = false) {
 	if (!string || string === "")
 		return false;
 	let praseMatch = new RegExp("\\b" + escapeRegExp(phrase) + "\\b", "i");
-	return praseMatch.test(string);
+	let oocParsed = ignoreOOC ? string : excludeParentheticalContent(string);
+	return praseMatch.test(oocParsed);
 }
 
 export function addCustomEffect(C: Character | null, effect: EffectName): boolean {
@@ -342,6 +340,20 @@ export function LSCG_SendLocal(msg: string, time?: number) {
 	var bgColor = (Player.ChatSettings!.ColorTheme!.indexOf("Light") > -1) ? "#D7F6E9" : "#23523E";
 	let text = `<p style='background-color:${bgColor};'>${msg}</p>`;
 	ChatRoomSendLocal(text);
+}
+
+export function excludeParentheticalContent(msg: string): string {
+	var result = "";
+	var Par = false;
+	if (msg == null) msg = "";
+	for (let i = 0; i < msg.length; i++) {
+		let char = msg.charAt(i);
+		if (char == "(" || char == '）') Par = true;
+		if (!Par)
+			result += char;
+		if (char == ")" || char == "）") Par = false;
+	}
+	return result;
 }
 
 // ICONS
