@@ -21,7 +21,7 @@ const patchedFunctions: Map<string, IPatchedFunctionData> = new Map();
 export const bcModSDK = bcModSDKRef.registerMod({
 	name: "LSCG",
 	fullName: "Little Sera's Club Games",
-	version: LSCG_VERSION,
+	version: LSCG_VERSION.startsWith("v") ? LSCG_VERSION.slice(1) : LSCG_VERSION,
 	repository: "https://github.com/littlesera/LSCG"
 });
 
