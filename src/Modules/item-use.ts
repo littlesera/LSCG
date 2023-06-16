@@ -43,8 +43,10 @@ export interface RopeTarget {
 
 export interface GagTarget {
 	MouthItemName: string;
-	SourceItemName: string;
-	SourceLocation?: string;
+	HandItemName?: string;
+	NeckItemName?: string;
+	//SourceItemName: string;
+	OverrideNeckLocation?: string;
 	LeaveHandItem?: boolean;
 	CraftedKeys?: string[];
 	PreferredTypes?: {Location: string, Type: string}[];
@@ -59,70 +61,84 @@ export class ItemUseModule extends BaseModule {
 
 	NeckTargets: GagTarget[] = [
 		{
-			SourceItemName: "NecklaceRope",
+			NeckItemName: "NecklaceRope",
 			MouthItemName: "RopeBallGag",
 			PreferredTypes: [{Location: "ItemMouth", Type: "Tight"},
 							{Location: "Necklace", Type: "Long"}]
 		},{
-			SourceItemName: "NecklaceBallGag",
+			NeckItemName: "NecklaceBallGag",
 			MouthItemName: "BallGag",
 			PreferredTypes: [{Location: "ItemMouth", Type: "Tight"}]
 		},{
-			SourceItemName: "Bandana",
 			MouthItemName: "ScarfGag",
+			NeckItemName: "Bandana",			
 			PreferredTypes: [{Location: "ItemMouth", Type: "OTN"}]
 		},{
-			SourceItemName: "Scarf",
-			SourceLocation: "ClothAccessory",
+			NeckItemName: "Scarf",
+			OverrideNeckLocation: "ClothAccessory",
 			MouthItemName: "ClothGag",
 			PreferredTypes: [{Location: "ItemMouth", Type: "OTM"}]
 		},{
-			SourceItemName: "FurScarf",
+			NeckItemName: "FurScarf",
 			MouthItemName: "FurScarf"
 		}
 	]
 
 	GagTargets: GagTarget[] = [
 		{
-			SourceItemName: "Ballgag",
 			MouthItemName: "BallGag",
+			HandItemName: "Ballgag",
+			NeckItemName: "NecklaceBallGag",
 			PreferredTypes: [{Location: "ItemMouth", Type: "Tight"}]
 		},{
-			SourceItemName: "Panties",
-			MouthItemName: "PantyStuffing"
+			MouthItemName: "PantyStuffing",
+			HandItemName: "Panties"
 		},{
-			SourceItemName: "LargeDildo",
-			MouthItemName: "LargeDildo"
+			MouthItemName: "LargeDildo",
+			HandItemName: "LargeDildo"
 		},{
-			SourceItemName: "Cane",
-			MouthItemName: "CaneGag"
+			MouthItemName: "CaneGag",
+			HandItemName: "Cane"
 		},{
-			SourceItemName: "Crop",
-			MouthItemName: "CropGag"
+			MouthItemName: "CropGag",
+			HandItemName: "Crop"
 		},{
-			SourceItemName: "LongSock",
-			MouthItemName: "SockStuffing"
+			MouthItemName: "SockStuffing",
+			HandItemName: "LongSock"
 		},{
-			SourceItemName: "Towel",
-			MouthItemName: "ClothStuffing"
+			MouthItemName: "ClothStuffing",
+			HandItemName: "Towel"
 		},{
-			SourceItemName: "RopeCoilShort",
 			MouthItemName: "RopeGag",
+			HandItemName: "RopeCoilShort",			
 			LeaveHandItem: true
 		},{
-			SourceItemName: "RopeCoilLong",
 			MouthItemName: "RopeBallGag",
+			HandItemName: "RopeCoilLong",	
+			NeckItemName: "NecklaceRope",		
 			LeaveHandItem: true,
 			PreferredTypes: [{Location: "ItemMouth", Type: "Tight"}]
 		},{
-			SourceItemName: "TapeRoll",
 			MouthItemName: "DuctTape",
+			HandItemName: "TapeRoll",
 			LeaveHandItem: true,
 			PreferredTypes: [
 				{Location: "ItemMouth", Type: "Crossed"},
 				{Location: "ItemMouth2", Type: "Double"},
 				{Location: "ItemMouth3", Type: "Cover"}
 			]
+		},{
+			MouthItemName: "ScarfGag",
+			NeckItemName: "Bandana",			
+			PreferredTypes: [{Location: "ItemMouth", Type: "OTN"}]
+		},{
+			NeckItemName: "Scarf",
+			OverrideNeckLocation: "ClothAccessory",
+			MouthItemName: "ClothGag",
+			PreferredTypes: [{Location: "ItemMouth", Type: "OTM"}]
+		},{
+			NeckItemName: "FurScarf",
+			MouthItemName: "FurScarf"
 		}
 	]
 
@@ -200,6 +216,12 @@ export class ItemUseModule extends BaseModule {
 					TargetLabel: "Gag Mouth",
 					TargetAction: "SourceCharacter pushes PronounPossessive UsedAsset into TargetCharacter's mouth.",
 					TargetSelfAction: "SourceCharacter gags themselves with their own UsedAsset.",
+					SelfAllowed: true
+				},<ActivityTarget>{
+					Name: "ItemNeck",
+					TargetLabel: "Place around Neck",
+					TargetAction: "SourceCharacter places PronounPossessive UsedAsset around TargetCharacter's neck.",
+					TargetSelfAction: "SourceCharacter places PronounPossessive UsedAsset around PronounPossessive own neck.",
 					SelfAllowed: true
 				}
 			],
