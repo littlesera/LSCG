@@ -1,12 +1,9 @@
 import { BaseModule } from "base";
 import { getModule, modules } from "modules";
 import { BaseSettingsModel } from "Settings/Models/base";
-import { CollarPublicSettingsModel } from "Settings/Models/collar";
-import { HypnoPublicSettingsModel } from "Settings/Models/hypno";
-import { InjectorPublicSettingsModel, InjectorSettingsModel } from "Settings/Models/injector";
 import { IPublicSettingsModel, PublicSettingsModel, SettingsModel } from "Settings/Models/settings";
-import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
-import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, setOrIgnoreBlush, isPhraseInString, hookFunction, getCharacter, drawSvg, SVG_ICONS, patchFunction, sendLSCGMessage, settingsSave, LSCG_CHANGES, LSCG_SendLocal } from "../utils";
+import { ModuleCategory } from "Settings/setting_definitions";
+import { removeAllHooksByModule, hookFunction, getCharacter, drawSvg, SVG_ICONS, sendLSCGMessage, settingsSave, LSCG_CHANGES } from "../utils";
 import { ActivityModule, GrabType } from "./activities";
 import { HypnoModule } from "./hypno";
 

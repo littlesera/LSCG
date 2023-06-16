@@ -1,12 +1,8 @@
 import { getModule } from "modules";
 import { HypnoModule } from "Modules/hypno";
-import { InjectorModule } from "Modules/injector";
-import { MiscModule } from "Modules/misc";
 import { RemoteUIModule } from "Modules/remoteUI";
 import { RemoteGuiSubscreen } from "./remoteBase";
-import { GUI } from "../settingUtils";
 import { GuiSubscreen } from "Settings/settingBase";
-import { GuiHypno } from "Settings/hypno";
 import { RemoteHypno } from "./hypno";
 import { LSCG_CHANGES } from "utils";
 

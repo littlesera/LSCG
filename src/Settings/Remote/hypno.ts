@@ -1,6 +1,5 @@
 import { RemoteGuiSubscreen } from "./remoteBase";
 import { Setting } from "Settings/settingBase";
-import { BaseSettingsModel } from "Settings/Models/base";
 import { HypnoPublicSettingsModel } from "Settings/Models/hypno";
 import { ICONS } from "utils";
 

@@ -1,6 +1,4 @@
 import { getModule } from "modules";
-import { HypnoModule } from "Modules/hypno";
-import { InjectorModule } from "Modules/injector";
 import { MiscModule } from "Modules/misc";
 import { GuiSubscreen } from "./settingBase";
 import { GUI } from "./settingUtils";

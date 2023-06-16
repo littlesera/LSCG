@@ -1,18 +1,9 @@
 import { BaseModule } from "base";
 import { getModule } from "modules";
-import { GuiHypno } from "Settings/hypno";
-import { MainMenu } from "Settings/mainmenu";
-import { RemoteMainMenu } from "Settings/Remote/mainmenu";
-import { RemoteGuiSubscreen } from "Settings/Remote/remoteBase";
-import { GuiSubscreen } from "Settings/settingBase";
-import { GUI } from "Settings/settingUtils";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { getCharacter, getRandomInt, hookFunction, ICONS, removeAllHooksByModule, SendAction } from "../utils";
+import { getRandomInt, hookFunction, removeAllHooksByModule, SendAction } from "../utils";
 import { ActivityBundle, ActivityModule, ActivityTarget } from "./activities";
 import { BoopsModule } from "./boops";
-import { HypnoModule } from "./hypno";
-import { InjectorModule } from "./injector";
-import { MiscModule } from "./misc";
 
 export class ActivityRoll {
 	constructor(raw: number, mod: number) {

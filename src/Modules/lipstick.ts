@@ -1,6 +1,6 @@
 import { BaseModule } from "base";
-import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
-import { OnActivity, removeAllHooksByModule, setOrIgnoreBlush } from "../utils";
+import { ModuleCategory } from "Settings/setting_definitions";
+import { OnActivity, removeAllHooksByModule } from "../utils";
 import { BaseSettingsModel } from "Settings/Models/base";
 
 export class LipstickModule extends BaseModule {

@@ -1,6 +1,6 @@
 import { BaseModule } from "base";
 import { MiscSettingsModel } from "Settings/Models/base";
-import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
+import { ModuleCategory } from "Settings/setting_definitions";
 import { getRandomInt, hookFunction, OnAction, OnActivity, removeAllHooksByModule, SendAction, setOrIgnoreBlush } from "../utils";
 
 export class MiscModule extends BaseModule {
