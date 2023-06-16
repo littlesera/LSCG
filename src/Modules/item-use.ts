@@ -61,7 +61,8 @@ export class ItemUseModule extends BaseModule {
 		{
 			SourceItemName: "NecklaceRope",
 			MouthItemName: "RopeBallGag",
-			PreferredTypes: [{Location: "ItemMouth", Type: "Tight"}]
+			PreferredTypes: [{Location: "ItemMouth", Type: "Tight"},
+							{Location: "Necklace", Type: "Long"}]
 		},{
 			SourceItemName: "NecklaceBallGag",
 			MouthItemName: "BallGag",
@@ -613,7 +614,8 @@ export class ItemUseModule extends BaseModule {
 		var gagItem = InventoryGet(source, sourceLocation);
 		if (gagItem?.Asset.Name == gagTarget.SourceItemName) {
 			if (!gagTarget.LeaveHandItem) InventoryRemove(source, sourceLocation, true);
-			var gag = InventoryWear(target, gagTarget.MouthItemName, location, gagItem?.Color, undefined, source.MemberNumber, gagItem?.Craft, true);
+			var color = this._handleWeirdColorStuff(gagItem, gagTarget, sourceLocation, location);
+			var gag = InventoryWear(target, gagTarget.MouthItemName, location, color, undefined, source.MemberNumber, gagItem?.Craft, true);
 			if (!!gagTarget.PreferredTypes && gagTarget.PreferredTypes.length > 0) {
 				var prefType = gagTarget.PreferredTypes.find(tgt => tgt.Location == location) ?? gagTarget.PreferredTypes[0];
 				gag!.Property!.Type = prefType.Type;
@@ -621,6 +623,17 @@ export class ItemUseModule extends BaseModule {
 			setTimeout(() => ChatRoomCharacterUpdate(target));
 		}
     }
+
+	_handleWeirdColorStuff(itemToMove: Item, gagTarget: GagTarget, sourceLocation: string, targetLocation: string): ItemColor | undefined {
+		var color = itemToMove?.Color;
+		// BallGag necklace + mouth gag alternate order...
+		if (!!color && gagTarget.MouthItemName == "BallGag") {
+			if ((sourceLocation.startsWith("ItemMouth") && targetLocation == "Necklace") ||
+				(sourceLocation == "Necklace" && targetLocation.startsWith("ItemMouth")))
+				color = (<string[]>(<ItemColor>color)).reverse();
+		}
+		return color;
+	}
 
 	TakeGag(target: Character, source: Character, gagTarget: GagTarget, location: string, targetLocation: string = "ItemHandheld") {
 		var gag = InventoryGet(target, location);
@@ -633,7 +646,12 @@ export class ItemUseModule extends BaseModule {
 			var craft = gag.Craft;
 			if (!!craft)
 				craft.Lock = "";
-			InventoryWear(source, gagTarget.SourceItemName, targetLocation, gag.Color, undefined, source.MemberNumber, craft, true);
+			var color = this._handleWeirdColorStuff(gag, gagTarget, location, targetLocation);
+			let item = InventoryWear(source, gagTarget.SourceItemName, targetLocation, color, undefined, source.MemberNumber, craft, true);
+			if (!!gagTarget.PreferredTypes && gagTarget.PreferredTypes.length > 0) {
+				var prefType = gagTarget.PreferredTypes.find(tgt => tgt.Location == targetLocation) ?? gagTarget.PreferredTypes[0];
+				item!.Property!.Type = prefType.Type;
+			}
 			setTimeout(() => ChatRoomCharacterUpdate(target));
 		}
 	}
