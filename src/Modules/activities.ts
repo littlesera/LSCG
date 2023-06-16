@@ -25,10 +25,15 @@ export interface CustomAction {
     Func(target: Character | null, args: any[], next: (args: any[]) => any): any;
 }
 
+export interface CustomPreparse {
+    Func(args: any[]): void;
+}
+
 export interface ActivityBundleBase {
     CustomPrereqs?: CustomPrerequisite[];
     CustomReaction?: CustomReaction;
     CustomAction?: CustomAction;
+    CustomPreparse?: CustomPreparse;
     CustomImage?: string;
 }
 
@@ -62,6 +67,10 @@ export class ActivityModule extends BaseModule {
                 let actName = data.Dictionary[3]?.ActivityName ?? "";
                 var isPatched = this.CheckForPatchedActivity(actName, data.Content);
                 if (actName.indexOf("LSCG_") == 0 || isPatched) {
+                    let preParse = this.CustomPreparseCallbacks.get(actName);
+                    if (!!preParse)
+                        preParse(args);
+
                     let target = data.Dictionary?.find((d: any) => d.Tag == "TargetCharacter");
                     var targetChar = getCharacter(target.MemberNumber);
                     let {metadata, substitutions} = ChatRoomMessageRunExtractors(data, Player)
@@ -682,6 +691,7 @@ export class ActivityModule extends BaseModule {
     CustomPrerequisiteFuncs: Map<string, (acting: Character, acted: Character, group: AssetGroup) => boolean> = new Map<string, (acting: Character, acted: Character, group: AssetGroup) => boolean>();
     CustomIncomingActivityReactions: Map<string, (sender: Character | null) => void> = new Map<string, (sender: Character | null) => void>();
     CustomActionCallbacks: Map<string, (target: Character | null, args: any[], next: (args: any[]) => any) => any> = new Map<string, (sender: Character | null, args: any[], next: (args: any[]) => any) => any>();
+    CustomPreparseCallbacks: Map<string, (args: any[]) => void> = new Map<string, (args: any[]) => void>();
     CustomImages: Map<string, string> = new Map<string, string>;
     PatchedActivities: string[] = [];
 
@@ -697,16 +707,17 @@ export class ActivityModule extends BaseModule {
             this.AddCustomPrereq(prereq);
         })
 
-        if (!!bundle.CustomReaction && !this.CustomIncomingActivityReactions.get(activity.Name)) {
+        if (!!bundle.CustomReaction && !this.CustomIncomingActivityReactions.get(activity.Name))
             this.CustomIncomingActivityReactions.set(activity.Name, bundle.CustomReaction.Func)
-        }
 
-        if (!!bundle.CustomImage && !this.CustomImages.get(activity.Name)) {
+        if (!!bundle.CustomImage && !this.CustomImages.get(activity.Name))
             this.CustomImages.set(activity.Name, bundle.CustomImage);
-        }
 
         if (!!bundle.CustomAction && !this.CustomActionCallbacks.get(activity.Name))
             this.CustomActionCallbacks.set(activity.Name, bundle.CustomAction.Func);
+
+        if (!!bundle.CustomPreparse && !this.CustomPreparseCallbacks.get(activity.Name))
+            this.CustomPreparseCallbacks.set(activity.Name, bundle.CustomPreparse.Func);
     }
 
     CheckForPatchedActivity(activityName: string, activityMsg: string): boolean {

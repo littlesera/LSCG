@@ -41,6 +41,7 @@ export interface GagTarget {
 	LeaveHandItem?: boolean;
 	CraftedKeys?: string[];
 	PreferredTypes?: {Location: string, Type: string}[];
+	UsedAssetOverride?: string;
 }
 
 // Remote UI Module to handle configuration on other characters
@@ -73,7 +74,8 @@ export class ItemUseModule extends BaseModule {
 			HandItemName: "LongSock"
 		},{
 			MouthItemName: "ClothStuffing",
-			HandItemName: "Towel"
+			HandItemName: "Towel",
+			UsedAssetOverride: "towel"
 		},{
 			MouthItemName: "RopeBallGag",
 			HandItemName: "RopeCoilLong",	
@@ -100,7 +102,8 @@ export class ItemUseModule extends BaseModule {
 		},{
 			MouthItemName: "ScarfGag",
 			NeckItemName: "Bandana",			
-			PreferredTypes: [{Location: "ItemMouth", Type: "OTN"}]
+			PreferredTypes: [{Location: "ItemMouth", Type: "OTN"}],
+			UsedAssetOverride: "bandana"
 		},{
 			MouthItemName: "ClothGag",
 			NeckItemName: "Scarf",
@@ -122,13 +125,13 @@ export class ItemUseModule extends BaseModule {
 			let ret = false;
 			var focusGroup = acted?.FocusGroup?.Name ?? undefined;
 
-			if (needsItem == "GagToNecklace"	|| 
-				needsItem == "NecklaceToGag"	||
-				(focusGroup == "ItemNeck" && needsItem == "GagTakeItem")) {
-				return this.ManualGenerateItemActivitiesForNecklaceActivity(allowed, acting, acted, needsItem, activity);
+			let res;
+			if (["GagGiveItem", "GagTakeItem","GagToNecklace", "NecklaceToGag"].indexOf(needsItem) > -1) {
+				res = this.ManualGenerateItemActivitiesForNecklaceActivity(allowed, acting, acted, needsItem, activity);
 			} else {
-				return next(args);
+				res = next(args);
 			}
+			return res;
 		}, ModuleCategory.ItemUse);
 
         hookFunction("CharacterItemsForActivity", 1, (args, next) => {
@@ -255,6 +258,9 @@ export class ItemUseModule extends BaseModule {
 					}
 					return next(args);
 				}
+			},
+			CustomPreparse: {
+				Func: (args) => this.UsedAssetPreparse(args)
 			}
 		});
 
@@ -341,6 +347,9 @@ export class ItemUseModule extends BaseModule {
 						this.TakeGag(target, Player, gagTarget, location);
 					return next(args);
 				}
+			},
+			CustomPreparse: {
+				Func: (args) => this.UsedAssetPreparse(args)
 			}
 		});
 
@@ -394,6 +403,9 @@ export class ItemUseModule extends BaseModule {
 					}
 					return next(args);
 				}
+			},
+			CustomPreparse: {
+				Func: (args) => this.UsedAssetPreparse(args)
 			}
 		});
 
@@ -409,8 +421,8 @@ export class ItemUseModule extends BaseModule {
 				<ActivityTarget>{
 					Name: "ItemMouth",
 					TargetLabel: "Wear around Neck",
-					TargetAction: "SourceCharacter pulls out TargetCharacter's UsedAsset, letting it hang around their neck.",
-					TargetSelfAction: "SourceCharacter pulls the UsedAsset out of PronounPossessive mouth and lets it hang around PronounPossessive mouth.",
+					TargetAction: "SourceCharacter removes TargetCharacter's UsedAsset, letting it hang around their neck.",
+					TargetSelfAction: "SourceCharacter removes the UsedAsset from PronounPossessive mouth and lets it hang around PronounPossessive neck.",
 					SelfAllowed: true
 				}
 			],
@@ -449,6 +461,9 @@ export class ItemUseModule extends BaseModule {
 						this.TakeGag(target, target, gagTarget, location, gagTarget?.OverrideNeckLocation ?? "Necklace");
 					return next(args);
 				}
+			},
+			CustomPreparse: {
+				Func: (args) => this.UsedAssetPreparse(args)
 			}
 		});
 
@@ -668,6 +683,8 @@ export class ItemUseModule extends BaseModule {
 			if ((sourceLocation.startsWith("ItemMouth") && targetLocation == "Necklace") ||
 				(sourceLocation == "Necklace" && targetLocation.startsWith("ItemMouth")))
 				color = (<string[]>(<ItemColor>color)).reverse();
+			else if (sourceLocation == "ItemHandheld")
+				color = [color[0], color[0]];
 		}
 		return color;
 	}
@@ -763,8 +780,35 @@ export class ItemUseModule extends BaseModule {
 		}
 	}
 
+	UsedAssetPreparse(args: any[]) {
+		let dict = args[1]?.Dictionary;
+		if (!dict)
+			return;
+		let asset = dict.find((x: { Tag: string; }) => x.Tag == "ActivityAsset");
+		let usedAsset = dict.find((x: { Tag: string; }) => x.Tag == "UsedAsset");
+		let targetLocation = dict[2]?.FocusGroupName;
+		if (!asset)
+			return;
+		let sourceItemName = asset.AssetName as string;
+		let sourceGroupName = asset.GroupName as string;
+		let gagTarget = this.GagTargets.find(t => {
+			switch (sourceGroupName) {
+				case "Necklace":
+				case "ClothAccessory":
+					return t.NeckItemName == sourceItemName;
+				case "ItemHandheld":
+					return t.HandItemName == sourceItemName;
+				default:
+					return t.MouthItemName == sourceItemName;
+			}
+		});
+		if (!!gagTarget)
+			usedAsset.Text = gagTarget.UsedAssetOverride ?? usedAsset.Text;
+	}
+
 	ManualGenerateItemActivitiesForNecklaceActivity(allowed: ItemActivity[], acting: Character, acted: Character, needsItem: string, activity: Activity) {
-		const items = CharacterItemsForActivity(acted, needsItem);
+		const itemOwner = needsItem == "GagGiveItem" ? acting : acted;
+		const items = CharacterItemsForActivity(itemOwner, needsItem);
 		if (items.length === 0) return true;
 	
 		let handled = false;
@@ -780,11 +824,29 @@ export class ItemUseModule extends BaseModule {
 			}
 	
 			let blocked: ItemActivityRestriction | null = null;
-			if (types.some((type) => InventoryIsAllowedLimited(acted, item, type ?? ""))) {
-				blocked = "limited";
-			} else if (types.some((type) => InventoryBlockedOrLimited(acted, item, type))) {
-				blocked = "blocked";
-			} else if (InventoryGroupIsBlocked(acting, /** @type {AssetGroupItemName} */(item.Asset.Group.Name))) {
+			let focusGroup = acted.FocusGroup?.Name;
+			let itemName = item.Asset.Name;
+			let gagTarget = this.GagTargets.find(t => [t.MouthItemName, t.HandItemName, t.NeckItemName].indexOf(itemName) > -1);
+			
+			let targetItemName = gagTarget?.MouthItemName;
+			if (focusGroup == "ItemNeck" || needsItem == "GagToNecklace") targetItemName = gagTarget?.NeckItemName;
+			else if (needsItem == "GagTakeItem") targetItemName = gagTarget?.HandItemName;
+			
+			let targetAssetGroup = "ItemMouth";
+			if (focusGroup == "ItemNeck" || needsItem == "GagToNecklace") targetAssetGroup = gagTarget?.OverrideNeckLocation ?? "Necklace";
+			else if (needsItem == "GagTakeItem") targetAssetGroup = "ItemHandheld";
+			
+			let targetItem = <Item>{Asset: AssetGet("Female3DCG", targetAssetGroup, targetItemName ?? "")};
+			let targetOwner = needsItem == "GagTakeItem" ? acting : acted;
+			if (targetItem.Asset != null) {
+				if (types.some((type) => InventoryIsAllowedLimited(targetOwner, targetItem, type ?? ""))) {
+					blocked = "limited";
+				} else if (types.some((type) => InventoryBlockedOrLimited(targetOwner, targetItem, type))) {
+					blocked = "blocked";
+				} else if (InventoryGroupIsBlocked(targetOwner, /** @type {AssetGroupItemName} */(targetItem.Asset.Group.Name))) {
+					blocked = "unavail";
+				}
+			} else {
 				blocked = "unavail";
 			}
 	
