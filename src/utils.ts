@@ -338,7 +338,7 @@ export function sendLSCGMessage(msg: LSCGMessageModel) {
 
 export function LSCG_SendLocal(msg: string, time?: number) {
 	var bgColor = (Player.ChatSettings!.ColorTheme!.indexOf("Light") > -1) ? "#D7F6E9" : "#23523E";
-	let text = `<p style='background-color:${bgColor};'>${msg}</p>`;
+	let text = `<div style='background-color:${bgColor};'>${msg}</div>`;
 	ChatRoomSendLocal(text);
 }
 
