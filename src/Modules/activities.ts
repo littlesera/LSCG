@@ -61,7 +61,8 @@ export class ActivityModule extends BaseModule {
         this.handHoldingMemberList = [];
         this.armGrabbedByMember = null;
         this.armGrabbingMemberList = [];
-        this.customGagged = false;
+        this.tongueGrabbedMember = null;
+        this.tongueGrabbedByMember = null;
     }
 
     load(): void {
@@ -685,7 +686,9 @@ export class ActivityModule extends BaseModule {
         });
     }
 
-    customGagged: boolean = false;
+    get customGagged(): boolean {
+        return !!this.tongueGrabbedByMember && this.tongueGrabbedByMember >= 0;
+    };
     prevMouth: ExpressionName | null = null;
 
     unload(): void {
@@ -850,7 +853,7 @@ export class ActivityModule extends BaseModule {
 
     InitHandHoldHooks(): void {
         hookFunction('Player.CanWalk', 1, (args, next) => {
-            if (!!this.earPinchedByMember || !!this.armGrabbedByMember)
+            if (!!this.earPinchedByMember || !!this.armGrabbedByMember || !!this.tongueGrabbedByMember)
                 return false;
             return next(args);
         }, ModuleCategory.Activities);
@@ -1033,6 +1036,7 @@ export class ActivityModule extends BaseModule {
     armGrabbingMemberList: number[] = [];
     handHoldingMemberList: number[] = [];
     tongueGrabbedMember: number | null = null;
+    tongueGrabbedByMember: number | null = null;
 
     get usedHandsCount(): number {
         return this.totalHeldByHandList.length;
@@ -1184,6 +1188,20 @@ export class ActivityModule extends BaseModule {
         this.armGrabbingMemberList = this.armGrabbingMemberList.filter(num => num != sender.MemberNumber!);
     }
 
+    tongueGrabbed(sender: Character) {
+        this.tongueGrabbedByMember = sender.MemberNumber!;
+        this.prevMouth = WardrobeGetExpression(Player)?.Mouth ?? null;
+        CharacterSetFacialExpression(Player, "Mouth", "Ahegao");
+    }
+
+    tongueReleased() {
+        if (!!this.tongueGrabbedByMember) {
+            CharacterSetFacialExpression(Player, "Mouth", this.prevMouth);
+            this.prevMouth = null;
+        }
+        this.tongueGrabbedByMember = null;
+    }
+
     IncomingGrab(sender: Character, grabType: GrabType) {
         switch (grabType) {
             case "hand":
@@ -1193,9 +1211,7 @@ export class ActivityModule extends BaseModule {
                 this.earPinchedByMember = sender.MemberNumber!
                 break;
             case "tongue":
-                this.customGagged = true;
-                this.prevMouth = WardrobeGetExpression(Player)?.Mouth ?? null;
-                CharacterSetFacialExpression(Player, "Mouth", "Ahegao");
+                this.tongueGrabbed(sender);
                 break;
             case "arm":
                 this.armGrabbedByMember = sender.MemberNumber!;
@@ -1214,9 +1230,7 @@ export class ActivityModule extends BaseModule {
                 this.earPinchedByMember = null;
                 break;
             case "tongue":
-                this.customGagged = false;
-                CharacterSetFacialExpression(Player, "Mouth", this.prevMouth);
-                this.prevMouth = null;
+                this.tongueReleased();
                 break;
             case "arm":
                 this.armGrabbedByMember = null;
@@ -1227,6 +1241,7 @@ export class ActivityModule extends BaseModule {
         if (escapeFromMemberNumber == Player.MemberNumber) {
             this.removeArmGrab(sender);
             this.removeEarPinch(sender);
+            this.tongueGrabbedMember = null;
         }
     }
 
@@ -1249,7 +1264,7 @@ export class ActivityModule extends BaseModule {
                 this.escapeAttempted = 0;
             }
         }
-        let grabbingMemberNumber = this.earPinchedByMember ?? this.armGrabbedByMember ?? -1;
+        let grabbingMemberNumber = this.earPinchedByMember ?? this.armGrabbedByMember ?? this.tongueGrabbedByMember ?? -1;
         if (grabbingMemberNumber < 0) {
             LSCG_SendLocal(`You are not grabbed by anyone!`);
             return;
@@ -1270,6 +1285,7 @@ export class ActivityModule extends BaseModule {
                 SendAction(`${CharacterNickname(Player)} ${check.AttackerRoll.TotalStr}successfully breaks free from ${CharacterNickname(grabber)}'s ${check.DefenderRoll.TotalStr}grasp!`);
                 this.earPinchedByMember = null;
                 this.armGrabbedByMember = null;
+                this.tongueReleased();
                 sendLSCGMessage(<LSCGMessageModel>{
                     type: "command",
                     reply: false,
