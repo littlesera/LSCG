@@ -901,10 +901,11 @@ export class ActivityModule extends BaseModule {
                     MainCanvas.translate(CharX + 420 * Zoom, CharY + 60 * Zoom);
                     MainCanvas.rotate(-Math.PI/2);
                     MainCanvas.translate(-(CharX + 420 * Zoom), -(CharY + 60 * Zoom));
-                    DrawImageResize(
-                        "Icons/Battle.png",
-                        CharX + 405 * Zoom, CharY + 45 * Zoom, 30 * Zoom, 30 * Zoom
-                    );
+                    DrawImageEx("Icons/Battle.png", CharX + 405 * Zoom, CharY + 45 * Zoom, { Width: 30 * Zoom, Height: 30 * Zoom, Invert: this.isPlayerGrabbing(C.MemberNumber) });
+                    // DrawImageResize(
+                    //     "Icons/Battle.png",
+                    //     CharX + 405 * Zoom, CharY + 45 * Zoom, 30 * Zoom, 30 * Zoom
+                    // );
                     MainCanvas.translate(CharX + 420 * Zoom, CharY + 60 * Zoom);
                     MainCanvas.rotate(Math.PI/2);
                     MainCanvas.translate(-(CharX + 420 * Zoom), -(CharY + 60 * Zoom));
@@ -1250,13 +1251,13 @@ export class ActivityModule extends BaseModule {
         }
         let grabbingMemberNumber = this.earPinchedByMember ?? this.armGrabbedByMember ?? -1;
         if (grabbingMemberNumber < 0) {
-            LSCG_SendLocal(`Unable to escape, you are not grabbed by anyone!`);
+            LSCG_SendLocal(`You are not grabbed by anyone!`);
             return;
         }
 
         var grabber = getCharacter(grabbingMemberNumber);
         if (!grabber) {
-            LSCG_SendLocal(`Unable to escape, cannot locate grabber! [Try refreshing if they DC'd]`);
+            LSCG_SendLocal(`Cannot locate grabber! [Try refreshing if they DC'd]`);
             return;
         }
 

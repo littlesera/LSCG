@@ -20,7 +20,7 @@ export class CommandModule extends BaseModule {
 			Action: (args, msg, parsed) => {
 				let helpLines: string[] = [];
 				this.orderedCommands.forEach(c => {
-					helpLines.push(`<br>/lscg ${c.Tag} ${c.Description}`);
+					helpLines.push(`<br><b>/lscg ${c.Tag}</b> ${c.Description}`);
 				})
 				var bgColor = (Player.ChatSettings!.ColorTheme!.indexOf("Light") > -1) ? "#D7F6E9" : "#23523E";
 				let helpText = `<p style='background-color:${bgColor};'><b>- Little Sera's Club Games -</b>${helpLines.join()}<br>More to come...</p>`;
