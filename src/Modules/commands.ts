@@ -1,5 +1,5 @@
 import { BaseModule } from "base";
-import { getModule } from "modules";
+import { getModule, modules } from "modules";
 import { ModuleCategory } from "Settings/setting_definitions";
 import { getCharacter, LSCG_SendLocal, removeAllHooksByModule, SendAction } from "../utils";
 import { HypnoModule } from "./hypno";
@@ -119,6 +119,17 @@ export class CommandModule extends BaseModule {
 					return;
 
 				module.TryEscape();
+			}
+		}, {
+			Tag: "emergency",
+			Description: " : Use in case of emergency to revert all LSCG settings to their default values.",
+			Action: (args, msg, parsed) => {
+				// Run Safeword action on all modules
+				for (const m of modules()) {
+					m.safeword();
+					if (!!m.settingsStorage)
+						(<any>Player.LSCG)[m.settingsStorage] = m.defaultSettings;
+				}
 			}
 		}
 	]
