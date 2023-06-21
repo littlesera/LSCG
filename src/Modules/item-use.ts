@@ -486,7 +486,9 @@ export class ItemUseModule extends BaseModule {
 				{
 					Name: "HasCoiledRope",
 					Func: (acting, acted, group) => {
-						var location = acted.FocusGroup?.Name!;
+						var location = acted.FocusGroup?.Name;
+						if (!location)
+							return false;
 						var ropeTarget = this.GetHempRopeLocations().find(t => t.Location == location);
 						var validParams = ValidationCreateDiffParams(acted, acting.MemberNumber!);
 						var blocked = (location.startsWith("ItemTorso") || location == "ItemPelvis") ? !InventoryDoItemsExposeGroup(acted, "ItemTorso", ["Cloth"]) : false;
@@ -680,8 +682,8 @@ export class ItemUseModule extends BaseModule {
 		var color = itemToMove?.Color;
 		// BallGag necklace + mouth gag alternate order...
 		if (!!color && gagTarget.MouthItemName == "BallGag") {
-			if ((sourceLocation.startsWith("ItemMouth") && targetLocation == "Necklace") ||
-				(sourceLocation == "Necklace" && targetLocation.startsWith("ItemMouth")))
+			if ((sourceLocation?.startsWith("ItemMouth") && targetLocation == "Necklace") ||
+				(sourceLocation == "Necklace" && targetLocation?.startsWith("ItemMouth")))
 				color = (<string[]>(<ItemColor>color)).reverse();
 			else if (sourceLocation == "ItemHandheld")
 				color = [color[0], color[0]];
@@ -692,7 +694,7 @@ export class ItemUseModule extends BaseModule {
 	ApplyGag(target: Character, source: Character, gagTarget: GagTarget, targetLocation: string, sourceLocation: string = "ItemHandheld") {
 		var gagItem = InventoryGet(source, sourceLocation);
 		let sourceItemName = (sourceLocation == "ItemHandheld" ? gagTarget.HandItemName : gagTarget.NeckItemName) ?? "";
-		let targetItemName = (targetLocation.startsWith("ItemMouth") ? gagTarget.MouthItemName : gagTarget.NeckItemName) ?? "";
+		let targetItemName = (targetLocation?.startsWith("ItemMouth") ? gagTarget.MouthItemName : gagTarget.NeckItemName) ?? "";
 		if (!!gagItem && gagItem.Asset.Name == sourceItemName) {
 			if (!(gagTarget.LeaveHandItem && sourceLocation == "ItemHandheld")) InventoryRemove(source, sourceLocation, true);
 			var color = this._handleWeirdColorStuff(gagItem, gagTarget, sourceLocation, targetLocation);
