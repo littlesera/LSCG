@@ -305,6 +305,8 @@ export class ItemUseModule extends BaseModule {
 								gagTarget = this.GagTargets.find(t => !!item && t.NeckItemName == item?.Asset.Name && !!t.HandItemName);
 							}
 						} else {
+							if (InventoryGroupIsBlocked(acted, location))
+								return false;
 							item = InventoryGet(acted, location);
 							gagTarget = this.GagTargets.find(t => !!item && t.MouthItemName == item?.Asset.Name && !!t.HandItemName);
 						}
@@ -435,6 +437,9 @@ export class ItemUseModule extends BaseModule {
 						var location = acted.FocusGroup?.Name!;
 						var item = InventoryGet(acted, location);
 						
+						if (InventoryGroupIsBlocked(acted, location))
+							return false;
+
 						if (!!item) {
 							if (!!item.Property && item.Property.Effect && item.Property.Effect.indexOf("Lock") > -1)
 								return false;
