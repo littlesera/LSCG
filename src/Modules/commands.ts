@@ -1,7 +1,7 @@
 import { BaseModule } from "base";
 import { getModule, modules } from "modules";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { getCharacter, LSCG_SendLocal, removeAllHooksByModule, SendAction } from "../utils";
+import { getCharacter, LSCG_SendLocal, removeAllHooksByModule, SendAction, settingsSave } from "../utils";
 import { HypnoModule } from "./hypno";
 import { ItemUseModule } from "./item-use";
 import { ActivityModule } from "./activities";
@@ -124,12 +124,7 @@ export class CommandModule extends BaseModule {
 			Tag: "emergency",
 			Description: " : Use in case of emergency to revert all LSCG settings to their default values.",
 			Action: (args, msg, parsed) => {
-				// Run Safeword action on all modules
-				for (const m of modules()) {
-					m.safeword();
-					if (!!m.settingsStorage)
-						(<any>Player.LSCG)[m.settingsStorage] = m.defaultSettings;
-				}
+				this.EmergencyRelease();	
 			}
 		}
 	]
@@ -183,4 +178,14 @@ export class CommandModule extends BaseModule {
     unload(): void {
         removeAllHooksByModule(ModuleCategory.Commands);
     }
+
+	EmergencyRelease() {
+		// Run Safeword action on all modules
+		for (const m of modules()) {
+			m.safeword();
+			if (!!m.settingsStorage)
+				(<any>Player.LSCG)[m.settingsStorage] = m.defaultSettings;
+		}
+		settingsSave(true);
+	}
 }
