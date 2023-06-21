@@ -152,11 +152,12 @@ export class HypnoModule extends BaseModule {
                 var now = CommonTime();
                 let triggerTimer = (this.settings.triggerTime ?? 5) * 60000;
                 let hypnoEnd = this.settings.activatedAt + triggerTimer;
+                let hornyCheck = lastHornyCheck + Math.min((triggerTimer/100), 30000); // Check for arousal and eyes at least every 30 seconds. More often if hypnosis length is short.
                 if (this.hypnoActivated && this.settings.triggerTime > 0 && hypnoEnd < now) {
                     // Hypno Timeout --
                     this.TriggerRestoreTimeout();
                 }
-                if (this.hypnoActivated && (lastHornyCheck + triggerTimer/100) > now) {
+                if (this.hypnoActivated && hornyCheck < now) {
                     lastHornyCheck = now;
                     this.HypnoHorny();
                 }
