@@ -392,12 +392,14 @@ export class ItemUseModule extends BaseModule {
 			],
 			CustomAction: {
 				Func: (target, args, next) => {
-					if (!target)
+					var dict = args[1]?.Dictionary;
+					if (!target || !dict)
 						return;
+					var activityAsset = dict.find((x: { Tag: string; }) => x.Tag == "ActivityAsset");
 					var location = target.FocusGroup?.Name!;
-					let heldItemName = InventoryGet(target, "Necklace")?.Asset.Name ?? "";
+					let heldItemName = InventoryGet(target, activityAsset.GroupName)?.Asset.Name ?? "";
 					let gagTarget = this.GagTargets.find(t => t.NeckItemName == heldItemName);
-					if (!gagTarget) gagTarget = this.GagTargets.find(t => t.NeckItemName == (InventoryGet(target, "ClothAccessory")?.Asset.Name ?? "") && t.OverrideNeckLocation == "ClothAccessory");
+					//if (!gagTarget) gagTarget = this.GagTargets.find(t => t.NeckItemName == (InventoryGet(target, "ClothAccessory")?.Asset.Name ?? "") && t.OverrideNeckLocation == "ClothAccessory");
 					if (!!gagTarget) {
 						this.ApplyGag(target, target, gagTarget, location, gagTarget.OverrideNeckLocation ?? "Necklace");
 					}
