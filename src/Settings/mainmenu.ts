@@ -3,6 +3,8 @@ import { MiscModule } from "Modules/misc";
 import { GuiSubscreen } from "./settingBase";
 import { GUI } from "./settingUtils";
 import { LSCG_CHANGES } from "utils";
+import { GuiReset } from "./reset";
+import { CoreModule } from "Modules/core";
 
 export class MainMenu extends GuiSubscreen {
 	subscreens: GuiSubscreen[] = [];
@@ -80,6 +82,10 @@ export class MainMenu extends GuiSubscreen {
 		}
 
 		MainCanvas.textAlign = "left";
+		DrawButton(1500, 620, 400, 80, "", "#ffc9c9", "", "Emergency reset of LSCG");		
+		DrawImageResize("Icons/ServiceBell.png", 1510, 630, 60, 60);
+        DrawTextFit("Reset", 1580, 660, 320, "Black");
+
 		DrawButton(1500, 720, 400, 80, "", "White", "", "Open LSCG Latest Release on Github.", false);
 		DrawImageResize("Icons/Changelog.png", 1510, 730, 60, 60);
         DrawTextFit("Latest Changes", 1580, 760, 320, "Black");
@@ -110,6 +116,9 @@ export class MainMenu extends GuiSubscreen {
 				i++;
 			}
 		}
+
+		if (MouseIn(1500, 620, 400, 80))
+            this.setSubscreen(new GuiReset(getModule<CoreModule>("CoreModule")));
 
 		if (MouseIn(1500, 720, 400, 80))
             window.open(LSCG_CHANGES, '_blank');
