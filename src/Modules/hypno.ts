@@ -156,7 +156,7 @@ export class HypnoModule extends BaseModule {
                     // Hypno Timeout --
                     this.TriggerRestoreTimeout();
                 }
-                if (this.hypnoActivated && (lastHornyCheck + triggerTimer/100) > now) {
+                if (this.hypnoActivated && (lastHornyCheck + triggerTimer/100) < now) {
                     lastHornyCheck = now;
                     this.HypnoHorny();
                 }
