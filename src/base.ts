@@ -26,10 +26,10 @@ export abstract class BaseModule {
 	get Enabled(): boolean {
 		if (!Player.LSCG || !Player.LSCG.GlobalModule)
 			return false;
-		return (Player.LSCG.GlobalModule.enabled && this.settings.enabled && 
+		return Player.LSCG.GlobalModule.enabled && this.settings.enabled && 
 			(CurrentModule == "Online" || 
 			CurrentModule == "Character" || 
-			CurrentModule == "Room"));
+			(CurrentModule == "Room" && CurrentScreen == "Crafting"));
 	}
 
 	init() {
