@@ -7,6 +7,7 @@ import { InjectorPublicSettingsModel, InjectorSettingsModel } from "./injector";
 
 export interface SettingsModel {
     Version: string;
+    RethrowExceptions: boolean;
     CollarModule: CollarSettingsModel;
     HypnoModule: HypnoSettingsModel;
     BoopsModule: BaseSettingsModel;

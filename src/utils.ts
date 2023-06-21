@@ -139,7 +139,24 @@ export function hookFunction(target: string, priority: number, hook: PatchHook, 
 		return () => null;
 	}
 
-	const removeCallback = bcModSDK.hookFunction(target, priority, hook);
+	let wrappedHook: PatchHook = (args, next) => {
+		try {
+			return hook(args, next);
+		} catch (error: any) {
+			let msg = `LSCG Error -- ${error.message}`;
+			console.error(`${msg} \n${error.stack}`);
+			if (target != "ChatRoomMessage" && target != "ChatRoomSendLocal") {
+				try {
+					LSCG_SendLocal(msg);
+				} catch (inner) {}
+			}
+			if (!!Player.LSCG.RethrowExceptions)
+				throw error;
+			return next(args);
+		}
+	}
+
+	const removeCallback = bcModSDK.hookFunction(target, priority, wrappedHook);
 
 	data.hooks.push({
 		hook,
