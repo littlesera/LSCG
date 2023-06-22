@@ -3,7 +3,7 @@ import { getModule, modules } from "modules";
 import { BaseSettingsModel } from "Settings/Models/base";
 import { IPublicSettingsModel, PublicSettingsModel, SettingsModel } from "Settings/Models/settings";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { removeAllHooksByModule, hookFunction, getCharacter, drawSvg, SVG_ICONS, sendLSCGMessage, settingsSave, LSCG_CHANGES } from "../utils";
+import { removeAllHooksByModule, hookFunction, getCharacter, drawSvg, SVG_ICONS, sendLSCGMessage, settingsSave, LSCG_CHANGES, LSCG_SendLocal } from "../utils";
 import { ActivityModule, GrabType } from "./activities";
 import { HypnoModule } from "./hypno";
 
@@ -149,6 +149,7 @@ export class CoreModule extends BaseModule {
                 Object.assign(Player.LSCG.CollarModule, msg.settings?.CollarModule);
                 getModule<HypnoModule>("HypnoModule")?.initializeTriggerWord();
                 settingsSave(true);
+                LSCG_SendLocal(`${!Sender ? "Someone" : CharacterNickname(Sender)} has changed your remote settings!`);
                 break;
         }
     }
