@@ -149,7 +149,7 @@ export class CoreModule extends BaseModule {
                 Object.assign(Player.LSCG.CollarModule, msg.settings?.CollarModule);
                 getModule<HypnoModule>("HypnoModule")?.initializeTriggerWord();
                 settingsSave(true);
-                LSCG_SendLocal(`${!Sender ? "Someone" : CharacterNickname(Sender)} has changed your remote settings!`);
+                LSCG_SendLocal(`${!Sender ? "Someone" : CharacterNickname(Sender)} has accessed your remote settings!`);
                 break;
         }
     }
