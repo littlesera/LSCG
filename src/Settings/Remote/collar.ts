@@ -200,7 +200,6 @@ export class RemoteCollar extends RemoteGuiSubscreen {
 		this.settings.enabled = true;
 		this.settings.remoteAccess = true;
 		this.settings.allowedMembers = `${Player.MemberNumber}`;
-		this.settings.lockable = true;
 		this.settings.tightTrigger = "tight";
 		this.settings.looseTrigger = "loose";
 		this.Load();
