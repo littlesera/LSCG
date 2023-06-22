@@ -202,6 +202,7 @@ export class GuiCollar extends GuiSubscreen {
 			return;
 		Player.Money -= 500;
 		this.settings.collarPurchased = true;
+		this.Load();
 		ServerPlayerSync();
 		settingsSave();
 	}
