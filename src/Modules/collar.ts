@@ -269,6 +269,9 @@ export class CollarModule extends BaseModule {
     ]
 
     CheckGagSuffocate(msg: string, sender: Character | null) {
+        if (!Player.LSCG.MiscModule.gagChokeEnabled)
+            return;
+
         var chokeThreshold = 8;
         var gaspThreshold = 5;
 
