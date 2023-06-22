@@ -37,6 +37,7 @@ export class GUI extends BaseModule {
 
 		// Reset that first, in case it gets set in the screen's Load callback
 		PreferenceMessage = "";
+		PreferencePageCurrent = 1;
 
 		let subscreenName = "";
 		if (this._currentSubscreen) {

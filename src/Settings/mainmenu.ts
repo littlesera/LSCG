@@ -106,13 +106,13 @@ export class MainMenu extends GuiSubscreen {
 				const PX = Math.floor(i / 6);
 				const PY = i % 6;
 
-				const isDisabled = !screen.enabled;
-				if (isDisabled) continue;
+				if (screen.name == "MainMenu" || screen.hidden) continue;
 
-				if (MouseIn(150 + 430 * PX, 190 + 120 * PY, 450, 90)) {
+				if (MouseIn(150 + 430 * PX, 190 + 120 * PY, 450, 90) && screen.enabled) {
 					this.setSubscreen(screen);
 					return;
 				}
+
 				i++;
 			}
 		}

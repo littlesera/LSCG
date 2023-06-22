@@ -19,6 +19,7 @@ export class GuiReset extends GuiSubscreen {
 
 	Load() {
 		this.allowedConfirmTime = Date.now() + 10_000;
+		super.Load();
 	}
 
 	Run() {

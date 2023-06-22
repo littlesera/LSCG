@@ -48,30 +48,6 @@ export class GuiGlobal extends GuiSubscreen {
 				setSetting: (val) => Player.LSCG.BoopsModule.enabled = val
 			},<Setting>{
 				type: "checkbox",
-				label: "Enable Chloroform:",
-				description: "Fall asleep if chloroformed.",
-				setting: () => Player.LSCG.MiscModule.chloroformEnabled ?? false,
-				setSetting: (val) => Player.LSCG.MiscModule.chloroformEnabled = val
-			},<Setting>{
-				type: "checkbox",
-				label: "Immersive Chloroform:",
-				description: "Enforce chloroform with more restrictive measures. LSCG settings will be unavailable while asleep.",
-				setting: () => Player.LSCG.MiscModule.immersiveChloroform ?? false,
-				setSetting: (val) => Player.LSCG.MiscModule.immersiveChloroform = val
-			},<Setting>{
-				type: "checkbox",
-				label: "Enable Hand Choking:",
-				description: "Enables breathplay using \"Choke Neck\" activity. If done repeatedly will cause blackout.",
-				setting: () => Player.LSCG.MiscModule.handChokeEnabled ?? false,
-				setSetting: (val) => Player.LSCG.MiscModule.handChokeEnabled = val
-			},<Setting>{
-				type: "checkbox",
-				label: "Enable Gag Suffocation:",
-				description: "Enabled breathplay using nose plugs and sufficient gags.",
-				setting: () => Player.LSCG.MiscModule.gagChokeEnabled ?? false,
-				setSetting: (val) => Player.LSCG.MiscModule.gagChokeEnabled = val
-			},<Setting>{
-				type: "checkbox",
 				label: "Show Check Rolls:",
 				description: "If enabled, will display the attacker/defender roll values for activity checks.",
 				setting: () => this.settings.showCheckRolls ?? true,
@@ -85,5 +61,6 @@ export class GuiGlobal extends GuiSubscreen {
 		getModule<MiscModule>("MiscModule")?.settings;
 		getModule<LipstickModule>("LipstickModule")?.settings;
 		getModule<BoopsModule>("BoopsModule")?.settings;
+		super.Load();
 	}
 }

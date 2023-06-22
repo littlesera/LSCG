@@ -145,11 +145,10 @@ export class CoreModule extends BaseModule {
                 getModule<ActivityModule>("ActivityModule")?.IncomingEscape(Sender!, msg.target);
                 break;
             case "remote":
-                if (Player.LSCG?.HypnoModule.remoteAccess) {
-                    Object.assign(Player.LSCG.HypnoModule, msg.settings?.HypnoModule);
-                    getModule<HypnoModule>("HypnoModule")?.initializeTriggerWord();
-                    settingsSave(true);
-                }
+                Object.assign(Player.LSCG.HypnoModule, msg.settings?.HypnoModule);
+                Object.assign(Player.LSCG.CollarModule, msg.settings?.CollarModule);
+                getModule<HypnoModule>("HypnoModule")?.initializeTriggerWord();
+                settingsSave(true);
                 break;
         }
     }

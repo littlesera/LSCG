@@ -1,85 +1,154 @@
-import { ICONS } from "utils";
+import { ICONS, settingsSave } from "utils";
 import { CollarModel, CollarSettingsModel } from "./Models/collar";
 import { GuiSubscreen, Setting } from "./settingBase";
+import { getModule } from "modules";
+import { MiscModule } from "Modules/misc";
 
 export class GuiCollar extends GuiSubscreen {
 	get name(): string {
-		return "Choke Collar";
+		return "Breathplay";
 	}
 
 	get icon(): string {
 		return ICONS.COLLAR;
 	}
 
-	get enabled(): boolean {
-		const allowedChokeMemberNumbers = [
-			74298, // little sera
-			54618, // megg
-			122875 // fake sera
-		];
-		return allowedChokeMemberNumbers.includes(this.character.MemberNumber ?? 0);
-	}
-
-	get hidden(): boolean {
-		return !this.enabled;
-	}
-
 	get settings(): CollarSettingsModel {
 		return super.settings as CollarSettingsModel;
 	}
 
-	get structure(): Setting[] {
+	get multipageStructure(): Setting[][] {
 		return [
-			<Setting>{
-				type: "checkbox",
-				label: "Enabled:",
-				description: "Enabled the Choking Collar Features.",
-				setting: () => this.settings.enabled ?? false,
-				setSetting: (val) => this.settings.enabled = val
-			},<Setting>{
-				type: "text",
-				id: "collar_allowedMembers",
-				label: "Allowed Members IDs:",
-				description: "Comma separated list of member IDs who can activate the collar. Leave empty for item permissions.",
-				setting: () => this.settings.allowedMembers ?? (Player.Ownership?.MemberNumber+"" ?? ""),
-				setSetting: (val) => this.settings.allowedMembers = val
-			},
-			// BUTTON HERE
-			<Setting>{
-				type: "text",
-				id: "collar_tightTrigger",
-				label: "Tighten Trigger:",
-				description: "Word or phrase that, if spoken, will tighten the collar.",
-				setting: () => this.settings.tightTrigger ?? false,
-				setSetting: (val) => this.settings.tightTrigger = val
-			},<Setting>{
-				type: "text",
-				id: "collar_looseTrigger",
-				label: "Loosen Trigger:",
-				description: "Word or phrase that, if spoken, will loosen the collar.",
-				setting: () => this.settings.looseTrigger ?? false,
-				setSetting: (val) => this.settings.looseTrigger = val
-			},
+			[
+				<Setting>{
+					type: "checkbox",
+					label: "Enable Hand Choking:",
+					description: "Enables breathplay using \"Choke Neck\" activity. If done repeatedly will cause blackout.",
+					setting: () => Player.LSCG.MiscModule.handChokeEnabled ?? false,
+					setSetting: (val) => Player.LSCG.MiscModule.handChokeEnabled = val
+				},<Setting>{
+					type: "checkbox",
+					label: "Enable Gag Suffocation:",
+					description: "Enabled breathplay using nose plugs and sufficient gags.",
+					setting: () => Player.LSCG.MiscModule.gagChokeEnabled ?? false,
+					setSetting: (val) => Player.LSCG.MiscModule.gagChokeEnabled = val
+				}
+			], !this.settings.collarPurchased ? [] :
+				this.settings.locked ? [
+					<Setting>{
+						type: "label",
+						label: "** Collar Settings Locked **",
+						description: "Collar Settings Locked Remotely"
+					}] : [
+				<Setting>{
+					type: "checkbox",
+					label: "Enabled:",
+					description: "Enabled the Choking Collar Features.",
+					setting: () => this.settings.enabled ?? false,
+					setSetting: (val) => this.settings.enabled = val
+				},<Setting>{
+					type: "checkbox",
+					label: "Allow Remote Access:",
+					description: "Enables Remote Access to Collar Settings.",
+					setting: () => this.settings.remoteAccess ?? false,
+					setSetting: (val) => this.settings.remoteAccess = val
+				},<Setting>{
+					type: "checkbox",
+					label: "Lockable:",
+					description: "Allowes Remote Access Users to lock you out of these settings.",
+					setting: () => this.settings.lockable ?? false,
+					setSetting: (val) => this.settings.lockable = val
+				},<Setting>{
+					type: "checkbox",
+					label: "Allow Self-Tightening:",
+					description: "Allow the wearer to tighten their own collar.",
+					setting: () => this.settings.allowSelfTightening ?? false,
+					setSetting: (val) => this.settings.allowSelfTightening = val
+				},<Setting>{
+					type: "checkbox",
+					label: "Allow Self-Loosening:",
+					description: "Allow the wearer to loosen their own collar.",
+					setting: () => this.settings.allowSelfLoosening ?? false,
+					setSetting: (val) => this.settings.allowSelfLoosening = val
+				},<Setting>{
+					type: "text",
+					id: "collar_allowedMembers",
+					label: "Allowed Members IDs:",
+					description: "Comma separated list of member IDs who can activate the collar. Leave empty for item permissions.",
+					setting: () => this.settings.allowedMembers ?? (Player.Ownership?.MemberNumber+"" ?? ""),
+					setSetting: (val) => this.settings.allowedMembers = val
+				},<Setting>{
+					type: "checkbox",
+					label: "Limit to Crafted User:",
+					description: "Limits collar activation to crafted user and allowed list. If no crafted user will use item permissions.",
+					setting: () => this.settings.limitToCrafted ?? false,
+					setSetting: (val) => this.settings.limitToCrafted = val
+				},<Setting>{
+					type: "text",
+					id: "collar_tightTrigger",
+					label: "Tighten Trigger:",
+					description: "Word or phrase that, if spoken, will tighten the collar.",
+					setting: () => this.settings.tightTrigger ?? false,
+					setSetting: (val) => this.settings.tightTrigger = val
+				},<Setting>{
+					type: "text",
+					id: "collar_looseTrigger",
+					label: "Loosen Trigger:",
+					description: "Word or phrase that, if spoken, will loosen the collar.",
+					setting: () => this.settings.looseTrigger ?? false,
+					setSetting: (val) => this.settings.looseTrigger = val
+				},
+			]
 		]
 	}
 
+	blinkLastTime = 0;
+	blinkColor = "Red";
     Run() {
 		super.Run();
-		var prev = MainCanvas.textAlign;
-		MainCanvas.textAlign = "left";
 
-		// Set/Update Collar	 	[Custom??]
-		DrawText("Update Collar:", this.getXPos(6), this.getYPos(6), "Black", "Gray");
-		MainCanvas.textAlign = "center";
-		DrawButton(this.getXPos(6) + 600, this.getYPos(6) - 32, 200, 64, "Update", "White", undefined, "Update Collar to Current", !this.settings.enabled);
+		if (PreferencePageCurrent == 2) {
+			var prev = MainCanvas.textAlign;
+			if (this.settings.collarPurchased) {
+				if (!this.settings.locked) {
+					MainCanvas.textAlign = "left";
 
-		MainCanvas.textAlign = "left";
-		if (!!this.settings.collar) {
-			DrawText("Current Name: " + this.settings.collar.name, this.getXPos(6) + 600, this.getYPos(6) + 60, "Gray", "Gray");
-			if (!!this.settings.collar.creator && this.settings.collar.creator > 0)
-				DrawText("Current Crafter: " + this.settings.collar.creator, this.getXPos(6) + 600, this.getYPos(6) + 110, "Gray", "Gray");
+					// Set/Update Collar	 	[Custom??]
+					let buttonPos = this.structure.length + 4;
+					DrawText("Update Collar:", this.getXPos(buttonPos), this.getYPos(buttonPos), "Black", "Gray");
+					MainCanvas.textAlign = "center";
+					DrawButton(this.getXPos(buttonPos) + 300, this.getYPos(buttonPos) - 32, 200, 64, "Update", "White", undefined, "Update Collar to Current", !this.settings.enabled);
+
+					MainCanvas.textAlign = "left";
+					if (!!this.settings.collar) {
+						DrawText("Current Name: " + this.settings.collar.name, this.getXPos(buttonPos), this.getYPos(buttonPos) + 60, "Gray", "Gray");
+						if (!!this.settings.collar.creator && this.settings.collar.creator > 0)
+							DrawText("Current Crafter: " + this.settings.collar.creator, this.getXPos(buttonPos), this.getYPos(buttonPos) + 110, "Gray", "Gray");
+					}
+				}
+			} else {
+				MainCanvas.textAlign = "center";
+				if (this.blinkLastTime + 750 < CommonTime()) {
+					this.blinkLastTime = CommonTime();
+					this.blinkColor = this.blinkColor == "Gray" ? "Red" : "Gray";
+				}
+				DrawText("Now available:", 1000, 200, "Black", "Black");
+				DrawText("Andrew's Collar Control Module!!", 1000, 250, this.blinkColor, "Black");
+
+				DrawText("Has your owner sent you shopping for a more controlling collar?", 1000, 350, "Black", "Gray");
+				DrawText("Are you looking for some extra motivation for good behavior?", 1000, 400, "Black", "Gray");
+				DrawText("Act now and secure your Control Module now for the low low price of $500!", 1000, 450, "Black", "Gray");
+
+				DrawText("Attach this revolutionary new device to your existing collar and it will", 1000, 550, "Gray", "Black");
+				DrawText("enhance it with the ability to tighten and loosen on command!", 1000, 600, "Gray", "Black");
+				DrawText("Let your dom quiet down those bratty moments and reward good behavior!", 1000, 650, "Gray", "Black");				
+
+				DrawButton(800, 740, 400, 80, "Purchase - $500", this.CanAffordCollar() ? "White" : "Pink", undefined, this.CanAffordCollar() ? "Unlock Andrew's Collar Module" : (!Player.Ownership ? "Cannot afford..." : "Too expensive? Ask your owner for help!"), !this.CanAffordCollar());
+
+				DrawTextFit("- Andrew co.® makes no guarantees as to the behavior of the wearer -", 1000, 900, 600, "Orange", "Gray");
+			}
+			MainCanvas.textAlign = prev; 
 		}
-		MainCanvas.textAlign = prev;
 	}
 
 	Exit(): void {
@@ -91,19 +160,49 @@ export class GuiCollar extends GuiSubscreen {
 	Click() {
 		super.Click();
 
-		// Update Collar Button
-		if (MouseIn(this.getXPos(6) + 600, this.getYPos(6) - 32, 200, 64)){
-			var collar = InventoryGet(Player, "ItemNeck");
-			if(!collar){
-				this.message = "No Collar Equipped";
-			}
-			else{
-				this.message = "Collar updated";
-				this.settings.collar = <CollarModel>{
-					name: collar.Craft?.Name ?? collar.Asset.Name,
-					creator: collar.Craft?.MemberNumber ?? 0
-				};
+		if (PreferencePageCurrent == 2) {
+			if (this.settings.collarPurchased) {
+				if (!this.settings.locked) {
+					// Update Collar Button
+					let buttonPos = this.structure.length + 4;
+					if (MouseIn(this.getXPos(buttonPos) + 300, this.getYPos(buttonPos) - 32, 200, 64)){
+						var collar = InventoryGet(Player, "ItemNeck");
+						if(!collar){
+							this.message = "No Collar Equipped";
+						}
+						else{
+							this.message = "Collar updated";
+							this.settings.collar = <CollarModel>{
+								name: collar.Craft?.Name ?? collar.Asset.Name,
+								creator: collar.Craft?.MemberNumber ?? 0
+							};
+						}
+					}
+				}
+			} else {
+				if (MouseIn(800, 740, 400, 80) && this.CanAffordCollar()) {
+					this.PurchaseCollar();
+				}
 			}
 		}
+	}
+
+	Load(): void {
+		// Load up module settings to ensure defaults..
+		getModule<MiscModule>("MiscModule")?.settings;
+		super.Load();
+	}
+
+	CanAffordCollar() {
+		return Player.Money >= 500;
+	}
+
+	PurchaseCollar() {
+		if (!this.CanAffordCollar())
+			return;
+		Player.Money -= 500;
+		this.settings.collarPurchased = true;
+		ServerPlayerSync();
+		settingsSave();
 	}
 }

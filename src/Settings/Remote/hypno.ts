@@ -30,7 +30,7 @@ export class RemoteHypno extends RemoteGuiSubscreen {
 		if (!passHypnotizerReq)
 			return "They seem suggestable, but not to you...";
 		else
-			return "Setting is Unavailable";
+			return "Section is Unavailable";
 	}
 
 	get enabled(): boolean {
@@ -58,8 +58,8 @@ export class RemoteHypno extends RemoteGuiSubscreen {
 		return super.settings as HypnoPublicSettingsModel;
 	}
 
-	get structure(): Setting[] {
-		return [
+	get multipageStructure(): Setting[][] {
+		return [[
 			<Setting>{
 				type: "checkbox",
 				label: "Immersive Hypnosis:",
@@ -146,6 +146,6 @@ export class RemoteHypno extends RemoteGuiSubscreen {
 					if (this.settings.allowLocked) this.settings.locked = val;
 				}
 			}
-		]
+		]]
 	}
 }

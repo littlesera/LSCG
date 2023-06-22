@@ -191,10 +191,11 @@ export class HypnoModule extends BaseModule {
             this.settings.trigger = this.getNewTriggerWord();
             settingsSave();
         }
-        else if (this.settings.overrideWords) {
+        else if (!!this.settings.overrideWords) {
             var words = this.settings.overrideWords.split(',').filter(word => !!word).map(word => word.toLocaleLowerCase());
             if (words.indexOf(this.settings.trigger) == -1)
                 this.settings.trigger = this.getNewTriggerWord();
+            settingsSave();
         }
     }
 
