@@ -5,6 +5,8 @@ import { RemoteGuiSubscreen } from "./remoteBase";
 import { GuiSubscreen } from "Settings/settingBase";
 import { RemoteHypno } from "./hypno";
 import { LSCG_CHANGES } from "utils";
+import { RemoteCollar } from "./collar";
+import { CollarModule } from "Modules/collar";
 
 export class RemoteMainMenu extends RemoteGuiSubscreen {
 	subscreens: RemoteGuiSubscreen[] = [];
@@ -32,7 +34,10 @@ export class RemoteMainMenu extends RemoteGuiSubscreen {
 	}
 
 	Load(): void {
-		this.subscreens = [new RemoteHypno(getModule<HypnoModule>("HypnoModule"), this.Character)];
+		this.subscreens = [
+			new RemoteHypno(getModule<HypnoModule>("HypnoModule"), this.Character),
+			new RemoteCollar(getModule<CollarModule>("CollarModule"), this.Character)
+		];
 	}
 
 	get character(): Character {
@@ -87,11 +92,10 @@ export class RemoteMainMenu extends RemoteGuiSubscreen {
 		for (const screen of this.subscreens) {
 			const PX = Math.floor(i / 6);
 			const PY = i % 6;
+			
+			if (screen.name == "MainMenu" || screen.hidden) continue;
 
-			const isDisabled = !screen.enabled;
-			if (isDisabled) continue;
-
-			if (MouseIn(150 + 430 * PX, 190 + 120 * PY, 450, 90)) {
+			if (MouseIn(150 + 430 * PX, 190 + 120 * PY, 450, 90) && screen.enabled) {
 				this.setSubscreen(screen);
 				return;
 			}

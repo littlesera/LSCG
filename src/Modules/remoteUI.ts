@@ -41,6 +41,10 @@ export class RemoteUIModule extends BaseModule {
 		return !!C && !C.IsPlayer() && ServerChatRoomGetAllowItem(Player, C) && C.LSCG?.GlobalModule.enabled;
 	}
 
+	get playerIsRestrained(): boolean {
+		return Player.IsRestrained();
+	}
+
     characterHasMod(C: OtherCharacter): boolean {
         return !!C.LSCG;
     }
@@ -48,6 +52,7 @@ export class RemoteUIModule extends BaseModule {
     load(): void {
         hookFunction("InformationSheetRun", 10, (args, next) => {
 			if (this._currentSubscreen) {
+				(<any>window).LSCG_REMOTE_WINDOW_OPEN = true;
 				MainCanvas.textAlign = "left";
 				this._currentSubscreen.Run();
 				MainCanvas.textAlign = "center";
@@ -55,11 +60,12 @@ export class RemoteUIModule extends BaseModule {
 				return;
 			}
 
+			(<any>window).LSCG_REMOTE_WINDOW_OPEN = false;
 			next(args);
 			const C = this.getInformationSheetCharacter();
             if (!!C && this.characterHasMod(C as OtherCharacter) && !C.IsPlayer()) {
                 const playerHasAccessToCharacter = this.playerHasAccessToCharacter(C as OtherCharacter);
-                DrawButton(90, 60, 60, 60, "", playerHasAccessToCharacter ? "White" : "#ddd", "", playerHasAccessToCharacter ? "LSCG Remote Settings" : "Needs BC item permission", !playerHasAccessToCharacter);
+                DrawButton(90, 60, 60, 60, "", (playerHasAccessToCharacter && !this.playerIsRestrained) ? "White" : "#ddd", "", playerHasAccessToCharacter ? (this.playerIsRestrained ? "Cannot access while restrained" : "LSCG Remote Settings") : "Needs BC item permission", !playerHasAccessToCharacter || this.playerIsRestrained);
                 DrawImageResize(ICONS.REMOTE, 95, 65, 50, 50);
             }
 		}, ModuleCategory.RemoteUI);
@@ -71,7 +77,7 @@ export class RemoteUIModule extends BaseModule {
 
 			const C = this.getInformationSheetCharacter();
             const playerHasAccessToCharacter = this.playerHasAccessToCharacter(C as OtherCharacter);
-			if (MouseIn(90, 60, 60, 60) && playerHasAccessToCharacter) {
+			if (MouseIn(90, 60, 60, 60) && playerHasAccessToCharacter && !this.playerIsRestrained) {
                 this.currentSubscreen = new RemoteMainMenu(this, C as OtherCharacter);
 			} else {
 				return next(args);

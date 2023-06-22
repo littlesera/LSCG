@@ -78,8 +78,12 @@ export abstract class GuiSubscreen {
 		return this.module.settings as BaseSettingsModel;
 	}
 
+	get multipageStructure(): Setting[][] {
+		return [[]];
+	}
+
 	get structure(): Setting[] {
-		return [];
+		return this.multipageStructure[Math.min(PreferencePageCurrent-1, this.multipageStructure.length-1)];
 	}
 
 	get character(): Character {
@@ -95,8 +99,19 @@ export abstract class GuiSubscreen {
 		return GuiSubscreen.START_X + (GuiSubscreen.X_MOD * Math.floor(ix / 10));
 	}
 
+	HideElements() {
+		this.multipageStructure.forEach((s, ix, arr) => {
+			if (ix != (PreferencePageCurrent-1)) {
+				s.forEach(setting => {
+					if (setting.type == "text" || setting.type == "number")
+					this.ElementHide(setting.id);
+				})
+			}
+		})
+	}
+
 	Load() {
-        this.structure.forEach(item => {
+        this.multipageStructure.forEach(s => s.forEach(item => {
 			switch (item.type) {
 				case "text":
 					ElementCreateInput(item.id, "text", item.setting(), "255");
@@ -105,7 +120,7 @@ export abstract class GuiSubscreen {
 					ElementCreateInput(item.id, "number", item.setting(), "255");
 					break;			
 			}
-		});
+		}));
 	}
 
 	Run() {
@@ -114,6 +129,13 @@ export abstract class GuiSubscreen {
 
 		DrawText("- LSCG " + this.name + " -", this.getXPos(0), this.getYPos(0), "Black", "Gray");
 		DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png", "LSCG main menu");
+		if (this.multipageStructure.length > 1) {
+			MainCanvas.textAlign = "center";
+			PreferencePageChangeDraw(1595, 75, this.multipageStructure.length);
+			MainCanvas.textAlign = "left";
+		}
+
+		this.HideElements();
 
 		this.structure.forEach((item, ix, arr) => {
 			switch(item.type) {
@@ -135,6 +157,8 @@ export abstract class GuiSubscreen {
 
 	Click() {
 		if (MouseIn(1815, 75, 90, 90)) return this.Exit();
+		if (this.multipageStructure.length > 1)
+			PreferencePageChangeClick(1595, 75, this.multipageStructure.length);
 
 		this.structure.forEach((item, ix, arr) => {
 			switch (item.type) {
@@ -148,7 +172,7 @@ export abstract class GuiSubscreen {
 	}
 
 	Exit() {
-		this.structure.forEach(item => {
+		this.multipageStructure.forEach(s => s.forEach(item => {
 			switch (item.type) {
 				case "number":
 					if (!CommonIsNumeric(ElementValue(item.id))) {
@@ -160,7 +184,7 @@ export abstract class GuiSubscreen {
 					ElementRemove(item.id);
 					break;
 			}
-		});
+		}));
 
 		setSubscreen("MainMenu");
 		settingsSave(true);
@@ -187,6 +211,10 @@ export abstract class GuiSubscreen {
 		DrawTextFit(label, this.getXPos(order), this.getYPos(order), 600, isHovering ? "Red" : "Black", "Gray");
 		DrawCheckbox(this.getXPos(order) + 600, this.getYPos(order) - 32, 64, 64, "", value ?? false, disabled);
 		if (isHovering) this.Tooltip(description);
+	}
+
+	ElementHide(elementId: string) {
+		ElementPosition(elementId, -999, -999, 1, 1);
 	}
 
 	ElementPosition(elementId: string, label: string, description: string, order: number, disabled: boolean = false) {

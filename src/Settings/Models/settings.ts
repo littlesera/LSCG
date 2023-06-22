@@ -1,7 +1,7 @@
 import { BoopsModule } from "Modules/boops";
 import { InjectorModule } from "Modules/injector";
 import { BaseSettingsModel, GlobalSettingsModel, MiscSettingsModel } from "./base";
-import { CollarPublicSettingsModel, CollarSettingsModel } from "./collar";
+import { CollarModel, CollarPublicSettingsModel, CollarSettingsModel } from "./collar";
 import { HypnoPublicSettingsModel, HypnoSettingsModel } from "./hypno";
 import { InjectorPublicSettingsModel, InjectorSettingsModel } from "./injector";
 
@@ -31,7 +31,21 @@ export interface IPublicSettingsModel extends BaseSettingsModel {
 export class PublicSettingsModel implements IPublicSettingsModel {
     enabled: boolean = false;
     Version: string = LSCG_VERSION;
-    CollarModule: CollarPublicSettingsModel = <CollarPublicSettingsModel>{chokeLevel: 0, enabled: false};
+    CollarModule: CollarPublicSettingsModel = <CollarPublicSettingsModel>{
+        enabled: false,
+        chokeLevel: 0,
+        collarPurchased: false,
+        allowedMembers: "",
+        remoteAccess: false,
+        lockable: false,
+        locked: false,
+        limitToCrafted: false,
+        collar: <CollarModel>{creator: -1, name:""},
+        tightTrigger: "",
+        looseTrigger: "",
+        allowSelfTightening: false,
+        allowSelfLoosening: false
+    };
     HypnoModule: HypnoPublicSettingsModel = <HypnoPublicSettingsModel>{
         enabled: false,
         activatedAt: 0,

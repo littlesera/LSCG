@@ -1,5 +1,10 @@
 import { BaseSettingsModel } from "./base";
 
+export interface DrugSpecificSettingsModel {
+    weakKeywords: string[];
+    strongKeywords: string[];
+}
+
 export interface InjectorSettingsModel extends InjectorPublicSettingsModel {
     immersive: boolean;
     enableSedative: boolean;

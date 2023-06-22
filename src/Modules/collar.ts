@@ -39,7 +39,10 @@ export class CollarModule extends BaseModule {
             allowedMembers: Player.Ownership?.MemberNumber + "" ?? "",
             chokeLevel: 0,
             tightTrigger: "tight",
-            looseTrigger: "loose"
+            looseTrigger: "loose",
+            collarPurchased: false,
+            limitToCrafted: false,
+            remoteAccess: false
         };
     }
 
@@ -49,29 +52,6 @@ export class CollarModule extends BaseModule {
     }
 
     load(): void {
-        // CommandCombine([
-        //     {
-        //         Tag: 'tight',
-        //         Description: ": tighten collar",
-
-        //         Action: () => {
-        //             if (!this.Enabled)
-        //                 return;
-        //             this.IncreaseCollarChoke();
-        //         }
-        //     },
-        //     {
-        //         Tag: 'loose',
-        //         Description: ": loosen collar",
-
-        //         Action: () => {
-        //             if (!this.Enabled)
-        //                 return;
-        //             this.DecreaseCollarChoke();
-        //         }
-        //     }
-        // ])
-
         OnChat(600, ModuleCategory.Collar, (data, sender, msg, metadata) => {
             if (!this.Enabled)
                 return;
@@ -118,10 +98,44 @@ export class CollarModule extends BaseModule {
             return;
         })
 
+        hookFunction("CharacterRefresh", 1, (args, next) => {
+            var [
+                C, 
+                Push, 
+                RefreshDialog
+            ] = <[Character, boolean, boolean]>args;
+
+            console.info("CharacterRefresh:");
+            console.info(args);
+            //this.CheckGagSuffocate("CharacterRefresh", null);
+
+            return next(args);
+        }, ModuleCategory.Collar);
+
+        hookFunction("CharacterAppearanceSetItem", 1, (args, next) => {
+            var [
+                C, 
+                Group, 
+                ItemAsset, 
+                NewColor, 
+                DifficultyFactor, 
+                ItemMemberNumber, 
+                Refresh
+            ] = <[Character, AssetGroup, Item, ItemColor, number, number, boolean]>args;
+
+            console.info("CharacterAppearanceSetItem:");
+            console.info(args);
+
+            return next(args);
+        }, ModuleCategory.Collar);
+
         // Check for heavy gag + nose plugs
         OnAction(100, ModuleCategory.Misc, (data, sender, msg, metadata) => {
             if (!Player.LSCG.MiscModule.gagChokeEnabled)
                 return;
+
+                console.info("OnAction:");
+                console.info(data);
 
             let airwaySlots = ["ItemMouth", "ItemMouth2", "ItemMouth3", "ItemNose"];
             let messagesToCheck = [
@@ -245,7 +259,10 @@ export class CollarModule extends BaseModule {
     // Choke Collar Code
     get allowedChokeMembers(): number[] {
         let stringList = this.settings.allowedMembers.split(",");
-        return stringList.filter(str => !!str && (+str === +str)).map(str => parseInt(str));
+        let memberList = stringList.filter(str => !!str && (+str === +str)).map(str => parseInt(str));
+        if (this.settings.limitToCrafted && this.settings.collar.creator >= 0)
+            memberList.push(this.settings.collar.creator);
+        return memberList;
     }
 
     get totalChokeLevel(): number {
@@ -284,8 +301,9 @@ export class CollarModule extends BaseModule {
         }
 
         let gagLevel = SpeechGetTotalGagLevel(Player, true);
-        if (gagLevel >= chokeThreshold && this.IsNosePlugged || 
-            (msg.indexOf("PumpGagpumpsTo") > -1 && gagLevel >= 7)) { // allow lower threshold for pump gag, letting it choke when full.
+        if (!this.isPassingOut && 
+            (gagLevel >= chokeThreshold && this.IsNosePlugged || 
+            (msg.indexOf("PumpGagpumpsTo") > -1 && gagLevel >= 7))) { // allow lower threshold for pump gag, letting it choke when full.
             if (msg.indexOf("PumpInflate") > -1) {
                 SendAction("%NAME%'s eyes widen as %POSSESSIVE% gag inflates to completely fill %POSSESSIVE% throat.");
             }
@@ -391,7 +409,7 @@ export class CollarModule extends BaseModule {
         ChatRoomCharacterUpdate(Player);
     }
 
-    CanActivate(sender: Character | null) {
+    CanActivate(sender: Character | null, isTighten: boolean) {
         var currentCollarObj = InventoryGet(Player, "ItemNeck");
         if (!currentCollarObj)
             return false; // Cannot choke if no collar on
@@ -400,14 +418,22 @@ export class CollarModule extends BaseModule {
             creator: currentCollarObj.Craft?.MemberNumber ?? 0
         };
         return !!sender &&
-                this.AllowedMember(sender) &&
+                this.AllowedMember(sender, isTighten) &&
                 currentCollar.name == this.settings.collar?.name &&
                 currentCollar.creator == this.settings.collar?.creator
     }
 
-    AllowedMember(member: Character | undefined): boolean {
-        if (!member || member.MemberNumber == Player.MemberNumber)
+    AllowedMember(member: Character | undefined, isTighten: boolean): boolean {
+        if (!member)
             return false;
+        if (member.IsPlayer()) {
+            if (isTighten && !this.settings.allowSelfTightening)
+                return false;
+            else if (!isTighten && !this.settings.allowSelfLoosening)
+                return false;
+            else
+                return true;
+        }
         if (this.allowedChokeMembers.length > 0)
             return this.allowedChokeMembers.indexOf(member.MemberNumber ?? 0) >= 0;
         else
@@ -416,12 +442,12 @@ export class CollarModule extends BaseModule {
 
     CheckForTriggers(msg: string, sender: Character | null): void {
         // Skip on invalid sender, OOC, or invalid triggers.
-        if (!this.CanActivate(sender) || msg.startsWith("(") || !this.settings.tightTrigger || !this.settings.looseTrigger)
+        if (!this.settings.tightTrigger || !this.settings.looseTrigger)
             return;
 
-        if (isPhraseInString(msg, this.settings.tightTrigger))
+        if (isPhraseInString(msg, this.settings.tightTrigger) && this.CanActivate(sender, true))
             this.IncreaseCollarChoke();
-        else if (isPhraseInString(msg, this.settings.looseTrigger))
+        else if (isPhraseInString(msg, this.settings.looseTrigger) && this.CanActivate(sender, false))
             this.DecreaseCollarChoke();
     }
 
