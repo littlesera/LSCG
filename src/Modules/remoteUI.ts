@@ -51,6 +51,9 @@ export class RemoteUIModule extends BaseModule {
 
     load(): void {
         hookFunction("InformationSheetRun", 10, (args, next) => {
+			if ((<any>window).bcx?.inBcxSubscreen())
+				return next(args);
+
 			if (this._currentSubscreen) {
 				(<any>window).LSCG_REMOTE_WINDOW_OPEN = true;
 				MainCanvas.textAlign = "left";
