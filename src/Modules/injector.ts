@@ -720,7 +720,7 @@ export class InjectorModule extends BaseModule {
     brainwashBlockStrings = [
         "%NAME% stares blankly, %POSSESSIVE% mind open and suggestable...",
         "%NAME%'s eyelids flutter gently, awaiting a command...",
-        "%NAME% trembles with a quiet moan as %POSSESSIVE% yearns to obey...",
+        "%NAME% trembles with a quiet moan as %PRONOUN% yearns to obey...",
         "%NAME% groans softly as %PRONOUN% drops even further under the drug's command..."
     ];
 
