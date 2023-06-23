@@ -236,7 +236,7 @@ export class ItemUseModule extends BaseModule {
 								InventoryGet(acted, "ItemMouth3")?.Asset.Name == gagTarget.MouthItemName;
 
 							return targetMouthAssetAllowed && !itemAlreadyInMouth;
-						} else if (group.Name == "ItemNeck") {
+						} else if (location == "ItemNeck") {
 							var existing = InventoryGet(acted, gagTarget.OverrideNeckLocation ?? "Necklace");
 							return !existing && !!gagTarget.NeckItemName;
 						}

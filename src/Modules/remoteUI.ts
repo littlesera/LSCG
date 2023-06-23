@@ -50,7 +50,7 @@ export class RemoteUIModule extends BaseModule {
     }
 
     load(): void {
-        hookFunction("InformationSheetRun", 10, (args, next) => {
+        hookFunction("InformationSheetRun", 11, (args, next) => {
 			if ((<any>window).bcx?.inBcxSubscreen())
 				return next(args);
 
