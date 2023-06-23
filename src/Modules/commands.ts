@@ -80,13 +80,13 @@ export class CommandModule extends BaseModule {
 			Tag: "roll-attack",
 			Description: "[defender] : Make a contested activity roll against another user where you are the attacker.",
 			Action: (args, msg, parsed) => {
-				if (parsed.length <= 0) {
+				if (!args) {
 					ChatRoomSendLocal("Please specify a defender for your roll.", 10000);
 					return;
 				}
-				let tgt = this.getCharacterByNicknameOrMemberNumber(parsed[0]);
+				let tgt = this.getCharacterByNicknameOrMemberNumber(args);
 				if (!tgt) {
-					ChatRoomSendLocal(`Defender ${tgt} not found.`, 10000);
+					ChatRoomSendLocal(`Defender ${args} not found.`, 10000);
 					return;
 				}
 				let check = getModule<ItemUseModule>("ItemUseModule")?.MakeActivityCheck(Player, tgt);
@@ -97,13 +97,13 @@ export class CommandModule extends BaseModule {
 			Tag: "roll-defend",
 			Description: "[attacker] : Make a contested activity roll where you are defending against another user.",
 			Action: (args, msg, parsed) => {
-				if (parsed.length <= 0) {
+				if (!args) {
 					ChatRoomSendLocal("Please specify an attacker for your roll.", 10000);
 					return;
 				}
-				let tgt = this.getCharacterByNicknameOrMemberNumber(parsed[0]);
+				let tgt = this.getCharacterByNicknameOrMemberNumber(args);
 				if (!tgt) {
-					ChatRoomSendLocal(`Attacker ${tgt} not found.`, 10000);
+					ChatRoomSendLocal(`Attacker ${args} not found.`, 10000);
 					return;
 				}
 				let check = getModule<ItemUseModule>("ItemUseModule")?.MakeActivityCheck(tgt, Player);
