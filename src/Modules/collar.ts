@@ -236,7 +236,7 @@ export class CollarModule extends BaseModule {
     // Choke Collar Code
     get allowedChokeMembers(): number[] {
         let stringList = this.settings.allowedMembers.split(",");
-        let memberList = stringList.filter(str => !!str && (+str === +str)).map(str => parseInt(str));
+        let memberList = stringList.filter(str => !!str && (+str === +str)).map(str => parseInt(str)).filter(id => id != Player.MemberNumber);
         if (this.settings.limitToCrafted && this.settings.collar.creator >= 0)
             memberList.push(this.settings.collar.creator);
         return memberList;
@@ -390,30 +390,17 @@ export class CollarModule extends BaseModule {
         ChatRoomCharacterUpdate(Player);
     }
 
-    CanActivate(sender: Character | null, isTighten: boolean) {
-        var currentCollarObj = InventoryGet(Player, "ItemNeck");
-        if (!currentCollarObj)
-            return false; // Cannot choke if no collar on
-        var currentCollar = <CollarModel>{
-            name: currentCollarObj.Craft?.Name ?? currentCollarObj.Asset.Name,
-            creator: currentCollarObj.Craft?.MemberNumber ?? 0
-        };
-        return !!sender &&
-                this.AllowedMember(sender, isTighten) &&
-                currentCollar.name == this.settings.collar?.name &&
-                currentCollar.creator == this.settings.collar?.creator
-    }
-
-    AllowedMember(member: Character | undefined, isTighten: boolean): boolean {
+    AllowedMember(member: Character | null, isTighten: boolean): boolean {
         if (!member)
             return false;
+        // If self-triggered, check appropriate settings
         if (member.IsPlayer()) {
-            if (isTighten && !this.settings.allowSelfTightening)
-                return false;
-            else if (!isTighten && !this.settings.allowSelfLoosening)
-                return false;
-            else
+            if (isTighten && this.settings.allowSelfTightening)
                 return true;
+            else if (!isTighten && this.settings.allowSelfLoosening)
+                return true;
+            else
+                return false;
         }
         if (this.allowedChokeMembers.length > 0)
             return this.allowedChokeMembers.indexOf(member.MemberNumber ?? 0) >= 0;
@@ -426,9 +413,9 @@ export class CollarModule extends BaseModule {
         if (!this.settings.tightTrigger || !this.settings.looseTrigger)
             return;
 
-        if (isPhraseInString(msg, this.settings.tightTrigger) && this.CanActivate(sender, true))
+        if (isPhraseInString(msg, this.settings.tightTrigger) && this.AllowedMember(sender, true))
             this.IncreaseCollarChoke();
-        else if (isPhraseInString(msg, this.settings.looseTrigger) && this.CanActivate(sender, false))
+        else if (isPhraseInString(msg, this.settings.looseTrigger) && this.AllowedMember(sender, false))
             this.DecreaseCollarChoke();
     }
 
@@ -469,7 +456,7 @@ export class CollarModule extends BaseModule {
                 break;
         }
 
-        settingsSave();
+        settingsSave(true);
     }
 
     DecreaseCollarChoke() {
@@ -513,7 +500,7 @@ export class CollarModule extends BaseModule {
                 break;
         }
 
-        settingsSave();
+        settingsSave(true);
     }
 
     ReleaseCollar() {
@@ -526,12 +513,12 @@ export class CollarModule extends BaseModule {
         this.settings.chokeLevel = 0;
         clearTimeout(this.chokeTimeout);
         this.isPassingOut = false;
-        settingsSave();
+        settingsSave(true);
     }
 
     plugReleaseEmotes = [
         "%NAME% gasps and gulps for air.",
-        "%NAME%'s lungs expands hungrily as %PRONOUN% gasps in air.",
+        "%NAME%'s lungs expand hungrily as %PRONOUN% gasps in air.",
         "%NAME% groans as air is allowed back into their lungs.",
         "%NAME% gasps for air with a whimper."
     ]
