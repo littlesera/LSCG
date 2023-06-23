@@ -1205,8 +1205,8 @@ export class ActivityModule extends BaseModule {
     }
 
     IncomingEscape(sender: OtherCharacter, escapeFromMemberNumber: number) {
-        if (escapeFromMemberNumber == Player.MemberNumber) {
-            this.releaseGrab(escapeFromMemberNumber, undefined);
+        if (escapeFromMemberNumber == Player.MemberNumber && !!sender.MemberNumber) {
+            this.releaseGrab(sender.MemberNumber, undefined);
         }
     }
 
