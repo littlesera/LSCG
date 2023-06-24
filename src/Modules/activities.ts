@@ -1086,7 +1086,7 @@ export class ActivityModule extends BaseModule {
             Type: type
         })
 
-        if (type == "tongue" && !this.prevMouth) {
+        if (type == "tongue") {
             this.prevMouth = WardrobeGetExpression(Player)?.Mouth ?? null;
             CharacterSetFacialExpression(Player, "Mouth", "Ahegao");
         }
@@ -1098,7 +1098,7 @@ export class ActivityModule extends BaseModule {
         else
             this.heldBy = this.heldBy.filter(h => !(h.Member == member && h.Type == type));
         
-        if (this.prevMouth && (!type || type == "tongue")) {
+        if (!type || type == "tongue") {
             CharacterSetFacialExpression(Player, "Mouth", this.prevMouth);
             this.prevMouth = null;
         }
