@@ -1093,15 +1093,15 @@ export class ActivityModule extends BaseModule {
     }
 
     releasedBy(member: number, type: GrabType | undefined) {
+        if (this.heldBy.filter(h => h.Member == member && h.Type == "tongue").length == 1 && (!type || type == "tongue")) {
+            CharacterSetFacialExpression(Player, "Mouth", this.prevMouth);
+            this.prevMouth = null;
+        }
+
         if (!type)
             this.heldBy = this.heldBy.filter(h => h.Member != member);
         else
             this.heldBy = this.heldBy.filter(h => !(h.Member == member && h.Type == type));
-        
-        if (!type || type == "tongue") {
-            CharacterSetFacialExpression(Player, "Mouth", this.prevMouth);
-            this.prevMouth = null;
-        }
     }
 
     get handHoldingMemberList(): number[] { return this.hands.filter(x => x.Type == "hand").map(h => h.Member) };
