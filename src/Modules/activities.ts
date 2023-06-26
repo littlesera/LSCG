@@ -111,7 +111,12 @@ export class ActivityModule extends BaseModule {
                 if (!customPrereqFunc)
                     return next(args);
                 else {
-                    return customPrereqFunc(acting, acted, targetGrp);
+                    try {
+                        return customPrereqFunc(acting, acted, targetGrp);
+                    }
+                    catch (error) {
+                        console.warn(`Custom Prereq ${prereqName} falied: ${error}`);
+                    }
                 }
             }
             else
