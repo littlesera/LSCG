@@ -115,7 +115,7 @@ export class ActivityModule extends BaseModule {
                         return customPrereqFunc(acting, acted, targetGrp);
                     }
                     catch (error) {
-                        console.warn(`Custom Prereq ${prereqName} falied: ${error}`);
+                        console.warn(`Custom Prereq ${prereqName} failed: ${error}`);
                     }
                 }
             }
