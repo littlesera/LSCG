@@ -571,15 +571,11 @@ export class InjectorModule extends BaseModule {
     AddHorny(multiplier: number, gradual: boolean = false) {
         var additive = this.drugLevelMultiplier * multiplier
         let newLevelActual = this.hornyLevel + additive;
-        // if (gradual)
-        //     this._targetHornyLevel = newLevelActual;
-        // else {
+        
         this.hornyLevel = Math.min(newLevelActual, this.hornyLevelMax * this.drugLevelMultiplier);
         if (newLevelActual >= this.hornyLevelMax * this.drugLevelMultiplier) {
             ActivityOrgasmPrepare(Player);
-            this.hornyLevel -= this.drugLevelMultiplier;
-            }
-        //}
+        }
 
         if (!!(<any>Player).BCT?.splitOrgasmArousal?.arousalProgress) {
             (<any>Player).BCT.splitOrgasmArousal.arousalProgress = 100;
