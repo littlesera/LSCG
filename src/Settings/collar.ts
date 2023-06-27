@@ -103,6 +103,12 @@ export class GuiCollar extends GuiSubscreen {
 					description: "Prevents the wearer from viewing triggers via show-triggers.",
 					setting: () => this.settings.immersive ?? false,
 					setSetting: (val) => this.settings.immersive = val
+				},<Setting>{
+					type: "checkbox",
+					label: "Any Collar:",
+					description: "If enabled, any collar can trigger and activate.",
+					setting: () => this.settings.anyCollar ?? false,
+					setSetting: (val) => this.settings.anyCollar = val
 				}
 			]
 		]
@@ -118,15 +124,15 @@ export class GuiCollar extends GuiSubscreen {
 			if (this.settings.collarPurchased) {
 				if (!this.settings.locked) {
 					MainCanvas.textAlign = "left";
-
 					// Set/Update Collar	 	[Custom??]
-					let buttonPos = this.structure.length + 2;
-					DrawText("Update Collar:", this.getXPos(buttonPos), this.getYPos(buttonPos), "Black", "Gray");
+					let buttonPos = this.structure.length;
+					let updateDisabled = !this.settings.enabled || this.settings.anyCollar;
+					DrawText("Update Collar:", this.getXPos(buttonPos), this.getYPos(buttonPos), updateDisabled ? "Gray" : "Black", "Gray");
 					MainCanvas.textAlign = "center";
-					DrawButton(this.getXPos(buttonPos) + 300, this.getYPos(buttonPos) - 32, 200, 64, "Update", "White", undefined, "Update Collar to Current", !this.settings.enabled);
+					DrawButton(this.getXPos(buttonPos) + 464, this.getYPos(buttonPos) - 32, 200, 64, "Update", updateDisabled ? "#CCCCCC" : "White", undefined, updateDisabled ? "" : "Update Collar to Current", updateDisabled);
 
 					MainCanvas.textAlign = "left";
-					if (!!this.settings.collar) {
+					if (!!this.settings.collar && !this.settings.anyCollar) {
 						DrawText("Current Name: " + this.settings.collar.name, this.getXPos(buttonPos), this.getYPos(buttonPos) + 60, "Gray", "Gray");
 						if (!!this.settings.collar.creator && this.settings.collar.creator > 0)
 							DrawText("Current Crafter: " + this.settings.collar.creator, this.getXPos(buttonPos), this.getYPos(buttonPos) + 110, "Gray", "Gray");
@@ -168,9 +174,9 @@ export class GuiCollar extends GuiSubscreen {
 
 		if (PreferencePageCurrent == 2) {
 			if (this.settings.collarPurchased) {
-				if (!this.settings.locked) {
+				if (!this.settings.locked && !this.settings.anyCollar) {
 					// Update Collar Button
-					let buttonPos = this.structure.length + 2;
+					let buttonPos = this.structure.length;
 					if (MouseIn(this.getXPos(buttonPos) + 300, this.getYPos(buttonPos) - 32, 200, 64)){
 						var collar = InventoryGet(Player, "ItemNeck");
 						if(!collar){

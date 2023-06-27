@@ -12,6 +12,7 @@ export interface CollarPublicSettingsModel extends BaseSettingsModel {
     lockable: boolean;
     locked: boolean;
     immersive: boolean;
+    anyCollar: boolean;
     limitToCrafted: boolean;
     collar: CollarModel;
     tightTrigger: string;
