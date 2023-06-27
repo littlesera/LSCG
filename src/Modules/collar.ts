@@ -20,13 +20,21 @@ export class CollarModule extends BaseModule {
 	}
 
     get wearingCorrectCollar(): boolean {
-        if (!this.settings.collar || !this.settings.collar.name)
+        var collar = InventoryGet(Player, "ItemNeck");
+        if (!collar)
+            return false;
+
+        if (!this.settings.collar || !this.settings.collar.name || this.settings.anyCollar)
             return true;
 
-        var collar = InventoryGet(Player, "ItemNeck");
-        var collarName = collar?.Craft?.Name ?? (collar?.Asset.Name ?? "");
-        var collarCreator = collar?.Craft?.MemberNumber ?? 0;
-        return collarName == this.settings.collar.name && collarCreator == this.settings.collar.creator;
+        // If configured collar is not crafted, let any inherited collar work.
+        if (!this.settings.collar.creator) {
+            return collar?.Asset.Name == this.settings.collar.name;
+        } else {
+            var collarName = collar?.Craft?.Name ?? (collar?.Asset.Name ?? "");
+            var collarCreator = collar?.Craft?.MemberNumber ?? -1;
+            return collarName == this.settings.collar.name && collarCreator == this.settings.collar.creator;
+        }
     }
 
     get settingsScreen(): Subscreen | null {
@@ -622,7 +630,7 @@ export class CollarModule extends BaseModule {
     }
 
     ChokeEvent() {
-        if (!this.wearingCorrectCollar)
+        if (!this.Enabled)
             return;
         // only activate 1/4 times triggered unless at high level
         if (this.settings.chokeLevel > 2)

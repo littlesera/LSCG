@@ -31,6 +31,9 @@ export class CommandModule extends BaseModule {
 			Tag: 'zonk',
 			Description: ": Hypnotize yourself",
 			Action: () => {
+				if (!this.hypno.Enabled)
+					return;
+
 				if (this.hypno.settings.immersive) {
 					LSCG_SendLocal("/zonk disabled while immersive", 5000);
 					return;
@@ -42,6 +45,9 @@ export class CommandModule extends BaseModule {
 			Tag: 'unzonk',
 			Description: ": Awaken yourself",
 			Action: () => {
+				if (!this.hypno.Enabled)
+					return;
+
 				if (this.hypno.hypnoActivated && this.hypno.settings.immersive) {
 					LSCG_SendLocal("/unzonk disabled while immersive", 5000);
 					return;
@@ -58,8 +64,8 @@ export class CommandModule extends BaseModule {
 				let tightenTrigger = this.collar.settings.tightTrigger;
 				let loosenTrigger = this.collar.settings.looseTrigger;
 
-				let hypnoStr = this.hypno.settings.immersive ? "<i>Hypnosis triggers hidden while immersive...</i>" : `<b>Hypnosis:</b> ${hypnoTriggers}<br><b>Awakeners:</b> ${awakenerTriggers}`;
-				let collarStr = this.collar.settings.immersive ? "<i>Collar triggers hidden while immersive...</i>" : `<b>Collar Tighten:</b> ${tightenTrigger}<br><b>Collar Loosen:</b> ${loosenTrigger}`;
+				let hypnoStr = !this.hypno.Enabled ? "<i>Hypnosis not enabled.</i>" : (this.hypno.settings.immersive ? "<i>Hypnosis triggers hidden while immersive...</i>" : `<b>Hypnosis:</b> ${hypnoTriggers}<br><b>Awakeners:</b> ${awakenerTriggers}`);
+				let collarStr = !this.hypno.settings.enabled ? "<i>Breathplay Collar not enabled.</i>" : (this.collar.settings.immersive ? "<i>Collar triggers hidden while immersive...</i>" : `<b>Collar Tighten:</b> ${tightenTrigger}<br><b>Collar Loosen:</b> ${loosenTrigger}`);
 
 				LSCG_SendLocal(`Your current triggers are: <br>${hypnoStr}<br>${collarStr}`);
 			}
@@ -133,35 +139,62 @@ export class CommandModule extends BaseModule {
 			}
 		}, {
 			Tag: "collar",
-			Description: " [tight/loose] : Use to self-tighten or self-loosen collar if allowed. Must be unrestrained to use.",
+			Description: " [tight/loose/stat] : Use to self-tighten, self-loosen, or read out information about your collar if allowed. Must be unrestrained to use.",
 			Action: (args, msg, parsed) => {
+				if (!this.collar.wearingCorrectCollar) {
+					LSCG_SendLocal(`You are not wearing a properly configured collar.`);
+					return;
+				}
+				if (!this.collar.Enabled)
+					return;
+
 				if (parsed.length == 1) {
 					switch (parsed[0].toLocaleLowerCase()) {
 						case "tight":
 						case "tighten":
-							if (!this.collar.settings.allowSelfTightening)
-								LSCG_SendLocal("You are not allowed to self-tighten your collar.");
-							else if (Player.IsRestrained())
-								SendAction("%NAME% struggles in %POSSESSIVE% bindings, trying to reach %POSSESSIVE% collar's controls.");
+							if (Player.IsRestrained())
+								SendAction("%NAME% struggles in %POSSESSIVE% bindings, unable to reach %POSSESSIVE% collar's controls.");
 							else {
 								SendAction("%NAME% presses a button on %POSSESSIVE% collar.");
-								setTimeout(() => this.collar.IncreaseCollarChoke(), 2000);
+								setTimeout(() => {
+									if (!this.collar.settings.allowSelfTightening)
+										SendAction(`%NAME%'s collar beeps and a computerized voice says "Access Denied."`);
+									else
+										this.collar.IncreaseCollarChoke();
+								}, 1500);
 							}
 							break;
 						case "loose":
 						case "loosen":
-							if (!this.collar.settings.allowSelfLoosening)
-								LSCG_SendLocal("You are not allowed to self-loosen your collar.");
-							else if (Player.IsRestrained())
-								SendAction("%NAME% struggles in %POSSESSIVE% bindings, trying to reach %POSSESSIVE% collar's controls.");
+							if (Player.IsRestrained())
+								SendAction("%NAME% struggles in %POSSESSIVE% bindings, unable to reach %POSSESSIVE% collar's controls.");
 							else {
 								SendAction("%NAME% presses a button on %POSSESSIVE% collar.");
-								setTimeout(() => this.collar.DecreaseCollarChoke(), 2000);
+								setTimeout(() => {
+									if (!this.collar.settings.allowSelfLoosening)
+										SendAction(`%NAME%'s collar beeps and a computerized voice says "Access Denied."`);
+									else
+										this.collar.DecreaseCollarChoke();
+								}, 1500);
 							}
 							break;
+						case "stat":
+						case "stats":
+							if (!this.collar.settings.collarPurchased)
+								LSCG_SendLocal(`Collar module not purchased.`);
+							else if (Player.IsRestrained())
+								SendAction("%NAME% struggles in %POSSESSIVE% bindings, unable to reach %POSSESSIVE% collar's controls.");
+							else {
+								SendAction("%NAME% presses a button on %POSSESSIVE% collar.");
+								setTimeout(() => {
+									let tightenTrigger = this.collar.settings.tightTrigger;
+									let loosenTrigger = this.collar.settings.looseTrigger;	
+									SendAction(`%NAME%'s collar chimes and a computerized voice reads out:\nCurrent Level: ${this.collar.settings.chokeLevel}...\nTighten Trigger: '${tightenTrigger}'...\nLoosen Trigger: '${loosenTrigger}'...\nRemote Access: ${this.collar.settings.remoteAccess ? "ENABLED" : "DISABLED"}...\nAutoasphyxiation: ${this.collar.settings.allowSelfTightening ? "ENABLED" : "DISABLED"}...`);
+								}, 1500);
+							}
 					} 
 				} else if (parsed.length == 0) {
-					LSCG_SendLocal(`<b>/lscg collar</b> [tight/loose] : Use to self-tighten or self-loosen collar if allowed. Must be unrestrained to use."`);
+					LSCG_SendLocal(`<b>/lscg collar</b> [tight/loose/stat] : Use to self-tighten, self-loosen, or read out information about your collar if allowed. Must be unrestrained to use."`);
 				}
 			}
 		}
