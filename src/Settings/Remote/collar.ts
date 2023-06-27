@@ -181,7 +181,7 @@ export class RemoteCollar extends RemoteGuiSubscreen {
 			if (!this.settings.anyCollar) {
 				// Update Collar Button
 				let buttonPos = this.structure.length;
-				if (MouseIn(this.getXPos(buttonPos) + 300, this.getYPos(buttonPos) - 32, 200, 64)){
+				if (MouseIn(this.getXPos(buttonPos) + 464, this.getYPos(buttonPos) - 32, 200, 64)){
 					var collar = InventoryGet(this.Character, "ItemNeck");
 					if(!collar){
 						this.message = "No Collar Equipped";
