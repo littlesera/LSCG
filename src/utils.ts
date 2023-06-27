@@ -89,7 +89,7 @@ export function OnChat(priority: any, module: ModuleCategory, callback: (data: a
     hookFunction("ChatRoomMessage", priority, (args, next) => {
         var data = args[0];
 		var sender = getCharacter(data.Sender);
-        if (data.Type == "Chat")
+        if (data.Type == "Chat" || data.Type == "Whisper")
             callback(data, sender, data.Content, data.Dictionary);
 		next(args);
     }, module);

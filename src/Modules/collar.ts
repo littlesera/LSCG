@@ -1,5 +1,5 @@
 import { BaseModule } from 'base';
-import { CollarModel, CollarSettingsModel } from 'Settings/Models/collar';
+import { CollarSettingsModel } from 'Settings/Models/collar';
 import { ModuleCategory, Subscreen } from 'Settings/setting_definitions';
 import { settingsSave, SendAction, OnChat, getRandomInt, hookFunction, removeAllHooksByModule, OnActivity, OnAction, setOrIgnoreBlush, getCharacter, hookBCXCurse, isPhraseInString } from '../utils';
 import { GuiCollar } from 'Settings/collar';
@@ -60,13 +60,13 @@ export class CollarModule extends BaseModule {
     }
 
     load(): void {
-        OnChat(600, ModuleCategory.Collar, (data, sender, msg, metadata) => {
+        OnChat(1, ModuleCategory.Collar, (data, sender, msg, metadata) => {
             if (!this.Enabled)
                 return;
             this.CheckForTriggers(msg, sender);
         });
 
-        OnActivity(100, ModuleCategory.Collar, (data, sender, msg, meta) => {
+        OnActivity(1, ModuleCategory.Collar, (data, sender, msg, meta) => {
             let target = data.Dictionary?.find((d: any) => d.Tag == "TargetCharacter");
             if (!!data && 
                 !!sender && 
@@ -78,7 +78,7 @@ export class CollarModule extends BaseModule {
             }
         });
 
-        OnAction(100, ModuleCategory.Collar, (data, sender, msg, meta) => {
+        OnAction(6, ModuleCategory.Collar, (data, sender, msg, meta) => {
             if (!data.Dictionary || !data.Dictionary[2] || !data.Dictionary[3])
                 return;
 
@@ -92,7 +92,7 @@ export class CollarModule extends BaseModule {
         })
 
         // Detect if choking member is bound
-        OnAction(100, ModuleCategory.Misc, (data, sender, msg, metadata) => {
+        OnAction(6, ModuleCategory.Misc, (data, sender, msg, metadata) => {
             if (!data.Dictionary || !data.Dictionary[2] || !data.Dictionary[3])
                 return;
 
