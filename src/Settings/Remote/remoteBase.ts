@@ -9,6 +9,7 @@ import { RemoteMainMenu } from "./mainmenu";
 
 export abstract class RemoteGuiSubscreen extends GuiSubscreen {
 
+	dirty: boolean = false;
 	readonly Character: OtherCharacter
 
 	constructor(module: BaseModule, C: OtherCharacter) {
@@ -36,7 +37,7 @@ export abstract class RemoteGuiSubscreen extends GuiSubscreen {
 	}
 
 	settingsSave() {
-		if (!this.Character)
+		if (!this.Character || !this.dirty)
 			return;
 		sendLSCGMessage(<LSCGMessageModel>{
             type: "command",
@@ -48,6 +49,16 @@ export abstract class RemoteGuiSubscreen extends GuiSubscreen {
                 name: "remote"
             }
         })
+	}
+
+	Load(): void {
+		super.Load();
+		this.dirty = false;
+	}
+
+	Click() {
+		super.Click();
+		this.dirty = true;
 	}
 
 	Exit() {

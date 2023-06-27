@@ -145,11 +145,16 @@ export class CoreModule extends BaseModule {
                 getModule<ActivityModule>("ActivityModule")?.IncomingEscape(Sender!, msg.target);
                 break;
             case "remote":
+                let prevCollarPurchase = Player.LSCG?.CollarModule?.collarPurchased;
                 Object.assign(Player.LSCG.HypnoModule, msg.settings?.HypnoModule);
                 Object.assign(Player.LSCG.CollarModule, msg.settings?.CollarModule);
                 getModule<HypnoModule>("HypnoModule")?.initializeTriggerWord();
                 settingsSave(true);
-                LSCG_SendLocal(`${!Sender ? "Someone" : CharacterNickname(Sender)} has accessed your remote settings!`);
+                let currentCollarPurchase = Player.LSCG?.CollarModule?.collarPurchased;
+                if (!prevCollarPurchase && currentCollarPurchase)
+                    LSCG_SendLocal(`${!Sender ? "Someone" : CharacterNickname(Sender)} has purchased the Collar Module for you!`);
+                else
+                    LSCG_SendLocal(`${!Sender ? "Someone" : CharacterNickname(Sender)} has accessed your remote settings!`);
                 break;
         }
     }
