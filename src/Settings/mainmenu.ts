@@ -54,7 +54,7 @@ export class MainMenu extends GuiSubscreen {
 	Run() {
 		var prev = MainCanvas.textAlign;
 		MainCanvas.textAlign = "left";
-		DrawText(`- Little Sera's Club Games ${LSCG_VERSION} -`, GuiSubscreen.START_X, GuiSubscreen.START_Y, "Black", "Gray");
+		DrawText(`- Little Sera's Club Games ${LSCG_VERSION} -`, GuiSubscreen.START_X, GuiSubscreen.START_Y - GuiSubscreen.Y_MOD, "Black", "#D7F6E9");
 		DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png");
 		
 		if (!this.immersiveBlock) {
