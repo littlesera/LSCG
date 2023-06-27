@@ -16,7 +16,7 @@ export interface Setting {
 
 export abstract class GuiSubscreen {
     static START_X: number = 180;
-    static START_Y: number = 120;
+    static START_Y: number = 205;
     static X_MOD: number = 950;
 	static Y_MOD: number = 75;
 	readonly module: BaseModule;
@@ -92,11 +92,11 @@ export abstract class GuiSubscreen {
 	}
 
     getYPos(ix: number) {
-        return GuiSubscreen.START_Y + (GuiSubscreen.Y_MOD * (ix % 10));
+        return GuiSubscreen.START_Y + (GuiSubscreen.Y_MOD * (ix % 9));
     }
 
 	getXPos(ix: number) {
-		return GuiSubscreen.START_X + (GuiSubscreen.X_MOD * Math.floor(ix / 10));
+		return GuiSubscreen.START_X + (GuiSubscreen.X_MOD * Math.floor(ix / 9));
 	}
 
 	HideElements() {
@@ -127,7 +127,7 @@ export abstract class GuiSubscreen {
 		var prev = MainCanvas.textAlign;
 		MainCanvas.textAlign = "left";
 
-		DrawText("- LSCG " + this.name + " -", this.getXPos(0), this.getYPos(0), "Black", "Gray");
+		DrawText("- LSCG " + this.name + " -", GuiSubscreen.START_X, GuiSubscreen.START_Y - GuiSubscreen.Y_MOD, "Black", "#D7F6E9");
 		DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png", "LSCG main menu");
 		if (this.multipageStructure.length > 1) {
 			MainCanvas.textAlign = "center";
@@ -140,14 +140,14 @@ export abstract class GuiSubscreen {
 		this.structure.forEach((item, ix, arr) => {
 			switch(item.type) {
 				case "checkbox":
-					this.DrawCheckbox(item.label, item.description, item.setting(), ix + 1, item.disabled);
+					this.DrawCheckbox(item.label, item.description, item.setting(), ix, item.disabled);
 					break;
 				case "text":
 				case "number":
-					this.ElementPosition(item.id, item.label, item.description, ix + 1, item.disabled);
+					this.ElementPosition(item.id, item.label, item.description, ix, item.disabled);
 					break;
 				case "label":
-					this.DrawLabel(item.label, item.description, ix + 1);
+					this.DrawLabel(item.label, item.description, ix);
 					break;
 			}
 		});
@@ -163,7 +163,7 @@ export abstract class GuiSubscreen {
 		this.structure.forEach((item, ix, arr) => {
 			switch (item.type) {
 				case "checkbox":
-					if (MouseIn(this.getXPos(ix + 1) + 600, this.getYPos(ix + 1) - 32, 64, 64) && !item.disabled){
+					if (MouseIn(this.getXPos(ix) + 600, this.getYPos(ix) - 32, 64, 64) && !item.disabled){
 						item.setSetting(!item.setting());
 					}
 					break;

@@ -5,6 +5,7 @@ import { getCharacter, LSCG_SendLocal, removeAllHooksByModule, SendAction, setti
 import { HypnoModule } from "./hypno";
 import { ItemUseModule } from "./item-use";
 import { ActivityModule } from "./activities";
+import { CollarModule } from "./collar";
 
 // Remote UI Module to handle configuration on other characters
 // Can be used to "program" another character's hypnosis, collar, etc.
@@ -12,6 +13,7 @@ import { ActivityModule } from "./activities";
 export class CommandModule extends BaseModule {   
     
 	get hypno(): HypnoModule { return getModule<HypnoModule>("HypnoModule")! }
+	get collar(): CollarModule { return getModule<CollarModule>("CollarModule")! }
 
 	lscgCommands: ICommand[] = [
 		{
@@ -22,16 +24,15 @@ export class CommandModule extends BaseModule {
 				this.orderedCommands.forEach(c => {
 					helpLines.push(`<br><b>/lscg ${c.Tag}</b> ${c.Description}`);
 				})
-				var bgColor = (Player.ChatSettings!.ColorTheme!.indexOf("Light") > -1) ? "#D7F6E9" : "#23523E";
-				let helpText = `<p style='background-color:${bgColor};'><b>- Little Sera's Club Games -</b>${helpLines.join()}<br>More to come...</p>`;
-				ChatRoomSendLocal(helpText);
+				let helpText = `<b>- Little Sera's Club Games -</b>${helpLines.join()}<br>More to come...`;
+				LSCG_SendLocal(helpText);
 			},
 		}, {
 			Tag: 'zonk',
 			Description: ": Hypnotize yourself",
 			Action: () => {
 				if (this.hypno.settings.immersive) {
-					ChatRoomSendLocal("/zonk disabled while immersive", 5000);
+					LSCG_SendLocal("/zonk disabled while immersive", 5000);
 					return;
 				}
 				if (!this.hypno.hypnoActivated)
@@ -42,28 +43,32 @@ export class CommandModule extends BaseModule {
 			Description: ": Awaken yourself",
 			Action: () => {
 				if (this.hypno.hypnoActivated && this.hypno.settings.immersive) {
-					ChatRoomSendLocal("/unzonk disabled while immersive", 5000);
+					LSCG_SendLocal("/unzonk disabled while immersive", 5000);
 					return;
 				}
 				if (this.hypno.hypnoActivated)
 					this.hypno.TriggerRestoreTimeout();
 			}
 		}, {
-			Tag: "show-trigger",
+			Tag: "show-triggers",
 			Description: ": Reveal your current trigger word(s) to yourself",
 			Action: () => {
-				if (this.hypno.settings.immersive) {
-					ChatRoomSendLocal("/show-trigger disabled while immersive", 5000);
-					return;
-				}
-				ChatRoomSendLocal("Your current triggers are: " + this.hypno.triggers);
+				let hypnoTriggers = this.hypno.triggers;
+				let awakenerTriggers = this.hypno.awakeners;
+				let tightenTrigger = this.collar.settings.tightTrigger;
+				let loosenTrigger = this.collar.settings.looseTrigger;
+
+				let hypnoStr = this.hypno.settings.immersive ? "<i>Hypnosis triggers hidden while immersive...</i>" : `<b>Hypnosis:</b> ${hypnoTriggers}<br><b>Awakeners:</b> ${awakenerTriggers}`;
+				let collarStr = this.collar.settings.immersive ? "<i>Collar triggers hidden while immersive...</i>" : `<b>Collar Tighten:</b> ${tightenTrigger}<br><b>Collar Loosen:</b> ${loosenTrigger}`;
+
+				LSCG_SendLocal(`Your current triggers are: <br>${hypnoStr}<br>${collarStr}`);
 			}
 		}, {
 			Tag: "cycle-trigger",
 			Description: ": Force a cycle to a new trigger word if enabled",
 			Action: () => {
 				if (this.hypno.settings.immersive) {
-					ChatRoomSendLocal("/cycle-trigger disabled while immersive", 5000);
+					LSCG_SendLocal("/cycle-trigger disabled while immersive", 5000);
 					return;
 				}
 				if (this.hypno.settings.enableCycle)
@@ -81,12 +86,12 @@ export class CommandModule extends BaseModule {
 			Description: "[defender] : Make a contested activity roll against another user where you are the attacker.",
 			Action: (args, msg, parsed) => {
 				if (!args) {
-					ChatRoomSendLocal("Please specify a defender for your roll.", 10000);
+					LSCG_SendLocal("Please specify a defender for your roll.", 10000);
 					return;
 				}
 				let tgt = this.getCharacterByNicknameOrMemberNumber(args);
 				if (!tgt) {
-					ChatRoomSendLocal(`Defender ${args} not found.`, 10000);
+					LSCG_SendLocal(`Defender ${args} not found.`, 10000);
 					return;
 				}
 				let check = getModule<ItemUseModule>("ItemUseModule")?.MakeActivityCheck(Player, tgt);
@@ -98,12 +103,12 @@ export class CommandModule extends BaseModule {
 			Description: "[attacker] : Make a contested activity roll where you are defending against another user.",
 			Action: (args, msg, parsed) => {
 				if (!args) {
-					ChatRoomSendLocal("Please specify an attacker for your roll.", 10000);
+					LSCG_SendLocal("Please specify an attacker for your roll.", 10000);
 					return;
 				}
 				let tgt = this.getCharacterByNicknameOrMemberNumber(args);
 				if (!tgt) {
-					ChatRoomSendLocal(`Attacker ${args} not found.`, 10000);
+					LSCG_SendLocal(`Attacker ${args} not found.`, 10000);
 					return;
 				}
 				let check = getModule<ItemUseModule>("ItemUseModule")?.MakeActivityCheck(tgt, Player);
@@ -125,6 +130,39 @@ export class CommandModule extends BaseModule {
 			Description: " : Use in case of emergency to revert all LSCG settings to their default values.",
 			Action: (args, msg, parsed) => {
 				this.EmergencyRelease();	
+			}
+		}, {
+			Tag: "collar",
+			Description: " [tight/loose] : Use to self-tighten or self-loosen collar if allowed. Must be unrestrained to use.",
+			Action: (args, msg, parsed) => {
+				if (parsed.length == 1) {
+					switch (parsed[0].toLocaleLowerCase()) {
+						case "tight":
+						case "tighten":
+							if (!this.collar.settings.allowSelfTightening)
+								LSCG_SendLocal("You are not allowed to self-tighten your collar.");
+							else if (Player.IsRestrained())
+								SendAction("%NAME% struggles in %POSSESSIVE% bindings, trying to reach %POSSESSIVE% collar's controls.");
+							else {
+								SendAction("%NAME% presses a button on %POSSESSIVE% collar.");
+								setTimeout(() => this.collar.IncreaseCollarChoke(), 2000);
+							}
+							break;
+						case "loose":
+						case "loosen":
+							if (!this.collar.settings.allowSelfLoosening)
+								LSCG_SendLocal("You are not allowed to self-loosen your collar.");
+							else if (Player.IsRestrained())
+								SendAction("%NAME% struggles in %POSSESSIVE% bindings, trying to reach %POSSESSIVE% collar's controls.");
+							else {
+								SendAction("%NAME% presses a button on %POSSESSIVE% collar.");
+								setTimeout(() => this.collar.DecreaseCollarChoke(), 2000);
+							}
+							break;
+					} 
+				} else if (parsed.length == 0) {
+					LSCG_SendLocal(`<b>/lscg collar</b> [tight/loose] : Use to self-tighten or self-loosen collar if allowed. Must be unrestrained to use."`);
+				}
 			}
 		}
 	]

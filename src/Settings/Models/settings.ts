@@ -39,6 +39,7 @@ export class PublicSettingsModel implements IPublicSettingsModel {
         remoteAccess: false,
         lockable: false,
         locked: false,
+        immersive: false,
         limitToCrafted: false,
         collar: <CollarModel>{creator: -1, name:""},
         tightTrigger: "",

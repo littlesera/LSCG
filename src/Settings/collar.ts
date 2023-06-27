@@ -97,7 +97,13 @@ export class GuiCollar extends GuiSubscreen {
 					description: "Word or phrase that, if spoken, will loosen the collar.",
 					setting: () => this.settings.looseTrigger ?? false,
 					setSetting: (val) => this.settings.looseTrigger = val
-				},
+				},<Setting>{
+					type: "checkbox",
+					label: "Immersive:",
+					description: "Prevents the wearer from viewing triggers via show-triggers.",
+					setting: () => this.settings.immersive ?? false,
+					setSetting: (val) => this.settings.immersive = val
+				}
 			]
 		]
 	}
@@ -114,7 +120,7 @@ export class GuiCollar extends GuiSubscreen {
 					MainCanvas.textAlign = "left";
 
 					// Set/Update Collar	 	[Custom??]
-					let buttonPos = this.structure.length + 4;
+					let buttonPos = this.structure.length + 2;
 					DrawText("Update Collar:", this.getXPos(buttonPos), this.getYPos(buttonPos), "Black", "Gray");
 					MainCanvas.textAlign = "center";
 					DrawButton(this.getXPos(buttonPos) + 300, this.getYPos(buttonPos) - 32, 200, 64, "Update", "White", undefined, "Update Collar to Current", !this.settings.enabled);
@@ -164,7 +170,7 @@ export class GuiCollar extends GuiSubscreen {
 			if (this.settings.collarPurchased) {
 				if (!this.settings.locked) {
 					// Update Collar Button
-					let buttonPos = this.structure.length + 4;
+					let buttonPos = this.structure.length + 2;
 					if (MouseIn(this.getXPos(buttonPos) + 300, this.getYPos(buttonPos) - 32, 200, 64)){
 						var collar = InventoryGet(Player, "ItemNeck");
 						if(!collar){
