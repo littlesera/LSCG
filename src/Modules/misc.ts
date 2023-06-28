@@ -1,7 +1,7 @@
 import { BaseModule } from "base";
 import { MiscSettingsModel } from "Settings/Models/base";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { addCustomEffect, getRandomInt, hookFunction, LSCG_SendLocal, OnAction, OnActivity, removeAllHooksByModule, removeCustomEffect, SendAction, setOrIgnoreBlush } from "../utils";
+import { addCustomEffect, getRandomInt, hookFunction, LSCG_SendLocal, OnAction, OnActivity, removeAllHooksByModule, removeCustomEffect, SendAction, setOrIgnoreBlush, settingsSave } from "../utils";
 
 export class MiscModule extends BaseModule {
     get settings(): MiscSettingsModel {
@@ -18,6 +18,9 @@ export class MiscModule extends BaseModule {
             enabled: true,
             chloroformEnabled: false,
             immersiveChloroform: false,
+            chloroformedAt: 0,
+            chloroformPotencyTime: 60 * 60 * 1000, // 1 hour cooloff
+            infiniteChloroformPotency: false,
             handChokeEnabled: false,
             gagChokeEnabled: false
         };
@@ -157,8 +160,19 @@ export class MiscModule extends BaseModule {
                 return;
             }
             return next(args);
-        }, ModuleCategory.Misc)
+        }, ModuleCategory.Misc);
+
+        hookFunction("TimerProcess", 1, (args, next) => {
+            let now = CommonTime();
+            if (!this.settings.infiniteChloroformPotency && this.lastChecked + 10000 < now) {
+                this.lastChecked = now;
+                if (this.isChloroformed && this.settings.chloroformedAt + this.settings.chloroformPotencyTime < now && !this.chloroformWearingOff)
+                    this.ChloroformWearOff();
+            }
+        })
     }
+
+    lastChecked: number = 0;
 
     chroloBlockStrings = [
         "%NAME%'s eyes move dreamily under %POSSESSIVE% closed eyelids...",
@@ -223,6 +237,7 @@ export class MiscModule extends BaseModule {
         if (!!sender && sender.MemberNumber != Player.MemberNumber)
             LSCG_SendLocal(CharacterNickname(sender) + " has forced chloroform over your mouth, you will passout if it is not removed soon!", 30000);
         CharacterSetFacialExpression(Player, "Eyes", "Scared");
+        clearTimeout(this.potencyTimeout);
         this.passoutTimer = setTimeout(() => this.StartPassout_1(), 20000);
     }
 
@@ -248,12 +263,23 @@ export class MiscModule extends BaseModule {
             addCustomEffect(Player, "ForceKneel");
         }        
         this.isChloroformed = true;
+        this.settings.chloroformedAt = CommonTime();
         clearTimeout(this.passoutTimer);
+        settingsSave();
         //this.eyesInterval = setInterval(() => this.SetSleepExpression(), 1000);
+    }
+
+    potencyTimeout: number = 0;
+    chloroformWearingOff: boolean = false;
+    ChloroformWearOff() {
+        SendAction("%NAME% takes a deep, calm breath as %POSSESSIVE% chloroform starts to lose its potency...");
+        this.potencyTimeout = setTimeout(() => this.RemoveChloroform_1(), 45000);
+        this.chloroformWearingOff = true;
     }
 
     RemoveChloroform() {
         if (this.isChloroformed) {
+            clearTimeout(this.potencyTimeout);
             SendAction("%NAME% continues to sleep peacefully as the cloth is removed...");
             setTimeout(() => this.RemoveChloroform_1(), 20000);
         }
@@ -276,6 +302,7 @@ export class MiscModule extends BaseModule {
 
     _removeChloroform() {
         this.isChloroformed = false;
+        this.chloroformWearingOff = false;
         clearInterval(this.eyesInterval);
         CharacterSetFacialExpression(Player, "Eyes", "Dazed");
         CharacterSetFacialExpression(Player, "Emoticon", null);

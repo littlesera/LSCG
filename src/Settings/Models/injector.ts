@@ -25,6 +25,7 @@ export interface InjectorSettingsModel extends InjectorPublicSettingsModel {
     allowBoopRestore: boolean;
     continuousDeliveryActivatedAt: number;
     continuousDeliveryTimeout: number;
+    continuousDeliveryForever: boolean;
 }
 
 export interface InjectorPublicSettingsModel extends BaseSettingsModel {

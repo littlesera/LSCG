@@ -70,6 +70,7 @@ export class InjectorModule extends BaseModule {
             hornyLevelMax: 4,
             heartbeat: true,
 
+            continuousDeliveryForever: false,
             continuousDeliveryActivatedAt: 0,
             continuousDeliveryTimeout: 60 * 60 * 1000 // By default, stop delivering continuous drug after 2 hours
         };
@@ -85,6 +86,7 @@ export class InjectorModule extends BaseModule {
     
     safeword(): void {
         this.settings.continuousDeliveryActivatedAt = 0;
+        this.settings.continuousDeliveryForever = false;
         this.DoCure();
     }
 
@@ -992,7 +994,8 @@ export class InjectorModule extends BaseModule {
     }
 
     get _respiratorHasGas(): boolean {
-        return this.settings.continuousDeliveryActivatedAt + this.settings.continuousDeliveryTimeout > CommonTime();
+        return this.settings.continuousDeliveryForever || 
+            this.settings.continuousDeliveryActivatedAt + this.settings.continuousDeliveryTimeout > CommonTime();
     }
 
     get RespiratorHasGas(): boolean {

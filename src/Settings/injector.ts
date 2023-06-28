@@ -66,6 +66,12 @@ export class GuiInjector extends GuiSubscreen {
 					setSetting: (val) => this.settings.showDrugLevels = val
 				},<Setting>{
 					type: "checkbox",
+					label: "Inexhaustible Gases:",
+					description: "If true, any continuous delivery (eg. respirator) on you will never run out of gas.",
+					setting: () => this.settings.continuousDeliveryForever ?? false,
+					setSetting: (val) => this.settings.continuousDeliveryForever = val
+				},<Setting>{
+					type: "checkbox",
 					label: "Allow Boop Awake:",
 					description: "If true, will awaken from drugged sleep or trance when booped.",
 					setting: () => this.settings.allowBoopRestore ?? true,
@@ -92,6 +98,12 @@ export class GuiInjector extends GuiSubscreen {
 					description: "Enforce chloroform with more restrictive measures. LSCG settings will be unavailable while asleep.",
 					setting: () => Player.LSCG.MiscModule.immersiveChloroform ?? false,
 					setSetting: (val) => Player.LSCG.MiscModule.immersiveChloroform = val
+				},<Setting>{
+					type: "checkbox",
+					label: "Chloroform Never Fades:",
+					description: "If enabled one rag over your mouth will last forever until removed, otherwise its potency will fade after an hour.",
+					setting: () => Player.LSCG.MiscModule.infiniteChloroformPotency ?? false,
+					setSetting: (val) => Player.LSCG.MiscModule.infiniteChloroformPotency = val
 				}
 			]
 		]
