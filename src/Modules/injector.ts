@@ -1057,7 +1057,7 @@ export class InjectorModule extends BaseModule {
             let types = this.GetDrugTypes(mask.Craft!);
             let randomLevelIncrease = (getRandomInt(4) + 2) / 10; // .2 to .5
 
-            // Event is 1 in n chance every 4s
+            // Event is 1 in n chance every 2s
             if (getRandomInt(14) == 0) {
                 randomLevelIncrease += 1;
                 if (types.indexOf("sedative") > -1 && this.settings.enableSedative) {
@@ -1072,7 +1072,7 @@ export class InjectorModule extends BaseModule {
                     SendAction(this.breathAphrodesiacEventStr[getRandomInt(this.breathAphrodesiacEventStr.length)]);
                     this.AddHorny(randomLevelIncrease, getRandomInt(3) != 0); // 2/3 chance to push user over the edge (if allowed...)
                 }
-            } else { // Do regular increase of drug level every 4s
+            } else { // Do regular increase of drug level every 2s
                 randomLevelIncrease = randomLevelIncrease / 4; // .025 to .125
                 if (types.indexOf("sedative") > -1 && this.settings.enableSedative) {
                     this.AddSedative(randomLevelIncrease, false);
