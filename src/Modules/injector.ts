@@ -58,11 +58,11 @@ export class InjectorModule extends BaseModule {
             sedativeKeywords: ["tranquilizer","sedative"],
             mindControlKeywords: ["mind control", "hypnotizing", "brainwashing"],
             hornyKeywords: ["horny", "aphrodisiac"],
-            cureKeywords: ["antidote", "healing", "curing"],
+            cureKeywords: ["antidote", "healing", "curing", "cure"],
             netgunKeywords: ["net gun", "netgun"],
             hornyTickTime: 5000,
-            sedativeCooldown: 120000, // 2 minutes
-            mindControlCooldown: 180000, // 3 minutes
+            sedativeCooldown: 180000, // 3 minutes
+            mindControlCooldown: 240000, // 4 minutes
             hornyCooldown: 300000, // 5 minutes
             drugLevelMultiplier: 100,
             sedativeMax: 4,
@@ -348,7 +348,7 @@ export class InjectorModule extends BaseModule {
 
         // Check for respirator curses
         hookBCXCurse("curseTrigger", (evt) => {
-            if (evt.group == "ItemMouth3")
+            if (evt.group == "ItemMouth3" && this.Enabled)
                 this.CheckRespiratorCurseUpdate();
         })
 
@@ -356,7 +356,7 @@ export class InjectorModule extends BaseModule {
         let breathInterval = 2000; // breath event every 4s
         hookFunction('TimerProcess', 1, (args, next) => {
             let now = CommonTime();
-            if (!ActivityAllowed())
+            if (!ActivityAllowed() || !this.Enabled)
                 return next(args);
 
             // Heardbeat every hornyTickTime
@@ -1010,7 +1010,7 @@ export class InjectorModule extends BaseModule {
     }
 
     get IsContinuousDeliveryActive(): boolean {
-        return this.IsWearingRespirator && this.RespiratorHasGas && this.IsRespiratorOn;
+        return this.Enabled && this.IsWearingRespirator && this.RespiratorHasGas && this.IsRespiratorOn;
     }
 
     IsValidRespirator(item: Item | null): boolean {
@@ -1049,6 +1049,12 @@ export class InjectorModule extends BaseModule {
         "%NAME%'s sensitive areas burn hot as %PRONOUN% breathes through %POSSESSIVE% mask."
     ];
 
+    breathAntidoteEventStr: string[] = [
+        "%NAME% sighs with relief as %PRONOUN% takes a deep gulp of healing mist.",
+        "%NAME% feels a tingle across %POSSESSIVE% skin as %POSSESSIVE% mask heals them.",
+        "%NAME% lets out a quiet moan as %POSSESSIVE% mask releases a healing mist into her lungs."
+    ];
+
     BreathInDrugEvent() {
         if (this.IsContinuousDeliveryActive) {
             let mask = InventoryGet(Player, "ItemMouth3");
@@ -1057,32 +1063,27 @@ export class InjectorModule extends BaseModule {
             let types = this.GetDrugTypes(mask.Craft!);
             let randomLevelIncrease = (getRandomInt(4) + 2) / 10; // .2 to .5
 
-            // Event is 1 in n chance every 2s
-            if (getRandomInt(14) == 0) {
-                randomLevelIncrease += 1;
-                if (types.indexOf("sedative") > -1 && this.settings.enableSedative) {
+            if (types.indexOf("sedative") > -1 && this.settings.enableSedative) {
+                if (getRandomInt(15) == 0) { // Odds are big jump once every 30 seconds
                     if (!this.asleep) SendAction(this.breathSedativeEventStr[getRandomInt(this.breathSedativeEventStr.length)]);
-                    this.AddSedative(randomLevelIncrease, getRandomInt(3) != 0); // 2/3 chance to start incap minigame
-                } 
-                if (types.indexOf("mindcontrol") > -1 && this.settings.enableMindControl) {
+                    this.AddSedative(randomLevelIncrease + 1, getRandomInt(3) != 0); // 2/3 chance to start incap minigame
+                } else this.AddSedative(randomLevelIncrease / 4, false);
+            } 
+            if (types.indexOf("mindcontrol") > -1 && this.settings.enableMindControl) {
+                if (getRandomInt(15) == 0) { // Odds are big jump once every 30 seconds
                     if (!this.brainwashed) SendAction(this.breathMindControlEventStr[getRandomInt(this.breathMindControlEventStr.length)]);
-                    this.AddMindControl(randomLevelIncrease, getRandomInt(3) != 0); // 2/3 chance to start incap minigame
-                } 
-                if (types.indexOf("horny") > -1 && this.settings.enableHorny) {
+                    this.AddMindControl(randomLevelIncrease + 1, getRandomInt(3) != 0); // 2/3 chance to start incap minigame
+                } else this.AddMindControl(randomLevelIncrease / 4, false);
+            } 
+            if (types.indexOf("horny") > -1 && this.settings.enableHorny) {
+                if (getRandomInt(20) == 0) { // Odds are big jump once every 40 seconds
                     SendAction(this.breathAphrodesiacEventStr[getRandomInt(this.breathAphrodesiacEventStr.length)]);
-                    this.AddHorny(randomLevelIncrease, getRandomInt(3) != 0); // 2/3 chance to push user over the edge (if allowed...)
-                }
-            } else { // Do regular increase of drug level every 2s
-                randomLevelIncrease = randomLevelIncrease / 4; // .025 to .125
-                if (types.indexOf("sedative") > -1 && this.settings.enableSedative) {
-                    this.AddSedative(randomLevelIncrease, false);
-                } 
-                if (types.indexOf("mindcontrol") > -1 && this.settings.enableMindControl) {
-                    this.AddMindControl(randomLevelIncrease, false);
-                } 
-                if (types.indexOf("horny") > -1 && this.settings.enableHorny) {
-                    this.AddHorny(randomLevelIncrease, false);
-                }
+                    this.AddHorny(randomLevelIncrease + 1, getRandomInt(3) != 0); // 2/3 chance to push user over the edge (if allowed...)
+                } else this.AddHorny(randomLevelIncrease / 4, false);
+            }
+            if (types.indexOf("antidote") > -1 && getRandomInt(120) == 0) { // Odds are heal once every 4 minutes
+                SendAction(this.breathAntidoteEventStr[getRandomInt(this.breathAntidoteEventStr.length)]);
+                this.DoCure();
             }
         }
     }
