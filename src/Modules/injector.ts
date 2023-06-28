@@ -6,7 +6,7 @@ import { getModule } from "modules";
 import { GuiInjector } from "Settings/injector";
 import { InjectorSettingsModel } from "Settings/Models/injector";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
-import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, setOrIgnoreBlush, isPhraseInString, settingsSave, hookFunction, getCharacter, AUDIO, getPlayerVolume } from "../utils";
+import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, setOrIgnoreBlush, isPhraseInString, settingsSave, hookFunction, getCharacter, AUDIO, getPlayerVolume, OnAction, LSCG_SendLocal, addCustomEffect, removeCustomEffect, hookBCXCurse } from "../utils";
 import { ActivityModule, CustomAction, CustomPrerequisite } from "./activities";
 import { HypnoModule } from "./hypno";
 import { MiscModule } from "./misc";
@@ -68,7 +68,10 @@ export class InjectorModule extends BaseModule {
             sedativeMax: 4,
             mindControlMax: 4,
             hornyLevelMax: 4,
-            heartbeat: true
+            heartbeat: true,
+
+            continuousDeliveryActivatedAt: 0,
+            continuousDeliveryTimeout: 60 * 60 * 1000 // By default, stop delivering continuous drug after 2 hours
         };
     }
 
@@ -81,6 +84,7 @@ export class InjectorModule extends BaseModule {
     }
     
     safeword(): void {
+        this.settings.continuousDeliveryActivatedAt = 0;
         this.DoCure();
     }
 
@@ -100,6 +104,8 @@ export class InjectorModule extends BaseModule {
         this.settings.sedativeMax = d.sedativeMax;
         this.settings.mindControlMax = d.mindControlMax;
         this.settings.hornyLevelMax = d.hornyLevelMax;
+
+        this.InitStates();
 
         OnActivity(10, ModuleCategory.Injector, (data, sender, msg, megadata) => {
             var activityName = data.Dictionary[3]?.ActivityName;
@@ -278,9 +284,15 @@ export class InjectorModule extends BaseModule {
             return next(args);
         }, ModuleCategory.Injector);
 
+        hookFunction('ChatRoomCanAttemptStand', 1, (args, next) => {
+            if (this.Enabled && this.asleep)
+                return false;
+            return next(args);
+        }, ModuleCategory.Injector);
+
         hookFunction('ChatRoomFocusCharacter', 6, (args, next) => {
             if (this.Enabled && this.asleep) {
-                ChatRoomSendLocal("Character access blocked while drugged asleep.", 5000);
+                LSCG_SendLocal("Character access blocked while drugged asleep.", 5000);
                 return;
             }
             return next(args);
@@ -309,10 +321,39 @@ export class InjectorModule extends BaseModule {
             return next(args);
         }, ModuleCategory.Injector);
 
-        let lastCheckedForContinuous = 0;
+        OnAction(1, ModuleCategory.Injector, (data, sender, msg, metadata) => {
+            let deliverySlots = ["ItemMouth3"];
+            let messagesToCheck = [
+                "ActionUse",
+                "ActionSwap",
+                "ActionRemove"
+            ];
+
+            var target = data.Dictionary?.find((dictItem: { Tag: string; }) => dictItem.Tag == "DestinationCharacter")?.MemberNumber;
+            if (!target)
+                var target = data.Dictionary?.find((dictItem: { Tag: string; }) => dictItem.Tag == "TargetCharacter")?.MemberNumber;
+            if (!target)
+                var target = data.Dictionary?.find((dictItem: { Tag: string; }) => dictItem.Tag == "TargetCharacterName")?.MemberNumber;
+            
+            var targetGroup = data.Dictionary?.find((dictItem: { Tag: string; }) => dictItem.Tag == "FocusAssetGroup")?.AssetGroupName;
+            
+            if (target == Player.MemberNumber &&
+                (!targetGroup || deliverySlots.indexOf(targetGroup) > -1) &&
+                messagesToCheck.some(x => msg.startsWith(x))) {
+                let _ = this.IsWearingRespirator;
+            } else if (target == Player.MemberNumber && msg == "ItemMouth3LatexRespiratorSetGlow" && !!sender) {
+                this.CheckForContinuousToggle(sender);
+            }
+        });
+
+        // Check for respirator curses
+        hookBCXCurse("curseTrigger", (evt) => {
+            if (evt.group == "ItemMouth3")
+                this.CheckRespiratorCurseUpdate();
+        })
+
         let lastBreathEvent = 0;
-        let breathInterval = 4000; // breath event every 4s
-        let _lastTick: number = 0;
+        let breathInterval = 2000; // breath event every 4s
         hookFunction('TimerProcess', 1, (args, next) => {
             let now = CommonTime();
             if (!ActivityAllowed())
@@ -328,12 +369,6 @@ export class InjectorModule extends BaseModule {
                     DrawFlashScreen("#FF647F", 1000, this.hornyLevel);
                 }
                 ActivitySetArousal(Player, newProgress);
-            }
-            
-            // Check every 10 seconds for any continuous delivery update
-            if (lastCheckedForContinuous + 10000 < now) {
-                lastCheckedForContinuous = now;
-                this.CheckForContinuousDelivery();
             }
 
             // Check every minute for breath drug event
@@ -402,7 +437,7 @@ export class InjectorModule extends BaseModule {
     mindControlCooldownInterval: number = 0;
     hornyCooldownInterval: number = 0;
     hornyLastBumped: number = 0;
-    cooldownTickMs: number = 5000;
+    cooldownTickMs: number = 6000; // tick cooldown every 6 seconds
 
     InjectionLocationTable: Map<string, number> = new Map<string, number>(Object.entries(locationObj))
 
@@ -667,7 +702,10 @@ export class InjectorModule extends BaseModule {
         this.asleep = true;
         SendAction("%NAME% moans weakly as %PRONOUN% succumbs to unconciousness.");
         this.miscModule?.SetSleepExpression();
-        this.miscModule?.FallDownIfPoissible();
+        if (Player.CanKneel()) {
+            this.miscModule?.FallDownIfPossible();
+            addCustomEffect(Player, "ForceKneel");
+        }            
     }
 
     Wake() {
@@ -677,14 +715,14 @@ export class InjectorModule extends BaseModule {
             CharacterSetFacialExpression(Player, "Eyes", "Dazed");
             if (WardrobeGetExpression(Player)?.Emoticon == "Sleep")
                 CharacterSetFacialExpression(Player, "Emoticon", null);
+            removeCustomEffect(Player, "ForceKneel");
         }
     }
 
     Brainwash() {
         this.brainwashed = true;
         SendAction("%NAME%'s body goes limp as %POSSESSIVE% mind empties and %PRONOUN% awaits a command.");
-        if (!!this.hypnoModule)
-            this.hypnoModule.SetEyes();
+        this.hypnoModule?.SetEyes();
     }
 
     SnapBack() {
@@ -819,9 +857,9 @@ export class InjectorModule extends BaseModule {
             if (this.targetMindControlLevel > this.mindControlLevel) {
                 this.mindControlLevel = Math.max(this.targetMindControlLevel, this.mindControlLevel + this.drugLevelMultiplier / 10);
                 if (this.mindControlLevel == this.targetMindControlLevel) {
-                    if (!this.brainwashed) {
+                    if (!this.brainwashed)
                         MiniGameStart(this.brainWashGame.name, ((this.mindControlLevel / this.drugLevelMultiplier) * 8), "LSCG_InjectEnd_Brainwash");
-                    }
+                    
                     CurrentModule = "Online";
                 }
             }
@@ -833,9 +871,9 @@ export class InjectorModule extends BaseModule {
             if (this.targetSedativeLevel > this.sedativeLevel) {
                 this.sedativeLevel = Math.max(this.targetSedativeLevel, this.sedativeLevel + this.drugLevelMultiplier / 10);
                 if (this.sedativeLevel == this.targetSedativeLevel) {
-                    if (!this.asleep) {
+                    if (!this.asleep)
                         MiniGameStart(this.sleepyGame.name, ((this.sedativeLevel / this.drugLevelMultiplier) * 8), "LSCG_InjectEnd_Sedative");
-                    }
+                    
                     CurrentModule = "Online";
                 }
             }
@@ -895,16 +933,87 @@ export class InjectorModule extends BaseModule {
         }
     }
 
-    isWearingRespirator: boolean = false;
-    CheckForContinuousDelivery() {
-        var item = InventoryGet(Player, "ItemMouth3");
-        if (this.IsActiveRespirator(item) && !this.isWearingRespirator)
-            this.WearRespirator(item);
-        else if (!this.IsActiveRespirator(item) && this.isWearingRespirator)
-            this.RemoveRespirator();
+    InitStates() {
+        let item = InventoryGet(Player, "ItemMouth3");
+        this._wasWearingRespirator = this.IsValidRespirator(item);
+        if (this.asleep) {
+            this.miscModule?.SetSleepExpression();
+            this.miscModule?.FallDownIfPossible();
+            addCustomEffect(Player, "ForceKneel");
+        }
+        if (this.brainwashed) {
+            this.hypnoModule?.SetEyes();
+        }
     }
 
-    IsActiveRespirator(item: Item | null): boolean {
+    CheckRespiratorCurseUpdate() {
+        if (this.IsWearingRespirator && this.IsRespiratorOn && !this._respiratorHasGas) {
+            SendAction("%NAME%'s mask whirs and shudders as it reloads its own supply to continues emitting.");
+            this.settings.continuousDeliveryActivatedAt = CommonTime();
+        } else if (this.IsWearingRespirator && !this.IsRespiratorOn) {
+            SendAction("%NAME%'s mask hums menacingly as it holds its supply in reserve.");
+        } else if (this.IsWearingRespirator && this.IsRespiratorOn && this._respiratorHasGas) {
+            SendAction("%NAME%'s mask clicks and turns itself back on.");
+        }
+    }
+
+    CheckForContinuousToggle(sender: Character) {
+        if (this.IsWearingRespirator) {
+            if (this.IsRespiratorOn) {
+                if (!this._respiratorHasGas) {
+                    SendAction("%OPP_NAME% reloads %NAME%'s mask and turns it back on, pumping gas back into %POSSESSIVE% lungs.", sender);
+                    this.settings.continuousDeliveryActivatedAt = CommonTime();
+                } else 
+                    SendAction("%OPP_NAME% switches on %NAME%'s mask, filling %POSSESSIVE% lungs.", sender);
+            } else {
+                SendAction("%OPP_NAME% switches off %NAME%'s mask, halting the flow of gas.", sender);
+            }
+        }
+    }
+
+    _wasWearingRespirator: boolean = false;
+    get IsWearingRespirator(): boolean {
+        let item = InventoryGet(Player, "ItemMouth3");
+        let isWearing = this.IsValidRespirator(item);
+        if (!this._wasWearingRespirator && isWearing) {
+            if (!this.asleep && !this.brainwashed) {
+                SendAction("%NAME%'s eyes widen as %POSSESSIVE% mask activates, slowly filling %POSSESSIVE% lungs with its drug.");
+                CharacterSetFacialExpression(Player, "Eyes", "Surprised", 4000);
+            }
+        } else if (this._wasWearingRespirator && !isWearing) {
+            SendAction("%NAME% takes a deep breath of cool, clean air as %POSSESSIVE% mask is removed.");
+        }
+        this._wasWearingRespirator = isWearing;
+        return isWearing;
+    }
+
+    get _respiratorHasGas(): boolean {
+        return this.settings.continuousDeliveryActivatedAt + this.settings.continuousDeliveryTimeout > CommonTime();
+    }
+
+    get RespiratorHasGas(): boolean {
+        let hasGas = this._respiratorHasGas;
+        if (!hasGas && this.IsRespiratorOn) {
+            SendAction("%NAME%'s mask hisses quietly as it runs out of its supply of gas.");
+            let item = InventoryGet(Player, "ItemMouth3");
+            if (!!item && !!item.Property && item.Property.Type) {
+                item.Property.Type = item.Property.Type.replace("g1", "g0");
+                CharacterRefresh(Player, true);
+            }
+        }
+        return hasGas;
+    }
+
+    get IsRespiratorOn(): boolean {
+        let item = InventoryGet(Player, "ItemMouth3");
+        return item?.Property?.Type?.substring(3,4) == "1";
+    }
+
+    get IsContinuousDeliveryActive(): boolean {
+        return this.IsWearingRespirator && this.RespiratorHasGas && this.IsRespiratorOn;
+    }
+
+    IsValidRespirator(item: Item | null): boolean {
         // False if not a crafted respirator
         if (!item || 
             !item.Craft || 
@@ -916,28 +1025,10 @@ export class InjectorModule extends BaseModule {
         //Type: "f2g1s0m0l0"
         let typeString = item.Property.Type;
         
-        let hasHose = typeString.substring(1,2) == '2' || typeString.substring(1,2) == '3';
-        let isGlowOn = typeString.substring(3,4) == '1';
+        let hasHose = typeString.substring(1,2) == '2' || typeString.substring(1,2) == '3';        
         let isDrugged = this.GetDrugTypes(item.Craft).length > 0
         
-        return hasHose && isGlowOn && isDrugged;
-    }
-
-    WearRespirator(respirator: Item | null) {
-        if (!!respirator && this.IsActiveRespirator(respirator)) {
-            let types = this.GetDrugTypes(respirator?.Craft!);
-            if (types.length <= 0)
-                return;
-
-            SendAction("%NAME%'s eyes widen as %POSSESSIVE% mask activates, slowly filling %POSSESSIVE% lungs with its drug.");
-            CharacterSetFacialExpression(Player, "Eyes", "Surprised", 4000);
-            this.isWearingRespirator = true;
-        }
-    }
-
-    RemoveRespirator() {
-        SendAction("%NAME% takes a deep breath of cool, clean air.");
-        this.isWearingRespirator = false;
+        return hasHose && isDrugged;
     }
 
     breathSedativeEventStr: string[] = [
@@ -959,29 +1050,28 @@ export class InjectorModule extends BaseModule {
     ];
 
     BreathInDrugEvent() {
-        if (this.isWearingRespirator) {
+        if (this.IsContinuousDeliveryActive) {
             let mask = InventoryGet(Player, "ItemMouth3");
             if (!mask)
                 return;
             let types = this.GetDrugTypes(mask.Craft!);
-            let randomLevelIncrease = (getRandomInt(5) + 1) / 10; // .1 to .5
+            let randomLevelIncrease = (getRandomInt(4) + 2) / 10; // .2 to .5
 
             // Event is 5% chance every 4s
             if (getRandomInt(20) == 0) {
                 randomLevelIncrease += 1;
                 if (types.indexOf("sedative") > -1 && this.settings.enableSedative) {
-                    SendAction(this.breathSedativeEventStr[getRandomInt(this.breathSedativeEventStr.length)]);
-                    this.AddSedative(randomLevelIncrease, getRandomInt(2) == 0); // 50% chance to start incap minigame
+                    if (!this.asleep) SendAction(this.breathSedativeEventStr[getRandomInt(this.breathSedativeEventStr.length)]);
+                    this.AddSedative(randomLevelIncrease, getRandomInt(3) != 0); // 2/3 chance to start incap minigame
                 } 
                 if (types.indexOf("mindcontrol") > -1 && this.settings.enableMindControl) {
-                    SendAction(this.breathMindControlEventStr[getRandomInt(this.breathMindControlEventStr.length)]);
-                    this.AddMindControl(randomLevelIncrease, getRandomInt(2) == 0); // 50% chance to start incap minigame
+                    if (!this.brainwashed) SendAction(this.breathMindControlEventStr[getRandomInt(this.breathMindControlEventStr.length)]);
+                    this.AddMindControl(randomLevelIncrease, getRandomInt(3) != 0); // 2/3 chance to start incap minigame
                 } 
                 if (types.indexOf("horny") > -1 && this.settings.enableHorny) {
                     SendAction(this.breathAphrodesiacEventStr[getRandomInt(this.breathAphrodesiacEventStr.length)]);
-                    this.AddHorny(randomLevelIncrease, getRandomInt(2) == 0); // 50% chance to push user over the edge (if allowed...)
+                    this.AddHorny(randomLevelIncrease, getRandomInt(3) != 0); // 2/3 chance to push user over the edge (if allowed...)
                 }
-                CharacterSetFacialExpression(Player, "Eyes", "Dazed", 4000);
             } else { // Do regular increase of drug level every 4s
                 randomLevelIncrease = randomLevelIncrease / 4; // .025 to .125
                 if (types.indexOf("sedative") > -1 && this.settings.enableSedative) {

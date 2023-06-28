@@ -267,6 +267,11 @@ export function addCustomEffect(C: Character | null, effect: EffectName): boolea
 		return updated;
 	}
 
+	if (Array.isArray(emoticon.Asset.AllowEffect))
+		emoticon.Asset.AllowEffect.push(effect);
+	else
+		emoticon.Asset.AllowEffect = [effect];
+
 	if (!emoticon.Property) {
 		emoticon.Property = { Effect: [effect] };
 		updated = true;
@@ -280,6 +285,7 @@ export function addCustomEffect(C: Character | null, effect: EffectName): boolea
 
 	if (updated && ServerPlayerIsInChatRoom() && C == Player) {
 		ChatRoomCharacterUpdate(Player);
+		CharacterRelease(Player, true);
 	}
 	return updated;
 }
