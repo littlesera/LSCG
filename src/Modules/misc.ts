@@ -1,7 +1,7 @@
 import { BaseModule } from "base";
 import { MiscSettingsModel } from "Settings/Models/base";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { getRandomInt, hookFunction, OnAction, OnActivity, removeAllHooksByModule, SendAction, setOrIgnoreBlush } from "../utils";
+import { addCustomEffect, getRandomInt, hookFunction, LSCG_SendLocal, OnAction, OnActivity, removeAllHooksByModule, removeCustomEffect, SendAction, setOrIgnoreBlush } from "../utils";
 
 export class MiscModule extends BaseModule {
     get settings(): MiscSettingsModel {
@@ -145,9 +145,15 @@ export class MiscModule extends BaseModule {
             return next(args);
         }, ModuleCategory.Misc);
 
+        hookFunction('ChatRoomCanAttemptStand', 1, (args, next) => {
+            if (this.settings.chloroformEnabled && this.settings.immersiveChloroform && this._isChloroformed)
+                return false;
+            return next(args);
+        }, ModuleCategory.Misc);
+
         hookFunction('ChatRoomFocusCharacter', 6, (args, next) => {
             if (this.settings.chloroformEnabled && this.settings.immersiveChloroform && this._isChloroformed) {
-                ChatRoomSendLocal("Character access blocked while immersively chloroformed.", 5000);
+                LSCG_SendLocal("Character access blocked while immersively chloroformed.", 5000);
                 return;
             }
             return next(args);
@@ -215,7 +221,7 @@ export class MiscModule extends BaseModule {
     AddChloroform(sender: Character | null) {
         SendAction("%NAME% eyes go wide as the sweet smell of ether fills %POSSESSIVE% nostrils.");
         if (!!sender && sender.MemberNumber != Player.MemberNumber)
-            ChatRoomSendLocal(CharacterNickname(sender) + " has forced chloroform over your mouth, you will passout if it is not removed soon!", 30000);
+            LSCG_SendLocal(CharacterNickname(sender) + " has forced chloroform over your mouth, you will passout if it is not removed soon!", 30000);
         CharacterSetFacialExpression(Player, "Eyes", "Scared");
         this.passoutTimer = setTimeout(() => this.StartPassout_1(), 20000);
     }
@@ -237,7 +243,10 @@ export class MiscModule extends BaseModule {
     Passout() {
         SendAction("%NAME% slumps weakly as %PRONOUN% slips into unconciousness.");
         this.SetSleepExpression();
-        this.FallDownIfPoissible();
+        if (Player.CanKneel()) {
+            this.FallDownIfPossible();
+            addCustomEffect(Player, "ForceKneel");
+        }        
         this.isChloroformed = true;
         clearTimeout(this.passoutTimer);
         //this.eyesInterval = setInterval(() => this.SetSleepExpression(), 1000);
@@ -246,7 +255,7 @@ export class MiscModule extends BaseModule {
     RemoveChloroform() {
         if (this.isChloroformed) {
             SendAction("%NAME% continues to sleep peacefully as the cloth is removed...");
-            setTimeout(() => this.RemoveChloroform_1(), 10000);
+            setTimeout(() => this.RemoveChloroform_1(), 20000);
         }
         else {
             SendAction("%NAME% gulps in fresh air as the cloth is removed...");
@@ -257,7 +266,7 @@ export class MiscModule extends BaseModule {
 
     RemoveChloroform_1() {
         SendAction("%NAME% starts to stir with a gentle moan...");
-        setTimeout(() => this.RemoveChloroform_2(), 5000);
+        setTimeout(() => this.RemoveChloroform_2(), 10000);
     }
 
     RemoveChloroform_2() {
@@ -271,6 +280,7 @@ export class MiscModule extends BaseModule {
         CharacterSetFacialExpression(Player, "Eyes", "Dazed");
         CharacterSetFacialExpression(Player, "Emoticon", null);
         setOrIgnoreBlush("Medium");
+        removeCustomEffect(Player, "ForceKneel");
     }
 
     SetSleepExpression() {
@@ -278,14 +288,9 @@ export class MiscModule extends BaseModule {
         CharacterSetFacialExpression(Player, "Emoticon", "Sleep");
     }
 
-    FallDownIfPoissible() {
-        var isStanding = Player.Pose != null && 
-            (Player.Pose.length == 0 ||
-            Player.Pose.includes("BaseLower") || 
-            Player.Pose.includes("LegsOpen") ||
-            Player.Pose.includes("LegsClosed") ||
-            Player.Pose.includes("Spread"));
-        if (Player.CanKneel() && isStanding)
-            CharacterSetActivePose(Player, "Kneel");
+    FallDownIfPossible() {
+        if (Player.CanKneel()) {
+            CharacterSetActivePose(Player, "Kneel", true);
+        }
     }
 }
