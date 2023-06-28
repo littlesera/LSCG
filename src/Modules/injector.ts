@@ -950,6 +950,7 @@ export class InjectorModule extends BaseModule {
         if (this.IsWearingRespirator && this.IsRespiratorOn && !this._respiratorHasGas) {
             SendAction("%NAME%'s mask whirs and shudders as it reloads its own supply to continues emitting.");
             this.settings.continuousDeliveryActivatedAt = CommonTime();
+            settingsSave();
         } else if (this.IsWearingRespirator && !this.IsRespiratorOn) {
             SendAction("%NAME%'s mask hums menacingly as it holds its supply in reserve.");
         } else if (this.IsWearingRespirator && this.IsRespiratorOn && this._respiratorHasGas) {
@@ -963,6 +964,7 @@ export class InjectorModule extends BaseModule {
                 if (!this._respiratorHasGas) {
                     SendAction("%OPP_NAME% reloads %NAME%'s mask and turns it back on, pumping gas back into %POSSESSIVE% lungs.", sender);
                     this.settings.continuousDeliveryActivatedAt = CommonTime();
+                    settingsSave()
                 } else 
                     SendAction("%OPP_NAME% switches on %NAME%'s mask, filling %POSSESSIVE% lungs.", sender);
             } else {
@@ -980,6 +982,8 @@ export class InjectorModule extends BaseModule {
                 SendAction("%NAME%'s eyes widen as %POSSESSIVE% mask activates, slowly filling %POSSESSIVE% lungs with its drug.");
                 CharacterSetFacialExpression(Player, "Eyes", "Surprised", 4000);
             }
+            this.settings.continuousDeliveryActivatedAt = CommonTime();
+            settingsSave();
         } else if (this._wasWearingRespirator && !isWearing) {
             SendAction("%NAME% takes a deep breath of cool, clean air as %POSSESSIVE% mask is removed.");
         }
@@ -993,7 +997,7 @@ export class InjectorModule extends BaseModule {
 
     get RespiratorHasGas(): boolean {
         let hasGas = this._respiratorHasGas;
-        if (!hasGas && this.IsRespiratorOn) {
+        if (!hasGas && this.IsWearingRespirator && this.IsRespiratorOn) {
             SendAction("%NAME%'s mask hisses quietly as it runs out of its supply of gas.");
             let item = InventoryGet(Player, "ItemMouth3");
             if (!!item && !!item.Property && item.Property.Type) {
