@@ -99,6 +99,10 @@ export class MiscModule extends BaseModule {
             if (this.isChloroformed) {
                 this.SetSleepExpression();
                 this.ActivateChloroEvent();
+                if (Player.CanKneel()) {
+                    this.FallDownIfPossible();
+                    addCustomEffect(Player, "ForceKneel");
+                }   
             }
         }, ModuleCategory.Misc);
 
@@ -125,31 +129,31 @@ export class MiscModule extends BaseModule {
         }, ModuleCategory.Misc);
 
         hookFunction('Player.CanChangeOwnClothes', 1, (args, next) => {
-            if (this.settings.chloroformEnabled && this.settings.immersiveChloroform && this._isChloroformed)
+            if (this.settings.chloroformEnabled && this.settings.immersiveChloroform && this.isChloroformed)
                 return false;
             return next(args);
         }, ModuleCategory.Misc);
 
         hookFunction('Player.IsDeaf', 1, (args, next) => {
-            if (this.settings.chloroformEnabled && this.settings.immersiveChloroform && this._isChloroformed)
+            if (this.settings.chloroformEnabled && this.settings.immersiveChloroform && this.isChloroformed)
                 return true;
             return next(args);
         }, ModuleCategory.Misc);
 
         hookFunction('Player.IsBlind', 1, (args, next) => {
-            if (this.settings.chloroformEnabled && this.settings.immersiveChloroform && this._isChloroformed)
+            if (this.settings.chloroformEnabled && this.settings.immersiveChloroform && this.isChloroformed)
                 return true;
             return next(args);
         }, ModuleCategory.Misc);
 
         hookFunction('Player.CanWalk', 1, (args, next) => {
-            if (this.settings.chloroformEnabled && this.settings.immersiveChloroform && this._isChloroformed)
+            if (this.settings.chloroformEnabled && this.settings.immersiveChloroform && this.isChloroformed)
                 return false;
             return next(args);
         }, ModuleCategory.Misc);
 
         hookFunction('ChatRoomCanAttemptStand', 1, (args, next) => {
-            if (this.settings.chloroformEnabled && this.settings.immersiveChloroform && this._isChloroformed)
+            if (this.settings.chloroformEnabled && this.settings.immersiveChloroform && this.isChloroformed)
                 return false;
             return next(args);
         }, ModuleCategory.Misc);
@@ -170,7 +174,14 @@ export class MiscModule extends BaseModule {
                     this.ChloroformWearOff();
             }
             return next(args);
-        })
+        }, ModuleCategory.Misc);
+    }
+
+    InitStates() {
+        if (Player.CanKneel()) {
+            this.FallDownIfPossible();
+            addCustomEffect(Player, "ForceKneel");
+        }   
     }
 
     lastChecked: number = 0;
@@ -184,6 +195,7 @@ export class MiscModule extends BaseModule {
     chloroEventInterval: number = 0;
     eyesInterval: number = 0;
     passoutTimer: number = 0;
+    awakenTimeout: number = 0;
     _isChloroformed: boolean = false;
 
     set isChloroformed(value: boolean) {
@@ -234,12 +246,24 @@ export class MiscModule extends BaseModule {
     }
 
     AddChloroform(sender: Character | null) {
-        SendAction("%NAME% eyes go wide as the sweet smell of ether fills %POSSESSIVE% nostrils.");
-        if (!!sender && sender.MemberNumber != Player.MemberNumber)
-            LSCG_SendLocal(CharacterNickname(sender) + " has forced chloroform over your mouth, you will passout if it is not removed soon!", 30000);
-        CharacterSetFacialExpression(Player, "Eyes", "Scared");
-        clearTimeout(this.potencyTimeout);
-        this.passoutTimer = setTimeout(() => this.StartPassout_1(), 20000);
+        if (this.chloroformWearingOff) {
+            SendAction("%NAME%'s muscles slump limply once more as another dose chloroform is reapplied.");
+            this.chloroformWearingOff = false;
+            this.isChloroformed = true;
+            this.settings.chloroformedAt = CommonTime();
+            clearTimeout(this.awakenTimeout);
+            settingsSave();
+        } else {
+            if (!this.isChloroformed)
+                SendAction("%NAME% eyes go wide as the sweet smell of ether fills %POSSESSIVE% nostrils.");
+            else
+                SendAction("%NAME% slumps back in %POSSESSIVE% sleep as another dose of ether assails %POSSESSIVE% senses.");
+            if (!!sender && sender.MemberNumber != Player.MemberNumber)
+                LSCG_SendLocal(CharacterNickname(sender) + " has forced chloroform over your mouth, you will passout if it is not removed soon!", 30000);
+            CharacterSetFacialExpression(Player, "Eyes", "Scared");
+            clearTimeout(this.awakenTimeout);
+            this.passoutTimer = setTimeout(() => this.StartPassout_1(), 20000);
+        }
     }
 
     StartPassout_1() {
@@ -267,33 +291,35 @@ export class MiscModule extends BaseModule {
         this.settings.chloroformedAt = CommonTime();
         clearTimeout(this.passoutTimer);
         settingsSave();
-        //this.eyesInterval = setInterval(() => this.SetSleepExpression(), 1000);
     }
 
-    potencyTimeout: number = 0;
     chloroformWearingOff: boolean = false;
     ChloroformWearOff() {
         SendAction("%NAME% takes a deep, calm breath as %POSSESSIVE% chloroform starts to lose its potency...");
-        this.potencyTimeout = setTimeout(() => this.RemoveChloroform_1(), 45000);
+        clearTimeout(this.awakenTimeout);
+        this.awakenTimeout = setTimeout(() => this.RemoveChloroform_1(), 45000);
         this.chloroformWearingOff = true;
     }
 
     RemoveChloroform() {
         if (this.isChloroformed) {
-            clearTimeout(this.potencyTimeout);
             SendAction("%NAME% continues to sleep peacefully as the cloth is removed...");
-            setTimeout(() => this.RemoveChloroform_1(), 20000);
+            clearTimeout(this.awakenTimeout);
+            this.awakenTimeout = setTimeout(() => this.RemoveChloroform_1(), 20000);
+            this.chloroformWearingOff = true;
         }
         else {
             SendAction("%NAME% gulps in fresh air as the cloth is removed...");
             CharacterSetFacialExpression(Player, "Eyes", null);
             clearTimeout(this.passoutTimer);
+            clearTimeout(this.awakenTimeout);
         }
     }
 
     RemoveChloroform_1() {
         SendAction("%NAME% starts to stir with a gentle moan...");
-        setTimeout(() => this.RemoveChloroform_2(), 10000);
+        clearTimeout(this.awakenTimeout);
+        this.awakenTimeout = setTimeout(() => this.RemoveChloroform_2(), 10000);
     }
 
     RemoveChloroform_2() {
