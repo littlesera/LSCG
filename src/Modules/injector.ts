@@ -72,7 +72,11 @@ export class InjectorModule extends BaseModule {
 
             continuousDeliveryForever: false,
             continuousDeliveryActivatedAt: 0,
-            continuousDeliveryTimeout: 60 * 60 * 1000 // By default, stop delivering continuous drug after 2 hours
+            continuousDeliveryTimeout: 60 * 60 * 1000, // By default, stop delivering continuous drug after 2 hours
+
+            asleep: false,
+            brainwashed: false,
+            stats: {}
         };
     }
 
@@ -443,6 +447,19 @@ export class InjectorModule extends BaseModule {
 
     InjectionLocationTable: Map<string, number> = new Map<string, number>(Object.entries(locationObj))
 
+    GetHandheldItemNameAndDescriptionConcat(C?: Character | null): string | undefined {
+        if (!C)
+            C = Player;
+
+        var asset = InventoryGet(C, "ItemHandheld");
+        if (!asset?.Craft)
+            return;
+        
+        var name = asset.Craft.Name;
+        var description = asset.Craft.Description;
+        return name + " | " + description;
+    }
+
     GetDrugTypes(item: CraftingItem): DrugType[] {
         var name = item.Name;
         var description = item.Description;
@@ -770,15 +787,11 @@ export class InjectorModule extends BaseModule {
         if (!C)
             return false;
 
-        var asset = InventoryGet(C, "ItemHandheld");
-        if (!asset?.Craft)
+        var totalString = this.GetHandheldItemNameAndDescriptionConcat();
+        if (!totalString)
             return false;
-        
-        var name = asset.Craft.Name;
-        var description = asset.Craft.Description;
-        var totalString = name + " " + description;
 
-        var isNetgun = this.settings.netgunKeywords?.some(ph => isPhraseInString(totalString, ph, true));
+        var isNetgun = this.settings.netgunKeywords?.some(ph => isPhraseInString(totalString ?? "", ph, true));
         return isNetgun;
     }
 
@@ -822,18 +835,28 @@ export class InjectorModule extends BaseModule {
     }
 
     ApplyNet(target: Character) {
-        var net = InventoryWear(target, "Net", "ItemDevices", "Default", 8, Player.MemberNumber, <CraftingItem>{
-            MemberNumber: Player.MemberNumber,
-            MemberName: CharacterNickname(Player),
-            Name: "Net Gun Net",
-            Description: "A lightweight net designed to be shot from a handheld launcher."
-        }, true);
-        if (!!net && !!net.Property) {
+        var netgunStr = this.GetHandheldItemNameAndDescriptionConcat() ?? "";
+        let craftedNets = Player.Crafting?.filter(x => x?.Item == "Net");
+        let craftedNet = craftedNets?.find(x => !!x && !!x.Name && isPhraseInString(netgunStr, x.Name));
+        let isDefaultNet = false;
+        if (!craftedNet) {
+            isDefaultNet = true;
+            craftedNet = <CraftingItem>{
+                MemberNumber: Player.MemberNumber,
+                MemberName: CharacterNickname(Player),
+                Name: "Net Gun Net",
+                Description: "A lightweight net designed to be shot from a handheld launcher.",
+                Color: "Default"            
+            };
+        }
+        var net = InventoryWear(target, "Net", "ItemDevices", craftedNet.Color, isDefaultNet ? 8 : undefined, Player.MemberNumber, craftedNet, false);
+        InventoryCraft(Player, target, "ItemDevices", craftedNet, true);
+        if (!!net && !!net.Property && isDefaultNet) {
             net.Difficulty = 8;
             net.Property.Difficulty = 8;
         }
         ChatRoomCharacterUpdate(target);
-        SendAction("%NAME%'s net engulfs %OPP_NAME%.", target);
+        SendAction(`%NAME%'s ${isDefaultNet ? "net" : craftedNet.Name} engulfs %OPP_NAME%.`, target);
     }
 
     /**
