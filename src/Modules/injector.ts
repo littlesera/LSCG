@@ -842,11 +842,31 @@ export class InjectorModule extends BaseModule {
         return filteredList[getRandomInt(filteredList.length)];
     }
 
-    ApplyNet(target: Character) {
+    GetCraftedNet(): CraftingItem | undefined {
+        let netgun = InventoryGet(Player, "ItemHandheld");
+        let netgunCraft = netgun?.Craft;
         var netgunStr = this.GetHandheldItemNameAndDescriptionConcat() ?? "";
-        let craftedNets = Player.Crafting?.filter(x => x?.Item == "Net");
-        let craftedNet = craftedNets?.find(x => !!x && !!x.Name && isPhraseInString(netgunStr, x.Name));
+        if (!netgunCraft || !netgunStr)
+            return;
+
+        let craftedNets: CraftingItem[] = Player.Crafting?.filter(x => !!x && x.Item == "Net").map(x => <CraftingItem>x) ?? [];
+
+        let craftingMember = netgunCraft.MemberNumber;
+        if (!!craftingMember && craftingMember >= 0 && craftingMember != Player.MemberNumber) {
+            let craftingChar = getCharacter(craftingMember);
+            if (!!craftingChar) {
+                craftedNets = craftedNets?.concat(CraftingDecompressServerData(<string>(<any>craftingChar.Crafting)).filter(x => x?.Item == "Net"));
+            }
+        }
+        
+        let craftedNet = craftedNets?.filter(x => !!x)?.find(x => !!x && !!x.Name && isPhraseInString(netgunStr, x.Name));
+        return craftedNet;
+    }
+
+    ApplyNet(target: Character) {
         let isDefaultNet = false;
+        let craftedNet = this.GetCraftedNet();
+
         if (!craftedNet) {
             isDefaultNet = true;
             craftedNet = <CraftingItem>{
