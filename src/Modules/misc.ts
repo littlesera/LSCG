@@ -169,6 +169,7 @@ export class MiscModule extends BaseModule {
                 if (this.isChloroformed && this.settings.chloroformedAt + this.settings.chloroformPotencyTime < now && !this.chloroformWearingOff)
                     this.ChloroformWearOff();
             }
+            return next(args);
         })
     }
 

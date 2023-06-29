@@ -115,7 +115,7 @@ export class CollarModule extends BaseModule {
                 this.CheckGagSuffocate("TimerProcess", null);
             }
             return next(args);
-        })
+        }, ModuleCategory.Collar)
 
         // Check for heavy gag + nose plugs
         OnAction(100, ModuleCategory.Misc, (data, sender, msg, metadata) => {
