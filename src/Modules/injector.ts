@@ -787,6 +787,13 @@ export class InjectorModule extends BaseModule {
         if (!C)
             return false;
 
+        let allowedNetGuns = [
+            "MedicalInjector"
+        ]
+        var item = InventoryGet(Player, "ItemHandheld");
+        if (!item || !item.Asset || allowedNetGuns.indexOf(item.Asset.Name) == -1)
+            return false;
+
         var totalString = this.GetHandheldItemNameAndDescriptionConcat();
         if (!totalString)
             return false;
