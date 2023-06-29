@@ -1,7 +1,13 @@
-import { BaseSettingsModel } from "./base";
+import { BaseSettingsModel, ModuleStats } from "./base";
 
 export interface CollarSettingsModel extends CollarPublicSettingsModel {        
-    
+    stats: CollarModuleStats;
+}
+
+export interface CollarModuleStats extends ModuleStats {
+    collarPassoutCount: number;
+    handPassoutCount: number;
+    gagPassoutCount: number;
 }
 
 export interface CollarPublicSettingsModel extends BaseSettingsModel {

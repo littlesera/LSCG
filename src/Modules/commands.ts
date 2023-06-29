@@ -189,7 +189,13 @@ export class CommandModule extends BaseModule {
 								setTimeout(() => {
 									let tightenTrigger = this.collar.settings.tightTrigger;
 									let loosenTrigger = this.collar.settings.looseTrigger;	
-									SendAction(`%NAME%'s collar chimes and a computerized voice reads out:\nCurrent Level: ${this.collar.settings.chokeLevel}...\nTighten Trigger: '${tightenTrigger}'...\nLoosen Trigger: '${loosenTrigger}'...\nRemote Access: ${this.collar.settings.remoteAccess ? "ENABLED" : "DISABLED"}...\nAutoasphyxiation: ${this.collar.settings.allowSelfTightening ? "ENABLED" : "DISABLED"}...`);
+									let chokeCount = this.collar.settings.stats.collarPassoutCount;
+									let remoteAccess = "ENABLED";
+									if (!this.collar.settings.remoteAccess)
+										remoteAccess = "DISABLED";
+									else if (this.collar.settings.limitToCrafted || this.collar.allowedChokeMembers.length > 0)
+										remoteAccess = "LIMITED";
+									SendAction(`%NAME%'s collar chimes and a computerized voice reads out:\nCurrent Level: ${this.collar.settings.chokeLevel}...\nCorrective Cycles: ${chokeCount}...\nTighten Trigger: '${tightenTrigger}'...\nLoosen Trigger: '${loosenTrigger}'...\nRemote Access: ${remoteAccess}...`);
 								}, 1500);
 							}
 					} 

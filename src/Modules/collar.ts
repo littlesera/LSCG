@@ -50,7 +50,19 @@ export class CollarModule extends BaseModule {
             looseTrigger: "loose",
             collarPurchased: false,
             limitToCrafted: false,
-            remoteAccess: false
+            remoteAccess: false,
+            allowSelfLoosening: false,
+            allowSelfTightening: false,
+            anyCollar: false,
+            collar: {},
+            immersive: false,
+            lockable: false,
+            locked: false,
+            stats: {
+                collarPassoutCount: 0,
+                gagPassoutCount: 0,
+                handPassoutCount: 0
+            }
         };
     }
 
@@ -611,22 +623,25 @@ export class CollarModule extends BaseModule {
         CharacterSetFacialExpression(Player, "Eyes", "Closed");
         CharacterSetFacialExpression(Player, "Mouth", "Closed");
         clearTimeout(this.chokeTimeout);
-        console.info("End Passout. Date.now() = " + Date.now());
 
         if (reason == PassoutReason.COLLAR) {
             SendAction("As %NAME% collapses unconscious, %POSSESSIVE% collar releases all of its pressure with a long hiss.");
             if (!AudioShouldSilenceSound(true))
                 AudioPlaySoundEffect("Deflation");
             this.ResetChoke();
+            this.settings.stats.collarPassoutCount++;
         }
         else if (reason == PassoutReason.HAND) {
             SendAction("As %NAME% collapses unconscious, %OPP_NAME% releases %POSSESSIVE% neck.", chokingMember);
             this.ReleaseHandChoke(chokingMember);
+            this.settings.stats.handPassoutCount++;
         }
         else if (reason == PassoutReason.PLUGS) {
             SendAction("As %NAME% slumps unconscious, %POSSESSIVE% nose plugs fall out.");
             this.ForceReleasePlugs();
+            this.settings.stats.gagPassoutCount++;
         }
+        settingsSave();
     }
 
     ChokeEvent() {
