@@ -31,7 +31,12 @@ export class HypnoModule extends BaseModule {
             immersive: false,
             trigger: "",
             triggerTime: 5,
-            locked: false
+            locked: false,
+            awakeners: "",
+            hypnotized: false,
+            hypnotizedBy: -1,
+            limitRemoteAccessToHypnotizer: false,
+            stats: {}
         };
     }
 
@@ -295,6 +300,7 @@ export class HypnoModule extends BaseModule {
         if (!AudioShouldSilenceSound(true))
             AudioPlaySoundEffect("SciFiEffect", 1);
         this.hypnoActivated = true;
+        this.settings.stats.hypnotizedCount++;
 
         if (wasWord)
             SendAction("%NAME%'s eyes immediately unfocus, %POSSESSIVE% posture slumping slightly as %PRONOUN% loses control of %POSSESSIVE% body at the utterance of a trigger word.");

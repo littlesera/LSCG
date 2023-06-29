@@ -1,4 +1,8 @@
-import { BaseSettingsModel } from "./base";
+import { BaseSettingsModel, ModuleStats } from "./base";
+
+export interface HypnoModuleStats extends ModuleStats {
+    hypnotizedCount: number;
+}
 
 export interface HypnoSettingsModel extends HypnoPublicSettingsModel {
     trigger: string;
@@ -8,6 +12,7 @@ export interface HypnoSettingsModel extends HypnoPublicSettingsModel {
     existingEye2Name: string | undefined;
     existingEyeExpression: ExpressionName | null;
     enableArousal: boolean;
+    stats: HypnoModuleStats;
 }
 
 export interface HypnoPublicSettingsModel extends BaseSettingsModel {
