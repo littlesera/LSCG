@@ -1200,7 +1200,8 @@ export class ActivityModule extends BaseModule {
     IncomingGrab(sender: Character, grabType: GrabType) {
         if (!!sender.MemberNumber) {
             this.grabbedBy(sender.MemberNumber, grabType);
-            this.NotifyAboutEscapeCommand(sender, grabType);
+            if (grabType != "hand")
+                this.NotifyAboutEscapeCommand(sender, grabType);
         }
     }
 
