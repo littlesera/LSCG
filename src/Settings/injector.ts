@@ -66,6 +66,12 @@ export class GuiInjector extends GuiSubscreen {
 					setSetting: (val) => this.settings.showDrugLevels = val
 				},<Setting>{
 					type: "checkbox",
+					label: "Allow Continuous Delivery:",
+					description: "If true, will allow respirators to deliver a continuous supply of drugged gas.",
+					setting: () => this.settings.enableContinuousDelivery ?? true,
+					setSetting: (val) => this.settings.enableContinuousDelivery = val
+				},<Setting>{
+					type: "checkbox",
 					label: "Inexhaustible Gases:",
 					description: "If true, any continuous delivery (eg. respirator) on you will never run out of gas.",
 					setting: () => this.settings.continuousDeliveryForever ?? false,

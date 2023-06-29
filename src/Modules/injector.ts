@@ -70,6 +70,7 @@ export class InjectorModule extends BaseModule {
             hornyLevelMax: 4,
             heartbeat: true,
 
+            enableContinuousDelivery: true,
             continuousDeliveryForever: false,
             continuousDeliveryActivatedAt: 0,
             continuousDeliveryTimeout: 60 * 60 * 1000, // By default, stop delivering continuous drug after 2 hours
@@ -354,7 +355,7 @@ export class InjectorModule extends BaseModule {
 
         // Check for respirator curses
         hookBCXCurse("curseTrigger", (evt) => {
-            if (evt.group == "ItemMouth3" && this.Enabled)
+            if (evt.group == "ItemMouth3" && this.Enabled && this.settings.enableContinuousDelivery)
                 this.CheckRespiratorCurseUpdate();
         })
 
@@ -378,7 +379,7 @@ export class InjectorModule extends BaseModule {
             }
 
             // Check every minute for breath drug event
-            if (lastBreathEvent + breathInterval < now) {
+            if (this.settings.enableContinuousDelivery && lastBreathEvent + breathInterval < now) {
                 lastBreathEvent = now;
                 this.BreathInDrugEvent();
             }
@@ -1070,7 +1071,8 @@ export class InjectorModule extends BaseModule {
 
     IsValidRespirator(item: Item | null): boolean {
         // False if not a crafted respirator
-        if (!item || 
+        if (!this.settings.enableContinuousDelivery ||
+            !item || 
             !item.Craft || 
             item.Asset.Name != "LatexRespirator" || 
             !item.Property || 
