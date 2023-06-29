@@ -181,7 +181,7 @@ export class ActivityModule extends BaseModule {
                     Name: "ItemArms",
                     SelfAllowed: true,
                     TargetAction: "SourceCharacter wraps PronounPossessive arms around TargetCharacter in a big warm hug.",
-                    TargetSelfAction: "SourceCharacter wraps TargetCharacter in a theraputic self-hug."
+                    TargetSelfAction: "SourceCharacter wraps TargetCharacter in a therapeutic self-hug."
                 }
             ],
             CustomImage: ICONS.HUG
