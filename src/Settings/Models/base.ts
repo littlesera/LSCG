@@ -2,6 +2,10 @@ export interface BaseSettingsModel {
     enabled: boolean;
 }
 
+export interface ModuleStats {
+
+}
+
 export interface GlobalSettingsModel extends BaseSettingsModel {
     edgeBlur: boolean;
     showCheckRolls: boolean;

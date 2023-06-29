@@ -606,6 +606,8 @@ export class InjectorModule extends BaseModule {
         this.hornyLevel = Math.min(newLevelActual, this.hornyLevelMax * this.drugLevelMultiplier);
         if (newLevelActual >= this.hornyLevelMax * this.drugLevelMultiplier && forceCum) {
             ActivityOrgasmPrepare(Player);
+            this.settings.stats.forcedOrgasmCount++;
+            settingsSave();
         }
 
         if (!!(<any>Player).BCT?.splitOrgasmArousal?.arousalProgress) {
@@ -652,6 +654,7 @@ export class InjectorModule extends BaseModule {
         this.settings.hornyLevel = 0;
         if (this.asleep) this.Wake();
         if (this.brainwashed) this.SnapBack();
+        this.settings.stats.curedCount++;
         settingsSave(true);
     }
 
@@ -707,7 +710,9 @@ export class InjectorModule extends BaseModule {
         if (Player.CanKneel()) {
             this.miscModule?.FallDownIfPossible();
             addCustomEffect(Player, "ForceKneel");
-        }            
+        }
+        this.settings.stats.sedatedCount++;
+        settingsSave();
     }
 
     Wake() {
@@ -725,6 +730,8 @@ export class InjectorModule extends BaseModule {
         this.brainwashed = true;
         SendAction("%NAME%'s body goes limp as %POSSESSIVE% mind empties and %PRONOUN% awaits a command.");
         this.hypnoModule?.SetEyes();
+        this.settings.stats.brainwashedCount++;
+        settingsSave();
     }
 
     SnapBack() {
@@ -781,15 +788,26 @@ export class InjectorModule extends BaseModule {
         
         if (this.settings.netgunIsChaotic) {
             SendAction("%NAME% fires a net wildly!");
-            setTimeout(() => this.ApplyNet(this.GetChaoticNetTarget(target)), 2000);
+            setTimeout(() => this.ResolveNetting(target, true), 2000);
         } else if (target.MemberNumber == Player.MemberNumber) {
             SendAction("%NAME% fires at themselves point blank!", target);
-            setTimeout(() => this.ApplyNet(target), 2000);
+            setTimeout(() => this.ResolveNetting(target), 2000);
         }
         else {
             SendAction("%NAME% fires a net at %OPP_NAME%!", target);
-            setTimeout(() => this.ApplyNet(target), 2000);
+            setTimeout(() => this.ResolveNetting(target), 2000);
         }
+    }
+
+    ResolveNetting(intendedTarget: Character, chaotic: boolean = false) {
+        this.settings.stats.totalNettingsCount++;
+        let actualTarget = intendedTarget
+        if (chaotic)
+            actualTarget = this.GetChaoticNetTarget(intendedTarget);
+        if (actualTarget.MemberNumber == intendedTarget.MemberNumber)
+            this.settings.stats.successfulNettingsCount++;
+        this.ApplyNet(actualTarget);
+        settingsSave();
     }
 
     GetChaoticNetTarget(intendedTarget: Character) {
@@ -1085,7 +1103,7 @@ export class InjectorModule extends BaseModule {
             if (types.indexOf("horny") > -1 && this.settings.enableHorny) {
                 if (getRandomInt(20) == 0) { // Odds are big jump once every 40 seconds
                     SendAction(this.breathAphrodesiacEventStr[getRandomInt(this.breathAphrodesiacEventStr.length)]);
-                    this.AddHorny(randomLevelIncrease + 1, getRandomInt(3) != 0); // 2/3 chance to push user over the edge (if allowed...)
+                    this.AddHorny(randomLevelIncrease + 1, getRandomInt(3) == 0); // 1/3 chance to push user over the edge (if allowed...)
                 } else this.AddHorny(randomLevelIncrease / 4, false);
             }
             if (types.indexOf("antidote") > -1 && getRandomInt(120) == 0) { // Odds are heal once every 4 minutes

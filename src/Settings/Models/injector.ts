@@ -1,8 +1,17 @@
-import { BaseSettingsModel } from "./base";
+import { BaseSettingsModel, ModuleStats } from "./base";
 
 export interface DrugSpecificSettingsModel {
     weakKeywords: string[];
     strongKeywords: string[];
+}
+
+export interface InjectorModuleStats extends ModuleStats {
+    forcedOrgasmCount: number;
+    sedatedCount: number;
+    brainwashedCount: number;
+    curedCount: number;
+    successfulNettingsCount: number;
+    totalNettingsCount: number;
 }
 
 export interface InjectorSettingsModel extends InjectorPublicSettingsModel {
@@ -26,6 +35,7 @@ export interface InjectorSettingsModel extends InjectorPublicSettingsModel {
     continuousDeliveryActivatedAt: number;
     continuousDeliveryTimeout: number;
     continuousDeliveryForever: boolean;
+    stats: InjectorModuleStats;
 }
 
 export interface InjectorPublicSettingsModel extends BaseSettingsModel {

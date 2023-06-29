@@ -46,7 +46,7 @@ export class PublicSettingsModel implements IPublicSettingsModel {
         looseTrigger: "",
         allowSelfTightening: false,
         allowSelfLoosening: false,
-        anyCollar: false
+        anyCollar: false        
     };
     HypnoModule: HypnoPublicSettingsModel = <HypnoPublicSettingsModel>{
         enabled: false,
