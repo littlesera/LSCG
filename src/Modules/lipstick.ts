@@ -1,6 +1,6 @@
 import { BaseModule } from "base";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { OnActivity, removeAllHooksByModule } from "../utils";
+import { OnActivity, removeAllHooksByModule, LerpHexColor } from "../utils";
 import { BaseSettingsModel } from "Settings/Models/base";
 
 export class LipstickModule extends BaseModule {
@@ -122,7 +122,9 @@ export class LipstickModule extends BaseModule {
             "f" + (status.forehead ? "1" : "0") + 
             "n" + (status.neck1 ? "1" : "0") + 
             "l" + (status.neck2 ? "1" : "0");
-    }    
+    }
+
+    
 
     RemoveKissMark(location: "cheek" | "forehead" | "neck" | "all") {
         var marks = this.getExistingLipstickMarks();
@@ -158,9 +160,24 @@ export class LipstickModule extends BaseModule {
             marks.Property.Type = this.getKissMarkTypeString(status);
         ChatRoomCharacterUpdate(Player);
     }
+
+    LerpKissColors(sender: Character) {
+        var sender_Color = this.getKisserLipColor(sender);
+        var receiver_Color = this.getKisserLipColor(Player);
+        if (sender_Color === undefined || receiver_Color === undefined) {
+            // :(
+            return "Default";
+        }
+        if (sender_Color == "Default" || receiver_Color == "Default") {
+            // :(
+            return "Default";
+        }
+        var lerped = LerpHexColor(sender_Color[0], receiver_Color[0], 0.5);
+        return lerped;
+    }
     
     AddKissMark(sender: Character, location: string) {
-        var color = this.getKisserLipColor(sender);
+        var color = this.LerpKissColors(sender);
         if (color == "Default")
             return; // No lipstick
     
@@ -200,7 +217,7 @@ export class LipstickModule extends BaseModule {
     }
 
     AddGagKissMark(sender: Character) {
-        var color = this.getKisserLipColor(sender);
+        var color = this.LerpKissColors(sender);
         if (color == "Default")
             return; // No lipstick
 

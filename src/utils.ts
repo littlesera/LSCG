@@ -95,6 +95,23 @@ export function OnChat(priority: any, module: ModuleCategory, callback: (data: a
     }, module);
 }
 
+/**
+ * Linearly interpolates between two hex colors
+ * @param {String} a : #RRGGBB
+ * @param {String} b : #RRGGBB
+ * @param {Number} amount : 0.0 - 1.0
+ * @returns {String} : #RRGGBB
+ */
+export function LerpHexColor(a: string, b:string, amount:number) {
+	var ah = parseInt(a.replace(/#/g, ''), 16),
+	ar = ah >> 16, ag = ah >> 8 & 0xff, ab = ah & 0xff,
+    bh = parseInt(b.replace(/#/g, ''), 16),
+    br = bh >> 16, bg = bh >> 8 & 0xff, bb = bh & 0xff,
+    rr = ar + amount * (br - ar),
+    rg = ag + amount * (bg - ag),
+    rb = ab + amount * (bb - ab);
+	return '#' + ((1 << 24) + (rr << 16) + (rg << 8) + rb | 0).toString(16).slice(1);
+}
 export function OnAction(priority: any, module: ModuleCategory, callback: (data: any, sender: Character | null, msg: string, metadata: any) => void) {
     hookFunction("ChatRoomMessage", priority, (args, next) => {
         var data = args[0];
