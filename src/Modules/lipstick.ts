@@ -71,9 +71,10 @@ export class LipstickModule extends BaseModule {
     getKisserLipColor(sender: Character): ItemColor | undefined {
         try {
             var mouth = InventoryGet(sender, "Mouth");
-            if (!!mouth && mouth.Color && mouth.Color != "Default")
+            if (!!mouth && mouth.Color && mouth.Color != "Default") {
+                console.log("Kisser has lipstick: " + mouth.Color);
                 return mouth.Color;
-            else
+            } else
                 return "Default";
         }
         catch {
