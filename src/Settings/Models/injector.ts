@@ -37,6 +37,7 @@ export interface InjectorSettingsModel extends InjectorPublicSettingsModel {
     continuousDeliveryTimeout: number;
     continuousDeliveryForever: boolean;
     stats: InjectorModuleStats;
+    sipLimit: number;
 }
 
 export interface InjectorPublicSettingsModel extends BaseSettingsModel {
