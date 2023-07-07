@@ -1049,9 +1049,9 @@ export class InjectorModule extends BaseModule {
         let item = InventoryGet(Player, "ItemMouth3");
         let isWearing = this.IsValidRespirator(item);
         if (!this._wasWearingRespirator && isWearing) {
-            if (!this.asleep && !this.brainwashed) {
+            if (!this.asleep && !this.brainwashed && this.IsRespiratorOn) {
                 SendAction("%NAME%'s eyes widen as %POSSESSIVE% mask activates, slowly filling %POSSESSIVE% lungs with its drug.");
-                CharacterSetFacialExpression(Player, "Eyes", "Surprised", 4000);
+                CharacterSetFacialExpression(Player, "Eyes", "Surprised", 4);
             }
             this.settings.continuousDeliveryActivatedAt = CommonTime();
             settingsSave();
