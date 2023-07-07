@@ -1201,19 +1201,19 @@ export class InjectorModule extends BaseModule {
             let randomLevelIncrease = (getRandomInt(4) + 2) / 10; // .2 to .5
 
             if (types.indexOf("sedative") > -1 && this.settings.enableSedative) {
-                if (getRandomInt(15) == 0) { // Odds are big jump once every 30 seconds
+                if (getRandomInt(30) == 0) { // Odds are big jump once every 60 seconds
                     if (!this.asleep) SendAction(this.breathSedativeEventStr[getRandomInt(this.breathSedativeEventStr.length)]);
                     this.AddSedative(randomLevelIncrease + 1, getRandomInt(3) != 0); // 2/3 chance to start incap minigame
                 } else this.AddSedative(randomLevelIncrease / 4, false);
             } 
             if (types.indexOf("mindcontrol") > -1 && this.settings.enableMindControl) {
-                if (getRandomInt(15) == 0) { // Odds are big jump once every 30 seconds
+                if (getRandomInt(30) == 0) { // Odds are big jump once every 60 seconds
                     if (!this.brainwashed) SendAction(this.breathMindControlEventStr[getRandomInt(this.breathMindControlEventStr.length)]);
                     this.AddMindControl(randomLevelIncrease + 1, getRandomInt(3) != 0); // 2/3 chance to start incap minigame
                 } else this.AddMindControl(randomLevelIncrease / 4, false);
             } 
             if (types.indexOf("horny") > -1 && this.settings.enableHorny) {
-                if (getRandomInt(20) == 0) { // Odds are big jump once every 40 seconds
+                if (getRandomInt(45) == 0) { // Odds are big jump once every 90 seconds
                     SendAction(this.breathAphrodesiacEventStr[getRandomInt(this.breathAphrodesiacEventStr.length)]);
                     this.AddHorny(randomLevelIncrease + 1, getRandomInt(3) == 0); // 1/3 chance to push user over the edge (if allowed...)
                 } else this.AddHorny(randomLevelIncrease / 4, false);
