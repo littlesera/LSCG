@@ -29,6 +29,11 @@ export class CoreModule extends BaseModule {
     }
 
     load(): void {
+        if (ServerPlayerIsInChatRoom()) {
+            this.CheckVersionUpdate();
+            this.SendPublicPacket(true);
+        }
+
         hookFunction("ChatRoomSync", 1, (args, next) => {
             this.CheckVersionUpdate();
             this.SendPublicPacket(true);
