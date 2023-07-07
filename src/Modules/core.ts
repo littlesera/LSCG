@@ -29,11 +29,6 @@ export class CoreModule extends BaseModule {
     }
 
     load(): void {
-        if (ServerPlayerIsInChatRoom()) {
-            this.CheckVersionUpdate();
-            this.SendPublicPacket(true);
-        }
-
         hookFunction("ChatRoomSync", 1, (args, next) => {
             this.CheckVersionUpdate();
             this.SendPublicPacket(true);
@@ -76,6 +71,13 @@ export class CoreModule extends BaseModule {
                 }
             }
         }, ModuleCategory.Core);
+    }
+
+    run(): void {
+        if (ServerPlayerIsInChatRoom()) {
+            this.CheckVersionUpdate();
+            this.SendPublicPacket(true);
+        }
     }
 
     unload(): void {
