@@ -90,6 +90,7 @@ export class HypnoModule extends BaseModule {
             // Check for non-garbled trigger word, this means a trigger word could be set to what garbled speech produces >.>
             let msg = callOriginal("SpeechGarble", args);
             if (this.CheckTrigger(msg, C) && !this.IsOnCooldown()) {
+                args[1] = this.BlankOutTriggers(args[1]);
                 this.StartTriggerWord(true, C.MemberNumber);
                 return next(args);
             }
@@ -97,9 +98,13 @@ export class HypnoModule extends BaseModule {
             if (this.hypnoActivated) {
                 var lowerMsg = args[1].toLowerCase();
                 var names = [CharacterNickname(Player)];
-                if (names.some(n => lowerMsg.indexOf(n) > -1) || this.settings.hypnotizedBy == C.MemberNumber || C.MemberNumber == Player.MemberNumber) {
-                    args[1] = args[1];
-                    if (this.CheckAwakener(msg, C)) this.TriggerRestoreWord(C);
+                if (!!Player.Name && names.indexOf(Player.Name) == -1)
+                    names.push(Player.Name);
+                if (names.some(n => isPhraseInString(lowerMsg, n)) || this.settings.hypnotizedBy == C.MemberNumber || C.MemberNumber == Player.MemberNumber) {
+                    args[1] = this.BlankOutTriggers(args[1]);
+                    if (this.CheckAwakener(msg, C)) {
+                        this.TriggerRestoreWord(C);
+                    }
                 }
                 else
                     args[1] =  args[1].replace(/\S/gm, '-');
@@ -240,6 +245,23 @@ export class HypnoModule extends BaseModule {
         if (allowedMembers.length <= 0)
             return isAllowedMember(speaker);
         else return allowedMembers.includes(memberId);
+    }
+
+    BlankOutTriggers(msg: string) {
+        if (!this.settings.immersive)
+            return msg;
+
+        let triggers = this.triggers.concat(this.awakeners);
+        triggers.forEach(t => {
+            let tWords = t.split(" ");
+            tWords = tWords.map(tw => {
+                let hashLength = Math.max(3, tw.length) + (getRandomInt(4) - 2);
+                return new Array(hashLength + 1).join('-');
+            });
+            let str = tWords.join(" ");
+            msg = msg.replaceAll(t, str);
+        });
+        return msg;
     }
 
     hypnoBlockStrings = [
