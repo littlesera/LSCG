@@ -766,8 +766,9 @@ export class ItemUseModule extends BaseModule {
 		if (!item)
 			return;
 			SendAction(`${CharacterNickname(source)} gives %POSSESSIVE% ${this.getItemName(item)} to ${CharacterNickname(target)}.`);
-		InventoryRemove(source, "ItemHandheld", true);
-		InventoryWear(target, item?.Asset.Name!, "ItemHandheld", item?.Color, item?.Difficulty, source.MemberNumber, item?.Craft, true);
+		InventoryRemove(source, "ItemHandheld", false);
+		let newItem = InventoryWear(target, item?.Asset.Name!, "ItemHandheld", item?.Color, item?.Difficulty, source.MemberNumber, item?.Craft, false);
+		if (!!newItem) newItem.Property = item.Property;
 		setTimeout(() => ChatRoomCharacterUpdate(source));
 		setTimeout(() => ChatRoomCharacterUpdate(target));
 	}
@@ -782,8 +783,9 @@ export class ItemUseModule extends BaseModule {
 
 		if (check.AttackerRoll.Total >= check.DefenderRoll.Total) {
 			SendAction(`${CharacterNickname(source)} ${check.AttackerRoll.TotalStr}manages to wrest ${CharacterNickname(target)}'s ${check.DefenderRoll.TotalStr}${this.getItemName(item)} out of their grasp!`);
-			InventoryRemove(target, "ItemHandheld", true);
-			InventoryWear(source, item.Asset.Name, "ItemHandheld", item.Color, item.Difficulty, source.MemberNumber, item.Craft, true);
+			InventoryRemove(target, "ItemHandheld", false);
+			let newItem = InventoryWear(source, item.Asset.Name, "ItemHandheld", item.Color, item.Difficulty, source.MemberNumber, item.Craft, false);
+			if (!!newItem) newItem.Property = item.Property;
 			setTimeout(() => ChatRoomCharacterUpdate(source));
 			setTimeout(() => ChatRoomCharacterUpdate(target));
 		}

@@ -77,7 +77,9 @@ export class InjectorModule extends BaseModule {
 
             asleep: false,
             brainwashed: false,
-            stats: {}
+            stats: {},
+
+            sipLimit: 0
         };
     }
 
@@ -115,10 +117,10 @@ export class InjectorModule extends BaseModule {
         this.InitStates();
 
         OnActivity(10, ModuleCategory.Injector, (data, sender, msg, megadata) => {
-            var activityName = data.Dictionary[3]?.ActivityName;
-            var target = data.Dictionary.find((d: { Tag: string; }) => d.Tag == "TargetCharacter")?.MemberNumber;
             if (!this.Enabled)
                 return;
+            var activityName = data.Dictionary[3]?.ActivityName;
+            var target = data.Dictionary.find((d: { Tag: string; }) => d.Tag == "TargetCharacter")?.MemberNumber;
             if (target == Player.MemberNumber && activityName == "Inject" && !!sender) {
                 var location = <AssetGroupItemName>data.Dictionary[2]?.FocusGroupName;
                 this.ProcessInjection(sender, location);
@@ -136,7 +138,65 @@ export class InjectorModule extends BaseModule {
                     if (this.brainwashed) this.SnapBack();
                 }
             }
-        });        
+        });
+
+        OnAction(1, ModuleCategory.Injector, (data, sender, msg, metadata) => {
+            if (!this.Enabled)
+                return;
+
+            let deliverySlots = ["ItemHandheld"];
+            let messagesToCheck = [
+                "ActionUse",
+                "ActionSwap"
+            ];
+
+            var target = data.Dictionary?.find((dictItem: { Tag: string; }) => dictItem.Tag == "DestinationCharacter")?.MemberNumber;
+            if (!target)
+                var target = data.Dictionary?.find((dictItem: { Tag: string; }) => dictItem.Tag == "TargetCharacter")?.MemberNumber;
+            if (!target)
+                var target = data.Dictionary?.find((dictItem: { Tag: string; }) => dictItem.Tag == "TargetCharacterName")?.MemberNumber;
+            
+            var targetGroup = data.Dictionary?.find((dictItem: { Tag: string; }) => dictItem.Tag == "FocusAssetGroup")?.AssetGroupName;
+            
+            if (target == Player.MemberNumber &&
+                sender?.IsPlayer() &&
+                (!targetGroup || deliverySlots.indexOf(targetGroup) > -1) &&
+                messagesToCheck.some(x => msg.startsWith(x))) {
+                let glass = InventoryGet(Player, "ItemHandheld");
+                if (glass?.Asset.Name == "GlassFilled"){
+                    if (!glass.Property) glass.Property = {};
+                    if (!(<any>glass.Property).SipLimit) (<any>glass.Property).SipLimit = this.settings.sipLimit;
+                }
+            }
+        });
+
+        hookFunction("ServerSend", 100, (args, next) => {
+            if (args[0] == "ChatRoomChat" && args[1]?.Type == "Activity" && this.Enabled){
+                let data = args[1];
+                let actName = data.Dictionary[3]?.ActivityName ?? "";
+                if (actName == "SipItem") {
+                    let glass = InventoryGet(Player, "ItemHandheld");
+                    if (glass?.Asset.Name == "GlassFilled") {
+                        if (!glass.Property) glass.Property = {};
+                        if (!(<any>glass.Property).SipLimit) (<any>glass.Property).SipLimit = this.settings.sipLimit;
+                        if (!(<any>glass.Property).SipCount) (<any>glass.Property).SipCount = 1;
+                        else (<any>glass.Property).SipCount++;
+                        if ((<any>glass.Property).SipLimit > 0 && (<any>glass.Property).SipCount >= (<any>glass.Property).SipLimit) {
+                            SendAction("%NAME%'s uses up the last drop of %POSSESSIVE% drink.");
+                            var craft = glass.Craft;
+                            InventoryRemove(Player, "ItemHandheld", false);
+                            let empty = InventoryWear(Player, "GlassEmpty", "ItemHandheld", glass.Color, glass.Difficulty, Player.MemberNumber, craft, false);
+                            if (!!empty && !!craft) {
+                                InventoryWearCraft(empty, Player, craft);
+                            }
+                            CharacterRefresh(Player);
+                        }
+                    }
+                }
+            }
+            
+            return next(args);
+        }, ModuleCategory.Injector);
 
         hookFunction("DrawArousalMeter", 1, (args, next) => {
             if (!this.Enabled || !this.settings.showDrugLevels)
@@ -1000,7 +1060,7 @@ export class InjectorModule extends BaseModule {
             SendAction(`${CharacterNickname(sender)} ${check.AttackerRoll.TotalStr}manages to get their ${itemName} past ${CharacterNickname(Player)}'s ${check.DefenderRoll.TotalStr}lips, forcing %POSSESSIVE% to swallow.`);
             setTimeout(() => this.ProcessDruggedDrink(sender), 5000);
         } else {
-            SendAction(`${CharacterNickname(Player)} ${check.DefenderRoll.TotalStr}successfully defends against ${CharacterNickname(sender)}'s ${check.AttackerRoll.TotalStr}attempt to force %POSSESSIVE% to drink their ${itemName}.`);
+            SendAction(`${CharacterNickname(Player)} ${check.DefenderRoll.TotalStr}successfully defends against ${CharacterNickname(sender)}'s ${check.AttackerRoll.TotalStr}attempt to force %POSSESSIVE% to drink their ${itemName}, spilling drink all over.`);
         }
     }
 
