@@ -728,10 +728,14 @@ export class ItemUseModule extends BaseModule {
 		if (ValidationCanRemoveItem(gag!, validParams, false)) {
 			InventoryRemove(target, sourceLocation, true);
 			var craft = gag.Craft;
-			if (!!craft)
+			if (!!craft) {
 				craft.Lock = "";
+				if (craft.Property == "Large" || craft.Property == "Small") {
+					craft.Property = "Normal";
+				}
+			}
 			var color = this._handleWeirdColorStuff(gag, gagTarget, sourceLocation, targetLocation);
-			let item = InventoryWear(source, targetItemName, targetLocation, color, undefined, source.MemberNumber, craft, true);
+			let item = InventoryWear(source, targetItemName, targetLocation, color, undefined, source.MemberNumber, craft, true);			
 			if (!!gagTarget.PreferredTypes && gagTarget.PreferredTypes.length > 0) {
 				var prefType = gagTarget.PreferredTypes.find(tgt => tgt.Location == targetLocation) ?? gagTarget.PreferredTypes.find(tgt => targetLocation.startsWith(tgt.Location));
 				if (!!item && !!prefType) {
