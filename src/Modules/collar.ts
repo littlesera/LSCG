@@ -98,10 +98,18 @@ export class CollarModule extends BaseModule {
             if (target != Player.MemberNumber)
                 return;
 
-            if ((msg == "ActionSwap" || "ActionRemove") && data.Dictionary[3]?.GroupName == "ItemNeck") {
+            if ((msg == "ActionSwap" || msg == "ActionRemove") && data.Dictionary[3]?.GroupName == "ItemNeck") {
                 this.ReleaseCollar();
             }
         })
+
+        hookFunction("InventoryRemove", 1, (args, next) => {
+            let C: Character = args[0];
+            let GroupName: string = args[1];
+            if (GroupName == "ItemNeck")
+                this.ReleaseCollar();
+            next(args);
+        }, ModuleCategory.Collar);
 
         // Detect if choking member is bound
         OnAction(6, ModuleCategory.Misc, (data, sender, msg, metadata) => {
