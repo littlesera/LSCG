@@ -1083,7 +1083,7 @@ export class ActivityModule extends BaseModule {
     }
 
     grabbedBy(member: number, type: GrabType) {
-        if (!member || member < 0 || !!this.hands.find(h => h.Member == member && h.Type == type))
+        if (!member || member < 0 || !!this.heldBy.find(h => h.Member == member && h.Type == type))
             return;
             
         this.heldBy.push(<HandOccupant>{
