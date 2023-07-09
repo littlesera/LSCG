@@ -1,6 +1,7 @@
 import bcModSDKRef from "bondage-club-mod-sdk";
 import { getModule } from "modules";
 import { CoreModule } from "Modules/core";
+import { MiscModule } from "Modules/misc";
 import { ModuleCategory } from "Settings/setting_definitions";
 
 export const LSCG_CHANGES: string = "https://github.com/littlesera/LSCG/releases/latest";
@@ -390,6 +391,12 @@ export function excludeParentheticalContent(msg: string): string {
 		if (char == ")" || char == "）") Par = false;
 	}
 	return result;
+}
+
+export function IsIncapacitated(C?: OtherCharacter | PlayerCharacter): boolean {
+	if (!C)
+		C = Player;
+	return C.LSCG?.HypnoModule?.hypnotized || C.LSCG?.InjectorModule?.asleep || C.LSCG?.InjectorModule?.brainwashed; // || getModule<MiscModule>("MiscModule")?.isChloroformed; -- Need to push chloroform status to public for this to work.
 }
 
 // ICONS

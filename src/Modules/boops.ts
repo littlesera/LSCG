@@ -2,7 +2,7 @@ import { BaseModule } from "base";
 import { getModule } from "modules";
 import { BaseSettingsModel } from "Settings/Models/base";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, setOrIgnoreBlush } from "../utils";
+import { IsIncapacitated, OnActivity, SendAction, getRandomInt, removeAllHooksByModule, setOrIgnoreBlush } from "../utils";
 import { MiscModule } from "./misc";
 
 export class BoopsModule extends BaseModule {
@@ -29,7 +29,7 @@ export class BoopsModule extends BaseModule {
             if (!!target && 
                 target.MemberNumber == Player.MemberNumber && 
                 data.Content == "ChatOther-ItemNose-Pet" && 
-                !this.IsIncapacitated) {
+                !IsIncapacitated()) {
                 this.BoopReact(sender?.MemberNumber);
             }
         });
@@ -43,10 +43,6 @@ export class BoopsModule extends BaseModule {
     unload(): void {
         removeAllHooksByModule(ModuleCategory.Boops);
         clearInterval(this.boopDecreaseLoop);
-    }
-
-    get IsIncapacitated(): boolean {
-        return Player.LSCG?.HypnoModule?.hypnotized || Player.LSCG?.InjectorModule?.asleep || Player.LSCG?.InjectorModule?.brainwashed || getModule<MiscModule>("MiscModule")?.isChloroformed;
     }
 
     normalBoopReactions = [
