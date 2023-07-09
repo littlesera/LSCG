@@ -1,7 +1,7 @@
 import { BaseModule } from "base";
 import { getModule } from "modules";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { getRandomInt, hookFunction, removeAllHooksByModule, SendAction } from "../utils";
+import { getRandomInt, hookFunction, IsIncapacitated, removeAllHooksByModule, SendAction } from "../utils";
 import { ActivityBundle, ActivityModule, ActivityTarget } from "./activities";
 import { BoopsModule } from "./boops";
 
@@ -627,7 +627,7 @@ export class ItemUseModule extends BaseModule {
 		// If edged, -0 to -4 based on arousal
 		let edgingMod = C.IsEdged() ? (Math.floor((C.ArousalSettings?.Progress ?? 0) / 25) * -1) : 0;
 		// -5 if we're incapacitated, automatic failure if we're also defending
-		let incapacitatedMod = getModule<BoopsModule>("BoopsModule")?.IsIncapacitated ? (isAggressor ? 5 : 100) * -1 : 0;
+		let incapacitatedMod = IsIncapacitated(C.IsPlayer() ? C as PlayerCharacter : C as OtherCharacter) ? (isAggressor ? 5 : 100) * -1 : 0;
 		
 		let finalMod = dominanceMod + ownershipMod + restrainedMod + edgingMod + incapacitatedMod;
 	
