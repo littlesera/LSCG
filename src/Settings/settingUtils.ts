@@ -83,7 +83,8 @@ export class GUI extends BaseModule {
 		return {
 			enabled: true,
 			edgeBlur: false,
-			showCheckRolls: true
+			showCheckRolls: true,
+			blockSettingsWhileRestrained: false
 		};
     }
 

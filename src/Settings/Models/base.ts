@@ -9,6 +9,7 @@ export interface ModuleStats {
 export interface GlobalSettingsModel extends BaseSettingsModel {
     edgeBlur: boolean;
     showCheckRolls: boolean;
+    blockSettingsWhileRestrained: boolean;
 }
 
 export interface LipstickSettingsModel extends BaseSettingsModel {
