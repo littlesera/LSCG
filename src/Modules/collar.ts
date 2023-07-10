@@ -78,18 +78,6 @@ export class CollarModule extends BaseModule {
             this.CheckForTriggers(msg, sender);
         });
 
-        OnActivity(1, ModuleCategory.Collar, (data, sender, msg, meta) => {
-            let target = GetTargetCharacter(data);
-            if (!!data && 
-                !!sender && 
-                data.Content == "ChatOther-ItemNeck-Choke" && 
-                Player.LSCG.MiscModule.handChokeEnabled &&
-                !!target && 
-                target == Player.MemberNumber) {
-                this.HandChoke(sender);
-            }
-        });
-
         OnAction(6, ModuleCategory.Collar, (data, sender, msg, meta) => {
             var target = GetTargetCharacter(data);
             if (target != Player.MemberNumber)
@@ -346,18 +334,12 @@ export class CollarModule extends BaseModule {
             this.chokeTimeout = setTimeout(() => f(), delay);
     }
 
-    handChokeTimeout: number = 0;
-    HandChoke(chokingMember: Character) {
-        console.debug("Hand-choke event.. coming soon.");
-        
-        if (this.handChokeModifier >= 4)
+    HandChoke(chokingMember: Character) {        
+        if (this.handChokeModifier >= 4 || !Player.LSCG.MiscModule.handChokeEnabled)
             return;
             
         this.handChokingMember = chokingMember.MemberNumber ?? 0;
         this.handChokeModifier = Math.min(this.handChokeModifier + 1, 4);
-        this.IncreaseArousal();
-        clearTimeout(this.handChokeTimeout);
-        this.handChokeTimeout = setTimeout(() => this.ReleaseHandChoke(chokingMember), 60000);
 
         CharacterSetFacialExpression(Player, "Eyebrows", "Soft");
         switch (this.totalChokeLevel) {
@@ -374,13 +356,11 @@ export class CollarModule extends BaseModule {
                 CharacterSetFacialExpression(Player, "Eyes", "Surprised");
                 break;
             case 3:
-                this.setChokeTimeout(() => this.DecreaseCollarChoke(), this.chokeTimer);
                 SendAction("%NAME%'s face runs flush, choking as %OPP_NAME% presses firmly against their neck, barely allowing any air to %POSSESSIVE% lungs.", chokingMember);
                 setOrIgnoreBlush("High");
                 CharacterSetFacialExpression(Player, "Eyes", "Scared");
                 break;
             case 4:
-                clearTimeout(this.handChokeTimeout);
                 this.StartPassout(PassoutReason.HAND, chokingMember, 30000);
                 break;
             default:
@@ -397,9 +377,9 @@ export class CollarModule extends BaseModule {
                 clearTimeout(this.chokeTimeout);
                 this.isPassingOut = false;
             }
-            // If collar still tight, wait just a second and ping an event as a "helpful" reminder
+            // If collar still tight, wait 2 seconds and ping an event as a "helpful" reminder
             if (this.settings.chokeLevel > 0 && showEmote)
-                setTimeout(() => this.ChokeEvent(), 1000);
+                setTimeout(() => this.ChokeEvent(), 2000);
         }
     }
 
