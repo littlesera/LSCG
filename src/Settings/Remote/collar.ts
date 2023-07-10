@@ -1,7 +1,7 @@
 import { RemoteGuiSubscreen } from "./remoteBase";
 import { Setting } from "Settings/settingBase";
 import { HypnoPublicSettingsModel } from "Settings/Models/hypno";
-import { ICONS } from "utils";
+import { GetDelimitedList, ICONS } from "utils";
 import { CollarModel, CollarPublicSettingsModel } from "Settings/Models/collar";
 
 export class RemoteCollar extends RemoteGuiSubscreen {
@@ -12,7 +12,7 @@ export class RemoteCollar extends RemoteGuiSubscreen {
 	}
 
 	get allowedMemberIds(): number[] {
-		let idList = this.settings.allowedMembers?.split(",").map(id => +id).filter(id => id > 0) ?? [];
+		let idList = GetDelimitedList(this.settings.allowedMembers).map(id => +id).filter(id => id > 0) ?? [];
 		if (this.settings.limitToCrafted && this.settings.collar.creator >= 0)
 			idList.push(this.settings.collar.creator);
 		return idList;

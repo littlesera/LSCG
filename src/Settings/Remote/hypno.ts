@@ -1,7 +1,7 @@
 import { RemoteGuiSubscreen } from "./remoteBase";
 import { Setting } from "Settings/settingBase";
 import { HypnoPublicSettingsModel } from "Settings/Models/hypno";
-import { ICONS } from "utils";
+import { GetDelimitedList, ICONS } from "utils";
 
 export class RemoteHypno extends RemoteGuiSubscreen {
 	subscreens: RemoteGuiSubscreen[] = [];
@@ -11,7 +11,7 @@ export class RemoteHypno extends RemoteGuiSubscreen {
 	}
 
 	get overrideMemberIds(): number[] {
-		return this.settings.overrideMemberIds?.split(",").map(id => +id).filter(id => id > 0) ?? [];
+		return GetDelimitedList(this.settings.overrideMemberIds).map(id => +id).filter(id => id > 0) ?? [];
 	}
 
 	get disabledReason(): string {

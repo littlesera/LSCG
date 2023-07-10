@@ -1,7 +1,7 @@
 import { BaseModule } from 'base';
 import { HypnoSettingsModel } from 'Settings/Models/hypno';
 import { ModuleCategory, Subscreen } from 'Settings/setting_definitions';
-import { settingsSave, parseMsgWords, OnAction, OnActivity, SendAction, getRandomInt, hookFunction, removeAllHooksByModule, callOriginal, setOrIgnoreBlush, isAllowedMember, isPhraseInString, GetTargetCharacter } from '../utils';
+import { settingsSave, parseMsgWords, OnAction, OnActivity, SendAction, getRandomInt, hookFunction, removeAllHooksByModule, callOriginal, setOrIgnoreBlush, isAllowedMember, isPhraseInString, GetTargetCharacter, GetDelimitedList } from '../utils';
 import { GuiHypno } from 'Settings/hypno';
 
 export class HypnoModule extends BaseModule {
@@ -214,11 +214,11 @@ export class HypnoModule extends BaseModule {
     }
 
     get awakeners(): string[] {
-        return this.settings.awakeners?.split(",")?.filter(word => !!word).map(word => word.toLocaleLowerCase()) ?? [];
+        return GetDelimitedList(this.settings.awakeners);
     }
 
     get triggers(): string[] {
-        var overrideWords = this.settings.overrideWords?.split(",")?.filter(word => !!word).map(word => word.toLocaleLowerCase()) ?? [];
+        var overrideWords = GetDelimitedList(this.settings.overrideWords);
         if (overrideWords.length > 0 && !this.settings.enableCycle)
             return overrideWords;
         else
@@ -227,7 +227,7 @@ export class HypnoModule extends BaseModule {
 
     getNewTriggerWord(): string {
         var currentTrigger = this.settings.trigger;
-        var words = this.settings.overrideWords?.split(",")?.filter((word, ix, arr) => !!word && arr.indexOf(word) == ix) ?? [];
+        var words = GetDelimitedList(this.settings.overrideWords)?.filter((word, ix, arr) => !!word && arr.indexOf(word) == ix) ?? [];
         if (words.length <= 0)
             words = commonWords;
 
@@ -241,7 +241,7 @@ export class HypnoModule extends BaseModule {
         if (speaker?.MemberNumber == Player.MemberNumber)
             return false;
         var memberId = speaker?.MemberNumber ?? 0;
-        var allowedMembers = this.settings.overrideMemberIds?.split(",").map(id => +id).filter(id => id > 0) ?? [];
+        var allowedMembers = GetDelimitedList(this.settings.overrideMemberIds).map(id => +id).filter(id => id > 0) ?? [];
         if (allowedMembers.length <= 0)
             return isAllowedMember(speaker);
         else return allowedMembers.includes(memberId);

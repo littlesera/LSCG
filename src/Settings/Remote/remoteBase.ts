@@ -70,6 +70,8 @@ export abstract class RemoteGuiSubscreen extends GuiSubscreen {
 						break;
 					}
 				case "text":
+					let val = ElementValue(item.id);
+					if (val != item.setting()) this.dirty = true;
 					item.setSetting(ElementValue(item.id));
 					ElementRemove(item.id);
 					break;
