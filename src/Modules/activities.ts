@@ -1,6 +1,6 @@
 import { BaseModule } from "base";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, setOrIgnoreBlush, hookFunction, ICONS, getCharacter, sendLSCGMessage, OnAction, callOriginal, LSCG_SendLocal } from "../utils";
+import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, setOrIgnoreBlush, hookFunction, ICONS, getCharacter, sendLSCGMessage, OnAction, callOriginal, LSCG_SendLocal, GetTargetCharacter, GetActivityName, GetMetadata } from "../utils";
 import { getModule } from "modules";
 import { ItemUseModule } from "./item-use";
 
@@ -69,15 +69,15 @@ export class ActivityModule extends BaseModule {
         hookFunction("ServerSend", 100, (args, next) => {
             if (args[0] == "ChatRoomChat" && args[1]?.Type == "Activity"){
                 let data = args[1];
-                let actName = data.Dictionary[3]?.ActivityName ?? "";
+                let actName = GetActivityName(data) ?? "";
                 var isPatched = this.CheckForPatchedActivity(actName, data.Content);
                 if (actName.indexOf("LSCG_") == 0 || isPatched) {
                     let preParse = this.CustomPreparseCallbacks.get(actName);
                     if (!!preParse)
                         preParse(args);
 
-                    let target = data.Dictionary?.find((d: any) => d.Tag == "TargetCharacter");
-                    var targetChar = getCharacter(target.MemberNumber);
+                    let target = GetTargetCharacter(data);
+                    var targetChar = getCharacter(target!);
                     let {metadata, substitutions} = ChatRoomMessageRunExtractors(data, Player)
                     let msg = ActivityDictionaryText(data.Content);
                     msg = CommonStringSubstitute(msg, substitutions ?? [])
@@ -124,12 +124,9 @@ export class ActivityModule extends BaseModule {
         }, ModuleCategory.Activities)
 
         OnActivity(1, ModuleCategory.Activities, (data, sender, msg, metadata) => {
-            var dictionary = data?.Dictionary;
-            if (!dictionary || !dictionary[3])
-                return;
-            let target = dictionary?.find((d: any) => d.Tag == "TargetCharacter");
-            let activityName = dictionary[3]?.ActivityName;
-            if (target?.MemberNumber == Player.MemberNumber && this.CustomIncomingActivityReactions.has(activityName)) {
+            let target = GetTargetCharacter(data);
+            let activityName = GetActivityName(data);
+            if (target == Player.MemberNumber && !!activityName && this.CustomIncomingActivityReactions.has(activityName)) {
                 var reactionFunc = this.CustomIncomingActivityReactions.get(activityName);
                 if (!!reactionFunc)
                     reactionFunc(sender);
@@ -589,7 +586,7 @@ export class ActivityModule extends BaseModule {
             ],
             CustomAction: <CustomAction>{
                 Func: (target, args, next) => {
-                    var location = args[1]?.Dictionary[2]?.FocusGroupName;
+                    var location = GetMetadata(args[1])?.GroupName;
                     if (!!target && !!location && location == "ItemEars")
                         this.DoGrab(target, "ear");
                     return next(args);
@@ -647,7 +644,7 @@ export class ActivityModule extends BaseModule {
             ],
             CustomAction: <CustomAction>{
                 Func: (target, args, next) => {
-                    var location = args[1]?.Dictionary[2]?.FocusGroupName;
+                    var location = GetMetadata(args[1])?.GroupName;
                     if (!!target && !!location && location == "ItemArms")
                         this.DoGrab(target, "arm");
                     return next(args);
@@ -855,8 +852,8 @@ export class ActivityModule extends BaseModule {
         hookFunction('ServerSend', 5, (args, next) => {
             let sendType = args[0];
             let data = args[1]; 
-            if (sendType == "ChatRoomChat" && data?.Type == "Activity" && !!data?.Dictionary && !!data?.Dictionary[3]){
-                var activityName = data?.Dictionary[3].ActivityName;
+            if (sendType == "ChatRoomChat" && data?.Type == "Activity"){
+                var activityName = GetActivityName(data);
                 if (activityName == "Lick" && this.customGagged)
                     SendAction(failedLinkActions[getRandomInt(failedLinkActions.length)]);
                 else

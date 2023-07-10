@@ -1,7 +1,7 @@
 import { BaseModule } from "base";
 import { MiscSettingsModel } from "Settings/Models/base";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { addCustomEffect, getRandomInt, hookFunction, LSCG_SendLocal, OnAction, OnActivity, removeAllHooksByModule, removeCustomEffect, SendAction, setOrIgnoreBlush, settingsSave } from "../utils";
+import { addCustomEffect, GetMetadata, getRandomInt, GetTargetCharacter, hookFunction, LSCG_SendLocal, OnAction, OnActivity, removeAllHooksByModule, removeCustomEffect, SendAction, setOrIgnoreBlush, settingsSave } from "../utils";
 
 export class MiscModule extends BaseModule {
     get settings(): MiscSettingsModel {
@@ -33,7 +33,7 @@ export class MiscModule extends BaseModule {
     load(): void {
         // Kneel on lap sit
         OnActivity(100, ModuleCategory.Misc, (data, sender, msg, metadata) => {
-            let target = data.Dictionary?.find((d: any) => d.Tag == "TargetCharacter");
+            let target = GetTargetCharacter(data);
             if (!!target && 
                 sender?.MemberNumber == Player.MemberNumber && 
                 data.Content == "ChatOther-ItemLegs-Sit" &&
@@ -60,10 +60,11 @@ export class MiscModule extends BaseModule {
 
         // Set Chloroform'd state
         OnAction(100, ModuleCategory.Misc, (data, sender, msg, metadata) => {
-            if (!data.Dictionary || !data.Dictionary[2] || !data.Dictionary[3] || !this.settings.chloroformEnabled)
+            if (!this.settings.chloroformEnabled)
                 return;
 
-            var target = data.Dictionary[2]?.MemberNumber;
+            let meta = GetMetadata(data);
+            var target = meta?.TargetMemberNumber;
             if (target != Player.MemberNumber)
                 return;
 

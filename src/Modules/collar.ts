@@ -1,7 +1,7 @@
 import { BaseModule } from 'base';
 import { CollarSettingsModel } from 'Settings/Models/collar';
 import { ModuleCategory, Subscreen } from 'Settings/setting_definitions';
-import { settingsSave, SendAction, OnChat, getRandomInt, hookFunction, removeAllHooksByModule, OnActivity, OnAction, setOrIgnoreBlush, getCharacter, hookBCXCurse, isPhraseInString } from '../utils';
+import { settingsSave, SendAction, OnChat, getRandomInt, hookFunction, removeAllHooksByModule, OnActivity, OnAction, setOrIgnoreBlush, getCharacter, hookBCXCurse, isPhraseInString, GetTargetCharacter, GetMetadata } from '../utils';
 import { GuiCollar } from 'Settings/collar';
 
 enum PassoutReason {
@@ -79,26 +79,23 @@ export class CollarModule extends BaseModule {
         });
 
         OnActivity(1, ModuleCategory.Collar, (data, sender, msg, meta) => {
-            let target = data.Dictionary?.find((d: any) => d.Tag == "TargetCharacter");
+            let target = GetTargetCharacter(data);
             if (!!data && 
                 !!sender && 
                 data.Content == "ChatOther-ItemNeck-Choke" && 
                 Player.LSCG.MiscModule.handChokeEnabled &&
                 !!target && 
-                target.MemberNumber == Player.MemberNumber) {
+                target == Player.MemberNumber) {
                 this.HandChoke(sender);
             }
         });
 
         OnAction(6, ModuleCategory.Collar, (data, sender, msg, meta) => {
-            if (!data.Dictionary || !data.Dictionary[2] || !data.Dictionary[3])
-                return;
-
-            var target = data.Dictionary[2]?.MemberNumber;
+            var target = GetTargetCharacter(data);
             if (target != Player.MemberNumber)
                 return;
 
-            if ((msg == "ActionSwap" || msg == "ActionRemove") && data.Dictionary[3]?.GroupName == "ItemNeck") {
+            if ((msg == "ActionSwap" || msg == "ActionRemove") && GetMetadata(data)?.GroupName == "ItemNeck") {
                 this.ReleaseCollar();
             }
         })
@@ -113,13 +110,12 @@ export class CollarModule extends BaseModule {
 
         // Detect if choking member is bound
         OnAction(6, ModuleCategory.Misc, (data, sender, msg, metadata) => {
-            if (!data.Dictionary || !data.Dictionary[2] || !data.Dictionary[3])
-                return;
-
-            var target = data.Dictionary[2]?.MemberNumber;
-            var targetMember = getCharacter(target);
-            if (target == this.handChokingMember && msg == "ActionUse") {
-                if (data.Dictionary[3]?.GroupName == "ItemHands" || data.Dictionary[3]?.GroupName == "ItemArms") {
+            let meta = GetMetadata(data);
+            let target = meta?.TargetMemberNumber;
+            let targetMember = meta?.TargetCharacter;
+            let groupName = meta?.GroupName;
+            if (!!targetMember && target == this.handChokingMember && msg == "ActionUse") {
+                if (groupName == "ItemHands" || groupName == "ItemArms") {
                     this.ReleaseHandChoke(targetMember);
                 }                
             }
@@ -156,13 +152,8 @@ export class CollarModule extends BaseModule {
                 "ItemMouthPonyGagSet"
             ]
             
-            var target = data.Dictionary?.find((dictItem: { Tag: string; }) => dictItem.Tag == "DestinationCharacter")?.MemberNumber;
-            if (!target)
-                var target = data.Dictionary?.find((dictItem: { Tag: string; }) => dictItem.Tag == "TargetCharacter")?.MemberNumber;
-            if (!target)
-                var target = data.Dictionary?.find((dictItem: { Tag: string; }) => dictItem.Tag == "TargetCharacterName")?.MemberNumber;
-            
-            var targetGroup = data.Dictionary?.find((dictItem: { Tag: string; }) => dictItem.Tag == "FocusAssetGroup")?.AssetGroupName;
+            let target = GetTargetCharacter(data);
+            var targetGroup = GetMetadata(data)?.GroupName;
 
             if (target == Player.MemberNumber &&
                 (!targetGroup || airwaySlots.indexOf(targetGroup) > -1) &&

@@ -38,7 +38,7 @@ export class GuiHypno extends GuiSubscreen {
 					},<Setting>{
 						type: "checkbox",
 						label: "Immersive Hypnosis:",
-						description: "Makes the hypnotized experience more restrictive. LSCG settings will be unavailable while hypnotized.",
+						description: "Makes the hypnotized experience more restrictive. LSCG settings will be unavailable while hypnotized and triggers are hidden.",
 						disabled: !this.settings.enabled,
 						setting: () => this.settings.immersive ?? false,
 						setSetting: (val) => this.settings.immersive = val

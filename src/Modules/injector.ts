@@ -6,7 +6,7 @@ import { getModule } from "modules";
 import { GuiInjector } from "Settings/injector";
 import { InjectorSettingsModel } from "Settings/Models/injector";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
-import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, setOrIgnoreBlush, isPhraseInString, settingsSave, hookFunction, getCharacter, AUDIO, getPlayerVolume, OnAction, LSCG_SendLocal, addCustomEffect, removeCustomEffect, hookBCXCurse } from "../utils";
+import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, setOrIgnoreBlush, isPhraseInString, settingsSave, hookFunction, getCharacter, AUDIO, getPlayerVolume, OnAction, LSCG_SendLocal, addCustomEffect, removeCustomEffect, hookBCXCurse, GetTargetCharacter, GetActivityName, GetMetadata } from "../utils";
 import { ActivityModule, CustomAction, CustomPrerequisite } from "./activities";
 import { HypnoModule } from "./hypno";
 import { MiscModule } from "./misc";
@@ -119,10 +119,11 @@ export class InjectorModule extends BaseModule {
         OnActivity(10, ModuleCategory.Injector, (data, sender, msg, megadata) => {
             if (!this.Enabled)
                 return;
-            var activityName = data.Dictionary[3]?.ActivityName;
-            var target = data.Dictionary.find((d: { Tag: string; }) => d.Tag == "TargetCharacter")?.MemberNumber;
+            let meta = GetMetadata(data);
+            var activityName = meta?.ActivityName;
+            var target = meta?.TargetMemberNumber;
             if (target == Player.MemberNumber && activityName == "Inject" && !!sender) {
-                var location = <AssetGroupItemName>data.Dictionary[2]?.FocusGroupName;
+                var location = <AssetGroupItemName>meta?.GroupName;
                 this.ProcessInjection(sender, location);
             }
             else if (target == Player.MemberNumber && activityName == "SipItem" && !!sender) {
@@ -150,13 +151,8 @@ export class InjectorModule extends BaseModule {
                 "ActionSwap"
             ];
 
-            var target = data.Dictionary?.find((dictItem: { Tag: string; }) => dictItem.Tag == "DestinationCharacter")?.MemberNumber;
-            if (!target)
-                var target = data.Dictionary?.find((dictItem: { Tag: string; }) => dictItem.Tag == "TargetCharacter")?.MemberNumber;
-            if (!target)
-                var target = data.Dictionary?.find((dictItem: { Tag: string; }) => dictItem.Tag == "TargetCharacterName")?.MemberNumber;
-            
-            var targetGroup = data.Dictionary?.find((dictItem: { Tag: string; }) => dictItem.Tag == "FocusAssetGroup")?.AssetGroupName;
+            let target = GetTargetCharacter(data);
+            let targetGroup = GetMetadata(data)?.GroupName;
             
             if (target == Player.MemberNumber &&
                 sender?.IsPlayer() &&
@@ -173,7 +169,7 @@ export class InjectorModule extends BaseModule {
         hookFunction("ServerSend", 100, (args, next) => {
             if (args[0] == "ChatRoomChat" && args[1]?.Type == "Activity" && this.Enabled){
                 let data = args[1];
-                let actName = data.Dictionary[3]?.ActivityName ?? "";
+                let actName = GetActivityName(data) ?? "";
                 if (actName == "SipItem") {
                     let glass = InventoryGet(Player, "ItemHandheld");
                     if (glass?.Asset.Name == "GlassFilled") {
@@ -396,13 +392,8 @@ export class InjectorModule extends BaseModule {
                 "ActionRemove"
             ];
 
-            var target = data.Dictionary?.find((dictItem: { Tag: string; }) => dictItem.Tag == "DestinationCharacter")?.MemberNumber;
-            if (!target)
-                var target = data.Dictionary?.find((dictItem: { Tag: string; }) => dictItem.Tag == "TargetCharacter")?.MemberNumber;
-            if (!target)
-                var target = data.Dictionary?.find((dictItem: { Tag: string; }) => dictItem.Tag == "TargetCharacterName")?.MemberNumber;
-            
-            var targetGroup = data.Dictionary?.find((dictItem: { Tag: string; }) => dictItem.Tag == "FocusAssetGroup")?.AssetGroupName;
+            let target = GetTargetCharacter(data);
+            let targetGroup = data.Dictionary?.find((dictItem: { Tag: string; }) => dictItem.Tag == "FocusAssetGroup")?.AssetGroupName;
             
             if (target == Player.MemberNumber &&
                 (!targetGroup || deliverySlots.indexOf(targetGroup) > -1) &&

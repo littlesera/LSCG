@@ -2,7 +2,7 @@ import { BaseModule } from "base";
 import { getModule } from "modules";
 import { BaseSettingsModel } from "Settings/Models/base";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { IsIncapacitated, OnActivity, SendAction, getRandomInt, removeAllHooksByModule, setOrIgnoreBlush } from "../utils";
+import { GetTargetCharacter, IsIncapacitated, OnActivity, SendAction, getRandomInt, removeAllHooksByModule, setOrIgnoreBlush } from "../utils";
 import { MiscModule } from "./misc";
 
 export class BoopsModule extends BaseModule {
@@ -25,9 +25,9 @@ export class BoopsModule extends BaseModule {
         OnActivity(1, ModuleCategory.Boops, (data, sender, msg, metadata) => {
             if (!this.Enabled)
                 return;
-            let target = data.Dictionary?.find((d: any) => d.Tag == "TargetCharacter");
+            let target = GetTargetCharacter(data);
             if (!!target && 
-                target.MemberNumber == Player.MemberNumber && 
+                target == Player.MemberNumber && 
                 data.Content == "ChatOther-ItemNose-Pet" && 
                 !IsIncapacitated()) {
                 this.BoopReact(sender?.MemberNumber);
