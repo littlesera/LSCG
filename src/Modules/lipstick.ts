@@ -1,6 +1,6 @@
 import { BaseModule } from "base";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { OnActivity, removeAllHooksByModule } from "../utils";
+import { GetTargetCharacter, OnActivity, removeAllHooksByModule } from "../utils";
 import { BaseSettingsModel } from "Settings/Models/base";
 
 export class LipstickModule extends BaseModule {
@@ -19,10 +19,10 @@ export class LipstickModule extends BaseModule {
         OnActivity(100, ModuleCategory.Lipstick, (data, sender, msg, metadata) => {
             if (!this.Enabled)
                 return;
-            let target = data.Dictionary?.find((d: any) => d.Tag == "TargetCharacter");
+            let target = GetTargetCharacter(data);
             if (!!target && 
                 !!sender &&
-                target.MemberNumber == Player.MemberNumber) {
+                target == Player.MemberNumber) {
                     if (this.wearingMask())
                         return;
                     switch (data.Content) {

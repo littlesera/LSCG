@@ -1,7 +1,7 @@
 import { BaseModule } from 'base';
 import { HypnoSettingsModel } from 'Settings/Models/hypno';
 import { ModuleCategory, Subscreen } from 'Settings/setting_definitions';
-import { settingsSave, parseMsgWords, OnAction, OnActivity, SendAction, getRandomInt, hookFunction, removeAllHooksByModule, callOriginal, setOrIgnoreBlush, isAllowedMember, isPhraseInString } from '../utils';
+import { settingsSave, parseMsgWords, OnAction, OnActivity, SendAction, getRandomInt, hookFunction, removeAllHooksByModule, callOriginal, setOrIgnoreBlush, isAllowedMember, isPhraseInString, GetTargetCharacter } from '../utils';
 import { GuiHypno } from 'Settings/hypno';
 
 export class HypnoModule extends BaseModule {
@@ -59,8 +59,8 @@ export class HypnoModule extends BaseModule {
         OnActivity(1, ModuleCategory.Hypno, (data, sender, msg, metadata) => {
             if (!this.Enabled)
                 return;
-            let target = data.Dictionary?.find((d: any) => d.Tag == "TargetCharacter");
-            if (!!target && target.MemberNumber == Player.MemberNumber) {
+            let target = GetTargetCharacter(data);
+            if (!!target && target == Player.MemberNumber) {
                 if (data.Content == "ChatOther-ItemNose-Pet" && this.hypnoActivated)
                     this.TriggerRestoreBoop();
                 // Special tummy rub hypno action for Bean
@@ -258,7 +258,7 @@ export class HypnoModule extends BaseModule {
                 let hashLength = Math.max(3, tw.length) + (getRandomInt(4) - 2);
                 return new Array(hashLength + 1).join('-');
             });
-            let str = tWords.join(" ");
+            let str = "⚠" + tWords.join(" ") + "⚠";
             msg = msg.replaceAll(t, str);
         });
         return msg;
