@@ -30,6 +30,12 @@ export class GuiGlobal extends GuiSubscreen {
 				setSetting: (val) => this.settings.enabled = val
 			},<Setting>{
 				type: "checkbox",
+				label: "Block Settings While Restrained:",
+				description: "Prevents LSCG settings access while restrained.",
+				setting: () => this.settings.blockSettingsWhileRestrained ?? false,
+				setSetting: (val) => this.settings.blockSettingsWhileRestrained = val
+			},<Setting>{
+				type: "checkbox",
 				label: "Blur While Edged:",
 				description: "Apply extra blurring to the screen while edging.",
 				setting: () => this.settings.edgeBlur ?? false,
