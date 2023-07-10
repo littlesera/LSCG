@@ -28,6 +28,10 @@ export class MainMenu extends GuiSubscreen {
 		return (hypnoBlock || chloroformBlock || drugBlock);
 	}
 
+	get restrainedBlock(): boolean {
+		return Player.IsRestrained() && Player.LSCG.GlobalModule.blockSettingsWhileRestrained;
+	}
+
 	constructor(module: GUI) {
 		super(module);
 
@@ -57,7 +61,7 @@ export class MainMenu extends GuiSubscreen {
 		DrawText(`- Little Sera's Club Games ${LSCG_VERSION} -`, GuiSubscreen.START_X, GuiSubscreen.START_Y - GuiSubscreen.Y_MOD, "Black", "#D7F6E9");
 		DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png");
 		
-		if (!this.immersiveBlock) {
+		if (!this.immersiveBlock && !this.restrainedBlock) {
 			MainCanvas.textAlign = "center";
 			let i = 0;
 			for (const screen of this.subscreens) {
@@ -77,7 +81,9 @@ export class MainMenu extends GuiSubscreen {
 
 				i++;
 			}
-		} else {
+		} else if (this.restrainedBlock) {
+			DrawText("Settings disabled while restrained", 150, 190, "Black", "Gray");
+		} else if (this.immersiveBlock) {
 			DrawText("Settings disabled while incapacitated and immersive", 150, 190, "Black", "Gray");
 		}
 
