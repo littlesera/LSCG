@@ -1,7 +1,7 @@
 import { BaseModule } from "base";
 import { getModule, modules } from "modules";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { getCharacter, LSCG_SendLocal, removeAllHooksByModule, SendAction, settingsSave } from "../utils";
+import { getCharacter, GetDelimitedList, LSCG_SendLocal, removeAllHooksByModule, SendAction, settingsSave } from "../utils";
 import { HypnoModule } from "./hypno";
 import { ItemUseModule } from "./item-use";
 import { ActivityModule } from "./activities";
@@ -61,11 +61,11 @@ export class CommandModule extends BaseModule {
 			Action: () => {
 				let hypnoTriggers = this.hypno.triggers;
 				let awakenerTriggers = this.hypno.awakeners;
-				let tightenTrigger = this.collar.settings.tightTrigger;
-				let loosenTrigger = this.collar.settings.looseTrigger;
+				let tightenTrigger = GetDelimitedList(this.collar.settings.tightTrigger);
+				let loosenTrigger = GetDelimitedList(this.collar.settings.looseTrigger);
 
 				let hypnoStr = !this.hypno.Enabled ? "<i>Hypnosis not enabled.</i>" : (this.hypno.settings.immersive ? "<i>Hypnosis triggers hidden while immersive...</i>" : `<b>Hypnosis:</b> ${hypnoTriggers}<br><b>Awakeners:</b> ${awakenerTriggers}`);
-				let collarStr = !this.hypno.settings.enabled ? "<i>Breathplay Collar not enabled.</i>" : (this.collar.settings.immersive ? "<i>Collar triggers hidden while immersive...</i>" : `<b>Collar Tighten:</b> ${tightenTrigger}<br><b>Collar Loosen:</b> ${loosenTrigger}`);
+				let collarStr = !this.collar.settings.enabled ? "<i>Breathplay Collar not enabled.</i>" : (this.collar.settings.immersive ? "<i>Collar triggers hidden while immersive...</i>" : `<b>Collar Tighten:</b> ${tightenTrigger}<br><b>Collar Loosen:</b> ${loosenTrigger}`);
 
 				LSCG_SendLocal(`Your current triggers are: <br>${hypnoStr}<br>${collarStr}`);
 			}
@@ -187,8 +187,8 @@ export class CommandModule extends BaseModule {
 							else {
 								SendAction("%NAME% presses a button on %POSSESSIVE% collar.");
 								setTimeout(() => {
-									let tightenTrigger = this.collar.settings.tightTrigger;
-									let loosenTrigger = this.collar.settings.looseTrigger;	
+									let tightenTrigger = GetDelimitedList(this.collar.settings.tightTrigger);
+									let loosenTrigger = GetDelimitedList(this.collar.settings.looseTrigger);
 									let chokeCount = this.collar.settings.stats.collarPassoutCount;
 									let remoteAccess = "ENABLED";
 									if (!this.collar.settings.remoteAccess)

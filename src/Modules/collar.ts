@@ -1,7 +1,7 @@
 import { BaseModule } from 'base';
 import { CollarSettingsModel } from 'Settings/Models/collar';
 import { ModuleCategory, Subscreen } from 'Settings/setting_definitions';
-import { settingsSave, SendAction, OnChat, getRandomInt, hookFunction, removeAllHooksByModule, OnActivity, OnAction, setOrIgnoreBlush, getCharacter, hookBCXCurse, isPhraseInString, GetTargetCharacter, GetMetadata } from '../utils';
+import { settingsSave, SendAction, OnChat, getRandomInt, hookFunction, removeAllHooksByModule, OnActivity, OnAction, setOrIgnoreBlush, getCharacter, hookBCXCurse, isPhraseInString, GetTargetCharacter, GetMetadata, GetDelimitedList } from '../utils';
 import { GuiCollar } from 'Settings/collar';
 
 enum PassoutReason {
@@ -254,7 +254,7 @@ export class CollarModule extends BaseModule {
 
     // Choke Collar Code
     get allowedChokeMembers(): number[] {
-        let stringList = this.settings.allowedMembers.split(",");
+        let stringList = GetDelimitedList(this.settings.allowedMembers);
         let memberList = stringList.filter(str => !!str && (+str === +str)).map(str => parseInt(str)).filter(id => id != Player.MemberNumber);
         if (this.settings.limitToCrafted && this.settings.collar.creator >= 0)
             memberList.push(this.settings.collar.creator);
@@ -432,9 +432,12 @@ export class CollarModule extends BaseModule {
         if (!this.settings.tightTrigger || !this.settings.looseTrigger)
             return;
 
-        if (isPhraseInString(msg, this.settings.tightTrigger) && this.AllowedMember(sender, true))
+        let tightTriggers = GetDelimitedList(this.settings.tightTrigger);
+        let looseTriggers = GetDelimitedList(this.settings.looseTrigger);
+
+        if (tightTriggers.some(trig => isPhraseInString(msg, trig)) && this.AllowedMember(sender, true))
             this.IncreaseCollarChoke();
-        else if (isPhraseInString(msg, this.settings.looseTrigger) && this.AllowedMember(sender, false))
+        else if (looseTriggers.some(trig => isPhraseInString(msg, trig)) && this.AllowedMember(sender, false))
             this.DecreaseCollarChoke();
     }
 
