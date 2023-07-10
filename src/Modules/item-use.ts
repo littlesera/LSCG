@@ -4,6 +4,7 @@ import { ModuleCategory } from "Settings/setting_definitions";
 import { getRandomInt, hookFunction, IsIncapacitated, removeAllHooksByModule, SendAction } from "../utils";
 import { ActivityBundle, ActivityModule, ActivityTarget } from "./activities";
 import { BoopsModule } from "./boops";
+import { CollarModule } from "./collar";
 
 export class ActivityRoll {
 	constructor(raw: number, mod: number) {
@@ -628,8 +629,10 @@ export class ItemUseModule extends BaseModule {
 		let edgingMod = C.IsEdged() ? (Math.floor((C.ArousalSettings?.Progress ?? 0) / 25) * -1) : 0;
 		// -5 if we're incapacitated, automatic failure if we're also defending
 		let incapacitatedMod = IsIncapacitated(C.IsPlayer() ? C as PlayerCharacter : C as OtherCharacter) ? (isAggressor ? 5 : 100) * -1 : 0;
-		
-		let finalMod = dominanceMod + ownershipMod + restrainedMod + edgingMod + incapacitatedMod;
+		// -2 for each level of choking
+		let breathMod = (C.IsPlayer() ? getModule<CollarModule>("CollarModule").totalChokeLevel : (C as OtherCharacter).LSCG.CollarModule.chokeLevel) * -2;
+
+		let finalMod = dominanceMod + ownershipMod + restrainedMod + edgingMod + incapacitatedMod + breathMod;
 	
 		console.debug(`${CharacterNickname(C)} is ${isAggressor ? 'rolling against' : 'defending against'} ${!Opponent ? "nobody" : CharacterNickname(Opponent)} [${finalMod}] --
 		dominanceMod: ${dominanceMod}
@@ -637,6 +640,7 @@ export class ItemUseModule extends BaseModule {
 		restrainedMod: ${restrainedMod}
 		edgingMod: ${edgingMod}
 		incapacitatedMod: ${incapacitatedMod}
+		breathMod: ${breathMod}
 		`);
 	
 		return finalMod;

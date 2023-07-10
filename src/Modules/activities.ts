@@ -3,6 +3,8 @@ import { ModuleCategory } from "Settings/setting_definitions";
 import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, setOrIgnoreBlush, hookFunction, ICONS, getCharacter, sendLSCGMessage, OnAction, callOriginal, LSCG_SendLocal, GetTargetCharacter, GetActivityName, GetMetadata } from "../utils";
 import { getModule } from "modules";
 import { ItemUseModule } from "./item-use";
+import { CollarModel } from "Settings/Models/collar";
+import { CollarModule } from "./collar";
 
 export interface ActivityTarget {
     Name: AssetGroupItemName;
@@ -52,7 +54,7 @@ export interface ActivityBundle extends ActivityBundleBase {
     Targets?: ActivityTarget[];
 }
 
-export type GrabType = "hand"  | "ear" | "tongue" | "arm"
+export type GrabType = "hand"  | "ear" | "tongue" | "arm" | "neck" | "mouth"
 
 export interface HandOccupant {
     Member: number,
@@ -64,6 +66,8 @@ export class ActivityModule extends BaseModule {
         this.heldBy = [];
         this.hands = [];
     }
+
+    collarModule: CollarModule = getModule<CollarModule>("CollarModule");
 
     load(): void {
         hookFunction("ServerSend", 100, (args, next) => {
@@ -162,6 +166,10 @@ export class ActivityModule extends BaseModule {
         this.InitTongueGrabHooks();
         this.InitHandHoldHooks();
         this.RegisterActivities();
+    }
+
+    run(): void {
+        this.collarModule = getModule<CollarModule>("CollarModule");
     }
 
     RegisterActivities(): void{
@@ -686,6 +694,54 @@ export class ActivityModule extends BaseModule {
             },
             CustomImage: "Assets/Female3DCG/Activity/Grope.png"
         });
+
+        // PatchChoke Neck
+        this.PatchActivity(<ActivityPatch>{
+            ActivityName: "Choke",
+            CustomAction: <CustomAction>{
+                Func: (target, args, next) => {
+                    var location = GetMetadata(args[1])?.GroupName;
+                    if (!!target && !!location && location == "ItemNeck")
+                        this.DoGrab(target, "neck");
+                    return next(args);
+                }
+            },
+        });
+
+        // ReleaseNeck
+        this.AddActivity({
+            Activity: <Activity>{
+                Name: "ReleaseNeck",
+                MaxProgress: 30,
+                Prerequisite: ["ZoneAccessible", "UseHands"]
+            },
+            Targets: [
+                {
+                    Name: "ItemNeck",
+                    SelfAllowed: false,
+                    TargetLabel: "Release Neck",
+                    TargetAction: "SourceCharacter releases TargetCharacter's neck."
+                }
+            ],
+            CustomPrereqs: [
+                {
+                    Name: "TargetIsNeckChoked",
+                    Func: (acting, acted, group) => {
+                        if (group.Name == "ItemNeck")
+                            return !!this.hands.find(h => h.Member == acted.MemberNumber && h.Type == "neck");
+                        return false;
+                    }
+                }
+            ],
+            CustomAction: <CustomAction>{
+                Func: (target, args, next) => {
+                    if (!!target)
+                        this.DoRelease(target, "neck");
+                    return next(args);
+                }
+            },
+            CustomImage: "Assets/Female3DCG/Activity/Choke.png"
+        });
     }
 
     get customGagged(): boolean {
@@ -1079,9 +1135,14 @@ export class ActivityModule extends BaseModule {
             this.hands = this.hands.filter(h => !(h.Member == member && h.Type == type));
     }
 
-    grabbedBy(member: number, type: GrabType) {
+    grabbedBy(member: number, type: GrabType): boolean {
+        if (type == "neck") {
+            let sender = getCharacter(member);
+            if (!!sender) this.collarModule.HandChoke(sender);
+        }
+
         if (!member || member < 0 || !!this.heldBy.find(h => h.Member == member && h.Type == type))
-            return;
+            return false;
             
         this.heldBy.push(<HandOccupant>{
             Member: member,
@@ -1092,12 +1153,16 @@ export class ActivityModule extends BaseModule {
             this.prevMouth = WardrobeGetExpression(Player)?.Mouth ?? null;
             CharacterSetFacialExpression(Player, "Mouth", "Ahegao");
         }
+
+        return true;
     }
 
     releasedBy(member: number, type: GrabType | undefined) {
         if (this.heldBy.filter(h => h.Member == member && h.Type == "tongue").length == 1 && (!type || type == "tongue")) {
             CharacterSetFacialExpression(Player, "Mouth", this.prevMouth);
             this.prevMouth = null;
+        } else if (this.heldBy.filter(h => h.Member == member && h.Type == "neck").length == 1 && (!type || type == "neck")) {
+            this.collarModule.ReleaseHandChoke(getCharacter(member), true);
         }
 
         if (!type)
@@ -1196,8 +1261,8 @@ export class ActivityModule extends BaseModule {
 
     IncomingGrab(sender: Character, grabType: GrabType) {
         if (!!sender.MemberNumber) {
-            this.grabbedBy(sender.MemberNumber, grabType);
-            if (grabType != "hand")
+            let doNotify = this.grabbedBy(sender.MemberNumber, grabType);
+            if (doNotify && grabType != "hand")
                 this.NotifyAboutEscapeCommand(sender, grabType);
         }
     }
@@ -1232,7 +1297,8 @@ export class ActivityModule extends BaseModule {
                 this.escapeAttempted = 0;
             }
         }
-        let grabbingMemberNumber = this.earPinchedByMember ?? this.armGrabbedByMember ?? this.tongueGrabbedByMember ?? -1;
+        let grabbingMembers = this.heldBy.filter(h => h.Type != "hand").map(h => h.Member);
+        let grabbingMemberNumber = grabbingMembers[0];
         if (grabbingMemberNumber < 0) {
             LSCG_SendLocal(`You are not grabbed by anyone!`);
             return;
