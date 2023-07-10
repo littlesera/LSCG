@@ -11,6 +11,10 @@ export interface GlobalSettingsModel extends BaseSettingsModel {
     showCheckRolls: boolean;
 }
 
+export interface LipstickSettingsModel extends BaseSettingsModel {
+    dry: boolean;
+}
+
 export interface MiscSettingsModel extends BaseSettingsModel {
     chloroformEnabled: boolean;
     chloroformedAt: number;

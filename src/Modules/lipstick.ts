@@ -1,13 +1,14 @@
 import { BaseModule } from "base";
 import { ModuleCategory } from "Settings/setting_definitions";
 import { GetTargetCharacter, OnActivity, removeAllHooksByModule } from "../utils";
-import { BaseSettingsModel } from "Settings/Models/base";
+import { BaseSettingsModel, LipstickSettingsModel } from "Settings/Models/base";
 
 export class LipstickModule extends BaseModule {
 
     get defaultSettings() {
-        return <BaseSettingsModel>{
-            enabled: false
+        return <LipstickSettingsModel>{
+            enabled: false,
+            dry: false
         };
     }
 
@@ -22,6 +23,7 @@ export class LipstickModule extends BaseModule {
             let target = GetTargetCharacter(data);
             if (!!target && 
                 !!sender &&
+                !(sender as OtherCharacter).LSCG?.LipstickModule?.dry &&
                 target == Player.MemberNumber) {
                     if (this.wearingMask())
                         return;

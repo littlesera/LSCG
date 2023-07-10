@@ -42,6 +42,12 @@ export class GuiGlobal extends GuiSubscreen {
 				setSetting: (val) => Player.LSCG.LipstickModule.enabled = val
 			},<Setting>{
 				type: "checkbox",
+				label: "Dry Lipstick:",
+				description: "Never apply kissmarks when you are the kisser.",
+				setting: () => Player.LSCG.LipstickModule.dry ?? false,
+				setSetting: (val) => Player.LSCG.LipstickModule.dry = val
+			},<Setting>{
+				type: "checkbox",
 				label: "Enable Boop Reactions:",
 				description: "Auto-react when booped.",
 				setting: () => Player.LSCG.BoopsModule.enabled ?? false,
