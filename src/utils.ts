@@ -2,6 +2,7 @@ import bcModSDKRef from "bondage-club-mod-sdk";
 import { getModule } from "modules";
 import { CoreModule } from "Modules/core";
 import { MiscModule } from "Modules/misc";
+import { ActivityEntryModel } from "Settings/Models/activities";
 import { ModuleCategory } from "Settings/setting_definitions";
 
 export const LSCG_CHANGES: string = "https://github.com/littlesera/LSCG/releases/latest";
@@ -416,6 +417,21 @@ export function GetActivityName(data: IChatRoomMessage): string | undefined {
 
 export function GetDelimitedList(source: string, delimiter: string = ","): string[] {
 	return source?.split(delimiter)?.filter(entry => !!entry).map(entry => entry.toLocaleLowerCase()) ?? [];
+}
+
+export function GetActivityEntry(actName: string, grpName: string): ActivityEntryModel | undefined {
+	if (!Player.LSCG?.ActivityModule)
+		return;
+	return Player.LSCG.ActivityModule.activities.find(a => a.name == actName && a.group == grpName);
+}
+
+export function GetActivityEntryFromContent(content: string): ActivityEntryModel | undefined {
+	// ex: ChatOther-ItemNose-Pet
+	let result = /Chat(Other|Self)-(\S+)-(\S+)/mi.exec(content);
+	if (!!result) {
+		return GetActivityEntry(result[3], result[2]);
+	}
+	return;
 }
 
 // ICONS

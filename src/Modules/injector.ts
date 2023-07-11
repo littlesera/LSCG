@@ -6,7 +6,7 @@ import { getModule } from "modules";
 import { GuiInjector } from "Settings/injector";
 import { InjectorSettingsModel } from "Settings/Models/injector";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
-import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, setOrIgnoreBlush, isPhraseInString, settingsSave, hookFunction, getCharacter, AUDIO, getPlayerVolume, OnAction, LSCG_SendLocal, addCustomEffect, removeCustomEffect, hookBCXCurse, GetTargetCharacter, GetActivityName, GetMetadata } from "../utils";
+import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, setOrIgnoreBlush, isPhraseInString, settingsSave, hookFunction, getCharacter, AUDIO, getPlayerVolume, OnAction, LSCG_SendLocal, addCustomEffect, removeCustomEffect, hookBCXCurse, GetTargetCharacter, GetActivityName, GetMetadata, GetActivityEntryFromContent } from "../utils";
 import { ActivityModule, CustomAction, CustomPrerequisite } from "./activities";
 import { HypnoModule } from "./hypno";
 import { MiscModule } from "./misc";
@@ -50,7 +50,6 @@ export class InjectorModule extends BaseModule {
             enableHorny: false,
             netgunIsChaotic: false,
             showDrugLevels: true,
-            allowBoopRestore: true,
             sedativeLevel: 0,
             mindControlLevel: 0,
             hornyLevel: 0,
@@ -134,7 +133,8 @@ export class InjectorModule extends BaseModule {
                     this.ProcessDruggedDrink(sender);
                 }
             } else if (target == Player.MemberNumber) {
-                if (data.Content == "ChatOther-ItemNose-Pet" && this.settings.allowBoopRestore) {
+                let activityEntry = GetActivityEntryFromContent(data.Content);
+                if (activityEntry?.awakener) {
                     if (this.asleep) this.Wake();
                     if (this.brainwashed) this.SnapBack();
                 }
