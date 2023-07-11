@@ -230,6 +230,45 @@ export class ActivityModule extends BaseModule {
             CustomImage: "Assets/Female3DCG/Activity/Slap.png"
         });
 
+        // Nuzzle
+        // ["ItemArms", "ItemBreast", "ItemButt", "ItemEars", "ItemFeet", "ItemBoots", "ItemHands", "ItemHead", "ItemLegs", "ItemMouth", "ItemNeck", "ItemNipples", "ItemNose", "ItemPelvis", "ItemTorso", "ItemTorso2", "ItemVulva", "ItemVulvaPiercings"],
+        this.AddActivity({
+            Activity: <Activity>{
+                Name: "Nuzzle",
+                MaxProgress: 70,
+                MaxProgressSelf: 70,
+                Prerequisite: ["ZoneAccessible"]
+            },
+            Targets: [
+                <ActivityTarget>{
+                    Name: "ItemHead",
+                    SelfAllowed: false,
+                    TargetAction: "SourceCharacter nuzzles against the side of TargetCharacter's head."
+                },<ActivityTarget>{
+                    Name: "ItemNeck",
+                    SelfAllowed: false,
+                    TargetAction: "SourceCharacter nuzzles into TargetCharacter's neck."
+                },<ActivityTarget>{
+                    Name: "ItemArms",
+                    SelfAllowed: false,
+                    TargetAction: "SourceCharacter nuzzles into TargetCharacter's arms."
+                },<ActivityTarget>{
+                    Name: "ItemHands",
+                    SelfAllowed: false,
+                    TargetAction: "SourceCharacter nuzzles underneath TargetCharacter's hand."
+                },<ActivityTarget>{
+                    Name: "ItemBreast",
+                    SelfAllowed: false,
+                    TargetAction: "SourceCharacter nuzzles into TargetCharacter's breasts."
+                },<ActivityTarget>{
+                    Name: "ItemTorso",
+                    SelfAllowed: false,
+                    TargetAction: "SourceCharacter nuzzles snugly into TargetCharacter."
+                }
+            ],
+            CustomImage: "Assets/Female3DCG/Activity/Kiss.png"
+        });
+
         // Hug
         this.AddActivity({
             Activity: <Activity>{
