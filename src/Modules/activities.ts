@@ -56,7 +56,7 @@ export interface ActivityBundle extends ActivityBundleBase {
     Targets?: ActivityTarget[];
 }
 
-export type GrabType = "hand"  | "ear" | "tongue" | "arm" | "neck" | "mouth"
+export type GrabType = "hand"  | "ear" | "tongue" | "arm" | "neck" | "mouth" | "horn"
 
 export interface HandOccupant {
     Member: number,
@@ -212,6 +212,24 @@ export class ActivityModule extends BaseModule {
     }
 
     RegisterActivities(): void{
+        // Bap
+        this.AddActivity({
+            Activity: <Activity>{
+                Name: "Bap",
+                MaxProgress: 70,
+                MaxProgressSelf: 70,
+                Prerequisite: ["UseArms"]
+            },
+            Targets: [
+                <ActivityTarget>{
+                    Name: "ItemHead",
+                    SelfAllowed: false,
+                    TargetAction: "SourceCharacter baps TargetCharacter."
+                }
+            ],
+            CustomImage: "Assets/Female3DCG/Activity/Slap.png"
+        });
+
         // Hug
         this.AddActivity({
             Activity: <Activity>{
@@ -688,12 +706,25 @@ export class ActivityModule extends BaseModule {
         // Patch Grab Arm
         this.PatchActivity(<ActivityPatch>{
             ActivityName: "Grope",
+            AddedTargets: [{
+                Name: "ItemHood",
+                SelfAllowed: false,
+                TargetLabel: "Grab Horn",
+                TargetAction: "SourceCharacter grabs one of TargetCharacter's horns."
+            }],
             CustomPrereqs: [
                 {
                     Name: "TargetIsArmAvailable",
                     Func: (acting, acted, group) => {
                         if (group.Name == "ItemArms")
-                            return !this.isPlayerGrabbing(acted.MemberNumber ?? 0) && this.armGrabbingMemberList.length < 2;
+                            return !this.isPlayerGrabbing(acted.MemberNumber ?? 0);
+                        return true;
+                    }
+                }, {
+                    Name: "TargetHornAvailable",
+                    Func: (acting, acted, group) => {
+                        if (group.Name == "ItemHood" && (InventoryGet(acted, "HairAccessory2")?.Asset.Name ?? "").toLocaleLowerCase().indexOf("horn") > -1)
+                            return !this.hands.find(h => h.Member == acted.MemberNumber && h.Type == "horn");
                         return true;
                     }
                 }
@@ -703,6 +734,8 @@ export class ActivityModule extends BaseModule {
                     var location = GetMetadata(args[1])?.GroupName;
                     if (!!target && !!location && location == "ItemArms")
                         this.DoGrab(target, "arm");
+                    else if (!!target && !!location && location == "ItemHood")
+                        this.DoGrab(target, "horn");
                     return next(args);
                 }
             },
@@ -711,7 +744,7 @@ export class ActivityModule extends BaseModule {
         // Release Arm
         this.AddActivity({
             Activity: <Activity>{
-                Name: "ReleaseArm",
+                Name: "Release",
                 MaxProgress: 30,
                 Prerequisite: [""]
             },
@@ -721,22 +754,32 @@ export class ActivityModule extends BaseModule {
                     SelfAllowed: false,
                     TargetLabel: "Release Arm",
                     TargetAction: "SourceCharacter releases TargetCharacter's arm."
+                },{
+                    Name: "ItemHood",
+                    SelfAllowed: false,
+                    TargetLabel: "Release Horn",
+                    TargetAction: "SourceCharacter releases TargetCharacter's horn."
                 }
             ],
             CustomPrereqs: [
                 {
-                    Name: "TargetIsArmGrabbed",
+                    Name: "TargetIsGrabbed",
                     Func: (acting, acted, group) => {
                         if (group.Name == "ItemArms")
                             return this.isPlayerGrabbing(acted.MemberNumber ?? 0);
+                        else if (group.Name == "ItemHood")
+                            return !!this.hands.find(h => h.Member == acted.MemberNumber && h.Type == "horn");
                         return false;
                     }
                 }
             ],
             CustomAction: <CustomAction>{
                 Func: (target, args, next) => {
-                    if (!!target)
+                    var location = GetMetadata(args[1])?.GroupName;
+                    if (!!target && location == "ItemArms")
                         this.DoRelease(target, "arm");
+                    else if (!!target && location == "ItemHood")
+                        this.DoRelease(target, "horn");
                     return next(args);
                 }
             },
@@ -970,7 +1013,7 @@ export class ActivityModule extends BaseModule {
 
     InitHandHoldHooks(): void {
         hookFunction('Player.CanWalk', 1, (args, next) => {
-            if (!!this.earPinchedByMember || !!this.armGrabbedByMember || !!this.tongueGrabbedByMember)
+            if (this.heldBy.filter(h => h.Type != "hand").length > 0)
                 return false;
             return next(args);
         }, ModuleCategory.Activities);
@@ -994,7 +1037,13 @@ export class ActivityModule extends BaseModule {
                     SendAction("%NAME% tugs %OPP_NAME% out of the room by the tongue.", chars[0]);
                 else
                     SendAction("%NAME% tugs " + CharacterNickname(chars[0]!) + " and " + CharacterNickname(chars[1]!) + " out of the room by their tongues.");
+            } else if (this.hands.length > 0) {
+                if (this.hands.length == 1)
+                    SendAction(`%NAME% leads %OPP_NAME% out of the room by the ${this.hands[0].Type}.`, getCharacter(this.hands[0].Member));
+                else
+                    SendAction("%NAME% leads " + CharacterNickname(getCharacter(this.hands[0].Member)!) + " and " + CharacterNickname(getCharacter(this.hands[1].Member)!) + " out of the room.");
             }
+
             return next(args);
         }, ModuleCategory.Activities);
 
@@ -1022,12 +1071,12 @@ export class ActivityModule extends BaseModule {
                     );
                 }
                 // ROTATE CANVAS TO DRAW ICON IN HERE, if it works it works, if it doesn't -- HO BOY!
-                else if (this.isPlayerGrabbedBy(C.MemberNumber) || this.isPlayerGrabbing(C.MemberNumber)) {
+                else if (!!this.heldBy.find(h => h.Member == C.MemberNumber) || !!this.hands.find(h => h.Member == C.MemberNumber)) {
                     DrawCircle(CharX + 420 * Zoom, CharY + 60 * Zoom, 20 * Zoom, 1, "Black", "White");
                     MainCanvas.translate(CharX + 420 * Zoom, CharY + 60 * Zoom);
                     MainCanvas.rotate(-Math.PI/2);
                     MainCanvas.translate(-(CharX + 420 * Zoom), -(CharY + 60 * Zoom));
-                    DrawImageEx("Icons/Battle.png", CharX + 405 * Zoom, CharY + 45 * Zoom, { Width: 30 * Zoom, Height: 30 * Zoom, Invert: this.isPlayerGrabbing(C.MemberNumber) });
+                    DrawImageEx("Icons/Battle.png", CharX + 405 * Zoom, CharY + 45 * Zoom, { Width: 30 * Zoom, Height: 30 * Zoom, Invert: !!this.hands.find(h => h.Member == C.MemberNumber) });
                     // DrawImageResize(
                     //     "Icons/Battle.png",
                     //     CharX + 405 * Zoom, CharY + 45 * Zoom, 30 * Zoom, 30 * Zoom
