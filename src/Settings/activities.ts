@@ -124,13 +124,13 @@ export class GuiActivities extends GuiSubscreen {
 	}
 
 	Exit() {
-		Player.FocusGroup = null;
-		super.Exit();
-
 		this.SetActivityEntryVals(this.currentActivityEntry);
 		ElementRemove("hypnoThreshold");
 		ElementRemove("hypnoCount");
 		ElementRemove("orgasmThreshold");
+
+		Player.FocusGroup = null;
+		super.Exit();
 	}
 
 	LoadActivityEntry(entry: ActivityEntryModel | undefined) {
