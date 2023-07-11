@@ -256,7 +256,7 @@ export class InjectorModule extends BaseModule {
                         SelfAllowed: true,
                         TargetLabel: "Shoot Netgun",
                         TargetAction: "SourceCharacter takes aim at TargetCharacter with their net gun.",
-                        TargetSelfAction: "SourceCharacter turns their netgun on themselves!"
+                        TargetSelfAction: "SourceCharacter turns their net gun on themselves!"
                     }
                 ],
                 CustomPrereqs: [
@@ -840,7 +840,9 @@ export class InjectorModule extends BaseModule {
             return false;
 
         let allowedNetGuns = [
-            "MedicalInjector"
+            "MedicalInjector",
+            "RainbowWand",
+            "Baguette"
         ]
         var item = InventoryGet(Player, "ItemHandheld");
         if (!item || !item.Asset || allowedNetGuns.indexOf(item.Asset.Name) == -1)
