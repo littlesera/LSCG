@@ -710,7 +710,7 @@ export class ActivityModule extends BaseModule {
                 Name: "ItemHood",
                 SelfAllowed: false,
                 TargetLabel: "Grab Horn",
-                TargetAction: "SourceCharacter grabs one of TargetCharacter's horns."
+                TargetAction: "SourceCharacter grabs TargetCharacter's horn."
             }],
             CustomPrereqs: [
                 {
