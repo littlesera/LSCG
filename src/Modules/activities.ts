@@ -230,8 +230,29 @@ export class ActivityModule extends BaseModule {
             CustomImage: "Assets/Female3DCG/Activity/Slap.png"
         });
 
+        // Bap
+        this.AddActivity({
+            Activity: <Activity>{
+                Name: "Headbutt",
+                MaxProgress: 70,
+                MaxProgressSelf: 70,
+                Prerequisite: ["CanHeadbutt"]
+            },
+            Targets: [
+                <ActivityTarget>{
+                    Name: "ItemArms",
+                    SelfAllowed: false,
+                    TargetAction: "SourceCharacter headbutts TargetCharacter."
+                }
+            ],
+            CustomPrereqs: [{
+                Name: "CanHeadbutt",
+                Func: (acting, acted, group) => !acting.IsFixedHead()
+            }],
+            CustomImage: "Assets/Female3DCG/Activity/Nod.png"
+        });
+
         // Nuzzle
-        // ["ItemArms", "ItemBreast", "ItemButt", "ItemEars", "ItemFeet", "ItemBoots", "ItemHands", "ItemHead", "ItemLegs", "ItemMouth", "ItemNeck", "ItemNipples", "ItemNose", "ItemPelvis", "ItemTorso", "ItemTorso2", "ItemVulva", "ItemVulvaPiercings"],
         this.AddActivity({
             Activity: <Activity>{
                 Name: "Nuzzle",
