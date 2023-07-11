@@ -1,10 +1,12 @@
 import { BaseModule } from "base";
-import { ModuleCategory } from "Settings/setting_definitions";
-import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, setOrIgnoreBlush, hookFunction, ICONS, getCharacter, sendLSCGMessage, OnAction, callOriginal, LSCG_SendLocal, GetTargetCharacter, GetActivityName, GetMetadata } from "../utils";
+import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
+import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, setOrIgnoreBlush, hookFunction, ICONS, getCharacter, sendLSCGMessage, OnAction, callOriginal, LSCG_SendLocal, GetTargetCharacter, GetActivityName, GetMetadata, GetActivityEntryFromContent } from "../utils";
 import { getModule } from "modules";
 import { ItemUseModule } from "./item-use";
 import { CollarModel } from "Settings/Models/collar";
 import { CollarModule } from "./collar";
+import { ActivitySettingsModel } from "Settings/Models/activities";
+import { GuiActivities } from "Settings/activities";
 
 export interface ActivityTarget {
     Name: AssetGroupItemName;
@@ -62,6 +64,33 @@ export interface HandOccupant {
 }
 
 export class ActivityModule extends BaseModule {
+    get settings(): ActivitySettingsModel {
+		return super.settings as ActivitySettingsModel;
+	}
+
+    get settingsScreen(): Subscreen | null {
+        return GuiActivities;
+    }
+
+    get defaultSettings() {
+		return <ActivitySettingsModel>{
+            enabled: true,
+            activities: [
+                {
+                    name: "Pet",
+                    group: "ItemNose",
+                    awakener: true,
+                    hypno: false,
+                    hypnoRequiredRepeats: 2,
+                    hypnoThreshold: 50,
+                    orgasm: false,
+                    orgasmThreshold: 75,
+                }
+            ],
+            stats: {}
+        };
+    }
+    
     safeword(): void {
         this.heldBy = [];
         this.hands = [];
@@ -134,6 +163,16 @@ export class ActivityModule extends BaseModule {
                 var reactionFunc = this.CustomIncomingActivityReactions.get(activityName);
                 if (!!reactionFunc)
                     reactionFunc(sender);
+            } else if (target == Player.MemberNumber) {
+                let activityEntry = GetActivityEntryFromContent(data.Content);
+                if (activityEntry?.orgasm && (Player.ArousalSettings?.Progress ?? 0) >= activityEntry?.orgasmThreshold) {
+                    if (Player.IsEdged()) {
+                        SendAction("%NAME% moans and trembles in frustration as %PRONOUN% is held right at the edge...");
+                        ActivitySetArousal(Player, 99);
+                    }
+                    else
+                        ActivityOrgasmPrepare(Player);
+                }
             }
         })
 
@@ -328,28 +367,22 @@ export class ActivityModule extends BaseModule {
         });
 
         // NibbleTail
-        this.AddActivity({
-            Activity: {
-                Name: "Nibble",
-                MaxProgress: 90,
-                MaxProgressSelf: 50,
-                Prerequisite: ["HasTail"],
-                Target: []
-            },
-            Targets: [{
+        this.PatchActivity({
+            ActivityName: "Nibble",
+            AddedTargets: [{
                 Name: "ItemButt",
                 SelfAllowed: true,
                 TargetLabel: "Nibble Tail",
                 TargetAction: "SourceCharacter nibbles on TargetCharacter's tail.",
                 TargetSelfAction: "SourceCharacter nibbles on PronounPossessive own tail."
             }],
+            AddedPrerequisites: ["HasTail"],
             CustomPrereqs: [
                 {
                     Name: "HasTail",
-                    Func: (acting, acted, group) => !!InventoryGet(acted, "TailStraps")
+                    Func: (acting, acted, group) => group.Name == "ItemButt" ? !!InventoryGet(acted, "TailStraps") : true
                 }
-            ],
-            CustomImage: "Assets/Female3DCG/Activity/Nibble.png"
+            ]
         });
 
         // FuckWithPussy

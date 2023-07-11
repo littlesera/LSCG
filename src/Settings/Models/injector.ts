@@ -31,7 +31,6 @@ export interface InjectorSettingsModel extends InjectorPublicSettingsModel {
     hornyCooldown: number;
     netgunIsChaotic: boolean;
     showDrugLevels: boolean;
-    allowBoopRestore: boolean;
     enableContinuousDelivery: boolean;
     continuousDeliveryActivatedAt: number;
     continuousDeliveryTimeout: number;

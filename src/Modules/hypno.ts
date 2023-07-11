@@ -1,8 +1,11 @@
 import { BaseModule } from 'base';
 import { HypnoSettingsModel } from 'Settings/Models/hypno';
 import { ModuleCategory, Subscreen } from 'Settings/setting_definitions';
-import { settingsSave, parseMsgWords, OnAction, OnActivity, SendAction, getRandomInt, hookFunction, removeAllHooksByModule, callOriginal, setOrIgnoreBlush, isAllowedMember, isPhraseInString, GetTargetCharacter, GetDelimitedList } from '../utils';
+import { settingsSave, parseMsgWords, OnAction, OnActivity, SendAction, getRandomInt, hookFunction, removeAllHooksByModule, callOriginal, setOrIgnoreBlush, isAllowedMember, isPhraseInString, GetTargetCharacter, GetDelimitedList, GetActivityEntryFromContent } from '../utils';
 import { GuiHypno } from 'Settings/hypno';
+import { ActivityModule } from './activities';
+import { getModule } from 'modules';
+import { ActivityEntryModel } from 'Settings/Models/activities';
 
 export class HypnoModule extends BaseModule {
     get settings(): HypnoSettingsModel {
@@ -61,11 +64,12 @@ export class HypnoModule extends BaseModule {
                 return;
             let target = GetTargetCharacter(data);
             if (!!target && target == Player.MemberNumber) {
-                if (data.Content == "ChatOther-ItemNose-Pet" && this.hypnoActivated)
+                let activityEntry = GetActivityEntryFromContent(data.Content);
+                if (activityEntry?.awakener && this.hypnoActivated)
                     this.TriggerRestoreBoop();
                 // Special tummy rub hypno action for Bean
-                else if ((data.Content == "ChatOther-ItemPelvis-MassageHands" || data.Content == "ChatOther-ItemPelvis-Caress") && !this.hypnoActivated && Player.MemberNumber == 71233 && !this.IsOnCooldown()) {
-                    this.DelayedTriggerWord(sender?.MemberNumber);
+                else if (activityEntry?.hypno && !this.hypnoActivated && !this.IsOnCooldown() && (Player.ArousalSettings?.Progress ?? 0) >= activityEntry.hypnoThreshold) {
+                    this.DelayedTrigger(activityEntry, sender?.MemberNumber);
                 }
             }
         });
@@ -272,9 +276,35 @@ export class HypnoModule extends BaseModule {
         "%NAME% quivers, patiently awaiting something to fill %POSSESSIVE% empty head..."
     ];
 
-    DelayedTriggerWord(memberNumber: number = 0) {
-        SendAction("%NAME%'s eyes flutter as %PRONOUN% fights to keep control of %POSSESSIVE% senses...");
-        setTimeout(() => this.StartTriggerWord(false, memberNumber), 10000);
+    delayedHypnoStrings = [
+        "%NAME%'s eyes flutter as %PRONOUN% fights to keep control of %POSSESSIVE% senses...",
+        "%NAME% whimpers and struggles to stay awake...",
+        "%NAME% can feel %POSSESSIVE% eyelids grow heavy as %PRONOUN% drifts on the edge of trance...",
+        "%NAME% lets out a low moan as %POSSESSIVE% muscles relax and %PRONOUN% starts to drop..."
+    ];
+
+    delayedActivations: Map<string, number> = new Map<string,number>();
+
+    DelayedTrigger(activityEntry: ActivityEntryModel, memberNumber: number = 0) {
+        let entryName = activityEntry.group + "-" + activityEntry.name;
+        
+        setTimeout(() => {
+            let activation = this.delayedActivations.get(entryName);
+            if (!!activation) {
+                activation = Math.max(0, activation - 1);
+                this.delayedActivations.set(entryName, activation);
+            }
+        }, 5 * 60 * 1000);
+        
+        let count = this.delayedActivations.get(entryName) ?? 0;
+        count++;
+        if (count >= activityEntry.hypnoRequiredRepeats) {
+            SendAction("%NAME% trembles weakly with one last attempt to maintain %POSSESSIVE% senses...");
+            setTimeout(() => this.StartTriggerWord(false, memberNumber), 4000);
+        }
+        else
+            SendAction(this.delayedHypnoStrings[getRandomInt(this.delayedHypnoStrings.length)]);
+        this.delayedActivations.set(entryName, count);
     }
 
     CheckAwakener(msg: string, sender: Character) {

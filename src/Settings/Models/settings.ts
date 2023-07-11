@@ -4,6 +4,7 @@ import { BaseSettingsModel, GlobalSettingsModel, LipstickSettingsModel, MiscSett
 import { CollarModel, CollarPublicSettingsModel, CollarSettingsModel } from "./collar";
 import { HypnoPublicSettingsModel, HypnoSettingsModel } from "./hypno";
 import { InjectorPublicSettingsModel, InjectorSettingsModel } from "./injector";
+import { ActivitySettingsModel } from "./activities";
 
 export interface SettingsModel {
     Version: string;
@@ -15,6 +16,7 @@ export interface SettingsModel {
     GlobalModule: GlobalSettingsModel;
     MiscModule: MiscSettingsModel;
     InjectorModule: InjectorSettingsModel;
+    ActivityModule: ActivitySettingsModel;
 }
 
 export interface IPublicSettingsModel extends BaseSettingsModel {

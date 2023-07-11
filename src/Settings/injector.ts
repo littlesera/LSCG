@@ -86,12 +86,6 @@ export class GuiInjector extends GuiSubscreen {
 					setSetting: (val) => this.settings.heartbeat = val
 				},<Setting>{
 					type: "checkbox",
-					label: "Allow Boop Awake:",
-					description: "If true, will awaken from drugged sleep or trance when booped.",
-					setting: () => this.settings.allowBoopRestore ?? true,
-					setSetting: (val) => this.settings.allowBoopRestore = val
-				},<Setting>{
-					type: "checkbox",
 					label: "Chaotic Net Gun:",
 					description: "If true, your net gun will fire wildly and have a 50/50 chance to net a random character instead of your target.",
 					setting: () => this.settings.netgunIsChaotic ?? true,

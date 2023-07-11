@@ -97,8 +97,8 @@ function init_modules(): boolean {
 	registerModule(new BoopsModule());
 	registerModule(new MiscModule());
 	registerModule(new LipstickModule());
-	registerModule(new ActivityModule());
 	registerModule(new InjectorModule());
+	registerModule(new ActivityModule());
 	registerModule(new ItemUseModule());
 	registerModule(new RemoteUIModule());
 	registerModule(new CommandModule());
