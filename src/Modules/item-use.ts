@@ -200,14 +200,14 @@ export class ItemUseModule extends BaseModule {
 				<ActivityTarget>{
 					Name: "ItemMouth",
 					TargetLabel: "Gag Mouth",
-					TargetAction: "SourceCharacter gags TargetCharacter with PronounPossessive UsedAsset.",
-					TargetSelfAction: "SourceCharacter gags themselves with their own UsedAsset.",
+					TargetAction: "SourceCharacter gags TargetCharacter with PronounPossessive ActivityAsset.",
+					TargetSelfAction: "SourceCharacter gags themselves with their own ActivityAsset.",
 					SelfAllowed: true
 				},<ActivityTarget>{
 					Name: "ItemNeck",
 					TargetLabel: "Place around Neck",
-					TargetAction: "SourceCharacter places PronounPossessive UsedAsset around TargetCharacter's neck.",
-					TargetSelfAction: "SourceCharacter places PronounPossessive UsedAsset around PronounPossessive own neck.",
+					TargetAction: "SourceCharacter places PronounPossessive ActivityAsset around TargetCharacter's neck.",
+					TargetSelfAction: "SourceCharacter places PronounPossessive ActivityAsset around PronounPossessive own neck.",
 					SelfAllowed: true
 				}
 			],
@@ -259,9 +259,6 @@ export class ItemUseModule extends BaseModule {
 					}
 					return next(args);
 				}
-			},
-			CustomPreparse: {
-				Func: (args) => this.UsedAssetPreparse(args)
 			}
 		});
 
@@ -278,14 +275,14 @@ export class ItemUseModule extends BaseModule {
 				<ActivityTarget>{
 					Name: "ItemMouth",
 					TargetLabel: "Take Gag",
-					TargetAction: "SourceCharacter removes TargetCharacter's UsedAsset.",
-					TargetSelfAction: "SourceCharacter pulls the UsedAsset from PronounPossessive mouth.",
+					TargetAction: "SourceCharacter removes TargetCharacter's ActivityAsset.",
+					TargetSelfAction: "SourceCharacter pulls the ActivityAsset from PronounPossessive mouth.",
 					SelfAllowed: true
 				}, <ActivityTarget>{
 					Name: "ItemNeck",
 					TargetLabel: "Take Gag",
-					TargetAction: "SourceCharacter takes TargetCharacter's UsedAsset from around TargetPronounPossessive neck.",
-					TargetSelfAction: "SourceCharacter takes PronounPossessive own UsedAsset from around PronounPossessive neck.",
+					TargetAction: "SourceCharacter takes TargetCharacter's ActivityAsset from around TargetPronounPossessive neck.",
+					TargetSelfAction: "SourceCharacter takes PronounPossessive own ActivityAsset from around PronounPossessive neck.",
 					SelfAllowed: true
 				}
 			],
@@ -350,9 +347,6 @@ export class ItemUseModule extends BaseModule {
 						this.TakeGag(target, Player, gagTarget, location);
 					return next(args);
 				}
-			},
-			CustomPreparse: {
-				Func: (args) => this.UsedAssetPreparse(args)
 			}
 		});
 
@@ -368,8 +362,8 @@ export class ItemUseModule extends BaseModule {
 				<ActivityTarget>{
 					Name: "ItemMouth",
 					TargetLabel: "Move to Mouth",
-					TargetAction: "SourceCharacter moves TargetCharacter's UsedAsset up to their mouth.",
-					TargetSelfAction: "SourceCharacter moves their own UsedAsset up to PronounPossessive mouth.",
+					TargetAction: "SourceCharacter moves TargetCharacter's ActivityAsset up to their mouth.",
+					TargetSelfAction: "SourceCharacter moves their own ActivityAsset up to PronounPossessive mouth.",
 					SelfAllowed: true
 				},
 			],
@@ -408,9 +402,6 @@ export class ItemUseModule extends BaseModule {
 					}
 					return next(args);
 				}
-			},
-			CustomPreparse: {
-				Func: (args) => this.UsedAssetPreparse(args)
 			}
 		});
 
@@ -426,8 +417,8 @@ export class ItemUseModule extends BaseModule {
 				<ActivityTarget>{
 					Name: "ItemMouth",
 					TargetLabel: "Wear around Neck",
-					TargetAction: "SourceCharacter removes TargetCharacter's UsedAsset, letting it hang around their neck.",
-					TargetSelfAction: "SourceCharacter removes the UsedAsset from PronounPossessive mouth and lets it hang around PronounPossessive neck.",
+					TargetAction: "SourceCharacter removes TargetCharacter's ActivityAsset, letting it hang around their neck.",
+					TargetSelfAction: "SourceCharacter removes the ActivityAsset from PronounPossessive mouth and lets it hang around PronounPossessive neck.",
 					SelfAllowed: true
 				}
 			],
@@ -469,9 +460,6 @@ export class ItemUseModule extends BaseModule {
 						this.TakeGag(target, target, gagTarget, location, gagTarget?.OverrideNeckLocation ?? "Necklace");
 					return next(args);
 				}
-			},
-			CustomPreparse: {
-				Func: (args) => this.UsedAssetPreparse(args)
 			}
 		});
 
@@ -797,32 +785,6 @@ export class ItemUseModule extends BaseModule {
 			SendAction(`${CharacterNickname(source)} ${check.AttackerRoll.TotalStr}fails to steal ${CharacterNickname(target)}'s ${check.DefenderRoll.TotalStr}${this.getItemName(item)} and is dazed from the attempt!`);
 			this.failedStealTime = CommonTime();
 		}
-	}
-
-	UsedAssetPreparse(args: any[]) {
-		let dict = args[1]?.Dictionary;
-		if (!dict)
-			return;
-		let asset = dict.find((x: { Tag: string; }) => x.Tag == "ActivityAsset");
-		let usedAsset = dict.find((x: { Tag: string; }) => x.Tag == "UsedAsset");
-		let targetLocation = dict[2]?.FocusGroupName;
-		if (!asset)
-			return;
-		let sourceItemName = asset.AssetName as string;
-		let sourceGroupName = asset.GroupName as string;
-		let gagTarget = this.GagTargets.find(t => {
-			switch (sourceGroupName) {
-				case "Necklace":
-				case "ClothAccessory":
-					return t.NeckItemName == sourceItemName;
-				case "ItemHandheld":
-					return t.HandItemName == sourceItemName;
-				default:
-					return t.MouthItemName == sourceItemName;
-			}
-		});
-		if (!!gagTarget)
-			usedAsset.Text = gagTarget.UsedAssetOverride ?? usedAsset.Text;
 	}
 
 	ManualGenerateItemActivitiesForNecklaceActivity(allowed: ItemActivity[], acting: Character, acted: Character, needsItem: string, activity: Activity) {

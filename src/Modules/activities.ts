@@ -317,51 +317,51 @@ export class ActivityModule extends BaseModule {
                 <ActivityTarget>{
                     Name: "ItemHead",
                     TargetLabel: "Slap Face",
-                    TargetAction: "SourceCharacter slaps PronounPossessive UsedAsset against TargetCharacter's face."
+                    TargetAction: "SourceCharacter slaps PronounPossessive ActivityAsset against TargetCharacter's face."
                 }, <ActivityTarget>{
                     Name: "ItemMouth",
                     TargetLabel: "Slap Mouth",
-                    TargetAction: "SourceCharacter slaps PronounPossessive UsedAsset against TargetCharacter's mouth."
+                    TargetAction: "SourceCharacter slaps PronounPossessive ActivityAsset against TargetCharacter's mouth."
                 }, <ActivityTarget>{
                     Name: "ItemVulva",
                     TargetLabel: "Slap against Pussy",
-                    TargetAction: "SourceCharacter slaps PronounPossessive UsedAsset against TargetCharacter's pussy."
+                    TargetAction: "SourceCharacter slaps PronounPossessive ActivityAsset against TargetCharacter's pussy."
                 }, <ActivityTarget>{
                     Name: "ItemBreast",
                     TargetLabel: "Slap Breast",
-                    TargetAction: "SourceCharacter slaps PronounPossessive UsedAsset against TargetCharacter's breast."
+                    TargetAction: "SourceCharacter slaps PronounPossessive ActivityAsset against TargetCharacter's breast."
                 }, <ActivityTarget>{
                     Name: "ItemLegs",
                     TargetLabel: "Slap Thigh",
-                    TargetAction: "SourceCharacter slaps PronounPossessive UsedAsset against TargetCharacter's thigh."
+                    TargetAction: "SourceCharacter slaps PronounPossessive ActivityAsset against TargetCharacter's thigh."
                 }, <ActivityTarget>{
                     Name: "ItemFeet",
                     TargetLabel: "Slap Calf",
-                    TargetAction: "SourceCharacter slaps PronounPossessive UsedAsset against TargetCharacter's calf."
+                    TargetAction: "SourceCharacter slaps PronounPossessive ActivityAsset against TargetCharacter's calf."
                 }, <ActivityTarget>{
                     Name: "ItemBoots",
                     TargetLabel: "Slap Feet",
-                    TargetAction: "SourceCharacter slaps PronounPossessive UsedAsset against TargetCharacter's feet."
+                    TargetAction: "SourceCharacter slaps PronounPossessive ActivityAsset against TargetCharacter's feet."
                 }, <ActivityTarget>{
                     Name: "ItemButt",
                     TargetLabel: "Slap Butt",
-                    TargetAction: "SourceCharacter slaps PronounPossessive UsedAsset against TargetCharacter's butt."
+                    TargetAction: "SourceCharacter slaps PronounPossessive ActivityAsset against TargetCharacter's butt."
                 }, <ActivityTarget>{
                     Name: "ItemNeck",
                     TargetLabel: "Slap Neck",
-                    TargetAction: "SourceCharacter slaps PronounPossessive UsedAsset against TargetCharacter's neck."
+                    TargetAction: "SourceCharacter slaps PronounPossessive ActivityAsset against TargetCharacter's neck."
                 }, <ActivityTarget>{
                     Name: "ItemArms",
                     TargetLabel: "Slap Arms",
-                    TargetAction: "SourceCharacter slaps PronounPossessive UsedAsset against TargetCharacter's arm."
+                    TargetAction: "SourceCharacter slaps PronounPossessive ActivityAsset against TargetCharacter's arm."
                 }, <ActivityTarget>{
                     Name: "ItemHands",
                     TargetLabel: "Slap Hand",
-                    TargetAction: "SourceCharacter slaps PronounPossessive UsedAsset against TargetCharacter's hand."
+                    TargetAction: "SourceCharacter slaps PronounPossessive ActivityAsset against TargetCharacter's hand."
                 }, <ActivityTarget>{
                     Name: "ItemPenis",
                     TargetLabel: "Slap Penis",
-                    TargetAction: "SourceCharacter slaps PronounPossessive UsedAsset against TargetCharacter's penis."
+                    TargetAction: "SourceCharacter slaps PronounPossessive ActivityAsset against TargetCharacter's penis."
                 }
             ]
         });
