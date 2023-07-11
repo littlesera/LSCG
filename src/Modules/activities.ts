@@ -375,14 +375,29 @@ export class ActivityModule extends BaseModule {
                 TargetLabel: "Nibble Tail",
                 TargetAction: "SourceCharacter nibbles on TargetCharacter's tail.",
                 TargetSelfAction: "SourceCharacter nibbles on PronounPossessive own tail."
+            },{
+                Name: "ItemHead",
+                SelfAllowed: false,
+                TargetLabel: "Nibble Halo",
+                TargetAction: "SourceCharacter nibbles on TargetCharacter's halo."
+            },{
+                Name: "ItemHood",
+                SelfAllowed: true,
+                TargetLabel: "Nibble Wing",
+                TargetAction: "SourceCharacter nibbles on TargetCharacter's wing.",
+                TargetSelfAction: "SourceCharacter nibbles on PronounPossessive own wing."
             }],
-            AddedPrerequisites: ["HasTail"],
-            CustomPrereqs: [
-                {
+            AddedPrerequisites: ["HasTail", "HasWings", "HasHalo"],
+            CustomPrereqs: [{
                     Name: "HasTail",
                     Func: (acting, acted, group) => group.Name == "ItemButt" ? !!InventoryGet(acted, "TailStraps") : true
-                }
-            ]
+                }, {
+                    Name: "HasWings",
+                    Func: (acting, acted, group) => group.Name == "ItemHood" ? !!InventoryGet(acted, "Wings") : true
+                }, {
+                    Name: "HasHalo",
+                    Func: (acting, acted, group) => group.Name == "ItemHood" ? (InventoryGet(acted, "HairAccessory1")?.Asset.Name == "Halo" || InventoryGet(acted, "HairAccessory3")?.Asset.Name == "Halo") : true
+                }]
         });
 
         // FuckWithPussy
