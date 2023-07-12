@@ -62,6 +62,8 @@ export class GuiActivities extends GuiSubscreen {
 		ElementPosition("hypnoThreshold", -1000, -1000, 0, 0);
 		ElementPosition("hypnoCount", -1000, -1000, 0, 0);
 		ElementPosition("orgasmThreshold", -1000, -1000, 0, 0);
+
+		CharacterAppearanceForceUpCharacter = Player.MemberNumber ?? -1;
 	}
 
 	Run() {
@@ -133,6 +135,8 @@ export class GuiActivities extends GuiSubscreen {
 		ElementRemove("hypnoCount");
 		ElementRemove("orgasmThreshold");
 
+		CharacterAppearanceForceUpCharacter = -1;
+		CharacterLoadCanvas(Player);
 		Player.FocusGroup = null;
 		super.Exit();
 	}
