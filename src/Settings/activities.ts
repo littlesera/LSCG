@@ -58,6 +58,10 @@ export class GuiActivities extends GuiSubscreen {
 		ElementCreateInput("hypnoThreshold", "number", "", "80");
 		ElementCreateInput("hypnoCount", "number", "", "80");
 		ElementCreateInput("orgasmThreshold", "number", "", "80");
+
+		ElementPosition("hypnoThreshold", -1000, -1000, 0, 0);
+		ElementPosition("hypnoCount", -1000, -1000, 0, 0);
+		ElementPosition("orgasmThreshold", -1000, -1000, 0, 0);
 	}
 
 	Run() {
