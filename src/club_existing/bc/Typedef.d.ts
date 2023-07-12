@@ -326,7 +326,7 @@ type AssetPrerequisite =
 	"HoodEmpty" | "LegsOpen" | "NakedFeet" | "NakedHands" | "NeedsHarness" | "NeedsNippleRings" | "NoChastityCage" | "NoClothLower" | "NoFeetSpreader" | "NoItemArms" |
 	"NoItemFeet" | "NoItemHands" | "NoItemLegs" | "NoMaidTray" | "NoOuterClothes" | "NotChained" | "NotChaste" | "NotHogtied" | "NotHorse" | "NotKneeling" |
 	"NotKneelingSpread" | "NotLifted" | "NotMasked" | "NotMounted" | "NotProtrudingFromMouth" | "NotShackled" | "NotSuspended" | "NotYoked" | "OnBed" |
-	"RemotesAllowed" | "VulvaEmpty" | "VulvaNotBlockedByBelt"
+	"RemotesAllowed" | "VulvaEmpty" | "VulvaNotBlockedByBelt" | "AccessCrotch"
 ;
 
 type CraftingStatusType = 0 | 1 | 2;

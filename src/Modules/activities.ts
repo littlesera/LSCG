@@ -465,10 +465,28 @@ export class ActivityModule extends BaseModule {
                 TargetAction: "SourceCharacter nibbles on TargetCharacter's wing.",
                 TargetSelfAction: "SourceCharacter nibbles on PronounPossessive own wing."
             }],
-            AddedPrerequisites: ["HasTail", "HasWings", "HasHalo"],
+            RemovedPrerequisites: ["ZoneNaked"],
+            AddedPrerequisites: ["CanCustomNibble"],
             CustomPrereqs: [{
-                    Name: "HasTail",
-                    Func: (acting, acted, group) => group.Name == "ItemButt" ? !!InventoryGet(acted, "TailStraps") : true
+                    Name: "CanCustomNibble",
+                    Func: (acting, acted, group) => {
+                        if (group.Name == "ItemButt")
+                            return !!InventoryGet(acted, "TailStraps");
+                        else if (group.Name == "ItemHood")
+                            return !!InventoryGet(acted, "Wings")
+                        else if (group.Name == "ItemHead") 
+                            return (InventoryGet(acted, "HairAccessory1")?.Asset.Name == "Halo" || InventoryGet(acted, "HairAccessory3")?.Asset.Name == "Halo")
+                        else if (group.Name === "ItemVulva")
+                            return (InventoryPrerequisiteMessage(acted, "AccessCrotch") === "") && !acted.IsVulvaChaste();
+                        else if (group.Name === "ItemVulvaPiercings")
+                            return (InventoryPrerequisiteMessage(acted, "AccessCrotch") === "") && !acted.IsVulvaChaste();
+                        else if (group.Name === "ItemBoots")
+                            return InventoryPrerequisiteMessage(acted, "NakedFeet") === "";
+                        else if (group.Name === "ItemHands")
+				            return InventoryPrerequisiteMessage(acted, "NakedHands") === "";
+                        else
+                            return true;
+                    }
                 }, {
                     Name: "HasWings",
                     Func: (acting, acted, group) => group.Name == "ItemHood" ? !!InventoryGet(acted, "Wings") : true
@@ -948,6 +966,20 @@ export class ActivityModule extends BaseModule {
         if (!!patch.AddedTargets) {
             patch.AddedTargets.forEach(tgt => {
                 this.AddTargetToActivity(activity!, tgt);
+            });
+        }
+
+        if (!!patch.RemovedTargets) {
+            patch.RemovedTargets.forEach(tgt => {
+                activity!.Target = activity!.Target.filter(t => t != tgt);
+                if (!!activity!.TargetSelf && Array.isArray(activity!.TargetSelf))
+                    activity!.TargetSelf = activity!.TargetSelf!.filter(t => t != tgt);
+            })
+        }
+
+        if (!!patch.RemovedPrerequisites) {
+            patch.RemovedPrerequisites.forEach(prereq => {
+                activity!.Prerequisite = activity!.Prerequisite.filter(p => p != prereq);
             });
         }
 
