@@ -474,7 +474,7 @@ export class ActivityModule extends BaseModule {
                     Func: (acting, acted, group) => group.Name == "ItemHood" ? !!InventoryGet(acted, "Wings") : true
                 }, {
                     Name: "HasHalo",
-                    Func: (acting, acted, group) => group.Name == "ItemHood" ? (InventoryGet(acted, "HairAccessory1")?.Asset.Name == "Halo" || InventoryGet(acted, "HairAccessory3")?.Asset.Name == "Halo") : true
+                    Func: (acting, acted, group) => group.Name == "ItemHead" ? (InventoryGet(acted, "HairAccessory1")?.Asset.Name == "Halo" || InventoryGet(acted, "HairAccessory3")?.Asset.Name == "Halo") : true
                 }]
         });
 
@@ -783,8 +783,8 @@ export class ActivityModule extends BaseModule {
                 }, {
                     Name: "TargetHornAvailable",
                     Func: (acting, acted, group) => {
-                        if (group.Name == "ItemHood" && (InventoryGet(acted, "HairAccessory2")?.Asset.Name ?? "").toLocaleLowerCase().indexOf("horn") > -1)
-                            return !this.hands.find(h => h.Member == acted.MemberNumber && h.Type == "horn");
+                        if (group.Name == "ItemHood")
+                            return (InventoryGet(acted, "HairAccessory2")?.Asset.Name ?? "").toLocaleLowerCase().indexOf("horn") > -1 && !this.hands.find(h => h.Member == acted.MemberNumber && h.Type == "horn");
                         return true;
                     }
                 }
