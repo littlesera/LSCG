@@ -441,7 +441,8 @@ export class ActivityModule extends BaseModule {
                     TargetLabel: "Slap Penis",
                     TargetAction: "SourceCharacter slaps PronounPossessive ActivityAsset against TargetCharacter's penis."
                 }
-            ]
+            ],
+            CustomImage: "Assets/Female3DCG/Activity/PenetrateSlow.png"
         });
 
         // NibbleTail

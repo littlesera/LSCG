@@ -111,8 +111,15 @@ export class GuiActivities extends GuiSubscreen {
 			MainCanvas.textAlign = "center";
 			DrawBackNextButton(550, this.getYPos(0), 600, 64, this.getActivityLabel(activity, Player.FocusGroup), "White", "", () => "", () => "");
 			MainCanvas.textAlign = "left";
-
-			this.DrawActivityOptions();
+			if (!!activity) {
+				let image = "Assets/" + Player.AssetFamily + "/Activity/" + activity.Name + ".png";
+				if (activity.Name.indexOf("Item") > -1) {
+					image = "Icons/Dress.png";
+				}
+				DrawImageResize(image, 1170, this.getYPos(0) - 28, 120, 120);
+				DrawEmptyRect(1170, this.getYPos(0) - 28, 120, 120, "Black", 2);
+				this.DrawActivityOptions();
+			}
 		} else {
 			DrawText("Please Select a Zone", this.getXPos(0), this.getYPos(0), "Black", "White");
 		}
@@ -132,7 +139,7 @@ export class GuiActivities extends GuiSubscreen {
 				if (Zone) {
 					Player.FocusGroup = Group;
 					let activities = this.Activities;
-					if (this.activityIndex > activities.length)
+					if (this.activityIndex >= activities.length)
 						this.activityIndex = 0;
 					this.LoadActivityEntry(this.currentActivityEntry);
 				}
@@ -243,7 +250,7 @@ export class GuiActivities extends GuiSubscreen {
 		
 		if (!!activityEntry) {
 			MainCanvas.textAlign = "center";
-			DrawButton(1170, this.getYPos(0), 64, 64, "X", "White", undefined, "Clear Entry");
+			DrawButton(1310, this.getYPos(0), 64, 64, "X", "White", undefined, "Clear Entry");
 			MainCanvas.textAlign = "left";
 		}
 
