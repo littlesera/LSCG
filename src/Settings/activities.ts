@@ -44,13 +44,38 @@ export class GuiActivities extends GuiSubscreen {
 		if (!Player.FocusGroup)
 			return [];
 		else
-			return AssetActivitiesForGroup("Female3DCG", Player.FocusGroup.Name);
+			return AssetActivitiesForGroup("Female3DCG", Player.FocusGroup.Name, "any").filter(a => this.ActivityHasDictionaryText(this.getActivityLabelTag(a, Player.FocusGroup!)));
 	}
 
-	getActivityLabel(activity: Activity, groupName: string) {
+	ActivityHasDictionaryText(KeyWord: string) {
+		if (!ActivityDictionary)
+			ActivityDictionaryLoad();
+		if (!ActivityDictionary)
+			return;
+
+		for (let D = 0; D < ActivityDictionary.length; D++)
+			if (ActivityDictionary[D][0] == KeyWord)
+				return true;
+		return false;
+	}
+
+	getActivityLabelTag(activity: Activity, group: AssetGroup) {
+		let groupName = group.Name;
+		if (Player.HasPenis()) {
+			if (groupName == "ItemVulva") groupName = "ItemPenis";
+			if (groupName == "ItemVulvaPiercings") groupName = "ItemGlans";
+		}
+	
+		return `Label-ChatOther-${groupName}-${activity.Name}`;
+	}
+
+	getActivityLabel(activity: Activity, group: AssetGroup) {
 		if (!activity)
 			return "ACTIVITY NOT FOUND";
-		return ActivityDictionaryText("Label-ChatOther-" + groupName + "-" + activity.Name);
+		
+		let tag = this.getActivityLabelTag(activity, group);
+
+		return ActivityDictionaryText(tag);
 	}
 
 	Load() {
@@ -84,7 +109,7 @@ export class GuiActivities extends GuiSubscreen {
 			let activity = this.Activities[this.activityIndex ?? 0];
 			DrawAssetGroupZone(Player, Player.FocusGroup.Zone, 0.9, 50, 50, 1, "cyan");
 			MainCanvas.textAlign = "center";
-			DrawBackNextButton(550, this.getYPos(0), 600, 64, this.getActivityLabel(activity, Player.FocusGroup.Name), "White", "", () => "", () => "");
+			DrawBackNextButton(550, this.getYPos(0), 600, 64, this.getActivityLabel(activity, Player.FocusGroup), "White", "", () => "", () => "");
 			MainCanvas.textAlign = "left";
 
 			this.DrawActivityOptions();
@@ -214,6 +239,7 @@ export class GuiActivities extends GuiSubscreen {
 
 	DrawActivityOptions() {
 		let activityEntry = this.currentActivityEntry;
+		let activity = this.Activities[this.activityIndex];
 		
 		if (!!activityEntry) {
 			MainCanvas.textAlign = "center";
