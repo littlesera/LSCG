@@ -259,7 +259,8 @@ export class ItemUseModule extends BaseModule {
 					}
 					return next(args);
 				}
-			}
+			},
+			CustomImage: "Assets/Female3DCG/ItemHandheld/Preview/Ballgag.png"
 		});
 
 		// Take Gag
@@ -347,7 +348,8 @@ export class ItemUseModule extends BaseModule {
 						this.TakeGag(target, Player, gagTarget, location);
 					return next(args);
 				}
-			}
+			},
+			CustomImage: "Assets/Female3DCG/ItemMouth/Preview/BallGag.png"
 		});
 
 		// Gag With Necklace
@@ -402,7 +404,8 @@ export class ItemUseModule extends BaseModule {
 					}
 					return next(args);
 				}
-			}
+			},
+			CustomImage: "Assets/Female3DCG/Necklace/Preview/NecklaceBallGag.png"
 		});
 
 		// Move Gag to Necklace
@@ -460,7 +463,8 @@ export class ItemUseModule extends BaseModule {
 						this.TakeGag(target, target, gagTarget, location, gagTarget?.OverrideNeckLocation ?? "Necklace");
 					return next(args);
 				}
-			}
+			},
+			CustomImage: "Assets/Female3DCG/ItemMouth/Preview/BallGag.png"
 		});
 
 		// Tie Up
@@ -548,7 +552,8 @@ export class ItemUseModule extends BaseModule {
 						return;
 					this.TrySteal(target, Player, InventoryGet(target, "ItemHandheld")!);
 				}
-			}
+			},
+			CustomImage: "Icons/Dress.png"
 		});
 
 		// Give
@@ -585,7 +590,8 @@ export class ItemUseModule extends BaseModule {
 						return;
 					this.GiveItem(target, Player);
 				}
-			}
+			},
+			CustomImage: "Icons/Dress.png"
 		});
 	}
 

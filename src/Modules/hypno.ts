@@ -1,7 +1,7 @@
 import { BaseModule } from 'base';
 import { HypnoSettingsModel } from 'Settings/Models/hypno';
 import { ModuleCategory, Subscreen } from 'Settings/setting_definitions';
-import { settingsSave, parseMsgWords, OnAction, OnActivity, SendAction, getRandomInt, hookFunction, removeAllHooksByModule, callOriginal, setOrIgnoreBlush, isAllowedMember, isPhraseInString, GetTargetCharacter, GetDelimitedList, GetActivityEntryFromContent, escapeRegExp } from '../utils';
+import { settingsSave, parseMsgWords, OnAction, OnActivity, SendAction, getRandomInt, hookFunction, removeAllHooksByModule, callOriginal, setOrIgnoreBlush, isAllowedMember, isPhraseInString, GetTargetCharacter, GetDelimitedList, GetActivityEntryFromContent, escapeRegExp, IsActivityAllowed } from '../utils';
 import { GuiHypno } from 'Settings/hypno';
 import { ActivityModule } from './activities';
 import { getModule } from 'modules';
@@ -65,6 +65,8 @@ export class HypnoModule extends BaseModule {
             let target = GetTargetCharacter(data);
             if (!!target && target == Player.MemberNumber) {
                 let activityEntry = GetActivityEntryFromContent(data.Content);
+                if (!activityEntry || !sender || !IsActivityAllowed(activityEntry, sender))
+                    return;
                 if (activityEntry?.awakener && this.hypnoActivated && !sender?.IsPlayer())
                     this.TriggerRestoreBoop();
                 // Special tummy rub hypno action for Bean

@@ -1,6 +1,6 @@
 import { BaseModule } from "base";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
-import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, setOrIgnoreBlush, hookFunction, ICONS, getCharacter, sendLSCGMessage, OnAction, callOriginal, LSCG_SendLocal, GetTargetCharacter, GetActivityName, GetMetadata, GetActivityEntryFromContent } from "../utils";
+import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, setOrIgnoreBlush, hookFunction, ICONS, getCharacter, sendLSCGMessage, OnAction, callOriginal, LSCG_SendLocal, GetTargetCharacter, GetActivityName, GetMetadata, GetActivityEntryFromContent, IsActivityAllowed } from "../utils";
 import { getModule } from "modules";
 import { ItemUseModule } from "./item-use";
 import { CollarModel } from "Settings/Models/collar";
@@ -165,6 +165,8 @@ export class ActivityModule extends BaseModule {
                     reactionFunc(sender);
             } else if (target == Player.MemberNumber) {
                 let activityEntry = GetActivityEntryFromContent(data.Content);
+                if (!activityEntry || !sender || !IsActivityAllowed(activityEntry, sender))
+                    return;
                 if (activityEntry?.orgasm && (Player.ArousalSettings?.Progress ?? 0) >= activityEntry?.orgasmThreshold) {
                     if (Player.IsEdged()) {
                         SendAction("%NAME% moans and trembles in frustration as %PRONOUN% is held right at the edge...");
@@ -441,7 +443,8 @@ export class ActivityModule extends BaseModule {
                     TargetLabel: "Slap Penis",
                     TargetAction: "SourceCharacter slaps PronounPossessive ActivityAsset against TargetCharacter's penis."
                 }
-            ]
+            ],
+            CustomImage: "Assets/Female3DCG/Activity/PenetrateSlow.png"
         });
 
         // NibbleTail
