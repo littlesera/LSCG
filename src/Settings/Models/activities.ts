@@ -22,4 +22,5 @@ export interface ActivityEntryModel {
     orgasm: boolean;
     orgasmThreshold: number;
     awakener: boolean;
+    allowedMemberIds: number[];
 }

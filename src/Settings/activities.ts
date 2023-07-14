@@ -2,7 +2,7 @@ import { getModule } from "modules";
 import { BoopsModule } from "Modules/boops";
 import { LipstickModule } from "Modules/lipstick";
 import { MiscModule } from "Modules/misc";
-import { ICONS } from "utils";
+import { GetDelimitedList, ICONS } from "utils";
 import { GlobalSettingsModel } from "./Models/base";
 import { GuiSubscreen, Setting } from "./settingBase";
 import { ActivityEntryModel, ActivitySettingsModel } from "./Models/activities";
@@ -31,7 +31,10 @@ export class GuiActivities extends GuiSubscreen {
 	}
 
 	get currentActivityEntry(): ActivityEntryModel | undefined {
-		return this.getActivityEntry(this.Activities[this.activityIndex]?.Name, Player.FocusGroup?.Name ?? "");
+		let actName = this.Activities[this.activityIndex]?.Name;
+		let groupName = Player.FocusGroup?.Name ?? "";
+		let entry = this.getActivityEntry(actName, groupName);
+		return entry;
 	}
 
 	getActivityEntry(actName: string, grpName: string): ActivityEntryModel | undefined {
@@ -83,10 +86,12 @@ export class GuiActivities extends GuiSubscreen {
 		ElementCreateInput("hypnoThreshold", "number", "", "80");
 		ElementCreateInput("hypnoCount", "number", "", "80");
 		ElementCreateInput("orgasmThreshold", "number", "", "80");
+		ElementCreateInput("allowedMembers", "text", "", "80");
 
 		ElementPosition("hypnoThreshold", -1000, -1000, 0, 0);
 		ElementPosition("hypnoCount", -1000, -1000, 0, 0);
 		ElementPosition("orgasmThreshold", -1000, -1000, 0, 0);
+		ElementPosition("allowedMembers", -1000, -1000, 0, 0);
 
 		CharacterAppearanceForceUpCharacter = Player.MemberNumber ?? -1;
 	}
@@ -137,6 +142,7 @@ export class GuiActivities extends GuiSubscreen {
 			if (Group.IsItem() && !Group.MirrorActivitiesFrom && AssetActivitiesForGroup("Female3DCG", Group.Name).length) {
 				const Zone = Group.Zone.find(z => DialogClickedInZone(Player, z, 0.9, 50, 50, 1));
 				if (Zone) {
+					this.SetActivityEntryVals(this.currentActivityEntry);
 					Player.FocusGroup = Group;
 					let activities = this.Activities;
 					if (this.activityIndex >= activities.length)
@@ -150,6 +156,7 @@ export class GuiActivities extends GuiSubscreen {
 			let activities = this.Activities;
 			// Arousal activity control
 			if (MouseIn(this.getXPos(0), this.getYPos(0), 600, 64)) {
+				this.SetActivityEntryVals(this.currentActivityEntry);
 				if (MouseX <= (this.getXPos(0) + 300)) this.activityIndex = (activities.length + this.activityIndex - 1) % activities.length;
 				else this.activityIndex = (this.activityIndex + 1) % activities.length;
 				this.LoadActivityEntry(this.currentActivityEntry);
@@ -166,6 +173,7 @@ export class GuiActivities extends GuiSubscreen {
 		ElementRemove("hypnoThreshold");
 		ElementRemove("hypnoCount");
 		ElementRemove("orgasmThreshold");
+		ElementRemove("allowedMembers");
 
 		CharacterAppearanceForceUpCharacter = -1;
 		CharacterLoadCanvas(Player);
@@ -174,9 +182,10 @@ export class GuiActivities extends GuiSubscreen {
 	}
 
 	LoadActivityEntry(entry: ActivityEntryModel | undefined) {
-		ElementSetAttribute("hypnoThreshold", "value", "" + entry?.hypnoThreshold ?? "50")
-		ElementSetAttribute("hypnoCount", "value", "" + entry?.hypnoRequiredRepeats ?? "2");
-		ElementSetAttribute("orgasmThreshold", "value", "" + entry?.orgasmThreshold ?? "75");
+		this.ElementSetValue("hypnoThreshold", (entry?.hypnoThreshold ?? 50));
+		this.ElementSetValue("hypnoCount", (entry?.hypnoRequiredRepeats ?? 2));
+		this.ElementSetValue("orgasmThreshold", (entry?.orgasmThreshold ?? 75));
+		this.ElementSetValue("allowedMembers", (entry?.allowedMemberIds ?? []).join(","));
 	}
 
 	SetActivityEntryVals(entry: ActivityEntryModel | undefined) {
@@ -185,14 +194,24 @@ export class GuiActivities extends GuiSubscreen {
 
 		let hypnoThreshold = ElementValue("hypnoThreshold");
 		if (CommonIsNumeric(hypnoThreshold)) entry.hypnoThreshold = +hypnoThreshold;
+		
+		entry.allowedMemberIds = GetDelimitedList(ElementValue("allowedMembers"), ",").filter(str => CommonIsNumeric(str)).map(str => +str);
+
 		let hypnoCount = ElementValue("hypnoCount");
 		if (CommonIsNumeric(hypnoCount)) entry.hypnoRequiredRepeats = +hypnoCount;
+		
 		let orgasmThreshold = ElementValue("orgasmThreshold");
 		if (CommonIsNumeric(orgasmThreshold)) entry.orgasmThreshold = +orgasmThreshold;
 	}
 
 	ClearEntry(entry: ActivityEntryModel) {
 		this.settings.activities = this.settings.activities.filter(a => !(a.name == entry.name && a.group == entry.group));
+	}
+
+	ElementSetValue(elementId: string, value: any) {
+		let element = document.getElementById(elementId) as HTMLInputElement;
+		if (!!element && value != null)
+			element.value = value;
 	}
 
 	newDefaultEntry(actName: string, grpName: string): ActivityEntryModel {
@@ -204,7 +223,8 @@ export class GuiActivities extends GuiSubscreen {
 			hypnoRequiredRepeats: 2,
 			awakener: false,
 			orgasm: false,
-			orgasmThreshold: 75
+			orgasmThreshold: 75,
+			allowedMemberIds: []
 		}
 	}
 
@@ -246,7 +266,6 @@ export class GuiActivities extends GuiSubscreen {
 
 	DrawActivityOptions() {
 		let activityEntry = this.currentActivityEntry;
-		let activity = this.Activities[this.activityIndex];
 		
 		if (!!activityEntry) {
 			MainCanvas.textAlign = "center";
@@ -265,5 +284,8 @@ export class GuiActivities extends GuiSubscreen {
 		// Orgasm Section
 		this.DrawCheckbox("Can Cause Orgasm", "Using this activity on this location can cause an orgasm.", activityEntry?.orgasm ?? false, 6);
 		this.ElementPosition("orgasmThreshold", "Orgasm Arousal Threshold", "Arousal threshold required for this activity to cause an orgasm.", 7, !(activityEntry?.orgasm ?? false));
+
+		// Allowed Members For Activity
+		this.ElementPosition("allowedMembers", "Allowed Member IDs", "Member IDs who can trance/awaken/orgasm with this activity. Leave empty to use BC item permissions", 8, !(activityEntry?.hypno ?? false) && !(activityEntry?.orgasm ?? false) && !(activityEntry?.awakener ?? false));
 	}
 }
