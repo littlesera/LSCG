@@ -1,7 +1,7 @@
 import { BaseModule } from 'base';
 import { HypnoSettingsModel } from 'Settings/Models/hypno';
 import { ModuleCategory, Subscreen } from 'Settings/setting_definitions';
-import { settingsSave, parseMsgWords, OnAction, OnActivity, SendAction, getRandomInt, hookFunction, removeAllHooksByModule, callOriginal, setOrIgnoreBlush, isAllowedMember, isPhraseInString, GetTargetCharacter, GetDelimitedList, GetActivityEntryFromContent } from '../utils';
+import { settingsSave, parseMsgWords, OnAction, OnActivity, SendAction, getRandomInt, hookFunction, removeAllHooksByModule, callOriginal, setOrIgnoreBlush, isAllowedMember, isPhraseInString, GetTargetCharacter, GetDelimitedList, GetActivityEntryFromContent, escapeRegExp } from '../utils';
 import { GuiHypno } from 'Settings/hypno';
 import { ActivityModule } from './activities';
 import { getModule } from 'modules';
@@ -263,7 +263,8 @@ export class HypnoModule extends BaseModule {
                 return new Array(hashLength + 1).join('-');
             });
             let str = "⚠" + tWords.join(" ") + "⚠";
-            msg = msg.replaceAll(t, str);
+
+            msg = msg.replaceAll(new RegExp("\\b" + escapeRegExp(t) + "\\b", "ig"), str);
         });
         return msg;
     }
