@@ -134,7 +134,7 @@ export class InjectorModule extends BaseModule {
                 }
             } else if (target == Player.MemberNumber) {
                 let activityEntry = GetActivityEntryFromContent(data.Content);
-                if (activityEntry?.awakener) {
+                if (activityEntry?.awakener && !sender?.IsPlayer()) {
                     if (this.asleep) this.Wake();
                     if (this.brainwashed) this.SnapBack();
                 }
