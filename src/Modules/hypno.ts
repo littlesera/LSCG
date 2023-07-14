@@ -65,7 +65,7 @@ export class HypnoModule extends BaseModule {
             let target = GetTargetCharacter(data);
             if (!!target && target == Player.MemberNumber) {
                 let activityEntry = GetActivityEntryFromContent(data.Content);
-                if (activityEntry?.awakener && this.hypnoActivated)
+                if (activityEntry?.awakener && this.hypnoActivated && !sender?.IsPlayer())
                     this.TriggerRestoreBoop();
                 // Special tummy rub hypno action for Bean
                 else if (activityEntry?.hypno && !this.hypnoActivated && !this.IsOnCooldown() && (Player.ArousalSettings?.Progress ?? 0) >= activityEntry.hypnoThreshold) {
