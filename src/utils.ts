@@ -435,11 +435,11 @@ export function GetActivityEntryFromContent(content: string): ActivityEntryModel
 }
 
 export function IsActivityAllowed(activity: ActivityEntryModel, sender: Character) {
-	if (!sender)
+	if (!sender || !activity)
 		return false;
-	if (activity.allowedMemberIds.length > 0 && activity.allowedMemberIds.indexOf(sender.MemberNumber ?? -1) > -1)
+	if (!!activity.allowedMemberIds && activity.allowedMemberIds.length > 0 && activity.allowedMemberIds.indexOf(sender.MemberNumber ?? -1) > -1)
 		return true;
-	else if (activity.allowedMemberIds.length == 0)
+	else if (!activity.allowedMemberIds || activity.allowedMemberIds.length == 0)
 		return isAllowedMember(sender);
 	else return false;
 }
