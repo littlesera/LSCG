@@ -226,7 +226,7 @@ export class ActivityModule extends BaseModule {
                 <ActivityTarget>{
                     Name: "ItemHead",
                     SelfAllowed: false,
-                    TargetAction: "SourceCharacter baps TargetCharacter."
+                    TargetAction: "SourceCharacter baps TargetCharacter!"
                 }
             ],
             CustomImage: "Assets/Female3DCG/Activity/Slap.png"
