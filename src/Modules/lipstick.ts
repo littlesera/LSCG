@@ -86,7 +86,7 @@ export class LipstickModule extends BaseModule {
     getExistingLipstickMarks(color: ItemColor | undefined) {
         let slots = [InventoryGet(Player, "Mask"), InventoryGet(Player, "ClothAccessory")].filter(s => !!s && s.Asset.Name == "Kissmark");
 
-        var matching = slots.find(s => s?.Color == color);
+        var matching = slots.find(s => Array.isArray(s?.Color) && Array.isArray(color) && s?.Color[0] == color[0]);
         if (!!matching)
             return matching;
 
