@@ -593,6 +593,84 @@ export class ItemUseModule extends BaseModule {
 			},
 			CustomImage: "Icons/Dress.png"
 		});
+
+		// Shark Bite
+		this.activities.AddActivity(<ActivityBundle>{
+			Activity: <Activity>{
+				Name: "SharkBite",
+				MaxProgress: 50,
+				MaxProgressSelf: 50,
+				Prerequisite: ["UseHands", "Needs-AnyItem"]
+			},
+			Targets: [
+				<ActivityTarget>{
+					Name: "ItemArms",
+					TargetLabel: "Shark Bite",
+					TargetAction: "SourceCharacter's ActivityAsset bites TargetCharacter's arm!",
+					SelfAllowed: false
+				}, <ActivityTarget>{
+					Name: "ItemBoots",
+					TargetLabel: "Shark Bite",
+					TargetAction: "SourceCharacter's ActivityAsset bites TargetCharacter's foot!",
+					SelfAllowed: false
+				}, <ActivityTarget>{
+					Name: "ItemBreast",
+					TargetLabel: "Shark Bite",
+					TargetAction: "SourceCharacter's ActivityAsset bites TargetCharacter's breast!",
+					SelfAllowed: false
+				}, <ActivityTarget>{
+					Name: "ItemButt",
+					TargetLabel: "Shark Bite",
+					TargetAction: "SourceCharacter's ActivityAsset bites TargetCharacter in the butt!",
+					SelfAllowed: false
+				}, <ActivityTarget>{
+					Name: "ItemEars",
+					TargetLabel: "Shark Bite",
+					TargetAction: "SourceCharacter's ActivityAsset bites TargetCharacter's ear'!",
+					SelfAllowed: false
+				}, <ActivityTarget>{
+					Name: "ItemFeet",
+					TargetLabel: "Shark Bite",
+					TargetAction: "SourceCharacter's ActivityAsset bites TargetCharacter's leg!",
+					SelfAllowed: false
+				},  <ActivityTarget>{
+					Name: "ItemHands",
+					TargetLabel: "Shark Bite",
+					TargetAction: "SourceCharacter's ActivityAsset bites TargetCharacter on the hand!",
+					SelfAllowed: false
+				},  <ActivityTarget>{
+					Name: "ItemLegs",
+					TargetLabel: "Shark Bite",
+					TargetAction: "SourceCharacter's ActivityAsset bites TargetCharacter in the thigh!",
+					SelfAllowed: false
+				},  <ActivityTarget>{
+					Name: "ItemNeck",
+					TargetLabel: "Shark Bite",
+					TargetAction: "SourceCharacter's ActivityAsset bites TargetCharacter on the neck!",
+					SelfAllowed: false
+				},  <ActivityTarget>{
+					Name: "ItemNipples",
+					TargetLabel: "Shark Bite",
+					TargetAction: "SourceCharacter's ActivityAsset bites TargetCharacter's nipple!",
+					SelfAllowed: false
+				},  <ActivityTarget>{
+					Name: "ItemTorso",
+					TargetLabel: "Shark Bite",
+					TargetAction: "SourceCharacter's ActivityAsset chomps on TargetCharacter!",
+					SelfAllowed: false
+				}
+			],
+			CustomPrereqs: [
+				{
+					Name: "HasShark",
+					Func: (acting, acted, group) => {
+						var sourceItem = InventoryGet(acting, "ItemHandheld");
+						return !!sourceItem && sourceItem.Asset.Name == "Shark";
+					}
+				}
+			],
+			CustomImage: "Assets/Female3DCG/ItemHandheld/Preview/Shark.png"
+		});
 	}
 
     unload(): void {
