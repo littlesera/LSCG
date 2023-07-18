@@ -241,7 +241,7 @@ export class GuiActivities extends GuiSubscreen {
 		let entry = this.currentActivityEntry;
 
 		// Clear Entry
-		if (!!entry && MouseIn(1170, this.getYPos(0), 64, 64)) {
+		if (!!entry && MouseIn(1310, this.getYPos(0), 64, 64)) {
 			this.ClearEntry(entry);
 		}
 
