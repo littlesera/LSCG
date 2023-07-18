@@ -1407,8 +1407,13 @@ export class ActivityModule extends BaseModule {
     }
 
     DoGrab(target: Character, type: GrabType) {
-        // Only bother custom grabbing other LSCG users, vanilla won't follow.
-        if (!(target as OtherCharacter).LSCG || !target.MemberNumber || target.MemberNumber == Player.MemberNumber)
+        let roomAllowsLeashing = (ChatRoomData && ChatRoomData.BlockCategory && ChatRoomData.BlockCategory.indexOf("Leashing") < 0) || !ChatRoomData;
+        
+        // Only bother custom grabbing other LSCG users, vanilla won't follow. Also don't do grab if room doesn't allow leashing
+        if (!roomAllowsLeashing ||
+            !(target as OtherCharacter).LSCG || 
+            !target.MemberNumber || 
+            target.MemberNumber == Player.MemberNumber)
             return;
 
         sendLSCGMessage(<LSCGMessageModel>{
