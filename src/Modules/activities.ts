@@ -714,6 +714,7 @@ export class ActivityModule extends BaseModule {
         // Patch Pinch
         this.PatchActivity(<ActivityPatch>{
             ActivityName: "Pinch",
+            RemovedPrerequisites: ["ZoneAccessible"],
             AddedTargets: [
                 {
                     Name: "ItemButt",
@@ -731,11 +732,15 @@ export class ActivityModule extends BaseModule {
             ],
             CustomPrereqs: [
                 {
-                    Name: "TargetIsEarAvailable",
+                    Name: "TargetCanBePinched",
                     Func: (acting, acted, group) => {
+                        let zoneAccessible = ActivityGetAllMirrorGroups(acted.AssetFamily, group.Name).some((g) => g.IsItem() ? !InventoryGroupIsBlocked(acted, g.Name, true) : true);
                         if (group.Name == "ItemEars")
-                            return !this.isPlayerPinching(acted.MemberNumber ?? 0) && this.earPinchingMemberList.length < 2;
-                        return true;
+                            return zoneAccessible && !this.isPlayerPinching(acted.MemberNumber ?? 0) && this.earPinchingMemberList.length < 2;
+                        else if (group.Name == "ItemButt")
+                            return true;
+                        else
+                            return zoneAccessible;
                     }
                 }
             ],
