@@ -106,7 +106,7 @@ export class MainMenu extends GuiSubscreen {
 	Click() {
 		if (MouseIn(1815, 75, 90, 90)) return this.Exit();
 
-		if (!this.immersiveBlock) {
+		if (!this.immersiveBlock && !this.restrainedBlock) {
 			let i = 0
 			for (const screen of this.subscreens) {
 				const PX = Math.floor(i / 6);
