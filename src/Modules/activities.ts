@@ -1053,7 +1053,7 @@ export class ActivityModule extends BaseModule {
     }
 
     get customGagged(): boolean {
-        return this.heldBy.some(h => h.Type == "tongue" || h.Type == "mouth") || !!this.footInMyMouth;
+        return this.heldBy.some(h => h.Type == "tongue" || h.Type == "mouth") || this.footInMyMouth >= 0;
     };
     prevMouth: ExpressionName | null = null;
 
