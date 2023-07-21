@@ -56,7 +56,7 @@ export interface ActivityBundle extends ActivityBundleBase {
     Targets?: ActivityTarget[];
 }
 
-export type GrabType = "hand"  | "ear" | "tongue" | "arm" | "neck" | "mouth" | "horn"
+export type GrabType = "hand"  | "ear" | "tongue" | "arm" | "neck" | "mouth" | "horn" | "mouth-with-foot"
 
 export interface HandOccupant {
     Member: number,
@@ -982,10 +982,78 @@ export class ActivityModule extends BaseModule {
             },
             CustomImage: "Assets/Female3DCG/Activity/HandGag.png"
         });
+
+        // GrabTongueWithFoot
+        this.AddActivity({
+            Activity: <Activity>{
+                Name: "GrabTongueWithFoot",
+                MaxProgress: 75,
+                MaxProgressSelf: 30,
+                Prerequisite: ["ZoneAccessible", "UseFeet", "TargetCanUseTongue"]
+            },
+            Targets: [
+                {
+                    Name: "ItemMouth",
+                    SelfAllowed: false,
+                    TargetLabel: "Stuff with Foot",
+                    TargetAction: "SourceCharacter shoves PronounPossessive foot into TargetCharacter's mouth, playing with and grabbing their tongue with PronounPossessive toes."
+                }
+            ],
+            CustomPrereqs: [
+                {
+                    Name: "TargetCanToeTongueGrab",
+                    Func: (acting, acted, group) => {
+                        return InventoryPrerequisiteMessage(acting, "NakedFeet") === "" && (!this.myFootInMouth || this.myFootInMouth < 0);
+                    }
+                }
+            ],
+            CustomAction: {
+                Func: (target, args, next) => {
+                    if (!!target)
+                        this.DoGrab(target, "mouth-with-foot");
+                    return next(args);
+                }
+            },
+            CustomImage: "Assets/Female3DCG/Activity/MassageFeet.png"
+        });
+
+        // ReleaseFootGrabbedTongue
+        this.AddActivity({
+            Activity: <Activity>{
+                Name: "ReleaseFootGrabbedTongue",
+                MaxProgress: 20,
+                MaxProgressSelf: 20,
+                Prerequisite: ["ZoneAccessible", "UseFeet"]
+            },
+            Targets: [
+                {
+                    Name: "ItemMouth",
+                    SelfAllowed: false,
+                    TargetLabel: "Remove Foot",
+                    TargetAction: "SourceCharacter removes PronounPossessive foot from TargetCharacter's mouth."
+                }
+            ],
+            CustomPrereqs: [
+                {
+                    Name: "TargetTongueIsToeGrabbed",
+                    Func: (acting, acted, group) => {
+                        return this.myFootInMouth == acted.MemberNumber;
+                    }
+                }
+            ],
+            CustomAction: {
+                Func: (target, args, next) => {
+                    if (!!target)
+                        this.DoRelease(target, "mouth-with-foot");
+                    return next(args);
+                }
+            },
+            CustomImage: "Assets/Female3DCG/Activity/MassageFeet.png"
+        });
     }
 
     get customGagged(): boolean {
-        return this.heldBy.some(h => h.Type == "tongue" || h.Type == "mouth");
+        return this.heldBy.some(h => h.Type == "tongue" || h.Type == "mouth") || !!this.footInMyMouth;
     };
     prevMouth: ExpressionName | null = null;
 
@@ -1129,7 +1197,7 @@ export class ActivityModule extends BaseModule {
         hookFunction("ServerSend", 1, (args, next) => {
             if (args[0] == "ChatRoomChat" && args[1]?.Type == "Chat"){
                 if (this.customGagged) {
-                    let gagIncrease = 2 * this.heldBy.filter(h => h.Type == "tongue" || h.Type == "mouth").length;
+                    let gagIncrease = 2 * this.heldBy.filter(h => h.Type == "tongue" || h.Type == "mouth").length + ((this.footInMyMouth ?? -1) > -1 ? 3 : 0);
                     let currentGagLevel = callOriginal("SpeechGetTotalGagLevel", [Player, true]);
                     args[1].Content = SpeechGarbleByGagLevel(currentGagLevel + gagIncrease, args[1].Content);
                     args[1].Content = SpeechStutter(Player, args[1].Content);
@@ -1201,12 +1269,23 @@ export class ActivityModule extends BaseModule {
                         SendAction("%NAME% tugs %OPP_NAME% out of the room by the tongue.", chars[0]);
                     else
                         SendAction("%NAME% tugs " + CharacterNickname(chars[0]!) + " and " + CharacterNickname(chars[1]!) + " out of the room by their tongues.");
-                } else if (this.hands.length > 0) {
-                    if (this.hands.length == 1)
-                        SendAction(`%NAME% leads %OPP_NAME% out of the room by the ${this.hands[0].Type}.`, getCharacter(this.hands[0].Member));
+                } else if (this.customLeashedObjs.length > 0) {
+                    if (this.customLeashedObjs.length == 1)
+                        SendAction(`%NAME% leads %OPP_NAME% out of the room by the ${this.customLeashedObjs[0].Type}.`, getCharacter(this.customLeashedObjs[0].Member));
                     else
-                        SendAction("%NAME% leads " + CharacterNickname(getCharacter(this.hands[0].Member)!) + " and " + CharacterNickname(getCharacter(this.hands[1].Member)!) + " out of the room.");
+                        SendAction("%NAME% leads " + CharacterNickname(getCharacter(this.customLeashedObjs[0].Member)!) + " and " + CharacterNickname(getCharacter(this.customLeashedObjs[1].Member)!) + " out of the room.");
                 }
+            }
+
+            if (this.myFootInMouth > -1) {
+                let char = getCharacter(this.myFootInMouth);
+                if (!!char)
+                    this.DoRelease(char, "mouth-with-foot");
+            }
+            if (this.footInMyMouth > -1) {
+                let char = getCharacter(this.footInMyMouth);
+                if (!!char)
+                    this.DoRelease(char, "mouth-with-foot");
             }
 
             return next(args);
@@ -1222,7 +1301,18 @@ export class ActivityModule extends BaseModule {
                 ChatRoomHideIconState === 0
             ) {
                 let isGrabbing = this.hands.filter(h => h.Member == C.MemberNumber);
+                if (this.myFootInMouth > -1 && this.myFootInMouth == C.MemberNumber)
+                    isGrabbing = isGrabbing.concat(<HandOccupant>{
+                        Member: this.myFootInMouth,
+                        Type: "mouth-with-foot"
+                    });
                 let grabbedBy = this.heldBy.filter(h => h.Member == C.MemberNumber);
+                if (this.footInMyMouth > -1 && this.footInMyMouth == C.MemberNumber)
+                    grabbedBy = grabbedBy.concat(<HandOccupant>{
+                        Member: this.footInMyMouth,
+                        Type: "mouth-with-foot"
+                    });
+
                 let grabList = isGrabbing.map(g => <OverlayGrabModel>{
                     Grab: g,
                     IsGrabber: true
@@ -1337,8 +1427,12 @@ export class ActivityModule extends BaseModule {
     hands: HandOccupant[] = [];
     heldBy: HandOccupant[] = [];
 
+    get customLeashedObjs(): HandOccupant[] {
+        return this.hands.concat(this.heldBy.filter(h => h.Type == "hand"));
+    }
+
     get customLeashedMemberNumbers(): number[] {
-        return this.hands.concat(this.heldBy.filter(h => h.Type == "hand")).map(h => h.Member);
+        return this.customLeashedObjs.map(h => h.Member);
     }
 
     get customLeashedByMemberNumbers(): number[] {
@@ -1349,9 +1443,22 @@ export class ActivityModule extends BaseModule {
         return 2;
     }
 
+    myFootInMouth: number = -1;
+    footInMyMouth: number = -1;
+
     addGrab(member: number, type: GrabType): HandOccupant | undefined {
-        if (!member || member < 0 || !!this.hands.find(h => h.Member == member && h.Type == type))
-            return undefined;
+        if (!member || member < 0)
+            return;
+
+        if (type == "mouth-with-foot") {
+            if (!!this.myFootInMouth && this.myFootInMouth >= 0)
+                return;
+            this.myFootInMouth = member;
+            return;
+        }
+
+        if (!!this.hands.find(h => h.Member == member && h.Type == type))
+            return;
 
         let removed: HandOccupant | undefined;
         if (this.hands.length + 1 > this.maxHands)
@@ -1374,13 +1481,23 @@ export class ActivityModule extends BaseModule {
     releaseGrab(member: number, type: GrabType | undefined) {
         if (!type)
             this.hands = this.hands.filter(h => h.Member != member);
+        else if (type == "mouth-with-foot")
+            this.myFootInMouth = -1;
         else
             this.hands = this.hands.filter(h => !(h.Member == member && h.Type == type));
     }
 
     grabbedBy(member: number, type: GrabType): boolean {
+        let sender = getCharacter(member);
+
+        if (type == "mouth-with-foot") {    
+            if (!!this.footInMyMouth && this.footInMyMouth >= 0 && !!sender)
+                this.DoRelease(sender, type);
+            this.footInMyMouth = member;
+            return true;
+        }
+
         if (type == "neck") {
-            let sender = getCharacter(member);
             if (!!sender) this.collarModule.HandChoke(sender);
         }
 
@@ -1401,7 +1518,13 @@ export class ActivityModule extends BaseModule {
     }
 
     releasedBy(member: number, type: GrabType | undefined) {
-        if (this.heldBy.filter(h => h.Member == member && h.Type == "tongue").length == 1 && (!type || type == "tongue")) {
+        if (type == "mouth-with-foot" || !type) {
+            if (member == this.footInMyMouth)
+                this.footInMyMouth = -1;
+            if (!!type)
+                return;
+        }
+        else if (this.heldBy.filter(h => h.Member == member && h.Type == "tongue").length == 1 && (!type || type == "tongue")) {
             CharacterSetFacialExpression(Player, "Mouth", this.prevMouth);
             this.prevMouth = null;
         } else if (this.heldBy.filter(h => h.Member == member && h.Type == "neck").length == 1 && (!type || type == "neck")) {
@@ -1459,7 +1582,8 @@ export class ActivityModule extends BaseModule {
 
     DoGrab(target: Character, type: GrabType) {
         // Only bother custom grabbing other LSCG users, vanilla won't follow. Also don't do grab if room doesn't allow leashing
-        if (!this.RoomAllowsLeashing ||
+        if ((!this.RoomAllowsLeashing &&
+            type != "mouth-with-foot") ||
             !(target as OtherCharacter).LSCG || 
             !target.MemberNumber || 
             target.MemberNumber == Player.MemberNumber)
@@ -1546,7 +1670,10 @@ export class ActivityModule extends BaseModule {
     }
 
     NotifyAboutEscapeCommand(grabber: Character, type: GrabType) {
-        LSCG_SendLocal(`Your ${type} has been grabbed by ${CharacterNickname(grabber)}! <br>[You can try '/lscg escape' to try and break free]`);
+        if (type == "mouth-with-foot")
+            LSCG_SendLocal(`${CharacterNickname(grabber)} has filled your mouth with their foot! <br>[You can try '/lscg escape' to try and escape]`);
+        else
+            LSCG_SendLocal(`Your ${type} has been grabbed by ${CharacterNickname(grabber)}! <br>[You can try '/lscg escape' to try and break free]`);
     }
 
     escapeAttempted: number = 0;
@@ -1561,6 +1688,8 @@ export class ActivityModule extends BaseModule {
             }
         }
         let grabbingMembers = this.heldBy.filter(h => h.Type != "hand").map(h => h.Member);
+        if (this.footInMyMouth >= 0)
+            grabbingMembers = grabbingMembers.concat(this.footInMyMouth);
         let grabbingMemberNumber = grabbingMembers[0];
         if (grabbingMemberNumber < 0) {
             LSCG_SendLocal(`You are not grabbed by anyone!`);
@@ -1604,6 +1733,7 @@ export class ActivityModule extends BaseModule {
             case "ear": return ICONS.EAR;
             case "hand": return ICONS.HOLD_HANDS;
             case "tongue": return ICONS.TONGUE;
+            case "mouth-with-foot": return "Icons/Management.png";
             case "horn":
             case "neck":
             case "arm": 
