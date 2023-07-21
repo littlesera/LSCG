@@ -63,6 +63,11 @@ export interface HandOccupant {
     Type: GrabType
 }
 
+export interface OverlayGrabModel {
+    Grab: HandOccupant,
+    IsGrabber: boolean
+}
+
 export class ActivityModule extends BaseModule {
     get settings(): ActivitySettingsModel {
 		return super.settings as ActivitySettingsModel;
@@ -919,10 +924,68 @@ export class ActivityModule extends BaseModule {
             },
             CustomImage: "Assets/Female3DCG/Activity/Choke.png"
         });
+
+        // Patch HandGag
+        this.PatchActivity(<ActivityPatch>{
+            ActivityName: "HandGag",
+            CustomPrereqs: [
+                {
+                    Name: "TargetNotAlreadyHandGagged",
+                    Func: (acting, acted, group) => {
+                        if (group.Name == "ItemMouth")
+                            return !this.hands.find(h => h.Member == acted.MemberNumber && h.Type == "mouth");
+                        return true;
+                    }
+                }
+            ],
+            CustomAction: <CustomAction>{
+                Func: (target, args, next) => {
+                    var location = GetMetadata(args[1])?.GroupName;
+                    if (!!target && !!location && location == "ItemMouth")
+                        this.DoGrab(target, "mouth");
+                    return next(args);
+                }
+            },
+        });
+
+        // ReleaseMouth
+        this.AddActivity({
+            Activity: <Activity>{
+                Name: "ReleaseMouth",
+                MaxProgress: 30,
+                Prerequisite: ["ZoneAccessible", "UseHands"]
+            },
+            Targets: [
+                {
+                    Name: "ItemMouth",
+                    SelfAllowed: false,
+                    TargetLabel: "Release Mouth",
+                    TargetAction: "SourceCharacter releases TargetCharacter's mouth."
+                }
+            ],
+            CustomPrereqs: [
+                {
+                    Name: "TargetIsHandGagged",
+                    Func: (acting, acted, group) => {
+                        if (group.Name == "ItemMouth")
+                            return !!this.hands.find(h => h.Member == acted.MemberNumber && h.Type == "mouth");
+                        return false;
+                    }
+                }
+            ],
+            CustomAction: <CustomAction>{
+                Func: (target, args, next) => {
+                    if (!!target)
+                        this.DoRelease(target, "mouth");
+                    return next(args);
+                }
+            },
+            CustomImage: "Assets/Female3DCG/Activity/HandGag.png"
+        });
     }
 
     get customGagged(): boolean {
-        return !!this.tongueGrabbedByMember && this.tongueGrabbedByMember >= 0;
+        return this.heldBy.some(h => h.Type == "tongue" || h.Type == "mouth");
     };
     prevMouth: ExpressionName | null = null;
 
@@ -1066,8 +1129,9 @@ export class ActivityModule extends BaseModule {
         hookFunction("ServerSend", 1, (args, next) => {
             if (args[0] == "ChatRoomChat" && args[1]?.Type == "Chat"){
                 if (this.customGagged) {
+                    let gagIncrease = 2 * this.heldBy.filter(h => h.Type == "tongue" || h.Type == "mouth").length;
                     let currentGagLevel = callOriginal("SpeechGetTotalGagLevel", [Player, true]);
-                    args[1].Content = SpeechGarbleByGagLevel(currentGagLevel + 2, args[1].Content);
+                    args[1].Content = SpeechGarbleByGagLevel(currentGagLevel + gagIncrease, args[1].Content);
                     args[1].Content = SpeechStutter(Player, args[1].Content);
                     args[1].Content = SpeechBabyTalk(Player, args[1].Content);
                 }
@@ -1081,10 +1145,9 @@ export class ActivityModule extends BaseModule {
                 <CustomPrerequisite>{
                     Name: "CheckTongueGrabbing",
                     Func: (acting, acted, group) => {
-                        if (!this.customGagged)
-                            return true;
-                        else
-                            return this.tongueGrabbedByMember == acted.MemberNumber && group?.Name == "ItemHands";
+                        if (this.customGagged && group?.Name == "ItemHands")
+                            return this.tongueGrabbedByMember == acted.MemberNumber || this.heldBy.some(h => h.Type == "mouth" && h.Member == acted.MemberNumber);
+                        else return true;
                     }
                 }
             ]
@@ -1101,7 +1164,7 @@ export class ActivityModule extends BaseModule {
             let data = args[1]; 
             if (sendType == "ChatRoomChat" && data?.Type == "Activity"){
                 var activityName = GetActivityName(data);
-                if (activityName == "Lick" && this.customGagged)
+                if (activityName == "Lick" && this.heldBy.some(h => h.Type == "tongue"))
                     SendAction(failedLinkActions[getRandomInt(failedLinkActions.length)]);
                 else
                     return next(args);
@@ -1119,29 +1182,31 @@ export class ActivityModule extends BaseModule {
         }, ModuleCategory.Activities);
         
         hookFunction("ChatRoomLeave", 1, (args, next) => {
-            if (this.earPinchingMemberList.length > 0) {
-                var chars = this.earPinchingMemberList.map(id => getCharacter(id));
-                if (chars.length == 1)
-                    SendAction("%NAME% leads %OPP_NAME% out of the room by the ear.", chars[0]);
-                else
-                    SendAction("%NAME% leads " + CharacterNickname(chars[0]!) + " and " + CharacterNickname(chars[1]!) + " out of the room by their ears.");
-            } else if (this.armGrabbingMemberList.length > 0) {
-                var chars = this.armGrabbingMemberList.map(id => getCharacter(id));
-                if (chars.length == 1)
-                    SendAction("%NAME% roughly pulls %OPP_NAME% out of the room by the arm.", chars[0]);
-                else
-                    SendAction("%NAME% roughly pulls " + CharacterNickname(chars[0]!) + " and " + CharacterNickname(chars[1]!) + " out of the room by their arms.");
-            } else if (this.tongueGrabbedMemberList.length > 0) {
-                var chars = this.tongueGrabbedMemberList.map(id => getCharacter(id));
-                if (chars.length == 1)
-                    SendAction("%NAME% tugs %OPP_NAME% out of the room by the tongue.", chars[0]);
-                else
-                    SendAction("%NAME% tugs " + CharacterNickname(chars[0]!) + " and " + CharacterNickname(chars[1]!) + " out of the room by their tongues.");
-            } else if (this.hands.length > 0) {
-                if (this.hands.length == 1)
-                    SendAction(`%NAME% leads %OPP_NAME% out of the room by the ${this.hands[0].Type}.`, getCharacter(this.hands[0].Member));
-                else
-                    SendAction("%NAME% leads " + CharacterNickname(getCharacter(this.hands[0].Member)!) + " and " + CharacterNickname(getCharacter(this.hands[1].Member)!) + " out of the room.");
+            if (this.RoomAllowsLeashing) {
+                if (this.earPinchingMemberList.length > 0) {
+                    var chars = this.earPinchingMemberList.map(id => getCharacter(id));
+                    if (chars.length == 1)
+                        SendAction("%NAME% leads %OPP_NAME% out of the room by the ear.", chars[0]);
+                    else
+                        SendAction("%NAME% leads " + CharacterNickname(chars[0]!) + " and " + CharacterNickname(chars[1]!) + " out of the room by their ears.");
+                } else if (this.armGrabbingMemberList.length > 0) {
+                    var chars = this.armGrabbingMemberList.map(id => getCharacter(id));
+                    if (chars.length == 1)
+                        SendAction("%NAME% roughly pulls %OPP_NAME% out of the room by the arm.", chars[0]);
+                    else
+                        SendAction("%NAME% roughly pulls " + CharacterNickname(chars[0]!) + " and " + CharacterNickname(chars[1]!) + " out of the room by their arms.");
+                } else if (this.tongueGrabbedMemberList.length > 0) {
+                    var chars = this.tongueGrabbedMemberList.map(id => getCharacter(id));
+                    if (chars.length == 1)
+                        SendAction("%NAME% tugs %OPP_NAME% out of the room by the tongue.", chars[0]);
+                    else
+                        SendAction("%NAME% tugs " + CharacterNickname(chars[0]!) + " and " + CharacterNickname(chars[1]!) + " out of the room by their tongues.");
+                } else if (this.hands.length > 0) {
+                    if (this.hands.length == 1)
+                        SendAction(`%NAME% leads %OPP_NAME% out of the room by the ${this.hands[0].Type}.`, getCharacter(this.hands[0].Member));
+                    else
+                        SendAction("%NAME% leads " + CharacterNickname(getCharacter(this.hands[0].Member)!) + " and " + CharacterNickname(getCharacter(this.hands[1].Member)!) + " out of the room.");
+                }
             }
 
             return next(args);
@@ -1156,45 +1221,25 @@ export class ActivityModule extends BaseModule {
                 typeof Zoom === "number" &&
                 ChatRoomHideIconState === 0
             ) {
-                if (this.isPlayerPinchedBy(C.MemberNumber) || this.isPlayerPinching(C.MemberNumber)) {
-                    DrawCircle(CharX + 420 * Zoom, CharY + 60 * Zoom, 20 * Zoom, 1, "Black", "White")
+                let isGrabbing = this.hands.filter(h => h.Member == C.MemberNumber);
+                let grabbedBy = this.heldBy.filter(h => h.Member == C.MemberNumber);
+                let grabList = isGrabbing.map(g => <OverlayGrabModel>{
+                    Grab: g,
+                    IsGrabber: true
+                }).concat(grabbedBy.map(g => <OverlayGrabModel>{
+                    Grab: g,
+                    IsGrabber: false
+                }));
+
+                grabList.forEach((g, ix, arr) => {
+                    let yOffset = ix * 40 * Zoom;
+                    let icon = this.GetIconForGrabType(g.Grab.Type)
+                    DrawCircle(CharX + 420 * Zoom, CharY + 60 * Zoom + yOffset, 20 * Zoom, 1, "Black", g.IsGrabber ? "White" : "#90E4C1")
                     DrawImageResize(
-                        this.isPlayerPinching(C.MemberNumber) ? ICONS.EAR : ICONS.PINCH,
-                        CharX + 405 * Zoom, CharY + 45 * Zoom, 30 * Zoom, 30 * Zoom
+                        icon,
+                        CharX + 405 * Zoom, CharY + 45 * Zoom + yOffset, 30 * Zoom, 30 * Zoom
                     );
-                }
-                else if (this.isHandLeashed(C)) {
-                    DrawCircle(CharX + 420 * Zoom, CharY + 60 * Zoom, 20 * Zoom, 1, "Black", "White")
-                    DrawImageResize(
-                        ICONS.HOLD_HANDS,
-                        CharX + 400 * Zoom, CharY + 40 * Zoom, 40 * Zoom, 40 * Zoom
-                    );
-                }
-                // ROTATE CANVAS TO DRAW ICON IN HERE, if it works it works, if it doesn't -- HO BOY!
-                else if (!!this.heldBy.find(h => h.Member == C.MemberNumber) || !!this.hands.find(h => h.Member == C.MemberNumber)) {
-                    DrawCircle(CharX + 420 * Zoom, CharY + 60 * Zoom, 20 * Zoom, 1, "Black", "White");
-                    MainCanvas.translate(CharX + 420 * Zoom, CharY + 60 * Zoom);
-                    MainCanvas.rotate(-Math.PI/2);
-                    MainCanvas.translate(-(CharX + 420 * Zoom), -(CharY + 60 * Zoom));
-                    DrawImageEx("Icons/Battle.png", CharX + 405 * Zoom, CharY + 45 * Zoom, { Width: 30 * Zoom, Height: 30 * Zoom, Invert: !!this.hands.find(h => h.Member == C.MemberNumber) });
-                    // DrawImageResize(
-                    //     "Icons/Battle.png",
-                    //     CharX + 405 * Zoom, CharY + 45 * Zoom, 30 * Zoom, 30 * Zoom
-                    // );
-                    MainCanvas.translate(CharX + 420 * Zoom, CharY + 60 * Zoom);
-                    MainCanvas.rotate(Math.PI/2);
-                    MainCanvas.translate(-(CharX + 420 * Zoom), -(CharY + 60 * Zoom));
-                }
-                else if (this.tongueGrabbedMemberList.indexOf(C.MemberNumber!) > -1 || (this.customGagged && C.IsPlayer())) {
-                    DrawCircle(CharX + 140 * Zoom, CharY + 60 * Zoom, 20 * Zoom, 1, "Black", "White")
-                    DrawImageResize(
-                        ICONS.TONGUE,
-                        CharX + 125 * Zoom,
-                        CharY + 45 * Zoom,
-                        30 * Zoom,
-                        30 * Zoom
-                    );
-                }
+                });
             }
             return ret;
         }, ModuleCategory.Activities);
@@ -1202,9 +1247,8 @@ export class ActivityModule extends BaseModule {
         hookFunction("ChatRoomCanBeLeashedBy", 1, (args, next) => {
             let sourceMemberNumber = args[0];
             let C = args[1];
-            let roomAllowsLeashing = (ChatRoomData && ChatRoomData.BlockCategory && ChatRoomData.BlockCategory.indexOf("Leashing") < 0) || !ChatRoomData;
 
-            if (this.isCustomLeashedBy(sourceMemberNumber) && roomAllowsLeashing) {
+            if (this.isCustomLeashedBy(sourceMemberNumber) && this.RoomAllowsLeashing) {
                 // Have to not be tethered, and need a leash
                 var isTrapped = false;
                 var neckLock = null;
@@ -1243,21 +1287,15 @@ export class ActivityModule extends BaseModule {
         hookFunction("ChatRoomDoPingLeashedPlayers", 1, (args, next) => {
             next(args);
             let SenderCharacter = args[0];
-            if (this.handHoldingMemberList.indexOf(SenderCharacter.MemberNumber) == -1 || !ChatRoomCanBeLeashedBy(SenderCharacter.MemberNumber, Player)) {
-                this.DoRelease(SenderCharacter, "hand");
-            }
-            if (this.earPinchedByMember == SenderCharacter.MemberNumber || !ChatRoomCanBeLeashedBy(SenderCharacter.MemberNumber, Player)) {
-                this.DoRelease(SenderCharacter, "ear");
-            }
-            if (this.armGrabbedByMember == SenderCharacter.MemberNumber || !ChatRoomCanBeLeashedBy(SenderCharacter.MemberNumber, Player)) {
-                this.DoRelease(SenderCharacter, "arm");
+            if (!ChatRoomCanBeLeashedBy(SenderCharacter.MemberNumber, Player)) {
+                this.DoEscape(SenderCharacter);
             }
         }, ModuleCategory.Activities)
 
         hookFunction("ServerAccountBeep", 1, (args, next) => {
             next(args);
             let data = args[0];
-            if (data.BeepType == "Leash" && this.heldBy.map(h => h.Member).indexOf(data.MemberNumber) > -1 && data.ChatRoomName) {
+            if (data.BeepType == "Leash" && this.customLeashedByMemberNumbers.indexOf(data.MemberNumber) > -1 && data.ChatRoomName) {
                 if (Player.OnlineSharedSettings && Player.OnlineSharedSettings.AllowPlayerLeashing != false && ( CurrentScreen != "ChatRoom" || !ChatRoomData || (CurrentScreen == "ChatRoom" && ChatRoomData.Name != data.ChatRoomName))) {
                     if (ChatRoomCanBeLeashedBy(data.MemberNumber, Player) && ChatSelectGendersAllowed(data.ChatRoomSpace, Player.GetGenders())) {
                         ChatRoomJoinLeash = data.ChatRoomName;
@@ -1280,7 +1318,7 @@ export class ActivityModule extends BaseModule {
         hookFunction("ChatRoomSync", 1, (args, next) => {
             var ret = next(args) as any;
             var currentRoomIds = ChatRoomCharacter.map(c => c.MemberNumber!);
-            this.hands.map(h => h.Member).filter(id => currentRoomIds.indexOf(id) == -1).forEach(memberNumber => {
+            this.customLeashedMemberNumbers.filter(id => currentRoomIds.indexOf(id) == -1).forEach(memberNumber => {
                 ServerSend("AccountBeep", { MemberNumber: memberNumber, BeepType: "Leash"});
             });
         }, ModuleCategory.Activities);
@@ -1298,6 +1336,14 @@ export class ActivityModule extends BaseModule {
 
     hands: HandOccupant[] = [];
     heldBy: HandOccupant[] = [];
+
+    get customLeashedMemberNumbers(): number[] {
+        return this.hands.concat(this.heldBy.filter(h => h.Type == "hand")).map(h => h.Member);
+    }
+
+    get customLeashedByMemberNumbers(): number[] {
+        return this.heldBy.concat(this.hands.filter(h => h.Type == "hand")).map(h => h.Member);
+    }
 
     get maxHands(): number {
         return 2;
@@ -1412,10 +1458,8 @@ export class ActivityModule extends BaseModule {
     }
 
     DoGrab(target: Character, type: GrabType) {
-        let roomAllowsLeashing = (ChatRoomData && ChatRoomData.BlockCategory && ChatRoomData.BlockCategory.indexOf("Leashing") < 0) || !ChatRoomData;
-        
         // Only bother custom grabbing other LSCG users, vanilla won't follow. Also don't do grab if room doesn't allow leashing
-        if (!roomAllowsLeashing ||
+        if (!this.RoomAllowsLeashing ||
             !(target as OtherCharacter).LSCG || 
             !target.MemberNumber || 
             target.MemberNumber == Player.MemberNumber)
@@ -1459,6 +1503,23 @@ export class ActivityModule extends BaseModule {
         });
      
         this.releaseGrab(target.MemberNumber, type);
+    }
+
+    DoEscape(escapeFrom: Character) {
+        if (!escapeFrom.MemberNumber)
+            return;
+
+        this.releasedBy(escapeFrom.MemberNumber, undefined);
+        sendLSCGMessage(<LSCGMessageModel>{
+            type: "command",
+            reply: false,
+            settings: null,
+            target: escapeFrom.MemberNumber!,
+            version: LSCG_VERSION,
+            command: {
+                name: "escape"
+            }
+        });
     }
 
     IncomingGrab(sender: Character, grabType: GrabType) {
@@ -1519,21 +1580,34 @@ export class ActivityModule extends BaseModule {
             let check = getModule<ItemUseModule>("ItemUseModule")?.MakeActivityCheck(Player, grabber);
             if (check.AttackerRoll.Total >= check.DefenderRoll.Total) {
                 SendAction(`${CharacterNickname(Player)} ${check.AttackerRoll.TotalStr}successfully breaks free from ${CharacterNickname(grabber)}'s ${check.DefenderRoll.TotalStr}grasp!`);
-                this.releasedBy(grabber.MemberNumber, undefined);
-                sendLSCGMessage(<LSCGMessageModel>{
-                    type: "command",
-                    reply: false,
-                    settings: null,
-                    target: grabber.MemberNumber!,
-                    version: LSCG_VERSION,
-                    command: {
-                        name: "escape"
-                    }
-                });
+                this.DoEscape(grabber);
             } else {
                 SendAction(`${CharacterNickname(Player)} ${check.AttackerRoll.TotalStr}squirms and wriggles but fails to escape from ${CharacterNickname(grabber)}'s ${check.DefenderRoll.TotalStr}grasp!`);
                 this.escapeAttempted = CommonTime();
             }
         }, 4000);
+    }
+
+    get RoomAllowsLeashing(): boolean {
+        return (ChatRoomData && ChatRoomData.BlockCategory && ChatRoomData.BlockCategory.indexOf("Leashing") < 0) || !ChatRoomData;
+    }
+
+    IsCharacterGrabbedOrGrabbing(C: Character, type: GrabType) {
+        if (!C.MemberNumber)
+            return false;
+        return this.hands.concat(this.heldBy).filter(h => h.Type == type).some(h => h.Member == C.MemberNumber);
+    }
+
+    GetIconForGrabType(type: GrabType) {
+        switch (type) {
+            case "mouth": return ICONS.MUTE;
+            case "ear": return ICONS.EAR;
+            case "hand": return ICONS.HOLD_HANDS;
+            case "tongue": return ICONS.TONGUE;
+            case "horn":
+            case "neck":
+            case "arm": 
+            default: return "Icons/Battle.png";
+        }
     }
 }
