@@ -1733,9 +1733,9 @@ export class ActivityModule extends BaseModule {
             case "ear": return ICONS.EAR;
             case "hand": return ICONS.HOLD_HANDS;
             case "tongue": return ICONS.TONGUE;
+            case "neck": return ICONS.NECK;
             case "mouth-with-foot": return "Icons/Management.png";
             case "horn":
-            case "neck":
             case "arm": 
             default: return "Icons/Battle.png";
         }
