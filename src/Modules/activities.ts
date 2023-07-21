@@ -1287,21 +1287,15 @@ export class ActivityModule extends BaseModule {
         hookFunction("ChatRoomDoPingLeashedPlayers", 1, (args, next) => {
             next(args);
             let SenderCharacter = args[0];
-            if (this.handHoldingMemberList.indexOf(SenderCharacter.MemberNumber) == -1 || !ChatRoomCanBeLeashedBy(SenderCharacter.MemberNumber, Player)) {
-                this.DoRelease(SenderCharacter, "hand");
-            }
-            if (this.earPinchedByMember == SenderCharacter.MemberNumber || !ChatRoomCanBeLeashedBy(SenderCharacter.MemberNumber, Player)) {
-                this.DoRelease(SenderCharacter, "ear");
-            }
-            if (this.armGrabbedByMember == SenderCharacter.MemberNumber || !ChatRoomCanBeLeashedBy(SenderCharacter.MemberNumber, Player)) {
-                this.DoRelease(SenderCharacter, "arm");
+            if (!ChatRoomCanBeLeashedBy(SenderCharacter.MemberNumber, Player)) {
+                this.DoEscape(SenderCharacter);
             }
         }, ModuleCategory.Activities)
 
         hookFunction("ServerAccountBeep", 1, (args, next) => {
             next(args);
             let data = args[0];
-            if (data.BeepType == "Leash" && this.heldBy.map(h => h.Member).indexOf(data.MemberNumber) > -1 && data.ChatRoomName) {
+            if (data.BeepType == "Leash" && this.customLeashedByMemberNumbers.indexOf(data.MemberNumber) > -1 && data.ChatRoomName) {
                 if (Player.OnlineSharedSettings && Player.OnlineSharedSettings.AllowPlayerLeashing != false && ( CurrentScreen != "ChatRoom" || !ChatRoomData || (CurrentScreen == "ChatRoom" && ChatRoomData.Name != data.ChatRoomName))) {
                     if (ChatRoomCanBeLeashedBy(data.MemberNumber, Player) && ChatSelectGendersAllowed(data.ChatRoomSpace, Player.GetGenders())) {
                         ChatRoomJoinLeash = data.ChatRoomName;
@@ -1324,7 +1318,7 @@ export class ActivityModule extends BaseModule {
         hookFunction("ChatRoomSync", 1, (args, next) => {
             var ret = next(args) as any;
             var currentRoomIds = ChatRoomCharacter.map(c => c.MemberNumber!);
-            this.hands.map(h => h.Member).filter(id => currentRoomIds.indexOf(id) == -1).forEach(memberNumber => {
+            this.customLeashedMemberNumbers.filter(id => currentRoomIds.indexOf(id) == -1).forEach(memberNumber => {
                 ServerSend("AccountBeep", { MemberNumber: memberNumber, BeepType: "Leash"});
             });
         }, ModuleCategory.Activities);
@@ -1342,6 +1336,14 @@ export class ActivityModule extends BaseModule {
 
     hands: HandOccupant[] = [];
     heldBy: HandOccupant[] = [];
+
+    get customLeashedMemberNumbers(): number[] {
+        return this.hands.concat(this.heldBy.filter(h => h.Type == "hand")).map(h => h.Member);
+    }
+
+    get customLeashedByMemberNumbers(): number[] {
+        return this.heldBy.concat(this.hands.filter(h => h.Type == "hand")).map(h => h.Member);
+    }
 
     get maxHands(): number {
         return 2;
@@ -1503,6 +1505,23 @@ export class ActivityModule extends BaseModule {
         this.releaseGrab(target.MemberNumber, type);
     }
 
+    DoEscape(escapeFrom: Character) {
+        if (!escapeFrom.MemberNumber)
+            return;
+
+        this.releasedBy(escapeFrom.MemberNumber, undefined);
+        sendLSCGMessage(<LSCGMessageModel>{
+            type: "command",
+            reply: false,
+            settings: null,
+            target: escapeFrom.MemberNumber!,
+            version: LSCG_VERSION,
+            command: {
+                name: "escape"
+            }
+        });
+    }
+
     IncomingGrab(sender: Character, grabType: GrabType) {
         if (!!sender.MemberNumber) {
             let doNotify = this.grabbedBy(sender.MemberNumber, grabType);
@@ -1561,17 +1580,7 @@ export class ActivityModule extends BaseModule {
             let check = getModule<ItemUseModule>("ItemUseModule")?.MakeActivityCheck(Player, grabber);
             if (check.AttackerRoll.Total >= check.DefenderRoll.Total) {
                 SendAction(`${CharacterNickname(Player)} ${check.AttackerRoll.TotalStr}successfully breaks free from ${CharacterNickname(grabber)}'s ${check.DefenderRoll.TotalStr}grasp!`);
-                this.releasedBy(grabber.MemberNumber, undefined);
-                sendLSCGMessage(<LSCGMessageModel>{
-                    type: "command",
-                    reply: false,
-                    settings: null,
-                    target: grabber.MemberNumber!,
-                    version: LSCG_VERSION,
-                    command: {
-                        name: "escape"
-                    }
-                });
+                this.DoEscape(grabber);
             } else {
                 SendAction(`${CharacterNickname(Player)} ${check.AttackerRoll.TotalStr}squirms and wriggles but fails to escape from ${CharacterNickname(grabber)}'s ${check.DefenderRoll.TotalStr}grasp!`);
                 this.escapeAttempted = CommonTime();
