@@ -13,6 +13,7 @@ export interface HypnoSettingsModel extends HypnoPublicSettingsModel {
     existingEyeExpression: ExpressionName | null;
     enableArousal: boolean;
     stats: HypnoModuleStats;
+    triggerCycled: boolean;
 }
 
 export interface HypnoPublicSettingsModel extends BaseSettingsModel {

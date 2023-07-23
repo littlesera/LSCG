@@ -23,6 +23,7 @@ export class HypnoModule extends BaseModule {
             recoveredAt: 0,
             cycleTime: 30,
             enableCycle: true,
+            triggerCycled: true,
             overrideMemberIds: "",
             overrideWords: "",
             allowLocked: false,
@@ -179,7 +180,7 @@ export class HypnoModule extends BaseModule {
                     lastHornyCheck = now;
                     this.HypnoHorny();
                 }
-                if (!this.hypnoActivated && (lastCycleCheck + 5000) > now) {
+                if (!this.hypnoActivated && (lastCycleCheck + 5000) < now) {
                     lastCycleCheck = now;
                     this.CheckNewTrigger();
                 }
@@ -352,6 +353,7 @@ export class HypnoModule extends BaseModule {
         this.cooldownMsgSent = false;
         this.settings.hypnotizedBy = memberNumber;
         this.settings.activatedAt = CommonTime();
+        this.settings.triggerCycled = false;
         if (!AudioShouldSilenceSound(true))
             AudioPlaySoundEffect("SciFiEffect", 1);
         this.hypnoActivated = true;
@@ -482,7 +484,7 @@ export class HypnoModule extends BaseModule {
     }
 
     CheckNewTrigger() {
-        if (this.hypnoActivated || !this.settings.enableCycle)
+        if (this.hypnoActivated || !this.settings.enableCycle || this.settings.triggerCycled)
             return;
         var cycleAtTime = Math.max(this.settings.activatedAt, this.settings.recoveredAt) + (Math.max(1, this.settings.cycleTime || 0) * 60000)
         if (cycleAtTime < CommonTime())
@@ -494,6 +496,7 @@ export class HypnoModule extends BaseModule {
         if (newTrigger != this.settings.trigger)
             SendAction("%NAME% concentrates, breaking the hold the previous trigger word held over %POSSESSIVE%.");
         this.settings.trigger = newTrigger;
+        this.settings.triggerCycled = true;
         settingsSave();
     }
 
