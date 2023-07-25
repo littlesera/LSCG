@@ -1,6 +1,6 @@
 import { BaseModule } from "base";
 import { getModule, modules } from "modules";
-import { BaseSettingsModel } from "Settings/Models/base";
+import { BaseSettingsModel, GlobalSettingsModel } from "Settings/Models/base";
 import { IPublicSettingsModel, PublicSettingsModel, SettingsModel } from "Settings/Models/settings";
 import { ModuleCategory } from "Settings/setting_definitions";
 import { removeAllHooksByModule, hookFunction, getCharacter, drawSvg, SVG_ICONS, sendLSCGMessage, settingsSave, LSCG_CHANGES, LSCG_SendLocal } from "../utils";
@@ -27,6 +27,10 @@ export class CoreModule extends BaseModule {
         }
         return settings;
     }
+
+    get settings(): GlobalSettingsModel {
+        return super.settings as GlobalSettingsModel;
+	}
 
     load(): void {
         hookFunction("ChatRoomSync", 1, (args, next) => {
@@ -70,6 +74,28 @@ export class CoreModule extends BaseModule {
                     MainCanvas.font = prevFont;
                 }
             }
+        }, ModuleCategory.Core);
+
+        // Pull other public crafts from the room
+        hookFunction("DialogInventoryBuild", 1, (args, next) => {
+            next(args);
+            let target = args[0];
+            ChatRoomCharacter.forEach(C => {
+                if (C.Crafting != null && !C.IsPlayer() && C.MemberNumber != target.MemberNumber && (C as OtherCharacter).LSCG && (C as OtherCharacter).LSCG.GlobalModule.sharePublicCrafting) {
+                    let Crafting = CraftingDecompressServerData(C.Crafting);
+                    for (let Craft of Crafting)
+                        if ((Craft != null) && (Craft.Item != null))
+                            if ((Craft.Private == null) || (Craft.Private == false)) {
+                                Craft.MemberName = CharacterNickname(C);
+                                Craft.MemberNumber = C.MemberNumber;
+                                const group = AssetGroupGet(target.AssetFamily, target.FocusGroup.Name);
+                                for (let A of group.Asset)
+                                    if (CraftingAppliesToItem(Craft, A) && DialogCanUseCraftedItem(target, Craft))
+                                        DialogInventoryAdd(target, { Asset: A, Craft: Craft }, false);
+                            }
+                }
+            });
+            DialogInventorySort();
         }, ModuleCategory.Core);
     }
 

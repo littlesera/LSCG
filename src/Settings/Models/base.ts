@@ -6,10 +6,14 @@ export interface ModuleStats {
 
 }
 
-export interface GlobalSettingsModel extends BaseSettingsModel {
+export interface GlobalSettingsModel extends GlobalPublicSettingsModel {
     edgeBlur: boolean;
     showCheckRolls: boolean;
     blockSettingsWhileRestrained: boolean;    
+}
+
+export interface GlobalPublicSettingsModel extends BaseSettingsModel {
+    sharePublicCrafting: boolean;
 }
 
 export interface LipstickSettingsModel extends BaseSettingsModel {

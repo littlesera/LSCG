@@ -1,6 +1,6 @@
 import { BoopsModule } from "Modules/boops";
 import { InjectorModule } from "Modules/injector";
-import { BaseSettingsModel, GlobalSettingsModel, LipstickSettingsModel, MiscSettingsModel } from "./base";
+import { BaseSettingsModel, GlobalPublicSettingsModel, GlobalSettingsModel, LipstickSettingsModel, MiscSettingsModel } from "./base";
 import { CollarModel, CollarPublicSettingsModel, CollarSettingsModel } from "./collar";
 import { HypnoPublicSettingsModel, HypnoSettingsModel } from "./hypno";
 import { InjectorPublicSettingsModel, InjectorSettingsModel } from "./injector";
@@ -25,7 +25,7 @@ export interface IPublicSettingsModel extends BaseSettingsModel {
     HypnoModule: HypnoPublicSettingsModel;
     BoopsModule: BaseSettingsModel;
     LipstickModule: LipstickSettingsModel;
-    GlobalModule: BaseSettingsModel;
+    GlobalModule: GlobalPublicSettingsModel;
     MiscModule: BaseSettingsModel;
     InjectorModule: InjectorPublicSettingsModel;
 }
@@ -77,7 +77,10 @@ export class PublicSettingsModel implements IPublicSettingsModel {
         enabled: false,
         dry: false
     };
-    GlobalModule: BaseSettingsModel = <BaseSettingsModel>{enabled: false};
+    GlobalModule: GlobalPublicSettingsModel = <GlobalPublicSettingsModel>{
+        enabled: false,
+        sharePublicCrafting: false
+    };
     MiscModule: BaseSettingsModel = <BaseSettingsModel>{enabled: false};
     InjectorModule: InjectorPublicSettingsModel = <InjectorPublicSettingsModel>{
         enabled: false, 
