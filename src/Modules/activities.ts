@@ -1050,6 +1050,33 @@ export class ActivityModule extends BaseModule {
             },
             CustomImage: "Assets/Female3DCG/Activity/MassageFeet.png"
         });
+
+        // Tug Crotch Rope
+        this.AddActivity({
+            Activity: <Activity>{
+                Name: "Tug",
+                MaxProgress: 50,
+                MaxProgressSelf: 50,
+                Prerequisite: ["UseHands", "ZoneAccessible", "ZoneNaked"]
+            },
+            Targets: [
+                <ActivityTarget>{
+                    Name: "ItemPelvis",
+                    SelfAllowed: true,
+                    TargetAction: "SourceCharacter tugs on TargetCharacter's crotch rope.",
+                    TargetSelfAction: "SourceCharacter tugs lewdly on PronounPossessive own crotch rope."
+                }
+            ],
+            CustomPrereqs: [
+                <CustomPrerequisite>{
+                    Name: "HasCrotchRope",
+                    Func: (acting, acted, group) => {
+                        return acted.HasEffect("CrotchRope");
+                    }
+                }
+            ],
+            CustomImage: "Assets/Female3DCG/ItemPelvis/HempRope_NormalOverPanties.png"
+        });
     }
 
     get customGagged(): boolean {
