@@ -70,12 +70,6 @@ export class GuiGlobal extends GuiSubscreen {
 				description: "If enabled, other LSCG users in the room will be able to use your crafted items on other people.",
 				setting: () => this.settings.sharePublicCrafting ?? false,
 				setSetting: (val) => this.settings.sharePublicCrafting = val
-			},<Setting>{
-				type: "checkbox",
-				label: "See Shared Craftings:",
-				description: "If disabled, only shows yours and your targets available crafts. (Regular BC behavior)",
-				setting: () => this.settings.seeSharedCrafts ?? true,
-				setSetting: (val) => this.settings.seeSharedCrafts = val
 			}
 		]
 	}

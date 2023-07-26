@@ -11,6 +11,13 @@ import { HypnoModule } from "./hypno";
 // Maybe can consolidate things like hypnosis/suffocation basic state handling too..
 export class CoreModule extends BaseModule {   
 
+    toggleSharedButton = {
+        x: 1898,
+        y: 120,
+        width: 40,
+        height: 40
+    };
+
     get publicSettings(): IPublicSettingsModel {
         var settings = new PublicSettingsModel();
         for (const m of modules()) {
@@ -114,6 +121,30 @@ export class CoreModule extends BaseModule {
                 DialogInventorySort();
             }
         }, ModuleCategory.Core);
+
+        hookFunction("DialogDrawItemMenu", 1, (args, next) => {
+            this._drawShareToggleButton(this.toggleSharedButton.x, this.toggleSharedButton.y, this.toggleSharedButton.width, this.toggleSharedButton.height);
+            next(args);
+        }, ModuleCategory.Core);
+
+        hookFunction("DialogClick", 1, (args, next) => {
+            next(args);
+            let C = CharacterGetCurrent();
+            if (!C)
+                return;
+            if (MouseIn(this.toggleSharedButton.x, this.toggleSharedButton.y, this.toggleSharedButton.width, this.toggleSharedButton.height) &&
+                DialogModeShowsInventory() && (DialogMenuMode === "permissions" || (Player.CanInteract() && !InventoryGroupIsBlocked(C, undefined, true)))) {
+                this.settings.seeSharedCrafts = !this.settings.seeSharedCrafts;
+                settingsSave();
+                DialogInventoryBuild(C, true, false);
+            }
+        })
+    }
+
+    _drawShareToggleButton(X: number, Y: number, Width: number, Height: number) {
+        DrawButton(X, Y, Width, Height, "", this.settings.seeSharedCrafts ? "White" : "Red", "", "Toggle Shared Crafts", false);
+        DrawImageResize("Icons/Online.png", X + 2, Y + 2, Width - 4, Height - 4);
+        DrawLineCorner(X + 2, Y + 2, X + Width - 2, Y + Height - 2, X + 2, Y + 2, 2, "Black");
     }
 
     run(): void {
