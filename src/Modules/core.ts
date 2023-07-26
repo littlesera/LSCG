@@ -28,8 +28,23 @@ export class CoreModule extends BaseModule {
         return settings;
     }
 
+    get settingsStorage(): string | null {
+		return "GlobalModule";
+	}
+
     get settings(): GlobalSettingsModel {
         return super.settings as GlobalSettingsModel;
+	}
+
+    get defaultSettings(): GlobalSettingsModel | null {
+		return <GlobalSettingsModel>{
+            enabled: false,
+            blockSettingsWhileRestrained: false,
+            edgeBlur: false,
+            seeSharedCrafts: true,
+            sharePublicCrafting: false,
+            showCheckRolls: true
+        };
 	}
 
     load(): void {
@@ -79,23 +94,25 @@ export class CoreModule extends BaseModule {
         // Pull other public crafts from the room
         hookFunction("DialogInventoryBuild", 1, (args, next) => {
             next(args);
-            let target = args[0];
-            ChatRoomCharacter.forEach(C => {
-                if (C.Crafting != null && !C.IsPlayer() && C.MemberNumber != target.MemberNumber && (C as OtherCharacter).LSCG && (C as OtherCharacter).LSCG.GlobalModule.sharePublicCrafting) {
-                    let Crafting = CraftingDecompressServerData(C.Crafting);
-                    for (let Craft of Crafting)
-                        if ((Craft != null) && (Craft.Item != null))
-                            if ((Craft.Private == null) || (Craft.Private == false)) {
-                                Craft.MemberName = CharacterNickname(C);
-                                Craft.MemberNumber = C.MemberNumber;
-                                const group = AssetGroupGet(target.AssetFamily, target.FocusGroup.Name);
-                                for (let A of group.Asset)
-                                    if (CraftingAppliesToItem(Craft, A) && DialogCanUseCraftedItem(target, Craft))
-                                        DialogInventoryAdd(target, { Asset: A, Craft: Craft }, false);
-                            }
-                }
-            });
-            DialogInventorySort();
+            if (this.settings.seeSharedCrafts) {
+                let target = args[0];
+                ChatRoomCharacter.forEach(C => {
+                    if (C.Crafting != null && !C.IsPlayer() && C.MemberNumber != target.MemberNumber && (C as OtherCharacter).LSCG && (C as OtherCharacter).LSCG.GlobalModule.sharePublicCrafting) {
+                        let Crafting = CraftingDecompressServerData(C.Crafting);
+                        for (let Craft of Crafting)
+                            if ((Craft != null) && (Craft.Item != null))
+                                if ((Craft.Private == null) || (Craft.Private == false)) {
+                                    Craft.MemberName = CharacterNickname(C);
+                                    Craft.MemberNumber = C.MemberNumber;
+                                    const group = AssetGroupGet(target.AssetFamily, target.FocusGroup.Name);
+                                    for (let A of group.Asset)
+                                        if (CraftingAppliesToItem(Craft, A) && DialogCanUseCraftedItem(target, Craft))
+                                            DialogInventoryAdd(target, { Asset: A, Craft: Craft }, false);
+                                }
+                    }
+                });
+                DialogInventorySort();
+            }
         }, ModuleCategory.Core);
     }
 
