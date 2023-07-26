@@ -658,6 +658,11 @@ export class ItemUseModule extends BaseModule {
 					TargetLabel: "Shark Bite",
 					TargetAction: "SourceCharacter's ActivityAsset chomps on TargetCharacter!",
 					SelfAllowed: false
+				},  <ActivityTarget>{
+					Name: "ItemNose",
+					TargetLabel: "Shark Boop",
+					TargetAction: "SourceCharacter boops TargetCharacter's nose with PronounPossessive ActivityAsset.",
+					SelfAllowed: false
 				}
 			],
 			CustomPrereqs: [
