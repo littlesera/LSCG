@@ -11,6 +11,13 @@ import { HypnoModule } from "./hypno";
 // Maybe can consolidate things like hypnosis/suffocation basic state handling too..
 export class CoreModule extends BaseModule {   
 
+    toggleSharedButton = {
+        x: 1898,
+        y: 120,
+        width: 40,
+        height: 40
+    };
+
     get publicSettings(): IPublicSettingsModel {
         var settings = new PublicSettingsModel();
         for (const m of modules()) {
@@ -28,8 +35,23 @@ export class CoreModule extends BaseModule {
         return settings;
     }
 
+    get settingsStorage(): string | null {
+		return "GlobalModule";
+	}
+
     get settings(): GlobalSettingsModel {
         return super.settings as GlobalSettingsModel;
+	}
+
+    get defaultSettings(): GlobalSettingsModel | null {
+		return <GlobalSettingsModel>{
+            enabled: false,
+            blockSettingsWhileRestrained: false,
+            edgeBlur: false,
+            seeSharedCrafts: true,
+            sharePublicCrafting: false,
+            showCheckRolls: true
+        };
 	}
 
     load(): void {
@@ -79,24 +101,50 @@ export class CoreModule extends BaseModule {
         // Pull other public crafts from the room
         hookFunction("DialogInventoryBuild", 1, (args, next) => {
             next(args);
-            let target = args[0];
-            ChatRoomCharacter.forEach(C => {
-                if (C.Crafting != null && !C.IsPlayer() && C.MemberNumber != target.MemberNumber && (C as OtherCharacter).LSCG && (C as OtherCharacter).LSCG.GlobalModule.sharePublicCrafting) {
-                    let Crafting = CraftingDecompressServerData(C.Crafting);
-                    for (let Craft of Crafting)
-                        if ((Craft != null) && (Craft.Item != null))
-                            if ((Craft.Private == null) || (Craft.Private == false)) {
-                                Craft.MemberName = CharacterNickname(C);
-                                Craft.MemberNumber = C.MemberNumber;
-                                const group = AssetGroupGet(target.AssetFamily, target.FocusGroup.Name);
-                                for (let A of group.Asset)
-                                    if (CraftingAppliesToItem(Craft, A) && DialogCanUseCraftedItem(target, Craft))
-                                        DialogInventoryAdd(target, { Asset: A, Craft: Craft }, false);
-                            }
-                }
-            });
-            DialogInventorySort();
+            if (this.settings.seeSharedCrafts) {
+                let target = args[0];
+                ChatRoomCharacter.forEach(C => {
+                    if (C.Crafting != null && !C.IsPlayer() && C.MemberNumber != target.MemberNumber && (C as OtherCharacter).LSCG && (C as OtherCharacter).LSCG.GlobalModule.sharePublicCrafting) {
+                        let Crafting = CraftingDecompressServerData(C.Crafting);
+                        for (let Craft of Crafting)
+                            if ((Craft != null) && (Craft.Item != null))
+                                if ((Craft.Private == null) || (Craft.Private == false)) {
+                                    Craft.MemberName = CharacterNickname(C);
+                                    Craft.MemberNumber = C.MemberNumber;
+                                    const group = AssetGroupGet(target.AssetFamily, target.FocusGroup.Name);
+                                    for (let A of group.Asset)
+                                        if (CraftingAppliesToItem(Craft, A) && DialogCanUseCraftedItem(target, Craft))
+                                            DialogInventoryAdd(target, { Asset: A, Craft: Craft }, false);
+                                }
+                    }
+                });
+                DialogInventorySort();
+            }
         }, ModuleCategory.Core);
+
+        hookFunction("DialogDrawItemMenu", 1, (args, next) => {
+            this._drawShareToggleButton(this.toggleSharedButton.x, this.toggleSharedButton.y, this.toggleSharedButton.width, this.toggleSharedButton.height);
+            next(args);
+        }, ModuleCategory.Core);
+
+        hookFunction("DialogClick", 1, (args, next) => {
+            next(args);
+            let C = CharacterGetCurrent();
+            if (!C)
+                return;
+            if (MouseIn(this.toggleSharedButton.x, this.toggleSharedButton.y, this.toggleSharedButton.width, this.toggleSharedButton.height) &&
+                DialogModeShowsInventory() && (DialogMenuMode === "permissions" || (Player.CanInteract() && !InventoryGroupIsBlocked(C, undefined, true)))) {
+                this.settings.seeSharedCrafts = !this.settings.seeSharedCrafts;
+                settingsSave();
+                DialogInventoryBuild(C, true, false);
+            }
+        })
+    }
+
+    _drawShareToggleButton(X: number, Y: number, Width: number, Height: number) {
+        DrawButton(X, Y, Width, Height, "", this.settings.seeSharedCrafts ? "White" : "Red", "", "Toggle Shared Crafts", false);
+        DrawImageResize("Icons/Online.png", X + 2, Y + 2, Width - 4, Height - 4);
+        DrawLineCorner(X + 2, Y + 2, X + Width - 2, Y + Height - 2, X + 2, Y + 2, 2, "Black");
     }
 
     run(): void {

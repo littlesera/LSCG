@@ -85,7 +85,8 @@ export class GUI extends BaseModule {
 			edgeBlur: false,
 			showCheckRolls: true,
 			blockSettingsWhileRestrained: false,
-			sharePublicCrafting: false
+			sharePublicCrafting: false,
+			seeSharedCrafts: true
 		};
     }
 

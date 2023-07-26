@@ -9,7 +9,8 @@ export interface ModuleStats {
 export interface GlobalSettingsModel extends GlobalPublicSettingsModel {
     edgeBlur: boolean;
     showCheckRolls: boolean;
-    blockSettingsWhileRestrained: boolean;    
+    blockSettingsWhileRestrained: boolean;
+    seeSharedCrafts: boolean;
 }
 
 export interface GlobalPublicSettingsModel extends BaseSettingsModel {

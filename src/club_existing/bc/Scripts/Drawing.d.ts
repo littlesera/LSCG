@@ -257,9 +257,10 @@ declare function GetWrapTextSize(Text: string, Width: number, MaxLine: number): 
  * @param {string} ForeColor - Foreground color
  * @param {string} [BackColor] - Background color
  * @param {number} [MaxLine] - Maximum of lines the word can wrap for
+ * @param {number} LineSpacing - The number of pixels between each lines (default to 23)
  * @returns {void} - Nothing
  */
-declare function DrawTextWrap(Text: string, X: number, Y: number, Width: number, Height: number, ForeColor: string, BackColor?: string, MaxLine?: number): void;
+declare function DrawTextWrap(Text: string, X: number, Y: number, Width: number, Height: number, ForeColor: string, BackColor?: string, MaxLine?: number, LineSpacing?: number): void;
 /**
  * Draws a text element on the canvas that will fit on the specified width
  * @param {string} Text - Text to draw
@@ -433,6 +434,32 @@ declare function DrawProcessScreenFlash(): void;
  */
 declare function DrawProcessHoverElements(): void;
 /**
+ *
+ * @param {Item | DialogInventoryItem} itemOrDialogItem
+ * @param {Character} char - The character using the item (used to calculate dynamic item descriptions/previews)
+ * @param {number} X
+ * @param {number} Y
+ * @param {object} [options]
+ * @param {string} [options.Background] - The background color to draw the preview box in - defaults to white
+ * @param {string} [options.Foreground] - The foreground (text) color to draw the description in - defaults to black
+ * @param {boolean} [options.Border] - Whether or not to draw a border around the preview box
+ * @param {boolean} [options.Hover] - Whether or not the button should enable hover behavior (background color change)
+ * @param {string} [options.HoverBackground] - The background color that should be used on mouse hover, if any
+ * @param {boolean} [options.Disabled] - Whether or not the element is disabled (prevents hover functionality)
+ * @param {number} [options.Width] - The width of the preview rectangle. Defaults to 225.
+ * @param {number} [options.Height] - The width of the preview rectangle. Defaults to 275.
+ */
+declare function DrawItemPreview(itemOrDialogItem: Item | DialogInventoryItem, char: Character, X: number, Y: number, options?: {
+    Background?: string;
+    Foreground?: string;
+    Border?: boolean;
+    Hover?: boolean;
+    HoverBackground?: string;
+    Disabled?: boolean;
+    Width?: number;
+    Height?: number;
+}): void;
+/**
  * Draws an asset's preview box
  * @param {number} X - Position of the preview box on the X axis
  * @param {number} Y - Position of the preview box on the Y axis
@@ -548,3 +575,7 @@ declare const DrawingGetTextSize: MemoizedFunction<(Text: any, Width: any) => an
 declare var DrawScreenFlashTime: number;
 declare var DrawScreenFlashColor: any;
 declare var DrawScreenFlashStrength: number;
+/** The default width of item previews */
+declare const DrawAssetPreviewDefaultWidth: 225;
+/** The default height of item previews */
+declare const DrawAssetPreviewDefaultHeight: 275;

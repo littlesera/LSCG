@@ -230,11 +230,13 @@ declare function ActivityRunSelf(Source: Character, Target: Character, Activity:
 declare function ActivityBuildChatTag(character: Character, group: AssetGroup, activity: Activity, is_label?: boolean): string;
 /**
  * Launches a sexual activity for a character and sends the chatroom message if applicable.
- * @param {Character} C - Character on which the activity was triggered
- * @param {ItemActivity} ItemActivity - Activity performed
- * @returns {void} - Nothing
+ * @param {Character} actor - Character which is performing the activity
+ * @param {Character} acted - Character on which the activity was triggered
+ * @param {AssetItemGroup} targetGroup - The group targetted by the activity
+ * @param {ItemActivity} ItemActivity - The activity performed, with its optional item used
+ * @param {boolean} sendMessage - Whether to send a message to the chat or not
  */
-declare function ActivityRun(C: Character, ItemActivity: ItemActivity): void;
+declare function ActivityRun(actor: Character, acted: Character, targetGroup: AssetItemGroup, ItemActivity: ItemActivity, sendMessage?: boolean): void;
 /**
  * Checks if a used asset should trigger an activity/arousal progress on the target character
  * @param {Character} Source - The character who used the item

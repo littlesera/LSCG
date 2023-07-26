@@ -7,12 +7,31 @@
  */
 declare function TypedItemRegister(asset: Asset, config: TypedItemConfig): TypedItemData;
 /**
+ * Parse and pre-process the passed item options.
+ * @param {Asset} asset - The item options asset
+ * @param {readonly TypedItemOptionConfig[]} protoOptions - The unparsed extended item options
+ * @param {boolean} [changeWhenLocked] - See {@link TypedItemConfig.ChangeWhenLocked}
+ * @returns {TypedItemOption[]} The newly generated extended item options
+ */
+declare function TypedItemBuildOptions(protoOptions: readonly TypedItemOptionConfig[], asset: Asset, changeWhenLocked?: boolean): TypedItemOption[];
+/**
+ * Parse the passed typed item draw data as passed via the extended item config
+ * @param {Asset} asset - The asset in question
+ * @param {ExtendedItemConfigDrawData<Partial<ElementMetaData.Typed>> | undefined} drawData - The to-be parsed draw data
+ * @param {readonly { Name: string }[]} options - The list of extended item options
+ * @param {Partial<ElementMetaData.Typed>} overrideMetaData
+ * @return {ExtendedItemDrawData<ElementMetaData.Typed>} - The parsed draw data
+ */
+declare function TypedItemGetDrawData(asset: Asset, drawData: ExtendedItemConfigDrawData<Partial<ElementMetaData.Typed>> | undefined, options: readonly {
+    Name: string;
+}[], overrideMetaData?: Partial<ElementMetaData.Typed>): ExtendedItemDrawData<ElementMetaData.Typed>;
+/**
  * Generates an asset's typed item data
  * @param {Asset} asset - The asset to generate modular item data for
  * @param {TypedItemConfig} config - The item's extended item configuration
  * @returns {TypedItemData} - The generated typed item data for the asset
  */
-declare function TypedItemCreateTypedItemData(asset: Asset, { Options, DialogPrefix, ChatTags, Dictionary, ChatSetting, DrawImages, ChangeWhenLocked, ScriptHooks, BaselineProperty, }: TypedItemConfig): TypedItemData;
+declare function TypedItemCreateTypedItemData(asset: Asset, { Options, DialogPrefix, ChatTags, Dictionary, ChatSetting, DrawImages, ChangeWhenLocked, ScriptHooks, DrawData, BaselineProperty, }: TypedItemConfig): TypedItemData;
 /**
  *
  * @param {TypedItemData} data
@@ -95,6 +114,7 @@ declare function TypedItemGetOption(groupName: AssetGroupName, assetName: string
  * the validation function indicates that the new option is not compatible with the character's current state (generally
  * due to prerequisites or other requirements).
  * @template {ExtendedItemOption} T
+ * @param {null | ExtendedItemData<T>} data
  * @param {Character} C - The character on whom the item is equipped
  * @param {Item} item - The item whose options are being validated
  * @param {T} option - The new option
@@ -102,7 +122,7 @@ declare function TypedItemGetOption(groupName: AssetGroupName, assetName: string
  * @returns {string|undefined} - undefined or an empty string if the validation passes. Otherwise, returns a string
  * message informing the player of the requirements that are not met.
  */
-declare function TypedItemValidateOption<T extends ExtendedItemOption>(C: Character, item: Item, option: T, previousOption: T): string | undefined;
+declare function TypedItemValidateOption<T extends ExtendedItemOption>(data: ExtendedItemData<T>, C: Character, item: Item, option: T, previousOption: T): string | undefined;
 /**
  * Sets a typed item's type and properties to the option whose name matches the provided option name parameter.
  * @param {Character} C - The character on whom the item is equipped
@@ -110,10 +130,12 @@ declare function TypedItemValidateOption<T extends ExtendedItemOption>(C: Charac
  * @param {string} optionName - The name of the option to set
  * @param {boolean} [push] - Whether or not appearance updates should be persisted (only applies if the character is the
  * player) - defaults to false.
+ * @param {null | Character} [C_Source] - The character setting the new item option. If `null`, assume that it is _not_ the player character.
+ * @param {null | [archetype: "typed" | "vibrating", screen: string]} [subscreen]
  * @returns {string|undefined} - undefined or an empty string if the type was set correctly. Otherwise, returns a string
  * informing the player of the requirements that are not met.
  */
-declare function TypedItemSetOptionByName(C: Character, itemOrGroupName: Item | AssetGroupName, optionName: string, push?: boolean): string | undefined;
+declare function TypedItemSetOptionByName(C: Character, itemOrGroupName: Item | AssetGroupName, optionName: string, push?: boolean, C_Source?: null | Character, subscreen?: null | [archetype: "typed" | "vibrating", screen: string]): string | undefined;
 /**
  * Finds the currently set option on the given typed item
  * @template {TypedItemOption | VibratingItemOption} T
@@ -130,10 +152,11 @@ declare function TypedItemFindPreviousOption<T extends TypedItemOption | Vibrati
  * @param {Item | AssetGroupName} itemOrGroupName - The item whose type to set, or the group name for the item
  * @param {boolean} [push] - Whether or not appearance updates should be persisted (only applies if the character is the
  * player) - defaults to false.
+ * @param {null | Character} [C_Source] - The character setting the new item option. If `null`, assume that it is _not_ the player character.
  * @returns {string|undefined} - undefined or an empty string if the type was set correctly. Otherwise, returns a string
  * informing the player of the requirements that are not met.
  */
-declare function TypedItemSetRandomOption(C: Character, itemOrGroupName: Item | AssetGroupName, push?: boolean): string | undefined;
+declare function TypedItemSetRandomOption(C: Character, itemOrGroupName: Item | AssetGroupName, push?: boolean, C_Source?: null | Character): string | undefined;
 /**
  * Initialize the typed item properties
  * @param {TypedItemData} Data - The item's extended item data
@@ -147,19 +170,15 @@ declare function TypedItemInit(Data: TypedItemData, C: Character, Item: Item, Re
  * Draws the extended item type selection screen
  * @param {TypedItemData | VibratingItemData} data - An Array of type definitions for each allowed extended type. The first item
  *     in the array should be the default option.
- * @param {number} [OptionsPerPage] - The number of options displayed on each page
- * @param {readonly [number, number][]} [XYPositions] - An array with custom X & Y coordinates of the buttons
  * @returns {void} Nothing
  */
-declare function TypedItemDraw({ functionPrefix, options, drawImages, parentOption, dialogPrefix }: TypedItemData | VibratingItemData, OptionsPerPage?: number, XYPositions?: readonly [number, number][]): void;
+declare function TypedItemDraw({ functionPrefix, options, parentOption, dialogPrefix, drawData, archetype }: TypedItemData | VibratingItemData): void;
 /**
  * Handles clicks on the extended item type selection screen
  * @param {TypedItemData | VibratingItemData} data
- * @param {number} [OptionsPerPage] - The number of options displayed on each page
- * @param {[number, number][]} [XYPositions] - An array with custom X & Y coordinates of the buttons
  * @returns {void} Nothing
  */
-declare function TypedItemClick(data: TypedItemData | VibratingItemData, OptionsPerPage?: number, XYPositions?: [number, number][]): void;
+declare function TypedItemClick(data: TypedItemData | VibratingItemData): void;
 /**
  * Handler function called when an option on the type selection screen is clicked
  * @template {TypedItemOption | VibratingItemOption} T
