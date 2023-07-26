@@ -21,6 +21,11 @@ export class BoopsModule extends BaseModule {
         };
     }
 
+    boopActivitied = [
+        "ChatOther-ItemNose-Pet",
+        "ChatOther-ItemNose-LSCG_SharkBite"
+    ]
+
     load(): void {
         OnActivity(1, ModuleCategory.Boops, (data, sender, msg, metadata) => {
             if (!this.Enabled)
@@ -28,7 +33,7 @@ export class BoopsModule extends BaseModule {
             let target = GetTargetCharacter(data);
             if (!!target && 
                 target == Player.MemberNumber && 
-                data.Content == "ChatOther-ItemNose-Pet" && 
+                this.boopActivitied.indexOf(data.Content) > -1 && 
                 !IsIncapacitated()) {
                 this.BoopReact(sender?.MemberNumber);
             }
