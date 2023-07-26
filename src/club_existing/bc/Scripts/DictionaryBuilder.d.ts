@@ -131,9 +131,12 @@ declare class DictionaryBuilder {
     focusGroup(groupName: AssetGroupItemName): this;
     /**
      * Adds a dictionary entry which identifies an asset - usually the asset being changed, but the tag can be customized.
-     * @param {Asset} asset
+     * @param {Asset} asset - The asset in question
+     * @param {string} [tag] - The tag to replace
+     * @param {string} [craftName] - The name of the crafted item if applicable
+     * @returns {this}
      */
-    asset(asset: Asset, tag?: string): DictionaryBuilder;
+    asset(asset: Asset, tag?: string, craftName?: string): this;
     /**
      * Adds a text dictionary entry. This is a straightforward dictionary entry where the provided tag will be directly
      * replaced by the given text.

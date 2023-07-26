@@ -32,28 +32,18 @@ declare function ModularItemDraw(data: ModularItemData): void;
 /**
  * Parse the and pre-process the passed modules (and their options)
  * @param {Asset} asset - The asset in question
- * @param {readonly ModularItemModuleBase[]} modules - An object describing a single module for a modular item.
+ * @param {readonly ModularItemModuleConfig[]} modules - An object describing a single module for a modular item.
  * @param {boolean | undefined} [changeWhenLocked] - See {@link ModularItemConfig.ChangeWhenLocked}
  * @returns {ModularItemModule[]} - The updated modules and options
  */
-declare function ModularItemUpdateModules(asset: Asset, modules: readonly ModularItemModuleBase[], changeWhenLocked?: boolean | undefined): ModularItemModule[];
+declare function ModularItemBuildModules(asset: Asset, modules: readonly ModularItemModuleConfig[], changeWhenLocked?: boolean | undefined): ModularItemModule[];
 /**
  * Generates an asset's modular item data
  * @param {Asset} asset - The asset to generate modular item data for
  * @param {ModularItemConfig} config - The item's extended item configuration
  * @returns {ModularItemData} - The generated modular item data for the asset
  */
-declare function ModularItemCreateModularData(asset: Asset, { Modules, ChatSetting, ChatTags, ChangeWhenLocked, DialogPrefix, ScriptHooks, Dictionary, BaselineProperty, DrawImages, }: ModularItemConfig): ModularItemData;
-/**
- * Generates drawing data for a given module. This includes button positions, whether pagination is necessary, and the
- * total page count for that module.
- * @param {number} itemCount - The number of items in the module
- * @param {Asset} asset - The relevant asset
- * @param {boolean} drawImages - Whether button images should be drawn or not
- * @returns {ModularItemDrawData} - An object containing required drawing for
- * a module with the given item count.
- */
-declare function ModularItemCreateDrawData(itemCount: number, asset: Asset, drawImages: boolean): ModularItemDrawData;
+declare function ModularItemCreateModularData(asset: Asset, { Modules, ChatSetting, ChatTags, ChangeWhenLocked, DialogPrefix, ScriptHooks, Dictionary, DrawData, BaselineProperty, DrawImages, }: ModularItemConfig): ModularItemData;
 /**
  * Creates a modular item's base draw function (for the module selection screen)
  * @param {ModularItemData} data - The modular item data for the asset
@@ -74,9 +64,10 @@ declare function ModularItemMapOptionToButtonDefinition(option: ModularItemOptio
  * @param {string} moduleName - The name of the module whose page is being drawn
  * @param {readonly ModularItemButtonDefinition[]} buttonDefinitions - A list of button definitions to draw
  * @param {ModularItemData} data - The modular item's data
+ * @param {ExtendedItemDrawData<ElementMetaData.Modular>} drawData
  * @returns {void} - Nothing
  */
-declare function ModularItemDrawCommon(moduleName: string, buttonDefinitions: readonly ModularItemButtonDefinition[], { asset, pages, drawData }: ModularItemData): void;
+declare function ModularItemDrawCommon(moduleName: string, buttonDefinitions: readonly ModularItemButtonDefinition[], data: ModularItemData, { paginate, pageCount, elementData, itemsPerPage }: ExtendedItemDrawData<ElementMetaData.Modular>): void;
 /**
  * Draws the extended item screen for a given module.
  * @param {ModularItemModule} module - The module whose screen to draw
@@ -100,21 +91,22 @@ declare function ModularItemClickModule(module: ModularItemModule, data: Modular
 /**
  * A common click handler for modular item screens. Note that pagination is not currently handled, but will be added
  * in the future.
- * @param {ModularItemDrawData} drawData
+ * @param {ExtendedItemDrawData<ElementMetaData.Modular>} drawData
  * @param {function(): void} exitCallback - A callback to be called when the exit button has been clicked
  * @param {function(number): void} itemCallback - A callback to be called when an item has been clicked
  * @param {function(number): void} paginateCallback - A callback to be called when a pagination button has been clicked
  * @returns {void} - Nothing
  */
-declare function ModularItemClickCommon({ paginate, positions, drawImages }: ModularItemDrawData, exitCallback: () => void, itemCallback: (arg0: number) => void, paginateCallback: (arg0: number) => void): void;
+declare function ModularItemClickCommon({ paginate, elementData }: ExtendedItemDrawData<ElementMetaData.Modular>, exitCallback: () => void, itemCallback: (arg0: number) => void, paginateCallback: (arg0: number) => void): void;
 /**
  * Handles page changing for modules
  * @param {string} moduleName - The name of the module whose page should be modified
  * @param {number} delta - The page delta to apply to the module's current page
  * @param {ModularItemData} data - The modular item's data
+ * @param {ExtendedItemDrawData<ElementMetaData.Modular>} drawData
  * @returns {void} - Nothing
  */
-declare function ModularItemChangePage(moduleName: string, delta: number, data: ModularItemData): void;
+declare function ModularItemChangePage(moduleName: string, delta: number, data: ModularItemData, { pageCount }: ExtendedItemDrawData<ElementMetaData.Modular>): void;
 /**
  * Transitions between pages within a modular item's extended item menu
  * @param {string} newModule - The name of the new module to transition to
@@ -180,10 +172,11 @@ declare function ModularItemSetType(module: ModularItemModule, index: number, da
  * @param {string} optionNames - The name of the option to set
  * @param {boolean} [push] - Whether or not appearance updates should be persisted (only applies if the character is the
  * player) - defaults to false.
+ * @param {null | Character} [C_Source] - The character setting the new item option. If `null`, assume that it is _not_ the player character.
  * @returns {string|undefined} - undefined or an empty string if the type was set correctly. Otherwise, returns a string
  * informing the player of the requirements that are not met.
  */
-declare function ModularItemSetOptionByName(C: Character, itemOrGroupName: Item | AssetGroupName, optionNames: string, push?: boolean): string | undefined;
+declare function ModularItemSetOptionByName(C: Character, itemOrGroupName: Item | AssetGroupName, optionNames: string, push?: boolean, C_Source?: null | Character): string | undefined;
 /**
  * Publishes the chatroom message for a modular item when one of its modules has changed.
  * @param {ModularItemData} data
@@ -211,13 +204,6 @@ declare function ModularItemGenerateTypeList({ modules }: ModularItemData, predi
  * @returns {void} - Nothing
  */
 declare function ModularItemGenerateAllowLockType(data: ModularItemData): void;
-/**
- * Generates and sets the AllowTypes property on an asset layer based on its AllowModuleTypes property.
- * @param {AssetLayer} layer - The layer to generate AllowTypes for
- * @param {ModularItemData} data - The modular item's data
- * @returns {void} - Nothing
- */
-declare function ModularItemGenerateLayerAllowTypes(layer: AssetLayer, data: ModularItemData): void;
 /**
  * Generates and assigns a modular asset's AllowType, AllowEffect and AllowBlock properties, along with the AllowTypes
  * properties on the asset layers based on the values set in its module definitions.
@@ -294,3 +280,7 @@ declare const ModularItemDataLookup: Record<string, ModularItemData>;
  * @type {Record<"PER_MODULE"|"PER_OPTION", ModularItemChatSetting>}
  */
 declare const ModularItemChatSetting: Record<"PER_MODULE" | "PER_OPTION", ModularItemChatSetting>;
+/** A regular expression that knows how to split modular types into [module key, option index] components */
+declare const ModularItemTypeSplitter: RegExp;
+/** A regular expression that knows how to split a [key, index] into its parts */
+declare const ModularItemSubtypeSplitter: RegExp;

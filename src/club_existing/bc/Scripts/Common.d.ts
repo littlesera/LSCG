@@ -384,6 +384,42 @@ declare function CommonEntries<KT extends string, VT>(record: Partial<Record<KT,
  * @returns {searchElement is T} Whether the array contains the passed element
  */
 declare function CommonIncludes<T>(array: readonly T[], searchElement: unknown, fromIndex?: number): searchElement is T;
+/**
+ * Automatically generate a grid based on parameters.
+ *
+ * This function takes a list of items, grid parameters, and a callback to manage
+ * creating a grid of them. It'll find the best value for margins between each cell,
+ * then will call the callback passing each item with its calculated coordinates in turn.
+ *
+ * Returning true from the callback to stop the iteration, useful for click handlers
+ * so you don't keep checking items after handling one.
+ *
+ * @template T
+ * @param {T[]} items
+ * @param {number} offset
+ * @param {CommonGenerateGridParameters} grid
+ * @param {CommonGenerateGridCallback<T>} callback
+ * @returns {number}
+ */
+declare function CommonGenerateGrid<T>(items: T[], offset: number, grid: CommonGenerateGridParameters, callback: CommonGenerateGridCallback<T>): number;
+/**
+ * Create a copy of the passed record with all specified keys removed
+ * @template {keyof RecordType} KeyType
+ * @template {{}} RecordType
+ * @param {RecordType} object - The to-be copied record
+ * @param {KeyType[]} keys - The to-be removed keys from the record
+ * @returns {Omit<RecordType, KeyType>}
+ */
+declare function CommonOmit<KeyType_1 extends keyof RecordType, RecordType extends {}>(object: RecordType, keys: KeyType_1[]): Omit<RecordType, KeyType_1>;
+/**
+ * Iterate through the passed iterable and yield index/value pairs.
+ * @template T
+ * @param {Iterable<T>} iterable - The to-be iterated iterable
+ * @param {number} start - The starting index
+ * @param {number} step - The step size in which the index is incremented
+ * @returns {Generator<[index: number, value: T], void>}
+ */
+declare function CommonEnumerate<T>(iterable: Iterable<T>, start?: number, step?: number): Generator<[index: number, value: T], void, any>;
 /** @type {PlayerCharacter} */
 declare var Player: PlayerCharacter;
 /** @type {number|string} */

@@ -244,6 +244,11 @@ declare function DialogPrerequisite(D: number): boolean;
  */
 declare function DialogHasGamingHeadset(): boolean;
 /**
+ * Checks if the player can play VR games
+ * @returns {boolean} - Whether or not the player is wearing a VR headset with Gaming type
+ */
+declare function DialogHasGamingHeadsetReady(): boolean;
+/**
  * Checks if the player can watch VR games
  * @returns {boolean} - Whether or not the player is wearing a VR headset with Gaming type
  */
@@ -273,6 +278,23 @@ declare function DialogHasKey(C: Character, Item: Item): boolean;
  */
 declare function DialogCanUnlock(C: Character, Item: Item): boolean;
 /**
+ * Checks whether we can lockpick a lock.
+ * @param {Character} C
+ * @param {Item} Item
+ * @returns {boolean}
+ */
+declare function DialogCanPickLock(C: Character, Item: Item): boolean;
+/**
+ * Checks whether we can access a lock.
+ *
+ * This function is used to enable the locked submenu
+ *
+ * @param {Character} C - The character wearing the lock
+ * @param {Item} Item - The locked item to inspect
+ * @returns {boolean}
+ */
+declare function DialogCanCheckLock(C: Character, Item: Item): boolean;
+/**
  * Some specific screens like the movie studio cannot allow the player to use items on herself, return FALSE if it's the case
  * @returns {boolean} - Returns TRUE if we allow using items
  */
@@ -300,25 +322,35 @@ declare function DialogRemove(): void;
  */
 declare function DialogRemoveGroup(GroupName: string): void;
 /**
- * Generic function that sets timers for expression changes, if the player'S expressions have been altered by the dialog
+ * Clears the timers used for expression changes caused by struggling
  * @returns {void} - Nothing
  */
 declare function DialogEndExpression(): void;
+/**
+ * Performs a "Back" action through the menu "stack".
+ */
+declare function DialogMenuBack(): void;
+/**
+ * Returns whether the current mode shows items.
+ */
+declare function DialogModeShowsInventory(): boolean;
+/**
+ * Helper used to check whether the player is in the Appearance screen
+ */
+declare function DialogIsInWardrobe(): boolean;
 /**
  * Leaves the item menu for both characters.
  *
  * This exits the item-selecting UI and switches back to the current character's dialog options.
  *
- * @param {boolean} [resetPermissionsMode=true] - If TRUE and in permissions mode, exits the mode
  * @returns {void} - Nothing
  */
-declare function DialogLeaveItemMenu(resetPermissionsMode?: boolean): void;
+declare function DialogLeaveItemMenu(): void;
 /**
  * Leaves the item menu of the focused item. Constructs a function name from the
  * item's asset group name and the item's name and tries to call that.
- * @returns {boolean} - Returns true, if an item specific exit function was called, false otherwise
  */
-declare function DialogLeaveFocusItem(): boolean;
+declare function DialogLeaveFocusItem(): void;
 /**
  * Adds the item in the dialog list
  * @param {Character} C - The character the inventory is being built for
@@ -345,6 +377,12 @@ declare function DialogInventoryCreateItem(C: Character, item: Item, isWorn: boo
  * @returns {FavoriteState} - The details to use for the asset
  */
 declare function DialogGetFavoriteStateDetails(C: Character, asset: Asset, type?: string): FavoriteState;
+/**
+ * Return icons representing the asset's current lock state
+ * @param {Item} item
+ * @param {boolean} isWorn
+ */
+declare function DialogGetLockIcon(item: Item, isWorn: boolean): InventoryIcon[];
 /**
  * Returns a list of icons associated with the asset
  * @param {Asset} asset - The asset to get icons for
@@ -378,10 +416,10 @@ declare function DialogCanUseRemoteState(C: Character, Item: Item): VibratorRemo
 declare function DialogCanColor(C: Character, Item: Item): boolean;
 /**
  * Checks whether a lock can be inspected while blind.
- * @param {AssetLockType} lockName - The lock type
+ * @param {Item} Item - The locked item
  * @returns {boolean}
  */
-declare function DialogCanInspectLockWhileBlind(lockName: AssetLockType): boolean;
+declare function DialogCanInspectLock(Item: Item): boolean;
 /**
  * Builds the possible dialog activity options based on the character settings
  * @param {Character} C - The character for which to build the activity dialog options
@@ -407,14 +445,32 @@ declare function DialogInventorySort(): void;
  */
 declare function DialogCanUseCraftedItem(C: Character, Craft: CraftingItem): boolean;
 /**
+ * Returns TRUE if the player can use owner locks on the target character
+ * @param {Character} target - The target to (potentially) lock
+ * @returns {Boolean} - TRUE if the player can use owner locks on the target, FALSE otherwise
+ */
+declare function DialogCanUseOwnerLockOn(target: Character): boolean;
+/**
+ * Returns TRUE if the player can use lover locks on the target character
+ * @param {Character} target - The target to (potentially) lock
+ * @returns {Boolean} - TRUE if the player can use lover locks on the target, FALSE otherwise
+ */
+declare function DialogCanUseLoverLockOn(target: Character): boolean;
+/**
+ * Returns TRUE if the player can use family locks on the target character
+ * @param {Character} target - The target to (potentially) lock
+ * @returns {Boolean} - TRUE if the player can use family locks on the target, FALSE otherwise
+ */
+declare function DialogCanUseFamilyLockOn(target: Character): boolean;
+/**
  * Build the inventory listing for the dialog which is what's equipped,
  * the player's inventory and the character's inventory for that group
  * @param {Character} C - The character whose inventory must be built
- * @param {number} [Offset] - The offset to be at, if specified.
- * @param {boolean} [redrawPreviews=false] - If TRUE and if building a list of preview character images, redraw the canvases
+ * @param {boolean} [resetOffset=false] - The offset to be at, if specified.
+ * @param {boolean} [locks=false] - If TRUE we build a list of locks instead.
  * @returns {void} - Nothing
  */
-declare function DialogInventoryBuild(C: Character, Offset?: number, redrawPreviews?: boolean): void;
+declare function DialogInventoryBuild(C: Character, resetOffset?: boolean, locks?: boolean): void;
 /**
  * Create a stringified list of the group and the assets currently in the dialog inventory
  * @param {Character} C - The character the dialog inventory has been built for
@@ -457,9 +513,9 @@ declare function DialogClickSavedExpressionsMenu(): void;
 declare function DialogLoadPoseMenu(): void;
 /**
  * Handles the Click events in the Dialog Screen
- * @returns {void} - Nothing
+ * @returns {boolean} - Whether a button was clicked
  */
-declare function DialogMenuButtonClick(): void;
+declare function DialogMenuButtonClick(): boolean;
 /**
  * Publishes the item action to the local chat room or the dialog screen
  * @param {Character} C - The character who is the actor in this action
@@ -487,6 +543,19 @@ declare function DialogItemClick(ClickItem: DialogInventoryItem): void;
  * @param {boolean} worn - True if the player is changing permissions for an item they're wearing
  */
 declare function DialogInventoryTogglePermission(item: DialogInventoryItem, worn: boolean): void;
+/**
+ * Changes the dialog mode and perform the initial setup.
+ *
+ * @param {DialogMenuMode} mode The new mode for the dialog.
+ * @param {boolean} reset Whether to reset the mode back to its defaults
+ */
+declare function DialogChangeMode(mode: DialogMenuMode, reset?: boolean): void;
+/**
+ * Change the given character's focused group.
+ * @param {Character} C - The character to change the focus of.
+ * @param {AssetItemGroup|string} Group - The group that should gain focus.
+ */
+declare function DialogChangeFocusToGroup(C: Character, Group: AssetItemGroup | string): void;
 /**
  * Handles the click in the dialog screen
  * @returns {void} - Nothing
@@ -522,9 +591,10 @@ declare function DialogFindNextSubMenu(): void;
 /**
  * Finds and set an available character sub menu.
  * @param {string} MenuName - The name of the sub menu, see DialogSelfMenuOptions.
+ * @param {boolean} force - Whether to check availability of the menu first.
  * @returns {boolean} - True, when the sub menu is found and available and was switched to. False otherwise and nothing happened.
  */
-declare function DialogFindSubMenu(MenuName: string): boolean;
+declare function DialogFindSubMenu(MenuName: string, force?: boolean): boolean;
 /**
  * Finds and sets a facial expression group. The expression sub menu has to be already opened.
  * @param {ExpressionGroupName} ExpressionGroup - The name of the expression group, see XXX.
@@ -533,10 +603,22 @@ declare function DialogFindSubMenu(MenuName: string): boolean;
 declare function DialogFindFacialExpressionMenuGroup(ExpressionGroup: ExpressionGroupName): boolean;
 /**
  * Displays the given text for 5 seconds
- * @param {string} NewText - The text to be displayed
+ * @param {string} status - The text to be displayed
+ * @param {number} timer - the number of milliseconds to display the message for
  * @returns {void} - Nothing
  */
-declare function DialogSetText(NewText: string): void;
+declare function DialogSetStatus(status: string, timer?: number): void;
+/**
+ * Clears the current status message.
+ *
+ * @param {boolean} clearDefault Whether to also clear the default status.
+ */
+declare function DialogStatusClear(clearDefault?: boolean): void;
+/**
+ * Draws the current dialog status
+ *
+ */
+declare function DialogStatusDraw(C: any): void;
 /**
  * Shows the extended item menu for a given item, if possible.
  * Therefore a dynamic function name is created and then called.
@@ -559,30 +641,31 @@ declare function DialogSetTightenLoosenItem(Item: Item): void;
  */
 declare function DialogChangeItemColor(C: Character, Color: string): void;
 /**
- * Draw the activity selection dialog
- * @param {Character} C - The character for whom the activity selection dialog is drawn. That can be the player or another character.
+ * Draw the list of activities
+ *
+ * @param {Character} C - The character currently focused in the dialog.
  * @returns {void} - Nothing
  */
 declare function DialogDrawActivityMenu(C: Character): void;
 /**
  * Returns the button image name for a dialog menu button based on the button name.
- * @param {string} ButtonName - The menu button name
+ * @param {DialogMenuButton} ButtonName - The menu button name
  * @param {Item} FocusItem - The focused item
  * @returns {string} - The button image name
  */
-declare function DialogGetMenuButtonImage(ButtonName: string, FocusItem: Item): string;
+declare function DialogGetMenuButtonImage(ButtonName: DialogMenuButton, FocusItem: Item): string;
 /**
  * Returns the background color of a dialog menu button based on the button name.
- * @param {string} ButtonName - The menu button name
+ * @param {DialogMenuButton} ButtonName - The menu button name
  * @returns {string} - The background color that the menu button should use
  */
-declare function DialogGetMenuButtonColor(ButtonName: string): string;
+declare function DialogGetMenuButtonColor(ButtonName: DialogMenuButton): string;
 /**
  * Determines whether or not a given dialog menu button should be disabled based on the button name.
- * @param {string} ButtonName - The menu button name
+ * @param {DialogMenuButton} ButtonName - The menu button name
  * @returns {boolean} - TRUE if the menu button should be disabled, FALSE otherwise
  */
-declare function DialogIsMenuButtonDisabled(ButtonName: string): boolean;
+declare function DialogIsMenuButtonDisabled(ButtonName: DialogMenuButton): boolean;
 /**
  * Draw the item menu dialog
  * @param {Character} C - The character on which the item is used
@@ -591,8 +674,9 @@ declare function DialogIsMenuButtonDisabled(ButtonName: string): boolean;
  */
 declare function DialogDrawCrafting(C: Character, Item: Item): void;
 /**
- * Draw the item menu dialog
- * @param {Character} C - The character for whom the activity selection dialog is drawn. That can be the player or another character.
+ * Draw the list of items
+ *
+ * @param {Character} C - The character currently focused in the dialog.
  * @returns {void} - Nothing
  */
 declare function DialogDrawItemMenu(C: Character): void;
@@ -627,10 +711,34 @@ declare function DialogFind(C: Character, KeyWord1: string, KeyWord2?: string, R
  */
 declare function DialogFindAutoReplace(C: Character, KeyWord1: string, KeyWord2?: string, ReturnPrevious?: boolean): string;
 /**
- * Draws the initial Dialog screen. That screen is entered, when the player clicks on herself or another player
+ * Draw the up/down arrow to bump a character up and down if they're hidden.
+ */
+declare function DialogDrawRepositionButton(): void;
+/**
+ * Draws the top menu buttons of the current dialog.
+ *
+ * @param {Character} C The character currently focused.
+ */
+declare function DialogDrawTopMenu(C: Character): void;
+/**
+ * Draws the initial Dialog screen.
+ *
+ * This is the main handler for drawing the Dialog UI, which activates
+ * when the player clicks on herself or another player.
+ *
  * @returns {void} - Nothing
  */
 declare function DialogDraw(): void;
+/**
+ * Draw a single line of text with an optional item preview icon.
+ *
+ * This function is used when the character's group is somehow unavailable.
+ *
+ * @param {Character} C - The character currently being interacted with
+ * @param {Item} [item] - The (optional) item in the currently selected group
+ * @param {string} msg - The explanation message to draw
+ */
+declare function DialogDrawItemMessage(C: Character, msg: string, item?: Item): void;
 /**
  * Draw the menu for changing facial expressions
  * @returns {void} - Nothing
@@ -731,10 +839,10 @@ declare function DialogStruggleStop(C: Character, Game: StruggleKnownMinigames, 
 declare var DialogText: string;
 declare var DialogTextDefault: string;
 declare var DialogTextDefaultTimer: number;
-/** @type {null | string} */
-declare var DialogColor: null | string;
-/** @type {null | string} */
-declare var DialogExpressionColor: null | string;
+/** The duration temporary status message show up for, in ms
+ * @type {number}
+ */
+declare var DialogTextDefaultDuration: number;
 /**
  * The default color to use when applying items.
  * @type {string}
@@ -744,12 +852,17 @@ declare var DialogColorSelect: string;
  * The list of available items for the selected group.
  * @type DialogInventoryItem[]
  */
+declare var DialogInventory: DialogInventoryItem[];
 /**
  * The current page offset of the item list. Also used for activities.
- * @type {DialogInventoryItem[]}
+ * @type {number}
  */
-declare var DialogInventory: DialogInventoryItem[];
 declare var DialogInventoryOffset: number;
+/**
+ * The grid configuration for most item views (items, permissions, activities)
+ * @type {CommonGenerateGridParameters}
+ */
+declare const DialogInventoryGrid: CommonGenerateGridParameters;
 /**
  * The item currently selected in the Dialog and showing its extended screen.
  *
@@ -768,14 +881,42 @@ declare var DialogFocusSourceItem: Item | null;
 declare var DialogFocusItemColorizationRedrawTimer: null | ReturnType<typeof setTimeout>;
 /**
  * The list of currently visible menu item buttons.
- * @type {string[]}
+ * @type {DialogMenuButton[]}
  */
-declare var DialogMenuButton: string[];
-/** @type {null | Item} */
+declare var DialogMenuButton: DialogMenuButton[];
+/**
+ * The dialog's current mode, what is currently shown.
+ * @type {DialogMenuMode}
+ */
+declare var DialogMenuMode: DialogMenuMode;
+/** @deprecated Use DialogMenuMode. */
+declare var DialogColor: any;
+/** @deprecated Use DialogMenuMode. */
+declare var DialogItemPermissionMode: any;
+/**
+ * @deprecated Use DialogMenuMode.
+ * @type {null | Item}
+ * */
 declare var DialogItemToLock: null | Item;
+/**
+ * @deprecated Use DialogMenuMode.
+ */
+declare var DialogActivityMode: boolean;
+/** @deprecated Use DialogMenuMode. */
+declare var DialogLockMenu: boolean;
+/** @deprecated Use DialogMenuMode. */
+declare var DialogCraftingMenu: boolean;
 declare var DialogAllowBlush: boolean;
 declare var DialogAllowEyebrows: boolean;
 declare var DialogAllowFluids: boolean;
+/**
+ * The group that was selected before we entered the expression coloring screen
+ * @type {{mode: DialogMenuMode, group: AssetItemGroup}}
+ */
+declare var DialogExpressionPreviousMode: {
+    mode: DialogMenuMode;
+    group: AssetItemGroup;
+};
 /** @type {ExpressionItem[]} */
 declare var DialogFacialExpressions: ExpressionItem[];
 /** The maximum number of expressions per page for a given asset group. */
@@ -791,9 +932,7 @@ declare var DialogFacialExpressionsSelectedBlindnessLevel: number;
 declare var DialogSavedExpressionPreviews: Character[];
 /** @type {Pose[][]} */
 declare var DialogActivePoses: Pose[][];
-declare var DialogItemPermissionMode: boolean;
 declare var DialogExtendedMessage: string;
-declare var DialogActivityMode: boolean;
 /**
  * The list of available activities for the selected group.
  * @type {ItemActivity[]}
@@ -804,8 +943,6 @@ declare var DialogSortOrder: Record<"Enabled" | "Equipped" | "BothFavoriteUsable
 /** @type {null | DialogSelfMenuOptionType} */
 declare var DialogSelfMenuSelected: null | DialogSelfMenuOptionType;
 declare var DialogLeaveDueToItem: boolean;
-declare var DialogLockMenu: boolean;
-declare var DialogCraftingMenu: boolean;
 declare var DialogLentLockpicks: boolean;
 declare var DialogGamingPreviousRoom: string;
 /** @type {"" | ModuleType} */

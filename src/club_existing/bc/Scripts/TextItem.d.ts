@@ -9,6 +9,13 @@
  */
 declare function TextItemRegister(asset: Asset, config: TextItemConfig, parentOption?: null | ExtendedItemOption, createCallbacks?: boolean): TextItemData;
 /**
+ * Parse the passed text item draw data as passed via the extended item config
+ * @param {readonly TextItemNames[]} fieldNames
+ * @param {ExtendedItemConfigDrawData<{}> | undefined} drawData - The to-be parsed draw data
+ * @return {ExtendedItemDrawData<ElementMetaData.Text>} - The parsed draw data
+ */
+declare function TextItemGetDrawData(fieldNames: readonly TextItemNames[], drawData: ExtendedItemConfigDrawData<{}> | undefined): ExtendedItemDrawData<ElementMetaData.Text>;
+/**
  * Generates an asset's typed item data
  * @param {Asset} asset - The asset to generate modular item data for
  * @param {TextItemConfig} config - The item's extended item configuration
@@ -21,7 +28,7 @@ declare function TextItemCreateTextItemData(asset: Asset, { MaxLength, Font, Dia
  * @param {Item} item - The item in question
  * @returns {{ newOption: TextItemOption, previousOption: TextItemOption }}
  */
-declare function TextItemConstructOptions({ textNames }: TextItemData, item: Item): {
+declare function TextItemConstructOptions(data: TextItemData, item: Item): {
     newOption: TextItemOption;
     previousOption: TextItemOption;
 };

@@ -20,12 +20,26 @@ declare function AssetActivityMirrorGroupSet(group: AssetGroup): void;
  */
 declare function AssetAdd(Group: AssetGroup, AssetDef: AssetDefinition, ExtendedConfig: ExtendedItemMainConfig): void;
 /**
- * Constructs extended item functions for an asset, if extended item configuration exists for the asset.
+ * Construct the items extended item config, merging via {@link AssetArchetypeConfig.CopyConfig} if required.
+ * Potentially updates the passed {@link AssetArchetypeConfig} object inplace.
  * @param {Asset} A - The asset to configure
- * @param {ExtendedItemMainConfig} ExtendedConfig - The extended item configuration object for the asset's family
- * @returns {void} - Nothing
+ * @param {AssetArchetypeConfig} config - The extended item configuration of the base item
+ * @param {ExtendedItemMainConfig} extendedConfig - The extended item configuration object for the asset's family
+ * @returns {null | AssetArchetypeConfig} - The oiginally passed base item configuration, potentially updated inplace.
+ * Returns `null` insstead if an error was encountered.
  */
-declare function AssetBuildExtended(A: Asset, ExtendedConfig: ExtendedItemMainConfig): void;
+declare function AssetBuildConfig(A: Asset, config: AssetArchetypeConfig, extendedConfig: ExtendedItemMainConfig): null | AssetArchetypeConfig;
+/**
+ * Constructs extended item functions for an asset, if extended item configuration exists for the asset.
+ * Updates the passed config inplace if {@link ExtendedItem.CopyConfig} is present.
+ * @param {Asset} A - The asset to configure
+ * @param {AssetArchetypeConfig} baseConfig - The extended item configuration of the base item
+ * @param {ExtendedItemMainConfig} extendedConfig - The extended item configuration object for the asset's family
+ * @param {null | ExtendedItemOption} parentOption
+ * @param {boolean} createCallbacks
+ * @returns {null | AssetArchetypeData} - The extended itemdata or `null` if an error was encoutered
+ */
+declare function AssetBuildExtended(A: Asset, baseConfig: AssetArchetypeConfig, extendedConfig: ExtendedItemMainConfig, parentOption?: null | ExtendedItemOption, createCallbacks?: boolean): null | AssetArchetypeData;
 /**
  * Finds the extended item configuration for the provided group and asset name, if any exists
  * @param {ExtendedItemMainConfig} ExtendedConfig - The full extended item configuration object

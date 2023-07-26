@@ -23,3 +23,8 @@ declare var TestingColorGroups: Set<string>;
 declare var TestingMisingColorLayers: TestingStruct<string>[];
 declare var TestingMisingColorGroups: TestingStruct<string>[];
 declare var TestingInvalidDefaultColor: TestingStruct<string[]>[];
+declare var TestingModularItemDataLookup: Record<string, ModularItemData>;
+declare var TestingTypedItemDataLookup: Record<string, TypedItemData>;
+declare var TestingVibratingItemDataLookup: Record<string, VibratingItemData>;
+declare var TestingVariableHeightItemDataLookup: Record<string, VariableHeightData>;
+declare var TestingTextItemDataLookup: Record<string, TextItemData>;
