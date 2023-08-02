@@ -103,6 +103,8 @@ export class CoreModule extends BaseModule {
             next(args);
             if (this.settings.seeSharedCrafts) {
                 let target = args[0];
+                if (!target.FocusGroup)
+                    return;
                 ChatRoomCharacter.forEach(C => {
                     if (C.Crafting != null && !C.IsPlayer() && C.MemberNumber != target.MemberNumber && (C as OtherCharacter).LSCG && (C as OtherCharacter).LSCG.GlobalModule.sharePublicCrafting) {
                         let Crafting = CraftingDecompressServerData(C.Crafting);
