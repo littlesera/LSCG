@@ -91,7 +91,7 @@ export class CollarModule extends BaseModule {
         hookFunction("InventoryRemove", 1, (args, next) => {
             let C: Character = args[0];
             let GroupName: string = args[1];
-            if (GroupName == "ItemNeck")
+            if (GroupName == "ItemNeck" && C.IsPlayer())
                 this.ReleaseCollar();
             next(args);
         }, ModuleCategory.Collar);
