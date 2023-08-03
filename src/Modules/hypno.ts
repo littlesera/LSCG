@@ -40,6 +40,8 @@ export class HypnoModule extends BaseModule {
             hypnotized: false,
             hypnotizedBy: -1,
             limitRemoteAccessToHypnotizer: false,
+            hypnoEyeColor: "#A2A2A2",
+            hypnoEyeType: 9,
             stats: {}
         };
     }
@@ -390,19 +392,19 @@ export class HypnoModule extends BaseModule {
     }
 
     EnforceEyes() {
-        var eyeAsset1 = AssetGet("Female3DCG", "Eyes", "Eyes9");
-        var eyeAsset2 = AssetGet("Female3DCG", "Eyes2", "Eyes9");
+        var eyeAsset1 = AssetGet("Female3DCG", "Eyes", "Eyes" + this.settings.hypnoEyeType ?? 9);
+        var eyeAsset2 = AssetGet("Female3DCG", "Eyes2", "Eyes" + this.settings.hypnoEyeType ?? 9);
 
         var eyes1 = InventoryGet(Player, "Eyes");
         var eyes2 = InventoryGet(Player, "Eyes2");
 
         if (!!eyes1) {
             eyes1.Asset = eyeAsset1 ?? <Asset>{};
-            eyes1.Color = "#A2A2A2";
+            eyes1.Color = this.settings.hypnoEyeColor ?? "#A2A2A2";
         }    
         if (!!eyes2) {
             eyes2.Asset = eyeAsset2  ?? <Asset>{};
-            eyes2.Color = "#A2A2A2";
+            eyes2.Color = this.settings.hypnoEyeColor ?? "#A2A2A2";
         }
 
         ChatRoomCharacterUpdate(Player);

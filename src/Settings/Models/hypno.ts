@@ -11,6 +11,8 @@ export interface HypnoSettingsModel extends HypnoPublicSettingsModel {
     existingEye2Color: ItemColor | undefined;
     existingEye2Name: string | undefined;
     existingEyeExpression: ExpressionName | null;
+    hypnoEyeColor: string | undefined;
+    hypnoEyeType: number | undefined;
     enableArousal: boolean;
     stats: HypnoModuleStats;
     triggerCycled: boolean;

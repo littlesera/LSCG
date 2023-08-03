@@ -141,6 +141,22 @@ export class GuiHypno extends GuiSubscreen {
 						disabled: !this.settings.enabled,
 						setting: () => this.settings.enableArousal ?? false,
 						setSetting: (val) => this.settings.enableArousal = val
+					},<Setting>{
+						type: "text",
+						id: "hypno_eyeColor",
+						label: "Hypnotized Eye Color:",
+						description: "Hex code of your eye color while hypnotized (default: #A2A2A2).",
+						disabled: !this.settings.enabled,
+						setting: () => this.settings.hypnoEyeColor ?? "#A2A2A2",
+						setSetting: (val) => this.settings.hypnoEyeColor = val
+					},<Setting>{
+						type: "number",
+						id: "hypno_eyeType",
+						label: "Hypnotized Eye Type:",
+						description: "Eye type # to use while under hypnosis (default: 9).",
+						disabled: !this.settings.enabled,
+						setting: () => (this.settings.hypnoEyeType ?? 9),
+						setSetting: (val) => this.settings.hypnoEyeType = val
 					}
 				]
 			]
