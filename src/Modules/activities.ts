@@ -1,9 +1,8 @@
 import { BaseModule } from "base";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
-import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, setOrIgnoreBlush, hookFunction, ICONS, getCharacter, sendLSCGMessage, OnAction, callOriginal, LSCG_SendLocal, GetTargetCharacter, GetActivityName, GetMetadata, GetActivityEntryFromContent, IsActivityAllowed } from "../utils";
+import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, hookFunction, ICONS, getCharacter, OnAction, callOriginal, LSCG_SendLocal, GetTargetCharacter, GetActivityName, GetMetadata, GetActivityEntryFromContent, IsActivityAllowed, sendLSCGCommand } from "../utils";
 import { getModule } from "modules";
 import { ItemUseModule } from "./item-use";
-import { CollarModel } from "Settings/Models/collar";
 import { CollarModule } from "./collar";
 import { ActivitySettingsModel } from "Settings/Models/activities";
 import { GuiActivities } from "Settings/activities";
@@ -1616,20 +1615,10 @@ export class ActivityModule extends BaseModule {
             target.MemberNumber == Player.MemberNumber)
             return;
 
-        sendLSCGMessage(<LSCGMessageModel>{
-            type: "command",
-            reply: false,
-            settings: null,
-            target: target.MemberNumber!,
-            version: LSCG_VERSION,
-            command: {
-                name: "grab",
-                args: [{
-                    name: "type",
-                    value: type
-                }]
-            }
-        });        
+        sendLSCGCommand(target, "grab", [{
+            name: "type",
+            value: type
+        }]);
 
         this.addGrab(target.MemberNumber, type);
     };
@@ -1638,20 +1627,10 @@ export class ActivityModule extends BaseModule {
         if (!target.MemberNumber)
             return;
 
-        sendLSCGMessage(<LSCGMessageModel>{
-            type: "command",
-            reply: false,
-            settings: null,
-            target: target.MemberNumber!,
-            version: LSCG_VERSION,
-            command: {
-                name: "release",
-                args: [{
-                    name: "type",
-                    value: type
-                }]
-            }
-        });
+            sendLSCGCommand(target, "release", [{
+                name: "type",
+                value: type
+            }]);
      
         this.releaseGrab(target.MemberNumber, type);
     }
@@ -1661,16 +1640,7 @@ export class ActivityModule extends BaseModule {
             return;
 
         this.releasedBy(escapeFrom.MemberNumber, undefined);
-        sendLSCGMessage(<LSCGMessageModel>{
-            type: "command",
-            reply: false,
-            settings: null,
-            target: escapeFrom.MemberNumber!,
-            version: LSCG_VERSION,
-            command: {
-                name: "escape"
-            }
-        });
+        sendLSCGCommand(escapeFrom, "escape");
     }
 
     IncomingGrab(sender: Character, grabType: GrabType) {
