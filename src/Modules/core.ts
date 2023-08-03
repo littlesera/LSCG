@@ -6,6 +6,7 @@ import { ModuleCategory } from "Settings/setting_definitions";
 import { removeAllHooksByModule, hookFunction, getCharacter, drawSvg, SVG_ICONS, sendLSCGMessage, settingsSave, LSCG_CHANGES, LSCG_SendLocal } from "../utils";
 import { ActivityModule, GrabType } from "./activities";
 import { HypnoModule } from "./hypno";
+import { CollarModule } from "./collar";
 
 // Core Module that can handle basic functionality like server handshakes etc.
 // Maybe can consolidate things like hypnosis/suffocation basic state handling too..
@@ -238,6 +239,15 @@ export class CoreModule extends BaseModule {
                     LSCG_SendLocal(`${!Sender ? "Someone" : CharacterNickname(Sender)} has purchased the Collar Module for you!`);
                 else
                     LSCG_SendLocal(`${!Sender ? "Someone" : CharacterNickname(Sender)} has accessed your remote settings!`);
+                break;
+            case "collar-tighten":
+                if (!!Sender) getModule<CollarModule>("CollarModule")?.TightenButtonPress(Sender);
+                break;
+            case "collar-loosen":
+                if (!!Sender) getModule<CollarModule>("CollarModule")?.LoosenButtonPress(Sender);
+                break;
+            case "collar-stats":
+                if (!!Sender) getModule<CollarModule>("CollarModule")?.StatsButtonPress(Sender);
                 break;
         }
     }

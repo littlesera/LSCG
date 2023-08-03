@@ -25,6 +25,7 @@ export interface CollarPublicSettingsModel extends BaseSettingsModel {
     looseTrigger: string;
     allowSelfTightening: boolean;
     allowSelfLoosening: boolean;
+    allowButtons: boolean;
 }
 
 export interface CollarModel {

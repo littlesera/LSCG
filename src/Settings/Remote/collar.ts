@@ -63,12 +63,6 @@ export class RemoteCollar extends RemoteGuiSubscreen {
 				setSetting: (val) => this.settings.enabled = val
 			},<Setting>{
 				type: "checkbox",
-				label: "Allow Remote Access:",
-				description: "Enables Remote Access to Collar Settings.",
-				setting: () => this.settings.remoteAccess ?? false,
-				setSetting: (val) => this.settings.remoteAccess = val
-			},<Setting>{
-				type: "checkbox",
 				label: "Locked:",
 				description: "Locks the user out of these settings.",
 				setting: () => this.settings.locked ?? false,
@@ -119,6 +113,12 @@ export class RemoteCollar extends RemoteGuiSubscreen {
 				description: "Prevents the wearer from viewing triggers via show-triggers.",
 				setting: () => this.settings.immersive ?? false,
 				setSetting: (val) => this.settings.immersive = val
+			},<Setting>{
+				type: "checkbox",
+				label: "Enable Buttons:",
+				description: "Allows activation of the collar features via buttons (activities & commands).",
+				setting: () => this.settings.allowButtons ?? true,
+				setSetting: (val) => this.settings.allowButtons = val
 			},<Setting>{
 				type: "checkbox",
 				label: "Any Collar:",

@@ -105,6 +105,12 @@ export class GuiCollar extends GuiSubscreen {
 					setSetting: (val) => this.settings.immersive = val
 				},<Setting>{
 					type: "checkbox",
+					label: "Enable Buttons:",
+					description: "Allows activation of the collar features via buttons (activities & commands).",
+					setting: () => this.settings.allowButtons ?? true,
+					setSetting: (val) => this.settings.allowButtons = val
+				},<Setting>{
+					type: "checkbox",
 					label: "Any Collar:",
 					description: "If enabled, any collar can trigger and activate.",
 					setting: () => this.settings.anyCollar ?? false,

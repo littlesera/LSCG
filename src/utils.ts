@@ -374,6 +374,20 @@ export function sendLSCGMessage(msg: LSCGMessageModel) {
 	ServerSend("ChatRoomChat", packet);
 }
 
+export function sendLSCGCommand(target: Character, commandName: LSCGCommandName, commandArgs: {name: string, value: any}[] = []) {
+	sendLSCGMessage(<LSCGMessageModel>{
+		type: "command",
+		reply: false,
+		settings: null,
+		target: target?.MemberNumber ?? -1,
+		version: LSCG_VERSION,
+		command: {
+			name: commandName,
+			args: commandArgs
+		}
+	});
+}
+
 export function LSCG_SendLocal(msg: string, time?: number) {
 	var bgColor = (Player.ChatSettings!.ColorTheme!.indexOf("Light") > -1) ? "#D7F6E9" : "#23523E";
 	let text = `<div style='background-color:${bgColor};'>${msg}</div>`;

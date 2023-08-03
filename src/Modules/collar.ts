@@ -1,8 +1,10 @@
 import { BaseModule } from 'base';
 import { CollarSettingsModel } from 'Settings/Models/collar';
 import { ModuleCategory, Subscreen } from 'Settings/setting_definitions';
-import { settingsSave, SendAction, OnChat, getRandomInt, hookFunction, removeAllHooksByModule, OnActivity, OnAction, setOrIgnoreBlush, getCharacter, hookBCXCurse, isPhraseInString, GetTargetCharacter, GetMetadata, GetDelimitedList } from '../utils';
+import { settingsSave, SendAction, OnChat, getRandomInt, hookFunction, removeAllHooksByModule, OnActivity, OnAction, setOrIgnoreBlush, getCharacter, hookBCXCurse, isPhraseInString, GetTargetCharacter, GetMetadata, GetDelimitedList, sendLSCGMessage, sendLSCGCommand, ICONS, LSCG_SendLocal } from '../utils';
 import { GuiCollar } from 'Settings/collar';
+import { ActivityBundle, ActivityModule, ActivityTarget, CustomPrerequisite } from './activities';
+import { getModule } from 'modules';
 
 enum PassoutReason {
     COLLAR,
@@ -11,6 +13,8 @@ enum PassoutReason {
 }
 
 export class CollarModule extends BaseModule {
+    activities: ActivityModule | undefined;
+    
     get settings(): CollarSettingsModel {
 		return super.settings as CollarSettingsModel;
 	}
@@ -19,22 +23,27 @@ export class CollarModule extends BaseModule {
 		return super.Enabled && this.wearingCorrectCollar;
 	}
 
-    get wearingCorrectCollar(): boolean {
-        var collar = InventoryGet(Player, "ItemNeck");
-        if (!collar)
+    WearingCorrectCollar(C: OtherCharacter | PlayerCharacter) {
+        var collar = InventoryGet(C, "ItemNeck");
+        let collarSettings = C.LSCG?.CollarModule;
+        if (!collar || !collarSettings || !collarSettings.enabled)
             return false;
 
-        if (!this.settings.collar || !this.settings.collar.name || this.settings.anyCollar)
+        if (!collarSettings || !collarSettings.collar.name || collarSettings.anyCollar)
             return true;
 
         // If configured collar is not crafted, let any inherited collar work.
-        if (!this.settings.collar.creator) {
-            return collar?.Asset.Name == this.settings.collar.name;
+        if (!collarSettings.collar.creator) {
+            return collar?.Asset.Name == collarSettings.collar.name;
         } else {
             var collarName = collar?.Craft?.Name ?? (collar?.Asset.Name ?? "");
             var collarCreator = collar?.Craft?.MemberNumber ?? -1;
-            return collarName == this.settings.collar.name && collarCreator == this.settings.collar.creator;
+            return collarName == collarSettings.collar.name && collarCreator == collarSettings.collar.creator;
         }
+    }
+
+    get wearingCorrectCollar(): boolean {
+        return this.WearingCorrectCollar(Player);
     }
 
     get settingsScreen(): Subscreen | null {
@@ -53,6 +62,7 @@ export class CollarModule extends BaseModule {
             remoteAccess: false,
             allowSelfLoosening: false,
             allowSelfTightening: false,
+            allowButtons: true,
             anyCollar: false,
             collar: {},
             immersive: false,
@@ -234,6 +244,101 @@ export class CollarModule extends BaseModule {
         if (this.settings.chokeLevel > 2) {
             this.setChokeTimeout(() => this.DecreaseCollarChoke(), this.chokeTimer);
         }
+    }
+
+    run(): void {
+        this.activities = getModule<ActivityModule>("ActivityModule");
+
+        this.activities.AddActivity({
+            Activity: <Activity>{
+                Name: "CollarTighten",
+                MaxProgress: 90,
+                MaxProgressSelf: 90,
+                Prerequisite: ["UseHands", "ZoneAccessible"]
+            },
+            Targets: [
+                <ActivityTarget>{
+                    Name: "ItemNeck",
+                    SelfAllowed: true,
+                    TargetLabel: "Tighten Collar",
+                    TargetAction: "",
+                    TargetSelfAction: ""
+                }
+            ],
+            CustomPrereqs: [
+                <CustomPrerequisite>{
+                    Name: "IsWearingChokeCollar",
+                    Func: (acting, acted, group) => {
+                        if (!((<any>acted).LSCG?.CollarModule.allowButtons ?? false))
+                            return false;
+                        return this.WearingCorrectCollar(acted.IsPlayer() ? acted as PlayerCharacter : acted as OtherCharacter);
+                    }
+                }
+            ],
+            CustomAction: {
+                Func: (target, args, next) => {
+                    if (target?.IsPlayer())
+                        this.TightenButtonPress(Player);
+                    else if (!!target)
+                        sendLSCGCommand(target, "collar-tighten");
+                }
+            },
+            CustomImage: ICONS.COLLAR
+        });
+
+        this.activities.AddActivity({
+            Activity: <Activity>{
+                Name: "CollarLoosen",
+                MaxProgress: 90,
+                MaxProgressSelf: 90,
+                Prerequisite: ["UseHands", "ZoneAccessible", "IsWearingChokeCollar"]
+            },
+            Targets: [
+                <ActivityTarget>{
+                    Name: "ItemNeck",
+                    SelfAllowed: true,
+                    TargetLabel: "Loosen Collar",
+                    TargetAction: "",
+                    TargetSelfAction: ""
+                }
+            ],
+            CustomAction: {
+                Func: (target, args, next) => {
+                    if (target?.IsPlayer())
+                        this.LoosenButtonPress(Player);
+                    else if (!!target)
+                        sendLSCGCommand(target, "collar-loosen");
+                }
+            },
+            CustomImage: ICONS.COLLAR
+        });
+
+        this.activities.AddActivity({
+            Activity: <Activity>{
+                Name: "CollarStats",
+                MaxProgress: 10,
+                MaxProgressSelf: 10,
+                Prerequisite: ["UseHands", "ZoneAccessible", "IsWearingChokeCollar"]
+            },
+            Targets: [
+                <ActivityTarget>{
+                    Name: "ItemNeck",
+                    SelfAllowed: true,
+                    TargetLabel: "Collar Stats",
+                    TargetAction: "",
+                    TargetSelfAction: ""
+                }
+            ],
+            CustomAction: {
+                Func: (target, args, next) => {
+                    if (target?.IsPlayer())
+                        this.StatsButtonPress(Player);
+                    else if (!!target)
+                        sendLSCGCommand(target, "collar-stats");
+                }
+            },
+            CustomImage: ICONS.COLLAR
+        });
     }
 
     unload(): void {
@@ -676,5 +781,51 @@ export class CollarModule extends BaseModule {
 
     IncreaseArousal() {
         ActivitySetArousal(Player, Math.min(99, (Player.ArousalSettings?.Progress ?? 0) + 10));
+    }
+
+    _collarPressButton(sender: Character, allowed: (c: Character) => boolean, action: () => void) {
+        if (!this.settings.allowButtons) {
+            LSCG_SendLocal("Collar buttons disabled.", 8000);
+            return;
+        }
+        let playerName = CharacterNickname(Player);
+        let name = CharacterNickname(sender);
+        let possessive = CharacterPronoun(sender, "Possessive", false);
+        let isSelf = sender.IsPlayer();
+        if (sender.IsRestrained())
+            sender.IsPlayer() ? 
+                SendAction(`${name} struggles in ${possessive} bindings, unable to reach ${possessive} collar's controls.`) : 
+                SendAction(`${name} struggles in ${possessive} bindings, unable to reach ${playerName}'s collar controls.`);
+        else {
+            isSelf ? SendAction(`${name} presses a button on ${possessive} collar.`) : SendAction(`${name} presses a button on ${playerName}'s collar.`);
+            setTimeout(() => {
+                if (!allowed(sender))
+                    SendAction(`${playerName}'s collar beeps and a computerized voice says "Access Denied."`);
+                else
+                    action();
+            }, 1500);
+        }
+    }
+
+    TightenButtonPress(sender: Character) {
+        this._collarPressButton(sender, c => this.AllowedMember(c, true), () => this.IncreaseCollarChoke());
+    }
+
+    LoosenButtonPress(sender: Character) {
+        this._collarPressButton(sender, c => this.AllowedMember(c, false), () => this.DecreaseCollarChoke());
+    }
+
+    StatsButtonPress(sender: Character) {
+        this._collarPressButton(sender, c => c.IsPlayer() || this.AllowedMember(c, false), () => {
+            let tightenTrigger = GetDelimitedList(this.settings.tightTrigger);
+            let loosenTrigger = GetDelimitedList(this.settings.looseTrigger);
+            let chokeCount = this.settings.stats.collarPassoutCount;
+            let remoteAccess = "ENABLED";
+            if (!this.settings.remoteAccess)
+                remoteAccess = "DISABLED";
+            else if (this.settings.limitToCrafted || this.allowedChokeMembers.length > 0)
+                remoteAccess = "LIMITED";
+            SendAction(`%NAME%'s collar chimes and a computerized voice reads out:\nCurrent Level: ${this.settings.chokeLevel}...\nCorrective Cycles: ${chokeCount}...\nTighten Trigger: '${tightenTrigger}'...\nLoosen Trigger: '${loosenTrigger}'...\nRemote Access: ${remoteAccess}...`);
+        });
     }
 }
