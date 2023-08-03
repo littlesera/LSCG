@@ -472,7 +472,7 @@ export class ActivityModule extends BaseModule {
                 TargetAction: "SourceCharacter nibbles on TargetCharacter's wing.",
                 TargetSelfAction: "SourceCharacter nibbles on PronounPossessive own wing."
             }],
-            RemovedPrerequisites: ["ZoneNaked"],
+            RemovedPrerequisites: ["ZoneNaked", "ZoneAccessible"],
             AddedPrerequisites: ["CanCustomNibble"],
             CustomPrereqs: [{
                     Name: "CanCustomNibble",
@@ -493,6 +493,14 @@ export class ActivityModule extends BaseModule {
 				            return InventoryPrerequisiteMessage(acted, "NakedHands") === "";
                         else
                             return true;
+                    }
+                }, {
+                    Name: "CustomNibbleAccessible",
+                    Func: (acting, acted, group) => {
+                        if (group.Name == "ItemButt")
+                            return true;
+                        else
+                            return ActivityGetAllMirrorGroups(acted.AssetFamily, group.Name).some((g) => g.IsItem() ? !InventoryGroupIsBlocked(acted, g.Name, true) : true)
                     }
                 }, {
                     Name: "HasWings",
