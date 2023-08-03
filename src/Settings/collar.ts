@@ -107,7 +107,7 @@ export class GuiCollar extends GuiSubscreen {
 					type: "checkbox",
 					label: "Enable Buttons:",
 					description: "Allows activation of the collar features via buttons (activities & commands).",
-					setting: () => this.settings.allowButtons ?? true,
+					setting: () => this.settings.allowButtons ?? false,
 					setSetting: (val) => this.settings.allowButtons = val
 				},<Setting>{
 					type: "checkbox",
