@@ -1173,9 +1173,10 @@ export class InjectorModule extends BaseModule {
 
     CheckForHypnoHelmet() {
         var headItem = InventoryGet(Player, "ItemHead");
-        if (!headItem)
-            return;
-        let isWearingActiveHeadset = headItem?.Asset?.Name == "InteractiveVRHeadset" && !!headItem?.Property?.Type && headItem?.Property?.Type[1] == "5";
+        var hoodItem = InventoryGet(Player, "ItemHood");
+        let isWearingActiveHeadset = 
+            (headItem?.Asset?.Name == "InteractiveVRHeadset" && !!headItem?.Property?.Type && headItem?.Property?.Type[1] == "5") ||
+            (hoodItem?.Asset?.Name == "TechnoHelmet1" && !!hoodItem?.Property?.Type && hoodItem?.Property?.Type[1] == "5");
         if (isWearingActiveHeadset) {
             let randomLevelIncrease = (getRandomInt(4) + 2) / 10; // .2 to .5
             if (getRandomInt(50) == 0) { // Odds are big jump once every 10 seconds
