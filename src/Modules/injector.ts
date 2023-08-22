@@ -357,7 +357,7 @@ export class InjectorModule extends BaseModule {
 
         hookFunction('ChatRoomFocusCharacter', 6, (args, next) => {
             if (this.Enabled && this.asleep) {
-                LSCG_SendLocal("Character access blocked while drugged asleep.", 5000);
+                LSCG_SendLocal("Character access blocked while asleep.", 5000);
                 return;
             }
             return next(args);
@@ -774,9 +774,10 @@ export class InjectorModule extends BaseModule {
         }
     }
 
-    Sleep() {
+    Sleep(doEmote: boolean = true) {
         this.asleep = true;
-        SendAction("%NAME% moans weakly as %PRONOUN% succumbs to unconciousness.");
+        if (doEmote)
+            SendAction("%NAME% moans weakly as %PRONOUN% succumbs to unconciousness.");
         this.miscModule?.SetSleepExpression();
         if (Player.CanKneel()) {
             this.miscModule?.FallDownIfPossible();

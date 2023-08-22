@@ -1558,10 +1558,13 @@ export class ActivityModule extends BaseModule {
             if (!!type)
                 return;
         }
-        else if (this.heldBy.filter(h => h.Member == member && h.Type == "tongue").length == 1 && (!type || type == "tongue")) {
+        
+        if (this.heldBy.filter(h => h.Member == member && h.Type == "tongue").length == 1 && (!type || type == "tongue")) {
             CharacterSetFacialExpression(Player, "Mouth", this.prevMouth);
             this.prevMouth = null;
-        } else if (this.heldBy.filter(h => h.Member == member && h.Type == "neck").length == 1 && (!type || type == "neck")) {
+        }
+        
+        if (this.heldBy.filter(h => h.Member == member && h.Type == "neck").length == 1 && (!type || type == "neck")) {
             this.collarModule.ReleaseHandChoke(getCharacter(member), true);
         }
 
