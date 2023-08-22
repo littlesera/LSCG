@@ -378,7 +378,7 @@ export class CollarModule extends BaseModule {
     gagSpeechlessLines = [
         "%NAME%'s mouth moves silently.",
         "%NAME%'s mouth moves without a sound.",
-        "%NAME%'s whimpers inaudibly, unable to breath.",
+        "%NAME%'s whimpers inaudibly, unable to breathe.",
         "%NAME% groans and convulses.",
         "%NAME% shudders as %POSSESSIVE% lungs burn."
     ]
@@ -777,8 +777,8 @@ export class CollarModule extends BaseModule {
                 "%NAME% tries to focus on breathing, each inhale an effort in %POSSESSIVE% collar."
             ],
             high: [
-                "%NAME% splutters and chokes, struggling to breath.",
-                "%NAME% grunts and moans, straining to breath.",
+                "%NAME% splutters and chokes, struggling to breathe.",
+                "%NAME% grunts and moans, straining to breathe.",
                 "%NAME%'s eyes have trouble focusing, as %PRONOUN% chokes and gets lightheaded."
             ]
         }
