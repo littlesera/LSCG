@@ -32,6 +32,20 @@ export class GuiCollar extends GuiSubscreen {
 					description: "Enabled breathplay using nose plugs and sufficient gags.",
 					setting: () => Player.LSCG.MiscModule.gagChokeEnabled ?? false,
 					setSetting: (val) => Player.LSCG.MiscModule.gagChokeEnabled = val
+				},<Setting>{
+					type: "checkbox",
+					label: "Sleep on Passout:",
+					description: "Will force sleep on passout.",
+					setting: () => this.settings.knockout ?? false,
+					setSetting: (val) => this.settings.knockout = val
+				},<Setting>{
+					type: "number",
+					id: "knockoutTime",
+					label: "Sleep time (minutes):",
+					description: "How long you will sleep after passout if enabled.",
+					disabled: !this.settings.knockout,
+					setting: () => (this.settings.knockoutMinutes ?? 2),
+					setSetting: (val) => this.settings.knockoutMinutes = Math.max(Math.min(val, 10), 1)
 				}
 			], !this.settings.collarPurchased ? [] :
 				this.settings.locked ? [

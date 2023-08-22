@@ -49,7 +49,9 @@ export class PublicSettingsModel implements IPublicSettingsModel {
         allowSelfTightening: false,
         allowSelfLoosening: false,
         allowButtons: false,
-        anyCollar: false
+        anyCollar: false,
+        knockout: false,
+        knockoutMinutes: 2
     };
     HypnoModule: HypnoPublicSettingsModel = <HypnoPublicSettingsModel>{
         enabled: false,

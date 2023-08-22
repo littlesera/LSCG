@@ -69,6 +69,8 @@ export class CollarModule extends BaseModule {
             immersive: false,
             lockable: false,
             locked: false,
+            knockout: false,
+            knockoutMinutes: 2,
             stats: {
                 collarPassoutCount: 0,
                 gagPassoutCount: 0,
@@ -733,7 +735,8 @@ export class CollarModule extends BaseModule {
             this.settings.stats.gagPassoutCount++;
         }
         
-        this.Knockout();
+        if (this.settings.knockout)
+            this.Knockout();
         settingsSave();
     }
 
@@ -743,7 +746,7 @@ export class CollarModule extends BaseModule {
         setTimeout(() => {
             if (injector.sedativeLevel <= 0)
                 injector.Wake();
-        }, 60000 * 2); // Sleep for 2 minutes after passout
+        }, 60000 * (this.settings.knockoutMinutes ?? 2)); // Sleep for 2 minutes after passout
     }
 
     ChokeEvent() {

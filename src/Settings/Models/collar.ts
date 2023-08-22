@@ -26,6 +26,8 @@ export interface CollarPublicSettingsModel extends BaseSettingsModel {
     allowSelfTightening: boolean;
     allowSelfLoosening: boolean;
     allowButtons: boolean;
+    knockout: boolean;
+    knockoutMinutes: number;
 }
 
 export interface CollarModel {
