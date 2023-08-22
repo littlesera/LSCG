@@ -5,6 +5,7 @@ import { settingsSave, SendAction, OnChat, getRandomInt, hookFunction, removeAll
 import { GuiCollar } from 'Settings/collar';
 import { ActivityBundle, ActivityModule, ActivityTarget, CustomPrerequisite } from './activities';
 import { getModule } from 'modules';
+import { InjectorModule } from './injector';
 
 enum PassoutReason {
     COLLAR,
@@ -68,6 +69,8 @@ export class CollarModule extends BaseModule {
             immersive: false,
             lockable: false,
             locked: false,
+            knockout: false,
+            knockoutMinutes: 2,
             stats: {
                 collarPassoutCount: 0,
                 gagPassoutCount: 0,
@@ -720,7 +723,10 @@ export class CollarModule extends BaseModule {
         }
         else if (reason == PassoutReason.HAND) {
             SendAction("As %NAME% collapses unconscious, %OPP_NAME% releases %POSSESSIVE% neck.", chokingMember);
-            this.ReleaseHandChoke(chokingMember);
+            if (!!chokingMember)
+                getModule<ActivityModule>("ActivityModule").DoEscape(chokingMember);
+            else
+                this.ReleaseHandChoke(chokingMember);
             this.settings.stats.handPassoutCount++;
         }
         else if (reason == PassoutReason.PLUGS) {
@@ -728,7 +734,19 @@ export class CollarModule extends BaseModule {
             this.ForceReleasePlugs();
             this.settings.stats.gagPassoutCount++;
         }
+        
+        if (this.settings.knockout)
+            this.Knockout();
         settingsSave();
+    }
+
+    Knockout() {
+        var injector = getModule<InjectorModule>("InjectorModule");
+        injector.Sleep(false);
+        setTimeout(() => {
+            if (injector.sedativeLevel <= 0)
+                injector.Wake();
+        }, 60000 * (this.settings.knockoutMinutes ?? 2)); // Sleep for 2 minutes after passout
     }
 
     ChokeEvent() {
