@@ -435,6 +435,7 @@ export class InjectorModule extends BaseModule {
             if (this.settings.enableContinuousDelivery && lastBreathEvent + breathInterval < now) {
                 lastBreathEvent = now;
                 this.BreathInDrugEvent();
+                this.CheckForHypnoHelmet();
             }
 
             return next(args);
@@ -1161,6 +1162,26 @@ export class InjectorModule extends BaseModule {
         let isDrugged = this.GetDrugTypes(item.Craft).length > 0
         
         return hasHose && isDrugged;
+    }
+
+    headsetMindControlEventStr: string[] = [
+        "%NAME% groans helplessly as %POSSESSIVE% headset manipulates %POSSESSIVE% mind.",
+        "%NAME% struggles to keep %POSSESSIVE% focus through the overwhelming influence of %POSSESSIVE% headset.",
+        "%NAME% whimpers as %POSSESSIVE% headset erases %POSSESSIVE% own mind relentlessly."
+    ];
+
+    CheckForHypnoHelmet() {
+        var headItem = InventoryGet(Player, "ItemHead");
+        if (!headItem)
+            return;
+        let isWearingActiveHeadset = headItem?.Asset?.Name == "InteractiveVRHeadset" && !!headItem?.Property?.Type && headItem?.Property?.Type[1] == "5";
+        if (isWearingActiveHeadset) {
+            let randomLevelIncrease = (getRandomInt(4) + 2) / 10; // .2 to .5
+            if (getRandomInt(50) == 0) { // Odds are big jump once every 10 seconds
+                if (!this.brainwashed) SendAction(this.headsetMindControlEventStr[getRandomInt(this.headsetMindControlEventStr.length)]);
+                this.AddMindControl(randomLevelIncrease + 1, getRandomInt(3) != 0); // 2/3 chance to start incap minigame
+            } else this.AddMindControl(randomLevelIncrease / 4, false);
+        }
     }
 
     breathSedativeEventStr: string[] = [
