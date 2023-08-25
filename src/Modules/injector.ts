@@ -585,7 +585,7 @@ export class InjectorModule extends BaseModule {
 
     sedativeInjectStr = [
         "%NAME% sighs as a cool relaxing calm glides through %POSSESSIVE% body, fighting to keep %POSSESSIVE% eyes open.",
-        "%NAME%'s muscle relax as %OPP_NAME%'s sedative courses through %POSSESSIVE% body",
+        "%NAME%'s muscles relax as %OPP_NAME%'s sedative courses through %POSSESSIVE% body",
         "%NAME% fights to stay conscious against the relentless weight of %OPP_NAME%'s drug.",
         "%NAME%'s eyes droop as %POSSESSIVE% fights to stay conscious against the cool, welcoming weight of %OPP_NAME%'s drug."
     ];
@@ -593,7 +593,7 @@ export class InjectorModule extends BaseModule {
     sedativeDrinkStr = [
         "%NAME% gulps and swallows %OPP_NAME%'s drink, a cool relaxing feeling starting to spread through %POSSESSIVE% body.",
         "%NAME% sighs as a cool relaxing calm glides down %POSSESSIVE% throat, fighting to keep %POSSESSIVE% eyes open.",
-        "%NAME%'s muscle relax as %OPP_NAME%'s sedative pours down %POSSESSIVE% throat and starts to take effect.",
+        "%NAME%'s muscles relax as %OPP_NAME%'s sedative pours down %POSSESSIVE% throat and starts to take effect.",
         "%NAME%'s eyes droop as %POSSESSIVE% fights to stay conscious against the cool, welcoming weight of %OPP_NAME%'s drug."
     ];
 
@@ -625,13 +625,13 @@ export class InjectorModule extends BaseModule {
     brainwashInjectStr = [
         "%NAME% whimpers and struggles to keep control of %POSSESSIVE% mind.",
         "%NAME% gasps weakly as %OPP_NAME%'s drug slowly erases %POSSESSIVE% free will.",
-        "%NAME%'s eyes struggle to focus as %OPP_NAME%'s drug makes %POSSESSIVE% more suggestable."
+        "%NAME%'s eyes struggle to focus as %OPP_NAME%'s drug makes %POSSESSIVE% more suggestible."
     ];
 
     brainwashDrinkStr = [
         "%NAME% starts to drift dreamily as they swallow %OPP_NAME%'s drink.",
         "%NAME% gasps weakly and starts to lose focus as %OPP_NAME%'s drug warms %POSSESSIVE% comfortably.",
-        "%NAME%'s eyes flutter and unfocus as %OPP_NAME%'s drink slides warmly down %POSSESSIVE% throat."
+        "%NAME%'s eyes flutter and defocus as %OPP_NAME%'s drink slides warmly down %POSSESSIVE% throat."
     ];
 
     AddMindControl(multiplier: number, minigame: boolean = true) {
@@ -667,7 +667,7 @@ export class InjectorModule extends BaseModule {
 
     hornyDrinkStr = [
         "%NAME% lets out a long low moan as %OPP_NAME%'s drink burns pleasurably down their throat.",
-        "%NAME%'s eyes roll back as a wave of pleasure eminates from %POSSESSIVE% belly.",
+        "%NAME%'s eyes roll back as a wave of pleasure emanates from %POSSESSIVE% belly.",
         "%NAME% gulps and quivers as %POSSESSIVE% body is slowly flooded with %OPP_NAME%'s aphrodisiac." 
     ];
 
@@ -701,13 +701,13 @@ export class InjectorModule extends BaseModule {
     cureInjectStr = [
         "%NAME% moans thankfully as %OPP_NAME%'s medicine heals %POSSESSIVE%.",
         "%NAME%'s body glows slightly as %OPP_NAME%'s cure washes warmly over %POSSESSIVE%.",
-        "%OPP_NAME%'s drug rushes warmly through %NAME%'s body, curing what ailes %POSSESSIVE%." 
+        "%OPP_NAME%'s drug rushes warmly through %NAME%'s body, curing what ails %POSSESSIVE%." 
     ];
 
     cureDrinkStr = [
         "%NAME% gulps thankfully as %OPP_NAME%'s medicine slowly heals %POSSESSIVE%.",
         "%NAME%'s body glows slightly as %OPP_NAME%'s cure glides warmly through %POSSESSIVE%.",
-        "%OPP_NAME%'s antidote slowly washes through %NAME%'s body, curing what ailes %POSSESSIVE%." 
+        "%OPP_NAME%'s antidote slowly washes through %NAME%'s body, curing what ails %POSSESSIVE%." 
     ];
 
     DrinkCure(sender: Character) {
@@ -829,7 +829,7 @@ export class InjectorModule extends BaseModule {
     }
 
     brainwashBlockStrings = [
-        "%NAME% stares blankly, %POSSESSIVE% mind open and suggestable...",
+        "%NAME% stares blankly, %POSSESSIVE% mind open and suggestible...",
         "%NAME%'s eyelids flutter gently, awaiting a command...",
         "%NAME% trembles with a quiet moan as %PRONOUN% yearns to obey...",
         "%NAME% groans softly as %PRONOUN% drops even further under the drug's command..."
@@ -1076,7 +1076,7 @@ export class InjectorModule extends BaseModule {
 
     CheckRespiratorCurseUpdate() {
         if (this.IsWearingRespirator && this.IsRespiratorOn && !this._respiratorHasGas) {
-            SendAction("%NAME%'s mask whirs and shudders as it reloads its own supply to continues emitting.");
+            SendAction("%NAME%'s mask whirs and shudders as it reloads its own supply and continues emitting.");
             this.settings.continuousDeliveryActivatedAt = CommonTime();
             settingsSave();
         } else if (this.IsWearingRespirator && !this.IsRespiratorOn) {
@@ -1194,7 +1194,7 @@ export class InjectorModule extends BaseModule {
 
     breathMindControlEventStr: string[] = [
         "%NAME% groans helplessly as %POSSESSIVE% mask sends another dose into %POSSESSIVE% lungs.",
-        "%NAME% struggles to keep %POSSESSIVE% focus through the suggestable haze caused by %POSSESSIVE% mask.",
+        "%NAME% struggles to keep %POSSESSIVE% focus through the suggestible haze caused by %POSSESSIVE% mask.",
         "%NAME% whimpers as %POSSESSIVE% mask's drug pushes %POSSESSIVE% further out of %POSSESSIVE% own mind."
     ];
 
