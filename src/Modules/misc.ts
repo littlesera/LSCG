@@ -248,7 +248,7 @@ export class MiscModule extends BaseModule {
 
     AddChloroform(sender: Character | null) {
         if (this.chloroformWearingOff) {
-            SendAction("%NAME%'s muscles slump limply once more as another dose chloroform is reapplied.");
+            SendAction("%NAME%'s muscles slump limply once more as another dose of chloroform is applied.");
             this.chloroformWearingOff = false;
             this.isChloroformed = true;
             this.settings.chloroformedAt = CommonTime();
@@ -260,7 +260,7 @@ export class MiscModule extends BaseModule {
             else
                 SendAction("%NAME% slumps back in %POSSESSIVE% sleep as another dose of ether assails %POSSESSIVE% senses.");
             if (!!sender && sender.MemberNumber != Player.MemberNumber)
-                LSCG_SendLocal(CharacterNickname(sender) + " has forced chloroform over your mouth, you will passout if it is not removed soon!", 30000);
+                LSCG_SendLocal(CharacterNickname(sender) + " has forced chloroform over your mouth, you will pass out if it is not removed soon!", 30000);
             CharacterSetFacialExpression(Player, "Eyes", "Scared");
             clearTimeout(this.awakenTimeout);
             this.passoutTimer = setTimeout(() => this.StartPassout_1(), 20000);
