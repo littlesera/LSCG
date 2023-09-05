@@ -85,6 +85,7 @@ export class ActivityModule extends BaseModule {
                     group: "ItemNose",
                     awakener: true,
                     hypno: false,
+                    sleep: false,
                     hypnoRequiredRepeats: 2,
                     hypnoThreshold: 50,
                     orgasm: false,

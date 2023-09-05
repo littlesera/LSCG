@@ -6,6 +6,7 @@ import { GuiHypno } from 'Settings/hypno';
 import { ActivityModule } from './activities';
 import { getModule } from 'modules';
 import { ActivityEntryModel } from 'Settings/Models/activities';
+import { InjectorModule } from './injector';
 
 export class HypnoModule extends BaseModule {
     get settings(): HypnoSettingsModel {
@@ -75,6 +76,8 @@ export class HypnoModule extends BaseModule {
                 // Special tummy rub hypno action for Bean
                 else if (activityEntry?.hypno && !this.hypnoActivated && !this.IsOnCooldown() && (Player.ArousalSettings?.Progress ?? 0) >= activityEntry.hypnoThreshold) {
                     this.DelayedTrigger(activityEntry, sender?.MemberNumber);
+                } else if (activityEntry?.sleep && !getModule<InjectorModule>("InjectorModule")?.asleep) {
+                    this.DelayedTrigger(activityEntry, sender?.MemberNumber, true);
                 }
             }
         });
@@ -289,9 +292,16 @@ export class HypnoModule extends BaseModule {
         "%NAME% lets out a low moan as %POSSESSIVE% muscles relax and %PRONOUN% starts to drop..."
     ];
 
+    delayedSleepStrings = [
+        "%NAME%'s eyes flutter as %PRONOUN% fights to keep them open...",
+        "%NAME% yawns and struggles to stay awake...",
+        "%NAME% can feel %POSSESSIVE% eyelids grow heavy as %PRONOUN% drifts on the edge of sleep...",
+        "%NAME% takes a deep, relaxing breath as %POSSESSIVE% muscles relax and %PRONOUN% eyes start to droop..."
+    ]
+
     delayedActivations: Map<string, number> = new Map<string,number>();
 
-    DelayedTrigger(activityEntry: ActivityEntryModel, memberNumber: number = 0) {
+    DelayedTrigger(activityEntry: ActivityEntryModel, memberNumber: number = 0, isSleep: boolean = false) {
         let entryName = activityEntry.group + "-" + activityEntry.name;
         
         setTimeout(() => {
@@ -305,11 +315,20 @@ export class HypnoModule extends BaseModule {
         let count = this.delayedActivations.get(entryName) ?? 0;
         count++;
         if (count >= activityEntry.hypnoRequiredRepeats) {
-            SendAction("%NAME% trembles weakly with one last attempt to maintain %POSSESSIVE% senses...");
-            setTimeout(() => this.StartTriggerWord(false, memberNumber), 4000);
+            if (isSleep) {
+                SendAction("%NAME% quivers with one last attempt to stay awake...");
+                setTimeout(() => getModule<InjectorModule>("InjectorModule")?.Sleep(true), 4000);
+            }
+            else {
+                SendAction("%NAME% trembles weakly with one last attempt to maintain %POSSESSIVE% senses...");
+                setTimeout(() => this.StartTriggerWord(false, memberNumber), 4000);
+            }
+            count = 0; // reset repeats
         }
-        else
-            SendAction(this.delayedHypnoStrings[getRandomInt(this.delayedHypnoStrings.length)]);
+        else {
+            let str = isSleep ? this.delayedSleepStrings[getRandomInt(this.delayedSleepStrings.length)] : this.delayedHypnoStrings[getRandomInt(this.delayedHypnoStrings.length)];
+            SendAction(str);
+        }
         this.delayedActivations.set(entryName, count);
     }
 
