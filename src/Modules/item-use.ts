@@ -180,6 +180,13 @@ export class ItemUseModule extends BaseModule {
 				let item = InventoryGet(C, "ItemHandheld")
 				if (!!item && item.Asset.Name.startsWith("RopeCoil"))
 					results.push(item)
+			} else if (itemType == "PlushItem") {
+				let teddy = InventoryGet(C, "ItemMisc");
+				let shark = InventoryGet(C, "ItemHandheld");
+				if (!!teddy && teddy.Asset.Name == "TeddyBear") 
+					results.push(teddy);
+				if (!!shark && shark.Asset.Name == "Shark")
+					results.push(shark);
 			}
 			return results;
 		}, ModuleCategory.ItemUse);
@@ -672,6 +679,26 @@ export class ItemUseModule extends BaseModule {
 						var sourceItem = InventoryGet(acting, "ItemHandheld");
 						return !!sourceItem && sourceItem.Asset.Name == "Shark";
 					}
+				}
+			],
+			CustomImage: "Assets/Female3DCG/ItemHandheld/Preview/Shark.png"
+		});
+
+		// Plush Hug
+		this.activities.AddActivity(<ActivityBundle>{
+			Activity: <Activity>{
+				Name: "PlushHug",
+				MaxProgress: 50,
+				MaxProgressSelf: 50,
+				Prerequisite: ["UseHands", "Needs-PlushItem"]
+			},
+			Targets: [
+				<ActivityTarget>{
+					Name: "ItemHands",
+					TargetLabel: "Squeeze",
+					TargetAction: "SourceCharacter hugs PronounPossessive ActivityAsset tightly.",
+					SelfAllowed: true,
+					SelfOnly: true
 				}
 			],
 			CustomImage: "Assets/Female3DCG/ItemHandheld/Preview/Shark.png"
