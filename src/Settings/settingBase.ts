@@ -99,6 +99,14 @@ export abstract class GuiSubscreen {
 		return GuiSubscreen.START_X + (GuiSubscreen.X_MOD * Math.floor(ix / 9));
 	}
 
+	getNarrowYPos(row: number) {
+		return GuiSubscreen.START_Y + (GuiSubscreen.Y_MOD * row);
+    }
+
+	getNarrowXPos(col: number) {
+		return GuiSubscreen.START_X + (600 * col);
+	}
+
 	HideElements() {
 		this.multipageStructure.forEach((s, ix, arr) => {
 			if (ix != (PreferencePageCurrent-1)) {
@@ -204,6 +212,16 @@ export abstract class GuiSubscreen {
 			1400,
 			text,
 			"left");
+	}
+
+	DrawCheckboxNarrow(label: string, description: string, value: boolean, row: number, column: number, disabled: boolean = false) {
+		let x = this.getNarrowXPos(column);
+		let y = this.getNarrowYPos(row);
+		let width = 400;
+		var isHovering = MouseIn(x, y - 32, width, 64);
+		DrawTextFit(label, x, y, width, isHovering ? "Red" : "Black", "Gray");
+		DrawCheckbox(x + width, y - 32, 64, 64, "", value ?? false, disabled);
+		if (isHovering) this.Tooltip(description);
 	}
 
 	DrawCheckbox(label: string, description: string, value: boolean, order: number, disabled: boolean = false) {

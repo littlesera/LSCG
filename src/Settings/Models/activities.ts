@@ -17,6 +17,7 @@ export interface ActivityEntryModel {
     name: string;
     group: string;
     hypno: boolean;
+    sleep: boolean;
     hypnoThreshold: number;
     hypnoRequiredRepeats: number;
     orgasm: boolean;

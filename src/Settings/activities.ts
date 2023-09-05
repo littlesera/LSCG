@@ -219,6 +219,7 @@ export class GuiActivities extends GuiSubscreen {
 			name: actName,
 			group: grpName,
 			hypno: false,
+			sleep: false,
 			hypnoThreshold: 50,
 			hypnoRequiredRepeats: 2,
 			awakener: false,
@@ -246,9 +247,15 @@ export class GuiActivities extends GuiSubscreen {
 		}
 
 		// Hypno Checkbox
-		if (MouseIn(this.getXPos(2) + 600, this.getYPos(2) - 32, 64, 64)){
+		if (MouseIn(this.getNarrowXPos(0) + 400, this.getNarrowYPos(2) - 32, 64, 64)){
 			entry = this.createEntryIfNeeded(entry);
 			entry.hypno = !entry.hypno;
+		}
+
+		// Sleep Checkbox
+		if (MouseIn(this.getNarrowXPos(1) + 400, this.getNarrowYPos(2) - 32, 64, 64)){
+			entry = this.createEntryIfNeeded(entry);
+			entry.sleep = !entry.sleep;
 		}
 
 		// Awaken Checkbox
@@ -274,9 +281,10 @@ export class GuiActivities extends GuiSubscreen {
 		}
 
 		// Trance Section
-		this.DrawCheckbox("Can Induce Trance", "Using this activity on this location can trigger hypnosis.", activityEntry?.hypno ?? false, 2);
-		this.ElementPosition("hypnoCount", "Repeats Required", "Number times within 5 minutes this activity must be done before hypnosis is triggered.", 3, !(activityEntry?.hypno ?? false));
-		this.ElementPosition("hypnoThreshold", "Trance Arousal Threshold", "Arousal threshold required for this activity to trigger hypnosis.", 4, !(activityEntry?.hypno ?? false));
+		this.DrawCheckboxNarrow("Can Induce Trance", "Using this activity on this location can trigger hypnosis.", activityEntry?.hypno ?? false, 2, 0);
+		this.DrawCheckboxNarrow("Can Induce Sleep", "Using this activity on this location can put them to sleep.", activityEntry?.sleep ?? false, 2, 1);
+		this.ElementPosition("hypnoCount", "Repeats Required", "Number times within 5 minutes this activity must be done before hypnosis or sleep is triggered.", 3, !(activityEntry?.hypno ?? false) && !(activityEntry?.sleep ?? false));
+		this.ElementPosition("hypnoThreshold", "Trance Arousal Threshold", "Arousal threshold required for this activity to trigger hypnosis. If both trance and sleep are checked, lower arousal triggers sleep.", 4, !(activityEntry?.hypno ?? false));
 
 		// Awakener Section
 		this.DrawCheckbox("Can Awaken", "Using this activity on this location will awaken you from trance or deep sleep.", activityEntry?.awakener ?? false, 5);
@@ -286,6 +294,6 @@ export class GuiActivities extends GuiSubscreen {
 		this.ElementPosition("orgasmThreshold", "Orgasm Arousal Threshold", "Arousal threshold required for this activity to cause an orgasm.", 7, !(activityEntry?.orgasm ?? false));
 
 		// Allowed Members For Activity
-		this.ElementPosition("allowedMembers", "Allowed Member IDs", "Member IDs who can trance/awaken/orgasm with this activity. Leave empty to use BC item permissions", 8, !(activityEntry?.hypno ?? false) && !(activityEntry?.orgasm ?? false) && !(activityEntry?.awakener ?? false));
+		this.ElementPosition("allowedMembers", "Allowed Member IDs", "Member IDs who can trance/sleep/awaken/orgasm with this activity. Leave empty to use BC item permissions", 8, !(activityEntry?.hypno ?? false) && !(activityEntry?.orgasm ?? false) && !(activityEntry?.awakener ?? false) && !(activityEntry?.sleep ?? false));
 	}
 }
