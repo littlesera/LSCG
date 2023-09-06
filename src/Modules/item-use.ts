@@ -740,7 +740,7 @@ export class ItemUseModule extends BaseModule {
                     return next(args);
                 }
             },
-            CustomImage: "Assets/Female3DCG/ItemPelvis/HempRope_NormalOverPanties.png"
+            CustomImage: "Assets/Female3DCG/ClothAccessory/Preview/Camera1.png"
         });
 	}
 
