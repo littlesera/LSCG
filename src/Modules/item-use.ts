@@ -546,8 +546,8 @@ export class ItemUseModule extends BaseModule {
 			Targets: [
 				<ActivityTarget>{
 					Name: "ItemHands",
-					TargetLabel: "Steal!",
-					TargetAction: "SourceCharacter grabs at TargetCharacters hands, trying to steal TargetPronounPossessive item!",
+					TargetLabel: "Steal",
+					TargetAction: "SourceCharacter grabs at TargetCharacters hands, trying to steal TargetPronounPossessive item.",
 					SelfAllowed: false
 				}
 			],
@@ -627,57 +627,57 @@ export class ItemUseModule extends BaseModule {
 				<ActivityTarget>{
 					Name: "ItemArms",
 					TargetLabel: "Shark Bite",
-					TargetAction: "SourceCharacter's ActivityAsset bites TargetCharacter's arm!",
+					TargetAction: "SourceCharacter's ActivityAsset bites TargetCharacter's arm.",
 					SelfAllowed: false
 				}, <ActivityTarget>{
 					Name: "ItemBoots",
 					TargetLabel: "Shark Bite",
-					TargetAction: "SourceCharacter's ActivityAsset bites TargetCharacter's foot!",
+					TargetAction: "SourceCharacter's ActivityAsset bites TargetCharacter's foot.",
 					SelfAllowed: false
 				}, <ActivityTarget>{
 					Name: "ItemBreast",
 					TargetLabel: "Shark Bite",
-					TargetAction: "SourceCharacter's ActivityAsset bites TargetCharacter's breast!",
+					TargetAction: "SourceCharacter's ActivityAsset bites TargetCharacter's breast.",
 					SelfAllowed: false
 				}, <ActivityTarget>{
 					Name: "ItemButt",
 					TargetLabel: "Shark Bite",
-					TargetAction: "SourceCharacter's ActivityAsset bites TargetCharacter's butt!",
+					TargetAction: "SourceCharacter's ActivityAsset bites TargetCharacter's butt.",
 					SelfAllowed: false
 				}, <ActivityTarget>{
 					Name: "ItemEars",
 					TargetLabel: "Shark Bite",
-					TargetAction: "SourceCharacter's ActivityAsset bites TargetCharacter's ear'!",
+					TargetAction: "SourceCharacter's ActivityAsset bites TargetCharacter's ear.",
 					SelfAllowed: false
 				}, <ActivityTarget>{
 					Name: "ItemFeet",
 					TargetLabel: "Shark Bite",
-					TargetAction: "SourceCharacter's ActivityAsset bites TargetCharacter's leg!",
+					TargetAction: "SourceCharacter's ActivityAsset bites TargetCharacter's leg.",
 					SelfAllowed: false
 				},  <ActivityTarget>{
 					Name: "ItemHands",
 					TargetLabel: "Shark Bite",
-					TargetAction: "SourceCharacter's ActivityAsset bites TargetCharacter on the hand!",
+					TargetAction: "SourceCharacter's ActivityAsset bites TargetCharacter on the hand.",
 					SelfAllowed: false
 				},  <ActivityTarget>{
 					Name: "ItemLegs",
 					TargetLabel: "Shark Bite",
-					TargetAction: "SourceCharacter's ActivityAsset bites TargetCharacter in the thigh!",
+					TargetAction: "SourceCharacter's ActivityAsset bites TargetCharacter in the thigh.",
 					SelfAllowed: false
 				},  <ActivityTarget>{
 					Name: "ItemNeck",
 					TargetLabel: "Shark Bite",
-					TargetAction: "SourceCharacter's ActivityAsset bites TargetCharacter on the neck!",
+					TargetAction: "SourceCharacter's ActivityAsset bites TargetCharacter on the neck.",
 					SelfAllowed: false
 				},  <ActivityTarget>{
 					Name: "ItemNipples",
 					TargetLabel: "Shark Bite",
-					TargetAction: "SourceCharacter's ActivityAsset bites TargetCharacter's nipple!",
+					TargetAction: "SourceCharacter's ActivityAsset bites TargetCharacter's nipple.",
 					SelfAllowed: false
 				},  <ActivityTarget>{
 					Name: "ItemTorso",
 					TargetLabel: "Shark Bite",
-					TargetAction: "SourceCharacter's ActivityAsset chomps on TargetCharacter!",
+					TargetAction: "SourceCharacter's ActivityAsset chomps on TargetCharacter.",
 					SelfAllowed: false
 				},  <ActivityTarget>{
 					Name: "ItemNose",
@@ -730,7 +730,7 @@ export class ItemUseModule extends BaseModule {
                     Name: "ItemArms",
 					TargetLabel: "Take Photo",
                     SelfAllowed: true,
-                    TargetAction: "SourceCharacter snaps a photograph of TargetCharacter.",
+                    TargetAction: "SourceCharacter snaps a photo of TargetCharacter.",
                     TargetSelfAction: "SourceCharacter takes a selfie."
                 }
             ],
