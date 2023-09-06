@@ -93,14 +93,14 @@ export class HypnoModule extends BaseModule {
             }
         }, ModuleCategory.Hypno);
 
-        hookFunction("SpeechGarble", 2, (args, next) => {
+        hookFunction("SpeechGarble", 69, (args, next) => { // high priority for now.. nice.
             if (!this.Enabled)
                 return next(args);
 
             const C = args[0] as Character;
 
             // Check for non-garbled trigger word, this means a trigger word could be set to what garbled speech produces >.>
-            let msg = callOriginal("SpeechGarble", args);
+            let msg = callOriginal("SpeechGarble", [args[0], args[1]]);
             if (this.CheckTrigger(msg, C) && !this.IsOnCooldown()) {
                 args[1] = this.BlankOutTriggers(args[1]);
                 this.StartTriggerWord(true, C.MemberNumber);

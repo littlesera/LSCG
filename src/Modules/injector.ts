@@ -258,7 +258,7 @@ export class InjectorModule extends BaseModule {
                         SelfAllowed: true,
                         TargetLabel: "Shoot Netgun",
                         TargetAction: "SourceCharacter takes aim at TargetCharacter with their net gun.",
-                        TargetSelfAction: "SourceCharacter turns their net gun on themselves!"
+                        TargetSelfAction: "SourceCharacter turns their net gun on themselves."
                     }
                 ],
                 CustomPrereqs: [
@@ -865,14 +865,14 @@ export class InjectorModule extends BaseModule {
             return;
         
         if (this.settings.netgunIsChaotic) {
-            SendAction("%NAME% fires a net wildly!");
+            SendAction("%NAME% fires a net wildly.");
             setTimeout(() => this.ResolveNetting(target, true), 2000);
         } else if (target.MemberNumber == Player.MemberNumber) {
-            SendAction("%NAME% fires at themselves point blank!", target);
+            SendAction("%NAME% fires at themselves point blank.", target);
             setTimeout(() => this.ResolveNetting(target), 2000);
         }
         else {
-            SendAction("%NAME% fires a net at %OPP_NAME%!", target);
+            SendAction("%NAME% fires a net at %OPP_NAME%.", target);
             setTimeout(() => this.ResolveNetting(target), 2000);
         }
     }
