@@ -252,6 +252,9 @@ export class CoreModule extends BaseModule {
             case "collar-stats":
                 if (!!Sender) getModule<CollarModule>("CollarModule")?.StatsButtonPress(Sender);
                 break;
+            case "photo":
+                DrawFlashScreen("#FFFFFF", 500, 1500);
+                break;
         }
     }
 

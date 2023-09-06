@@ -1,7 +1,7 @@
 import { BaseModule } from "base";
 import { getModule } from "modules";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { getRandomInt, hookFunction, IsIncapacitated, removeAllHooksByModule, SendAction } from "../utils";
+import { getRandomInt, hookFunction, IsIncapacitated, removeAllHooksByModule, SendAction, sendLSCGCommand } from "../utils";
 import { ActivityBundle, ActivityModule, ActivityTarget } from "./activities";
 import { BoopsModule } from "./boops";
 import { CollarModule } from "./collar";
@@ -116,6 +116,13 @@ export class ItemUseModule extends BaseModule {
 		}
 	]
 
+	CameraItems: string[] = [
+		"Phone1",
+		"Phone2",
+		"PortalTablet",
+		"Camera1",
+	];
+
     load(): void {
 		hookFunction("ActivityGenerateItemActivitiesFromNeed", 1, (args, next) => {
 			let allowed = args[0];
@@ -187,6 +194,13 @@ export class ItemUseModule extends BaseModule {
 					results.push(teddy);
 				if (!!shark && shark.Asset.Name == "Shark")
 					results.push(shark);
+			} else if (itemType == "CameraItem") {
+				let item = InventoryGet(C, "ItemHandheld");
+				let acc = InventoryGet(C, "ClothAccessory");
+				if (!!item && this.CameraItems.indexOf(item.Asset?.Name) > -1) 
+					results.push(item);
+				else if (!!acc && this.CameraItems.indexOf(acc.Asset?.Name) > -1) 
+					results.push(acc);
 			}
 			return results;
 		}, ModuleCategory.ItemUse);
@@ -703,6 +717,66 @@ export class ItemUseModule extends BaseModule {
 			],
 			CustomImage: "Assets/Female3DCG/ItemHandheld/Preview/Shark.png"
 		});
+
+		this.activities.AddActivity({
+            Activity: <Activity>{
+                Name: "TakePhoto",
+                MaxProgress: 50,
+                MaxProgressSelf: 50,
+                Prerequisite: ["UseHands", "Needs-CameraItem"]
+            },
+            Targets: [
+                <ActivityTarget>{
+                    Name: "ItemArms",
+					TargetLabel: "Take Photo",
+                    SelfAllowed: true,
+                    TargetAction: "SourceCharacter snaps a photograph of TargetCharacter.",
+                    TargetSelfAction: "SourceCharacter takes a selfie."
+                }
+            ],
+            CustomAction: {
+                Func: (target, args, next) => {
+                    this.TakePhoto(target);
+                    return next(args);
+                }
+            },
+            CustomImage: "Assets/Female3DCG/ItemPelvis/HempRope_NormalOverPanties.png"
+        });
+	}
+
+	TakePhoto(C: Character | null) {
+		if (!C) {
+			return;
+		}
+		
+		CommonPhotoMode = true;
+		let temp = C.FocusGroup;
+		C.FocusGroup = null;
+		ChatRoomDrawBackground(ChatRoomData?.Background ?? "", 0, 1, 1, false);
+		DrawCharacter(C, 0, 0, 1);
+
+		// Capture screen as image URL
+		const ImgData = /** @type {HTMLCanvasElement} */ (<any>document?.getElementById("MainCanvas"))?.getContext('2d').getImageData(0, 0, 500, 1000);
+		let PhotoCanvas = document.createElement('canvas');
+		PhotoCanvas.width = 500;
+		PhotoCanvas.height = 1000;
+		PhotoCanvas?.getContext('2d')?.putImageData(ImgData, 0, 0);
+		const PhotoImg = PhotoCanvas.toDataURL("image/png");
+
+		// Open the image in a new window
+		let newWindow = window.open('about:blank', '_blank');
+		if (newWindow) {
+			newWindow.document.write("<img src='" + PhotoImg + "' alt='from canvas'/>");
+			newWindow.document.title = CharacterNickname(C);
+			newWindow.document.close();
+		} else {
+			console.warn("Popups blocked: Cannot open photo in new tab.");
+		}
+
+		CommonPhotoMode = false;
+		C.FocusGroup = temp;
+
+		sendLSCGCommand(C, "photo");
 	}
 
     unload(): void {
