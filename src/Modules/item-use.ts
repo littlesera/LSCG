@@ -642,7 +642,7 @@ export class ItemUseModule extends BaseModule {
 				}, <ActivityTarget>{
 					Name: "ItemButt",
 					TargetLabel: "Shark Bite",
-					TargetAction: "SourceCharacter's ActivityAsset bites TargetCharacter in the butt!",
+					TargetAction: "SourceCharacter's ActivityAsset bites TargetCharacter's butt!",
 					SelfAllowed: false
 				}, <ActivityTarget>{
 					Name: "ItemEars",
