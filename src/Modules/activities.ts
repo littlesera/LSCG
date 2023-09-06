@@ -231,7 +231,7 @@ export class ActivityModule extends BaseModule {
                 <ActivityTarget>{
                     Name: "ItemHead",
                     SelfAllowed: false,
-                    TargetAction: "SourceCharacter baps TargetCharacter!"
+                    TargetAction: "SourceCharacter baps TargetCharacter."
                 }
             ],
             CustomImage: "Assets/Female3DCG/Activity/Slap.png"
@@ -346,7 +346,7 @@ export class ActivityModule extends BaseModule {
                 <ActivityTarget>{
                     Name: "ItemArms",
                     SelfAllowed: false,
-                    TargetAction: "SourceCharacter flops on top of TargetCharacter!"
+                    TargetAction: "SourceCharacter flops on top of TargetCharacter."
                 }
             ],
             CustomImage: "Assets/Female3DCG/Activity/Cuddle.png"
