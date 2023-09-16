@@ -5,6 +5,8 @@ import { CollarModel, CollarPublicSettingsModel, CollarSettingsModel } from "./c
 import { HypnoPublicSettingsModel, HypnoSettingsModel } from "./hypno";
 import { InjectorPublicSettingsModel, InjectorSettingsModel } from "./injector";
 import { ActivitySettingsModel } from "./activities";
+import { StateModule } from "Modules/states";
+import { StatePublicSettingsModel, StateSettingsModel } from "./states";
 
 export interface SettingsModel {
     Version: string;
@@ -17,6 +19,7 @@ export interface SettingsModel {
     MiscModule: MiscSettingsModel;
     InjectorModule: InjectorSettingsModel;
     ActivityModule: ActivitySettingsModel;
+    StateModule: StateSettingsModel;
 }
 
 export interface IPublicSettingsModel extends BaseSettingsModel {
@@ -28,6 +31,7 @@ export interface IPublicSettingsModel extends BaseSettingsModel {
     GlobalModule: GlobalPublicSettingsModel;
     MiscModule: BaseSettingsModel;
     InjectorModule: InjectorPublicSettingsModel;
+    StateModule: StatePublicSettingsModel;
 }
 
 export class PublicSettingsModel implements IPublicSettingsModel {
@@ -97,4 +101,8 @@ export class PublicSettingsModel implements IPublicSettingsModel {
         asleep: false,
         brainwashed: false
     };
+    StateModule: StatePublicSettingsModel = <StatePublicSettingsModel>{
+        enabled: true,
+        states: []
+    }
 }

@@ -5,6 +5,7 @@ import { GUI } from "./settingUtils";
 import { LSCG_CHANGES } from "utils";
 import { GuiReset } from "./reset";
 import { CoreModule } from "Modules/core";
+import { StateModule } from "Modules/states";
 
 export class MainMenu extends GuiSubscreen {
 	subscreens: GuiSubscreen[] = [];
@@ -22,7 +23,8 @@ export class MainMenu extends GuiSubscreen {
 	}
 
 	get immersiveBlock(): boolean {
-		var hypnoBlock = Player.LSCG.HypnoModule?.immersive && Player.LSCG.HypnoModule?.hypnotized;
+		let states = getModule<StateModule>("StateModule");
+		var hypnoBlock = states.HypnoState.config.immersive && states.HypnoState.config.active;// Player.LSCG.HypnoModule?.immersive && Player.LSCG.HypnoModule?.hypnotized;
 		var chloroformBlock = Player.LSCG.MiscModule?.immersiveChloroform && getModule<MiscModule>("MiscModule")?.isChloroformed;
 		var drugBlock = Player.LSCG.InjectorModule?.immersive && (Player.LSCG.InjectorModule?.asleep || Player.LSCG.InjectorModule?.brainwashed)
 		return (hypnoBlock || chloroformBlock || drugBlock);

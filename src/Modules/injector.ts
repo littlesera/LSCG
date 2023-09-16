@@ -11,6 +11,7 @@ import { ActivityModule, CustomAction, CustomPrerequisite } from "./activities";
 import { HypnoModule } from "./hypno";
 import { MiscModule } from "./misc";
 import { ItemUseModule } from "./item-use";
+import { StateModule } from "./states";
 
 type DrugType = "sedative" | "mindcontrol" | "horny" | "antidote";
 
@@ -40,6 +41,10 @@ export class InjectorModule extends BaseModule {
     hypnoModule: HypnoModule | undefined;
     activityModule: ActivityModule | undefined;
     miscModule: MiscModule | undefined;
+
+    get stateModule(): StateModule {
+        return getModule<StateModule>("StateModule");
+    }
 
     get defaultSettings() {
         return <InjectorSettingsModel>{
@@ -453,9 +458,7 @@ export class InjectorModule extends BaseModule {
         }, ModuleCategory.Injector);
 
         hookFunction('ChatRoomSync', 1, (args, next) => {
-            if (this.brainwashed)
-                setTimeout(() => this.hypnoModule?.EnforceEyes());
-            else if (this.asleep)
+            if (this.asleep)
                 setTimeout(() => this.miscModule?.SetSleepExpression());
             return next(args);
         })
@@ -467,8 +470,8 @@ export class InjectorModule extends BaseModule {
 
     get asleep(): boolean { return this.settings.asleep };
     set asleep(val: boolean) { if (this.settings.asleep != val){ this.settings.asleep = val; settingsSave(true);}}
-    get brainwashed(): boolean { return this.settings.brainwashed };
-    set brainwashed(val: boolean) { if (this.settings.brainwashed != val) {this.settings.brainwashed = val; settingsSave(true);}}
+    get brainwashed(): boolean { return this.stateModule.HypnoState.config.active };
+    // set brainwashed(val: boolean) { if (this.settings.brainwashed != val) {this.settings.brainwashed = val; settingsSave(true);}}
 
     get sedativeLevel(): number {return this.settings.sedativeLevel};
     set sedativeLevel(val: number) {if (this.settings.sedativeLevel != val) {this.settings.sedativeLevel = val; settingsSave(true);}}
@@ -800,20 +803,16 @@ export class InjectorModule extends BaseModule {
     }
 
     Brainwash() {
-        this.brainwashed = true;
         SendAction("%NAME%'s body goes limp as %POSSESSIVE% mind empties and %PRONOUN% awaits a command.");
-        this.hypnoModule?.SetEyes();
+        this.stateModule.HypnoState.Activate();
         this.settings.stats.brainwashedCount++;
         settingsSave();
     }
 
     SnapBack() {
         if (this.brainwashed) {
-            this.brainwashed = false;
             SendAction("%NAME% gasps, snapping back into their senses confused and blushing.");
-            setOrIgnoreBlush("Medium");
-            if (!!this.hypnoModule)
-                this.hypnoModule.ResetEyes();
+            this.stateModule.HypnoState.Recover();
         }
     }
 
@@ -1068,9 +1067,6 @@ export class InjectorModule extends BaseModule {
             this.miscModule?.SetSleepExpression();
             this.miscModule?.FallDownIfPossible();
             addCustomEffect(Player, "ForceKneel");
-        }
-        if (this.brainwashed) {
-            this.hypnoModule?.SetEyes();
         }
     }
 

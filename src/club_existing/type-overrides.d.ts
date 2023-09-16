@@ -18,6 +18,8 @@ type LSCGMessageModelType = "init" | "sync" | "command";
 
 type LSCGCommandName = "grab" | "release" | "remote" | "escape" | "collar-tighten" | "collar-loosen" | "collar-stats" | "photo";
 
+type LSCGState = "hypnotized" | "asleep" | "horny" | "choking" | "held";
+
 interface LSCGMessageModel {
     type: LSCGMessageModelType;
     version: string;

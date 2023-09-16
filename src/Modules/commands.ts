@@ -6,12 +6,14 @@ import { HypnoModule } from "./hypno";
 import { ItemUseModule } from "./item-use";
 import { ActivityModule } from "./activities";
 import { CollarModule } from "./collar";
+import { StateModule } from "./states";
 
 // Remote UI Module to handle configuration on other characters
 // Can be used to "program" another character's hypnosis, collar, etc.
 // Framework inspired from BCX
 export class CommandModule extends BaseModule {   
     
+	get states(): StateModule { return getModule<StateModule>("StateModule")! }
 	get hypno(): HypnoModule { return getModule<HypnoModule>("HypnoModule")! }
 	get collar(): CollarModule { return getModule<CollarModule>("CollarModule")! }
 
@@ -34,7 +36,7 @@ export class CommandModule extends BaseModule {
 				if (!this.hypno.Enabled)
 					return;
 
-				if (this.hypno.settings.immersive) {
+				if (this.states.HypnoState.config.immersive) {
 					LSCG_SendLocal("/zonk disabled while immersive", 5000);
 					return;
 				}
@@ -48,7 +50,7 @@ export class CommandModule extends BaseModule {
 				if (!this.hypno.Enabled)
 					return;
 
-				if (this.hypno.hypnoActivated && this.hypno.settings.immersive) {
+				if (this.hypno.hypnoActivated && this.states.HypnoState.config.immersive) {
 					LSCG_SendLocal("/unzonk disabled while immersive", 5000);
 					return;
 				}
@@ -64,7 +66,7 @@ export class CommandModule extends BaseModule {
 				let tightenTrigger = GetDelimitedList(this.collar.settings.tightTrigger);
 				let loosenTrigger = GetDelimitedList(this.collar.settings.looseTrigger);
 
-				let hypnoStr = !this.hypno.Enabled ? "<i>Hypnosis not enabled.</i>" : (this.hypno.settings.immersive ? "<i>Hypnosis triggers hidden while immersive...</i>" : `<b>Hypnosis:</b> ${hypnoTriggers}<br><b>Awakeners:</b> ${awakenerTriggers}`);
+				let hypnoStr = !this.hypno.Enabled ? "<i>Hypnosis not enabled.</i>" : (this.states.HypnoState.config.immersive ? "<i>Hypnosis triggers hidden while immersive...</i>" : `<b>Hypnosis:</b> ${hypnoTriggers}<br><b>Awakeners:</b> ${awakenerTriggers}`);
 				let collarStr = !this.collar.settings.enabled ? "<i>Breathplay Collar not enabled.</i>" : (this.collar.settings.immersive ? "<i>Collar triggers hidden while immersive...</i>" : `<b>Collar Tighten:</b> ${tightenTrigger}<br><b>Collar Loosen:</b> ${loosenTrigger}`);
 
 				LSCG_SendLocal(`Your current triggers are: <br>${hypnoStr}<br>${collarStr}`);
@@ -73,7 +75,7 @@ export class CommandModule extends BaseModule {
 			Tag: "cycle-trigger",
 			Description: ": Force a cycle to a new trigger word if enabled",
 			Action: () => {
-				if (this.hypno.settings.immersive) {
+				if (this.states.HypnoState.config) {
 					LSCG_SendLocal("/cycle-trigger disabled while immersive", 5000);
 					return;
 				}

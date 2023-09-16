@@ -2,6 +2,7 @@ import { RemoteGuiSubscreen } from "./remoteBase";
 import { Setting } from "Settings/settingBase";
 import { HypnoPublicSettingsModel } from "Settings/Models/hypno";
 import { GetDelimitedList, ICONS } from "utils";
+import { StateConfig } from "Settings/Models/states";
 
 export class RemoteHypno extends RemoteGuiSubscreen {
 	subscreens: RemoteGuiSubscreen[] = [];
@@ -19,9 +20,10 @@ export class RemoteHypno extends RemoteGuiSubscreen {
 		if (this.overrideMemberIds.length > 0)
 			memberIdIsAllowed = this.overrideMemberIds.indexOf(Player.MemberNumber!) > -1;
 
-		var isTrance = this.settings.hypnotized || this.Character?.LSCG?.InjectorModule?.brainwashed;
+		var isTrance = this.Character.LSCG.StateModule.states.find(s => s.type == "hypnotized")?.active ?? false;
 		var passTranceReq = (this.settings.remoteAccessRequiredTrance && isTrance) || !this.settings.remoteAccessRequiredTrance;
-		var passHypnotizerReq = (this.settings.limitRemoteAccessToHypnotizer && this.settings.hypnotizedBy == Player.MemberNumber) || !this.settings.limitRemoteAccessToHypnotizer;
+		var passHypnotizerReq = (this.settings.limitRemoteAccessToHypnotizer && this.Character.LSCG.StateModule.states.find(s => s.type == "hypnotized")?.activatedBy == Player.MemberNumber) || 
+								!this.settings.limitRemoteAccessToHypnotizer;
 
 		if (!memberIdIsAllowed)
 			return "You do not have access to their mind...";
@@ -38,9 +40,10 @@ export class RemoteHypno extends RemoteGuiSubscreen {
 		if (this.overrideMemberIds.length > 0)
 			memberIdIsAllowed = this.overrideMemberIds.indexOf(Player.MemberNumber!) > -1;
 
-		var isTrance = this.settings.hypnotized || this.Character?.LSCG?.InjectorModule?.brainwashed;
+		var isTrance = this.Character.LSCG.StateModule.states.find(s => s.type == "hypnotized")?.active ?? false;
 		var passTranceReq = (this.settings.remoteAccessRequiredTrance && isTrance) || !this.settings.remoteAccessRequiredTrance;
-		var passHypnotizerReq = (this.settings.limitRemoteAccessToHypnotizer && this.settings.hypnotizedBy == Player.MemberNumber) || !this.settings.limitRemoteAccessToHypnotizer;
+		var passHypnotizerReq = (this.settings.limitRemoteAccessToHypnotizer && this.Character.LSCG.StateModule.states.find(s => s.type == "hypnotized")?.activatedBy == Player.MemberNumber) || 
+								!this.settings.limitRemoteAccessToHypnotizer;
 
 		return this.settings.remoteAccess && 
 				(this.Character.IsOwnedByPlayer() ||
@@ -64,8 +67,19 @@ export class RemoteHypno extends RemoteGuiSubscreen {
 				type: "checkbox",
 				label: "Immersive Hypnosis:",
 				description: "Makes the hypnotized experience more restrictive. LSCG settings will be unavailable while hypnotized.",
-				setting: () => this.settings.immersive ?? false,
-				setSetting: (val) => this.settings.immersive = val
+				setting: () => this.Character.LSCG.StateModule.states.find(s => s.type == "hypnotized")?.immersive ?? false,
+				setSetting: (val) => {
+					let hypnoSetting = this.Character.LSCG.StateModule.states.find(s => s.type == "hypnotized");
+					if (!hypnoSetting) {
+						hypnoSetting = <StateConfig>{
+							type: "hypnotized",
+							extensions: {},
+							immersive: val
+						}
+						this.Character.LSCG.StateModule.states.push(hypnoSetting);
+					} else
+						hypnoSetting.immersive = val;
+				}
 			},<Setting>{
 				type: "text",
 				id: "hypno_overrideWords",

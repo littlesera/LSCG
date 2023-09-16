@@ -411,7 +411,13 @@ export function excludeParentheticalContent(msg: string): string {
 export function IsIncapacitated(C?: OtherCharacter | PlayerCharacter): boolean {
 	if (!C)
 		C = Player;
-	return C.LSCG?.HypnoModule?.hypnotized || C.LSCG?.InjectorModule?.asleep || C.LSCG?.InjectorModule?.brainwashed; // || getModule<MiscModule>("MiscModule")?.isChloroformed; -- Need to push chloroform status to public for this to work.
+	let hypnotized = false;
+	if (C.LSCG && !!C.LSCG.StateModule)
+		hypnotized = C.LSCG?.StateModule.states.find(s => s.type == "hypnotized")?.active ?? false; 
+	else if (C.LSCG && !!C.LSCG.HypnoModule) // LEGACY HANDLING
+		hypnotized = (C.LSCG.HypnoModule as any).hypnotized ?? false;
+	return hypnotized || C.LSCG?.InjectorModule?.asleep || C.LSCG?.InjectorModule?.brainwashed;
+	// || getModule<MiscModule>("MiscModule")?.isChloroformed; -- Need to push chloroform status to public for this to work.
 }
 
 export function GetMetadata(data: IChatRoomMessage): IChatRoomMessageMetadata | undefined {
