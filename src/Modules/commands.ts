@@ -36,7 +36,7 @@ export class CommandModule extends BaseModule {
 				if (!this.hypno.Enabled)
 					return;
 
-				if (this.states.HypnoState.config.immersive) {
+				if (this.states.settings.immersive) {
 					LSCG_SendLocal("/zonk disabled while immersive", 5000);
 					return;
 				}
@@ -50,7 +50,7 @@ export class CommandModule extends BaseModule {
 				if (!this.hypno.Enabled)
 					return;
 
-				if (this.hypno.hypnoActivated && this.states.HypnoState.config.immersive) {
+				if (this.hypno.hypnoActivated && this.states.settings.immersive) {
 					LSCG_SendLocal("/unzonk disabled while immersive", 5000);
 					return;
 				}
@@ -66,7 +66,7 @@ export class CommandModule extends BaseModule {
 				let tightenTrigger = GetDelimitedList(this.collar.settings.tightTrigger);
 				let loosenTrigger = GetDelimitedList(this.collar.settings.looseTrigger);
 
-				let hypnoStr = !this.hypno.Enabled ? "<i>Hypnosis not enabled.</i>" : (this.states.HypnoState.config.immersive ? "<i>Hypnosis triggers hidden while immersive...</i>" : `<b>Hypnosis:</b> ${hypnoTriggers}<br><b>Awakeners:</b> ${awakenerTriggers}`);
+				let hypnoStr = !this.hypno.Enabled ? "<i>Hypnosis not enabled.</i>" : (this.states.settings.immersive ? "<i>Hypnosis triggers hidden while immersive...</i>" : `<b>Hypnosis:</b> ${hypnoTriggers}<br><b>Awakeners:</b> ${awakenerTriggers}`);
 				let collarStr = !this.collar.settings.enabled ? "<i>Breathplay Collar not enabled.</i>" : (this.collar.settings.immersive ? "<i>Collar triggers hidden while immersive...</i>" : `<b>Collar Tighten:</b> ${tightenTrigger}<br><b>Collar Loosen:</b> ${loosenTrigger}`);
 
 				LSCG_SendLocal(`Your current triggers are: <br>${hypnoStr}<br>${collarStr}`);

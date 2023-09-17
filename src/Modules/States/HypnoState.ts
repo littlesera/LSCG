@@ -1,24 +1,22 @@
 import { StateConfig } from "Settings/Models/states";
-import { BaseState } from "./BaseState";
+import { BaseState, StateRestrictions } from "./BaseState";
 import { SendAction, getRandomInt, hookFunction, setOrIgnoreBlush, settingsSave } from "utils";
 import { getModule } from "modules";
 import { HypnoModule } from "Modules/hypno";
 import { HypnoSettingsModel } from "Settings/Models/hypno";
 import { ModuleCategory } from "Settings/setting_definitions";
+import { StateModule } from "Modules/states";
 
 export class HypnoState extends BaseState {
-    get config(): StateConfig {
-        return this.StateModule.getStateSetting("hypnotized");
-    }
-
-    get extensions(): any {
-        if (!this.config.extensions)
-            this.config.extensions = {};
-        return this.config.extensions;
-    }
+    Type: LSCGState = "hypnotized";
 
     get hypnoSettings(): HypnoSettingsModel {
         return getModule<HypnoModule>("HypnoModule").settings;
+    }
+
+    constructor(stateModule: StateModule) {
+        super(stateModule);
+        this.Restrictions.Walk = "whenImmersive";
     }
 
     Init() {
@@ -53,24 +51,26 @@ export class HypnoState extends BaseState {
     }
 
     Activate(memberNumber?: number, emote?: boolean) {
-        this.config.active = true;
-        this.config.activatedAt = new Date().getTime();
-        this.config.activatedBy = memberNumber ?? -1;
-        this.hypnoSettings.stats.hypnotizedCount++;
         this.SetEyes();
         this.CheckHypnotizedState();
+        super.Activate(memberNumber, emote);
     }
 
     Recover(emote?: boolean) {
-        this.ResetEyes();
-        CharacterSetFacialExpression(Player, "Eyes", null);
-        this.config.active = false;
-        this.config.recoveredAt = new Date().getTime();
-        settingsSave(true);
+        if (this.Active) {
+            this.ResetEyes();
+            CharacterSetFacialExpression(Player, "Eyes", null);
+            super.Recover(emote);
+        }
     }
 
-    CanWalk(): boolean {
-        return !this.config.immersive || !this.config.active;
+    RoomSync() {
+        this.CheckHypnotizedState();
+        this.IdleEmote();
+    }
+
+    SpeechBlock() {
+        this.IdleEmote();
     }
 
     _hornyCheck: number = 0;
@@ -88,16 +88,20 @@ export class HypnoState extends BaseState {
         "%NAME% sways weakly in %POSSESSIVE% place, drifting peacefully...",
         "%NAME% trembles as something deep and forgotten fails to resurface...",
         "%NAME% moans softly as %PRONOUN% drops even deeper into trance...",
-        "%NAME% quivers, patiently awaiting something to fill %POSSESSIVE% empty head..."
+        "%NAME% quivers, patiently awaiting something to fill %POSSESSIVE% empty head...",
+        "%NAME% stares blankly, %POSSESSIVE% mind open and suggestible...",
+        "%NAME%'s eyelids flutter gently, awaiting a command...",
+        "%NAME% trembles with a quiet moan as %PRONOUN% yearns to obey..."
     ];
 
     IdleEmote() {
-        SendAction(this.hypnoBlockStrings[getRandomInt(this.hypnoBlockStrings.length)]);
+        if (this.Active)
+            SendAction(this.hypnoBlockStrings[getRandomInt(this.hypnoBlockStrings.length)]);
     }
 
     // Hypnosis Handling
     CheckHypnotizedState() {
-        if (this.config?.active) {
+        if (this.Active) {
             this.EnforceEyes();
             setOrIgnoreBlush("Medium");
             CharacterSetFacialExpression(Player, "Eyebrows", "Lowered");

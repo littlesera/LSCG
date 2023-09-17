@@ -125,7 +125,7 @@ export class HypnoModule extends BaseModule {
         hookFunction('ServerSend', 5, (args, next) => {
             if (!this.Enabled)
                 return next(args);
-            // Prevent speech at choke level 4
+            
             if (this.hypnoActivated) {
                 var type = args[0];
                 if (type == "ChatRoomChat" && args[1].Type == "Chat" && args[1]?.Content[0] != "("){
@@ -217,7 +217,7 @@ export class HypnoModule extends BaseModule {
     }
 
     BlankOutTriggers(msg: string) {
-        if (!this.StateModule.HypnoState.config.immersive)
+        if (!this.StateModule.settings.immersive)
             return msg;
 
         let triggers = this.triggers.concat(this.awakeners);
@@ -338,6 +338,7 @@ export class HypnoModule extends BaseModule {
         else
             SendAction("%NAME%'s eyes glaze over, %POSSESSIVE% posture slumping weakly as %PRONOUN% loses control of %POSSESSIVE% body.");
         
+        this.settings.stats.hypnotizedCount++;
         this.StateModule.HypnoState.Activate(memberNumber);
     }
 

@@ -312,61 +312,58 @@ export class InjectorModule extends BaseModule {
     }
 
     InitializeRestrictiveHooks() {
-        hookFunction('ServerSend', 5, (args, next) => {
-            if (!this.Enabled)
-                return next(args);
+        // hookFunction('ServerSend', 5, (args, next) => {
+        //     if (!this.Enabled)
+        //         return next(args);
             
-            var type = args[0];
-            // Prevent speech while asleep
-            if ((type == "ChatRoomChat" && args[1].Type == "Chat" && args[1]?.Content[0] != "(")) {
-                if (this.asleep) {
-                    this.ActivateSleepEvent();
-                    return null;
-                } else if (this.brainwashed) {
-                    this.ActivateBrainwashEvent();
-                    return null;
-                }
-            }
-            return next(args);
-        }, ModuleCategory.Injector);
+        //     var type = args[0];
+        //     // Prevent speech while asleep
+        //     if ((type == "ChatRoomChat" && args[1].Type == "Chat" && args[1]?.Content[0] != "(")) {
+        //         if (this.asleep) {
+        //             this.ActivateSleepEvent();
+        //             return null;
+        //         }
+        //     }
+        //     return next(args);
+        // }, ModuleCategory.Injector);
 
-        hookFunction('Player.CanChangeOwnClothes', 1, (args, next) => {
-            if (this.Enabled && this.asleep)
-                return false;
-            return next(args);
-        }, ModuleCategory.Injector);
+        // hookFunction('Player.CanChangeOwnClothes', 1, (args, next) => {
+        //     if (this.Enabled && this.asleep)
+        //         return false;
+        //     return next(args);
+        // }, ModuleCategory.Injector);
 
-        hookFunction('Player.IsDeaf', 1, (args, next) => {
-            if (this.Enabled && this.asleep)
-                return true;
-            return next(args);
-        }, ModuleCategory.Injector);
+        // hookFunction('Player.IsDeaf', 1, (args, next) => {
+        //     if (this.Enabled && this.asleep)
+        //         return true;
+        //     return next(args);
+        // }, ModuleCategory.Injector);
 
-        hookFunction('Player.IsBlind', 1, (args, next) => {
-            if (this.Enabled && this.asleep)
-                return true;
-            return next(args);
-        }, ModuleCategory.Injector);
+        // hookFunction('Player.IsBlind', 1, (args, next) => {
+        //     if (this.Enabled && this.asleep)
+        //         return true;
+        //     return next(args);
+        // }, ModuleCategory.Injector);
 
-        hookFunction('Player.CanWalk', 1, (args, next) => {
-            if (this.Enabled && (this.asleep || this.brainwashed))
-                return false;
-            return next(args);
-        }, ModuleCategory.Injector);
+        // hookFunction('Player.CanWalk', 1, (args, next) => {
+        //     if (this.Enabled && (this.asleep || this.brainwashed))
+        //         return false;
+        //     return next(args);
+        // }, ModuleCategory.Injector);
 
-        hookFunction('ChatRoomCanAttemptStand', 1, (args, next) => {
-            if (this.Enabled && this.asleep)
-                return false;
-            return next(args);
-        }, ModuleCategory.Injector);
+        // hookFunction('ChatRoomCanAttemptStand', 1, (args, next) => {
+        //     if (this.Enabled && this.asleep)
+        //         return false;
+        //     return next(args);
+        // }, ModuleCategory.Injector);
 
-        hookFunction('ChatRoomFocusCharacter', 6, (args, next) => {
-            if (this.Enabled && this.asleep) {
-                LSCG_SendLocal("Character access blocked while asleep.", 5000);
-                return;
-            }
-            return next(args);
-        }, ModuleCategory.Injector);
+        // hookFunction('ChatRoomFocusCharacter', 6, (args, next) => {
+        //     if (this.Enabled && this.asleep) {
+        //         LSCG_SendLocal("Character access blocked while asleep.", 5000);
+        //         return;
+        //     }
+        //     return next(args);
+        // }, ModuleCategory.Injector);
 
         hookFunction("Player.HasTints", 4, (args, next) => {
             if (!this.Enabled || !Player.ImmersionSettings?.AllowTints)
@@ -457,20 +454,20 @@ export class InjectorModule extends BaseModule {
             return next(args);
         }, ModuleCategory.Injector);
 
-        hookFunction('ChatRoomSync', 1, (args, next) => {
-            if (this.asleep)
-                setTimeout(() => this.miscModule?.SetSleepExpression());
-            return next(args);
-        })
+        // hookFunction('ChatRoomSync', 1, (args, next) => {
+        //     if (this.asleep)
+        //         setTimeout(() => this.miscModule?.SetSleepExpression());
+        //     return next(args);
+        // })
     }
 
     sleepTotalTicks = 12;
     sleepTimer: number = 0;
     hypnoTimer: number = 0;
 
-    get asleep(): boolean { return this.settings.asleep };
-    set asleep(val: boolean) { if (this.settings.asleep != val){ this.settings.asleep = val; settingsSave(true);}}
-    get brainwashed(): boolean { return this.stateModule.HypnoState.config.active };
+    get asleep(): boolean { return this.stateModule.SleepState.Active };
+    //set asleep(val: boolean) { if (this.settings.asleep != val){ this.settings.asleep = val; settingsSave(true);}}
+    get brainwashed(): boolean { return this.stateModule.HypnoState.Active };
     // set brainwashed(val: boolean) { if (this.settings.brainwashed != val) {this.settings.brainwashed = val; settingsSave(true);}}
 
     get sedativeLevel(): number {return this.settings.sedativeLevel};
@@ -779,27 +776,12 @@ export class InjectorModule extends BaseModule {
     }
 
     Sleep(doEmote: boolean = true) {
-        this.asleep = true;
-        if (doEmote)
-            SendAction("%NAME% moans weakly as %PRONOUN% succumbs to unconciousness.");
-        this.miscModule?.SetSleepExpression();
-        if (Player.CanKneel()) {
-            this.miscModule?.FallDownIfPossible();
-            addCustomEffect(Player, "ForceKneel");
-        }
+        this.stateModule.SleepState.Activate(undefined, doEmote);
         this.settings.stats.sedatedCount++;
-        settingsSave();
     }
 
     Wake() {
-        if (this.asleep) {
-            this.asleep = false;
-            SendAction("%NAME%'s eyelids flutter and start to open sleepily...");
-            CharacterSetFacialExpression(Player, "Eyes", "Dazed");
-            if (WardrobeGetExpression(Player)?.Emoticon == "Sleep")
-                CharacterSetFacialExpression(Player, "Emoticon", null);
-            removeCustomEffect(Player, "ForceKneel");
-        }
+        this.stateModule.SleepState.Recover(true);
     }
 
     Brainwash() {
@@ -825,17 +807,6 @@ export class InjectorModule extends BaseModule {
 
     ActivateSleepEvent() {
         SendAction(this.sleepBlockStrings[getRandomInt(this.sleepBlockStrings.length)]);
-    }
-
-    brainwashBlockStrings = [
-        "%NAME% stares blankly, %POSSESSIVE% mind open and suggestible...",
-        "%NAME%'s eyelids flutter gently, awaiting a command...",
-        "%NAME% trembles with a quiet moan as %PRONOUN% yearns to obey...",
-        "%NAME% groans softly as %PRONOUN% drops even further under the drug's command..."
-    ];
-
-    ActivateBrainwashEvent() {
-        SendAction(this.brainwashBlockStrings[getRandomInt(this.brainwashBlockStrings.length)]);
     }
 
     HasNetgun(C: Character | null): boolean {
@@ -1063,11 +1034,6 @@ export class InjectorModule extends BaseModule {
     InitStates() {
         let item = InventoryGet(Player, "ItemMouth3");
         this._wasWearingRespirator = this.IsValidRespirator(item);
-        if (this.asleep) {
-            this.miscModule?.SetSleepExpression();
-            this.miscModule?.FallDownIfPossible();
-            addCustomEffect(Player, "ForceKneel");
-        }
     }
 
     CheckRespiratorCurseUpdate() {

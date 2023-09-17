@@ -18,7 +18,9 @@ type LSCGMessageModelType = "init" | "sync" | "command";
 
 type LSCGCommandName = "grab" | "release" | "remote" | "escape" | "collar-tighten" | "collar-loosen" | "collar-stats" | "photo";
 
-type LSCGState = "hypnotized" | "asleep" | "horny" | "choking" | "held";
+type LSCGState = "none" | "hypnotized" | "asleep" | "horny" | "choking" | "held";
+
+type LSCGImmersiveOption = "true" | "false" | "whenImmersive";
 
 interface LSCGMessageModel {
     type: LSCGMessageModelType;

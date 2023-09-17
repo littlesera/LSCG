@@ -103,6 +103,7 @@ export class PublicSettingsModel implements IPublicSettingsModel {
     };
     StateModule: StatePublicSettingsModel = <StatePublicSettingsModel>{
         enabled: true,
+        immersive: false,
         states: []
     }
 }

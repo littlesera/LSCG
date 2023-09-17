@@ -175,6 +175,11 @@ export class CoreModule extends BaseModule {
             Player.LSCG.Version = LSCG_VERSION;
             settingsSave();
         }
+        this.CheckForMigrations(previousVersion);
+    }
+
+    CheckForMigrations(fromVersion: string) {
+
     }
 
     SendPublicPacket(replyRequested: boolean, type: LSCGMessageModelType = "init") {
