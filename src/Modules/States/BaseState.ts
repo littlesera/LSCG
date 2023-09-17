@@ -13,6 +13,7 @@ export interface StateRestrictions {
     Wardrobe: LSCGImmersiveOption;
     CharacterAccess: LSCGImmersiveOption;
     Speech: LSCGImmersiveOption;
+    
 }
 
 export abstract class BaseState {
@@ -52,8 +53,6 @@ export abstract class BaseState {
         this._state = stateModule;
     }
 
-    abstract Init(): void;
-
     Activate(memberNumber?: number, emote?: boolean) {
         this.config.active = true;
         this.config.activatedAt = new Date().getTime();
@@ -68,6 +67,7 @@ export abstract class BaseState {
         settingsSave(true);
     }
     
+    abstract Init(): void;
     abstract Tick(now: number): void;
     abstract RoomSync(): void;
     abstract SpeechBlock(): void;

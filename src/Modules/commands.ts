@@ -50,7 +50,7 @@ export class CommandModule extends BaseModule {
 				if (!this.hypno.Enabled)
 					return;
 
-				if (this.hypno.hypnoActivated && this.states.settings.immersive) {
+				if (this.states.settings.immersive) {
 					LSCG_SendLocal("/unzonk disabled while immersive", 5000);
 					return;
 				}
@@ -75,7 +75,7 @@ export class CommandModule extends BaseModule {
 			Tag: "cycle-trigger",
 			Description: ": Force a cycle to a new trigger word if enabled",
 			Action: () => {
-				if (this.states.HypnoState.config) {
+				if (this.states.settings.immersive) {
 					LSCG_SendLocal("/cycle-trigger disabled while immersive", 5000);
 					return;
 				}

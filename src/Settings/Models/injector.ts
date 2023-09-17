@@ -15,7 +15,7 @@ export interface InjectorModuleStats extends ModuleStats {
 }
 
 export interface InjectorSettingsModel extends InjectorPublicSettingsModel {
-    immersive: boolean;
+    //immersive: boolean;
     enableSedative: boolean;
     enableMindControl: boolean;
     enableHorny: boolean;
@@ -40,8 +40,8 @@ export interface InjectorSettingsModel extends InjectorPublicSettingsModel {
 }
 
 export interface InjectorPublicSettingsModel extends BaseSettingsModel {
-    asleep: boolean;
-    brainwashed: boolean;
+    //asleep: boolean;
+    //brainwashed: boolean;
     sedativeLevel: number;
     mindControlLevel: number;
     hornyLevel: number;

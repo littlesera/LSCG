@@ -49,7 +49,7 @@ export class InjectorModule extends BaseModule {
     get defaultSettings() {
         return <InjectorSettingsModel>{
             enabled: false,
-            immersive: false,
+            //immersive: false,
             enableSedative: false,
             enableMindControl: false,
             enableHorny: false,
@@ -79,8 +79,8 @@ export class InjectorModule extends BaseModule {
             continuousDeliveryActivatedAt: 0,
             continuousDeliveryTimeout: 60 * 60 * 1000, // By default, stop delivering continuous drug after 2 hours
 
-            asleep: false,
-            brainwashed: false,
+            //asleep: false,
+            //brainwashed: false,
             stats: {},
 
             sipLimit: 0
@@ -368,23 +368,21 @@ export class InjectorModule extends BaseModule {
         hookFunction("Player.HasTints", 4, (args, next) => {
             if (!this.Enabled || !Player.ImmersionSettings?.AllowTints)
                 return next(args);
-            if (this.hornyLevel > 0 || this.brainwashed) return true;
+            if (this.hornyLevel > 0) return true;
             return next(args);
         }, ModuleCategory.Injector);
         
         hookFunction("Player.GetTints", 4, (args, next) => {
             if (!this.Enabled || !Player.ImmersionSettings?.AllowTints)
                 return next(args);
-            if (this.brainwashed) return [{r: 148, g: 0, b: 211, a: 0.4}];
-            else if (this.hornyLevel > 0) return [{r: 254, g: 44, b: 84, a: (this.hornyLevel/(this.hornyLevelMax*this.drugLevelMultiplier*4))}];
+            if (this.hornyLevel > 0) return [{r: 254, g: 44, b: 84, a: (this.hornyLevel/(this.hornyLevelMax*this.drugLevelMultiplier*4))}];
             return next(args);
         }, ModuleCategory.Injector);
 
         hookFunction("Player.GetBlurLevel", 4, (args, next) => {
             if (!this.Enabled || !Player.GraphicsSettings!.AllowBlur)
                 return next(args);
-            if (this.brainwashed) return 3;
-            else if (this.hornyLevel > 0) return Math.max(0, (this.hornyLevel / this.drugLevelMultiplier) - 1);
+            if (this.hornyLevel > 0) return Math.max(0, (this.hornyLevel / this.drugLevelMultiplier) - 1);
             return next(args);
         }, ModuleCategory.Injector);
 
@@ -424,12 +422,12 @@ export class InjectorModule extends BaseModule {
             // Heardbeat every hornyTickTime
             if (this.hornyLevel > 0 && this.hornyLastBumped + this.settings.hornyTickTime < now) {
                 this.hornyLastBumped = now;
-                var newProgress = (Player.ArousalSettings?.Progress ?? 0) + (this.hornyLevel/this.drugLevelMultiplier) * 4;
-                newProgress = Math.min(99, newProgress);
                 if (getRandomInt(this.hornyLevelMax) <= Math.floor(this.hornyLevel/this.drugLevelMultiplier)) {
                     if (this.settings.heartbeat && !AudioShouldSilenceSound(true)) AudioPlayInstantSound(AUDIO.HEARTBEAT, getPlayerVolume(0));
                     DrawFlashScreen("#FF647F", 1000, this.hornyLevel);
                 }
+                var newProgress = (Player.ArousalSettings?.Progress ?? 0) + (this.hornyLevel/this.drugLevelMultiplier) * 4;
+                newProgress = Math.min(99, newProgress);
                 ActivitySetArousal(Player, newProgress);
             }
 

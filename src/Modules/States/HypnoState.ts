@@ -23,21 +23,21 @@ export class HypnoState extends BaseState {
         hookFunction("Player.HasTints", 4, (args, next) => {
             if (!this.StateModule.Enabled || !Player.ImmersionSettings?.AllowTints)
                 return next(args);
-            if (this.config.active) return true;
+            if (this.Active) return true;
             return next(args);
         }, ModuleCategory.States);
         
         hookFunction("Player.GetTints", 4, (args, next) => {
             if (!this.StateModule.Enabled || !Player.ImmersionSettings?.AllowTints)
                 return next(args);
-            if (this.config.active) return [{r: 148, g: 0, b: 211, a: 0.4}];
+            if (this.Active) return [{r: 148, g: 0, b: 211, a: 0.4}];
             return next(args);
         }, ModuleCategory.States);
             
         hookFunction("Player.GetBlurLevel", 4, (args, next) => {
             if (!this.StateModule.Enabled || !Player.GraphicsSettings?.AllowBlur)
                 return next(args);
-            if (this.config.active) return 3;
+            if (this.Active) return 3;
             return next(args);
         }, ModuleCategory.States);
 
@@ -170,7 +170,7 @@ export class HypnoState extends BaseState {
     }
 
     HornyTick() {
-        if (this.config.active && this.hypnoSettings.enableArousal) {
+        if (this.Active && this.hypnoSettings.enableArousal) {
             var progress = Math.min(99, (Player.ArousalSettings?.Progress ?? 0) + 5);
             ActivitySetArousal(Player, progress);
         }

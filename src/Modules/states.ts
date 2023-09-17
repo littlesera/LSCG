@@ -1,15 +1,14 @@
 import { BaseModule } from "base";
-import { getModule } from "modules";
-import { BaseSettingsModel } from "Settings/Models/base";
-import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
-import { GetTargetCharacter, IsIncapacitated, LSCG_SendLocal, OnActivity, SendAction, getRandomInt, hookFunction, removeAllHooksByModule, setOrIgnoreBlush, settingsSave } from "../utils";
-import { MiscModule } from "./misc";
+import { ModuleCategory } from "Settings/setting_definitions";
+import { LSCG_SendLocal, hookFunction, removeAllHooksByModule } from "../utils";
 import { StateConfig, StateSettingsModel } from "Settings/Models/states";
-import { HypnoModule } from "./hypno";
 import { HypnoState } from "./States/HypnoState";
 import { SleepState } from "./States/SleepState";
 import { BaseState, StateRestrictions } from "./States/BaseState";
-import { GuiStates } from "Settings/states";
+import { HornyState } from "./States/HornyState";
+import { BlindState } from "./States/BlindState";
+import { DeafState } from "./States/DeafState";
+import { FrozenState } from "./States/FrozenState";
 
 export class StateModule extends BaseModule {
     // get settingsScreen(): Subscreen | null {
@@ -34,6 +33,7 @@ export class StateModule extends BaseModule {
             config = <StateConfig>{
                 type: type,
                 active: false,
+                activationCount: 0,
                 extensions: {}
             };
             this.settings.states.push(config);
@@ -42,9 +42,13 @@ export class StateModule extends BaseModule {
     }
 
     // States
-    States: BaseState[] = [];
-    HypnoState: HypnoState;
+    States: BaseState[];
     SleepState: SleepState;
+    HypnoState: HypnoState;
+    HornyState: HornyState;
+    BlindState: BlindState;
+    DeafState: DeafState;
+    FrozenState: FrozenState;
 
     GetRestriction(state: BaseState, restriction: LSCGImmersiveOption): boolean {
         return state.Active &&
@@ -63,7 +67,12 @@ export class StateModule extends BaseModule {
         super();
         this.SleepState = new SleepState(this);
         this.HypnoState = new HypnoState(this);
-        this.States = [this.SleepState, this.HypnoState];
+        this.HornyState = new HornyState(this);
+        this.BlindState = new BlindState(this);
+        this.DeafState = new DeafState(this);
+        this.FrozenState = new FrozenState(this);
+
+        this.States = [this.SleepState, this.FrozenState, this.HypnoState, this.BlindState, this.DeafState, this.HornyState];
         
         // States module in general is always enabled. Toggling is done on each specific state.
         this.settings.enabled = true;
@@ -73,11 +82,6 @@ export class StateModule extends BaseModule {
     _tickInterval: number = 1000; // ever second
 
     load(): void {
-        if (!this.SleepState)
-            this.SleepState = new SleepState(this);
-        if (!this.HypnoState)
-            this.HypnoState = new HypnoState(this);
-
         // General Hooks
         hookFunction("ChatRoomSync", 10, (args, next) => {
             next(args);
