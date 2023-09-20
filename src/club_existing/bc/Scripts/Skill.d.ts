@@ -36,11 +36,12 @@ declare function SkillGetLevelReal(C: Character, SkillType: SkillType): number;
 declare function SkillGetProgress(C: Character, SkillType: SkillType): number;
 /**
  * Add progress to a skill, the skill progresses slower for each level, takes into account cheaters version.
+ * @param {Character} C - The character to get skills from
  * @param {SkillType} SkillType - Name of the skill to add progress to
  * @param {number} Progress - Progress to be made before the ratios are applied
  * @returns {void} - Nothing
  */
-declare function SkillProgress(SkillType: SkillType, Progress: number): void;
+declare function SkillProgress(C: Character, SkillType: SkillType, Progress: number): void;
 /**
  * Sets the ratio % of a skill that's going to be used by the player
  * @param {SkillType} SkillType - Name of the skill to get the value of
