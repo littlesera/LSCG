@@ -3,11 +3,12 @@ import { HypnoModule } from "Modules/hypno";
 import { ICONS } from "utils";
 import { HypnoSettingsModel } from "./Models/hypno";
 import { GuiSubscreen, Setting } from "./settingBase";
+import { StateConfig } from "./Models/states";
 
 export class GuiHypno extends GuiSubscreen {
 
 	get name(): string {
-		return "Hypnosis";
+		return "Triggered Hypnosis";
 	}
 
 	get icon(): string {
@@ -32,16 +33,27 @@ export class GuiHypno extends GuiSubscreen {
 					<Setting>{
 						type: "checkbox",
 						label: "Enabled:",
-						description: "Enabled the Hypnosis Features.",
+						description: "Enabled the Triggered Hypnosis Features.",
 						setting: () => this.settings.enabled ?? false,
 						setSetting: (val) => this.settings.enabled = val
-					},<Setting>{
-						type: "checkbox",
-						label: "Immersive Hypnosis:",
-						description: "Makes the hypnotized experience more restrictive. LSCG settings will be unavailable while hypnotized and triggers are hidden.",
-						disabled: !this.settings.enabled,
-						setting: () => this.settings.immersive ?? false,
-						setSetting: (val) => this.settings.immersive = val
+					// },<Setting>{
+					// 	type: "checkbox",
+					// 	label: "Immersive Hypnosis:",
+					// 	description: "Makes the hypnotized experience more restrictive. LSCG settings will be unavailable while hypnotized and triggers are hidden.",
+					// 	disabled: !this.settings.enabled,
+					// 	setting: () => Player.LSCG.StateModule.states.find(s => s.type == "hypnotized")?.immersive ?? false,
+					// 	setSetting: (val) => {
+					// 		let hypnoSetting = Player.LSCG.StateModule.states.find(s => s.type == "hypnotized");
+					// 		if (!hypnoSetting) {
+					// 			hypnoSetting = <StateConfig>{
+					// 				type: "hypnotized",
+					// 				extensions: {},
+					// 				immersive: val
+					// 			}
+					// 			Player.LSCG.StateModule.states.push(hypnoSetting);
+					// 		} else
+					// 			hypnoSetting.immersive = val;
+					// 	}
 					},<Setting>{
 						type: "text",
 						id: "hypno_overrideWords",
