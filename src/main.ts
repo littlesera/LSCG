@@ -14,6 +14,7 @@ import { RemoteUIModule } from 'Modules/remoteUI';
 import { CommandModule } from 'Modules/commands';
 import { ItemUseModule } from 'Modules/item-use';
 import { StateModule } from 'Modules/states';
+import { MagicModule } from 'Modules/magic';
 
 function initWait() {
 	console.debug("LSCG: Init wait");
@@ -102,6 +103,7 @@ function init_modules(): boolean {
 	registerModule(new InjectorModule());
 	registerModule(new ActivityModule());
 	registerModule(new ItemUseModule());
+	registerModule(new MagicModule());
 	registerModule(new RemoteUIModule());
 	registerModule(new CommandModule());
 

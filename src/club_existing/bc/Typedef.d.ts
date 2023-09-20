@@ -3672,6 +3672,8 @@ interface PreviewDrawOptions {
 	Icons?: readonly InventoryIcon[];
 	/** The crafted properties of the item */
 	Craft?: CraftingItem;
+	Width?: number;
+	Height?: number;
 }
 
 // #end region

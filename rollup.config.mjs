@@ -30,14 +30,14 @@ console.debug("LSCG: Parse start...");
       const git = simpleGit();
       console.log(await git.status());
       let LSCG_VERSION = packageJson.version;
-      await git.tags((err, tags) => {
-        if (!!tags.latest) {
-          console.log('\nUsing tag version: %s\n', tags.latest);
-          LSCG_VERSION = tags.latest;
-        } else {
-          console.log('\nUnable to determine latest tag: %s\n', tags.latest);
-        }
-      });
+      // await git.tags((err, tags) => {
+      //   if (!!tags.latest) {
+      //     console.log('\nUsing tag version: %s\n', tags.latest);
+      //     LSCG_VERSION = tags.latest;
+      //   } else {
+      //     console.log('\nUnable to determine latest tag: %s\n', tags.latest);
+      //   }
+      // });
       LSCG_VERSION = (LSCG_VERSION.length > 0 && LSCG_VERSION[0] == 'v') ? LSCG_VERSION : "v" + LSCG_VERSION;
       return `const LSCG_VERSION="${LSCG_VERSION}";`;
     }

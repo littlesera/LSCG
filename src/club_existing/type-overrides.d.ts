@@ -14,9 +14,18 @@ interface LSCGMessageDictionaryEntry {
     message: LSCGMessageModel;
 }
 
+interface CommonGenerateGridParameters {
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    itemWidth: number,
+    itemHeight: number
+}
+
 type LSCGMessageModelType = "init" | "sync" | "command";
 
-type LSCGCommandName = "grab" | "release" | "remote" | "escape" | "collar-tighten" | "collar-loosen" | "collar-stats" | "photo";
+type LSCGCommandName = "grab" | "release" | "remote" | "escape" | "collar-tighten" | "collar-loosen" | "collar-stats" | "photo" | "spell";
 
 type LSCGState = "none" | "hypnotized" | "asleep" | "horny" | "choking" | "held" | "blind" | "deaf" | "frozen";
 

@@ -123,6 +123,10 @@ export class ItemUseModule extends BaseModule {
 		"Camera1",
 	];
 
+	MagicWandItems: string[] = [
+		"RainbowWand"
+	]
+
     load(): void {
 		hookFunction("ActivityGenerateItemActivitiesFromNeed", 1, (args, next) => {
 			let allowed = args[0];
@@ -201,6 +205,10 @@ export class ItemUseModule extends BaseModule {
 					results.push(item);
 				else if (!!acc && this.CameraItems.indexOf(acc.Asset?.Name) > -1) 
 					results.push(acc);
+			} else if (itemType == "MagicItem") {
+				let item = InventoryGet(C, "ItemHandheld");
+				if (!!item && this.MagicWandItems.indexOf(item.Asset?.Name) > -1) 
+					results.push(item);
 			}
 			return results;
 		}, ModuleCategory.ItemUse);
