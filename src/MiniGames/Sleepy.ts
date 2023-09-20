@@ -50,7 +50,7 @@ export class SleepyMiniGame extends BaseMiniGame {
         this.GameEndTime = MiniGameTimer;
         CharacterSetFacialExpression(Player, "Eyes", Victory ? null : "Closed");
         if (Victory)
-            SkillProgress("Willpower", this.SleepyChallenge);
+            SkillProgress(Player, "Willpower", this.SleepyChallenge);
     }
 
     Load(): void {
