@@ -78,7 +78,7 @@ export class HypnoState extends BaseState {
     Tick(now: number) {
         if (this._hornyCheck > (now + this._hornyInterval)) {
             this._hornyCheck = now;
-            this.HornyTick();
+            this.ArousalTick();
         }
     }
 
@@ -169,7 +169,7 @@ export class HypnoState extends BaseState {
         settingsSave();
     }
 
-    HornyTick() {
+    ArousalTick() {
         if (this.Active && this.hypnoSettings.enableArousal) {
             var progress = Math.min(99, (Player.ArousalSettings?.Progress ?? 0) + 5);
             ActivitySetArousal(Player, progress);

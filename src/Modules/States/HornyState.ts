@@ -12,13 +12,14 @@ export class HornyState extends BaseState {
 
     Init(): void {
         hookFunction('ActivitySetArousalTimer', 1, (args, next) => {
-            let Activity = args[1];
-            let Zone = args[2];
-            let Progress = args[3];
+            if (this.Active) {
+                let Activity = args[1];
+                let Zone = args[2];
+                let Progress = args[3];
 
-            let hornyMod = 2;
-            args[3] = Math.min(99, Progress * hornyMod);
-
+                let hornyMod = 2;
+                args[3] = Math.min(99, Progress * hornyMod);
+            }
             return next(args);
         }, ModuleCategory.States);
     }
