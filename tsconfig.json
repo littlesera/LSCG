@@ -17,5 +17,12 @@
 		"esModuleInterop": true,
 		"resolveJsonModule": true
 	},
-	"include": ["./src/**/*"]
+	"include": [
+		//"node_modules/bc-stubs/bc/**/*.d.ts",
+		"./src/**/*"
+	],
+	// "exclude": [
+	// 	"node_modules/bc-stubs/bc/Female3DCG_Types.d.ts",
+	// 	"node_modules/bc-stubs/bc/Typedef.d.ts"
+	// ]
 }

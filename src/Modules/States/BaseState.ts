@@ -67,6 +67,10 @@ export abstract class BaseState {
         settingsSave(true);
     }
     
+    Safeword(): void {
+        this.Recover(false);
+    }
+
     abstract Init(): void;
     abstract Tick(now: number): void;
     abstract RoomSync(): void;

@@ -27,6 +27,10 @@ export class StateModule extends BaseModule {
         };
     }
 
+    safeword(): void {
+        this.States.forEach(s => s.Safeword());
+    }
+
     getStateSetting(type: LSCGState): StateConfig {
         var config = this.settings.states.find(s => s.type == type);
         if (!config) {
