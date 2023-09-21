@@ -1,3 +1,5 @@
+declare const LZString: import("lz-string").LZStringStatic;
+
 interface PlayerCharacter extends Character {
     LSCG: import("Settings/Models/settings").SettingsModel;
 }
@@ -7,7 +9,7 @@ interface OtherCharacter extends Character {
 }
 
 interface PlayerOnlineSettings {
-	LSCG: import("Settings/Models/settings").SettingsModel;
+	LSCG: import("Settings/Models/settings").SettingsModel | string;
 }
 
 interface LSCGMessageDictionaryEntry {
@@ -25,9 +27,9 @@ interface CommonGenerateGridParameters {
 
 type LSCGMessageModelType = "init" | "sync" | "command";
 
-type LSCGCommandName = "grab" | "release" | "remote" | "escape" | "collar-tighten" | "collar-loosen" | "collar-stats" | "photo" | "spell";
+type LSCGCommandName = "grab" | "release" | "remote" | "escape" | "collar-tighten" | "collar-loosen" | "collar-stats" | "photo" | "spell" | "spell-pair";
 
-type LSCGState = "none" | "hypnotized" | "asleep" | "horny" | "choking" | "held" | "blind" | "deaf" | "frozen";
+type LSCGState = "none" | "hypnotized" | "asleep" | "horny" | "choking" | "held" | "blind" | "deaf" | "frozen" | "gagged" | "redressed" | "paired";
 
 type LSCGImmersiveOption = "true" | "false" | "whenImmersive";
 

@@ -111,6 +111,15 @@ export class PublicSettingsModel implements IPublicSettingsModel {
     };
     MagicModule: MagicPublicSettingsModel = <MagicPublicSettingsModel>{
         enabled: false,
-        blockedSpellEffects: []
+        enableWildMagic: false,
+        forceWildMagic: false,
+        trueWildMagic: false,
+        blockedSpellEffects: [],
+        lockable: false,
+        locked: false,
+        remoteAccess: false,
+        remoteAccessRequiredTrance: false,
+        limitRemoteAccessToHypnotizer: false,
+        remoteMemberIds: ""
     }
 }

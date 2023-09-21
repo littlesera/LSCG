@@ -12,6 +12,7 @@ import * as semver from "semver";
 import { StateConfig } from "Settings/Models/states";
 import { BaseMigrator } from "./Migrators/BaseMigrator";
 import { StateMigrator } from "./Migrators/StateMigrator";
+import { MagicModule } from "./magic";
 
 // Core Module that can handle basic functionality like server handshakes etc.
 // Maybe can consolidate things like hypnosis/suffocation basic state handling too..
@@ -255,6 +256,7 @@ export class CoreModule extends BaseModule {
                 let prevCollarPurchase = Player.LSCG?.CollarModule?.collarPurchased;
                 Object.assign(Player.LSCG.HypnoModule, msg.settings?.HypnoModule);
                 Object.assign(Player.LSCG.CollarModule, msg.settings?.CollarModule);
+                Object.assign(Player.LSCG.MagicModule, msg.settings?.MagicModule);
                 getModule<HypnoModule>("HypnoModule")?.initializeTriggerWord();
                 settingsSave(true);
                 let currentCollarPurchase = Player.LSCG?.CollarModule?.collarPurchased;
@@ -275,6 +277,9 @@ export class CoreModule extends BaseModule {
             case "photo":
                 DrawFlashScreen("#FFFFFF", 500, 1500);
                 break;
+            case "spell":
+            case "spell-pair":
+                getModule<MagicModule>("MagicModule").IncomingSpellCommand(Sender, msg);
         }
     }
 

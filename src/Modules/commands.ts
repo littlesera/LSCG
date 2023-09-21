@@ -174,6 +174,13 @@ export class CommandModule extends BaseModule {
 					LSCG_SendLocal(`<b>/lscg collar</b> [tight/loose/stat] : Use to self-tighten, self-loosen, or read out information about your collar if allowed. Must be unrestrained to use."`);
 				}
 			}
+		}, {
+			Tag: "conditions",
+			Description: " : List which conditions are currently active on you.",
+			Action: (args, msg, parsed) => {
+				let stateList = this.states.States.filter(s => s.Active).map(s => `<li>${s.Type}</li>`).join("");
+				LSCG_SendLocal(`<div><b>Active Conditions:</b><ul>${stateList}</ul></div>`, 12000);
+			}
 		}
 	]
 

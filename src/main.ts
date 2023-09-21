@@ -62,7 +62,10 @@ export function init() {
 	if (!!(<any>Player.OnlineSettings)?.ClubGames)
 		delete (<any>Player.OnlineSettings).ClubGames;
 
-    Player.LSCG = Player.OnlineSettings?.LSCG || <SettingsModel>{};
+	if (typeof Player.OnlineSettings?.LSCG == "string")
+    	Player.LSCG = JSON.parse(LZString.decompressFromBase64(Player.OnlineSettings?.LSCG)) || <SettingsModel>{};
+	else
+	Player.LSCG = Player.OnlineSettings?.LSCG || <SettingsModel>{};
 
 	initSettingsScreen();
 

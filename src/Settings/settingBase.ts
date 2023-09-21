@@ -114,7 +114,7 @@ export abstract class GuiSubscreen {
 			if (ix != (PreferencePageCurrent-1)) {
 				s.forEach(setting => {
 					if (setting.type == "text" || setting.type == "number" || setting.type == "dropdown")
-					this.ElementHide(setting.id);
+						this.ElementHide(setting.id);
 				})
 			}
 		})
@@ -162,7 +162,7 @@ export abstract class GuiSubscreen {
 					this.ElementPosition(item.id, item.label, item.description, ix, item.disabled, item.hidden);
 					break;
 				case "label":
-					this.DrawLabel(item.label, item.description, ix);
+					if (!item.hidden) this.DrawLabel(item.label, item.description, ix);
 					break;
 			}
 		});
@@ -234,9 +234,10 @@ export abstract class GuiSubscreen {
 
 	DrawCheckbox(label: string, description: string, value: boolean, order: number, disabled: boolean = false, hidden: boolean = false) {
 		var isHovering = MouseIn(this.getXPos(order), this.getYPos(order) - 32, 600, 64);
-		DrawTextFit(label, this.getXPos(order), this.getYPos(order), 600, isHovering ? "Red" : "Black", "Gray");
-		if (!hidden)
+		if (!hidden) {
 			DrawCheckbox(this.getXPos(order) + 600, this.getYPos(order) - 32, 64, 64, "", value ?? false, disabled);
+			DrawTextFit(label, this.getXPos(order), this.getYPos(order), 600, isHovering ? "Red" : "Black", "Gray");
+		}
 		if (isHovering) this.Tooltip(description);
 	}
 
@@ -246,8 +247,9 @@ export abstract class GuiSubscreen {
 
 	ElementPosition(elementId: string, label: string, description: string, order: number, disabled: boolean = false, hidden: boolean = false) {
 		var isHovering = MouseIn(this.getXPos(order), this.getYPos(order) - 32, 600, 64);
-		DrawTextFit(label, this.getXPos(order), this.getYPos(order), 600, isHovering ? "Red" : "Black", "Gray");
-		ElementPosition(elementId, this.getXPos(order) + 750, this.hidden ? 9999 : this.getYPos(order), 300);
+		if (!hidden)
+			DrawTextFit(label, this.getXPos(order), this.getYPos(order), 600, isHovering ? "Red" : "Black", "Gray");
+		ElementPosition(elementId, this.getXPos(order) + 750, hidden ? 9999 : this.getYPos(order), 300);
 		if (disabled)
 			ElementSetAttribute(elementId, "disabled", "true");
 		else{
@@ -266,5 +268,12 @@ export abstract class GuiSubscreen {
 		var isHovering = MouseIn(this.getXPos(order), this.getYPos(order) - 32, 600, 64);
 		DrawTextFit(name, this.getXPos(order), this.getYPos(order), 600, isHovering ? "Red" : "Black", "Gray");
 		if (isHovering) this.Tooltip(description);
+	}
+
+	GetNewIndexFromNextPrevClick(midpoint: number, currentIndex: number, listLength: number): number {
+		if (MouseX <= midpoint) 
+			return (listLength + currentIndex - 1) % listLength;
+		else 
+			return (currentIndex + 1) % listLength;
 	}
 }

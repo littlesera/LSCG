@@ -4,7 +4,7 @@ import { LSCGSpellEffect, MagicSettingsModel, SpellDefinition } from "./Models/m
 export class GuiMagic extends GuiSubscreen {
 
 	get name(): string {
-		return "Magic & Potions";
+		return "Magic™";
 	}
 
 	get icon(): string {
@@ -18,14 +18,48 @@ export class GuiMagic extends GuiSubscreen {
 	get multipageStructure(): Setting[][] {
 		if (!this.settings.enabled)
 			return [[]];
+		else if (this.settings.locked)
+			return [[
+				<Setting>{
+					type: "label",
+					label: "** Magic™ Settings Locked **",
+					description: "Magic™ Settings Locked Remotely"
+				} 
+			]]
 		else
 			return [[
 				<Setting>{
 					type: "checkbox",
 					label: "Enabled:",
-					description: "Enabled the use and application of Magic(tm).",
+					description: "Enabled the use and application of Magic™.",
 					setting: () => this.settings.enabled ?? false,
 					setSetting: (val) => this.settings.enabled = val
+				}, <Setting>{
+					type: "checkbox",
+					label: "Enable Wild Magic:",
+					description: "Cast a random spell from your spell list, with a chance of a truly random spell.",
+					setting: () => this.settings.enableWildMagic ?? false,
+					setSetting: (val) => {
+						this.settings.enableWildMagic = val
+						if (!val) {
+							this.settings.forceWildMagic = false;
+							this.settings.trueWildMagic = false;
+						}
+					}
+				}, <Setting>{
+					type: "checkbox",
+					label: "Force Wild Magic",
+					description: "Prevent the ability to choose the spell you are casting.",
+					disabled: !this.settings.enableWildMagic,
+					setting: () => this.settings.forceWildMagic ?? false,
+					setSetting: (val) => this.settings.forceWildMagic = val
+				}, <Setting>{
+					type: "checkbox",
+					label: "True Wild Magic",
+					description: "Generate a truly random spell whenever casting.",
+					disabled: !this.settings.enableWildMagic,
+					setting: () => this.settings.trueWildMagic ?? false,
+					setSetting: (val) => this.settings.trueWildMagic = val
 				}, <Setting>{
 					type: "label",
 					label: "Blocked Effects:",
@@ -60,6 +94,7 @@ export class GuiMagic extends GuiSubscreen {
 						label: "Effect #1:",
 						description: "An effect the spell has.",
 						options: this.Effects,
+						hidden: !this.Spell,
 						setting: () => this.Spell?.Effects.length > 0 ? (this.Spell?.Effects[0] ?? "None") : "None",
 						setSetting: (val) => { if (!!this.Spell) this.Spell.Effects = this.Spell.Effects.concat(val).filter((eff, ix, arr) => arr.indexOf(eff) == ix) },
 					},<Setting>{
@@ -72,6 +107,7 @@ export class GuiMagic extends GuiSubscreen {
 						label: "Effect #2:",
 						description: "An effect the spell has.",
 						options: this.Effects,
+						hidden: !this.Spell,
 						setting: () => this.Spell?.Effects.length > 1 ? (this.Spell?.Effects[1] ?? "None") : "None",
 						setSetting: (val) => { if (!!this.Spell) this.Spell.Effects = this.Spell.Effects.concat(val).filter((eff, ix, arr) => arr.indexOf(eff) == ix) },
 					},<Setting>{
@@ -84,6 +120,7 @@ export class GuiMagic extends GuiSubscreen {
 						label: "Effect #3:",
 						description: "An effect the spell has.",
 						options: this.Effects,
+						hidden: !this.Spell,
 						setting: () => this.Spell?.Effects.length > 2 ? (this.Spell?.Effects[2] ?? "None") : "None",
 						setSetting: (val) => { if (!!this.Spell) this.Spell.Effects = this.Spell.Effects.concat(val).filter((eff, ix, arr) => arr.indexOf(eff) == ix) },
 					},<Setting>{
@@ -91,15 +128,80 @@ export class GuiMagic extends GuiSubscreen {
 						label: "",
 						description: ""
 					}
+				], [
+					<Setting>{
+						type: "checkbox",
+						label: "Allow Remote Access:",
+						description: "If checked, allowed users can modify these settings.",
+						disabled: !this.settings.enabled,
+						setting: () => this.settings.remoteAccess ?? false,
+						setSetting: (val) => this.settings.remoteAccess = val
+					},<Setting>{
+						type: "checkbox",
+						label: "Lockable:",
+						description: "If checked, allowed users can lock you out of these settings.",
+						disabled: !this.settings.enabled || !this.settings.remoteAccess,
+						setting: () => this.settings.lockable ?? false,
+						setSetting: (val) => this.settings.lockable = val
+					},<Setting>{
+						type: "checkbox",
+						label: "Remote Access Requires Trance:",
+						description: "If checked, remote access is only possible while actively hypnotized.",
+						disabled: !this.settings.enabled || !this.settings.remoteAccess,
+						setting: () => this.settings.remoteAccessRequiredTrance ?? true,
+						setSetting: (val) => this.settings.remoteAccessRequiredTrance = val
+					},<Setting>{
+						type: "checkbox",
+						label: "Remote Access Limited to Hypnotizer:",
+						description: "If checked, only the user who hypnotized you can access your settings (after matching other conditions).",
+						disabled: !this.settings.enabled || !this.settings.remoteAccess,
+						setting: () => this.settings.limitRemoteAccessToHypnotizer ?? true,
+						setSetting: (val) => this.settings.limitRemoteAccessToHypnotizer = val
+					},<Setting>{
+						type: "text",
+						id: "magic_remoteMembers",
+						label: "Remote Allowed Member Ids:",
+						description: "Comma separated list of member Ids. If empty will use standard Item Permissions.",
+						disabled: !this.settings.enabled,
+						setting: () => this.settings.remoteMemberIds ?? "",
+						setSetting: (val) => this.settings.remoteMemberIds = val
+					}
 				]];
+	}
+
+	outfitFieldId: string = "magic_outfitPaste" ;
+	Load(): void {
+		super.Load();
+		ElementCreateInput(this.outfitFieldId, "text", "", -1);
 	}
 
 	blinkLastTime = 0;
 	blinkColor = "Pink";
     Run() {
+		if (!this.settings.locked && this._ConfigureOutfit) {
+			this.multipageStructure.forEach((s, ix, arr) => {
+				s.forEach(setting => {
+					if (setting.type == "text" || setting.type == "number" || setting.type == "dropdown")
+						this.ElementHide(setting.id);
+				})
+			})
+			DrawRect(0, 0, 2000, 1000, "rgba(0,0,0,.5)");
+			let coords = {x: 500, y: 400, w: 1000, h: 200};
+			let buttonWidth = 150;
+			DrawRect(coords.x, coords.y, coords.w, coords.h, "White");
+			DrawEmptyRect(coords.x, coords.y, coords.w, coords.h, "Black", 5);
+			DrawEmptyRect(coords.x+5, coords.y+5, coords.w-10, coords.h-10, "Grey", 2);
+			MainCanvas.textAlign = "left";
+			DrawTextFit("Paste Outfit Code:", coords.x + 50, (coords.y + coords.h/2) - 50, coords.w - 100 - buttonWidth, "Black", "Grey");
+			MainCanvas.textAlign = "center";
+			ElementPosition(this.outfitFieldId, coords.x + (coords.w/2) - (buttonWidth/2), (coords.y + coords.h/2) + 20, coords.w - 100 - buttonWidth);
+			DrawButton(1350, 500 - 32, 100, 64, "Confirm", "White");
+			return;
+		}
+
 		super.Run();
 
-		DrawTextFit(`${MouseX}, ${MouseY}`, MouseX, MouseY, 200, "Black");
+		this.ElementHide(this.outfitFieldId);
 
 		var prev = MainCanvas.textAlign;
 		if (!this.settings.enabled) {
@@ -109,11 +211,11 @@ export class GuiMagic extends GuiSubscreen {
 				this.blinkColor = this.blinkColor == "Pink" ? "Purple" : "Pink";
 			}
 			DrawText("Now available:", 1000, 200, "Black", "Black");
-			DrawText("Magic (tm)!", 1000, 250, this.blinkColor, "Black");
+			DrawText("Magic™!", 1000, 250, this.blinkColor, "Black");
 
 			DrawText("Want to wow and amaze your friends and lovers?", 1000, 350, "Black", "Gray");
 			DrawText("Are you looking to impress and punish your enemies?", 1000, 400, "Black", "Gray");
-			DrawText("With just a simple signature you too can experience the thrill of Magic (tm)!", 1000, 450, "Black", "Gray");
+			DrawText("With just a simple signature you too can experience the thrill of Magic™!", 1000, 450, "Black", "Gray");
 
 			DrawText("- Reveal the ancient secrets of the arcane! -", 1000, 550, "Gray", "Black");
 			DrawText("- Craft your own amazing potions! -", 1000, 600, "Gray", "Black");
@@ -121,152 +223,200 @@ export class GuiMagic extends GuiSubscreen {
 
 			DrawButton(800, 740, 400, 80, "~Sign Here~", "White", undefined, "Apply signature to scroll");
 
-			DrawTextFit("* Any sufficiently advanced technology is indistinguishable from magic *", 1000, 880, 600, "Gray", "Orange");
-			DrawTextFit("* Signatory agrees to Magic(tm) 'installation' required to experience spell effects *", 1000, 900, 600, "Gray", "Orange");
-		} else {
+			DrawTextFit("~ Any sufficiently advanced technology is indistinguishable from magic ~", 1000, 880, 600, "Black", "Purple");
+			DrawTextFit("* Signatory agrees to Magic™ Installation (ᴘᴀᴛ. ᴘᴇɴᴅ.) required to experience spell effects *", 1000, 900, 600, "Gray", "Pink");
+		} else if (!this.settings.locked) {
 			if (PreferencePageCurrent == 1) {
 				if (!this.settings.blockedSpellEffects)
-				this.settings.blockedSpellEffects = [];
+					this.settings.blockedSpellEffects = [];
 				let val = this.settings.blockedSpellEffects.indexOf(this.Effect) > -1;
 				let blockedStr = val ? "Blocked" : "Allowed";
-				DrawBackNextButton(780, this.getYPos(1)-32, 600, 64, this.Effect, "White", "", () => blockedStr, () => blockedStr);
-				DrawCheckbox(780 + 600 + 64, this.getYPos(1) - 32, 64, 64, "", val);
+				DrawBackNextButton(780, this.getYPos(4)-32, 600, 64, this.Effect, "White", "", () => blockedStr, () => blockedStr);
+				DrawCheckbox(780 + 600 + 64, this.getYPos(4) - 32, 64, 64, "", val);
 
 				MainCanvas.textAlign = "left";
-				DrawTextFit(this.SpellEffectDescription(this.Effect), 780, this.getYPos(2), 1000, "Black");
+				DrawTextFit(this.SpellEffectDescription(this.Effect), 780, this.getYPos(5), 1000, "Black");
 				MainCanvas.textAlign = "center";
 			} else if (PreferencePageCurrent == 2) {
 				if (this.settings.knownSpells.length > 0) {
 					DrawBackNextButton(550, this.getYPos(0)-32, 600, 64, this.Spell.Name, "White", "", () => "Previous", () => "Next");
 					DrawButton(1180 - 4, this.getYPos(0) - 32 - 4, 72, 72, "", "White", "", `Delete ${this.Spell.Name}`); // Delete Current
 					DrawImageResize("Icons/Trash.png", 1180, this.getYPos(0) - 32, 64, 64);
+
+					// Draw Effect Pickers
+					DrawBackNextButton(780, this.getYPos(3) - 32, 600, 64, this.Spell.Effects.length > 0 ? this.Spell.Effects[0] : LSCGSpellEffect.none, "White", "", () => "", () => "");
+					if (this.Spell.Effects.length == 1) {
+						DrawButton(1410 - 4, this.getYPos(3) - 32 - 4, 72, 72, "", "White", "", `Delete ${this.Spell.Name}`); // Delete Effect
+						DrawImageResize("Icons/Trash.png", 1410, this.getYPos(3) - 32, 64, 64);
+					}
+					if (this.Spell.Effects[0] == LSCGSpellEffect.outfit) DrawButton(1500, this.getYPos(3) - 32, 200, 64, "Configure", "White");
+					MainCanvas.textAlign = "left";
+					DrawTextFit(this.SpellEffectDescription(this.Spell.Effects[0]), 780, this.getYPos(4), 1000, "Black");
+					MainCanvas.textAlign = "center";
+					if (this.Spell.Effects.length > 0) {
+						DrawBackNextButton(780, this.getYPos(5) - 32, 600, 64, this.Spell.Effects[1] ?? LSCGSpellEffect.none, "White", "", () => "", () => "");
+						if (this.Spell.Effects.length == 2) {
+							DrawButton(1410 - 4, this.getYPos(5) - 32 - 4, 72, 72, "", "White", "", `Delete ${this.Spell.Name}`); // Delete Effect
+							DrawImageResize("Icons/Trash.png", 1410, this.getYPos(5) - 32, 64, 64);
+						}
+						if (this.Spell.Effects[1] == LSCGSpellEffect.outfit) DrawButton(1500, this.getYPos(5) - 32, 200, 64, "Configure", "White");
+						MainCanvas.textAlign = "left";
+						DrawTextFit(this.SpellEffectDescription(this.Spell.Effects[1]), 780, this.getYPos(6), 1000, "Black");
+						MainCanvas.textAlign = "center";
+					}
+					if (this.Spell.Effects.length > 1) {
+						DrawBackNextButton(780, this.getYPos(7) - 32, 600, 64, this.Spell.Effects[2] ?? LSCGSpellEffect.none, "White", "", () => "", () => "");
+						if (this.Spell.Effects.length > 2) {
+							DrawButton(1410 - 4, this.getYPos(7) - 32 - 4, 72, 72, "", "White", "", `Delete ${this.Spell.Name}`); // Delete Effect
+							DrawImageResize("Icons/Trash.png", 1410, this.getYPos(7) - 32, 64, 64);
+						}
+						if (this.Spell.Effects[2] == LSCGSpellEffect.outfit) DrawButton(1500, this.getYPos(7) - 32, 200, 64, "Configure", "White");
+						MainCanvas.textAlign = "left";
+						DrawTextFit(this.SpellEffectDescription(this.Spell.Effects[2]), 780, this.getYPos(8), 1000, "Black");
+						MainCanvas.textAlign = "center";
+					}
+				}
+				else {
+					DrawTextFit("No Spells Known...", 780, this.getYPos(0), 600, "Black");
 				}
 				DrawButton(1260 - 4, this.getYPos(0) - 32 - 4, 72, 72, "", "White", "", `Create new Spell`); // Add New Spell
 				DrawImageResize("Icons/Plus.png", 1260, this.getYPos(0) - 32, 64, 64);
-
-				// Draw Effect Pickers
-				DrawBackNextButton(780, this.getYPos(3) - 32, 600, 64, this.Spell.Effects.length > 0 ? this.Spell.Effects[0] : LSCGSpellEffect.none, "White", "", () => "", () => "");
-				if (this.Spell.Effects.length == 1) {
-					DrawButton(1410 - 4, this.getYPos(3) - 32 - 4, 72, 72, "", "White", "", `Delete ${this.Spell.Name}`); // Delete Effect
-					DrawImageResize("Icons/Trash.png", 1410, this.getYPos(3) - 32, 64, 64);
-				}
-				MainCanvas.textAlign = "left";
-				DrawTextFit(this.SpellEffectDescription(this.Spell.Effects[0]), 780, this.getYPos(4), 1000, "Black");
-				MainCanvas.textAlign = "center";
-				if (this.Spell.Effects.length > 0) {
-					DrawBackNextButton(780, this.getYPos(5) - 32, 600, 64, this.Spell.Effects[1] ?? LSCGSpellEffect.none, "White", "", () => "", () => "");
-					if (this.Spell.Effects.length == 2) {
-						DrawButton(1410 - 4, this.getYPos(5) - 32 - 4, 72, 72, "", "White", "", `Delete ${this.Spell.Name}`); // Delete Effect
-						DrawImageResize("Icons/Trash.png", 1410, this.getYPos(5) - 32, 64, 64);
-					}
-					MainCanvas.textAlign = "left";
-					DrawTextFit(this.SpellEffectDescription(this.Spell.Effects[1]), 780, this.getYPos(6), 1000, "Black");
-					MainCanvas.textAlign = "center";
-				}
-				if (this.Spell.Effects.length > 1) {
-					DrawBackNextButton(780, this.getYPos(7) - 32, 600, 64, this.Spell.Effects[2] ?? LSCGSpellEffect.none, "White", "", () => "", () => "");
-					if (this.Spell.Effects.length > 2) {
-						DrawButton(1410 - 4, this.getYPos(7) - 32 - 4, 72, 72, "", "White", "", `Delete ${this.Spell.Name}`); // Delete Effect
-						DrawImageResize("Icons/Trash.png", 1410, this.getYPos(7) - 32, 64, 64);
-					}
-					MainCanvas.textAlign = "left";
-					DrawTextFit(this.SpellEffectDescription(this.Spell.Effects[2]), 780, this.getYPos(8), 1000, "Black");
-					MainCanvas.textAlign = "center";
-				}
 			}
 		}
 		MainCanvas.textAlign = prev;
 	}
 
 	Click(): void {
+		if (!this.settings.locked && this._ConfigureOutfit) {
+			let coords = {x: 500, y: 400, w: 1000, h: 200};
+			let buttonWidth = 150;
+			if (!MouseIn(coords.x, coords.y, coords.w, coords.h)) this._ConfigureOutfit = false;
+			else if (MouseIn(1350, 500 - 32, 100, 64)) this.ConfirmOutfit();
+			return;
+		}
+
 		super.Click();
 
 		if (!this.settings.enabled) {
 			if (MouseIn(800, 740, 400, 80)) {
 				this.settings.enabled = true;
-				DrawFlashScreen("Purple", 500, 1500);
+				DrawFlashScreen("#800080", 500, 1500);
+				if (!AudioShouldSilenceSound(true))
+            		AudioPlaySoundEffect("SciFiBeeps", 1);
 			}
-		} else {
+		} else if (!this.settings.locked) {
 			if (PreferencePageCurrent == 1) {
-				if (MouseIn(550, this.getYPos(1)-32, 600, 64)) {
-					if (MouseX <= 850) this.EffectIndex = (this.ActualEffects.length + this.EffectIndex - 1) % this.ActualEffects.length;
-					else this.EffectIndex = (this.EffectIndex + 1) % this.ActualEffects.length;
-				} else if (MouseIn(550 + 600 + 64, this.getYPos(1) - 32, 64, 64)) {
+				if (MouseIn(780, this.getYPos(4)-32, 600, 64)) {
+					this.EffectIndex = this.GetNewIndexFromNextPrevClick(1080, this.EffectIndex, this.ActualEffects.length);
+				} else if (MouseIn(550 + 600 + 64, this.getYPos(4) - 32, 64, 64)) {
 					if (this.settings.blockedSpellEffects.indexOf(this.Effect) > -1)
 						this.settings.blockedSpellEffects = this.settings.blockedSpellEffects.filter(ef => ef != this.Effect);
 					else this.settings.blockedSpellEffects.push(this.Effect);
 				}
 			} else if (PreferencePageCurrent == 2) {
 				if (MouseIn(550, this.getYPos(0) - 32, 600, 64)) {
-					// Save all current text field values
-					this.structure.forEach((item, ix, arr) => {
-						switch (item.type) {
-							case "number":
-							case "text":
-							case "dropdown":
-								item.setSetting(ElementValue(item.id));
-								break;
-						}
-					});
-					if (MouseX <= 850) this.SpellIndex = (this.settings.knownSpells.length + this.SpellIndex - 1) % this.settings.knownSpells.length;
-					else this.SpellIndex = (this.SpellIndex + 1) % this.settings.knownSpells.length;
-					// Load new text element values
-					this.structure.forEach((item, ix, arr) => {
-						switch (item.type) {
-							case "number":
-							case "text":
-							case "dropdown":
-								this.ElementSetValue(item.id, item.setting());
-								break;
-						}
-					});
+					this.saveSpell();
+					this.SpellIndex = this.GetNewIndexFromNextPrevClick(850, this.SpellIndex, this.settings.knownSpells.length);
+					this.loadSpell();
 				}
 				else if (MouseIn(1180, this.getYPos(0) - 32, 64, 64)) {
 					// Remove Spell
 					this.settings.knownSpells.splice(this.SpellIndex, 1);
+					if (this.SpellIndex >= this.settings.knownSpells.length)
+						this.SpellIndex = this.settings.knownSpells.length - 1;
+					this.loadSpell();
 				} else if (MouseIn(1260, this.getYPos(0) - 32, 64, 64)) {
+					if (!!this.Spell)
+						this.saveSpell();
 					this.settings.knownSpells.push(<SpellDefinition>{
-						Name: "New Spell",
+						Name: `Spell No. ${this.settings.knownSpells.length+1}`,
 						Creator: Player.MemberNumber,
 						Effects: [],
-						AllowPotion: false
-					})
-				} else if (MouseIn(780, this.getYPos(3) - 32, 600, 64)) {
-					if (MouseX <= 850) {
-						if (this.Spell.Effects.length < 1) this.Spell.Effects = [this.ActualEffects[this.ActualEffects.length - 1]];
-						else this.Spell.Effects[0] = this.ActualEffects[(this.ActualEffects.length + this.ActualEffects.indexOf(this.Spell.Effects[0]) - 1) % this.ActualEffects.length];
-					}
-					else {
-						if (this.Spell.Effects.length < 1) this.Spell.Effects = [this.ActualEffects[0]];
-						else this.Spell.Effects[0] = this.ActualEffects[(this.ActualEffects.indexOf(this.Spell.Effects[0]) + 1) % this.ActualEffects.length];
-					}
-				} else if (this.Spell.Effects.length < 2 && MouseIn(1410, this.getYPos(3) - 32, 64, 64)) {
-					this.Spell.Effects.splice(0)
-				} else if (MouseIn(780, this.getYPos(5) - 32, 600, 64)) {
-					if (MouseX <= 850) {
-						if (this.Spell.Effects.length < 2) this.Spell.Effects.push(this.ActualEffects[this.ActualEffects.length - 1]);
-						else this.Spell.Effects[1] = this.ActualEffects[(this.ActualEffects.length + this.ActualEffects.indexOf(this.Spell.Effects[0]) - 1) % this.ActualEffects.length];
-					}
-					else {
-						if (this.Spell.Effects.length < 2) this.Spell.Effects.push(this.ActualEffects[0]);
-						else this.Spell.Effects[1] = this.ActualEffects[(this.ActualEffects.indexOf(this.Spell.Effects[0]) + 1) % this.ActualEffects.length];
-					}
-				} else if (this.Spell.Effects.length < 3 && MouseIn(1410, this.getYPos(5) - 32, 64, 64)) {
-					this.Spell.Effects.splice(1)
-				} else if (MouseIn(780, this.getYPos(7) - 32, 600, 64)) {
-					if (MouseX <= 850) {
-						if (this.Spell.Effects.length < 3) this.Spell.Effects.push(this.ActualEffects[this.ActualEffects.length - 1]);
-						else this.Spell.Effects[2] = this.ActualEffects[(this.ActualEffects.length + this.ActualEffects.indexOf(this.Spell.Effects[0]) - 1) % this.ActualEffects.length];
-					}
-					else {
-						if (this.Spell.Effects.length < 3) this.Spell.Effects.push(this.ActualEffects[0]);
-						else this.Spell.Effects[2] = this.ActualEffects[(this.ActualEffects.indexOf(this.Spell.Effects[0]) + 1) % this.ActualEffects.length];
-					}
-				} else if (this.Spell.Effects.length < 4 && MouseIn(1410, this.getYPos(7) - 32, 64, 64)) {
-					this.Spell.Effects.splice(2)
+						AllowPotion: false,
+						OutfitCode: ""
+					});
+					this.SpellIndex = this.settings.knownSpells.length - 1;
+					this.loadSpell();
 				} 
+				if (!!this.Spell) {
+					if (MouseIn(780, this.getYPos(3) - 32, 600, 64)) {
+						let effects = this.UniqueEffects(0);
+						if (MouseX <= 1080) {
+							if (this.Spell.Effects.length < 1) this.Spell.Effects = [effects[effects.length - 1]];
+							else this.Spell.Effects[0] = effects[(effects.length + effects.indexOf(this.Spell.Effects[0]) - 1) % effects.length];
+						}
+						else {
+							if (this.Spell.Effects.length < 1) this.Spell.Effects = [effects[0]];
+							else this.Spell.Effects[0] = effects[(effects.indexOf(this.Spell.Effects[0]) + 1) % effects.length];
+						}
+					} else if (this.Spell.Effects.length < 2 && MouseIn(1410, this.getYPos(3) - 32, 64, 64)) {
+						this.Spell.Effects.splice(0);
+					} else if (this.Spell.Effects[0] == LSCGSpellEffect.outfit && MouseIn(1500, this.getYPos(3)-32, 200, 64)){
+						this.ConfigureOutfitEffect();
+					} else if (MouseIn(780, this.getYPos(5) - 32, 600, 64)) {
+						let effects = this.UniqueEffects(1);
+						if (MouseX <= 1080) {
+							if (this.Spell.Effects.length < 2) this.Spell.Effects.push(effects[effects.length - 1]);
+							else this.Spell.Effects[1] = effects[(effects.length + effects.indexOf(this.Spell.Effects[1]) - 1) % effects.length];
+						}
+						else {
+							if (this.Spell.Effects.length < 2) this.Spell.Effects.push(effects[0]);
+							else this.Spell.Effects[1] = effects[(effects.indexOf(this.Spell.Effects[1]) + 1) % effects.length];
+						}
+					} else if (this.Spell.Effects.length < 3 && MouseIn(1410, this.getYPos(5) - 32, 64, 64)) {
+						this.Spell.Effects.splice(1)
+					} else if (this.Spell.Effects[1] == LSCGSpellEffect.outfit && MouseIn(1500, this.getYPos(5)-32, 200, 64)){
+						this.ConfigureOutfitEffect();
+					}else if (MouseIn(780, this.getYPos(7) - 32, 600, 64)) {
+						let effects = this.UniqueEffects(2);
+						if (MouseX <= 1080) {
+							if (this.Spell.Effects.length < 3) this.Spell.Effects.push(effects[effects.length - 1]);
+							else this.Spell.Effects[2] = effects[(effects.length + effects.indexOf(this.Spell.Effects[2]) - 1) % effects.length];
+						}
+						else {
+							if (this.Spell.Effects.length < 3) this.Spell.Effects.push(effects[0]);
+							else this.Spell.Effects[2] = effects[(effects.indexOf(this.Spell.Effects[2]) + 1) % effects.length];
+						}
+					} else if (this.Spell.Effects.length < 4 && MouseIn(1410, this.getYPos(7) - 32, 64, 64)) {
+						this.Spell.Effects.splice(2)
+					} else if (this.Spell.Effects[2] == LSCGSpellEffect.outfit && MouseIn(1500, this.getYPos(7)-32, 200, 64)){
+						this.ConfigureOutfitEffect();
+					}
+				}
 			}
 		}
+	}
+
+	Exit(): void {
+		ElementRemove(this.outfitFieldId);
+		super.Exit();
+	}
+
+	saveSpell() {
+		// Save all current text field values
+		this.structure.forEach((item, ix, arr) => {
+			switch (item.type) {
+				case "number":
+				case "text":
+				case "dropdown":
+					if (!!ElementValue(item.id))
+						item.setSetting(ElementValue(item.id));
+					break;
+			}
+		});
+	}
+
+	loadSpell() {
+		// Load new text element values
+		this.structure.forEach((item, ix, arr) => {
+			switch (item.type) {
+				case "number":
+				case "text":
+				case "dropdown":
+					this.ElementSetValue(item.id, item.setting());
+					break;
+			}
+		});
 	}
 
 	SpellIndex: number = 0;
@@ -278,6 +428,12 @@ export class GuiMagic extends GuiSubscreen {
 		return this.settings.knownSpells[this.SpellIndex]
 	}
 
+	UniqueEffects(ix: number) {
+		if (!this.Spell)
+			return this.ActualEffects;
+		let otherEffects = this.Spell.Effects.filter((v, i, arr) => i != ix);
+		return this.ActualEffects.filter(eff => otherEffects.indexOf(eff) == -1);
+	}
 	get Effect(): LSCGSpellEffect {
 		return this.ActualEffects[this.EffectIndex];
 	}
@@ -289,10 +445,19 @@ export class GuiMagic extends GuiSubscreen {
 	}
 	EffectIndex: number = 0;
 
+	_ConfigureOutfit: boolean = false;
+	ConfigureOutfitEffect() {
+		this.ElementSetValue(this.outfitFieldId, this.Spell.OutfitCode ?? "");
+		this._ConfigureOutfit = true;
+	}
+	ConfirmOutfit() {
+		this._ConfigureOutfit = false;
+		this.Spell.OutfitCode = ElementValue(this.outfitFieldId);
+		this.ElementSetValue(this.outfitFieldId, "");
+	}
+
 	SpellEffectDescription(effect: LSCGSpellEffect): string {
 		switch (effect) {
-			case LSCGSpellEffect.none:
-				return "";
 			case LSCGSpellEffect.blindness:
 				return "Prevents the target from seeing.";
 			case LSCGSpellEffect.deafened:
@@ -313,8 +478,11 @@ export class GuiMagic extends GuiSubscreen {
 				return "Pair two targets, such that when one feels arousal the other also does.";
 			case LSCGSpellEffect.orgasm_siphon:
 				return "Redirect all of the target's orgasmic pleasure to another.";
+			case LSCGSpellEffect.dispell:
+				return "Dispells any existing effects on the target (including anything drug induced).";
+			case LSCGSpellEffect.none:
 			default:
-				return "Some special effect..."			;
+				return ""			;
 		}
 	}
 }

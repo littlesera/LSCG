@@ -11,7 +11,8 @@ export enum LSCGSpellEffect {
     frozen = "Petrifying", 
     paired_arousal = "Pairing", 
     orgasm_siphon = "Siphoning", 
-    outfit = "Outfit"
+    outfit = "Outfit",
+    dispell = "Dispell"
 }
 
 export interface SpellDefinition {
@@ -19,6 +20,7 @@ export interface SpellDefinition {
     Creator: number;
     Effects: LSCGSpellEffect[];
     AllowPotion: boolean;
+    OutfitCode: string;
 }
 
 export interface MagicSettingsModel extends MagicPublicSettingsModel {
@@ -27,4 +29,15 @@ export interface MagicSettingsModel extends MagicPublicSettingsModel {
 
 export interface MagicPublicSettingsModel extends BaseSettingsModel{
     blockedSpellEffects: LSCGSpellEffect[];
+    enableWildMagic: boolean;
+    trueWildMagic: boolean;
+    forceWildMagic: boolean;
+    lockable: boolean;
+    locked: boolean;
+
+    // remote access
+    remoteAccess: boolean;
+    remoteAccessRequiredTrance: boolean;
+    limitRemoteAccessToHypnotizer: boolean;
+    remoteMemberIds: string;
 }

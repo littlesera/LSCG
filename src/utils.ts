@@ -250,7 +250,7 @@ export function getRandomInt(max: number) {
 export function settingsSave(publish: boolean = false) {
 	if (!Player.OnlineSettings)
 		Player.OnlineSettings = <PlayerOnlineSettings>{};
-    Player.OnlineSettings.LSCG = Player.LSCG
+    Player.OnlineSettings.LSCG = LZString.compressToBase64(JSON.stringify(Player.LSCG));
     window.ServerAccountUpdate.QueueData({OnlineSettings: Player.OnlineSettings});
 	if (publish)
 		getModule<CoreModule>("CoreModule")?.SendPublicPacket(false, "sync");
@@ -391,7 +391,7 @@ export function sendLSCGCommand(target: Character, commandName: LSCGCommandName,
 export function LSCG_SendLocal(msg: string, time?: number) {
 	var bgColor = (Player.ChatSettings!.ColorTheme!.indexOf("Light") > -1) ? "#D7F6E9" : "#23523E";
 	let text = `<div style='background-color:${bgColor};'>${msg}</div>`;
-	ChatRoomSendLocal(text);
+	ChatRoomSendLocal(text, time ?? 4000);
 }
 
 export function excludeParentheticalContent(msg: string): string {
@@ -467,6 +467,21 @@ export function IsActivityAllowed(activity: ActivityEntryModel, sender: Characte
 	else if (!activity.allowedMemberIds || activity.allowedMemberIds.length == 0)
 		return isAllowedMember(sender);
 	else return false;
+}
+
+export function BC_ItemToItemBundle(item: Item): ItemBundle {
+	return <ItemBundle>{
+		Group: item.Asset.Group.Name,
+		Name: item.Asset.Name,
+		Color: item.Color,
+		Craft: item.Craft,
+		Difficulty: item.Difficulty,
+		Property: item.Property
+	}
+}
+
+export function BC_ItemsToItemBundles(items: Item[]): ItemBundle[] {
+	return items.map(i => BC_ItemToItemBundle(i));
 }
 
 // ICONS

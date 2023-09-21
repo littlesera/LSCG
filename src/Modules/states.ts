@@ -1,6 +1,6 @@
 import { BaseModule } from "base";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { LSCG_SendLocal, hookFunction, removeAllHooksByModule } from "../utils";
+import { LSCG_SendLocal, getRandomInt, hookFunction, removeAllHooksByModule } from "../utils";
 import { StateConfig, StateSettingsModel } from "Settings/Models/states";
 import { HypnoState } from "./States/HypnoState";
 import { SleepState } from "./States/SleepState";
@@ -9,6 +9,8 @@ import { HornyState } from "./States/HornyState";
 import { BlindState } from "./States/BlindState";
 import { DeafState } from "./States/DeafState";
 import { FrozenState } from "./States/FrozenState";
+import { GaggedState } from "./States/GaggedState";
+import { RedressedState } from "./States/RedressedState";
 
 export class StateModule extends BaseModule {
     // get settingsScreen(): Subscreen | null {
@@ -53,6 +55,8 @@ export class StateModule extends BaseModule {
     BlindState: BlindState;
     DeafState: DeafState;
     FrozenState: FrozenState;
+    GaggedState: GaggedState;
+    RedressedState: RedressedState;
 
     GetRestriction(state: BaseState, restriction: LSCGImmersiveOption): boolean {
         return state.Active &&
@@ -75,8 +79,19 @@ export class StateModule extends BaseModule {
         this.BlindState = new BlindState(this);
         this.DeafState = new DeafState(this);
         this.FrozenState = new FrozenState(this);
+        this.GaggedState = new GaggedState(this);
+        this.RedressedState = new RedressedState(this);
 
-        this.States = [this.SleepState, this.FrozenState, this.HypnoState, this.BlindState, this.DeafState, this.HornyState];
+        this.States = [
+            this.SleepState, 
+            this.FrozenState, 
+            this.HypnoState, 
+            this.GaggedState,
+            this.BlindState, 
+            this.DeafState, 
+            this.HornyState,
+            this.RedressedState
+        ];
         
         // States module in general is always enabled. Toggling is done on each specific state.
         this.settings.enabled = true;
@@ -100,10 +115,12 @@ export class StateModule extends BaseModule {
                 return next(args);
 
             let type = args[0];
-            let speechBlockStates = this.GetRestrictions(r => r.Speech);
-            if (speechBlockStates.length > 0 && type == "ChatRoomChat" && args[1].Type == "Chat" && args[1]?.Content[0] != "("){
-                speechBlockStates[0].SpeechBlock();
-                return null;
+            if (type == "ChatRoomChat" && args[1].Type == "Chat" && args[1]?.Content[0] != "(") {
+                let speechBlockStates = this.GetRestrictions(r => r.Speech);
+                if (speechBlockStates.length > 0){
+                    speechBlockStates[getRandomInt(speechBlockStates.length)].SpeechBlock();
+                    return null;
+                }
             }
             return next(args);
         }, ModuleCategory.States);
@@ -131,15 +148,15 @@ export class StateModule extends BaseModule {
             return next(args);
         }, ModuleCategory.States);
 
-        hookFunction('Player.IsDeaf', 1, (args, next) => {
+        hookFunction('Player.GetDeafLevel', 1, (args, next) => {
             if (this.Enabled && this.AnyRestrictions(r => r.Hearing))
-                return true;
+                return 4;
             return next(args);
         }, ModuleCategory.States);
 
-        hookFunction('Player.IsBlind', 1, (args, next) => {
+        hookFunction('Player.GetBlindLevel', 1, (args, next) => {
             if (this.Enabled && this.AnyRestrictions(r => r.Sight))
-                return true;
+                return Player.GameplaySettings?.SensDepChatLog == "SensDepLight" ? 2 : 3;
             return next(args);
         }, ModuleCategory.States);
 
@@ -164,5 +181,9 @@ export class StateModule extends BaseModule {
 
     unload(): void {
         removeAllHooksByModule(ModuleCategory.States);
+    }
+
+    Clear(emote: boolean) {
+        this.States.forEach(s => s.Recover(emote));
     }
 }

@@ -24,7 +24,7 @@ export class MiscModule extends BaseModule {
         return <MiscSettingsModel>{
             enabled: true,
             chloroformEnabled: false,
-            immersiveChloroform: false,
+            //immersiveChloroform: false,
             chloroformedAt: 0,
             chloroformPotencyTime: 60 * 60 * 1000, // 1 hour cooloff
             infiniteChloroformPotency: false,
