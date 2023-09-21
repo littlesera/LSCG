@@ -1,9 +1,10 @@
 import { BaseModule } from "base";
 import { getModule } from "modules";
-import { ModuleCategory } from "Settings/setting_definitions";
+import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
 import { SendAction, getRandomInt, hookFunction, removeAllHooksByModule } from "../utils";
 import { ActivityModule, ActivityTarget } from "./activities";
-import { LSCGSpellType, MagicSettingsModel, SpellDefinition } from "Settings/Models/magic";
+import { LSCGSpellEffect, MagicSettingsModel, SpellDefinition } from "Settings/Models/magic";
+import { GuiMagic } from "Settings/magic";
 
 export class MagicModule extends BaseModule {
     SpellMenuOpen: boolean = false;
@@ -21,7 +22,9 @@ export class MagicModule extends BaseModule {
 
     get defaultSettings() {
         return <MagicSettingsModel>{
-            enabled: false
+            enabled: false,
+            blockedSpellEffects: [],
+            knownSpells: []
         };
     }
 
@@ -29,12 +32,16 @@ export class MagicModule extends BaseModule {
         return super.settings as MagicSettingsModel;
 	}
 
+    get settingsScreen(): Subscreen | null {
+        return GuiMagic;
+    }
+
     _testSpells: SpellDefinition[] = []; 
     get TestSpells(): SpellDefinition[] {
         if (this._testSpells.length <= 0)
             this._testSpells = [...Array(18).keys()].map(i => <SpellDefinition>{
                     Name: `Spell ${i+1}`,
-                    Types: Array(getRandomInt(3) + 1).fill(0).map(t => Object.values(LSCGSpellType)[getRandomInt(Object.keys(LSCGSpellType).length)])
+                    Effects: Array(getRandomInt(3) + 1).fill(0).map(t => Object.values(LSCGSpellEffect)[getRandomInt(Object.keys(LSCGSpellEffect).length)])
                 });
         return this._testSpells;
     }
@@ -134,7 +141,7 @@ export class MagicModule extends BaseModule {
     DrawSpellMenu() {
         if (!CurrentCharacter)
             return this.CloseSpellMenu();
-        let blockedSpellTypes = (CurrentCharacter as any).LSCG?.MagicModule?.blockedSpellTypes ?? [];
+        let blockedSpellEffects = (CurrentCharacter as any).LSCG?.MagicModule?.blockedSpellEffects ?? [];
 
         let toolbarY = this.boxDimensions.y + 5;
         let toolbarRight = this.boxDimensions.x + this.boxDimensions.width - 5;
@@ -148,9 +155,9 @@ export class MagicModule extends BaseModule {
         if (this.SpellPairOption.SelectOpen) {
             DrawTextFit("Select a paired target...", this.boxDimensions.x + 400, this.boxDimensions.y + 50, 600, "White", "Grey");
             // Draw 2x5 columns of character names
-            let characterOptions = ChatRoomCharacter.filter(c => !!c && !!(c as any).LSCG);
+            let characterOptions = ChatRoomCharacter.filter(c => !!c && !!(c as any).LSCG && c.MemberNumber != this.SpellPairOption.Source?.MemberNumber);
             characterOptions.forEach((char, ix, arr) => {
-                DrawButton(this.SpellGrid.x + (ix > 4 ? 450 : 0), this.SpellGrid.y + ((ix % 5) * 120), 400, 100, CharacterNickname(char), "White");
+                DrawButton(this.SpellGrid.x + (ix > 4 ? 450 : 0), this.SpellGrid.y + ((ix % 5) * 120), characterOptions.length > 5 ? 400 : 800, 100, CharacterNickname(char), "White");
             });
         }
         else {
@@ -168,14 +175,14 @@ export class MagicModule extends BaseModule {
 
                 let icons: InventoryIcon[] = [];
                 let background = "white";
-                if (spell.Types.some(type => this.pairedSpellTypes.indexOf(type) > -1))
+                if (spell.Effects.some(effect => this.pairedSpellEffects.indexOf(effect) > -1))
                     icons.push("Handheld");
-                if (spell.Types.some(type => blockedSpellTypes.indexOf(type) > -1)) {
+                if (spell.Effects.some(effect => blockedSpellEffects.indexOf(effect) > -1)) {
                     icons.push("AllowedLimited");
                     background = "red";
                 }
 
-                let desc = spell.Types.join(", ");
+                let desc = spell.Effects.join(", ");
 
                 DrawPreviewBox(x, y, image, label, { Hover: true, Icons: icons, Background: background, Width: width, Height: height });
                 if (MouseHovering(x, y, width, height)) {
@@ -232,8 +239,7 @@ export class MagicModule extends BaseModule {
             CommonGenerateGrid(this.AvailableSpells, this.SpellMenuOffset, this.SpellGrid, (spell: SpellDefinition, x: number, y: number, width: number, height: number) => {
                 // If this specific activity is clicked, we run it
                 if (!MouseIn(x, y, width, height)) return false;
-                let spellTypes = spell.Types;
-                let blocked = spell.Types.some(type => blockedSpellTypes.indexOf(type) > -1);
+                let blocked = spell.Effects.some(effect => blockedSpellTypes.indexOf(effect) > -1);
                 
                 if (!blocked) {
                     this.CastSpellInitial(spell, CurrentCharacter);
@@ -246,14 +252,14 @@ export class MagicModule extends BaseModule {
 		return;
     }
 
-    pairedSpellTypes = [
-        LSCGSpellType.orgasm_siphon,
-        LSCGSpellType.paired_arousal
+    pairedSpellEffects = [
+        LSCGSpellEffect.orgasm_siphon,
+        LSCGSpellEffect.paired_arousal
     ];
 
     CastSpellInitial(spell: SpellDefinition, C: Character | null) {
         if (!!C) {
-            if (spell.Types.some(t => this.pairedSpellTypes.indexOf(t) > -1)) {
+            if (spell.Effects.some(e => this.pairedSpellEffects.indexOf(e) > -1)) {
                 this.SpellPairOption.Spell = spell;
                 this.SpellPairOption.Source = C;
                 this.SpellPairOption.SelectOpen = true;

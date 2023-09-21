@@ -1,21 +1,24 @@
 import { BaseSettingsModel } from "./base";
 
-export enum LSCGSpellType {
+export enum LSCGSpellEffect {
+    none = "None",
     hypnotizing = "Hypnotizing", 
     slumber = "Slumbering", 
     horny = "Arousing", 
     blindness = "Blinding", 
     deafened = "Deafening", 
-    muted = "Muting", 
+    muted = "Gagged", 
     frozen = "Petrifying", 
     paired_arousal = "Pairing", 
     orgasm_siphon = "Siphoning", 
-    outfit = "Growing"
+    outfit = "Outfit"
 }
 
 export interface SpellDefinition {
     Name: string;
-    Types: LSCGSpellType[];
+    Creator: number;
+    Effects: LSCGSpellEffect[];
+    AllowPotion: boolean;
 }
 
 export interface MagicSettingsModel extends MagicPublicSettingsModel {
@@ -23,5 +26,5 @@ export interface MagicSettingsModel extends MagicPublicSettingsModel {
 }
 
 export interface MagicPublicSettingsModel extends BaseSettingsModel{
-    blockedSpellTypes: LSCGSpellType[];
+    blockedSpellEffects: LSCGSpellEffect[];
 }

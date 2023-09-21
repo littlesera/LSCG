@@ -5,11 +5,13 @@ import { BaseModule } from "base";
 import { drawTooltip, GUI } from "./settingUtils";
 
 export interface Setting {
-	type: "checkbox" | "text" | "number" | "label";
+	type: "checkbox" | "text" | "number" | "label" | "dropdown";
 	id: string;
 	disabled: boolean;
+	hidden: boolean;
 	label: string;
 	description: string;
+	options: string[],
 	setting(): any;
 	setSetting(val: any): void;
 }
@@ -111,7 +113,7 @@ export abstract class GuiSubscreen {
 		this.multipageStructure.forEach((s, ix, arr) => {
 			if (ix != (PreferencePageCurrent-1)) {
 				s.forEach(setting => {
-					if (setting.type == "text" || setting.type == "number")
+					if (setting.type == "text" || setting.type == "number" || setting.type == "dropdown")
 					this.ElementHide(setting.id);
 				})
 			}
@@ -119,14 +121,18 @@ export abstract class GuiSubscreen {
 	}
 
 	Load() {
-        this.multipageStructure.forEach(s => s.forEach(item => {
+		this.multipageStructure.forEach(s => s.forEach(item => {
 			switch (item.type) {
 				case "text":
 					ElementCreateInput(item.id, "text", item.setting(), "255");
 					break;
 				case "number":
 					ElementCreateInput(item.id, "number", item.setting(), "255");
-					break;			
+					break;	
+				case "dropdown":
+					ElementCreateDropdown(item.id, item.options, () => item.setSetting(ElementValue(item.id)));
+					this.ElementSetValue(item.id, item.setting());
+					break;
 			}
 		}));
 	}
@@ -148,11 +154,12 @@ export abstract class GuiSubscreen {
 		this.structure.forEach((item, ix, arr) => {
 			switch(item.type) {
 				case "checkbox":
-					this.DrawCheckbox(item.label, item.description, item.setting(), ix, item.disabled);
+					this.DrawCheckbox(item.label, item.description, item.setting(), ix, item.disabled, item.hidden);
 					break;
 				case "text":
 				case "number":
-					this.ElementPosition(item.id, item.label, item.description, ix, item.disabled);
+				case "dropdown":
+					this.ElementPosition(item.id, item.label, item.description, ix, item.disabled, item.hidden);
 					break;
 				case "label":
 					this.DrawLabel(item.label, item.description, ix);
@@ -188,6 +195,7 @@ export abstract class GuiSubscreen {
 						break;
 					}
 				case "text":
+				case "dropdown":
 					item.setSetting(ElementValue(item.id));
 					ElementRemove(item.id);
 					break;
@@ -224,10 +232,11 @@ export abstract class GuiSubscreen {
 		if (isHovering) this.Tooltip(description);
 	}
 
-	DrawCheckbox(label: string, description: string, value: boolean, order: number, disabled: boolean = false) {
+	DrawCheckbox(label: string, description: string, value: boolean, order: number, disabled: boolean = false, hidden: boolean = false) {
 		var isHovering = MouseIn(this.getXPos(order), this.getYPos(order) - 32, 600, 64);
 		DrawTextFit(label, this.getXPos(order), this.getYPos(order), 600, isHovering ? "Red" : "Black", "Gray");
-		DrawCheckbox(this.getXPos(order) + 600, this.getYPos(order) - 32, 64, 64, "", value ?? false, disabled);
+		if (!hidden)
+			DrawCheckbox(this.getXPos(order) + 600, this.getYPos(order) - 32, 64, 64, "", value ?? false, disabled);
 		if (isHovering) this.Tooltip(description);
 	}
 
@@ -235,16 +244,22 @@ export abstract class GuiSubscreen {
 		ElementPosition(elementId, -999, -999, 1, 1);
 	}
 
-	ElementPosition(elementId: string, label: string, description: string, order: number, disabled: boolean = false) {
+	ElementPosition(elementId: string, label: string, description: string, order: number, disabled: boolean = false, hidden: boolean = false) {
 		var isHovering = MouseIn(this.getXPos(order), this.getYPos(order) - 32, 600, 64);
 		DrawTextFit(label, this.getXPos(order), this.getYPos(order), 600, isHovering ? "Red" : "Black", "Gray");
-		ElementPosition(elementId, this.getXPos(order) + 750, this.getYPos(order), 300);
+		ElementPosition(elementId, this.getXPos(order) + 750, this.hidden ? 9999 : this.getYPos(order), 300);
 		if (disabled)
 			ElementSetAttribute(elementId, "disabled", "true");
 		else{
 			document.getElementById(elementId)?.removeAttribute("disabled");
 		}
 		if (isHovering) this.Tooltip(description);
+	}
+
+	ElementSetValue(elementId: string, value: any) {
+		let element = document.getElementById(elementId) as HTMLInputElement;
+		if (!!element && value != null)
+			element.value = value;
 	}
 
 	DrawLabel(name: string, description: string, order: number) {

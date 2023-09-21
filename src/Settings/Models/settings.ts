@@ -111,6 +111,6 @@ export class PublicSettingsModel implements IPublicSettingsModel {
     };
     MagicModule: MagicPublicSettingsModel = <MagicPublicSettingsModel>{
         enabled: false,
-        blockedSpellTypes: []
+        blockedSpellEffects: []
     }
 }
