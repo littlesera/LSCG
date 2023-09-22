@@ -58,6 +58,17 @@ export function getCharacter(memberNumber: number) {
 	return ChatRoomCharacter.find(c => c.MemberNumber == memberNumber) ?? null;
 }
 
+export function getCharacterByNicknameOrMemberNumber(tgt: string): Character | undefined {
+	tgt = tgt.toLocaleLowerCase();
+	let tgtC: Character | undefined | null;
+	if (CommonIsNumeric(tgt))
+		tgtC = getCharacter(+tgt);
+	if (!tgtC) {
+		tgtC = ChatRoomCharacter.find(c => CharacterNickname(c).toLocaleLowerCase() == tgt);
+	}
+	return tgtC;
+}
+
 export function setOrIgnoreBlush(blushLevel: ExpressionName | null) {
 	const blushLevels: string[] = [
 		"Default",
@@ -374,12 +385,35 @@ export function sendLSCGMessage(msg: LSCGMessageModel) {
 	ServerSend("ChatRoomChat", packet);
 }
 
+export function sendLSCGBeep(target: number, msg: LSCGMessageModel) {
+	ServerSend("AccountBeep", { 
+		MemberNumber: target,
+		BeepType: "LSCG",
+		IsSecret: true,
+		Message: msg
+	});
+}
+
 export function sendLSCGCommand(target: Character, commandName: LSCGCommandName, commandArgs: {name: string, value: any}[] = []) {
 	sendLSCGMessage(<LSCGMessageModel>{
 		type: "command",
 		reply: false,
 		settings: null,
 		target: target?.MemberNumber ?? -1,
+		version: LSCG_VERSION,
+		command: {
+			name: commandName,
+			args: commandArgs
+		}
+	});
+}
+
+export function sendLSCGCommandBeep(target: number, commandName: LSCGCommandName, commandArgs: {name: string, value: any}[] = []) {
+	sendLSCGBeep(target, <LSCGMessageModel>{
+		type: "command",
+		reply: false,
+		settings: null,
+		target: target ?? -1,
 		version: LSCG_VERSION,
 		command: {
 			name: commandName,

@@ -27,9 +27,9 @@ interface CommonGenerateGridParameters {
 
 type LSCGMessageModelType = "init" | "sync" | "command";
 
-type LSCGCommandName = "grab" | "release" | "remote" | "escape" | "collar-tighten" | "collar-loosen" | "collar-stats" | "photo" | "spell" | "spell-pair";
+type LSCGCommandName = "debug" | "grab" | "release" | "remote" | "escape" | "collar-tighten" | "collar-loosen" | "collar-stats" | "photo" | "spell" | "pair" | "unpair" | "pairing-update";
 
-type LSCGState = "none" | "hypnotized" | "asleep" | "horny" | "choking" | "held" | "blind" | "deaf" | "frozen" | "gagged" | "redressed" | "paired";
+type LSCGState = "none" | "hypnotized" | "asleep" | "horny" | "choking" | "held" | "blind" | "deaf" | "frozen" | "gagged" | "redressed" | "arousal-paired" | "orgasm-siphoned" | "leashed";
 
 type LSCGImmersiveOption = "true" | "false" | "whenImmersive";
 

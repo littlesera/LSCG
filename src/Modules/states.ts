@@ -11,6 +11,9 @@ import { DeafState } from "./States/DeafState";
 import { FrozenState } from "./States/FrozenState";
 import { GaggedState } from "./States/GaggedState";
 import { RedressedState } from "./States/RedressedState";
+import { ArousalPairedState } from "./States/ArousalPairedState";
+import { PairedBaseState } from "./States/PairedBaseState";
+import { OrgasmSiphonedState } from "./States/OrgasmSiphonedState";
 
 export class StateModule extends BaseModule {
     // get settingsScreen(): Subscreen | null {
@@ -57,6 +60,8 @@ export class StateModule extends BaseModule {
     FrozenState: FrozenState;
     GaggedState: GaggedState;
     RedressedState: RedressedState;
+    ArousalPairedState: ArousalPairedState;
+    OrgasmSiphonedState: OrgasmSiphonedState;
 
     GetRestriction(state: BaseState, restriction: LSCGImmersiveOption): boolean {
         return state.Active &&
@@ -81,6 +86,8 @@ export class StateModule extends BaseModule {
         this.FrozenState = new FrozenState(this);
         this.GaggedState = new GaggedState(this);
         this.RedressedState = new RedressedState(this);
+        this.ArousalPairedState = new ArousalPairedState(this);
+        this.OrgasmSiphonedState = new OrgasmSiphonedState(this);
 
         this.States = [
             this.SleepState, 
@@ -90,7 +97,9 @@ export class StateModule extends BaseModule {
             this.BlindState, 
             this.DeafState, 
             this.HornyState,
-            this.RedressedState
+            this.RedressedState,
+            this.ArousalPairedState,
+            this.OrgasmSiphonedState
         ];
         
         // States module in general is always enabled. Toggling is done on each specific state.
@@ -175,8 +184,7 @@ export class StateModule extends BaseModule {
             return next(args);
         }, ModuleCategory.States);
 
-        this.HypnoState.Init();
-        this.SleepState.Init();
+        this.States.forEach(s => s.Init());
     }
 
     unload(): void {
@@ -185,5 +193,20 @@ export class StateModule extends BaseModule {
 
     Clear(emote: boolean) {
         this.States.forEach(s => s.Recover(emote));
+    }
+
+    IncomingUnpair(sender: number, msg: LSCGMessageModel) {
+        let command = msg.command;
+        let unPairType = command?.args.find(a => a.name == "type")?.value as LSCGState;
+        let unPairingState = this.States.find(s => s.Type == unPairType) as PairedBaseState;
+        unPairingState.RemovePairing(sender);
+    }
+
+    PairingUpdate(sender: number, msg: LSCGMessageModel) {
+        if (!msg.command)
+            return;
+        let pairType = msg.command.args.find(a => a.name == "type")?.value as LSCGState;
+        let pairingState = this.States.find(s => s.Type == pairType) as PairedBaseState;
+        pairingState.Update(sender, msg.command.args);
     }
 }

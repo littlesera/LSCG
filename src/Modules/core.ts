@@ -3,7 +3,7 @@ import { getModule, modules } from "modules";
 import { BaseSettingsModel, GlobalSettingsModel } from "Settings/Models/base";
 import { IPublicSettingsModel, PublicSettingsModel, SettingsModel } from "Settings/Models/settings";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { removeAllHooksByModule, hookFunction, getCharacter, drawSvg, SVG_ICONS, sendLSCGMessage, settingsSave, LSCG_CHANGES, LSCG_SendLocal } from "../utils";
+import { removeAllHooksByModule, hookFunction, getCharacter, drawSvg, SVG_ICONS, sendLSCGMessage, settingsSave, LSCG_CHANGES, LSCG_SendLocal, getCharacterByNicknameOrMemberNumber } from "../utils";
 import { ActivityModule, GrabType } from "./activities";
 import { HypnoModule } from "./hypno";
 import { CollarModule } from "./collar";
@@ -13,6 +13,7 @@ import { StateConfig } from "Settings/Models/states";
 import { BaseMigrator } from "./Migrators/BaseMigrator";
 import { StateMigrator } from "./Migrators/StateMigrator";
 import { MagicModule } from "./magic";
+import { StateModule } from "./states";
 
 // Core Module that can handle basic functionality like server handshakes etc.
 // Maybe can consolidate things like hypnosis/suffocation basic state handling too..
@@ -72,6 +73,18 @@ export class CoreModule extends BaseModule {
             this.CheckForPublicPacket(args[0]);
             return next(args);
         }, ModuleCategory.Core);
+
+        hookFunction("ServerAccountBeep", 10, (args, next) => {
+            let data = args[0];
+            // Intercept LSCG beeps directly
+            if (data.BeepType == "LSCG") {
+                let msg = data.Message as LSCGMessageModel;
+                if (msg.type == "command")
+                    this.Command(data.MemberNumber, msg)
+            }
+            else
+                return next(args);
+        })
 
         hookFunction("ChatRoomDrawCharacterOverlay", 1, (args, next) => {
             next(args);
@@ -220,7 +233,7 @@ export class CoreModule extends BaseModule {
                     this.Sync(C, msg);
                     break;
                 case "command":
-                    this.Command(C, msg);
+                    this.Command(data.Sender, msg);
                     break;
             }
         }
@@ -239,18 +252,22 @@ export class CoreModule extends BaseModule {
         }
     }
 
-    Command(Sender: OtherCharacter | null, msg: LSCGMessageModel) {
+    Command(senderNumber: number, msg: LSCGMessageModel) {
         if (!msg.command || msg.target != Player.MemberNumber)
             return;
+        let Sender = getCharacter(senderNumber) as OtherCharacter;
         switch (msg.command!.name) {
+            case "debug":
+                LSCG_SendLocal(msg.command.args[0].value as string, 10000);
+                break;
             case "grab":
-                getModule<ActivityModule>("ActivityModule")?.IncomingGrab(Sender!, msg.command.args.find(a => a.name == "type")?.value as GrabType);
+                getModule<ActivityModule>("ActivityModule")?.IncomingGrab(Sender, msg.command.args.find(a => a.name == "type")?.value as GrabType);
                 break;
             case "release":
-                getModule<ActivityModule>("ActivityModule")?.IncomingRelease(Sender!, msg.command.args.find(a => a.name == "type")?.value as GrabType);
+                getModule<ActivityModule>("ActivityModule")?.IncomingRelease(Sender, msg.command.args.find(a => a.name == "type")?.value as GrabType);
                 break;
             case "escape":
-                getModule<ActivityModule>("ActivityModule")?.IncomingEscape(Sender!, msg.target);
+                getModule<ActivityModule>("ActivityModule")?.IncomingEscape(Sender, msg.target);
                 break;
             case "remote":
                 let prevCollarPurchase = Player.LSCG?.CollarModule?.collarPurchased;
@@ -278,8 +295,15 @@ export class CoreModule extends BaseModule {
                 DrawFlashScreen("#FFFFFF", 500, 1500);
                 break;
             case "spell":
-            case "spell-pair":
+            case "pair":
                 getModule<MagicModule>("MagicModule").IncomingSpellCommand(Sender, msg);
+                break;
+            case "unpair":
+                getModule<StateModule>("StateModule").IncomingUnpair(senderNumber, msg);
+                break;
+            case "pairing-update":
+                getModule<StateModule>("StateModule").PairingUpdate(senderNumber, msg);
+                break;
         }
     }
 

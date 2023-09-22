@@ -313,7 +313,7 @@ export class GuiMagic extends GuiSubscreen {
 			if (PreferencePageCurrent == 1) {
 				if (MouseIn(780, this.getYPos(4)-32, 600, 64)) {
 					this.EffectIndex = this.GetNewIndexFromNextPrevClick(1080, this.EffectIndex, this.ActualEffects.length);
-				} else if (MouseIn(550 + 600 + 64, this.getYPos(4) - 32, 64, 64)) {
+				} else if (MouseIn(780 + 600 + 64, this.getYPos(4) - 32, 64, 64)) {
 					if (this.settings.blockedSpellEffects.indexOf(this.Effect) > -1)
 						this.settings.blockedSpellEffects = this.settings.blockedSpellEffects.filter(ef => ef != this.Effect);
 					else this.settings.blockedSpellEffects.push(this.Effect);

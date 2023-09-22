@@ -11,7 +11,7 @@ export class HornyState extends BaseState {
     }
 
     Init(): void {
-        hookFunction('ActivitySetArousalTimer', 1, (args, next) => {
+        hookFunction('ActivitySetArousalTimer', 2, (args, next) => {
             if (this.Active) {
                 let Activity = args[1];
                 let Zone = args[2];

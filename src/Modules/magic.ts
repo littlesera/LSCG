@@ -1,7 +1,7 @@
 import { BaseModule } from "base";
 import { getModule } from "modules";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
-import { LSCG_SendLocal, SendAction, getRandomInt, hookFunction, removeAllHooksByModule, sendLSCGCommand } from "../utils";
+import { LSCG_SendLocal, SendAction, getCharacter, getRandomInt, hookFunction, removeAllHooksByModule, sendLSCGCommand, sendLSCGCommandBeep } from "../utils";
 import { ActivityModule, ActivityTarget } from "./activities";
 import { LSCGSpellEffect, MagicSettingsModel, OutfitConfig, OutfitOption, SpellDefinition } from "Settings/Models/magic";
 import { GuiMagic } from "Settings/magic";
@@ -281,12 +281,12 @@ export class MagicModule extends BaseModule {
         }
 
         if (this.SpellPairOption.SelectOpen) {
-            let characterOptions = ChatRoomCharacter.filter(c => !!c && !!(c as any).LSCG);
+            let characterOptions = this.PairedCharacterOptions(this.SpellPairOption.Source);
             if (characterOptions.length <= 0) {
                 this.CloseSpellMenu();    
             }
             characterOptions.forEach((char, ix, arr) => {
-                if (MouseIn(this.SpellGrid.x + (ix > 4 ? 450 : 0), this.SpellGrid.y + ((ix % 5) * 120), 400, 100)) {
+                if (MouseIn(this.SpellGrid.x + (ix > 4 ? 450 : 0), this.SpellGrid.y + ((ix % 5) * 120), this.PairedCharacterOptions(this.SpellPairOption.Source).length > 5 ? 400 : 800, 100)) {
                     if (!!this.SpellPairOption.Source)
                         this.CastSpellActual(this.SpellPairOption.Spell, this.SpellPairOption.Source, char);
                 }
@@ -373,15 +373,18 @@ export class MagicModule extends BaseModule {
                 SendAction(`%NAME% casts ${spell.Name} at %OPP_NAME% but it seems to fizzle.`, spellTarget);
             else {
                 SendAction(this.getCastingActionString(spell, InventoryGet(Player, "ItemHandheld"), spellTarget, pairedTarget), spellTarget);
-                sendLSCGCommand(spellTarget, "spell", [
-                    {
-                        name: "spell",
-                        value: spell
-                    }, {
-                        name: "paired",
-                        value: pairedTarget?.MemberNumber
-                    }
-                ]);
+                if (spellTarget.IsPlayer())
+                    this.IncomingSpell(Player, spell, pairedTarget);
+                else
+                    sendLSCGCommand(spellTarget, "spell", [
+                        {
+                            name: "spell",
+                            value: spell
+                        }, {
+                            name: "paired",
+                            value: pairedTarget?.MemberNumber
+                        }
+                    ]);
             }
         }
         this.CloseSpellMenu();
@@ -391,24 +394,26 @@ export class MagicModule extends BaseModule {
     // ********************** INCOMING *************************
 
     IncomingSpellCommand(sender: Character | null, msg: LSCGMessageModel) {
-        let spell = msg.command?.args?.find(arg => arg.name == "spell")?.value as SpellDefinition;
-        if (!spell)
-            return;
         if (msg.command?.name == "spell") {
-            let paired = ChatRoomCharacter.find(c => c.MemberNumber == (msg.command?.args.find(arg => arg.name == "paired")?.value as number));
+            let paired = getCharacter((msg.command?.args.find(arg => arg.name == "paired")?.value as number));
+            let spell = msg.command?.args?.find(arg => arg.name == "spell")?.value as SpellDefinition;
+            if (!spell)
+                return;
             this.IncomingSpell(sender, spell, paired);
         }
-        else if (msg.command?.name == "spell-pair") {
-            let origin = ChatRoomCharacter.find(c => c.MemberNumber == (msg.command?.args.find(arg => arg.name == "paired")?.value as number));
-            if (!!origin)
-                this.IncomingSpellPair(sender, spell, origin);
-            else if (!!sender) {
+        else if (msg.command?.name == "pair") {
+            let origin = getCharacter(msg.command?.args.find(arg => arg.name == "paired")?.value as number);
+            let spellEffect = msg.command?.args?.find(arg => arg.name == "spell-effect")?.value as LSCGSpellEffect;
+            let pairType = msg.command?.args?.find(arg => arg.name == "pair-type")?.value as LSCGState;
+            if (!!origin && !!spellEffect && !!pairType)
+                this.IncomingSpellPair(sender, spellEffect, origin, pairType);
+            else if (!!sender && !origin) {
                 SendAction(`${CharacterNickname(sender)}'s paired spell fizzles because the origin target has left.`);
             }
         }
     }
 
-    IncomingSpell(sender: Character | null, spell: SpellDefinition, paired?: Character) {
+    IncomingSpell(sender: Character | null, spell: SpellDefinition, paired?: Character | null) {
         let senderName = !sender ? "Someone" : CharacterNickname(sender);
         let pairedName = !paired ? "someone else" : CharacterNickname(paired);
         let allowedSpellEffects = spell.Effects.filter(effect => this.settings.blockedSpellEffects.indexOf(effect) == -1);
@@ -461,58 +466,71 @@ export class MagicModule extends BaseModule {
                         }
                         break;
                     case LSCGSpellEffect.paired_arousal:
-                        // TODO
-                        SendAction(`%NAME% squirms as %POSSESSIVE% arousal is paired.`);
-                        this.NotifyPair(sender, paired, spell);
+                        if (!!paired && !!sender) {
+                            SendAction(`%NAME% squirms as %POSSESSIVE% arousal is paired.`);
+                            this.stateModule.ArousalPairedState.DoPair(paired, sender);
+                            this.NotifyPair(sender, paired, LSCGSpellEffect.paired_arousal, this.stateModule.ArousalPairedState.Type);
+                        }
                         break;
                     case LSCGSpellEffect.orgasm_siphon:
-                        // TODO
-                        this.stateModule.GaggedState.Active ? 
-                            SendAction(`%NAME% quivers as %PRONOUN% feels %POSSESSIVE% impending denial.`) :
-                            SendAction(`%NAME% whimpers as %PRONOUN% feels %POSSESSIVE% impending denial.`);
-                        this.NotifyPair(sender, paired, spell);
+                        if (!!paired && !!sender) {
+                            this.stateModule.GaggedState.Active ? 
+                                SendAction(`%NAME% quivers as %PRONOUN% feels %POSSESSIVE% impending denial.`) :
+                                SendAction(`%NAME% whimpers as %PRONOUN% feels %POSSESSIVE% impending denial.`);
+                            this.stateModule.OrgasmSiphonedState.DoPair(paired, sender);
+                            this.NotifyPair(sender, paired, LSCGSpellEffect.orgasm_siphon, this.stateModule.OrgasmSiphonedState.Type);
+                        }
                         break;
                 }
             }, 2000 * ix);
         });
     }
 
-    NotifyPair(caster: Character | null, pairedTarget: Character | undefined, spell: SpellDefinition) {
+    NotifyPair(caster: Character | null, pairedTarget: Character | undefined, spellEffect: LSCGSpellEffect, pairType: LSCGState) {
         if (!pairedTarget)
             return;
 
-        sendLSCGCommand(pairedTarget, "spell-pair", [
+        sendLSCGCommand(pairedTarget, "pair", [
             {
-                name: "spell",
-                value: spell
+                name: "spell-effect",
+                value: spellEffect
             }, {
                 name: "paired",
                 value: Player.MemberNumber
             }, {
                 name: "caster",
                 value: caster?.MemberNumber
+            }, {
+                name: "pair-type",
+                value: pairType
             }
         ]);
     }
 
-    IncomingSpellPair(sender: Character | null, spell: SpellDefinition, originalTarget: Character) {
+    IncomingSpellPair(sender: Character | null, spellEffect: LSCGSpellEffect, originalTarget: Character, pairType: LSCGState) {
         let senderName = !sender ? "Someone" : CharacterNickname(sender);
         let originalTargetName = CharacterNickname(originalTarget);
-        let allowedSpellEffects = spell.Effects.filter(effect => this.pairedSpellEffects.indexOf(effect) > -1 && this.settings.blockedSpellEffects.indexOf(effect) == -1);
+        let isAllowed = this.settings.blockedSpellEffects.indexOf(spellEffect) == -1;
 
-        allowedSpellEffects.forEach(effect => {
-            switch (effect) {
+        if (!isAllowed) {
+            SendAction(`${senderName}'s paired spell fizzles as it attempts to pair with %NAME%.`);
+            sendLSCGCommandBeep(originalTarget.MemberNumber ?? -1, "unpair", [{
+                name: "type",
+                value: pairType
+            }]);
+        } else {
+            switch (spellEffect) {
                 case LSCGSpellEffect.paired_arousal:
                     // TODO
                     SendAction(`%NAME% squirms as %POSSESSIVE% arousal is paired.`);
-                    LSCG_SendLocal(`paired_arousal spell TODO...`);
+                    this.stateModule.ArousalPairedState.RespondToPairing(originalTarget, sender);
                     break;
                 case LSCGSpellEffect.orgasm_siphon:
                     // TODO
                     SendAction(`%NAME% lets out a quiet gasp as the pleasure center of %POSSESSIVE% mind starts to tingle.`);
-                    LSCG_SendLocal(`orgasm_siphon spell TODO...`);
+                    this.stateModule.OrgasmSiphonedState.RespondToPairing(originalTarget, sender);
                     break;
             }
-        });
+        }
     }
 }
