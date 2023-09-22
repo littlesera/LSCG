@@ -1,5 +1,11 @@
 import { GuiSubscreen, Setting } from "./settingBase";
 import { LSCGSpellEffect, MagicSettingsModel, OutfitConfig, OutfitOption, SpellDefinition } from "./Models/magic";
+import { PairedBaseState } from "Modules/States/PairedBaseState";
+
+export const pairedSpellEffects = [
+	LSCGSpellEffect.orgasm_siphon,
+	LSCGSpellEffect.paired_arousal
+];
 
 export class GuiMagic extends GuiSubscreen {
 
@@ -85,8 +91,12 @@ export class GuiMagic extends GuiSubscreen {
 						type: "checkbox",
 						label: "Allow Potion:",
 						description: "Allows this spell to be brewed into a crafted potion bottle using its name.",
-						setting: () => this.Spell?.AllowPotion ?? false,
-						setSetting: (val) => { if (!!this.Spell) this.Spell.AllowPotion = val},
+						disabled: this.SpellHasPairedEffect,
+						setting: () => this.SpellHasPairedEffect ? false : this.Spell?.AllowPotion ?? false,
+						setSetting: (val) => { 
+							if (this.SpellHasPairedEffect && !!this.Spell) this.Spell.AllowPotion = false;
+							else if (!!this.Spell) this.Spell.AllowPotion = val;
+						},
 						hidden: !this.Spell
 					},<Setting>{
 						type: "label",
@@ -431,6 +441,10 @@ export class GuiMagic extends GuiSubscreen {
 		if (this.SpellIndex >= this.settings.knownSpells.length)
 			this.SpellIndex = this.settings.knownSpells.length - 1;
 		return this.settings.knownSpells[this.SpellIndex]
+	}
+
+	get SpellHasPairedEffect(): boolean {
+		return this.Spell?.Effects.some(e => pairedSpellEffects.indexOf(e) > -1) ?? false;
 	}
 
 	UniqueEffects(ix: number) {

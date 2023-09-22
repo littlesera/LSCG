@@ -1,14 +1,16 @@
 import { BaseModule } from "base";
 import { getModule } from "modules";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
-import { LSCG_SendLocal, SendAction, getCharacter, getRandomInt, hookFunction, removeAllHooksByModule, sendLSCGCommand, sendLSCGCommandBeep } from "../utils";
+import { LSCG_SendLocal, SendAction, getCharacter, getRandomInt, hookFunction, removeAllHooksByModule, sendLSCGCommand, sendLSCGCommandBeep, settingsSave } from "../utils";
 import { ActivityModule, ActivityTarget } from "./activities";
 import { LSCGSpellEffect, MagicSettingsModel, OutfitConfig, OutfitOption, SpellDefinition } from "Settings/Models/magic";
-import { GuiMagic } from "Settings/magic";
+import { GuiMagic, pairedSpellEffects } from "Settings/magic";
 import { StateModule } from "./states";
+import { MagicWandItems } from "./item-use";
 
 export class MagicModule extends BaseModule {
     SpellMenuOpen: boolean = false;
+    TeachingSpell: boolean = false;
     SpellMenuOffset: number = 0;
 
     SpellPairOption: {
@@ -175,6 +177,42 @@ export class MagicModule extends BaseModule {
                 }
             }
         });
+
+        activities?.AddActivity({
+            Activity: <Activity>{
+                Name: "TeachSpell",
+                MaxProgress: 90,
+                MaxProgressSelf: 90,
+                Prerequisite: ["UseHands", "Needs-MagicItem"]
+            },
+            Targets: [
+                <ActivityTarget>{
+                    Name: "ItemArms",
+					TargetLabel: "Teach Spell",
+                    SelfAllowed: false,
+                    TargetAction: "SourceCharacter carefully instructs TargetCharacter in the intricate movements required for a new spell."
+                }
+            ],
+            CustomPrereqs: [
+				{
+					Name: "CanTeachSpell",
+					Func: (acting, acted, group) => {
+                        // Must have available spells and can only cast on LSCG users
+                        let targetItem = InventoryGet(acted, "ItemHandheld");
+						return this.Enabled && 
+                            this.settings.knownSpells.length > 0 &&
+                            MagicWandItems.indexOf(targetItem?.Asset?.Name ?? "") > -1;
+					}
+				}
+			],
+            CustomAction: {
+                Func: (target, args, next) => {
+                    if (!!target)
+                        this.TeachSpell(target as OtherCharacter);
+                }
+            },
+            CustomImage: "Icons/Magic.png"
+        });
     }
 
     run(): void {
@@ -196,9 +234,17 @@ export class MagicModule extends BaseModule {
 
     CloseSpellMenu() {
         this.SpellMenuOpen = false;
+        this.TeachingSpell = false;
         this.SpellPairOption.SelectOpen = false;
         if (CurrentScreen == "LSCG_SPELLS_DIALOG")
             CurrentScreen = this.PrevScreen ?? "ChatRoom";
+    }
+
+    TeachSpell(target: OtherCharacter) {
+        if (this.Enabled) {
+            this.OpenSpellMenu(target);
+            this.TeachingSpell = true;
+        }
     }
 
     SpellGrid: CommonGenerateGridParameters = {
@@ -247,11 +293,11 @@ export class MagicModule extends BaseModule {
 
                 let icons: InventoryIcon[] = [];
                 let background = "white";
-                if (spell.Effects.some(effect => this.pairedSpellEffects.indexOf(effect) > -1))
+                if (spell.Effects.some(effect => pairedSpellEffects.indexOf(effect) > -1))
                     icons.push("Handheld");
                 if (spell.Effects.some(effect => blockedSpellEffects.indexOf(effect) > -1)) {
                     icons.push("AllowedLimited");
-                    background = "red";
+                    background = "orange";
                 }
 
                 let desc = spell.Effects.length == 0 ? "None" : spell.Effects.join(", ");
@@ -324,11 +370,6 @@ export class MagicModule extends BaseModule {
 		return;
     }
 
-    pairedSpellEffects = [
-        LSCGSpellEffect.orgasm_siphon,
-        LSCGSpellEffect.paired_arousal
-    ];
-
     CastWildMagic(C: OtherCharacter | PlayerCharacter) {
         let spellIndex = getRandomInt(this.settings.knownSpells.length + 1);
         let spell = this.settings.knownSpells[spellIndex];
@@ -341,12 +382,15 @@ export class MagicModule extends BaseModule {
     }
 
     SpellNeedsPair(spell: SpellDefinition): boolean {
-        return spell.Effects.some(e => this.pairedSpellEffects.indexOf(e) > -1);
+        return spell.Effects.some(e => pairedSpellEffects.indexOf(e) > -1);
     }
 
     CastSpellInitial(spell: SpellDefinition, C: Character | null) {
         if (!!C) {
-            if (this.SpellNeedsPair(spell)) {
+            if (this.TeachingSpell) {
+                this.TeachSpellActual(spell, C as OtherCharacter);
+            }
+            else if (this.SpellNeedsPair(spell)) {
                 this.SpellPairOption.Spell = spell;
                 this.SpellPairOption.Source = C;
                 this.SpellPairOption.SelectOpen = true;
@@ -354,6 +398,17 @@ export class MagicModule extends BaseModule {
                 this.CastSpellActual(spell, C);
             }
         }
+    }
+
+    getTeachingActionString(spell: SpellDefinition, item: Item | null, targetItem: Item | null): string {
+        let itemName = !!item ? (item?.Craft?.Name ?? item?.Asset.Description) : "wand";
+        let targetItemName = !!targetItem ? (targetItem?.Craft?.Name ?? targetItem?.Asset.Description) : "wand";
+        let teachingActionStrings: string[] = [
+            `%NAME% slowly waves %POSSESSIVE% ${itemName} in an intricate pattern, making sure %OPP_NAME% follows along with %OPP_POSSESSIVE% ${targetItemName}.`,
+            `%NAME% repeats an indecipherable phrase, touching %POSSESSIVE% ${itemName} to %OPP_NAME%'s ${targetItemName}.`,
+            `%NAME% holds both %POSSESSIVE% ${itemName} and %OPP_NAME%'s ${targetItemName} tightly, energy traveling from one to the other.`
+        ];
+        return teachingActionStrings[getRandomInt(teachingActionStrings.length)];
     }
 
     getCastingActionString(spell: SpellDefinition, item: Item | null, target: Character, paired?: Character): string {
@@ -385,6 +440,29 @@ export class MagicModule extends BaseModule {
                             value: pairedTarget?.MemberNumber
                         }
                     ]);
+            }
+        }
+        this.CloseSpellMenu();
+        DialogLeave();
+    }
+
+    TeachSpellActual(spell: SpellDefinition, target: OtherCharacter) {
+        if (!!spell && !!target) {
+            if (!target.LSCG.MagicModule)
+                SendAction(`%NAME% tries to explain the details of ${spell.Name} to %OPP_NAME% but %OPP_PRONOUN% don't seem to understand.`, target);
+            else if (!target.LSCG?.MagicModule.enabled) {
+                SendAction(`%NAME% tries to teach %OPP_NAME% ${spell.Name} but %OPP_PRONOUN% don't seem to have ̶i̶n̶s̶t̶a̶l̶l̶e̶d̶ embraced Magic™.`, target);
+            }
+            else {
+                SendAction(this.getTeachingActionString(spell, InventoryGet(Player, "ItemHandheld"), InventoryGet(target, "ItemHandheld")), target);
+                setTimeout(() => {
+                    sendLSCGCommand(target, "spell-teach", [
+                        {
+                            name: "spell",
+                            value: spell
+                        }
+                    ]);
+                }, 2000); // 2sec wait until actual teach
             }
         }
         this.CloseSpellMenu();
@@ -531,6 +609,17 @@ export class MagicModule extends BaseModule {
                     this.stateModule.OrgasmSiphonedState.RespondToPairing(originalTarget, sender);
                     break;
             }
+        }
+    }
+
+    IncomingSpellTeachCommand(sender: Character | null, msg: LSCGMessageModel) {
+        let spell = msg.command?.args?.find(arg => arg.name == "spell")?.value as SpellDefinition;
+        if (this.settings.knownSpells.find(s => s.Name == spell.Name)) {
+            SendAction(`%NAME% already knows a spell called ${spell.Name} and ignores %POSSESSIVE% new instructions.`);
+        } else {
+            SendAction(`%NAME% grins as they finally understand the details of ${spell.Name} and memorizes it for later.`);
+            this.settings.knownSpells.push(spell);
+            settingsSave(true);
         }
     }
 }

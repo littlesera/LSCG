@@ -296,13 +296,16 @@ export class CoreModule extends BaseModule {
                 break;
             case "spell":
             case "pair":
-                getModule<MagicModule>("MagicModule").IncomingSpellCommand(Sender, msg);
+                getModule<MagicModule>("MagicModule")?.IncomingSpellCommand(Sender, msg);
+                break;
+            case "spell-teach":
+                getModule<MagicModule>("MagicModule")?.IncomingSpellTeachCommand(Sender, msg);
                 break;
             case "unpair":
-                getModule<StateModule>("StateModule").IncomingUnpair(senderNumber, msg);
+                getModule<StateModule>("StateModule")?.IncomingUnpair(senderNumber, msg);
                 break;
             case "pairing-update":
-                getModule<StateModule>("StateModule").PairingUpdate(senderNumber, msg);
+                getModule<StateModule>("StateModule")?.PairingUpdate(senderNumber, msg);
                 break;
         }
     }

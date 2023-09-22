@@ -231,25 +231,37 @@ export function SendChat(msg: string) {
 export function replace_template(text: string, source: Character | null = null) {
     let result = text;
 	let pronounItem = InventoryGet(Player, "Pronouns");
-	let posessive = "Her";
+	let possessive = "Her";
 	let intensive = "Her"
 	let pronoun = "She";
 	if (pronounItem?.Asset.Name == "HeHim") {
-		posessive = "His";
+		possessive = "His";
 		intensive = "Him";
 		pronoun = "He";
 	}
 
+	let opp_pronounItem = !source? null : InventoryGet(source, "Pronouns");
+	let opp_male = opp_pronounItem?.Asset.Name == "HeHim" ?? false;
 	let oppName = !!source ? CharacterNickname(source) : "";
+	let oppPossessive = opp_male ? "His" : "Her";
+	let oppIntensive = opp_male ? "Him" : "Her";
+	let oppPronoun = opp_male ? "He" : "She";
 
-    result = result.replaceAll("%POSSESSIVE%", posessive.toLocaleLowerCase())
-    result = result.replaceAll("%CAP_POSSESSIVE%", posessive)
-    result = result.replaceAll("%PRONOUN%", pronoun.toLocaleLowerCase())
-    result = result.replaceAll("%CAP_PRONOUN%", pronoun)
-    result = result.replaceAll("%INTENSIVE%", intensive.toLocaleLowerCase())
-    result = result.replaceAll("%CAP_INTENSIVE%", intensive)
-    result = result.replaceAll("%NAME%", CharacterNickname(Player)) //Does this works to print "Lilly"? -- it should, yes
-    result = result.replaceAll("%OPP_NAME%", oppName) // finally we can use the source name to make the substitution
+	result = result.replaceAll("%NAME%", CharacterNickname(Player));
+    result = result.replaceAll("%POSSESSIVE%", possessive.toLocaleLowerCase());
+    result = result.replaceAll("%PRONOUN%", pronoun.toLocaleLowerCase());
+    result = result.replaceAll("%INTENSIVE%", intensive.toLocaleLowerCase());
+	result = result.replaceAll("%CAP_POSSESSIVE%", possessive);
+	result = result.replaceAll("%CAP_PRONOUN%", pronoun);
+    result = result.replaceAll("%CAP_INTENSIVE%", intensive);
+
+    result = result.replaceAll("%OPP_NAME%", oppName);
+	result = result.replaceAll("%CAP_OPP_PRONOUN%", oppPronoun);
+	result = result.replaceAll("%CAP_OPP_POSSESSIVE%", oppPossessive);
+	result = result.replaceAll("%CAP_OPP_INTENSIVE%", oppIntensive);
+	result = result.replaceAll("%OPP_PRONOUN%", oppPronoun.toLocaleLowerCase());
+	result = result.replaceAll("%OPP_POSSESSIVE%", oppPossessive.toLocaleLowerCase());
+	result = result.replaceAll("%OPP_INTENSIVE%", oppIntensive.toLocaleLowerCase());
 
     return result
 }
