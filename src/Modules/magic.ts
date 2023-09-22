@@ -448,11 +448,11 @@ export class MagicModule extends BaseModule {
                     this.stateModule.Clear(true);
                     break;
                 case LSCGSpellEffect.outfit:
-                    if (!!spell.OutfitCode) {
+                    if (!!spell.Outfit?.Code) {
                         this.stateModule.GaggedState.Active ? 
                             SendAction("%NAME% trembles as %POSSESSIVE% clothing shimmers and morphs around %PRONOUN%.") : 
                             SendAction("%NAME% squeaks as %POSSESSIVE% clothing shimmers and morphs around %PRONOUN%.");
-                        this.stateModule.RedressedState.ApplyOutfit(spell.OutfitCode)
+                        this.stateModule.RedressedState.ApplyOutfit(spell.Outfit)
                     }
                     break;
                 case LSCGSpellEffect.paired_arousal:

@@ -15,12 +15,21 @@ export enum LSCGSpellEffect {
     dispell = "Dispell"
 }
 
+export enum OutfitOption {
+    clothes_only = "Clothes Only",
+    binds_only = "Restraints Only",
+    both = "Clothes and Restraints"
+}
+export interface OutfitConfig {
+    Code: string;
+    Option: OutfitOption;
+}
 export interface SpellDefinition {
     Name: string;
     Creator: number;
     Effects: LSCGSpellEffect[];
     AllowPotion: boolean;
-    OutfitCode: string;
+    Outfit?: OutfitConfig;
 }
 
 export interface MagicSettingsModel extends MagicPublicSettingsModel {

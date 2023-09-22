@@ -1,5 +1,5 @@
 import { GuiSubscreen, Setting } from "./settingBase";
-import { LSCGSpellEffect, MagicSettingsModel, SpellDefinition } from "./Models/magic";
+import { LSCGSpellEffect, MagicSettingsModel, OutfitConfig, OutfitOption, SpellDefinition } from "./Models/magic";
 
 export class GuiMagic extends GuiSubscreen {
 
@@ -169,10 +169,12 @@ export class GuiMagic extends GuiSubscreen {
 				]];
 	}
 
-	outfitFieldId: string = "magic_outfitPaste" ;
+	outfitFieldId: string = "magic_outfitPaste";
+	outfitDropId: string = "magic_outfitDrop";
 	Load(): void {
 		super.Load();
 		ElementCreateInput(this.outfitFieldId, "text", "", -1);
+		ElementCreateDropdown(this.outfitDropId, Object.values(OutfitOption), (evt) => this.OutfitConfigDropChanged(evt));
 	}
 
 	blinkLastTime = 0;
@@ -195,6 +197,8 @@ export class GuiMagic extends GuiSubscreen {
 			DrawTextFit("Paste Outfit Code:", coords.x + 50, (coords.y + coords.h/2) - 50, coords.w - 100 - buttonWidth, "Black", "Grey");
 			MainCanvas.textAlign = "center";
 			ElementPosition(this.outfitFieldId, coords.x + (coords.w/2) - (buttonWidth/2), (coords.y + coords.h/2) + 20, coords.w - 100 - buttonWidth);
+			ElementPosition(this.outfitDropId, coords.x + 650, (coords.y + coords.h / 2) - 50 - 32, 300, 64);
+			DrawEmptyRect(coords.x + 650, (coords.y + coords.h / 2) - 50 - 32, 300, 64, "Black", 3);
 			DrawButton(1350, 500 - 32, 100, 64, "Confirm", "White");
 			return;
 		}
@@ -202,6 +206,7 @@ export class GuiMagic extends GuiSubscreen {
 		super.Run();
 
 		this.ElementHide(this.outfitFieldId);
+		this.ElementHide(this.outfitDropId);
 
 		var prev = MainCanvas.textAlign;
 		if (!this.settings.enabled) {
@@ -332,8 +337,7 @@ export class GuiMagic extends GuiSubscreen {
 						Name: `Spell No. ${this.settings.knownSpells.length+1}`,
 						Creator: Player.MemberNumber,
 						Effects: [],
-						AllowPotion: false,
-						OutfitCode: ""
+						AllowPotion: false
 					});
 					this.SpellIndex = this.settings.knownSpells.length - 1;
 					this.loadSpell();
@@ -389,6 +393,7 @@ export class GuiMagic extends GuiSubscreen {
 
 	Exit(): void {
 		ElementRemove(this.outfitFieldId);
+		ElementRemove(this.outfitDropId);
 		super.Exit();
 	}
 
@@ -447,13 +452,25 @@ export class GuiMagic extends GuiSubscreen {
 
 	_ConfigureOutfit: boolean = false;
 	ConfigureOutfitEffect() {
-		this.ElementSetValue(this.outfitFieldId, this.Spell.OutfitCode ?? "");
+		this.ElementSetValue(this.outfitFieldId, this.Spell.Outfit?.Code ?? "");
+		this.ElementSetValue(this.outfitDropId, this.Spell.Outfit?.Option ?? OutfitOption.clothes_only);
 		this._ConfigureOutfit = true;
 	}
 	ConfirmOutfit() {
 		this._ConfigureOutfit = false;
-		this.Spell.OutfitCode = ElementValue(this.outfitFieldId);
+		if (!this.Spell.Outfit) this.Spell.Outfit = {Code: "", Option: OutfitOption.both};
+		this.Spell.Outfit.Code = ElementValue(this.outfitFieldId);
 		this.ElementSetValue(this.outfitFieldId, "");
+	}
+	OutfitConfigDropChanged(evt: any) {
+		if (!!this.Spell) {
+			if (!this.Spell.Outfit)
+				this.Spell.Outfit = <OutfitConfig>{
+					Code: "",
+					Option: OutfitOption.both
+				}
+			this.Spell.Outfit.Option = evt.target.value as OutfitOption;
+		}
 	}
 
 	SpellEffectDescription(effect: LSCGSpellEffect): string {

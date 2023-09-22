@@ -1,6 +1,7 @@
-import { BC_ItemsToItemBundles, SendAction, addCustomEffect, getRandomInt, removeCustomEffect, settingsSave, waitFor } from "utils";
+import { BC_ItemsToItemBundles, SendAction, addCustomEffect, getRandomInt, isBind, isCloth, removeCustomEffect, settingsSave, waitFor } from "utils";
 import { BaseState, StateRestrictions } from "./BaseState";
 import { StateModule } from "Modules/states";
+import { OutfitConfig, OutfitOption } from "Settings/Models/magic";
 
 export class RedressedState extends BaseState {
     Type: LSCGState = "deaf";
@@ -32,7 +33,20 @@ export class RedressedState extends BaseState {
         settingsSave();
     }
 
-    StripCharacter(skipStore: boolean = false) {
+    DoChange(asset: Asset | null, type: OutfitOption): boolean {
+        if (!asset)
+            return false;
+        switch(type) {
+            case OutfitOption.clothes_only:
+                return isCloth(asset);
+            case OutfitOption.binds_only:
+                return isBind(asset);
+            case OutfitOption.both:
+                return isCloth(asset) || isBind(asset);
+        }
+    }
+
+    StripCharacter(skipStore: boolean, type: OutfitOption) {
         if (!skipStore && !this.StoredOutfit)
             this.SetStoredOutfit();
 
@@ -40,7 +54,7 @@ export class RedressedState extends BaseState {
         let appearance = Player.Appearance;
         for (let i = appearance.length - 1; i >= 0; i--) {
             const asset = appearance[i].Asset;
-            if (asset.Group.AllowNone && !asset.BodyCosplay) {
+            if (this.DoChange(asset, type)) {
                 appearance.splice(i, 1);
             }
         }
@@ -48,32 +62,34 @@ export class RedressedState extends BaseState {
         ChatRoomCharacterUpdate(Player);
     }
 
-    ApplyOutfit(outfitCode: string, memberNumber?: number | undefined, emote?: boolean | undefined): void {
+    ApplyOutfit(outfit: OutfitConfig, memberNumber?: number | undefined, emote?: boolean | undefined): void {
         try{
-            let outfitList = JSON.parse(LZString.decompressFromBase64(outfitCode)) as ItemBundle[];
+            let outfitList = JSON.parse(LZString.decompressFromBase64(outfit.Code)) as ItemBundle[];
             if (!!outfitList && typeof outfitList == "object") {
-                this.StripCharacter();
-                this.WearMany(outfitList);
+                this.StripCharacter(false, outfit.Option);
+                this.WearMany(outfitList, outfit.Option);
                 super.Activate(memberNumber, emote);
             }
         }
         catch {
-            console.warn("error parsing outfitcode in RedressedState: " + outfitCode);
+            console.warn("error parsing outfitcode in RedressedState: " + outfit.Code);
         }
     }
 
     Recover(emote?: boolean | undefined): void {
         super.Recover();
         if (!!this.StoredOutfit) {
-            this.StripCharacter(true);
-            this.WearMany(this.StoredOutfit);
+            this.StripCharacter(true, OutfitOption.both);
+            this.WearMany(this.StoredOutfit, OutfitOption.both);
             this.ClearStoredOutfit();
         }
     }
 
-    WearMany(items: ItemBundle[]) {
+    WearMany(items: ItemBundle[], type: OutfitOption) {
         items.forEach(item => {
-            InventoryWear(Player, item.Name, item.Group, item.Color, item.Difficulty, -1, item.Craft, true);
+            let asset = AssetGet("Female3DCG", item.Group, item.Name);
+            if (this.DoChange(asset, type))
+                InventoryWear(Player, item.Name, item.Group, item.Color, item.Difficulty, -1, item.Craft, true);
         });
         ChatRoomCharacterUpdate(Player);
     }
