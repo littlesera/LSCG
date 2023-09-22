@@ -63,7 +63,7 @@ export class MagicModule extends BaseModule {
     get RandomSpell(): SpellDefinition {
         let spell = <SpellDefinition>{
             Name: `wild magic`,
-            Effects: Array(getRandomInt(3) + 1).fill(0).map(t => Object.values(LSCGSpellEffect)[getRandomInt(Object.keys(LSCGSpellEffect).length)])
+            Effects: Array(getRandomInt(3) + 1).fill(0).map((t, ix, arr) => Object.values(LSCGSpellEffect).filter(v => arr.indexOf(v) == -1)[getRandomInt(Object.keys(LSCGSpellEffect).length)])
         }
         if (spell.Effects.indexOf(LSCGSpellEffect.outfit)) {
             let mbsOutfits = (<any>Player).MBSSettings?.FortuneWheelItemSets.filter((s: any) => !!s).map((s: { itemList: any; }) => s.itemList as ItemBundle[]) as ItemBundle[][];

@@ -51,9 +51,11 @@ export class HypnoState extends BaseState {
     }
 
     Activate(memberNumber?: number, emote?: boolean) {
-        this.SetEyes();
-        this.CheckHypnotizedState();
-        super.Activate(memberNumber, emote);
+        if (!this.Active) {
+            this.SetEyes();
+            this.CheckHypnotizedState();
+            super.Activate(memberNumber, emote);
+        }
     }
 
     Recover(emote?: boolean) {
@@ -112,11 +114,13 @@ export class HypnoState extends BaseState {
     }
 
     SetEyes() {
-        this.extensions["existingEye1Name"] = InventoryGet(Player, "Eyes")?.Asset.Name;
-        this.extensions["existingEye1Color"] = InventoryGet(Player, "Eyes")?.Color;
-        this.extensions["existingEye2Name"] = InventoryGet(Player, "Eyes2")?.Asset.Name;
-        this.extensions["existingEye2Color"] = InventoryGet(Player, "Eyes2")?.Color;
-        this.extensions["existingEyeExpression"] = WardrobeGetExpression(Player)?.Eyes ?? null;
+        if (!this.extensions["existingEye1Name"]) {
+            this.extensions["existingEye1Name"] = InventoryGet(Player, "Eyes")?.Asset.Name;
+            this.extensions["existingEye1Color"] = InventoryGet(Player, "Eyes")?.Color;
+            this.extensions["existingEye2Name"] = InventoryGet(Player, "Eyes2")?.Asset.Name;
+            this.extensions["existingEye2Color"] = InventoryGet(Player, "Eyes2")?.Color;
+            this.extensions["existingEyeExpression"] = WardrobeGetExpression(Player)?.Eyes ?? null;
+        }
 
         settingsSave();
         this.EnforceEyes();

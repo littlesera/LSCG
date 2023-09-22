@@ -4,7 +4,7 @@ import { StateModule } from "Modules/states";
 import { OutfitConfig, OutfitOption } from "Settings/Models/magic";
 
 export class RedressedState extends BaseState {
-    Type: LSCGState = "deaf";
+    Type: LSCGState = "redressed";
 
     constructor(state: StateModule) {
         super(state);
@@ -63,6 +63,7 @@ export class RedressedState extends BaseState {
     }
 
     ApplyOutfit(outfit: OutfitConfig, memberNumber?: number | undefined, emote?: boolean | undefined): void {
+        this.Activate(memberNumber, emote);
         try{
             let outfitList = JSON.parse(LZString.decompressFromBase64(outfit.Code)) as ItemBundle[];
             if (!!outfitList && typeof outfitList == "object") {
