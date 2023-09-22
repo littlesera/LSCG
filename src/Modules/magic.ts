@@ -3,7 +3,7 @@ import { getModule } from "modules";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
 import { LSCG_SendLocal, SendAction, getRandomInt, hookFunction, removeAllHooksByModule, sendLSCGCommand } from "../utils";
 import { ActivityModule, ActivityTarget } from "./activities";
-import { LSCGSpellEffect, MagicSettingsModel, SpellDefinition } from "Settings/Models/magic";
+import { LSCGSpellEffect, MagicSettingsModel, OutfitConfig, OutfitOption, SpellDefinition } from "Settings/Models/magic";
 import { GuiMagic } from "Settings/magic";
 import { StateModule } from "./states";
 
@@ -61,10 +61,24 @@ export class MagicModule extends BaseModule {
     }
 
     get RandomSpell(): SpellDefinition {
-        return <SpellDefinition>{
+        let spell = <SpellDefinition>{
             Name: `wild magic`,
             Effects: Array(getRandomInt(3) + 1).fill(0).map(t => Object.values(LSCGSpellEffect)[getRandomInt(Object.keys(LSCGSpellEffect).length)])
         }
+        if (spell.Effects.indexOf(LSCGSpellEffect.outfit)) {
+            let mbsOutfits = (<any>Player).MBSSettings?.FortuneWheelItemSets.filter((s: any) => !!s).map((s: { itemList: any; }) => s.itemList as ItemBundle[]) as ItemBundle[][];
+            let outfitIx = getRandomInt(mbsOutfits?.length);
+            let outfit = !mbsOutfits ? undefined : mbsOutfits[outfitIx];
+            let wardrobeOutfit = !Player.Wardrobe ? undefined : Player.Wardrobe[getRandomInt(Player.Wardrobe?.length)];
+            if (!outfit || !!wardrobeOutfit && getRandomInt(2) == 0)
+                outfit = wardrobeOutfit;
+
+            spell.Outfit = <OutfitConfig>{
+                Option: OutfitOption.both,
+                Code: LZString.compressToBase64(JSON.stringify(outfit))
+            }
+        }        
+        return spell;
     }
 
     get AvailableSpells(): SpellDefinition[] {
@@ -368,16 +382,6 @@ export class MagicModule extends BaseModule {
                         value: pairedTarget?.MemberNumber
                     }
                 ]);
-                if (!!pairedTarget)
-                    sendLSCGCommand(pairedTarget, "spell-pair", [
-                        {
-                            name: "spell",
-                            value: spell
-                        }, {
-                            name: "paired",
-                            value: spellTarget.MemberNumber
-                        }
-                    ]);
             }
         }
         this.CloseSpellMenu();
@@ -413,62 +417,82 @@ export class MagicModule extends BaseModule {
             return;
         }
 
-        allowedSpellEffects.forEach(effect => {
-            switch (effect) {
-                case LSCGSpellEffect.blindness:
-                    SendAction("%NAME%'s eyes dart around, %POSSESSIVE% world suddenly plunged into darkness.");
-                    this.stateModule.BlindState.Activate(sender?.MemberNumber);
-                    break;
-                case LSCGSpellEffect.deafened:
-                    SendAction("%NAME% frowns as %PRONOUN% is completely deafened.");
-                    this.stateModule.DeafState.Activate(sender?.MemberNumber);
-                    break;
-                case LSCGSpellEffect.frozen:
-                    SendAction("%NAME%'s widen in a panic as %POSSESSIVE% muscles seize in place.");
-                    this.stateModule.FrozenState.Activate(sender?.MemberNumber);
-                    break;
-                case LSCGSpellEffect.horny:
-                    this.stateModule.GaggedState.Active ? SendAction("A blush runs into %NAME%'s cheeks uncontrollably.") : SendAction("A moan escapes %NAME%'s lips uncontrollably.");
-                    this.stateModule.HornyState.Activate(sender?.MemberNumber);
-                    break;
-                case LSCGSpellEffect.hypnotizing:
-                    SendAction("%NAME% is unable to fight the spell's hypnotizing influence, slumping weakly as %POSSESSIVE% eyes go blank.");
-                    this.stateModule.HypnoState.Activate(sender?.MemberNumber);
-                    break;
-                case LSCGSpellEffect.muted:
-                    Player.IsGagged() ? SendAction("%NAME%'s protests suddenly fall completely silent.") : SendAction("%NAME%'s mouth moves in protest but not a single sound escapes.");
-                    this.stateModule.GaggedState.Activate(sender?.MemberNumber);
-                    break;
-                case LSCGSpellEffect.slumber:
-                    SendAction("%NAME% succumbs to the spell's overwhelming pressure, %POSSESSIVE% eyes closing as %PRONOUN% falls unconscious.");
-                    this.stateModule.SleepState.Activate(sender?.MemberNumber);
-                    break;
-                case LSCGSpellEffect.dispell:
-                    SendAction("%NAME% gasps, blinking as %PRONOUN% is restored to normal.");
-                    this.stateModule.Clear(true);
-                    break;
-                case LSCGSpellEffect.outfit:
-                    if (!!spell.Outfit?.Code) {
+        allowedSpellEffects.forEach((effect, ix, arr) => {
+            setTimeout(() => {
+                switch (effect) {
+                    case LSCGSpellEffect.blindness:
+                        SendAction("%NAME%'s eyes dart around, %POSSESSIVE% world suddenly plunged into darkness.");
+                        this.stateModule.BlindState.Activate(sender?.MemberNumber);
+                        break;
+                    case LSCGSpellEffect.deafened:
+                        SendAction("%NAME% frowns as %PRONOUN% is completely deafened.");
+                        this.stateModule.DeafState.Activate(sender?.MemberNumber);
+                        break;
+                    case LSCGSpellEffect.frozen:
+                        SendAction("%NAME%'s widen in a panic as %POSSESSIVE% muscles seize in place.");
+                        this.stateModule.FrozenState.Activate(sender?.MemberNumber);
+                        break;
+                    case LSCGSpellEffect.horny:
+                        this.stateModule.GaggedState.Active ? SendAction("A blush runs into %NAME%'s cheeks uncontrollably.") : SendAction("A moan escapes %NAME%'s lips uncontrollably.");
+                        this.stateModule.HornyState.Activate(sender?.MemberNumber);
+                        break;
+                    case LSCGSpellEffect.hypnotizing:
+                        SendAction("%NAME% is unable to fight the spell's hypnotizing influence, slumping weakly as %POSSESSIVE% eyes go blank.");
+                        this.stateModule.HypnoState.Activate(sender?.MemberNumber);
+                        break;
+                    case LSCGSpellEffect.muted:
+                        Player.IsGagged() ? SendAction("%NAME%'s protests suddenly fall completely silent.") : SendAction("%NAME%'s mouth moves in protest but not a single sound escapes.");
+                        this.stateModule.GaggedState.Activate(sender?.MemberNumber);
+                        break;
+                    case LSCGSpellEffect.slumber:
+                        SendAction("%NAME% succumbs to the spell's overwhelming pressure, %POSSESSIVE% eyes closing as %PRONOUN% falls unconscious.");
+                        this.stateModule.SleepState.Activate(sender?.MemberNumber);
+                        break;
+                    case LSCGSpellEffect.dispell:
+                        SendAction("%NAME% gasps, blinking as %PRONOUN% is restored to normal.");
+                        this.stateModule.Clear(true);
+                        break;
+                    case LSCGSpellEffect.outfit:
+                        if (!!spell.Outfit?.Code) {
+                            this.stateModule.GaggedState.Active ? 
+                                SendAction("%NAME% trembles as %POSSESSIVE% clothing shimmers and morphs around %INTENSIVE%.") : 
+                                SendAction("%NAME% squeaks as %POSSESSIVE% clothing shimmers and morphs around %INTENSIVE%.");
+                            this.stateModule.RedressedState.ApplyOutfit(spell.Outfit)
+                        }
+                        break;
+                    case LSCGSpellEffect.paired_arousal:
+                        // TODO
+                        SendAction(`%NAME% squirms as %POSSESSIVE% arousal is paired.`);
+                        this.NotifyPair(sender, paired, spell);
+                        break;
+                    case LSCGSpellEffect.orgasm_siphon:
+                        // TODO
                         this.stateModule.GaggedState.Active ? 
-                            SendAction("%NAME% trembles as %POSSESSIVE% clothing shimmers and morphs around %PRONOUN%.") : 
-                            SendAction("%NAME% squeaks as %POSSESSIVE% clothing shimmers and morphs around %PRONOUN%.");
-                        this.stateModule.RedressedState.ApplyOutfit(spell.Outfit)
-                    }
-                    break;
-                case LSCGSpellEffect.paired_arousal:
-                    // TODO
-                    SendAction(`%NAME% squirms as %POSSESSIVE% arousal is paired.`);
-                    LSCG_SendLocal(`paired_arousal spell TODO...`);
-                    break;
-                case LSCGSpellEffect.orgasm_siphon:
-                    // TODO
-                    this.stateModule.GaggedState.Active ? 
-                    SendAction(`%NAME% quivers as %PRONOUN% feels %POSSESSIVE% impending denial.`) :
-                    SendAction(`%NAME% whimpers as %PRONOUN% feels %POSSESSIVE% impending denial.`);
-                    LSCG_SendLocal(`orgasm_siphon spell TODO...`);
-                    break;
-            }
+                            SendAction(`%NAME% quivers as %PRONOUN% feels %POSSESSIVE% impending denial.`) :
+                            SendAction(`%NAME% whimpers as %PRONOUN% feels %POSSESSIVE% impending denial.`);
+                        this.NotifyPair(sender, paired, spell);
+                        break;
+                }
+            }, 2000 * ix);
         });
+    }
+
+    NotifyPair(caster: Character | null, pairedTarget: Character | undefined, spell: SpellDefinition) {
+        if (!pairedTarget)
+            return;
+
+        sendLSCGCommand(pairedTarget, "spell-pair", [
+            {
+                name: "spell",
+                value: spell
+            }, {
+                name: "paired",
+                value: Player.MemberNumber
+            }, {
+                name: "caster",
+                value: caster?.MemberNumber
+            }
+        ]);
     }
 
     IncomingSpellPair(sender: Character | null, spell: SpellDefinition, originalTarget: Character) {

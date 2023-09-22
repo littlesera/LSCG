@@ -197,8 +197,8 @@ export class GuiMagic extends GuiSubscreen {
 			DrawTextFit("Paste Outfit Code:", coords.x + 50, (coords.y + coords.h/2) - 50, coords.w - 100 - buttonWidth, "Black", "Grey");
 			MainCanvas.textAlign = "center";
 			ElementPosition(this.outfitFieldId, coords.x + (coords.w/2) - (buttonWidth/2), (coords.y + coords.h/2) + 20, coords.w - 100 - buttonWidth);
-			ElementPosition(this.outfitDropId, coords.x + 650, (coords.y + coords.h / 2) - 50 - 32, 300, 64);
-			DrawEmptyRect(coords.x + 650, (coords.y + coords.h / 2) - 50 - 32, 300, 64, "Black", 3);
+			ElementPositionFix(this.outfitDropId, 28, coords.x + 450, (coords.y + coords.h / 2) - 50 - 19, 340, 64);
+			DrawEmptyRect(coords.x + 445, (coords.y + coords.h / 2) - 48 - 32, 350, 68, "Black", 3);
 			DrawButton(1350, 500 - 32, 100, 64, "Confirm", "White");
 			return;
 		}
