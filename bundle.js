@@ -8900,7 +8900,7 @@ ${LSCG_CHANGES}`;
 	    });
 	}
 	function init() {
-	    var _a, _b, _c;
+	    var _a, _b, _c, _d, _e, _f;
 	    if (window.LSCG_Loaded)
 	        return;
 	    // clear any old settings.
@@ -8908,7 +8908,10 @@ ${LSCG_CHANGES}`;
 	        delete Player.OnlineSettings.LittleSera;
 	    if (!!((_b = Player.OnlineSettings) === null || _b === void 0 ? void 0 : _b.ClubGames))
 	        delete Player.OnlineSettings.ClubGames;
-	    Player.LSCG = ((_c = Player.OnlineSettings) === null || _c === void 0 ? void 0 : _c.LSCG) || {};
+	    if (typeof ((_c = Player.OnlineSettings) === null || _c === void 0 ? void 0 : _c.LSCG) === 'object')
+	        Player.LSCG = ((_d = Player.OnlineSettings) === null || _d === void 0 ? void 0 : _d.LSCG) || {};
+	    else if (typeof ((_e = Player.OnlineSettings) === null || _e === void 0 ? void 0 : _e.LSCG) === 'string')
+	        Player.LSCG = JSON.parse(LZString.decompressFromBase64((_f = Player.OnlineSettings) === null || _f === void 0 ? void 0 : _f.LSCG)) || {};
 	    initSettingsScreen();
 	    if (!init_modules()) {
 	        unload();
