@@ -547,7 +547,7 @@ export class MagicModule extends BaseModule {
                         this.stateModule.DeafState.Activate(sender?.MemberNumber);
                         break;
                     case LSCGSpellEffect.frozen:
-                        SendAction("%NAME%'s widen in a panic as %POSSESSIVE% muscles seize in place.");
+                        SendAction("%NAME%'s eyes widen in a panic as %POSSESSIVE% muscles seize in place.");
                         this.stateModule.FrozenState.Activate(sender?.MemberNumber);
                         break;
                     case LSCGSpellEffect.horny:

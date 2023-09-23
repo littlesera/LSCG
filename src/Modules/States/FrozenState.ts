@@ -19,6 +19,7 @@ export class FrozenState extends BaseState {
         this.Restrictions.Kneel = "true";
         this.Restrictions.Wardrobe = "true";
         this.Restrictions.Walk = "true";
+        this.Restrictions.Speech = "true";
     }
 
     Init(): void {}
@@ -27,5 +28,13 @@ export class FrozenState extends BaseState {
 
     RoomSync(): void {}
 
-    SpeechBlock(): void {}
+    speechBlockStr: string[] = [
+        "%NAME% barely trembles, unable to move their mouth or make a sound...",
+        "%NAME%'s eyes plead helplessly as their muscles refuse to obey...",
+        "%NAME% manages to muster a quiet whimper, their body held fast..."
+    ];
+
+    SpeechBlock(): void {
+        SendAction(this.speechBlockStr[getRandomInt(this.speechBlockStr.length)]);
+    }
 }

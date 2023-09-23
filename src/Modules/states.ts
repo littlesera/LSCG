@@ -129,17 +129,17 @@ export class StateModule extends BaseModule {
                 typeof CharY === "number" &&
                 typeof Zoom === "number" &&
                 ChatRoomHideIconState === 0 &&
-                MouseIn(CharX, CharY, CharX + 500 * Zoom, CharY + 1000 * Zoom)
+                MouseIn(CharX, CharY, 500 * Zoom, 1000 * Zoom)
             ) {
                 let validStates = C.LSCG?.StateModule.states.filter(s => s.active);
                 let validStateCound = validStates.length;
                 let tooltip = undefined;
                 validStates.forEach((state, ix, arr) => {
                     let iconSize = 30;
-                    let xOffset = (ix+1) * 40 * Zoom;
+                    let yOffset = (ix+1) * 40 * Zoom;
                     let iconCoords = {
-                        x: CharX + xOffset * Zoom,
-                        y: CharY + 60 * Zoom,
+                        x: CharX + 40 * Zoom,
+                        y: CharY + (60 + yOffset * Zoom),
                         w: iconSize * Zoom,
                         h: iconSize * Zoom
                     };

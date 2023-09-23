@@ -25,7 +25,7 @@ export class GaggedState extends BaseState {
 
     freeBlockStrings = [
         "%NAME%'s eyes widen as they try to speak without success...",
-        "%NAME% claws helplessly at %POSSESSIVE% mouth, unable to make a sound...",
+        "%NAME% looks around helplessly, unable to make a sound...",
         "%NAME%'s mouth moves in silence...",
         "%NAME%'s mouth moves silently..."
     ];

@@ -53,7 +53,7 @@ export class RedressedState extends BaseState {
         }
     }
 
-    StripCharacter(skipStore: boolean, type: OutfitOption) {
+    StripCharacter(skipStore: boolean, type: OutfitOption, newList: ItemBundle[] = []) {
         if (!skipStore && !this.StoredOutfit)
             this.SetStoredOutfit();
 
@@ -62,11 +62,10 @@ export class RedressedState extends BaseState {
         for (let i = appearance.length - 1; i >= 0; i--) {
             const asset = appearance[i].Asset;
             if (this.DoChange(asset, type)) {
-                appearance.splice(i, 1);
+                if (isCloth(asset) || newList.length == 0 || newList.some(x => x.Group == asset.Group.Name))
+                    appearance.splice(i, 1);
             }
         }
-
-        ChatRoomCharacterUpdate(Player);
     }
 
     ApplyOutfit(outfit: OutfitConfig, memberNumber?: number | undefined, emote?: boolean | undefined): void {
@@ -74,7 +73,7 @@ export class RedressedState extends BaseState {
         try{
             let outfitList = JSON.parse(LZString.decompressFromBase64(outfit.Code)) as ItemBundle[];
             if (!!outfitList && typeof outfitList == "object") {
-                this.StripCharacter(false, outfit.Option);
+                this.StripCharacter(false, outfit.Option, outfitList);
                 this.WearMany(outfitList, outfit.Option);
                 super.Activate(memberNumber, emote);
             }
