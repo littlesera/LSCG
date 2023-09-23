@@ -1,16 +1,13 @@
 # This workflow will do a clean installation of node dependencies, cache/restore them, build the source code and run tests across different versions of node
 # For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-nodejs
 
-name: Build + Deploy LSCG
+name: Release LSCG
 permissions:
   id-token: write
   pages: write
+  contents: write
 on:
   workflow_dispatch:
-  #push:
-  #  branches: [ "main" ]
-  #pull_request:
-  #  branches: [ "main" ]
 
 jobs:
   build:
@@ -28,10 +25,11 @@ jobs:
     - run: npm run build --if-present
     #- run: npm test
 
-    - name: Upload GitHub Pages artifact
-      uses: actions/upload-pages-artifact@v1.0.8
+    - name: Deploy
+      uses: JamesIves/github-pages-deploy-action@v4
       with:
-        path: dist/
-
-    - name: Deploy GitHub Pages site
-      uses: actions/deploy-pages@v2.0.0
+        branch: gh-pages
+        folder: dist
+        clean-exclude: dev
+        git-config-name: github-actions[bot]
+        git-config-email: github-actions[bot]@users.noreply.github.com
