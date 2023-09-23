@@ -3,7 +3,7 @@ import { getModule, modules } from "modules";
 import { BaseSettingsModel, GlobalSettingsModel } from "Settings/Models/base";
 import { IPublicSettingsModel, PublicSettingsModel, SettingsModel } from "Settings/Models/settings";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { removeAllHooksByModule, hookFunction, getCharacter, drawSvg, SVG_ICONS, sendLSCGMessage, settingsSave, LSCG_CHANGES, LSCG_SendLocal, getCharacterByNicknameOrMemberNumber, mouseTooltop } from "../utils";
+import { removeAllHooksByModule, hookFunction, getCharacter, drawSvg, SVG_ICONS, sendLSCGMessage, settingsSave, LSCG_CHANGES, LSCG_SendLocal, getCharacterByNicknameOrMemberNumber, mouseTooltip } from "../utils";
 import { ActivityModule, GrabType } from "./activities";
 import { HypnoModule } from "./hypno";
 import { CollarModule } from "./collar";
@@ -104,7 +104,7 @@ export class CoreModule extends BaseModule {
                     xOffset = -10;
                 drawSvg(MainCanvas, SVG_ICONS.STAR, CharX + (xOffset + 410) * Zoom, CharY + 8 * Zoom, 40 * Zoom, 40 * Zoom, 50, 0.8, 1, starColor);
                 if (MouseIn(CharX + 405 * Zoom, CharY + 3 * Zoom, 50 * Zoom, 50 * Zoom)) {
-                    mouseTooltop(version, CharX + 425 * Zoom, CharY + 50 * Zoom);
+                    mouseTooltip(version, CharX + 425 * Zoom, CharY + 50 * Zoom);
                 }
             }
         }, ModuleCategory.Core);

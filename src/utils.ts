@@ -578,17 +578,18 @@ export function GetItemNameAndDescriptionConcat(item: Item | null): string | und
 	return name + " | " + description;
 }
 
-export function mouseTooltop(msg: string, x?: number, y?: number) {
+export function mouseTooltip(msg: string, x?: number, y?: number) {
 	var prevAlign = MainCanvas.textAlign;
 	var prevFont = MainCanvas.font;
 	var pad = 5;
-	var TextX = Math.max(0, Math.min(1000, x ?? MouseX));
-	var TextY = Math.max(0, Math.min(1000, y ?? MouseY));
 	MainCanvas.textAlign = "left";
 	MainCanvas.font = '16px Arial, sans-serif'
 	var size = MainCanvas.measureText(msg);
-	DrawRect(TextX - pad + 3, TextY - size.actualBoundingBoxAscent - pad + 3, size.actualBoundingBoxRight - size.actualBoundingBoxLeft + 2 * pad, size.actualBoundingBoxDescent + size.actualBoundingBoxAscent + 2 * pad, "rgba(0, 0, 0, .7)");
-	DrawRect(TextX - pad, TextY - size.actualBoundingBoxAscent - pad, size.actualBoundingBoxRight - size.actualBoundingBoxLeft + 2 * pad, size.actualBoundingBoxDescent + size.actualBoundingBoxAscent + 2 * pad, "#D7F6E9");
+	let width = size.actualBoundingBoxRight - size.actualBoundingBoxLeft + 2 * pad;
+	var TextX = Math.max(0, Math.min(1000, (x ?? MouseX) + width)) - width;
+	var TextY = Math.max(0, Math.min(1000, y ?? MouseY));
+	DrawRect(TextX - pad + 3, TextY - size.actualBoundingBoxAscent - pad + 3, width, size.actualBoundingBoxDescent + size.actualBoundingBoxAscent + 2 * pad, "rgba(0, 0, 0, .7)");
+	DrawRect(TextX - pad, TextY - size.actualBoundingBoxAscent - pad, width, size.actualBoundingBoxDescent + size.actualBoundingBoxAscent + 2 * pad, "#D7F6E9");
 	DrawTextFit(msg, TextX, TextY, size.width, "Black");
 	MainCanvas.textAlign = prevAlign;
 	MainCanvas.font = prevFont;

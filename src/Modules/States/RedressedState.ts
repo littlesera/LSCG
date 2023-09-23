@@ -7,7 +7,7 @@ export class RedressedState extends BaseState {
     Type: LSCGState = "redressed";
 
     get Icon(): string {
-        return "Icons/Magic.png";
+        return "Icons/Dress.png";
     }
     get Label(): string {
         return "Redressed";

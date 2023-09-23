@@ -6,7 +6,7 @@ export class BlindState extends BaseState {
     Type: LSCGState = "blind";
 
     get Icon(): string {
-        return "Icons/Magic.png";
+        return "Icons/Previews/BlindHeavy.png";
     }
     get Label(): string {
         return "Blinded";

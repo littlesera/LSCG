@@ -6,7 +6,7 @@ export class DeafState extends BaseState {
     Type: LSCGState = "deaf";
 
     get Icon(): string {
-        return "Icons/Magic.png";
+        return "Icons/Previews/DeafHeavy.png";
     }
     get Label(): string {
         return "Deafened";

@@ -1,6 +1,6 @@
 import { BaseModule } from "base";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { ICONS, LSCG_SendLocal, SendAction, getRandomInt, hookFunction, mouseTooltop, removeAllHooksByModule } from "../utils";
+import { ICONS, LSCG_SendLocal, SendAction, getRandomInt, hookFunction, mouseTooltip, removeAllHooksByModule } from "../utils";
 import { StateConfig, StateSettingsModel } from "Settings/Models/states";
 import { HypnoState } from "./States/HypnoState";
 import { SleepState } from "./States/SleepState";
@@ -155,7 +155,7 @@ export class StateModule extends BaseModule {
                     }
                 });
                 if (!!tooltip)
-                    mouseTooltop(tooltip);
+                mouseTooltip(tooltip);
             }
             return ret;
         }, ModuleCategory.States);

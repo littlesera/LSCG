@@ -1,12 +1,12 @@
 import { ModuleCategory } from "Settings/setting_definitions";
 import { PairedBaseState } from "./PairedBaseState";
-import { hookFunction, sendLSCGCommandBeep } from "utils";
+import { ICONS, hookFunction, sendLSCGCommandBeep } from "utils";
 
 export class OrgasmSiphonedState extends PairedBaseState {
     Type: LSCGState = "orgasm-siphoned";
 
     get Icon(): string {
-        return "Icons/Magic.png";
+        return "Assets/Female3DCG/Emoticon/Annoyed/Icon.png";
     }
     get Label(): string {
         return "Orgasms Siphoned";

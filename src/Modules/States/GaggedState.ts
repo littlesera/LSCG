@@ -6,7 +6,7 @@ export class GaggedState extends BaseState {
     Type: LSCGState = "gagged";
 
     get Icon(): string {
-        return "Icons/Magic.png";
+        return "Icons/Previews/GagHeavy.png";
     }
     get Label(): string {
         return "Gagged";

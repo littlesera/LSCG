@@ -7,7 +7,7 @@ export class HornyState extends BaseState {
     Type: LSCGState = "horny";
 
     get Icon(): string {
-        return "Icons/Magic.png";
+        return "Icons/Small/Lover.png";
     }
     get Label(): string {
         return "Aroused";

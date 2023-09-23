@@ -6,7 +6,7 @@ export class SleepState extends BaseState {
     Type: LSCGState = "asleep";
 
     get Icon(): string {
-        return "Icons/Magic.png";
+        return "Assets/Female3DCG/Eyes/Closed/Icon.png";
     }
     get Label(): string {
         return "Asleep";

@@ -6,7 +6,7 @@ export class FrozenState extends BaseState {
     Type: LSCGState = "frozen";
 
     get Icon(): string {
-        return "Icons/Magic.png";
+        return "Icons/Kidnap.png";
     }
     get Label(): string {
         return "Petrified";
