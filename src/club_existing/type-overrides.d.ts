@@ -1,3 +1,5 @@
+declare const LZString: import("lz-string").LZStringStatic;
+
 interface PlayerCharacter extends Character {
     LSCG: import("Settings/Models/settings").SettingsModel;
 }
