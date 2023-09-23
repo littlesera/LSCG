@@ -5,18 +5,19 @@ name: Dev LSCG
 permissions:
   id-token: write
   pages: write
+  contents: write
 on:
   workflow_dispatch:
   push:
-    branches: [ "dev" ]
-  pull_request:
     branches: [ "dev" ]
 
 jobs:
   build:
 
     runs-on: ubuntu-latest
-
+    environment: development
+    env:
+      IS_DEV: true
     steps:
     - uses: actions/checkout@v3
     - name: Use Node.js 18.x
@@ -28,10 +29,11 @@ jobs:
     - run: npm run build --if-present
     #- run: npm test
 
-    #- name: Upload GitHub Pages artifact
-    #  uses: actions/upload-pages-artifact@v1.0.8
-    #  with:
-    #    path: dist/
-
-    #- name: Deploy GitHub Pages site
-    #  uses: actions/deploy-pages@v2.0.0
+    - name: Deploy
+      uses: JamesIves/github-pages-deploy-action@v4
+      with:
+        branch: gh-pages
+        folder: dist
+        target-folder: dev
+        git-config-name: github-actions[bot]
+        git-config-email: github-actions[bot]@users.noreply.github.com
