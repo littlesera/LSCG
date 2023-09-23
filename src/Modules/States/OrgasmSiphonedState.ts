@@ -5,6 +5,13 @@ import { hookFunction, sendLSCGCommandBeep } from "utils";
 export class OrgasmSiphonedState extends PairedBaseState {
     Type: LSCGState = "orgasm-siphoned";
 
+    get Icon(): string {
+        return "Icons/Magic.png";
+    }
+    get Label(): string {
+        return "Orgasms Siphoned";
+    }
+
     Update(source: number, args: {name: string, value: any}[]): void {
         if (!!Player.ArousalSettings) Player.ArousalSettings.Progress = 100;
         ActivityOrgasmPrepare(Player);
@@ -16,7 +23,7 @@ export class OrgasmSiphonedState extends PairedBaseState {
             let C = args[0] as Character;
             if (!C.IsPlayer())
                 return next(args);
-                
+
             let siphonTargets = this.Pairings.filter(p => p.IsSource);
             if (siphonTargets.length > 0) {
                 siphonTargets.forEach(p => {

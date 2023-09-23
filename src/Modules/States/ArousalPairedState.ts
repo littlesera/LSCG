@@ -5,6 +5,13 @@ import { ModuleCategory } from "Settings/setting_definitions";
 
 export class ArousalPairedState extends PairedBaseState {
     Type: LSCGState = "arousal-paired";
+    
+    get Icon(): string {
+        return "Icons/Magic.png";
+    }
+    get Label(): string {
+        return "Arousal Paired";
+    }
 
     Update(source: number, args: {name: string, value: any}[]): void {
         let progress = args.find(a => a.name == "progress")?.value as number;

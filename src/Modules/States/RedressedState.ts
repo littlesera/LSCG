@@ -6,6 +6,13 @@ import { OutfitConfig, OutfitOption } from "Settings/Models/magic";
 export class RedressedState extends BaseState {
     Type: LSCGState = "redressed";
 
+    get Icon(): string {
+        return "Icons/Magic.png";
+    }
+    get Label(): string {
+        return "Redressed";
+    }
+
     constructor(state: StateModule) {
         super(state);
         this.Restrictions.Wardrobe = "true";

@@ -1,12 +1,13 @@
 import { BaseModule } from "base";
 import { getModule } from "modules";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
-import { LSCG_SendLocal, SendAction, getCharacter, getRandomInt, hookFunction, removeAllHooksByModule, sendLSCGCommand, sendLSCGCommandBeep, settingsSave } from "../utils";
+import { GetHandheldItemNameAndDescriptionConcat, GetItemNameAndDescriptionConcat, GetMetadata, ICONS, LSCG_SendLocal, OnActivity, SendAction, getCharacter, getRandomInt, hookFunction, isPhraseInString, removeAllHooksByModule, sendLSCGCommand, sendLSCGCommandBeep, settingsSave } from "../utils";
 import { ActivityModule, ActivityTarget } from "./activities";
 import { LSCGSpellEffect, MagicSettingsModel, OutfitConfig, OutfitOption, SpellDefinition } from "Settings/Models/magic";
 import { GuiMagic, pairedSpellEffects } from "Settings/magic";
 import { StateModule } from "./states";
-import { MagicWandItems } from "./item-use";
+import { ItemUseModule, MagicWandItems } from "./item-use";
+import { InjectorModule } from "./injector";
 
 export class MagicModule extends BaseModule {
     SpellMenuOpen: boolean = false;
@@ -110,7 +111,23 @@ export class MagicModule extends BaseModule {
 
         hookFunction("ServerPlayerIsInChatRoom", 10, (args, next) => {
             return next(args) || CurrentScreen == "LSCG_SPELLS_DIALOG";
-        }, ModuleCategory.Magic)
+        }, ModuleCategory.Magic);
+
+        OnActivity(1, ModuleCategory.Magic, (data, sender, msg, megadata) => {
+            if (!this.Enabled)
+                return;
+            let meta = GetMetadata(data);
+            var activityName = meta?.ActivityName;
+            var target = meta?.TargetMemberNumber;
+            if (target == Player.MemberNumber && activityName == "LSCG_Quaff" && !!sender) {
+                let gagType = getModule<InjectorModule>("InjectorModule")?.GetGagDrinkAccess(Player);
+                if (gagType == "nothing" && sender.MemberNumber != Player.MemberNumber) {
+                    this.TryForcePotion(sender);
+                } else {
+                    this.ProcessPotion(sender);
+                }
+            }
+        });
 
         activities?.AddActivity({
             Activity: <Activity>{
@@ -211,6 +228,24 @@ export class MagicModule extends BaseModule {
                         this.TeachSpell(target as OtherCharacter);
                 }
             },
+            CustomImage: "Icons/Magic.png"
+        });
+
+        activities?.AddActivity({
+            Activity: <Activity>{
+                Name: "Quaff",
+                MaxProgress: 90,
+                MaxProgressSelf: 90,
+                Prerequisite: ["UseHands", "Needs-QuaffableItem"]
+            },
+            Targets: [
+                <ActivityTarget>{
+                    Name: "ItemMouth",
+					TargetLabel: "Quaff",
+                    SelfAllowed: true,
+                    TargetAction: "SourceCharacter quaffs the ActivityAsset in one gulp."
+                }
+            ],
             CustomImage: "Icons/Magic.png"
         });
     }
@@ -621,5 +656,47 @@ export class MagicModule extends BaseModule {
             this.settings.knownSpells.push(spell);
             settingsSave(true);
         }
+    }
+
+    // ***************** Potions *******************
+    TryForcePotion(sender: Character) {
+        let itemUseModule = getModule<ItemUseModule>("ItemUseModule");
+        if (!itemUseModule) {
+            return this.ProcessPotion(sender);
+        }
+        var itemName = itemUseModule.getItemName(InventoryGet(sender, "ItemHandheld")!);
+        let check = getModule<ItemUseModule>("ItemUseModule")?.MakeActivityCheck(sender, Player);
+        if (check.AttackerRoll.Total >= check.DefenderRoll.Total) {
+            SendAction(`${CharacterNickname(sender)} ${check.AttackerRoll.TotalStr}manages to get their ${itemName} past ${CharacterNickname(Player)}'s ${check.DefenderRoll.TotalStr}lips, forcing %POSSESSIVE% to swallow it.`);
+            setTimeout(() => this.ProcessPotion(sender), 5000);
+        } else {
+            SendAction(`${CharacterNickname(Player)} ${check.DefenderRoll.TotalStr}successfully defends against ${CharacterNickname(sender)}'s ${check.AttackerRoll.TotalStr}attempt to force %POSSESSIVE% to drink their ${itemName}.`);
+        }
+    }
+
+    ProcessPotion(sender: Character) {
+        var item = InventoryGet(sender, "ItemHandheld");
+        let spell = this.GetSpellFromItem(item);
+        if (!!spell)
+            this.IncomingSpell(sender, spell);
+    }
+
+    GetSpellFromItem(item: Item | null): SpellDefinition | undefined {
+        let itemCraft = item?.Craft;
+        var itemStr = GetItemNameAndDescriptionConcat(item) ?? "";
+        if (!itemCraft || !itemStr)
+            return;
+
+        let spells: SpellDefinition[] = []
+        let craftingMember = itemCraft.MemberNumber;
+        if (!!craftingMember && craftingMember >= 0) {
+            let craftingChar = getCharacter(craftingMember) as OtherCharacter;
+            if (!!craftingChar && !!craftingChar.LSCG) {
+                spells = craftingChar.LSCG.MagicModule.knownSpells.filter(s => s.AllowPotion && !s.Effects.some(e => pairedSpellEffects.indexOf(e) > -1));
+            }
+        }
+        
+        let spell = spells?.filter(x => !!x)?.find(x => !!x && !!x.Name && isPhraseInString(itemStr, x.Name));
+        return spell;
     }
 }

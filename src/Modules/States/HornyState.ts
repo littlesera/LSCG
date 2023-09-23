@@ -6,6 +6,13 @@ import { ModuleCategory } from "Settings/setting_definitions";
 export class HornyState extends BaseState {
     Type: LSCGState = "horny";
 
+    get Icon(): string {
+        return "Icons/Magic.png";
+    }
+    get Label(): string {
+        return "Aroused";
+    }
+
     constructor(state: StateModule) {
         super(state);
     }

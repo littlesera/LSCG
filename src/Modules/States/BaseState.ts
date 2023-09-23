@@ -1,13 +1,14 @@
 import { StateModule } from "Modules/states";
 import { StateConfig } from "Settings/Models/states";
 import { getModule } from "modules";
-import { SendAction, getRandomInt, settingsSave } from "utils";
+import { ICONS, SendAction, getRandomInt, settingsSave } from "utils";
 
 
 
 export interface StateRestrictions {
     Walk: LSCGImmersiveOption;
     Stand: LSCGImmersiveOption;
+    Kneel: LSCGImmersiveOption;
     Hearing: LSCGImmersiveOption;
     Sight: LSCGImmersiveOption;
     Wardrobe: LSCGImmersiveOption;
@@ -70,6 +71,9 @@ export abstract class BaseState {
     Safeword(): void {
         this.Recover(false);
     }
+
+    abstract get Icon(): string;
+    abstract get Label(): string;
 
     abstract Init(): void;
     abstract Tick(now: number): void;

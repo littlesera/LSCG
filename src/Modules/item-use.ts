@@ -17,6 +17,10 @@ export const MagicWandItems: string[] = [
 	"RainbowWand"
 ]
 
+export const QuaffableItems: string[] = [
+	"PotionBottle"
+]
+
 export class ActivityRoll {
 	constructor(raw: number, mod: number) {
 		this.Raw = raw;
@@ -208,6 +212,10 @@ export class ItemUseModule extends BaseModule {
 			} else if (itemType == "MagicItem") {
 				let item = InventoryGet(C, "ItemHandheld");
 				if (!!item && MagicWandItems.indexOf(item.Asset?.Name) > -1) 
+					results.push(item);
+			} else if (itemType == "QuaffableItem") {
+				let item = InventoryGet(C, "ItemHandheld");
+				if (!!item && QuaffableItems.indexOf(item.Asset?.Name) > -1) 
 					results.push(item);
 			}
 			return results;

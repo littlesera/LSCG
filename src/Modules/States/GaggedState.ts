@@ -5,6 +5,13 @@ import { StateModule } from "Modules/states";
 export class GaggedState extends BaseState {
     Type: LSCGState = "gagged";
 
+    get Icon(): string {
+        return "Icons/Magic.png";
+    }
+    get Label(): string {
+        return "Gagged";
+    }
+
     constructor(state: StateModule) {
         super(state);
         this.Restrictions.Speech = "true";

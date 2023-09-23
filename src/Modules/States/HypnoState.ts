@@ -1,6 +1,6 @@
 import { StateConfig } from "Settings/Models/states";
 import { BaseState, StateRestrictions } from "./BaseState";
-import { SendAction, getRandomInt, hookFunction, setOrIgnoreBlush, settingsSave } from "utils";
+import { ICONS, SendAction, getRandomInt, hookFunction, setOrIgnoreBlush, settingsSave } from "utils";
 import { getModule } from "modules";
 import { HypnoModule } from "Modules/hypno";
 import { HypnoSettingsModel } from "Settings/Models/hypno";
@@ -10,12 +10,20 @@ import { StateModule } from "Modules/states";
 export class HypnoState extends BaseState {
     Type: LSCGState = "hypnotized";
 
+    get Icon(): string {
+        return ICONS.HYPNO;
+    }
+    get Label(): string {
+        return "Hypnotized";
+    }
+
     get hypnoSettings(): HypnoSettingsModel {
         return getModule<HypnoModule>("HypnoModule").settings;
     }
 
     constructor(stateModule: StateModule) {
         super(stateModule);
+        this.Restrictions.Speech = "true";
         this.Restrictions.Walk = "whenImmersive";
     }
 

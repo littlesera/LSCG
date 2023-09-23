@@ -1,9 +1,16 @@
-import { SendAction, addCustomEffect, getRandomInt, removeCustomEffect } from "utils";
+import { ICONS, SendAction, addCustomEffect, getRandomInt, removeCustomEffect } from "utils";
 import { BaseState, StateRestrictions } from "./BaseState";
 import { StateModule } from "Modules/states";
 
 export class SleepState extends BaseState {
     Type: LSCGState = "asleep";
+
+    get Icon(): string {
+        return "Icons/Magic.png";
+    }
+    get Label(): string {
+        return "Asleep";
+    }
 
     constructor(state: StateModule) {
         super(state);

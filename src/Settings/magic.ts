@@ -404,7 +404,15 @@ export class GuiMagic extends GuiSubscreen {
 	Exit(): void {
 		ElementRemove(this.outfitFieldId);
 		ElementRemove(this.outfitDropId);
+		this.CleanPotionSettings();
 		super.Exit();
+	}
+
+	CleanPotionSettings() {
+		this.settings.knownSpells.forEach(spell => {
+			if (spell.Effects.some(e => pairedSpellEffects.indexOf(e) > -1) ?? false)
+				spell.AllowPotion = false;
+		});
 	}
 
 	saveSpell() {

@@ -1,6 +1,6 @@
 import { BaseModule } from "base";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { LSCG_SendLocal, getRandomInt, hookFunction, removeAllHooksByModule } from "../utils";
+import { ICONS, LSCG_SendLocal, SendAction, getRandomInt, hookFunction, mouseTooltop, removeAllHooksByModule } from "../utils";
 import { StateConfig, StateSettingsModel } from "Settings/Models/states";
 import { HypnoState } from "./States/HypnoState";
 import { SleepState } from "./States/SleepState";
@@ -14,6 +14,13 @@ import { RedressedState } from "./States/RedressedState";
 import { ArousalPairedState } from "./States/ArousalPairedState";
 import { PairedBaseState } from "./States/PairedBaseState";
 import { OrgasmSiphonedState } from "./States/OrgasmSiphonedState";
+import { getModule } from "modules";
+import { ItemUseModule } from "./item-use";
+
+interface StateIcon {
+    Label: string;
+    Icon: string;
+}
 
 export class StateModule extends BaseModule {
     // get settingsScreen(): Subscreen | null {
@@ -110,6 +117,83 @@ export class StateModule extends BaseModule {
     _tickInterval: number = 1000; // ever second
 
     load(): void {
+        hookFunction("DrawStatus", 1, (args, next) => {
+            const ret = next(args) as any;
+            let C = args[0] as OtherCharacter;
+            let CharX = args[1] as number;
+            let CharY = args[2] as number;
+            let Zoom = args[3] as number;
+            if (
+                !!C && !!C.LSCG && !!C.LSCG.StateModule &&
+                typeof CharX === "number" &&
+                typeof CharY === "number" &&
+                typeof Zoom === "number" &&
+                ChatRoomHideIconState === 0 &&
+                MouseIn(CharX, CharY, CharX + 500 * Zoom, CharY + 1000 * Zoom)
+            ) {
+                let validStates = C.LSCG?.StateModule.states.filter(s => s.active);
+                let validStateCound = validStates.length;
+                let tooltip = undefined;
+                validStates.forEach((state, ix, arr) => {
+                    let iconSize = 30;
+                    let xOffset = (ix+1) * 40 * Zoom;
+                    let iconCoords = {
+                        x: CharX + xOffset * Zoom,
+                        y: CharY + 60 * Zoom,
+                        w: iconSize * Zoom,
+                        h: iconSize * Zoom
+                    };
+                    let iconCenter = {x: iconCoords.x + iconCoords.w/2, y: iconCoords.y + iconCoords.h/2}
+                    let statePair = this.GetIconForState(state)
+                    DrawCircle(iconCenter.x, iconCenter.y, (iconSize + 10)/2 * Zoom, 1, "Black", "White")
+                    DrawImageResize(
+                        statePair.Icon,
+                        iconCoords.x, iconCoords.y, iconCoords.w, iconCoords.h
+                    );
+                    if (MouseIn(iconCoords.x, iconCoords.y, iconCoords.w, iconCoords.h)) {
+                        tooltip = statePair.Label;
+                    }
+                });
+                if (!!tooltip)
+                    mouseTooltop(tooltip);
+            }
+            return ret;
+        }, ModuleCategory.States);
+
+        // hookFunction("ChatRoomClickCharacter", 1, (args, next) => {
+        //     let C = args[0] as OtherCharacter;
+        //     let CharX = args[1] as number;
+        //     let CharY = args[2] as number;
+        //     let Zoom = args[3] as number;
+        //     let validStates = C.LSCG?.StateModule.states.filter(s => s.active);
+        //     let clickHandled = false;
+        //     if (
+        //         !!C && !!C.LSCG && !!C.LSCG.StateModule &&
+        //         typeof CharX === "number" &&
+        //         typeof CharY === "number" &&
+        //         typeof Zoom === "number" &&
+        //         ChatRoomHideIconState === 0 &&
+        //         C.IsPlayer() &&
+        //         validStates.length > 0
+        //     ) {
+        //         validStates.forEach((state, ix, arr) => {
+        //             let iconSize = 30;
+        //             let xOffset = (ix+1) * 40 * Zoom;
+        //             let iconCoords = {
+        //                 x: CharX + xOffset * Zoom,
+        //                 y: CharY + 60 * Zoom,
+        //                 w: iconSize * Zoom,
+        //                 h: iconSize * Zoom
+        //             };
+        //             if (MouseIn(iconCoords.x, iconCoords.y, iconCoords.w, iconCoords.h)) {
+        //                 this.ClickResist(state);
+        //             }
+        //         });
+        //     }
+        //     if (!clickHandled)
+        //         return next(args);
+        // })
+
         // General Hooks
         hookFunction("ChatRoomSync", 10, (args, next) => {
             next(args);
@@ -175,6 +259,12 @@ export class StateModule extends BaseModule {
             return next(args);
         }, ModuleCategory.States);
 
+        hookFunction('ChatRoomCanAttemptKneel', 1, (args, next) => {
+            if (this.Enabled && this.AnyRestrictions(r => r.Kneel))
+                return false;
+            return next(args);
+        }, ModuleCategory.States);
+
         hookFunction('ChatRoomFocusCharacter', 6, (args, next) => {
             let accessBlockedStates = this.GetRestrictions(r => r.CharacterAccess);
             if (this.Enabled && accessBlockedStates.length > 0) {
@@ -189,6 +279,19 @@ export class StateModule extends BaseModule {
 
     unload(): void {
         removeAllHooksByModule(ModuleCategory.States);
+    }
+
+    GetIconForState(state: StateConfig): StateIcon {
+        let stateObj = this.States.find(s => s.Type == state.type);
+        if (!stateObj)
+            return {
+                Label: state.type,
+                Icon: ICONS.BDSM
+            };
+        return {
+            Label: stateObj.Label,
+            Icon: stateObj.Icon
+        };
     }
 
     Clear(emote: boolean) {
