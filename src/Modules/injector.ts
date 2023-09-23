@@ -11,7 +11,6 @@ import { ActivityModule, CustomAction, CustomPrerequisite } from "./activities";
 import { HypnoModule } from "./hypno";
 import { MiscModule } from "./misc";
 import { ItemUseModule } from "./item-use";
-import { StateModule } from "./states";
 
 type DrugType = "sedative" | "mindcontrol" | "horny" | "antidote";
 
@@ -42,14 +41,10 @@ export class InjectorModule extends BaseModule {
     activityModule: ActivityModule | undefined;
     miscModule: MiscModule | undefined;
 
-    get stateModule(): StateModule {
-        return getModule<StateModule>("StateModule");
-    }
-
     get defaultSettings() {
         return <InjectorSettingsModel>{
             enabled: false,
-            //immersive: false,
+            immersive: false,
             enableSedative: false,
             enableMindControl: false,
             enableHorny: false,
@@ -79,8 +74,8 @@ export class InjectorModule extends BaseModule {
             continuousDeliveryActivatedAt: 0,
             continuousDeliveryTimeout: 60 * 60 * 1000, // By default, stop delivering continuous drug after 2 hours
 
-            //asleep: false,
-            //brainwashed: false,
+            asleep: false,
+            brainwashed: false,
             stats: {},
 
             sipLimit: 0
@@ -312,77 +307,82 @@ export class InjectorModule extends BaseModule {
     }
 
     InitializeRestrictiveHooks() {
-        // hookFunction('ServerSend', 5, (args, next) => {
-        //     if (!this.Enabled)
-        //         return next(args);
+        hookFunction('ServerSend', 5, (args, next) => {
+            if (!this.Enabled)
+                return next(args);
             
-        //     var type = args[0];
-        //     // Prevent speech while asleep
-        //     if ((type == "ChatRoomChat" && args[1].Type == "Chat" && args[1]?.Content[0] != "(")) {
-        //         if (this.asleep) {
-        //             this.ActivateSleepEvent();
-        //             return null;
-        //         }
-        //     }
-        //     return next(args);
-        // }, ModuleCategory.Injector);
+            var type = args[0];
+            // Prevent speech while asleep
+            if ((type == "ChatRoomChat" && args[1].Type == "Chat" && args[1]?.Content[0] != "(")) {
+                if (this.asleep) {
+                    this.ActivateSleepEvent();
+                    return null;
+                } else if (this.brainwashed) {
+                    this.ActivateBrainwashEvent();
+                    return null;
+                }
+            }
+            return next(args);
+        }, ModuleCategory.Injector);
 
-        // hookFunction('Player.CanChangeOwnClothes', 1, (args, next) => {
-        //     if (this.Enabled && this.asleep)
-        //         return false;
-        //     return next(args);
-        // }, ModuleCategory.Injector);
+        hookFunction('Player.CanChangeOwnClothes', 1, (args, next) => {
+            if (this.Enabled && this.asleep)
+                return false;
+            return next(args);
+        }, ModuleCategory.Injector);
 
-        // hookFunction('Player.IsDeaf', 1, (args, next) => {
-        //     if (this.Enabled && this.asleep)
-        //         return true;
-        //     return next(args);
-        // }, ModuleCategory.Injector);
+        hookFunction('Player.IsDeaf', 1, (args, next) => {
+            if (this.Enabled && this.asleep)
+                return true;
+            return next(args);
+        }, ModuleCategory.Injector);
 
-        // hookFunction('Player.IsBlind', 1, (args, next) => {
-        //     if (this.Enabled && this.asleep)
-        //         return true;
-        //     return next(args);
-        // }, ModuleCategory.Injector);
+        hookFunction('Player.IsBlind', 1, (args, next) => {
+            if (this.Enabled && this.asleep)
+                return true;
+            return next(args);
+        }, ModuleCategory.Injector);
 
-        // hookFunction('Player.CanWalk', 1, (args, next) => {
-        //     if (this.Enabled && (this.asleep || this.brainwashed))
-        //         return false;
-        //     return next(args);
-        // }, ModuleCategory.Injector);
+        hookFunction('Player.CanWalk', 1, (args, next) => {
+            if (this.Enabled && (this.asleep || this.brainwashed))
+                return false;
+            return next(args);
+        }, ModuleCategory.Injector);
 
-        // hookFunction('ChatRoomCanAttemptStand', 1, (args, next) => {
-        //     if (this.Enabled && this.asleep)
-        //         return false;
-        //     return next(args);
-        // }, ModuleCategory.Injector);
+        hookFunction('ChatRoomCanAttemptStand', 1, (args, next) => {
+            if (this.Enabled && this.asleep)
+                return false;
+            return next(args);
+        }, ModuleCategory.Injector);
 
-        // hookFunction('ChatRoomFocusCharacter', 6, (args, next) => {
-        //     if (this.Enabled && this.asleep) {
-        //         LSCG_SendLocal("Character access blocked while asleep.", 5000);
-        //         return;
-        //     }
-        //     return next(args);
-        // }, ModuleCategory.Injector);
+        hookFunction('ChatRoomFocusCharacter', 6, (args, next) => {
+            if (this.Enabled && this.asleep) {
+                LSCG_SendLocal("Character access blocked while asleep.", 5000);
+                return;
+            }
+            return next(args);
+        }, ModuleCategory.Injector);
 
         hookFunction("Player.HasTints", 4, (args, next) => {
             if (!this.Enabled || !Player.ImmersionSettings?.AllowTints)
                 return next(args);
-            if (this.hornyLevel > 0) return true;
+            if (this.hornyLevel > 0 || this.brainwashed) return true;
             return next(args);
         }, ModuleCategory.Injector);
         
         hookFunction("Player.GetTints", 4, (args, next) => {
             if (!this.Enabled || !Player.ImmersionSettings?.AllowTints)
                 return next(args);
-            if (this.hornyLevel > 0) return [{r: 254, g: 44, b: 84, a: (this.hornyLevel/(this.hornyLevelMax*this.drugLevelMultiplier*4))}];
+            if (this.brainwashed) return [{r: 148, g: 0, b: 211, a: 0.4}];
+            else if (this.hornyLevel > 0) return [{r: 254, g: 44, b: 84, a: (this.hornyLevel/(this.hornyLevelMax*this.drugLevelMultiplier*4))}];
             return next(args);
         }, ModuleCategory.Injector);
 
         hookFunction("Player.GetBlurLevel", 4, (args, next) => {
             if (!this.Enabled || !Player.GraphicsSettings!.AllowBlur)
                 return next(args);
-            if (this.hornyLevel > 0) return Math.max(0, (this.hornyLevel / this.drugLevelMultiplier) - 1);
+            if (this.brainwashed) return 3;
+            else if (this.hornyLevel > 0) return Math.max(0, (this.hornyLevel / this.drugLevelMultiplier) - 1);
             return next(args);
         }, ModuleCategory.Injector);
 
@@ -422,12 +422,12 @@ export class InjectorModule extends BaseModule {
             // Heardbeat every hornyTickTime
             if (this.hornyLevel > 0 && this.hornyLastBumped + this.settings.hornyTickTime < now) {
                 this.hornyLastBumped = now;
+                var newProgress = (Player.ArousalSettings?.Progress ?? 0) + (this.hornyLevel/this.drugLevelMultiplier) * 4;
+                newProgress = Math.min(99, newProgress);
                 if (getRandomInt(this.hornyLevelMax) <= Math.floor(this.hornyLevel/this.drugLevelMultiplier)) {
                     if (this.settings.heartbeat && !AudioShouldSilenceSound(true)) AudioPlayInstantSound(AUDIO.HEARTBEAT, getPlayerVolume(0));
                     DrawFlashScreen("#FF647F", 1000, this.hornyLevel);
                 }
-                var newProgress = (Player.ArousalSettings?.Progress ?? 0) + (this.hornyLevel/this.drugLevelMultiplier) * 4;
-                newProgress = Math.min(99, newProgress);
                 ActivitySetArousal(Player, newProgress);
             }
 
@@ -452,21 +452,23 @@ export class InjectorModule extends BaseModule {
             return next(args);
         }, ModuleCategory.Injector);
 
-        // hookFunction('ChatRoomSync', 1, (args, next) => {
-        //     if (this.asleep)
-        //         setTimeout(() => this.miscModule?.SetSleepExpression());
-        //     return next(args);
-        // })
+        hookFunction('ChatRoomSync', 1, (args, next) => {
+            if (this.brainwashed)
+                setTimeout(() => this.hypnoModule?.EnforceEyes());
+            else if (this.asleep)
+                setTimeout(() => this.miscModule?.SetSleepExpression());
+            return next(args);
+        })
     }
 
     sleepTotalTicks = 12;
     sleepTimer: number = 0;
     hypnoTimer: number = 0;
 
-    get asleep(): boolean { return this.stateModule.SleepState.Active };
-    //set asleep(val: boolean) { if (this.settings.asleep != val){ this.settings.asleep = val; settingsSave(true);}}
-    get brainwashed(): boolean { return this.stateModule.HypnoState.Active };
-    // set brainwashed(val: boolean) { if (this.settings.brainwashed != val) {this.settings.brainwashed = val; settingsSave(true);}}
+    get asleep(): boolean { return this.settings.asleep };
+    set asleep(val: boolean) { if (this.settings.asleep != val){ this.settings.asleep = val; settingsSave(true);}}
+    get brainwashed(): boolean { return this.settings.brainwashed };
+    set brainwashed(val: boolean) { if (this.settings.brainwashed != val) {this.settings.brainwashed = val; settingsSave(true);}}
 
     get sedativeLevel(): number {return this.settings.sedativeLevel};
     set sedativeLevel(val: number) {if (this.settings.sedativeLevel != val) {this.settings.sedativeLevel = val; settingsSave(true);}}
@@ -774,25 +776,44 @@ export class InjectorModule extends BaseModule {
     }
 
     Sleep(doEmote: boolean = true) {
-        this.stateModule.SleepState.Activate(undefined, doEmote);
+        this.asleep = true;
+        if (doEmote)
+            SendAction("%NAME% moans weakly as %PRONOUN% succumbs to unconciousness.");
+        this.miscModule?.SetSleepExpression();
+        if (Player.CanKneel()) {
+            this.miscModule?.FallDownIfPossible();
+            addCustomEffect(Player, "ForceKneel");
+        }
         this.settings.stats.sedatedCount++;
+        settingsSave();
     }
 
     Wake() {
-        this.stateModule.SleepState.Recover(true);
+        if (this.asleep) {
+            this.asleep = false;
+            SendAction("%NAME%'s eyelids flutter and start to open sleepily...");
+            CharacterSetFacialExpression(Player, "Eyes", "Dazed");
+            if (WardrobeGetExpression(Player)?.Emoticon == "Sleep")
+                CharacterSetFacialExpression(Player, "Emoticon", null);
+            removeCustomEffect(Player, "ForceKneel");
+        }
     }
 
     Brainwash() {
+        this.brainwashed = true;
         SendAction("%NAME%'s body goes limp as %POSSESSIVE% mind empties and %PRONOUN% awaits a command.");
-        this.stateModule.HypnoState.Activate();
+        this.hypnoModule?.SetEyes();
         this.settings.stats.brainwashedCount++;
         settingsSave();
     }
 
     SnapBack() {
         if (this.brainwashed) {
+            this.brainwashed = false;
             SendAction("%NAME% gasps, snapping back into their senses confused and blushing.");
-            this.stateModule.HypnoState.Recover();
+            setOrIgnoreBlush("Medium");
+            if (!!this.hypnoModule)
+                this.hypnoModule.ResetEyes();
         }
     }
 
@@ -805,6 +826,17 @@ export class InjectorModule extends BaseModule {
 
     ActivateSleepEvent() {
         SendAction(this.sleepBlockStrings[getRandomInt(this.sleepBlockStrings.length)]);
+    }
+
+    brainwashBlockStrings = [
+        "%NAME% stares blankly, %POSSESSIVE% mind open and suggestible...",
+        "%NAME%'s eyelids flutter gently, awaiting a command...",
+        "%NAME% trembles with a quiet moan as %PRONOUN% yearns to obey...",
+        "%NAME% groans softly as %PRONOUN% drops even further under the drug's command..."
+    ];
+
+    ActivateBrainwashEvent() {
+        SendAction(this.brainwashBlockStrings[getRandomInt(this.brainwashBlockStrings.length)]);
     }
 
     HasNetgun(C: Character | null): boolean {
@@ -1032,6 +1064,14 @@ export class InjectorModule extends BaseModule {
     InitStates() {
         let item = InventoryGet(Player, "ItemMouth3");
         this._wasWearingRespirator = this.IsValidRespirator(item);
+        if (this.asleep) {
+            this.miscModule?.SetSleepExpression();
+            this.miscModule?.FallDownIfPossible();
+            addCustomEffect(Player, "ForceKneel");
+        }
+        if (this.brainwashed) {
+            this.hypnoModule?.SetEyes();
+        }
     }
 
     CheckRespiratorCurseUpdate() {

@@ -28,12 +28,12 @@ export class GuiInjector extends GuiSubscreen {
 					description: "Enable Enhanced Injections and Net Gun.",
 					setting: () => this.settings.enabled ?? false,
 					setSetting: (val) => this.settings.enabled = val
-				// },<Setting>{
-				// 	type: "checkbox",
-				// 	label: "Immersive:",
-				// 	description: "Block LSCG settings while drugged.",
-				// 	setting: () => this.settings.immersive ?? false,
-				// 	setSetting: (val) => this.settings.immersive = val
+				},<Setting>{
+					type: "checkbox",
+					label: "Immersive:",
+					description: "Block LSCG settings while drugged.",
+					setting: () => this.settings.immersive ?? false,
+					setSetting: (val) => this.settings.immersive = val
 				},<Setting>{
 					type: "checkbox",
 					label: "Enable Sedative:",

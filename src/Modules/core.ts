@@ -8,11 +8,6 @@ import { ActivityModule, GrabType } from "./activities";
 import { HypnoModule } from "./hypno";
 import { CollarModule } from "./collar";
 
-import * as semver from "semver";
-import { StateConfig } from "Settings/Models/states";
-import { BaseMigrator } from "./Migrators/BaseMigrator";
-import { StateMigrator } from "./Migrators/StateMigrator";
-
 // Core Module that can handle basic functionality like server handshakes etc.
 // Maybe can consolidate things like hypnosis/suffocation basic state handling too..
 export class CoreModule extends BaseModule {   
@@ -180,21 +175,6 @@ export class CoreModule extends BaseModule {
             Player.LSCG.Version = LSCG_VERSION;
             settingsSave();
         }
-        this.CheckForMigrations(previousVersion);
-    }
-
-    Migrators: BaseMigrator[] = [new StateMigrator()]
-
-    CheckForMigrations(fromVersion: string) {
-        if (fromVersion[0] == 'v')
-            fromVersion = fromVersion.substring(1);
-
-        this.Migrators.forEach(m => {
-            if (semver.lt(fromVersion, m.Version))
-                m.Migrate(fromVersion);
-        });
-
-        settingsSave();
     }
 
     SendPublicPacket(replyRequested: boolean, type: LSCGMessageModelType = "init") {

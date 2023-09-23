@@ -22,7 +22,6 @@ export enum ModuleCategory {
     Activities = 5,
 	Injector = 6,
 	ItemUse = 7,
-	States = 8,
 	RemoteUI = 98,
 	Misc = 99,
 	Commands = 100
