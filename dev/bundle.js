@@ -115,6 +115,16 @@ var LSCG = (function (exports) {
 	    var _a;
 	    return (_a = ChatRoomCharacter.find(c => c.MemberNumber == memberNumber)) !== null && _a !== void 0 ? _a : null;
 	}
+	function getCharacterByNicknameOrMemberNumber(tgt) {
+	    tgt = tgt.toLocaleLowerCase();
+	    let tgtC;
+	    if (CommonIsNumeric(tgt))
+	        tgtC = getCharacter(+tgt);
+	    if (!tgtC) {
+	        tgtC = ChatRoomCharacter.find(c => CharacterNickname(c).toLocaleLowerCase() == tgt);
+	    }
+	    return tgtC;
+	}
 	function setOrIgnoreBlush(blushLevel) {
 	    var _a;
 	    const blushLevels = [
@@ -256,25 +266,37 @@ var LSCG = (function (exports) {
 	    ServerSend("ChatRoomChat", { Type: "Chat", Content: msg });
 	}
 	function replace_template(text, source = null) {
+	    var _a;
 	    let result = text;
 	    let pronounItem = InventoryGet(Player, "Pronouns");
-	    let posessive = "Her";
+	    let possessive = "Her";
 	    let intensive = "Her";
 	    let pronoun = "She";
 	    if ((pronounItem === null || pronounItem === void 0 ? void 0 : pronounItem.Asset.Name) == "HeHim") {
-	        posessive = "His";
+	        possessive = "His";
 	        intensive = "Him";
 	        pronoun = "He";
 	    }
+	    let opp_pronounItem = !source ? null : InventoryGet(source, "Pronouns");
+	    let opp_male = (_a = (opp_pronounItem === null || opp_pronounItem === void 0 ? void 0 : opp_pronounItem.Asset.Name) == "HeHim") !== null && _a !== void 0 ? _a : false;
 	    let oppName = !!source ? CharacterNickname(source) : "";
-	    result = result.replaceAll("%POSSESSIVE%", posessive.toLocaleLowerCase());
-	    result = result.replaceAll("%CAP_POSSESSIVE%", posessive);
+	    let oppPossessive = opp_male ? "His" : "Her";
+	    let oppIntensive = opp_male ? "Him" : "Her";
+	    let oppPronoun = opp_male ? "He" : "She";
+	    result = result.replaceAll("%NAME%", CharacterNickname(Player));
+	    result = result.replaceAll("%POSSESSIVE%", possessive.toLocaleLowerCase());
 	    result = result.replaceAll("%PRONOUN%", pronoun.toLocaleLowerCase());
-	    result = result.replaceAll("%CAP_PRONOUN%", pronoun);
 	    result = result.replaceAll("%INTENSIVE%", intensive.toLocaleLowerCase());
+	    result = result.replaceAll("%CAP_POSSESSIVE%", possessive);
+	    result = result.replaceAll("%CAP_PRONOUN%", pronoun);
 	    result = result.replaceAll("%CAP_INTENSIVE%", intensive);
-	    result = result.replaceAll("%NAME%", CharacterNickname(Player)); //Does this works to print "Lilly"? -- it should, yes
-	    result = result.replaceAll("%OPP_NAME%", oppName); // finally we can use the source name to make the substitution
+	    result = result.replaceAll("%OPP_NAME%", oppName);
+	    result = result.replaceAll("%CAP_OPP_PRONOUN%", oppPronoun);
+	    result = result.replaceAll("%CAP_OPP_POSSESSIVE%", oppPossessive);
+	    result = result.replaceAll("%CAP_OPP_INTENSIVE%", oppIntensive);
+	    result = result.replaceAll("%OPP_PRONOUN%", oppPronoun.toLocaleLowerCase());
+	    result = result.replaceAll("%OPP_POSSESSIVE%", oppPossessive.toLocaleLowerCase());
+	    result = result.replaceAll("%OPP_INTENSIVE%", oppIntensive.toLocaleLowerCase());
 	    return result;
 	}
 	function getRandomInt(max) {
@@ -284,7 +306,7 @@ var LSCG = (function (exports) {
 	    var _a;
 	    if (!Player.OnlineSettings)
 	        Player.OnlineSettings = {};
-	    Player.OnlineSettings.LSCG = Player.LSCG;
+	    Player.OnlineSettings.LSCG = LZString.compressToBase64(JSON.stringify(Player.LSCG));
 	    window.ServerAccountUpdate.QueueData({ OnlineSettings: Player.OnlineSettings });
 	    if (publish)
 	        (_a = getModule("CoreModule")) === null || _a === void 0 ? void 0 : _a.SendPublicPacket(false, "sync");
@@ -385,6 +407,14 @@ var LSCG = (function (exports) {
 	    };
 	    ServerSend("ChatRoomChat", packet);
 	}
+	function sendLSCGBeep(target, msg) {
+	    ServerSend("AccountBeep", {
+	        MemberNumber: target,
+	        BeepType: "LSCG",
+	        IsSecret: true,
+	        Message: msg
+	    });
+	}
 	function sendLSCGCommand(target, commandName, commandArgs = []) {
 	    var _a;
 	    sendLSCGMessage({
@@ -399,10 +429,23 @@ var LSCG = (function (exports) {
 	        }
 	    });
 	}
+	function sendLSCGCommandBeep(target, commandName, commandArgs = []) {
+	    sendLSCGBeep(target, {
+	        type: "command",
+	        reply: false,
+	        settings: null,
+	        target: target !== null && target !== void 0 ? target : -1,
+	        version: LSCG_VERSION,
+	        command: {
+	            name: commandName,
+	            args: commandArgs
+	        }
+	    });
+	}
 	function LSCG_SendLocal(msg, time) {
 	    var bgColor = (Player.ChatSettings.ColorTheme.indexOf("Light") > -1) ? "#D7F6E9" : "#23523E";
 	    let text = `<div style='background-color:${bgColor};'>${msg}</div>`;
-	    ChatRoomSendLocal(text);
+	    ChatRoomSendLocal(text, time !== null && time !== void 0 ? time : 4000);
 	}
 	function excludeParentheticalContent(msg) {
 	    var result = "";
@@ -479,6 +522,74 @@ var LSCG = (function (exports) {
 	        return isAllowedMember(sender);
 	    else
 	        return false;
+	}
+	function BC_ItemToItemBundle(item) {
+	    return {
+	        Group: item.Asset.Group.Name,
+	        Name: item.Asset.Name,
+	        Color: item.Color,
+	        Craft: item.Craft,
+	        Difficulty: item.Difficulty,
+	        Property: item.Property
+	    };
+	}
+	function BC_ItemsToItemBundles(items) {
+	    return items.map(i => BC_ItemToItemBundle(i));
+	}
+	// Stolen Utils from BCX >.>
+	function smartGetAssetGroup(item) {
+	    const group = AssetGroup.includes(item) ? item : Asset.includes(item) ? item.Group : item.Asset.Group;
+	    if (!AssetGroup.includes(group)) {
+	        throw new Error("Failed to convert item to group");
+	    }
+	    return group;
+	}
+	function isCloth(item, allowCosplay = false) {
+	    const group = smartGetAssetGroup(item);
+	    return group.Category === "Appearance" && group.AllowNone && group.Clothing && (allowCosplay || !group.BodyCosplay);
+	}
+	function isCosplay(item) {
+	    const group = smartGetAssetGroup(item);
+	    return group.Category === "Appearance" && group.AllowNone && group.Clothing && group.BodyCosplay;
+	}
+	function isBody(item) {
+	    const group = smartGetAssetGroup(item);
+	    return group.Category === "Appearance" && !group.Clothing;
+	}
+	function isBind(item, excludeSlots = ["ItemNeck", "ItemNeckAccessories", "ItemNeckRestraints"]) {
+	    const group = smartGetAssetGroup(item);
+	    if (group.Category !== "Item" || group.BodyCosplay)
+	        return false;
+	    return !excludeSlots.includes(group.Name);
+	}
+	function GetHandheldItemNameAndDescriptionConcat(C) {
+	    if (!C)
+	        C = Player;
+	    var asset = InventoryGet(C, "ItemHandheld");
+	    return GetItemNameAndDescriptionConcat(asset);
+	}
+	function GetItemNameAndDescriptionConcat(item) {
+	    if (!(item === null || item === void 0 ? void 0 : item.Craft))
+	        return;
+	    var name = item.Craft.Name;
+	    var description = item.Craft.Description;
+	    return name + " | " + description;
+	}
+	function mouseTooltip(msg, x, y) {
+	    var prevAlign = MainCanvas.textAlign;
+	    var prevFont = MainCanvas.font;
+	    var pad = 5;
+	    MainCanvas.textAlign = "left";
+	    MainCanvas.font = '16px Arial, sans-serif';
+	    var size = MainCanvas.measureText(msg);
+	    let width = size.actualBoundingBoxRight - size.actualBoundingBoxLeft + 2 * pad;
+	    var TextX = Math.max(0, Math.min(1000, (x !== null && x !== void 0 ? x : MouseX) + width)) - width;
+	    var TextY = Math.max(0, Math.min(1000, y !== null && y !== void 0 ? y : MouseY));
+	    DrawRect(TextX - pad + 3, TextY - size.actualBoundingBoxAscent - pad + 3, width, size.actualBoundingBoxDescent + size.actualBoundingBoxAscent + 2 * pad, "rgba(0, 0, 0, .7)");
+	    DrawRect(TextX - pad, TextY - size.actualBoundingBoxAscent - pad, width, size.actualBoundingBoxDescent + size.actualBoundingBoxAscent + 2 * pad, "#D7F6E9");
+	    DrawTextFit(msg, TextX, TextY, size.width, "Black");
+	    MainCanvas.textAlign = prevAlign;
+	    MainCanvas.font = prevFont;
 	}
 	// ICONS
 	const ICONS = Object.freeze({
@@ -636,7 +747,7 @@ var LSCG = (function (exports) {
 	        this.multipageStructure.forEach((s, ix, arr) => {
 	            if (ix != (PreferencePageCurrent - 1)) {
 	                s.forEach(setting => {
-	                    if (setting.type == "text" || setting.type == "number")
+	                    if (setting.type == "text" || setting.type == "number" || setting.type == "dropdown")
 	                        this.ElementHide(setting.id);
 	                });
 	            }
@@ -650,6 +761,10 @@ var LSCG = (function (exports) {
 	                    break;
 	                case "number":
 	                    ElementCreateInput(item.id, "number", item.setting(), "255");
+	                    break;
+	                case "dropdown":
+	                    ElementCreateDropdown(item.id, item.options, () => item.setSetting(ElementValue(item.id)));
+	                    this.ElementSetValue(item.id, item.setting());
 	                    break;
 	            }
 	        }));
@@ -668,14 +783,16 @@ var LSCG = (function (exports) {
 	        this.structure.forEach((item, ix, arr) => {
 	            switch (item.type) {
 	                case "checkbox":
-	                    this.DrawCheckbox(item.label, item.description, item.setting(), ix, item.disabled);
+	                    this.DrawCheckbox(item.label, item.description, item.setting(), ix, item.disabled, item.hidden);
 	                    break;
 	                case "text":
 	                case "number":
-	                    this.ElementPosition(item.id, item.label, item.description, ix, item.disabled);
+	                case "dropdown":
+	                    this.ElementPosition(item.id, item.label, item.description, ix, item.disabled, item.hidden);
 	                    break;
 	                case "label":
-	                    this.DrawLabel(item.label, item.description, ix);
+	                    if (!item.hidden)
+	                        this.DrawLabel(item.label, item.description, ix);
 	                    break;
 	            }
 	        });
@@ -705,6 +822,7 @@ var LSCG = (function (exports) {
 	                        break;
 	                    }
 	                case "text":
+	                case "dropdown":
 	                    item.setSetting(ElementValue(item.id));
 	                    ElementRemove(item.id);
 	                    break;
@@ -732,21 +850,24 @@ var LSCG = (function (exports) {
 	        if (isHovering)
 	            this.Tooltip(description);
 	    }
-	    DrawCheckbox(label, description, value, order, disabled = false) {
+	    DrawCheckbox(label, description, value, order, disabled = false, hidden = false) {
 	        var isHovering = MouseIn(this.getXPos(order), this.getYPos(order) - 32, 600, 64);
-	        DrawTextFit(label, this.getXPos(order), this.getYPos(order), 600, isHovering ? "Red" : "Black", "Gray");
-	        DrawCheckbox(this.getXPos(order) + 600, this.getYPos(order) - 32, 64, 64, "", value !== null && value !== void 0 ? value : false, disabled);
+	        if (!hidden) {
+	            DrawCheckbox(this.getXPos(order) + 600, this.getYPos(order) - 32, 64, 64, "", value !== null && value !== void 0 ? value : false, disabled);
+	            DrawTextFit(label, this.getXPos(order), this.getYPos(order), 600, isHovering ? "Red" : "Black", "Gray");
+	        }
 	        if (isHovering)
 	            this.Tooltip(description);
 	    }
 	    ElementHide(elementId) {
 	        ElementPosition(elementId, -999, -999, 1, 1);
 	    }
-	    ElementPosition(elementId, label, description, order, disabled = false) {
+	    ElementPosition(elementId, label, description, order, disabled = false, hidden = false) {
 	        var _a;
 	        var isHovering = MouseIn(this.getXPos(order), this.getYPos(order) - 32, 600, 64);
-	        DrawTextFit(label, this.getXPos(order), this.getYPos(order), 600, isHovering ? "Red" : "Black", "Gray");
-	        ElementPosition(elementId, this.getXPos(order) + 750, this.getYPos(order), 300);
+	        if (!hidden)
+	            DrawTextFit(label, this.getXPos(order), this.getYPos(order), 600, isHovering ? "Red" : "Black", "Gray");
+	        ElementPosition(elementId, this.getXPos(order) + 750, hidden ? 9999 : this.getYPos(order), 300);
 	        if (disabled)
 	            ElementSetAttribute(elementId, "disabled", "true");
 	        else {
@@ -755,11 +876,22 @@ var LSCG = (function (exports) {
 	        if (isHovering)
 	            this.Tooltip(description);
 	    }
+	    ElementSetValue(elementId, value) {
+	        let element = document.getElementById(elementId);
+	        if (!!element && value != null)
+	            element.value = value;
+	    }
 	    DrawLabel(name, description, order) {
 	        var isHovering = MouseIn(this.getXPos(order), this.getYPos(order) - 32, 600, 64);
 	        DrawTextFit(name, this.getXPos(order), this.getYPos(order), 600, isHovering ? "Red" : "Black", "Gray");
 	        if (isHovering)
 	            this.Tooltip(description);
+	    }
+	    GetNewIndexFromNextPrevClick(midpoint, currentIndex, listLength) {
+	        if (MouseX <= midpoint)
+	            return (listLength + currentIndex - 1) % listLength;
+	        else
+	            return (currentIndex + 1) % listLength;
 	    }
 	}
 	GuiSubscreen.START_X = 180;
@@ -1124,6 +1256,7 @@ var LSCG = (function (exports) {
 	    ModuleCategory[ModuleCategory["Injector"] = 6] = "Injector";
 	    ModuleCategory[ModuleCategory["ItemUse"] = 7] = "ItemUse";
 	    ModuleCategory[ModuleCategory["States"] = 8] = "States";
+	    ModuleCategory[ModuleCategory["Magic"] = 9] = "Magic";
 	    ModuleCategory[ModuleCategory["RemoteUI"] = 98] = "RemoteUI";
 	    ModuleCategory[ModuleCategory["Misc"] = 99] = "Misc";
 	    ModuleCategory[ModuleCategory["Commands"] = 100] = "Commands";
@@ -1727,6 +1860,8 @@ var LSCG = (function (exports) {
 	                    label: "Sleep time (minutes):",
 	                    description: "How long you will sleep after passout if enabled.",
 	                    disabled: !this.settings.knockout,
+	                    hidden: false,
+	                    options: [],
 	                    setting: () => { var _a; return ((_a = this.settings.knockoutMinutes) !== null && _a !== void 0 ? _a : 2); },
 	                    setSetting: (val) => this.settings.knockoutMinutes = Math.max(Math.min(val, 10), 1)
 	                }
@@ -2834,7 +2969,7 @@ var LSCG = (function (exports) {
 	        return {
 	            enabled: true,
 	            chloroformEnabled: false,
-	            immersiveChloroform: false,
+	            //immersiveChloroform: false,
 	            chloroformedAt: 0,
 	            chloroformPotencyTime: 60 * 60 * 1000,
 	            infiniteChloroformPotency: false,
@@ -3436,11 +3571,6 @@ var LSCG = (function (exports) {
 	    }
 	    ClearEntry(entry) {
 	        this.settings.activities = this.settings.activities.filter(a => !(a.name == entry.name && a.group == entry.group));
-	    }
-	    ElementSetValue(elementId, value) {
-	        let element = document.getElementById(elementId);
-	        if (!!element && value != null)
-	            element.value = value;
 	    }
 	    newDefaultEntry(actName, grpName) {
 	        return {
@@ -5009,18 +5139,18 @@ var LSCG = (function (exports) {
 	        sendLSCGCommand(escapeFrom, "escape");
 	    }
 	    IncomingGrab(sender, grabType) {
-	        if (!!sender.MemberNumber) {
+	        if (!!sender && !!sender.MemberNumber) {
 	            let doNotify = this.grabbedBy(sender.MemberNumber, grabType);
 	            if (doNotify && grabType != "hand")
 	                this.NotifyAboutEscapeCommand(sender, grabType);
 	        }
 	    }
 	    IncomingRelease(sender, grabType) {
-	        if (!!sender.MemberNumber)
+	        if (!!sender && !!sender.MemberNumber)
 	            this.releasedBy(sender.MemberNumber, grabType);
 	    }
 	    IncomingEscape(sender, escapeFromMemberNumber) {
-	        if (escapeFromMemberNumber == Player.MemberNumber && !!sender.MemberNumber) {
+	        if (!!sender && !!sender.MemberNumber && escapeFromMemberNumber == Player.MemberNumber) {
 	            this.releaseGrab(sender.MemberNumber, undefined);
 	        }
 	    }
@@ -5394,12 +5524,12 @@ var LSCG = (function (exports) {
 	                    setting: () => { var _a; return (_a = Player.LSCG.MiscModule.chloroformEnabled) !== null && _a !== void 0 ? _a : false; },
 	                    setSetting: (val) => Player.LSCG.MiscModule.chloroformEnabled = val
 	                }, {
-	                    type: "checkbox",
-	                    label: "Immersive Chloroform:",
-	                    description: "Enforce chloroform with more restrictive measures. LSCG settings will be unavailable while asleep.",
-	                    setting: () => { var _a; return (_a = Player.LSCG.MiscModule.immersiveChloroform) !== null && _a !== void 0 ? _a : false; },
-	                    setSetting: (val) => Player.LSCG.MiscModule.immersiveChloroform = val
-	                }, {
+	                    // 	type: "checkbox",
+	                    // 	label: "Immersive Chloroform:",
+	                    // 	description: "Enforce chloroform with more restrictive measures. LSCG settings will be unavailable while asleep.",
+	                    // 	setting: () => Player.LSCG.MiscModule.immersiveChloroform ?? false,
+	                    // 	setSetting: (val) => Player.LSCG.MiscModule.immersiveChloroform = val
+	                    // },<Setting>{
 	                    type: "checkbox",
 	                    label: "Chloroform Never Fades:",
 	                    description: "If enabled one rag over your mouth will last forever until removed, otherwise its potency will fade after an hour.",
@@ -5962,16 +6092,6 @@ var LSCG = (function (exports) {
 	    ;
 	    get targetHornyLevel() { return Math.max(this.hornyLevel, this._targetHornyLevel); }
 	    ;
-	    GetHandheldItemNameAndDescriptionConcat(C) {
-	        if (!C)
-	            C = Player;
-	        var asset = InventoryGet(C, "ItemHandheld");
-	        if (!(asset === null || asset === void 0 ? void 0 : asset.Craft))
-	            return;
-	        var name = asset.Craft.Name;
-	        var description = asset.Craft.Description;
-	        return name + " | " + description;
-	    }
 	    GetDrugTypes(item) {
 	        var _a, _b, _c, _d;
 	        var name = item.Name;
@@ -6190,7 +6310,7 @@ var LSCG = (function (exports) {
 	        var item = InventoryGet(Player, "ItemHandheld");
 	        if (!item || !item.Asset || allowedNetGuns.indexOf(item.Asset.Name) == -1)
 	            return false;
-	        var totalString = this.GetHandheldItemNameAndDescriptionConcat();
+	        var totalString = GetHandheldItemNameAndDescriptionConcat();
 	        if (!totalString)
 	            return false;
 	        var isNetgun = (_a = this.settings.netgunKeywords) === null || _a === void 0 ? void 0 : _a.some(ph => isPhraseInString(totalString !== null && totalString !== void 0 ? totalString : "", ph, true));
@@ -6235,7 +6355,7 @@ var LSCG = (function (exports) {
 	        var _a, _b, _c, _d;
 	        let netgun = InventoryGet(Player, "ItemHandheld");
 	        let netgunCraft = netgun === null || netgun === void 0 ? void 0 : netgun.Craft;
-	        var netgunStr = (_a = this.GetHandheldItemNameAndDescriptionConcat()) !== null && _a !== void 0 ? _a : "";
+	        var netgunStr = (_a = GetHandheldItemNameAndDescriptionConcat()) !== null && _a !== void 0 ? _a : "";
 	        if (!netgunCraft || !netgunStr)
 	            return;
 	        let craftedNets = (_c = (_b = Player.Crafting) === null || _b === void 0 ? void 0 : _b.filter(x => !!x && x.Item == "Net").map(x => x)) !== null && _c !== void 0 ? _c : [];
@@ -6602,6 +6722,20 @@ var LSCG = (function (exports) {
 	            enabled: true,
 	            immersive: false,
 	            states: []
+	        };
+	        this.MagicModule = {
+	            enabled: false,
+	            enableWildMagic: false,
+	            forceWildMagic: false,
+	            trueWildMagic: false,
+	            knownSpells: [],
+	            blockedSpellEffects: [],
+	            lockable: false,
+	            locked: false,
+	            remoteAccess: false,
+	            remoteAccessRequiredTrance: false,
+	            limitRemoteAccessToHypnotizer: false,
+	            remoteMemberIds: ""
 	        };
 	    }
 	}
@@ -9645,9 +9779,10 @@ var LSCG = (function (exports) {
 	        return "0.3.0";
 	    }
 	    Migrate(fromVersion) {
+	        var _a, _b, _c, _d;
 	        // Migration to StatesModule
 	        console.info("Migrating LSCG Data for new States Module.");
-	        let anyImmersive = Player.LSCG.HypnoModule.immersive || Player.LSCG.InjectorModule.immersive;
+	        let anyImmersive = ((_a = Player.LSCG) === null || _a === void 0 ? void 0 : _a.HypnoModule).immersive || ((_b = Player.LSCG) === null || _b === void 0 ? void 0 : _b.InjectorModule).immersive || ((_c = Player.LSCG) === null || _c === void 0 ? void 0 : _c.MiscModule).immersiveChloroform;
 	        Player.LSCG.StateModule.immersive = anyImmersive;
 	        // Migrate Hypnosis State
 	        if (!!Player.LSCG.HypnoModule.existingEye1Color) {
@@ -9684,6 +9819,8 @@ var LSCG = (function (exports) {
 	        delete Player.LSCG.InjectorModule.immersive;
 	        delete Player.LSCG.InjectorModule.brainwashed;
 	        delete Player.LSCG.InjectorModule.asleep;
+	        // Migrate immersive bools
+	        delete ((_d = Player.LSCG) === null || _d === void 0 ? void 0 : _d.MiscModule).immersiveChloroform;
 	    }
 	}
 
@@ -9743,6 +9880,17 @@ var LSCG = (function (exports) {
 	            this.CheckForPublicPacket(args[0]);
 	            return next(args);
 	        }, ModuleCategory.Core);
+	        hookFunction("ServerAccountBeep", 10, (args, next) => {
+	            let data = args[0];
+	            // Intercept LSCG beeps directly
+	            if (data.BeepType == "LSCG") {
+	                let msg = data.Message;
+	                if (msg.type == "command")
+	                    this.Command(data.MemberNumber, msg);
+	            }
+	            else
+	                return next(args);
+	        });
 	        hookFunction("ChatRoomDrawCharacterOverlay", 1, (args, next) => {
 	            var _a, _b, _c;
 	            next(args);
@@ -9762,19 +9910,7 @@ var LSCG = (function (exports) {
 	                    xOffset = -10;
 	                drawSvg(MainCanvas, SVG_ICONS.STAR, CharX + (xOffset + 410) * Zoom, CharY + 8 * Zoom, 40 * Zoom, 40 * Zoom, 50, 0.8, 1, starColor);
 	                if (MouseIn(CharX + 405 * Zoom, CharY + 3 * Zoom, 50 * Zoom, 50 * Zoom)) {
-	                    var prevAlign = MainCanvas.textAlign;
-	                    var prevFont = MainCanvas.font;
-	                    var pad = 5;
-	                    var TextX = CharX + 425 * Zoom;
-	                    var TextY = CharY + 50 * Zoom;
-	                    MainCanvas.textAlign = "left";
-	                    MainCanvas.font = '16px Arial, sans-serif';
-	                    var size = MainCanvas.measureText(version);
-	                    DrawRect(TextX - size.width - pad, TextY - size.actualBoundingBoxAscent - pad, size.actualBoundingBoxRight - size.actualBoundingBoxLeft + 2 * pad, size.actualBoundingBoxDescent + size.actualBoundingBoxAscent + 2 * pad, "#D7F6E9");
-	                    DrawText(version, TextX - size.width, TextY, "Black");
-	                    //MainCanvas.fillText(version, CharX + 420 * Zoom, CharY + 50*Zoom, 100*Zoom);
-	                    MainCanvas.textAlign = prevAlign;
-	                    MainCanvas.font = prevFont;
+	                    mouseTooltip(version, CharX + 425 * Zoom, CharY + 50 * Zoom);
 	                }
 	            }
 	        }, ModuleCategory.Core);
@@ -9878,7 +10014,7 @@ var LSCG = (function (exports) {
 	                    this.Sync(C, msg);
 	                    break;
 	                case "command":
-	                    this.Command(C, msg);
+	                    this.Command(data.Sender, msg);
 	                    break;
 	            }
 	        }
@@ -9895,11 +10031,15 @@ var LSCG = (function (exports) {
 	            this.SendPublicPacket(false, msg.type);
 	        }
 	    }
-	    Command(Sender, msg) {
-	        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q;
+	    Command(senderNumber, msg) {
+	        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u, _v;
 	        if (!msg.command || msg.target != Player.MemberNumber)
 	            return;
+	        let Sender = getCharacter(senderNumber);
 	        switch (msg.command.name) {
+	            case "debug":
+	                LSCG_SendLocal(msg.command.args[0].value, 10000);
+	                break;
 	            case "grab":
 	                (_a = getModule("ActivityModule")) === null || _a === void 0 ? void 0 : _a.IncomingGrab(Sender, (_b = msg.command.args.find(a => a.name == "type")) === null || _b === void 0 ? void 0 : _b.value);
 	                break;
@@ -9913,9 +10053,10 @@ var LSCG = (function (exports) {
 	                let prevCollarPurchase = (_g = (_f = Player.LSCG) === null || _f === void 0 ? void 0 : _f.CollarModule) === null || _g === void 0 ? void 0 : _g.collarPurchased;
 	                Object.assign(Player.LSCG.HypnoModule, (_h = msg.settings) === null || _h === void 0 ? void 0 : _h.HypnoModule);
 	                Object.assign(Player.LSCG.CollarModule, (_j = msg.settings) === null || _j === void 0 ? void 0 : _j.CollarModule);
-	                (_k = getModule("HypnoModule")) === null || _k === void 0 ? void 0 : _k.initializeTriggerWord();
+	                Object.assign(Player.LSCG.MagicModule, (_k = msg.settings) === null || _k === void 0 ? void 0 : _k.MagicModule);
+	                (_l = getModule("HypnoModule")) === null || _l === void 0 ? void 0 : _l.initializeTriggerWord();
 	                settingsSave(true);
-	                let currentCollarPurchase = (_m = (_l = Player.LSCG) === null || _l === void 0 ? void 0 : _l.CollarModule) === null || _m === void 0 ? void 0 : _m.collarPurchased;
+	                let currentCollarPurchase = (_o = (_m = Player.LSCG) === null || _m === void 0 ? void 0 : _m.CollarModule) === null || _o === void 0 ? void 0 : _o.collarPurchased;
 	                if (!prevCollarPurchase && currentCollarPurchase)
 	                    LSCG_SendLocal(`${!Sender ? "Someone" : CharacterNickname(Sender)} has purchased the Collar Module for you!`);
 	                else
@@ -9923,18 +10064,31 @@ var LSCG = (function (exports) {
 	                break;
 	            case "collar-tighten":
 	                if (!!Sender)
-	                    (_o = getModule("CollarModule")) === null || _o === void 0 ? void 0 : _o.TightenButtonPress(Sender);
+	                    (_p = getModule("CollarModule")) === null || _p === void 0 ? void 0 : _p.TightenButtonPress(Sender);
 	                break;
 	            case "collar-loosen":
 	                if (!!Sender)
-	                    (_p = getModule("CollarModule")) === null || _p === void 0 ? void 0 : _p.LoosenButtonPress(Sender);
+	                    (_q = getModule("CollarModule")) === null || _q === void 0 ? void 0 : _q.LoosenButtonPress(Sender);
 	                break;
 	            case "collar-stats":
 	                if (!!Sender)
-	                    (_q = getModule("CollarModule")) === null || _q === void 0 ? void 0 : _q.StatsButtonPress(Sender);
+	                    (_r = getModule("CollarModule")) === null || _r === void 0 ? void 0 : _r.StatsButtonPress(Sender);
 	                break;
 	            case "photo":
 	                DrawFlashScreen("#FFFFFF", 500, 1500);
+	                break;
+	            case "spell":
+	            case "pair":
+	                (_s = getModule("MagicModule")) === null || _s === void 0 ? void 0 : _s.IncomingSpellCommand(Sender, msg);
+	                break;
+	            case "spell-teach":
+	                (_t = getModule("MagicModule")) === null || _t === void 0 ? void 0 : _t.IncomingSpellTeachCommand(Sender, msg);
+	                break;
+	            case "unpair":
+	                (_u = getModule("StateModule")) === null || _u === void 0 ? void 0 : _u.IncomingUnpair(senderNumber, msg);
+	                break;
+	            case "pairing-update":
+	                (_v = getModule("StateModule")) === null || _v === void 0 ? void 0 : _v.PairingUpdate(senderNumber, msg);
 	                break;
 	        }
 	    }
@@ -10384,6 +10538,209 @@ ${LSCG_CHANGES}`;
 	    }
 	}
 
+	var LSCGSpellEffect;
+	(function (LSCGSpellEffect) {
+	    LSCGSpellEffect["none"] = "None";
+	    LSCGSpellEffect["hypnotizing"] = "Hypnotizing";
+	    LSCGSpellEffect["slumber"] = "Slumbering";
+	    LSCGSpellEffect["horny"] = "Arousing";
+	    LSCGSpellEffect["blindness"] = "Blinding";
+	    LSCGSpellEffect["deafened"] = "Deafening";
+	    LSCGSpellEffect["muted"] = "Gagged";
+	    LSCGSpellEffect["frozen"] = "Petrifying";
+	    LSCGSpellEffect["paired_arousal"] = "Pairing";
+	    LSCGSpellEffect["orgasm_siphon"] = "Siphoning";
+	    LSCGSpellEffect["outfit"] = "Outfit";
+	    LSCGSpellEffect["dispell"] = "Dispell";
+	})(LSCGSpellEffect || (LSCGSpellEffect = {}));
+	var OutfitOption;
+	(function (OutfitOption) {
+	    OutfitOption["clothes_only"] = "Clothes Only";
+	    OutfitOption["binds_only"] = "Restraints Only";
+	    OutfitOption["both"] = "Clothes and Restraints";
+	})(OutfitOption || (OutfitOption = {}));
+
+	class RemoteMagic extends RemoteGuiSubscreen {
+	    constructor() {
+	        super(...arguments);
+	        this.subscreens = [];
+	        this.EffectIndex = 0;
+	    }
+	    get name() {
+	        return "Magic™";
+	    }
+	    get overrideMemberIds() {
+	        var _a;
+	        return (_a = GetDelimitedList(this.settings.remoteMemberIds).map(id => +id).filter(id => id > 0)) !== null && _a !== void 0 ? _a : [];
+	    }
+	    get disabledReason() {
+	        var _a, _b, _c;
+	        var memberIdIsAllowed = ServerChatRoomGetAllowItem(Player, this.Character);
+	        if (this.overrideMemberIds.length > 0)
+	            memberIdIsAllowed = this.overrideMemberIds.indexOf(Player.MemberNumber) > -1;
+	        var isTrance = (_b = (_a = this.Character.LSCG.StateModule.states.find(s => s.type == "hypnotized")) === null || _a === void 0 ? void 0 : _a.active) !== null && _b !== void 0 ? _b : false;
+	        var passTranceReq = (this.settings.remoteAccessRequiredTrance && isTrance) || !this.settings.remoteAccessRequiredTrance;
+	        var passHypnotizerReq = (this.settings.limitRemoteAccessToHypnotizer && ((_c = this.Character.LSCG.StateModule.states.find(s => s.type == "hypnotized")) === null || _c === void 0 ? void 0 : _c.activatedBy) == Player.MemberNumber) ||
+	            !this.settings.limitRemoteAccessToHypnotizer;
+	        if (!this.settings.enabled)
+	            return "Section is Disabled";
+	        if (!memberIdIsAllowed)
+	            return "You do not have access to their mind...";
+	        if (!passTranceReq)
+	            return "They have too much willpower to let you in...";
+	        if (!passHypnotizerReq)
+	            return "They seem suggestable, but not to you...";
+	        else
+	            return "Section is Unavailable";
+	    }
+	    get enabled() {
+	        var _a, _b, _c;
+	        var memberIdIsAllowed = ServerChatRoomGetAllowItem(Player, this.Character);
+	        if (this.overrideMemberIds.length > 0)
+	            memberIdIsAllowed = this.overrideMemberIds.indexOf(Player.MemberNumber) > -1;
+	        var isTrance = (_b = (_a = this.Character.LSCG.StateModule.states.find(s => s.type == "hypnotized")) === null || _a === void 0 ? void 0 : _a.active) !== null && _b !== void 0 ? _b : false;
+	        var passTranceReq = (this.settings.remoteAccessRequiredTrance && isTrance) || !this.settings.remoteAccessRequiredTrance;
+	        var passHypnotizerReq = (this.settings.limitRemoteAccessToHypnotizer && ((_c = this.Character.LSCG.StateModule.states.find(s => s.type == "hypnotized")) === null || _c === void 0 ? void 0 : _c.activatedBy) == Player.MemberNumber) ||
+	            !this.settings.limitRemoteAccessToHypnotizer;
+	        return this.settings.remoteAccess &&
+	            this.settings.enabled &&
+	            memberIdIsAllowed &&
+	            passTranceReq &&
+	            passHypnotizerReq;
+	    }
+	    get icon() {
+	        return "Icons/Magic.png";
+	    }
+	    get settings() {
+	        return super.settings;
+	    }
+	    get multipageStructure() {
+	        return [[
+	                {
+	                    type: "checkbox",
+	                    label: "Locked:",
+	                    disabled: !this.settings.lockable,
+	                    description: "If checked, locks the user out of their own hypnosis settings.",
+	                    setting: () => { var _a; return (_a = this.settings.locked) !== null && _a !== void 0 ? _a : false; },
+	                    setSetting: (val) => {
+	                        if (this.settings.lockable)
+	                            this.settings.locked = val;
+	                    }
+	                }, {
+	                    type: "checkbox",
+	                    label: "Remote Access Requires Trance:",
+	                    description: "If checked, remote access is only possible while actively hypnotized.",
+	                    setting: () => { var _a; return (_a = this.settings.remoteAccessRequiredTrance) !== null && _a !== void 0 ? _a : true; },
+	                    setSetting: (val) => this.settings.remoteAccessRequiredTrance = val
+	                }, {
+	                    type: "checkbox",
+	                    label: "Remote Access Limited to Hypnotizer:",
+	                    description: "If checked, only the user who hypnotized you can access your settings (after matching other conditions).",
+	                    setting: () => { var _a; return (_a = this.settings.limitRemoteAccessToHypnotizer) !== null && _a !== void 0 ? _a : true; },
+	                    setSetting: (val) => this.settings.limitRemoteAccessToHypnotizer = val
+	                }, {
+	                    type: "checkbox",
+	                    label: "Enable Wild Magic:",
+	                    description: "Cast a random spell from your spell list, with a chance of a truly random spell.",
+	                    setting: () => { var _a; return (_a = this.settings.enableWildMagic) !== null && _a !== void 0 ? _a : false; },
+	                    setSetting: (val) => {
+	                        this.settings.enableWildMagic = val;
+	                        if (!val) {
+	                            this.settings.forceWildMagic = false;
+	                            this.settings.trueWildMagic = false;
+	                        }
+	                    }
+	                }, {
+	                    type: "checkbox",
+	                    label: "Force Wild Magic",
+	                    description: "Prevent the ability to choose the spell you are casting.",
+	                    disabled: !this.settings.enableWildMagic,
+	                    setting: () => { var _a; return (_a = this.settings.forceWildMagic) !== null && _a !== void 0 ? _a : false; },
+	                    setSetting: (val) => this.settings.forceWildMagic = val
+	                }, {
+	                    type: "checkbox",
+	                    label: "True Wild Magic",
+	                    description: "Generate a truly random spell whenever casting.",
+	                    disabled: !this.settings.enableWildMagic,
+	                    setting: () => { var _a; return (_a = this.settings.trueWildMagic) !== null && _a !== void 0 ? _a : false; },
+	                    setSetting: (val) => this.settings.trueWildMagic = val
+	                }, {
+	                    type: "label",
+	                    label: "Blocked Effects:",
+	                    description: "Toggle which spell effects you want to block on yourself."
+	                }, {
+	                    type: "label",
+	                    label: "",
+	                    description: ""
+	                }
+	            ]];
+	    }
+	    Run() {
+	        super.Run();
+	        var prev = MainCanvas.textAlign;
+	        MainCanvas.textAlign = "center";
+	        if (!this.settings.blockedSpellEffects)
+	            this.settings.blockedSpellEffects = [];
+	        let val = this.settings.blockedSpellEffects.indexOf(this.Effect) > -1;
+	        let blockedStr = val ? "Blocked" : "Allowed";
+	        DrawBackNextButton(780, this.getYPos(6) - 32, 600, 64, this.Effect, "White", "", () => blockedStr, () => blockedStr);
+	        DrawCheckbox(780 + 600 + 64, this.getYPos(6) - 32, 64, 64, "", val);
+	        MainCanvas.textAlign = "left";
+	        DrawTextFit(this.SpellEffectDescription(this.Effect), 780, this.getYPos(7), 1000, "Black");
+	        MainCanvas.textAlign = prev;
+	    }
+	    Click() {
+	        super.Click();
+	        if (MouseIn(780, this.getYPos(6) - 32, 600, 64)) {
+	            this.EffectIndex = this.GetNewIndexFromNextPrevClick(1080, this.EffectIndex, this.ActualEffects.length);
+	        }
+	        else if (MouseIn(550 + 600 + 64, this.getYPos(6) - 32, 64, 64)) {
+	            if (this.settings.blockedSpellEffects.indexOf(this.Effect) > -1)
+	                this.settings.blockedSpellEffects = this.settings.blockedSpellEffects.filter(ef => ef != this.Effect);
+	            else
+	                this.settings.blockedSpellEffects.push(this.Effect);
+	        }
+	    }
+	    get Effect() {
+	        return this.ActualEffects[this.EffectIndex];
+	    }
+	    get ActualEffects() {
+	        return this.Effects.filter(e => e != LSCGSpellEffect.none);
+	    }
+	    get Effects() {
+	        return Object.values(LSCGSpellEffect);
+	    }
+	    SpellEffectDescription(effect) {
+	        switch (effect) {
+	            case LSCGSpellEffect.blindness:
+	                return "Prevents the target from seeing.";
+	            case LSCGSpellEffect.deafened:
+	                return "Prevents the target from hearing.";
+	            case LSCGSpellEffect.muted:
+	                return "Gags the target.";
+	            case LSCGSpellEffect.frozen:
+	                return "Petrifies the target.";
+	            case LSCGSpellEffect.horny:
+	                return "Arouses the target.";
+	            case LSCGSpellEffect.hypnotizing:
+	                return "Hypnotizes the target.";
+	            case LSCGSpellEffect.slumber:
+	                return "Induces a deep slumber in the target.";
+	            case LSCGSpellEffect.outfit:
+	                return "Magically change the target's clothing and equipment.";
+	            case LSCGSpellEffect.paired_arousal:
+	                return "Pair two targets, such that when one feels arousal the other also does.";
+	            case LSCGSpellEffect.orgasm_siphon:
+	                return "Redirect all of the target's orgasmic pleasure to another.";
+	            case LSCGSpellEffect.dispell:
+	                return "Dispells any existing effects on the target (including anything drug induced).";
+	            case LSCGSpellEffect.none:
+	            default:
+	                return "";
+	        }
+	    }
+	}
+
 	class RemoteMainMenu extends RemoteGuiSubscreen {
 	    get name() {
 	        return "MainMenu";
@@ -10406,7 +10763,8 @@ ${LSCG_CHANGES}`;
 	    Load() {
 	        this.subscreens = [
 	            new RemoteHypno(getModule("HypnoModule"), this.Character),
-	            new RemoteCollar(getModule("CollarModule"), this.Character)
+	            new RemoteCollar(getModule("CollarModule"), this.Character),
+	            new RemoteMagic(getModule("MagicModule"), this.Character)
 	        ];
 	    }
 	    get character() {
@@ -10642,7 +11000,7 @@ ${LSCG_CHANGES}`;
 	                        LSCG_SendLocal("Please specify a defender for your roll.", 10000);
 	                        return;
 	                    }
-	                    let tgt = this.getCharacterByNicknameOrMemberNumber(args);
+	                    let tgt = getCharacterByNicknameOrMemberNumber(args);
 	                    if (!tgt) {
 	                        LSCG_SendLocal(`Defender ${args} not found.`, 10000);
 	                        return;
@@ -10660,7 +11018,7 @@ ${LSCG_CHANGES}`;
 	                        LSCG_SendLocal("Please specify an attacker for your roll.", 10000);
 	                        return;
 	                    }
-	                    let tgt = this.getCharacterByNicknameOrMemberNumber(args);
+	                    let tgt = getCharacterByNicknameOrMemberNumber(args);
 	                    if (!tgt) {
 	                        LSCG_SendLocal(`Attacker ${args} not found.`, 10000);
 	                        return;
@@ -10718,6 +11076,31 @@ ${LSCG_CHANGES}`;
 	                        LSCG_SendLocal(`<b>/lscg collar</b> [tight/loose/stat] : Use to self-tighten, self-loosen, or read out information about your collar if allowed. Must be unrestrained to use."`);
 	                    }
 	                }
+	            }, {
+	                Tag: "conditions",
+	                Description: " : List which conditions are currently active on you.",
+	                Action: (args, msg, parsed) => {
+	                    let target = getCharacterByNicknameOrMemberNumber(args);
+	                    let targetName = !target ? CharacterNickname(Player) : CharacterNickname(target);
+	                    let states = !target ?
+	                        this.states.States.filter(s => s.Active).map(s => s.Type) :
+	                        target.LSCG.StateModule.states.filter(s => s.active).map(s => s.type);
+	                    let stateList = states.map(s => `<li>${s}</li>`).join("");
+	                    LSCG_SendLocal(`<div><b>Active Conditions on ${targetName}:</b><ul>${stateList}</ul></div>`, 12000);
+	                }
+	                // }, {
+	                // 	Tag: "test-beep",
+	                // 	Description: " : List which conditions are currently active on you.",
+	                // 	Action: (args, msg, parsed) => {
+	                // 		let tgt = getCharacterByNicknameOrMemberNumber(args);
+	                // 		if (!!tgt) {
+	                // 			LSCG_SendLocal(`Sending beep command to ${CharacterNickname(tgt)}`);
+	                // 			sendLSCGCommandBeep(tgt.MemberNumber ?? -1, "debug", [{
+	                // 				name: "msg",
+	                // 				value: `Test LSCG Beep from ${CharacterNickname(Player)}`
+	                // 			}]);
+	                // 		}
+	                // 	}
 	            }
 	        ];
 	    }
@@ -10734,16 +11117,6 @@ ${LSCG_CHANGES}`;
 	    }
 	    getSubcommand(name) {
 	        return this.lscgCommands.find(c => c.Tag.toLocaleLowerCase() == name.toLocaleLowerCase());
-	    }
-	    getCharacterByNicknameOrMemberNumber(tgt) {
-	        tgt = tgt.toLocaleLowerCase();
-	        let tgtC;
-	        if (CommonIsNumeric(tgt))
-	            tgtC = getCharacter(+tgt);
-	        if (!tgtC) {
-	            tgtC = ChatRoomCharacter.find(c => CharacterNickname(c).toLocaleLowerCase() == tgt);
-	        }
-	        return tgtC;
 	    }
 	    load() {
 	        CommandCombine([
@@ -10779,6 +11152,18 @@ ${LSCG_CHANGES}`;
 	    }
 	}
 
+	const CameraItems = [
+	    "Phone1",
+	    "Phone2",
+	    "PortalTablet",
+	    "Camera1",
+	];
+	const MagicWandItems = [
+	    "RainbowWand"
+	];
+	const QuaffableItems = [
+	    "PotionBottle"
+	];
 	class ActivityRoll {
 	    constructor(raw, mod) {
 	        this.Raw = 0;
@@ -10864,12 +11249,6 @@ ${LSCG_CHANGES}`;
 	                NeckItemName: "FurScarf"
 	            }
 	        ];
-	        this.CameraItems = [
-	            "Phone1",
-	            "Phone2",
-	            "PortalTablet",
-	            "Camera1",
-	        ];
 	    }
 	    load() {
 	        hookFunction("ActivityGenerateItemActivitiesFromNeed", 1, (args, next) => {
@@ -10891,7 +11270,7 @@ ${LSCG_CHANGES}`;
 	            return res;
 	        }, ModuleCategory.ItemUse);
 	        hookFunction("CharacterItemsForActivity", 1, (args, next) => {
-	            var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l;
+	            var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o;
 	            let C = args[0];
 	            let itemType = args[1];
 	            let results = next(args);
@@ -10955,10 +11334,20 @@ ${LSCG_CHANGES}`;
 	            else if (itemType == "CameraItem") {
 	                let item = InventoryGet(C, "ItemHandheld");
 	                let acc = InventoryGet(C, "ClothAccessory");
-	                if (!!item && this.CameraItems.indexOf((_k = item.Asset) === null || _k === void 0 ? void 0 : _k.Name) > -1)
+	                if (!!item && CameraItems.indexOf((_k = item.Asset) === null || _k === void 0 ? void 0 : _k.Name) > -1)
 	                    results.push(item);
-	                else if (!!acc && this.CameraItems.indexOf((_l = acc.Asset) === null || _l === void 0 ? void 0 : _l.Name) > -1)
+	                else if (!!acc && CameraItems.indexOf((_l = acc.Asset) === null || _l === void 0 ? void 0 : _l.Name) > -1)
 	                    results.push(acc);
+	            }
+	            else if (itemType == "MagicItem") {
+	                let item = InventoryGet(C, "ItemHandheld");
+	                if (!!item && MagicWandItems.indexOf((_m = item.Asset) === null || _m === void 0 ? void 0 : _m.Name) > -1)
+	                    results.push(item);
+	            }
+	            else if (itemType == "QuaffableItem") {
+	                let item = InventoryGet(C, "ItemHandheld");
+	                if (!!item && QuaffableItems.indexOf((_o = item.Asset) === null || _o === void 0 ? void 0 : _o.Name) > -1)
+	                    results.push(item);
 	            }
 	            return results;
 	        }, ModuleCategory.ItemUse);
@@ -11820,6 +12209,12 @@ ${LSCG_CHANGES}`;
 	}
 
 	class HypnoState extends BaseState {
+	    get Icon() {
+	        return ICONS.HYPNO;
+	    }
+	    get Label() {
+	        return "Hypnotized";
+	    }
 	    get hypnoSettings() {
 	        return getModule("HypnoModule").settings;
 	    }
@@ -11839,6 +12234,7 @@ ${LSCG_CHANGES}`;
 	            "%NAME%'s eyelids flutter gently, awaiting a command...",
 	            "%NAME% trembles with a quiet moan as %PRONOUN% yearns to obey..."
 	        ];
+	        this.Restrictions.Speech = "true";
 	        this.Restrictions.Walk = "whenImmersive";
 	    }
 	    Init() {
@@ -11875,9 +12271,11 @@ ${LSCG_CHANGES}`;
 	            this.ResetEyes();
 	    }
 	    Activate(memberNumber, emote) {
-	        this.SetEyes();
-	        this.CheckHypnotizedState();
-	        super.Activate(memberNumber, emote);
+	        if (!this.Active) {
+	            this.SetEyes();
+	            this.CheckHypnotizedState();
+	            super.Activate(memberNumber, emote);
+	        }
 	    }
 	    Recover(emote) {
 	        if (this.Active) {
@@ -11916,11 +12314,13 @@ ${LSCG_CHANGES}`;
 	    }
 	    SetEyes() {
 	        var _a, _b, _c, _d, _e, _f;
-	        this.extensions["existingEye1Name"] = (_a = InventoryGet(Player, "Eyes")) === null || _a === void 0 ? void 0 : _a.Asset.Name;
-	        this.extensions["existingEye1Color"] = (_b = InventoryGet(Player, "Eyes")) === null || _b === void 0 ? void 0 : _b.Color;
-	        this.extensions["existingEye2Name"] = (_c = InventoryGet(Player, "Eyes2")) === null || _c === void 0 ? void 0 : _c.Asset.Name;
-	        this.extensions["existingEye2Color"] = (_d = InventoryGet(Player, "Eyes2")) === null || _d === void 0 ? void 0 : _d.Color;
-	        this.extensions["existingEyeExpression"] = (_f = (_e = WardrobeGetExpression(Player)) === null || _e === void 0 ? void 0 : _e.Eyes) !== null && _f !== void 0 ? _f : null;
+	        if (!this.extensions["existingEye1Name"]) {
+	            this.extensions["existingEye1Name"] = (_a = InventoryGet(Player, "Eyes")) === null || _a === void 0 ? void 0 : _a.Asset.Name;
+	            this.extensions["existingEye1Color"] = (_b = InventoryGet(Player, "Eyes")) === null || _b === void 0 ? void 0 : _b.Color;
+	            this.extensions["existingEye2Name"] = (_c = InventoryGet(Player, "Eyes2")) === null || _c === void 0 ? void 0 : _c.Asset.Name;
+	            this.extensions["existingEye2Color"] = (_d = InventoryGet(Player, "Eyes2")) === null || _d === void 0 ? void 0 : _d.Color;
+	            this.extensions["existingEyeExpression"] = (_f = (_e = WardrobeGetExpression(Player)) === null || _e === void 0 ? void 0 : _e.Eyes) !== null && _f !== void 0 ? _f : null;
+	        }
 	        settingsSave();
 	        this.EnforceEyes();
 	    }
@@ -11973,6 +12373,12 @@ ${LSCG_CHANGES}`;
 	}
 
 	class SleepState extends BaseState {
+	    get Icon() {
+	        return "Assets/Female3DCG/Eyes/Closed/Icon.png";
+	    }
+	    get Label() {
+	        return "Asleep";
+	    }
 	    constructor(state) {
 	        super(state);
 	        this.Type = "asleep";
@@ -12036,12 +12442,18 @@ ${LSCG_CHANGES}`;
 	}
 
 	class HornyState extends BaseState {
+	    get Icon() {
+	        return "Icons/Small/Lover.png";
+	    }
+	    get Label() {
+	        return "Aroused";
+	    }
 	    constructor(state) {
 	        super(state);
 	        this.Type = "horny";
 	    }
 	    Init() {
-	        hookFunction('ActivitySetArousalTimer', 1, (args, next) => {
+	        hookFunction('ActivitySetArousalTimer', 2, (args, next) => {
 	            if (this.Active) {
 	                let Activity = args[1];
 	                let Zone = args[2];
@@ -12058,6 +12470,12 @@ ${LSCG_CHANGES}`;
 	}
 
 	class BlindState extends BaseState {
+	    get Icon() {
+	        return "Icons/Previews/BlindHeavy.png";
+	    }
+	    get Label() {
+	        return "Blinded";
+	    }
 	    constructor(state) {
 	        super(state);
 	        this.Type = "blind";
@@ -12070,6 +12488,12 @@ ${LSCG_CHANGES}`;
 	}
 
 	class DeafState extends BaseState {
+	    get Icon() {
+	        return "Icons/Previews/DeafHeavy.png";
+	    }
+	    get Label() {
+	        return "Deafened";
+	    }
 	    constructor(state) {
 	        super(state);
 	        this.Type = "deaf";
@@ -12082,14 +12506,327 @@ ${LSCG_CHANGES}`;
 	}
 
 	class FrozenState extends BaseState {
+	    get Icon() {
+	        return "Icons/Kidnap.png";
+	    }
+	    get Label() {
+	        return "Petrified";
+	    }
 	    constructor(state) {
 	        super(state);
 	        this.Type = "frozen";
+	        this.speechBlockStr = [
+	            "%NAME% barely trembles, unable to move their mouth or make a sound...",
+	            "%NAME%'s eyes plead helplessly as their muscles refuse to obey...",
+	            "%NAME% manages to muster a quiet whimper, their body held fast..."
+	        ];
 	        this.Restrictions.CharacterAccess = "true";
 	        this.Restrictions.Stand = "true";
+	        this.Restrictions.Kneel = "true";
+	        this.Restrictions.Wardrobe = "true";
 	        this.Restrictions.Walk = "true";
+	        this.Restrictions.Speech = "true";
 	    }
 	    Init() { }
+	    Tick(now) { }
+	    RoomSync() { }
+	    SpeechBlock() {
+	        SendAction(this.speechBlockStr[getRandomInt(this.speechBlockStr.length)]);
+	    }
+	}
+
+	class GaggedState extends BaseState {
+	    get Icon() {
+	        return "Icons/Previews/GagHeavy.png";
+	    }
+	    get Label() {
+	        return "Gagged";
+	    }
+	    constructor(state) {
+	        super(state);
+	        this.Type = "gagged";
+	        this.freeBlockStrings = [
+	            "%NAME%'s eyes widen as they try to speak without success...",
+	            "%NAME% looks around helplessly, unable to make a sound...",
+	            "%NAME%'s mouth moves in silence...",
+	            "%NAME%'s mouth moves silently..."
+	        ];
+	        this.restrainedBlockStrings = [
+	            "%NAME% whimpers, struggling in %POSSESSIVE% bindings and unable to speak...",
+	            "%NAME%'s eyes widen as they squirm in %POSSESSIVE% bondage, only a gentle moan escaping...",
+	            "%NAME% tries %POSSESSIVE% best to speak, but has to resign themselves to mearly a bound whimper...",
+	            "%NAME% squirms in %POSSESSIVE% bindings, %POSSESSIVE% mouth moving in silence..."
+	        ];
+	        this.Restrictions.Speech = "true";
+	    }
+	    Init() { }
+	    Tick(now) { }
+	    RoomSync() { }
+	    SpeechBlock() {
+	        if (Player.IsRestrained())
+	            SendAction(this.restrainedBlockStrings[getRandomInt(this.restrainedBlockStrings.length)]);
+	        else
+	            SendAction(this.freeBlockStrings[getRandomInt(this.freeBlockStrings.length)]);
+	    }
+	}
+
+	class RedressedState extends BaseState {
+	    get Icon() {
+	        return "Icons/Dress.png";
+	    }
+	    get Label() {
+	        return "Redressed";
+	    }
+	    constructor(state) {
+	        super(state);
+	        this.Type = "redressed";
+	        this.storedOutfitKey = "stored-outfit";
+	        this.Restrictions.Wardrobe = "true";
+	    }
+	    get StoredOutfit() {
+	        let ext = this.config.extensions[this.storedOutfitKey];
+	        if (!ext)
+	            return undefined;
+	        try {
+	            return JSON.parse(LZString.decompressFromBase64(ext));
+	        }
+	        catch (_a) {
+	            return undefined;
+	        }
+	    }
+	    SetStoredOutfit() {
+	        this.config.extensions[this.storedOutfitKey] = LZString.compressToBase64(JSON.stringify(BC_ItemsToItemBundles(Player.Appearance)));
+	        settingsSave();
+	    }
+	    ClearStoredOutfit() {
+	        delete this.config.extensions[this.storedOutfitKey];
+	        settingsSave();
+	    }
+	    DoChange(asset, type) {
+	        if (!asset)
+	            return false;
+	        switch (type) {
+	            case OutfitOption.clothes_only:
+	                return isCloth(asset);
+	            case OutfitOption.binds_only:
+	                return isBind(asset);
+	            case OutfitOption.both:
+	                return isCloth(asset) || isBind(asset);
+	        }
+	    }
+	    StripCharacter(skipStore, type, newList = []) {
+	        var _a, _b;
+	        if (!skipStore && !this.StoredOutfit)
+	            this.SetStoredOutfit();
+	        const cosplayBlocked = (_b = (_a = Player.OnlineSharedSettings) === null || _a === void 0 ? void 0 : _a.BlockBodyCosplay) !== null && _b !== void 0 ? _b : true;
+	        let appearance = Player.Appearance;
+	        for (let i = appearance.length - 1; i >= 0; i--) {
+	            const asset = appearance[i].Asset;
+	            if (this.DoChange(asset, type)) {
+	                if (isCloth(asset) || newList.length == 0 || newList.some(x => x.Group == asset.Group.Name))
+	                    appearance.splice(i, 1);
+	            }
+	        }
+	    }
+	    ApplyOutfit(outfit, memberNumber, emote) {
+	        this.Activate(memberNumber, emote);
+	        try {
+	            let outfitList = JSON.parse(LZString.decompressFromBase64(outfit.Code));
+	            if (!!outfitList && typeof outfitList == "object") {
+	                this.StripCharacter(false, outfit.Option, outfitList);
+	                this.WearMany(outfitList, outfit.Option);
+	                super.Activate(memberNumber, emote);
+	            }
+	        }
+	        catch (_a) {
+	            console.warn("error parsing outfitcode in RedressedState: " + outfit.Code);
+	        }
+	    }
+	    Recover(emote) {
+	        super.Recover();
+	        if (!!this.StoredOutfit) {
+	            this.StripCharacter(true, OutfitOption.both);
+	            this.WearMany(this.StoredOutfit, OutfitOption.both);
+	            this.ClearStoredOutfit();
+	        }
+	    }
+	    WearMany(items, type) {
+	        items.forEach(item => {
+	            let asset = AssetGet("Female3DCG", item.Group, item.Name);
+	            if (this.DoChange(asset, type))
+	                InventoryWear(Player, item.Name, item.Group, item.Color, item.Difficulty, -1, item.Craft, true);
+	        });
+	        ChatRoomCharacterUpdate(Player);
+	    }
+	    Init() { }
+	    Tick(now) { }
+	    RoomSync() { }
+	    SpeechBlock() { }
+	}
+
+	class PairedBaseState extends BaseState {
+	    get Pairings() {
+	        if (!this.config.extensions["pairings"])
+	            this.config.extensions["pairings"] = [];
+	        return this.config.extensions["pairings"];
+	    }
+	    set Pairings(pairings) {
+	        this.config.extensions["pairings"] = pairings;
+	    }
+	    DoPair(target, matchmaker) {
+	        this.AddPairing({
+	            PairedMember: target.MemberNumber,
+	            PairedBy: matchmaker === null || matchmaker === void 0 ? void 0 : matchmaker.MemberNumber,
+	            IsSource: true
+	        });
+	        this.Activate(matchmaker === null || matchmaker === void 0 ? void 0 : matchmaker.MemberNumber);
+	    }
+	    RespondToPairing(source, matchmaker) {
+	        this.AddPairing({
+	            PairedMember: source.MemberNumber,
+	            PairedBy: matchmaker === null || matchmaker === void 0 ? void 0 : matchmaker.MemberNumber,
+	            IsSource: false
+	        });
+	        this.Activate(matchmaker === null || matchmaker === void 0 ? void 0 : matchmaker.MemberNumber);
+	    }
+	    Recover(emote) {
+	        this.Pairings.forEach(pair => {
+	            sendLSCGCommandBeep(pair.PairedMember, "unpair", [{
+	                    name: "type",
+	                    value: this.Type
+	                }]);
+	        });
+	        this.Pairings = [];
+	        super.Recover();
+	    }
+	    Init() { }
+	    Tick(now) { }
+	    RoomSync() { }
+	    SpeechBlock() { }
+	    // ******* Pairing Manipulations *********
+	    AddPairing(pairing) {
+	        let exists = this.Pairings.find(p => p.PairedMember == pairing.PairedMember);
+	        if (!exists)
+	            this.Pairings.push(pairing);
+	        else // Update if existing pairing to member of matching type
+	            Object.assign(exists, pairing);
+	        settingsSave();
+	    }
+	    RemovePairing(paired) {
+	        this.Pairings = this.Pairings.filter(p => p.PairedMember != paired);
+	        if (this.Pairings.length <= 0)
+	            super.Recover();
+	        else
+	            settingsSave();
+	    }
+	    RemovePairingsByMember(matchmaker) {
+	        this.Pairings = this.Pairings.filter(p => p.PairedBy != matchmaker);
+	        if (this.Pairings.length <= 0)
+	            super.Recover();
+	        else
+	            settingsSave();
+	    }
+	    ClearAllPairings() {
+	        this.Recover();
+	    }
+	}
+
+	class ArousalPairedState extends PairedBaseState {
+	    constructor() {
+	        super(...arguments);
+	        this.Type = "arousal-paired";
+	        this._prevArousalProgress = 0;
+	    }
+	    get Icon() {
+	        return "Assets/Female3DCG/Emoticon/Hearts/Icon.png";
+	    }
+	    get Label() {
+	        return "Arousal Paired";
+	    }
+	    Update(source, args) {
+	        var _a;
+	        let progress = (_a = args.find(a => a.name == "progress")) === null || _a === void 0 ? void 0 : _a.value;
+	        if (!Player.ArousalSettings || typeof progress !== "number")
+	            return;
+	        Player.ArousalSettings.ProgressTimer = 0;
+	        Player.ArousalSettings.Progress = this._prevArousalProgress = progress;
+	        if (progress == 100)
+	            ActivityOrgasmPrepare(Player);
+	        if (CurrentScreen == "ChatRoom")
+	            ServerSend("ChatRoomCharacterArousalUpdate", {
+	                OrgasmTimer: Player.ArousalSettings.OrgasmTimer,
+	                Progress: Player.ArousalSettings.Progress,
+	                ProgressTimer: Player.ArousalSettings.ProgressTimer,
+	                OrgasmCount: Player.ArousalSettings.OrgasmCount
+	            });
+	        console.debug(`Arousal updated from ${source} to ${progress}`);
+	    }
+	    Init() { }
+	    PingArousal() {
+	        var _a, _b;
+	        let isSiphoned = this.StateModule.OrgasmSiphonedState.Pairings.filter(p => p.IsSource).length > 0;
+	        let progress = Math.min((_b = (_a = Player.ArousalSettings) === null || _a === void 0 ? void 0 : _a.Progress) !== null && _b !== void 0 ? _b : 0, isSiphoned ? 99 : 100);
+	        this.Pairings.forEach(p => {
+	            sendLSCGCommandBeep(p.PairedBy, "pairing-update", [
+	                {
+	                    name: "type",
+	                    value: this.Type
+	                }, {
+	                    name: "progress",
+	                    value: progress
+	                }
+	            ]);
+	        });
+	    }
+	    Tick(now) {
+	        var _a, _b;
+	        let currentArousalProgress = (_b = (_a = Player.ArousalSettings) === null || _a === void 0 ? void 0 : _a.Progress) !== null && _b !== void 0 ? _b : 0;
+	        if (currentArousalProgress != this._prevArousalProgress) {
+	            this._prevArousalProgress = currentArousalProgress;
+	            this.PingArousal();
+	        }
+	    }
+	    RoomSync() { }
+	    SpeechBlock() { }
+	}
+
+	class OrgasmSiphonedState extends PairedBaseState {
+	    constructor() {
+	        super(...arguments);
+	        this.Type = "orgasm-siphoned";
+	    }
+	    get Icon() {
+	        return "Assets/Female3DCG/Emoticon/Annoyed/Icon.png";
+	    }
+	    get Label() {
+	        return "Orgasms Siphoned";
+	    }
+	    Update(source, args) {
+	        if (!!Player.ArousalSettings)
+	            Player.ArousalSettings.Progress = 100;
+	        ActivityOrgasmPrepare(Player);
+	    }
+	    Init() {
+	        hookFunction("ActivityOrgasmStart", 1, (args, next) => {
+	            // Intercept an orgasm, force it to ruin and send command to paired target
+	            let C = args[0];
+	            if (!C.IsPlayer())
+	                return next(args);
+	            let siphonTargets = this.Pairings.filter(p => p.IsSource);
+	            if (siphonTargets.length > 0) {
+	                siphonTargets.forEach(p => {
+	                    sendLSCGCommandBeep(p.PairedMember, "pairing-update", [
+	                        {
+	                            name: "type",
+	                            value: this.Type
+	                        }
+	                    ]);
+	                });
+	                ActivityOrgasmRuined = true;
+	            }
+	            return next(args);
+	        }, ModuleCategory.States);
+	    }
 	    Tick(now) { }
 	    RoomSync() { }
 	    SpeechBlock() { }
@@ -12145,11 +12882,97 @@ ${LSCG_CHANGES}`;
 	        this.BlindState = new BlindState(this);
 	        this.DeafState = new DeafState(this);
 	        this.FrozenState = new FrozenState(this);
-	        this.States = [this.SleepState, this.FrozenState, this.HypnoState, this.BlindState, this.DeafState, this.HornyState];
+	        this.GaggedState = new GaggedState(this);
+	        this.RedressedState = new RedressedState(this);
+	        this.ArousalPairedState = new ArousalPairedState(this);
+	        this.OrgasmSiphonedState = new OrgasmSiphonedState(this);
+	        this.States = [
+	            this.SleepState,
+	            this.FrozenState,
+	            this.HypnoState,
+	            this.GaggedState,
+	            this.BlindState,
+	            this.DeafState,
+	            this.HornyState,
+	            this.RedressedState,
+	            this.ArousalPairedState,
+	            this.OrgasmSiphonedState
+	        ];
 	        // States module in general is always enabled. Toggling is done on each specific state.
 	        this.settings.enabled = true;
 	    }
 	    load() {
+	        hookFunction("DrawStatus", 1, (args, next) => {
+	            var _a;
+	            const ret = next(args);
+	            let C = args[0];
+	            let CharX = args[1];
+	            let CharY = args[2];
+	            let Zoom = args[3];
+	            if (!!C && !!C.LSCG && !!C.LSCG.StateModule &&
+	                typeof CharX === "number" &&
+	                typeof CharY === "number" &&
+	                typeof Zoom === "number" &&
+	                ChatRoomHideIconState === 0 &&
+	                MouseIn(CharX, CharY, 500 * Zoom, 1000 * Zoom)) {
+	                let validStates = (_a = C.LSCG) === null || _a === void 0 ? void 0 : _a.StateModule.states.filter(s => s.active);
+	                let validStateCound = validStates.length;
+	                let tooltip = undefined;
+	                validStates.forEach((state, ix, arr) => {
+	                    let iconSize = 30;
+	                    let yOffset = (ix + 1) * 40 * Zoom;
+	                    let iconCoords = {
+	                        x: CharX + 40 * Zoom,
+	                        y: CharY + (60 + yOffset * Zoom),
+	                        w: iconSize * Zoom,
+	                        h: iconSize * Zoom
+	                    };
+	                    let iconCenter = { x: iconCoords.x + iconCoords.w / 2, y: iconCoords.y + iconCoords.h / 2 };
+	                    let statePair = this.GetIconForState(state);
+	                    DrawCircle(iconCenter.x, iconCenter.y, (iconSize + 10) / 2 * Zoom, 1, "Black", "White");
+	                    DrawImageResize(statePair.Icon, iconCoords.x, iconCoords.y, iconCoords.w, iconCoords.h);
+	                    if (MouseIn(iconCoords.x, iconCoords.y, iconCoords.w, iconCoords.h)) {
+	                        tooltip = statePair.Label;
+	                    }
+	                });
+	                if (!!tooltip)
+	                    mouseTooltip(tooltip);
+	            }
+	            return ret;
+	        }, ModuleCategory.States);
+	        // hookFunction("ChatRoomClickCharacter", 1, (args, next) => {
+	        //     let C = args[0] as OtherCharacter;
+	        //     let CharX = args[1] as number;
+	        //     let CharY = args[2] as number;
+	        //     let Zoom = args[3] as number;
+	        //     let validStates = C.LSCG?.StateModule.states.filter(s => s.active);
+	        //     let clickHandled = false;
+	        //     if (
+	        //         !!C && !!C.LSCG && !!C.LSCG.StateModule &&
+	        //         typeof CharX === "number" &&
+	        //         typeof CharY === "number" &&
+	        //         typeof Zoom === "number" &&
+	        //         ChatRoomHideIconState === 0 &&
+	        //         C.IsPlayer() &&
+	        //         validStates.length > 0
+	        //     ) {
+	        //         validStates.forEach((state, ix, arr) => {
+	        //             let iconSize = 30;
+	        //             let xOffset = (ix+1) * 40 * Zoom;
+	        //             let iconCoords = {
+	        //                 x: CharX + xOffset * Zoom,
+	        //                 y: CharY + 60 * Zoom,
+	        //                 w: iconSize * Zoom,
+	        //                 h: iconSize * Zoom
+	        //             };
+	        //             if (MouseIn(iconCoords.x, iconCoords.y, iconCoords.w, iconCoords.h)) {
+	        //                 this.ClickResist(state);
+	        //             }
+	        //         });
+	        //     }
+	        //     if (!clickHandled)
+	        //         return next(args);
+	        // })
 	        // General Hooks
 	        hookFunction("ChatRoomSync", 10, (args, next) => {
 	            next(args);
@@ -12162,10 +12985,12 @@ ${LSCG_CHANGES}`;
 	            if (!this.Enabled)
 	                return next(args);
 	            let type = args[0];
-	            let speechBlockStates = this.GetRestrictions(r => r.Speech);
-	            if (speechBlockStates.length > 0 && type == "ChatRoomChat" && args[1].Type == "Chat" && ((_a = args[1]) === null || _a === void 0 ? void 0 : _a.Content[0]) != "(") {
-	                speechBlockStates[0].SpeechBlock();
-	                return null;
+	            if (type == "ChatRoomChat" && args[1].Type == "Chat" && ((_a = args[1]) === null || _a === void 0 ? void 0 : _a.Content[0]) != "(") {
+	                let speechBlockStates = this.GetRestrictions(r => r.Speech);
+	                if (speechBlockStates.length > 0) {
+	                    speechBlockStates[getRandomInt(speechBlockStates.length)].SpeechBlock();
+	                    return null;
+	                }
 	            }
 	            return next(args);
 	        }, ModuleCategory.States);
@@ -12189,18 +13014,24 @@ ${LSCG_CHANGES}`;
 	                return false;
 	            return next(args);
 	        }, ModuleCategory.States);
-	        hookFunction('Player.IsDeaf', 1, (args, next) => {
+	        hookFunction('Player.GetDeafLevel', 1, (args, next) => {
 	            if (this.Enabled && this.AnyRestrictions(r => r.Hearing))
-	                return true;
+	                return 4;
 	            return next(args);
 	        }, ModuleCategory.States);
-	        hookFunction('Player.IsBlind', 1, (args, next) => {
+	        hookFunction('Player.GetBlindLevel', 1, (args, next) => {
+	            var _a;
 	            if (this.Enabled && this.AnyRestrictions(r => r.Sight))
-	                return true;
+	                return ((_a = Player.GameplaySettings) === null || _a === void 0 ? void 0 : _a.SensDepChatLog) == "SensDepLight" ? 2 : 3;
 	            return next(args);
 	        }, ModuleCategory.States);
 	        hookFunction('ChatRoomCanAttemptStand', 1, (args, next) => {
 	            if (this.Enabled && this.AnyRestrictions(r => r.Stand))
+	                return false;
+	            return next(args);
+	        }, ModuleCategory.States);
+	        hookFunction('ChatRoomCanAttemptKneel', 1, (args, next) => {
+	            if (this.Enabled && this.AnyRestrictions(r => r.Kneel))
 	                return false;
 	            return next(args);
 	        }, ModuleCategory.States);
@@ -12212,11 +13043,1235 @@ ${LSCG_CHANGES}`;
 	            }
 	            return next(args);
 	        }, ModuleCategory.States);
-	        this.HypnoState.Init();
-	        this.SleepState.Init();
+	        this.States.forEach(s => s.Init());
 	    }
 	    unload() {
 	        removeAllHooksByModule(ModuleCategory.States);
+	    }
+	    GetIconForState(state) {
+	        let stateObj = this.States.find(s => s.Type == state.type);
+	        if (!stateObj)
+	            return {
+	                Label: state.type,
+	                Icon: ICONS.BDSM
+	            };
+	        return {
+	            Label: stateObj.Label,
+	            Icon: stateObj.Icon
+	        };
+	    }
+	    Clear(emote) {
+	        this.States.forEach(s => s.Recover(emote));
+	    }
+	    IncomingUnpair(sender, msg) {
+	        var _a;
+	        let command = msg.command;
+	        let unPairType = (_a = command === null || command === void 0 ? void 0 : command.args.find(a => a.name == "type")) === null || _a === void 0 ? void 0 : _a.value;
+	        let unPairingState = this.States.find(s => s.Type == unPairType);
+	        unPairingState.RemovePairing(sender);
+	    }
+	    PairingUpdate(sender, msg) {
+	        var _a;
+	        if (!msg.command)
+	            return;
+	        let pairType = (_a = msg.command.args.find(a => a.name == "type")) === null || _a === void 0 ? void 0 : _a.value;
+	        let pairingState = this.States.find(s => s.Type == pairType);
+	        pairingState.Update(sender, msg.command.args);
+	    }
+	}
+
+	const pairedSpellEffects = [
+	    LSCGSpellEffect.orgasm_siphon,
+	    LSCGSpellEffect.paired_arousal
+	];
+	class GuiMagic extends GuiSubscreen {
+	    constructor() {
+	        super(...arguments);
+	        this.outfitFieldId = "magic_outfitPaste";
+	        this.outfitDropId = "magic_outfitDrop";
+	        this.blinkLastTime = 0;
+	        this.blinkColor = "Pink";
+	        this.SpellIndex = 0;
+	        this.EffectIndex = 0;
+	        this._ConfigureOutfit = false;
+	    }
+	    get name() {
+	        return "Magic™";
+	    }
+	    get icon() {
+	        return "Icons/Magic.png";
+	    }
+	    get settings() {
+	        return super.settings;
+	    }
+	    get multipageStructure() {
+	        if (!this.settings.enabled)
+	            return [[]];
+	        else if (this.settings.locked)
+	            return [[
+	                    {
+	                        type: "label",
+	                        label: "** Magic™ Settings Locked **",
+	                        description: "Magic™ Settings Locked Remotely"
+	                    }
+	                ]];
+	        else
+	            return [[
+	                    {
+	                        type: "checkbox",
+	                        label: "Enabled:",
+	                        description: "Enabled the use and application of Magic™.",
+	                        setting: () => { var _a; return (_a = this.settings.enabled) !== null && _a !== void 0 ? _a : false; },
+	                        setSetting: (val) => this.settings.enabled = val
+	                    }, {
+	                        type: "checkbox",
+	                        label: "Enable Wild Magic:",
+	                        description: "Cast a random spell from your spell list, with a chance of a truly random spell.",
+	                        setting: () => { var _a; return (_a = this.settings.enableWildMagic) !== null && _a !== void 0 ? _a : false; },
+	                        setSetting: (val) => {
+	                            this.settings.enableWildMagic = val;
+	                            if (!val) {
+	                                this.settings.forceWildMagic = false;
+	                                this.settings.trueWildMagic = false;
+	                            }
+	                        }
+	                    }, {
+	                        type: "checkbox",
+	                        label: "Force Wild Magic",
+	                        description: "Prevent the ability to choose the spell you are casting.",
+	                        disabled: !this.settings.enableWildMagic,
+	                        setting: () => { var _a; return (_a = this.settings.forceWildMagic) !== null && _a !== void 0 ? _a : false; },
+	                        setSetting: (val) => this.settings.forceWildMagic = val
+	                    }, {
+	                        type: "checkbox",
+	                        label: "True Wild Magic",
+	                        description: "Generate a truly random spell whenever casting.",
+	                        disabled: !this.settings.enableWildMagic,
+	                        setting: () => { var _a; return (_a = this.settings.trueWildMagic) !== null && _a !== void 0 ? _a : false; },
+	                        setSetting: (val) => this.settings.trueWildMagic = val
+	                    }, {
+	                        type: "label",
+	                        label: "Blocked Effects:",
+	                        description: "Toggle which spell effects you want to block on yourself."
+	                    }, {
+	                        type: "label",
+	                        label: "",
+	                        description: ""
+	                    }
+	                ], [
+	                    {
+	                        type: "label",
+	                        label: "Spell Crafting",
+	                        description: "Create your arcane sorceries and potions."
+	                    }, {
+	                        type: "text",
+	                        label: "Spell Name:",
+	                        description: "Name of your powerful spell",
+	                        id: "spellName",
+	                        setting: () => { var _a, _b; return (_b = (_a = this.Spell) === null || _a === void 0 ? void 0 : _a.Name) !== null && _b !== void 0 ? _b : ""; },
+	                        setSetting: (val) => { if (!!this.Spell)
+	                            this.Spell.Name = val; },
+	                        hidden: !this.Spell
+	                    }, {
+	                        type: "checkbox",
+	                        label: "Allow Potion:",
+	                        description: "Allows this spell to be brewed into a crafted potion bottle using its name.",
+	                        disabled: this.SpellHasPairedEffect,
+	                        setting: () => { var _a, _b; return this.SpellHasPairedEffect ? false : (_b = (_a = this.Spell) === null || _a === void 0 ? void 0 : _a.AllowPotion) !== null && _b !== void 0 ? _b : false; },
+	                        setSetting: (val) => {
+	                            if (this.SpellHasPairedEffect && !!this.Spell)
+	                                this.Spell.AllowPotion = false;
+	                            else if (!!this.Spell)
+	                                this.Spell.AllowPotion = val;
+	                        },
+	                        hidden: !this.Spell
+	                    }, {
+	                        type: "label",
+	                        id: "effect1",
+	                        label: "Effect #1:",
+	                        description: "An effect the spell has.",
+	                        options: this.Effects,
+	                        hidden: !this.Spell,
+	                        setting: () => { var _a, _b, _c; return ((_a = this.Spell) === null || _a === void 0 ? void 0 : _a.Effects.length) > 0 ? ((_c = (_b = this.Spell) === null || _b === void 0 ? void 0 : _b.Effects[0]) !== null && _c !== void 0 ? _c : "None") : "None"; },
+	                        setSetting: (val) => { if (!!this.Spell)
+	                            this.Spell.Effects = this.Spell.Effects.concat(val).filter((eff, ix, arr) => arr.indexOf(eff) == ix); },
+	                    }, {
+	                        type: "label",
+	                        label: "",
+	                        description: ""
+	                    }, {
+	                        type: "label",
+	                        id: "effect2",
+	                        label: "Effect #2:",
+	                        description: "An effect the spell has.",
+	                        options: this.Effects,
+	                        hidden: !this.Spell,
+	                        setting: () => { var _a, _b, _c; return ((_a = this.Spell) === null || _a === void 0 ? void 0 : _a.Effects.length) > 1 ? ((_c = (_b = this.Spell) === null || _b === void 0 ? void 0 : _b.Effects[1]) !== null && _c !== void 0 ? _c : "None") : "None"; },
+	                        setSetting: (val) => { if (!!this.Spell)
+	                            this.Spell.Effects = this.Spell.Effects.concat(val).filter((eff, ix, arr) => arr.indexOf(eff) == ix); },
+	                    }, {
+	                        type: "label",
+	                        label: "",
+	                        description: ""
+	                    }, {
+	                        type: "label",
+	                        id: "effect3",
+	                        label: "Effect #3:",
+	                        description: "An effect the spell has.",
+	                        options: this.Effects,
+	                        hidden: !this.Spell,
+	                        setting: () => { var _a, _b, _c; return ((_a = this.Spell) === null || _a === void 0 ? void 0 : _a.Effects.length) > 2 ? ((_c = (_b = this.Spell) === null || _b === void 0 ? void 0 : _b.Effects[2]) !== null && _c !== void 0 ? _c : "None") : "None"; },
+	                        setSetting: (val) => { if (!!this.Spell)
+	                            this.Spell.Effects = this.Spell.Effects.concat(val).filter((eff, ix, arr) => arr.indexOf(eff) == ix); },
+	                    }, {
+	                        type: "label",
+	                        label: "",
+	                        description: ""
+	                    }
+	                ], [
+	                    {
+	                        type: "checkbox",
+	                        label: "Allow Remote Access:",
+	                        description: "If checked, allowed users can modify these settings.",
+	                        disabled: !this.settings.enabled,
+	                        setting: () => { var _a; return (_a = this.settings.remoteAccess) !== null && _a !== void 0 ? _a : false; },
+	                        setSetting: (val) => this.settings.remoteAccess = val
+	                    }, {
+	                        type: "checkbox",
+	                        label: "Lockable:",
+	                        description: "If checked, allowed users can lock you out of these settings.",
+	                        disabled: !this.settings.enabled || !this.settings.remoteAccess,
+	                        setting: () => { var _a; return (_a = this.settings.lockable) !== null && _a !== void 0 ? _a : false; },
+	                        setSetting: (val) => this.settings.lockable = val
+	                    }, {
+	                        type: "checkbox",
+	                        label: "Remote Access Requires Trance:",
+	                        description: "If checked, remote access is only possible while actively hypnotized.",
+	                        disabled: !this.settings.enabled || !this.settings.remoteAccess,
+	                        setting: () => { var _a; return (_a = this.settings.remoteAccessRequiredTrance) !== null && _a !== void 0 ? _a : true; },
+	                        setSetting: (val) => this.settings.remoteAccessRequiredTrance = val
+	                    }, {
+	                        type: "checkbox",
+	                        label: "Remote Access Limited to Hypnotizer:",
+	                        description: "If checked, only the user who hypnotized you can access your settings (after matching other conditions).",
+	                        disabled: !this.settings.enabled || !this.settings.remoteAccess,
+	                        setting: () => { var _a; return (_a = this.settings.limitRemoteAccessToHypnotizer) !== null && _a !== void 0 ? _a : true; },
+	                        setSetting: (val) => this.settings.limitRemoteAccessToHypnotizer = val
+	                    }, {
+	                        type: "text",
+	                        id: "magic_remoteMembers",
+	                        label: "Remote Allowed Member Ids:",
+	                        description: "Comma separated list of member Ids. If empty will use standard Item Permissions.",
+	                        disabled: !this.settings.enabled,
+	                        setting: () => { var _a; return (_a = this.settings.remoteMemberIds) !== null && _a !== void 0 ? _a : ""; },
+	                        setSetting: (val) => this.settings.remoteMemberIds = val
+	                    }
+	                ]];
+	    }
+	    Load() {
+	        super.Load();
+	        ElementCreateInput(this.outfitFieldId, "text", "", -1);
+	        ElementCreateDropdown(this.outfitDropId, Object.values(OutfitOption), (evt) => this.OutfitConfigDropChanged(evt));
+	    }
+	    Run() {
+	        var _a, _b;
+	        if (!this.settings.locked && this._ConfigureOutfit) {
+	            this.multipageStructure.forEach((s, ix, arr) => {
+	                s.forEach(setting => {
+	                    if (setting.type == "text" || setting.type == "number" || setting.type == "dropdown")
+	                        this.ElementHide(setting.id);
+	                });
+	            });
+	            DrawRect(0, 0, 2000, 1000, "rgba(0,0,0,.5)");
+	            let coords = { x: 500, y: 400, w: 1000, h: 200 };
+	            let buttonWidth = 150;
+	            DrawRect(coords.x, coords.y, coords.w, coords.h, "White");
+	            DrawEmptyRect(coords.x, coords.y, coords.w, coords.h, "Black", 5);
+	            DrawEmptyRect(coords.x + 5, coords.y + 5, coords.w - 10, coords.h - 10, "Grey", 2);
+	            MainCanvas.textAlign = "left";
+	            DrawTextFit("Paste Outfit Code:", coords.x + 50, (coords.y + coords.h / 2) - 50, coords.w - 100 - buttonWidth, "Black", "Grey");
+	            MainCanvas.textAlign = "center";
+	            ElementPosition(this.outfitFieldId, coords.x + (coords.w / 2) - (buttonWidth / 2), (coords.y + coords.h / 2) + 20, coords.w - 100 - buttonWidth);
+	            ElementPositionFix(this.outfitDropId, 28, coords.x + 450, (coords.y + coords.h / 2) - 50 - 19, 340, 64);
+	            DrawEmptyRect(coords.x + 445, (coords.y + coords.h / 2) - 48 - 32, 350, 68, "Black", 3);
+	            DrawButton(1350, 500 - 32, 100, 64, "Confirm", "White");
+	            return;
+	        }
+	        super.Run();
+	        this.ElementHide(this.outfitFieldId);
+	        this.ElementHide(this.outfitDropId);
+	        var prev = MainCanvas.textAlign;
+	        if (!this.settings.enabled) {
+	            MainCanvas.textAlign = "center";
+	            if (this.blinkLastTime + 750 < CommonTime()) {
+	                this.blinkLastTime = CommonTime();
+	                this.blinkColor = this.blinkColor == "Pink" ? "Purple" : "Pink";
+	            }
+	            DrawText("Now available:", 1000, 200, "Black", "Black");
+	            DrawText("Magic™!", 1000, 250, this.blinkColor, "Black");
+	            DrawText("Want to wow and amaze your friends and lovers?", 1000, 350, "Black", "Gray");
+	            DrawText("Are you looking to impress and punish your enemies?", 1000, 400, "Black", "Gray");
+	            DrawText("With just a simple signature you too can experience the thrill of Magic™!", 1000, 450, "Black", "Gray");
+	            DrawText("- Reveal the ancient secrets of the arcane! -", 1000, 550, "Gray", "Black");
+	            DrawText("- Craft your own amazing potions! -", 1000, 600, "Gray", "Black");
+	            DrawText("- Share in your powers, or dont! -", 1000, 650, "Gray", "Black");
+	            DrawButton(800, 740, 400, 80, "~Sign Here~", "White", undefined, "Apply signature to scroll");
+	            DrawTextFit("~ Any sufficiently advanced technology is indistinguishable from magic ~", 1000, 880, 600, "Black", "Purple");
+	            DrawTextFit("* Signatory agrees to Magic™ Installation (ᴘᴀᴛ. ᴘᴇɴᴅ.) required to experience spell effects *", 1000, 900, 600, "Gray", "Pink");
+	        }
+	        else if (!this.settings.locked) {
+	            if (PreferencePageCurrent == 1) {
+	                if (!this.settings.blockedSpellEffects)
+	                    this.settings.blockedSpellEffects = [];
+	                let val = this.settings.blockedSpellEffects.indexOf(this.Effect) > -1;
+	                let blockedStr = val ? "Blocked" : "Allowed";
+	                DrawBackNextButton(780, this.getYPos(4) - 32, 600, 64, this.Effect, "White", "", () => blockedStr, () => blockedStr);
+	                DrawCheckbox(780 + 600 + 64, this.getYPos(4) - 32, 64, 64, "", val);
+	                MainCanvas.textAlign = "left";
+	                DrawTextFit(this.SpellEffectDescription(this.Effect), 780, this.getYPos(5), 1000, "Black");
+	                MainCanvas.textAlign = "center";
+	            }
+	            else if (PreferencePageCurrent == 2) {
+	                if (this.settings.knownSpells.length > 0) {
+	                    DrawBackNextButton(550, this.getYPos(0) - 32, 600, 64, this.Spell.Name, "White", "", () => "Previous", () => "Next");
+	                    DrawButton(1180 - 4, this.getYPos(0) - 32 - 4, 72, 72, "", "White", "", `Delete ${this.Spell.Name}`); // Delete Current
+	                    DrawImageResize("Icons/Trash.png", 1180, this.getYPos(0) - 32, 64, 64);
+	                    // Draw Effect Pickers
+	                    DrawBackNextButton(780, this.getYPos(3) - 32, 600, 64, this.Spell.Effects.length > 0 ? this.Spell.Effects[0] : LSCGSpellEffect.none, "White", "", () => "", () => "");
+	                    if (this.Spell.Effects.length == 1) {
+	                        DrawButton(1410 - 4, this.getYPos(3) - 32 - 4, 72, 72, "", "White", "", `Delete ${this.Spell.Name}`); // Delete Effect
+	                        DrawImageResize("Icons/Trash.png", 1410, this.getYPos(3) - 32, 64, 64);
+	                    }
+	                    if (this.Spell.Effects[0] == LSCGSpellEffect.outfit)
+	                        DrawButton(1500, this.getYPos(3) - 32, 200, 64, "Configure", "White");
+	                    MainCanvas.textAlign = "left";
+	                    DrawTextFit(this.SpellEffectDescription(this.Spell.Effects[0]), 780, this.getYPos(4), 1000, "Black");
+	                    MainCanvas.textAlign = "center";
+	                    if (this.Spell.Effects.length > 0) {
+	                        DrawBackNextButton(780, this.getYPos(5) - 32, 600, 64, (_a = this.Spell.Effects[1]) !== null && _a !== void 0 ? _a : LSCGSpellEffect.none, "White", "", () => "", () => "");
+	                        if (this.Spell.Effects.length == 2) {
+	                            DrawButton(1410 - 4, this.getYPos(5) - 32 - 4, 72, 72, "", "White", "", `Delete ${this.Spell.Name}`); // Delete Effect
+	                            DrawImageResize("Icons/Trash.png", 1410, this.getYPos(5) - 32, 64, 64);
+	                        }
+	                        if (this.Spell.Effects[1] == LSCGSpellEffect.outfit)
+	                            DrawButton(1500, this.getYPos(5) - 32, 200, 64, "Configure", "White");
+	                        MainCanvas.textAlign = "left";
+	                        DrawTextFit(this.SpellEffectDescription(this.Spell.Effects[1]), 780, this.getYPos(6), 1000, "Black");
+	                        MainCanvas.textAlign = "center";
+	                    }
+	                    if (this.Spell.Effects.length > 1) {
+	                        DrawBackNextButton(780, this.getYPos(7) - 32, 600, 64, (_b = this.Spell.Effects[2]) !== null && _b !== void 0 ? _b : LSCGSpellEffect.none, "White", "", () => "", () => "");
+	                        if (this.Spell.Effects.length > 2) {
+	                            DrawButton(1410 - 4, this.getYPos(7) - 32 - 4, 72, 72, "", "White", "", `Delete ${this.Spell.Name}`); // Delete Effect
+	                            DrawImageResize("Icons/Trash.png", 1410, this.getYPos(7) - 32, 64, 64);
+	                        }
+	                        if (this.Spell.Effects[2] == LSCGSpellEffect.outfit)
+	                            DrawButton(1500, this.getYPos(7) - 32, 200, 64, "Configure", "White");
+	                        MainCanvas.textAlign = "left";
+	                        DrawTextFit(this.SpellEffectDescription(this.Spell.Effects[2]), 780, this.getYPos(8), 1000, "Black");
+	                        MainCanvas.textAlign = "center";
+	                    }
+	                }
+	                else {
+	                    DrawTextFit("No Spells Known...", 780, this.getYPos(0), 600, "Black");
+	                }
+	                DrawButton(1260 - 4, this.getYPos(0) - 32 - 4, 72, 72, "", "White", "", `Create new Spell`); // Add New Spell
+	                DrawImageResize("Icons/Plus.png", 1260, this.getYPos(0) - 32, 64, 64);
+	            }
+	        }
+	        MainCanvas.textAlign = prev;
+	    }
+	    Click() {
+	        if (!this.settings.locked && this._ConfigureOutfit) {
+	            let coords = { x: 500, y: 400, w: 1000, h: 200 };
+	            let buttonWidth = 150;
+	            if (!MouseIn(coords.x, coords.y, coords.w, coords.h))
+	                this._ConfigureOutfit = false;
+	            else if (MouseIn(1350, 500 - 32, 100, 64))
+	                this.ConfirmOutfit();
+	            return;
+	        }
+	        super.Click();
+	        if (!this.settings.enabled) {
+	            if (MouseIn(800, 740, 400, 80)) {
+	                this.settings.enabled = true;
+	                DrawFlashScreen("#800080", 500, 1500);
+	                if (!AudioShouldSilenceSound(true))
+	                    AudioPlaySoundEffect("SciFiBeeps", 1);
+	            }
+	        }
+	        else if (!this.settings.locked) {
+	            if (PreferencePageCurrent == 1) {
+	                if (MouseIn(780, this.getYPos(4) - 32, 600, 64)) {
+	                    this.EffectIndex = this.GetNewIndexFromNextPrevClick(1080, this.EffectIndex, this.ActualEffects.length);
+	                }
+	                else if (MouseIn(780 + 600 + 64, this.getYPos(4) - 32, 64, 64)) {
+	                    if (this.settings.blockedSpellEffects.indexOf(this.Effect) > -1)
+	                        this.settings.blockedSpellEffects = this.settings.blockedSpellEffects.filter(ef => ef != this.Effect);
+	                    else
+	                        this.settings.blockedSpellEffects.push(this.Effect);
+	                }
+	            }
+	            else if (PreferencePageCurrent == 2) {
+	                if (MouseIn(550, this.getYPos(0) - 32, 600, 64)) {
+	                    this.saveSpell();
+	                    this.SpellIndex = this.GetNewIndexFromNextPrevClick(850, this.SpellIndex, this.settings.knownSpells.length);
+	                    this.loadSpell();
+	                }
+	                else if (MouseIn(1180, this.getYPos(0) - 32, 64, 64)) {
+	                    // Remove Spell
+	                    this.settings.knownSpells.splice(this.SpellIndex, 1);
+	                    if (this.SpellIndex >= this.settings.knownSpells.length)
+	                        this.SpellIndex = this.settings.knownSpells.length - 1;
+	                    this.loadSpell();
+	                }
+	                else if (MouseIn(1260, this.getYPos(0) - 32, 64, 64)) {
+	                    if (!!this.Spell)
+	                        this.saveSpell();
+	                    this.settings.knownSpells.push({
+	                        Name: `Spell No. ${this.settings.knownSpells.length + 1}`,
+	                        Creator: Player.MemberNumber,
+	                        Effects: [],
+	                        AllowPotion: false
+	                    });
+	                    this.SpellIndex = this.settings.knownSpells.length - 1;
+	                    this.loadSpell();
+	                }
+	                if (!!this.Spell) {
+	                    if (MouseIn(780, this.getYPos(3) - 32, 600, 64)) {
+	                        let effects = this.UniqueEffects(0);
+	                        if (MouseX <= 1080) {
+	                            if (this.Spell.Effects.length < 1)
+	                                this.Spell.Effects = [effects[effects.length - 1]];
+	                            else
+	                                this.Spell.Effects[0] = effects[(effects.length + effects.indexOf(this.Spell.Effects[0]) - 1) % effects.length];
+	                        }
+	                        else {
+	                            if (this.Spell.Effects.length < 1)
+	                                this.Spell.Effects = [effects[0]];
+	                            else
+	                                this.Spell.Effects[0] = effects[(effects.indexOf(this.Spell.Effects[0]) + 1) % effects.length];
+	                        }
+	                    }
+	                    else if (this.Spell.Effects.length < 2 && MouseIn(1410, this.getYPos(3) - 32, 64, 64)) {
+	                        this.Spell.Effects.splice(0);
+	                    }
+	                    else if (this.Spell.Effects[0] == LSCGSpellEffect.outfit && MouseIn(1500, this.getYPos(3) - 32, 200, 64)) {
+	                        this.ConfigureOutfitEffect();
+	                    }
+	                    else if (MouseIn(780, this.getYPos(5) - 32, 600, 64)) {
+	                        let effects = this.UniqueEffects(1);
+	                        if (MouseX <= 1080) {
+	                            if (this.Spell.Effects.length < 2)
+	                                this.Spell.Effects.push(effects[effects.length - 1]);
+	                            else
+	                                this.Spell.Effects[1] = effects[(effects.length + effects.indexOf(this.Spell.Effects[1]) - 1) % effects.length];
+	                        }
+	                        else {
+	                            if (this.Spell.Effects.length < 2)
+	                                this.Spell.Effects.push(effects[0]);
+	                            else
+	                                this.Spell.Effects[1] = effects[(effects.indexOf(this.Spell.Effects[1]) + 1) % effects.length];
+	                        }
+	                    }
+	                    else if (this.Spell.Effects.length < 3 && MouseIn(1410, this.getYPos(5) - 32, 64, 64)) {
+	                        this.Spell.Effects.splice(1);
+	                    }
+	                    else if (this.Spell.Effects[1] == LSCGSpellEffect.outfit && MouseIn(1500, this.getYPos(5) - 32, 200, 64)) {
+	                        this.ConfigureOutfitEffect();
+	                    }
+	                    else if (MouseIn(780, this.getYPos(7) - 32, 600, 64)) {
+	                        let effects = this.UniqueEffects(2);
+	                        if (MouseX <= 1080) {
+	                            if (this.Spell.Effects.length < 3)
+	                                this.Spell.Effects.push(effects[effects.length - 1]);
+	                            else
+	                                this.Spell.Effects[2] = effects[(effects.length + effects.indexOf(this.Spell.Effects[2]) - 1) % effects.length];
+	                        }
+	                        else {
+	                            if (this.Spell.Effects.length < 3)
+	                                this.Spell.Effects.push(effects[0]);
+	                            else
+	                                this.Spell.Effects[2] = effects[(effects.indexOf(this.Spell.Effects[2]) + 1) % effects.length];
+	                        }
+	                    }
+	                    else if (this.Spell.Effects.length < 4 && MouseIn(1410, this.getYPos(7) - 32, 64, 64)) {
+	                        this.Spell.Effects.splice(2);
+	                    }
+	                    else if (this.Spell.Effects[2] == LSCGSpellEffect.outfit && MouseIn(1500, this.getYPos(7) - 32, 200, 64)) {
+	                        this.ConfigureOutfitEffect();
+	                    }
+	                }
+	            }
+	        }
+	    }
+	    Exit() {
+	        ElementRemove(this.outfitFieldId);
+	        ElementRemove(this.outfitDropId);
+	        this.CleanPotionSettings();
+	        super.Exit();
+	    }
+	    CleanPotionSettings() {
+	        this.settings.knownSpells.forEach(spell => {
+	            var _a;
+	            if ((_a = spell.Effects.some(e => pairedSpellEffects.indexOf(e) > -1)) !== null && _a !== void 0 ? _a : false)
+	                spell.AllowPotion = false;
+	        });
+	    }
+	    saveSpell() {
+	        // Save all current text field values
+	        this.structure.forEach((item, ix, arr) => {
+	            switch (item.type) {
+	                case "number":
+	                case "text":
+	                case "dropdown":
+	                    if (!!ElementValue(item.id))
+	                        item.setSetting(ElementValue(item.id));
+	                    break;
+	            }
+	        });
+	    }
+	    loadSpell() {
+	        // Load new text element values
+	        this.structure.forEach((item, ix, arr) => {
+	            switch (item.type) {
+	                case "number":
+	                case "text":
+	                case "dropdown":
+	                    this.ElementSetValue(item.id, item.setting());
+	                    break;
+	            }
+	        });
+	    }
+	    get Spell() {
+	        if (this.SpellIndex < 0)
+	            this.SpellIndex = 0;
+	        if (this.SpellIndex >= this.settings.knownSpells.length)
+	            this.SpellIndex = this.settings.knownSpells.length - 1;
+	        return this.settings.knownSpells[this.SpellIndex];
+	    }
+	    get SpellHasPairedEffect() {
+	        var _a, _b;
+	        return (_b = (_a = this.Spell) === null || _a === void 0 ? void 0 : _a.Effects.some(e => pairedSpellEffects.indexOf(e) > -1)) !== null && _b !== void 0 ? _b : false;
+	    }
+	    UniqueEffects(ix) {
+	        if (!this.Spell)
+	            return this.ActualEffects;
+	        let otherEffects = this.Spell.Effects.filter((v, i, arr) => i != ix);
+	        return this.ActualEffects.filter(eff => otherEffects.indexOf(eff) == -1);
+	    }
+	    get Effect() {
+	        return this.ActualEffects[this.EffectIndex];
+	    }
+	    get ActualEffects() {
+	        return this.Effects.filter(e => e != LSCGSpellEffect.none);
+	    }
+	    get Effects() {
+	        return Object.values(LSCGSpellEffect);
+	    }
+	    ConfigureOutfitEffect() {
+	        var _a, _b, _c, _d;
+	        this.ElementSetValue(this.outfitFieldId, (_b = (_a = this.Spell.Outfit) === null || _a === void 0 ? void 0 : _a.Code) !== null && _b !== void 0 ? _b : "");
+	        this.ElementSetValue(this.outfitDropId, (_d = (_c = this.Spell.Outfit) === null || _c === void 0 ? void 0 : _c.Option) !== null && _d !== void 0 ? _d : OutfitOption.clothes_only);
+	        this._ConfigureOutfit = true;
+	    }
+	    ConfirmOutfit() {
+	        this._ConfigureOutfit = false;
+	        if (!this.Spell.Outfit)
+	            this.Spell.Outfit = { Code: "", Option: OutfitOption.both };
+	        this.Spell.Outfit.Code = ElementValue(this.outfitFieldId);
+	        this.ElementSetValue(this.outfitFieldId, "");
+	    }
+	    OutfitConfigDropChanged(evt) {
+	        if (!!this.Spell) {
+	            if (!this.Spell.Outfit)
+	                this.Spell.Outfit = {
+	                    Code: "",
+	                    Option: OutfitOption.both
+	                };
+	            this.Spell.Outfit.Option = evt.target.value;
+	        }
+	    }
+	    SpellEffectDescription(effect) {
+	        switch (effect) {
+	            case LSCGSpellEffect.blindness:
+	                return "Prevents the target from seeing.";
+	            case LSCGSpellEffect.deafened:
+	                return "Prevents the target from hearing.";
+	            case LSCGSpellEffect.muted:
+	                return "Gags the target.";
+	            case LSCGSpellEffect.frozen:
+	                return "Petrifies the target.";
+	            case LSCGSpellEffect.horny:
+	                return "Arouses the target.";
+	            case LSCGSpellEffect.hypnotizing:
+	                return "Hypnotizes the target.";
+	            case LSCGSpellEffect.slumber:
+	                return "Induces a deep slumber in the target.";
+	            case LSCGSpellEffect.outfit:
+	                return "Magically change the target's clothing and equipment.";
+	            case LSCGSpellEffect.paired_arousal:
+	                return "Pair two targets, such that when one feels arousal the other also does.";
+	            case LSCGSpellEffect.orgasm_siphon:
+	                return "Redirect all of the target's orgasmic pleasure to another.";
+	            case LSCGSpellEffect.dispell:
+	                return "Dispells any existing effects on the target (including anything drug induced).";
+	            case LSCGSpellEffect.none:
+	            default:
+	                return "";
+	        }
+	    }
+	}
+
+	class MagicModule extends BaseModule {
+	    constructor() {
+	        super(...arguments);
+	        this.SpellMenuOpen = false;
+	        this.TeachingSpell = false;
+	        this.SpellMenuOffset = 0;
+	        this.SpellPairOption = {
+	            SelectOpen: false,
+	            Spell: undefined,
+	            Source: undefined
+	        };
+	        this._testSpells = [];
+	        this.PrevScreen = undefined;
+	        this.SpellGrid = {
+	            x: 550,
+	            y: 200,
+	            height: 690,
+	            width: 900,
+	            itemHeight: 225,
+	            itemWidth: 220
+	        };
+	        this.boxDimensions = { x: 500, y: 100, width: 1000, height: 850 };
+	    }
+	    get defaultSettings() {
+	        return {
+	            enabled: false,
+	            blockedSpellEffects: [],
+	            enableWildMagic: false,
+	            forceWildMagic: false,
+	            trueWildMagic: false,
+	            knownSpells: [],
+	            lockable: false,
+	            locked: false,
+	            remoteAccess: false,
+	            remoteAccessRequiredTrance: false,
+	            limitRemoteAccessToHypnotizer: false,
+	            remoteMemberIds: ""
+	        };
+	    }
+	    get settings() {
+	        return super.settings;
+	    }
+	    get settingsScreen() {
+	        return GuiMagic;
+	    }
+	    get stateModule() {
+	        return getModule("StateModule");
+	    }
+	    get TestSpells() {
+	        if (this._testSpells.length <= 0)
+	            this._testSpells = [...Array(18).keys()].map(i => ({
+	                Name: `Spell ${i + 1}`,
+	                Effects: Array(getRandomInt(3) + 1).fill(0).map(t => Object.values(LSCGSpellEffect)[getRandomInt(Object.keys(LSCGSpellEffect).length)])
+	            }));
+	        return this._testSpells;
+	    }
+	    get RandomSpell() {
+	        var _a, _b;
+	        let spell = {
+	            Name: `wild magic`,
+	            Effects: Array(getRandomInt(3) + 1).fill(0).map((t, ix, arr) => Object.values(LSCGSpellEffect).filter(v => arr.indexOf(v) == -1)[getRandomInt(Object.keys(LSCGSpellEffect).length)])
+	        };
+	        if (spell.Effects.indexOf(LSCGSpellEffect.outfit)) {
+	            let mbsOutfits = (_a = Player.MBSSettings) === null || _a === void 0 ? void 0 : _a.FortuneWheelItemSets.filter((s) => !!s).map((s) => s.itemList);
+	            let outfitIx = getRandomInt(mbsOutfits === null || mbsOutfits === void 0 ? void 0 : mbsOutfits.length);
+	            let outfit = !mbsOutfits ? undefined : mbsOutfits[outfitIx];
+	            let wardrobeOutfit = !Player.Wardrobe ? undefined : Player.Wardrobe[getRandomInt((_b = Player.Wardrobe) === null || _b === void 0 ? void 0 : _b.length)];
+	            if (!outfit || !!wardrobeOutfit && getRandomInt(2) == 0)
+	                outfit = wardrobeOutfit;
+	            spell.Outfit = {
+	                Option: OutfitOption.both,
+	                Code: LZString.compressToBase64(JSON.stringify(outfit))
+	            };
+	        }
+	        return spell;
+	    }
+	    get AvailableSpells() {
+	        var _a;
+	        return (_a = this.settings.knownSpells) !== null && _a !== void 0 ? _a : []; //this.TestSpells;
+	    }
+	    PairedCharacterOptions(spellTarget) {
+	        return ChatRoomCharacter.filter(c => !!c && !!c.LSCG && !!c.LSCG.MagicModule && c.MemberNumber != (spellTarget === null || spellTarget === void 0 ? void 0 : spellTarget.MemberNumber));
+	    }
+	    load() {
+	        let activities = getModule("ActivityModule");
+	        hookFunction("DialogDraw", 10, (args, next) => {
+	            if (this.Enabled && this.SpellMenuOpen)
+	                return this.DrawSpellMenu();
+	            return next(args);
+	        }, ModuleCategory.Magic);
+	        hookFunction("DialogClick", 10, (args, next) => {
+	            if (this.Enabled && this.SpellMenuOpen)
+	                return this.ClickSpellMenu();
+	            return next(args);
+	        }, ModuleCategory.Magic);
+	        hookFunction("ServerPlayerIsInChatRoom", 10, (args, next) => {
+	            return next(args) || CurrentScreen == "LSCG_SPELLS_DIALOG";
+	        }, ModuleCategory.Magic);
+	        OnActivity(1, ModuleCategory.Magic, (data, sender, msg, megadata) => {
+	            var _a;
+	            if (!this.Enabled)
+	                return;
+	            let meta = GetMetadata(data);
+	            var activityName = meta === null || meta === void 0 ? void 0 : meta.ActivityName;
+	            var target = meta === null || meta === void 0 ? void 0 : meta.TargetMemberNumber;
+	            if (target == Player.MemberNumber && activityName == "LSCG_Quaff" && !!sender) {
+	                let gagType = (_a = getModule("InjectorModule")) === null || _a === void 0 ? void 0 : _a.GetGagDrinkAccess(Player);
+	                if (gagType == "nothing" && sender.MemberNumber != Player.MemberNumber) {
+	                    this.TryForcePotion(sender);
+	                }
+	                else {
+	                    this.ProcessPotion(sender);
+	                }
+	            }
+	        });
+	        activities === null || activities === void 0 ? void 0 : activities.AddActivity({
+	            Activity: {
+	                Name: "CastSpell",
+	                MaxProgress: 90,
+	                MaxProgressSelf: 90,
+	                Prerequisite: ["UseHands", "Needs-MagicItem"]
+	            },
+	            Targets: [
+	                {
+	                    Name: "ItemArms",
+	                    TargetLabel: "Cast Spell",
+	                    SelfAllowed: true,
+	                    TargetAction: "SourceCharacter casts a spell on TargetCharacter with PronounPossessive ActivityAsset.",
+	                    TargetSelfAction: "SourceCharacter casts a spell on themselves with PronounPossessive ActivityAsset."
+	                }
+	            ],
+	            CustomPrereqs: [
+	                {
+	                    Name: "CanCastSpell",
+	                    Func: (acting, acted, group) => {
+	                        // Must have available spells and can only cast on LSCG users
+	                        return this.Enabled && this.AvailableSpells.length > 0 && !!acted.LSCG && !this.settings.forceWildMagic;
+	                    }
+	                }
+	            ],
+	            CustomAction: {
+	                Func: (target, args, next) => {
+	                    if (!!target)
+	                        this.OpenSpellMenu((target === null || target === void 0 ? void 0 : target.IsPlayer()) ? target : target);
+	                }
+	            }
+	        });
+	        activities === null || activities === void 0 ? void 0 : activities.AddActivity({
+	            Activity: {
+	                Name: "CastWildMagic",
+	                MaxProgress: 90,
+	                MaxProgressSelf: 90,
+	                Prerequisite: ["UseHands", "Needs-MagicItem"]
+	            },
+	            Targets: [
+	                {
+	                    Name: "ItemArms",
+	                    TargetLabel: "Cast Wild Magic",
+	                    SelfAllowed: true,
+	                    TargetAction: "SourceCharacter casts a wild spell on TargetCharacter with PronounPossessive ActivityAsset.",
+	                    TargetSelfAction: "SourceCharacter casts a wild spell on themselves with PronounPossessive ActivityAsset."
+	                }
+	            ],
+	            CustomPrereqs: [
+	                {
+	                    Name: "CanCastWildMagic",
+	                    Func: (acting, acted, group) => {
+	                        // Must have available spells and can only cast on LSCG users
+	                        return this.Enabled && !!acted.LSCG && this.settings.enableWildMagic;
+	                    }
+	                }
+	            ],
+	            CustomAction: {
+	                Func: (target, args, next) => {
+	                    if (!!target)
+	                        this.CastWildMagic((target === null || target === void 0 ? void 0 : target.IsPlayer()) ? target : target);
+	                }
+	            }
+	        });
+	        activities === null || activities === void 0 ? void 0 : activities.AddActivity({
+	            Activity: {
+	                Name: "TeachSpell",
+	                MaxProgress: 90,
+	                MaxProgressSelf: 90,
+	                Prerequisite: ["UseHands", "Needs-MagicItem"]
+	            },
+	            Targets: [
+	                {
+	                    Name: "ItemArms",
+	                    TargetLabel: "Teach Spell",
+	                    SelfAllowed: false,
+	                    TargetAction: "SourceCharacter carefully instructs TargetCharacter in the intricate movements required for a new spell."
+	                }
+	            ],
+	            CustomPrereqs: [
+	                {
+	                    Name: "CanTeachSpell",
+	                    Func: (acting, acted, group) => {
+	                        var _a, _b;
+	                        // Must have available spells and can only cast on LSCG users
+	                        let targetItem = InventoryGet(acted, "ItemHandheld");
+	                        return this.Enabled &&
+	                            this.settings.knownSpells.length > 0 &&
+	                            MagicWandItems.indexOf((_b = (_a = targetItem === null || targetItem === void 0 ? void 0 : targetItem.Asset) === null || _a === void 0 ? void 0 : _a.Name) !== null && _b !== void 0 ? _b : "") > -1;
+	                    }
+	                }
+	            ],
+	            CustomAction: {
+	                Func: (target, args, next) => {
+	                    if (!!target)
+	                        this.TeachSpell(target);
+	                }
+	            },
+	            CustomImage: "Icons/Magic.png"
+	        });
+	        activities === null || activities === void 0 ? void 0 : activities.AddActivity({
+	            Activity: {
+	                Name: "Quaff",
+	                MaxProgress: 90,
+	                MaxProgressSelf: 90,
+	                Prerequisite: ["UseHands", "Needs-QuaffableItem"]
+	            },
+	            Targets: [
+	                {
+	                    Name: "ItemMouth",
+	                    TargetLabel: "Quaff",
+	                    SelfAllowed: true,
+	                    TargetAction: "SourceCharacter quaffs the ActivityAsset in one gulp."
+	                }
+	            ],
+	            CustomImage: "Icons/Magic.png"
+	        });
+	    }
+	    run() {
+	    }
+	    unload() {
+	        removeAllHooksByModule(ModuleCategory.Magic);
+	    }
+	    OpenSpellMenu(C) {
+	        if (this.Enabled) {
+	            this.SpellMenuOpen = true;
+	            this.PrevScreen = CurrentScreen;
+	            CurrentScreen = "LSCG_SPELLS_DIALOG";
+	        }
+	    }
+	    CloseSpellMenu() {
+	        var _a;
+	        this.SpellMenuOpen = false;
+	        this.TeachingSpell = false;
+	        this.SpellPairOption.SelectOpen = false;
+	        if (CurrentScreen == "LSCG_SPELLS_DIALOG")
+	            CurrentScreen = (_a = this.PrevScreen) !== null && _a !== void 0 ? _a : "ChatRoom";
+	    }
+	    TeachSpell(target) {
+	        if (this.Enabled) {
+	            this.OpenSpellMenu(target);
+	            this.TeachingSpell = true;
+	        }
+	    }
+	    DrawSpellMenu() {
+	        var _a, _b, _c;
+	        if (!CurrentCharacter)
+	            return this.CloseSpellMenu();
+	        let blockedSpellEffects = (_c = (_b = (_a = CurrentCharacter.LSCG) === null || _a === void 0 ? void 0 : _a.MagicModule) === null || _b === void 0 ? void 0 : _b.blockedSpellEffects) !== null && _c !== void 0 ? _c : [];
+	        let toolbarY = this.boxDimensions.y + 5;
+	        let toolbarRight = this.boxDimensions.x + this.boxDimensions.width - 5;
+	        let buttonSize = 90;
+	        // Draw Hovering Box & exit button
+	        DrawRect(this.boxDimensions.x, this.boxDimensions.y, this.boxDimensions.width, this.boxDimensions.height, "Black");
+	        DrawEmptyRect(this.boxDimensions.x + 2, this.boxDimensions.y + 2, this.boxDimensions.width - 4, this.boxDimensions.height - 4, "White", 2);
+	        DrawButton(toolbarRight - buttonSize, toolbarY, buttonSize, buttonSize, "", "White", "Icons/Exit.png", "Cancel");
+	        if (this.SpellPairOption.SelectOpen) {
+	            DrawTextFit("Select a paired target...", this.boxDimensions.x + 400, this.boxDimensions.y + 50, 600, "White", "Grey");
+	            // Draw 2x5 columns of character names
+	            this.PairedCharacterOptions(this.SpellPairOption.Source).forEach((char, ix, arr) => {
+	                DrawButton(this.SpellGrid.x + (ix > 4 ? 450 : 0), this.SpellGrid.y + ((ix % 5) * 120), this.PairedCharacterOptions(this.SpellPairOption.Source).length > 5 ? 400 : 800, 100, CharacterNickname(char), "White");
+	            });
+	        }
+	        else {
+	            DrawTextFit("Select a spell to cast...", this.boxDimensions.x + 400, this.boxDimensions.y + 50, 600, "White", "Grey");
+	            // Draw toolbar
+	            if (this.AvailableSpells.length > 12) {
+	                DrawButton(toolbarRight - (buttonSize * 2), toolbarY, buttonSize, buttonSize, "", "White", "Icons/Next.png", "Next");
+	                DrawButton(toolbarRight - (buttonSize * 3), toolbarY, buttonSize, buttonSize, "", "White", "Icons/Prev.png", "Previous");
+	            }
+	            // Draw a grid with all activities
+	            CommonGenerateGrid(this.AvailableSpells, this.SpellMenuOffset, this.SpellGrid, (spell, x, y, width, height) => {
+	                let label = spell.Name;
+	                let image = "Icons/Magic.png";
+	                let icons = [];
+	                let background = "white";
+	                if (spell.Effects.some(effect => pairedSpellEffects.indexOf(effect) > -1))
+	                    icons.push("Handheld");
+	                if (spell.Effects.some(effect => blockedSpellEffects.indexOf(effect) > -1)) {
+	                    icons.push("AllowedLimited");
+	                    background = "orange";
+	                }
+	                let desc = spell.Effects.length == 0 ? "None" : spell.Effects.join(", ");
+	                DrawPreviewBox(x, y, image, label, { Hover: true, Icons: icons, Background: background, Width: width, Height: height });
+	                if (MouseHovering(x, y, width, height)) {
+	                    DrawRect(this.boxDimensions.x + (this.boxDimensions.width - 500 - 350), this.boxDimensions.y + this.boxDimensions.height - 56, 700, 50, "#00d5d5");
+	                    DrawEmptyRect(this.boxDimensions.x + (this.boxDimensions.width - 500 - 350) + 2, this.boxDimensions.y + this.boxDimensions.height - 56 + 2, 700 - 4, 50 - 4, "Black", 2);
+	                    DrawTextFit(desc, 1000, this.boxDimensions.y + this.boxDimensions.height - 30, 600, "Black", "White");
+	                }
+	                return false;
+	            });
+	        }
+	    }
+	    ClickSpellMenu() {
+	        var _a, _b, _c;
+	        if (!CurrentCharacter)
+	            return this.CloseSpellMenu();
+	        let blockedSpellTypes = (_c = (_b = (_a = CurrentCharacter.LSCG) === null || _a === void 0 ? void 0 : _a.MagicModule) === null || _b === void 0 ? void 0 : _b.blockedSpellTypes) !== null && _c !== void 0 ? _c : [];
+	        // Handle toolbar clicks
+	        let toolbarY = this.boxDimensions.y + 5;
+	        let toolbarRight = this.boxDimensions.x + this.boxDimensions.width - 5;
+	        let buttonSize = 90;
+	        if (MouseIn(toolbarRight - buttonSize, toolbarY, buttonSize, buttonSize)) {
+	            this.CloseSpellMenu();
+	        }
+	        if (this.SpellPairOption.SelectOpen) {
+	            let characterOptions = this.PairedCharacterOptions(this.SpellPairOption.Source);
+	            if (characterOptions.length <= 0) {
+	                this.CloseSpellMenu();
+	            }
+	            characterOptions.forEach((char, ix, arr) => {
+	                if (MouseIn(this.SpellGrid.x + (ix > 4 ? 450 : 0), this.SpellGrid.y + ((ix % 5) * 120), this.PairedCharacterOptions(this.SpellPairOption.Source).length > 5 ? 400 : 800, 100)) {
+	                    if (!!this.SpellPairOption.Source)
+	                        this.CastSpellActual(this.SpellPairOption.Spell, this.SpellPairOption.Source, char);
+	                }
+	            });
+	        }
+	        else {
+	            if (this.AvailableSpells.length > 12) {
+	                // Click Next
+	                if (MouseIn(toolbarRight - (buttonSize * 2), toolbarY, buttonSize, buttonSize)) {
+	                    this.SpellMenuOffset += 12;
+	                    if (this.SpellMenuOffset > this.AvailableSpells.length)
+	                        this.SpellMenuOffset = 0;
+	                }
+	                // Click Prev
+	                else if (MouseIn(toolbarRight - (buttonSize * 3), toolbarY, buttonSize, buttonSize)) {
+	                    this.SpellMenuOffset -= 12;
+	                    if (this.SpellMenuOffset < 0)
+	                        this.SpellMenuOffset = this.AvailableSpells.length - (this.AvailableSpells.length % 12);
+	                }
+	            }
+	            // For each activities in the list
+	            CommonGenerateGrid(this.AvailableSpells, this.SpellMenuOffset, this.SpellGrid, (spell, x, y, width, height) => {
+	                // If this specific activity is clicked, we run it
+	                if (!MouseIn(x, y, width, height))
+	                    return false;
+	                let blocked = spell.Effects.some(effect => blockedSpellTypes.indexOf(effect) > -1);
+	                if (!blocked) {
+	                    this.CastSpellInitial(spell, CurrentCharacter);
+	                    return true;
+	                }
+	                return false;
+	            });
+	        }
+	        return;
+	    }
+	    CastWildMagic(C) {
+	        let spellIndex = getRandomInt(this.settings.knownSpells.length + 1);
+	        let spell = this.settings.knownSpells[spellIndex];
+	        if (!spell || this.settings.trueWildMagic)
+	            spell = this.RandomSpell;
+	        let paired = undefined;
+	        if (this.SpellNeedsPair(spell))
+	            paired = this.PairedCharacterOptions(C)[getRandomInt(this.PairedCharacterOptions(C).length)];
+	        this.CastSpellActual(spell, C, paired);
+	    }
+	    SpellNeedsPair(spell) {
+	        return spell.Effects.some(e => pairedSpellEffects.indexOf(e) > -1);
+	    }
+	    CastSpellInitial(spell, C) {
+	        if (!!C) {
+	            if (this.TeachingSpell) {
+	                this.TeachSpellActual(spell, C);
+	            }
+	            else if (this.SpellNeedsPair(spell)) {
+	                this.SpellPairOption.Spell = spell;
+	                this.SpellPairOption.Source = C;
+	                this.SpellPairOption.SelectOpen = true;
+	            }
+	            else {
+	                this.CastSpellActual(spell, C);
+	            }
+	        }
+	    }
+	    getTeachingActionString(spell, item, targetItem) {
+	        var _a, _b, _c, _d;
+	        let itemName = !!item ? ((_b = (_a = item === null || item === void 0 ? void 0 : item.Craft) === null || _a === void 0 ? void 0 : _a.Name) !== null && _b !== void 0 ? _b : item === null || item === void 0 ? void 0 : item.Asset.Description) : "wand";
+	        let targetItemName = !!targetItem ? ((_d = (_c = targetItem === null || targetItem === void 0 ? void 0 : targetItem.Craft) === null || _c === void 0 ? void 0 : _c.Name) !== null && _d !== void 0 ? _d : targetItem === null || targetItem === void 0 ? void 0 : targetItem.Asset.Description) : "wand";
+	        let teachingActionStrings = [
+	            `%NAME% slowly waves %POSSESSIVE% ${itemName} in an intricate pattern, making sure %OPP_NAME% follows along with %OPP_POSSESSIVE% ${targetItemName}.`,
+	            `%NAME% repeats an indecipherable phrase, touching %POSSESSIVE% ${itemName} to %OPP_NAME%'s ${targetItemName}.`,
+	            `%NAME% holds both %POSSESSIVE% ${itemName} and %OPP_NAME%'s ${targetItemName} tightly, energy traveling from one to the other.`
+	        ];
+	        return teachingActionStrings[getRandomInt(teachingActionStrings.length)];
+	    }
+	    getCastingActionString(spell, item, target, paired) {
+	        var _a, _b;
+	        let itemName = !!item ? ((_b = (_a = item === null || item === void 0 ? void 0 : item.Craft) === null || _a === void 0 ? void 0 : _a.Name) !== null && _b !== void 0 ? _b : item === null || item === void 0 ? void 0 : item.Asset.Description) : "wand";
+	        let pairedDefaultStr = `${!!paired ? ", the spell's power also arcing to " + CharacterNickname(paired) + "." : "."}`;
+	        let castingActionStrings = [
+	            `%NAME% waves %POSSESSIVE% ${itemName} in an intricate pattern and casts ${spell.Name} on %OPP_NAME%${pairedDefaultStr}`,
+	            `%NAME% chants an indecipherable phrase, pointing %POSSESSIVE% ${itemName} at %OPP_NAME% and casting ${spell.Name}${pairedDefaultStr}`,
+	            `%NAME% aims %POSSESSIVE% ${itemName} at %OPP_NAME% and, with a grin, casts ${spell.Name}${pairedDefaultStr}`
+	        ];
+	        return castingActionStrings[getRandomInt(castingActionStrings.length)];
+	    }
+	    CastSpellActual(spell, spellTarget, pairedTarget) {
+	        var _a;
+	        if (!!spell && !!spellTarget) {
+	            if (!((_a = spellTarget.LSCG) === null || _a === void 0 ? void 0 : _a.MagicModule))
+	                SendAction(`%NAME% casts ${spell.Name} at %OPP_NAME% but it seems to fizzle.`, spellTarget);
+	            else {
+	                SendAction(this.getCastingActionString(spell, InventoryGet(Player, "ItemHandheld"), spellTarget, pairedTarget), spellTarget);
+	                if (spellTarget.IsPlayer())
+	                    this.IncomingSpell(Player, spell, pairedTarget);
+	                else
+	                    sendLSCGCommand(spellTarget, "spell", [
+	                        {
+	                            name: "spell",
+	                            value: spell
+	                        }, {
+	                            name: "paired",
+	                            value: pairedTarget === null || pairedTarget === void 0 ? void 0 : pairedTarget.MemberNumber
+	                        }
+	                    ]);
+	            }
+	        }
+	        this.CloseSpellMenu();
+	        DialogLeave();
+	    }
+	    TeachSpellActual(spell, target) {
+	        var _a;
+	        if (!!spell && !!target) {
+	            if (!target.LSCG.MagicModule)
+	                SendAction(`%NAME% tries to explain the details of ${spell.Name} to %OPP_NAME% but %OPP_PRONOUN% don't seem to understand.`, target);
+	            else if (!((_a = target.LSCG) === null || _a === void 0 ? void 0 : _a.MagicModule.enabled)) {
+	                SendAction(`%NAME% tries to teach %OPP_NAME% ${spell.Name} but %OPP_PRONOUN% don't seem to have ̶i̶n̶s̶t̶a̶l̶l̶e̶d̶ embraced Magic™.`, target);
+	            }
+	            else {
+	                SendAction(this.getTeachingActionString(spell, InventoryGet(Player, "ItemHandheld"), InventoryGet(target, "ItemHandheld")), target);
+	                setTimeout(() => {
+	                    sendLSCGCommand(target, "spell-teach", [
+	                        {
+	                            name: "spell",
+	                            value: spell
+	                        }
+	                    ]);
+	                }, 2000); // 2sec wait until actual teach
+	            }
+	        }
+	        this.CloseSpellMenu();
+	        DialogLeave();
+	    }
+	    // ********************** INCOMING *************************
+	    IncomingSpellCommand(sender, msg) {
+	        var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q;
+	        if (((_a = msg.command) === null || _a === void 0 ? void 0 : _a.name) == "spell") {
+	            let paired = getCharacter((_c = (_b = msg.command) === null || _b === void 0 ? void 0 : _b.args.find(arg => arg.name == "paired")) === null || _c === void 0 ? void 0 : _c.value);
+	            let spell = (_f = (_e = (_d = msg.command) === null || _d === void 0 ? void 0 : _d.args) === null || _e === void 0 ? void 0 : _e.find(arg => arg.name == "spell")) === null || _f === void 0 ? void 0 : _f.value;
+	            if (!spell)
+	                return;
+	            this.IncomingSpell(sender, spell, paired);
+	        }
+	        else if (((_g = msg.command) === null || _g === void 0 ? void 0 : _g.name) == "pair") {
+	            let origin = getCharacter((_j = (_h = msg.command) === null || _h === void 0 ? void 0 : _h.args.find(arg => arg.name == "paired")) === null || _j === void 0 ? void 0 : _j.value);
+	            let spellEffect = (_m = (_l = (_k = msg.command) === null || _k === void 0 ? void 0 : _k.args) === null || _l === void 0 ? void 0 : _l.find(arg => arg.name == "spell-effect")) === null || _m === void 0 ? void 0 : _m.value;
+	            let pairType = (_q = (_p = (_o = msg.command) === null || _o === void 0 ? void 0 : _o.args) === null || _p === void 0 ? void 0 : _p.find(arg => arg.name == "pair-type")) === null || _q === void 0 ? void 0 : _q.value;
+	            if (!!origin && !!spellEffect && !!pairType)
+	                this.IncomingSpellPair(sender, spellEffect, origin, pairType);
+	            else if (!!sender && !origin) {
+	                SendAction(`${CharacterNickname(sender)}'s paired spell fizzles because the origin target has left.`);
+	            }
+	        }
+	    }
+	    IncomingSpell(sender, spell, paired) {
+	        let senderName = !sender ? "Someone" : CharacterNickname(sender);
+	        let pairedName = !paired ? "someone else" : CharacterNickname(paired);
+	        let allowedSpellEffects = spell.Effects.filter(effect => this.settings.blockedSpellEffects.indexOf(effect) == -1);
+	        if (allowedSpellEffects.length <= 0) {
+	            SendAction(`${senderName}'s ${spell.Name} fizzles when cast on %NAME%, none of its effects allowed to take hold.`);
+	            return;
+	        }
+	        allowedSpellEffects.forEach((effect, ix, arr) => {
+	            setTimeout(() => {
+	                var _a;
+	                switch (effect) {
+	                    case LSCGSpellEffect.blindness:
+	                        SendAction("%NAME%'s eyes dart around, %POSSESSIVE% world suddenly plunged into darkness.");
+	                        this.stateModule.BlindState.Activate(sender === null || sender === void 0 ? void 0 : sender.MemberNumber);
+	                        break;
+	                    case LSCGSpellEffect.deafened:
+	                        SendAction("%NAME% frowns as %PRONOUN% is completely deafened.");
+	                        this.stateModule.DeafState.Activate(sender === null || sender === void 0 ? void 0 : sender.MemberNumber);
+	                        break;
+	                    case LSCGSpellEffect.frozen:
+	                        SendAction("%NAME%'s eyes widen in a panic as %POSSESSIVE% muscles seize in place.");
+	                        this.stateModule.FrozenState.Activate(sender === null || sender === void 0 ? void 0 : sender.MemberNumber);
+	                        break;
+	                    case LSCGSpellEffect.horny:
+	                        this.stateModule.GaggedState.Active ? SendAction("A blush runs into %NAME%'s cheeks uncontrollably.") : SendAction("A moan escapes %NAME%'s lips uncontrollably.");
+	                        this.stateModule.HornyState.Activate(sender === null || sender === void 0 ? void 0 : sender.MemberNumber);
+	                        break;
+	                    case LSCGSpellEffect.hypnotizing:
+	                        SendAction("%NAME% is unable to fight the spell's hypnotizing influence, slumping weakly as %POSSESSIVE% eyes go blank.");
+	                        this.stateModule.HypnoState.Activate(sender === null || sender === void 0 ? void 0 : sender.MemberNumber);
+	                        break;
+	                    case LSCGSpellEffect.muted:
+	                        Player.IsGagged() ? SendAction("%NAME%'s protests suddenly fall completely silent.") : SendAction("%NAME%'s mouth moves in protest but not a single sound escapes.");
+	                        this.stateModule.GaggedState.Activate(sender === null || sender === void 0 ? void 0 : sender.MemberNumber);
+	                        break;
+	                    case LSCGSpellEffect.slumber:
+	                        SendAction("%NAME% succumbs to the spell's overwhelming pressure, %POSSESSIVE% eyes closing as %PRONOUN% falls unconscious.");
+	                        this.stateModule.SleepState.Activate(sender === null || sender === void 0 ? void 0 : sender.MemberNumber);
+	                        break;
+	                    case LSCGSpellEffect.dispell:
+	                        SendAction("%NAME% gasps, blinking as %PRONOUN% is restored to normal.");
+	                        this.stateModule.Clear(true);
+	                        break;
+	                    case LSCGSpellEffect.outfit:
+	                        if (!!((_a = spell.Outfit) === null || _a === void 0 ? void 0 : _a.Code)) {
+	                            this.stateModule.GaggedState.Active ?
+	                                SendAction("%NAME% trembles as %POSSESSIVE% clothing shimmers and morphs around %INTENSIVE%.") :
+	                                SendAction("%NAME% squeaks as %POSSESSIVE% clothing shimmers and morphs around %INTENSIVE%.");
+	                            this.stateModule.RedressedState.ApplyOutfit(spell.Outfit);
+	                        }
+	                        break;
+	                    case LSCGSpellEffect.paired_arousal:
+	                        if (!!paired && !!sender) {
+	                            SendAction(`%NAME% squirms as %POSSESSIVE% arousal is paired.`);
+	                            this.stateModule.ArousalPairedState.DoPair(paired, sender);
+	                            this.NotifyPair(sender, paired, LSCGSpellEffect.paired_arousal, this.stateModule.ArousalPairedState.Type);
+	                        }
+	                        break;
+	                    case LSCGSpellEffect.orgasm_siphon:
+	                        if (!!paired && !!sender) {
+	                            this.stateModule.GaggedState.Active ?
+	                                SendAction(`%NAME% quivers as %PRONOUN% feels %POSSESSIVE% impending denial.`) :
+	                                SendAction(`%NAME% whimpers as %PRONOUN% feels %POSSESSIVE% impending denial.`);
+	                            this.stateModule.OrgasmSiphonedState.DoPair(paired, sender);
+	                            this.NotifyPair(sender, paired, LSCGSpellEffect.orgasm_siphon, this.stateModule.OrgasmSiphonedState.Type);
+	                        }
+	                        break;
+	                }
+	            }, 2000 * ix);
+	        });
+	    }
+	    NotifyPair(caster, pairedTarget, spellEffect, pairType) {
+	        if (!pairedTarget)
+	            return;
+	        sendLSCGCommand(pairedTarget, "pair", [
+	            {
+	                name: "spell-effect",
+	                value: spellEffect
+	            }, {
+	                name: "paired",
+	                value: Player.MemberNumber
+	            }, {
+	                name: "caster",
+	                value: caster === null || caster === void 0 ? void 0 : caster.MemberNumber
+	            }, {
+	                name: "pair-type",
+	                value: pairType
+	            }
+	        ]);
+	    }
+	    IncomingSpellPair(sender, spellEffect, originalTarget, pairType) {
+	        var _a;
+	        let senderName = !sender ? "Someone" : CharacterNickname(sender);
+	        let originalTargetName = CharacterNickname(originalTarget);
+	        let isAllowed = this.settings.blockedSpellEffects.indexOf(spellEffect) == -1;
+	        if (!isAllowed) {
+	            SendAction(`${senderName}'s paired spell fizzles as it attempts to pair with %NAME%.`);
+	            sendLSCGCommandBeep((_a = originalTarget.MemberNumber) !== null && _a !== void 0 ? _a : -1, "unpair", [{
+	                    name: "type",
+	                    value: pairType
+	                }]);
+	        }
+	        else {
+	            switch (spellEffect) {
+	                case LSCGSpellEffect.paired_arousal:
+	                    // TODO
+	                    SendAction(`%NAME% squirms as %POSSESSIVE% arousal is paired.`);
+	                    this.stateModule.ArousalPairedState.RespondToPairing(originalTarget, sender);
+	                    break;
+	                case LSCGSpellEffect.orgasm_siphon:
+	                    // TODO
+	                    SendAction(`%NAME% lets out a quiet gasp as the pleasure center of %POSSESSIVE% mind starts to tingle.`);
+	                    this.stateModule.OrgasmSiphonedState.RespondToPairing(originalTarget, sender);
+	                    break;
+	            }
+	        }
+	    }
+	    IncomingSpellTeachCommand(sender, msg) {
+	        var _a, _b, _c;
+	        let spell = (_c = (_b = (_a = msg.command) === null || _a === void 0 ? void 0 : _a.args) === null || _b === void 0 ? void 0 : _b.find(arg => arg.name == "spell")) === null || _c === void 0 ? void 0 : _c.value;
+	        if (this.settings.knownSpells.find(s => s.Name == spell.Name)) {
+	            SendAction(`%NAME% already knows a spell called ${spell.Name} and ignores %POSSESSIVE% new instructions.`);
+	        }
+	        else {
+	            SendAction(`%NAME% grins as they finally understand the details of ${spell.Name} and memorizes it for later.`);
+	            this.settings.knownSpells.push(spell);
+	            settingsSave(true);
+	        }
+	    }
+	    // ***************** Potions *******************
+	    TryForcePotion(sender) {
+	        var _a;
+	        let itemUseModule = getModule("ItemUseModule");
+	        if (!itemUseModule) {
+	            return this.ProcessPotion(sender);
+	        }
+	        var itemName = itemUseModule.getItemName(InventoryGet(sender, "ItemHandheld"));
+	        let check = (_a = getModule("ItemUseModule")) === null || _a === void 0 ? void 0 : _a.MakeActivityCheck(sender, Player);
+	        if (check.AttackerRoll.Total >= check.DefenderRoll.Total) {
+	            SendAction(`${CharacterNickname(sender)} ${check.AttackerRoll.TotalStr}manages to get their ${itemName} past ${CharacterNickname(Player)}'s ${check.DefenderRoll.TotalStr}lips, forcing %POSSESSIVE% to swallow it.`);
+	            setTimeout(() => this.ProcessPotion(sender), 5000);
+	        }
+	        else {
+	            SendAction(`${CharacterNickname(Player)} ${check.DefenderRoll.TotalStr}successfully defends against ${CharacterNickname(sender)}'s ${check.AttackerRoll.TotalStr}attempt to force %POSSESSIVE% to drink their ${itemName}.`);
+	        }
+	    }
+	    ProcessPotion(sender) {
+	        var item = InventoryGet(sender, "ItemHandheld");
+	        let spell = this.GetSpellFromItem(item);
+	        if (!!spell)
+	            this.IncomingSpell(sender, spell);
+	    }
+	    GetSpellFromItem(item) {
+	        var _a, _b;
+	        let itemCraft = item === null || item === void 0 ? void 0 : item.Craft;
+	        var itemStr = (_a = GetItemNameAndDescriptionConcat(item)) !== null && _a !== void 0 ? _a : "";
+	        if (!itemCraft || !itemStr)
+	            return;
+	        let spells = [];
+	        let craftingMember = itemCraft.MemberNumber;
+	        if (!!craftingMember && craftingMember >= 0) {
+	            let craftingChar = getCharacter(craftingMember);
+	            if (!!craftingChar && !!craftingChar.LSCG) {
+	                spells = craftingChar.LSCG.MagicModule.knownSpells.filter(s => s.AllowPotion && !s.Effects.some(e => pairedSpellEffects.indexOf(e) > -1));
+	            }
+	        }
+	        let spell = (_b = spells === null || spells === void 0 ? void 0 : spells.filter(x => !!x)) === null || _b === void 0 ? void 0 : _b.find(x => !!x && !!x.Name && isPhraseInString(itemStr, x.Name));
+	        return spell;
 	    }
 	}
 
@@ -12257,7 +14312,7 @@ ${LSCG_CHANGES}`;
 	    });
 	}
 	function init() {
-	    var _a, _b, _c;
+	    var _a, _b, _c, _d, _e;
 	    if (window.LSCG_Loaded)
 	        return;
 	    // clear any old settings.
@@ -12265,7 +14320,10 @@ ${LSCG_CHANGES}`;
 	        delete Player.OnlineSettings.LittleSera;
 	    if (!!((_b = Player.OnlineSettings) === null || _b === void 0 ? void 0 : _b.ClubGames))
 	        delete Player.OnlineSettings.ClubGames;
-	    Player.LSCG = ((_c = Player.OnlineSettings) === null || _c === void 0 ? void 0 : _c.LSCG) || {};
+	    if (typeof ((_c = Player.OnlineSettings) === null || _c === void 0 ? void 0 : _c.LSCG) == "string")
+	        Player.LSCG = JSON.parse(LZString.decompressFromBase64((_d = Player.OnlineSettings) === null || _d === void 0 ? void 0 : _d.LSCG)) || {};
+	    else
+	        Player.LSCG = ((_e = Player.OnlineSettings) === null || _e === void 0 ? void 0 : _e.LSCG) || {};
 	    initSettingsScreen();
 	    if (!init_modules()) {
 	        unload();
@@ -12299,6 +14357,7 @@ ${LSCG_CHANGES}`;
 	    registerModule(new InjectorModule());
 	    registerModule(new ActivityModule());
 	    registerModule(new ItemUseModule());
+	    registerModule(new MagicModule());
 	    registerModule(new RemoteUIModule());
 	    registerModule(new CommandModule());
 	    for (const m of modules()) {
