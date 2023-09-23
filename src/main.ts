@@ -14,6 +14,7 @@ import { RemoteUIModule } from 'Modules/remoteUI';
 import { CommandModule } from 'Modules/commands';
 import { ItemUseModule } from 'Modules/item-use';
 import { StateModule } from 'Modules/states';
+import { MagicModule } from 'Modules/magic';
 
 function initWait() {
 	console.debug("LSCG: Init wait");
@@ -61,7 +62,10 @@ export function init() {
 	if (!!(<any>Player.OnlineSettings)?.ClubGames)
 		delete (<any>Player.OnlineSettings).ClubGames;
 
-    Player.LSCG = Player.OnlineSettings?.LSCG || <SettingsModel>{};
+	if (typeof Player.OnlineSettings?.LSCG == "string")
+    	Player.LSCG = JSON.parse(LZString.decompressFromBase64(Player.OnlineSettings?.LSCG)) || <SettingsModel>{};
+	else
+	Player.LSCG = Player.OnlineSettings?.LSCG || <SettingsModel>{};
 
 	initSettingsScreen();
 
@@ -102,6 +106,7 @@ function init_modules(): boolean {
 	registerModule(new InjectorModule());
 	registerModule(new ActivityModule());
 	registerModule(new ItemUseModule());
+	registerModule(new MagicModule());
 	registerModule(new RemoteUIModule());
 	registerModule(new CommandModule());
 

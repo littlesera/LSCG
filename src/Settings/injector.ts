@@ -101,12 +101,12 @@ export class GuiInjector extends GuiSubscreen {
 					setting: () => Player.LSCG.MiscModule.chloroformEnabled ?? false,
 					setSetting: (val) => Player.LSCG.MiscModule.chloroformEnabled = val
 				},<Setting>{
-					type: "checkbox",
-					label: "Immersive Chloroform:",
-					description: "Enforce chloroform with more restrictive measures. LSCG settings will be unavailable while asleep.",
-					setting: () => Player.LSCG.MiscModule.immersiveChloroform ?? false,
-					setSetting: (val) => Player.LSCG.MiscModule.immersiveChloroform = val
-				},<Setting>{
+				// 	type: "checkbox",
+				// 	label: "Immersive Chloroform:",
+				// 	description: "Enforce chloroform with more restrictive measures. LSCG settings will be unavailable while asleep.",
+				// 	setting: () => Player.LSCG.MiscModule.immersiveChloroform ?? false,
+				// 	setSetting: (val) => Player.LSCG.MiscModule.immersiveChloroform = val
+				// },<Setting>{
 					type: "checkbox",
 					label: "Chloroform Never Fades:",
 					description: "If enabled one rag over your mouth will last forever until removed, otherwise its potency will fade after an hour.",

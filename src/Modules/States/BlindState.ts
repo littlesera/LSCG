@@ -5,6 +5,13 @@ import { StateModule } from "Modules/states";
 export class BlindState extends BaseState {
     Type: LSCGState = "blind";
 
+    get Icon(): string {
+        return "Icons/Previews/BlindHeavy.png";
+    }
+    get Label(): string {
+        return "Blinded";
+    }
+
     constructor(state: StateModule) {
         super(state);
         this.Restrictions.Sight = "true";

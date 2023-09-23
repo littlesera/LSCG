@@ -8,7 +8,7 @@ export class StateMigrator extends BaseMigrator {
     Migrate(fromVersion: string): void {
         // Migration to StatesModule
         console.info("Migrating LSCG Data for new States Module.");
-        let anyImmersive = (Player.LSCG.HypnoModule as any).immersive || (Player.LSCG.InjectorModule as any).immersive;
+        let anyImmersive = (Player.LSCG?.HypnoModule as any).immersive || (Player.LSCG?.InjectorModule as any).immersive || (Player.LSCG?.MiscModule as any).immersiveChloroform;
         Player.LSCG.StateModule.immersive = anyImmersive;
 
         // Migrate Hypnosis State
@@ -47,5 +47,8 @@ export class StateMigrator extends BaseMigrator {
         delete (Player.LSCG.InjectorModule as any).immersive;
         delete (Player.LSCG.InjectorModule as any).brainwashed;
         delete (Player.LSCG.InjectorModule as any).asleep;
+
+        // Migrate immersive bools
+        delete (Player.LSCG?.MiscModule as any).immersiveChloroform;
     }
 }

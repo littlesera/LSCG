@@ -6,12 +6,19 @@ import { ModuleCategory } from "Settings/setting_definitions";
 export class HornyState extends BaseState {
     Type: LSCGState = "horny";
 
+    get Icon(): string {
+        return "Icons/Small/Lover.png";
+    }
+    get Label(): string {
+        return "Aroused";
+    }
+
     constructor(state: StateModule) {
         super(state);
     }
 
     Init(): void {
-        hookFunction('ActivitySetArousalTimer', 1, (args, next) => {
+        hookFunction('ActivitySetArousalTimer', 2, (args, next) => {
             if (this.Active) {
                 let Activity = args[1];
                 let Zone = args[2];

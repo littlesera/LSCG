@@ -1,7 +1,7 @@
 import { BaseModule } from "base";
 import { getModule, modules } from "modules";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { getCharacter, GetDelimitedList, LSCG_SendLocal, removeAllHooksByModule, SendAction, settingsSave } from "../utils";
+import { getCharacter, getCharacterByNicknameOrMemberNumber, GetDelimitedList, LSCG_SendLocal, removeAllHooksByModule, SendAction, sendLSCGCommandBeep, settingsSave } from "../utils";
 import { HypnoModule } from "./hypno";
 import { ItemUseModule } from "./item-use";
 import { ActivityModule } from "./activities";
@@ -97,7 +97,7 @@ export class CommandModule extends BaseModule {
 					LSCG_SendLocal("Please specify a defender for your roll.", 10000);
 					return;
 				}
-				let tgt = this.getCharacterByNicknameOrMemberNumber(args);
+				let tgt = getCharacterByNicknameOrMemberNumber(args);
 				if (!tgt) {
 					LSCG_SendLocal(`Defender ${args} not found.`, 10000);
 					return;
@@ -114,7 +114,7 @@ export class CommandModule extends BaseModule {
 					LSCG_SendLocal("Please specify an attacker for your roll.", 10000);
 					return;
 				}
-				let tgt = this.getCharacterByNicknameOrMemberNumber(args);
+				let tgt = getCharacterByNicknameOrMemberNumber(args);
 				if (!tgt) {
 					LSCG_SendLocal(`Attacker ${args} not found.`, 10000);
 					return;
@@ -174,6 +174,33 @@ export class CommandModule extends BaseModule {
 					LSCG_SendLocal(`<b>/lscg collar</b> [tight/loose/stat] : Use to self-tighten, self-loosen, or read out information about your collar if allowed. Must be unrestrained to use."`);
 				}
 			}
+		}, {
+			Tag: "conditions",
+			Description: " : List which conditions are currently active on you.",
+			Action: (args, msg, parsed) => {
+				let target = getCharacterByNicknameOrMemberNumber(args) as OtherCharacter;
+
+				let targetName = !target ? CharacterNickname(Player) : CharacterNickname(target);
+				let states = !target ? 
+					this.states.States.filter(s => s.Active).map(s => s.Type) :
+					target.LSCG.StateModule.states.filter(s => s.active).map(s => s.type);
+				
+				let stateList = states.map(s => `<li>${s}</li>`).join("");
+				LSCG_SendLocal(`<div><b>Active Conditions on ${targetName}:</b><ul>${stateList}</ul></div>`, 12000);
+			}
+		// }, {
+		// 	Tag: "test-beep",
+		// 	Description: " : List which conditions are currently active on you.",
+		// 	Action: (args, msg, parsed) => {
+		// 		let tgt = getCharacterByNicknameOrMemberNumber(args);
+		// 		if (!!tgt) {
+		// 			LSCG_SendLocal(`Sending beep command to ${CharacterNickname(tgt)}`);
+		// 			sendLSCGCommandBeep(tgt.MemberNumber ?? -1, "debug", [{
+		// 				name: "msg",
+		// 				value: `Test LSCG Beep from ${CharacterNickname(Player)}`
+		// 			}]);
+		// 		}
+		// 	}
 		}
 	]
 
@@ -189,17 +216,6 @@ export class CommandModule extends BaseModule {
 
 	getSubcommand(name: string): ICommand | undefined {
 		return this.lscgCommands.find(c => c.Tag.toLocaleLowerCase() == name.toLocaleLowerCase());
-	}
-
-	getCharacterByNicknameOrMemberNumber(tgt: string): Character | undefined {
-		tgt = tgt.toLocaleLowerCase();
-		let tgtC: Character | undefined | null;
-		if (CommonIsNumeric(tgt))
-			tgtC = getCharacter(+tgt);
-		if (!tgtC) {
-			tgtC = ChatRoomCharacter.find(c => CharacterNickname(c).toLocaleLowerCase() == tgt);
-		}
-		return tgtC;
 	}
 
     load(): void {

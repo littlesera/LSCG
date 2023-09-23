@@ -58,6 +58,17 @@ export function getCharacter(memberNumber: number) {
 	return ChatRoomCharacter.find(c => c.MemberNumber == memberNumber) ?? null;
 }
 
+export function getCharacterByNicknameOrMemberNumber(tgt: string): Character | undefined {
+	tgt = tgt.toLocaleLowerCase();
+	let tgtC: Character | undefined | null;
+	if (CommonIsNumeric(tgt))
+		tgtC = getCharacter(+tgt);
+	if (!tgtC) {
+		tgtC = ChatRoomCharacter.find(c => CharacterNickname(c).toLocaleLowerCase() == tgt);
+	}
+	return tgtC;
+}
+
 export function setOrIgnoreBlush(blushLevel: ExpressionName | null) {
 	const blushLevels: string[] = [
 		"Default",
@@ -220,25 +231,37 @@ export function SendChat(msg: string) {
 export function replace_template(text: string, source: Character | null = null) {
     let result = text;
 	let pronounItem = InventoryGet(Player, "Pronouns");
-	let posessive = "Her";
+	let possessive = "Her";
 	let intensive = "Her"
 	let pronoun = "She";
 	if (pronounItem?.Asset.Name == "HeHim") {
-		posessive = "His";
+		possessive = "His";
 		intensive = "Him";
 		pronoun = "He";
 	}
 
+	let opp_pronounItem = !source? null : InventoryGet(source, "Pronouns");
+	let opp_male = opp_pronounItem?.Asset.Name == "HeHim" ?? false;
 	let oppName = !!source ? CharacterNickname(source) : "";
+	let oppPossessive = opp_male ? "His" : "Her";
+	let oppIntensive = opp_male ? "Him" : "Her";
+	let oppPronoun = opp_male ? "He" : "She";
 
-    result = result.replaceAll("%POSSESSIVE%", posessive.toLocaleLowerCase())
-    result = result.replaceAll("%CAP_POSSESSIVE%", posessive)
-    result = result.replaceAll("%PRONOUN%", pronoun.toLocaleLowerCase())
-    result = result.replaceAll("%CAP_PRONOUN%", pronoun)
-    result = result.replaceAll("%INTENSIVE%", intensive.toLocaleLowerCase())
-    result = result.replaceAll("%CAP_INTENSIVE%", intensive)
-    result = result.replaceAll("%NAME%", CharacterNickname(Player)) //Does this works to print "Lilly"? -- it should, yes
-    result = result.replaceAll("%OPP_NAME%", oppName) // finally we can use the source name to make the substitution
+	result = result.replaceAll("%NAME%", CharacterNickname(Player));
+    result = result.replaceAll("%POSSESSIVE%", possessive.toLocaleLowerCase());
+    result = result.replaceAll("%PRONOUN%", pronoun.toLocaleLowerCase());
+    result = result.replaceAll("%INTENSIVE%", intensive.toLocaleLowerCase());
+	result = result.replaceAll("%CAP_POSSESSIVE%", possessive);
+	result = result.replaceAll("%CAP_PRONOUN%", pronoun);
+    result = result.replaceAll("%CAP_INTENSIVE%", intensive);
+
+    result = result.replaceAll("%OPP_NAME%", oppName);
+	result = result.replaceAll("%CAP_OPP_PRONOUN%", oppPronoun);
+	result = result.replaceAll("%CAP_OPP_POSSESSIVE%", oppPossessive);
+	result = result.replaceAll("%CAP_OPP_INTENSIVE%", oppIntensive);
+	result = result.replaceAll("%OPP_PRONOUN%", oppPronoun.toLocaleLowerCase());
+	result = result.replaceAll("%OPP_POSSESSIVE%", oppPossessive.toLocaleLowerCase());
+	result = result.replaceAll("%OPP_INTENSIVE%", oppIntensive.toLocaleLowerCase());
 
     return result
 }
@@ -250,7 +273,7 @@ export function getRandomInt(max: number) {
 export function settingsSave(publish: boolean = false) {
 	if (!Player.OnlineSettings)
 		Player.OnlineSettings = <PlayerOnlineSettings>{};
-    Player.OnlineSettings.LSCG = Player.LSCG
+    Player.OnlineSettings.LSCG = LZString.compressToBase64(JSON.stringify(Player.LSCG));
     window.ServerAccountUpdate.QueueData({OnlineSettings: Player.OnlineSettings});
 	if (publish)
 		getModule<CoreModule>("CoreModule")?.SendPublicPacket(false, "sync");
@@ -374,6 +397,15 @@ export function sendLSCGMessage(msg: LSCGMessageModel) {
 	ServerSend("ChatRoomChat", packet);
 }
 
+export function sendLSCGBeep(target: number, msg: LSCGMessageModel) {
+	ServerSend("AccountBeep", { 
+		MemberNumber: target,
+		BeepType: "LSCG",
+		IsSecret: true,
+		Message: msg
+	});
+}
+
 export function sendLSCGCommand(target: Character, commandName: LSCGCommandName, commandArgs: {name: string, value: any}[] = []) {
 	sendLSCGMessage(<LSCGMessageModel>{
 		type: "command",
@@ -388,10 +420,24 @@ export function sendLSCGCommand(target: Character, commandName: LSCGCommandName,
 	});
 }
 
+export function sendLSCGCommandBeep(target: number, commandName: LSCGCommandName, commandArgs: {name: string, value: any}[] = []) {
+	sendLSCGBeep(target, <LSCGMessageModel>{
+		type: "command",
+		reply: false,
+		settings: null,
+		target: target ?? -1,
+		version: LSCG_VERSION,
+		command: {
+			name: commandName,
+			args: commandArgs
+		}
+	});
+}
+
 export function LSCG_SendLocal(msg: string, time?: number) {
 	var bgColor = (Player.ChatSettings!.ColorTheme!.indexOf("Light") > -1) ? "#D7F6E9" : "#23523E";
 	let text = `<div style='background-color:${bgColor};'>${msg}</div>`;
-	ChatRoomSendLocal(text);
+	ChatRoomSendLocal(text, time ?? 4000);
 }
 
 export function excludeParentheticalContent(msg: string): string {
@@ -467,6 +513,86 @@ export function IsActivityAllowed(activity: ActivityEntryModel, sender: Characte
 	else if (!activity.allowedMemberIds || activity.allowedMemberIds.length == 0)
 		return isAllowedMember(sender);
 	else return false;
+}
+
+export function BC_ItemToItemBundle(item: Item): ItemBundle {
+	return <ItemBundle>{
+		Group: item.Asset.Group.Name,
+		Name: item.Asset.Name,
+		Color: item.Color,
+		Craft: item.Craft,
+		Difficulty: item.Difficulty,
+		Property: item.Property
+	}
+}
+
+export function BC_ItemsToItemBundles(items: Item[]): ItemBundle[] {
+	return items.map(i => BC_ItemToItemBundle(i));
+}
+
+// Stolen Utils from BCX >.>
+
+export function smartGetAssetGroup(item: Item | Asset | AssetGroup): AssetGroup {
+	const group = AssetGroup.includes(item as AssetGroup) ? item as AssetGroup : Asset.includes(item as Asset) ? (item as Asset).Group : (item as Item).Asset.Group;
+	if (!AssetGroup.includes(group)) {
+		throw new Error("Failed to convert item to group");
+	}
+	return group;
+}
+
+export function isCloth(item: Item | Asset | AssetGroup, allowCosplay: boolean = false): boolean {
+	const group = smartGetAssetGroup(item);
+	return group.Category === "Appearance" && group.AllowNone && group.Clothing && (allowCosplay || !group.BodyCosplay);
+}
+
+export function isCosplay(item: Item | Asset | AssetGroup): boolean {
+	const group = smartGetAssetGroup(item);
+	return group.Category === "Appearance" && group.AllowNone && group.Clothing && group.BodyCosplay;
+}
+
+export function isBody(item: Item | Asset | AssetGroup): boolean {
+	const group = smartGetAssetGroup(item);
+	return group.Category === "Appearance" && !group.Clothing;
+}
+
+export function isBind(item: Item | Asset | AssetGroup, excludeSlots: AssetGroupName[] = ["ItemNeck", "ItemNeckAccessories", "ItemNeckRestraints"]): boolean {
+	const group = smartGetAssetGroup(item);
+	if (group.Category !== "Item" || group.BodyCosplay) return false;
+	return !excludeSlots.includes(group.Name);
+}
+
+export function GetHandheldItemNameAndDescriptionConcat(C?: Character | null): string | undefined {
+	if (!C)
+		C = Player;
+
+	var asset = InventoryGet(C, "ItemHandheld");
+	return GetItemNameAndDescriptionConcat(asset);
+}	
+
+export function GetItemNameAndDescriptionConcat(item: Item | null): string | undefined {
+	if (!item?.Craft)
+		return;
+	
+	var name = item.Craft.Name;
+	var description = item.Craft.Description;
+	return name + " | " + description;
+}
+
+export function mouseTooltip(msg: string, x?: number, y?: number) {
+	var prevAlign = MainCanvas.textAlign;
+	var prevFont = MainCanvas.font;
+	var pad = 5;
+	MainCanvas.textAlign = "left";
+	MainCanvas.font = '16px Arial, sans-serif'
+	var size = MainCanvas.measureText(msg);
+	let width = size.actualBoundingBoxRight - size.actualBoundingBoxLeft + 2 * pad;
+	var TextX = Math.max(0, Math.min(1000, (x ?? MouseX) + width)) - width;
+	var TextY = Math.max(0, Math.min(1000, y ?? MouseY));
+	DrawRect(TextX - pad + 3, TextY - size.actualBoundingBoxAscent - pad + 3, width, size.actualBoundingBoxDescent + size.actualBoundingBoxAscent + 2 * pad, "rgba(0, 0, 0, .7)");
+	DrawRect(TextX - pad, TextY - size.actualBoundingBoxAscent - pad, width, size.actualBoundingBoxDescent + size.actualBoundingBoxAscent + 2 * pad, "#D7F6E9");
+	DrawTextFit(msg, TextX, TextY, size.width, "Black");
+	MainCanvas.textAlign = prevAlign;
+	MainCanvas.font = prevFont;
 }
 
 // ICONS

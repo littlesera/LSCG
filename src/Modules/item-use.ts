@@ -6,6 +6,21 @@ import { ActivityBundle, ActivityModule, ActivityTarget } from "./activities";
 import { BoopsModule } from "./boops";
 import { CollarModule } from "./collar";
 
+export const CameraItems: string[] = [
+	"Phone1",
+	"Phone2",
+	"PortalTablet",
+	"Camera1",
+];
+
+export const MagicWandItems: string[] = [
+	"RainbowWand"
+]
+
+export const QuaffableItems: string[] = [
+	"PotionBottle"
+]
+
 export class ActivityRoll {
 	constructor(raw: number, mod: number) {
 		this.Raw = raw;
@@ -116,13 +131,6 @@ export class ItemUseModule extends BaseModule {
 		}
 	]
 
-	CameraItems: string[] = [
-		"Phone1",
-		"Phone2",
-		"PortalTablet",
-		"Camera1",
-	];
-
     load(): void {
 		hookFunction("ActivityGenerateItemActivitiesFromNeed", 1, (args, next) => {
 			let allowed = args[0];
@@ -197,10 +205,18 @@ export class ItemUseModule extends BaseModule {
 			} else if (itemType == "CameraItem") {
 				let item = InventoryGet(C, "ItemHandheld");
 				let acc = InventoryGet(C, "ClothAccessory");
-				if (!!item && this.CameraItems.indexOf(item.Asset?.Name) > -1) 
+				if (!!item && CameraItems.indexOf(item.Asset?.Name) > -1) 
 					results.push(item);
-				else if (!!acc && this.CameraItems.indexOf(acc.Asset?.Name) > -1) 
+				else if (!!acc && CameraItems.indexOf(acc.Asset?.Name) > -1) 
 					results.push(acc);
+			} else if (itemType == "MagicItem") {
+				let item = InventoryGet(C, "ItemHandheld");
+				if (!!item && MagicWandItems.indexOf(item.Asset?.Name) > -1) 
+					results.push(item);
+			} else if (itemType == "QuaffableItem") {
+				let item = InventoryGet(C, "ItemHandheld");
+				if (!!item && QuaffableItems.indexOf(item.Asset?.Name) > -1) 
+					results.push(item);
 			}
 			return results;
 		}, ModuleCategory.ItemUse);

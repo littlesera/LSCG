@@ -6,7 +6,7 @@ import { getModule } from "modules";
 import { GuiInjector } from "Settings/injector";
 import { InjectorSettingsModel } from "Settings/Models/injector";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
-import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, setOrIgnoreBlush, isPhraseInString, settingsSave, hookFunction, getCharacter, AUDIO, getPlayerVolume, OnAction, LSCG_SendLocal, addCustomEffect, removeCustomEffect, hookBCXCurse, GetTargetCharacter, GetActivityName, GetMetadata, GetActivityEntryFromContent, IsActivityAllowed } from "../utils";
+import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, setOrIgnoreBlush, isPhraseInString, settingsSave, hookFunction, getCharacter, AUDIO, getPlayerVolume, OnAction, LSCG_SendLocal, addCustomEffect, removeCustomEffect, hookBCXCurse, GetTargetCharacter, GetActivityName, GetMetadata, GetActivityEntryFromContent, IsActivityAllowed, GetHandheldItemNameAndDescriptionConcat } from "../utils";
 import { ActivityModule, CustomAction, CustomPrerequisite } from "./activities";
 import { HypnoModule } from "./hypno";
 import { MiscModule } from "./misc";
@@ -500,19 +500,6 @@ export class InjectorModule extends BaseModule {
 
     InjectionLocationTable: Map<string, number> = new Map<string, number>(Object.entries(locationObj))
 
-    GetHandheldItemNameAndDescriptionConcat(C?: Character | null): string | undefined {
-        if (!C)
-            C = Player;
-
-        var asset = InventoryGet(C, "ItemHandheld");
-        if (!asset?.Craft)
-            return;
-        
-        var name = asset.Craft.Name;
-        var description = asset.Craft.Description;
-        return name + " | " + description;
-    }
-
     GetDrugTypes(item: CraftingItem): DrugType[] {
         var name = item.Name;
         var description = item.Description;
@@ -820,7 +807,7 @@ export class InjectorModule extends BaseModule {
         if (!item || !item.Asset || allowedNetGuns.indexOf(item.Asset.Name) == -1)
             return false;
 
-        var totalString = this.GetHandheldItemNameAndDescriptionConcat();
+        var totalString = GetHandheldItemNameAndDescriptionConcat();
         if (!totalString)
             return false;
 
@@ -870,7 +857,7 @@ export class InjectorModule extends BaseModule {
     GetCraftedNet(): CraftingItem | undefined {
         let netgun = InventoryGet(Player, "ItemHandheld");
         let netgunCraft = netgun?.Craft;
-        var netgunStr = this.GetHandheldItemNameAndDescriptionConcat() ?? "";
+        var netgunStr = GetHandheldItemNameAndDescriptionConcat() ?? "";
         if (!netgunCraft || !netgunStr)
             return;
 

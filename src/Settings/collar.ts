@@ -44,6 +44,8 @@ export class GuiCollar extends GuiSubscreen {
 					label: "Sleep time (minutes):",
 					description: "How long you will sleep after passout if enabled.",
 					disabled: !this.settings.knockout,
+					hidden: false,
+					options: [],
 					setting: () => (this.settings.knockoutMinutes ?? 2),
 					setSetting: (val) => this.settings.knockoutMinutes = Math.max(Math.min(val, 10), 1)
 				}
