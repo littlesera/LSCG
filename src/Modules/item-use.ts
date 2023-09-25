@@ -14,11 +14,15 @@ export const CameraItems: string[] = [
 ];
 
 export const MagicWandItems: string[] = [
-	"RainbowWand"
+	"RainbowWand",
+	"VibratingWand",
+	"SmallVibratingWand"
 ]
 
 export const QuaffableItems: string[] = [
-	"PotionBottle"
+	"PotionBottle",
+	"GlassFilled",
+	"Mug"
 ]
 
 export class ActivityRoll {
