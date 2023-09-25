@@ -229,13 +229,19 @@ export class StateModule extends BaseModule {
             return next(args);
         }, ModuleCategory.States);
 
+        hookFunction('Player.CanTalk', 1, (args, next) => {
+            if (this.Enabled && this.AnyRestrictions(r => r.Speech))
+                return false;
+            return next(args);
+        }, ModuleCategory.States)
+
         hookFunction('Player.CanWalk', 1, (args, next) => {
             if (this.Enabled && this.AnyRestrictions(r => r.Walk))
                 return false;
             return next(args);
         }, ModuleCategory.States);
 
-        hookFunction('Player.CanChangeOwnClothes', 1, (args, next) => {
+        hookFunction('Player.CanChangeClothesOn', 1, (args, next) => {
             if (this.Enabled && this.AnyRestrictions(r => r.Wardrobe))
                 return false;
             return next(args);
@@ -265,10 +271,15 @@ export class StateModule extends BaseModule {
             return next(args);
         }, ModuleCategory.States);
 
-        hookFunction('ChatRoomFocusCharacter', 6, (args, next) => {
-            let accessBlockedStates = this.GetRestrictions(r => r.CharacterAccess);
+        hookFunction('CharacterCanKneel', 1, (args, next) => {
+            if (this.Enabled && this.AnyRestrictions(r => r.Kneel))
+                return false;
+            return next(args);
+        }, ModuleCategory.States);
+
+        hookFunction('CharacterCanChangeToPose', 6, (args, next) => {
+            let accessBlockedStates = this.GetRestrictions(r => r.ChangePose);
             if (this.Enabled && accessBlockedStates.length > 0) {
-                LSCG_SendLocal(`Character access blocked while ${accessBlockedStates[0].Type}.`, 5000);
                 return;
             }
             return next(args);

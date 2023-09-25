@@ -1,4 +1,4 @@
-import { SendAction, addCustomEffect, getRandomInt, removeCustomEffect } from "utils";
+import { SendAction, addCustomEffect, getRandomInt, hookFunction, removeCustomEffect } from "utils";
 import { BaseState, StateRestrictions } from "./BaseState";
 import { StateModule } from "Modules/states";
 
@@ -14,7 +14,7 @@ export class FrozenState extends BaseState {
 
     constructor(state: StateModule) {
         super(state);
-        this.Restrictions.CharacterAccess = "true";
+        this.Restrictions.ChangePose = "true";
         this.Restrictions.Stand = "true";
         this.Restrictions.Kneel = "true";
         this.Restrictions.Wardrobe = "true";
@@ -22,7 +22,13 @@ export class FrozenState extends BaseState {
         this.Restrictions.Speech = "true";
     }
 
-    Init(): void {}
+    Init(): void {
+        hookFunction("CharacterCanChangeToPose", 1, (args, next) => {
+            if (this.Active)
+                return false;
+            return next(args);
+        })
+    }
 
     Tick(now: number) {}
 

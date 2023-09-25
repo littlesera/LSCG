@@ -15,7 +15,7 @@ export class SleepState extends BaseState {
     constructor(state: StateModule) {
         super(state);
         this.Restrictions.Walk = "whenImmersive";
-        this.Restrictions.CharacterAccess = "true";
+        this.Restrictions.ChangePose = "true";
         this.Restrictions.Wardrobe = "true";
         this.Restrictions.Hearing = "true";
         this.Restrictions.Sight = "true";
