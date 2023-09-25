@@ -82,7 +82,6 @@ export class HypnoState extends BaseState {
     }
 
     RoomSync() {
-        //this.SetHypnotizedFace();
         this.IdleEmote();
     }
 
@@ -188,6 +187,7 @@ export class HypnoState extends BaseState {
         delete this.extensions["existingEye2Color"];
 
         settingsSave();
+        ChatRoomCharacterUpdate(Player);
     }
 
     ArousalTick() {
