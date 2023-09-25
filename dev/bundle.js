@@ -445,7 +445,7 @@ var LSCG = (function (exports) {
 	function LSCG_SendLocal(msg, time) {
 	    var bgColor = (Player.ChatSettings.ColorTheme.indexOf("Light") > -1) ? "#D7F6E9" : "#23523E";
 	    let text = `<div style='background-color:${bgColor};'>${msg}</div>`;
-	    ChatRoomSendLocal(text, time !== null && time !== void 0 ? time : 4000);
+	    ChatRoomSendLocal(text);
 	}
 	function excludeParentheticalContent(msg) {
 	    var result = "";
