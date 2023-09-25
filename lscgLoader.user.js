@@ -17,6 +17,6 @@
     var script = document.createElement("script");
     script.type = "module";
     script.setAttribute("crossorigin", "anonymous");
-    script.src = "https://littlesera.github.io/LSCG/bundle.js";
+    script.src = "https://littlesera.github.io/LSCG/bundle.js?" + Date.now();
     document.head.appendChild(script);
 })();
