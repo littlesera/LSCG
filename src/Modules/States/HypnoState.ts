@@ -1,6 +1,6 @@
 import { StateConfig } from "Settings/Models/states";
 import { BaseState, StateRestrictions } from "./BaseState";
-import { ICONS, SendAction, getRandomInt, hookFunction, setOrIgnoreBlush, settingsSave } from "utils";
+import { ICONS, LSCG_SendLocal, SendAction, getRandomInt, hookFunction, setOrIgnoreBlush, settingsSave } from "utils";
 import { getModule } from "modules";
 import { HypnoModule } from "Modules/hypno";
 import { HypnoSettingsModel } from "Settings/Models/hypno";
@@ -25,6 +25,7 @@ export class HypnoState extends BaseState {
         super(stateModule);
         this.Restrictions.Speech = "true";
         this.Restrictions.Walk = "whenImmersive";
+        this.Restrictions.Wardrobe = "true";
     }
 
     Init() {
@@ -49,33 +50,39 @@ export class HypnoState extends BaseState {
             return next(args);
         }, ModuleCategory.States);
 
+        hookFunction("DialogClickExpressionMenu", 5, (args, next) => {
+            const I = DialogFacialExpressions.findIndex(a => a.Appearance.Asset.Group.Name === "Eyes");
+            if (this.StateModule.Enabled && MouseIn(20, 185 + 100 * I, 90, 90)) {
+                LSCG_SendLocal("Your eyes remain unfocused and blank while hypnotized.");
+                return;
+            }
+            return next(args);
+        }, ModuleCategory.States);
+
         if (!this.config.activatedAt) {
             this.config.activatedAt = 0;
             this.config.recoveredAt = 0;
             settingsSave();
         }
-        if (!!this.extensions["existingEye1Name"])
-            this.ResetEyes();
     }
 
     Activate(memberNumber?: number, emote?: boolean) {
         if (!this.Active) {
-            this.SetEyes();
-            this.CheckHypnotizedState();
             super.Activate(memberNumber, emote);
+            this.SaveExistingEyes();
+            this.SetHypnotizedFace();
         }
     }
 
     Recover(emote?: boolean) {
         if (this.Active) {
             this.ResetEyes();
-            CharacterSetFacialExpression(Player, "Eyes", null);
             super.Recover(emote);
         }
     }
 
     RoomSync() {
-        this.CheckHypnotizedState();
+        //this.SetHypnotizedFace();
         this.IdleEmote();
     }
 
@@ -110,18 +117,17 @@ export class HypnoState extends BaseState {
     }
 
     // Hypnosis Handling
-    CheckHypnotizedState() {
+    SetHypnotizedFace() {
         if (this.Active) {
-            this.EnforceEyes();
             setOrIgnoreBlush("Medium");
-            CharacterSetFacialExpression(Player, "Eyebrows", "Lowered");
-            CharacterSetFacialExpression(Player, "Eyes", "Dazed");
             CharacterSetFacialExpression(Player, "Fluids", "DroolLow");    
             CharacterSetFacialExpression(Player, "Mouth", null);   
+            this.SetHypnoEyes();
+            ChatRoomCharacterUpdate(Player);
         }
     }
 
-    SetEyes() {
+    SaveExistingEyes() {
         if (!this.extensions["existingEye1Name"]) {
             this.extensions["existingEye1Name"] = InventoryGet(Player, "Eyes")?.Asset.Name;
             this.extensions["existingEye1Color"] = InventoryGet(Player, "Eyes")?.Color;
@@ -129,12 +135,10 @@ export class HypnoState extends BaseState {
             this.extensions["existingEye2Color"] = InventoryGet(Player, "Eyes2")?.Color;
             this.extensions["existingEyeExpression"] = WardrobeGetExpression(Player)?.Eyes ?? null;
         }
-
         settingsSave();
-        this.EnforceEyes();
     }
 
-    EnforceEyes() {
+    SetHypnoEyes() {
         let hypnoSettings = getModule<HypnoModule>("HypnoModule")?.settings;
         var eyeAsset1 = AssetGet("Female3DCG", "Eyes", "Eyes" + hypnoSettings.hypnoEyeType ?? 9);
         if (!eyeAsset1)
@@ -156,7 +160,8 @@ export class HypnoState extends BaseState {
             eyes2.Color = hypnoSettings.hypnoEyeColor ?? "#A2A2A2";
         }
 
-        ChatRoomCharacterUpdate(Player);
+        CharacterSetFacialExpression(Player, "Eyes", "Dazed");
+        CharacterSetFacialExpression(Player, "Eyebrows", "Lowered");
     }
 
     ResetEyes() {
@@ -177,12 +182,11 @@ export class HypnoState extends BaseState {
 
         CharacterSetFacialExpression(Player, "Eyes", this.extensions["existingEyeExpression"] ?? null);
 
-        ChatRoomCharacterUpdate(Player);
-
         delete this.extensions["existingEye1Name"];
         delete this.extensions["existingEye1Color"];
         delete this.extensions["existingEye2Name"];
         delete this.extensions["existingEye2Color"];
+
         settingsSave();
     }
 
