@@ -3,6 +3,7 @@ import commonjs from '@rollup/plugin-commonjs';
 import json from '@rollup/plugin-json';
 import typescript from '@rollup/plugin-typescript';
 import resolve from "@rollup/plugin-node-resolve";
+import terser from "@rollup/plugin-terser";
 import progress from 'rollup-plugin-progress';
 import packageJson from "./package.json" assert { type: "json" };
 import simpleGit from "simple-git";
@@ -40,7 +41,10 @@ console.debug("LSCG: Parse start...");
       // });
       LSCG_VERSION = (LSCG_VERSION.length > 0 && LSCG_VERSION[0] == 'v') ? LSCG_VERSION : "v" + LSCG_VERSION;
       return `const LSCG_VERSION="${LSCG_VERSION}";`;
-    }
+    },
+    plugins: [terser({
+      mangle: false
+    })]
   },
   treeshake: false,
   plugins: [
