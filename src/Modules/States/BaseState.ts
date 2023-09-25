@@ -12,9 +12,11 @@ export interface StateRestrictions {
     Hearing: LSCGImmersiveOption;
     Sight: LSCGImmersiveOption;
     Wardrobe: LSCGImmersiveOption;
-    ChangePose: LSCGImmersiveOption;
+    Move: LSCGImmersiveOption;
     Speech: LSCGImmersiveOption;
     Restrained: LSCGImmersiveOption;
+    Eyes: LSCGImmersiveOption;
+    Emoticon: LSCGImmersiveOption;
 }
 
 export abstract class BaseState {
@@ -25,7 +27,7 @@ export abstract class BaseState {
         Hearing: "false",
         Sight: "false",
         Wardrobe: "false",
-        ChangePose: "false",
+        Move: "false",
         Speech: "false"
     };
 

@@ -122,21 +122,6 @@ export class HypnoModule extends BaseModule {
             return next(args);
         }, ModuleCategory.Hypno);
 
-        hookFunction('ServerSend', 5, (args, next) => {
-            if (!this.Enabled)
-                return next(args);
-            
-            if (this.hypnoActivated) {
-                var type = args[0];
-                if (type == "ChatRoomChat" && args[1].Type == "Chat" && args[1]?.Content[0] != "("){
-                    SendAction(this.hypnoBlockStrings[getRandomInt(this.hypnoBlockStrings.length)]);
-                    return null;
-                }
-                return next(args);
-            }
-            return next(args);
-        }, ModuleCategory.Hypno);
-
         let lastHornyCheck = 0;
         let lastCycleCheck = 0;
         hookFunction('TimerProcess', 1, (args, next) => {
@@ -233,14 +218,6 @@ export class HypnoModule extends BaseModule {
         });
         return msg;
     }
-
-    hypnoBlockStrings = [
-        "%NAME%'s eyelids flutter as a thought tries to enter %POSSESSIVE% blank mind...",
-        "%NAME% sways weakly in %POSSESSIVE% place, drifting peacefully...",
-        "%NAME% trembles as something deep and forgotten fails to resurface...",
-        "%NAME% moans softly as %PRONOUN% drops even deeper into trance...",
-        "%NAME% quivers, patiently awaiting something to fill %POSSESSIVE% empty head..."
-    ];
 
     delayedHypnoStrings = [
         "%NAME%'s eyes flutter as %PRONOUN% fights to keep control of %POSSESSIVE% senses...",

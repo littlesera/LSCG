@@ -14,7 +14,7 @@ export class FrozenState extends BaseState {
 
     constructor(state: StateModule) {
         super(state);
-        this.Restrictions.ChangePose = "true";
+        this.Restrictions.Move = "true";
         this.Restrictions.Stand = "true";
         this.Restrictions.Kneel = "true";
         this.Restrictions.Wardrobe = "true";

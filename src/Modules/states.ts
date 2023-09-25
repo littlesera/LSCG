@@ -160,40 +160,6 @@ export class StateModule extends BaseModule {
             return ret;
         }, ModuleCategory.States);
 
-        // hookFunction("ChatRoomClickCharacter", 1, (args, next) => {
-        //     let C = args[0] as OtherCharacter;
-        //     let CharX = args[1] as number;
-        //     let CharY = args[2] as number;
-        //     let Zoom = args[3] as number;
-        //     let validStates = C.LSCG?.StateModule.states.filter(s => s.active);
-        //     let clickHandled = false;
-        //     if (
-        //         !!C && !!C.LSCG && !!C.LSCG.StateModule &&
-        //         typeof CharX === "number" &&
-        //         typeof CharY === "number" &&
-        //         typeof Zoom === "number" &&
-        //         ChatRoomHideIconState === 0 &&
-        //         C.IsPlayer() &&
-        //         validStates.length > 0
-        //     ) {
-        //         validStates.forEach((state, ix, arr) => {
-        //             let iconSize = 30;
-        //             let xOffset = (ix+1) * 40 * Zoom;
-        //             let iconCoords = {
-        //                 x: CharX + xOffset * Zoom,
-        //                 y: CharY + 60 * Zoom,
-        //                 w: iconSize * Zoom,
-        //                 h: iconSize * Zoom
-        //             };
-        //             if (MouseIn(iconCoords.x, iconCoords.y, iconCoords.w, iconCoords.h)) {
-        //                 this.ClickResist(state);
-        //             }
-        //         });
-        //     }
-        //     if (!clickHandled)
-        //         return next(args);
-        // })
-
         // General Hooks
         hookFunction("ChatRoomSync", 10, (args, next) => {
             next(args);
@@ -278,8 +244,38 @@ export class StateModule extends BaseModule {
         }, ModuleCategory.States);
 
         hookFunction('CharacterCanChangeToPose', 6, (args, next) => {
-            let accessBlockedStates = this.GetRestrictions(r => r.ChangePose);
-            if (this.Enabled && accessBlockedStates.length > 0) {
+            if (this.Enabled && this.AnyRestrictions(r => r.Move)) {
+                return;
+            }
+            return next(args);
+        }, ModuleCategory.States);
+
+        hookFunction("DialogClickExpressionMenu", 5, (args, next) => {
+            const eyes = DialogFacialExpressions.findIndex(a => a.Appearance.Asset.Group.Name === "Eyes");
+            const emoticon = DialogFacialExpressions.findIndex(a => a.Appearance.Asset.Group.Name === "Emoticon");
+            const allExceptEmoticon = DialogFacialExpressions.filter((exp, ix, arr) => ix !== emoticon).map(exp => DialogFacialExpressions.indexOf(exp));
+            let eyeChangeButton = [20, 185 + 100 * eyes, 90, 90];
+            let emoticonChangeButton = [20, 185 + 100 * emoticon, 90, 90];
+            let clearExpButton = [20, 50, 90, 90];
+            let winkButton = [120, 50, 90, 90];
+            
+            let eyeBlockMousePos = [eyeChangeButton, winkButton, clearExpButton];
+            let expressionButtonsOtherThanEmoticon = allExceptEmoticon.map(ix => [20, 185 + 100 * ix, 90, 90]);
+            let moveBlockMousePos = expressionButtonsOtherThanEmoticon.concat(eyeBlockMousePos).filter((val, ix, arr) => arr.indexOf(val) == ix);
+
+            const eyeBlock = this.AnyRestrictions(r => r.Eyes) && eyeBlockMousePos.some(arr => MouseIn(arr[0], arr[1], arr[2], arr[3]));
+            const moveBlock = this.AnyRestrictions(r => r.Move) && moveBlockMousePos.some(arr => MouseIn(arr[0], arr[1], arr[2], arr[3]));;
+            const emoticonBlock = this.AnyRestrictions(r => r.Emoticon) && MouseIn(emoticonChangeButton[0], emoticonChangeButton[1], emoticonChangeButton[2], emoticonChangeButton[3]);
+            if (this.Enabled && (moveBlock || eyeBlock || emoticonBlock)) {
+                return;
+            }
+            return next(args);
+        }, ModuleCategory.States);        
+
+        hookFunction("DialogFacialExpressionsLoad", 5, (args, next) => {
+            const eyeBlock = this.AnyRestrictions(r => r.Eyes);
+            const moveBlock = this.AnyRestrictions(r => r.Move);
+            if (this.Enabled && (eyeBlock || moveBlock)) {
                 return;
             }
             return next(args);
