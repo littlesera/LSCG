@@ -3,13 +3,13 @@ import { getModule, modules } from "modules";
 import { BaseSettingsModel, GlobalSettingsModel } from "Settings/Models/base";
 import { IPublicSettingsModel, PublicSettingsModel, SettingsModel } from "Settings/Models/settings";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { removeAllHooksByModule, hookFunction, getCharacter, drawSvg, SVG_ICONS, sendLSCGMessage, settingsSave, LSCG_CHANGES, LSCG_SendLocal, getCharacterByNicknameOrMemberNumber, mouseTooltip } from "../utils";
+import { removeAllHooksByModule, hookFunction, getCharacter, drawSvg, SVG_ICONS, sendLSCGMessage, settingsSave, LSCG_CHANGES, LSCG_SendLocal, mouseTooltip } from "../utils";
 import { ActivityModule, GrabType } from "./activities";
 import { HypnoModule } from "./hypno";
 import { CollarModule } from "./collar";
 
-import * as semver from "semver";
-import { StateConfig } from "Settings/Models/states";
+//import * as semver from "semver";
+import { lt } from "semver";
 import { BaseMigrator } from "./Migrators/BaseMigrator";
 import { StateMigrator } from "./Migrators/StateMigrator";
 import { MagicModule } from "./magic";
@@ -192,7 +192,7 @@ export class CoreModule extends BaseModule {
             fromVersion = fromVersion.substring(1);
 
         this.Migrators.forEach(m => {
-            if (semver.lt(fromVersion, m.Version))
+            if (lt(fromVersion, m.Version))
                 m.Migrate(fromVersion);
         });
 
