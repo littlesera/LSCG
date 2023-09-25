@@ -437,7 +437,7 @@ export function sendLSCGCommandBeep(target: number, commandName: LSCGCommandName
 export function LSCG_SendLocal(msg: string, time?: number) {
 	var bgColor = (Player.ChatSettings!.ColorTheme!.indexOf("Light") > -1) ? "#D7F6E9" : "#23523E";
 	let text = `<div style='background-color:${bgColor};'>${msg}</div>`;
-	ChatRoomSendLocal(text, time ?? 4000);
+	ChatRoomSendLocal(text);
 }
 
 export function excludeParentheticalContent(msg: string): string {
