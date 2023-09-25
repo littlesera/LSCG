@@ -6,7 +6,10 @@ export class OrgasmSiphonedState extends PairedBaseState {
     Type: LSCGState = "orgasm-siphoned";
 
     get Icon(): string {
-        return "Assets/Female3DCG/Emoticon/Annoyed/Icon.png";
+        if (this.Pairings.some(p => p.IsSource))
+            return "Assets/Female3DCG/Emoticon/Annoyed/Icon.png";
+        else
+            return "Assets/Female3DCG/Emoticon/Tear/Icon.png";
     }
     get Label(): string {
         return "Orgasms Siphoned";
