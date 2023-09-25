@@ -15,12 +15,13 @@ export class SleepState extends BaseState {
     constructor(state: StateModule) {
         super(state);
         this.Restrictions.Walk = "whenImmersive";
-        this.Restrictions.CharacterAccess = "true";
+        this.Restrictions.Move = "true";
         this.Restrictions.Wardrobe = "true";
         this.Restrictions.Hearing = "true";
         this.Restrictions.Sight = "true";
         this.Restrictions.Speech = "true";
         this.Restrictions.Stand = "true";
+        this.Restrictions.Emoticon = "true";
     }
 
     Init() {

@@ -26,6 +26,7 @@ export class HypnoState extends BaseState {
         this.Restrictions.Speech = "true";
         this.Restrictions.Walk = "whenImmersive";
         this.Restrictions.Wardrobe = "true";
+        this.Restrictions.Eyes = "true";
     }
 
     Init() {
@@ -47,15 +48,6 @@ export class HypnoState extends BaseState {
             if (!this.StateModule.Enabled || !Player.GraphicsSettings?.AllowBlur)
                 return next(args);
             if (this.Active) return 3;
-            return next(args);
-        }, ModuleCategory.States);
-
-        hookFunction("DialogClickExpressionMenu", 5, (args, next) => {
-            const I = DialogFacialExpressions.findIndex(a => a.Appearance.Asset.Group.Name === "Eyes");
-            if (this.Active && MouseIn(20, 185 + 100 * I, 90, 90)) {
-                LSCG_SendLocal("Your eyes remain unfocused and blank while hypnotized.");
-                return;
-            }
             return next(args);
         }, ModuleCategory.States);
 
