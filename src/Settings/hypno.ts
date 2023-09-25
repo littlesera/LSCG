@@ -163,12 +163,16 @@ export class GuiHypno extends GuiSubscreen {
 						setSetting: (val) => this.settings.hypnoEyeColor = val
 					},<Setting>{
 						type: "number",
-						id: "hypno_eyeType",
+						id: "hypno_eyeType", // Consider making bigger UI for eye picking here, similar to selecting from wardrobe.
 						label: "Hypnotized Eye Type:",
 						description: "Eye type # to use while under hypnosis (default: 9).",
 						disabled: !this.settings.enabled,
 						setting: () => (this.settings.hypnoEyeType ?? 9),
-						setSetting: (val) => this.settings.hypnoEyeType = val
+						setSetting: (val) => {
+							this.settings.hypnoEyeType = Math.min(13, Math.max(0, val)) // UPDATE THIS WHEN EYE STYLES CHANGE
+							let test = AssetGet("Female3DCG", "Eyes", "Eyes" + val);
+							if (!test) this.settings.hypnoEyeType = 9; // default to style 9 if somehow we can't find a valid eye type here.
+						}
 					}
 				]
 			]
