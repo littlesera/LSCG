@@ -52,7 +52,7 @@ export class HypnoState extends BaseState {
 
         hookFunction("DialogClickExpressionMenu", 5, (args, next) => {
             const I = DialogFacialExpressions.findIndex(a => a.Appearance.Asset.Group.Name === "Eyes");
-            if (this.StateModule.Enabled && MouseIn(20, 185 + 100 * I, 90, 90)) {
+            if (this.Active && MouseIn(20, 185 + 100 * I, 90, 90)) {
                 LSCG_SendLocal("Your eyes remain unfocused and blank while hypnotized.");
                 return;
             }
