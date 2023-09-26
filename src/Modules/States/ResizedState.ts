@@ -48,7 +48,7 @@ export class ResizedState extends BaseState {
         hookFunction("ChatRoomDrawCharacter", 1, (args, next) => {
             ChatRoomCharacterDrawlist.forEach(C => {
                 let lscg = (C as OtherCharacter).LSCG;
-                if (!!lscg && lscg.StateModule.states.find(s => s.type == "resized")?.active) {
+                if (!!lscg && !! lscg.StateModule && lscg.StateModule.states && lscg.StateModule.states.find(s => s.type == "resized")?.active) {
                     let enlarge = lscg.StateModule.states.find(s => s.type == "resized")?.extensions["enlarged"] ?? false;
                     C.HeightRatio *= enlarge ? 1.5 : .75;
                 }
@@ -56,7 +56,7 @@ export class ResizedState extends BaseState {
             let ret = next(args);
             ChatRoomCharacterDrawlist.forEach(C => {
                 let lscg = (C as OtherCharacter).LSCG;
-                if (!!lscg && lscg.StateModule.states.find(s => s.type == "resized")?.active) {
+                if (!!lscg && !! lscg.StateModule && lscg.StateModule.states && lscg.StateModule.states.find(s => s.type == "resized")?.active) {
                     let originalHeightRatio = lscg.StateModule.states.find(s => s.type == "resized")?.extensions["originalHeightRatio"] ?? 1;
                     C.HeightRatio = originalHeightRatio;
                 }
