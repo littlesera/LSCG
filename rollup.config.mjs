@@ -28,8 +28,8 @@ window.LSCG_Loaded = false;
 console.debug("LSCG: Parse start...");
 `,
     intro: async () => {
-      const git = simpleGit();
-      console.log(await git.status());
+      // const git = simpleGit();
+      // console.log(await git.status());
       let LSCG_VERSION = packageJson.version;
       // await git.tags((err, tags) => {
       //   if (!!tags.latest) {

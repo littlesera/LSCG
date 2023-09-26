@@ -66,6 +66,16 @@ declare function SkillGetWithRatio(SkillType: SkillType): number;
  * @returns {void} - Nothing
  */
 declare function SkillModifierChange(Change: any): void;
+/**
+ * Set a specific skill modifier to apply for a given duration on the target character.
+ * @param {Character} C - The character to change the modifier on
+ * @param {SkillType} SkillType - The skill the modifier applies to
+ * @param {number} Value - The new value of the modifier
+ * @param {number} Duration - The length of the modifier effect, in ms
+ * @param {boolean} [Push=true] - Pushes the skills to the server if TRUE
+ * @returns {boolean} true if the new value was valid, false if it got capped.
+ */
+declare function SkillSetModifier(C: Character, SkillType: SkillType, Value: number, Duration: number, Push: boolean): number;
 declare var SkillModifier: number;
 declare var SkillModifierMax: number;
 declare var SkillModifierMin: number;

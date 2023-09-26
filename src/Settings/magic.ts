@@ -524,6 +524,10 @@ export class GuiMagic extends GuiSubscreen {
 				return "Redirect all of the target's orgasmic pleasure to another.";
 			case LSCGSpellEffect.dispell:
 				return "Dispells any existing effects on the target (including anything drug induced).";
+			case LSCGSpellEffect.bless:
+				return "Applies a +5 buff to all the target's skills for 15 minutes";
+			case LSCGSpellEffect.bane:
+				return "Applies a -5 debuff to all the target's skills for 15 minutes";
 			case LSCGSpellEffect.none:
 			default:
 				return ""			;

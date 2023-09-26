@@ -11,6 +11,8 @@ export enum LSCGSpellEffect {
     frozen = "Petrifying",
     enlarge = "Enlarging",
     reduce = "Reducing",
+    bless = "Bless",
+    bane = "Bane",
     paired_arousal = "Pairing", 
     orgasm_siphon = "Siphoning", 
     outfit = "Outfit",

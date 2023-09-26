@@ -5,6 +5,7 @@ import { getRandomInt, hookFunction, IsIncapacitated, removeAllHooksByModule, Se
 import { ActivityBundle, ActivityModule, ActivityTarget } from "./activities";
 import { BoopsModule } from "./boops";
 import { CollarModule } from "./collar";
+import { StateModule } from "./states";
 
 export const CameraItems: string[] = [
 	"Phone1",
@@ -817,6 +818,8 @@ export class ItemUseModule extends BaseModule {
 	}
 	
 	getRollMod(C: Character, Opponent?: Character, isAggressor: boolean = false): number {
+		let buffState = (C as OtherCharacter)?.LSCG?.StateModule?.states?.find(s => s.type == "buffed");
+
 		// Dominant vs Submissive ==> -3 to +3 modifier
 		let dominanceMod = Math.floor(this.getDominance(C) / 33);
 		// +5 if we own our opponent
@@ -829,8 +832,10 @@ export class ItemUseModule extends BaseModule {
 		let incapacitatedMod = IsIncapacitated(C.IsPlayer() ? C as PlayerCharacter : C as OtherCharacter) ? (isAggressor ? 5 : 100) * -1 : 0;
 		// -2 for each level of choking
 		let breathMod = (C.IsPlayer() ? getModule<CollarModule>("CollarModule").totalChokeLevel : (C as OtherCharacter).LSCG?.CollarModule.chokeLevel ?? 0) * -2;
+		// +/- 5 for buff state
+		let buffMod = (!buffState || !buffState.active) ? 0 : ((buffState.extensions["negative"] ?? false) ? -5 : 5);
 
-		let finalMod = dominanceMod + ownershipMod + restrainedMod + edgingMod + incapacitatedMod + breathMod;
+		let finalMod = dominanceMod + ownershipMod + restrainedMod + edgingMod + incapacitatedMod + breathMod + buffMod;
 	
 		console.debug(`${CharacterNickname(C)} is ${isAggressor ? 'rolling against' : 'defending against'} ${!Opponent ? "nobody" : CharacterNickname(Opponent)} [${finalMod}] --
 		dominanceMod: ${dominanceMod}
@@ -839,6 +844,7 @@ export class ItemUseModule extends BaseModule {
 		edgingMod: ${edgingMod}
 		incapacitatedMod: ${incapacitatedMod}
 		breathMod: ${breathMod}
+		buffMod: ${buffMod}
 		`);
 	
 		return finalMod;
