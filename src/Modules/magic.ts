@@ -593,16 +593,20 @@ export class MagicModule extends BaseModule {
                         this.stateModule.SleepState.Activate(sender?.MemberNumber);
                         break;
                     case LSCGSpellEffect.enlarge:
-                        SendAction(`%NAME% winces as %POSSESSIVE% body reshapes and grows to twice its size.`);
-                        this.stateModule.ResizedState.Enlarge(sender?.MemberNumber);
+                        this.stateModule.ResizedState.Enlarge(sender?.MemberNumber, true);
                         break;
                     case LSCGSpellEffect.reduce:
-                        SendAction(`%NAME% squeaks as %POSSESSIVE% body reshapes and shrinks to half its size.`);
-                        this.stateModule.ResizedState.Reduce(sender?.MemberNumber);
+                        this.stateModule.ResizedState.Reduce(sender?.MemberNumber, true);
                         break;
                     case LSCGSpellEffect.dispell:
                         SendAction("%NAME% gasps, blinking as the magic affecting %INTENSIVE% is removed.");
                         this.stateModule.Clear(true);
+                        break;
+                    case LSCGSpellEffect.bless:
+                        this.stateModule.BuffedState.Bless(sender?.MemberNumber, true);
+                        break;
+                    case LSCGSpellEffect.bane:
+                        this.stateModule.BuffedState.Bane(sender?.MemberNumber, true);
                         break;
                     case LSCGSpellEffect.outfit:
                         if (!!spell.Outfit?.Code) {

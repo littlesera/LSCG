@@ -26,13 +26,23 @@ export class ResizedState extends BaseState {
     }
 
     Enlarge(MemberNumber?: number, emote?: boolean) {
-        this.enlarged = true;
-        this.Activate(MemberNumber, emote);
+        if (this.Active && !this.enlarged)
+            this.Recover(true);
+        else {
+            this.enlarged = true;
+            if (emote) SendAction(`%NAME%'s body reshapes and grows to twice its size.`);
+            this.Activate(MemberNumber, emote);
+        }
     }
 
     Reduce(MemberNumber?: number, emote?: boolean) {
-        this.enlarged = false;
-        this.Activate(MemberNumber, emote);
+        if (this.Active && this.enlarged)
+            this.Recover(true);
+        else {
+            this.enlarged = false;
+            if (emote) SendAction(`%NAME%'s body reshapes and shrinks to half its size.`);
+            this.Activate(MemberNumber, emote);
+        }
     }
 
     Activate(memberNumber?: number | undefined, emote?: boolean | undefined): void {
@@ -40,7 +50,8 @@ export class ResizedState extends BaseState {
         super.Activate();
     }
 
-    Recover(emote?: boolean | undefined): void {        
+    Recover(emote?: boolean | undefined): void {
+        if (emote) SendAction(`%NAME%'s body returns to its normal size.`);
         super.Recover();
     }
 

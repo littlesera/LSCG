@@ -17,6 +17,7 @@ import { OrgasmSiphonedState } from "./States/OrgasmSiphonedState";
 import { getModule } from "modules";
 import { ItemUseModule } from "./item-use";
 import { ResizedState } from "./States/ResizedState";
+import { BuffedState } from "./States/BuffedState";
 
 interface StateIcon {
     Label: string;
@@ -69,6 +70,7 @@ export class StateModule extends BaseModule {
     GaggedState: GaggedState;
     ResizedState: ResizedState;
     RedressedState: RedressedState;
+    BuffedState: BuffedState;
     ArousalPairedState: ArousalPairedState;
     OrgasmSiphonedState: OrgasmSiphonedState;
 
@@ -96,6 +98,7 @@ export class StateModule extends BaseModule {
         this.GaggedState = new GaggedState(this);
         this.ResizedState = new ResizedState(this);
         this.RedressedState = new RedressedState(this);
+        this.BuffedState = new BuffedState(this);
         this.ArousalPairedState = new ArousalPairedState(this);
         this.OrgasmSiphonedState = new OrgasmSiphonedState(this);
 
@@ -110,7 +113,8 @@ export class StateModule extends BaseModule {
             this.RedressedState,
             this.ResizedState,
             this.ArousalPairedState,
-            this.OrgasmSiphonedState
+            this.OrgasmSiphonedState,
+            this.BuffedState
         ];
         
         // States module in general is always enabled. Toggling is done on each specific state.
