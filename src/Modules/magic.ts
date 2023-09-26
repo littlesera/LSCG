@@ -459,23 +459,37 @@ export class MagicModule extends BaseModule {
 
     CastSpellActual(spell: SpellDefinition | undefined, spellTarget: Character, pairedTarget?: Character) {
         if (!!spell && !!spellTarget) {
-            if (!(spellTarget as any).LSCG?.MagicModule)
+            let wand = InventoryGet(Player, "ItemHandheld");
+            if (!!wand && !!wand.Craft && wand.Craft.MemberNumber != Player.MemberNumber && getRandomInt(2) == 0) { // 50% chance of backfire when using someone else's wand
+                let crafter = getCharacter(wand.Craft.MemberNumber ?? -1);
+                let crafterName = !crafter ? "someone" : CharacterNickname(crafter);
+                if (!spellTarget.IsPlayer()) {
+                    SendAction(`%NAME% struggles to wield ${crafterName}'s ${wand.Craft.Name}, %POSSESSIVE% spell backfiring.`);
+                    spellTarget = Player;
+                } else {
+                    SendAction(`%NAME% struggles to wield ${crafterName}'s ${wand.Craft.Name}, %POSSESSIVE% spell fizzling with no effect.`);
+                }
+            }
+            else if (!(spellTarget as any).LSCG?.MagicModule) {
                 SendAction(`%NAME% casts ${spell.Name} at %OPP_NAME% but it seems to fizzle.`, spellTarget);
+                return;
+            }
             else {
                 SendAction(this.getCastingActionString(spell, InventoryGet(Player, "ItemHandheld"), spellTarget, pairedTarget), spellTarget);
-                if (spellTarget.IsPlayer())
-                    this.IncomingSpell(Player, spell, pairedTarget);
-                else
-                    sendLSCGCommand(spellTarget, "spell", [
-                        {
-                            name: "spell",
-                            value: spell
-                        }, {
-                            name: "paired",
-                            value: pairedTarget?.MemberNumber
-                        }
-                    ]);
             }
+
+            if (spellTarget.IsPlayer())
+                this.IncomingSpell(Player, spell, pairedTarget);
+            else
+                sendLSCGCommand(spellTarget, "spell", [
+                    {
+                        name: "spell",
+                        value: spell
+                    }, {
+                        name: "paired",
+                        value: pairedTarget?.MemberNumber
+                    }
+                ]);
         }
         this.CloseSpellMenu();
         DialogLeave();
