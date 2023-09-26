@@ -64,10 +64,12 @@ export class BuffedState extends BaseState {
     }
 
     Recover(emote?: boolean | undefined): void {
-        if (emote) SendAction("%NAME%'s abilities return to normal.");
-        BuffedState.BUFF_SKILLS.forEach(skill => {
-            SkillSetModifier(Player, skill, 0, 0, true);
-        })   
+        if (this.Active) {
+            if (emote) SendAction("%NAME%'s abilities return to normal.");
+            BuffedState.BUFF_SKILLS.forEach(skill => {
+                SkillSetModifier(Player, skill, 0, 0, true);
+            })
+        }
         super.Recover();
     }
 
