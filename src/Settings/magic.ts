@@ -315,6 +315,7 @@ export class GuiMagic extends GuiSubscreen {
 		if (!this.settings.enabled) {
 			if (MouseIn(800, 740, 400, 80)) {
 				this.settings.enabled = true;
+				this.Load();
 				DrawFlashScreen("#800080", 500, 1500);
 				if (!AudioShouldSilenceSound(true))
             		AudioPlaySoundEffect("SciFiBeeps", 1);
