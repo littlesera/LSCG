@@ -12,6 +12,7 @@ import { HypnoModule } from "./hypno";
 import { MiscModule } from "./misc";
 import { ItemUseModule } from "./item-use";
 import { StateModule } from "./states";
+import { MagicModule } from "./magic";
 
 type DrugType = "sedative" | "mindcontrol" | "horny" | "antidote";
 
@@ -1009,10 +1010,10 @@ export class InjectorModule extends BaseModule {
         var itemName = itemUseModule.getItemName(InventoryGet(sender, "ItemHandheld")!);
         let check = getModule<ItemUseModule>("ItemUseModule")?.MakeActivityCheck(sender, Player);
         if (check.AttackerRoll.Total >= check.DefenderRoll.Total) {
-            SendAction(`${CharacterNickname(sender)} ${check.AttackerRoll.TotalStr}manages to get their ${itemName} past ${CharacterNickname(Player)}'s ${check.DefenderRoll.TotalStr}lips, forcing %POSSESSIVE% to swallow.`);
+            SendAction(`${CharacterNickname(sender)} ${check.AttackerRoll.TotalStr}manages to get their ${itemName} past ${CharacterNickname(Player)}'s ${check.DefenderRoll.TotalStr}lips, forcing %INTENSIVE% to swallow.`);
             setTimeout(() => this.ProcessDruggedDrink(sender), 5000);
         } else {
-            SendAction(`${CharacterNickname(Player)} ${check.DefenderRoll.TotalStr}successfully defends against ${CharacterNickname(sender)}'s ${check.AttackerRoll.TotalStr}attempt to force %POSSESSIVE% to drink their ${itemName}, spilling drink all over.`);
+            SendAction(`${CharacterNickname(Player)} ${check.DefenderRoll.TotalStr}successfully defends against ${CharacterNickname(sender)}'s ${check.AttackerRoll.TotalStr}attempt to force %INTENSIVE% to drink their ${itemName}, spilling drink all over.`);
         }
     }
 

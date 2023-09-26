@@ -92,6 +92,11 @@ export class MagicModule extends BaseModule {
         return ChatRoomCharacter.filter(c => !!c && !!(c as any).LSCG && !!(c as any).LSCG.MagicModule && c.MemberNumber != spellTarget?.MemberNumber);
     }
 
+    drinkActivityNames: string[] = [
+        "LSCG_Quaff",
+        "SipItem"
+    ]
+
     load(): void {
         let activities = getModule<ActivityModule>("ActivityModule");
 
@@ -119,13 +124,10 @@ export class MagicModule extends BaseModule {
             let meta = GetMetadata(data);
             var activityName = meta?.ActivityName;
             var target = meta?.TargetMemberNumber;
-            if (target == Player.MemberNumber && activityName == "LSCG_Quaff" && !!sender) {
-                let gagType = getModule<InjectorModule>("InjectorModule")?.GetGagDrinkAccess(Player);
-                if (gagType == "nothing" && sender.MemberNumber != Player.MemberNumber) {
-                    this.TryForcePotion(sender);
-                } else {
-                    this.ProcessPotion(sender);
-                }
+            if (target == Player.MemberNumber && 
+                this.drinkActivityNames.indexOf(activityName ?? "") > -1 && 
+                !!sender) {
+                this.HandleQuaff(sender);
             }
         });
 
@@ -459,23 +461,37 @@ export class MagicModule extends BaseModule {
 
     CastSpellActual(spell: SpellDefinition | undefined, spellTarget: Character, pairedTarget?: Character) {
         if (!!spell && !!spellTarget) {
-            if (!(spellTarget as any).LSCG?.MagicModule)
+            let wand = InventoryGet(Player, "ItemHandheld");
+            if (!!wand && !!wand.Craft && wand.Craft.MemberNumber != Player.MemberNumber && getRandomInt(2) == 0) { // 50% chance of backfire when using someone else's wand
+                let crafter = getCharacter(wand.Craft.MemberNumber ?? -1);
+                let crafterName = !crafter ? "someone" : CharacterNickname(crafter);
+                if (!spellTarget.IsPlayer()) {
+                    SendAction(`%NAME% struggles to wield ${crafterName}'s ${wand.Craft.Name}, %POSSESSIVE% spell backfiring.`);
+                    spellTarget = Player;
+                } else {
+                    SendAction(`%NAME% struggles to wield ${crafterName}'s ${wand.Craft.Name}, %POSSESSIVE% spell fizzling with no effect.`);
+                }
+            }
+            else if (!(spellTarget as any).LSCG?.MagicModule) {
                 SendAction(`%NAME% casts ${spell.Name} at %OPP_NAME% but it seems to fizzle.`, spellTarget);
+                return;
+            }
             else {
                 SendAction(this.getCastingActionString(spell, InventoryGet(Player, "ItemHandheld"), spellTarget, pairedTarget), spellTarget);
-                if (spellTarget.IsPlayer())
-                    this.IncomingSpell(Player, spell, pairedTarget);
-                else
-                    sendLSCGCommand(spellTarget, "spell", [
-                        {
-                            name: "spell",
-                            value: spell
-                        }, {
-                            name: "paired",
-                            value: pairedTarget?.MemberNumber
-                        }
-                    ]);
             }
+
+            if (spellTarget.IsPlayer())
+                setTimeout(() => this.IncomingSpell(Player, spell, pairedTarget), 1000);
+            else
+                sendLSCGCommand(spellTarget, "spell", [
+                    {
+                        name: "spell",
+                        value: spell
+                    }, {
+                        name: "paired",
+                        value: pairedTarget?.MemberNumber
+                    }
+                ]);
         }
         this.CloseSpellMenu();
         DialogLeave();
@@ -507,23 +523,33 @@ export class MagicModule extends BaseModule {
     // ********************** INCOMING *************************
 
     IncomingSpellCommand(sender: Character | null, msg: LSCGMessageModel) {
-        if (msg.command?.name == "spell") {
-            let paired = getCharacter((msg.command?.args.find(arg => arg.name == "paired")?.value as number));
-            let spell = msg.command?.args?.find(arg => arg.name == "spell")?.value as SpellDefinition;
-            if (!spell)
-                return;
-            this.IncomingSpell(sender, spell, paired);
-        }
-        else if (msg.command?.name == "pair") {
-            let origin = getCharacter(msg.command?.args.find(arg => arg.name == "paired")?.value as number);
-            let spellEffect = msg.command?.args?.find(arg => arg.name == "spell-effect")?.value as LSCGSpellEffect;
-            let pairType = msg.command?.args?.find(arg => arg.name == "pair-type")?.value as LSCGState;
-            if (!!origin && !!spellEffect && !!pairType)
-                this.IncomingSpellPair(sender, spellEffect, origin, pairType);
-            else if (!!sender && !origin) {
-                SendAction(`${CharacterNickname(sender)}'s paired spell fizzles because the origin target has left.`);
+        setTimeout(() => {
+            if (msg.command?.name == "spell") {
+                let paired = getCharacter((msg.command?.args.find(arg => arg.name == "paired")?.value as number));
+                let spell = msg.command?.args?.find(arg => arg.name == "spell")?.value as SpellDefinition;
+                if (!spell)
+                    return;
+                let spellIsJustDispell = spell.Effects.length == 1 && spell.Effects[0] == LSCGSpellEffect.dispell;
+                if (!!sender && !spellIsJustDispell) {
+                    let check = getModule<ItemUseModule>("ItemUseModule")?.MakeActivityCheck(sender, Player);
+                    if (check.AttackerRoll.Total < check.DefenderRoll.Total) {
+                        SendAction(`${CharacterNickname(Player)} ${check.DefenderRoll.TotalStr}successfully saves against ${CharacterNickname(sender)}'s ${check.AttackerRoll.TotalStr}${spell.Name}.`);
+                        return;
+                    }
+                }
+                this.IncomingSpell(sender, spell, paired);
             }
-        }
+            else if (msg.command?.name == "pair") {
+                let origin = getCharacter(msg.command?.args.find(arg => arg.name == "paired")?.value as number);
+                let spellEffect = msg.command?.args?.find(arg => arg.name == "spell-effect")?.value as LSCGSpellEffect;
+                let pairType = msg.command?.args?.find(arg => arg.name == "pair-type")?.value as LSCGState;
+                if (!!origin && !!spellEffect && !!pairType)
+                    this.IncomingSpellPair(sender, spellEffect, origin, pairType);
+                else if (!!sender && !origin) {
+                    SendAction(`${CharacterNickname(sender)}'s paired spell fizzles because the origin target has left.`);
+                }
+            }
+        }, 1000); // Slight delay on responding to spell commands, builds anticipation.
     }
 
     IncomingSpell(sender: Character | null, spell: SpellDefinition, paired?: Character | null) {
@@ -566,8 +592,16 @@ export class MagicModule extends BaseModule {
                         SendAction("%NAME% succumbs to the spell's overwhelming pressure, %POSSESSIVE% eyes closing as %PRONOUN% falls unconscious.");
                         this.stateModule.SleepState.Activate(sender?.MemberNumber);
                         break;
+                    case LSCGSpellEffect.enlarge:
+                        SendAction(`%NAME% winces as %POSSESSIVE% body reshapes and grows to twice its size.`);
+                        this.stateModule.ResizedState.Enlarge(sender?.MemberNumber);
+                        break;
+                    case LSCGSpellEffect.reduce:
+                        SendAction(`%NAME% squeaks as %POSSESSIVE% body reshapes and shrinks to half its size.`);
+                        this.stateModule.ResizedState.Reduce(sender?.MemberNumber);
+                        break;
                     case LSCGSpellEffect.dispell:
-                        SendAction("%NAME% gasps, blinking as %PRONOUN% is restored to normal.");
+                        SendAction("%NAME% gasps, blinking as the magic affecting %INTENSIVE% is removed.");
                         this.stateModule.Clear(true);
                         break;
                     case LSCGSpellEffect.outfit:
@@ -659,18 +693,31 @@ export class MagicModule extends BaseModule {
     }
 
     // ***************** Potions *******************
+    HandleQuaff(sender: Character) {
+        let item = InventoryGet(sender, "ItemHandheld");
+        let spell = this.GetSpellFromItem(item);
+        if (!!spell) {
+            let gagType = getModule<InjectorModule>("InjectorModule")?.GetGagDrinkAccess(Player);
+            if (gagType == "nothing" && sender.MemberNumber != Player.MemberNumber) {
+                this.TryForcePotion(sender);
+            } else {
+                this.ProcessPotion(sender);
+            }
+        }
+    }
+
     TryForcePotion(sender: Character) {
         let itemUseModule = getModule<ItemUseModule>("ItemUseModule");
         if (!itemUseModule) {
             return this.ProcessPotion(sender);
         }
         var itemName = itemUseModule.getItemName(InventoryGet(sender, "ItemHandheld")!);
-        let check = getModule<ItemUseModule>("ItemUseModule")?.MakeActivityCheck(sender, Player);
+        let check = itemUseModule?.MakeActivityCheck(sender, Player);
         if (check.AttackerRoll.Total >= check.DefenderRoll.Total) {
-            SendAction(`${CharacterNickname(sender)} ${check.AttackerRoll.TotalStr}manages to get their ${itemName} past ${CharacterNickname(Player)}'s ${check.DefenderRoll.TotalStr}lips, forcing %POSSESSIVE% to swallow it.`);
+            SendAction(`${CharacterNickname(sender)} ${check.AttackerRoll.TotalStr}manages to get their ${itemName} past ${CharacterNickname(Player)}'s ${check.DefenderRoll.TotalStr}lips, forcing %INTENSIVE% to swallow it.`);
             setTimeout(() => this.ProcessPotion(sender), 5000);
         } else {
-            SendAction(`${CharacterNickname(Player)} ${check.DefenderRoll.TotalStr}successfully defends against ${CharacterNickname(sender)}'s ${check.AttackerRoll.TotalStr}attempt to force %POSSESSIVE% to drink their ${itemName}.`);
+            SendAction(`${CharacterNickname(Player)} ${check.DefenderRoll.TotalStr}successfully defends against ${CharacterNickname(sender)}'s ${check.AttackerRoll.TotalStr}attempt to force %INTENSIVE% to drink their ${itemName}.`);
         }
     }
 

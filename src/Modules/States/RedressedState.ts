@@ -6,10 +6,10 @@ import { OutfitConfig, OutfitOption } from "Settings/Models/magic";
 export class RedressedState extends BaseState {
     Type: LSCGState = "redressed";
 
-    get Icon(): string {
+    Icon(C: OtherCharacter): string {
         return "Icons/Dress.png";
     }
-    get Label(): string {
+    Label(C: OtherCharacter): string {
         return "Redressed";
     }
 

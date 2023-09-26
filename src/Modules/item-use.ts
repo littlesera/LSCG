@@ -20,9 +20,9 @@ export const MagicWandItems: string[] = [
 ]
 
 export const QuaffableItems: string[] = [
-	"PotionBottle",
-	"GlassFilled",
-	"Mug"
+	"PotionBottle"
+	// "GlassFilled",
+	// "Mug"
 ]
 
 export class ActivityRoll {

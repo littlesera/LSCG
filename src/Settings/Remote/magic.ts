@@ -4,6 +4,7 @@ import { HypnoPublicSettingsModel } from "Settings/Models/hypno";
 import { GetDelimitedList, ICONS } from "utils";
 import { StateConfig } from "Settings/Models/states";
 import { LSCGSpellEffect, MagicPublicSettingsModel } from "Settings/Models/magic";
+import { GuiMagic } from "Settings/magic";
 
 export class RemoteMagic extends RemoteGuiSubscreen {
 	subscreens: RemoteGuiSubscreen[] = [];
@@ -137,7 +138,7 @@ export class RemoteMagic extends RemoteGuiSubscreen {
 		DrawCheckbox(780 + 600 + 64, this.getYPos(6) - 32, 64, 64, "", val);
 
 		MainCanvas.textAlign = "left";
-		DrawTextFit(this.SpellEffectDescription(this.Effect), 780, this.getYPos(7), 1000, "Black");
+		DrawTextFit(GuiMagic.SpellEffectDescription(this.Effect), 780, this.getYPos(7), 1000, "Black");
 		MainCanvas.textAlign = prev;
 	}
 
@@ -163,34 +164,4 @@ export class RemoteMagic extends RemoteGuiSubscreen {
 		return Object.values(LSCGSpellEffect);
 	}
 	EffectIndex: number = 0;
-
-	SpellEffectDescription(effect: LSCGSpellEffect): string {
-		switch (effect) {
-			case LSCGSpellEffect.blindness:
-				return "Prevents the target from seeing.";
-			case LSCGSpellEffect.deafened:
-				return "Prevents the target from hearing.";
-			case LSCGSpellEffect.muted:
-				return "Gags the target.";
-			case LSCGSpellEffect.frozen:
-				return "Petrifies the target.";
-			case LSCGSpellEffect.horny:
-				return "Arouses the target.";
-			case LSCGSpellEffect.hypnotizing:
-				return "Hypnotizes the target.";
-			case LSCGSpellEffect.slumber:
-				return "Induces a deep slumber in the target.";
-			case LSCGSpellEffect.outfit:
-				return "Magically change the target's clothing and equipment.";
-			case LSCGSpellEffect.paired_arousal:
-				return "Pair two targets, such that when one feels arousal the other also does.";
-			case LSCGSpellEffect.orgasm_siphon:
-				return "Redirect all of the target's orgasmic pleasure to another.";
-			case LSCGSpellEffect.dispell:
-				return "Dispells any existing effects on the target (including anything drug induced).";
-			case LSCGSpellEffect.none:
-			default:
-				return ""			;
-		}
-	}
 }

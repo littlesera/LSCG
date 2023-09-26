@@ -5,10 +5,10 @@ import { StateModule } from "Modules/states";
 export class BlindState extends BaseState {
     Type: LSCGState = "blind";
 
-    get Icon(): string {
+    Icon(C: OtherCharacter): string {
         return "Icons/Previews/BlindHeavy.png";
     }
-    get Label(): string {
+    Label(C: OtherCharacter): string {
         return "Blinded";
     }
 

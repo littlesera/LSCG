@@ -16,6 +16,7 @@ import { PairedBaseState } from "./States/PairedBaseState";
 import { OrgasmSiphonedState } from "./States/OrgasmSiphonedState";
 import { getModule } from "modules";
 import { ItemUseModule } from "./item-use";
+import { ResizedState } from "./States/ResizedState";
 
 interface StateIcon {
     Label: string;
@@ -66,6 +67,7 @@ export class StateModule extends BaseModule {
     DeafState: DeafState;
     FrozenState: FrozenState;
     GaggedState: GaggedState;
+    ResizedState: ResizedState;
     RedressedState: RedressedState;
     ArousalPairedState: ArousalPairedState;
     OrgasmSiphonedState: OrgasmSiphonedState;
@@ -92,6 +94,7 @@ export class StateModule extends BaseModule {
         this.DeafState = new DeafState(this);
         this.FrozenState = new FrozenState(this);
         this.GaggedState = new GaggedState(this);
+        this.ResizedState = new ResizedState(this);
         this.RedressedState = new RedressedState(this);
         this.ArousalPairedState = new ArousalPairedState(this);
         this.OrgasmSiphonedState = new OrgasmSiphonedState(this);
@@ -105,6 +108,7 @@ export class StateModule extends BaseModule {
             this.DeafState, 
             this.HornyState,
             this.RedressedState,
+            this.ResizedState,
             this.ArousalPairedState,
             this.OrgasmSiphonedState
         ];
@@ -138,13 +142,13 @@ export class StateModule extends BaseModule {
                     let iconSize = 30;
                     let yOffset = (ix+1) * 40 * Zoom;
                     let iconCoords = {
-                        x: CharX + 40 * Zoom,
+                        x: CharX + 80 * Zoom,
                         y: CharY + (60 + yOffset * Zoom),
                         w: iconSize * Zoom,
                         h: iconSize * Zoom
                     };
                     let iconCenter = {x: iconCoords.x + iconCoords.w/2, y: iconCoords.y + iconCoords.h/2}
-                    let statePair = this.GetIconForState(state)
+                    let statePair = this.GetIconForState(state, C)
                     DrawCircle(iconCenter.x, iconCenter.y, (iconSize + 10)/2 * Zoom, 1, "Black", "White")
                     DrawImageResize(
                         statePair.Icon,
@@ -288,7 +292,7 @@ export class StateModule extends BaseModule {
         removeAllHooksByModule(ModuleCategory.States);
     }
 
-    GetIconForState(state: StateConfig): StateIcon {
+    GetIconForState(state: StateConfig, C: OtherCharacter): StateIcon {
         let stateObj = this.States.find(s => s.Type == state.type);
         if (!stateObj)
             return {
@@ -296,8 +300,8 @@ export class StateModule extends BaseModule {
                 Icon: ICONS.BDSM
             };
         return {
-            Label: stateObj.Label,
-            Icon: stateObj.Icon
+            Label: stateObj.Label(C),
+            Icon: stateObj.Icon(C)
         };
     }
 

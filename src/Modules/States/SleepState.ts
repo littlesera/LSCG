@@ -5,10 +5,10 @@ import { StateModule } from "Modules/states";
 export class SleepState extends BaseState {
     Type: LSCGState = "asleep";
 
-    get Icon(): string {
+    Icon(C: OtherCharacter): string {
         return "Assets/Female3DCG/Eyes/Closed/Icon.png";
     }
-    get Label(): string {
+    Label(C: OtherCharacter): string {
         return "Asleep";
     }
 
