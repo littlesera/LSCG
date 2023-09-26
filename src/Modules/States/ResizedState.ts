@@ -51,7 +51,7 @@ export class ResizedState extends BaseState {
     }
 
     Recover(emote?: boolean | undefined): void {
-        if (emote) SendAction(`%NAME%'s body returns to its normal size.`);
+        if (emote && this.Active) SendAction(`%NAME%'s body returns to its normal size.`);
         super.Recover();
     }
 
