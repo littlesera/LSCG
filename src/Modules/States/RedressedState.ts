@@ -94,9 +94,14 @@ export class RedressedState extends BaseState {
 
     WearMany(items: ItemBundle[], type: OutfitOption) {
         items.forEach(item => {
-            let asset = AssetGet("Female3DCG", item.Group, item.Name);
-            if (this.DoChange(asset, type))
-                InventoryWear(Player, item.Name, item.Group, item.Color, item.Difficulty, -1, item.Craft, true);
+            let asset = AssetGet(Player.AssetFamily, item.Group, item.Name);
+            if (this.DoChange(asset, type)) {
+                let newItem = InventoryWear(Player, item.Name, item.Group, item.Color, item.Difficulty, -1, item.Craft, true);
+                if (!!newItem && !!item.Property?.LockedBy && InventoryDoesItemAllowLock(newItem)) {
+                    let lock = AssetGet(Player.AssetFamily, "ItemMisc", item.Property.LockedBy);
+                    if (!!lock) InventoryLock(Player, newItem, {Asset:lock}, item.Property.LockMemberNumber)
+                }
+            }
         });
         ChatRoomCharacterUpdate(Player);
     }
