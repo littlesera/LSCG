@@ -522,7 +522,7 @@ export function BC_ItemToItemBundle(item: Item): ItemBundle {
 		Color: item.Color,
 		Craft: item.Craft,
 		Difficulty: item.Difficulty,
-		Property: item.Property
+		Property: item.Property		
 	}
 }
 
