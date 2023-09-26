@@ -92,6 +92,11 @@ export class MagicModule extends BaseModule {
         return ChatRoomCharacter.filter(c => !!c && !!(c as any).LSCG && !!(c as any).LSCG.MagicModule && c.MemberNumber != spellTarget?.MemberNumber);
     }
 
+    drinkActivityNames: string[] = [
+        "LSCG_Quaff",
+        "SipItem"
+    ]
+
     load(): void {
         let activities = getModule<ActivityModule>("ActivityModule");
 
@@ -119,13 +124,10 @@ export class MagicModule extends BaseModule {
             let meta = GetMetadata(data);
             var activityName = meta?.ActivityName;
             var target = meta?.TargetMemberNumber;
-            if (target == Player.MemberNumber && activityName == "LSCG_Quaff" && !!sender) {
-                let gagType = getModule<InjectorModule>("InjectorModule")?.GetGagDrinkAccess(Player);
-                if (gagType == "nothing" && sender.MemberNumber != Player.MemberNumber) {
-                    this.TryForcePotion(sender);
-                } else {
-                    this.ProcessPotion(sender);
-                }
+            if (target == Player.MemberNumber && 
+                this.drinkActivityNames.indexOf(activityName ?? "") > -1 && 
+                !!sender) {
+                this.HandleQuaff(sender);
             }
         });
 
@@ -581,7 +583,7 @@ export class MagicModule extends BaseModule {
                         this.stateModule.SleepState.Activate(sender?.MemberNumber);
                         break;
                     case LSCGSpellEffect.dispell:
-                        SendAction("%NAME% gasps, blinking as %PRONOUN% is restored to normal.");
+                        SendAction("%NAME% gasps, blinking as the magic affecting %INTENSIVE% is removed.");
                         this.stateModule.Clear(true);
                         break;
                     case LSCGSpellEffect.outfit:
@@ -673,6 +675,19 @@ export class MagicModule extends BaseModule {
     }
 
     // ***************** Potions *******************
+    HandleQuaff(sender: Character) {
+        let item = InventoryGet(sender, "ItemHandheld");
+        let spell = this.GetSpellFromItem(item);
+        if (!!spell) {
+            let gagType = getModule<InjectorModule>("InjectorModule")?.GetGagDrinkAccess(Player);
+            if (gagType == "nothing" && sender.MemberNumber != Player.MemberNumber) {
+                this.TryForcePotion(sender);
+            } else {
+                this.ProcessPotion(sender);
+            }
+        }
+    }
+
     TryForcePotion(sender: Character) {
         let itemUseModule = getModule<ItemUseModule>("ItemUseModule");
         if (!itemUseModule) {
@@ -681,10 +696,10 @@ export class MagicModule extends BaseModule {
         var itemName = itemUseModule.getItemName(InventoryGet(sender, "ItemHandheld")!);
         let check = getModule<ItemUseModule>("ItemUseModule")?.MakeActivityCheck(sender, Player);
         if (check.AttackerRoll.Total >= check.DefenderRoll.Total) {
-            SendAction(`${CharacterNickname(sender)} ${check.AttackerRoll.TotalStr}manages to get their ${itemName} past ${CharacterNickname(Player)}'s ${check.DefenderRoll.TotalStr}lips, forcing %POSSESSIVE% to swallow it.`);
+            SendAction(`${CharacterNickname(sender)} ${check.AttackerRoll.TotalStr}manages to get their ${itemName} past ${CharacterNickname(Player)}'s ${check.DefenderRoll.TotalStr}lips, forcing %INTENSIVE% to swallow it.`);
             setTimeout(() => this.ProcessPotion(sender), 5000);
         } else {
-            SendAction(`${CharacterNickname(Player)} ${check.DefenderRoll.TotalStr}successfully defends against ${CharacterNickname(sender)}'s ${check.AttackerRoll.TotalStr}attempt to force %POSSESSIVE% to drink their ${itemName}.`);
+            SendAction(`${CharacterNickname(Player)} ${check.DefenderRoll.TotalStr}successfully defends against ${CharacterNickname(sender)}'s ${check.AttackerRoll.TotalStr}attempt to force %INTENSIVE% to drink their ${itemName}.`);
         }
     }
 

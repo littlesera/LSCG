@@ -90,7 +90,7 @@ export class GuiMagic extends GuiSubscreen {
 					},<Setting>{
 						type: "checkbox",
 						label: "Allow Potion:",
-						description: "Allows this spell to be brewed into a crafted potion bottle using its name.",
+						description: "Allows this spell to be brewed into a crafted potion bottles/glasses/mugs using its name.",
 						disabled: this.SpellHasPairedEffect,
 						setting: () => this.SpellHasPairedEffect ? false : this.Spell?.AllowPotion ?? false,
 						setSetting: (val) => { 
