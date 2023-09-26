@@ -229,6 +229,18 @@ export class StateModule extends BaseModule {
             return next(args);
         }, ModuleCategory.States);
 
+        hookFunction('Player.CanInteract', 1, (args, next) => {
+            if (this.Enabled && this.AnyRestrictions(r => r.Move))
+                return false;
+            return next(args);
+        }, ModuleCategory.States);
+
+        hookFunction('InventoryGroupIsBlockedForCharacter', 1, (args, next) => {
+            if (this.Enabled && this.AnyRestrictions(r => r.Move))
+                return true;
+            return next(args);
+        }, ModuleCategory.States);
+
         hookFunction('ChatRoomCanAttemptStand', 1, (args, next) => {
             if (this.Enabled && this.AnyRestrictions(r => r.Stand))
                 return false;
