@@ -50,7 +50,7 @@ export class ResizedState extends BaseState {
                 let lscg = (C as OtherCharacter).LSCG;
                 if (!!lscg && lscg.StateModule.states.find(s => s.type == "resized")?.active) {
                     let enlarge = lscg.StateModule.states.find(s => s.type == "resized")?.extensions["enlarged"] ?? false;
-                    C.HeightRatio *= enlarge ? 1.5 : .5;
+                    C.HeightRatio *= enlarge ? 1.5 : .75;
                 }
             })
             let ret = next(args);

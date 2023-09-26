@@ -142,7 +142,7 @@ export class StateModule extends BaseModule {
                     let iconSize = 30;
                     let yOffset = (ix+1) * 40 * Zoom;
                     let iconCoords = {
-                        x: CharX + 40 * Zoom,
+                        x: CharX + 80 * Zoom,
                         y: CharY + (60 + yOffset * Zoom),
                         w: iconSize * Zoom,
                         h: iconSize * Zoom

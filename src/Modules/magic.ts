@@ -481,7 +481,7 @@ export class MagicModule extends BaseModule {
             }
 
             if (spellTarget.IsPlayer())
-                this.IncomingSpell(Player, spell, pairedTarget);
+                setTimeout(() => this.IncomingSpell(Player, spell, pairedTarget), 1000);
             else
                 sendLSCGCommand(spellTarget, "spell", [
                     {
@@ -523,23 +523,33 @@ export class MagicModule extends BaseModule {
     // ********************** INCOMING *************************
 
     IncomingSpellCommand(sender: Character | null, msg: LSCGMessageModel) {
-        if (msg.command?.name == "spell") {
-            let paired = getCharacter((msg.command?.args.find(arg => arg.name == "paired")?.value as number));
-            let spell = msg.command?.args?.find(arg => arg.name == "spell")?.value as SpellDefinition;
-            if (!spell)
-                return;
-            this.IncomingSpell(sender, spell, paired);
-        }
-        else if (msg.command?.name == "pair") {
-            let origin = getCharacter(msg.command?.args.find(arg => arg.name == "paired")?.value as number);
-            let spellEffect = msg.command?.args?.find(arg => arg.name == "spell-effect")?.value as LSCGSpellEffect;
-            let pairType = msg.command?.args?.find(arg => arg.name == "pair-type")?.value as LSCGState;
-            if (!!origin && !!spellEffect && !!pairType)
-                this.IncomingSpellPair(sender, spellEffect, origin, pairType);
-            else if (!!sender && !origin) {
-                SendAction(`${CharacterNickname(sender)}'s paired spell fizzles because the origin target has left.`);
+        setTimeout(() => {
+            if (msg.command?.name == "spell") {
+                let paired = getCharacter((msg.command?.args.find(arg => arg.name == "paired")?.value as number));
+                let spell = msg.command?.args?.find(arg => arg.name == "spell")?.value as SpellDefinition;
+                if (!spell)
+                    return;
+                let spellIsJustDispell = spell.Effects.length == 1 && spell.Effects[0] == LSCGSpellEffect.dispell;
+                if (!!sender && !spellIsJustDispell) {
+                    let check = getModule<ItemUseModule>("ItemUseModule")?.MakeActivityCheck(sender, Player);
+                    if (check.AttackerRoll.Total < check.DefenderRoll.Total) {
+                        SendAction(`${CharacterNickname(Player)} ${check.DefenderRoll.TotalStr}successfully saves against ${CharacterNickname(sender)}'s ${check.AttackerRoll.TotalStr}${spell.Name}.`);
+                        return;
+                    }
+                }
+                this.IncomingSpell(sender, spell, paired);
             }
-        }
+            else if (msg.command?.name == "pair") {
+                let origin = getCharacter(msg.command?.args.find(arg => arg.name == "paired")?.value as number);
+                let spellEffect = msg.command?.args?.find(arg => arg.name == "spell-effect")?.value as LSCGSpellEffect;
+                let pairType = msg.command?.args?.find(arg => arg.name == "pair-type")?.value as LSCGState;
+                if (!!origin && !!spellEffect && !!pairType)
+                    this.IncomingSpellPair(sender, spellEffect, origin, pairType);
+                else if (!!sender && !origin) {
+                    SendAction(`${CharacterNickname(sender)}'s paired spell fizzles because the origin target has left.`);
+                }
+            }
+        }, 1000); // Slight delay on responding to spell commands, builds anticipation.
     }
 
     IncomingSpell(sender: Character | null, spell: SpellDefinition, paired?: Character | null) {
@@ -702,7 +712,7 @@ export class MagicModule extends BaseModule {
             return this.ProcessPotion(sender);
         }
         var itemName = itemUseModule.getItemName(InventoryGet(sender, "ItemHandheld")!);
-        let check = getModule<ItemUseModule>("ItemUseModule")?.MakeActivityCheck(sender, Player);
+        let check = itemUseModule?.MakeActivityCheck(sender, Player);
         if (check.AttackerRoll.Total >= check.DefenderRoll.Total) {
             SendAction(`${CharacterNickname(sender)} ${check.AttackerRoll.TotalStr}manages to get their ${itemName} past ${CharacterNickname(Player)}'s ${check.DefenderRoll.TotalStr}lips, forcing %INTENSIVE% to swallow it.`);
             setTimeout(() => this.ProcessPotion(sender), 5000);
