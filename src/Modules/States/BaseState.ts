@@ -74,8 +74,8 @@ export abstract class BaseState {
         this.Recover(false);
     }
 
-    abstract get Icon(): string;
-    abstract get Label(): string;
+    abstract Icon(C: OtherCharacter): string;
+    abstract Label(C: OtherCharacter): string;
 
     abstract Init(): void;
     abstract Tick(now: number): void;

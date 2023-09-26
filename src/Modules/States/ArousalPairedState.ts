@@ -6,10 +6,10 @@ import { ModuleCategory } from "Settings/setting_definitions";
 export class ArousalPairedState extends PairedBaseState {
     Type: LSCGState = "arousal-paired";
     
-    get Icon(): string {
+    Icon(C: OtherCharacter): string {
         return "Assets/Female3DCG/Emoticon/Hearts/Icon.png";
     }
-    get Label(): string {
+    Label(C: OtherCharacter): string {
         return "Arousal Paired";
     }
 

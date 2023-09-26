@@ -5,10 +5,10 @@ import { StateModule } from "Modules/states";
 export class DeafState extends BaseState {
     Type: LSCGState = "deaf";
 
-    get Icon(): string {
+    Icon(C: OtherCharacter): string {
         return "Icons/Previews/DeafHeavy.png";
     }
-    get Label(): string {
+    Label(C: OtherCharacter): string {
         return "Deafened";
     }
 

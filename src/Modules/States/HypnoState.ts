@@ -10,10 +10,10 @@ import { StateModule } from "Modules/states";
 export class HypnoState extends BaseState {
     Type: LSCGState = "hypnotized";
 
-    get Icon(): string {
+    Icon(C: OtherCharacter): string {
         return ICONS.HYPNO;
     }
-    get Label(): string {
+    Label(C: OtherCharacter): string {
         return "Hypnotized";
     }
 

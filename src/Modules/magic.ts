@@ -582,6 +582,14 @@ export class MagicModule extends BaseModule {
                         SendAction("%NAME% succumbs to the spell's overwhelming pressure, %POSSESSIVE% eyes closing as %PRONOUN% falls unconscious.");
                         this.stateModule.SleepState.Activate(sender?.MemberNumber);
                         break;
+                    case LSCGSpellEffect.enlarge:
+                        SendAction(`%NAME% winces as %POSSESSIVE% body reshapes and grows to twice its size.`);
+                        this.stateModule.ResizedState.Enlarge(sender?.MemberNumber);
+                        break;
+                    case LSCGSpellEffect.reduce:
+                        SendAction(`%NAME% squeaks as %POSSESSIVE% body reshapes and shrinks to half its size.`);
+                        this.stateModule.ResizedState.Reduce(sender?.MemberNumber);
+                        break;
                     case LSCGSpellEffect.dispell:
                         SendAction("%NAME% gasps, blinking as the magic affecting %INTENSIVE% is removed.");
                         this.stateModule.Clear(true);

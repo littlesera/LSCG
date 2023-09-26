@@ -5,10 +5,10 @@ import { StateModule } from "Modules/states";
 export class GaggedState extends BaseState {
     Type: LSCGState = "gagged";
 
-    get Icon(): string {
+    Icon(C: OtherCharacter): string {
         return "Icons/Previews/GagHeavy.png";
     }
-    get Label(): string {
+    Label(C: OtherCharacter): string {
         return "Gagged";
     }
 

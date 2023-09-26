@@ -6,10 +6,10 @@ import { ModuleCategory } from "Settings/setting_definitions";
 export class HornyState extends BaseState {
     Type: LSCGState = "horny";
 
-    get Icon(): string {
+    Icon(C: OtherCharacter): string {
         return "Icons/Small/Lover.png";
     }
-    get Label(): string {
+    Label(C: OtherCharacter): string {
         return "Aroused";
     }
 

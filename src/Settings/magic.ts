@@ -250,7 +250,7 @@ export class GuiMagic extends GuiSubscreen {
 				DrawCheckbox(780 + 600 + 64, this.getYPos(4) - 32, 64, 64, "", val);
 
 				MainCanvas.textAlign = "left";
-				DrawTextFit(this.SpellEffectDescription(this.Effect), 780, this.getYPos(5), 1000, "Black");
+				DrawTextFit(GuiMagic.SpellEffectDescription(this.Effect), 780, this.getYPos(5), 1000, "Black");
 				MainCanvas.textAlign = "center";
 			} else if (PreferencePageCurrent == 2) {
 				if (this.settings.knownSpells.length > 0) {
@@ -266,7 +266,7 @@ export class GuiMagic extends GuiSubscreen {
 					}
 					if (this.Spell.Effects[0] == LSCGSpellEffect.outfit) DrawButton(1500, this.getYPos(3) - 32, 200, 64, "Configure", "White");
 					MainCanvas.textAlign = "left";
-					DrawTextFit(this.SpellEffectDescription(this.Spell.Effects[0]), 780, this.getYPos(4), 1000, "Black");
+					DrawTextFit(GuiMagic.SpellEffectDescription(this.Spell.Effects[0]), 780, this.getYPos(4), 1000, "Black");
 					MainCanvas.textAlign = "center";
 					if (this.Spell.Effects.length > 0) {
 						DrawBackNextButton(780, this.getYPos(5) - 32, 600, 64, this.Spell.Effects[1] ?? LSCGSpellEffect.none, "White", "", () => "", () => "");
@@ -276,7 +276,7 @@ export class GuiMagic extends GuiSubscreen {
 						}
 						if (this.Spell.Effects[1] == LSCGSpellEffect.outfit) DrawButton(1500, this.getYPos(5) - 32, 200, 64, "Configure", "White");
 						MainCanvas.textAlign = "left";
-						DrawTextFit(this.SpellEffectDescription(this.Spell.Effects[1]), 780, this.getYPos(6), 1000, "Black");
+						DrawTextFit(GuiMagic.SpellEffectDescription(this.Spell.Effects[1]), 780, this.getYPos(6), 1000, "Black");
 						MainCanvas.textAlign = "center";
 					}
 					if (this.Spell.Effects.length > 1) {
@@ -287,7 +287,7 @@ export class GuiMagic extends GuiSubscreen {
 						}
 						if (this.Spell.Effects[2] == LSCGSpellEffect.outfit) DrawButton(1500, this.getYPos(7) - 32, 200, 64, "Configure", "White");
 						MainCanvas.textAlign = "left";
-						DrawTextFit(this.SpellEffectDescription(this.Spell.Effects[2]), 780, this.getYPos(8), 1000, "Black");
+						DrawTextFit(GuiMagic.SpellEffectDescription(this.Spell.Effects[2]), 780, this.getYPos(8), 1000, "Black");
 						MainCanvas.textAlign = "center";
 					}
 				}
@@ -495,7 +495,7 @@ export class GuiMagic extends GuiSubscreen {
 		}
 	}
 
-	SpellEffectDescription(effect: LSCGSpellEffect): string {
+	static SpellEffectDescription(effect: LSCGSpellEffect): string {
 		switch (effect) {
 			case LSCGSpellEffect.blindness:
 				return "Prevents the target from seeing.";
@@ -511,6 +511,10 @@ export class GuiMagic extends GuiSubscreen {
 				return "Hypnotizes the target.";
 			case LSCGSpellEffect.slumber:
 				return "Induces a deep slumber in the target.";
+			case LSCGSpellEffect.enlarge:
+				return "Enlarges the target to twice their size.";
+			case LSCGSpellEffect.reduce:
+				return "Shrinks the target to half their size."
 			case LSCGSpellEffect.outfit:
 				return "Magically change the target's clothing and equipment.";
 			case LSCGSpellEffect.paired_arousal:

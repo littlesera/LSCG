@@ -5,10 +5,10 @@ import { StateModule } from "Modules/states";
 export class FrozenState extends BaseState {
     Type: LSCGState = "frozen";
 
-    get Icon(): string {
+    Icon(C: OtherCharacter): string {
         return "Icons/Kidnap.png";
     }
-    get Label(): string {
+    Label(C: OtherCharacter): string {
         return "Petrified";
     }
 

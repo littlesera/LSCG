@@ -1,17 +1,18 @@
 import { ModuleCategory } from "Settings/setting_definitions";
-import { PairedBaseState } from "./PairedBaseState";
+import { PairedBaseState, Pairing } from "./PairedBaseState";
 import { ICONS, hookFunction, sendLSCGCommandBeep } from "utils";
 
 export class OrgasmSiphonedState extends PairedBaseState {
     Type: LSCGState = "orgasm-siphoned";
 
-    get Icon(): string {
-        if (this.Pairings.some(p => p.IsSource))
+    Icon(C: OtherCharacter): string {
+        let pairings = C.LSCG?.StateModule.states.find(s => s.type == "orgasm-siphoned")?.extensions["pairings"] as Pairing[] ?? [];
+        if (pairings.some(p => p.IsSource))
             return "Assets/Female3DCG/Emoticon/Annoyed/Icon.png";
         else
             return "Assets/Female3DCG/Emoticon/Tear/Icon.png";
     }
-    get Label(): string {
+    Label(C: OtherCharacter): string {
         return "Orgasms Siphoned";
     }
 
