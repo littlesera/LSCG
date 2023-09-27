@@ -122,6 +122,26 @@ export class RemoteMagic extends RemoteGuiSubscreen {
 				label: "",
 				description: ""
 			}
+		], [
+			<Setting>{
+				type: "label",
+				label: "Spell Defenses:",
+				description: ""
+			},<Setting>{
+				type: "checkbox",
+				label: "Never Defend:",
+				description: "If checked, you will never defend against spells cast on you.",
+				setting: () => this.settings.neverDefend ?? false,
+				setSetting: (val) => this.settings.neverDefend = val
+			},<Setting>{
+				type: "text",
+				id: "magic_remoteMembers",
+				label: "Defenseless Against Member IDs:",
+				description: "Comma separated list of member IDs. If empty will use standard Item Permissions. You will never defend against their spells.",
+				disabled: this.settings.neverDefend,
+				setting: () => this.settings.noDefenseMemberIds ?? "",
+				setSetting: (val) => this.settings.noDefenseMemberIds = val
+			}
 		]]
 	}
 

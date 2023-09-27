@@ -121,6 +121,8 @@ export class PublicSettingsModel implements IPublicSettingsModel {
         remoteAccess: false,
         remoteAccessRequiredTrance: false,
         limitRemoteAccessToHypnotizer: false,
-        remoteMemberIds: ""
+        remoteMemberIds: "",
+        neverDefend: false,
+        noDefenseMemberIds: ""
     }
 }

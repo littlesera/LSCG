@@ -54,4 +54,8 @@ export interface MagicPublicSettingsModel extends BaseSettingsModel{
     remoteAccessRequiredTrance: boolean;
     limitRemoteAccessToHypnotizer: boolean;
     remoteMemberIds: string;
+
+    // spell defense
+    neverDefend: boolean;
+    noDefenseMemberIds: string;
 }
