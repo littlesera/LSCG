@@ -304,7 +304,10 @@ export class MagicModule extends BaseModule {
     }
 
     CanUseMagic(target: Character) {
-        return (this.CanCastSpell(CurrentCharacter as OtherCharacter) || 
+        let item = InventoryGet(Player, "ItemHandheld");
+        let isWieldingMagicItem = !!item && MagicWandItems.indexOf(item.Asset.Name) > -1;
+        return isWieldingMagicItem &&
+                (this.CanCastSpell(CurrentCharacter as OtherCharacter) || 
                 this.CanWildMagic(CurrentCharacter as OtherCharacter) || 
                 this.CanTeachSpell(CurrentCharacter as OtherCharacter))
     }
