@@ -2,7 +2,8 @@
 ***DISCLAIMER***: Script under rapid development, if you have crashing errors suggestion is to disable for a little bit :3
 
 ### TamperMonkey install:
-https://github.com/littlesera/LSCG/raw/main/lscgLoader.user.js
+**Stable:** https://github.com/littlesera/LSCG/raw/main/lscgLoader.user.js
+**Dev:** https://github.com/littlesera/LSCG/raw/dev/lscgLoader-dev.user.js
 
 ### Bookmark:
 ```
