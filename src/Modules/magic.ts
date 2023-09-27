@@ -1,7 +1,7 @@
 import { BaseModule } from "base";
 import { getModule } from "modules";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
-import { GetHandheldItemNameAndDescriptionConcat, GetItemNameAndDescriptionConcat, GetMetadata, ICONS, LSCG_SendLocal, OnActivity, SendAction, getCharacter, getRandomInt, hookFunction, isPhraseInString, removeAllHooksByModule, sendLSCGCommand, sendLSCGCommandBeep, settingsSave } from "../utils";
+import { GetDelimitedList, GetHandheldItemNameAndDescriptionConcat, GetItemNameAndDescriptionConcat, GetMetadata, ICONS, LSCG_SendLocal, LSCG_TEAL, OnActivity, SendAction, getCharacter, getRandomInt, hookFunction, isPhraseInString, removeAllHooksByModule, sendLSCGCommand, sendLSCGCommandBeep, settingsSave } from "../utils";
 import { ActivityModule, ActivityTarget } from "./activities";
 import { LSCGSpellEffect, MagicSettingsModel, OutfitConfig, OutfitOption, SpellDefinition } from "Settings/Models/magic";
 import { GuiMagic, pairedSpellEffects } from "Settings/magic";
@@ -9,7 +9,14 @@ import { StateModule } from "./states";
 import { ItemUseModule, MagicWandItems } from "./item-use";
 import { InjectorModule } from "./injector";
 
+const dialogButtonInfo = [980, 10, 100, 40, 5];
+const dialogButtonCoords: [number,number,number,number] = [dialogButtonInfo[0], dialogButtonInfo[1], 40, 40];
+const dialogCastButtonCoords: [number,number,number,number] = [dialogButtonInfo[0] - (dialogButtonInfo[2] + dialogButtonInfo[4]), dialogButtonInfo[1], dialogButtonInfo[2], dialogButtonInfo[3]];
+const dialogWildButtonCoords: [number,number,number,number] = [dialogButtonInfo[0] - (dialogButtonInfo[2] + dialogButtonInfo[4]), dialogButtonInfo[1]  + (dialogButtonInfo[3] + dialogButtonInfo[4]), dialogButtonInfo[2], dialogButtonInfo[3]];
+const dialogTeachButtonCoords: [number,number,number,number] = [dialogButtonInfo[0] - (dialogButtonInfo[2] + dialogButtonInfo[4]), dialogButtonInfo[1]  + (dialogButtonInfo[3] + dialogButtonInfo[4]) * 2, dialogButtonInfo[2], dialogButtonInfo[3]];
+
 export class MagicModule extends BaseModule {
+    DialogMenuOpen: boolean = false;
     SpellMenuOpen: boolean = false;
     TeachingSpell: boolean = false;
     SpellMenuOffset: number = 0;
@@ -37,7 +44,9 @@ export class MagicModule extends BaseModule {
             remoteAccess: false,
             remoteAccessRequiredTrance: false,
             limitRemoteAccessToHypnotizer: false,
-            remoteMemberIds: ""
+            remoteMemberIds: "",
+            neverDefend: false,
+            noDefenseMemberIds: ""
         };
     }
 
@@ -88,6 +97,10 @@ export class MagicModule extends BaseModule {
         return this.settings.knownSpells ?? [];//this.TestSpells;
     }
 
+    get noDefenseMemberIds(): number[] {
+		return GetDelimitedList(this.settings.noDefenseMemberIds).map(id => +id).filter(id => id > 0) ?? [];
+	}
+
     PairedCharacterOptions(spellTarget: Character | undefined): Character[] {
         return ChatRoomCharacter.filter(c => !!c && !!(c as any).LSCG && !!(c as any).LSCG.MagicModule && c.MemberNumber != spellTarget?.MemberNumber);
     }
@@ -100,23 +113,59 @@ export class MagicModule extends BaseModule {
     load(): void {
         let activities = getModule<ActivityModule>("ActivityModule");
 
+        (<any>window)["Dialog_LSCG_CastSpell"] = () => this.OpenSpellMenu(CurrentCharacter as OtherCharacter);
+        (<any>window)["Dialog_LSCG_CastWildMagic"] = () => this.CastWildMagic(CurrentCharacter as OtherCharacter);
+        (<any>window)["Dialog_LSCG_TeachSpell"] = () => this.TeachSpell(CurrentCharacter as OtherCharacter);
+
+        (<any>window)["Dialog_LSCG_CanDoMagic"] = () => this.CanUseMagic(CurrentCharacter as OtherCharacter);
+        (<any>window)["Dialog_LSCG_CanCastSpell"] = () => this.CanCastSpell(CurrentCharacter as OtherCharacter);
+        (<any>window)["Dialog_LSCG_CanWildMagic"] = () => this.CanWildMagic(CurrentCharacter as OtherCharacter);
+        (<any>window)["Dialog_LSCG_CanTeachSpell"] = () => this.CanTeachSpell(CurrentCharacter as OtherCharacter);
+
+        //this.AddDialogOptions(Player);
+
         hookFunction("DialogDraw", 10, (args, next) => {
             if (this.Enabled && this.SpellMenuOpen) 
                 return this.DrawSpellMenu();
-
-            return next(args)
+            
+            if (this.Enabled && !!CurrentCharacter && this.CanUseMagic(CurrentCharacter) && DialogMenuMode === "dialog") {
+                DrawButton(...dialogButtonCoords, "Magic", this.DialogMenuOpen ? LSCG_TEAL : "White", "Magic™");
+                if (this.DialogMenuOpen) {
+                    DrawButton(...dialogCastButtonCoords, "Cast Spell", this.CanCastSpell(CurrentCharacter) ? "White" : "Grey", undefined, undefined, !this.CanCastSpell(CurrentCharacter));
+                    DrawButton(...dialogWildButtonCoords, "Wild Magic", this.CanWildMagic(CurrentCharacter) ? "White" : "Grey", undefined, undefined, !this.CanWildMagic(CurrentCharacter));
+                    DrawButton(...dialogTeachButtonCoords, "Teach Spell", this.CanTeachSpell(CurrentCharacter) ? "White" : "Grey", undefined, undefined, !this.CanTeachSpell(CurrentCharacter));
+                }
+            }
+            next(args);
         }, ModuleCategory.Magic);
 
         hookFunction("DialogClick", 10, (args, next) => {
             if (this.Enabled && this.SpellMenuOpen)
                 return this.ClickSpellMenu();
-
-            return next(args);
+            else if (this.Enabled && !!CurrentCharacter && DialogMenuMode === "dialog" && MouseIn(...dialogButtonCoords)) {
+                this.DialogMenuOpen = !this.DialogMenuOpen;
+                return;
+            } 
+            if (this.DialogMenuOpen && !!CurrentCharacter && this.CanUseMagic(CurrentCharacter)) {
+                if (MouseIn(...dialogCastButtonCoords)) { if (this.CanCastSpell(CurrentCharacter)) this.OpenSpellMenu(CurrentCharacter as OtherCharacter); return; }
+                else if (MouseIn(...dialogWildButtonCoords)) { if (this.CanWildMagic(CurrentCharacter)) this.CastWildMagic(CurrentCharacter as OtherCharacter); return; }
+                else if (MouseIn(...dialogTeachButtonCoords)) { if (this.CanTeachSpell(CurrentCharacter)) this.TeachSpell(CurrentCharacter as OtherCharacter); return; }
+            }
+            next(args);
         }, ModuleCategory.Magic);
 
         hookFunction("ServerPlayerIsInChatRoom", 10, (args, next) => {
             return next(args) || CurrentScreen == "LSCG_SPELLS_DIALOG";
         }, ModuleCategory.Magic);
+
+        // hookFunction("CharacterBuildDialog", 1, (args, next) => {
+        //     next(args);
+        //     let C = args[0] as OtherCharacter;
+        //     if (!C || C.Dialog.some(d => (d.Function?.indexOf("LSCG") ?? -1) > -1))
+        //         return;
+        //     else
+        //         this.AddDialogOptions(C);
+        // }, ModuleCategory.Magic)
 
         OnActivity(1, ModuleCategory.Magic, (data, sender, msg, megadata) => {
             if (!this.Enabled)
@@ -131,107 +180,101 @@ export class MagicModule extends BaseModule {
             }
         });
 
-        activities?.AddActivity({
-            Activity: <Activity>{
-                Name: "CastSpell",
-                MaxProgress: 90,
-                MaxProgressSelf: 90,
-                Prerequisite: ["UseHands", "Needs-MagicItem"]
-            },
-            Targets: [
-                <ActivityTarget>{
-                    Name: "ItemArms",
-					TargetLabel: "Cast Spell",
-                    SelfAllowed: true,
-                    TargetAction: "SourceCharacter casts a spell on TargetCharacter with PronounPossessive ActivityAsset.",
-                    TargetSelfAction: "SourceCharacter casts a spell on themselves with PronounPossessive ActivityAsset."
-                }
-            ],
-            CustomPrereqs: [
-				{
-					Name: "CanCastSpell",
-					Func: (acting, acted, group) => {
-                        // Must have available spells and can only cast on LSCG users
-						return this.Enabled && this.AvailableSpells.length > 0 && !!(<any>acted).LSCG && !this.settings.forceWildMagic;
-					}
-				}
-			],
-            CustomAction: {
-                Func: (target, args, next) => {
-                    if (!!target)
-                        this.OpenSpellMenu(target?.IsPlayer() ? target as PlayerCharacter : target as OtherCharacter);
-                }
-            }
-        });
+        // activities?.AddActivity({
+        //     Activity: <Activity>{
+        //         Name: "CastSpell",
+        //         MaxProgress: 90,
+        //         MaxProgressSelf: 90,
+        //         Prerequisite: ["UseHands", "Needs-MagicItem"]
+        //     },
+        //     Targets: [
+        //         <ActivityTarget>{
+        //             Name: "ItemArms",
+		// 			TargetLabel: "Cast Spell",
+        //             SelfAllowed: true,
+        //             TargetAction: "SourceCharacter casts a spell on TargetCharacter with PronounPossessive ActivityAsset.",
+        //             TargetSelfAction: "SourceCharacter casts a spell on themselves with PronounPossessive ActivityAsset."
+        //         }
+        //     ],
+        //     CustomPrereqs: [
+		// 		{
+		// 			Name: "CanCastSpell",
+		// 			Func: (acting, acted, group) => {
+        //                 return this.CanCastSpell(acted);
+		// 			}
+		// 		}
+		// 	],
+        //     CustomAction: {
+        //         Func: (target, args, next) => {
+        //             if (!!target)
+        //                 this.OpenSpellMenu(target?.IsPlayer() ? target as PlayerCharacter : target as OtherCharacter);
+        //         }
+        //     }
+        // });
 
-        activities?.AddActivity({
-            Activity: <Activity>{
-                Name: "CastWildMagic",
-                MaxProgress: 90,
-                MaxProgressSelf: 90,
-                Prerequisite: ["UseHands", "Needs-MagicItem"]
-            },
-            Targets: [
-                <ActivityTarget>{
-                    Name: "ItemArms",
-					TargetLabel: "Cast Wild Magic",
-                    SelfAllowed: true,
-                    TargetAction: "SourceCharacter casts a wild spell on TargetCharacter with PronounPossessive ActivityAsset.",
-                    TargetSelfAction: "SourceCharacter casts a wild spell on themselves with PronounPossessive ActivityAsset."
-                }
-            ],
-            CustomPrereqs: [
-				{
-					Name: "CanCastWildMagic",
-					Func: (acting, acted, group) => {
-                        // Must have available spells and can only cast on LSCG users
-						return this.Enabled && !!(<any>acted).LSCG && this.settings.enableWildMagic;
-					}
-				}
-			],
-            CustomAction: {
-                Func: (target, args, next) => {
-                    if (!!target)
-                        this.CastWildMagic(target?.IsPlayer() ? target as PlayerCharacter : target as OtherCharacter);
-                }
-            }
-        });
+        // activities?.AddActivity({
+        //     Activity: <Activity>{
+        //         Name: "CastWildMagic",
+        //         MaxProgress: 90,
+        //         MaxProgressSelf: 90,
+        //         Prerequisite: ["UseHands", "Needs-MagicItem"]
+        //     },
+        //     Targets: [
+        //         <ActivityTarget>{
+        //             Name: "ItemArms",
+		// 			TargetLabel: "Cast Wild Magic",
+        //             SelfAllowed: true,
+        //             TargetAction: "SourceCharacter casts a wild spell on TargetCharacter with PronounPossessive ActivityAsset.",
+        //             TargetSelfAction: "SourceCharacter casts a wild spell on themselves with PronounPossessive ActivityAsset."
+        //         }
+        //     ],
+        //     CustomPrereqs: [
+		// 		{
+		// 			Name: "CanCastWildMagic",
+		// 			Func: (acting, acted, group) => {
+        //                 return this.CanWildMagic(acted);
+		// 			}
+		// 		}
+		// 	],
+        //     CustomAction: {
+        //         Func: (target, args, next) => {
+        //             if (!!target)
+        //                 this.CastWildMagic(target?.IsPlayer() ? target as PlayerCharacter : target as OtherCharacter);
+        //         }
+        //     }
+        // });
 
-        activities?.AddActivity({
-            Activity: <Activity>{
-                Name: "TeachSpell",
-                MaxProgress: 90,
-                MaxProgressSelf: 90,
-                Prerequisite: ["UseHands", "Needs-MagicItem"]
-            },
-            Targets: [
-                <ActivityTarget>{
-                    Name: "ItemArms",
-					TargetLabel: "Teach Spell",
-                    SelfAllowed: false,
-                    TargetAction: "SourceCharacter carefully instructs TargetCharacter in the intricate movements required for a new spell."
-                }
-            ],
-            CustomPrereqs: [
-				{
-					Name: "CanTeachSpell",
-					Func: (acting, acted, group) => {
-                        // Must have available spells and can only cast on LSCG users
-                        let targetItem = InventoryGet(acted, "ItemHandheld");
-						return this.Enabled && 
-                            this.settings.knownSpells.length > 0 &&
-                            MagicWandItems.indexOf(targetItem?.Asset?.Name ?? "") > -1;
-					}
-				}
-			],
-            CustomAction: {
-                Func: (target, args, next) => {
-                    if (!!target)
-                        this.TeachSpell(target as OtherCharacter);
-                }
-            },
-            CustomImage: "Icons/Magic.png"
-        });
+        // activities?.AddActivity({
+        //     Activity: <Activity>{
+        //         Name: "TeachSpell",
+        //         MaxProgress: 90,
+        //         MaxProgressSelf: 90,
+        //         Prerequisite: ["UseHands", "Needs-MagicItem"]
+        //     },
+        //     Targets: [
+        //         <ActivityTarget>{
+        //             Name: "ItemArms",
+		// 			TargetLabel: "Teach Spell",
+        //             SelfAllowed: false,
+        //             TargetAction: "SourceCharacter carefully instructs TargetCharacter in the intricate movements required for a new spell."
+        //         }
+        //     ],
+        //     CustomPrereqs: [
+		// 		{
+		// 			Name: "CanTeachSpell",
+		// 			Func: (acting, acted, group) => {
+        //                 return this.CanTeachSpell(acted);
+		// 			}
+		// 		}
+		// 	],
+        //     CustomAction: {
+        //         Func: (target, args, next) => {
+        //             if (!!target)
+        //                 this.TeachSpell(target as OtherCharacter);
+        //         }
+        //     },
+        //     CustomImage: "Icons/Magic.png"
+        // });
 
         activities?.AddActivity({
             Activity: <Activity>{
@@ -258,6 +301,87 @@ export class MagicModule extends BaseModule {
 
     unload(): void {
         removeAllHooksByModule(ModuleCategory.Magic);
+    }
+
+    CanUseMagic(target: Character) {
+        return (this.CanCastSpell(CurrentCharacter as OtherCharacter) || 
+                this.CanWildMagic(CurrentCharacter as OtherCharacter) || 
+                this.CanTeachSpell(CurrentCharacter as OtherCharacter))
+    }
+
+    CanCastSpell(target: Character): boolean {
+        // Must have available spells and can only cast on LSCG users
+        return this.Enabled && this.AvailableSpells.length > 0 && !!(<any>target).LSCG && !this.settings.forceWildMagic;
+    }
+
+    CanWildMagic(target: Character): boolean {
+        // Must have available spells and can only cast on LSCG users
+        return this.Enabled && !!(<any>target).LSCG && this.settings.enableWildMagic;    
+    }
+
+    CanTeachSpell(target: Character): boolean {
+        // Must have available spells and can only cast on LSCG users
+        let targetItem = InventoryGet(target, "ItemHandheld");
+        return this.Enabled && 
+            !target.IsPlayer() &&
+            this.settings.knownSpells.length > 0 &&
+            MagicWandItems.indexOf(targetItem?.Asset?.Name ?? "") > -1;
+    }
+
+    AdditionalDialogs: DialogLine[] = [
+        <DialogLine>{
+            Stage: '0',
+            NextStage: 'LSCG_Magic',
+            Option: '(LSCG Magic.)',
+            Result: "(LSCG Magic™)",
+            Function: null,
+            Group: null,
+            Trait: null,
+            Prerequisite: 'Dialog_LSCG_CanDoMagic()'
+        }, <DialogLine>{
+            Stage: 'LSCG_Magic',
+            NextStage: null,
+            Option: '(Cast a Spell.)',
+            Result: null,
+            Function: "Dialog_LSCG_CastSpell()",
+            Group: null,
+            Trait: null,
+            Prerequisite: 'Dialog_LSCG_CanCastSpell()'
+        }, <DialogLine>{
+            Stage: 'LSCG_Magic',
+            NextStage: null,
+            Option: '(Cast Wild Magic.)',
+            Result: null,
+            Function: "Dialog_LSCG_CastWildMagic()",
+            Group: null,
+            Trait: null,
+            Prerequisite: 'Dialog_LSCG_CanWildMagic()'
+        }, <DialogLine>{
+            Stage: 'LSCG_Magic',
+            NextStage: null,
+            Option: '(Teach a Spell.)',
+            Result: null,
+            Function: "Dialog_LSCG_TeachSpell()",
+            Group: null,
+            Trait: null,
+            Prerequisite: 'Dialog_LSCG_CanTeachSpell()'
+        }, <DialogLine>{
+            Stage: 'LSCG_Magic',
+            NextStage: "0",
+            Option: '(Back to main menu.)',
+            Result: '(Main menu.)',
+            Function: null,
+            Group: null,
+            Trait: null,
+            Prerequisite: null
+        }
+    ]
+
+    AddDialogOptions(C: Character) {
+        let leaveIx = C.Dialog.findIndex(d => d.Function == "DialogLeave()");
+        if (leaveIx > -1) {
+            C.Dialog.splice(leaveIx, 0, ...this.AdditionalDialogs);
+        }
     }
 
     PrevScreen: string | undefined = undefined;
@@ -341,7 +465,7 @@ export class MagicModule extends BaseModule {
 
                 DrawPreviewBox(x, y, image, label, { Hover: true, Icons: icons, Background: background, Width: width, Height: height });
                 if (MouseHovering(x, y, width, height)) {
-                    DrawRect(this.boxDimensions.x + (this.boxDimensions.width - 500 - 350), this.boxDimensions.y + this.boxDimensions.height - 56, 700, 50, "#00d5d5");
+                    DrawRect(this.boxDimensions.x + (this.boxDimensions.width - 500 - 350), this.boxDimensions.y + this.boxDimensions.height - 56, 700, 50, LSCG_TEAL);
                     DrawEmptyRect(this.boxDimensions.x + (this.boxDimensions.width-500-350) + 2, this.boxDimensions.y + this.boxDimensions.height - 56 + 2, 700 - 4, 50 - 4, "Black", 2);
                     DrawTextFit(desc, 1000, this.boxDimensions.y + this.boxDimensions.height - 30, 600, "Black", "White");
                 }
@@ -522,6 +646,23 @@ export class MagicModule extends BaseModule {
 
     // ********************** INCOMING *************************
 
+    DefendAgainst(sender: number): boolean {
+        if (this.settings.neverDefend)
+            return false;
+        else if (this.noDefenseMemberIds.indexOf(sender) > -1)
+            return false;
+        else
+            return true;
+    }
+
+    SpellIsBeneficial(spell: SpellDefinition) {
+        let beneficialEffects: LSCGSpellEffect[] = [
+            LSCGSpellEffect.dispell,
+            LSCGSpellEffect.bless
+        ];
+        return  spell.Effects.every(e => beneficialEffects.indexOf(e) > -1);
+    }
+
     IncomingSpellCommand(sender: Character | null, msg: LSCGMessageModel) {
         setTimeout(() => {
             if (msg.command?.name == "spell") {
@@ -529,8 +670,7 @@ export class MagicModule extends BaseModule {
                 let spell = msg.command?.args?.find(arg => arg.name == "spell")?.value as SpellDefinition;
                 if (!spell)
                     return;
-                let spellIsJustDispell = spell.Effects.length == 1 && spell.Effects[0] == LSCGSpellEffect.dispell;
-                if (!!sender && !spellIsJustDispell) {
+                if (!!sender && !this.SpellIsBeneficial(spell) && this.DefendAgainst(sender.MemberNumber ?? -1)) {
                     let check = getModule<ItemUseModule>("ItemUseModule")?.MakeActivityCheck(sender, Player);
                     if (check.AttackerRoll.Total < check.DefenderRoll.Total) {
                         SendAction(`${CharacterNickname(Player)} ${check.DefenderRoll.TotalStr}successfully saves against ${CharacterNickname(sender)}'s ${check.AttackerRoll.TotalStr}${spell.Name}.`);

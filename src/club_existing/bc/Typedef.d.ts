@@ -1399,14 +1399,14 @@ type ScriptPermissionLevel = "Self" | "Owner" | "Lovers" | "Friends" | "Whitelis
 type ScriptPermissions = Record<ScriptPermissionProperty, ScriptPermission>;
 
 interface DialogLine {
-	Stage: string;
-	NextStage: string;
-	Option: string;
-	Result: string;
-	Function: string;
-	Prerequisite: string;
-	Group: string;
-	Trait: string;
+	Stage: string | null;
+	NextStage: string | null;
+	Option: string | null;
+	Result: string | null;
+	Function: string | null;
+	Prerequisite: string | null;
+	Group: string | null;
+	Trait: string | null;
 }
 
 interface Character {

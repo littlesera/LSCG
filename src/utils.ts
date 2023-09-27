@@ -6,6 +6,7 @@ import { ActivityEntryModel } from "Settings/Models/activities";
 import { ModuleCategory } from "Settings/setting_definitions";
 
 export const LSCG_CHANGES: string = "https://github.com/littlesera/LSCG/releases/latest";
+export const LSCG_TEAL: string = "#00d5d5";
 
 type PatchHook = (args: any[], next: (args: any[]) => any) => any;
 interface IPatchedFunctionData {

@@ -164,17 +164,37 @@ export class GuiMagic extends GuiSubscreen {
 						type: "checkbox",
 						label: "Remote Access Limited to Hypnotizer:",
 						description: "If checked, only the user who hypnotized you can access your settings (after matching other conditions).",
-						disabled: !this.settings.enabled || !this.settings.remoteAccess,
+						disabled: !this.settings.enabled || !this.settings.remoteAccess || !this.settings.remoteAccessRequiredTrance,
 						setting: () => this.settings.limitRemoteAccessToHypnotizer ?? true,
 						setSetting: (val) => this.settings.limitRemoteAccessToHypnotizer = val
 					},<Setting>{
 						type: "text",
 						id: "magic_remoteMembers",
-						label: "Remote Allowed Member Ids:",
-						description: "Comma separated list of member Ids. If empty will use standard Item Permissions.",
+						label: "Remote Allowed Member IDs:",
+						description: "Comma separated list of member IDs. If empty will use standard Item Permissions.",
 						disabled: !this.settings.enabled,
 						setting: () => this.settings.remoteMemberIds ?? "",
 						setSetting: (val) => this.settings.remoteMemberIds = val
+					}
+				], [
+					<Setting>{
+						type: "label",
+						label: "Spell Defenses:",
+						description: ""
+					},<Setting>{
+						type: "checkbox",
+						label: "Never Defend:",
+						description: "If checked, you will never defend against spells cast on you.",
+						setting: () => this.settings.neverDefend ?? false,
+						setSetting: (val) => this.settings.neverDefend = val
+					},<Setting>{
+						type: "text",
+						id: "magic_remoteMembers",
+						label: "Defenseless Against Member IDs:",
+						description: "Comma separated list of member IDs. If empty will use standard Item Permissions. You will never defend against their spells.",
+						disabled: this.settings.neverDefend,
+						setting: () => this.settings.noDefenseMemberIds ?? "",
+						setSetting: (val) => this.settings.noDefenseMemberIds = val
 					}
 				]];
 	}
