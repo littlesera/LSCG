@@ -1,16 +1,16 @@
-import { BC_ItemsToItemBundles, SendAction, addCustomEffect, getRandomInt, isBind, isCloth, removeCustomEffect, settingsSave, waitFor } from "utils";
+import { BC_ItemsToItemBundles, SendAction, addCustomEffect, getRandomInt, isBind, isBody, isCloth, isCosplay, removeCustomEffect, settingsSave, waitFor } from "utils";
 import { BaseState, StateRestrictions } from "./BaseState";
 import { StateModule } from "Modules/states";
-import { OutfitConfig, OutfitOption } from "Settings/Models/magic";
+import { PolymorphConfig, PolymorphOption } from "Settings/Models/magic";
 
-export class RedressedState extends BaseState {
-    Type: LSCGState = "redressed";
+export class PolymorphedState extends BaseState {
+    Type: LSCGState = "polymorphed";
 
     Icon(C: OtherCharacter): string {
-        return "Icons/Dress.png";
+        return "Icons/Horse.png";
     }
     Label(C: OtherCharacter): string {
-        return "Redressed";
+        return "Polymorphed";
     }
 
     constructor(state: StateModule) {
@@ -18,7 +18,7 @@ export class RedressedState extends BaseState {
         this.Restrictions.Wardrobe = "true";
     }
 
-    storedOutfitKey: string = "stored-outfit";
+    storedOutfitKey: string = "stored";
     get StoredOutfit(): ItemBundle[] | undefined {
         let ext = this.config.extensions[this.storedOutfitKey];
         if (!ext) return undefined;
@@ -40,20 +40,21 @@ export class RedressedState extends BaseState {
         settingsSave();
     }
 
-    DoChange(asset: Asset | null, type: OutfitOption): boolean {
+    DoChange(asset: Asset | null, type: PolymorphOption): boolean {
         if (!asset)
             return false;
         switch(type) {
-            case OutfitOption.clothes_only:
-                return isCloth(asset);
-            case OutfitOption.binds_only:
-                return isBind(asset);
-            case OutfitOption.both:
-                return isCloth(asset) || isBind(asset);
+            case PolymorphOption.cosplay_only:
+                return isCosplay(asset) && !(Player.OnlineSharedSettings?.BlockBodyCosplay ?? false);
+            case PolymorphOption.body_only:
+                return isBody(asset) && (Player.OnlineSharedSettings?.AllowFullWardrobeAccess ?? false);
+            case PolymorphOption.both:
+                return (isCosplay(asset) && !(Player.OnlineSharedSettings?.BlockBodyCosplay ?? false)) || 
+                       (isBody(asset) && (Player.OnlineSharedSettings?.AllowFullWardrobeAccess ?? false));
         }
     }
 
-    StripCharacter(skipStore: boolean, type: OutfitOption, newList: ItemBundle[] = []) {
+    StripCharacter(skipStore: boolean, type: PolymorphOption, newList: ItemBundle[] = []) {
         if (!skipStore && !this.StoredOutfit)
             this.SetStoredOutfit();
 
@@ -68,7 +69,7 @@ export class RedressedState extends BaseState {
         }
     }
 
-    Apply(outfit: OutfitConfig, memberNumber?: number | undefined, emote?: boolean | undefined): void {
+    Apply(outfit: PolymorphConfig, memberNumber?: number | undefined, emote?: boolean | undefined): void {
         this.Activate(memberNumber, emote);
         try{
             let outfitList = JSON.parse(LZString.decompressFromBase64(outfit.Code)) as ItemBundle[];
@@ -86,13 +87,13 @@ export class RedressedState extends BaseState {
     Recover(emote?: boolean | undefined): void {
         super.Recover();
         if (!!this.StoredOutfit) {
-            this.StripCharacter(true, OutfitOption.both);
-            this.WearMany(this.StoredOutfit, OutfitOption.both);
+            this.StripCharacter(true, PolymorphOption.both);
+            this.WearMany(this.StoredOutfit, PolymorphOption.both);
             this.ClearStoredOutfit();
         }
     }
 
-    WearMany(items: ItemBundle[], type: OutfitOption) {
+    WearMany(items: ItemBundle[], type: PolymorphOption) {
         items.forEach(item => {
             let asset = AssetGet(Player.AssetFamily, item.Group, item.Name);
             if (this.DoChange(asset, type)) {

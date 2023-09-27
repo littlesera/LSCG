@@ -528,7 +528,7 @@ export function BC_ItemToItemBundle(item: Item): ItemBundle {
 }
 
 export function BC_ItemsToItemBundles(items: Item[]): ItemBundle[] {
-	return items.map(i => BC_ItemToItemBundle(i));
+	return items.filter(i => !!i).map(i => BC_ItemToItemBundle(i));
 }
 
 // Stolen Utils from BCX >.>

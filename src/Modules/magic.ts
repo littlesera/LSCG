@@ -304,7 +304,10 @@ export class MagicModule extends BaseModule {
     }
 
     CanUseMagic(target: Character) {
-        return (this.CanCastSpell(CurrentCharacter as OtherCharacter) || 
+        let item = InventoryGet(Player, "ItemHandheld");
+        let isWieldingMagicItem = !!item && MagicWandItems.indexOf(item.Asset.Name) > -1;
+        return isWieldingMagicItem &&
+                (this.CanCastSpell(CurrentCharacter as OtherCharacter) || 
                 this.CanWildMagic(CurrentCharacter as OtherCharacter) || 
                 this.CanTeachSpell(CurrentCharacter as OtherCharacter))
     }
@@ -753,7 +756,15 @@ export class MagicModule extends BaseModule {
                             this.stateModule.GaggedState.Active ? 
                                 SendAction("%NAME% trembles as %POSSESSIVE% clothing shimmers and morphs around %INTENSIVE%.") : 
                                 SendAction("%NAME% squeaks as %POSSESSIVE% clothing shimmers and morphs around %INTENSIVE%.");
-                            this.stateModule.RedressedState.ApplyOutfit(spell.Outfit)
+                            this.stateModule.RedressedState.Apply(spell.Outfit);
+                        }
+                        break;
+                    case LSCGSpellEffect.polymorph:
+                        if (!!spell.Polymorph?.Code) {
+                            this.stateModule.GaggedState.Active ? 
+                                SendAction("%NAME% trembles as %POSSESSIVE% body shimmers and morphs.") : 
+                                SendAction("%NAME% squeaks as %POSSESSIVE% body shimmers and morphs.");
+                            this.stateModule.PolymorphedState.Apply(spell.Polymorph);
                         }
                         break;
                     case LSCGSpellEffect.paired_arousal:

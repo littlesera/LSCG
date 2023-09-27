@@ -18,6 +18,7 @@ import { getModule } from "modules";
 import { ItemUseModule } from "./item-use";
 import { ResizedState } from "./States/ResizedState";
 import { BuffedState } from "./States/BuffedState";
+import { PolymorphedState } from "./States/PolymorphedState";
 
 interface StateIcon {
     Label: string;
@@ -70,6 +71,7 @@ export class StateModule extends BaseModule {
     GaggedState: GaggedState;
     ResizedState: ResizedState;
     RedressedState: RedressedState;
+    PolymorphedState: PolymorphedState;
     BuffedState: BuffedState;
     ArousalPairedState: ArousalPairedState;
     OrgasmSiphonedState: OrgasmSiphonedState;
@@ -98,6 +100,7 @@ export class StateModule extends BaseModule {
         this.GaggedState = new GaggedState(this);
         this.ResizedState = new ResizedState(this);
         this.RedressedState = new RedressedState(this);
+        this.PolymorphedState = new PolymorphedState(this);
         this.BuffedState = new BuffedState(this);
         this.ArousalPairedState = new ArousalPairedState(this);
         this.OrgasmSiphonedState = new OrgasmSiphonedState(this);
@@ -111,6 +114,7 @@ export class StateModule extends BaseModule {
             this.DeafState, 
             this.HornyState,
             this.RedressedState,
+            this.PolymorphedState,
             this.ResizedState,
             this.ArousalPairedState,
             this.OrgasmSiphonedState,
