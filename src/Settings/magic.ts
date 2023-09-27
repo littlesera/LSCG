@@ -1,5 +1,5 @@
 import { GuiSubscreen, Setting } from "./settingBase";
-import { LSCGSpellEffect, MagicSettingsModel, OutfitConfig, OutfitOption, SpellDefinition } from "./Models/magic";
+import { LSCGSpellEffect, MagicSettingsModel, OutfitConfig, OutfitOption, PolymorphConfig, PolymorphOption, SpellDefinition } from "./Models/magic";
 import { PairedBaseState } from "Modules/States/PairedBaseState";
 
 export const pairedSpellEffects = [
@@ -201,16 +201,23 @@ export class GuiMagic extends GuiSubscreen {
 
 	outfitFieldId: string = "magic_outfitPaste";
 	outfitDropId: string = "magic_outfitDrop";
+	polymorphDropId: string = "magic_polymorphDrop";
 	Load(): void {
 		super.Load();
 		ElementCreateInput(this.outfitFieldId, "text", "", -1);
 		ElementCreateDropdown(this.outfitDropId, Object.values(OutfitOption), (evt) => this.OutfitConfigDropChanged(evt));
+		ElementCreateDropdown(this.polymorphDropId, Object.values(PolymorphOption), (evt) => this.PolymorphConfigDropChanged(evt));
 	}
+
+	outfitEffects: LSCGSpellEffect[] = [
+		LSCGSpellEffect.outfit,
+		LSCGSpellEffect.polymorph
+	]
 
 	blinkLastTime = 0;
 	blinkColor = "Pink";
     Run() {
-		if (!this.settings.locked && this._ConfigureOutfit) {
+		if (!this.settings.locked && (this._ConfigureOutfit || this._ConfigurePolymorph)) {
 			this.multipageStructure.forEach((s, ix, arr) => {
 				s.forEach(setting => {
 					if (setting.type == "text" || setting.type == "number" || setting.type == "dropdown")
@@ -227,7 +234,8 @@ export class GuiMagic extends GuiSubscreen {
 			DrawTextFit("Paste Outfit Code:", coords.x + 50, (coords.y + coords.h/2) - 50, coords.w - 100 - buttonWidth, "Black", "Grey");
 			MainCanvas.textAlign = "center";
 			ElementPosition(this.outfitFieldId, coords.x + (coords.w/2) - (buttonWidth/2), (coords.y + coords.h/2) + 20, coords.w - 100 - buttonWidth);
-			ElementPositionFix(this.outfitDropId, 28, coords.x + 450, (coords.y + coords.h / 2) - 50 - 19, 340, 64);
+			if (this._ConfigureOutfit) ElementPositionFix(this.outfitDropId, 28, coords.x + 450, (coords.y + coords.h / 2) - 50 - 19, 340, 64);
+			else if (this._ConfigurePolymorph) ElementPositionFix(this.polymorphDropId, 28, coords.x + 450, (coords.y + coords.h / 2) - 50 - 19, 340, 64);
 			DrawEmptyRect(coords.x + 445, (coords.y + coords.h / 2) - 48 - 32, 350, 68, "Black", 3);
 			DrawButton(1350, 500 - 32, 100, 64, "Confirm", "White");
 			return;
@@ -237,6 +245,7 @@ export class GuiMagic extends GuiSubscreen {
 
 		this.ElementHide(this.outfitFieldId);
 		this.ElementHide(this.outfitDropId);
+		this.ElementHide(this.polymorphDropId);
 
 		var prev = MainCanvas.textAlign;
 		if (!this.settings.enabled) {
@@ -284,7 +293,7 @@ export class GuiMagic extends GuiSubscreen {
 						DrawButton(1410 - 4, this.getYPos(3) - 32 - 4, 72, 72, "", "White", "", `Delete ${this.Spell.Name}`); // Delete Effect
 						DrawImageResize("Icons/Trash.png", 1410, this.getYPos(3) - 32, 64, 64);
 					}
-					if (this.Spell.Effects[0] == LSCGSpellEffect.outfit) DrawButton(1500, this.getYPos(3) - 32, 200, 64, "Configure", "White");
+					if (this.outfitEffects.indexOf(this.Spell.Effects[0]) > -1) DrawButton(1500, this.getYPos(3) - 32, 200, 64, "Configure", "White");
 					MainCanvas.textAlign = "left";
 					DrawTextFit(GuiMagic.SpellEffectDescription(this.Spell.Effects[0]), 780, this.getYPos(4), 1000, "Black");
 					MainCanvas.textAlign = "center";
@@ -294,7 +303,7 @@ export class GuiMagic extends GuiSubscreen {
 							DrawButton(1410 - 4, this.getYPos(5) - 32 - 4, 72, 72, "", "White", "", `Delete ${this.Spell.Name}`); // Delete Effect
 							DrawImageResize("Icons/Trash.png", 1410, this.getYPos(5) - 32, 64, 64);
 						}
-						if (this.Spell.Effects[1] == LSCGSpellEffect.outfit) DrawButton(1500, this.getYPos(5) - 32, 200, 64, "Configure", "White");
+						if (this.outfitEffects.indexOf(this.Spell.Effects[1]) > -1) DrawButton(1500, this.getYPos(5) - 32, 200, 64, "Configure", "White");
 						MainCanvas.textAlign = "left";
 						DrawTextFit(GuiMagic.SpellEffectDescription(this.Spell.Effects[1]), 780, this.getYPos(6), 1000, "Black");
 						MainCanvas.textAlign = "center";
@@ -305,7 +314,7 @@ export class GuiMagic extends GuiSubscreen {
 							DrawButton(1410 - 4, this.getYPos(7) - 32 - 4, 72, 72, "", "White", "", `Delete ${this.Spell.Name}`); // Delete Effect
 							DrawImageResize("Icons/Trash.png", 1410, this.getYPos(7) - 32, 64, 64);
 						}
-						if (this.Spell.Effects[2] == LSCGSpellEffect.outfit) DrawButton(1500, this.getYPos(7) - 32, 200, 64, "Configure", "White");
+						if (this.outfitEffects.indexOf(this.Spell.Effects[2]) > -1) DrawButton(1500, this.getYPos(7) - 32, 200, 64, "Configure", "White");
 						MainCanvas.textAlign = "left";
 						DrawTextFit(GuiMagic.SpellEffectDescription(this.Spell.Effects[2]), 780, this.getYPos(8), 1000, "Black");
 						MainCanvas.textAlign = "center";
@@ -327,6 +336,12 @@ export class GuiMagic extends GuiSubscreen {
 			let buttonWidth = 150;
 			if (!MouseIn(coords.x, coords.y, coords.w, coords.h)) this._ConfigureOutfit = false;
 			else if (MouseIn(1350, 500 - 32, 100, 64)) this.ConfirmOutfit();
+			return;
+		} else if (!this.settings.locked && this._ConfigurePolymorph) {
+			let coords = {x: 500, y: 400, w: 1000, h: 200};
+			let buttonWidth = 150;
+			if (!MouseIn(coords.x, coords.y, coords.w, coords.h)) this._ConfigurePolymorph = false;
+			else if (MouseIn(1350, 500 - 32, 100, 64)) this.ConfirmPolymorph();
 			return;
 		}
 
@@ -386,8 +401,8 @@ export class GuiMagic extends GuiSubscreen {
 						}
 					} else if (this.Spell.Effects.length < 2 && MouseIn(1410, this.getYPos(3) - 32, 64, 64)) {
 						this.Spell.Effects.splice(0);
-					} else if (this.Spell.Effects[0] == LSCGSpellEffect.outfit && MouseIn(1500, this.getYPos(3)-32, 200, 64)){
-						this.ConfigureOutfitEffect();
+					} else if (this.outfitEffects.indexOf(this.Spell.Effects[0]) > -1 && MouseIn(1500, this.getYPos(3)-32, 200, 64)){
+						this.Spell.Effects[0] == LSCGSpellEffect.outfit ? this.ConfigureOutfitEffect() : this.ConfigurePolymorphEffect();
 					} else if (MouseIn(780, this.getYPos(5) - 32, 600, 64)) {
 						let effects = this.UniqueEffects(1);
 						if (MouseX <= 1080) {
@@ -400,8 +415,8 @@ export class GuiMagic extends GuiSubscreen {
 						}
 					} else if (this.Spell.Effects.length < 3 && MouseIn(1410, this.getYPos(5) - 32, 64, 64)) {
 						this.Spell.Effects.splice(1)
-					} else if (this.Spell.Effects[1] == LSCGSpellEffect.outfit && MouseIn(1500, this.getYPos(5)-32, 200, 64)){
-						this.ConfigureOutfitEffect();
+					} else if (this.outfitEffects.indexOf(this.Spell.Effects[1]) > -1 && MouseIn(1500, this.getYPos(5)-32, 200, 64)){
+						this.Spell.Effects[1] == LSCGSpellEffect.outfit ? this.ConfigureOutfitEffect() : this.ConfigurePolymorphEffect();
 					}else if (MouseIn(780, this.getYPos(7) - 32, 600, 64)) {
 						let effects = this.UniqueEffects(2);
 						if (MouseX <= 1080) {
@@ -414,8 +429,8 @@ export class GuiMagic extends GuiSubscreen {
 						}
 					} else if (this.Spell.Effects.length < 4 && MouseIn(1410, this.getYPos(7) - 32, 64, 64)) {
 						this.Spell.Effects.splice(2)
-					} else if (this.Spell.Effects[2] == LSCGSpellEffect.outfit && MouseIn(1500, this.getYPos(7)-32, 200, 64)){
-						this.ConfigureOutfitEffect();
+					} else if (this.outfitEffects.indexOf(this.Spell.Effects[2]) > -1 && MouseIn(1500, this.getYPos(7)-32, 200, 64)){
+						this.Spell.Effects[2] == LSCGSpellEffect.outfit ? this.ConfigureOutfitEffect() : this.ConfigurePolymorphEffect();
 					}
 				}
 			}
@@ -425,6 +440,7 @@ export class GuiMagic extends GuiSubscreen {
 	Exit(): void {
 		ElementRemove(this.outfitFieldId);
 		ElementRemove(this.outfitDropId);
+		ElementRemove(this.polymorphDropId);
 		this.CleanPotionSettings();
 		super.Exit();
 	}
@@ -516,6 +532,30 @@ export class GuiMagic extends GuiSubscreen {
 		}
 	}
 
+	// Duplicate for polymorph.... annoying.
+	_ConfigurePolymorph: boolean = false;
+	ConfigurePolymorphEffect() {
+		this.ElementSetValue(this.outfitFieldId, this.Spell.Polymorph?.Code ?? "");
+		this.ElementSetValue(this.polymorphDropId, this.Spell.Polymorph?.Option ?? PolymorphOption.both);
+		this._ConfigurePolymorph = true;
+	}
+	ConfirmPolymorph() {
+		this._ConfigurePolymorph = false;
+		if (!this.Spell.Polymorph) this.Spell.Polymorph = {Code: "", Option: PolymorphOption.both};
+		this.Spell.Polymorph.Code = ElementValue(this.outfitFieldId);
+		this.ElementSetValue(this.outfitFieldId, "");
+	}
+	PolymorphConfigDropChanged(evt: any) {
+		if (!!this.Spell) {
+			if (!this.Spell.Polymorph)
+				this.Spell.Polymorph = <PolymorphConfig>{
+					Code: "",
+					Option: PolymorphOption.both
+				}
+			this.Spell.Polymorph.Option = evt.target.value as PolymorphOption;
+		}
+	}
+
 	static SpellEffectDescription(effect: LSCGSpellEffect): string {
 		switch (effect) {
 			case LSCGSpellEffect.blindness:
@@ -548,6 +588,8 @@ export class GuiMagic extends GuiSubscreen {
 				return "Applies a +5 buff to all the target's skills for 15 minutes";
 			case LSCGSpellEffect.bane:
 				return "Applies a -5 debuff to all the target's skills for 15 minutes";
+			case LSCGSpellEffect.polymorph:
+				return "Polymorph the target's body and/or cosplay items"
 			case LSCGSpellEffect.none:
 			default:
 				return ""			;

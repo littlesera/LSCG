@@ -188,19 +188,6 @@ export class CommandModule extends BaseModule {
 				let stateList = states.map(s => `<li>${s}</li>`).join("");
 				LSCG_SendLocal(`<div><b>Active Conditions on ${targetName}:</b><ul>${stateList}</ul></div>`, 12000);
 			}
-		// }, {
-		// 	Tag: "test-beep",
-		// 	Description: " : List which conditions are currently active on you.",
-		// 	Action: (args, msg, parsed) => {
-		// 		let tgt = getCharacterByNicknameOrMemberNumber(args);
-		// 		if (!!tgt) {
-		// 			LSCG_SendLocal(`Sending beep command to ${CharacterNickname(tgt)}`);
-		// 			sendLSCGCommandBeep(tgt.MemberNumber ?? -1, "debug", [{
-		// 				name: "msg",
-		// 				value: `Test LSCG Beep from ${CharacterNickname(Player)}`
-		// 			}]);
-		// 		}
-		// 	}
 		}
 	]
 

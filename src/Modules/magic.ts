@@ -753,7 +753,15 @@ export class MagicModule extends BaseModule {
                             this.stateModule.GaggedState.Active ? 
                                 SendAction("%NAME% trembles as %POSSESSIVE% clothing shimmers and morphs around %INTENSIVE%.") : 
                                 SendAction("%NAME% squeaks as %POSSESSIVE% clothing shimmers and morphs around %INTENSIVE%.");
-                            this.stateModule.RedressedState.ApplyOutfit(spell.Outfit)
+                            this.stateModule.RedressedState.Apply(spell.Outfit);
+                        }
+                        break;
+                    case LSCGSpellEffect.polymorph:
+                        if (!!spell.Polymorph?.Code) {
+                            this.stateModule.GaggedState.Active ? 
+                                SendAction("%NAME% trembles as %POSSESSIVE% body shimmers and morphs.") : 
+                                SendAction("%NAME% squeaks as %POSSESSIVE% body shimmers and morphs.");
+                            this.stateModule.PolymorphedState.Apply(spell.Polymorph);
                         }
                         break;
                     case LSCGSpellEffect.paired_arousal:

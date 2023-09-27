@@ -48,6 +48,17 @@ export abstract class BaseState {
         return this.config.extensions;
     }
 
+    getConfigValue(key: string): string {
+        return this.extensions[key];
+    }
+
+    setConfigValue(key: string, val: string | null): void {
+        if (!val)
+            delete this.extensions[key];
+        else
+            this.extensions[key] = val;
+    }
+
     get Active(): boolean {
         return this.config.active;
     }
