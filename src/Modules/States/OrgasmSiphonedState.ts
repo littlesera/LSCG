@@ -22,7 +22,7 @@ export class OrgasmSiphonedState extends PairedBaseState {
     }
 
     Init(): void {
-        hookFunction("ActivityOrgasmStart", 1, (args, next) => {
+        hookFunction("ActivityOrgasmStart", 100, (args, next) => { // high high priority
             // Intercept an orgasm, force it to ruin and send command to paired target
             let C = args[0] as Character;
             if (!C.IsPlayer())

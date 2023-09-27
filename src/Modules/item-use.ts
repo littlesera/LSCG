@@ -11,13 +11,15 @@ export const CameraItems: string[] = [
 	"Phone1",
 	"Phone2",
 	"PortalTablet",
-	"Camera1",
+	"Camera1", 
+	"Baguette"
 ];
 
 export const MagicWandItems: string[] = [
 	"RainbowWand",
 	"VibratingWand",
-	"SmallVibratingWand"
+	"SmallVibratingWand",
+	"Baguette"
 ]
 
 export const QuaffableItems: string[] = [

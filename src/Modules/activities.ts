@@ -177,8 +177,10 @@ export class ActivityModule extends BaseModule {
                         SendAction("%NAME% moans and trembles in frustration as %PRONOUN% is held right at the edge...");
                         ActivitySetArousal(Player, 99);
                     }
-                    else
+                    else {
+                        if (!!Player.ArousalSettings) Player.ArousalSettings.Progress = 100;
                         ActivityOrgasmPrepare(Player);
+                    }
                 }
             }
         })
