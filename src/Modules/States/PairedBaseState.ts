@@ -21,25 +21,25 @@ export abstract class PairedBaseState extends BaseState {
 
     abstract Update(source: number, args: {name: string, value: any}[]): void;
 
-    DoPair(target: Character, matchmaker: Character | null) {
+    DoPair(target: Character, matchmaker: Character | null, duration?: number) {
         this.AddPairing(<Pairing>{
             PairedMember: target.MemberNumber,
             PairedBy: matchmaker?.MemberNumber,
             IsSource: true
         });
-        this.Activate(matchmaker?.MemberNumber);
+        return this.Activate(matchmaker?.MemberNumber, duration);
     }
 
-    RespondToPairing(source: Character, matchmaker: Character | null) {
+    RespondToPairing(source: Character, matchmaker: Character | null, duration?: number) {
         this.AddPairing(<Pairing>{
             PairedMember: source.MemberNumber,
             PairedBy: matchmaker?.MemberNumber,
             IsSource: false
         });
-        this.Activate(matchmaker?.MemberNumber);
+        this.Activate(matchmaker?.MemberNumber, duration);
     }
 
-    Recover(emote?: boolean | undefined): void {
+    Recover(emote?: boolean | undefined): BaseState | undefined {
         this.Pairings.forEach(pair => {
             sendLSCGCommandBeep(pair.PairedMember, "unpair", [{
                 name: "type",
@@ -47,12 +47,10 @@ export abstract class PairedBaseState extends BaseState {
             }])
         });
         this.Pairings = [];
-        super.Recover();
+        return super.Recover(emote);
     }
 
     Init(): void {}
-
-    Tick(now: number) {}
 
     RoomSync(): void {}
 

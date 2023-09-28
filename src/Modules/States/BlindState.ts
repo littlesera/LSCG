@@ -19,8 +19,6 @@ export class BlindState extends BaseState {
 
     Init(): void {}
 
-    Tick(now: number) {}
-
     RoomSync(): void {}
 
     SpeechBlock(): void {}

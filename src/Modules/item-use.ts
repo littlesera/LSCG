@@ -853,14 +853,19 @@ export class ItemUseModule extends BaseModule {
 	}
 
 	UnopposedActivityRoll(C: Character) {
-		return new ActivityRoll(this.d20, this.getRollMod(C));
+		let roll = new ActivityRoll(this.d20, this.getRollMod(C));
+		console.debug(`LSCG Roll: ${CharacterNickname(C)} [${roll.Total}]`);
+		return roll;
 	}
 
 	MakeActivityCheck(attacker: Character, defender: Character): ActivityCheck {
+		let attackRoll = new ActivityRoll(this.d20, this.getRollMod(attacker, defender, true));
+		let defendRoll = new ActivityRoll(this.d20, this.getRollMod(defender, attacker, false));
+		console.debug(`LSCG Roll: ${CharacterNickname(attacker)} [${attackRoll.Total}] -- ${CharacterNickname(defender)} [${defendRoll.Total}]`);
 		return <ActivityCheck>{
-			AttackerRoll: new ActivityRoll(this.d20, this.getRollMod(attacker, defender, true)),
-			DefenderRoll: new ActivityRoll(this.d20, this.getRollMod(defender, attacker, false))
-		}
+			AttackerRoll: attackRoll,
+			DefenderRoll: defendRoll
+		};
 	}
 
 	GetHempRopeLocations(): RopeTarget[] {

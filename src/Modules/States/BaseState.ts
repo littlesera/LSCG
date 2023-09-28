@@ -67,20 +67,33 @@ export abstract class BaseState {
         this._state = stateModule;
     }
 
-    Activate(memberNumber?: number, emote?: boolean) {
+    Activate(memberNumber?: number, duration?: number, emote?: boolean): BaseState | undefined {
         this.config.active = true;
         this.config.activatedAt = new Date().getTime();
         this.config.activatedBy = memberNumber ?? -1;
         this.config.activationCount++;
+        this.config.duration = duration;
+
         settingsSave(true);
+        return this;
      }
 
-    Recover(emote?: boolean): void {
+    Recover(emote?: boolean): BaseState | undefined {
+        if (emote) SendAction(`%NAME%'s ${this.Type} state wears off.`)
         this.config.active = false;
         this.config.recoveredAt = new Date().getTime();
         settingsSave(true);
+        return this;
     }
-    
+
+    Tick(now: number): void {
+        if (!!this.config.duration && this.config.duration > 0) {
+            let isExpired = this.Active && this.config.activatedAt + this.config.duration < now;
+            if (isExpired)
+                this.Recover(true);
+        }
+    }
+
     Safeword(): void {
         this.Recover(false);
     }
@@ -89,7 +102,6 @@ export abstract class BaseState {
     abstract Label(C: OtherCharacter): string;
 
     abstract Init(): void;
-    abstract Tick(now: number): void;
     abstract RoomSync(): void;
     abstract SpeechBlock(): void;
 }

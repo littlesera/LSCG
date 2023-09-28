@@ -1,6 +1,6 @@
 import { BaseModule } from "base";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { ICONS, LSCG_SendLocal, SendAction, getRandomInt, hookFunction, mouseTooltip, removeAllHooksByModule } from "../utils";
+import { ICONS, LSCG_SendLocal, LSCG_TEAL, SVG_ICONS, SendAction, drawSvg, getRandomInt, hookFunction, mouseTooltip, removeAllHooksByModule } from "../utils";
 import { StateConfig, StateSettingsModel } from "Settings/Models/states";
 import { HypnoState } from "./States/HypnoState";
 import { SleepState } from "./States/SleepState";
@@ -144,30 +144,45 @@ export class StateModule extends BaseModule {
                 MouseIn(CharX, CharY, 500 * Zoom, 1000 * Zoom)
             ) {
                 let validStates = C.LSCG?.StateModule.states.filter(s => s.active);
-                let validStateCound = validStates.length;
+                let validStateCount = validStates.length;
                 let tooltip = undefined;
                 validStates.forEach((state, ix, arr) => {
+                    let durationEnabled = (state.duration ?? 0) > 0;
                     let iconSize = 30;
-                    let yOffset = (ix+1) * 40 * Zoom;
+                    let yOffset = (ix+1) * 40;
                     let iconCoords = {
                         x: CharX + 80 * Zoom,
-                        y: CharY + (60 + yOffset * Zoom),
+                        y: CharY + ((60 + yOffset) * Zoom),
                         w: iconSize * Zoom,
                         h: iconSize * Zoom
                     };
                     let iconCenter = {x: iconCoords.x + iconCoords.w/2, y: iconCoords.y + iconCoords.h/2}
                     let statePair = this.GetIconForState(state, C)
-                    DrawCircle(iconCenter.x, iconCenter.y, (iconSize + 10)/2 * Zoom, 1, "Black", "White")
+                    DrawCircle(iconCenter.x, iconCenter.y, (iconSize + 10)/2 * Zoom, 2, "Black", "White");
                     DrawImageResize(
                         statePair.Icon,
                         iconCoords.x, iconCoords.y, iconCoords.w, iconCoords.h
                     );
+                    if (durationEnabled) {
+                        let lengthActive = Math.max(1, (CommonTime() - state.activatedAt));
+                        let durationPercentage = 1 - (lengthActive / Math.max((state.duration ?? 0), lengthActive));
+                        let timeRemainingInMin = Math.max(0, Math.floor(((state.duration ?? 0) - lengthActive)/(60*1000)));
+                        let barH = iconCoords.h * durationPercentage;
+                        let barY = iconCoords.y + (iconCoords.h - barH);
+                        let barXOffset = 10;
+                        let barW = 10;
+                        DrawRect(iconCoords.x + iconCoords.w + barXOffset, iconCoords.y, barW * Zoom, iconCoords.h, "White");
+                        DrawRect(iconCoords.x + iconCoords.w + barXOffset, barY, barW * Zoom, barH, LSCG_TEAL);
+                        DrawEmptyRect(iconCoords.x + iconCoords.w + barXOffset, iconCoords.y, barW * Zoom, iconCoords.h, "Black", 2);
+                        // if (MouseIn(iconCoords.x + iconCoords.w + barXOffset, iconCoords.y, barW * Zoom, iconCoords.h))
+                        //     tooltip = `${timeRemainingInMin} min. remain`;
+                    }
                     if (MouseIn(iconCoords.x, iconCoords.y, iconCoords.w, iconCoords.h)) {
                         tooltip = statePair.Label;
                     }
                 });
                 if (!!tooltip)
-                mouseTooltip(tooltip);
+                    mouseTooltip(tooltip);
             }
             return ret;
         }, ModuleCategory.States);

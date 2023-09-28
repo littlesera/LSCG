@@ -74,4 +74,6 @@ export interface MagicPublicSettingsModel extends BaseSettingsModel{
     // spell defense
     neverDefend: boolean;
     noDefenseMemberIds: string;
+    limitedDuration: boolean;
+    maxDuration: number;
 }

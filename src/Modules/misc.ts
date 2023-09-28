@@ -220,7 +220,7 @@ export class MiscModule extends BaseModule {
         this.isChloroformed = true;
         this.settings.chloroformedAt = CommonTime();
         clearTimeout(this.passoutTimer);
-        getModule<StateModule>("StateModule")?.SleepState.Activate(undefined, true);
+        getModule<StateModule>("StateModule")?.SleepState.Activate(undefined, undefined, true);
     }
 
     chloroformWearingOff: boolean = false;

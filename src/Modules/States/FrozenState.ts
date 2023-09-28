@@ -30,8 +30,6 @@ export class FrozenState extends BaseState {
         })
     }
 
-    Tick(now: number) {}
-
     RoomSync(): void {}
 
     speechBlockStr: string[] = [

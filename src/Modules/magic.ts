@@ -8,6 +8,7 @@ import { GuiMagic, pairedSpellEffects } from "Settings/magic";
 import { StateModule } from "./states";
 import { ItemUseModule, MagicWandItems } from "./item-use";
 import { InjectorModule } from "./injector";
+import { BaseState } from "./States/BaseState";
 
 const dialogButtonInfo = [980, 10, 100, 40, 5];
 const dialogButtonCoords: [number,number,number,number] = [dialogButtonInfo[0], dialogButtonInfo[1], 40, 40];
@@ -46,7 +47,9 @@ export class MagicModule extends BaseModule {
             limitRemoteAccessToHypnotizer: false,
             remoteMemberIds: "",
             neverDefend: false,
-            noDefenseMemberIds: ""
+            noDefenseMemberIds: "",
+            limitedDuration: true,
+            maxDuration: 0
         };
     }
 
@@ -113,17 +116,6 @@ export class MagicModule extends BaseModule {
     load(): void {
         let activities = getModule<ActivityModule>("ActivityModule");
 
-        (<any>window)["Dialog_LSCG_CastSpell"] = () => this.OpenSpellMenu(CurrentCharacter as OtherCharacter);
-        (<any>window)["Dialog_LSCG_CastWildMagic"] = () => this.CastWildMagic(CurrentCharacter as OtherCharacter);
-        (<any>window)["Dialog_LSCG_TeachSpell"] = () => this.TeachSpell(CurrentCharacter as OtherCharacter);
-
-        (<any>window)["Dialog_LSCG_CanDoMagic"] = () => this.CanUseMagic(CurrentCharacter as OtherCharacter);
-        (<any>window)["Dialog_LSCG_CanCastSpell"] = () => this.CanCastSpell(CurrentCharacter as OtherCharacter);
-        (<any>window)["Dialog_LSCG_CanWildMagic"] = () => this.CanWildMagic(CurrentCharacter as OtherCharacter);
-        (<any>window)["Dialog_LSCG_CanTeachSpell"] = () => this.CanTeachSpell(CurrentCharacter as OtherCharacter);
-
-        //this.AddDialogOptions(Player);
-
         hookFunction("DialogDraw", 10, (args, next) => {
             if (this.Enabled && this.SpellMenuOpen) 
                 return this.DrawSpellMenu();
@@ -158,15 +150,6 @@ export class MagicModule extends BaseModule {
             return next(args) || CurrentScreen == "LSCG_SPELLS_DIALOG";
         }, ModuleCategory.Magic);
 
-        // hookFunction("CharacterBuildDialog", 1, (args, next) => {
-        //     next(args);
-        //     let C = args[0] as OtherCharacter;
-        //     if (!C || C.Dialog.some(d => (d.Function?.indexOf("LSCG") ?? -1) > -1))
-        //         return;
-        //     else
-        //         this.AddDialogOptions(C);
-        // }, ModuleCategory.Magic)
-
         OnActivity(1, ModuleCategory.Magic, (data, sender, msg, megadata) => {
             if (!this.Enabled)
                 return;
@@ -179,102 +162,6 @@ export class MagicModule extends BaseModule {
                 this.HandleQuaff(sender);
             }
         });
-
-        // activities?.AddActivity({
-        //     Activity: <Activity>{
-        //         Name: "CastSpell",
-        //         MaxProgress: 90,
-        //         MaxProgressSelf: 90,
-        //         Prerequisite: ["UseHands", "Needs-MagicItem"]
-        //     },
-        //     Targets: [
-        //         <ActivityTarget>{
-        //             Name: "ItemArms",
-		// 			TargetLabel: "Cast Spell",
-        //             SelfAllowed: true,
-        //             TargetAction: "SourceCharacter casts a spell on TargetCharacter with PronounPossessive ActivityAsset.",
-        //             TargetSelfAction: "SourceCharacter casts a spell on themselves with PronounPossessive ActivityAsset."
-        //         }
-        //     ],
-        //     CustomPrereqs: [
-		// 		{
-		// 			Name: "CanCastSpell",
-		// 			Func: (acting, acted, group) => {
-        //                 return this.CanCastSpell(acted);
-		// 			}
-		// 		}
-		// 	],
-        //     CustomAction: {
-        //         Func: (target, args, next) => {
-        //             if (!!target)
-        //                 this.OpenSpellMenu(target?.IsPlayer() ? target as PlayerCharacter : target as OtherCharacter);
-        //         }
-        //     }
-        // });
-
-        // activities?.AddActivity({
-        //     Activity: <Activity>{
-        //         Name: "CastWildMagic",
-        //         MaxProgress: 90,
-        //         MaxProgressSelf: 90,
-        //         Prerequisite: ["UseHands", "Needs-MagicItem"]
-        //     },
-        //     Targets: [
-        //         <ActivityTarget>{
-        //             Name: "ItemArms",
-		// 			TargetLabel: "Cast Wild Magic",
-        //             SelfAllowed: true,
-        //             TargetAction: "SourceCharacter casts a wild spell on TargetCharacter with PronounPossessive ActivityAsset.",
-        //             TargetSelfAction: "SourceCharacter casts a wild spell on themselves with PronounPossessive ActivityAsset."
-        //         }
-        //     ],
-        //     CustomPrereqs: [
-		// 		{
-		// 			Name: "CanCastWildMagic",
-		// 			Func: (acting, acted, group) => {
-        //                 return this.CanWildMagic(acted);
-		// 			}
-		// 		}
-		// 	],
-        //     CustomAction: {
-        //         Func: (target, args, next) => {
-        //             if (!!target)
-        //                 this.CastWildMagic(target?.IsPlayer() ? target as PlayerCharacter : target as OtherCharacter);
-        //         }
-        //     }
-        // });
-
-        // activities?.AddActivity({
-        //     Activity: <Activity>{
-        //         Name: "TeachSpell",
-        //         MaxProgress: 90,
-        //         MaxProgressSelf: 90,
-        //         Prerequisite: ["UseHands", "Needs-MagicItem"]
-        //     },
-        //     Targets: [
-        //         <ActivityTarget>{
-        //             Name: "ItemArms",
-		// 			TargetLabel: "Teach Spell",
-        //             SelfAllowed: false,
-        //             TargetAction: "SourceCharacter carefully instructs TargetCharacter in the intricate movements required for a new spell."
-        //         }
-        //     ],
-        //     CustomPrereqs: [
-		// 		{
-		// 			Name: "CanTeachSpell",
-		// 			Func: (acting, acted, group) => {
-        //                 return this.CanTeachSpell(acted);
-		// 			}
-		// 		}
-		// 	],
-        //     CustomAction: {
-        //         Func: (target, args, next) => {
-        //             if (!!target)
-        //                 this.TeachSpell(target as OtherCharacter);
-        //         }
-        //     },
-        //     CustomImage: "Icons/Magic.png"
-        // });
 
         activities?.AddActivity({
             Activity: <Activity>{
@@ -291,6 +178,12 @@ export class MagicModule extends BaseModule {
                     TargetAction: "SourceCharacter quaffs the ActivityAsset in one gulp."
                 }
             ],
+            CustomAction: {
+                Func: (target, args, next) => {
+                    next(args);
+                    InventoryRemove(Player, "ItemHandheld", true);
+                }
+            },
             CustomImage: "Icons/Magic.png"
         });
     }
@@ -329,62 +222,6 @@ export class MagicModule extends BaseModule {
             !target.IsPlayer() &&
             this.settings.knownSpells.length > 0 &&
             MagicWandItems.indexOf(targetItem?.Asset?.Name ?? "") > -1;
-    }
-
-    AdditionalDialogs: DialogLine[] = [
-        <DialogLine>{
-            Stage: '0',
-            NextStage: 'LSCG_Magic',
-            Option: '(LSCG Magic.)',
-            Result: "(LSCG Magic™)",
-            Function: null,
-            Group: null,
-            Trait: null,
-            Prerequisite: 'Dialog_LSCG_CanDoMagic()'
-        }, <DialogLine>{
-            Stage: 'LSCG_Magic',
-            NextStage: null,
-            Option: '(Cast a Spell.)',
-            Result: null,
-            Function: "Dialog_LSCG_CastSpell()",
-            Group: null,
-            Trait: null,
-            Prerequisite: 'Dialog_LSCG_CanCastSpell()'
-        }, <DialogLine>{
-            Stage: 'LSCG_Magic',
-            NextStage: null,
-            Option: '(Cast Wild Magic.)',
-            Result: null,
-            Function: "Dialog_LSCG_CastWildMagic()",
-            Group: null,
-            Trait: null,
-            Prerequisite: 'Dialog_LSCG_CanWildMagic()'
-        }, <DialogLine>{
-            Stage: 'LSCG_Magic',
-            NextStage: null,
-            Option: '(Teach a Spell.)',
-            Result: null,
-            Function: "Dialog_LSCG_TeachSpell()",
-            Group: null,
-            Trait: null,
-            Prerequisite: 'Dialog_LSCG_CanTeachSpell()'
-        }, <DialogLine>{
-            Stage: 'LSCG_Magic',
-            NextStage: "0",
-            Option: '(Back to main menu.)',
-            Result: '(Main menu.)',
-            Function: null,
-            Group: null,
-            Trait: null,
-            Prerequisite: null
-        }
-    ]
-
-    AddDialogOptions(C: Character) {
-        let leaveIx = C.Dialog.findIndex(d => d.Function == "DialogLeave()");
-        if (leaveIx > -1) {
-            C.Dialog.splice(leaveIx, 0, ...this.AdditionalDialogs);
-        }
     }
 
     PrevScreen: string | undefined = undefined;
@@ -607,8 +444,10 @@ export class MagicModule extends BaseModule {
                 SendAction(this.getCastingActionString(spell, InventoryGet(Player, "ItemHandheld"), spellTarget, pairedTarget), spellTarget);
             }
 
-            if (spellTarget.IsPlayer())
-                setTimeout(() => this.IncomingSpell(Player, spell, pairedTarget), 1000);
+            if (spellTarget.IsPlayer()) {
+                let check = getModule<ItemUseModule>("ItemUseModule").UnopposedActivityRoll(spellTarget);
+                setTimeout(() => this.IncomingSpell(Player, spell, pairedTarget, Math.max(1, check.Total / 2)), 1000);
+            }
             else
                 sendLSCGCommand(spellTarget, "spell", [
                     {
@@ -671,16 +510,16 @@ export class MagicModule extends BaseModule {
             if (msg.command?.name == "spell") {
                 let paired = getCharacter((msg.command?.args.find(arg => arg.name == "paired")?.value as number));
                 let spell = msg.command?.args?.find(arg => arg.name == "spell")?.value as SpellDefinition;
-                if (!spell)
+                if (!spell || !sender)
                     return;
-                if (!!sender && !this.SpellIsBeneficial(spell) && this.DefendAgainst(sender.MemberNumber ?? -1)) {
-                    let check = getModule<ItemUseModule>("ItemUseModule")?.MakeActivityCheck(sender, Player);
+                let check = getModule<ItemUseModule>("ItemUseModule")?.MakeActivityCheck(sender, Player);
+                if (!this.SpellIsBeneficial(spell) && this.DefendAgainst(sender.MemberNumber ?? -1)) {
                     if (check.AttackerRoll.Total < check.DefenderRoll.Total) {
                         SendAction(`${CharacterNickname(Player)} ${check.DefenderRoll.TotalStr}successfully saves against ${CharacterNickname(sender)}'s ${check.AttackerRoll.TotalStr}${spell.Name}.`);
                         return;
                     }
                 }
-                this.IncomingSpell(sender, spell, paired);
+                this.IncomingSpell(sender, spell, paired, Math.max(1, check.AttackerRoll.Total - check.DefenderRoll.Total));
             }
             else if (msg.command?.name == "pair") {
                 let origin = getCharacter(msg.command?.args.find(arg => arg.name == "paired")?.value as number);
@@ -695,7 +534,7 @@ export class MagicModule extends BaseModule {
         }, 1000); // Slight delay on responding to spell commands, builds anticipation.
     }
 
-    IncomingSpell(sender: Character | null, spell: SpellDefinition, paired?: Character | null) {
+    IncomingSpell(sender: Character | null, spell: SpellDefinition, paired?: Character | null, saveDiff: number = 1) {
         let senderName = !sender ? "Someone" : CharacterNickname(sender);
         let pairedName = !paired ? "someone else" : CharacterNickname(paired);
         let allowedSpellEffects = spell.Effects.filter(effect => this.settings.blockedSpellEffects.indexOf(effect) == -1);
@@ -703,60 +542,71 @@ export class MagicModule extends BaseModule {
             SendAction(`${senderName}'s ${spell.Name} fizzles when cast on %NAME%, none of its effects allowed to take hold.`);
             return;
         }
+        let duration: number | undefined = undefined;
+        
+        if (!this.SpellIsBeneficial(spell)) {
+            duration = saveDiff * 5 * (60 * 1000) // 5 minutes for every level of "spell power" (difference between caster and defender checks)
+            if (!this.settings.limitedDuration)
+                duration = 0;
+            else if (this.settings.maxDuration > 0)
+                duration = Math.min(duration, this.settings.maxDuration * (60 * 1000));
+            LSCG_SendLocal(`${sender?.IsPlayer() ? 'Your' : senderName + "'s"} ${spell.Name} spell will last ${duration / (60 * 1000)} minutes.`);
+        }            
 
         allowedSpellEffects.forEach((effect, ix, arr) => {
             setTimeout(() => {
+                let state: BaseState | undefined;
                 switch (effect) {
                     case LSCGSpellEffect.blindness:
                         SendAction("%NAME%'s eyes dart around, %POSSESSIVE% world suddenly plunged into darkness.");
-                        this.stateModule.BlindState.Activate(sender?.MemberNumber);
+                        state = this.stateModule.BlindState.Activate(sender?.MemberNumber, duration);
                         break;
                     case LSCGSpellEffect.deafened:
                         SendAction("%NAME% frowns as %PRONOUN% is completely deafened.");
-                        this.stateModule.DeafState.Activate(sender?.MemberNumber);
+                        state = this.stateModule.DeafState.Activate(sender?.MemberNumber, duration);
                         break;
                     case LSCGSpellEffect.frozen:
                         SendAction("%NAME%'s eyes widen in a panic as %POSSESSIVE% muscles seize in place.");
-                        this.stateModule.FrozenState.Activate(sender?.MemberNumber);
+                        state = this.stateModule.FrozenState.Activate(sender?.MemberNumber, duration);
                         break;
                     case LSCGSpellEffect.horny:
                         this.stateModule.GaggedState.Active ? SendAction("A blush runs into %NAME%'s cheeks uncontrollably.") : SendAction("A moan escapes %NAME%'s lips uncontrollably.");
-                        this.stateModule.HornyState.Activate(sender?.MemberNumber);
+                        state = this.stateModule.HornyState.Activate(sender?.MemberNumber, duration);
                         break;
                     case LSCGSpellEffect.hypnotizing:
                         SendAction("%NAME% is unable to fight the spell's hypnotizing influence, slumping weakly as %POSSESSIVE% eyes go blank.");
-                        this.stateModule.HypnoState.Activate(sender?.MemberNumber);
+                        state = this.stateModule.HypnoState.Activate(sender?.MemberNumber, duration);
                         break;
                     case LSCGSpellEffect.muted:
                         Player.IsGagged() ? SendAction("%NAME%'s protests suddenly fall completely silent.") : SendAction("%NAME%'s mouth moves in protest but not a single sound escapes.");
-                        this.stateModule.GaggedState.Activate(sender?.MemberNumber);
+                        state = this.stateModule.GaggedState.Activate(sender?.MemberNumber, duration);
                         break;
                     case LSCGSpellEffect.slumber:
                         SendAction("%NAME% succumbs to the spell's overwhelming pressure, %POSSESSIVE% eyes closing as %PRONOUN% falls unconscious.");
-                        this.stateModule.SleepState.Activate(sender?.MemberNumber);
+                        state = this.stateModule.SleepState.Activate(sender?.MemberNumber, duration);
                         break;
                     case LSCGSpellEffect.enlarge:
-                        this.stateModule.ResizedState.Enlarge(sender?.MemberNumber, true);
+                        state = this.stateModule.ResizedState.Enlarge(sender?.MemberNumber, duration, true);
                         break;
                     case LSCGSpellEffect.reduce:
-                        this.stateModule.ResizedState.Reduce(sender?.MemberNumber, true);
+                        state = this.stateModule.ResizedState.Reduce(sender?.MemberNumber, duration, true);
                         break;
                     case LSCGSpellEffect.dispell:
                         SendAction("%NAME% gasps, blinking as the magic affecting %INTENSIVE% is removed.");
-                        this.stateModule.Clear(true);
+                        this.stateModule.Clear(false);
                         break;
                     case LSCGSpellEffect.bless:
-                        this.stateModule.BuffedState.Bless(sender?.MemberNumber, true);
+                        state = this.stateModule.BuffedState.Bless(sender?.MemberNumber, true, duration);
                         break;
                     case LSCGSpellEffect.bane:
-                        this.stateModule.BuffedState.Bane(sender?.MemberNumber, true);
+                        state = this.stateModule.BuffedState.Bane(sender?.MemberNumber, true, duration);
                         break;
                     case LSCGSpellEffect.outfit:
                         if (!!spell.Outfit?.Code) {
                             this.stateModule.GaggedState.Active ? 
                                 SendAction("%NAME% trembles as %POSSESSIVE% clothing shimmers and morphs around %INTENSIVE%.") : 
                                 SendAction("%NAME% squeaks as %POSSESSIVE% clothing shimmers and morphs around %INTENSIVE%.");
-                            this.stateModule.RedressedState.Apply(spell.Outfit);
+                            state = this.stateModule.RedressedState.Apply(spell.Outfit, duration);
                         }
                         break;
                     case LSCGSpellEffect.polymorph:
@@ -764,13 +614,13 @@ export class MagicModule extends BaseModule {
                             this.stateModule.GaggedState.Active ? 
                                 SendAction("%NAME% trembles as %POSSESSIVE% body shimmers and morphs.") : 
                                 SendAction("%NAME% squeaks as %POSSESSIVE% body shimmers and morphs.");
-                            this.stateModule.PolymorphedState.Apply(spell.Polymorph);
+                            state = this.stateModule.PolymorphedState.Apply(spell.Polymorph, duration);
                         }
                         break;
                     case LSCGSpellEffect.paired_arousal:
                         if (!!paired && !!sender) {
                             SendAction(`%NAME% squirms as %POSSESSIVE% arousal is paired.`);
-                            this.stateModule.ArousalPairedState.DoPair(paired, sender);
+                            state = this.stateModule.ArousalPairedState.DoPair(paired, sender, duration);
                             this.NotifyPair(sender, paired, LSCGSpellEffect.paired_arousal, this.stateModule.ArousalPairedState.Type);
                         }
                         break;
@@ -779,7 +629,7 @@ export class MagicModule extends BaseModule {
                             this.stateModule.GaggedState.Active ? 
                                 SendAction(`%NAME% quivers as %PRONOUN% feels %POSSESSIVE% impending denial.`) :
                                 SendAction(`%NAME% whimpers as %PRONOUN% feels %POSSESSIVE% impending denial.`);
-                            this.stateModule.OrgasmSiphonedState.DoPair(paired, sender);
+                            state = this.stateModule.OrgasmSiphonedState.DoPair(paired, sender, duration);
                             this.NotifyPair(sender, paired, LSCGSpellEffect.orgasm_siphon, this.stateModule.OrgasmSiphonedState.Type);
                         }
                         break;

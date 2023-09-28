@@ -25,34 +25,36 @@ export class ResizedState extends BaseState {
         super(state);
     }
 
-    Enlarge(MemberNumber?: number, emote?: boolean) {
+    Enlarge(MemberNumber?: number, duration?: number, emote?: boolean): BaseState {
         if (this.Active && !this.enlarged)
             this.Recover(true);
         else {
             this.enlarged = true;
             if (emote) SendAction(`%NAME%'s body reshapes and grows to twice its size.`);
-            this.Activate(MemberNumber, emote);
+            this.Activate(MemberNumber, duration, emote);
         }
+        return this;
     }
 
-    Reduce(MemberNumber?: number, emote?: boolean) {
+    Reduce(MemberNumber?: number, duration?: number, emote?: boolean): BaseState {
         if (this.Active && this.enlarged)
             this.Recover(true);
         else {
             this.enlarged = false;
             if (emote) SendAction(`%NAME%'s body reshapes and shrinks to half its size.`);
-            this.Activate(MemberNumber, emote);
+            this.Activate(MemberNumber, duration, emote);
         }
+        return this;
     }
 
-    Activate(memberNumber?: number | undefined, emote?: boolean | undefined): void {
+    Activate(memberNumber?: number | undefined, duration?: number, emote?: boolean | undefined): BaseState | undefined {
         this.config.extensions["originalHeightRatio"] = Player.HeightRatio;
-        super.Activate();
+        return super.Activate(memberNumber, duration, emote);
     }
 
-    Recover(emote?: boolean | undefined): void {
+    Recover(emote?: boolean | undefined): BaseState | undefined {
         if (emote && this.Active) SendAction(`%NAME%'s body returns to its normal size.`);
-        super.Recover();
+        return super.Recover(false);
     }
 
     Init(): void {
@@ -75,8 +77,6 @@ export class ResizedState extends BaseState {
             return ret;
         })
     }
-
-    Tick(now: number) {}
 
     RoomSync(): void {}
 

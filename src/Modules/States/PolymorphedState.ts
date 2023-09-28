@@ -69,28 +69,29 @@ export class PolymorphedState extends BaseState {
         }
     }
 
-    Apply(outfit: PolymorphConfig, memberNumber?: number | undefined, emote?: boolean | undefined): void {
-        this.Activate(memberNumber, emote);
+    Apply(outfit: PolymorphConfig, memberNumber?: number | undefined, duration?: number,  emote?: boolean | undefined): BaseState {
         try{
             let outfitList = JSON.parse(LZString.decompressFromBase64(outfit.Code)) as ItemBundle[];
             if (!!outfitList && typeof outfitList == "object") {
                 this.StripCharacter(false, outfit.Option, outfitList);
                 this.WearMany(outfitList, outfit.Option);
-                super.Activate(memberNumber, emote);
+                super.Activate(memberNumber, duration, emote);
             }
         }
         catch {
-            console.warn("error parsing outfitcode in RedressedState: " + outfit.Code);
+            console.warn("error parsing outfitcode in PolymorphedState: " + outfit.Code);
         }
+        return this;
     }
 
-    Recover(emote?: boolean | undefined): void {
+    Recover(emote?: boolean | undefined): BaseState {
         super.Recover();
         if (!!this.StoredOutfit) {
             this.StripCharacter(true, PolymorphOption.both);
             this.WearMany(this.StoredOutfit, PolymorphOption.both);
             this.ClearStoredOutfit();
         }
+        return this;
     }
 
     WearMany(items: ItemBundle[], type: PolymorphOption) {
@@ -108,8 +109,6 @@ export class PolymorphedState extends BaseState {
     }
 
     Init(): void {}
-
-    Tick(now: number) {}
 
     RoomSync(): void {}
 
