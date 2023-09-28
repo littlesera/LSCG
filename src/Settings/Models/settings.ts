@@ -7,6 +7,7 @@ import { InjectorPublicSettingsModel, InjectorSettingsModel } from "./injector";
 import { ActivitySettingsModel } from "./activities";
 import { StateModule } from "Modules/states";
 import { StatePublicSettingsModel, StateSettingsModel } from "./states";
+import { MagicPublicSettingsModel, MagicSettingsModel } from "./magic";
 
 export interface SettingsModel {
     Version: string;
@@ -20,6 +21,7 @@ export interface SettingsModel {
     InjectorModule: InjectorSettingsModel;
     ActivityModule: ActivitySettingsModel;
     StateModule: StateSettingsModel;
+    MagicModule: MagicSettingsModel;
 }
 
 export interface IPublicSettingsModel extends BaseSettingsModel {
@@ -32,6 +34,7 @@ export interface IPublicSettingsModel extends BaseSettingsModel {
     MiscModule: BaseSettingsModel;
     InjectorModule: InjectorPublicSettingsModel;
     StateModule: StatePublicSettingsModel;
+    MagicModule: MagicPublicSettingsModel;
 }
 
 export class PublicSettingsModel implements IPublicSettingsModel {
@@ -105,5 +108,23 @@ export class PublicSettingsModel implements IPublicSettingsModel {
         enabled: true,
         immersive: false,
         states: []
+    };
+    MagicModule: MagicPublicSettingsModel = <MagicPublicSettingsModel>{
+        enabled: false,
+        enableWildMagic: false,
+        forceWildMagic: false,
+        trueWildMagic: false,
+        knownSpells: [],
+        blockedSpellEffects: [],
+        lockable: false,
+        locked: false,
+        remoteAccess: false,
+        remoteAccessRequiredTrance: false,
+        limitRemoteAccessToHypnotizer: false,
+        remoteMemberIds: "",
+        neverDefend: false,
+        noDefenseMemberIds: "",
+        limitedDuration: true,
+        maxDuration: 0
     }
 }

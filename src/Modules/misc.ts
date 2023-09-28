@@ -24,7 +24,7 @@ export class MiscModule extends BaseModule {
         return <MiscSettingsModel>{
             enabled: true,
             chloroformEnabled: false,
-            immersiveChloroform: false,
+            //immersiveChloroform: false,
             chloroformedAt: 0,
             chloroformPotencyTime: 60 * 60 * 1000, // 1 hour cooloff
             infiniteChloroformPotency: false,
@@ -220,7 +220,7 @@ export class MiscModule extends BaseModule {
         this.isChloroformed = true;
         this.settings.chloroformedAt = CommonTime();
         clearTimeout(this.passoutTimer);
-        getModule<StateModule>("StateModule")?.SleepState.Activate(undefined, true);
+        getModule<StateModule>("StateModule")?.SleepState.Activate(undefined, undefined, true);
     }
 
     chloroformWearingOff: boolean = false;

@@ -1,32 +1,43 @@
-import { SendAction, addCustomEffect, getRandomInt, removeCustomEffect } from "utils";
+import { ICONS, SendAction, addCustomEffect, getRandomInt, removeCustomEffect } from "utils";
 import { BaseState, StateRestrictions } from "./BaseState";
 import { StateModule } from "Modules/states";
 
 export class SleepState extends BaseState {
     Type: LSCGState = "asleep";
 
+    Icon(C: OtherCharacter): string {
+        return "Assets/Female3DCG/Eyes/Closed/Icon.png";
+    }
+    Label(C: OtherCharacter): string {
+        return "Asleep";
+    }
+
     constructor(state: StateModule) {
         super(state);
         this.Restrictions.Walk = "whenImmersive";
-        this.Restrictions.CharacterAccess = "true";
+        this.Restrictions.Move = "true";
         this.Restrictions.Wardrobe = "true";
         this.Restrictions.Hearing = "true";
         this.Restrictions.Sight = "true";
         this.Restrictions.Speech = "true";
         this.Restrictions.Stand = "true";
+        this.Restrictions.Emoticon = "true";
     }
 
     Init() {
         this.RoomSync();
      }
 
-    Activate(memberNumber?: number, emote?: boolean) {
-        if (emote)
-            SendAction("%NAME% slumps weakly as %PRONOUN% slips into unconciousness.");
-        this.SetSleepExpression();
-        this.FallDownIfPossible();
-        addCustomEffect(Player, "ForceKneel");
-        super.Activate(memberNumber, emote);
+    Activate(memberNumber?: number, duration?: number, emote?: boolean): BaseState | undefined {
+        if (!this.Active) {
+            if (emote)
+                SendAction("%NAME% slumps weakly as %PRONOUN% slips into unconciousness.");
+            this.SetSleepExpression();
+            this.FallDownIfPossible();
+            addCustomEffect(Player, "ForceKneel");
+            return super.Activate(memberNumber, duration, emote);
+        }
+        return;
     }
 
     Recover(emote?: boolean) {
@@ -39,9 +50,8 @@ export class SleepState extends BaseState {
             removeCustomEffect(Player, "ForceKneel");
             super.Recover(emote);
         }
+        return this;
     }
-
-    Tick(now: number) {}
 
     RoomSync(): void {
         if (this.Active) {

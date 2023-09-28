@@ -15,10 +15,10 @@ export class GuiReset extends GuiSubscreen {
 		return ICONS.BOUND_GIRL;
 	}
 
-	private allowedConfirmTime: number | null = 0;
+	allowedConfirmTime: number | null = 0;
 
 	Load() {
-		this.allowedConfirmTime = Date.now() + 10_000;
+		this.allowedConfirmTime = Date.now() + 10000;
 		super.Load();
 	}
 
@@ -40,7 +40,7 @@ export class GuiReset extends GuiSubscreen {
 			return;
 		}
 
-		const now = Date.now();
+		let now = Date.now();
 		if (now < this.allowedConfirmTime) {
 			DrawButton(300, 720, 200, 80, `Confirm (${Math.floor((this.allowedConfirmTime - now) / 1000)})`, "#ddd", undefined, undefined, true);
 		} else {

@@ -3,15 +3,17 @@ import { getModule, modules } from "modules";
 import { BaseSettingsModel, GlobalSettingsModel } from "Settings/Models/base";
 import { IPublicSettingsModel, PublicSettingsModel, SettingsModel } from "Settings/Models/settings";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { removeAllHooksByModule, hookFunction, getCharacter, drawSvg, SVG_ICONS, sendLSCGMessage, settingsSave, LSCG_CHANGES, LSCG_SendLocal } from "../utils";
+import { removeAllHooksByModule, hookFunction, getCharacter, drawSvg, SVG_ICONS, sendLSCGMessage, settingsSave, LSCG_CHANGES, LSCG_SendLocal, mouseTooltip } from "../utils";
 import { ActivityModule, GrabType } from "./activities";
 import { HypnoModule } from "./hypno";
 import { CollarModule } from "./collar";
 
-import * as semver from "semver";
-import { StateConfig } from "Settings/Models/states";
+//import * as semver from "semver";
+import { lt } from "semver";
 import { BaseMigrator } from "./Migrators/BaseMigrator";
 import { StateMigrator } from "./Migrators/StateMigrator";
+import { MagicModule } from "./magic";
+import { StateModule } from "./states";
 
 // Core Module that can handle basic functionality like server handshakes etc.
 // Maybe can consolidate things like hypnosis/suffocation basic state handling too..
@@ -72,6 +74,18 @@ export class CoreModule extends BaseModule {
             return next(args);
         }, ModuleCategory.Core);
 
+        hookFunction("ServerAccountBeep", 10, (args, next) => {
+            let data = args[0];
+            // Intercept LSCG beeps directly
+            if (data.BeepType == "LSCG") {
+                let msg = data.Message as LSCGMessageModel;
+                if (msg.type == "command")
+                    this.Command(data.MemberNumber, msg)
+            }
+            else
+                return next(args);
+        })
+
         hookFunction("ChatRoomDrawCharacterOverlay", 1, (args, next) => {
             next(args);
             const [C, CharX, CharY, Zoom] = args as [Character, number, number, number];
@@ -90,19 +104,7 @@ export class CoreModule extends BaseModule {
                     xOffset = -10;
                 drawSvg(MainCanvas, SVG_ICONS.STAR, CharX + (xOffset + 410) * Zoom, CharY + 8 * Zoom, 40 * Zoom, 40 * Zoom, 50, 0.8, 1, starColor);
                 if (MouseIn(CharX + 405 * Zoom, CharY + 3 * Zoom, 50 * Zoom, 50 * Zoom)) {
-                    var prevAlign = MainCanvas.textAlign;
-                    var prevFont = MainCanvas.font;
-                    var pad = 5;
-                    var TextX = CharX + 425 * Zoom;
-                    var TextY = CharY + 50 * Zoom;
-                    MainCanvas.textAlign = "left";
-                    MainCanvas.font = '16px Arial, sans-serif'
-                    var size = MainCanvas.measureText(version);
-                    DrawRect(TextX - size.width - pad, TextY - size.actualBoundingBoxAscent - pad, size.actualBoundingBoxRight - size.actualBoundingBoxLeft + 2 * pad, size.actualBoundingBoxDescent + size.actualBoundingBoxAscent + 2 * pad, "#D7F6E9");
-                    DrawText(version, TextX - size.width, TextY, "Black");
-                    //MainCanvas.fillText(version, CharX + 420 * Zoom, CharY + 50*Zoom, 100*Zoom);
-                    MainCanvas.textAlign = prevAlign;
-                    MainCanvas.font = prevFont;
+                    mouseTooltip(version, CharX + 425 * Zoom, CharY + 50 * Zoom);
                 }
             }
         }, ModuleCategory.Core);
@@ -190,7 +192,7 @@ export class CoreModule extends BaseModule {
             fromVersion = fromVersion.substring(1);
 
         this.Migrators.forEach(m => {
-            if (semver.lt(fromVersion, m.Version))
+            if (lt(fromVersion, m.Version))
                 m.Migrate(fromVersion);
         });
 
@@ -219,7 +221,7 @@ export class CoreModule extends BaseModule {
                     this.Sync(C, msg);
                     break;
                 case "command":
-                    this.Command(C, msg);
+                    this.Command(data.Sender, msg);
                     break;
             }
         }
@@ -238,23 +240,28 @@ export class CoreModule extends BaseModule {
         }
     }
 
-    Command(Sender: OtherCharacter | null, msg: LSCGMessageModel) {
+    Command(senderNumber: number, msg: LSCGMessageModel) {
         if (!msg.command || msg.target != Player.MemberNumber)
             return;
+        let Sender = getCharacter(senderNumber) as OtherCharacter;
         switch (msg.command!.name) {
+            case "debug":
+                LSCG_SendLocal(msg.command.args[0].value as string, 10000);
+                break;
             case "grab":
-                getModule<ActivityModule>("ActivityModule")?.IncomingGrab(Sender!, msg.command.args.find(a => a.name == "type")?.value as GrabType);
+                getModule<ActivityModule>("ActivityModule")?.IncomingGrab(Sender, msg.command.args.find(a => a.name == "type")?.value as GrabType);
                 break;
             case "release":
-                getModule<ActivityModule>("ActivityModule")?.IncomingRelease(Sender!, msg.command.args.find(a => a.name == "type")?.value as GrabType);
+                getModule<ActivityModule>("ActivityModule")?.IncomingRelease(Sender, msg.command.args.find(a => a.name == "type")?.value as GrabType);
                 break;
             case "escape":
-                getModule<ActivityModule>("ActivityModule")?.IncomingEscape(Sender!, msg.target);
+                getModule<ActivityModule>("ActivityModule")?.IncomingEscape(Sender, msg.target);
                 break;
             case "remote":
                 let prevCollarPurchase = Player.LSCG?.CollarModule?.collarPurchased;
                 Object.assign(Player.LSCG.HypnoModule, msg.settings?.HypnoModule);
                 Object.assign(Player.LSCG.CollarModule, msg.settings?.CollarModule);
+                Object.assign(Player.LSCG.MagicModule, msg.settings?.MagicModule);
                 getModule<HypnoModule>("HypnoModule")?.initializeTriggerWord();
                 settingsSave(true);
                 let currentCollarPurchase = Player.LSCG?.CollarModule?.collarPurchased;
@@ -274,6 +281,19 @@ export class CoreModule extends BaseModule {
                 break;
             case "photo":
                 DrawFlashScreen("#FFFFFF", 500, 1500);
+                break;
+            case "spell":
+            case "pair":
+                getModule<MagicModule>("MagicModule")?.IncomingSpellCommand(Sender, msg);
+                break;
+            case "spell-teach":
+                getModule<MagicModule>("MagicModule")?.IncomingSpellTeachCommand(Sender, msg);
+                break;
+            case "unpair":
+                getModule<StateModule>("StateModule")?.IncomingUnpair(senderNumber, msg);
+                break;
+            case "pairing-update":
+                getModule<StateModule>("StateModule")?.PairingUpdate(senderNumber, msg);
                 break;
         }
     }

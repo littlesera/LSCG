@@ -9,6 +9,7 @@ import { StateModule } from "Modules/states";
 
 export class MainMenu extends GuiSubscreen {
 	subscreens: GuiSubscreen[] = [];
+	resetSubscreen: GuiReset;
 
 	get name(): string {
 		return "MainMenu";
@@ -38,6 +39,7 @@ export class MainMenu extends GuiSubscreen {
 		super(module);
 
 		this.subscreens = module.subscreens;
+		this.resetSubscreen = new GuiReset(getModule<CoreModule>("CoreModule"));
 	}
 
 	onChange(source: number) {
@@ -126,7 +128,7 @@ export class MainMenu extends GuiSubscreen {
 		}
 
 		if (MouseIn(1500, 620, 400, 80))
-            this.setSubscreen(new GuiReset(getModule<CoreModule>("CoreModule")));
+            this.setSubscreen(this.resetSubscreen);
 
 		if (MouseIn(1500, 720, 400, 80))
             window.open(LSCG_CHANGES, '_blank');

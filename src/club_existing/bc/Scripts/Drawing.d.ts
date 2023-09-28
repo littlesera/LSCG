@@ -296,6 +296,7 @@ declare function DrawText(Text: string, X: number, Y: number, Color: string, Bac
  * @returns {void} - Nothing
  */
 declare function DrawButton(Left: number, Top: number, Width: number, Height: number, Label: string, Color: string, Image?: string, HoveringText?: string, Disabled?: boolean): void;
+declare function DrawButton(Left: number, Top: number, Width: number, Height: number, Label: string, Color: string, Image?: string, HoveringText?: string, Disabled?: boolean): void;
 /**
  * Draws a checkbox component
  * @param {number} Left - Position of the component from the left of the canvas

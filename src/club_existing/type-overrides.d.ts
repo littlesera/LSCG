@@ -9,18 +9,27 @@ interface OtherCharacter extends Character {
 }
 
 interface PlayerOnlineSettings {
-	LSCG: import("Settings/Models/settings").SettingsModel;
+	LSCG: import("Settings/Models/settings").SettingsModel | string;
 }
 
 interface LSCGMessageDictionaryEntry {
     message: LSCGMessageModel;
 }
 
+interface CommonGenerateGridParameters {
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    itemWidth: number,
+    itemHeight: number
+}
+
 type LSCGMessageModelType = "init" | "sync" | "command";
 
-type LSCGCommandName = "grab" | "release" | "remote" | "escape" | "collar-tighten" | "collar-loosen" | "collar-stats" | "photo";
+type LSCGCommandName = "debug" | "grab" | "release" | "remote" | "escape" | "collar-tighten" | "collar-loosen" | "collar-stats" | "photo" | "spell" | "spell-teach" | "pair" | "unpair" | "pairing-update";
 
-type LSCGState = "none" | "hypnotized" | "asleep" | "horny" | "choking" | "held" | "blind" | "deaf" | "frozen";
+type LSCGState = "none" | "hypnotized" | "asleep" | "horny" | "choking" | "held" | "blind" | "deaf" | "frozen" | "gagged" | "redressed" | "arousal-paired" | "orgasm-siphoned" | "leashed" | "resized" | "buffed" | "polymorphed";
 
 type LSCGImmersiveOption = "true" | "false" | "whenImmersive";
 

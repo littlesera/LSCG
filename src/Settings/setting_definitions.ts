@@ -23,6 +23,7 @@ export enum ModuleCategory {
 	Injector = 6,
 	ItemUse = 7,
 	States = 8,
+	Magic = 9,
 	RemoteUI = 98,
 	Misc = 99,
 	Commands = 100

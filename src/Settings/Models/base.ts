@@ -25,7 +25,7 @@ export interface MiscSettingsModel extends BaseSettingsModel {
     chloroformEnabled: boolean;
     chloroformedAt: number;
     chloroformPotencyTime: number;
-    immersiveChloroform: boolean;
+    //immersiveChloroform: boolean;
     infiniteChloroformPotency: boolean;
     handChokeEnabled: boolean;
     gagChokeEnabled: boolean;

@@ -177,8 +177,10 @@ export class ActivityModule extends BaseModule {
                         SendAction("%NAME% moans and trembles in frustration as %PRONOUN% is held right at the edge...");
                         ActivitySetArousal(Player, 99);
                     }
-                    else
+                    else {
+                        if (!!Player.ArousalSettings) Player.ArousalSettings.Progress = 100;
                         ActivityOrgasmPrepare(Player);
+                    }
                 }
             }
         })
@@ -1655,21 +1657,21 @@ export class ActivityModule extends BaseModule {
         sendLSCGCommand(escapeFrom, "escape");
     }
 
-    IncomingGrab(sender: Character, grabType: GrabType) {
-        if (!!sender.MemberNumber) {
+    IncomingGrab(sender: Character | null, grabType: GrabType) {
+        if (!!sender && !!sender.MemberNumber) {
             let doNotify = this.grabbedBy(sender.MemberNumber, grabType);
             if (doNotify && grabType != "hand")
                 this.NotifyAboutEscapeCommand(sender, grabType);
         }
     }
 
-    IncomingRelease(sender: OtherCharacter, grabType: GrabType) {
-        if (!!sender.MemberNumber)
+    IncomingRelease(sender: OtherCharacter | null, grabType: GrabType) {
+        if (!!sender && !!sender.MemberNumber)
             this.releasedBy(sender.MemberNumber, grabType);
     }
 
-    IncomingEscape(sender: OtherCharacter, escapeFromMemberNumber: number) {
-        if (escapeFromMemberNumber == Player.MemberNumber && !!sender.MemberNumber) {
+    IncomingEscape(sender: OtherCharacter | null, escapeFromMemberNumber: number) {
+        if (!!sender && !!sender.MemberNumber && escapeFromMemberNumber == Player.MemberNumber) {
             this.releaseGrab(sender.MemberNumber, undefined);
         }
     }

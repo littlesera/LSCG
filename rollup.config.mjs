@@ -3,6 +3,7 @@ import commonjs from '@rollup/plugin-commonjs';
 import json from '@rollup/plugin-json';
 import typescript from '@rollup/plugin-typescript';
 import resolve from "@rollup/plugin-node-resolve";
+import terser from "@rollup/plugin-terser";
 import progress from 'rollup-plugin-progress';
 import packageJson from "./package.json" assert { type: "json" };
 import simpleGit from "simple-git";
@@ -27,20 +28,23 @@ window.LSCG_Loaded = false;
 console.debug("LSCG: Parse start...");
 `,
     intro: async () => {
-      const git = simpleGit();
-      console.log(await git.status());
+      // const git = simpleGit();
+      // console.log(await git.status());
       let LSCG_VERSION = packageJson.version;
-      await git.tags((err, tags) => {
-        if (!!tags.latest) {
-          console.log('\nUsing tag version: %s\n', tags.latest);
-          LSCG_VERSION = tags.latest;
-        } else {
-          console.log('\nUnable to determine latest tag: %s\n', tags.latest);
-        }
-      });
+      // await git.tags((err, tags) => {
+      //   if (!!tags.latest) {
+      //     console.log('\nUsing tag version: %s\n', tags.latest);
+      //     LSCG_VERSION = tags.latest;
+      //   } else {
+      //     console.log('\nUnable to determine latest tag: %s\n', tags.latest);
+      //   }
+      // });
       LSCG_VERSION = (LSCG_VERSION.length > 0 && LSCG_VERSION[0] == 'v') ? LSCG_VERSION : "v" + LSCG_VERSION;
       return `const LSCG_VERSION="${LSCG_VERSION}";`;
-    }
+    },
+    plugins: [terser({
+      mangle: false
+    })]
   },
   treeshake: false,
   plugins: [

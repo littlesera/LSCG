@@ -8,6 +8,7 @@ export interface StateConfig {
     recoveredAt: number;
     activationCount: number;
     extensions: any;
+    duration: number | undefined;
 }
 
 export interface StateSettingsModel extends StatePublicSettingsModel {

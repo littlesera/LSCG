@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name LSCG
+// @name LSCG DEV
 // @namespace https://www.bondageprojects.com/
 // @version 0.3.7
 // @description Little Sera's Club Games
@@ -17,6 +17,6 @@
     var script = document.createElement("script");
     script.type = "module";
     script.setAttribute("crossorigin", "anonymous");
-    script.src = `https://littlesera.github.io/LSCG/bundle.js?${Date.now()}`;
+    script.src = `https://littlesera.github.io/LSCG/dev/bundle.js?${Date.now()}`;
     document.head.appendChild(script);
 })();

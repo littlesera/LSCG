@@ -208,12 +208,6 @@ export class GuiActivities extends GuiSubscreen {
 		this.settings.activities = this.settings.activities.filter(a => !(a.name == entry.name && a.group == entry.group));
 	}
 
-	ElementSetValue(elementId: string, value: any) {
-		let element = document.getElementById(elementId) as HTMLInputElement;
-		if (!!element && value != null)
-			element.value = value;
-	}
-
 	newDefaultEntry(actName: string, grpName: string): ActivityEntryModel {
 		return <ActivityEntryModel>{
 			name: actName,

@@ -5,6 +5,28 @@ import { getRandomInt, hookFunction, IsIncapacitated, removeAllHooksByModule, Se
 import { ActivityBundle, ActivityModule, ActivityTarget } from "./activities";
 import { BoopsModule } from "./boops";
 import { CollarModule } from "./collar";
+import { StateModule } from "./states";
+
+export const CameraItems: string[] = [
+	"Phone1",
+	"Phone2",
+	"PortalTablet",
+	"Camera1", 
+	"Baguette"
+];
+
+export const MagicWandItems: string[] = [
+	"RainbowWand",
+	"VibratingWand",
+	"SmallVibratingWand",
+	"Baguette"
+]
+
+export const QuaffableItems: string[] = [
+	"PotionBottle"
+	// "GlassFilled",
+	// "Mug"
+]
 
 export class ActivityRoll {
 	constructor(raw: number, mod: number) {
@@ -116,13 +138,6 @@ export class ItemUseModule extends BaseModule {
 		}
 	]
 
-	CameraItems: string[] = [
-		"Phone1",
-		"Phone2",
-		"PortalTablet",
-		"Camera1",
-	];
-
     load(): void {
 		hookFunction("ActivityGenerateItemActivitiesFromNeed", 1, (args, next) => {
 			let allowed = args[0];
@@ -197,10 +212,18 @@ export class ItemUseModule extends BaseModule {
 			} else if (itemType == "CameraItem") {
 				let item = InventoryGet(C, "ItemHandheld");
 				let acc = InventoryGet(C, "ClothAccessory");
-				if (!!item && this.CameraItems.indexOf(item.Asset?.Name) > -1) 
+				if (!!item && CameraItems.indexOf(item.Asset?.Name) > -1) 
 					results.push(item);
-				else if (!!acc && this.CameraItems.indexOf(acc.Asset?.Name) > -1) 
+				else if (!!acc && CameraItems.indexOf(acc.Asset?.Name) > -1) 
 					results.push(acc);
+			} else if (itemType == "MagicItem") {
+				let item = InventoryGet(C, "ItemHandheld");
+				if (!!item && MagicWandItems.indexOf(item.Asset?.Name) > -1) 
+					results.push(item);
+			} else if (itemType == "QuaffableItem") {
+				let item = InventoryGet(C, "ItemHandheld");
+				if (!!item && QuaffableItems.indexOf(item.Asset?.Name) > -1) 
+					results.push(item);
 			}
 			return results;
 		}, ModuleCategory.ItemUse);
@@ -797,6 +820,8 @@ export class ItemUseModule extends BaseModule {
 	}
 	
 	getRollMod(C: Character, Opponent?: Character, isAggressor: boolean = false): number {
+		let buffState = (C as OtherCharacter)?.LSCG?.StateModule?.states?.find(s => s.type == "buffed");
+
 		// Dominant vs Submissive ==> -3 to +3 modifier
 		let dominanceMod = Math.floor(this.getDominance(C) / 33);
 		// +5 if we own our opponent
@@ -809,8 +834,10 @@ export class ItemUseModule extends BaseModule {
 		let incapacitatedMod = IsIncapacitated(C.IsPlayer() ? C as PlayerCharacter : C as OtherCharacter) ? (isAggressor ? 5 : 100) * -1 : 0;
 		// -2 for each level of choking
 		let breathMod = (C.IsPlayer() ? getModule<CollarModule>("CollarModule").totalChokeLevel : (C as OtherCharacter).LSCG?.CollarModule.chokeLevel ?? 0) * -2;
+		// +/- 5 for buff state
+		let buffMod = (!buffState || !buffState.active) ? 0 : ((buffState.extensions["negative"] ?? false) ? -5 : 5);
 
-		let finalMod = dominanceMod + ownershipMod + restrainedMod + edgingMod + incapacitatedMod + breathMod;
+		let finalMod = dominanceMod + ownershipMod + restrainedMod + edgingMod + incapacitatedMod + breathMod + buffMod;
 	
 		console.debug(`${CharacterNickname(C)} is ${isAggressor ? 'rolling against' : 'defending against'} ${!Opponent ? "nobody" : CharacterNickname(Opponent)} [${finalMod}] --
 		dominanceMod: ${dominanceMod}
@@ -819,20 +846,26 @@ export class ItemUseModule extends BaseModule {
 		edgingMod: ${edgingMod}
 		incapacitatedMod: ${incapacitatedMod}
 		breathMod: ${breathMod}
+		buffMod: ${buffMod}
 		`);
 	
 		return finalMod;
 	}
 
 	UnopposedActivityRoll(C: Character) {
-		return new ActivityRoll(this.d20, this.getRollMod(C));
+		let roll = new ActivityRoll(this.d20, this.getRollMod(C));
+		console.debug(`LSCG Roll: ${CharacterNickname(C)} [${roll.Total}]`);
+		return roll;
 	}
 
 	MakeActivityCheck(attacker: Character, defender: Character): ActivityCheck {
+		let attackRoll = new ActivityRoll(this.d20, this.getRollMod(attacker, defender, true));
+		let defendRoll = new ActivityRoll(this.d20, this.getRollMod(defender, attacker, false));
+		console.debug(`LSCG Roll: ${CharacterNickname(attacker)} [${attackRoll.Total}] -- ${CharacterNickname(defender)} [${defendRoll.Total}]`);
 		return <ActivityCheck>{
-			AttackerRoll: new ActivityRoll(this.d20, this.getRollMod(attacker, defender, true)),
-			DefenderRoll: new ActivityRoll(this.d20, this.getRollMod(defender, attacker, false))
-		}
+			AttackerRoll: attackRoll,
+			DefenderRoll: defendRoll
+		};
 	}
 
 	GetHempRopeLocations(): RopeTarget[] {
