@@ -88,20 +88,25 @@ export class PolymorphedState extends BaseState {
         super.Recover();
         if (!!this.StoredOutfit) {
             this.StripCharacter(true, PolymorphOption.both);
-            this.WearMany(this.StoredOutfit, PolymorphOption.both);
+            this.WearMany(this.StoredOutfit, PolymorphOption.both, true);
             this.ClearStoredOutfit();
         }
         return this;
     }
 
-    WearMany(items: ItemBundle[], type: PolymorphOption) {
+    WearMany(items: ItemBundle[], type: PolymorphOption, isRestore: boolean = false) {
         items.forEach(item => {
             let asset = AssetGet(Player.AssetFamily, item.Group, item.Name);
-            if (this.DoChange(asset, type)) {
-                let newItem = InventoryWear(Player, item.Name, item.Group, item.Color, item.Difficulty, -1, item.Craft, true);
-                if (!!newItem && !!item.Property?.LockedBy && InventoryDoesItemAllowLock(newItem)) {
-                    let lock = AssetGet(Player.AssetFamily, "ItemMisc", item.Property.LockedBy);
-                    if (!!lock) InventoryLock(Player, newItem, {Asset:lock}, item.Property.LockMemberNumber)
+            if (!!asset && this.DoChange(asset, type)) {
+                let groupBlocked = InventoryGroupIsBlockedForCharacter(Player, asset.Group.Name);
+                let isBlocked = InventoryBlockedOrLimited(Player, {Asset: asset})
+                let isRoomDisallowed = !InventoryChatRoomAllow(asset?.Category ?? []);
+                if (isRestore || !(groupBlocked || isBlocked || isRoomDisallowed)) {
+                    let newItem = InventoryWear(Player, item.Name, item.Group, item.Color, item.Difficulty, -1, item.Craft, true);
+                    if (!!newItem && !!item.Property?.LockedBy && InventoryDoesItemAllowLock(newItem)) {
+                        let lock = AssetGet(Player.AssetFamily, "ItemMisc", item.Property.LockedBy);
+                        if (!!lock) InventoryLock(Player, newItem, {Asset:lock}, item.Property.LockMemberNumber)
+                    }
                 }
             }
         });
