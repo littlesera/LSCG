@@ -32,6 +32,10 @@ export class MagicModule extends BaseModule {
         Source: undefined
     }
 
+    get Enabled(): boolean {
+		return super.Enabled && (ChatBlockItemCategory?.indexOf("Fantasy") ?? -1) == -1
+	}
+
     get defaultSettings() {
         return <MagicSettingsModel>{
             enabled: false,
@@ -199,7 +203,11 @@ export class MagicModule extends BaseModule {
     CanUseMagic(target: Character) {
         let item = InventoryGet(Player, "ItemHandheld");
         let isWieldingMagicItem = !!item && MagicWandItems.indexOf(item.Asset.Name) > -1;
-        return isWieldingMagicItem &&
+        let hasItemPermission = ServerChatRoomGetAllowItem(target, Player);
+        return this.Enabled &&
+                isWieldingMagicItem &&
+                hasItemPermission &&
+                Player.CanInteract() &&
                 (this.CanCastSpell(CurrentCharacter as OtherCharacter) || 
                 this.CanWildMagic(CurrentCharacter as OtherCharacter) || 
                 this.CanTeachSpell(CurrentCharacter as OtherCharacter))
