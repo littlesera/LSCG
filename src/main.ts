@@ -13,6 +13,7 @@ import { CoreModule } from 'Modules/core';
 import { RemoteUIModule } from 'Modules/remoteUI';
 import { CommandModule } from 'Modules/commands';
 import { ItemUseModule } from 'Modules/item-use';
+import { StateModule } from 'Modules/states';
 
 function initWait() {
 	console.debug("LSCG: Init wait");
@@ -95,6 +96,7 @@ export function init() {
 function init_modules(): boolean {
 	registerModule(new CoreModule());
 	registerModule(new GUI());
+	registerModule(new StateModule());
 	registerModule(new HypnoModule());
 	registerModule(new CollarModule());
 	registerModule(new BoopsModule());

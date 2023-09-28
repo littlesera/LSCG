@@ -36,6 +36,12 @@ export class GuiGlobal extends GuiSubscreen {
 				setSetting: (val) => this.settings.blockSettingsWhileRestrained = val
 			},<Setting>{
 				type: "checkbox",
+				label: "Immersive Conditions:",
+				description: "Applies a more restrictive set of conditional states while incapacitated by LSCG.",
+				setting: () => Player.LSCG.StateModule.immersive ?? false,
+				setSetting: (val) => Player.LSCG.StateModule.immersive = val
+			},<Setting>{
+				type: "checkbox",
 				label: "Blur While Edged:",
 				description: "Apply extra blurring to the screen while edging.",
 				setting: () => this.settings.edgeBlur ?? false,

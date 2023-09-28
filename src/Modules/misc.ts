@@ -2,11 +2,18 @@ import { BaseModule } from "base";
 import { MiscSettingsModel } from "Settings/Models/base";
 import { ModuleCategory } from "Settings/setting_definitions";
 import { addCustomEffect, GetMetadata, getRandomInt, GetTargetCharacter, hookFunction, LSCG_SendLocal, OnAction, OnActivity, removeAllHooksByModule, removeCustomEffect, SendAction, setOrIgnoreBlush, settingsSave } from "../utils";
+import { getModule } from "modules";
+import { StateModule } from "./states";
+import { SleepState } from "./States/SleepState";
 
 export class MiscModule extends BaseModule {
     get settings(): MiscSettingsModel {
         return super.settings as MiscSettingsModel;
 	}
+
+    get sleepState(): SleepState {
+        return getModule<StateModule>("StateModule")?.SleepState;
+    }
 
     // Disabled as it's managed via General
     // get settingsScreen(): Subscreen | null {
@@ -97,74 +104,10 @@ export class MiscModule extends BaseModule {
             
             this.isChloroformed = this.IsWearingChloroform();
 
-            if (this.isChloroformed) {
-                this.SetSleepExpression();
+            if (this.isChloroformed && !this.sleepState.Active) {
+                this.sleepState.Activate();
                 this.ActivateChloroEvent();
-                if (Player.CanKneel()) {
-                    this.FallDownIfPossible();
-                    addCustomEffect(Player, "ForceKneel");
-                }   
             }
-        }, ModuleCategory.Misc);
-
-        // Block activity while choloform'd
-        hookFunction('ServerSend', 5, (args, next) => {
-            if (!this.settings.chloroformEnabled)
-                return next(args);
-            
-            if (this.isChloroformed && this.settings.immersiveChloroform) {
-                var type = args[0];
-                // Prevent speech while chloroformed
-                if ((type == "ChatRoomChat" && args[1].Type == "Chat" && args[1]?.Content[0] != "(")) {
-                    this.ActivateChloroEvent();
-                    this.SetSleepExpression();
-                    return null;
-                // Prevent changing eye expression while chloroformed
-                } else if (type == "ChatRoomCharacterExpressionUpdate" && (args[1]?.Group == "Eyes" || args[1]?.Group == "Eyes2")) {
-                    this.SetSleepExpression();
-                    return null;
-                }
-                return next(args);
-            }
-            return next(args);
-        }, ModuleCategory.Misc);
-
-        hookFunction('Player.CanChangeOwnClothes', 1, (args, next) => {
-            if (this.settings.chloroformEnabled && this.settings.immersiveChloroform && this.isChloroformed)
-                return false;
-            return next(args);
-        }, ModuleCategory.Misc);
-
-        hookFunction('Player.IsDeaf', 1, (args, next) => {
-            if (this.settings.chloroformEnabled && this.settings.immersiveChloroform && this.isChloroformed)
-                return true;
-            return next(args);
-        }, ModuleCategory.Misc);
-
-        hookFunction('Player.IsBlind', 1, (args, next) => {
-            if (this.settings.chloroformEnabled && this.settings.immersiveChloroform && this.isChloroformed)
-                return true;
-            return next(args);
-        }, ModuleCategory.Misc);
-
-        hookFunction('Player.CanWalk', 1, (args, next) => {
-            if (this.settings.chloroformEnabled && this.settings.immersiveChloroform && this.isChloroformed)
-                return false;
-            return next(args);
-        }, ModuleCategory.Misc);
-
-        hookFunction('ChatRoomCanAttemptStand', 1, (args, next) => {
-            if (this.settings.chloroformEnabled && this.settings.immersiveChloroform && this.isChloroformed)
-                return false;
-            return next(args);
-        }, ModuleCategory.Misc);
-
-        hookFunction('ChatRoomFocusCharacter', 6, (args, next) => {
-            if (this.settings.chloroformEnabled && this.settings.immersiveChloroform && this._isChloroformed) {
-                LSCG_SendLocal("Character access blocked while immersively chloroformed.", 5000);
-                return;
-            }
-            return next(args);
         }, ModuleCategory.Misc);
 
         hookFunction("TimerProcess", 1, (args, next) => {
@@ -176,13 +119,6 @@ export class MiscModule extends BaseModule {
             }
             return next(args);
         }, ModuleCategory.Misc);
-    }
-
-    InitStates() {
-        if (Player.CanKneel()) {
-            this.FallDownIfPossible();
-            addCustomEffect(Player, "ForceKneel");
-        }   
     }
 
     lastChecked: number = 0;
@@ -202,7 +138,6 @@ export class MiscModule extends BaseModule {
     set isChloroformed(value: boolean) {
         clearInterval(this.chloroEventInterval)
         if (value) {
-            this.SetSleepExpression();
             this.chloroEventInterval = setInterval(() => {
                 this.ChloroEvent();
             }, 60010)
@@ -282,16 +217,10 @@ export class MiscModule extends BaseModule {
     }
 
     Passout() {
-        SendAction("%NAME% slumps weakly as %PRONOUN% slips into unconciousness.");
-        this.SetSleepExpression();
-        if (Player.CanKneel()) {
-            this.FallDownIfPossible();
-            addCustomEffect(Player, "ForceKneel");
-        }        
         this.isChloroformed = true;
         this.settings.chloroformedAt = CommonTime();
         clearTimeout(this.passoutTimer);
-        settingsSave();
+        getModule<StateModule>("StateModule")?.SleepState.Activate(undefined, true);
     }
 
     chloroformWearingOff: boolean = false;
@@ -332,20 +261,17 @@ export class MiscModule extends BaseModule {
         this.isChloroformed = false;
         this.chloroformWearingOff = false;
         clearInterval(this.eyesInterval);
-        CharacterSetFacialExpression(Player, "Eyes", "Dazed");
-        CharacterSetFacialExpression(Player, "Emoticon", null);
-        setOrIgnoreBlush("Medium");
-        removeCustomEffect(Player, "ForceKneel");
+        this.sleepState.Recover();
     }
 
-    SetSleepExpression() {
-        CharacterSetFacialExpression(Player, "Eyes", "Closed");
-        CharacterSetFacialExpression(Player, "Emoticon", "Sleep");
-    }
+    // SetSleepExpression() {
+    //     CharacterSetFacialExpression(Player, "Eyes", "Closed");
+    //     CharacterSetFacialExpression(Player, "Emoticon", "Sleep");
+    // }
 
-    FallDownIfPossible() {
-        if (Player.CanKneel()) {
-            CharacterSetActivePose(Player, "Kneel", true);
-        }
-    }
+    // FallDownIfPossible() {
+    //     if (Player.CanKneel()) {
+    //         CharacterSetActivePose(Player, "Kneel", true);
+    //     }
+    // }
 }
