@@ -203,7 +203,7 @@ export class MagicModule extends BaseModule {
     CanUseMagic(target: Character) {
         let item = InventoryGet(Player, "ItemHandheld");
         let isWieldingMagicItem = !!item && MagicWandItems.indexOf(item.Asset.Name) > -1;
-        let hasItemPermission = ServerChatRoomGetAllowItem(target, Player);
+        let hasItemPermission = ServerChatRoomGetAllowItem(Player, target);
         return this.Enabled &&
                 isWieldingMagicItem &&
                 hasItemPermission &&
