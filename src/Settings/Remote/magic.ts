@@ -74,7 +74,7 @@ export class RemoteMagic extends RemoteGuiSubscreen {
 				setSetting: (val) => this.settings.neverDefend = val
 			}, <Setting>{
 				type: "text",
-				id: "magic_remoteMembers",
+				id: "magic_neverDefendMembers",
 				label: "Defenseless Against Member IDs:",
 				description: "Comma separated list of member IDs. If empty will use standard Item Permissions. The target will never defend against their spells.",
 				disabled: this.settings.neverDefend,

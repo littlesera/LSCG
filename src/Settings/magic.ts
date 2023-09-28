@@ -175,29 +175,27 @@ export class GuiMagic extends GuiSubscreen {
 						disabled: !this.settings.enabled,
 						setting: () => this.settings.remoteMemberIds ?? "",
 						setSetting: (val) => this.settings.remoteMemberIds = val
-					}
-				], [
-					<Setting>{
+					}, <Setting>{
 						type: "checkbox",
 						label: "Never Defend:",
 						description: "If checked, you will never defend against spells cast on you.",
 						setting: () => this.settings.neverDefend ?? false,
 						setSetting: (val) => this.settings.neverDefend = val
-					},<Setting>{
+					}, <Setting>{
 						type: "text",
-						id: "magic_remoteMembers",
+						id: "magic_neverDefendMembers",
 						label: "Defenseless Against Member IDs:",
 						description: "Comma separated list of member IDs. If empty will use standard Item Permissions. You will never defend against their spells.",
 						disabled: this.settings.neverDefend,
 						setting: () => this.settings.noDefenseMemberIds ?? "",
 						setSetting: (val) => this.settings.noDefenseMemberIds = val
-					},<Setting>{
+					}, <Setting>{
 						type: "checkbox",
 						label: "Limited Spell Duration:",
 						description: "If checked, you will eventually break free from a detrimental spell's effects, the time variable based on how poorly you fail an activity roll against the caster.",
 						setting: () => this.settings.limitedDuration ?? false,
 						setSetting: (val) => this.settings.limitedDuration = val
-					},<Setting>{
+					}, <Setting>{
 						type: "number",
 						id: "magic_maxDuration",
 						label: "Maximum Spell Duration:",
