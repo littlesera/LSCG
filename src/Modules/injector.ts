@@ -762,7 +762,7 @@ export class InjectorModule extends BaseModule {
     }
 
     Sleep(doEmote: boolean = true) {
-        this.stateModule.SleepState.Activate(undefined, doEmote);
+        this.stateModule.SleepState.Activate(undefined, undefined, doEmote);
         this.settings.stats.sedatedCount++;
     }
 

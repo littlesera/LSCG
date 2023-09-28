@@ -58,12 +58,13 @@ export class HypnoState extends BaseState {
         }
     }
 
-    Activate(memberNumber?: number, emote?: boolean) {
+    Activate(memberNumber?: number, duration?: number, emote?: boolean): BaseState {
         if (!this.Active) {
-            super.Activate(memberNumber, emote);
+            super.Activate(memberNumber, duration, emote);
             this.SaveExistingEyes();
             this.SetHypnotizedFace();
         }
+        return this;
     }
 
     Recover(emote?: boolean) {
@@ -71,6 +72,7 @@ export class HypnoState extends BaseState {
             this.ResetEyes();
             super.Recover(emote);
         }
+        return this;
     }
 
     RoomSync() {
@@ -88,6 +90,7 @@ export class HypnoState extends BaseState {
             this._hornyCheck = now;
             this.ArousalTick();
         }
+        super.Tick(now);
     }
 
     // Emote Strings

@@ -31,8 +31,6 @@ export class HornyState extends BaseState {
         }, ModuleCategory.States);
     }
 
-    Tick(now: number) {}
-
     RoomSync(): void {}
 
     SpeechBlock(): void {}

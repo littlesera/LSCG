@@ -36,49 +36,46 @@ export class BuffedState extends BaseState {
         super(state);
     }
 
-    Bless(MemberNumber?: number, emote?: boolean) {
+    Bless(MemberNumber?: number, emote?: boolean, duration?: number): BaseState {
         if (this.Active && this.negative)
             this.Recover(true);
         else {
             this.negative = false;
             if (emote) SendAction("%NAME% feels as though %POSSESSIVE% abilities are enhanced.");
-            this.Activate(MemberNumber, emote);
+            this.Activate(MemberNumber, duration ?? BuffedState.BUFF_DURATION, emote);
         }
+        return this;
     }
 
-    Bane(MemberNumber?: number, emote?: boolean) {
+    Bane(MemberNumber?: number, emote?: boolean, duration?: number): BaseState {
         if (this.Active && !this.negative)
             this.Recover(true);
         else {
             this.negative = true;
             if (emote) SendAction("%NAME% feels as though %POSSESSIVE% abilities are deminished.");
-            this.Activate(MemberNumber, emote);
+            this.Activate(MemberNumber, duration ?? BuffedState.BUFF_DURATION, emote);
         }
+        return this;
     }
 
-    Activate(memberNumber?: number | undefined, emote?: boolean | undefined): void {
+    Activate(memberNumber?: number | undefined, duration?: number, emote?: boolean | undefined): BaseState | undefined {
         BuffedState.BUFF_SKILLS.forEach(skill => {
-            SkillSetModifier(Player, skill, this.negative ? -5 : 5, BuffedState.BUFF_DURATION, true);
+            SkillSetModifier(Player, skill, this.negative ? -5 : 5, duration ?? BuffedState.BUFF_DURATION, true);
         });
-        super.Activate();
+        return super.Activate(memberNumber, duration, emote);
     }
 
-    Recover(emote?: boolean | undefined): void {
+    Recover(emote?: boolean | undefined): BaseState | undefined {
         if (this.Active) {
             if (emote) SendAction("%NAME%'s abilities return to normal.");
             BuffedState.BUFF_SKILLS.forEach(skill => {
                 SkillSetModifier(Player, skill, 0, 0, true);
             })
         }
-        super.Recover();
+        return super.Recover(emote);
     }
 
     Init(): void {}
-
-    Tick(now: number) {
-        if (this.Active && (now > this.config.activatedAt + BuffedState.BUFF_DURATION))
-            this.Recover(true);
-    }
 
     RoomSync(): void {}
 

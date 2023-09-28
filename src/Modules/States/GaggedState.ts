@@ -19,8 +19,6 @@ export class GaggedState extends BaseState {
 
     Init(): void {}
 
-    Tick(now: number) {}
-
     RoomSync(): void {}
 
     freeBlockStrings = [

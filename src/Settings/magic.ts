@@ -178,10 +178,6 @@ export class GuiMagic extends GuiSubscreen {
 					}
 				], [
 					<Setting>{
-						type: "label",
-						label: "Spell Defenses:",
-						description: ""
-					},<Setting>{
 						type: "checkbox",
 						label: "Never Defend:",
 						description: "If checked, you will never defend against spells cast on you.",
@@ -195,6 +191,20 @@ export class GuiMagic extends GuiSubscreen {
 						disabled: this.settings.neverDefend,
 						setting: () => this.settings.noDefenseMemberIds ?? "",
 						setSetting: (val) => this.settings.noDefenseMemberIds = val
+					},<Setting>{
+						type: "checkbox",
+						label: "Limited Spell Duration:",
+						description: "If checked, you will eventually break free from a detrimental spell's effects, the time variable based on how poorly you fail an activity roll against the caster.",
+						setting: () => this.settings.limitedDuration ?? false,
+						setSetting: (val) => this.settings.limitedDuration = val
+					},<Setting>{
+						type: "number",
+						id: "magic_maxDuration",
+						label: "Maximum Spell Duration:",
+						description: "Maximum amount of time, in minutes, you will be affected by any specific spell effects. Set to 0 for no maximum.",
+						disabled: !this.settings.limitedDuration,
+						setting: () => this.settings.maxDuration ?? 0,
+						setSetting: (val) => this.settings.maxDuration = val
 					}
 				]];
 	}

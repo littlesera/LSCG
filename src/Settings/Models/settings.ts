@@ -123,6 +123,8 @@ export class PublicSettingsModel implements IPublicSettingsModel {
         limitRemoteAccessToHypnotizer: false,
         remoteMemberIds: "",
         neverDefend: false,
-        noDefenseMemberIds: ""
+        noDefenseMemberIds: "",
+        limitedDuration: true,
+        maxDuration: 0
     }
 }

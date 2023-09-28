@@ -28,13 +28,16 @@ export class SleepState extends BaseState {
         this.RoomSync();
      }
 
-    Activate(memberNumber?: number, emote?: boolean) {
-        if (emote)
-            SendAction("%NAME% slumps weakly as %PRONOUN% slips into unconciousness.");
-        this.SetSleepExpression();
-        this.FallDownIfPossible();
-        addCustomEffect(Player, "ForceKneel");
-        super.Activate(memberNumber, emote);
+    Activate(memberNumber?: number, duration?: number, emote?: boolean): BaseState | undefined {
+        if (!this.Active) {
+            if (emote)
+                SendAction("%NAME% slumps weakly as %PRONOUN% slips into unconciousness.");
+            this.SetSleepExpression();
+            this.FallDownIfPossible();
+            addCustomEffect(Player, "ForceKneel");
+            return super.Activate(memberNumber, duration, emote);
+        }
+        return;
     }
 
     Recover(emote?: boolean) {
@@ -47,9 +50,8 @@ export class SleepState extends BaseState {
             removeCustomEffect(Player, "ForceKneel");
             super.Recover(emote);
         }
+        return this;
     }
-
-    Tick(now: number) {}
 
     RoomSync(): void {
         if (this.Active) {

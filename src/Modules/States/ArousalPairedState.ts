@@ -56,6 +56,7 @@ export class ArousalPairedState extends PairedBaseState {
             this._prevArousalProgress = currentArousalProgress
             this.PingArousal();
         }
+        super.Tick(now);
     }
 
     RoomSync(): void {}
