@@ -68,25 +68,31 @@ export class RemoteMagic extends RemoteGuiSubscreen {
 		return [[
 			<Setting>{
 				type: "checkbox",
-				label: "Locked:",
-				disabled: !this.settings.lockable,
-				description: "If checked, locks the user out of their own hypnosis settings.",
-				setting: () => this.settings.locked ?? false,
-				setSetting: (val) => {
-					if (this.settings.lockable) this.settings.locked = val;
-				}
+				label: "Never Defend:",
+				description: "If checked, the target will never defend against spells cast on them.",
+				setting: () => this.settings.neverDefend ?? false,
+				setSetting: (val) => this.settings.neverDefend = val
+			}, <Setting>{
+				type: "text",
+				id: "magic_remoteMembers",
+				label: "Defenseless Against Member IDs:",
+				description: "Comma separated list of member IDs. If empty will use standard Item Permissions. The target will never defend against their spells.",
+				disabled: this.settings.neverDefend,
+				setting: () => this.settings.noDefenseMemberIds ?? "",
+				setSetting: (val) => this.settings.noDefenseMemberIds = val
 			}, <Setting>{
 				type: "checkbox",
-				label: "Remote Access Requires Trance:",
-				description: "If checked, remote access is only possible while actively hypnotized.",
-				setting: () => this.settings.remoteAccessRequiredTrance ?? true,
-				setSetting: (val) => this.settings.remoteAccessRequiredTrance = val
+				label: "Limited Spell Duration:",
+				description: "If checked, the target will eventually break free from a detrimental spell's effects, the time variable based on how poorly they fail an activity roll against the caster.",
+				setting: () => this.settings.limitedDuration ?? false,
+				setSetting: (val) => this.settings.limitedDuration = val
 			}, <Setting>{
-				type: "checkbox",
-				label: "Remote Access Limited to Hypnotizer:",
-				description: "If checked, only the user who hypnotized you can access your settings (after matching other conditions).",
-				setting: () => this.settings.limitRemoteAccessToHypnotizer ?? true,
-				setSetting: (val) => this.settings.limitRemoteAccessToHypnotizer = val
+				type: "number",
+				id: "magic_maxDuration",
+				label: "Maximum Spell Duration:",
+				description: "Maximum amount of time, in minutes, the target will be affected by any specific spell effects. Set to 0 for unlimited.",
+				setting: () => this.settings.maxDuration ?? 0,
+				setSetting: (val) => this.settings.maxDuration = val
 			}, <Setting>{
 				type: "checkbox",
 				label: "Enable Wild Magic:",
@@ -121,35 +127,27 @@ export class RemoteMagic extends RemoteGuiSubscreen {
 				type: "label", // Blank Spot
 				label: "",
 				description: ""
-			}
-		], [
-			<Setting>{
+			}, <Setting>{
 				type: "checkbox",
-				label: "Never Defend:",
-				description: "If checked, the target will never defend against spells cast on them.",
-				setting: () => this.settings.neverDefend ?? false,
-				setSetting: (val) => this.settings.neverDefend = val
-			},<Setting>{
-				type: "text",
-				id: "magic_remoteMembers",
-				label: "Defenseless Against Member IDs:",
-				description: "Comma separated list of member IDs. If empty will use standard Item Permissions. The target will never defend against their spells.",
-				disabled: this.settings.neverDefend,
-				setting: () => this.settings.noDefenseMemberIds ?? "",
-				setSetting: (val) => this.settings.noDefenseMemberIds = val
-			},<Setting>{
+				label: "Locked:",
+				disabled: !this.settings.lockable,
+				description: "If checked, locks the user out of their own hypnosis settings.",
+				setting: () => this.settings.locked ?? false,
+				setSetting: (val) => {
+					if (this.settings.lockable) this.settings.locked = val;
+				}
+			}, <Setting>{
 				type: "checkbox",
-				label: "Limited Spell Duration:",
-				description: "If checked, the target will eventually break free from a detrimental spell's effects, the time variable based on how poorly they fail an activity roll against the caster.",
-				setting: () => this.settings.limitedDuration ?? false,
-				setSetting: (val) => this.settings.limitedDuration = val
-			},<Setting>{
-				type: "number",
-				id: "magic_maxDuration",
-				label: "Maximum Spell Duration:",
-				description: "Maximum amount of time, in minutes, the target will be affected by any specific spell effects. Set to 0 for unlimited.",
-				setting: () => this.settings.maxDuration ?? 0,
-				setSetting: (val) => this.settings.maxDuration = val
+				label: "Remote Access Requires Trance:",
+				description: "If checked, remote access is only possible while actively hypnotized.",
+				setting: () => this.settings.remoteAccessRequiredTrance ?? true,
+				setSetting: (val) => this.settings.remoteAccessRequiredTrance = val
+			}, <Setting>{
+				type: "checkbox",
+				label: "Remote Access Limited to Hypnotizer:",
+				description: "If checked, only the user who hypnotized you can access your settings (after matching other conditions).",
+				setting: () => this.settings.limitRemoteAccessToHypnotizer ?? true,
+				setSetting: (val) => this.settings.limitRemoteAccessToHypnotizer = val
 			}
 		]]
 	}
@@ -163,20 +161,20 @@ export class RemoteMagic extends RemoteGuiSubscreen {
 			this.settings.blockedSpellEffects = [];
 		let val = this.settings.blockedSpellEffects.indexOf(this.Effect) > -1;
 		let blockedStr = val ? "Blocked" : "Allowed";
-		DrawBackNextButton(780, this.getYPos(6)-32, 600, 64, this.Effect, "White", "", () => blockedStr, () => blockedStr);
-		DrawCheckbox(780 + 600 + 64, this.getYPos(6) - 32, 64, 64, "", val);
+		DrawBackNextButton(780, this.getYPos(7)-32, 600, 64, this.Effect, "White", "", () => blockedStr, () => blockedStr);
+		DrawCheckbox(780 + 600 + 64, this.getYPos(7) - 32, 64, 64, "", val);
 
 		MainCanvas.textAlign = "left";
-		DrawTextFit(GuiMagic.SpellEffectDescription(this.Effect), 780, this.getYPos(7), 1000, "Black");
+		DrawTextFit(GuiMagic.SpellEffectDescription(this.Effect), 780, this.getYPos(8), 1000, "Black");
 		MainCanvas.textAlign = prev;
 	}
 
 	Click(): void {
 		super.Click();
 
-		if (MouseIn(780, this.getYPos(6)-32, 600, 64)) {
+		if (MouseIn(780, this.getYPos(7)-32, 600, 64)) {
 			this.EffectIndex = this.GetNewIndexFromNextPrevClick(1080, this.EffectIndex, this.ActualEffects.length);
-		} else if (MouseIn(550 + 600 + 64, this.getYPos(6) - 32, 64, 64)) {
+		} else if (MouseIn(550 + 600 + 64, this.getYPos(7) - 32, 64, 64)) {
 			if (this.settings.blockedSpellEffects.indexOf(this.Effect) > -1)
 				this.settings.blockedSpellEffects = this.settings.blockedSpellEffects.filter(ef => ef != this.Effect);
 			else this.settings.blockedSpellEffects.push(this.Effect);
