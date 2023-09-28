@@ -43,6 +43,7 @@ export class RedressedState extends BaseState {
     DoChange(asset: Asset | null, type: OutfitOption): boolean {
         if (!asset)
             return false;
+        
         switch(type) {
             case OutfitOption.clothes_only:
                 return isCloth(asset);
@@ -87,20 +88,25 @@ export class RedressedState extends BaseState {
         super.Recover();
         if (!!this.StoredOutfit) {
             this.StripCharacter(true, OutfitOption.both);
-            this.WearMany(this.StoredOutfit, OutfitOption.both);
+            this.WearMany(this.StoredOutfit, OutfitOption.both, true);
             this.ClearStoredOutfit();
         }
         return this;
     }
 
-    WearMany(items: ItemBundle[], type: OutfitOption) {
+    WearMany(items: ItemBundle[], type: OutfitOption, isRestore: boolean = false) {
         items.forEach(item => {
             let asset = AssetGet(Player.AssetFamily, item.Group, item.Name);
-            if (this.DoChange(asset, type)) {
-                let newItem = InventoryWear(Player, item.Name, item.Group, item.Color, item.Difficulty, -1, item.Craft, true);
-                if (!!newItem && !!item.Property?.LockedBy && InventoryDoesItemAllowLock(newItem)) {
-                    let lock = AssetGet(Player.AssetFamily, "ItemMisc", item.Property.LockedBy);
-                    if (!!lock) InventoryLock(Player, newItem, {Asset:lock}, item.Property.LockMemberNumber)
+            if (!!asset && this.DoChange(asset, type)) {
+                let groupBlocked = InventoryGroupIsBlockedForCharacter(Player, asset.Group.Name);
+                let isBlocked = InventoryBlockedOrLimited(Player, {Asset: asset})
+                let isRoomDisallowed = !InventoryChatRoomAllow(asset?.Category ?? []);
+                if (isRestore || !(groupBlocked || isBlocked || isRoomDisallowed)) {
+                    let newItem = InventoryWear(Player, item.Name, item.Group, item.Color, item.Difficulty, -1, item.Craft, true);
+                    if (!!newItem && !!item.Property?.LockedBy && InventoryDoesItemAllowLock(newItem)) {
+                        let lock = AssetGet(Player.AssetFamily, "ItemMisc", item.Property.LockedBy);
+                        if (!!lock) InventoryLock(Player, newItem, {Asset:lock}, item.Property.LockMemberNumber)
+                    }
                 }
             }
         });
