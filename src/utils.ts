@@ -274,7 +274,7 @@ export function getRandomInt(max: number) {
 export function settingsSave(publish: boolean = false) {
 	if (!Player.OnlineSettings)
 		Player.OnlineSettings = <PlayerOnlineSettings>{};
-    Player.OnlineSettings.LSCG = LZString.compressToBase64(JSON.stringify(Player.LSCG));
+    Player.OnlineSettings.LSCG = LZString.compressToUTF16(JSON.stringify(Player.LSCG));
     window.ServerAccountUpdate.QueueData({OnlineSettings: Player.OnlineSettings});
 	if (publish)
 		getModule<CoreModule>("CoreModule")?.SendPublicPacket(false, "sync");
