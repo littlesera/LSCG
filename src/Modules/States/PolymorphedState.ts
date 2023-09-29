@@ -53,6 +53,12 @@ export class PolymorphedState extends BaseState {
         return allow;
     }
 
+    skinColorChangeOnly: string[] = [
+        "BodyUpper",
+        "BodyLower",
+        "Mouth"
+    ]
+
     StripCharacter(skipStore: boolean, config: PolymorphConfig, newList: ItemBundle[] = []) {
         if (!skipStore && !this.StoredOutfit)
             this.SetStoredOutfit();
@@ -62,11 +68,13 @@ export class PolymorphedState extends BaseState {
         for (let i = appearance.length - 1; i >= 0; i--) {
             const asset = appearance[i].Asset;
             if (this.DoChange(asset, config)) {
-                if (!config.IncludeAllBody && config.IncludeSkin && (asset.Group.Name == "BodyUpper" || asset.Group.Name == "BodyLower")) {
+                let newItem = newList.find(x => x.Group == asset.Group.Name);
+                if (!config.IncludeAllBody && config.IncludeSkin && 
+                    !!newItem && 
+                    this.skinColorChangeOnly.indexOf(asset.Group.Name) > -1) {
                     // Special handling for simple color change.
-                    let newSkin = newList.find(x => x.Group == asset.Group.Name);
-                    if (!!newSkin)
-                        appearance[i].Color = newSkin.Color;
+                    if (asset.Group.Name != "Mouth" || (!!newItem && !!newItem.Color && newItem.Color != "Default"))
+                        appearance[i].Color = newItem.Color;
                 }
                 else if (newList.length == 0 || newList.some(x => x.Group == asset.Group.Name))
                     appearance.splice(i, 1);
@@ -107,12 +115,12 @@ export class PolymorphedState extends BaseState {
                 let isBlocked = InventoryBlockedOrLimited(Player, {Asset: asset})
                 let isRoomDisallowed = !InventoryChatRoomAllow(asset?.Category ?? []);
 
-                let isSkinColorChangeOnly = !config.IncludeAllBody && config.IncludeSkin && (asset.Group.Name == "BodyUpper" || asset.Group.Name == "BodyLower");
+                let isSkinColorChangeOnly = !config.IncludeAllBody && config.IncludeSkin && this.skinColorChangeOnly.indexOf(asset.Group.Name) > -1;
                 if (isRestore || !(groupBlocked || isBlocked || isRoomDisallowed || isSkinColorChangeOnly)) {
                     let newItem = InventoryWear(Player, item.Name, item.Group, item.Color, item.Difficulty, -1, item.Craft, false);
-                    if (!!newItem && !!item.Property?.LockedBy && InventoryDoesItemAllowLock(newItem)) {
-                        let lock = AssetGet(Player.AssetFamily, "ItemMisc", item.Property.LockedBy);
-                        if (!!lock) InventoryLock(Player, newItem, {Asset:lock}, item.Property.LockMemberNumber)
+                    if (!!newItem) {
+                        if (!!item.Property?.Type && !!newItem.Property)
+                            newItem.Property.Type = item.Property.Type;
                     }
                 }
             }
