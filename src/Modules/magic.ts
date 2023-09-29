@@ -441,6 +441,8 @@ export class MagicModule extends BaseModule {
                     spellTarget = Player;
                 } else {
                     SendAction(`%NAME% struggles to wield ${crafterName}'s ${wand.Craft.Name}, %POSSESSIVE% spell fizzling with no effect.`);
+                    DialogLeave();
+                    return;
                 }
             }
             else if (!(spellTarget as any).LSCG?.MagicModule || !(spellTarget as any).LSCG?.MagicModule.enabled) {
