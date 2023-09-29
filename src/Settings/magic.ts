@@ -1,5 +1,5 @@
 import { GuiSubscreen, Setting } from "./settingBase";
-import { LSCGSpellEffect, MagicSettingsModel, OutfitConfig, OutfitOption, PolymorphConfig, PolymorphOption, SpellDefinition } from "./Models/magic";
+import { KNOWN_SPELLS_LIMIT, LSCGSpellEffect, MagicSettingsModel, OutfitConfig, OutfitOption, PolymorphConfig, PolymorphOption, SpellDefinition } from "./Models/magic";
 import { PairedBaseState } from "Modules/States/PairedBaseState";
 
 export const pairedSpellEffects = [
@@ -476,7 +476,7 @@ export class GuiMagic extends GuiSubscreen {
 					if (this.SpellIndex >= this.settings.knownSpells.length)
 						this.SpellIndex = this.settings.knownSpells.length - 1;
 					this.loadSpell();
-				} else if (MouseIn(1260, this.getYPos(0) - 32, 64, 64)) {
+				} else if (MouseIn(1260, this.getYPos(0) - 32, 64, 64) && this.settings.knownSpells.length < KNOWN_SPELLS_LIMIT) {
 					if (!!this.Spell)
 						this.saveSpell();
 					this.settings.knownSpells.push(<SpellDefinition>{

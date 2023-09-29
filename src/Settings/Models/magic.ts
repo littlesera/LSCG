@@ -1,5 +1,7 @@
 import { BaseSettingsModel } from "./base";
 
+export const KNOWN_SPELLS_LIMIT: number = 48;
+
 export enum LSCGSpellEffect {
     none = "None",
     hypnotizing = "Hypnotizing", 
