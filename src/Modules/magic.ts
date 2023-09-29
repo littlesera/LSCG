@@ -182,12 +182,6 @@ export class MagicModule extends BaseModule {
                     TargetAction: "SourceCharacter quaffs the ActivityAsset in one gulp."
                 }
             ],
-            CustomAction: {
-                Func: (target, args, next) => {
-                    next(args);
-                    InventoryRemove(Player, "ItemHandheld", true);
-                }
-            },
             CustomImage: "Icons/Magic.png"
         });
     }
