@@ -62,8 +62,17 @@ export function init() {
 	if (!!(<any>Player.OnlineSettings)?.ClubGames)
 		delete (<any>Player.OnlineSettings).ClubGames;
 
-	if (typeof Player.OnlineSettings?.LSCG == "string")
-    	Player.LSCG = JSON.parse(LZString.decompressFromBase64(Player.OnlineSettings?.LSCG)) || <SettingsModel>{};
+	if (typeof Player.OnlineSettings?.LSCG == "string") {
+		try {
+			let dataString = LZString.decompressFromUTF16(Player.OnlineSettings?.LSCG);
+			if (!dataString)
+				dataString = LZString.decompressFromBase64(Player.OnlineSettings?.LSCG) // Fallback to old compression
+			Player.LSCG = JSON.parse(dataString) || <SettingsModel>{};
+		} catch(error) {
+			console.warn("LSCG: Failed to load corrupted server data.", error);
+			throw error; // Throw error here to prevent LSCG from later trying to save corrupted data back and blowing away existing settings.
+		}
+	}
 	else
 		Player.LSCG = Player.OnlineSettings?.LSCG || <SettingsModel>{};
 
