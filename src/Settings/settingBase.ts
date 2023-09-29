@@ -280,6 +280,11 @@ export abstract class GuiSubscreen {
 		let element = document.getElementById(elementId) as HTMLInputElement;
 		if (!!element && value != null)
 			element.value = value;
+		if (element.localName == "div") { // Top of dropdown
+			let displayDiv = (element as Element).childNodes[1];
+			if (!!displayDiv)
+				displayDiv.textContent = value;
+		}
 	}
 
 	DrawLabel(name: string, description: string, order: number, hidden: boolean = false) {
