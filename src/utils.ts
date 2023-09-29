@@ -553,13 +553,43 @@ export function isCosplay(item: Item | Asset | AssetGroup): boolean {
 
 export function isBody(item: Item | Asset | AssetGroup): boolean {
 	const group = smartGetAssetGroup(item);
-	return group.Category === "Appearance" && !group.Clothing;
+	return group.Category === "Appearance" && (!group.Clothing || group.Name == "EyeShadow");
 }
 
 export function isBind(item: Item | Asset | AssetGroup, excludeSlots: AssetGroupName[] = ["ItemNeck", "ItemNeckAccessories", "ItemNeckRestraints"]): boolean {
 	const group = smartGetAssetGroup(item);
 	if (group.Category !== "Item" || group.BodyCosplay) return false;
 	return !excludeSlots.includes(group.Name);
+}
+
+export function isHair(item: Item | Asset | AssetGroup) {
+	const group = smartGetAssetGroup(item);
+	let targetGroups = [
+		"HairBack",
+		"HairFront",
+		"Eyebrows",
+		"Mask"
+	]
+	return group.Category === "Appearance" && targetGroups.indexOf(group.Name) > -1;
+}
+
+export function isSkin(item: Item | Asset | AssetGroup) {
+	const group = smartGetAssetGroup(item);
+	let targetGroups = [
+		"EyeShadow",
+		"Jewelry",
+		"BodyUpper",
+		"BodyLower"
+	]
+	return group.Category === "Appearance" && targetGroups.indexOf(group.Name) > -1;
+}
+
+export function isGenitals(item: Item | Asset | AssetGroup) {
+	const group = smartGetAssetGroup(item);
+	let targetGroups = [
+		"Pussy"
+	]
+	return group.Category === "Appearance" && targetGroups.indexOf(group.Name) > -1;
 }
 
 export function GetHandheldItemNameAndDescriptionConcat(C?: Character | null): string | undefined {

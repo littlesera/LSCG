@@ -129,7 +129,7 @@ export class StateModule extends BaseModule {
     _tickInterval: number = 1000; // ever second
 
     load(): void {
-        hookFunction("DrawStatus", 1, (args, next) => {
+        hookFunction("DrawStatus", 11, (args, next) => { // Pri 11 to bump above BCX hook
             const ret = next(args) as any;
             let C = args[0] as OtherCharacter;
             let CharX = args[1] as number;
@@ -146,6 +146,7 @@ export class StateModule extends BaseModule {
                 let validStates = C.LSCG?.StateModule.states.filter(s => s.active);
                 let validStateCount = validStates.length;
                 let tooltip = undefined;
+                let lineWidth = ChatRoomCharacterCount > 5 ? 1 : 2;
                 validStates.forEach((state, ix, arr) => {
                     let durationEnabled = (state.duration ?? 0) > 0;
                     let iconSize = 30;
@@ -158,7 +159,7 @@ export class StateModule extends BaseModule {
                     };
                     let iconCenter = {x: iconCoords.x + iconCoords.w/2, y: iconCoords.y + iconCoords.h/2}
                     let statePair = this.GetIconForState(state, C)
-                    DrawCircle(iconCenter.x, iconCenter.y, (iconSize + 10)/2 * Zoom, 2, "Black", "White");
+                    DrawCircle(iconCenter.x, iconCenter.y, (iconSize + 10)/2 * Zoom, lineWidth, "Black", "White");
                     DrawImageResize(
                         statePair.Icon,
                         iconCoords.x, iconCoords.y, iconCoords.w, iconCoords.h
@@ -169,11 +170,11 @@ export class StateModule extends BaseModule {
                         let timeRemainingInMin = Math.max(0, Math.floor(((state.duration ?? 0) - lengthActive)/(60*1000)));
                         let barH = iconCoords.h * durationPercentage;
                         let barY = iconCoords.y + (iconCoords.h - barH);
-                        let barXOffset = 10;
+                        let barXOffset = 10 * Zoom;
                         let barW = 10;
                         DrawRect(iconCoords.x + iconCoords.w + barXOffset, iconCoords.y, barW * Zoom, iconCoords.h, "White");
                         DrawRect(iconCoords.x + iconCoords.w + barXOffset, barY, barW * Zoom, barH, LSCG_TEAL);
-                        DrawEmptyRect(iconCoords.x + iconCoords.w + barXOffset, iconCoords.y, barW * Zoom, iconCoords.h, "Black", 2);
+                        DrawEmptyRect(iconCoords.x + iconCoords.w + barXOffset, iconCoords.y, barW * Zoom, iconCoords.h, "Black", lineWidth);
                         // if (MouseIn(iconCoords.x + iconCoords.w + barXOffset, iconCoords.y, barW * Zoom, iconCoords.h))
                         //     tooltip = `${timeRemainingInMin} min. remain`;
                     }

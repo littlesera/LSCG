@@ -26,10 +26,11 @@ export enum OutfitOption {
     both = "Clothes and Restraints"
 }
 
+// Deprecated
 export enum PolymorphOption {
     cosplay_only = "Cosplay Only",
     body_only = "Whole Body Only",
-    both = "Body and Cosplay"
+    both = "Body and Cosplay",
 }
 
 export interface OutfitConfig {
@@ -39,6 +40,13 @@ export interface OutfitConfig {
 
 export interface PolymorphConfig {
     Code: string;
+    IncludeCosplay: boolean;
+    IncludeSkin: boolean;
+    IncludeHair: boolean;
+    IncludeGenitals: boolean;
+    IncludeAllBody: boolean;
+    
+    // Deprecated
     Option: PolymorphOption;
 }
 
