@@ -109,7 +109,7 @@ export class PolymorphedState extends BaseState {
 
                 let isSkinColorChangeOnly = !config.IncludeAllBody && config.IncludeSkin && (asset.Group.Name == "BodyUpper" || asset.Group.Name == "BodyLower");
                 if (isRestore || !(groupBlocked || isBlocked || isRoomDisallowed || isSkinColorChangeOnly)) {
-                    let newItem = InventoryWear(Player, item.Name, item.Group, item.Color, item.Difficulty, -1, item.Craft, true);
+                    let newItem = InventoryWear(Player, item.Name, item.Group, item.Color, item.Difficulty, -1, item.Craft);
                     if (!!newItem && !!item.Property?.LockedBy && InventoryDoesItemAllowLock(newItem)) {
                         let lock = AssetGet(Player.AssetFamily, "ItemMisc", item.Property.LockedBy);
                         if (!!lock) InventoryLock(Player, newItem, {Asset:lock}, item.Property.LockMemberNumber)

@@ -579,7 +579,8 @@ export function isSkin(item: Item | Asset | AssetGroup) {
 		"EyeShadow",
 		"Jewelry",
 		"BodyUpper",
-		"BodyLower"
+		"BodyLower",
+		"Mouth"
 	]
 	return group.Category === "Appearance" && targetGroups.indexOf(group.Name) > -1;
 }
