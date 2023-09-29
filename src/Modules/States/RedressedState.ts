@@ -43,7 +43,6 @@ export class RedressedState extends BaseState {
     DoChange(asset: Asset | null, type: OutfitOption): boolean {
         if (!asset)
             return false;
-        
         switch(type) {
             case OutfitOption.clothes_only:
                 return isCloth(asset);

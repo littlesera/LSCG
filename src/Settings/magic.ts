@@ -209,12 +209,10 @@ export class GuiMagic extends GuiSubscreen {
 
 	outfitFieldId: string = "magic_outfitPaste";
 	outfitDropId: string = "magic_outfitDrop";
-	polymorphDropId: string = "magic_polymorphDrop";
 	Load(): void {
 		super.Load();
 		ElementCreateInput(this.outfitFieldId, "text", "", -1);
 		ElementCreateDropdown(this.outfitDropId, Object.values(OutfitOption), (evt) => this.OutfitConfigDropChanged(evt));
-		ElementCreateDropdown(this.polymorphDropId, Object.values(PolymorphOption), (evt) => this.PolymorphConfigDropChanged(evt));
 	}
 
 	outfitEffects: LSCGSpellEffect[] = [
@@ -225,7 +223,7 @@ export class GuiMagic extends GuiSubscreen {
 	blinkLastTime = 0;
 	blinkColor = "Pink";
     Run() {
-		if (!this.settings.locked && (this._ConfigureOutfit || this._ConfigurePolymorph)) {
+		if (!this.settings.locked && this._ConfigureOutfit) {
 			this.multipageStructure.forEach((s, ix, arr) => {
 				s.forEach(setting => {
 					if (setting.type == "text" || setting.type == "number" || setting.type == "dropdown")
@@ -242,10 +240,72 @@ export class GuiMagic extends GuiSubscreen {
 			DrawTextFit("Paste Outfit Code:", coords.x + 50, (coords.y + coords.h/2) - 50, coords.w - 100 - buttonWidth, "Black", "Grey");
 			MainCanvas.textAlign = "center";
 			ElementPosition(this.outfitFieldId, coords.x + (coords.w/2) - (buttonWidth/2), (coords.y + coords.h/2) + 20, coords.w - 100 - buttonWidth);
-			if (this._ConfigureOutfit) ElementPositionFix(this.outfitDropId, 28, coords.x + 450, (coords.y + coords.h / 2) - 50 - 19, 340, 64);
-			else if (this._ConfigurePolymorph) ElementPositionFix(this.polymorphDropId, 28, coords.x + 450, (coords.y + coords.h / 2) - 50 - 19, 340, 64);
+			ElementPositionFix(this.outfitDropId, 28, coords.x + 450, (coords.y + coords.h / 2) - 50 - 19, 340, 64);
 			DrawEmptyRect(coords.x + 445, (coords.y + coords.h / 2) - 48 - 32, 350, 68, "Black", 3);
 			DrawButton(1350, 500 - 32, 100, 64, "Confirm", "White");
+			return;
+		} else if (!this.settings.locked && this._ConfigurePolymorph) {
+			this.multipageStructure.forEach((s, ix, arr) => {
+				s.forEach(setting => {
+					if (setting.type == "text" || setting.type == "number" || setting.type == "dropdown")
+						this.ElementHide(setting.id);
+				})
+			})
+			DrawRect(0, 0, 2000, 1000, "rgba(0,0,0,.5)");
+			let coords = {x: 500, y: 200, w: 1000, h: 500};
+			let buttonWidth = 150;
+			
+			// Dialog Box
+			DrawRect(coords.x, coords.y, coords.w, coords.h, "White");
+			DrawEmptyRect(coords.x, coords.y, coords.w, coords.h, "Black", 5);
+			DrawEmptyRect(coords.x+5, coords.y+5, coords.w-10, coords.h-10, "Grey", 2);
+
+			// Paste text field
+			MainCanvas.textAlign = "left";
+			DrawTextFit("Paste Outfit Code:", coords.x + 50, coords.y + 50, coords.w - 100 - buttonWidth, "Black", "Grey");
+			ElementPosition(this.outfitFieldId, coords.x + (coords.w/2) - (buttonWidth/2), coords.y + 120, coords.w - 100 - buttonWidth);
+			
+			// Checkboxes
+			this.DrawCheckboxAbsolute("Cosplay:", 
+				"Polymorph applies cosplay items from the outfit code.", 
+				this.Spell.Polymorph?.IncludeCosplay ?? false, {
+					x: coords.x + 50,
+					y: coords.y + 200,
+					w: 200
+				}, false, false);
+			this.DrawCheckboxAbsolute("Whole Body:", 
+				"Polymorph modifies the whole body.", 
+				this.Spell.Polymorph?.IncludeAllBody ?? false, {
+					x: coords.x + 50,
+					y: coords.y + 300,
+					w: 200
+			}, false, false);
+			this.DrawCheckboxAbsolute("Hair:", 
+				"Polymorph applies cosplay items from the outfit code.", 
+				this.Spell.Polymorph?.IncludeHair ?? false, {
+					x: coords.x + 450,
+					y: coords.y + 200,
+					w: 200
+			}, this.Spell.Polymorph?.IncludeAllBody, false);
+			this.DrawCheckboxAbsolute("Skin/Jewelry/Makeup:", 
+				"Polymorph changes the target's skin.", 
+				this.Spell.Polymorph?.IncludeSkin ?? false, {
+					x: coords.x + 450,
+					y: coords.y + 300,
+					w: 200
+			}, this.Spell.Polymorph?.IncludeAllBody, false);
+			this.DrawCheckboxAbsolute("Genitals:", 
+				"Polymorph changes the target's genitals.", 
+				this.Spell.Polymorph?.IncludeGenitals ?? false, {
+					x: coords.x + 450,
+					y: coords.y + 400,
+					w: 200
+			}, this.Spell.Polymorph?.IncludeAllBody, false);
+			
+			MainCanvas.textAlign = "center";
+
+			// Confirm Button
+			DrawButton(1320, coords.y + 50, buttonWidth, 64, "Confirm", "White");
 			return;
 		}
 
@@ -253,7 +313,6 @@ export class GuiMagic extends GuiSubscreen {
 
 		this.ElementHide(this.outfitFieldId);
 		this.ElementHide(this.outfitDropId);
-		this.ElementHide(this.polymorphDropId);
 
 		var prev = MainCanvas.textAlign;
 		if (!this.settings.enabled) {
@@ -346,10 +405,43 @@ export class GuiMagic extends GuiSubscreen {
 			else if (MouseIn(1350, 500 - 32, 100, 64)) this.ConfirmOutfit();
 			return;
 		} else if (!this.settings.locked && this._ConfigurePolymorph) {
-			let coords = {x: 500, y: 400, w: 1000, h: 200};
+			let coords = {x: 500, y: 200, w: 1000, h: 500};
 			let buttonWidth = 150;
-			if (!MouseIn(coords.x, coords.y, coords.w, coords.h)) this._ConfigurePolymorph = false;
-			else if (MouseIn(1350, 500 - 32, 100, 64)) this.ConfirmPolymorph();
+			if (!MouseIn(coords.x, coords.y, coords.w, coords.h)){ this._ConfigurePolymorph = false; return; }
+			if (MouseIn(1320, coords.y + 50, buttonWidth, 64)) return this.ConfirmPolymorph();
+			if (!this.Spell.Polymorph)
+				this.Spell.Polymorph = <PolymorphConfig>{};
+			this.ClickCheckboxAbsolute({
+				x: coords.x + 50,
+				y: coords.y + 200,
+				w: 200
+			}, () => this.Spell.Polymorph!.IncludeCosplay = !this.Spell.Polymorph?.IncludeCosplay);
+			this.ClickCheckboxAbsolute({
+				x: coords.x + 50,
+				y: coords.y + 300,
+				w: 200
+			}, () => {
+				this.Spell.Polymorph!.IncludeAllBody = !this.Spell.Polymorph?.IncludeAllBody;
+				this.Spell.Polymorph!.IncludeHair = this.Spell.Polymorph?.IncludeAllBody ?? false;
+				this.Spell.Polymorph!.IncludeSkin = this.Spell.Polymorph?.IncludeAllBody ?? false;
+				this.Spell.Polymorph!.IncludeGenitals = this.Spell.Polymorph?.IncludeAllBody ?? false;
+			});
+			this.ClickCheckboxAbsolute({
+				x: coords.x + 450,
+				y: coords.y + 200,
+				w: 200
+			}, () => this.Spell.Polymorph!.IncludeHair = !this.Spell.Polymorph?.IncludeHair);
+			this.ClickCheckboxAbsolute({
+				x: coords.x + 450,
+				y: coords.y + 300,
+				w: 200
+			}, () => this.Spell.Polymorph!.IncludeSkin = !this.Spell.Polymorph?.IncludeSkin);
+			this.ClickCheckboxAbsolute({
+				x: coords.x + 450,
+				y: coords.y + 400,
+				w: 200
+			}, () => this.Spell.Polymorph!.IncludeGenitals = !this.Spell.Polymorph?.IncludeGenitals);
+
 			return;
 		}
 
@@ -448,7 +540,6 @@ export class GuiMagic extends GuiSubscreen {
 	Exit(): void {
 		ElementRemove(this.outfitFieldId);
 		ElementRemove(this.outfitDropId);
-		ElementRemove(this.polymorphDropId);
 		this.CleanPotionSettings();
 		super.Exit();
 	}
@@ -544,12 +635,11 @@ export class GuiMagic extends GuiSubscreen {
 	_ConfigurePolymorph: boolean = false;
 	ConfigurePolymorphEffect() {
 		this.ElementSetValue(this.outfitFieldId, this.Spell.Polymorph?.Code ?? "");
-		this.ElementSetValue(this.polymorphDropId, this.Spell.Polymorph?.Option ?? PolymorphOption.both);
 		this._ConfigurePolymorph = true;
 	}
 	ConfirmPolymorph() {
 		this._ConfigurePolymorph = false;
-		if (!this.Spell.Polymorph) this.Spell.Polymorph = {Code: "", Option: PolymorphOption.both};
+		if (!this.Spell.Polymorph) this.Spell.Polymorph = <PolymorphConfig>{};
 		this.Spell.Polymorph.Code = ElementValue(this.outfitFieldId);
 		this.ElementSetValue(this.outfitFieldId, "");
 	}

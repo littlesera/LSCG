@@ -242,6 +242,23 @@ export abstract class GuiSubscreen {
 		if (isHovering) this.Tooltip(description);
 	}
 
+	DrawCheckboxAbsolute(label: string, description: string, value: boolean, coords: {x: number, y: number, w?: number}, disabled: boolean = false, hidden: boolean = false) {
+		let x = coords.x;
+		let y = coords.y;
+		let width = coords.w ?? 400;
+		var isHovering = MouseIn(x, y - 32, width, 64) && !hidden;
+		DrawTextFit(label, x, y, width, isHovering ? "Red" : "Black", "Gray");
+		DrawCheckbox(x + width, y - 32, 64, 64, "", value ?? false, disabled);
+		if (isHovering) this.Tooltip(description);
+	}
+	ClickCheckboxAbsolute(coords: {x: number, y: number, w?: number}, action: () => void) {
+		let x = coords.x;
+		let y = coords.y;
+		let width = coords.w ?? 400;
+		if (MouseIn(x + width, y - 32, 64, 64))
+			action();
+	}
+
 	ElementHide(elementId: string) {
 		ElementPosition(elementId, -999, -999, 1, 1);
 	}
