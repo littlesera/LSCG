@@ -41,10 +41,10 @@ console.debug("LSCG: Parse start...");
       // });
       LSCG_VERSION = (LSCG_VERSION.length > 0 && LSCG_VERSION[0] == 'v') ? LSCG_VERSION : "v" + LSCG_VERSION;
       return `const LSCG_VERSION="${LSCG_VERSION}";`;
-    },
-    plugins: [terser({
-      mangle: false
-    })]
+    }//,
+    // plugins: [terser({
+    //   mangle: false
+    // })]
   },
   treeshake: false,
   plugins: [
