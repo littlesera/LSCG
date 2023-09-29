@@ -48,7 +48,7 @@ export class SleepState extends BaseState {
             if (WardrobeGetExpression(Player)?.Emoticon == "Sleep")
                 CharacterSetFacialExpression(Player, "Emoticon", null);            
             removeCustomEffect(Player, "ForceKneel");
-            super.Recover(emote);
+            super.Recover(false);
         }
         return this;
     }

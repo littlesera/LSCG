@@ -154,6 +154,11 @@ export class MagicModule extends BaseModule {
             return next(args) || CurrentScreen == "LSCG_SPELLS_DIALOG";
         }, ModuleCategory.Magic);
 
+        hookFunction("DialogLeave", 1, (args, next) => {
+            this.CloseSpellMenu();
+            return next(args);
+        }, ModuleCategory.Magic)
+
         OnActivity(1, ModuleCategory.Magic, (data, sender, msg, megadata) => {
             if (!this.Enabled)
                 return;
@@ -440,8 +445,10 @@ export class MagicModule extends BaseModule {
                     return;
                 }
             }
-            else if (!(spellTarget as any).LSCG?.MagicModule) {
+            else if (!(spellTarget as any).LSCG?.MagicModule || !(spellTarget as any).LSCG?.MagicModule.enabled) {
                 SendAction(`%NAME% casts ${spell.Name} at %OPP_NAME% but it seems to fizzle.`, spellTarget);
+                this.CloseSpellMenu();
+                DialogLeave();
                 return;
             }
             else {

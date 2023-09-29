@@ -40,6 +40,7 @@ export abstract class PairedBaseState extends BaseState {
     }
 
     Recover(emote?: boolean | undefined): BaseState | undefined {
+        if (emote) SendAction("%NAME%'s breathing calms down as %PRONOUN% regains control of %POSSESSIVE% arousal.")
         this.Pairings.forEach(pair => {
             sendLSCGCommandBeep(pair.PairedMember, "unpair", [{
                 name: "type",
@@ -47,7 +48,7 @@ export abstract class PairedBaseState extends BaseState {
             }])
         });
         this.Pairings = [];
-        return super.Recover(emote);
+        return super.Recover(false);
     }
 
     Init(): void {}
