@@ -11,14 +11,14 @@ export const CameraItems: string[] = [
 	"Phone1",
 	"Phone2",
 	"PortalTablet",
-	"Camera1", 
-	"Baguette"
+	"Camera1"
 ];
 
 export const MagicWandItems: string[] = [
 	"RainbowWand",
 	"VibratingWand",
 	"SmallVibratingWand",
+	"ShockWand",
 	"Baguette"
 ]
 
