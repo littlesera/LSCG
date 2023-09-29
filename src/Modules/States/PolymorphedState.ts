@@ -118,10 +118,8 @@ export class PolymorphedState extends BaseState {
                 let isSkinColorChangeOnly = !config.IncludeAllBody && config.IncludeSkin && this.skinColorChangeOnly.indexOf(asset.Group.Name) > -1;
                 if (isRestore || !(groupBlocked || isBlocked || isRoomDisallowed || isSkinColorChangeOnly)) {
                     let newItem = InventoryWear(Player, item.Name, item.Group, item.Color, item.Difficulty, -1, item.Craft, false);
-                    if (!!newItem) {
-                        if (!!item.Property?.Type && !!newItem.Property)
-                            newItem.Property.Type = item.Property.Type;
-                    }
+                    if (!!newItem && !!item.Property)
+                        newItem.Property = item.Property;
                 }
             }
         });
