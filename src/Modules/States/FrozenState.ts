@@ -33,9 +33,9 @@ export class FrozenState extends BaseState {
     RoomSync(): void {}
 
     speechBlockStr: string[] = [
-        "%NAME% barely trembles, unable to move their mouth or make a sound...",
-        "%NAME%'s eyes plead helplessly as their muscles refuse to obey...",
-        "%NAME% manages to muster a quiet whimper, their body held fast..."
+        "%NAME% barely trembles, unable to move %POSSESSIVE% mouth or make a sound...",
+        "%NAME%'s eyes plead helplessly as %POSSESSIVE% muscles refuse to obey...",
+        "%NAME% manages to muster a quiet whimper, %POSSESSIVE% body held fast..."
     ];
 
     SpeechBlock(): void {
