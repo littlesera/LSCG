@@ -3,7 +3,7 @@ import { getModule } from "modules";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
 import { GetDelimitedList, GetHandheldItemNameAndDescriptionConcat, GetItemNameAndDescriptionConcat, GetMetadata, ICONS, LSCG_SendLocal, LSCG_TEAL, OnActivity, SendAction, getCharacter, getRandomInt, hookFunction, isPhraseInString, removeAllHooksByModule, sendLSCGCommand, sendLSCGCommandBeep, settingsSave } from "../utils";
 import { ActivityModule, ActivityTarget } from "./activities";
-import { LSCGSpellEffect, MagicSettingsModel, OutfitConfig, OutfitOption, SpellDefinition } from "Settings/Models/magic";
+import { KNOWN_SPELLS_LIMIT, LSCGSpellEffect, MagicSettingsModel, OutfitConfig, OutfitOption, SpellDefinition } from "Settings/Models/magic";
 import { GuiMagic, pairedSpellEffects } from "Settings/magic";
 import { StateModule } from "./states";
 import { ItemUseModule, MagicWandItems } from "./item-use";
@@ -690,6 +690,8 @@ export class MagicModule extends BaseModule {
 
     IncomingSpellTeachCommand(sender: Character | null, msg: LSCGMessageModel) {
         let spell = msg.command?.args?.find(arg => arg.name == "spell")?.value as SpellDefinition;
+        if (this.settings.knownSpells.length >= KNOWN_SPELLS_LIMIT)
+            SendAction(`%NAME%'s mind is already full of spells. %INTENSIVE% must forget one before %INTENSIVE% can learn ${spell.Name}.`);
         if (this.settings.knownSpells.find(s => s.Name == spell.Name)) {
             SendAction(`%NAME% already knows a spell called ${spell.Name} and ignores %POSSESSIVE% new instructions.`);
         } else {
