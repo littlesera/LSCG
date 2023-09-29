@@ -109,7 +109,7 @@ export class MagicModule extends BaseModule {
 	}
 
     PairedCharacterOptions(spellTarget: Character | undefined): Character[] {
-        return ChatRoomCharacter.filter(c => !!c && !!(c as any).LSCG && !!(c as any).LSCG.MagicModule && c.MemberNumber != spellTarget?.MemberNumber);
+        return ChatRoomCharacter.filter(c => !!c && !!(c as any).LSCG && !!(c as any).LSCG.MagicModule && (c as any).LSCG.MagicModule.enabled && c.MemberNumber != spellTarget?.MemberNumber);
     }
 
     drinkActivityNames: string[] = [
