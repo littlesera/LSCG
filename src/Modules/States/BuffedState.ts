@@ -72,7 +72,7 @@ export class BuffedState extends BaseState {
                 SkillSetModifier(Player, skill, 0, 0, true);
             })
         }
-        return super.Recover(emote);
+        return super.Recover(false);
     }
 
     Init(): void {}
