@@ -59,6 +59,9 @@ export class ResizedState extends BaseState {
 
     Init(): void {
         hookFunction("ChatRoomDrawCharacter", 1, (args, next) => {
+            if (Player.VisualSettings?.ForceFullHeight ?? false) // Skip if player specifies always draw full height
+                return next(args);
+
             ChatRoomCharacterDrawlist.forEach(C => {
                 let lscg = (C as OtherCharacter).LSCG;
                 if (!!lscg && !! lscg.StateModule && lscg.StateModule.states && lscg.StateModule.states.find(s => s.type == "resized")?.active) {

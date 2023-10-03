@@ -33,7 +33,7 @@ export class MagicModule extends BaseModule {
     }
 
     get Enabled(): boolean {
-		return super.Enabled && (ChatBlockItemCategory?.indexOf("Fantasy") ?? -1) == -1
+		return super.Enabled && (ChatRoomData?.BlockCategory?.indexOf("Fantasy") ?? -1) == -1
 	}
 
     get defaultSettings() {
@@ -184,7 +184,8 @@ export class MagicModule extends BaseModule {
                     Name: "ItemMouth",
 					TargetLabel: "Quaff",
                     SelfAllowed: true,
-                    TargetAction: "SourceCharacter quaffs the ActivityAsset in one gulp."
+                    TargetSelfAction: "SourceCharacter quaffs the ActivityAsset in one gulp.",
+                    TargetAction: "SourceCharacter presses PronounPossessive ActivityAsset up against TargetCharacter's lips."
                 }
             ],
             CustomImage: "Icons/Magic.png"
@@ -227,7 +228,7 @@ export class MagicModule extends BaseModule {
         let targetItem = InventoryGet(target, "ItemHandheld");
         return this.Enabled && 
             !target.IsPlayer() &&
-            this.settings.knownSpells.length > 0 &&
+            this.AvailableSpells.length > 0 &&
             MagicWandItems.indexOf(targetItem?.Asset?.Name ?? "") > -1;
     }
 
@@ -379,8 +380,8 @@ export class MagicModule extends BaseModule {
     }
 
     CastWildMagic(C: OtherCharacter | PlayerCharacter) {
-        let spellIndex = getRandomInt(this.settings.knownSpells.length + 1);
-        let spell = this.settings.knownSpells[spellIndex];
+        let spellIndex = getRandomInt(this.AvailableSpells.length + 1);
+        let spell = this.AvailableSpells[spellIndex];
         if (!spell || this.settings.trueWildMagic)
             spell = this.RandomSpell
         let paired: Character | undefined = undefined;
@@ -559,9 +560,10 @@ export class MagicModule extends BaseModule {
             duration = saveDiff * 5 * (60 * 1000) // 5 minutes for every level of "spell power" (difference between caster and defender checks)
             if (!this.settings.limitedDuration)
                 duration = 0;
-            else if (this.settings.maxDuration > 0)
+            else if (this.settings.maxDuration > 0) {
                 duration = Math.min(duration, this.settings.maxDuration * (60 * 1000));
-            LSCG_SendLocal(`${sender?.IsPlayer() ? 'Your' : senderName + "'s"} ${spell.Name} spell will last ${duration / (60 * 1000)} minutes.`);
+                LSCG_SendLocal(`${sender?.IsPlayer() ? 'Your' : senderName + "'s"} ${spell.Name} spell will last ${duration / (60 * 1000)} minutes.`);
+            }
         }            
 
         allowedSpellEffects.forEach((effect, ix, arr) => {
@@ -699,9 +701,9 @@ export class MagicModule extends BaseModule {
 
     IncomingSpellTeachCommand(sender: Character | null, msg: LSCGMessageModel) {
         let spell = msg.command?.args?.find(arg => arg.name == "spell")?.value as SpellDefinition;
-        if (this.settings.knownSpells.length >= KNOWN_SPELLS_LIMIT)
+        if (this.AvailableSpells.length >= KNOWN_SPELLS_LIMIT)
             SendAction(`%NAME%'s mind is already full of spells. %INTENSIVE% must forget one before %INTENSIVE% can learn ${spell.Name}.`);
-        if (this.settings.knownSpells.find(s => s.Name == spell.Name)) {
+        if (this.AvailableSpells.find(s => s.Name == spell.Name)) {
             SendAction(`%NAME% already knows a spell called ${spell.Name} and ignores %POSSESSIVE% new instructions.`);
         } else {
             SendAction(`%NAME% grins as they finally understand the details of ${spell.Name} and memorizes it for later.`);
@@ -714,11 +716,13 @@ export class MagicModule extends BaseModule {
     HandleQuaff(sender: Character) {
         let item = InventoryGet(sender, "ItemHandheld");
         let spell = this.GetSpellFromItem(item);
-        if (!!spell) {
+        if (!!spell && !!item) {
+            var itemName = getModule<ItemUseModule>("ItemUseModule").getItemName(item!);
             let gagType = getModule<InjectorModule>("InjectorModule")?.GetGagDrinkAccess(Player);
-            if (gagType == "nothing" && sender.MemberNumber != Player.MemberNumber) {
+            if (!this.SpellIsBeneficial(spell) && gagType == "nothing" && sender.MemberNumber != Player.MemberNumber) {
                 this.TryForcePotion(sender);
             } else {
+                SendAction(`%OPP_NAME% gulps down %NAME%'s ${itemName}.`)
                 this.ProcessPotion(sender);
             }
         }
@@ -742,7 +746,7 @@ export class MagicModule extends BaseModule {
     ProcessPotion(sender: Character) {
         var item = InventoryGet(sender, "ItemHandheld");
         let spell = this.GetSpellFromItem(item);
-        if (!!spell)
+        if (!!spell && this.Enabled)
             this.IncomingSpell(sender, spell);
     }
 
