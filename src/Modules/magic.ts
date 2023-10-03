@@ -33,7 +33,7 @@ export class MagicModule extends BaseModule {
     }
 
     get Enabled(): boolean {
-		return super.Enabled && (ChatBlockItemCategory?.indexOf("Fantasy") ?? -1) == -1
+		return super.Enabled && (ChatRoomData?.BlockCategory?.indexOf("Fantasy") ?? -1) == -1
 	}
 
     get defaultSettings() {
@@ -228,7 +228,7 @@ export class MagicModule extends BaseModule {
         let targetItem = InventoryGet(target, "ItemHandheld");
         return this.Enabled && 
             !target.IsPlayer() &&
-            this.settings.knownSpells.length > 0 &&
+            this.AvailableSpells.length > 0 &&
             MagicWandItems.indexOf(targetItem?.Asset?.Name ?? "") > -1;
     }
 
@@ -380,8 +380,8 @@ export class MagicModule extends BaseModule {
     }
 
     CastWildMagic(C: OtherCharacter | PlayerCharacter) {
-        let spellIndex = getRandomInt(this.settings.knownSpells.length + 1);
-        let spell = this.settings.knownSpells[spellIndex];
+        let spellIndex = getRandomInt(this.AvailableSpells.length + 1);
+        let spell = this.AvailableSpells[spellIndex];
         if (!spell || this.settings.trueWildMagic)
             spell = this.RandomSpell
         let paired: Character | undefined = undefined;
@@ -700,9 +700,9 @@ export class MagicModule extends BaseModule {
 
     IncomingSpellTeachCommand(sender: Character | null, msg: LSCGMessageModel) {
         let spell = msg.command?.args?.find(arg => arg.name == "spell")?.value as SpellDefinition;
-        if (this.settings.knownSpells.length >= KNOWN_SPELLS_LIMIT)
+        if (this.AvailableSpells.length >= KNOWN_SPELLS_LIMIT)
             SendAction(`%NAME%'s mind is already full of spells. %INTENSIVE% must forget one before %INTENSIVE% can learn ${spell.Name}.`);
-        if (this.settings.knownSpells.find(s => s.Name == spell.Name)) {
+        if (this.AvailableSpells.find(s => s.Name == spell.Name)) {
             SendAction(`%NAME% already knows a spell called ${spell.Name} and ignores %POSSESSIVE% new instructions.`);
         } else {
             SendAction(`%NAME% grins as they finally understand the details of ${spell.Name} and memorizes it for later.`);
@@ -743,7 +743,7 @@ export class MagicModule extends BaseModule {
     ProcessPotion(sender: Character) {
         var item = InventoryGet(sender, "ItemHandheld");
         let spell = this.GetSpellFromItem(item);
-        if (!!spell)
+        if (!!spell && this.Enabled)
             this.IncomingSpell(sender, spell);
     }
 
