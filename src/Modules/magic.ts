@@ -716,11 +716,13 @@ export class MagicModule extends BaseModule {
     HandleQuaff(sender: Character) {
         let item = InventoryGet(sender, "ItemHandheld");
         let spell = this.GetSpellFromItem(item);
-        if (!!spell) {
+        if (!!spell && !!item) {
+            var itemName = getModule<ItemUseModule>("ItemUseModule").getItemName(item!);
             let gagType = getModule<InjectorModule>("InjectorModule")?.GetGagDrinkAccess(Player);
-            if (gagType == "nothing" && sender.MemberNumber != Player.MemberNumber) {
+            if (!this.SpellIsBeneficial(spell) && gagType == "nothing" && sender.MemberNumber != Player.MemberNumber) {
                 this.TryForcePotion(sender);
             } else {
+                SendAction(`%OPP_NAME% gulps down %NAME%'s ${itemName}.`)
                 this.ProcessPotion(sender);
             }
         }
