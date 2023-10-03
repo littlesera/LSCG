@@ -259,10 +259,14 @@ export class CoreModule extends BaseModule {
                 break;
             case "remote":
                 let prevCollarPurchase = Player.LSCG?.CollarModule?.collarPurchased;
-                Object.assign(Player.LSCG.HypnoModule, msg.settings?.HypnoModule);
-                Object.assign(Player.LSCG.CollarModule, msg.settings?.CollarModule);
-                Object.assign(Player.LSCG.MagicModule, msg.settings?.MagicModule);
-                getModule<HypnoModule>("HypnoModule")?.initializeTriggerWord();
+                if (Player.LSCG.HypnoModule.remoteAccess) {
+                    Object.assign(Player.LSCG.HypnoModule, msg.settings?.HypnoModule);
+                    getModule<HypnoModule>("HypnoModule")?.initializeTriggerWord();
+                }
+                if (Player.LSCG.CollarModule.remoteAccess)
+                    Object.assign(Player.LSCG.CollarModule, msg.settings?.CollarModule);
+                if (Player.LSCG.MagicModule.remoteAccess)
+                    Object.assign(Player.LSCG.MagicModule, msg.settings?.MagicModule);
                 settingsSave(true);
                 let currentCollarPurchase = Player.LSCG?.CollarModule?.collarPurchased;
                 if (!prevCollarPurchase && currentCollarPurchase)
