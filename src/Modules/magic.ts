@@ -560,9 +560,10 @@ export class MagicModule extends BaseModule {
             duration = saveDiff * 5 * (60 * 1000) // 5 minutes for every level of "spell power" (difference between caster and defender checks)
             if (!this.settings.limitedDuration)
                 duration = 0;
-            else if (this.settings.maxDuration > 0)
+            else if (this.settings.maxDuration > 0) {
                 duration = Math.min(duration, this.settings.maxDuration * (60 * 1000));
-            LSCG_SendLocal(`${sender?.IsPlayer() ? 'Your' : senderName + "'s"} ${spell.Name} spell will last ${duration / (60 * 1000)} minutes.`);
+                LSCG_SendLocal(`${sender?.IsPlayer() ? 'Your' : senderName + "'s"} ${spell.Name} spell will last ${duration / (60 * 1000)} minutes.`);
+            }
         }            
 
         allowedSpellEffects.forEach((effect, ix, arr) => {
