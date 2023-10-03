@@ -1120,6 +1120,8 @@ export class InjectorModule extends BaseModule {
     ];
 
     CheckForHypnoHelmet() {
+        if (!this.settings.enableMindControl)
+            return;
         var headItem = InventoryGet(Player, "ItemHead");
         var hoodItem = InventoryGet(Player, "ItemHood");
         let isWearingActiveHeadset = 
