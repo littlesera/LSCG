@@ -184,7 +184,8 @@ export class MagicModule extends BaseModule {
                     Name: "ItemMouth",
 					TargetLabel: "Quaff",
                     SelfAllowed: true,
-                    TargetAction: "SourceCharacter quaffs the ActivityAsset in one gulp."
+                    TargetSelfAction: "SourceCharacter quaffs the ActivityAsset in one gulp.",
+                    TargetAction: "SourceCharacter presses PronounPossessive ActivityAsset up against TargetCharacter's lips."
                 }
             ],
             CustomImage: "Icons/Magic.png"
