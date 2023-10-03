@@ -460,15 +460,17 @@ export function IsIncapacitated(C?: OtherCharacter | PlayerCharacter): boolean {
 		C = Player;
 	let hypnotized = false;
 	let asleep = false;
+	let paralyzed = false;
 	if (C.LSCG && !!C.LSCG.StateModule) {
 		hypnotized = C.LSCG?.StateModule.states.find(s => s.type == "hypnotized")?.active ?? false; 
-		asleep = C.LSCG?.StateModule.states.find(s => s.type == "asleep")?.active ?? false; 
+		asleep = C.LSCG?.StateModule.states.find(s => s.type == "asleep")?.active ?? false;
+		paralyzed = C.LSCG?.StateModule.states.find(s => s.type == "frozen")?.active ?? false;
 	}
 	else if (C.LSCG && !!C.LSCG.HypnoModule) { // LEGACY HANDLING
 		hypnotized = ((C.LSCG.HypnoModule as any).hypnotized ?? false) || ((C.LSCG.InjectorModule as any).brainwashed ?? false);
 		asleep = (C.LSCG.InjectorModule as any).asleep ?? false;
 	}
-	return hypnotized || asleep;
+	return hypnotized || asleep || paralyzed;
 	// || getModule<MiscModule>("MiscModule")?.isChloroformed; -- Need to push chloroform status to public for this to work.
 }
 
