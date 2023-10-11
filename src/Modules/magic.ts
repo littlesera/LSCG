@@ -123,7 +123,8 @@ export class MagicModule extends BaseModule {
         hookFunction("DialogDraw", 10, (args, next) => {
             if (this.Enabled && this.SpellMenuOpen) 
                 return this.DrawSpellMenu();
-            
+                
+            next(args);
             if (this.Enabled && !!CurrentCharacter && this.CanUseMagic(CurrentCharacter) && DialogMenuMode === "dialog") {
                 DrawButton(...dialogButtonCoords, "Magic", this.DialogMenuOpen ? LSCG_TEAL : "White", "Magic™");
                 if (this.DialogMenuOpen) {
@@ -132,7 +133,6 @@ export class MagicModule extends BaseModule {
                     DrawButton(...dialogTeachButtonCoords, "Teach Spell", this.CanTeachSpell(CurrentCharacter) ? "White" : "Grey", undefined, undefined, !this.CanTeachSpell(CurrentCharacter));
                 }
             }
-            next(args);
         }, ModuleCategory.Magic);
 
         hookFunction("DialogClick", 10, (args, next) => {
@@ -142,7 +142,7 @@ export class MagicModule extends BaseModule {
                 this.DialogMenuOpen = !this.DialogMenuOpen;
                 return;
             } 
-            if (this.DialogMenuOpen && !!CurrentCharacter && this.CanUseMagic(CurrentCharacter)) {
+            if (this.DialogMenuOpen && this.Enabled && !!CurrentCharacter && this.CanUseMagic(CurrentCharacter) && DialogMenuMode === "dialog") {
                 if (MouseIn(...dialogCastButtonCoords)) { if (this.CanCastSpell(CurrentCharacter)) this.OpenSpellMenu(CurrentCharacter as OtherCharacter); return; }
                 else if (MouseIn(...dialogWildButtonCoords)) { if (this.CanWildMagic(CurrentCharacter)) this.CastWildMagic(CurrentCharacter as OtherCharacter); return; }
                 else if (MouseIn(...dialogTeachButtonCoords)) { if (this.CanTeachSpell(CurrentCharacter)) this.TeachSpell(CurrentCharacter as OtherCharacter); return; }
