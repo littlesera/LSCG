@@ -1,6 +1,7 @@
 import { ICONS, SendAction, addCustomEffect, getRandomInt, hookFunction, removeCustomEffect } from "utils";
 import { BaseState, StateRestrictions } from "./BaseState";
 import { StateModule } from "Modules/states";
+import { ModuleCategory } from "Settings/setting_definitions";
 
 export class ResizedState extends BaseState {
     Type: LSCGState = "resized";
@@ -48,7 +49,6 @@ export class ResizedState extends BaseState {
     }
 
     Activate(memberNumber?: number | undefined, duration?: number, emote?: boolean | undefined): BaseState | undefined {
-        this.config.extensions["originalHeightRatio"] = Player.HeightRatio;
         return super.Activate(memberNumber, duration, emote);
     }
 
@@ -58,27 +58,16 @@ export class ResizedState extends BaseState {
     }
 
     Init(): void {
-        hookFunction("ChatRoomDrawCharacter", 1, (args, next) => {
-            if (Player.VisualSettings?.ForceFullHeight ?? false) // Skip if player specifies always draw full height
-                return next(args);
-
-            ChatRoomCharacterDrawlist.forEach(C => {
-                let lscg = (C as OtherCharacter).LSCG;
-                if (!!lscg && !! lscg.StateModule && lscg.StateModule.states && lscg.StateModule.states.find(s => s.type == "resized")?.active) {
-                    let enlarge = lscg.StateModule.states.find(s => s.type == "resized")?.extensions["enlarged"] ?? false;
-                    C.HeightRatio *= enlarge ? 1.5 : .75;
-                }
-            })
-            let ret = next(args);
-            ChatRoomCharacterDrawlist.forEach(C => {
-                let lscg = (C as OtherCharacter).LSCG;
-                if (!!lscg && !! lscg.StateModule && lscg.StateModule.states && lscg.StateModule.states.find(s => s.type == "resized")?.active) {
-                    let originalHeightRatio = lscg.StateModule.states.find(s => s.type == "resized")?.extensions["originalHeightRatio"] ?? 1;
-                    C.HeightRatio = originalHeightRatio;
-                }
-            })
-            return ret;
-        })
+        hookFunction("CharacterAppearanceSetHeightModifiers", 1, (args, next) => {
+            let C = args[0] as OtherCharacter;
+            next(args);
+            if (Player.VisualSettings?.ForceFullHeight ?? false)
+                return;
+            if (!!C.LSCG && !!C.LSCG.StateModule && C.LSCG.StateModule.states && C.LSCG.StateModule.states.find(s => s.type == "resized")?.active) {
+                let enlarge = C.LSCG.StateModule.states.find(s => s.type == "resized")?.extensions["enlarged"] ?? false;
+                C.HeightRatio *= enlarge ? 1.5 : .75;
+            }
+        }, ModuleCategory.States);
     }
 
     RoomSync(): void {}
