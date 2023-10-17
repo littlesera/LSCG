@@ -1,5 +1,5 @@
 import { hookFunction, ICONS, isObject, settingsSave } from './utils';
-import { modules, registerModule } from 'modules';
+import { ConfiguredActivities, CraftableItemSpellNames, DrugKeywords, HypnoTriggers, modules, registerModule } from 'modules';
 import { SettingsModel } from 'Settings/Models/settings';
 import { HypnoModule } from './Modules/hypno';
 import { CollarModule } from './Modules/collar';
@@ -15,6 +15,8 @@ import { CommandModule } from 'Modules/commands';
 import { ItemUseModule } from 'Modules/item-use';
 import { StateModule } from 'Modules/states';
 import { MagicModule } from 'Modules/magic';
+
+export { DrugKeywords, CraftableItemSpellNames, HypnoTriggers, ConfiguredActivities };
 
 function initWait() {
 	console.debug("LSCG: Init wait");
