@@ -54,7 +54,7 @@ export class MagicModule extends BaseModule {
             noDefenseMemberIds: "",
             limitedDuration: true,
             maxDuration: 0,
-            allowOutfitToChangeNeckItems: true
+            allowOutfitToChangeNeckItems: false
         };
     }
 
