@@ -114,7 +114,6 @@ export class PublicSettingsModel implements IPublicSettingsModel {
         enableWildMagic: false,
         forceWildMagic: false,
         trueWildMagic: false,
-        knownSpells: [],
         blockedSpellEffects: [],
         lockable: false,
         locked: false,
@@ -125,6 +124,7 @@ export class PublicSettingsModel implements IPublicSettingsModel {
         neverDefend: false,
         noDefenseMemberIds: "",
         limitedDuration: true,
-        maxDuration: 0
+        maxDuration: 0,
+        allowOutfitToChangeNeckItems: true
     }
 }

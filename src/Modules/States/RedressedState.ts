@@ -4,6 +4,20 @@ import { StateModule } from "Modules/states";
 import { OutfitConfig, OutfitOption } from "Settings/Models/magic";
 
 export class RedressedState extends BaseState {
+    static CleanItemCode(code: string): string {
+        let items = JSON.parse(LZString.decompressFromBase64(code)) as ItemBundle[];
+        if (!items)
+            return code;
+        items = items.filter(item => {
+            let asset = AssetGet(Player.AssetFamily, item.Group, item.Name);
+            if (!asset)
+                return false;
+            return isCloth(asset) || 
+                isBind(asset, []);
+        });
+        return LZString.compressToBase64(JSON.stringify(items));
+    }
+
     Type: LSCGState = "redressed";
 
     Icon(C: OtherCharacter): string {
@@ -47,7 +61,7 @@ export class RedressedState extends BaseState {
             case OutfitOption.clothes_only:
                 return isCloth(asset);
             case OutfitOption.binds_only:
-                return isBind(asset);
+                return isBind(asset, Player.LSCG.MagicModule.allowOutfitToChangeNeckItems ? [] : ["ItemNeck", "ItemNeckAccessories", "ItemNeckRestraints"]);
             case OutfitOption.both:
                 return isCloth(asset) || isBind(asset);
         }

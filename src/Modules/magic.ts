@@ -53,7 +53,8 @@ export class MagicModule extends BaseModule {
             neverDefend: false,
             noDefenseMemberIds: "",
             limitedDuration: true,
-            maxDuration: 0
+            maxDuration: 0,
+            allowOutfitToChangeNeckItems: true
         };
     }
 
@@ -715,57 +716,118 @@ export class MagicModule extends BaseModule {
     // ***************** Potions *******************
     HandleQuaff(sender: Character) {
         let item = InventoryGet(sender, "ItemHandheld");
-        let spell = this.GetSpellFromItem(item);
-        if (!!spell && !!item) {
-            var itemName = getModule<ItemUseModule>("ItemUseModule").getItemName(item!);
+        let spell = this.GetSpellFromItem(item, sender);
+        if (!!spell && !!item)
+            this.HandleQuaffWithSpell(sender, getModule<ItemUseModule>("ItemUseModule")?.getItemName(item), spell);
+    }
+
+    HandleQuaffWithSpell(sender: Character | null, itemName: string, spell: SpellDefinition | undefined) {
+        if (!!spell && !!itemName && !!sender) {
             let gagType = getModule<InjectorModule>("InjectorModule")?.GetGagDrinkAccess(Player);
             if (!this.SpellIsBeneficial(spell) && gagType == "nothing" && sender.MemberNumber != Player.MemberNumber) {
-                this.TryForcePotion(sender);
+                this.TryForcePotion(sender, itemName, spell);
             } else {
-                SendAction(`%OPP_NAME% gulps down %NAME%'s ${itemName}.`)
-                this.ProcessPotion(sender);
+                SendAction(`%NAME% gulps down %OPP_NAME%'s ${itemName}.`, sender)
+                this.ProcessPotion(sender, spell);
             }
         }
     }
 
-    TryForcePotion(sender: Character) {
+    TryForcePotion(sender: Character, itemName: string, spell: SpellDefinition) {
         let itemUseModule = getModule<ItemUseModule>("ItemUseModule");
         if (!itemUseModule) {
-            return this.ProcessPotion(sender);
+            return this.ProcessPotion(sender, spell);
         }
-        var itemName = itemUseModule.getItemName(InventoryGet(sender, "ItemHandheld")!);
         let check = itemUseModule?.MakeActivityCheck(sender, Player);
         if (check.AttackerRoll.Total >= check.DefenderRoll.Total) {
             SendAction(`${CharacterNickname(sender)} ${check.AttackerRoll.TotalStr}manages to get their ${itemName} past ${CharacterNickname(Player)}'s ${check.DefenderRoll.TotalStr}lips, forcing %INTENSIVE% to swallow it.`);
-            setTimeout(() => this.ProcessPotion(sender), 5000);
+            this.ProcessPotion(sender, spell);
         } else {
             SendAction(`${CharacterNickname(Player)} ${check.DefenderRoll.TotalStr}successfully defends against ${CharacterNickname(sender)}'s ${check.AttackerRoll.TotalStr}attempt to force %INTENSIVE% to drink their ${itemName}.`);
         }
     }
 
-    ProcessPotion(sender: Character) {
-        var item = InventoryGet(sender, "ItemHandheld");
-        let spell = this.GetSpellFromItem(item);
-        if (!!spell && this.Enabled)
-            this.IncomingSpell(sender, spell);
+    ProcessPotion(sender: Character, spell: SpellDefinition) {
+        setTimeout(() => {
+            if (!!spell && this.Enabled)
+                this.IncomingSpell(sender, spell)
+        }, 1000);
     }
 
-    GetSpellFromItem(item: Item | null): SpellDefinition | undefined {
+    itemSpellRequests: number[] = [];
+
+    GetSpellFromItem(item: Item | null, itemUser: Character): SpellDefinition | undefined {
         let itemCraft = item?.Craft;
-        var itemStr = GetItemNameAndDescriptionConcat(item) ?? "";
-        if (!itemCraft || !itemStr)
+        let itemStr = GetItemNameAndDescriptionConcat(item) ?? "";
+        if (!item || !itemCraft || !itemStr)
             return;
 
+        let itemName = getModule<ItemUseModule>("ItemUseModule")?.getItemName(item);
         let spells: SpellDefinition[] = []
         let craftingMember = itemCraft.MemberNumber;
         if (!!craftingMember && craftingMember >= 0) {
             let craftingChar = getCharacter(craftingMember) as OtherCharacter;
-            if (!!craftingChar && !!craftingChar.LSCG) {
-                spells = craftingChar.LSCG.MagicModule.knownSpells.filter(s => s.AllowPotion && !s.Effects.some(e => pairedSpellEffects.indexOf(e) > -1));
+            if (!!craftingChar && craftingChar.IsPlayer()) {
+                spells = Player.LSCG.MagicModule.knownSpells.filter(s => s.AllowPotion && !s.Effects.some(e => pairedSpellEffects.indexOf(e) > -1));
+                return spells?.filter(x => !!x)?.find(x => !!x && !!x.Name && isPhraseInString(itemStr, x.Name));
+            } else {
+                let reqId = Date.now();
+                this.itemSpellRequests.push(reqId);
+                sendLSCGCommandBeep(craftingMember, "get-spell", [{
+                    name: "itemStr",
+                    value: itemStr
+                }, {
+                    name: "id",
+                    value: reqId
+                }, {
+                    name: "originator",
+                    value: itemUser?.MemberNumber ?? Player.MemberNumber
+                }, {
+                    name: "itemName",
+                    value: itemName
+                }]);
             }
         }
-        
+        return undefined;
+    }
+
+    HandleItemSpellRequest(senderNum: number, request: LSCGMessageModel) {
+        let itemStr = request.command?.args.find(a => a.name == "itemStr")?.value as string;
+        let reqId = request.command?.args.find(a => a.name == "id")?.value as number;
+
+        if (!itemStr || !reqId)
+            return;
+
+        let spells = Player.LSCG.MagicModule.knownSpells.filter(s => s.AllowPotion && !s.Effects.some(e => pairedSpellEffects.indexOf(e) > -1));
         let spell = spells?.filter(x => !!x)?.find(x => !!x && !!x.Name && isPhraseInString(itemStr, x.Name));
-        return spell;
+        if (!!spell)
+            sendLSCGCommandBeep(senderNum, "get-spell-response", [{
+                name: "spell",
+                value: spell
+            }, {
+                name: "id",
+                value: reqId
+            }, {
+                name: "originator",
+                value: request.command?.args.find(a => a.name == "originator")?.value as number
+            }, {
+                name: "itemName",
+                value: request.command?.args.find(a => a.name == "itemName")?.value as Item
+            }]);
+    }
+
+    IncomingGetItemSpellResponse(senderNum: number, response: LSCGMessageModel) {
+        let reqId = response.command?.args.find(a => a.name == "id")?.value as number;
+        let spell = response.command?.args.find(a => a.name == "spell")?.value as SpellDefinition;
+        let itemName = response.command?.args.find(a => a.name == "itemName")?.value as string;
+        let originator = response.command?.args.find(a => a.name == "originator")?.value as number;
+        let sender = getCharacter(originator);
+
+        if (this.itemSpellRequests.indexOf(reqId) > -1) {
+            this.itemSpellRequests.splice(this.itemSpellRequests.indexOf(reqId));
+            setTimeout(() => {
+                this.HandleQuaffWithSpell(sender, itemName, spell);
+            }, 1000);
+        }
     }
 }

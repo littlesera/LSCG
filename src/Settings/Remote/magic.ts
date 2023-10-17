@@ -148,6 +148,12 @@ export class RemoteMagic extends RemoteGuiSubscreen {
 				description: "If checked, only the user who hypnotized you can access your settings (after matching other conditions).",
 				setting: () => this.settings.limitRemoteAccessToHypnotizer ?? true,
 				setSetting: (val) => this.settings.limitRemoteAccessToHypnotizer = val
+			}, <Setting>{
+				type: "checkbox",
+				label: "Allow Outfit Spell to Change Neck Items:",
+				description: "If checked, outfit spell effects can modify and replace your neck items.",
+				setting: () => this.settings.allowOutfitToChangeNeckItems ?? true,
+				setSetting: (val) => this.settings.allowOutfitToChangeNeckItems = val
 			}
 		]]
 	}
