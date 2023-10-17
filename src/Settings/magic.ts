@@ -203,6 +203,12 @@ export class GuiMagic extends GuiSubscreen {
 						disabled: !this.settings.limitedDuration,
 						setting: () => this.settings.maxDuration ?? 0,
 						setSetting: (val) => this.settings.maxDuration = val
+					}, <Setting>{
+						type: "checkbox",
+						label: "Allow Outfit Spell to Change Neck Items:",
+						description: "If checked, outfit spell effects can modify and replace your neck items.",
+						setting: () => this.settings.allowOutfitToChangeNeckItems ?? true,
+						setSetting: (val) => this.settings.allowOutfitToChangeNeckItems = val
 					}
 				]];
 	}

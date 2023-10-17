@@ -299,6 +299,12 @@ export class CoreModule extends BaseModule {
             case "pairing-update":
                 getModule<StateModule>("StateModule")?.PairingUpdate(senderNumber, msg);
                 break;
+            case "get-spell":
+                getModule<MagicModule>("MagicModule")?.HandleItemSpellRequest(senderNumber, msg);
+                break;
+            case "get-spell-response":
+                getModule<MagicModule>("MagicModule")?.IncomingGetItemSpellResponse(senderNumber, msg);
+                break;
         }
     }
 

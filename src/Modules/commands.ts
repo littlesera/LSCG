@@ -1,12 +1,14 @@
 import { BaseModule } from "base";
 import { getModule, modules } from "modules";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { getCharacter, getCharacterByNicknameOrMemberNumber, GetDelimitedList, LSCG_SendLocal, removeAllHooksByModule, SendAction, sendLSCGCommandBeep, settingsSave } from "../utils";
+import { getCharacter, getCharacterByNicknameOrMemberNumber, GetDelimitedList, LSCG_SendLocal, removeAllHooksByModule, SendAction, sendLSCGCommandBeep, settingsSave, toItemBundle } from "../utils";
 import { HypnoModule } from "./hypno";
 import { ItemUseModule } from "./item-use";
 import { ActivityModule } from "./activities";
 import { CollarModule } from "./collar";
 import { StateModule } from "./states";
+import { PolymorphedState } from "./States/PolymorphedState";
+import { RedressedState } from "./States/RedressedState";
 
 // Remote UI Module to handle configuration on other characters
 // Can be used to "program" another character's hypnosis, collar, etc.
@@ -176,7 +178,7 @@ export class CommandModule extends BaseModule {
 			}
 		}, {
 			Tag: "conditions",
-			Description: " : List which conditions are currently active on you.",
+			Description: " [target?] : List which conditions are currently active on you or [target].",
 			Action: (args, msg, parsed) => {
 				let target = getCharacterByNicknameOrMemberNumber(args) as OtherCharacter;
 
@@ -187,6 +189,61 @@ export class CommandModule extends BaseModule {
 				
 				let stateList = states.map(s => `<li>${s}</li>`).join("");
 				LSCG_SendLocal(`<div><b>Active Conditions on ${targetName}:</b><ul>${stateList}</ul></div>`, 12000);
+			}
+		}, {
+			Tag: "get-outfit-code",
+			Description: " [target?] : Prints the current base64 encoded outfit string for yourself or [target].",
+			Action: (args, msg, parsed) => {
+				let target = getCharacterByNicknameOrMemberNumber(args);
+				if (!target)
+					target = Player;
+				if (!target)
+					return;
+				let targetName = CharacterNickname(target);
+				let items = target.Appearance.map(item => toItemBundle(item, target));
+				let str = LZString.compressToBase64(JSON.stringify(items));
+				str = RedressedState.CleanItemCode(str);
+				navigator.clipboard.writeText(str);
+				LSCG_SendLocal(`<div><b>Outfit Code for ${targetName} copied to clipboard.`, 8000);
+			}
+		}, {
+			Tag: "get-polymorph-code",
+			Description: " [target?] : Prints the current base64 encoded outfit string for yourself or [target].",
+			Action: (args, msg, parsed) => {
+				let target = getCharacterByNicknameOrMemberNumber(args);
+				if (!target)
+					target = Player;
+				if (!target)
+					return;
+				let targetName = CharacterNickname(target);
+				let items = target.Appearance.map(item => toItemBundle(item, target));
+				let str = LZString.compressToBase64(JSON.stringify(items));
+				str = PolymorphedState.CleanItemCode(str);
+				navigator.clipboard.writeText(str);
+				LSCG_SendLocal(`<div><b>Polymorph Code for ${targetName} copied to clipboard.`, 8000);
+			}
+		}, {
+			Tag: "parse-code",
+			Description: " : Reports what items/assets are in a compressed item code stored in the clipboard.",
+			Action: (args, msg, parsed) => {
+				navigator.clipboard
+				.readText()
+				.then(code => {
+					if (!code)
+					LSCG_SendLocal("No code in clipboard.", 5000);
+				
+					let items: ItemBundle[] = [];
+					try {
+						items = JSON.parse(LZString.decompressFromBase64(code)) as ItemBundle[];
+						if (!items)
+							LSCG_SendLocal("Invalid code.", 5000);
+					} catch {
+						LSCG_SendLocal("Invalid code.", 5000);
+					}
+
+					let itemList = items.map(item => `<li>${item.Group} - ${item.Name}</li>`).join("");
+					LSCG_SendLocal(`<div><b>Encoded Items:</b><ul>${itemList}</ul></div>`, 30000);
+				});
 			}
 		}
 	]

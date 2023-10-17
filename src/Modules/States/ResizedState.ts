@@ -1,6 +1,7 @@
 import { ICONS, SendAction, addCustomEffect, getRandomInt, hookFunction, removeCustomEffect } from "utils";
 import { BaseState, StateRestrictions } from "./BaseState";
 import { StateModule } from "Modules/states";
+import { ModuleCategory } from "Settings/setting_definitions";
 
 export class ResizedState extends BaseState {
     Type: LSCGState = "resized";
@@ -58,6 +59,18 @@ export class ResizedState extends BaseState {
     }
 
     Init(): void {
+        hookFunction("CharacterAppearanceSetHeightModifiers", 1, (args, next) => {
+            let C = args[0] as OtherCharacter;
+            next(args);
+            if ((Player.VisualSettings?.ForceFullHeight ?? false) || !C || !C.LSCG || !C.LSCG.StateModule || !!CurrentCharacter)
+                return;
+            let stateModule = C.LSCG.StateModule;
+            if (stateModule.states.find(s => s.type == "resized")?.active) {
+                let enlarge = stateModule.states.find(s => s.type == "resized")?.extensions["enlarged"] ?? false;
+                C.HeightRatio *= enlarge ? 1.5 : .75;
+            }
+        }, ModuleCategory.States);
+
         hookFunction("ChatRoomDrawCharacter", 1, (args, next) => {
             if (Player.VisualSettings?.ForceFullHeight ?? false) // Skip if player specifies always draw full height
                 return next(args);
@@ -78,7 +91,7 @@ export class ResizedState extends BaseState {
                 }
             })
             return ret;
-        })
+        }, ModuleCategory.States);
     }
 
     RoomSync(): void {}

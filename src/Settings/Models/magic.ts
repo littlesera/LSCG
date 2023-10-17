@@ -62,17 +62,17 @@ export interface SpellDefinition {
 }
 
 export interface MagicSettingsModel extends MagicPublicSettingsModel {
-    
+    knownSpells: SpellDefinition[];
 }
 
 export interface MagicPublicSettingsModel extends BaseSettingsModel{
-    knownSpells: SpellDefinition[];
     blockedSpellEffects: LSCGSpellEffect[];
     enableWildMagic: boolean;
     trueWildMagic: boolean;
     forceWildMagic: boolean;
     lockable: boolean;
     locked: boolean;
+    allowOutfitToChangeNeckItems: boolean;
 
     // remote access
     remoteAccess: boolean;

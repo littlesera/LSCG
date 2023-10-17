@@ -4,6 +4,7 @@ import { CoreModule } from "Modules/core";
 import { MiscModule } from "Modules/misc";
 import { ActivityEntryModel } from "Settings/Models/activities";
 import { ModuleCategory } from "Settings/setting_definitions";
+import { cloneDeep, clone } from "lodash-es";
 
 export const LSCG_CHANGES: string = "https://github.com/littlesera/LSCG/releases/latest";
 export const LSCG_TEAL: string = "#00d5d5";
@@ -627,6 +628,20 @@ export function mouseTooltip(msg: string, x?: number, y?: number) {
 	DrawTextFit(msg, TextX, TextY, size.width, "Black");
 	MainCanvas.textAlign = prevAlign;
 	MainCanvas.font = prevFont;
+}
+
+export function toItemBundle(item: Item, character: Character | undefined): ItemBundle {
+    const asset = AssetGet(character?.AssetFamily ?? "Female3DCG", item.Asset.Group.Name, item.Asset.Name);
+    if (asset == null) {
+        throw new Error(`Unknown asset: ${item.Asset.Group.Name}${item.Asset.Name}`);
+    }
+    return <ItemBundle>{
+        Group: item.Asset.Group.Name,
+        Name: item.Asset.Name,
+        Color: clone(item.Color),
+        Craft: clone(item.Craft),
+        Property: clone(item.Property)
+    };
 }
 
 // ICONS

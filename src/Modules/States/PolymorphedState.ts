@@ -4,6 +4,23 @@ import { StateModule } from "Modules/states";
 import { PolymorphConfig, PolymorphOption } from "Settings/Models/magic";
 
 export class PolymorphedState extends BaseState {
+    static CleanItemCode(code: string): string {
+        let items = JSON.parse(LZString.decompressFromBase64(code)) as ItemBundle[];
+        if (!items)
+            return code;
+        items = items.filter(item => {
+            let asset = AssetGet(Player.AssetFamily, item.Group, item.Name);
+            if (!asset)
+                return false;
+            return isCosplay(asset) || 
+                isBody(asset) ||
+                isHair(asset) ||
+                isSkin(asset) ||
+                isGenitals(asset);
+        });
+        return LZString.compressToBase64(JSON.stringify(items));
+    }
+
     Type: LSCGState = "polymorphed";
 
     Icon(C: OtherCharacter): string {
