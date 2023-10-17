@@ -224,23 +224,26 @@ export class CommandModule extends BaseModule {
 			}
 		}, {
 			Tag: "parse-code",
-			Description: " [code] : Reports what items/assets are in a compressed item code.",
+			Description: " : Reports what items/assets are in a compressed item code stored in the clipboard.",
 			Action: (args, msg, parsed) => {
-				let code = msg.substring(17);
-				if (!code)
-					LSCG_SendLocal("No code provided.", 5000);
+				navigator.clipboard
+				.readText()
+				.then(code => {
+					if (!code)
+					LSCG_SendLocal("No code in clipboard.", 5000);
 				
-				let items: ItemBundle[] = [];
-				try {
-					items = JSON.parse(LZString.decompressFromBase64(code)) as ItemBundle[];
-					if (!items)
+					let items: ItemBundle[] = [];
+					try {
+						items = JSON.parse(LZString.decompressFromBase64(code)) as ItemBundle[];
+						if (!items)
+							LSCG_SendLocal("Invalid code.", 5000);
+					} catch {
 						LSCG_SendLocal("Invalid code.", 5000);
-				} catch {
-					LSCG_SendLocal("Invalid code.", 5000);
-				}
+					}
 
-				let itemList = items.map(item => `<li>${item.Group} - ${item.Name}</li>`).join("");
-				LSCG_SendLocal(`<div><b>Encoded Items:</b><ul>${itemList}</ul></div>`, 30000);
+					let itemList = items.map(item => `<li>${item.Group} - ${item.Name}</li>`).join("");
+					LSCG_SendLocal(`<div><b>Encoded Items:</b><ul>${itemList}</ul></div>`, 30000);
+				});
 			}
 		}
 	]
