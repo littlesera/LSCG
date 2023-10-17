@@ -226,7 +226,7 @@ export class CommandModule extends BaseModule {
 			Tag: "parse-code",
 			Description: " [code] : Reports what items/assets are in a compressed item code.",
 			Action: (args, msg, parsed) => {
-				let code = msg.substring(22);
+				let code = msg.substring(17);
 				if (!code)
 					LSCG_SendLocal("No code provided.", 5000);
 				
