@@ -59,38 +59,35 @@ export class ResizedState extends BaseState {
     }
 
     Init(): void {
-        hookFunction("CharacterAppearanceSetHeightModifiers", 1, (args, next) => {
+        hookFunction("CharacterAppearanceGetCurrentValue", 1, (args, next) => {
             let C = args[0] as OtherCharacter;
-            next(args);
-            if ((Player.VisualSettings?.ForceFullHeight ?? false) || !C || !C.LSCG || !C.LSCG.StateModule || !!CurrentCharacter)
-                return;
-            let stateModule = C.LSCG.StateModule;
-            if (stateModule.states.find(s => s.type == "resized")?.active) {
-                let enlarge = stateModule.states.find(s => s.type == "resized")?.extensions["enlarged"] ?? false;
-                C.HeightRatio *= enlarge ? 1.5 : .75;
+            let Group = args[1];
+            let Type = args[2];
+            let ret = next(args);
+            if (Group == "Height" && Type == "Zoom") {
+                if ((Player.VisualSettings?.ForceFullHeight ?? false) || !C || !C.LSCG || !C.LSCG.StateModule || !!CurrentCharacter)
+                    return ret;
+                if (ret == "None")
+                    ret = 1;
+                let stateModule = C.LSCG.StateModule;
+                if (stateModule.states.find(s => s.type == "resized")?.active) {
+                    let enlarge = stateModule.states.find(s => s.type == "resized")?.extensions["enlarged"] ?? false;
+                    ret *= enlarge ? 1.5 : .75;
+                }
             }
+            return ret;
         }, ModuleCategory.States);
 
-        hookFunction("ChatRoomDrawCharacter", 1, (args, next) => {
-            if (Player.VisualSettings?.ForceFullHeight ?? false) // Skip if player specifies always draw full height
-                return next(args);
+        hookFunction("CommonDrawAppearanceBuild", 1, (args, next) => {
+            let C = args[0] as OtherCharacter;
+            C.HeightRatio = CharacterAppearanceGetCurrentValue(C, "Height", "Zoom");
+            return next(args);
+        }, ModuleCategory.States);
 
-            ChatRoomCharacterDrawlist.forEach(C => {
-                let lscg = (C as OtherCharacter).LSCG;
-                if (!!lscg && !! lscg.StateModule && lscg.StateModule.states && lscg.StateModule.states.find(s => s.type == "resized")?.active) {
-                    let enlarge = lscg.StateModule.states.find(s => s.type == "resized")?.extensions["enlarged"] ?? false;
-                    C.HeightRatio *= enlarge ? 1.5 : .75;
-                }
-            })
-            let ret = next(args);
-            ChatRoomCharacterDrawlist.forEach(C => {
-                let lscg = (C as OtherCharacter).LSCG;
-                if (!!lscg && !! lscg.StateModule && lscg.StateModule.states && lscg.StateModule.states.find(s => s.type == "resized")?.active) {
-                    let originalHeightRatio = lscg.StateModule.states.find(s => s.type == "resized")?.extensions["originalHeightRatio"] ?? 1;
-                    C.HeightRatio = originalHeightRatio;
-                }
-            })
-            return ret;
+        hookFunction("DrawCharacter", 1, (args, next) => {
+            let C = args[0] as OtherCharacter;
+            C.HeightRatio = CharacterAppearanceGetCurrentValue(C, "Height", "Zoom");
+            return next(args);
         }, ModuleCategory.States);
     }
 
