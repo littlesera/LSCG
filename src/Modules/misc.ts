@@ -80,20 +80,36 @@ export class MiscModule extends BaseModule {
                     this.RemoveChloroform();
                 }
                 else if (data.Dictionary[4]?.AssetName == "ChloroformCloth" && this.NumberChloroform() == 1) {
-                    this.AddChloroform(sender);
+                    this.AddChloroform();
                 }
                 return;
             }
             var isChloroformAction = data.Dictionary[3]?.AssetName == "ChloroformCloth";
             if (isChloroformAction) {
                 if (msg == "ActionUse" && this.NumberChloroform() == 1) {
-                    this.AddChloroform(sender);
+                    this.AddChloroform();
                 }
                 else if (msg == "ActionRemove" && !this.IsWearingChloroform()) {
                     this.RemoveChloroform();
                 }
             }
         })
+
+        let lastChloroEvent = 0;
+        let chloroInterval = 2000; // breath event every 4s
+        hookFunction('TimerProcess', 1, (args, next) => {
+            let now = CommonTime();
+            if (!ActivityAllowed() || !this.Enabled)
+                return next(args);
+
+            // Check every minute for breath drug event
+            if (this.settings.chloroformEnabled && lastChloroEvent + chloroInterval < now) {
+                lastChloroEvent = now;
+                this.CheckForChloro();
+            }
+
+            return next(args);
+        }, ModuleCategory.Injector);
 
         // Set chloroform'd state on room join
         hookFunction("ChatRoomSync", 4, (args, next) => {
@@ -149,6 +165,19 @@ export class MiscModule extends BaseModule {
         return this._isChloroformed;
     }
 
+    CheckForChloro() {
+        if (!this.settings.chloroformEnabled)
+            return;
+        var mouthItems = [InventoryGet(Player, "ItemMouth"),
+                            InventoryGet(Player, "ItemMouth2"),
+                            InventoryGet(Player, "ItemMouth3")];
+        if (mouthItems.some(item => item?.Asset.Name == "ChloroformCloth") && (!this.isChloroformed && !this.passoutTimer)) {
+            this.AddChloroform();
+        } else if (!mouthItems.some(item => item?.Asset.Name == "ChloroformCloth") && (this.isChloroformed || !!this.passoutTimer)) {
+            this.RemoveChloroform();
+        }
+    }
+
     ChloroEvent() {
         if (!this.isChloroformed)
             return;
@@ -181,7 +210,7 @@ export class MiscModule extends BaseModule {
         ].filter(item => item == "ChloroformCloth").length;
     }
 
-    AddChloroform(sender: Character | null) {
+    AddChloroform() {
         if (this.chloroformWearingOff) {
             SendAction("%NAME%'s muscles slump limply once more as another dose of chloroform is applied.");
             this.chloroformWearingOff = false;
@@ -194,11 +223,10 @@ export class MiscModule extends BaseModule {
                 SendAction("%NAME% eyes go wide as the sweet smell of ether fills %POSSESSIVE% nostrils.");
             else
                 SendAction("%NAME% slumps back in %POSSESSIVE% sleep as another dose of ether assails %POSSESSIVE% senses.");
-            if (!!sender && sender.MemberNumber != Player.MemberNumber)
-                LSCG_SendLocal(CharacterNickname(sender) + " has forced chloroform over your mouth, you will pass out if it is not removed soon!", 30000);
-            CharacterSetFacialExpression(Player, "Eyes", "Scared");
+            LSCG_SendLocal("Chloroform has been forced over your mouth, you will pass out if it is not removed soon!", 30000);
             clearTimeout(this.awakenTimeout);
             this.passoutTimer = setTimeout(() => this.StartPassout_1(), 20000);
+            CharacterSetFacialExpression(Player, "Eyes", "Scared");
         }
     }
 
@@ -220,6 +248,7 @@ export class MiscModule extends BaseModule {
         this.isChloroformed = true;
         this.settings.chloroformedAt = CommonTime();
         clearTimeout(this.passoutTimer);
+        this.passoutTimer = 0;
         getModule<StateModule>("StateModule")?.SleepState.Activate(undefined, undefined, true);
     }
 
@@ -243,6 +272,8 @@ export class MiscModule extends BaseModule {
             CharacterSetFacialExpression(Player, "Eyes", null);
             clearTimeout(this.passoutTimer);
             clearTimeout(this.awakenTimeout);
+            this.passoutTimer = 0;
+            this.awakenTimeout = 0;
         }
     }
 

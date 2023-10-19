@@ -125,6 +125,7 @@ export class PublicSettingsModel implements IPublicSettingsModel {
         noDefenseMemberIds: "",
         limitedDuration: true,
         maxDuration: 0,
-        allowOutfitToChangeNeckItems: false
+        allowOutfitToChangeNeckItems: false,
+        allowChangeGenitals: true
     }
 }

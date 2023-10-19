@@ -209,6 +209,18 @@ export class GuiMagic extends GuiSubscreen {
 						description: "If checked, outfit spell effects can modify and replace your neck items.",
 						setting: () => this.settings.allowOutfitToChangeNeckItems ?? false,
 						setSetting: (val) => this.settings.allowOutfitToChangeNeckItems = val
+					}, <Setting>{
+						type: "checkbox",
+						label: "Allow Polymorph Spell to Change Genitals:",
+						description: "If checked, polymorph spell effects can modify your genitals.",
+						setting: () => this.settings.allowChangeGenitals ?? true,
+						setSetting: (val) => this.settings.allowChangeGenitals = val
+					}, <Setting>{
+						type: "checkbox",
+						label: "Allow Polymorph Spell to Change Pronouns:",
+						description: "If checked, polymorph spell effects can modify your pronouns.",
+						setting: () => this.settings.allowChangePronouns ?? true,
+						setSetting: (val) => this.settings.allowChangePronouns = val
 					}
 				]];
 	}

@@ -63,6 +63,7 @@ export interface SpellDefinition {
 
 export interface MagicSettingsModel extends MagicPublicSettingsModel {
     knownSpells: SpellDefinition[];
+    allowChangePronouns: boolean;
 }
 
 export interface MagicPublicSettingsModel extends BaseSettingsModel{
@@ -73,6 +74,7 @@ export interface MagicPublicSettingsModel extends BaseSettingsModel{
     lockable: boolean;
     locked: boolean;
     allowOutfitToChangeNeckItems: boolean;
+    allowChangeGenitals: boolean;
 
     // remote access
     remoteAccess: boolean;
