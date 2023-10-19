@@ -1,4 +1,4 @@
-import { BC_ItemsToItemBundles, SendAction, addCustomEffect, getCharacter, getRandomInt, isBind, isBody, isCloth, isCosplay, isGenitals, isHair, isSkin, removeCustomEffect, settingsSave, waitFor } from "utils";
+import { BC_ItemsToItemBundles, SendAction, addCustomEffect, getCharacter, getRandomInt, isBind, isBody, isCloth, isCosplay, isGenitals, isHair, isPronouns, isSkin, removeCustomEffect, settingsSave, waitFor } from "utils";
 import { BaseState, StateRestrictions } from "./BaseState";
 import { StateModule } from "Modules/states";
 import { PolymorphConfig, PolymorphOption } from "Settings/Models/magic";
@@ -67,6 +67,10 @@ export class PolymorphedState extends BaseState {
         allow ||= config.IncludeSkin && isSkin(asset);
         allow ||= config.IncludeGenitals && isGenitals(asset);
         
+        if ((isGenitals(asset) && !Player?.LSCG?.MagicModule?.allowChangeGenitals) ||
+            (isPronouns(asset) && !Player?.LSCG?.MagicModule?.allowChangePronouns))
+            allow = false;
+
         return allow;
     }
 
