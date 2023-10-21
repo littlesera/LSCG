@@ -173,7 +173,7 @@ export class MiscModule extends BaseModule {
                             InventoryGet(Player, "ItemMouth3")];
         if (mouthItems.some(item => item?.Asset.Name == "ChloroformCloth") && (!this.isChloroformed && !this.passoutTimer)) {
             this.AddChloroform();
-        } else if (!mouthItems.some(item => item?.Asset.Name == "ChloroformCloth") && (this.isChloroformed || !!this.passoutTimer)) {
+        } else if (!mouthItems.some(item => item?.Asset.Name == "ChloroformCloth") && (this.isChloroformed || !!this.passoutTimer || !!this.awakenTimeout)) {
             this.RemoveChloroform();
         }
     }
