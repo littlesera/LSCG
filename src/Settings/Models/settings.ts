@@ -126,6 +126,7 @@ export class PublicSettingsModel implements IPublicSettingsModel {
         limitedDuration: true,
         maxDuration: 0,
         allowOutfitToChangeNeckItems: false,
-        allowChangeGenitals: true
+        allowChangeGenitals: true,
+        requireWhitelist: false
     }
 }
