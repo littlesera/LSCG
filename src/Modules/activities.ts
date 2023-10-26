@@ -532,7 +532,7 @@ export class ActivityModule extends BaseModule {
                 Name: "FuckWithPussy",
                 MaxProgress: 100,
                 MaxProgressSelf: 100,
-                Prerequisite: ["ZoneAccessible", "ZoneNaked", "HasVagina"]
+                Prerequisite: ["ZoneAccessible", "ZoneNaked", "TargetZoneAccessible", "TargetZoneNaked", "HasVagina"]
             },
             Targets: [
                 {
@@ -580,7 +580,7 @@ export class ActivityModule extends BaseModule {
                 Name: "FuckWithAss",
                 MaxProgress: 100,
                 MaxProgressSelf: 100,
-                Prerequisite: ["ZoneAccessible", "ZoneNaked", "TargetHasPenis"]
+                Prerequisite: ["ZoneAccessible", "ZoneNaked", "TargetZoneAccessible", "TargetZoneNaked", "TargetHasPenis"]
             },
             Targets: [
                 {
@@ -602,6 +602,54 @@ export class ActivityModule extends BaseModule {
                 }
             ],
             CustomImage: ICONS.ASS
+        });
+
+        // Suck
+        this.AddActivity({
+            Activity: <Activity>{
+                Name: "Suck",
+                MaxProgress: 100,
+                MaxProgressSelf: 100,
+                Prerequisite: ["ZoneAccessible", "ZoneNaked", "TargetHasPenis", "UseTongue"]
+            },
+            Targets: [
+                {
+                    Name: "ItemVulva",
+                    SelfAllowed: false,
+                    TargetLabel: "Suck",
+                    TargetAction: "SourceCharacter presses PronounPossessive lips around TargetCharacter's vulva, sucking gently."
+                }, {
+                    Name: "ItemPenis",
+                    SelfAllowed: false,
+                    TargetLabel: "Suck",
+                    TargetAction: "SourceCharacter wraps PronounPossessive lips around TargetCharacter's penis and sucks."
+                }
+            ],
+            CustomImage: "Assets/Female3DCG/Activity/Kiss.png"
+        });
+
+        // Throat
+        this.AddActivity({
+            Activity: <Activity>{
+                Name: "Throat",
+                MaxProgress: 100,
+                MaxProgressSelf: 100,
+                Prerequisite: ["ZoneAccessible", "ZoneNaked", "TargetHasPenis", "UseTongue"]
+            },
+            Targets: [
+                {
+                    Name: "ItemVulva",
+                    SelfAllowed: false,
+                    TargetLabel: "Deepthroat",
+                    TargetAction: "---"
+                }, {
+                    Name: "ItemPenis",
+                    SelfAllowed: false,
+                    TargetLabel: "Deepthroat",
+                    TargetAction: "SourceCharacter takes TargetCharacter's penis deep down PronounPossessive throat."
+                }
+            ],
+            CustomImage: "Assets/Female3DCG/Activity/Kiss.png"
         });
 
         // GrabTongue
