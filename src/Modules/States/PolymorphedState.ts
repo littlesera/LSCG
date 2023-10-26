@@ -132,12 +132,12 @@ export class PolymorphedState extends BaseState {
         items.forEach(item => {
             let asset = AssetGet(Player.AssetFamily, item.Group, item.Name);
             if (!!asset && this.DoChange(asset, config)) {
-                let groupBlocked = InventoryGroupIsBlockedForCharacter(Player, asset.Group.Name);
+                //let groupBlocked = InventoryGroupIsBlockedForCharacter(Player, asset.Group.Name);
                 let isBlocked = InventoryBlockedOrLimited(Player, {Asset: asset})
                 let isRoomDisallowed = !InventoryChatRoomAllow(asset?.Category ?? []);
 
                 let isSkinColorChangeOnly = !config.IncludeAllBody && config.IncludeSkin && this.skinColorChangeOnly.indexOf(asset.Group.Name) > -1;
-                if (isRestore || !(groupBlocked || isBlocked || isRoomDisallowed || isSkinColorChangeOnly)) {
+                if (isRestore || !(isBlocked || isRoomDisallowed || isSkinColorChangeOnly)) {
                     let newItem = InventoryWear(Player, item.Name, item.Group, item.Color, item.Difficulty, -1, item.Craft, false);
                     if (!!newItem && !!item.Property)
                         newItem.Property = item.Property;
