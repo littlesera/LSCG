@@ -294,6 +294,18 @@ export class ActivityModule extends BaseModule {
                     Name: "ItemTorso",
                     SelfAllowed: false,
                     TargetAction: "SourceCharacter nuzzles snugly into TargetCharacter."
+                },<ActivityTarget>{
+                    Name: "ItemLegs",
+                    SelfAllowed: false,
+                    TargetAction: "SourceCharacter nuzzles against TargetCharacter's thigh."
+                },<ActivityTarget>{
+                    Name: "ItemFeet",
+                    SelfAllowed: false,
+                    TargetAction: "SourceCharacter nuzzles along TargetCharacter's leg."
+                },<ActivityTarget>{
+                    Name: "ItemBoots",
+                    SelfAllowed: false,
+                    TargetAction: "SourceCharacter nuzzles under TargetCharacter's feet."
                 }
             ],
             CustomImage: "Assets/Female3DCG/Activity/Kiss.png"
