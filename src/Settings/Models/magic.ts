@@ -87,4 +87,5 @@ export interface MagicPublicSettingsModel extends BaseSettingsModel{
     noDefenseMemberIds: string;
     limitedDuration: boolean;
     maxDuration: number;
+    requireWhitelist: boolean;
 }

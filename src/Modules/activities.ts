@@ -294,6 +294,18 @@ export class ActivityModule extends BaseModule {
                     Name: "ItemTorso",
                     SelfAllowed: false,
                     TargetAction: "SourceCharacter nuzzles snugly into TargetCharacter."
+                },<ActivityTarget>{
+                    Name: "ItemLegs",
+                    SelfAllowed: false,
+                    TargetAction: "SourceCharacter nuzzles against TargetCharacter's thigh."
+                },<ActivityTarget>{
+                    Name: "ItemFeet",
+                    SelfAllowed: false,
+                    TargetAction: "SourceCharacter nuzzles along TargetCharacter's leg."
+                },<ActivityTarget>{
+                    Name: "ItemBoots",
+                    SelfAllowed: false,
+                    TargetAction: "SourceCharacter nuzzles under TargetCharacter's feet."
                 }
             ],
             CustomImage: "Assets/Female3DCG/Activity/Kiss.png"
@@ -586,10 +598,121 @@ export class ActivityModule extends BaseModule {
             CustomPrereqs: [
                 {
                     Name: "SourceAssEmpty",
-                    Func: (acting, acted, group) => !acting.IsPlugged()
+                    Func: (acting, acted, group) => InventoryPrerequisiteMessage(acting, "AccessButt") === "" && 
+                        !(acting.IsPlugged() || acting.IsButtChaste() &&
+                        !InventoryGroupIsBlocked(acting, "ItemButt", true))
                 }
             ],
             CustomImage: ICONS.ASS
+        });
+
+        // Suck
+        this.AddActivity({
+            Activity: <Activity>{
+                Name: "Suck",
+                MaxProgress: 100,
+                MaxProgressSelf: 100,
+                Prerequisite: ["ZoneAccessible", "ZoneNaked", "UseTongue", "Needs-FellatioItem"]
+            },
+            Targets: [
+                {
+                    Name: "ItemVulva",
+                    SelfAllowed: false,
+                    TargetLabel: "Suck",
+                    TargetAction: "SourceCharacter wraps PronounPossessive lips around TargetCharacter's ActivityAsset and sucks."
+                }, {
+                    Name: "ItemPenis",
+                    SelfAllowed: false,
+                    TargetLabel: "Suck",
+                    TargetAction: "SourceCharacter wraps PronounPossessive lips around TargetCharacter's ActivityAsset and sucks."
+                }
+            ],
+            CustomImage: "Assets/Female3DCG/Activity/Kiss.png"
+        });
+
+        // Throat
+        this.AddActivity({
+            Activity: <Activity>{
+                Name: "Throat",
+                MaxProgress: 100,
+                MaxProgressSelf: 100,
+                Prerequisite: ["ZoneAccessible", "ZoneNaked", "UseTongue", "Needs-FellatioItem"]
+            },
+            Targets: [
+                {
+                    Name: "ItemVulva",
+                    SelfAllowed: false,
+                    TargetLabel: "Deepthroat",
+                    TargetAction: "SourceCharacter takes TargetCharacter's ActivityAsset deep down PronounPossessive throat."
+                }, {
+                    Name: "ItemPenis",
+                    SelfAllowed: false,
+                    TargetLabel: "Deepthroat",
+                    TargetAction: "SourceCharacter takes TargetCharacter's ActivityAsset deep down PronounPossessive throat."
+                }
+            ],
+            CustomImage: "Assets/Female3DCG/Activity/Kiss.png"
+        });
+
+        // Suck-Handheld
+        this.AddActivity({
+            Activity: <Activity>{
+                Name: "SuckHandheld",
+                MaxProgress: 100,
+                MaxProgressSelf: 100,
+                Prerequisite: ["ZoneAccessible", "UseTongue", "Needs-FellatioItem"]
+            },
+            Targets: [
+                {
+                    Name: "ItemHands",
+                    SelfAllowed: true,
+                    TargetLabel: "Suck",
+                    TargetAction: "SourceCharacter wraps PronounPossessive lips around TargetCharacter's ActivityAsset and sucks.",
+                    TargetSelfAction: "SourceCharacter wraps PronounPossessive lips around PronounPossessive own ActivityAsset and sucks."
+                }
+            ],
+            CustomImage: "Assets/Female3DCG/Activity/Kiss.png"
+        });
+
+        // Throat-Handheld
+        this.AddActivity({
+            Activity: <Activity>{
+                Name: "ThroatHandheld",
+                MaxProgress: 100,
+                MaxProgressSelf: 100,
+                Prerequisite: ["ZoneAccessible", "UseTongue", "Needs-FellatioItem"]
+            },
+            Targets: [
+                {
+                    Name: "ItemHands",
+                    SelfAllowed: true,
+                    TargetLabel: "Deepthroat",
+                    TargetAction: "SourceCharacter takes TargetCharacter's ActivityAsset deep down PronounPossessive throat.",
+                    TargetSelfAction: "SourceCharacter takes PronounPossessive own ActivityAsset deep down PronounPossessive throat."
+                }
+            ],
+            CustomImage: "Assets/Female3DCG/Activity/Kiss.png"
+        });
+
+        // Eat
+        this.AddActivity({
+            Activity: <Activity>{
+                Name: "Eat",
+                MaxProgress: 50,
+                MaxProgressSelf: 50,
+                Prerequisite: ["ZoneAccessible", "UseMouth", "Needs-EdibleItem"]
+            },
+            Targets: [
+                {
+                    Name: "ItemHands",
+                    SelfAllowed: true,
+                    SelfOnly: true,
+                    TargetLabel: "Eat",
+                    TargetAction: "SourceCharacter takes a big bite out of TargetCharacter's ActivityAsset.",
+                    TargetSelfAction: "SourceCharacter takes a big bite out of PronounPossessive own ActivityAsset."
+                }
+            ],
+            CustomImage: "Assets/Female3DCG/Activity/Bite.png"
         });
 
         // GrabTongue

@@ -28,6 +28,14 @@ export const QuaffableItems: string[] = [
 	// "Mug"
 ]
 
+export const AdditionalPenetrateItems: string[] = [
+	
+]
+
+export const EdibleItems: string[] = [
+	"Baguette"
+]
+
 export class ActivityRoll {
 	constructor(raw: number, mod: number) {
 		this.Raw = raw;
@@ -140,17 +148,23 @@ export class ItemUseModule extends BaseModule {
 
     load(): void {
 		hookFunction("ActivityGenerateItemActivitiesFromNeed", 1, (args, next) => {
-			let allowed = args[0];
-			let acting = args[1];
-			let acted = args[2];
-			let needsItem = args[3];
-			let activity = args[4];
+			let allowed = args[0] as ItemActivity[];
+			let acting = args[1] as Character;
+			let acted = args[2] as Character;
+			let needsItem = args[3] as string;
+			let activity = args[4] as Activity;
 			let ret = false;
 			var focusGroup = acted?.FocusGroup?.Name ?? undefined;
 
 			let res;
 			if (["GagGiveItem", "GagTakeItem","GagToNecklace", "NecklaceToGag"].indexOf(needsItem) > -1) {
 				res = this.ManualGenerateItemActivitiesForNecklaceActivity(allowed, acting, acted, needsItem, activity);
+			} else if (needsItem == "FellatioItem" || needsItem == "EdibleItem") {
+				let tmpActivity = Object.assign({}, activity);
+				tmpActivity.Reverse = true;
+				if (activity.Name == "LSCG_Suck" || activity.Name == "LSCG_Throat")
+					needsItem = "PenetrateItem";
+				res = next([args[0], args[1], args[2], needsItem, tmpActivity]);
 			} else {
 				res = next(args);
 			}
@@ -223,6 +237,14 @@ export class ItemUseModule extends BaseModule {
 			} else if (itemType == "QuaffableItem") {
 				let item = InventoryGet(C, "ItemHandheld");
 				if (!!item && QuaffableItems.indexOf(item.Asset?.Name) > -1) 
+					results.push(item);
+			} else if (itemType == "FellatioItem") {
+				let item = InventoryGet(C, "ItemHandheld");
+				if (!!item && (AdditionalPenetrateItems.indexOf(item.Asset?.Name) > -1 || InventoryGetItemProperty(item, "AllowActivity")?.includes("PenetrateItem")))
+					results.push(item);
+			} else if (itemType == "EdibleItem") {
+				let item = InventoryGet(C, "ItemHandheld");
+				if (!!item && EdibleItems.indexOf(item.Asset?.Name) > -1) 
 					results.push(item);
 			}
 			return results;

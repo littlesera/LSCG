@@ -56,7 +56,8 @@ export class MagicModule extends BaseModule {
             maxDuration: 0,
             allowOutfitToChangeNeckItems: false,
             allowChangeGenitals: true,
-            allowChangePronouns: false
+            allowChangePronouns: false,
+            requireWhitelist: false
         };
     }
 
@@ -117,6 +118,7 @@ export class MagicModule extends BaseModule {
 
     drinkActivityNames: string[] = [
         "LSCG_Quaff",
+        "LSCG_Eat",
         "SipItem"
     ]
 
@@ -207,10 +209,14 @@ export class MagicModule extends BaseModule {
         let item = InventoryGet(Player, "ItemHandheld");
         let isWieldingMagicItem = !!item && MagicWandItems.indexOf(item.Asset.Name) > -1;
         let hasItemPermission = ServerChatRoomGetAllowItem(Player, target);
+        let targetHasMagicEnabled = (target as OtherCharacter).LSCG?.MagicModule?.enabled;
+        let whitelisted = !(target as OtherCharacter).LSCG?.MagicModule?.requireWhitelist || (!!Player.MemberNumber && target.WhiteList.indexOf(Player.MemberNumber) > -1);
         return this.Enabled &&
+                targetHasMagicEnabled &&
                 isWieldingMagicItem &&
                 hasItemPermission &&
                 Player.CanInteract() &&
+                whitelisted &&
                 (this.CanCastSpell(CurrentCharacter as OtherCharacter) || 
                 this.CanWildMagic(CurrentCharacter as OtherCharacter) || 
                 this.CanTeachSpell(CurrentCharacter as OtherCharacter))
@@ -521,6 +527,10 @@ export class MagicModule extends BaseModule {
     }
 
     IncomingSpellCommand(sender: Character | null, msg: LSCGMessageModel) {
+        if (!this.Enabled || !sender || this.WhitelistBlocked(sender)) {
+            SendAction(`${!sender ? "Someone" : CharacterNickname(sender)}'s spell fizzles.`);
+            return;
+        }
         setTimeout(() => {
             if (msg.command?.name == "spell") {
                 let paired = getCharacter((msg.command?.args.find(arg => arg.name == "paired")?.value as number));
@@ -702,7 +712,13 @@ export class MagicModule extends BaseModule {
         }
     }
 
+    WhitelistBlocked(sender: Character) {
+        return this.settings.requireWhitelist && !!sender.MemberNumber && Player.WhiteList.indexOf(sender.MemberNumber) == -1;
+    }
+
     IncomingSpellTeachCommand(sender: Character | null, msg: LSCGMessageModel) {
+        if (!this.Enabled || !sender || this.WhitelistBlocked(sender))
+            return;
         let spell = msg.command?.args?.find(arg => arg.name == "spell")?.value as SpellDefinition;
         if (this.AvailableSpells.length >= KNOWN_SPELLS_LIMIT)
             SendAction(`%NAME%'s mind is already full of spells. %INTENSIVE% must forget one before %INTENSIVE% can learn ${spell.Name}.`);

@@ -221,6 +221,12 @@ export class GuiMagic extends GuiSubscreen {
 						description: "If checked, polymorph spell effects can modify your pronouns.",
 						setting: () => this.settings.allowChangePronouns ?? true,
 						setSetting: (val) => this.settings.allowChangePronouns = val
+					}, <Setting>{
+						type: "checkbox",
+						label: "Require Whitelist.",
+						description: "If checked, only people on your whitelist can cast spells on you or teach you spells.",
+						setting: () => this.settings.requireWhitelist ?? false,
+						setSetting: (val) => this.settings.requireWhitelist = val
 					}
 				]];
 	}

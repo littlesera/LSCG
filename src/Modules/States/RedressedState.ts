@@ -111,10 +111,10 @@ export class RedressedState extends BaseState {
         items.forEach(item => {
             let asset = AssetGet(Player.AssetFamily, item.Group, item.Name);
             if (!!asset && this.DoChange(asset, type)) {
-                let groupBlocked = InventoryGroupIsBlockedForCharacter(Player, asset.Group.Name);
+                //let groupBlocked = InventoryGroupIsBlockedForCharacter(Player, asset.Group.Name);
                 let isBlocked = InventoryBlockedOrLimited(Player, {Asset: asset})
                 let isRoomDisallowed = !InventoryChatRoomAllow(asset?.Category ?? []);
-                if (isRestore || !(groupBlocked || isBlocked || isRoomDisallowed)) {
+                if (isRestore || !(isBlocked || isRoomDisallowed)) {
                     let newItem = InventoryWear(Player, item.Name, item.Group, item.Color, item.Difficulty, -1, item.Craft, false);
                     if (!!newItem) {
                         if (!!item.Property)
