@@ -1,3 +1,4 @@
+"use strict";
 import { hookFunction, ICONS, isObject, settingsSave } from './utils';
 import { ConfiguredActivities, CraftableItemSpellNames, DrugKeywords, HypnoTriggers, modules, NetgunKeywords, registerModule } from 'modules';
 import { SettingsModel } from 'Settings/Models/settings';
