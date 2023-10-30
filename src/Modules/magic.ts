@@ -378,6 +378,8 @@ export class MagicModule extends BaseModule {
                 // If this specific activity is clicked, we run it
                 if (!MouseIn(x, y, width, height)) return false;
                 let blocked = spell.Effects.some(effect => blockedSpellTypes.indexOf(effect) > -1);
+                spell = JSON.parse(JSON.stringify(spell));
+                this.UnpackSpellCodes(spell);
                 
                 if (!blocked) {
                     this.CastSpellInitial(spell, CurrentCharacter);
@@ -396,6 +398,8 @@ export class MagicModule extends BaseModule {
         if (!spell || this.settings.trueWildMagic)
             spell = this.RandomSpell
         let paired: Character | undefined = undefined;
+        spell = JSON.parse(JSON.stringify(spell));
+        this.UnpackSpellCodes(spell);
         if (this.SpellNeedsPair(spell))
             paired = this.PairedCharacterOptions(C)[getRandomInt(this.PairedCharacterOptions(C).length)];
         this.CastSpellActual(spell, C, paired);
@@ -465,14 +469,6 @@ export class MagicModule extends BaseModule {
             }
             else {
                 SendAction(this.getCastingActionString(spell, InventoryGet(Player, "ItemHandheld"), spellTarget, pairedTarget), spellTarget);
-            }
-
-            // Unpack specified outfit codes for sending.
-            if (!!spell.Outfit && !!spell.Outfit.Code) {
-                spell.Outfit.Code = LZString.compressToBase64(JSON.stringify(GetConfiguredItemBundlesFromSavedCode(spell.Outfit.Code, item => RedressedState.ItemIsAllowed(item))));
-            } 
-            if (!!spell.Polymorph && spell.Polymorph.Code) {
-                spell.Polymorph.Code = LZString.compressToBase64(JSON.stringify(GetConfiguredItemBundlesFromSavedCode(spell.Polymorph.Code, item => PolymorphedState.ItemIsAllowed(item))));
             }
 
             if (spellTarget.IsPlayer()) {
@@ -829,6 +825,8 @@ export class MagicModule extends BaseModule {
         let spells = Player.LSCG.MagicModule.knownSpells.filter(s => s.AllowPotion && !s.Effects.some(e => pairedSpellEffects.indexOf(e) > -1));
         let spell = spells?.filter(x => !!x)?.find(x => !!x && !!x.Name && isPhraseInString(itemStr, x.Name));
         if (!!spell)
+            spell = JSON.parse(JSON.stringify(spell));
+            this.UnpackSpellCodes(spell);
             sendLSCGCommandBeep(senderNum, "get-spell-response", [{
                 name: "spell",
                 value: spell
@@ -856,6 +854,18 @@ export class MagicModule extends BaseModule {
             setTimeout(() => {
                 this.HandleQuaffWithSpell(sender, itemName, spell);
             }, 1000);
+        }
+    }
+
+    UnpackSpellCodes(spell: SpellDefinition | undefined) {
+        if (!spell)
+            return;
+        // Unpack specified outfit codes for sending.
+        if (!!spell.Outfit && !!spell.Outfit.Code) {
+            spell.Outfit.Code = LZString.compressToBase64(JSON.stringify(GetConfiguredItemBundlesFromSavedCode(spell.Outfit.Code, item => RedressedState.ItemIsAllowed(item))));
+        } 
+        if (!!spell.Polymorph && spell.Polymorph.Code) {
+            spell.Polymorph.Code = LZString.compressToBase64(JSON.stringify(GetConfiguredItemBundlesFromSavedCode(spell.Polymorph.Code, item => PolymorphedState.ItemIsAllowed(item))));
         }
     }
 }
