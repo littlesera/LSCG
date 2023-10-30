@@ -159,7 +159,7 @@ export class ItemUseModule extends BaseModule {
 			let res;
 			if (["GagGiveItem", "GagTakeItem","GagToNecklace", "NecklaceToGag"].indexOf(needsItem) > -1) {
 				res = this.ManualGenerateItemActivitiesForNecklaceActivity(allowed, acting, acted, needsItem, activity);
-			} else if (needsItem == "FellatioItem" || needsItem == "EdibleItem") {
+			} else if (needsItem == "FellatioItem") {
 				let tmpActivity = Object.assign({}, activity);
 				tmpActivity.Reverse = true;
 				if (activity.Name == "LSCG_Suck" || activity.Name == "LSCG_Throat")
