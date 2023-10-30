@@ -1,7 +1,7 @@
 import { BaseModule } from "base";
 import { getModule } from "modules";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
-import { GetDelimitedList, GetHandheldItemNameAndDescriptionConcat, GetItemNameAndDescriptionConcat, GetMetadata, ICONS, LSCG_SendLocal, LSCG_TEAL, OnActivity, SendAction, getCharacter, getRandomInt, hookFunction, isPhraseInString, removeAllHooksByModule, sendLSCGCommand, sendLSCGCommandBeep, settingsSave } from "../utils";
+import { GetConfiguredItemBundlesFromSavedCode, GetDelimitedList, GetHandheldItemNameAndDescriptionConcat, GetItemNameAndDescriptionConcat, GetMetadata, ICONS, LSCG_SendLocal, LSCG_TEAL, OnActivity, SendAction, getCharacter, getRandomInt, hookFunction, isPhraseInString, removeAllHooksByModule, sendLSCGCommand, sendLSCGCommandBeep, settingsSave } from "../utils";
 import { ActivityModule, ActivityTarget } from "./activities";
 import { KNOWN_SPELLS_LIMIT, LSCGSpellEffect, MagicSettingsModel, OutfitConfig, OutfitOption, SpellDefinition } from "Settings/Models/magic";
 import { GuiMagic, pairedSpellEffects } from "Settings/magic";
@@ -9,6 +9,8 @@ import { StateModule } from "./states";
 import { ItemUseModule, MagicWandItems } from "./item-use";
 import { InjectorModule } from "./injector";
 import { BaseState } from "./States/BaseState";
+import { RedressedState } from "./States/RedressedState";
+import { PolymorphedState } from "./States/PolymorphedState";
 
 const dialogButtonInfo = [980, 10, 100, 40, 5];
 const dialogButtonCoords: [number,number,number,number] = [dialogButtonInfo[0], dialogButtonInfo[1], 40, 40];
@@ -465,6 +467,14 @@ export class MagicModule extends BaseModule {
                 SendAction(this.getCastingActionString(spell, InventoryGet(Player, "ItemHandheld"), spellTarget, pairedTarget), spellTarget);
             }
 
+            // Unpack specified outfit codes for sending.
+            if (!!spell.Outfit && !!spell.Outfit.Code) {
+                spell.Outfit.Code = LZString.compressToBase64(JSON.stringify(GetConfiguredItemBundlesFromSavedCode(spell.Outfit.Code, item => RedressedState.ItemIsAllowed(item))));
+            } 
+            if (!!spell.Polymorph && spell.Polymorph.Code) {
+                spell.Polymorph.Code = LZString.compressToBase64(JSON.stringify(GetConfiguredItemBundlesFromSavedCode(spell.Polymorph.Code, item => PolymorphedState.ItemIsAllowed(item))));
+            }
+
             if (spellTarget.IsPlayer()) {
                 let check = getModule<ItemUseModule>("ItemUseModule").UnopposedActivityRoll(spellTarget);
                 setTimeout(() => this.IncomingSpell(Player, spell, pairedTarget, Math.max(1, check.Total / 2)), 1000);
@@ -632,7 +642,7 @@ export class MagicModule extends BaseModule {
                             this.stateModule.GaggedState.Active ? 
                                 SendAction("%NAME% trembles as %POSSESSIVE% clothing shimmers and morphs around %INTENSIVE%.") : 
                                 SendAction("%NAME% squeaks as %POSSESSIVE% clothing shimmers and morphs around %INTENSIVE%.");
-                            state = this.stateModule.RedressedState.Apply(spell.Outfit, sender?.MemberNumber, duration);
+                            state = this.stateModule.RedressedState.Apply(spell, sender?.MemberNumber, duration);
                         }
                         break;
                     case LSCGSpellEffect.polymorph:
@@ -640,7 +650,7 @@ export class MagicModule extends BaseModule {
                             this.stateModule.GaggedState.Active ? 
                                 SendAction("%NAME% trembles as %POSSESSIVE% body shimmers and morphs.") : 
                                 SendAction("%NAME% squeaks as %POSSESSIVE% body shimmers and morphs.");
-                            state = this.stateModule.PolymorphedState.Apply(spell.Polymorph, sender?.MemberNumber, duration);
+                            state = this.stateModule.PolymorphedState.Apply(spell, sender?.MemberNumber, duration);
                         }
                         break;
                     case LSCGSpellEffect.paired_arousal:

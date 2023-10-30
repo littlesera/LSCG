@@ -50,7 +50,6 @@ console.debug("LSCG: Parse start...");
   plugins: [
     progress({ clearLine: true }),
 		resolve({ browser: true }),
-		json(),
     typescript({ tsconfig: "./tsconfig.json", inlineSources: true }),
     commonjs()
   ]

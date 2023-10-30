@@ -651,6 +651,65 @@ export function toItemBundle(item: Item, character: Character | undefined): Item
     };
 }
 
+function measureDataSize(data: any) {
+    try {
+        if (typeof data !== "string") {
+            data = JSON.stringify(data) || "";
+        }
+        if (typeof data === "string") {
+            // We want byte size, so use text encoder
+            return (new TextEncoder()).encode(data).byteLength;
+        }
+    } catch (_err) {
+        // Ignore errors
+    }
+    // If stringification fails, we can't guess how the data would be actually serialized
+    return 0;
+}
+
+// Data Measuring Function from Joshmir
+export function GetDataSizeReport(data: any) {
+    let res = `Type: ${data == null ? "null" : Array.isArray(data) ? "array" : typeof data}\n`;
+    res += `Size: ${measureDataSize(data)}\n`;
+
+    if (typeof data === "string" && data.length < 64) {
+        res += `Value: ${JSON.stringify(data)}\n`;
+    }
+
+    if (!!data && typeof data === "object" && !Array.isArray(data)) {
+        res += "Breakdown by keys:\n";
+        for (const [key, value] of Object.entries(data).sort((a, b) => measureDataSize(b[1]) - measureDataSize(a[1]))) {
+            res += `- ${key}: ${measureDataSize(value)}\n`;
+        }
+    }
+
+    console.log(res);
+}
+
+export function stringIsCompressedItemBundleArray(str: string): boolean {
+	try {
+		return Array.isArray(JSON.parse(LZString.decompressFromBase64(str)))
+	}
+	catch {
+		return false;
+	}
+}
+
+export function GetConfiguredItemBundlesFromSavedCode(code: string, filter: (item: ItemBundle) => boolean): ItemBundle[] {
+	let items: ItemBundle[] = [];
+	if (stringIsCompressedItemBundleArray(code)) {
+		items = JSON.parse(LZString.decompressFromBase64(code)) as ItemBundle[];
+	} else if (CommonIsNumeric(code) && !!Player.Wardrobe) {
+	    let ix = parseInt(code);
+	    if (ix >= 0 && ix < Player.Wardrobe.length)
+	        items = Player.Wardrobe[ix];
+	} else if (code.length <= 70 && typeof mbs !== "undefined") {
+	    items = mbs.wheelOutfits.getByName(code)?.items ?? [];
+	}
+	
+	return items.filter(item => filter(item));
+}
+
 // ICONS
 export const ICONS = Object.freeze({
 	TONGUE: "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0idXRmLTgiPz48c3ZnIHZlcnNpb249IjEuMSIgaWQ9IkxheWVyXzEiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyIgeG1sbnM6eGxpbms9Imh0dHA6Ly93d3cudzMub3JnLzE5OTkveGxpbmsiIHg9IjBweCIgeT0iMHB4IiB2aWV3Qm94PSIwIDAgMTIyLjg4IDk3LjI1IiBzdHlsZT0iZW5hYmxlLWJhY2tncm91bmQ6bmV3IDAgMCAxMjIuODggOTcuMjUiIHhtbDpzcGFjZT0icHJlc2VydmUiPjxnPjxwYXRoIGQ9Ik0xMjEuOTksMjEuNzNjMC44OCwwLjUzLDEuMTUsMS42OCwwLjYyLDIuNTVjLTAuNCwwLjY2LTEuMTUsMC45OC0xLjg3LDAuODdMOTYuMiwzNi43NmwtMC4wMywwLjAyIGMtMC4xOSw0LjQxLTAuNDYsOS4yMy0wLjk5LDE0LjE1Yy0wLjU0LDUuMDUtMS4zNCwxMC4yMi0yLjYsMTUuMThjLTIuMTQsOC40My02LjEzLDE3LjEzLTEyLjI5LDIzLjE3IGMtNS4xMiw1LjAxLTExLjY5LDguMi0xOS45LDcuOTdjLTMuNjUtMC4xMS03LjI4LTEtMTAuNzItMi42OGMtMy4zLTEuNjItNi40Mi0zLjk2LTkuMi03LjA1QzI5LjksNzUuODQsMjguMjksNTcuNzksMjYuODYsNDEuNzYgYy0wLjE0LTEuNTMtMC4yNy0zLjA1LTAuNDItNC41OEwxLjEyLDI0LjE1QzAuNzgsMjQsMC40OCwyMy43NiwwLjI4LDIzLjQyYy0wLjU0LTAuODgtMC4yNi0yLjAyLDAuNjEtMi41NmwyNi4zMy0xNi4yIGMzLjQ5LTIuNDksNi45NC0zLjk1LDEwLjY1LTQuNDVjMy42OS0wLjUsNy41Ny0wLjA1LDExLjk0LDEuMjdjMTEuODUsMy41OSwxMi41OCwzLjQsMjIuOTIsMC43OWMwLjg1LTAuMjEsMS43OC0wLjQ1LDMuMzktMC44NSBjMy43MS0wLjkyLDYuMzUtMS4xMiw5LjA2LTAuNTZjMi42MiwwLjU0LDUuMTMsMS43NSw4LjY3LDMuNjljMC4wNSwwLjAzLDAuMTEsMC4wNSwwLjE2LDAuMDlMMTIxLjk5LDIxLjczTDEyMS45OSwyMS43M3ogTTk2LjI0LDMyLjYzbDIwLjU2LTkuNzNMOTIuMDgsNy43OWwwLDBjLTMuMjMtMS43Ny01LjQ5LTIuODctNy42NC0zLjMxYy0yLjEtMC40My00LjI3LTAuMjUtNy40MywwLjU0IGMtMC44NSwwLjIxLTIuMTYsMC41NC0zLjM3LDAuODVjLTExLjI3LDIuODUtMTIuMDcsMy4wNS0yNC45LTAuODNjLTMuODctMS4xNy03LjI0LTEuNTgtMTAuMzctMS4xNSBjLTMuMDksMC40Mi02LjAyLDEuNjgtOS4wNCwzLjg0Yy0wLjA0LDAuMDMtMC4wNywwLjA1LTAuMTEsMC4wN2wwLDBMNS42NCwyMi4zTDI2LDMyLjc4Yy0wLjE2LTMuMDcsMC4yLTUuODMsMS4wOS04LjI2IGMwLjkyLTIuNTMsMi40LTQuNjksNC40NC02LjQ4YzIuNTYtMi4yNCw1LjQ5LTMuNjEsOC41OS00LjNjMy40NC0wLjc3LDcuMDYtMC42OSwxMC41OS0wLjA3YzEuOTYsMC4zNSwzLjg5LDAuODksNS43OCwxLjYxIGMxLjUsMC41NywyLjk2LDEuMjQsNC4zOSwybDAuMDUsMGMwLjA0LDAsMC4wOCwwLDAuMTIsMGMzLjIyLTIuMDIsNi40OS0zLjM0LDkuODItMy45OGMzLjcyLTAuNzEsNy40OS0wLjU3LDExLjMxLDAuNDMgYzMuNjksMC45Nyw2LjIzLDEuOTQsOC4yNiwzLjYzYzIuMDUsMS43MSwzLjQzLDQuMDQsNC43NCw3LjY4YzAuNTEsMS40MiwwLjgxLDMuMTgsMC45NSw1LjE3Qzk2LjE5LDMwLjk4LDk2LjIyLDMxLjc5LDk2LjI0LDMyLjYzIEw5Ni4yNCwzMi42M3ogTTYzLjQyLDIwLjJWNTguOWMwLDEuMzctMS4xMSwyLjQ4LTIuNDgsMi40OGMtMS4zNywwLTIuNDgtMS4xMS0yLjQ4LTIuNDhWMjAuMjFjLTEuMDgtMC41NS0yLjE3LTEuMDMtMy4yNy0xLjQ1IGMtMS42Ni0wLjYzLTMuMzYtMS4xMS01LjExLTEuNDJjLTMuMTEtMC41NS02LjI0LTAuNjMtOS4xNSwwLjAyYy0yLjUxLDAuNTYtNC44OCwxLjY2LTYuOTUsMy40N2MtMS41NiwxLjM2LTIuNjksMy4wMi0zLjM5LDQuOTUgYy0wLjcyLDEuOTgtMS4wMSw0LjI4LTAuODcsNi45YzAuMjksMi42MywwLjU2LDUuNjUsMC44NCw4Ljc2YzEuMzgsMTUuNDQsMi45MywzMi44MywxMi42NSw0My41OGMyLjQ2LDIuNzMsNS4yLDQuNzksOC4wOCw2LjIgYzIuOTYsMS40NSw2LjA3LDIuMjIsOS4xOSwyLjMxYzcuMDgsMC4yMSwxMi43Ni0yLjU2LDE3LjItNi45YzUuNjMtNS41MSw5LjMtMTMuNTcsMTEuMjktMjEuNDJjMS4yMi00LjgsMS45OS05Ljc5LDIuNTEtMTQuNjcgYzAuNTMtNC45NCwwLjc5LTkuNzMsMC45OC0xNC4wOWMwLjA5LTIuMTUsMC4wOS00LjE3LTAuMDMtNS45NmMtMC4xMi0xLjY5LTAuMzUtMy4xMy0wLjczLTQuMThjLTEuMDctMi45OC0yLjEzLTQuODItMy42My02LjA4IGMtMS41My0xLjI4LTMuNjUtMi4wNy02LjgtMi44OWMtMy4yOC0wLjg2LTYuNS0wLjk5LTkuNjktMC4zOEM2OC44NCwxNy40OCw2Ni4xMiwxOC41Niw2My40MiwyMC4yTDYzLjQyLDIwLjJ6Ii8+PC9nPjwvc3ZnPg==",

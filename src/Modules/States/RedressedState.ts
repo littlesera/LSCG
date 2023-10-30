@@ -1,21 +1,28 @@
 import { BC_ItemsToItemBundles, SendAction, addCustomEffect, getRandomInt, isBind, isCloth, removeCustomEffect, settingsSave, waitFor } from "utils";
 import { BaseState, StateRestrictions } from "./BaseState";
 import { StateModule } from "Modules/states";
-import { OutfitConfig, OutfitOption } from "Settings/Models/magic";
+import { OutfitConfig, OutfitOption, SpellDefinition } from "Settings/Models/magic";
+import { ItemBundleBaseState } from "./ItemBundleBaseState";
 
-export class RedressedState extends BaseState {
+export class RedressedState extends ItemBundleBaseState {
     static CleanItemCode(code: string): string {
         let items = JSON.parse(LZString.decompressFromBase64(code)) as ItemBundle[];
-        if (!items)
+        if (!items || !Array.isArray(items))
             return code;
-        items = items.filter(item => {
-            let asset = AssetGet(Player.AssetFamily, item.Group, item.Name);
-            if (!asset)
-                return false;
-            return isCloth(asset) || 
-                isBind(asset, []);
-        });
+        items = items.filter(item => RedressedState.ItemIsAllowed(item));
         return LZString.compressToBase64(JSON.stringify(items));
+    }
+
+    static ItemIsAllowed(item: ItemBundle): boolean {
+        let asset = AssetGet(Player.AssetFamily, item.Group, item.Name);
+        if (!asset)
+            return false;
+        return RedressedState.AssetIsAllowed(asset);
+    }
+
+    static AssetIsAllowed(asset: Asset): boolean {
+        return isCloth(asset) || 
+                isBind(asset, []);
     }
 
     Type: LSCGState = "redressed";
@@ -32,42 +39,24 @@ export class RedressedState extends BaseState {
         this.Restrictions.Wardrobe = "true";
     }
 
-    storedOutfitKey: string = "stored-outfit";
-    get StoredOutfit(): ItemBundle[] | undefined {
-        let ext = this.config.extensions[this.storedOutfitKey];
-        if (!ext) return undefined;
-        try {
-            return JSON.parse(LZString.decompressFromBase64(ext));
-        }
-        catch {
-            return undefined;
-        }
-    }
-
-    SetStoredOutfit() {
-        this.config.extensions[this.storedOutfitKey] = LZString.compressToBase64(JSON.stringify(BC_ItemsToItemBundles(Player.Appearance)));
-        settingsSave();
-    }
-
-    ClearStoredOutfit() {
-        delete this.config.extensions[this.storedOutfitKey];
-        settingsSave();
-    }
-
-    DoChange(asset: Asset | null, type: OutfitOption): boolean {
+    DoChange(asset: Asset | null, spell: SpellDefinition | null): boolean {
         if (!asset)
             return false;
-        switch(type) {
+        if (!spell)
+            return RedressedState.AssetIsAllowed(asset);
+        switch(spell.Outfit?.Option) {
             case OutfitOption.clothes_only:
                 return isCloth(asset);
             case OutfitOption.binds_only:
                 return isBind(asset, Player.LSCG.MagicModule.allowOutfitToChangeNeckItems ? [] : ["ItemNeck", "ItemNeckAccessories", "ItemNeckRestraints"]);
             case OutfitOption.both:
                 return isCloth(asset) || isBind(asset);
+            default:
+                return false;
         }
     }
 
-    StripCharacter(skipStore: boolean, type: OutfitOption, newList: ItemBundle[] = []) {
+    StripCharacter(skipStore: boolean, spell: SpellDefinition | null, newList: ItemBundle[] = []) {
         if (!skipStore && !this.StoredOutfit)
             this.SetStoredOutfit();
 
@@ -75,42 +64,35 @@ export class RedressedState extends BaseState {
         let appearance = Player.Appearance;
         for (let i = appearance.length - 1; i >= 0; i--) {
             const asset = appearance[i].Asset;
-            if (this.DoChange(asset, type)) {
+            if (this.DoChange(asset, spell)) {
                 if (isCloth(asset) || newList.length == 0 || newList.some(x => x.Group == asset.Group.Name))
                     appearance.splice(i, 1);
             }
         }
     }
 
-    Apply(outfit: OutfitConfig, memberNumber?: number | undefined, duration?: number, emote?: boolean | undefined): BaseState {
+    Apply(spell: SpellDefinition, memberNumber?: number | undefined, duration?: number, emote?: boolean | undefined): BaseState {
         try{
-            let outfitList = JSON.parse(LZString.decompressFromBase64(outfit.Code)) as ItemBundle[];
-            if (!!outfitList && typeof outfitList == "object") {
-                this.StripCharacter(false, outfit.Option, outfitList);
-                this.WearMany(outfitList, outfit.Option);
-                super.Activate(memberNumber, duration, emote);
+            let outfit = spell.Outfit;
+            if (!!outfit) {
+                let outfitList = this.GetConfiguredItemBundles(outfit.Code, item => RedressedState.ItemIsAllowed(item));
+                if (!!outfitList && typeof outfitList == "object") {
+                    this.StripCharacter(false, spell, outfitList);
+                    this.WearMany(outfitList, spell);
+                    super.Activate(memberNumber, duration, emote);
+                }
             }
         }
         catch {
-            console.warn("error parsing outfitcode in RedressedState: " + outfit.Code);
+            console.warn("error parsing outfitcode in RedressedState: " + spell.Outfit?.Code);
         }
         return this;
     }
 
-    Recover(emote?: boolean | undefined): BaseState {
-        super.Recover();
-        if (!!this.StoredOutfit) {
-            this.StripCharacter(true, OutfitOption.both);
-            this.WearMany(this.StoredOutfit, OutfitOption.both, true);
-            this.ClearStoredOutfit();
-        }
-        return this;
-    }
-
-    WearMany(items: ItemBundle[], type: OutfitOption, isRestore: boolean = false) {
+    WearMany(items: ItemBundle[], spell: SpellDefinition, isRestore: boolean = false) {
         items.forEach(item => {
             let asset = AssetGet(Player.AssetFamily, item.Group, item.Name);
-            if (!!asset && this.DoChange(asset, type)) {
+            if (!!asset && this.DoChange(asset, spell)) {
                 //let groupBlocked = InventoryGroupIsBlockedForCharacter(Player, asset.Group.Name);
                 let isBlocked = InventoryBlockedOrLimited(Player, {Asset: asset})
                 let isRoomDisallowed = !InventoryChatRoomAllow(asset?.Category ?? []);

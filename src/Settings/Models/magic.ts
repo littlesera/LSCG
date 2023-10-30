@@ -35,21 +35,20 @@ export enum PolymorphOption {
     both = "Body and Cosplay",
 }
 
-export interface OutfitConfig {
+export interface ItemBundleConfig {
     Code: string;
+}
+
+export interface OutfitConfig extends ItemBundleConfig {
     Option: OutfitOption;
 }
 
-export interface PolymorphConfig {
-    Code: string;
+export interface PolymorphConfig extends ItemBundleConfig {
     IncludeCosplay: boolean;
     IncludeSkin: boolean;
     IncludeHair: boolean;
     IncludeGenitals: boolean;
-    IncludeAllBody: boolean;
-    
-    // Deprecated
-    Option: PolymorphOption;
+    IncludeAllBody: boolean;    
 }
 
 export interface SpellDefinition {
