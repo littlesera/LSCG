@@ -212,7 +212,7 @@ export class MagicModule extends BaseModule {
         let isWieldingMagicItem = !!item && MagicWandItems.indexOf(item.Asset.Name) > -1;
         let hasItemPermission = ServerChatRoomGetAllowItem(Player, target);
         let targetHasMagicEnabled = (target as OtherCharacter).LSCG?.MagicModule?.enabled;
-        let whitelisted = !(target as OtherCharacter).LSCG?.MagicModule?.requireWhitelist || (!!Player.MemberNumber && target.WhiteList.indexOf(Player.MemberNumber) > -1);
+        let whitelisted = !(target as OtherCharacter).LSCG?.MagicModule?.requireWhitelist || (!!Player.MemberNumber && target.WhiteList.indexOf(Player.MemberNumber) > -1) || target.IsPlayer();
         return this.Enabled &&
                 targetHasMagicEnabled &&
                 isWieldingMagicItem &&
@@ -719,7 +719,7 @@ export class MagicModule extends BaseModule {
     }
 
     WhitelistBlocked(sender: Character) {
-        return this.settings.requireWhitelist && !!sender.MemberNumber && Player.WhiteList.indexOf(sender.MemberNumber) == -1;
+        return this.settings.requireWhitelist && !!sender.MemberNumber && Player.WhiteList.indexOf(sender.MemberNumber) == -1 && !sender.IsPlayer();
     }
 
     IncomingSpellTeachCommand(sender: Character | null, msg: LSCGMessageModel) {
