@@ -179,7 +179,7 @@ export class CoreModule extends BaseModule {
                 Player.LSCG = <SettingsModel>{};
                 this.registerDefaultSettings();
             }
-            Player.LSCG.Version = LSCG_VERSION;
+            previousVersion = Player.LSCG.Version = LSCG_VERSION;
             settingsSave();
         }
         this.CheckForMigrations(previousVersion);

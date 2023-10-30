@@ -1,4 +1,4 @@
-import { hookFunction, ICONS, isObject, settingsSave } from './utils';
+import { GetDataSizeReport, hookFunction, ICONS, isObject, settingsSave } from './utils';
 import { ConfiguredActivities, CraftableItemSpellNames, DrugKeywords, HypnoTriggers, modules, NetgunKeywords, registerModule } from 'modules';
 import { SettingsModel } from 'Settings/Models/settings';
 import { HypnoModule } from './Modules/hypno';
@@ -16,7 +16,14 @@ import { ItemUseModule } from 'Modules/item-use';
 import { StateModule } from 'Modules/states';
 import { MagicModule } from 'Modules/magic';
 
-export { DrugKeywords, NetgunKeywords, CraftableItemSpellNames, HypnoTriggers, ConfiguredActivities };
+export { 
+	DrugKeywords, 
+	NetgunKeywords, 
+	CraftableItemSpellNames, 
+	HypnoTriggers, 
+	ConfiguredActivities, 
+	GetDataSizeReport 
+};
 
 function initWait() {
 	console.debug("LSCG: Init wait");
@@ -36,13 +43,13 @@ function initWait() {
 	}
 }
 
-export function loginInit(C: any) {
+function loginInit(C: any) {
 	if (window.LSCG_Loaded)
 		return;
 	init();
 }
 
-export function initSettingsScreen() {
+function initSettingsScreen() {
 	PreferenceSubscreenList.push("LSCGMainMenu");
 	hookFunction("TextGet", 2, (args: string[], next: (arg0: any) => any) => {
 		if (args[0] == "HomepageLSCGMainMenu") return "LSCG Settings";
@@ -54,7 +61,7 @@ export function initSettingsScreen() {
 	});
 }
 
-export function init() {
+function init() {
 	if (window.LSCG_Loaded)
 		return;
 	
@@ -152,7 +159,7 @@ function init_modules(): boolean {
 	return true;
 }
 
-export function unload(): true {
+function unload(): true {
 	unload_modules();
 
 	delete window.LSCG_Loaded;

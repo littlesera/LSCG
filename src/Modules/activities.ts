@@ -704,7 +704,7 @@ export class ActivityModule extends BaseModule {
             },
             Targets: [
                 {
-                    Name: "ItemHands",
+                    Name: "ItemMouth",
                     SelfAllowed: true,
                     SelfOnly: true,
                     TargetLabel: "Eat",

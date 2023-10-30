@@ -1,6 +1,9 @@
 import { GuiSubscreen, Setting } from "./settingBase";
 import { KNOWN_SPELLS_LIMIT, LSCGSpellEffect, MagicSettingsModel, OutfitConfig, OutfitOption, PolymorphConfig, PolymorphOption, SpellDefinition } from "./Models/magic";
 import { PairedBaseState } from "Modules/States/PairedBaseState";
+import { stringIsCompressedItemBundleArray } from "utils";
+import { PolymorphedState } from "Modules/States/PolymorphedState";
+import { RedressedState } from "Modules/States/RedressedState";
 
 export const pairedSpellEffects = [
 	LSCGSpellEffect.orgasm_siphon,
@@ -641,7 +644,8 @@ export class GuiMagic extends GuiSubscreen {
 	ConfirmOutfit() {
 		this._ConfigureOutfit = false;
 		if (!this.Spell.Outfit) this.Spell.Outfit = {Code: "", Option: OutfitOption.both};
-		this.Spell.Outfit.Code = ElementValue(this.outfitFieldId);
+		let outfitCode = this.ParseCode(ElementValue(this.outfitFieldId), code => RedressedState.CleanItemCode(code));
+		this.Spell.Outfit.Code = outfitCode;
 		this.ElementSetValue(this.outfitFieldId, "");
 	}
 	OutfitConfigDropChanged(evt: any) {
@@ -664,18 +668,9 @@ export class GuiMagic extends GuiSubscreen {
 	ConfirmPolymorph() {
 		this._ConfigurePolymorph = false;
 		if (!this.Spell.Polymorph) this.Spell.Polymorph = <PolymorphConfig>{};
-		this.Spell.Polymorph.Code = ElementValue(this.outfitFieldId);
+		let polymorphCode = this.ParseCode(ElementValue(this.outfitFieldId), code => PolymorphedState.CleanItemCode(code));
+		this.Spell.Polymorph.Code = polymorphCode;
 		this.ElementSetValue(this.outfitFieldId, "");
-	}
-	PolymorphConfigDropChanged(evt: any) {
-		if (!!this.Spell) {
-			if (!this.Spell.Polymorph)
-				this.Spell.Polymorph = <PolymorphConfig>{
-					Code: "",
-					Option: PolymorphOption.both
-				}
-			this.Spell.Polymorph.Option = evt.target.value as PolymorphOption;
-		}
 	}
 
 	static SpellEffectDescription(effect: LSCGSpellEffect): string {
@@ -716,5 +711,14 @@ export class GuiMagic extends GuiSubscreen {
 			default:
 				return ""			;
 		}
+	}
+
+	ParseCode(code: string, trimFunc: (str: string) => string): string {
+		if (stringIsCompressedItemBundleArray(code))
+			return trimFunc(code);
+		else if (CommonIsNumeric(code) || code.length <= 70)
+			return code;
+		else
+			return "";
 	}
 }
