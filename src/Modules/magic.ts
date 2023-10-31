@@ -577,7 +577,7 @@ export class MagicModule extends BaseModule {
         
         if (!this.SpellIsBeneficial(spell)) {
             duration = saveDiff * 5 * (60 * 1000) // 5 minutes for every level of "spell power" (difference between caster and defender checks)
-            if (!this.settings.limitedDuration)
+            if (!this.settings.limitedDuration && !spell.Effects.some(e => e == LSCGSpellEffect.bane))
                 duration = 0;
             else if (this.settings.maxDuration > 0) {
                 duration = Math.min(duration, this.settings.maxDuration * (60 * 1000));
