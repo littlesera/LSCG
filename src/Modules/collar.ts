@@ -711,7 +711,7 @@ export class CollarModule extends BaseModule {
         CharacterSetFacialExpression(Player, "Blush", "Medium");
         CharacterSetFacialExpression(Player, "Eyebrows", "Soft");
         CharacterSetFacialExpression(Player, "Eyes", "Closed");
-        CharacterSetFacialExpression(Player, "Mouth", "Closed");
+        CharacterSetFacialExpression(Player, "Mouth", null);
         clearTimeout(this.chokeTimeout);
 
         if (reason == PassoutReason.COLLAR) {
