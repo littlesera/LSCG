@@ -83,7 +83,7 @@ export class PolymorphedState extends ItemBundleBaseState {
             const asset = appearance[i].Asset;
             if (this.DoChange(asset, spell)) {
                 let newItem = newList.find(x => x.Group == asset.Group.Name);
-                if (!spell.Polymorph?.IncludeAllBody && spell.Polymorph?.IncludeSkin && 
+                if ((!spell || (!spell.Polymorph?.IncludeAllBody && spell.Polymorph?.IncludeSkin)) && 
                     !!newItem && 
                     this.skinColorChangeOnly.indexOf(asset.Group.Name) > -1) {
                     // Special handling for simple color change.
@@ -122,7 +122,7 @@ export class PolymorphedState extends ItemBundleBaseState {
                 let isBlocked = InventoryBlockedOrLimited(Player, {Asset: asset})
                 let isRoomDisallowed = !InventoryChatRoomAllow(asset?.Category ?? []);
 
-                let isSkinColorChangeOnly = !spell.Polymorph?.IncludeAllBody && spell.Polymorph?.IncludeSkin && this.skinColorChangeOnly.indexOf(asset.Group.Name) > -1;
+                let isSkinColorChangeOnly = (!spell || (!spell.Polymorph?.IncludeAllBody && spell.Polymorph?.IncludeSkin)) && this.skinColorChangeOnly.indexOf(asset.Group.Name) > -1;
                 if (isRestore || !(isBlocked || isRoomDisallowed || isSkinColorChangeOnly)) {
                     let newItem = InventoryWear(Player, item.Name, item.Group, item.Color, item.Difficulty, -1, item.Craft, false);
                     if (!!newItem && !!item.Property)
