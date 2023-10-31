@@ -1643,8 +1643,11 @@ export class ActivityModule extends BaseModule {
             this.hands = this.hands.filter(h => h.Member != member);
         else if (type == "mouth-with-foot")
             this.myFootInMouth = -1;
-        else
+        else {
             this.hands = this.hands.filter(h => !(h.Member == member && h.Type == type));
+            if (type == "hand")
+                this.heldBy = this.heldBy.filter(h => !(h.Member == member && h.Type == type));
+        }
     }
 
     grabbedBy(member: number, type: GrabType): boolean {
@@ -1696,11 +1699,14 @@ export class ActivityModule extends BaseModule {
 
         if (!type)
             this.heldBy = this.heldBy.filter(h => h.Member != member);
-        else
+        else {
             this.heldBy = this.heldBy.filter(h => !(h.Member == member && h.Type == type));
+            if (type == "hand")
+                this.hands = this.hands.filter(h => !(h.Member == member && h.Type == type));
+        }
     }
 
-    get handHoldingMemberList(): number[] { return this.hands.filter(x => x.Type == "hand").map(h => h.Member) };
+    get handHoldingMemberList(): number[] { return this.hands.concat(this.heldBy).filter(x => x.Type == "hand").map(h => h.Member) };
 
     get earPinchedByMember(): number | undefined { return this.heldBy.find(x => x.Type == "ear")?.Member};
     get earPinchingMemberList(): number[] { return this.hands.filter(x => x.Type == "ear").map(h => h.Member) };
