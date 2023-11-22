@@ -121,7 +121,8 @@ export class MagicModule extends BaseModule {
     drinkActivityNames: string[] = [
         "LSCG_Quaff",
         "LSCG_Eat",
-        "SipItem"
+        "SipItem",
+        "LSCG_FunnelPour"
     ]
 
     load(): void {

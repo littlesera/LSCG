@@ -7,7 +7,7 @@ import { GuiInjector } from "Settings/injector";
 import { InjectorSettingsModel } from "Settings/Models/injector";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
 import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, setOrIgnoreBlush, isPhraseInString, settingsSave, hookFunction, getCharacter, AUDIO, getPlayerVolume, OnAction, LSCG_SendLocal, addCustomEffect, removeCustomEffect, hookBCXCurse, GetTargetCharacter, GetActivityName, GetMetadata, GetActivityEntryFromContent, IsActivityAllowed, GetHandheldItemNameAndDescriptionConcat } from "../utils";
-import { ActivityModule, CustomAction, CustomPrerequisite } from "./activities";
+import { ActivityBundle, ActivityModule, ActivityPatch, ActivityTarget, CustomAction, CustomPrerequisite } from "./activities";
 import { HypnoModule } from "./hypno";
 import { MiscModule } from "./misc";
 import { ItemUseModule } from "./item-use";
@@ -131,12 +131,13 @@ export class InjectorModule extends BaseModule {
                 var location = <AssetGroupItemName>meta?.GroupName;
                 this.ProcessInjection(sender, location);
             }
-            else if (target == Player.MemberNumber && activityName == "SipItem" && !!sender) {
+            else if (target == Player.MemberNumber && (activityName == "SipItem" || activityName == "LSCG_FunnelPour") && !!sender) {
                 let gagType = this.GetGagDrinkAccess(Player);
+                let isFullPour = activityName == "LSCG_FunnelPour";
                 if (gagType == "nothing" && sender.MemberNumber != Player.MemberNumber && this.IsDrugAllowed(sender)) {
-                    this.TryForceDrink(sender);
+                    this.TryForceDrink(sender, isFullPour);
                 } else {
-                    this.ProcessDruggedDrink(sender);
+                    this.ProcessDruggedDrink(sender, isFullPour);
                 }
             } else if (target == Player.MemberNumber) {
                 let activityEntry = GetActivityEntryFromContent(data.Content);
@@ -178,14 +179,17 @@ export class InjectorModule extends BaseModule {
             if (args[0] == "ChatRoomChat" && args[1]?.Type == "Activity" && this.Enabled){
                 let data = args[1];
                 let actName = GetActivityName(data) ?? "";
-                if (actName == "SipItem") {
+                if (actName == "SipItem" || actName == "LSCG_FunnelPour") {
+                    let fullPour = actName == "LSCG_FunnelPour";
                     let glass = InventoryGet(Player, "ItemHandheld");
                     if (glass?.Asset.Name == "GlassFilled") {
-                        if (!glass.Property) glass.Property = {};
-                        if (!(<any>glass.Property).SipLimit) (<any>glass.Property).SipLimit = this.settings.sipLimit;
-                        if (!(<any>glass.Property).SipCount) (<any>glass.Property).SipCount = 1;
-                        else (<any>glass.Property).SipCount++;
-                        if ((<any>glass.Property).SipLimit > 0 && (<any>glass.Property).SipCount >= (<any>glass.Property).SipLimit) {
+                        if (!fullPour) {
+                            if (!glass.Property) glass.Property = {};
+                            if (!(<any>glass.Property).SipLimit) (<any>glass.Property).SipLimit = this.settings.sipLimit;
+                            if (!(<any>glass.Property).SipCount) (<any>glass.Property).SipCount = 1;
+                            else (<any>glass.Property).SipCount++;
+                        }
+                        if (fullPour || (<any>glass.Property).SipLimit > 0 && (<any>glass.Property).SipCount >= (<any>glass.Property).SipLimit) {
                             SendAction("%NAME%'s uses up the last drop of %POSSESSIVE% drink.");
                             var craft = glass.Craft;
                             InventoryRemove(Player, "ItemHandheld", false);
@@ -251,6 +255,7 @@ export class InjectorModule extends BaseModule {
         this.miscModule = getModule<MiscModule>("MiscModule");
 
         if (!!this.activityModule) {
+            // Netgun
             this.activityModule.AddActivity({
                 Activity: <Activity>{
                     Name: "NetGun",
@@ -297,6 +302,34 @@ export class InjectorModule extends BaseModule {
                     }
                 },
                 CustomImage: "Assets/Female3DCG/ItemDevices/Preview/Net.png"
+            });
+
+            // Pour drink into funnel
+            this.activityModule?.AddActivity(<ActivityBundle>{
+                Activity: <Activity>{
+                    Name: "FunnelPour",
+                    MaxProgress: 90,
+                    MaxProgressSelf: 90,
+                    Prerequisite: ["UseHands", "Needs-PourableItem"]
+                },
+                Targets: [
+                    <ActivityTarget>{
+                        Name: "ItemMouth",
+                        TargetLabel: "Pour into Funnel",
+                        SelfAllowed: true,
+                        TargetAction: "SourceCharacter pours PronounPossessive ActivityAsset into TargetCharacter's funnel.",
+                        TargetSelfAction: "SourceCharacter pours PronounPossessive ActivityAsset into PronounPossessive own funnel."
+                    }
+                ],
+                CustomPrereqs: [
+                    <CustomPrerequisite>{
+                        Name: "CanPourIntoFunnel",
+                        Func: (acting, acted, group) => {
+                            let gag = InventoryGet(acted, "ItemMouth");
+                            return !!gag && gag.Asset.Name == "FunnelGag" && gag.Property?.Type == "Funnel";
+                        }
+                    }
+                ]
             });
         }        
 
@@ -534,17 +567,18 @@ export class InjectorModule extends BaseModule {
         return false;
     }
 
-    ProcessDruggedDrink(sender: Character) {
+    ProcessDruggedDrink(sender: Character, fullPour: boolean = false) {
         var asset = InventoryGet(sender, "ItemHandheld");
         if (!asset?.Craft)
             return;
+        //var multiplier = ((<any>asset.Property)?.SipLimit ?? 1) - ((<any>asset.Property)?.SipCount ?? 0)
         let types = this.GetDrugTypes(asset.Craft!);
         if (types.indexOf("sedative") > -1 && this.settings.enableSedative)
-            this.DrinkSedative(sender);
+            this.DrinkSedative(sender, fullPour);
         if (types.indexOf("mindcontrol") > -1 && this.settings.enableMindControl)
-            this.DrinkMindControl(sender);
+            this.DrinkMindControl(sender, fullPour);
         if (types.indexOf("horny") > -1 && this.settings.enableHorny)
-            this.DrinkHorny(sender);
+            this.DrinkHorny(sender, fullPour);
         if (types.indexOf("antidote") > -1)
             this.DrinkCure(sender);
     }
@@ -597,7 +631,7 @@ export class InjectorModule extends BaseModule {
         CurrentModule = "Online";
     }
 
-    DrinkSedative(sender: Character) {
+    DrinkSedative(sender: Character, fullPour: boolean = false) {
         this.AddSedative(2);
         SendAction(this.sedativeDrinkStr[getRandomInt(this.sedativeDrinkStr.length)], sender);
     }
@@ -634,7 +668,7 @@ export class InjectorModule extends BaseModule {
         CurrentModule = "Online";
     }
 
-    DrinkMindControl(sender: Character) {
+    DrinkMindControl(sender: Character, fullPour: boolean = false) {
         this.AddMindControl(2);
         SendAction(this.brainwashDrinkStr[getRandomInt(this.brainwashDrinkStr.length)], sender);
     }
@@ -673,7 +707,7 @@ export class InjectorModule extends BaseModule {
         }
     }
 
-    DrinkHorny(sender: Character) {
+    DrinkHorny(sender: Character, fullPour: boolean = false) {
         this.AddHorny(2);
         SendAction(this.hornyDrinkStr[getRandomInt(this.hornyDrinkStr.length)], sender);
     }
@@ -1002,7 +1036,7 @@ export class InjectorModule extends BaseModule {
             return "nothing";        
     }
 
-    TryForceDrink(sender: Character) {
+    TryForceDrink(sender: Character, fullPour: boolean = false) {
         let itemUseModule = getModule<ItemUseModule>("ItemUseModule");
         if (!itemUseModule) {
             return this.ProcessDruggedDrink(sender);
@@ -1011,7 +1045,7 @@ export class InjectorModule extends BaseModule {
         let check = getModule<ItemUseModule>("ItemUseModule")?.MakeActivityCheck(sender, Player);
         if (check.AttackerRoll.Total >= check.DefenderRoll.Total) {
             SendAction(`${CharacterNickname(sender)} ${check.AttackerRoll.TotalStr}manages to get their ${itemName} past ${CharacterNickname(Player)}'s ${check.DefenderRoll.TotalStr}lips, forcing %INTENSIVE% to swallow.`);
-            setTimeout(() => this.ProcessDruggedDrink(sender), 5000);
+            setTimeout(() => this.ProcessDruggedDrink(sender, fullPour), 5000);
         } else {
             SendAction(`${CharacterNickname(Player)} ${check.DefenderRoll.TotalStr}successfully defends against ${CharacterNickname(sender)}'s ${check.AttackerRoll.TotalStr}attempt to force %INTENSIVE% to drink their ${itemName}, spilling drink all over.`);
         }

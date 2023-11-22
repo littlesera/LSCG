@@ -24,9 +24,12 @@ export const MagicWandItems: string[] = [
 
 export const QuaffableItems: string[] = [
 	"PotionBottle"
-	// "GlassFilled",
-	// "Mug"
 ]
+
+export const PourableItems: string[] = [
+	"GlassFilled",
+	"Mug"
+].concat(QuaffableItems);
 
 export const AdditionalPenetrateItems: string[] = [
 	
@@ -237,6 +240,10 @@ export class ItemUseModule extends BaseModule {
 			} else if (itemType == "QuaffableItem") {
 				let item = InventoryGet(C, "ItemHandheld");
 				if (!!item && QuaffableItems.indexOf(item.Asset?.Name) > -1) 
+					results.push(item);
+			} else if (itemType == "PourableItem") {
+				let item = InventoryGet(C, "ItemHandheld");
+				if (!!item && PourableItems.indexOf(item.Asset?.Name) > -1) 
 					results.push(item);
 			} else if (itemType == "FellatioItem") {
 				let item = InventoryGet(C, "ItemHandheld");
