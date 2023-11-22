@@ -1188,8 +1188,8 @@ export class ActivityModule extends BaseModule {
         this.AddActivity({
             Activity: <Activity>{
                 Name: "Tug",
-                MaxProgress: 50,
-                MaxProgressSelf: 50,
+                MaxProgress: 99,
+                MaxProgressSelf: 99,
                 Prerequisite: ["UseHands", "ZoneAccessible", "ZoneNaked"]
             },
             Targets: [
@@ -1209,6 +1209,111 @@ export class ActivityModule extends BaseModule {
                 }
             ],
             CustomImage: "Assets/Female3DCG/ItemPelvis/HempRope_NormalOverPanties.png"
+        });
+
+        // Flick
+        this.AddActivity({
+            Activity: <Activity>{
+                Name: "Flick",
+                MaxProgress: 50,
+                MaxProgressSelf: 50,
+                Prerequisite: ["UseHands", "ZoneAccessible"]
+            },
+            Targets: [
+                <ActivityTarget>{
+                    Name: "ItemEars",
+                    TargetLabel: "Flick Ear",
+                    SelfAllowed: true,
+                    TargetAction: "SourceCharacter flicks TargetCharacter's ear.",
+                    TargetSelfAction: "SourceCharacter flicks PronounPossessive own ear."
+                }, <ActivityTarget>{
+                    Name: "ItemNose",
+                    TargetLabel: "Flick Nose",
+                    SelfAllowed: true,
+                    TargetAction: "SourceCharacter flicks TargetCharacter's nose.",
+                    TargetSelfAction: "SourceCharacter flicks PronounPossessive own nose."
+                }, <ActivityTarget>{
+                    Name: "ItemNipples",
+                    TargetLabel: "Flick Nipple",
+                    SelfAllowed: true,
+                    TargetAction: "SourceCharacter flicks TargetCharacter's nipple.",
+                    TargetSelfAction: "SourceCharacter flicks PronounPossessive own nipple."
+                }, <ActivityTarget>{
+                    Name: "ItemButt",
+                    TargetLabel: "Flick Butt",
+                    SelfAllowed: true,
+                    TargetAction: "SourceCharacter flicks TargetCharacter's butt.",
+                    TargetSelfAction: "SourceCharacter flicks PronounPossessive own butt."
+                }, <ActivityTarget>{
+                    Name: "ItemBoots",
+                    TargetLabel: "Flick Foot",
+                    SelfAllowed: true,
+                    TargetAction: "SourceCharacter flicks the bottom of TargetCharacter's feet.",
+                    TargetSelfAction: "SourceCharacter flicks the bottom of PronounPossessive feet."
+                }, <ActivityTarget>{
+                    Name: "ItemHead",
+                    TargetLabel: "Flick Forehead",
+                    SelfAllowed: true,
+                    TargetAction: "SourceCharacter flicks TargetCharacter's forehead.",
+                    TargetSelfAction: "SourceCharacter flicks PronounPossessive own forehead."
+                }, <ActivityTarget>{
+                    Name: "ItemNeck",
+                    TargetLabel: "Flick Neck",
+                    SelfAllowed: true,
+                    TargetAction: "SourceCharacter flicks TargetCharacter's neck.",
+                    TargetSelfAction: "SourceCharacter flicks PronounPossessive own neck."
+                }, <ActivityTarget>{
+                    Name: "ItemLegs",
+                    TargetLabel: "Flick Thigh",
+                    SelfAllowed: true,
+                    TargetAction: "SourceCharacter flicks TargetCharacter's thigh.",
+                    TargetSelfAction: "SourceCharacter flicks PronounPossessive own thigh."
+                }, <ActivityTarget>{
+                    Name: "ItemFeet",
+                    TargetLabel: "Flick Leg",
+                    SelfAllowed: true,
+                    TargetAction: "SourceCharacter flicks TargetCharacter's leg.",
+                    TargetSelfAction: "SourceCharacter flicks PronounPossessive own leg."
+                }, <ActivityTarget>{
+                    Name: "ItemVulvaPiercings",
+                    TargetLabel: "Flick Clitoris",
+                    SelfAllowed: true,
+                    TargetAction: "SourceCharacter flicks TargetCharacter's clitoris.",
+                    TargetSelfAction: "SourceCharacter flicks PronounPossessive own clitoris."
+                }, <ActivityTarget>{
+                    Name: "ItemGlans",
+                    TargetLabel: "Flick Balls",
+                    SelfAllowed: true,
+                    TargetAction: "SourceCharacter flicks TargetCharacter's balls.",
+                    TargetSelfAction: "SourceCharacter flicks PronounPossessive own balls."
+                }, <ActivityTarget>{
+                    Name: "ItemVulva",
+                    TargetLabel: "Flick Pussy",
+                    SelfAllowed: true,
+                    TargetAction: "SourceCharacter flicks TargetCharacter's pussy.",
+                    TargetSelfAction: "SourceCharacter flicks PronounPossessive own pussy."
+                }, <ActivityTarget>{
+                    Name: "ItemPenis",
+                    TargetLabel: "Flick Penis",
+                    SelfAllowed: true,
+                    TargetAction: "SourceCharacter flicks TargetCharacter's penis.",
+                    TargetSelfAction: "SourceCharacter flicks PronounPossessive own penis."
+                }
+            ],
+            CustomPrereqs: [{
+                Name: "CanCustomFlick",
+                Func: (acting, acted, group) => {
+                    if (group.Name === "ItemBoots")
+                        return InventoryPrerequisiteMessage(acted, "NakedFeet") === "";
+                    else if (group.Name === "ItemVulvaPiercings")
+                        return (InventoryPrerequisiteMessage(acted, "AccessCrotch") === "") && !acted.IsVulvaChaste();
+                    else if (group.Name === "ItemVulva")
+                            return (InventoryPrerequisiteMessage(acted, "AccessCrotch") === "") && !acted.IsVulvaChaste();
+                    else
+                        return true;
+                }
+            }],
+            CustomImage: "Assets/Female3DCG/Activity/Pinch.png"
         });
     }
 
