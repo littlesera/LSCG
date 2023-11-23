@@ -64,7 +64,7 @@ export class ResizedState extends BaseState {
             let Group = args[1];
             let Type = args[2];
             let ret = next(args);
-            if (Group == "Height" && Type == "Zoom") {
+            if (!Player.LSCG.GlobalModule.hideResizing && Group == "Height" && Type == "Zoom") {
                 if ((Player.VisualSettings?.ForceFullHeight ?? false) || !C || !C.LSCG || !C.LSCG.StateModule || !!CurrentCharacter)
                     return ret;
                 if (ret == "None")

@@ -86,7 +86,8 @@ export class GUI extends BaseModule {
 			showCheckRolls: true,
 			blockSettingsWhileRestrained: false,
 			sharePublicCrafting: false,
-			seeSharedCrafts: true
+			seeSharedCrafts: true,
+			hideResizing: false
 		};
     }
 
