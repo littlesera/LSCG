@@ -11,6 +11,7 @@ export interface GlobalSettingsModel extends GlobalPublicSettingsModel {
     showCheckRolls: boolean;
     blockSettingsWhileRestrained: boolean;
     seeSharedCrafts: boolean;
+    hideResizing: boolean;
 }
 
 export interface GlobalPublicSettingsModel extends BaseSettingsModel {

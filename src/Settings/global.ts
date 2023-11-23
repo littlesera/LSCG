@@ -76,6 +76,12 @@ export class GuiGlobal extends GuiSubscreen {
 				description: "If enabled, other LSCG users in the room will be able to use your crafted items on other people.",
 				setting: () => this.settings.sharePublicCrafting ?? false,
 				setSetting: (val) => this.settings.sharePublicCrafting = val
+			},<Setting>{
+				type: "checkbox",
+				label: "Hide Resizing Effects:",
+				description: "If checked, you will not see any LSCG resizing effects. (eg. from magic)",
+				setting: () => this.settings.hideResizing ?? false,
+				setSetting: (val) => this.settings.hideResizing = val
 			}
 		]
 	}

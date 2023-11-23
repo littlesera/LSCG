@@ -1,7 +1,7 @@
 import { BaseModule } from 'base';
 import { CollarSettingsModel } from 'Settings/Models/collar';
 import { ModuleCategory, Subscreen } from 'Settings/setting_definitions';
-import { settingsSave, SendAction, OnChat, getRandomInt, hookFunction, removeAllHooksByModule, OnActivity, OnAction, setOrIgnoreBlush, getCharacter, hookBCXCurse, isPhraseInString, GetTargetCharacter, GetMetadata, GetDelimitedList, sendLSCGMessage, sendLSCGCommand, ICONS, LSCG_SendLocal } from '../utils';
+import { settingsSave, SendAction, OnChat, getRandomInt, hookFunction, removeAllHooksByModule, OnActivity, OnAction, setOrIgnoreBlush, getCharacter, hookBCXCurse, isPhraseInString, GetTargetCharacter, GetMetadata, GetDelimitedList, sendLSCGCommand, ICONS, LSCG_SendLocal } from '../utils';
 import { GuiCollar } from 'Settings/collar';
 import { ActivityBundle, ActivityModule, ActivityTarget, CustomPrerequisite } from './activities';
 import { getModule } from 'modules';
@@ -711,7 +711,7 @@ export class CollarModule extends BaseModule {
         CharacterSetFacialExpression(Player, "Blush", "Medium");
         CharacterSetFacialExpression(Player, "Eyebrows", "Soft");
         CharacterSetFacialExpression(Player, "Eyes", "Closed");
-        CharacterSetFacialExpression(Player, "Mouth", "Closed");
+        CharacterSetFacialExpression(Player, "Mouth", null);
         clearTimeout(this.chokeTimeout);
 
         if (reason == PassoutReason.COLLAR) {
