@@ -293,7 +293,7 @@ export function escapeRegExp(string: string) {
 export function isPhraseInString(string: string, phrase: string, ignoreOOC: boolean = false) {
 	if (!string || string === "")
 		return false;
-	let praseMatch = new RegExp("\\b" + escapeRegExp(phrase) + "\\b", "i");
+	let praseMatch = new RegExp("(\\b|\\B)" + escapeRegExp(phrase) + "(\\b|\\B)", "i");
 	let oocParsed = ignoreOOC ? string : excludeParentheticalContent(string);
 	return praseMatch.test(oocParsed);
 }
