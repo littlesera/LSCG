@@ -1330,6 +1330,21 @@ export class ActivityModule extends BaseModule {
                     SelfAllowed: false,
                     TargetLabel: "Chomp on Arm",
                     TargetAction: "SourceCharacter chomps down on TargetCharacter's arm and doesn't let go."
+                }, {
+                    Name: "ItemFeet",
+                    SelfAllowed: false,
+                    TargetLabel: "Chomp on Leg",
+                    TargetAction: "SourceCharacter chomps down on TargetCharacter's leg and doesn't let go."
+                }, {
+                    Name: "ItemButt",
+                    SelfAllowed: false,
+                    TargetLabel: "Chomp on Butt",
+                    TargetAction: "SourceCharacter chomps down on TargetCharacter's butt and doesn't let go."
+                }, {
+                    Name: "ItemNeck",
+                    SelfAllowed: false,
+                    TargetLabel: "Chomp on Neck",
+                    TargetAction: "SourceCharacter chomps down on TargetCharacter's neck and doesn't let go."
                 }
             ],
             CustomPrereqs: [
@@ -1362,6 +1377,21 @@ export class ActivityModule extends BaseModule {
             Targets: [
                 {
                     Name: "ItemArms",
+                    SelfAllowed: false,
+                    TargetLabel: "Release Chomp",
+                    TargetAction: "SourceCharacter releases PronounPossessive chomp on TargetCharacter."
+                }, {
+                    Name: "ItemFeet",
+                    SelfAllowed: false,
+                    TargetLabel: "Release Chomp",
+                    TargetAction: "SourceCharacter releases PronounPossessive chomp on TargetCharacter."
+                }, {
+                    Name: "ItemButt",
+                    SelfAllowed: false,
+                    TargetLabel: "Release Chomp",
+                    TargetAction: "SourceCharacter releases PronounPossessive chomp on TargetCharacter."
+                }, {
+                    Name: "ItemNeck",
                     SelfAllowed: false,
                     TargetLabel: "Release Chomp",
                     TargetAction: "SourceCharacter releases PronounPossessive chomp on TargetCharacter."
@@ -1907,7 +1937,8 @@ export class ActivityModule extends BaseModule {
                 this.footInMyMouth = -1;
             if (!!type)
                 return;
-        } else if (type == "chomp" || !type) {
+        } 
+        if (type == "chomp" || !type) {
             if (this.chompedBy.indexOf(member) > -1)
                 this.chompedBy.splice(this.chompedBy.indexOf(member), 1);
             if (!!type)
@@ -2058,6 +2089,8 @@ export class ActivityModule extends BaseModule {
         let grabbingMembers = this.heldBy.filter(h => h.Type != "hand").map(h => h.Member);
         if (this.footInMyMouth >= 0)
             grabbingMembers = grabbingMembers.concat(this.footInMyMouth);
+        if (this.chompedBy.length >= 0)
+            grabbingMembers = grabbingMembers.concat(this.chompedBy);
         let grabbingMemberNumber = grabbingMembers[0];
         if (grabbingMemberNumber < 0) {
             LSCG_SendLocal(`You are not grabbed by anyone!`);
