@@ -55,7 +55,7 @@ export interface ActivityBundle extends ActivityBundleBase {
     Targets?: ActivityTarget[];
 }
 
-export type GrabType = "hand"  | "ear" | "tongue" | "arm" | "neck" | "mouth" | "horn" | "mouth-with-foot"
+export type GrabType = "hand"  | "ear" | "tongue" | "arm" | "neck" | "mouth" | "horn" | "mouth-with-foot" | "chomp"
 
 export interface HandOccupant {
     Member: number,
@@ -1315,6 +1315,77 @@ export class ActivityModule extends BaseModule {
             }],
             CustomImage: "Assets/Female3DCG/Activity/Pinch.png"
         });
+
+        // Chomp
+        this.AddActivity({
+            Activity: <Activity>{
+                Name: "Chomp",
+                MaxProgress: 60,
+                MaxProgressSelf: 60,
+                Prerequisite: ["ZoneAccessible", "UseMouth"]
+            },
+            Targets: [
+                {
+                    Name: "ItemArms",
+                    SelfAllowed: false,
+                    TargetLabel: "Chomp on Arm",
+                    TargetAction: "SourceCharacter chomps down on TargetCharacter's arm and doesn't let go."
+                }
+            ],
+            CustomPrereqs: [
+                {
+                    Name: "CanChomp",
+                    Func: (acting, acted, group) => {
+                        return !this.chomping || this.chomping < 0;
+                    }
+                }
+            ],
+            CustomAction: {
+                Func: (target, args, next) => {
+                    if (!!target) {
+                        CharacterSetFacialExpression(Player, "Mouth", "Angry");
+                        this.DoGrab(target, "chomp");
+                    }
+                    return next(args);
+                }
+            },
+            CustomImage: "Assets/Female3DCG/Activity/Bite.png"
+        });
+
+        // ReleaseChomp
+        this.AddActivity({
+            Activity: <Activity>{
+                Name: "ReleaseChomp",
+                MaxProgress: 20,
+                MaxProgressSelf: 20
+            },
+            Targets: [
+                {
+                    Name: "ItemArms",
+                    SelfAllowed: false,
+                    TargetLabel: "Release Chomp",
+                    TargetAction: "SourceCharacter releases PronounPossessive chomp on TargetCharacter."
+                }
+            ],
+            CustomPrereqs: [
+                {
+                    Name: "IsChomping",
+                    Func: (acting, acted, group) => {
+                        return this.chomping == acted.MemberNumber;
+                    }
+                }
+            ],
+            CustomAction: {
+                Func: (target, args, next) => {
+                    if (!!target) {
+                        CharacterSetFacialExpression(Player, "Mouth", null);
+                        this.DoRelease(target, "chomp");
+                    }
+                    return next(args);
+                }
+            },
+            CustomImage: "Assets/Female3DCG/Activity/Kiss.png"
+        });
     }
 
     get customGagged(): boolean {
@@ -1511,6 +1582,8 @@ export class ActivityModule extends BaseModule {
         hookFunction('Player.CanWalk', 1, (args, next) => {
             if (this.heldBy.filter(h => h.Type != "hand").length > 0)
                 return false;
+            if (!!this.chomping && this.chomping > -1)
+                return false;
             return next(args);
         }, ModuleCategory.Activities);
         
@@ -1539,6 +1612,17 @@ export class ActivityModule extends BaseModule {
                         SendAction(`%NAME% leads %OPP_NAME% out of the room by the ${this.customLeashedObjs[0].Type}.`, getCharacter(this.customLeashedObjs[0].Member));
                     else
                         SendAction("%NAME% leads " + CharacterNickname(getCharacter(this.customLeashedObjs[0].Member)!) + " and " + CharacterNickname(getCharacter(this.customLeashedObjs[1].Member)!) + " out of the room.");
+                } else if (this.chompedBy.length > 0) {
+                    var chars = this.chompedBy.map(id => getCharacter(id));
+                    if (chars.length == 1)
+                        SendAction(`%NAME% drags %OPP_NAME% out of the room with a wince.`, chars[0]);
+                    else {
+                        let nameStr = "everyone chomping down";
+                        try {
+                            nameStr = chars.slice(0, chars.length - 2).map(c => CharacterNickname(c!)).join(", ") + ", and " + CharacterNickname(chars[chars.length - 1]!)
+                        } catch {}
+                        SendAction(`%NAME% drags ${nameStr} out of the room with a wince.`);
+                    }
                 }
             }
 
@@ -1571,12 +1655,22 @@ export class ActivityModule extends BaseModule {
                         Member: this.myFootInMouth,
                         Type: "mouth-with-foot"
                     });
+                if (this.chomping > -1 && this.chomping == C.MemberNumber)
+                    isGrabbing = isGrabbing.concat(<HandOccupant>{
+                        Member: this.chomping,
+                        Type: "chomp"
+                    });
                 let grabbedBy = this.heldBy.filter(h => h.Member == C.MemberNumber);
                 if (this.footInMyMouth > -1 && this.footInMyMouth == C.MemberNumber)
                     grabbedBy = grabbedBy.concat(<HandOccupant>{
                         Member: this.footInMyMouth,
                         Type: "mouth-with-foot"
-                    });
+                    })
+                if (this.chompedBy.indexOf(C.MemberNumber) > -1)
+                    grabbedBy = grabbedBy.concat(this.chompedBy.map(memb => <HandOccupant>{
+                        Member: memb,
+                        Type: "chomp"
+                    }));
 
                 let grabList = isGrabbing.map(g => <OverlayGrabModel>{
                     Grab: g,
@@ -1635,6 +1729,12 @@ export class ActivityModule extends BaseModule {
                 this.hands.forEach(hand => {
                     ServerSend("ChatRoomChat", { Content: "PingHoldLeash", Type: "Hidden", Target: hand.Member });
                     ServerSend("AccountBeep", { MemberNumber: hand.Member, BeepType: "Leash"});
+                });
+            }
+            if (this.chompedBy.length > 0) {
+                this.chompedBy.forEach(follower => {
+                    ServerSend("ChatRoomChat", { Content: "PingHoldLeash", Type: "Hidden", Target: follower });
+                    ServerSend("AccountBeep", { MemberNumber: follower, BeepType: "Leash"});
                 });
             }
         }, ModuleCategory.Activities);
@@ -1701,7 +1801,10 @@ export class ActivityModule extends BaseModule {
     }
 
     get customLeashedByMemberNumbers(): number[] {
-        return this.heldBy.concat(this.hands.filter(h => h.Type == "hand")).map(h => h.Member);
+        let result = this.heldBy.concat(this.hands.filter(h => h.Type == "hand")).map(h => h.Member);
+        if (this.chomping >= 0)
+            result = result.concat(this.chomping);
+        return result;
     }
 
     get maxHands(): number {
@@ -1710,6 +1813,8 @@ export class ActivityModule extends BaseModule {
 
     myFootInMouth: number = -1;
     footInMyMouth: number = -1;
+    chomping: number = -1;
+    chompedBy: number[] = [];
 
     addGrab(member: number, type: GrabType): HandOccupant | undefined {
         if (!member || member < 0)
@@ -1719,6 +1824,11 @@ export class ActivityModule extends BaseModule {
             if (!!this.myFootInMouth && this.myFootInMouth >= 0)
                 return;
             this.myFootInMouth = member;
+            return;
+        } else if (type == "chomp") {
+            if (!!this.chomping && this.chomping >= 0)
+                return;
+            this.chomping = member;
             return;
         }
 
@@ -1746,8 +1856,10 @@ export class ActivityModule extends BaseModule {
     releaseGrab(member: number, type: GrabType | undefined) {
         if (!type)
             this.hands = this.hands.filter(h => h.Member != member);
-        else if (type == "mouth-with-foot")
+        if (type == "mouth-with-foot" || !type)
             this.myFootInMouth = -1;
+        if (type == "chomp" || !type)
+            this.chomping = -1;
         else {
             this.hands = this.hands.filter(h => !(h.Member == member && h.Type == type));
             if (type == "hand")
@@ -1762,6 +1874,10 @@ export class ActivityModule extends BaseModule {
             if (!!this.footInMyMouth && this.footInMyMouth >= 0 && !!sender)
                 this.DoRelease(sender, type);
             this.footInMyMouth = member;
+            return true;
+        } else if (type == "chomp") {
+            if (this.chompedBy.indexOf(member) == -1)
+                this.chompedBy.push(member);
             return true;
         }
 
@@ -1789,6 +1905,11 @@ export class ActivityModule extends BaseModule {
         if (type == "mouth-with-foot" || !type) {
             if (member == this.footInMyMouth)
                 this.footInMyMouth = -1;
+            if (!!type)
+                return;
+        } else if (type == "chomp" || !type) {
+            if (this.chompedBy.indexOf(member) > -1)
+                this.chompedBy.splice(this.chompedBy.indexOf(member), 1);
             if (!!type)
                 return;
         }
@@ -1824,7 +1945,7 @@ export class ActivityModule extends BaseModule {
     
 
     isCustomLeashedBy(sourceMember: number) {
-        return !!this.heldBy.find(h => h.Member == sourceMember);
+        return !!this.heldBy.find(h => h.Member == sourceMember) || this.chompedBy.indexOf(sourceMember) > -1;
     }
 
     isPlayerHoldingHandsWith(holdingMemberNumber: number) {
@@ -1916,9 +2037,11 @@ export class ActivityModule extends BaseModule {
 
     NotifyAboutEscapeCommand(grabber: Character, type: GrabType) {
         if (type == "mouth-with-foot")
-            LSCG_SendLocal(`${CharacterNickname(grabber)} has filled your mouth with their foot! <br>[You can try '/lscg escape' to try and escape]`);
+            LSCG_SendLocal(`${CharacterNickname(grabber)} has filled your mouth with their foot! <br>[You can use '/lscg escape' to try and escape]`);
+        else if (type == "chomp")
+            LSCG_SendLocal(`${CharacterNickname(grabber)} has chomped down hard on you! <br>[You can use '/lscg escape' to try and escape]`);
         else
-            LSCG_SendLocal(`Your ${type} has been grabbed by ${CharacterNickname(grabber)}! <br>[You can try '/lscg escape' to try and break free]`);
+            LSCG_SendLocal(`Your ${type} has been grabbed by ${CharacterNickname(grabber)}! <br>[You can use '/lscg escape' to try and break free]`);
     }
 
     escapeAttempted: number = 0;
@@ -1980,6 +2103,7 @@ export class ActivityModule extends BaseModule {
             case "tongue": return ICONS.TONGUE;
             case "neck": return ICONS.NECK;
             case "mouth-with-foot": return "Icons/Management.png";
+            case "chomp": return "Assets/Female3DCG/Mouth/Angry/Icon.png";
             case "horn":
             case "arm": 
             default: return "Icons/Battle.png";
