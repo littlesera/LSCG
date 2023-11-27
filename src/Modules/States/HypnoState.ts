@@ -106,6 +106,18 @@ export class HypnoState extends BaseState {
         "%NAME% trembles with a quiet moan as %PRONOUN% yearns to obey..."
     ];
 
+    allowSpeechStrings = [
+        "%NAME% groans softly as %PRONOUN% is allowed speech once more...",
+        "%NAME% gasps quietly as %POSSESSIVE% mind can suddenly form sentences once again...",
+        "%NAME% furrows %POSSESSIVE% brow briefly, words returning to %INTENSIVE%"
+    ];
+
+    blockSpeechStrings = [
+        "%NAME% moans quietly as %PRONOUN% slips back down under trance...",
+        "%NAME%'s eyelids flutter gently as %PRONOUN% slumps back into silence...",
+        "%NAME%'s mouth falls silent once again..."
+    ];
+
     IdleEmote() {
         if (this.Active)
             SendAction(this.hypnoBlockStrings[getRandomInt(this.hypnoBlockStrings.length)]);
@@ -190,6 +202,20 @@ export class HypnoState extends BaseState {
         if (this.Active && this.hypnoSettings.enableArousal) {
             var progress = Math.min(99, (Player.ArousalSettings?.Progress ?? 0) + 5);
             ActivitySetArousal(Player, progress);
+        }
+    }
+    
+    AllowSpeech() {
+        if (this.Restrictions.Speech != "false") {
+            this.Restrictions.Speech = "false";
+            SendAction(this.allowSpeechStrings[getRandomInt(this.allowSpeechStrings.length)]);
+        }
+    }
+
+    PreventSpeech() {
+        if (this.Restrictions.Speech != "true") {
+            this.Restrictions.Speech = "true";
+            SendAction(this.blockSpeechStrings[getRandomInt(this.blockSpeechStrings.length)]);
         }
     }
 }

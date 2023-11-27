@@ -131,13 +131,21 @@ export class RemoteHypno extends RemoteGuiSubscreen {
 				setting: () => (this.settings.cycleTime ?? 30),
 				setSetting: (val) => this.settings.cycleTime = val
 			},<Setting>{
-				type: "label",
-				label: "",
-				description: ""
-			},<Setting>{
-				type: "label",
-				label: "",
-				description: ""
+				type: "text",
+				id: "hypno_speakWords",
+				label: "Allow Speech Trigger Words:",
+				description: "When spoken while hypnotized, will allow speech. Separated by a comma.",
+				disabled: !this.settings.enabled,
+				setting: () => this.settings.speakTriggers ?? "",
+				setSetting: (val) => this.settings.speakTriggers = val
+			}, <Setting>{
+				type: "text",
+				id: "hypno_silenceWords",
+				label: "Silence Trigger Words:",
+				description: "When spoken while hypnotized, will prevent speech. Separated by a comma.",
+				disabled: !this.settings.enabled,
+				setting: () => this.settings.silenceTriggers ?? "",
+				setSetting: (val) => this.settings.silenceTriggers = val
 			},<Setting>{
 				type: "checkbox",
 				label: "Remote Access Requires Trance:",
