@@ -1408,7 +1408,6 @@ export class ActivityModule extends BaseModule {
             CustomAction: {
                 Func: (target, args, next) => {
                     if (!!target) {
-                        CharacterSetFacialExpression(Player, "Mouth", null);
                         this.DoRelease(target, "chomp");
                     }
                     return next(args);
@@ -1419,7 +1418,7 @@ export class ActivityModule extends BaseModule {
     }
 
     get customGagged(): boolean {
-        return this.heldBy.some(h => h.Type == "tongue" || h.Type == "mouth") || this.footInMyMouth >= 0;
+        return this.heldBy.some(h => h.Type == "tongue" || h.Type == "mouth") || this.footInMyMouth >= 0 || this.chomping >= 0;
     };
     prevMouth: ExpressionName | null = null;
 
@@ -1563,7 +1562,7 @@ export class ActivityModule extends BaseModule {
         hookFunction("ServerSend", 1, (args, next) => {
             if (args[0] == "ChatRoomChat" && args[1]?.Type == "Chat"){
                 if (this.customGagged) {
-                    let gagIncrease = 2 * this.heldBy.filter(h => h.Type == "tongue" || h.Type == "mouth").length + ((this.footInMyMouth ?? -1) > -1 ? 3 : 0);
+                    let gagIncrease = 2 * this.heldBy.filter(h => h.Type == "tongue" || h.Type == "mouth").length + ((this.footInMyMouth ?? -1) > -1 ? 3 : 0) + ((this.chomping ?? -1) > -1 ? 4 : 0);
                     let currentGagLevel = callOriginal("SpeechGetTotalGagLevel", [Player, true]);
                     args[1].Content = SpeechGarbleByGagLevel(currentGagLevel + gagIncrease, args[1].Content);
                     args[1].Content = SpeechStutter(Player, args[1].Content);
@@ -1888,8 +1887,10 @@ export class ActivityModule extends BaseModule {
             this.hands = this.hands.filter(h => h.Member != member);
         if (type == "mouth-with-foot" || !type)
             this.myFootInMouth = -1;
-        if (type == "chomp" || !type)
+        if (type == "chomp" || !type) {
             this.chomping = -1;
+            CharacterSetFacialExpression(Player, "Mouth", null);
+        }
         else {
             this.hands = this.hands.filter(h => !(h.Member == member && h.Type == type));
             if (type == "hand")
