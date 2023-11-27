@@ -37,4 +37,6 @@ export interface HypnoPublicSettingsModel extends BaseSettingsModel {
     locked: boolean;
     //hypnotized: boolean;
     //hypnotizedBy: number;
+    speakTriggers: string;
+    silenceTriggers: string;
 }

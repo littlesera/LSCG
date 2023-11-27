@@ -81,6 +81,8 @@ export class PublicSettingsModel implements IPublicSettingsModel {
         locked: false,
         hypnotized: false,
         hypnotizedBy: 0,
+        speakTriggers: "",
+        silenceTriggers: ""
     };
     BoopsModule: BaseSettingsModel = <BaseSettingsModel>{enabled: false};
     LipstickModule: LipstickSettingsModel = <LipstickSettingsModel>{

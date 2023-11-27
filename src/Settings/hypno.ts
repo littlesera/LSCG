@@ -36,24 +36,6 @@ export class GuiHypno extends GuiSubscreen {
 						description: "Enabled the Triggered Hypnosis Features.",
 						setting: () => this.settings.enabled ?? false,
 						setSetting: (val) => this.settings.enabled = val
-					// },<Setting>{
-					// 	type: "checkbox",
-					// 	label: "Immersive Hypnosis:",
-					// 	description: "Makes the hypnotized experience more restrictive. LSCG settings will be unavailable while hypnotized and triggers are hidden.",
-					// 	disabled: !this.settings.enabled,
-					// 	setting: () => Player.LSCG.StateModule.states.find(s => s.type == "hypnotized")?.immersive ?? false,
-					// 	setSetting: (val) => {
-					// 		let hypnoSetting = Player.LSCG.StateModule.states.find(s => s.type == "hypnotized");
-					// 		if (!hypnoSetting) {
-					// 			hypnoSetting = <StateConfig>{
-					// 				type: "hypnotized",
-					// 				extensions: {},
-					// 				immersive: val
-					// 			}
-					// 			Player.LSCG.StateModule.states.push(hypnoSetting);
-					// 		} else
-					// 			hypnoSetting.immersive = val;
-					// 	}
 					},<Setting>{
 						type: "text",
 						id: "hypno_overrideWords",
@@ -173,6 +155,24 @@ export class GuiHypno extends GuiSubscreen {
 							let test = AssetGet("Female3DCG", "Eyes", "Eyes" + val);
 							if (!test) this.settings.hypnoEyeType = 9; // default to style 9 if somehow we can't find a valid eye type here.
 						}
+					}
+				], [
+					<Setting>{
+						type: "text",
+						id: "hypno_speakWords",
+						label: "Allow Speech Trigger Words:",
+						description: "When spoken while hypnotized, will allow speech. Separated by a comma.",
+						disabled: !this.settings.enabled,
+						setting: () => this.settings.speakTriggers ?? "",
+						setSetting: (val) => this.settings.speakTriggers = val
+					}, <Setting>{
+						type: "text",
+						id: "hypno_silenceWords",
+						label: "Silence Trigger Words:",
+						description: "When spoken while hypnotized, will prevent speech. Separated by a comma.",
+						disabled: !this.settings.enabled,
+						setting: () => this.settings.silenceTriggers ?? "",
+						setSetting: (val) => this.settings.silenceTriggers = val
 					}
 				]
 			]

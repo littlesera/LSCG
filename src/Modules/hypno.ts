@@ -44,6 +44,8 @@ export class HypnoModule extends BaseModule {
             limitRemoteAccessToHypnotizer: false,
             hypnoEyeColor: "#A2A2A2",
             hypnoEyeType: 9,
+            speakTriggers: "",
+            silenceTriggers: "",
             stats: {}
         };
     }
@@ -113,6 +115,8 @@ export class HypnoModule extends BaseModule {
                     args[1] = this.BlankOutTriggers(args[1]);
                     if (this.CheckAwakener(msg, C)) {
                         this.TriggerRestoreWord(C);
+                    } else  {
+                        this.CheckSpeechTriggers(msg, C);
                     }
                 }
                 else
@@ -177,6 +181,14 @@ export class HypnoModule extends BaseModule {
             return overrideWords;
         else
             return [this.settings.trigger];
+    }
+
+    get blockSpeechTriggers(): string[] {
+        return GetDelimitedList(this.settings.silenceTriggers);
+    }
+
+    get allowSpeechTriggers(): string[] {
+        return GetDelimitedList(this.settings.speakTriggers);
     }
 
     getNewTriggerWord(): string {
@@ -266,15 +278,23 @@ export class HypnoModule extends BaseModule {
         this.delayedActivations.set(entryName, count);
     }
 
-    CheckAwakener(msg: string, sender: Character) {
+    CheckAwakener(msg: string, sender: Character): boolean {
         return this._CheckForTriggers(msg, sender, this.awakeners, true);
+    }
+
+    CheckSpeechTriggers(msg: string, sender: Character) {
+        if (this._CheckForTriggers(msg, sender, this.blockSpeechTriggers, true)) {
+            this.StateModule.HypnoState.PreventSpeech();
+        } else if (this._CheckForTriggers(msg, sender, this.allowSpeechTriggers, true)) {
+            this.StateModule.HypnoState.AllowSpeech();
+        }
     }
 
     CheckTrigger(msg: string, sender: Character): boolean {
         return this._CheckForTriggers(msg, sender, this.triggers);
     }
 
-    _CheckForTriggers(msg: string, sender: Character, triggers: string[], awakener: boolean = false) {
+    _CheckForTriggers(msg: string, sender: Character, triggers: string[], awakener: boolean = false): boolean {
         // Skip on OOC
         if (msg.startsWith("(") || !triggers)
             return false;
