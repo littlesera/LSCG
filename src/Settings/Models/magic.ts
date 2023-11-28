@@ -12,7 +12,7 @@ export enum LSCGSpellEffect {
     muted = "Gagged", 
     frozen = "Petrifying",
     enlarge = "Enlarging",
-    reduce = "Reducing",
+    //reduce = "Reducing",
     bless = "Bless",
     bane = "Bane",
     paired_arousal = "Pairing", 
