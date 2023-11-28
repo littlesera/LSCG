@@ -15,11 +15,11 @@ export class ResizedState extends BaseState {
 
     Icon(C: OtherCharacter): string {
         let isEnlarge = C.LSCG?.StateModule.states.find(s => s.type == "resized")?.extensions["enlarged"] as boolean ?? false;
-        return isEnlarge ? ICONS.EXPAND : ICONS.SHRINK;
+        return isEnlarge ? ICONS.EXPAND : "";//ICONS.SHRINK;
     }
     Label(C: OtherCharacter): string {
         let isEnlarge = C.LSCG?.StateModule.states.find(s => s.type == "resized")?.extensions["enlarged"] as boolean ?? false;
-        return isEnlarge ? "Enlarged" : "Shrunk";
+        return isEnlarge ? "Enlarged" : "";//"Shrunk";
     }
 
     constructor(state: StateModule) {
@@ -37,16 +37,16 @@ export class ResizedState extends BaseState {
         return this;
     }
 
-    Reduce(MemberNumber?: number, duration?: number, emote?: boolean): BaseState {
-        if (this.Active && this.enlarged)
-            this.Recover(true);
-        else {
-            this.enlarged = false;
-            if (emote) SendAction(`%NAME%'s body reshapes and shrinks to half its size.`);
-            this.Activate(MemberNumber, duration, emote);
-        }
-        return this;
-    }
+    // Reduce(MemberNumber?: number, duration?: number, emote?: boolean): BaseState {
+    //     if (this.Active && this.enlarged)
+    //         this.Recover(true);
+    //     else {
+    //         this.enlarged = false;
+    //         if (emote) SendAction(`%NAME%'s body reshapes and shrinks to half its size.`);
+    //         this.Activate(MemberNumber, duration, emote);
+    //     }
+    //     return this;
+    // }
 
     Activate(memberNumber?: number | undefined, duration?: number, emote?: boolean | undefined): BaseState | undefined {
         this.config.extensions["originalHeightRatio"] = Player.HeightRatio;
@@ -59,6 +59,11 @@ export class ResizedState extends BaseState {
     }
 
     Init(): void {
+        // Force recover if shrunk on init.
+        if (this.Active && !this.enlarged) {
+            this.Recover(false);
+        }
+
         hookFunction("CharacterAppearanceGetCurrentValue", 1, (args, next) => {
             let C = args[0] as OtherCharacter;
             let Group = args[1];
@@ -72,7 +77,7 @@ export class ResizedState extends BaseState {
                 let stateModule = C.LSCG.StateModule;
                 if (stateModule.states.find(s => s.type == "resized")?.active) {
                     let enlarge = stateModule.states.find(s => s.type == "resized")?.extensions["enlarged"] ?? false;
-                    ret *= enlarge ? 1.5 : .75;
+                    ret *= enlarge ? 1.5 : 1;//.75;
                 }
             }
             return ret;

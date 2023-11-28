@@ -691,8 +691,8 @@ export class GuiMagic extends GuiSubscreen {
 				return "Induces a deep slumber in the target.";
 			case LSCGSpellEffect.enlarge:
 				return "Enlarges the target to twice their size.";
-			case LSCGSpellEffect.reduce:
-				return "Shrinks the target to half their size."
+			// case LSCGSpellEffect.reduce:
+			// 	return "Shrinks the target to half their size."
 			case LSCGSpellEffect.outfit:
 				return "Magically change the target's clothing and equipment.";
 			case LSCGSpellEffect.paired_arousal:
