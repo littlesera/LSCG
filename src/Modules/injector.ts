@@ -268,8 +268,8 @@ export class InjectorModule extends BaseModule {
                         Name: "ItemArms",
                         SelfAllowed: true,
                         TargetLabel: "Shoot Netgun",
-                        TargetAction: "SourceCharacter takes aim at TargetCharacter with their net gun.",
-                        TargetSelfAction: "SourceCharacter turns their net gun on themselves."
+                        TargetAction: "SourceCharacter takes aim at TargetCharacter with PronounPossessive net gun.",
+                        TargetSelfAction: "SourceCharacter turns PronounPossessive net gun on PronounSelf."
                     }
                 ],
                 CustomPrereqs: [
@@ -686,7 +686,7 @@ export class InjectorModule extends BaseModule {
     ];
 
     hornyDrinkStr = [
-        "%NAME% lets out a long low moan as %OPP_NAME%'s drink burns pleasurably down their throat.",
+        "%NAME% lets out a long low moan as %OPP_NAME%'s drink burns pleasurably down %POSSESSIVE% throat.",
         "%NAME%'s eyes roll back as a wave of pleasure emanates from %POSSESSIVE% belly.",
         "%NAME% gulps and quivers as %POSSESSIVE% body is slowly flooded with %OPP_NAME%'s aphrodisiac." 
     ];
@@ -813,7 +813,7 @@ export class InjectorModule extends BaseModule {
 
     SnapBack() {
         if (this.brainwashed) {
-            SendAction("%NAME% gasps, snapping back into their senses confused and blushing.");
+            SendAction("%NAME% gasps, snapping back into %POSSESSIVE% senses confused and blushing.");
             this.stateModule.HypnoState.Recover();
         }
     }
@@ -1044,10 +1044,10 @@ export class InjectorModule extends BaseModule {
         var itemName = itemUseModule.getItemName(InventoryGet(sender, "ItemHandheld")!);
         let check = getModule<ItemUseModule>("ItemUseModule")?.MakeActivityCheck(sender, Player);
         if (check.AttackerRoll.Total >= check.DefenderRoll.Total) {
-            SendAction(`${CharacterNickname(sender)} ${check.AttackerRoll.TotalStr}manages to get their ${itemName} past ${CharacterNickname(Player)}'s ${check.DefenderRoll.TotalStr}lips, forcing %INTENSIVE% to swallow.`);
+            SendAction(`${CharacterNickname(sender)} ${check.AttackerRoll.TotalStr}manages to get %OPP_POSSESSIVE% ${itemName} past ${CharacterNickname(Player)}'s ${check.DefenderRoll.TotalStr}lips, forcing %INTENSIVE% to swallow.`, sender);
             setTimeout(() => this.ProcessDruggedDrink(sender, fullPour), 5000);
         } else {
-            SendAction(`${CharacterNickname(Player)} ${check.DefenderRoll.TotalStr}successfully defends against ${CharacterNickname(sender)}'s ${check.AttackerRoll.TotalStr}attempt to force %INTENSIVE% to drink their ${itemName}, spilling drink all over.`);
+            SendAction(`${CharacterNickname(Player)} ${check.DefenderRoll.TotalStr}successfully defends against ${CharacterNickname(sender)}'s ${check.AttackerRoll.TotalStr}attempt to force %INTENSIVE% to drink %OPP_POSSESSIVE% ${itemName}, spilling drink all over.`, sender);
         }
     }
 
