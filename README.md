@@ -1,5 +1,8 @@
-# Little Sera Scripts!
-***DISCLAIMER***: Script under rapid development, if you have crashing errors suggestion is to disable for a little bit :3
+# Little Sera Club Games!
+
+### Recommended Use:
+**FUSAM Integration**: https://sidiousious.gitlab.io/bc-addon-loader/
+This addon allows you to enable/disable many other mods from a single location, including LSCG.
 
 ### TamperMonkey install:
 **Stable:** 
