@@ -453,18 +453,18 @@ export class CollarModule extends BaseModule {
         switch (this.totalChokeLevel) {
             case 1:
                 clearTimeout(this.chokeTimeout);
-                SendAction("%NAME%'s eyes flutter as %OPP_NAME% wraps their hand around %POSSESSIVE% neck.", chokingMember);
+                SendAction("%NAME%'s eyes flutter as %OPP_NAME% wraps %OPP_POSSESSIVE% hand around %POSSESSIVE% neck.", chokingMember);
                 setOrIgnoreBlush("Low");
                 CharacterSetFacialExpression(Player, "Eyes", "Sad");
                 break;
             case 2:
                 clearTimeout(this.chokeTimeout);
-                SendAction("%NAME% gasps for air as %OPP_NAME% tightens their grip on %POSSESSIVE% neck.", chokingMember);
+                SendAction("%NAME% gasps for air as %OPP_NAME% tightens %OPP_POSSESSIVE% grip on %POSSESSIVE% neck.", chokingMember);
                 setOrIgnoreBlush("Medium");
                 CharacterSetFacialExpression(Player, "Eyes", "Surprised");
                 break;
             case 3:
-                SendAction("%NAME%'s face runs flush, choking as %OPP_NAME% presses firmly against their neck, barely allowing any air to %POSSESSIVE% lungs.", chokingMember);
+                SendAction("%NAME%'s face runs flush, choking as %OPP_NAME% presses firmly against %OPP_POSSESSIVE% neck, barely allowing any air to %POSSESSIVE% lungs.", chokingMember);
                 setOrIgnoreBlush("High");
                 CharacterSetFacialExpression(Player, "Eyes", "Scared");
                 break;
@@ -479,7 +479,7 @@ export class CollarModule extends BaseModule {
     ReleaseHandChoke(chokingMember: Character | null, showEmote: boolean = true) {
         if (this.handChokeModifier > 0) {
             if (!!chokingMember && showEmote)
-                SendAction("%NAME% gasps in relief as %OPP_NAME% releases their pressure on %POSSESSIVE% neck.", chokingMember);
+                SendAction("%NAME% gasps in relief as %OPP_NAME% releases %OPP_POSSESSIVE% pressure on %POSSESSIVE% neck.", chokingMember);
             this.handChokeModifier = 0;
             if (this.totalChokeLevel < 4) {
                 clearTimeout(this.chokeTimeout);
@@ -629,7 +629,7 @@ export class CollarModule extends BaseModule {
     plugReleaseEmotes = [
         "%NAME% gasps and gulps for air.",
         "%NAME%'s lungs expand hungrily as %PRONOUN% gasps in air.",
-        "%NAME% groans as air is allowed back into their lungs.",
+        "%NAME% groans as air is allowed back into %POSSESSIVE% lungs.",
         "%NAME% gasps for air with a whimper."
     ]
 
@@ -662,7 +662,7 @@ export class CollarModule extends BaseModule {
         if (reason == PassoutReason.COLLAR)
             SendAction("%NAME%'s eyes start to roll back, gasping and choking as %POSSESSIVE% collar presses in tightly and completely with a menacing hiss.");
         else if (reason == PassoutReason.HAND)
-            SendAction("%NAME%'s eyes start to roll back with a groan as %OPP_NAME% completely closes %POSSESSIVE% airway with their hand.", chokingMember);
+            SendAction("%NAME%'s eyes start to roll back with a groan as %OPP_NAME% completely closes %POSSESSIVE% airway with %OPP_POSSESSIVE% hand.", chokingMember);
         else if (reason == PassoutReason.PLUGS)
             SendAction("%NAME%'s eyes flutter with a groan, unable to get any air to %POSSESSIVE% lungs.");
     }
@@ -681,7 +681,7 @@ export class CollarModule extends BaseModule {
         else if (reason == PassoutReason.HAND)
             SendAction("%NAME% chokes and spasms, %OPP_NAME% gripping %POSSESSIVE% throat relentlessly.", chokingMember);
         else if (reason == PassoutReason.PLUGS)
-            SendAction("%NAME% chokes and spasms, struggling in their gag.");
+            SendAction("%NAME% chokes and spasms, struggling in %POSSESSIVE% gag.");
     }
 
     Passout2(reason: PassoutReason = PassoutReason.COLLAR, chokingMember: Character | null = null) {
@@ -699,9 +699,9 @@ export class CollarModule extends BaseModule {
                 AudioPlaySoundEffect("HydraulicLock");
         }
         else if (reason == PassoutReason.HAND)
-            SendAction("%NAME% convulses weakly with a moan, %POSSESSIVE% eyes rolling back as %OPP_NAME% clenches around their throat even tighter.", chokingMember);
+            SendAction("%NAME% convulses weakly with a moan, %POSSESSIVE% eyes rolling back as %OPP_NAME% clenches around %POSSESSIVE% throat even tighter.", chokingMember);
         else if (reason == PassoutReason.PLUGS)
-            SendAction("%NAME% convulses weakly with a moan, %POSSESSIVE% eyes rolling back as their lungs scream for air.");
+            SendAction("%NAME% convulses weakly with a moan, %POSSESSIVE% eyes rolling back as %POSSESSIVE% lungs scream for air.");
     }
 
     Passout3(reason: PassoutReason = PassoutReason.COLLAR, chokingMember: Character | null = null) {
