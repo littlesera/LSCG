@@ -216,8 +216,8 @@ export class RemoteCollar extends RemoteGuiSubscreen {
 		this.settings.allowedMembers = `${Player.MemberNumber}`;
 		this.settings.tightTrigger = "tight";
 		this.settings.looseTrigger = "loose";
+		this.settingsSave();
 		this.Load();
 		ServerPlayerSync();
-		this.settingsSave();
 	}
 }
