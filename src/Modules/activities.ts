@@ -1358,6 +1358,7 @@ export class ActivityModule extends BaseModule {
             CustomAction: {
                 Func: (target, args, next) => {
                     if (!!target) {
+                        this.prevMouth = WardrobeGetExpression(Player)?.Mouth ?? null;
                         CharacterSetFacialExpression(Player, "Mouth", "Angry");
                         this.DoGrab(target, "chomp");
                     }
@@ -1780,7 +1781,7 @@ export class ActivityModule extends BaseModule {
             next(args);
             let data = args[0];
             if (data.BeepType == "Leash" && this.customLeashedByMemberNumbers.indexOf(data.MemberNumber) > -1 && data.ChatRoomName) {
-                if (Player.OnlineSharedSettings && Player.OnlineSharedSettings.AllowPlayerLeashing != false && ( CurrentScreen != "ChatRoom" || !ChatRoomData || (CurrentScreen == "ChatRoom" && ChatRoomData.Name != data.ChatRoomName))) {
+                if (Player.OnlineSharedSettings && Player.OnlineSharedSettings.AllowPlayerLeashing != false && (CurrentScreen != "ChatRoom" || !ChatRoomData || (CurrentScreen == "ChatRoom" && ChatRoomData.Name != data.ChatRoomName))) {
                     if (ChatRoomCanBeLeashedBy(data.MemberNumber, Player) && ChatSelectGendersAllowed(data.ChatRoomSpace, Player.GetGenders())) {
                         ChatRoomJoinLeash = data.ChatRoomName;
     
@@ -1822,7 +1823,7 @@ export class ActivityModule extends BaseModule {
     heldBy: HandOccupant[] = [];
 
     get customLeashedObjs(): HandOccupant[] {
-        return this.hands.concat(this.heldBy.filter(h => h.Type == "hand"));
+        return this.hands.concat(this.heldBy.filter(h => h.Type == "hand")).concat(this.chompedBy.map(chompNum => <HandOccupant>{Type: "chomp", Member: chompNum}));
     }
 
     get customLeashedMemberNumbers(): number[] {
@@ -1883,14 +1884,16 @@ export class ActivityModule extends BaseModule {
     }
 
     releaseGrab(member: number, type: GrabType | undefined) {
+        if ((type == "mouth-with-foot" || !type) && this.myFootInMouth == member)
+            this.myFootInMouth = -1;
+        if ((type == "chomp" || !type) && this.chomping == member) {
+            CharacterSetFacialExpression(Player, "Mouth", this.prevMouth);
+            this.prevMouth = null;
+            this.chomping = -1;
+        }
+
         if (!type)
             this.hands = this.hands.filter(h => h.Member != member);
-        if (type == "mouth-with-foot" || !type)
-            this.myFootInMouth = -1;
-        if (type == "chomp" || !type) {
-            this.chomping = -1;
-            CharacterSetFacialExpression(Player, "Mouth", null);
-        }
         else {
             this.hands = this.hands.filter(h => !(h.Member == member && h.Type == type));
             if (type == "hand")
