@@ -263,7 +263,7 @@ export class CoreModule extends BaseModule {
                     Object.assign(Player.LSCG.HypnoModule, msg.settings?.HypnoModule);
                     getModule<HypnoModule>("HypnoModule")?.initializeTriggerWord();
                 }
-                if (Player.LSCG.CollarModule.enabled && Player.LSCG.CollarModule.remoteAccess)
+                if ((!!Sender.MemberNumber && Player.IsOwnedByMemberNumber(Sender.MemberNumber)) || (Player.LSCG.CollarModule.enabled && Player.LSCG.CollarModule.remoteAccess))
                     Object.assign(Player.LSCG.CollarModule, msg.settings?.CollarModule);
                 if (Player.LSCG.MagicModule.enabled && Player.LSCG.MagicModule.remoteAccess)
                     Object.assign(Player.LSCG.MagicModule, msg.settings?.MagicModule);

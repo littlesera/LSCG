@@ -274,7 +274,7 @@ export class ItemUseModule extends BaseModule {
 					Name: "ItemMouth",
 					TargetLabel: "Gag Mouth",
 					TargetAction: "SourceCharacter gags TargetCharacter with PronounPossessive ActivityAsset.",
-					TargetSelfAction: "SourceCharacter gags themselves with their own ActivityAsset.",
+					TargetSelfAction: "SourceCharacter gags PronounSelf with PronounPossessive own ActivityAsset.",
 					SelfAllowed: true
 				},<ActivityTarget>{
 					Name: "ItemNeck",
@@ -437,8 +437,8 @@ export class ItemUseModule extends BaseModule {
 				<ActivityTarget>{
 					Name: "ItemMouth",
 					TargetLabel: "Move to Mouth",
-					TargetAction: "SourceCharacter moves TargetCharacter's ActivityAsset up to their mouth.",
-					TargetSelfAction: "SourceCharacter moves their own ActivityAsset up to PronounPossessive mouth.",
+					TargetAction: "SourceCharacter moves TargetCharacter's ActivityAsset up to PronounPossessive mouth.",
+					TargetSelfAction: "SourceCharacter moves PronounPossessive own ActivityAsset up to PronounPossessive mouth.",
 					SelfAllowed: true
 				},
 			],
@@ -1018,23 +1018,23 @@ export class ItemUseModule extends BaseModule {
 	}
 
 	TrySteal(target: Character, source: Character, item: Item) {
-		SendAction(`${CharacterNickname(source)} grabs at ${CharacterNickname(target)}'s ${this.getItemName(item)}, trying to steal it!`);
+		SendAction(`${CharacterNickname(Player)} grabs at ${CharacterNickname(target)}'s ${this.getItemName(item)}, trying to steal it!`);
 		setTimeout(() => this.Steal_Roll(target, source, item), 5000);
 	}
 
 	Steal_Roll(target: Character, source: Character, item: Item) {
-		let check = this.MakeActivityCheck(source, target);
+		let check = this.MakeActivityCheck(Player, target);
 
 		if (check.AttackerRoll.Total >= check.DefenderRoll.Total) {
-			SendAction(`${CharacterNickname(source)} ${check.AttackerRoll.TotalStr}manages to wrest ${CharacterNickname(target)}'s ${check.DefenderRoll.TotalStr}${this.getItemName(item)} out of their grasp!`);
+			SendAction(`%NAME% ${check.AttackerRoll.TotalStr}manages to wrest %OPP_NAME%'s ${check.DefenderRoll.TotalStr}${this.getItemName(item)} out of %OPP_POSSESSIVE% grasp!`, target);
 			InventoryRemove(target, "ItemHandheld", false);
-			let newItem = InventoryWear(source, item.Asset.Name, "ItemHandheld", item.Color, item.Difficulty, source.MemberNumber, item.Craft, false);
+			let newItem = InventoryWear(Player, item.Asset.Name, "ItemHandheld", item.Color, item.Difficulty, Player.MemberNumber, item.Craft, false);
 			if (!!newItem) newItem.Property = item.Property;
-			setTimeout(() => ChatRoomCharacterUpdate(source));
+			setTimeout(() => ChatRoomCharacterUpdate(Player));
 			setTimeout(() => ChatRoomCharacterUpdate(target));
 		}
 		else {
-			SendAction(`${CharacterNickname(source)} ${check.AttackerRoll.TotalStr}fails to steal ${CharacterNickname(target)}'s ${check.DefenderRoll.TotalStr}${this.getItemName(item)} and is dazed from the attempt!`);
+			SendAction(`%NAME% ${check.AttackerRoll.TotalStr}fails to steal %OPP_NAME%'s ${check.DefenderRoll.TotalStr}${this.getItemName(item)} and is dazed from the attempt!`, target);
 			this.failedStealTime = CommonTime();
 		}
 	}

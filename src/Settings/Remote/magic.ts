@@ -1,7 +1,7 @@
 import { RemoteGuiSubscreen } from "./remoteBase";
 import { Setting } from "Settings/settingBase";
 import { HypnoPublicSettingsModel } from "Settings/Models/hypno";
-import { GetDelimitedList, ICONS } from "utils";
+import { GetDelimitedList, ICONS, replace_template } from "utils";
 import { StateConfig } from "Settings/Models/states";
 import { LSCGSpellEffect, MagicPublicSettingsModel } from "Settings/Models/magic";
 import { GuiMagic } from "Settings/magic";
@@ -30,11 +30,11 @@ export class RemoteMagic extends RemoteGuiSubscreen {
 		if (!this.settings.enabled)
 			return "Section is Disabled";
 		if (!memberIdIsAllowed)
-			return "You do not have access to their mind...";
+			return replace_template("You do not have access to %OPP_POSSESSIVE% mind...", this.Character);
 		if (!passTranceReq)
-			return "They have too much willpower to let you in...";
+			return replace_template("%OPP_NAME% has too much willpower to let you in...", this.Character);
 		if (!passHypnotizerReq)
-			return "They seem suggestable, but not to you...";
+			return replace_template("%OPP_NAME% seems suggestable, but not to you...", this.Character);
 		else
 			return "Section is Unavailable";
 	}

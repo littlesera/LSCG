@@ -1,6 +1,6 @@
 import { BaseModule } from "base";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
-import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, hookFunction, ICONS, getCharacter, OnAction, callOriginal, LSCG_SendLocal, GetTargetCharacter, GetActivityName, GetMetadata, GetActivityEntryFromContent, IsActivityAllowed, sendLSCGCommand } from "../utils";
+import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, hookFunction, ICONS, getCharacter, OnAction, callOriginal, LSCG_SendLocal, GetTargetCharacter, GetActivityName, GetMetadata, GetActivityEntryFromContent, IsActivityAllowed, sendLSCGCommand, replace_template } from "../utils";
 import { getModule } from "modules";
 import { ItemUseModule } from "./item-use";
 import { CollarModule } from "./collar";
@@ -398,7 +398,7 @@ export class ActivityModule extends BaseModule {
                     Name: "ItemPenis",
                     SelfAllowed: false,
                     TargetLabel: "Rub Pussy",
-                    TargetAction: "SourceCharacter grinds their pussy against TargetCharacter's penis."
+                    TargetAction: "SourceCharacter grinds PronounPossessive pussy against TargetCharacter's penis."
                 }
             ],
             CustomImage: "Assets/Female3DCG/Activity/MasturbateHand.png"
@@ -1358,6 +1358,7 @@ export class ActivityModule extends BaseModule {
             CustomAction: {
                 Func: (target, args, next) => {
                     if (!!target) {
+                        this.prevMouth = WardrobeGetExpression(Player)?.Mouth ?? null;
                         CharacterSetFacialExpression(Player, "Mouth", "Angry");
                         this.DoGrab(target, "chomp");
                     }
@@ -1780,7 +1781,7 @@ export class ActivityModule extends BaseModule {
             next(args);
             let data = args[0];
             if (data.BeepType == "Leash" && this.customLeashedByMemberNumbers.indexOf(data.MemberNumber) > -1 && data.ChatRoomName) {
-                if (Player.OnlineSharedSettings && Player.OnlineSharedSettings.AllowPlayerLeashing != false && ( CurrentScreen != "ChatRoom" || !ChatRoomData || (CurrentScreen == "ChatRoom" && ChatRoomData.Name != data.ChatRoomName))) {
+                if (Player.OnlineSharedSettings && Player.OnlineSharedSettings.AllowPlayerLeashing != false && (CurrentScreen != "ChatRoom" || !ChatRoomData || (CurrentScreen == "ChatRoom" && ChatRoomData.Name != data.ChatRoomName))) {
                     if (ChatRoomCanBeLeashedBy(data.MemberNumber, Player) && ChatSelectGendersAllowed(data.ChatRoomSpace, Player.GetGenders())) {
                         ChatRoomJoinLeash = data.ChatRoomName;
     
@@ -1822,7 +1823,7 @@ export class ActivityModule extends BaseModule {
     heldBy: HandOccupant[] = [];
 
     get customLeashedObjs(): HandOccupant[] {
-        return this.hands.concat(this.heldBy.filter(h => h.Type == "hand"));
+        return this.hands.concat(this.heldBy.filter(h => h.Type == "hand")).concat(this.chompedBy.map(chompNum => <HandOccupant>{Type: "chomp", Member: chompNum}));
     }
 
     get customLeashedMemberNumbers(): number[] {
@@ -1883,14 +1884,16 @@ export class ActivityModule extends BaseModule {
     }
 
     releaseGrab(member: number, type: GrabType | undefined) {
+        if ((type == "mouth-with-foot" || !type) && this.myFootInMouth == member)
+            this.myFootInMouth = -1;
+        if ((type == "chomp" || !type) && this.chomping == member) {
+            CharacterSetFacialExpression(Player, "Mouth", this.prevMouth);
+            this.prevMouth = null;
+            this.chomping = -1;
+        }
+
         if (!type)
             this.hands = this.hands.filter(h => h.Member != member);
-        if (type == "mouth-with-foot" || !type)
-            this.myFootInMouth = -1;
-        if (type == "chomp" || !type) {
-            this.chomping = -1;
-            CharacterSetFacialExpression(Player, "Mouth", null);
-        }
         else {
             this.hands = this.hands.filter(h => !(h.Member == member && h.Type == type));
             if (type == "hand")
@@ -2069,7 +2072,7 @@ export class ActivityModule extends BaseModule {
 
     NotifyAboutEscapeCommand(grabber: Character, type: GrabType) {
         if (type == "mouth-with-foot")
-            LSCG_SendLocal(`${CharacterNickname(grabber)} has filled your mouth with their foot! <br>[You can use '/lscg escape' to try and escape]`);
+            LSCG_SendLocal(replace_template(`${CharacterNickname(grabber)} has filled your mouth with %OPP_POSSESSIVE% foot! <br>[You can use '/lscg escape' to try and escape]`, grabber));
         else if (type == "chomp")
             LSCG_SendLocal(`${CharacterNickname(grabber)} has chomped down hard on you! <br>[You can use '/lscg escape' to try and escape]`);
         else
@@ -2104,7 +2107,7 @@ export class ActivityModule extends BaseModule {
             return;
         }
 
-        SendAction(`${CharacterNickname(Player)} tries their best to escape from ${CharacterNickname(grabber)}'s grip...`);
+        SendAction(`${CharacterNickname(Player)} tries %POSSESSIVE% best to escape from %OPP_NAME%'s grip...`, grabber);
         setTimeout(() => {
             if (!grabber || !grabber?.MemberNumber)
                 return;
