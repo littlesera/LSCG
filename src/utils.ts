@@ -232,40 +232,38 @@ export function SendChat(msg: string) {
 
 export function replace_template(text: string, source: Character | null = null) {
     let result = text;
-	let pronounItem = InventoryGet(Player, "Pronouns");
-	let possessive = "Her";
-	let intensive = "Her"
-	let pronoun = "She";
-	if (pronounItem?.Asset.Name == "HeHim") {
-		possessive = "His";
-		intensive = "Him";
-		pronoun = "He";
-	}
 
-	let opp_pronounItem = !source? null : InventoryGet(source, "Pronouns");
-	let opp_male = opp_pronounItem?.Asset.Name == "HeHim" ?? false;
-	let oppName = !!source ? CharacterNickname(source) : "";
-	let oppPossessive = opp_male ? "His" : "Her";
-	let oppIntensive = opp_male ? "Him" : "Her";
-	let oppPronoun = opp_male ? "He" : "She";
+	let pronounItem = CharacterPronounDescription(Player);
+	let isPlayerMale = pronounItem == "He/Him" ?? false;
 
-	result = result.replaceAll("%NAME%", CharacterNickname(Player));
-    result = result.replaceAll("%POSSESSIVE%", possessive.toLocaleLowerCase());
-    result = result.replaceAll("%PRONOUN%", pronoun.toLocaleLowerCase());
-    result = result.replaceAll("%INTENSIVE%", intensive.toLocaleLowerCase());
-	result = result.replaceAll("%CAP_POSSESSIVE%", possessive);
-	result = result.replaceAll("%CAP_PRONOUN%", pronoun);
-    result = result.replaceAll("%CAP_INTENSIVE%", intensive);
+	let possessive = isPlayerMale ? "His" : "Her";
+	let intensive = isPlayerMale ? "Him" : "Her";
+	let pronoun = isPlayerMale ? "He" : "She";
 
-    result = result.replaceAll("%OPP_NAME%", oppName);
-	result = result.replaceAll("%CAP_OPP_PRONOUN%", oppPronoun);
-	result = result.replaceAll("%CAP_OPP_POSSESSIVE%", oppPossessive);
-	result = result.replaceAll("%CAP_OPP_INTENSIVE%", oppIntensive);
-	result = result.replaceAll("%OPP_PRONOUN%", oppPronoun.toLocaleLowerCase());
-	result = result.replaceAll("%OPP_POSSESSIVE%", oppPossessive.toLocaleLowerCase());
-	result = result.replaceAll("%OPP_INTENSIVE%", oppIntensive.toLocaleLowerCase());
+	let opp_pronounItem = !source ? null : CharacterPronounDescription(source);
+	let isOppMale = opp_pronounItem == "He/Him" ?? false;
+
+	let oppName = source == Player ? (isOppMale ? "himself" : "herself") : !!source ? CharacterNickname(source) : "";
+	let oppPossessive = isOppMale ? "His" : "Her";
+	let oppIntensive = source == Player ? (isOppMale ? "Himself" : "Herself") : (isOppMale ? "Him" : "Her");
+	let oppPronoun = isOppMale ? "He" : "She";
 
     return result
+		.replaceAll("%NAME%", CharacterNickname(Player))
+		.replaceAll("%POSSESSIVE%", possessive.toLocaleLowerCase())
+		.replaceAll("%PRONOUN%", pronoun.toLocaleLowerCase())
+		.replaceAll("%INTENSIVE%", intensive.toLocaleLowerCase())
+		.replaceAll("%CAP_POSSESSIVE%", possessive)
+		.replaceAll("%CAP_PRONOUN%", pronoun)
+		.replaceAll("%CAP_INTENSIVE%", intensive)
+
+		.replaceAll("%OPP_NAME%", oppName)
+		.replaceAll("%OPP_PRONOUN%", oppPronoun.toLocaleLowerCase())
+		.replaceAll("%OPP_POSSESSIVE%", oppPossessive.toLocaleLowerCase())
+		.replaceAll("%OPP_INTENSIVE%", oppIntensive.toLocaleLowerCase())
+		.replaceAll("%CAP_OPP_PRONOUN%", oppPronoun)
+		.replaceAll("%CAP_OPP_POSSESSIVE%", oppPossessive)
+		.replaceAll("%CAP_OPP_INTENSIVE%", oppIntensive);
 }
 
 export function getRandomInt(max: number) {

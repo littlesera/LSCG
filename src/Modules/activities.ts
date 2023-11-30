@@ -1,6 +1,6 @@
 import { BaseModule } from "base";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
-import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, hookFunction, ICONS, getCharacter, OnAction, callOriginal, LSCG_SendLocal, GetTargetCharacter, GetActivityName, GetMetadata, GetActivityEntryFromContent, IsActivityAllowed, sendLSCGCommand } from "../utils";
+import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, hookFunction, ICONS, getCharacter, OnAction, callOriginal, LSCG_SendLocal, GetTargetCharacter, GetActivityName, GetMetadata, GetActivityEntryFromContent, IsActivityAllowed, sendLSCGCommand, replace_template } from "../utils";
 import { getModule } from "modules";
 import { ItemUseModule } from "./item-use";
 import { CollarModule } from "./collar";
@@ -398,7 +398,7 @@ export class ActivityModule extends BaseModule {
                     Name: "ItemPenis",
                     SelfAllowed: false,
                     TargetLabel: "Rub Pussy",
-                    TargetAction: "SourceCharacter grinds their pussy against TargetCharacter's penis."
+                    TargetAction: "SourceCharacter grinds PronounPossessive pussy against TargetCharacter's penis."
                 }
             ],
             CustomImage: "Assets/Female3DCG/Activity/MasturbateHand.png"
@@ -2072,7 +2072,7 @@ export class ActivityModule extends BaseModule {
 
     NotifyAboutEscapeCommand(grabber: Character, type: GrabType) {
         if (type == "mouth-with-foot")
-            LSCG_SendLocal(`${CharacterNickname(grabber)} has filled your mouth with their foot! <br>[You can use '/lscg escape' to try and escape]`);
+            LSCG_SendLocal(replace_template(`${CharacterNickname(grabber)} has filled your mouth with %OPP_POSSESSIVE% foot! <br>[You can use '/lscg escape' to try and escape]`, grabber));
         else if (type == "chomp")
             LSCG_SendLocal(`${CharacterNickname(grabber)} has chomped down hard on you! <br>[You can use '/lscg escape' to try and escape]`);
         else
@@ -2107,7 +2107,7 @@ export class ActivityModule extends BaseModule {
             return;
         }
 
-        SendAction(`${CharacterNickname(Player)} tries their best to escape from ${CharacterNickname(grabber)}'s grip...`);
+        SendAction(`${CharacterNickname(Player)} tries %POSSESSIVE% best to escape from %OPP_NAME%'s grip...`, grabber);
         setTimeout(() => {
             if (!grabber || !grabber?.MemberNumber)
                 return;

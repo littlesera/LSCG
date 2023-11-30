@@ -340,7 +340,7 @@ export class HypnoModule extends BaseModule {
     }
 
     TriggerRestoreWord(speaker: Character) {
-        SendAction("%NAME% snaps back into their senses at %OPP_NAME%'s voice.", speaker);
+        SendAction("%NAME% snaps back into %POSSESSIVE% senses at %OPP_NAME%'s voice.", speaker);
         this.TriggerRestore();
     }
 
