@@ -1,7 +1,7 @@
 import { RemoteGuiSubscreen } from "./remoteBase";
 import { Setting } from "Settings/settingBase";
 import { HypnoPublicSettingsModel } from "Settings/Models/hypno";
-import { GetDelimitedList, ICONS } from "utils";
+import { GetDelimitedList, ICONS, replace_template } from "utils";
 import { CollarModel, CollarPublicSettingsModel } from "Settings/Models/collar";
 
 export class RemoteCollar extends RemoteGuiSubscreen {
@@ -20,14 +20,14 @@ export class RemoteCollar extends RemoteGuiSubscreen {
 
 	get disabledReason(): string {
 		if (!this.settings.collarPurchased && !this.Character.IsOwnedByPlayer())
-			return "You must be the owner to purchase this module for them...";
+			return replace_template("You must be the owner to purchase this module for %OPP_NAME%...", this.Character);
 
 		var memberIdIsAllowed = ServerChatRoomGetAllowItem(Player, this.Character);
 		if (this.allowedMemberIds.length > 0)
 			memberIdIsAllowed = this.allowedMemberIds.indexOf(Player.MemberNumber!) > -1;
 
 		if (!memberIdIsAllowed)
-			return "You do not have access to their collar...";
+			return replace_template("You do not have access to %OPP_POSSESSIVE% collar...", this.Character);
 		else
 			return "Section is Unavailable";
 	}
