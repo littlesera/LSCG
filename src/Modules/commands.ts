@@ -1,7 +1,7 @@
 import { BaseModule } from "base";
 import { getModule, modules } from "modules";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { getCharacter, getCharacterByNicknameOrMemberNumber, GetDelimitedList, LSCG_SendLocal, removeAllHooksByModule, SendAction, sendLSCGCommandBeep, settingsSave, toItemBundle } from "../utils";
+import { ExportSettings, getCharacter, getCharacterByNicknameOrMemberNumber, GetDelimitedList, ImportSettings, LSCG_SendLocal, removeAllHooksByModule, SendAction, sendLSCGCommandBeep, settingsSave, toItemBundle } from "../utils";
 import { HypnoModule } from "./hypno";
 import { ItemUseModule } from "./item-use";
 import { ActivityModule } from "./activities";
@@ -243,6 +243,30 @@ export class CommandModule extends BaseModule {
 
 					let itemList = items.map(item => `<li>${item.Group} - ${item.Name}</li>`).join("");
 					LSCG_SendLocal(`<div><b>Encoded Items:</b><ul>${itemList}</ul></div>`, 30000);
+				});
+			}
+		}, {
+			Tag: "export",
+			Description: " : Exports all LSCG settings into the clipboard.",
+			Action: (args, msg, parsed) => {
+				let compressed = ExportSettings();
+				navigator.clipboard.writeText(compressed);
+				LSCG_SendLocal(`<div><b>LSCG</b> settings copied to clipboard.`, 8000);
+			}
+		}, {
+			Tag: "import",
+			Description: " : Imports all LSCG settings from the clipboard, overwriting any current configuration.",
+			Action: (args, msg, parsed) => {
+				navigator.clipboard
+				.readText()
+				.then(compressed => {
+					if (!compressed)
+						LSCG_SendLocal("No content in clipboard.", 5000);
+					localStorage.setItem(`LSCG_${Player.MemberNumber}_Backup`, ExportSettings());
+					if (ImportSettings(compressed))
+						LSCG_SendLocal(`<div><b>LSCG</b> settings Imported from clipboard. If this was in error, try using /lscg restore</div>`, 30000);
+					else
+						LSCG_SendLocal(`Failed to import LSCG settings from clipboard.`, 30000);
 				});
 			}
 		}

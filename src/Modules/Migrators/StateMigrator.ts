@@ -5,7 +5,7 @@ export class StateMigrator extends BaseMigrator {
     get Version(): string {
         return "0.3.0";
     }
-    Migrate(fromVersion: string): void {
+    Migrate(fromVersion: string): boolean {
         // Migration to StatesModule
         console.info("Migrating LSCG Data for new States Module.");
         let anyImmersive = (Player.LSCG?.HypnoModule as any).immersive || (Player.LSCG?.InjectorModule as any).immersive || (Player.LSCG?.MiscModule as any).immersiveChloroform;
@@ -50,5 +50,7 @@ export class StateMigrator extends BaseMigrator {
 
         // Migrate immersive bools
         delete (Player.LSCG?.MiscModule as any).immersiveChloroform;
+
+        return true;
     }
 }

@@ -173,6 +173,7 @@ export class CoreModule extends BaseModule {
 
     CheckVersionUpdate() {
         var previousVersion = Player.LSCG?.Version;
+        let saveRequired = false;
         if (!previousVersion || previousVersion != LSCG_VERSION) {
             this.ShowChangelog();
             if (!Player.LSCG) {
@@ -180,23 +181,26 @@ export class CoreModule extends BaseModule {
                 this.registerDefaultSettings();
             }
             previousVersion = Player.LSCG.Version = LSCG_VERSION;
-            settingsSave();
+            saveRequired = true;
         }
-        this.CheckForMigrations(previousVersion);
+        saveRequired = saveRequired || this.CheckForMigrations(previousVersion);
+        if (saveRequired) settingsSave();
     }
 
     Migrators: BaseMigrator[] = [new StateMigrator()]
 
-    CheckForMigrations(fromVersion: string) {
+    CheckForMigrations(fromVersion: string): boolean {
         if (fromVersion[0] == 'v')
             fromVersion = fromVersion.substring(1);
 
+        let saveRequired = false;
         this.Migrators.forEach(m => {
-            if (lt(fromVersion, m.Version))
-                m.Migrate(fromVersion);
+            if (lt(fromVersion, m.Version)) {
+                saveRequired = saveRequired || m.Migrate(fromVersion);
+            }
         });
 
-        settingsSave();
+        return saveRequired;
     }
 
     SendPublicPacket(replyRequested: boolean, type: LSCGMessageModelType = "init") {

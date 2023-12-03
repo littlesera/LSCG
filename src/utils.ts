@@ -5,6 +5,7 @@ import { MiscModule } from "Modules/misc";
 import { ActivityEntryModel } from "Settings/Models/activities";
 import { ModuleCategory } from "Settings/setting_definitions";
 import { cloneDeep, clone } from "lodash-es";
+import { PublicSettingsModel, SettingsModel } from "Settings/Models/settings";
 
 export const LSCG_CHANGES: string = "https://github.com/littlesera/LSCG/releases/latest";
 export const LSCG_TEAL: string = "#00d5d5";
@@ -273,10 +274,67 @@ export function getRandomInt(max: number) {
 export function settingsSave(publish: boolean = false) {
 	if (!Player.OnlineSettings)
 		Player.OnlineSettings = <PlayerOnlineSettings>{};
-    Player.OnlineSettings.LSCG = LZString.compressToUTF16(JSON.stringify(Player.LSCG));
+	let cleaned = CleanDefaultsFromSettings(Player.LSCG);
+	let cleanedAndCompressed = LZString.compressToBase64(JSON.stringify(CleanDefaultsFromSettings(Player.LSCG)));
+	let cleanedDataSize = GetDataSizeReport(cleanedAndCompressed, false);
+    Player.OnlineSettings.LSCG = LZString.compressToBase64(JSON.stringify(Player.LSCG));
+	let currentDataSize = GetDataSizeReport(Player.OnlineSettings.LSCG, false);
+	console.log(`LSCG Save Size: ${currentDataSize} bytes, with clean it could be: ${cleanedDataSize} bytes`);
+	console.debug("Cleaned:");
+	console.debug(cleaned);
     window.ServerAccountUpdate.QueueData({OnlineSettings: Player.OnlineSettings});
 	if (publish)
 		getModule<CoreModule>("CoreModule")?.SendPublicPacket(false, "sync");
+}
+
+export function ExportSettings(): string {
+	return LZString.compressToBase64(JSON.stringify(Player.LSCG));
+}
+
+export function ImportSettings(val: string): boolean {
+	try {
+		let parsed = JSON.parse(LZString.decompressFromBase64(val))
+		if (!!parsed) {
+			Player.LSCG = parsed;
+			settingsSave(true);
+			return true;
+		} else
+			return false;
+	}
+	catch (error) {
+		console.error("LSCG Error on Import:")
+		console.error(error);
+		return false;
+	}
+}
+
+export function CleanDefaultsFromSettings(settings: SettingsModel) : SettingsModel {
+	let newObj = JSON.parse(JSON.stringify(settings));
+	Object.keys(newObj).forEach(key => {
+		let defaultModule = getModule(key);
+		let settingModule = (<any>newObj)[key];
+		if (!!defaultModule) {
+			let defaults = defaultModule.defaultSettings as any;
+			_compareAndTrimObjects(defaults, settingModule);
+		}
+	})
+	return newObj;
+}
+
+function _compareAndTrimObjects(defaults: any, settings: any) {
+	if (!defaults)
+		return;
+	Object.keys(defaults).forEach(dk => {
+		let defaultVal = defaults[dk];
+		let settingVal = settings[dk];
+		if (typeof defaultVal === "number")
+			settingVal = parseInt(settings[dk]);
+		
+		if (typeof settingVal === "object")
+			_compareAndTrimObjects(defaultVal, settingVal);
+		else if (defaultVal === settingVal)
+			delete settings[dk];
+	})
 }
 
 /** Checks if the `obj` is an object (not null, not array) */
@@ -666,9 +724,10 @@ function measureDataSize(data: any) {
 }
 
 // Data Measuring Function from Joshmir
-export function GetDataSizeReport(data: any) {
+export function GetDataSizeReport(data: any, log: boolean = true): number {
     let res = `Type: ${data == null ? "null" : Array.isArray(data) ? "array" : typeof data}\n`;
-    res += `Size: ${measureDataSize(data)}\n`;
+	let totalSize = measureDataSize(data);
+    res += `Size: ${totalSize}\n`;
 
     if (typeof data === "string" && data.length < 64) {
         res += `Value: ${JSON.stringify(data)}\n`;
@@ -681,7 +740,9 @@ export function GetDataSizeReport(data: any) {
         }
     }
 
-    console.log(res);
+	if (log)
+    	console.log(res);
+	return totalSize;
 }
 
 export function stringIsCompressedItemBundleArray(str: string): boolean {
