@@ -6,6 +6,8 @@ import { ActivityEntryModel } from "Settings/Models/activities";
 import { ModuleCategory } from "Settings/setting_definitions";
 import { cloneDeep, clone } from "lodash-es";
 import { PublicSettingsModel, SettingsModel } from "Settings/Models/settings";
+import { lt } from "semver";
+import { BaseSettingsModel } from "Settings/Models/base";
 
 export const LSCG_CHANGES: string = "https://github.com/littlesera/LSCG/releases/latest";
 export const LSCG_TEAL: string = "#00d5d5";
@@ -289,21 +291,39 @@ export function settingsSave(publish: boolean = false) {
 
 export function ExportSettings(): string {
 	return LZString.compressToBase64(JSON.stringify(Player.LSCG));
+	// let parsed =  JSON.parse(JSON.stringify(Player.LSCG)); //CleanDefaultsFromSettings(Player.LSCG);
+	// Object.keys(parsed).filter(key => key != "Version").forEach(key => {
+	// 	let module = (<any>parsed)[key];
+	// 	Object.keys(module).forEach(mk => {
+	// 		if (mk == "stats")
+	// 			delete module[mk];
+	// 	});
+	// });
+	// return LZString.compressToBase64(JSON.stringify(parsed));
 }
 
 export function ImportSettings(val: string): boolean {
 	try {
-		let parsed = JSON.parse(LZString.decompressFromBase64(val))
-		if (!!parsed) {
-			Player.LSCG = parsed;
+		let oldSettings = JSON.parse(JSON.stringify(Player.LSCG));
+		localStorage.setItem(`LSCG_${Player.MemberNumber}_Backup`, LZString.compressToBase64(JSON.stringify(oldSettings)));
+		let parsed = JSON.parse(LZString.decompressFromBase64(val)) as SettingsModel;
+		if (!!parsed && !!parsed.GlobalModule) {
+			if (lt(parsed.Version, LSCG_VERSION)) {
+				return false;
+			}
+			Player.LSCG = parsed; //Object.assign(Player.LSCG, parsed);
+			Player.LSCG.Version = oldSettings.Version;
+			Player.LSCG.ActivityModule.stats = Object.assign({}, oldSettings.ActivityModule.stats);
+			Player.LSCG.CollarModule.stats = Object.assign({}, oldSettings.CollarModule.stats);
+			Player.LSCG.HypnoModule.stats = Object.assign({}, oldSettings.HypnoModule.stats);
+			Player.LSCG.InjectorModule.stats = Object.assign({}, oldSettings.InjectorModule.stats);
 			settingsSave(true);
 			return true;
 		} else
 			return false;
 	}
 	catch (error) {
-		console.error("LSCG Error on Import:")
-		console.error(error);
+		console.error("LSCG Error on Import")
 		return false;
 	}
 }
@@ -327,13 +347,17 @@ function _compareAndTrimObjects(defaults: any, settings: any) {
 	Object.keys(defaults).forEach(dk => {
 		let defaultVal = defaults[dk];
 		let settingVal = settings[dk];
-		if (typeof defaultVal === "number")
-			settingVal = parseInt(settings[dk]);
-		
-		if (typeof settingVal === "object")
-			_compareAndTrimObjects(defaultVal, settingVal);
-		else if (defaultVal === settingVal)
+		if (!Array.isArray(settingVal)) {
+			if (typeof defaultVal === "number")
+				settingVal = parseInt(settings[dk]);
+			
+			if (typeof settingVal === "object")
+				_compareAndTrimObjects(defaultVal, settingVal);
+			else if (defaultVal === settingVal)
+				delete settings[dk];
+		} else if (JSON.stringify(defaultVal) === JSON.stringify(settingVal)) {
 			delete settings[dk];
+		}
 	})
 }
 

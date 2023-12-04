@@ -208,7 +208,7 @@ export class CommandModule extends BaseModule {
 			}
 		}, {
 			Tag: "get-polymorph-code",
-			Description: " [target?] : Prints the current base64 encoded outfit string for yourself or [target].",
+			Description: " [target?] : Prints the current base64 encoded polymorph string for yourself or [target].",
 			Action: (args, msg, parsed) => {
 				let target = getCharacterByNicknameOrMemberNumber(args);
 				if (!target)
@@ -221,6 +221,21 @@ export class CommandModule extends BaseModule {
 				str = PolymorphedState.CleanItemCode(str);
 				navigator.clipboard.writeText(str);
 				LSCG_SendLocal(`<div><b>Polymorph Code for ${targetName} copied to clipboard.`, 8000);
+			}
+		}, {
+			Tag: "get-items-code",
+			Description: " [target?] : Prints the current base64 encoded item bundle array for yourself or [target].",
+			Action: (args, msg, parsed) => {
+				let target = getCharacterByNicknameOrMemberNumber(args);
+				if (!target)
+					target = Player;
+				if (!target)
+					return;
+				let targetName = CharacterNickname(target);
+				let items = target.Appearance.map(item => toItemBundle(item, target));
+				let str = LZString.compressToBase64(JSON.stringify(items));
+				navigator.clipboard.writeText(str);
+				LSCG_SendLocal(`<div><b>Encoded Item Bundle Code for ${targetName} copied to clipboard.`, 8000);
 			}
 		}, {
 			Tag: "parse-code",

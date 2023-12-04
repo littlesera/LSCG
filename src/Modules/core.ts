@@ -64,7 +64,6 @@ export class CoreModule extends BaseModule {
 
     load(): void {
         hookFunction("ChatRoomSync", 1, (args, next) => {
-            this.CheckVersionUpdate();
             this.SendPublicPacket(true);
             return next(args);
         }, ModuleCategory.Core);
@@ -158,13 +157,6 @@ export class CoreModule extends BaseModule {
         DrawButton(X, Y, Width, Height, "", this.settings.seeSharedCrafts ? "White" : "Red", "", "Toggle Shared Crafts", false);
         DrawImageResize("Icons/Online.png", X + 2, Y + 2, Width - 4, Height - 4);
         DrawLineCorner(X + 2, Y + 2, X + Width - 2, Y + Height - 2, X + 2, Y + 2, 2, "Black");
-    }
-
-    run(): void {
-        if (ServerPlayerIsInChatRoom()) {
-            this.CheckVersionUpdate();
-            this.SendPublicPacket(true);
-        }
     }
 
     unload(): void {

@@ -80,6 +80,8 @@ function init() {
 		let parsed = <SettingsModel>{};
 		try {
 			parsed = JSON.parse(LZString.decompressFromBase64(Player.OnlineSettings?.LSCG));
+			if (!parsed)
+				parsed = JSON.parse(LZString.decompressFromUTF16(Player.OnlineSettings?.LSCG));
 		} catch (error) {
 			try {
 				parsed = JSON.parse(LZString.decompressFromUTF16(Player.OnlineSettings?.LSCG)); // Fallback to old compression
@@ -95,12 +97,15 @@ function init() {
 
 	initSettingsScreen();
 
+	debugger;
 	if (!init_modules()) {
 		unload();
 		return;
 	}
 
 	//settingsSave();
+	// Checks for new version and migrations and does a save if things updated.
+	getModule<CoreModule>("CoreModule")?.CheckVersionUpdate();
 
 	const currentAccount = Player.MemberNumber;
 	if (currentAccount == null) {

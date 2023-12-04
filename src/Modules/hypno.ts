@@ -148,8 +148,7 @@ export class HypnoModule extends BaseModule {
 
         // Set Trigger
         if (!this.settings.trigger) {
-            this.settings.trigger = this.getNewTriggerWord();
-            settingsSave();
+            this.settings.trigger = this.getNewTriggerWord();            
         }
     }
 
