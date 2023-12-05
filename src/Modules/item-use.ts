@@ -150,6 +150,8 @@ export class ItemUseModule extends BaseModule {
 	]
 
     load(): void {
+		this.HackAssetPrereqs();
+
 		hookFunction("ActivityGenerateItemActivitiesFromNeed", 1, (args, next) => {
 			let allowed = args[0] as ItemActivity[];
 			let acting = args[1] as Character;
@@ -1104,5 +1106,12 @@ export class ItemUseModule extends BaseModule {
 			handled = true;
 		}
 		return handled;
+	}
+
+	HackAssetPrereqs() {
+		if (!AssetMap)
+			return;
+		AssetMap.get("ItemHandheld/Phone2")!.Prerequisite = [];
+		AssetMap.get("ItemHandheld/Phone1")!.Prerequisite = [];
 	}
 }
