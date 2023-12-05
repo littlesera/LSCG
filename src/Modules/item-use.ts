@@ -150,8 +150,6 @@ export class ItemUseModule extends BaseModule {
 	]
 
     load(): void {
-		this.HackAssetPrereqs();
-
 		hookFunction("ActivityGenerateItemActivitiesFromNeed", 1, (args, next) => {
 			let allowed = args[0] as ItemActivity[];
 			let acting = args[1] as Character;
