@@ -64,7 +64,6 @@ export class CoreModule extends BaseModule {
 
     load(): void {
         hookFunction("ChatRoomSync", 1, (args, next) => {
-            this.CheckVersionUpdate();
             this.SendPublicPacket(true);
             return next(args);
         }, ModuleCategory.Core);
@@ -160,19 +159,13 @@ export class CoreModule extends BaseModule {
         DrawLineCorner(X + 2, Y + 2, X + Width - 2, Y + Height - 2, X + 2, Y + 2, 2, "Black");
     }
 
-    run(): void {
-        if (ServerPlayerIsInChatRoom()) {
-            this.CheckVersionUpdate();
-            this.SendPublicPacket(true);
-        }
-    }
-
     unload(): void {
         removeAllHooksByModule(ModuleCategory.Core);
     }
 
     CheckVersionUpdate() {
         var previousVersion = Player.LSCG?.Version;
+        let saveRequired = false;
         if (!previousVersion || previousVersion != LSCG_VERSION) {
             this.ShowChangelog();
             if (!Player.LSCG) {
@@ -180,23 +173,26 @@ export class CoreModule extends BaseModule {
                 this.registerDefaultSettings();
             }
             previousVersion = Player.LSCG.Version = LSCG_VERSION;
-            settingsSave();
+            saveRequired = true;
         }
-        this.CheckForMigrations(previousVersion);
+        saveRequired = saveRequired || this.CheckForMigrations(previousVersion);
+        if (saveRequired) settingsSave();
     }
 
     Migrators: BaseMigrator[] = [new StateMigrator()]
 
-    CheckForMigrations(fromVersion: string) {
+    CheckForMigrations(fromVersion: string): boolean {
         if (fromVersion[0] == 'v')
             fromVersion = fromVersion.substring(1);
 
+        let saveRequired = false;
         this.Migrators.forEach(m => {
-            if (lt(fromVersion, m.Version))
-                m.Migrate(fromVersion);
+            if (lt(fromVersion, m.Version)) {
+                saveRequired = saveRequired || m.Migrate(fromVersion);
+            }
         });
 
-        settingsSave();
+        return saveRequired;
     }
 
     SendPublicPacket(replyRequested: boolean, type: LSCGMessageModelType = "init") {

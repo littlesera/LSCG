@@ -54,7 +54,6 @@ export class HypnoState extends BaseState {
         if (!this.config.activatedAt) {
             this.config.activatedAt = 0;
             this.config.recoveredAt = 0;
-            settingsSave();
         }
     }
 

@@ -5,6 +5,9 @@ import { MiscModule } from "Modules/misc";
 import { ActivityEntryModel } from "Settings/Models/activities";
 import { ModuleCategory } from "Settings/setting_definitions";
 import { cloneDeep, clone } from "lodash-es";
+import { PublicSettingsModel, SettingsModel } from "Settings/Models/settings";
+import { lt } from "semver";
+import { BaseSettingsModel } from "Settings/Models/base";
 
 export const LSCG_CHANGES: string = "https://github.com/littlesera/LSCG/releases/latest";
 export const LSCG_TEAL: string = "#00d5d5";
@@ -273,10 +276,89 @@ export function getRandomInt(max: number) {
 export function settingsSave(publish: boolean = false) {
 	if (!Player.OnlineSettings)
 		Player.OnlineSettings = <PlayerOnlineSettings>{};
-    Player.OnlineSettings.LSCG = LZString.compressToUTF16(JSON.stringify(Player.LSCG));
+	let cleaned = CleanDefaultsFromSettings(Player.LSCG);
+	let cleanedAndCompressed = LZString.compressToBase64(JSON.stringify(CleanDefaultsFromSettings(Player.LSCG)));
+	let cleanedDataSize = GetDataSizeReport(cleanedAndCompressed, false);
+    Player.OnlineSettings.LSCG = LZString.compressToBase64(JSON.stringify(Player.LSCG));
+	let currentDataSize = GetDataSizeReport(Player.OnlineSettings.LSCG, false);
+	console.log(`LSCG Save Size: ${currentDataSize} bytes, with clean it could be: ${cleanedDataSize} bytes`);
+	console.debug("Cleaned:");
+	console.debug(cleaned);
     window.ServerAccountUpdate.QueueData({OnlineSettings: Player.OnlineSettings});
 	if (publish)
 		getModule<CoreModule>("CoreModule")?.SendPublicPacket(false, "sync");
+}
+
+export function ExportSettings(): string {
+	return LZString.compressToBase64(JSON.stringify(Player.LSCG));
+	// let parsed =  JSON.parse(JSON.stringify(Player.LSCG)); //CleanDefaultsFromSettings(Player.LSCG);
+	// Object.keys(parsed).filter(key => key != "Version").forEach(key => {
+	// 	let module = (<any>parsed)[key];
+	// 	Object.keys(module).forEach(mk => {
+	// 		if (mk == "stats")
+	// 			delete module[mk];
+	// 	});
+	// });
+	// return LZString.compressToBase64(JSON.stringify(parsed));
+}
+
+export function ImportSettings(val: string): boolean {
+	try {
+		let oldSettings = JSON.parse(JSON.stringify(Player.LSCG));
+		localStorage.setItem(`LSCG_${Player.MemberNumber}_Backup`, LZString.compressToBase64(JSON.stringify(oldSettings)));
+		let parsed = JSON.parse(LZString.decompressFromBase64(val)) as SettingsModel;
+		if (!!parsed && !!parsed.GlobalModule) {
+			if (lt(parsed.Version, LSCG_VERSION)) {
+				return false;
+			}
+			Player.LSCG = parsed; //Object.assign(Player.LSCG, parsed);
+			Player.LSCG.Version = oldSettings.Version;
+			Player.LSCG.ActivityModule.stats = Object.assign({}, oldSettings.ActivityModule.stats);
+			Player.LSCG.CollarModule.stats = Object.assign({}, oldSettings.CollarModule.stats);
+			Player.LSCG.HypnoModule.stats = Object.assign({}, oldSettings.HypnoModule.stats);
+			Player.LSCG.InjectorModule.stats = Object.assign({}, oldSettings.InjectorModule.stats);
+			settingsSave(true);
+			return true;
+		} else
+			return false;
+	}
+	catch (error) {
+		console.error("LSCG Error on Import")
+		return false;
+	}
+}
+
+export function CleanDefaultsFromSettings(settings: SettingsModel) : SettingsModel {
+	let newObj = JSON.parse(JSON.stringify(settings));
+	Object.keys(newObj).forEach(key => {
+		let defaultModule = getModule(key);
+		let settingModule = (<any>newObj)[key];
+		if (!!defaultModule) {
+			let defaults = defaultModule.defaultSettings as any;
+			_compareAndTrimObjects(defaults, settingModule);
+		}
+	})
+	return newObj;
+}
+
+function _compareAndTrimObjects(defaults: any, settings: any) {
+	if (!defaults)
+		return;
+	Object.keys(defaults).forEach(dk => {
+		let defaultVal = defaults[dk];
+		let settingVal = settings[dk];
+		if (!Array.isArray(settingVal)) {
+			if (typeof defaultVal === "number")
+				settingVal = parseInt(settings[dk]);
+			
+			if (typeof settingVal === "object")
+				_compareAndTrimObjects(defaultVal, settingVal);
+			else if (defaultVal === settingVal)
+				delete settings[dk];
+		} else if (JSON.stringify(defaultVal) === JSON.stringify(settingVal)) {
+			delete settings[dk];
+		}
+	})
 }
 
 /** Checks if the `obj` is an object (not null, not array) */
@@ -666,9 +748,10 @@ function measureDataSize(data: any) {
 }
 
 // Data Measuring Function from Joshmir
-export function GetDataSizeReport(data: any) {
+export function GetDataSizeReport(data: any, log: boolean = true): number {
     let res = `Type: ${data == null ? "null" : Array.isArray(data) ? "array" : typeof data}\n`;
-    res += `Size: ${measureDataSize(data)}\n`;
+	let totalSize = measureDataSize(data);
+    res += `Size: ${totalSize}\n`;
 
     if (typeof data === "string" && data.length < 64) {
         res += `Value: ${JSON.stringify(data)}\n`;
@@ -681,7 +764,9 @@ export function GetDataSizeReport(data: any) {
         }
     }
 
-    console.log(res);
+	if (log)
+    	console.log(res);
+	return totalSize;
 }
 
 export function stringIsCompressedItemBundleArray(str: string): boolean {

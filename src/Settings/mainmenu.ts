@@ -2,7 +2,7 @@ import { getModule } from "modules";
 import { MiscModule } from "Modules/misc";
 import { GuiSubscreen } from "./settingBase";
 import { GUI } from "./settingUtils";
-import { LSCG_CHANGES, sleep } from "utils";
+import { ExportSettings, ImportSettings, LSCG_CHANGES, sleep } from "utils";
 import { GuiReset } from "./reset";
 import { CoreModule } from "Modules/core";
 import { StateModule } from "Modules/states";
@@ -92,9 +92,16 @@ export class MainMenu extends GuiSubscreen {
 		}
 
 		MainCanvas.textAlign = "left";
-		DrawButton(1500, 620, 400, 80, "", "#ffc9c9", "", "Emergency reset of LSCG");		
-		DrawImageResize("Icons/ServiceBell.png", 1510, 630, 60, 60);
-        DrawTextFit("Reset", 1580, 660, 320, "Black");
+		DrawButton(1500, 520, 400, 80, "", "#ffc9c9", "", "Emergency reset of LSCG");		
+		DrawImageResize("Icons/ServiceBell.png", 1510, 530, 60, 60);
+        DrawTextFit("Reset", 1580, 560, 320, "Black");
+
+		DrawButton(1500, 620, 190, 80, "", "White", "", "Export LSCG Settings");		
+		//DrawImageResize("Icons/Preference.png", 1510, 630, 60, 60);
+        DrawTextFit("Export", 1540, 660, 190, "Black");
+		DrawButton(1710, 620, 190, 80, "", "White", "", "Import LSCG Settings");		
+		//DrawImageResize("Icons/Preference.png", 1510, 630, 60, 60);
+        DrawTextFit("Import", 1750, 660, 190, "Black");
 
 		DrawButton(1500, 720, 400, 80, "", "White", "", "Open LSCG Latest Release on Github.", false);
 		DrawImageResize("Icons/Changelog.png", 1510, 730, 60, 60);
@@ -127,8 +134,31 @@ export class MainMenu extends GuiSubscreen {
 			}
 		}
 
-		if (MouseIn(1500, 620, 400, 80))
+		if (MouseIn(1500, 520, 400, 80))
             this.setSubscreen(this.resetSubscreen);
+
+		if (MouseIn(1500, 620, 190, 80)) {
+			let compressed = ExportSettings();
+			navigator.clipboard.writeText(compressed);
+			alert(`LSCG settings copied to clipboard.`);
+		}
+
+		if (MouseIn(1710, 620, 190, 80)) {
+			if (confirm("Importing settings will overwrite existing settings. \nAre you sure?")) {
+				setTimeout(() => {
+					navigator.clipboard
+					.readText()
+					.then(compressed => {
+						if (!compressed)
+							alert("No content in clipboard.");
+						if (ImportSettings(compressed))
+							alert(`LSCG settings Imported from clipboard.`);
+						else
+							alert(`Failed to import LSCG settings from clipboard.`);
+					});
+				}, 500);
+			}
+		}
 
 		if (MouseIn(1500, 720, 400, 80))
             window.open(LSCG_CHANGES, '_blank');

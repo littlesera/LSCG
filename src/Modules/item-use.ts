@@ -731,11 +731,6 @@ export class ItemUseModule extends BaseModule {
 					TargetLabel: "Shark Bite",
 					TargetAction: "SourceCharacter's ActivityAsset chomps on TargetCharacter.",
 					SelfAllowed: false
-				},  <ActivityTarget>{
-					Name: "ItemNose",
-					TargetLabel: "Shark Boop",
-					TargetAction: "SourceCharacter boops TargetCharacter's nose with PronounPossessive ActivityAsset.",
-					SelfAllowed: false
 				}
 			],
 			CustomPrereqs: [
@@ -748,6 +743,25 @@ export class ItemUseModule extends BaseModule {
 				}
 			],
 			CustomImage: "Assets/Female3DCG/ItemHandheld/Preview/Shark.png"
+		});
+
+		// Item Boop
+		this.activities.AddActivity(<ActivityBundle>{
+			Activity: <Activity>{
+				Name: "ItemBoop",
+				MaxProgress: 50,
+				MaxProgressSelf: 50,
+				Prerequisite: ["UseHands", "Needs-AnyItem"]
+			},
+			Targets: [
+				<ActivityTarget>{
+					Name: "ItemNose",
+					TargetLabel: "Boop",
+					TargetAction: "SourceCharacter boops TargetCharacter's nose with PronounPossessive ActivityAsset.",
+					SelfAllowed: false
+				}
+			],
+			CustomImage: "Assets/Female3DCG/Activity/Caress.png"
 		});
 
 		// Plush Hug
@@ -1090,5 +1104,12 @@ export class ItemUseModule extends BaseModule {
 			handled = true;
 		}
 		return handled;
+	}
+
+	HackAssetPrereqs() {
+		if (!AssetMap)
+			return;
+		AssetMap.get("ItemHandheld/Phone2")!.Prerequisite = [];
+		AssetMap.get("ItemHandheld/Phone1")!.Prerequisite = [];
 	}
 }
