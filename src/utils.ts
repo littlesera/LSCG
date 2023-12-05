@@ -276,14 +276,20 @@ export function getRandomInt(max: number) {
 export function settingsSave(publish: boolean = false) {
 	if (!Player.OnlineSettings)
 		Player.OnlineSettings = <PlayerOnlineSettings>{};
-	let cleaned = CleanDefaultsFromSettings(Player.LSCG);
-	let cleanedAndCompressed = LZString.compressToBase64(JSON.stringify(CleanDefaultsFromSettings(Player.LSCG)));
-	let cleanedDataSize = GetDataSizeReport(cleanedAndCompressed, false);
-    Player.OnlineSettings.LSCG = LZString.compressToBase64(JSON.stringify(Player.LSCG));
-	let currentDataSize = GetDataSizeReport(Player.OnlineSettings.LSCG, false);
-	console.log(`LSCG Save Size: ${currentDataSize} bytes, with clean it could be: ${cleanedDataSize} bytes`);
-	console.debug("Cleaned:");
-	console.debug(cleaned);
+	Player.OnlineSettings.LSCG = LZString.compressToBase64(JSON.stringify(Player.LSCG));
+	
+	try {
+		let cleaned = CleanDefaultsFromSettings(Player.LSCG);
+		let cleanedAndCompressed = LZString.compressToBase64(JSON.stringify(cleaned));
+		let cleanedDataSize = GetDataSizeReport(cleanedAndCompressed, false);
+		let currentDataSize = GetDataSizeReport(Player.OnlineSettings.LSCG, false);
+		console.log(`LSCG Save Size: ${currentDataSize} bytes, with clean it could be: ${cleanedDataSize} bytes`);
+		console.debug("Cleaned:");
+		console.debug(cleaned);
+	} catch (error) {
+		console.warn(`Error during experimental clean: ${error}`);
+	}
+
     window.ServerAccountUpdate.QueueData({OnlineSettings: Player.OnlineSettings});
 	if (publish)
 		getModule<CoreModule>("CoreModule")?.SendPublicPacket(false, "sync");
@@ -342,7 +348,7 @@ export function CleanDefaultsFromSettings(settings: SettingsModel) : SettingsMod
 }
 
 function _compareAndTrimObjects(defaults: any, settings: any) {
-	if (!defaults)
+	if (!defaults || !settings)
 		return;
 	Object.keys(defaults).forEach(dk => {
 		let defaultVal = defaults[dk];
