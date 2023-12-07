@@ -23,7 +23,7 @@ export class BoopsModule extends BaseModule {
 
     boopActivitied = [
         "ChatOther-ItemNose-Pet",
-        "ChatOther-ItemNose-LSCG_SharkBite"
+        "ChatOther-ItemNose-LSCG_ItemBoop"
     ]
 
     load(): void {
