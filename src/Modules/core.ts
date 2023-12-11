@@ -14,6 +14,7 @@ import { BaseMigrator } from "./Migrators/BaseMigrator";
 import { StateMigrator } from "./Migrators/StateMigrator";
 import { MagicModule } from "./magic";
 import { StateModule } from "./states";
+import { drawTooltip } from "Settings/settingUtils";
 
 // Core Module that can handle basic functionality like server handshakes etc.
 // Maybe can consolidate things like hypnosis/suffocation basic state handling too..
@@ -138,6 +139,19 @@ export class CoreModule extends BaseModule {
             this._drawShareToggleButton(this.toggleSharedButton.x, this.toggleSharedButton.y, this.toggleSharedButton.width, this.toggleSharedButton.height);
             next(args);
         }, ModuleCategory.Core);
+
+        hookFunction("DrawItemPreview", 1, (args, next) => {
+				const ret = next(args);
+				const [item, , x, y] = args;
+				if (item) {
+					const { Craft } = item;
+					if (MouseIn(x, y, DialogInventoryGrid.itemWidth, DialogInventoryGrid.itemHeight) && Craft && Craft?.MemberNumber) {
+						drawTooltip(1000, y - 140, 975, `Crafted By: ${Craft.MemberName} [${Craft.MemberNumber}]`, "left");
+					}
+				}
+				return ret;
+			}
+		);
 
         hookFunction("DialogClick", 1, (args, next) => {
             next(args);
