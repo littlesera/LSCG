@@ -1009,7 +1009,7 @@ export class ItemUseModule extends BaseModule {
 		var handRope = InventoryGet(source, "ItemHandheld");
 		if (handRope?.Asset.Name.startsWith("RopeCoil")) {
 			var ropeTie = InventoryWear(target, rope.ItemName, rope.Location, handRope?.Color, undefined, source.MemberNumber, handRope?.Craft, true);
-			if (!!rope.Type)
+			if (!!rope.Type && !!ropeTie)
 				(<any>ropeTie!.Property!.Type!) = rope.Type;
 			setTimeout(() => ChatRoomCharacterUpdate(target));
 		}
