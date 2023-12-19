@@ -32,22 +32,6 @@ export class XRayVisionState extends BaseState {
             }
             return ret;
         }, ModuleCategory.States);
-
-        // hookFunction("CommonDrawAppearanceBuild", 1, (args, next) => {
-        //     let C = args[0] as OtherCharacter;
-        //     if (this.Active && this.CanViewXRay(C)) {
-        //         let callbacks = args[1];
-        //         C.AppearanceLayers?.forEach((Layer) => {
-        //             const A = Layer.Asset;
-        //             if (isCloth(A)) {
-        //                 A.DynamicBeforeDraw = true;
-        //             }
-        //         });
-        //         let ret = next(args);
-        //         return ret;
-        //     } else
-        //         return next(args);
-        // }, ModuleCategory.States);
     }
 
     Activate(memberNumber?: number | undefined, duration?: number | undefined, emote?: boolean | undefined): BaseState | undefined {

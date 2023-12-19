@@ -232,6 +232,25 @@ export class CoreModule extends BaseModule {
             });
             return next(args);
         }, ModuleCategory.Core);
+
+        hookFunction("InventoryGetItemProperty", 1, (args, next) => {
+            let item = args[0];
+            let prop = args[1];
+            if (prop == "HideItemExclude" && (item?.Property?.LSCGOpacity ?? 1) < 1) {
+                let result = (item.Property.HideItemExclude ?? []) as string[];
+                let hideGroups = item.Asset.Hide;
+                if (!hideGroups)
+                    return result;
+                AssetMap.forEach((a) => {
+                    if (hideGroups.indexOf(a.Group.Name) > -1) 
+                        result.push(`${a.Group.Name}${a.Name}`);
+                });
+                result = result.filter((v, ix, arr) => arr.indexOf(v) == ix);
+                return result;
+            } else {
+                return next(args);
+            }
+        }, ModuleCategory.Core);
     }
 
     opacitySlider: HTMLInputElement | null = null;

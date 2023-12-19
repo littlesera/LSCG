@@ -94,7 +94,7 @@ export class RedressedState extends ItemBundleBaseState {
             let asset = AssetGet(Player.AssetFamily, item.Group, item.Name);
             if (!!asset && this.DoChange(asset, spell)) {
                 //let groupBlocked = InventoryGroupIsBlockedForCharacter(Player, asset.Group.Name);
-                let isBlocked = InventoryBlockedOrLimited(Player, {Asset: asset})
+                let isBlocked = InventoryBlockedOrLimited(Player, {Asset: asset});
                 let isRoomDisallowed = !InventoryChatRoomAllow(asset?.Category ?? []);
                 if (isRestore || !(isBlocked || isRoomDisallowed)) {
                     let newItem = InventoryWear(Player, item.Name, item.Group, item.Color, item.Difficulty, -1, item.Craft, false);
