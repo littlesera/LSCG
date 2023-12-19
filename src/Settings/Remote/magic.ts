@@ -160,6 +160,12 @@ export class RemoteMagic extends RemoteGuiSubscreen {
 				description: "If checked, polymorph spell effects can modify your genitals.",
 				setting: () => this.settings.allowChangeGenitals ?? true,
 				setSetting: (val) => this.settings.allowChangeGenitals = val
+			}, <Setting>{
+				type: "checkbox",
+				label: "Prevent XRay Vision",
+				description: "Enhance your clothing with xray-vision-blockers.",
+				setting: () => this.settings.blockXRay ?? false,
+				setSetting: (val) => this.settings.blockXRay = val
 			}
 		]]
 	}

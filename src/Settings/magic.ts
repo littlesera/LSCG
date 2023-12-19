@@ -70,6 +70,12 @@ export class GuiMagic extends GuiSubscreen {
 					setting: () => this.settings.trueWildMagic ?? false,
 					setSetting: (val) => this.settings.trueWildMagic = val
 				}, <Setting>{
+					type: "checkbox",
+					label: "Prevent XRay Vision",
+					description: "Enhance your clothing with xray-vision-blockers.",
+					setting: () => this.settings.blockXRay ?? false,
+					setSetting: (val) => this.settings.blockXRay = val
+				}, <Setting>{
 					type: "label",
 					label: "Blocked Effects:",
 					description: "Toggle which spell effects you want to block on yourself."
@@ -369,11 +375,11 @@ export class GuiMagic extends GuiSubscreen {
 					this.settings.blockedSpellEffects = [];
 				let val = this.settings.blockedSpellEffects.indexOf(this.Effect) > -1;
 				let blockedStr = val ? "Blocked" : "Allowed";
-				DrawBackNextButton(780, this.getYPos(4)-32, 600, 64, this.Effect, "White", "", () => blockedStr, () => blockedStr);
-				DrawCheckbox(780 + 600 + 64, this.getYPos(4) - 32, 64, 64, "", val);
+				DrawBackNextButton(780, this.getYPos(5)-32, 600, 64, this.Effect, "White", "", () => blockedStr, () => blockedStr);
+				DrawCheckbox(780 + 600 + 64, this.getYPos(5) - 32, 64, 64, "", val);
 
 				MainCanvas.textAlign = "left";
-				DrawTextFit(GuiMagic.SpellEffectDescription(this.Effect), 780, this.getYPos(5), 1000, "Black");
+				DrawTextFit(GuiMagic.SpellEffectDescription(this.Effect), 780, this.getYPos(6), 1000, "Black");
 				MainCanvas.textAlign = "center";
 			} else if (PreferencePageCurrent == 2) {
 				if (this.settings.knownSpells.length > 0) {
@@ -484,9 +490,9 @@ export class GuiMagic extends GuiSubscreen {
 			}
 		} else if (!this.settings.locked) {
 			if (PreferencePageCurrent == 1) {
-				if (MouseIn(780, this.getYPos(4)-32, 600, 64)) {
+				if (MouseIn(780, this.getYPos(5)-32, 600, 64)) {
 					this.EffectIndex = this.GetNewIndexFromNextPrevClick(1080, this.EffectIndex, this.ActualEffects.length);
-				} else if (MouseIn(780 + 600 + 64, this.getYPos(4) - 32, 64, 64)) {
+				} else if (MouseIn(780 + 600 + 64, this.getYPos(5) - 32, 64, 64)) {
 					if (this.settings.blockedSpellEffects.indexOf(this.Effect) > -1)
 						this.settings.blockedSpellEffects = this.settings.blockedSpellEffects.filter(ef => ef != this.Effect);
 					else this.settings.blockedSpellEffects.push(this.Effect);
@@ -706,7 +712,9 @@ export class GuiMagic extends GuiSubscreen {
 			case LSCGSpellEffect.bane:
 				return "Applies a -5 debuff to all the target's skills for 15 minutes";
 			case LSCGSpellEffect.polymorph:
-				return "Polymorph the target's body and/or cosplay items"
+				return "Polymorph the target's body and/or cosplay items";
+			case LSCGSpellEffect.xRay:
+				return "Grants the target X-Ray vision";
 			case LSCGSpellEffect.none:
 			default:
 				return ""			;
