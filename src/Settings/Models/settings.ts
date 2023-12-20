@@ -129,6 +129,7 @@ export class PublicSettingsModel implements IPublicSettingsModel {
         maxDuration: 0,
         allowOutfitToChangeNeckItems: false,
         allowChangeGenitals: true,
-        requireWhitelist: false
+        requireWhitelist: false,
+        blockXRay: false
     }
 }

@@ -27,7 +27,11 @@ export class FrozenState extends BaseState {
             if (this.Active)
                 return false;
             return next(args);
-        })
+        });
+
+        hookFunction("Player.IsEnclose", 1, (args, next) => {
+            return this.Active || next(args);
+        });
     }
 
     RoomSync(): void {}

@@ -59,7 +59,8 @@ export class MagicModule extends BaseModule {
             allowOutfitToChangeNeckItems: false,
             allowChangeGenitals: true,
             allowChangePronouns: false,
-            requireWhitelist: false
+            requireWhitelist: false,
+            blockXRay: false
         };
     }
 
@@ -528,7 +529,8 @@ export class MagicModule extends BaseModule {
     SpellIsBeneficial(spell: SpellDefinition) {
         let beneficialEffects: LSCGSpellEffect[] = [
             LSCGSpellEffect.dispell,
-            LSCGSpellEffect.bless
+            LSCGSpellEffect.bless,
+            LSCGSpellEffect.xRay
         ];
         return  spell.Effects.every(e => beneficialEffects.indexOf(e) > -1);
     }
@@ -665,6 +667,10 @@ export class MagicModule extends BaseModule {
                             state = this.stateModule.OrgasmSiphonedState.DoPair(paired, sender, duration);
                             this.NotifyPair(sender, paired, LSCGSpellEffect.orgasm_siphon, this.stateModule.OrgasmSiphonedState.Type);
                         }
+                        break;
+                    case LSCGSpellEffect.xRay:
+                        SendAction(`%NAME% blinks with a grin.`);
+                        state = this.stateModule.XRayState.Activate(sender?.MemberNumber, duration);
                         break;
                 }
             }, 2000 * ix);

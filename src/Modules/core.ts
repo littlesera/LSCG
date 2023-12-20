@@ -3,7 +3,7 @@ import { getModule, modules } from "modules";
 import { BaseSettingsModel, GlobalSettingsModel } from "Settings/Models/base";
 import { IPublicSettingsModel, PublicSettingsModel, SettingsModel } from "Settings/Models/settings";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { removeAllHooksByModule, hookFunction, getCharacter, drawSvg, SVG_ICONS, sendLSCGMessage, settingsSave, LSCG_CHANGES, LSCG_SendLocal, mouseTooltip } from "../utils";
+import { removeAllHooksByModule, hookFunction, getCharacter, drawSvg, SVG_ICONS, sendLSCGMessage, settingsSave, LSCG_CHANGES, LSCG_SendLocal, mouseTooltip, isCloth } from "../utils";
 import { ActivityModule, GrabType } from "./activities";
 import { HypnoModule } from "./hypno";
 import { CollarModule } from "./collar";
@@ -164,8 +164,164 @@ export class CoreModule extends BaseModule {
                 settingsSave();
                 DialogInventoryBuild(C, true, false);
             }
-        })
+        });
+
+        hookFunction("ItemColorLoad", 1, (args, next) => {
+            next(args);
+            let C = args[0] as Character;
+            let Item = args[1] as Item;
+            if (C.IsPlayer() && isCloth(Item)) {
+                this.OpacityCharacter = C;
+                this.OpacityItem = Item;
+                ElementPosition(this.opacityEleId, 250, 200, 300, 20);
+                ElementPosition(this.opacityLabelId, 250, 150, 300, 20);
+                ElementValue(this.opacityEleId, "" + (this.OpacityItem?.Property?.LSCGOpacity ?? 1));
+            }
+        });
+
+        hookFunction("ItemColorFireExit", 1, (args, next) => {
+            next(args);
+            this.OpacityCharacter = null;
+            this.OpacityItem = null;
+            ElementPosition(this.opacityEleId, -999, -999, 1, 1);
+            ElementPosition(this.opacityLabelId, -999, -999, 1, 1);
+        });
+
+        hookFunction("CommonCallFunctionByNameWarn", 2, (args, next) => {
+            let funcName = args[0];
+            let params = args[1]
+            let C = params['C'] as OtherCharacter;
+            let CA = params['CA'];
+            let ret = next(args) ?? {};
+            let regex = /Assets(.+)BeforeDraw/i;
+            if (regex.test(funcName) && !!CA && isCloth(CA)) {
+                ret.Opacity = Math.min((ret.Opacity ?? 1), (CA.Property?.LSCGOpacity ?? CA.Asset?.Opacity ?? 1));
+            }
+            return ret;
+        }, ModuleCategory.Core);
+
+        // hookFunction("InventoryGetItemProperty", 1, (args, next) => {
+        //     let item = args[0];
+        //     let prop = args[1];
+        //     if (prop == "HideItemExclude" && (item?.Property?.LSCGOpacity ?? 1) < 1) {
+        //         let result = (item.Property.HideItemExclude ?? []) as string[];
+        //         let hideGroups = item.Asset.Hide as string[];
+        //         if (!hideGroups)
+        //             return result;
+        //         //hideGroups = hideGroups.filter(g => g != "Pussy");
+        //         AssetMap.forEach((a) => {
+        //             if (hideGroups.indexOf(a.Group.Name) > -1) 
+        //                 result.push(`${a.Group.Name}${a.Name}`);
+        //         });
+        //         result = result.filter((v, ix, arr) => arr.indexOf(v) == ix);
+        //         return result;
+        //     } else {
+        //         return next(args);
+        //     }
+        // }, ModuleCategory.Core);
     }
+
+    opacitySlider: HTMLInputElement | null = null;
+    opacityLabel: HTMLLabelElement | null = null;
+    opacityEleId: string = "LSCG_OpacitySlider";
+    opacityLabelId: string = "LSCG_OpacitySlider_Label";
+    OpacityItem: Item | null = null;
+    OpacityCharacter: Character | null = null;
+    run() {
+        this.opacitySlider = ElementCreateRangeInput(
+            this.opacityEleId,
+            1,
+            0,
+            1,
+            0.01
+        );
+        this.opacityLabel = this.CreateOpacityLabel();
+        ElementPosition(this.opacityEleId, -999, -999, 1, 1);
+        ElementPosition(this.opacityLabelId, -999, -999, 1, 1);
+        this.opacitySlider.addEventListener("input", (e) => this.OpacityChange());
+
+        hookFunction("CommonDrawAppearanceBuild", 1, (args, next) => {
+            let C = args[0] as OtherCharacter;
+            let callbacks = args[1];
+            C.AppearanceLayers?.forEach((Layer) => {
+                const A = Layer.Asset;
+                if (isCloth(A)) {
+                    A.DynamicBeforeDraw = true;
+                }
+            });
+            let ret = next(args);
+            return ret;
+        }, ModuleCategory.Core);
+
+        hookFunction("CharacterAppearanceSortLayers", 1, (args, next) => {
+            let C = args[0] as OtherCharacter;
+            if (!C.MemberNumber)
+                return next(args);
+
+            let xray = getModule<StateModule>("StateModule")?.XRayState;
+            let xrayActive = xray?.Active && xray?.CanViewXRay(C);
+            C.DrawAppearance?.forEach(item => {
+                if ((item.Property?.LSCGOpacity ?? 1) < 1 || xrayActive) {
+                    item.Asset = Object.assign({}, item.Asset);
+                    item?.Asset?.Layer?.forEach(layer => {
+                        layer.Alpha = [];
+                    });
+                    item.Asset.Hide = [];
+                    item.Asset.HideItem = [];
+                    item.Asset.HideItemAttribute = [];
+                } else {
+                    let defaultAsset = AssetMap.get(`${item?.Asset?.Group?.Name}/${item.Asset.Name}`);
+                    if (!!defaultAsset) {
+                        item?.Asset?.Layer?.forEach((layer, ix, arr) => {
+                            if (defaultAsset!.Alpha)
+                                layer.Alpha = defaultAsset!.Alpha;
+                        });
+                    }
+                }
+
+                if (item.Asset.Name == "Penis") {
+                    let transpPants = (InventoryGet(C, "ClothLower")?.Property?.LSCGOpacity ?? 1) > 1;
+                    let transpUnderwear = (InventoryGet(C, "Panties")?.Property?.LSCGOpacity ?? 1) > 1;
+                    if ((xrayActive || transpPants || transpUnderwear) && (!item.Property || !item.Property?.OverridePriority)) {
+                        if (!item.Property)
+                            item.Property = {};
+                        item.Property.OverridePriority = 18;
+                    }
+                }
+            });
+            return next(args);
+        }, ModuleCategory.Core);
+    }
+
+    CreateOpacityLabel() {
+        if (document.getElementById(this.opacityLabelId) == null) {
+            const label = document.createElement("label");
+            label.setAttribute("id", this.opacityLabelId);
+            label.setAttribute("for", this.opacityEleId);
+            label.style.color = "#FFF";
+            label.innerText = "Opacity";
+            document.body.appendChild(label);
+            return label;
+        } else
+            return document.getElementById(this.opacityLabelId) as HTMLLabelElement;
+    }
+
+    OpacityChange() {
+        if (!this.OpacityItem)
+            return;
+
+        let value = parseFloat(ElementValue(this.opacityEleId));
+        let C = Player;
+        if (!this.OpacityItem.Property)
+            this.OpacityItem.Property = {};
+        this.OpacityItem.Property.LSCGOpacity = value;
+        this.UpdatePreview();
+    }
+
+    UpdatePreview = CommonLimitFunction(() => {
+        if (!!this.OpacityCharacter)
+            CharacterLoadCanvas(this.OpacityCharacter);
+    });
 
     _drawShareToggleButton(X: number, Y: number, Width: number, Height: number) {
         DrawButton(X, Y, Width, Height, "", this.settings.seeSharedCrafts ? "White" : "Red", "", "Toggle Shared Crafts", false);
@@ -245,6 +401,7 @@ export class CoreModule extends BaseModule {
         if (!Sender)
             return;
         Sender.LSCG = Object.assign(Sender.LSCG ?? {}, msg.settings ?? {});
+        CharacterLoadCanvas(Sender);
         if (msg.reply) {
             this.SendPublicPacket(false, msg.type);
         }

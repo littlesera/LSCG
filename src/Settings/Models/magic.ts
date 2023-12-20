@@ -19,7 +19,8 @@ export enum LSCGSpellEffect {
     orgasm_siphon = "Siphoning", 
     outfit = "Outfit",
     polymorph = "Polymorph",
-    dispell = "Dispell"
+    dispell = "Dispell",
+    xRay = "X-Ray Vision"
 }
 
 export enum OutfitOption {
@@ -87,4 +88,7 @@ export interface MagicPublicSettingsModel extends BaseSettingsModel{
     limitedDuration: boolean;
     maxDuration: number;
     requireWhitelist: boolean;
+
+    // XRay Block
+    blockXRay: boolean;
 }

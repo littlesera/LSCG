@@ -19,6 +19,7 @@ import { ItemUseModule } from "./item-use";
 import { ResizedState } from "./States/ResizedState";
 import { BuffedState } from "./States/BuffedState";
 import { PolymorphedState } from "./States/PolymorphedState";
+import { XRayVisionState } from "./States/XRayVisionState";
 
 interface StateIcon {
     Label: string;
@@ -75,6 +76,7 @@ export class StateModule extends BaseModule {
     BuffedState: BuffedState;
     ArousalPairedState: ArousalPairedState;
     OrgasmSiphonedState: OrgasmSiphonedState;
+    XRayState: XRayVisionState;
 
     GetRestriction(state: BaseState, restriction: LSCGImmersiveOption): boolean {
         return state.Active &&
@@ -104,6 +106,7 @@ export class StateModule extends BaseModule {
         this.BuffedState = new BuffedState(this);
         this.ArousalPairedState = new ArousalPairedState(this);
         this.OrgasmSiphonedState = new OrgasmSiphonedState(this);
+        this.XRayState = new XRayVisionState(this);
 
         this.States = [
             this.SleepState, 
@@ -118,7 +121,8 @@ export class StateModule extends BaseModule {
             this.ResizedState,
             this.ArousalPairedState,
             this.OrgasmSiphonedState,
-            this.BuffedState
+            this.BuffedState,
+            this.XRayState
         ];
         
         // States module in general is always enabled. Toggling is done on each specific state.

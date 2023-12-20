@@ -2626,6 +2626,8 @@ interface ItemPropertiesCustom {
 	/** Lucky Wheel: the angle the wheel should spin to */
 	TargetAngle?: number;
 
+	// Custom LSCG property to override opacity
+	LSCGOpacity?: number;
 }
 
 interface ItemProperties extends ItemPropertiesBase, AssetDefinitionProperties, ItemPropertiesCustom { }
