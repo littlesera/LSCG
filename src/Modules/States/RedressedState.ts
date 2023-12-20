@@ -1,4 +1,4 @@
-import { BC_ItemsToItemBundles, SendAction, addCustomEffect, getRandomInt, isBind, isCloth, removeCustomEffect, settingsSave, waitFor } from "utils";
+import { BC_ItemsToItemBundles, SendAction, addCustomEffect, getCharacter, getRandomInt, isBind, isCloth, removeCustomEffect, settingsSave, waitFor } from "utils";
 import { BaseState, StateRestrictions } from "./BaseState";
 import { StateModule } from "Modules/states";
 import { OutfitConfig, OutfitOption, SpellDefinition } from "Settings/Models/magic";
@@ -78,7 +78,7 @@ export class RedressedState extends ItemBundleBaseState {
                 let outfitList = this.GetConfiguredItemBundles(outfit.Code, item => RedressedState.ItemIsAllowed(item));
                 if (!!outfitList && typeof outfitList == "object") {
                     this.StripCharacter(false, spell, outfitList);
-                    this.WearMany(outfitList, spell);
+                    this.WearMany(outfitList, spell, false, memberNumber);
                     super.Activate(memberNumber, duration, emote);
                 }
             }
@@ -89,12 +89,14 @@ export class RedressedState extends ItemBundleBaseState {
         return this;
     }
 
-    WearMany(items: ItemBundle[], spell: SpellDefinition, isRestore: boolean = false) {
+    WearMany(items: ItemBundle[], spell: SpellDefinition, isRestore: boolean = false, memberNumber: number | undefined = undefined) {
+        if (!memberNumber)
+            memberNumber = Player.MemberNumber ?? 0;
+        let sender = !!memberNumber ? getCharacter(memberNumber) : null;
         items.forEach(item => {
             let asset = AssetGet(Player.AssetFamily, item.Group, item.Name);
             if (!!asset && this.DoChange(asset, spell)) {
-                //let groupBlocked = InventoryGroupIsBlockedForCharacter(Player, asset.Group.Name);
-                let isBlocked = InventoryBlockedOrLimited(Player, {Asset: asset});
+                let isBlocked = this.InventoryBlockedOrLimited(sender, {Asset: asset});
                 let isRoomDisallowed = !InventoryChatRoomAllow(asset?.Category ?? []);
                 if (isRestore || !(isBlocked || isRoomDisallowed)) {
                     let newItem = InventoryWear(Player, item.Name, item.Group, item.Color, item.Difficulty, -1, item.Craft, false);

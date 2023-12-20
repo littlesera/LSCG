@@ -30,7 +30,7 @@ export abstract class ItemBundleBaseState extends BaseState {
 
     abstract StripCharacter(skipStore: boolean, spell: SpellDefinition | null, newList: ItemBundle[]): void;
 
-    abstract WearMany(items: ItemBundle[], spell: SpellDefinition | null, isRestore: boolean): void;
+    abstract WearMany(items: ItemBundle[], spell: SpellDefinition | null, isRestore: boolean, memberNumber: number | undefined): void;
 
     abstract Apply(spell: SpellDefinition, memberNumber?: number | undefined, duration?: number, emote?: boolean | undefined): BaseState;
 
@@ -38,7 +38,7 @@ export abstract class ItemBundleBaseState extends BaseState {
         super.Recover();
         if (!!this.StoredOutfit) {
             this.StripCharacter(true, null, []);
-            this.WearMany(this.StoredOutfit, null, true);
+            this.WearMany(this.StoredOutfit, null, true, undefined);
             this.ClearStoredOutfit();
         }
         return this;
@@ -59,5 +59,20 @@ export abstract class ItemBundleBaseState extends BaseState {
         // }
         
         return items.filter(item => filter(item));
+    }
+
+    // Check if an item is limited or blocked when applied by Sender
+    InventoryBlockedOrLimited(Sender: Character | null, Item: Item, ItemType?: string) {
+        let Blocked = InventoryIsPermissionBlocked(Player, Item.Asset.DynamicName(Player), Item.Asset.Group.Name, ItemType);
+        let Limited = !this.InventoryCheckLimitedPermission(Sender, Item, ItemType);
+        return Blocked || Limited;
+    }
+    
+    // Check if Sender has limited permission to the Item on Player
+    InventoryCheckLimitedPermission(Sender: Character | null, Item: Item, ItemType?: string) {
+        if (!InventoryIsPermissionLimited(Player, Item.Asset.DynamicName(Player), Item.Asset.Group.Name, ItemType)) return true;
+        if (!Sender || (Sender.IsPlayer()) || Sender.IsLoverOfPlayer() || Player.IsOwnedByMemberNumber(Sender.MemberNumber!)) return true;
+        if ((Player.ItemPermission! < 3) && !(Player.WhiteList.indexOf(Sender.MemberNumber!) < 0)) return true;
+        return false;
     }
 }

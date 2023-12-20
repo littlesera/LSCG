@@ -104,7 +104,7 @@ export class PolymorphedState extends ItemBundleBaseState {
             let outfitList = this.GetConfiguredItemBundles(outfit.Code, item => PolymorphedState.ItemIsAllowed(item));
             if (!!outfitList && typeof outfitList == "object") {
                 this.StripCharacter(false, spell, outfitList);
-                this.WearMany(outfitList, spell);
+                this.WearMany(outfitList, spell, false, memberNumber);
                 super.Activate(memberNumber, duration, emote);
             }
         }
@@ -114,12 +114,14 @@ export class PolymorphedState extends ItemBundleBaseState {
         return this;
     }
 
-    WearMany(items: ItemBundle[], spell: SpellDefinition, isRestore: boolean = false) {
+    WearMany(items: ItemBundle[], spell: SpellDefinition, isRestore: boolean = false, memberNumber: number | undefined = undefined) {
+        if (!memberNumber)
+            memberNumber = Player.MemberNumber ?? 0;
+        let sender = !!memberNumber ? getCharacter(memberNumber) : null;
         items.forEach(item => {
             let asset = AssetGet(Player.AssetFamily, item.Group, item.Name);
             if (!!asset && this.DoChange(asset, spell)) {
-                //let groupBlocked = InventoryGroupIsBlockedForCharacter(Player, asset.Group.Name);
-                let isBlocked = InventoryBlockedOrLimited(Player, {Asset: asset})
+                let isBlocked = this.InventoryBlockedOrLimited(Player, {Asset: asset});
                 let isRoomDisallowed = !InventoryChatRoomAllow(asset?.Category ?? []);
 
                 let isSkinColorChangeOnly = (!spell || (!spell.Polymorph?.IncludeAllBody && spell.Polymorph?.IncludeSkin)) && this.skinColorChangeOnly.indexOf(asset.Group.Name) > -1;
