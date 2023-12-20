@@ -200,57 +200,25 @@ export class CoreModule extends BaseModule {
             return ret;
         }, ModuleCategory.Core);
 
-        hookFunction("CommonDrawAppearanceBuild", 1, (args, next) => {
-            let C = args[0] as OtherCharacter;
-            let callbacks = args[1];
-            C.AppearanceLayers?.forEach((Layer) => {
-                const A = Layer.Asset;
-                if (isCloth(A)) {
-                    A.DynamicBeforeDraw = true;
-                }
-            });
-            let ret = next(args);
-            return ret;
-        }, ModuleCategory.Core);
-
-        hookFunction("CharacterAppearanceSortLayers", 1, (args, next) => {
-            let C = args[0] as Character;
-            C.DrawAppearance?.forEach(item => {
-                if ((item.Property?.LSCGOpacity ?? 1) < 1) {
-                    item?.Asset?.Layer?.forEach(layer => {
-                        layer.Alpha = [];
-                    });
-                } else {
-                    let defaultAsset = AssetMap.get(`${item?.Asset?.Group?.Name}/${item.Asset.Name}`);
-                    if (!!defaultAsset) {
-                        item?.Asset?.Layer?.forEach((layer, ix, arr) => {
-                            if (defaultAsset!.Alpha)
-                                layer.Alpha = defaultAsset!.Alpha;
-                        });
-                    }
-                }
-            });
-            return next(args);
-        }, ModuleCategory.Core);
-
-        hookFunction("InventoryGetItemProperty", 1, (args, next) => {
-            let item = args[0];
-            let prop = args[1];
-            if (prop == "HideItemExclude" && (item?.Property?.LSCGOpacity ?? 1) < 1) {
-                let result = (item.Property.HideItemExclude ?? []) as string[];
-                let hideGroups = item.Asset.Hide;
-                if (!hideGroups)
-                    return result;
-                AssetMap.forEach((a) => {
-                    if (hideGroups.indexOf(a.Group.Name) > -1) 
-                        result.push(`${a.Group.Name}${a.Name}`);
-                });
-                result = result.filter((v, ix, arr) => arr.indexOf(v) == ix);
-                return result;
-            } else {
-                return next(args);
-            }
-        }, ModuleCategory.Core);
+        // hookFunction("InventoryGetItemProperty", 1, (args, next) => {
+        //     let item = args[0];
+        //     let prop = args[1];
+        //     if (prop == "HideItemExclude" && (item?.Property?.LSCGOpacity ?? 1) < 1) {
+        //         let result = (item.Property.HideItemExclude ?? []) as string[];
+        //         let hideGroups = item.Asset.Hide as string[];
+        //         if (!hideGroups)
+        //             return result;
+        //         //hideGroups = hideGroups.filter(g => g != "Pussy");
+        //         AssetMap.forEach((a) => {
+        //             if (hideGroups.indexOf(a.Group.Name) > -1) 
+        //                 result.push(`${a.Group.Name}${a.Name}`);
+        //         });
+        //         result = result.filter((v, ix, arr) => arr.indexOf(v) == ix);
+        //         return result;
+        //     } else {
+        //         return next(args);
+        //     }
+        // }, ModuleCategory.Core);
     }
 
     opacitySlider: HTMLInputElement | null = null;
@@ -271,6 +239,55 @@ export class CoreModule extends BaseModule {
         ElementPosition(this.opacityEleId, -999, -999, 1, 1);
         ElementPosition(this.opacityLabelId, -999, -999, 1, 1);
         this.opacitySlider.addEventListener("input", (e) => this.OpacityChange());
+
+        hookFunction("CommonDrawAppearanceBuild", 1, (args, next) => {
+            let C = args[0] as OtherCharacter;
+            let callbacks = args[1];
+            C.AppearanceLayers?.forEach((Layer) => {
+                const A = Layer.Asset;
+                if (isCloth(A)) {
+                    A.DynamicBeforeDraw = true;
+                }
+            });
+            let ret = next(args);
+            return ret;
+        }, ModuleCategory.Core);
+
+        hookFunction("CharacterAppearanceSortLayers", 1, (args, next) => {
+            let C = args[0] as OtherCharacter;
+            let xray = getModule<StateModule>("StateModule")?.XRayState;
+            C.DrawAppearance?.forEach(item => {
+                if ((item.Property?.LSCGOpacity ?? 1) < 1 || (xray?.Active && xray?.CanViewXRay(C))) {
+                    item.Asset = Object.assign({}, item.Asset);
+                    item?.Asset?.Layer?.forEach(layer => {
+                        layer.Alpha = [];
+                    });
+                    item.Asset.Hide = [];
+                    item.Asset.HideItem = [];
+                    item.Asset.HideItemAttribute = [];
+                } else {
+                    let defaultAsset = AssetMap.get(`${item?.Asset?.Group?.Name}/${item.Asset.Name}`);
+                    if (!!defaultAsset) {
+                        item?.Asset?.Layer?.forEach((layer, ix, arr) => {
+                            if (defaultAsset!.Alpha)
+                                layer.Alpha = defaultAsset!.Alpha;
+                        });
+                    }
+                }
+
+                if (item.Asset.Name == "Penis") {
+                    let xrayActive = xray?.Active && xray?.CanViewXRay(C);
+                    let transpPants = (InventoryGet(C, "ClothLower")?.Property?.LSCGOpacity ?? 1) > 1;
+                    let transpUnderwear = (InventoryGet(C, "Panties")?.Property?.LSCGOpacity ?? 1) > 1;
+                    if ((xrayActive || transpPants || transpUnderwear) && (!item.Property || !item.Property?.OverridePriority)) {
+                        if (!item.Property)
+                            item.Property = {};
+                        item.Property.OverridePriority = 18;
+                    }
+                }
+            });
+            return next(args);
+        }, ModuleCategory.Core);
     }
 
     CreateOpacityLabel() {
