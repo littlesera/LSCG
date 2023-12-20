@@ -37,7 +37,7 @@ export class XRayVisionState extends BaseState {
     Activate(memberNumber?: number | undefined, duration?: number | undefined, emote?: boolean | undefined): BaseState | undefined {
         let ret = super.Activate(memberNumber, duration, emote);
         ChatRoomCharacter.forEach(C => {
-            CharacterAppearanceBuildCanvas(C);
+            CharacterLoadCanvas(C);
         });
         return ret;
     }
@@ -45,7 +45,7 @@ export class XRayVisionState extends BaseState {
     Recover(emote?: boolean | undefined): BaseState | undefined {
         let ret = super.Recover(emote);
         ChatRoomCharacter.forEach(C => {
-            CharacterAppearanceBuildCanvas(C);
+            CharacterLoadCanvas(C);
         });
         return ret;
     }

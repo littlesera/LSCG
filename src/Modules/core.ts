@@ -255,9 +255,13 @@ export class CoreModule extends BaseModule {
 
         hookFunction("CharacterAppearanceSortLayers", 1, (args, next) => {
             let C = args[0] as OtherCharacter;
+            if (!C.MemberNumber)
+                return next(args);
+
             let xray = getModule<StateModule>("StateModule")?.XRayState;
+            let xrayActive = xray?.Active && xray?.CanViewXRay(C);
             C.DrawAppearance?.forEach(item => {
-                if ((item.Property?.LSCGOpacity ?? 1) < 1 || (xray?.Active && xray?.CanViewXRay(C))) {
+                if ((item.Property?.LSCGOpacity ?? 1) < 1 || xrayActive) {
                     item.Asset = Object.assign({}, item.Asset);
                     item?.Asset?.Layer?.forEach(layer => {
                         layer.Alpha = [];
@@ -276,7 +280,6 @@ export class CoreModule extends BaseModule {
                 }
 
                 if (item.Asset.Name == "Penis") {
-                    let xrayActive = xray?.Active && xray?.CanViewXRay(C);
                     let transpPants = (InventoryGet(C, "ClothLower")?.Property?.LSCGOpacity ?? 1) > 1;
                     let transpUnderwear = (InventoryGet(C, "Panties")?.Property?.LSCGOpacity ?? 1) > 1;
                     if ((xrayActive || transpPants || transpUnderwear) && (!item.Property || !item.Property?.OverridePriority)) {
@@ -398,6 +401,7 @@ export class CoreModule extends BaseModule {
         if (!Sender)
             return;
         Sender.LSCG = Object.assign(Sender.LSCG ?? {}, msg.settings ?? {});
+        CharacterLoadCanvas(Sender);
         if (msg.reply) {
             this.SendPublicPacket(false, msg.type);
         }
