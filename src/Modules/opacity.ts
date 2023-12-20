@@ -121,6 +121,9 @@ export class OpacityModule extends BaseModule {
         hookFunction("CommonCallFunctionByNameWarn", 2, (args, next) => {
             let funcName = args[0];
             let params = args[1];
+            if (!params) {
+                return next(args);
+            }
             let C = params['C'] as OtherCharacter;
             let CA = params['CA'] as Item;
             let Property = params['Property'];

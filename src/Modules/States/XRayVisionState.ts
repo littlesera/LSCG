@@ -20,7 +20,10 @@ export class XRayVisionState extends BaseState {
     Init(): void {
         hookFunction("CommonCallFunctionByNameWarn", 1, (args, next) => {
             let funcName = args[0];
-            let params = args[1]
+            let params = args[1];
+            if (!params) {
+                return next(args);
+            }
             let C = params['C'] as OtherCharacter;
             let CA = params['CA'];
             let ret = next(args) ?? {};
