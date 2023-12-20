@@ -71,7 +71,7 @@ export class GuiMagic extends GuiSubscreen {
 					setSetting: (val) => this.settings.trueWildMagic = val
 				}, <Setting>{
 					type: "checkbox",
-					label: "Prevent XRay Vision",
+					label: "Prevent X-Ray Vision",
 					description: "Enhance your clothing with xray-vision-blockers.",
 					setting: () => this.settings.blockXRay ?? false,
 					setSetting: (val) => this.settings.blockXRay = val
