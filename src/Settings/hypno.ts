@@ -151,7 +151,7 @@ export class GuiHypno extends GuiSubscreen {
 						disabled: !this.settings.enabled,
 						setting: () => (this.settings.hypnoEyeType ?? 9),
 						setSetting: (val) => {
-							this.settings.hypnoEyeType = Math.min(13, Math.max(0, val)) // UPDATE THIS WHEN EYE STYLES CHANGE
+							this.settings.hypnoEyeType = Math.min(14, Math.max(0, val)) // UPDATE THIS WHEN EYE STYLES CHANGE
 							let test = AssetGet("Female3DCG", "Eyes", "Eyes" + val);
 							if (!test) this.settings.hypnoEyeType = 9; // default to style 9 if somehow we can't find a valid eye type here.
 						}
