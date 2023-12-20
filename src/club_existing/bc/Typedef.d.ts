@@ -2627,7 +2627,7 @@ interface ItemPropertiesCustom {
 	TargetAngle?: number;
 
 	// Custom LSCG property to override opacity
-	LSCGOpacity?: number;
+	LSCGOpacity?: number | number[];
 }
 
 interface ItemProperties extends ItemPropertiesBase, AssetDefinitionProperties, ItemPropertiesCustom { }
