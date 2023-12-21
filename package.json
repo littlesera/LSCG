@@ -1,7 +1,7 @@
 {
   "name": "ls-club-games",
   "description": "Little Sera's Club Games",
-  "version": "0.3.34",
+  "version": "0.3.35",
   "main": "dist/bundle.js",
   "scripts": {
     "build": "rollup -c",
@@ -32,7 +32,7 @@
     "@types/node": "^20.2.1",
     "@typescript-eslint/eslint-plugin": "^5.52.0",
     "@typescript-eslint/parser": "^5.52.0",
-    "bc-stubs": "github:bananarama92/BC-stubs",
+    "bc-stubs": "^99.0.0",
     "eslint": "^8.34.0",
     "rollup": "^3.20.0",
     "rollup-plugin-copy": "^3.4.0",

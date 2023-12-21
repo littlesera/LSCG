@@ -322,6 +322,7 @@ export class ItemUseModule extends BaseModule {
 				Func: (target, args, next) => {
 					if (!target)
 						return;
+					let ret = next(args);
 					var location = target.FocusGroup?.Name!;
 					let heldItemName = InventoryGet(Player, "ItemHandheld")?.Asset.Name ?? "";
 					let gagTarget = this.GagTargets.find(t => t.HandItemName == heldItemName);
@@ -330,7 +331,7 @@ export class ItemUseModule extends BaseModule {
 							location = gagTarget.OverrideNeckLocation ?? "Necklace";
 						this.ApplyGag(target, Player, gagTarget, location);
 					}
-					return next(args);
+					return ret;
 				}
 			},
 			CustomImage: "Assets/Female3DCG/ItemHandheld/Preview/Ballgag.png"
@@ -950,8 +951,11 @@ export class ItemUseModule extends BaseModule {
 			if ((sourceLocation?.startsWith("ItemMouth") && targetLocation == "Necklace") ||
 				(sourceLocation == "Necklace" && targetLocation?.startsWith("ItemMouth")))
 				color = (<string[]>(<ItemColor>color)).reverse();
-			else if (sourceLocation == "ItemHandheld")
+			else if (sourceLocation == "Necklace" && targetLocation == "ItemHandheld")
+				color = [color[1]];
+			else if (sourceLocation == "ItemHandheld") {
 				color = [color[0], color[0]];
+			}
 		}
 		return color;
 	}
@@ -961,9 +965,10 @@ export class ItemUseModule extends BaseModule {
 		let sourceItemName = (sourceLocation == "ItemHandheld" ? gagTarget.HandItemName : gagTarget.NeckItemName) ?? "";
 		let targetItemName = (targetLocation?.startsWith("ItemMouth") ? gagTarget.MouthItemName : gagTarget.NeckItemName) ?? "";
 		if (!!gagItem && gagItem.Asset.Name == sourceItemName) {
-			if (!(gagTarget.LeaveHandItem && sourceLocation == "ItemHandheld")) InventoryRemove(source, sourceLocation, true);
+			if (!(gagTarget.LeaveHandItem && sourceLocation == "ItemHandheld")) InventoryRemove(source, sourceLocation, source.MemberNumber != target.MemberNumber);
 			var color = this._handleWeirdColorStuff(gagItem, gagTarget, sourceLocation, targetLocation);
-			var gag = InventoryWear(target, targetItemName, targetLocation, color, undefined, source.MemberNumber, gagItem?.Craft, true);
+			InventoryWear(target, targetItemName, targetLocation, color, undefined, source.MemberNumber, gagItem?.Craft, false);
+			let gag = InventoryGet(target, targetLocation);
 			if (!!gagTarget.PreferredTypes && gagTarget.PreferredTypes.length > 0) {
 				var prefType = gagTarget.PreferredTypes.find(tgt => tgt.Location == targetLocation) ?? gagTarget.PreferredTypes.find(tgt => targetLocation.startsWith(tgt.Location));
 				if (!!gag && !!prefType) {
@@ -971,7 +976,7 @@ export class ItemUseModule extends BaseModule {
 					gag!.Property!.Type = prefType.Type;
 				}
 			}
-			setTimeout(() => ChatRoomCharacterUpdate(target));
+			CharacterRefresh(target, true);
 		}
     }
 
@@ -993,7 +998,7 @@ export class ItemUseModule extends BaseModule {
 				}
 			}
 			var color = this._handleWeirdColorStuff(gag, gagTarget, sourceLocation, targetLocation);
-			let item = InventoryWear(source, targetItemName, targetLocation, color, undefined, source.MemberNumber, craft, true);			
+			let item = InventoryWear(source, targetItemName, targetLocation, color, undefined, source.MemberNumber, craft, false);			
 			if (!!gagTarget.PreferredTypes && gagTarget.PreferredTypes.length > 0) {
 				var prefType = gagTarget.PreferredTypes.find(tgt => tgt.Location == targetLocation) ?? gagTarget.PreferredTypes.find(tgt => targetLocation.startsWith(tgt.Location));
 				if (!!item && !!prefType) {
@@ -1001,17 +1006,17 @@ export class ItemUseModule extends BaseModule {
 					item!.Property!.Type = prefType.Type;
 				}
 			}
-			setTimeout(() => ChatRoomCharacterUpdate(target));
+			CharacterRefresh(target, true);
 		}
 	}
 
 	TieUp(target: Character, source: Character, rope: RopeTarget) {
 		var handRope = InventoryGet(source, "ItemHandheld");
 		if (handRope?.Asset.Name.startsWith("RopeCoil")) {
-			var ropeTie = InventoryWear(target, rope.ItemName, rope.Location, handRope?.Color, undefined, source.MemberNumber, handRope?.Craft, true);
+			var ropeTie = InventoryWear(target, rope.ItemName, rope.Location, handRope?.Color, undefined, source.MemberNumber, handRope?.Craft);
 			if (!!rope.Type && !!ropeTie)
 				(<any>ropeTie!.Property!.Type!) = rope.Type;
-			setTimeout(() => ChatRoomCharacterUpdate(target));
+			CharacterRefresh(target, true);
 		}
 	}
 

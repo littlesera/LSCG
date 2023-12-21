@@ -18,7 +18,7 @@ export class XRayVisionState extends BaseState {
     }
 
     Init(): void {
-        hookFunction("CommonCallFunctionByNameWarn", 1, (args, next) => {
+        hookFunction("CommonCallFunctionByName", 1, (args, next) => {
             let funcName = args[0];
             let params = args[1];
             if (!params) {
@@ -28,7 +28,7 @@ export class XRayVisionState extends BaseState {
             let CA = params['CA'] as Item;
             let regex = /Assets(.+)BeforeDraw/i;
             if (regex.test(funcName)) {
-                let ret = CommonCallFunctionByName(args[0], args[1]) ?? {};
+                let ret = next(args) ?? {};
                 if (this.Active && this.CanViewXRay(C) && !!CA && isCloth(CA)) {
                     let layerName = (params['L'] as string ?? "")?.trim().slice(1) ?? "";
                     let layerIx = CA.Asset.Layer.findIndex(l => l.Name == layerName);
