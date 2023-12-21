@@ -29,6 +29,12 @@ export class OpacityModule extends BaseModule {
     OpacityCharacter: Character | null = null;
     opacityAllLayer: boolean = false;
 
+    get defaultSettings() {
+        return <BaseSettingsModel>{
+            enabled: true
+        };
+    }
+
     load(): void {
         hookFunction("ItemColorLoad", 1, (args, next) => {
             next(args);
@@ -129,11 +135,14 @@ export class OpacityModule extends BaseModule {
             let Property = params['Property'];
             let ret = next(args) ?? {};
             let regex = /Assets(.+)BeforeDraw/i;
-            if (regex.test(funcName) && !!CA && isCloth(CA) && !!Property) {
+            if (regex.test(funcName) && !!CA && isCloth(CA) && !!Property && this.Enabled) {
                 let layerName = (params['L'] as string ?? "").trim().slice(1);
                 let layerIx = CA.Asset.Layer.findIndex(l => l.Name == layerName);
+                let originalLayerOpacity = CA.Asset.Layer[layerIx].Opacity;
                 let overrideOpacity = Array.isArray(Property?.LSCGOpacity) ? Property?.LSCGOpacity[layerIx] : Property?.LSCGOpacity;
-                ret.Opacity = Math.min((ret.Opacity ?? 1), (overrideOpacity ?? CA.Asset?.Opacity ?? 1));
+                if (overrideOpacity !== undefined) {
+                    ret.Opacity = Math.min((ret.Opacity ?? Property.Opacity ?? 1), (overrideOpacity ?? originalLayerOpacity ?? 1));
+                }
             }
             return ret;
         }, ModuleCategory.Opacity);
