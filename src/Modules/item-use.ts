@@ -976,7 +976,7 @@ export class ItemUseModule extends BaseModule {
 					gag!.Property!.Type = prefType.Type;
 				}
 			}
-			CharacterRefresh(target, true);
+			ChatRoomCharacterUpdate(target);
 		}
     }
 
@@ -1006,7 +1006,7 @@ export class ItemUseModule extends BaseModule {
 					item!.Property!.Type = prefType.Type;
 				}
 			}
-			CharacterRefresh(target, true);
+			ChatRoomCharacterUpdate(target);
 		}
 	}
 
@@ -1016,7 +1016,7 @@ export class ItemUseModule extends BaseModule {
 			var ropeTie = InventoryWear(target, rope.ItemName, rope.Location, handRope?.Color, undefined, source.MemberNumber, handRope?.Craft);
 			if (!!rope.Type && !!ropeTie)
 				(<any>ropeTie!.Property!.Type!) = rope.Type;
-			CharacterRefresh(target, true);
+			ChatRoomCharacterUpdate(target);
 		}
 	}
 
