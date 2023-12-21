@@ -34,6 +34,7 @@ type LSCGState = "none" | "hypnotized" | "asleep" | "horny" | "choking" | "held"
 type LSCGImmersiveOption = "true" | "false" | "whenImmersive";
 
 interface LSCGMessageModel {
+    IsLSCG: boolean;
     type: LSCGMessageModelType;
     version: string;
     settings: import("Settings/Models/settings").IPublicSettingsModel | null,

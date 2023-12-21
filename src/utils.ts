@@ -486,9 +486,10 @@ export function sendLSCGMessage(msg: LSCGMessageModel) {
 }
 
 export function sendLSCGBeep(target: number, msg: LSCGMessageModel) {
+	msg.IsLSCG = true;
 	ServerSend("AccountBeep", { 
 		MemberNumber: target,
-		BeepType: "LSCG",
+		BeepType: "Leash", // Hijack "Leash" BeepType to bypass friends-only server restriction
 		IsSecret: true,
 		Message: msg
 	});
@@ -496,6 +497,7 @@ export function sendLSCGBeep(target: number, msg: LSCGMessageModel) {
 
 export function sendLSCGCommand(target: Character, commandName: LSCGCommandName, commandArgs: {name: string, value: any}[] = []) {
 	sendLSCGMessage(<LSCGMessageModel>{
+		IsLSCG: true,
 		type: "command",
 		reply: false,
 		settings: null,
@@ -510,6 +512,7 @@ export function sendLSCGCommand(target: Character, commandName: LSCGCommandName,
 
 export function sendLSCGCommandBeep(target: number, commandName: LSCGCommandName, commandArgs: {name: string, value: any}[] = []) {
 	sendLSCGBeep(target, <LSCGMessageModel>{
+		IsLSCG: true,
 		type: "command",
 		reply: false,
 		settings: null,
