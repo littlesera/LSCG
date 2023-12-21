@@ -157,13 +157,14 @@ export class HypnoState extends BaseState {
         var eyes1 = InventoryGet(Player, "Eyes");
         var eyes2 = InventoryGet(Player, "Eyes2");
 
+        let hypnoEyeColors = hypnoSettings.hypnoEyeColor?.split(",") || hypnoSettings.hypnoEyeColor;
         if (!!eyes1) {
             eyes1.Asset = eyeAsset1 ?? eyes1.Asset;
-            eyes1.Color = hypnoSettings.hypnoEyeColor ?? "#A2A2A2";
+            eyes1.Color = hypnoEyeColors ?? "#A2A2A2";
         }    
         if (!!eyes2) {
             eyes2.Asset = eyeAsset2  ?? eyes2.Asset;
-            eyes2.Color = hypnoSettings.hypnoEyeColor ?? "#A2A2A2";
+            eyes2.Color = hypnoEyeColors ?? "#A2A2A2";
         }
 
         CharacterSetFacialExpression(Player, "Eyes", "Dazed");
