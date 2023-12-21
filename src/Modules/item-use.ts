@@ -950,8 +950,11 @@ export class ItemUseModule extends BaseModule {
 			if ((sourceLocation?.startsWith("ItemMouth") && targetLocation == "Necklace") ||
 				(sourceLocation == "Necklace" && targetLocation?.startsWith("ItemMouth")))
 				color = (<string[]>(<ItemColor>color)).reverse();
-			else if (sourceLocation == "ItemHandheld")
+			else if (sourceLocation == "Necklace" && targetLocation == "ItemHandheld")
+				color = [color[1]];
+			else if (sourceLocation == "ItemHandheld") {
 				color = [color[0], color[0]];
+			}
 		}
 		return color;
 	}
