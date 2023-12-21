@@ -133,18 +133,21 @@ export class OpacityModule extends BaseModule {
             let C = params['C'] as OtherCharacter;
             let CA = params['CA'] as Item;
             let Property = params['Property'];
-            let ret = next(args) ?? {};
             let regex = /Assets(.+)BeforeDraw/i;
-            if (regex.test(funcName) && !!CA && isCloth(CA) && !!Property && this.Enabled) {
-                let layerName = (params['L'] as string ?? "").trim().slice(1);
-                let layerIx = CA.Asset.Layer.findIndex(l => l.Name == layerName);
-                let originalLayerOpacity = CA.Asset.Layer[layerIx]?.Opacity ?? CA.Asset.Opacity ?? 1;
-                let overrideOpacity = Array.isArray(Property?.LSCGOpacity) ? Property?.LSCGOpacity[layerIx] : Property?.LSCGOpacity;
-                if (overrideOpacity !== undefined) {
-                    ret.Opacity = Math.min((ret.Opacity ?? Property.Opacity ?? 1), (overrideOpacity ?? originalLayerOpacity ?? 1));
+            if (regex.test(funcName)) {
+                let ret = CommonCallFunctionByName(args[0], args[1]) ?? {};
+                if (!!CA && isCloth(CA) && !!Property && this.Enabled) {
+                    let layerName = (params['L'] as string ?? "").trim().slice(1);
+                    let layerIx = CA.Asset.Layer.findIndex(l => l.Name == layerName);
+                    let originalLayerOpacity = CA.Asset.Layer[layerIx]?.Opacity ?? CA.Asset.Opacity ?? 1;
+                    let overrideOpacity = Array.isArray(Property?.LSCGOpacity) ? Property?.LSCGOpacity[layerIx] : Property?.LSCGOpacity;
+                    if (overrideOpacity !== undefined) {
+                        ret.Opacity = Math.min((ret.Opacity ?? Property.Opacity ?? 1), (overrideOpacity ?? originalLayerOpacity ?? 1));
+                    }
                 }
-            }
-            return ret;
+                return ret
+            } else
+                return next(args);
         }, ModuleCategory.Opacity);
     }
 
