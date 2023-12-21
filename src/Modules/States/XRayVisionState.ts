@@ -26,17 +26,20 @@ export class XRayVisionState extends BaseState {
             }
             let C = params['C'] as OtherCharacter;
             let CA = params['CA'] as Item;
-            let ret = next(args) ?? {};
             let regex = /Assets(.+)BeforeDraw/i;
-            if (regex.test(funcName) && this.Active && this.CanViewXRay(C) && !!CA && isCloth(CA)) {
-                let layerName = (params['L'] as string ?? "")?.trim().slice(1) ?? "";
-                let layerIx = CA.Asset.Layer.findIndex(l => l.Name == layerName);
-                let originalLayerOpacity = CA.Asset.Layer[layerIx]?.Opacity ?? CA.Asset.Opacity;
-                let curOpacity = ret.Opacity ?? originalLayerOpacity ?? 1;
-                ret.Opacity = curOpacity * .5;
-                ret.AlphaMasks = [];
-            }
-            return ret;
+            if (regex.test(funcName)) {
+                let ret = CommonCallFunctionByName(args[0], args[1]) ?? {};
+                if (this.Active && this.CanViewXRay(C) && !!CA && isCloth(CA)) {
+                    let layerName = (params['L'] as string ?? "")?.trim().slice(1) ?? "";
+                    let layerIx = CA.Asset.Layer.findIndex(l => l.Name == layerName);
+                    let originalLayerOpacity = CA.Asset.Layer[layerIx]?.Opacity ?? CA.Asset.Opacity;
+                    let curOpacity = ret.Opacity ?? originalLayerOpacity ?? 1;
+                    ret.Opacity = curOpacity * .5;
+                    ret.AlphaMasks = [];
+                }
+                return ret;
+            } else
+                return next(args);
         }, ModuleCategory.States);
     }
 
