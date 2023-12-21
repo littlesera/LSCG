@@ -20,13 +20,19 @@ export class XRayVisionState extends BaseState {
     Init(): void {
         hookFunction("CommonCallFunctionByNameWarn", 1, (args, next) => {
             let funcName = args[0];
-            let params = args[1]
+            let params = args[1];
+            if (!params) {
+                return next(args);
+            }
             let C = params['C'] as OtherCharacter;
-            let CA = params['CA'];
+            let CA = params['CA'] as Item;
             let ret = next(args) ?? {};
             let regex = /Assets(.+)BeforeDraw/i;
             if (regex.test(funcName) && this.Active && this.CanViewXRay(C) && !!CA && isCloth(CA)) {
-                let curOpacity = ret.Opacity ?? CA.Asset?.Opacity ?? 1;
+                let layerName = (params['L'] as string ?? "")?.trim().slice(1) ?? "";
+                let layerIx = CA.Asset.Layer.findIndex(l => l.Name == layerName);
+                let originalLayerOpacity = CA.Asset.Layer[layerIx]?.Opacity ?? CA.Asset.Opacity;
+                let curOpacity = ret.Opacity ?? originalLayerOpacity ?? 1;
                 ret.Opacity = curOpacity * .5;
                 ret.AlphaMasks = [];
             }

@@ -15,6 +15,7 @@ import { CommandModule } from 'Modules/commands';
 import { ItemUseModule } from 'Modules/item-use';
 import { StateModule } from 'Modules/states';
 import { MagicModule } from 'Modules/magic';
+import { OpacityModule } from 'Modules/opacity';
 
 export { 
 	DrugKeywords, 
@@ -127,6 +128,7 @@ function init() {
 
 function init_modules(): boolean {
 	registerModule(new CoreModule());
+	registerModule(new OpacityModule());
 	registerModule(new GUI());
 	registerModule(new StateModule());
 	registerModule(new HypnoModule());
