@@ -758,7 +758,10 @@ export class MagicModule extends BaseModule {
             if (!this.SpellIsBeneficial(spell) && gagType == "nothing" && sender.MemberNumber != Player.MemberNumber) {
                 this.TryForcePotion(sender, itemName, spell);
             } else {
-                SendAction(`%NAME% gulps down %OPP_NAME%'s ${itemName}.`, sender)
+                if (sender.IsPlayer())
+                    SendAction(`%NAME% gulps down %POSSESSIVE% ${itemName}.`, sender);
+                else
+                    SendAction(`%NAME% gulps down %OPP_NAME%'s ${itemName}.`, sender)
                 this.ProcessPotion(sender, spell);
             }
         }
