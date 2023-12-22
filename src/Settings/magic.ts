@@ -72,7 +72,7 @@ export class GuiMagic extends GuiSubscreen {
 				}, <Setting>{
 					type: "checkbox",
 					label: "Prevent X-Ray Vision",
-					description: "Enhance your clothing with xray-vision-blockers.",
+					description: "Lead-line all your clothing.",
 					setting: () => this.settings.blockXRay ?? false,
 					setSetting: (val) => this.settings.blockXRay = val
 				}, <Setting>{

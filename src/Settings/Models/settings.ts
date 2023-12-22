@@ -1,6 +1,6 @@
 import { BoopsModule } from "Modules/boops";
 import { InjectorModule } from "Modules/injector";
-import { BaseSettingsModel, GlobalPublicSettingsModel, GlobalSettingsModel, LipstickSettingsModel, MiscSettingsModel } from "./base";
+import { BaseSettingsModel, GlobalPublicSettingsModel, GlobalSettingsModel, LipstickSettingsModel, MiscSettingsModel, OpacityPublicSettingsModel, OpacitySettingsModel } from "./base";
 import { CollarModel, CollarPublicSettingsModel, CollarSettingsModel } from "./collar";
 import { HypnoPublicSettingsModel, HypnoSettingsModel } from "./hypno";
 import { InjectorPublicSettingsModel, InjectorSettingsModel } from "./injector";
@@ -22,6 +22,7 @@ export interface SettingsModel {
     ActivityModule: ActivitySettingsModel;
     StateModule: StateSettingsModel;
     MagicModule: MagicSettingsModel;
+    OpacityModule: OpacitySettingsModel;
 }
 
 export interface IPublicSettingsModel extends BaseSettingsModel {
@@ -35,6 +36,7 @@ export interface IPublicSettingsModel extends BaseSettingsModel {
     InjectorModule: InjectorPublicSettingsModel;
     StateModule: StatePublicSettingsModel;
     MagicModule: MagicPublicSettingsModel;
+    OpacityModule: OpacityPublicSettingsModel;
 }
 
 export class PublicSettingsModel implements IPublicSettingsModel {
@@ -131,5 +133,9 @@ export class PublicSettingsModel implements IPublicSettingsModel {
         allowChangeGenitals: true,
         requireWhitelist: false,
         blockXRay: false
+    };
+    OpacityModule: OpacityPublicSettingsModel = <OpacityPublicSettingsModel>{
+        enabled: true,
+        preventExternalMod: false
     }
 }

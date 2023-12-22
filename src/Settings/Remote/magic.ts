@@ -163,7 +163,7 @@ export class RemoteMagic extends RemoteGuiSubscreen {
 			}, <Setting>{
 				type: "checkbox",
 				label: "Prevent X-Ray Vision",
-				description: "Enhance your clothing with xray-vision-blockers.",
+				description: "Lead-line all the target's clothing.",
 				setting: () => this.settings.blockXRay ?? false,
 				setSetting: (val) => this.settings.blockXRay = val
 			}

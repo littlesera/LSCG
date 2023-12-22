@@ -31,3 +31,10 @@ export interface MiscSettingsModel extends BaseSettingsModel {
     handChokeEnabled: boolean;
     gagChokeEnabled: boolean;
 }
+
+export interface OpacitySettingsModel extends OpacityPublicSettingsModel {
+}
+
+export interface OpacityPublicSettingsModel extends BaseSettingsModel {
+    preventExternalMod: boolean;
+}

@@ -5,6 +5,7 @@ import { MiscModule } from "Modules/misc";
 import { ICONS } from "utils";
 import { GlobalSettingsModel } from "./Models/base";
 import { GuiSubscreen, Setting } from "./settingBase";
+import { OpacityModule } from "Modules/opacity";
 
 export class GuiGlobal extends GuiSubscreen {
 
@@ -82,6 +83,18 @@ export class GuiGlobal extends GuiSubscreen {
 				description: "If checked, you will not see any LSCG resizing effects. (eg. from magic)",
 				setting: () => this.settings.hideResizing ?? false,
 				setSetting: (val) => this.settings.hideResizing = val
+			},<Setting>{
+				type: "checkbox",
+				label: "Hide all Opacity Overrides:",
+				description: "If checked, will skip any opacity override effects. (includes x-ray vision)",
+				setting: () => !(Player.LSCG.OpacityModule.enabled ?? true),
+				setSetting: (val) => { Player.LSCG.OpacityModule.enabled = (val === false) }
+			},<Setting>{
+				type: "checkbox",
+				label: "Prevent Remote Opacity Changes:",
+				description: "If checked, other players will not be able to directly modify the opacity settings on your wardrobe items.",
+				setting: () => Player.LSCG.OpacityModule.preventExternalMod ?? false,
+				setSetting: (val) => Player.LSCG.OpacityModule.preventExternalMod = val
 			}
 		]
 	}
@@ -91,6 +104,7 @@ export class GuiGlobal extends GuiSubscreen {
 		getModule<MiscModule>("MiscModule")?.settings;
 		getModule<LipstickModule>("LipstickModule")?.settings;
 		getModule<BoopsModule>("BoopsModule")?.settings;
+		getModule<OpacityModule>("OpacityModule")?.settings;
 		super.Load();
 	}
 }
