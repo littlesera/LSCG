@@ -344,7 +344,7 @@ export class ItemUseModule extends BaseModule {
 				MaxProgress: 50,
 				MaxProgressSelf: 80,
 				Reverse: true,
-				Prerequisite: ["UseHands", "Needs-GagTakeItem"]
+				Prerequisite: ["Needs-GagTakeItem"]
 			},
 			Targets: [
 				<ActivityTarget>{
@@ -1007,6 +1007,7 @@ export class ItemUseModule extends BaseModule {
 				}
 			}
 			ChatRoomCharacterUpdate(target);
+			ChatRoomCharacterUpdate(source);
 		}
 	}
 

@@ -163,9 +163,9 @@ export class OpacityModule extends BaseModule {
             let CA = params['CA'] as Item;
             let Property = params['Property'];
             let regex = /Assets(.+)BeforeDraw/i;
-            if (regex.test(funcName)) {
+            if (regex.test(funcName) && this.Enabled) {
                 let ret = CommonCallFunctionByName(args[0], args[1]) ?? {};
-                if (!!CA && isCloth(CA) && !!Property && this.Enabled) {
+                if (!!CA && isCloth(CA) && !!Property) {
                     let layerName = (params['L'] as string ?? "").trim().slice(1);
                     let layerIx = CA.Asset.Layer.findIndex(l => l.Name == layerName);
                     let originalLayerOpacity = CA.Asset.Layer[layerIx]?.Opacity ?? CA.Asset.Opacity ?? 1;
