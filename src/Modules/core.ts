@@ -76,14 +76,14 @@ export class CoreModule extends BaseModule {
         hookFunction("ServerAccountBeep", 10, (args, next) => {
             let data = args[0];
             // Intercept LSCG beeps directly
-            if (data.BeepType == "LSCG") {
+            if (data.BeepType == "Leash" && !!data.Message && data.Message.IsLSCG === true) {
                 let msg = data.Message as LSCGMessageModel;
                 if (msg.type == "command")
-                    this.Command(data.MemberNumber, msg)
+                    this.Command(data.MemberNumber, msg);
             }
             else
                 return next(args);
-        })
+        }, ModuleCategory.Core);
 
         hookFunction("ChatRoomDrawCharacterOverlay", 1, (args, next) => {
             next(args);

@@ -28,8 +28,9 @@ export class XRayVisionState extends BaseState {
             let CA = params['CA'] as Item;
             let regex = /Assets(.+)BeforeDraw/i;
             if (regex.test(funcName)) {
+                let opacityEnabled = Player.LSCG.OpacityModule.enabled ?? true;
                 let ret = next(args) ?? {};
-                if (this.Active && this.CanViewXRay(C) && !!CA && isCloth(CA)) {
+                if (opacityEnabled && this.Active && this.CanViewXRay(C) && !!CA && isCloth(CA) && !(params['Property']?.LSCGLeadLined ?? false)) {
                     let layerName = (params['L'] as string ?? "")?.trim().slice(1) ?? "";
                     let layerIx = CA.Asset.Layer.findIndex(l => l.Name == layerName);
                     let originalLayerOpacity = CA.Asset.Layer[layerIx]?.Opacity ?? CA.Asset.Opacity;

@@ -1,6 +1,6 @@
 import { BaseModule } from "base";
 import { getModule } from "modules";
-import { BaseSettingsModel } from "Settings/Models/base";
+import { BaseSettingsModel, OpacitySettingsModel } from "Settings/Models/base";
 import { ModuleCategory } from "Settings/setting_definitions";
 import { GetTargetCharacter, IsIncapacitated, OnActivity, SendAction, getRandomInt, hookFunction, isCloth, removeAllHooksByModule, setOrIgnoreBlush } from "../utils";
 import { MiscModule } from "./misc";
@@ -26,21 +26,30 @@ export class OpacityModule extends BaseModule {
     OpacityLayerSliders: OpacitySlider[] = [];
 
     OpacityItem: Item | null = null;
-    OpacityCharacter: Character | null = null;
+    OpacityCharacter: OtherCharacter | null = null;
     opacityAllLayer: boolean = false;
 
+    get settings(): OpacitySettingsModel {
+        return super.settings as OpacitySettingsModel;
+	}
+
     get defaultSettings() {
-        return <BaseSettingsModel>{
-            enabled: true
+        return <OpacitySettingsModel>{
+            enabled: true,
+            preventExternalMod: false
         };
+    }
+
+    CanChangeOpacityOnCharacter(C: OtherCharacter): boolean {
+        return C.IsPlayer() || !(C.LSCG?.OpacityModule?.preventExternalMod ?? false);
     }
 
     load(): void {
         hookFunction("ItemColorLoad", 1, (args, next) => {
             next(args);
-            let C = args[0] as Character;
+            let C = args[0] as OtherCharacter;
             let Item = args[1] as Item;
-            if (C.IsPlayer() && isCloth(Item)) {
+            if (this.CanChangeOpacityOnCharacter(C) && isCloth(Item)) {
                 this.OpacityCharacter = C;
                 this.OpacityItem = Item;
 
@@ -72,9 +81,7 @@ export class OpacityModule extends BaseModule {
                     this.DrawOpacityLayerSliders();
                 } else {
                     this.opacityAllLayer = false;
-                    ElementPosition(this.OpacityMainSlider.LabelId, 250, 200, 300, 20);
-                    ElementPosition(this.OpacityMainSlider.ElementId, 250, 250, 300, 20);
-                    ElementValue(this.OpacityMainSlider.ElementId, "" + (this.OpacityItem?.Property?.LSCGOpacity ?? 1));
+                    this.DrawMainOpacitySlider();
                 }
             }
         }, ModuleCategory.Opacity);
@@ -93,14 +100,21 @@ export class OpacityModule extends BaseModule {
         }, ModuleCategory.Opacity);
 
         hookFunction("ItemColorDraw", 1, (args, next) => {
-            if (this.OpacityCharacter && this.OpacityCharacter.IsPlayer() && this.OpacityItem && isCloth(this.OpacityItem) && this.OpacityItem.Asset?.Layer.length > 1) {
+            if (this.OpacityCharacter && this.CanChangeOpacityOnCharacter(this.OpacityCharacter) && this.OpacityItem && isCloth(this.OpacityItem)) {
                 let prev = MainCanvas.textAlign;
                 MainCanvas.textAlign = "left";
-                var isHovering = MouseIn(50, 120 - 32, 64, 64);
-                DrawCheckbox(50, 120 - 32, 64, 64, "", this.opacityAllLayer);
-                DrawTextFit("All Layers", 180, 120, 300, isHovering ? "Red" : "White", "Gray");
-                if (isHovering) 
+                
+                // Draw "All Layers" checkbox
+                DrawCheckbox(50, 120 - 32, 64, 64, "", this.opacityAllLayer, this.OpacityItem.Asset?.Layer.length <= 1);
+                DrawTextFit("All Layers", 120, 120, 300, "White", "Gray");
+                if (MouseIn(50, 120 - 32, 64, 64)) 
                     drawTooltip(50, 50, 800, "Modify opacity levels for each asset layer", "left");
+
+                // Draw "All Layers" checkbox
+                DrawCheckbox(350, 120 - 32, 64, 64, "", this.OpacityItem?.Property?.LSCGLeadLined ?? false);
+                DrawTextFit("Lead-Lined", 420, 120, 300, "White", "Gray");
+                if (MouseIn(350, 120 - 32, 64, 64)) 
+                    drawTooltip(50, 50, 800, "Line this item with x-ray blocking lead.", "left");
 
                 MainCanvas.textAlign = prev;
             }
@@ -109,17 +123,32 @@ export class OpacityModule extends BaseModule {
 
         hookFunction("ItemColorClick", 1, (args, next) => {
             next(args);
-            if (MouseIn(50, 120 - 32, 64, 64) && this.OpacityCharacter && this.OpacityCharacter.IsPlayer() && this.OpacityItem && isCloth(this.OpacityItem) && this.OpacityItem.Asset?.Layer.length > 1) {
-                this.opacityAllLayer = !this.opacityAllLayer;
-
-                if (this.opacityAllLayer) {
+            if (this.OpacityCharacter && this.CanChangeOpacityOnCharacter(this.OpacityCharacter) && this.OpacityItem && isCloth(this.OpacityItem)) {
+                if (this.OpacityItem.Asset?.Layer.length > 1 && MouseIn(50, 120 - 32, 64, 64)) {
+                    this.opacityAllLayer = !this.opacityAllLayer;
+    
                     if (!this.OpacityItem.Property)
                         this.OpacityItem.Property = {};
-                    if (!Array.isArray(this.OpacityItem.Property.LSCGOpacity))
-                        this.OpacityItem.Property.LSCGOpacity = this.OpacityLayerSliders.map(s => s.Value);
-                    this.DrawOpacityLayerSliders();
-                } else {
-                    this.DrawMainOpacitySlider();
+
+                    if (this.opacityAllLayer) {
+                        if (!Array.isArray(this.OpacityItem.Property.LSCGOpacity)) {
+                            let opac = this.OpacityItem?.Property?.LSCGOpacity ?? 1;
+                            if (!this.OpacityItem.Property)
+                                this.OpacityItem.Property = {};
+                            this.OpacityItem.Property.LSCGOpacity = new Array(this.OpacityLayerSliders.length).fill(opac);
+                        }
+                        this.DrawOpacityLayerSliders();
+                    } else {
+                        if (Array.isArray(this.OpacityItem.Property.LSCGOpacity)) {
+                            this.OpacityItem.Property.LSCGOpacity = Math.max(...this.OpacityItem.Property.LSCGOpacity);
+                        }
+                        this.DrawMainOpacitySlider();
+                    }
+                    this.UpdatePreview();
+                } else if (MouseIn(350, 120 - 32, 64, 64)) {
+                    if (!this.OpacityItem.Property)
+                        this.OpacityItem.Property = {};
+                    this.OpacityItem.Property.LSCGLeadLined = !this.OpacityItem.Property.LSCGLeadLined;
                 }
             }
         }, ModuleCategory.Opacity)
@@ -226,9 +255,11 @@ export class OpacityModule extends BaseModule {
             ElementPosition(layerSlider.ElementId, -999, -999, 300, 20);
         });
 
+        let opacityValue = Array.isArray(this.OpacityItem?.Property?.LSCGOpacity) ? 1 : (this.OpacityItem?.Property?.LSCGOpacity ?? 1);
+
         ElementPosition(this.OpacityMainSlider.LabelId, 200, 200, 300, 20);
         ElementPosition(this.OpacityMainSlider.ElementId, 200, 260, 300, 20);
-        ElementValue(this.OpacityMainSlider.ElementId, "" + (this.OpacityItem?.Property?.LSCGOpacity ?? 1));
+        ElementValue(this.OpacityMainSlider.ElementId, "" + opacityValue);
     }
 
     CreateOpacityLabel(labelId: string, sliderId: string, overrideText?: string | null | undefined) {

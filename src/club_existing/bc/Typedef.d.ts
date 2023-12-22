@@ -2628,6 +2628,9 @@ interface ItemPropertiesCustom {
 
 	// Custom LSCG property to override opacity
 	LSCGOpacity?: number | number[];
+
+	// Custom LSCG property to block xray vision
+	LSCGLeadLined?: boolean;
 }
 
 interface ItemProperties extends ItemPropertiesBase, AssetDefinitionProperties, ItemPropertiesCustom { }
