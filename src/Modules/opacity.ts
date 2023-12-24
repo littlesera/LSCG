@@ -202,9 +202,10 @@ export class OpacityModule extends BaseModule {
             let xray = getModule<StateModule>("StateModule")?.XRayState;
             let xrayActive = xray?.Active && xray?.CanViewXRay(C);
             C.DrawAppearance?.forEach(item => {
-                let hasOpacitySettings = !!item.Property?.LSCGOpacity;
+                let hasOpacitySettings = !!item.Property?.LSCGOpacity && item.Property?.LSCGOpacity != 1;
                 if (hasOpacitySettings || xrayActive) {
                     item.Asset = Object.assign({}, item.Asset);
+                    item.Asset.Layer = item.Asset.Layer.map(l => Object.assign({}, l));
                     item?.Asset?.Layer?.forEach(layer => {
                         layer.Alpha = [];
                     });
@@ -212,6 +213,8 @@ export class OpacityModule extends BaseModule {
                     item.Asset.HideItem = [];
                     item.Asset.HideItemAttribute = [];
                 } else {
+                    item.Asset = Object.assign({}, item.Asset);
+                    item.Asset.Layer = item.Asset.Layer.map(l => Object.assign({}, l));
                     let defaultAsset = AssetMap.get(`${item?.Asset?.Group?.Name}/${item.Asset.Name}`);
                     if (!!defaultAsset) {
                         item?.Asset?.Layer?.forEach((layer, ix, arr) => {

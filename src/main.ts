@@ -98,7 +98,6 @@ function init() {
 
 	initSettingsScreen();
 
-	debugger;
 	if (!init_modules()) {
 		unload();
 		return;
