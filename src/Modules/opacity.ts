@@ -218,6 +218,9 @@ export class OpacityModule extends BaseModule {
                             if (defaultAsset!.Alpha)
                                 layer.Alpha = defaultAsset!.Alpha;
                         });
+                        item.Asset.Hide = defaultAsset.Hide;
+                        item.Asset.HideItem = defaultAsset.HideItem;
+                        item.Asset.HideItemAttribute = defaultAsset.HideItemAttribute;
                     }
                 }
 
