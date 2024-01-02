@@ -10,6 +10,7 @@ import { drawTooltip } from "Settings/settingUtils";
 interface OpacitySlider {
     ElementId: string;
     Element: HTMLInputElement | null;
+    TextElement: HTMLInputElement | null;
     LabelId: string;
     Label: HTMLLabelElement | null;
     Value: number;
@@ -19,6 +20,7 @@ export class OpacityModule extends BaseModule {
     OpacityMainSlider: OpacitySlider = {
         ElementId: "LSCG_OpacitySlider",
         Element: null,
+        TextElement: null,
         LabelId: "LSCG_OpacitySlider_Label",
         Label: null,
         Value: 0
@@ -55,8 +57,14 @@ export class OpacityModule extends BaseModule {
 
                 this.OpacityMainSlider.Element = ElementCreateRangeInput(this.OpacityMainSlider.ElementId, 1, 0, 1, 0.01);
                 this.OpacityMainSlider.Element.addEventListener("input", (e) => this.OpacityChange(this.OpacityMainSlider));
+                this.OpacityMainSlider.TextElement = ElementCreateInput(this.OpacityMainSlider.ElementId + "_Text", "number", this.OpacityMainSlider.Value + "");
+                ElementSetAttribute(this.OpacityMainSlider.ElementId + "_Text", "min", "0");
+                ElementSetAttribute(this.OpacityMainSlider.ElementId + "_Text", "max", "1");
+                ElementSetAttribute(this.OpacityMainSlider.ElementId + "_Text", "step", "0.1");
+                this.OpacityMainSlider.TextElement.addEventListener("input", (e) => this.OpacityTextChange(this.OpacityMainSlider));
                 this.OpacityMainSlider.Label = this.CreateOpacityLabel(this.OpacityMainSlider.LabelId, this.OpacityMainSlider.ElementId);
                 ElementPosition(this.OpacityMainSlider.ElementId, -999, -999, 300, 20);
+                ElementPosition(this.OpacityMainSlider.ElementId + "_Text", -999, -999, 300, 20);
                 ElementPosition(this.OpacityMainSlider.LabelId, -999, -999, 300, 20);
 
                 this.OpacityLayerSliders = [];
@@ -69,8 +77,14 @@ export class OpacityModule extends BaseModule {
                         };
                         layerSlider.Element = ElementCreateRangeInput(layerSlider.ElementId, 1, 0, 1, 0.01);
                         layerSlider.Element.addEventListener("input", (e) => this.OpacityChange(layerSlider));
+                        layerSlider.Element = ElementCreateInput(layerSlider.ElementId + "_Text", "number", layerSlider.Value + "");
+                        ElementSetAttribute(layerSlider.ElementId + "_Text", "min", "0");
+                        ElementSetAttribute(layerSlider.ElementId + "_Text", "max", "1");
+                        ElementSetAttribute(layerSlider.ElementId + "_Text", "step", "0.1");
+                        layerSlider.Element.addEventListener("input", (e) => this.OpacityTextChange(layerSlider));
                         layerSlider.Label = this.CreateOpacityLabel(layerSlider.LabelId, layerSlider.ElementId, l.Name);
                         ElementPosition(layerSlider.ElementId, -999, -999, 300, 20);
+                        ElementPosition(layerSlider.ElementId + "_Text", -999, -999, 300, 20);
                         ElementPosition(layerSlider.LabelId, -999, -999, 300, 20);
                         this.OpacityLayerSliders.push(layerSlider);
                     });
@@ -91,9 +105,11 @@ export class OpacityModule extends BaseModule {
             this.OpacityCharacter = null;
             this.OpacityItem = null;
             ElementRemove(this.OpacityMainSlider.ElementId);
+            ElementRemove(this.OpacityMainSlider.ElementId + "_Text");
             ElementRemove(this.OpacityMainSlider.LabelId);
             this.OpacityLayerSliders.forEach(s => {
                 ElementRemove(s.ElementId);
+                ElementRemove(s.ElementId + "_Text");
                 ElementRemove(s.LabelId);
             });
             this.OpacityLayerSliders = [];
@@ -244,13 +260,17 @@ export class OpacityModule extends BaseModule {
     DrawOpacityLayerSliders() {
         ElementPosition(this.OpacityMainSlider.LabelId, -999, -999, 300, 20);
         ElementPosition(this.OpacityMainSlider.ElementId, -999, -999, 300, 20);
+        ElementPosition(this.OpacityMainSlider.ElementId + "_Text", -999, -999, 300, 40);
 
         this.OpacityLayerSliders.forEach((layerSlider, ix, arr) => {
             let xMod = Math.floor(ix / 8);
             let yMod = ix % 8;
-            ElementPosition(layerSlider.LabelId, 200 + (xMod * 350), 200 + (yMod * 100), 300, 20);
-            ElementPosition(layerSlider.ElementId, 200 + (xMod * 350), 260 + (yMod * 100), 300, 20);
-            ElementValue(layerSlider.ElementId, "" + ((<number[]>this.OpacityItem?.Property?.LSCGOpacity)[ix] ?? 1));
+            ElementPosition(layerSlider.LabelId, 200 + (xMod * 420), 200 + (yMod * 100), 300, 20);
+            ElementPosition(layerSlider.ElementId, 200 + (xMod * 420), 260 + (yMod * 100), 300, 20);
+            ElementPosition(layerSlider.ElementId + "_Text", 400 + (xMod * 420), 260 + (yMod * 100), 128, 40);
+            let valStr = "" + ((<number[]>this.OpacityItem?.Property?.LSCGOpacity)[ix] ?? 1);
+            ElementValue(layerSlider.ElementId, valStr);
+            ElementValue(layerSlider.ElementId + "_Text", valStr);
         });
     }
 
@@ -259,13 +279,16 @@ export class OpacityModule extends BaseModule {
             let xMod = Math.floor(ix / 5);
             ElementPosition(layerSlider.LabelId, -999, -999, 300, 20);
             ElementPosition(layerSlider.ElementId, -999, -999, 300, 20);
+            ElementPosition(layerSlider.ElementId + "_Text", -999, -999, 300, 40);
         });
 
         let opacityValue = Array.isArray(this.OpacityItem?.Property?.LSCGOpacity) ? 1 : (this.OpacityItem?.Property?.LSCGOpacity ?? 1);
 
         ElementPosition(this.OpacityMainSlider.LabelId, 200, 200, 300, 20);
         ElementPosition(this.OpacityMainSlider.ElementId, 200, 260, 300, 20);
+        ElementPosition(this.OpacityMainSlider.ElementId + "_Text", 400, 260, 128, 40);
         ElementValue(this.OpacityMainSlider.ElementId, "" + opacityValue);
+        ElementValue(this.OpacityMainSlider.ElementId + "_Text", "" + opacityValue);
     }
 
     CreateOpacityLabel(labelId: string, sliderId: string, overrideText?: string | null | undefined) {
@@ -283,25 +306,39 @@ export class OpacityModule extends BaseModule {
     }
 
     OpacityChange(slider: OpacitySlider) {
-        if (!this.OpacityItem)
-            return;
+        let value = this._updateOpacityValue(slider.ElementId);
+        slider.Value = value;
+        ElementValue(slider.ElementId + "_Text", value + "");
+        this.UpdatePreview();
+    }
 
-        let value = parseFloat(ElementValue(slider.ElementId));
+    OpacityTextChange(slider: OpacitySlider) {
+        let value = this._updateOpacityValue(slider.ElementId + "_Text");
+        slider.Value = value;
+        ElementValue(slider.ElementId, value + "");
+        this.UpdatePreview();
+    }
+
+    _updateOpacityValue(fromElementId: string): number {
+        if (!this.OpacityItem)
+            return 1;
+
+        let value = parseFloat(ElementValue(fromElementId));
         let C = Player;
         if (!this.OpacityItem.Property)
             this.OpacityItem.Property = {};
-        if (slider.ElementId == this.OpacityMainSlider.ElementId) {
+        if (fromElementId == this.OpacityMainSlider.ElementId || fromElementId == this.OpacityMainSlider.ElementId + "_Text") {
             if (value < 1)
                 this.OpacityItem.Property.LSCGOpacity = value;
             else delete this.OpacityItem.Property.LSCGOpacity;
         } else {
             if (!Array.isArray(this.OpacityItem.Property.LSCGOpacity))
                 this.OpacityItem.Property.LSCGOpacity = [];
-            let ix = this.OpacityLayerSliders.findIndex(s => s.ElementId == slider.ElementId);
+            let ix = this.OpacityLayerSliders.findIndex(s => s.ElementId == fromElementId || s.ElementId + "_Text" == fromElementId);
             this.OpacityItem.Property.LSCGOpacity[ix] = value;
         }
-        slider.Value = value;
-        this.UpdatePreview();
+
+        return value;
     }
 
     UpdatePreview = CommonLimitFunction(() => {
