@@ -274,15 +274,15 @@ export function getRandomInt(max: number) {
 }
 
 export function settingsSave(publish: boolean = false) {
-	if (!Player.OnlineSettings)
-		Player.OnlineSettings = <PlayerOnlineSettings>{};
-	Player.OnlineSettings.LSCG = LZString.compressToBase64(JSON.stringify(Player.LSCG));
+	if (!Player.ExtensionSettings)
+		Player.ExtensionSettings = <PlayerExtensionSettings>{};
+	Player.ExtensionSettings.LSCG = LZString.compressToBase64(JSON.stringify(Player.LSCG));
 	
 	try {
 		let cleaned = CleanDefaultsFromSettings(Player.LSCG);
 		let cleanedAndCompressed = LZString.compressToBase64(JSON.stringify(cleaned));
 		let cleanedDataSize = GetDataSizeReport(cleanedAndCompressed, false);
-		let currentDataSize = GetDataSizeReport(Player.OnlineSettings.LSCG, false);
+		let currentDataSize = GetDataSizeReport(Player.ExtensionSettings.LSCG, false);
 		console.log(`LSCG Save Size: ${currentDataSize} bytes, with clean it could be: ${cleanedDataSize} bytes`);
 		console.debug("Cleaned:");
 		console.debug(cleaned);
@@ -290,7 +290,7 @@ export function settingsSave(publish: boolean = false) {
 		console.warn(`Error during experimental clean: ${error}`);
 	}
 
-    window.ServerAccountUpdate.QueueData({OnlineSettings: Player.OnlineSettings});
+	ServerPlayerExtensionSettingsSync("LSCG");
 	if (publish)
 		getModule<CoreModule>("CoreModule")?.SendPublicPacket(false, "sync");
 }

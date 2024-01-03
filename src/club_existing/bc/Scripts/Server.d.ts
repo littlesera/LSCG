@@ -177,6 +177,14 @@ declare function ServerAccountOwnership(data: object): void;
  * @returns {void} - Nothing
  */
 declare function ServerAccountLovership(data: object): void;
+
+/**
+ * Syncs {@link Player.ExtensionSettings} to the server.
+ * @param {keyof ExtensionSettings} dataKeyName - The single key to sync
+ * @param {boolean} [_force] - unused
+ */
+declare function ServerPlayerExtensionSettingsSync(dataKeyName: string, _force?: boolean): void;
+
 /**
  * Compares the source account and target account to check if we allow using an item
  *

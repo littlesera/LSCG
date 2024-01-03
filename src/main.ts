@@ -16,6 +16,7 @@ import { ItemUseModule } from 'Modules/item-use';
 import { StateModule } from 'Modules/states';
 import { MagicModule } from 'Modules/magic';
 import { OpacityModule } from 'Modules/opacity';
+import { lt } from 'semver';
 
 export { 
 	DrugKeywords, 
@@ -76,25 +77,40 @@ function init() {
 	if (!!(<any>Player.OnlineSettings)?.ClubGames)
 		delete (<any>Player.OnlineSettings).ClubGames;
 
-	if (typeof Player.OnlineSettings?.LSCG == "string") {
-		localStorage.setItem(`LSCG_${Player.MemberNumber}_Backup`, Player.OnlineSettings?.LSCG)
+	let settings = Player.ExtensionSettings?.LSCG || Player.OnlineSettings?.LSCG;
+	let settingsVer = (<SettingsModel>JSON.parse(LZString.decompressFromBase64(settings || null) || "{}")).Version || "v0.0.0";
+	let localSettings = localStorage.getItem(`LSCG_${Player.MemberNumber}_Backup`);
+	let localSettingsVer = (<SettingsModel>JSON.parse(LZString.decompressFromBase64(localSettings || null) || "{}")).Version || "v0.0.0";
+	
+	let localIsMoreRecent = lt(settingsVer, localSettingsVer);
+	
+	if (!!localSettings && (!settings || localIsMoreRecent))
+		settings = localSettings;
+
+	if (!!settings && typeof settings == "string") {
+		localStorage.setItem(`LSCG_${Player.MemberNumber}_Backup`, settings)
 		let parsed = <SettingsModel>{};
 		try {
-			parsed = JSON.parse(LZString.decompressFromBase64(Player.OnlineSettings?.LSCG));
+			parsed = JSON.parse(LZString.decompressFromBase64(settings));
 			if (!parsed)
-				parsed = JSON.parse(LZString.decompressFromUTF16(Player.OnlineSettings?.LSCG));
+				parsed = JSON.parse(LZString.decompressFromUTF16(settings));
 		} catch (error) {
 			try {
-				parsed = JSON.parse(LZString.decompressFromUTF16(Player.OnlineSettings?.LSCG)); // Fallback to old compression
+				parsed = JSON.parse(LZString.decompressFromUTF16(settings)); // Fallback to old compression
 			} catch (secondError) {
 				console.warn("LSCG: Failed to load corrupted server data.", error);
 				throw error; // Throw error here to prevent LSCG from later trying to save corrupted data back and blowing away existing settings.	
 			}
 		}
 		Player.LSCG = parsed || <SettingsModel>{};
+		// Clean old settings
+		if (!!Player.OnlineSettings?.LSCG) {
+			delete (<any>Player.OnlineSettings).LSCG;
+			settingsSave();
+		}
 	}
-	else
-		Player.LSCG = Player.OnlineSettings?.LSCG || <SettingsModel>{};
+	else if (!!settings)
+		Player.LSCG = <SettingsModel>settings || <SettingsModel>{};
 
 	initSettingsScreen();
 

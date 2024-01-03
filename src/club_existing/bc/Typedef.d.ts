@@ -1802,6 +1802,7 @@ interface PlayerCharacter extends Character {
 		BypassNPCPunishments: boolean;
 	};
 	OnlineSettings?: PlayerOnlineSettings;
+	ExtensionSettings?: PlayerExtensionSettings;
 	GraphicsSettings?: {
 		Font: GraphicsFontName;
 		InvertRoom: boolean;

@@ -12,6 +12,10 @@ interface PlayerOnlineSettings {
 	LSCG: import("Settings/Models/settings").SettingsModel | string;
 }
 
+interface PlayerExtensionSettings {
+    LSCG: string;
+}
+
 interface LSCGMessageDictionaryEntry {
     message: LSCGMessageModel;
 }

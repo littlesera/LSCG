@@ -60,7 +60,7 @@ export class MagicModule extends BaseModule {
             allowChangeGenitals: true,
             allowChangePronouns: false,
             requireWhitelist: false,
-            blockXRay: false
+            blockXRay: true
         };
     }
 
