@@ -299,6 +299,10 @@ export class ActivityModule extends BaseModule {
                     SelfAllowed: false,
                     TargetAction: "SourceCharacter nuzzles snugly into TargetCharacter."
                 },<ActivityTarget>{
+                    Name: "ItemPelvis",
+                    SelfAllowed: false,
+                    TargetAction: "SourceCharacter nuzzles snugly into TargetCharacter."
+                },<ActivityTarget>{
                     Name: "ItemLegs",
                     SelfAllowed: false,
                     TargetAction: "SourceCharacter nuzzles against TargetCharacter's thigh."
