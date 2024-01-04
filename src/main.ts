@@ -78,14 +78,22 @@ function init() {
 		delete (<any>Player.OnlineSettings).ClubGames;
 
 	let settings = Player.ExtensionSettings?.LSCG || Player.OnlineSettings?.LSCG;
-	let settingsVer = (<SettingsModel>JSON.parse(LZString.decompressFromBase64(settings || null) || "{}")).Version || "v0.0.0";
 	let localSettings = localStorage.getItem(`LSCG_${Player.MemberNumber}_Backup`);
-	let localSettingsVer = (<SettingsModel>JSON.parse(LZString.decompressFromBase64(localSettings || null) || "{}")).Version || "v0.0.0";
 	
-	let localIsMoreRecent = lt(settingsVer, localSettingsVer);
-	
-	if (!!localSettings && (!settings || localIsMoreRecent))
-		settings = localSettings;
+	// If localStorage setting backup exist, compare the versions to restore from backup
+	if (!!localSettings) {
+		let settingsVer = (<SettingsModel>JSON.parse(LZString.decompressFromBase64(settings || null) || "{}")).Version || "v0.0.0";
+		let localSettingsVer = (<SettingsModel>JSON.parse(LZString.decompressFromBase64(localSettings || null) || "{}")).Version || "v0.0.0";
+		let localIsMoreRecent = false;
+		try {
+			localIsMoreRecent = lt(settingsVer, localSettingsVer);
+		} catch (error) {
+			console.debug(`LSCG: Failed to compare local and remote setting versions -- ${error}`);
+		}
+
+		if (!settings || localIsMoreRecent)
+			settings = localSettings;
+	}
 
 	if (!!settings && typeof settings == "string") {
 		localStorage.setItem(`LSCG_${Player.MemberNumber}_Backup`, settings)
