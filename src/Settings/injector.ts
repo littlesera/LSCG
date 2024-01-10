@@ -25,7 +25,7 @@ export class GuiInjector extends GuiSubscreen {
 				<Setting>{
 					type: "checkbox",
 					label: "Enabled:",
-					description: "Enable Enhanced Injections and Net Gun.",
+					description: "Enable Enhanced Drinks, Injectors and Net Gun.",
 					setting: () => this.settings.enabled ?? false,
 					setSetting: (val) => this.settings.enabled = val
 				// },<Setting>{

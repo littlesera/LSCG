@@ -273,6 +273,8 @@ export function getRandomInt(max: number) {
     return Math.floor(Math.random() * max);
 }
 
+let savingFlag = 0;
+
 export function settingsSave(publish: boolean = false) {
 	if (!Player.ExtensionSettings)
 		Player.ExtensionSettings = <PlayerExtensionSettings>{};
@@ -290,9 +292,15 @@ export function settingsSave(publish: boolean = false) {
 		console.warn(`Error during experimental clean: ${error}`);
 	}
 
-	ServerPlayerExtensionSettingsSync("LSCG");
-	if (publish)
-		getModule<CoreModule>("CoreModule")?.SendPublicPacket(false, "sync");
+	if (!savingFlag)
+		savingFlag = setTimeout(() => {
+			ServerPlayerExtensionSettingsSync("LSCG");
+			if (publish) {
+				getModule<CoreModule>("CoreModule")?.SendPublicPacket(false, "sync");
+			}
+			clearTimeout(savingFlag);
+			savingFlag = 0;
+		}, 500);
 }
 
 export function ExportSettings(): string {
