@@ -188,7 +188,7 @@ export class ActivityModule extends BaseModule {
         hookFunction("DrawImageResize", 1, (args, next) => {
             try {
                 var path = <string>args[0];
-                if (!!path && path.indexOf("LSCG_") > -1) {
+                if (!!path && (typeof path === "string") && path.indexOf("LSCG_") > -1) {
                     var activityName = path.substring(path.indexOf("LSCG_"));
                     activityName = activityName.substring(0, activityName.indexOf(".png"))
                     if (this.CustomImages.has(activityName))
