@@ -82,10 +82,10 @@ function init() {
 	
 	// If localStorage setting backup exist, compare the versions to restore from backup
 	if (!!localSettings) {
-		let settingsVer = (<SettingsModel>JSON.parse(LZString.decompressFromBase64(settings || null) || "{}")).Version || "v0.0.0";
-		let localSettingsVer = (<SettingsModel>JSON.parse(LZString.decompressFromBase64(localSettings || null) || "{}")).Version || "v0.0.0";
 		let localIsMoreRecent = false;
 		try {
+			let settingsVer = (<SettingsModel>JSON.parse(LZString.decompressFromBase64(settings || null) || "{}")).Version || "v0.0.0";
+			let localSettingsVer = (<SettingsModel>JSON.parse(LZString.decompressFromBase64(localSettings || null) || "{}")).Version || "v0.0.0";
 			localIsMoreRecent = lt(settingsVer, localSettingsVer);
 		} catch (error) {
 			console.debug(`LSCG: Failed to compare local and remote setting versions -- ${error}`);
