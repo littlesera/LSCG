@@ -98,10 +98,7 @@ export class CoreModule extends BaseModule {
                 var starColor = isAdmin ? "#008080" : "#00AEAE";
                 if (version != LSCG_VERSION)
                     starColor = "#ff4545";
-                var xOffset = 0;
-                if (!window.bcx)
-                    xOffset = -10;
-                drawSvg(MainCanvas, SVG_ICONS.STAR, CharX + (xOffset + 410) * Zoom, CharY + 8 * Zoom, 40 * Zoom, 40 * Zoom, 50, 0.8, 1, starColor);
+                drawSvg(MainCanvas, SVG_ICONS.STAR, CharX + 400 * Zoom, CharY + 8 * Zoom, 40 * Zoom, 40 * Zoom, 50, 0.8, 1, starColor);
                 if (MouseIn(CharX + 405 * Zoom, CharY + 3 * Zoom, 50 * Zoom, 50 * Zoom)) {
                     mouseTooltip(version, CharX + 425 * Zoom, CharY + 50 * Zoom);
                 }
