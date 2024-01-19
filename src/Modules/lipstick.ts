@@ -12,6 +12,16 @@ export class LipstickModule extends BaseModule {
         };
     }
 
+    get baseKissTypeRecord(): TypeRecord {
+        return {
+            "c": 0,
+            "r": 1,
+            "f": 0,
+            "n": 0,
+            "l": 0
+        }
+    }
+
     safeword(): void {
         this.RemoveKissMark("all");
     }
@@ -109,8 +119,8 @@ export class LipstickModule extends BaseModule {
             InventoryWear(Player, "Kissmark", slot, "Default", 1, Player.MemberNumber ?? 0, undefined, true);
             var marks = InventoryGet(Player, slot);
             // Maybe not needed anymore?
-            // if (!!marks && !!marks.Property)
-            //     marks.Property.Type = "c0r1f0n0l0";
+            if (!!marks && !!marks.Property)
+                marks.Property.TypeRecord = this.baseKissTypeRecord;
             return marks;
         } else return undefined;
     }
@@ -182,16 +192,6 @@ export class LipstickModule extends BaseModule {
             this.removeGagKissMark();
 
         ChatRoomCharacterUpdate(Player);
-    }
-    
-    get baseKissTypeRecord(): TypeRecord {
-        return {
-            "c": 0,
-            "r": 1,
-            "f": 0,
-            "n": 0,
-            "l": 0
-        }
     }
 
     AddKissMark(sender: Character, location: string) {
