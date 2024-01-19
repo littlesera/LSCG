@@ -6,10 +6,10 @@
 declare function DrawHexToRGB(color: string): RGBColor;
 /**
  * Converts a RGB color to a hex color string
- * @param {number[]} color - RGB color to conver
+ * @param {readonly number[]} color - RGB color to conver
  * @returns {string} - Hex color string
  */
-declare function DrawRGBToHex(color: number[]): string;
+declare function DrawRGBToHex(color: readonly number[]): string;
 /**
  * Loads the canvas to draw on with its style and event listeners.
  * @returns {void} - Nothing
@@ -80,7 +80,7 @@ declare function DrawCharacter(C: Character, X: number, Y: number, Zoom: number,
 /**
  * Draws an asset group zone outline over the character
  * @param {Character} C - Character for which to draw the zone
- * @param {readonly [number, number, number, number][]} Zone - Zone to be drawn
+ * @param {readonly RectTuple[]} Zone - Zone to be drawn
  * @param {number} Zoom - Height ratio of the character
  * @param {number} X - Position of the character on the X axis
  * @param {number} Y - Position of the character on the Y axis
@@ -90,7 +90,7 @@ declare function DrawCharacter(C: Character, X: number, Y: number, Zoom: number,
  * @param {string} FillColor - If non-empty, the color to fill the rectangle with
  * @returns {void} - Nothing
  */
-declare function DrawAssetGroupZone(C: Character, Zone: readonly [number, number, number, number][], Zoom: number, X: number, Y: number, HeightRatio: number, Color: string, Thickness?: number, FillColor?: string): void;
+declare function DrawAssetGroupZone(C: Character, Zone: readonly RectTuple[], Zoom: number, X: number, Y: number, HeightRatio: number, Color: string, Thickness?: number, FillColor?: string): void;
 /**
  * Return a semi-transparent copy of a canvas
  * @param {HTMLCanvasElement} Canvas - source
@@ -98,6 +98,24 @@ declare function DrawAssetGroupZone(C: Character, Zone: readonly [number, number
  * @returns {HTMLCanvasElement} - result
  */
 declare function DrawAlpha(Canvas: HTMLCanvasElement, Alpha?: number): HTMLCanvasElement;
+/**
+ * Clears a rectangle on a canvas
+ * @param {CanvasRenderingContext2D} Canvas - The canvas on which to clear rect
+ * @param {number} x - Position of the image on the X axis
+ * @param {number} y - Position of the image on the Y axis
+ * @param {number} width - Width of the rectangle to clear
+ * @param {number} height - Height of the rectangle to clear
+ * @returns {void} - Nothing
+ */
+declare function DrawClearRect(Canvas: CanvasRenderingContext2D, x: number, y: number, width: number, height: number): void;
+/**
+ * Clears alpha masks on a canvas
+ * @param {CanvasRenderingContext2D} Canvas - The canvas on which to clear rect
+ * @param {number} X - X offset of where the masking should be done
+ * @param {number} Y - Y offset of where the masking should be done
+ * @param {readonly RectTuple[]} AlphaMasks - An array of alpha masks to apply
+ */
+declare function DrawClearAlphaMasks(Canvas: CanvasRenderingContext2D, X: number, Y: number, AlphaMasks: readonly RectTuple[]): void;
 /**
  * Draws a zoomed image from a source to a specific canvas
  * @param {string} Source - URL of the image
@@ -126,17 +144,14 @@ declare function DrawImageZoomCanvas(Source: string, Canvas: CanvasRenderingCont
 declare function DrawImageResize(Source: string, X: number, Y: number, Width: number, Height: number): boolean;
 /**
  * Draws a zoomed image from a source to a specific canvas
- * @param {string} Source - URL of the image
+ * @param {string | HTMLImageElement | HTMLCanvasElement} Source - URL of the image
  * @param {CanvasRenderingContext2D} Canvas - Canvas on which to draw the image
  * @param {number} X - Position of the image on the X axis
  * @param {number} Y - Position of the image on the Y axis
- * @param {readonly RectTuple[]} [AlphaMasks] - A list of alpha masks to apply to the asset
- * @param {number} [Opacity=1] - The opacity at which to draw the image
- * @param {boolean} [Rotate=false] - If the image should be rotated by 180 degrees
- * @param {GlobalCompositeOperation} [BlendingMode="source-over"] - blending mode for drawing the image
+ * @param {DrawOptions} [Options] Options to use when drawing
  * @returns {boolean} - whether the image was complete or not
  */
-declare function DrawImageCanvas(Source: string, Canvas: CanvasRenderingContext2D, X: number, Y: number, AlphaMasks?: readonly RectTuple[], Opacity?: number, Rotate?: boolean, BlendingMode?: GlobalCompositeOperation): boolean;
+declare function DrawImageCanvas(Source: string | HTMLImageElement | HTMLCanvasElement, Canvas: CanvasRenderingContext2D, X: number, Y: number, Options?: DrawOptions): boolean;
 /**
  * Draws a canvas to a specific canvas
  * @param {HTMLImageElement | HTMLCanvasElement} Img - Canvas to draw
@@ -148,25 +163,6 @@ declare function DrawImageCanvas(Source: string, Canvas: CanvasRenderingContext2
  */
 declare function DrawCanvas(Img: HTMLImageElement | HTMLCanvasElement, Canvas: CanvasRenderingContext2D, X: number, Y: number, AlphaMasks: readonly RectTuple[]): boolean;
 /**
- * Draws a specific canvas with a zoom on the main canvas
- * @param {HTMLImageElement | HTMLCanvasElement} Canvas - Canvas to draw on the main canvas
- * @param {number} X - Position of the canvas on the X axis
- * @param {number} Y - Position of the canvas on the Y axis
- * @param {number} Zoom - Zoom factor
- * @returns {boolean} - whether the image was complete or not
- */
-declare function DrawCanvasZoom(Canvas: HTMLImageElement | HTMLCanvasElement, X: number, Y: number, Zoom: number): boolean;
-/**
- * Draws a zoomed image from a source to the canvas and mirrors it from left to right
- * @param {string} Source - URL of the image
- * @param {number} X - Position of the image on the X axis
- * @param {number} Y - Position of the image on the Y axis
- * @param {number} Width - Width of the image
- * @param {number} Height - Height of the image
- * @returns {boolean} - whether the image was complete or not
- */
-declare function DrawImageZoomMirror(Source: string, X: number, Y: number, Width: number, Height: number): boolean;
-/**
  * Draws an image from a source on the main canvas
  * @param {string} Source - URL of the image
  * @param {number} X - Position of the image on the X axis
@@ -176,69 +172,23 @@ declare function DrawImageZoomMirror(Source: string, X: number, Y: number, Width
  */
 declare function DrawImage(Source: string, X: number, Y: number, Invert?: boolean): boolean;
 /**
- * Draws an image from a source to the specified canvas
- * @param {string} Source - URL of the image
- * @param {CanvasRenderingContext2D} Canvas - Canvas on which to draw the image
- * @param {number} X - Position of the rectangle on the X axis
- * @param {number} Y - Position of the rectangle on the Y axis
- * @param {number} Zoom - Zoom factor
- * @param {string} HexColor - Color of the image to draw
- * @param {boolean} FullAlpha - Whether or not it is drawn in full alpha mode
- * @param {readonly RectTuple[]} [AlphaMasks] - A list of alpha masks to apply to the asset
- * @param {number} [Opacity=1] - The opacity at which to draw the image
- * @param {boolean} [Rotate=false] - If the image should be rotated by 180 degrees
- * @param {GlobalCompositeOperation} [BlendingMode="source-over"] - blending mode for drawing the image
- * @returns {boolean} - whether the image was complete or not
- */
-declare function DrawImageCanvasColorize(Source: string, Canvas: CanvasRenderingContext2D, X: number, Y: number, Zoom: number, HexColor: string, FullAlpha: boolean, AlphaMasks?: readonly RectTuple[], Opacity?: number, Rotate?: boolean, BlendingMode?: GlobalCompositeOperation): boolean;
-/**
- * Draws the mirrored version of an image from a source on the canvas
- * @param {string} Source - URL of the image
- * @param {number} X - Position of the image on the X axis
- * @param {number} Y - Position of the image on the Y axis
- * @returns {boolean} - whether the image was complete or not
- */
-declare function DrawImageMirror(Source: string, X: number, Y: number): boolean;
-/**
- * Flips an image vertically
- * @param {HTMLImageElement} Img - The image to be inverted
- * @returns {HTMLCanvasElement} - Canvas with the inverted image
- */
-declare function DrawImageInvert(Img: HTMLImageElement): HTMLCanvasElement;
-/**
  * Draws an image on canvas, applying all options
  * @param {string | HTMLImageElement | HTMLCanvasElement} Source - URL of image or image itself
+ * @param {CanvasRenderingContext2D} Canvas - Canvas on which to draw the image
  * @param {number} X - Position of the image on the X axis
  * @param {number} Y - Position of the image on the Y axis
- * @param {object} [options] - any extra options, optional
- * @param {CanvasRenderingContext2D} [options.Canvas] - Canvas on which to draw the image, defaults to `MainCanvas`
- * @param {number} [options.Alpha] - transparency between 0-1
- * @param {readonly [number, number, number, number]} [options.SourcePos] - Area in original image to draw in format `[left, top, width, height]`
- * @param {number} [options.Width] - Width of the drawn image, defaults to width of original image
- * @param {number} [options.Height] - Height of the drawn image, defaults to height of original image
- * @param {boolean} [options.Invert=false] - If image should be flipped vertically
- * @param {boolean} [options.Mirror=false] - If image should be flipped horizontally
- * @param {number} [options.Zoom=1] - Zoom factor
+ * @param {DrawOptions} [Options = {}] - any extra options
  * @returns {boolean} - whether the image was complete or not
  */
-declare function DrawImageEx(Source: string | HTMLImageElement | HTMLCanvasElement, X: number, Y: number, { Canvas, Alpha, SourcePos, Width, Height, Invert, Mirror, Zoom }?: {
-    Canvas?: CanvasRenderingContext2D;
-    Alpha?: number;
-    SourcePos?: readonly [number, number, number, number];
-    Width?: number;
-    Height?: number;
-    Invert?: boolean;
-    Mirror?: boolean;
-    Zoom?: number;
-}): boolean;
+declare function DrawImageEx(Source: string | HTMLImageElement | HTMLCanvasElement, Canvas: CanvasRenderingContext2D, X: number, Y: number, Options?: DrawOptions): boolean;
 /**
  * Wrapping text in fragments to support languages that do not separate between words using space.
  * This function can also break between a long English word if somehow needed in the script.
  * @param {string} text - The text to be fragmented.
  * @param {number} maxWidth - The max width the text will be filled in.
- * @returns {Array<string>} - A list of string that being fragmented.
+ * @returns {string[]} - A list of string that being fragmented.
  */
-declare function fragmentText(text: string, maxWidth: number): Array<string>;
+declare function fragmentText(text: string, maxWidth: number): string[];
 /**
  * Reduces the font size progressively until the text fits the wrap size
  * @param {string} Text - Text that will be drawn
@@ -258,9 +208,10 @@ declare function GetWrapTextSize(Text: string, Width: number, MaxLine: number): 
  * @param {string} [BackColor] - Background color
  * @param {number} [MaxLine] - Maximum of lines the word can wrap for
  * @param {number} LineSpacing - The number of pixels between each lines (default to 23)
+ * @param {"Center" | "Top"} Alignment - How the text should be alligned w.r.t. the Y position when wrapped over multiple lines
  * @returns {void} - Nothing
  */
-declare function DrawTextWrap(Text: string, X: number, Y: number, Width: number, Height: number, ForeColor: string, BackColor?: string, MaxLine?: number, LineSpacing?: number): void;
+declare function DrawTextWrap(Text: string, X: number, Y: number, Width: number, Height: number, ForeColor: string, BackColor?: string, MaxLine?: number, LineSpacing?: number, Alignment?: "Center" | "Top"): void;
 /**
  * Draws a text element on the canvas that will fit on the specified width
  * @param {string} Text - Text to draw
@@ -295,7 +246,6 @@ declare function DrawText(Text: string, X: number, Y: number, Color: string, Bac
  * @param {boolean} [Disabled] - Disables the hovering options if set to true
  * @returns {void} - Nothing
  */
-declare function DrawButton(Left: number, Top: number, Width: number, Height: number, Label: string, Color: string, Image?: string, HoveringText?: string, Disabled?: boolean): void;
 declare function DrawButton(Left: number, Top: number, Width: number, Height: number, Label: string, Color: string, Image?: string, HoveringText?: string, Disabled?: boolean): void;
 /**
  * Draws a checkbox component
@@ -440,26 +390,9 @@ declare function DrawProcessHoverElements(): void;
  * @param {Character} char - The character using the item (used to calculate dynamic item descriptions/previews)
  * @param {number} X
  * @param {number} Y
- * @param {object} [options]
- * @param {string} [options.Background] - The background color to draw the preview box in - defaults to white
- * @param {string} [options.Foreground] - The foreground (text) color to draw the description in - defaults to black
- * @param {boolean} [options.Border] - Whether or not to draw a border around the preview box
- * @param {boolean} [options.Hover] - Whether or not the button should enable hover behavior (background color change)
- * @param {string} [options.HoverBackground] - The background color that should be used on mouse hover, if any
- * @param {boolean} [options.Disabled] - Whether or not the element is disabled (prevents hover functionality)
- * @param {number} [options.Width] - The width of the preview rectangle. Defaults to 225.
- * @param {number} [options.Height] - The width of the preview rectangle. Defaults to 275.
+ * @param {PreviewDrawOptions} [options]
  */
-declare function DrawItemPreview(itemOrDialogItem: Item | DialogInventoryItem, char: Character, X: number, Y: number, options?: {
-    Background?: string;
-    Foreground?: string;
-    Border?: boolean;
-    Hover?: boolean;
-    HoverBackground?: string;
-    Disabled?: boolean;
-    Width?: number;
-    Height?: number;
-}): void;
+declare function DrawItemPreview(itemOrDialogItem: Item | DialogInventoryItem, char: Character, X: number, Y: number, options?: PreviewDrawOptions): void;
 /**
  * Draws an asset's preview box
  * @param {number} X - Position of the preview box on the X axis
@@ -536,12 +469,16 @@ declare function DrawImageTrapezify(image: HTMLCanvasElement | HTMLImageElement,
  * @type {CanvasRenderingContext2D}
  */
 declare let MainCanvas: CanvasRenderingContext2D;
-/** @type {CanvasRenderingContext2D} */
+/**
+ * Temporary GPU-based canvas
+ * @type {CanvasRenderingContext2D}
+ */
 declare let TempCanvas: CanvasRenderingContext2D;
-/** @type {CanvasRenderingContext2D} */
+/**
+ * Temporary CPU-based canvas (for colorization)
+ * @type {CanvasRenderingContext2D}
+ */
 declare let ColorCanvas: CanvasRenderingContext2D;
-/** @type {CanvasRenderingContext2D} */
-declare let CharacterCanvas: CanvasRenderingContext2D;
 declare var DialogLeaveDueToItem: boolean;
 declare var BlindFlash: boolean;
 declare var DrawingBlindFlashTimer: number;
@@ -563,8 +500,9 @@ declare var DrawLastCharacters: Character[];
 declare var DrawHoverElements: Function[];
 /**
  * The last canvas position in format `[left, top, width, height]`
+ * @type {RectTuple}
  */
-declare var DrawCanvasPosition: number[];
+declare var DrawCanvasPosition: RectTuple;
 /**
  * Gets the text size needed to fit inside a given width according to the current font.
  * This function is memoized because <code>MainCanvas.measureText(Text)</code> is a major resource hog.
@@ -572,7 +510,7 @@ declare var DrawCanvasPosition: number[];
  * @param {number} Width - Width in which the text has to fit
  * @returns {[string, number]} - Text to draw and its font size
  */
-declare const DrawingGetTextSize: MemoizedFunction<(Text: any, Width: any) => any[]>;
+declare const DrawingGetTextSize: MemoizedFunction<(Text: string, Width: number) => [text: string, size: number]>;
 declare var DrawScreenFlashTime: number;
 declare var DrawScreenFlashColor: any;
 declare var DrawScreenFlashStrength: number;

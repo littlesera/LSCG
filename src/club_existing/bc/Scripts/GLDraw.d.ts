@@ -42,6 +42,7 @@ declare function GLDrawOnContextRestored(): void;
  *
  * This function removes the current canvas, removes cached textures from the
  * image cache, and reloads a fresh canvas unless prevented.
+ * @param {boolean} force2d
  * @returns {void} - Nothing
  */
 declare function GLDrawResetCanvas(force2d?: boolean): void;
@@ -75,19 +76,14 @@ declare function GLDrawCreateProgram(gl: WebGL2RenderingContext, vertexShader: W
 /**
  * Draws an image from a given url to a WebGLRenderingContext
  * @param {string} url - URL of the image to render
- * @param {WebGL2RenderingContext} gl - WebGL context
+ * @param {WebGL2RenderingContext} gl - The context we're drawing with
  * @param {number} dstX - Position of the image on the X axis
  * @param {number} dstY - Position of the image on the Y axis
- * @param {number} offsetX - Additional offset to add to the X axis (for blinking)
- * @param {string} color - Color of the image to draw
- * @param {boolean} fullAlpha - Whether or not the full alpha should be rendered
- * @param {RectTuple[]} alphaMasks - A list of alpha masks to apply to the asset
- * @param {number} [opacity=1] - The opacity at which to draw the image
- * @param {boolean} [rotate=false] - If the image should be rotated by 180 degrees
- * @param {GlobalCompositeOperation} [blendingMode="source-over"] - blending mode for drawing the image
+ * @param {DrawOptions} options - Drawing options
+ * @param {number} [offsetX=0] - Additional offset to add to the X axis (for blinking)
  * @returns {void} - Nothing
  */
-declare function GLDrawImage(url: string, gl: WebGL2RenderingContext, dstX: number, dstY: number, offsetX: number, color: string, fullAlpha: boolean, alphaMasks: RectTuple[], opacity?: number, rotate?: boolean, blendingMode?: GlobalCompositeOperation): void;
+declare function GLDrawImage(url: string, gl: WebGL2RenderingContext, dstX: number, dstY: number, options: DrawOptions, offsetX?: number): void;
 /**
  * Chooses right program using input parameters
  * @param {WebGL2RenderingContext} gl - WebGL context
@@ -104,32 +100,24 @@ declare function GLChooseProgram(gl: WebGL2RenderingContext, color: string, full
  * @param {number} X - Position of the image on the X axis
  * @param {number} Y - Position of the image on the Y axis
  * @param {number} blinkOffset - Offset for the blink canvas
- * @param {RectTuple[]} alphaMasks - A list of alpha masks to apply to the asset
+ * @param {readonly RectTuple[]} alphaMasks - A list of alpha masks to apply to the asset
  */
-declare function GLDraw2DCanvas(gl: WebGL2RenderingContext, Img: HTMLImageElement | HTMLCanvasElement, X: number, Y: number, blinkOffset: number, alphaMasks: RectTuple[]): void;
+declare function GLDraw2DCanvas(gl: WebGL2RenderingContext, Img: HTMLImageElement | HTMLCanvasElement, X: number, Y: number, blinkOffset: number, alphaMasks: readonly RectTuple[]): void;
 /**
  * Sets texture info from image data
  * @param {WebGLRenderingContext} gl - WebGL context
  * @param {HTMLImageElement} Img - Image to get the data of
- * @param {{ width: number; height: number; texture: WebGLTexture; }} textureInfo - Texture information
+ * @param {WebGLTextureData} textureInfo - Texture information
  * @returns {void} - Nothing
  */
-declare function GLDrawBingImageToTextureInfo(gl: WebGLRenderingContext, Img: HTMLImageElement, textureInfo: {
-    width: number;
-    height: number;
-    texture: WebGLTexture;
-}): void;
+declare function GLDrawBingImageToTextureInfo(gl: WebGLRenderingContext, Img: HTMLImageElement, textureInfo: WebGLTextureData): void;
 /**
  * Loads image texture data
  * @param {WebGL2RenderingContext} gl - WebGL context
  * @param {string} url - URL of the image
- * @returns {{ width: number; height: number; texture: WebGLTexture; }} - The texture info of a given image
+ * @returns {WebGLTextureData} - The texture info of a given image
  */
-declare function GLDrawLoadImage(gl: WebGL2RenderingContext, url: string): {
-    width: number;
-    height: number;
-    texture: WebGLTexture;
-};
+declare function GLDrawLoadImage(gl: WebGL2RenderingContext, url: string): WebGLTextureData;
 /**
  * Loads alpha mask data
  * @param {WebGL2RenderingContext} gl - The WebGL context
@@ -137,10 +125,10 @@ declare function GLDrawLoadImage(gl: WebGL2RenderingContext, url: string): {
  * @param {number} texHeight - The height of the texture to mask
  * @param {number} offsetX - The X offset at which the texture is to be drawn on the target canvas
  * @param {number} offsetY - The Y offset at which the texture is to be drawn on the target canvas
- * @param {RectTuple[]} alphaMasks - A list of alpha masks to apply to the asset
+ * @param {readonly RectTuple[]} alphaMasks - A list of alpha masks to apply to the asset
  * @return {WebGLTexture} - The WebGL texture corresponding to the mask
  */
-declare function GLDrawLoadMask(gl: WebGL2RenderingContext, texWidth: number, texHeight: number, offsetX: number, offsetY: number, alphaMasks: RectTuple[]): WebGLTexture;
+declare function GLDrawLoadMask(gl: WebGL2RenderingContext, texWidth: number, texHeight: number, offsetX: number, offsetY: number, alphaMasks: readonly RectTuple[]): WebGLTexture;
 /**
  * Clears a rectangle on WebGLRenderingContext
  * @param {WebGLRenderingContext} gl - WebGL context

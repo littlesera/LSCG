@@ -1,4 +1,8 @@
 /**
+ * Checks whether we're running a translation
+ */
+declare function TranslationEnabled(): boolean;
+/**
  * Checks if a file can be translated in the selected language
  * @param {string} FullPath - Full path of the file to check for a corresponding translation file
  * @returns {boolean} - Returns TRUE if a translation is available for the given file
@@ -14,10 +18,9 @@ declare function TranslationParseTXT(str: string): string[];
  * Translates a string to another language from the array, the translation is always the one right after the english line
  * @param {string} S - The original english string to translate
  * @param {readonly string[]} T - The active translation dictionary
- * @param {string} CharacterName - Name of the character if it is required to replace it within the string.
  * @returns {string} - The translated string
  */
-declare function TranslationString(S: string, T: readonly string[], CharacterName: string): string;
+declare function TranslationString(S: string, T: readonly string[]): string;
 /**
  * Translates a character dialog from the specified array
  * @param {Character} C - The character for which we need to translate the dialog array.
@@ -36,11 +39,16 @@ declare function TranslationTextArray(S: readonly {
     Value: string;
 }[], T: readonly string[]): void;
 /**
- * Translate a character dialog if the file is in the dictionary
+ * Loads a character dialog translation and caches it
  * @param {Character} C - The character for which we want to translate the dialog
  * @returns {void} - Nothing
  */
-declare function TranslationDialog(C: Character): void;
+declare function TranslationLoadDialog(C: Character, cb: any): void;
+/**
+ * Translate a character dialog if the file is in the dictionary
+ * @param {Character} C
+ */
+declare function TranslationTranslateDialog(C: Character): void;
 /**
  * Translate an array of tags in the current selected language
  * @param {readonly {Tag: string, Value: string}[]} Text - Array of current tag-value pairs

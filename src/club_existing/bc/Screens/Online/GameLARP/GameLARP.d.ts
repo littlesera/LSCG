@@ -47,10 +47,10 @@ declare function GameLARPRunProcess(): void;
 declare function GameLARPBuildInventory(FocusGroup: AssetGroupName): void;
 /**
  * Triggered when an option is selected for the current target character. The inventory for it is built and the action is published
- * @param {string} Name - Name of the selected option
+ * @param {GameLARPOptionName} Name - Name of the selected option
  * @returns {void} - Nothing
  */
-declare function GameLARPClickOption(Name: string): void;
+declare function GameLARPClickOption(Name: GameLARPOptionName): void;
 /**
  * Handles clicks during the LARP game.
  * @returns {boolean} - Returns TRUE if the click was handled by this LARP click handler
@@ -219,10 +219,10 @@ declare function GameLARPGetClassProgress(LARP: GameLARPParameters): number;
 declare function GameLARPContinue(): boolean;
 /**
  * Processes the LARP game messages for turns and actions.
- * @param {IChatRoomGameResponse} P - Data object containing the message data.
+ * @param {ServerChatRoomGameResponse} P - Data object containing the message data.
  * @returns {void} - Nothing
  */
-declare function GameLARPProcess(P: IChatRoomGameResponse): void;
+declare function GameLARPProcess(P: ServerChatRoomGameResponse): void;
 /**
  * Resets the LARP game so a new game might be started
  * @returns {void} - Nothing
@@ -251,19 +251,20 @@ declare var GameLARPTeamList: string[];
 declare var GameLARPTimerDelay: number[];
 declare var GameLARPEntryClass: string;
 declare var GameLARPEntryTeam: string;
-/** @type { { Sender: number, Time: number, RNG: number, Data: IChatRoomGameResponse["Data"], Success?: boolean }[] } */
+/** @type { { Sender: number, Time: number, RNG: number, Data: ServerChatRoomGameResponse["Data"], Success?: boolean }[] } */
 declare var GameLARPProgress: {
     Sender: number;
     Time: number;
     RNG: number;
-    Data: IChatRoomGameResponse["Data"];
+    Data: ServerChatRoomGameResponse["Data"];
     Success?: boolean;
 }[];
 /** @type {Character[]} */
 declare var GameLARPPlayer: Character[];
 /** @type {GameLARPOption[]} */
 declare var GameLARPOption: GameLARPOption[];
-declare var GameLARPAction: string;
+/** @type {GameLARPOptionName | ""} */
+declare var GameLARPAction: GameLARPOptionName | "";
 /** @type {Asset[]} */
 declare var GameLARPInventory: Asset[];
 declare var GameLARPInventoryOffset: number;

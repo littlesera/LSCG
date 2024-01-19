@@ -1,12 +1,6 @@
-/** @type {ExtendedItemCallbacks.Init} */
-declare function InventoryItemMiscSafewordPadlockInit(C: Character, Item: Item): boolean;
-/** @type {ExtendedItemCallbacks.Init} */
-declare function InventoryItemMiscSafewordPadlockInit(C: Character, Item: Item): boolean;
-/** @type {ExtendedItemCallbacks.Load} */
+declare function InventoryItemMiscSafewordPadlockInit(C: Character, item: Item, push: boolean, refresh: boolean): boolean;
+declare function InventoryItemMiscSafewordPadlockInit(C: Character, item: Item, push: boolean, refresh: boolean): boolean;
 declare function InventoryItemMiscSafewordPadlockLoad(): void;
-/** @type {ExtendedItemCallbacks.Draw} */
 declare function InventoryItemMiscSafewordPadlockDraw(): void;
-/** @type {ExtendedItemCallbacks.Click} */
 declare function InventoryItemMiscSafewordPadlockClick(): void;
-/** @type {ExtendedItemCallbacks.Exit} */
 declare function InventoryItemMiscSafewordPadlockExit(): void;

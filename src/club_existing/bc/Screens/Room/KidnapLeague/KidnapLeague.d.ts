@@ -213,6 +213,16 @@ declare function KidnapLeagueRandomActivityLaunch(): void;
  * @returns {void} - Nothing
  */
 declare function KidnapLeagueTransferToRoom(): void;
+/**
+ * When the player starts a club card game
+ * @returns {void} - Nothing
+ */
+declare function KidnapLeagueRandomClubCardStart(): void;
+/**
+ * When the player ends a club card game
+ * @returns {void} - Nothing
+ */
+declare function KidnapLeagueRandomClubCardEnd(): void;
 declare var KidnapLeagueBackground: string;
 /** @type {null | NPCCharacter} */
 declare var KidnapLeagueTrainer: null | NPCCharacter;

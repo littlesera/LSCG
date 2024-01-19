@@ -1,13 +1,19 @@
-/** @type {ExtendedItemCallbacks.Init} */
-declare function InventoryItemMiscOwnerTimerPadlockInit(C: Character, Item: Item): boolean;
-/** @type {ExtendedItemCallbacks.Load} */
+declare function InventoryItemMiscOwnerTimerPadlockInit(C: Character, item: Item, push: boolean, refresh: boolean): boolean;
 declare function InventoryItemMiscOwnerTimerPadlockLoad(): void;
-/** @type {ExtendedItemCallbacks.Draw} */
-declare function InventoryItemMiscOwnerTimerPadlockDraw(): void;
-/** @type {ExtendedItemCallbacks.Click} */
-declare function InventoryItemMiscOwnerTimerPadlockClick(): void;
+/**
+ * @param {Character} C
+ * @returns {boolean} - Whether the passed character is elligble for full control over the lock
+ */
+declare function InventoryItemMiscOwnerTimerPadlockValidator(C: Character): boolean;
+/**
+ * @param {(C: Character) => boolean} validator
+ */
+declare function InventoryItemMiscOwnerTimerPadlockDraw(validator?: (C: Character) => boolean): void;
+/**
+ * @param {(C: Character) => boolean} validator
+ */
+declare function InventoryItemMiscOwnerTimerPadlockClick(validator?: (C: Character) => boolean): void;
 declare function InventoryItemMiscOwnerTimerPadlockAdd(TimeToAdd: any, PlayerMemberNumberToList: any): void;
-/** @type {ExtendedItemCallbacks.Exit} */
 declare function InventoryItemMiscOwnerTimerPadlockExit(): void;
 declare const OwnerTimerChooseList: number[];
 declare let OwnerTimerChooseIndex: number;

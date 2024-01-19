@@ -6,6 +6,13 @@
  */
 declare function AssetGroupAdd(Family: IAssetFamily, GroupDef: AssetGroupDefinition): AssetGroup;
 /**
+ * Parse the passed {@link AssetDefinition.Top} and Left values
+ * @param {undefined | TopLeft.Definition} value
+ * @param {number | TopLeft.Data} fallback
+ * @returns {TopLeft.Data}
+ */
+declare function AssetParseTopLeft(value: undefined | TopLeft.Definition, fallback: number | TopLeft.Data): TopLeft.Data;
+/**
  * Collects the group equivalence classes defined by the MirrorActivitiesFrom property into a map for easy access to
  * mirror group sets (i.e. all groups that are mirror activities from, or are mirrored by, each other).
  * @param {AssetGroup} group - The group to register
@@ -19,6 +26,15 @@ declare function AssetActivityMirrorGroupSet(group: AssetGroup): void;
  * @returns {void} - Nothing
  */
 declare function AssetAdd(Group: AssetGroup, AssetDef: AssetDefinition, ExtendedConfig: ExtendedItemMainConfig): void;
+/**
+ * Automatically generated pose-related asset prerequisites
+ * @param {Partial<Pick<Asset, "AllowActivePose" | "SetPose" | "Prerequisite" | "Effect">>} asset The asset or any other object with the expected asset interface subset
+ * @returns {{ Prerequisite?: AssetPrerequisite[], AllowActivePose?: AssetPoseName[] }} The newly generated prerequisites
+ */
+declare function AssetParsePosePrerequisite({ SetPose, AllowActivePose, Effect, Prerequisite }: Partial<Pick<Asset, "AllowActivePose" | "SetPose" | "Prerequisite" | "Effect">>): {
+    Prerequisite?: AssetPrerequisite[];
+    AllowActivePose?: AssetPoseName[];
+};
 /**
  * Construct the items extended item config, merging via {@link AssetArchetypeConfig.CopyConfig} if required.
  * Potentially updates the passed {@link AssetArchetypeConfig} object inplace.
@@ -50,64 +66,48 @@ declare function AssetBuildExtended(A: Asset, baseConfig: AssetArchetypeConfig, 
  */
 declare function AssetFindExtendedConfig(ExtendedConfig: ExtendedItemMainConfig, GroupName: AssetGroupName, AssetName: string): AssetArchetypeConfig | undefined;
 /**
- * Builds the layer array for an asset based on the asset definition. One layer is created for each drawable part of
- * the asset (excluding the lock). If the asset definition contains no layer definitions, a default layer definition
- * will be created.
- * @param {AssetDefinition} AssetDefinition - The raw asset definition
- * @param {Asset} A - The built asset
- * @return {AssetLayer[]} - An array of layer objects representing the drawable layers of the asset
- */
-declare function AssetBuildLayer(AssetDefinition: AssetDefinition, A: Asset): AssetLayer[];
-/**
  * Maps a layer definition to a drawable layer object
  * @param {AssetLayerDefinition} Layer - The raw layer definition
- * @param {AssetDefinition} AssetDefinition - The raw asset definition
  * @param {Asset} A - The built asset
  * @param {number} I - The index of the layer within the asset
  * @return {AssetLayer} - A Layer object representing the drawable properties of the given layer
  */
-declare function AssetMapLayer(Layer: AssetLayerDefinition, AssetDefinition: AssetDefinition, A: Asset, I: number): AssetLayer;
+declare function AssetMapLayer(Layer: AssetLayerDefinition, A: Asset, I: number): AssetLayer;
 /**
- * Resolves the AllowPose and HideForPose properties on a layer or an asset
- * @param {Asset | AssetLayerDefinition} obj - The asset or layer object
- * @param {AssetPoseName[]} defaultAllowPose - A fallback value for the AllowPose property if it's not defined on the
- * object
- * @return {{AllowPose: AssetPoseName[], HideForPose: (AssetPoseName | "")[]}} - A partial object containing AllowPose and HideForPose
- * properties
+ * @param {AllowTypes.Definition} allowTypes
+ * @returns {AllowTypes.Data}
  */
-declare function AssetParsePoseProperties(obj: Asset | AssetLayerDefinition, defaultAllowPose?: AssetPoseName[]): {
-    AllowPose: AssetPoseName[];
-    HideForPose: (AssetPoseName | "")[];
-};
+declare function AssetParseAllowTypes(allowTypes: AllowTypes.Definition): AllowTypes.Data;
 /**
  * Parses and validates asset's opacity
  * @param {number|undefined} opacity
+ * @param {number} min - The minimum opacity
+ * @param {number} max - The maximum opacity
  * @returns {number}
  */
-declare function AssetParseOpacity(opacity: number | undefined): number;
+declare function AssetParseOpacity(opacity: number | undefined, min?: number, max?: number): number;
 /**
- * Determines whether a layer can be colorized, based on the layer definition and its parent asset/group definitions
- * @param {AssetLayerDefinition} Layer - The raw layer definition
- * @param {AssetDefinition} NewAsset - The raw asset definition
- * @param {AssetGroup} Group - The group being processed
- * @return {boolean} - Whether or not the layer should be permit colors
+ * Parse the passed alpha mask definitions.
+ * @param {undefined | Alpha.Definition[]} alphaDef The unparsed alpha mask definition
+ * @param {null | string} warningPrefix - A prefix to-be prepended to any warning messages
+ * @returns {null | Alpha.Data[]} The parsed alpha mask data
  */
-declare function AssetLayerAllowColorize(Layer: AssetLayerDefinition, NewAsset: AssetDefinition, Group: AssetGroup): boolean;
+declare function AssetParseAlpha(alphaDef: undefined | Alpha.Definition[], warningPrefix?: null | string): null | Alpha.Data[];
 /**
- * Builds the alpha mask definitions for a layer, based on the
+ * Parse the passed layers alpha mask definitions.
  * @param {AssetLayerDefinition} Layer - The raw layer definition
- * @param {AssetDefinition} NewAsset - The raw asset definition
+ * @param {Asset} NewAsset - The raw asset definition
  * @param {number} I - The index of the layer within its asset
- * @return {AlphaDefinition[]} - a list of alpha mask definitions for the layer
+ * @return {Alpha.Data[]} - a list of alpha mask data for the layer
  */
-declare function AssetLayerAlpha(Layer: AssetLayerDefinition, NewAsset: AssetDefinition, I: number): AlphaDefinition[];
+declare function AssetParseLayerAlpha(Layer: AssetLayerDefinition, NewAsset: Asset, I: number): Alpha.Data[];
 /**
  * Assigns color indices to the layers of an asset. These determine which colors get applied to the layer. Also adds
  * a count of colorable layers to the asset definition.
- * @param {Asset} A - The built asset
+ * @param {Mutable<Asset>} A - The built asset
  * @returns {void} - Nothing
  */
-declare function AssetAssignColorIndices(A: Asset): void;
+declare function AssetAssignColorIndices(A: Mutable<Asset>): void;
 /**
  * Builds the asset description from the CSV file
  * @param {IAssetFamily} Family
@@ -212,5 +212,11 @@ declare var AssetMap: Map<string, Asset>;
 declare var AssetGroupMap: Map<AssetGroupName, AssetGroup>;
 /** @type {Pose[]} */
 declare var Pose: Pose[];
+/** A record mapping pose names to their respective {@link Pose}. */
+declare const PoseRecord: Record<AssetPoseName, Pose>;
 /** @type {Map<AssetGroupName, AssetGroup[]>} */
 declare var AssetActivityMirrorGroups: Map<AssetGroupName, AssetGroup[]>;
+declare namespace PoseType {
+    let HIDE: "Hide";
+    let DEFAULT: "";
+}

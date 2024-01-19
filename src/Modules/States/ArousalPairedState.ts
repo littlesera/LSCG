@@ -23,10 +23,10 @@ export class ArousalPairedState extends PairedBaseState {
             ActivityOrgasmPrepare(Player);
         if (CurrentScreen == "ChatRoom")
 		    ServerSend("ChatRoomCharacterArousalUpdate", { 
-                OrgasmTimer: Player.ArousalSettings.OrgasmTimer, 
+                OrgasmTimer: Player.ArousalSettings.OrgasmTimer!, 
                 Progress: Player.ArousalSettings.Progress, 
                 ProgressTimer: Player.ArousalSettings.ProgressTimer, 
-                OrgasmCount: Player.ArousalSettings.OrgasmCount 
+                OrgasmCount: Player.ArousalSettings.OrgasmCount! 
             });
         console.debug(`Arousal updated from ${source} to ${progress}`);
     }

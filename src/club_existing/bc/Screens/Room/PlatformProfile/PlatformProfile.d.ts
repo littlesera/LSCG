@@ -28,6 +28,18 @@ declare function PlatformProfileLoad(): void;
  */
 declare function PlatformProfileDrawPerkButton(X: number, Y: number, PerkNum: number, Prerequisite1: any, Prerequisite2: any): void;
 /**
+ * Returns the text associated to the bonus given by the owner of the current player
+ * @param {Object} PlatformChar - The platform character to evaluate
+ * @returns {string} - The text string linked to the bonus
+ */
+declare function PlatformGetOwnerBonus(PlatformChar: any): string;
+/**
+ * Returns the text associated to the bonus given by the lover of the current player
+ * @param {Object} PlatformChar - The platform character to evaluate
+ * @returns {string} - The text string linked to the bonus
+ */
+declare function PlatformGetLoverBonus(PlatformChar: any): string;
+/**
  * Runs and draws the screen.
  * @returns {void} - Nothing
  */

@@ -218,6 +218,7 @@ declare function PreferenceSubscreenChatRun(): void;
  * @returns {void} - Nothing
  */
 declare function PreferenceSubscreenOnlineRun(): void;
+declare function PreferenceSubscreenArousalLoad(): void;
 /**
  * Sets the arousal preferences for a player. Redirected to from the main Run function if the player is in the arousal
  * settings subscreen
@@ -559,6 +560,7 @@ declare var PreferenceSettingsVolumeList: number[];
 declare var PreferenceSettingsSensitivityList: number[];
 declare var PreferenceSettingsDeadZoneList: number[];
 declare var PreferenceSettingsVolumeIndex: number;
+declare var PreferenceSettingsMusicVolumeIndex: number;
 declare var PreferenceSettingsSensitivityIndex: number;
 declare var PreferenceSettingsDeadZoneIndex: number;
 /** @type {ArousalActiveName[]} */

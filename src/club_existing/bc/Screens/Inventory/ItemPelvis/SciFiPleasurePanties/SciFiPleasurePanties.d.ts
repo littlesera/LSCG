@@ -1,6 +1,3 @@
-/** @type {ExtendedItemScriptHookCallbacks.Draw<ModularItemData>} */
-declare function InventoryItemPelvisSciFiPleasurePantiesDrawHook(Data: ModularItemData, OriginalFunction: () => void): void;
-/** @type {ExtendedItemScriptHookCallback<ModularItemData, [Futuristic?: boolean]>} */
-declare function InventoryItemPelvisSciFiPleasurePantiesClickHook(Data: ModularItemData, OriginalFunction: (Futuristic?: boolean) => void, Futuristic?: boolean): void;
-/** @type {ExtendedItemChatCallback<ModularItemOption>} */
-declare function InventoryItemPelvisSciFiPleasurePantiesChatPrefix({ previousOption, newOption }: ExtendedItemChatData<ModularItemOption>): string;
+declare function InventoryItemPelvisSciFiPleasurePantiesDrawHook(data: ModularItemData, originalFunction: () => void): void;
+declare function InventoryItemPelvisSciFiPleasurePantiesClickHook(data: ModularItemData, originalFunction: (Futuristic?: boolean) => void, Futuristic?: boolean): void;
+declare function InventoryItemPelvisSciFiPleasurePantiesChatPrefix(chatData: ExtendedItemChatData<ModularItemOption>): string;

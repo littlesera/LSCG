@@ -1,8 +1,5 @@
-/** @type {ExtendedItemScriptHookCallbacks.Draw<ModularItemData>} */
-declare function InventoryItemPelvisLoveChastityBeltDraw(Data: ModularItemData, OriginalFunction: () => void): void;
-/** @type {ExtendedItemScriptHookCallbacks.SetOption<ModularItemData, ModularItemOption>} */
-declare function InventoryItemPelvisLoveChastityBeltSetOptionHook(data: ModularItemData, originalFunction: (C: Character, item: Item, newOption: ModularItemOption, previousOption: ModularItemOption, push: boolean) => string, C: Character, item: Item, newOption: ModularItemOption, previousOption: ModularItemOption, push: boolean): string;
-/** @type {ExtendedItemScriptHookStruct<ModularItemData, ModularItemOption>["validate"]} */
-declare function InventoryItemPelvisLoveChastityBeltValidate(Data: ModularItemData, OriginalFunction: (C: Character, item: Item, newOption: ModularItemOption, previousOption: ModularItemOption) => string, C: Character, Item: Item, Option: ModularItemOption, CurrentOption: ModularItemOption): string;
+declare function InventoryItemPelvisLoveChastityBeltDraw(data: ModularItemData, originalFunction: () => void): void;
+declare function InventoryItemPelvisLoveChastityBeltSetOptionHook(data: ModularItemData, originalFunction: (C: Character, item: Item, newOption: ModularItemOption, previousOption: ModularItemOption, push: boolean, refresh: boolean) => void, C: Character, item: Item, newOption: ModularItemOption, previousOption: ModularItemOption, push: boolean, refresh: boolean): void;
+declare function InventoryItemPelvisLoveChastityBeltValidate(data: ModularItemData, originalFunction: (C: Character, item: Item, newOption: ModularItemOption, previousOption: ModularItemOption, permitExisting?: boolean) => string, C: Character, item: Item, newOption: ModularItemOption, previousOption: ModularItemOption, permitExisting?: boolean): string;
 /** Map the names of the love chastity belt front + black shield options to its scifi pleasure panties equivalent. */
 declare const InventoryItemPelvisLoveChastityBeltCrotchShield: Map<string, string>;

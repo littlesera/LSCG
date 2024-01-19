@@ -215,8 +215,8 @@ export class CoreModule extends BaseModule {
         });
     }
 
-    CheckForPublicPacket(data: IChatRoomMessage) {
-        if (data.Sender != Player.MemberNumber && data.Type == "Hidden" && data.Content == "LSCGMsg" && !!data.Dictionary && !!data.Dictionary[0]) {
+    CheckForPublicPacket(data: ServerChatRoomMessage) {
+        if (!!data.Sender && data.Sender != Player.MemberNumber && data.Type == "Hidden" && data.Content == "LSCGMsg" && !!data.Dictionary && !!data.Dictionary[0]) {
             var C = getCharacter(data.Sender) as OtherCharacter;
             var msg = (<LSCGMessageDictionaryEntry>data.Dictionary[0]).message;
             switch (msg.type) {

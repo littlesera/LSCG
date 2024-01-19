@@ -14,17 +14,10 @@ declare function CreationRun(): void;
 /**
  * Handles the server response to a creation request. Creates the character, if possible,
  * initializes the basic data and sends the newborn to the maid in the main hall.
- * @param {object} data - The set of data, received from the server
- * @param {string} data.ServerAnswer - The outcome of the creation request: should always be "AccountCreated"
- * @param {string} data.OnlineID - The ID of the newly created account
- * @param {number} data.MemberNumber - The member number of the newly created account
+ * @param {ServerAccountCreateResponse} data - The recieved data from the server
  * @returns {void} - Nothing
  */
-declare function CreationResponse(data: {
-    ServerAnswer: string;
-    OnlineID: string;
-    MemberNumber: number;
-}): void;
+declare function CreationResponse(data: ServerAccountCreateResponse): void;
 /**
  * Handles click events in the creation dialog.
  * Imports data from Bondage College and creates a character.

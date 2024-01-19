@@ -1,10 +1,5 @@
-/**
- * @typedef {{ DildoState?: number, Modifier?: number, Speed?: number, FuckChangeTime?: number, Mode?: VibratorMode, ChangeTime?: number, LastChange?: number }} FuckMachinePersistentData
- */
-/** @type {ExtendedItemCallbacks.BeforeDraw<FuckMachinePersistentData>} */
-declare function AssetsItemDevicesFuckMachineBeforeDraw({ PersistentData, L, Y, Property }: DynamicDrawingData<FuckMachinePersistentData>): DynamicBeforeDrawOverrides;
-/** @type {ExtendedItemCallbacks.ScriptDraw<FuckMachinePersistentData>} */
-declare function AssetsItemDevicesFuckMachineScriptDraw(data: DynamicScriptCallbackData<FuckMachinePersistentData>): void;
+declare function AssetsItemDevicesFuckMachineBeforeDrawHook(data: VibratingItemData, originalFunction: (drawData: DynamicDrawingData<FuckMachinePersistentData>) => DynamicBeforeDrawOverrides, drawData: DynamicDrawingData<FuckMachinePersistentData>): DynamicBeforeDrawOverrides;
+declare function AssetsItemDevicesFuckMachineScriptDrawHook(data: VibratingItemData, originalFunction: (drawData: DynamicScriptCallbackData<FuckMachinePersistentData>) => void, drawData: DynamicScriptCallbackData<FuckMachinePersistentData>): void;
 type FuckMachinePersistentData = {
     DildoState?: number;
     Modifier?: number;

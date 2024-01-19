@@ -13,20 +13,29 @@ declare function ElementValue(ID: string, Value?: string): string;
  */
 declare function ElementContent(ID: string, Content?: string): string;
 /**
+ * Creates a new from element in the main document.
+ *
+ * @param {string} ID - The id of the form to create
+ * @returns {HTMLFormElement}
+ */
+declare function ElementCreateForm(ID: string): HTMLFormElement;
+/**
  * Creates a new text area element in the main document. Does not create a new element if there is already an existing one with the same ID
  * @param {string} ID - The id of the text area to create.
- * @returns {void} - Nothing
+ * @param {HTMLFormElement} [form] - The form the element belongs to
+ * @returns {HTMLTextAreaElement}
  */
-declare function ElementCreateTextArea(ID: string): void;
+declare function ElementCreateTextArea(ID: string, form?: HTMLFormElement): HTMLTextAreaElement;
 /**
  * Creates a new text input element in the main document.Does not create a new element if there is already an existing one with the same ID
  * @param {string} ID - The id of the input tag to create.
  * @param {string} Type - Type of the input tag to create.
  * @param {string} Value - Value of the input tag to create.
  * @param {string | number} [MaxLength] - Maximum input tag of the input to create.
+ * * @param {HTMLFormElement} [form] - The form the element belongs to
  * @returns {HTMLInputElement} - The created HTML input element
  */
-declare function ElementCreateInput(ID: string, Type: string, Value: string, MaxLength?: string | number): HTMLInputElement;
+declare function ElementCreateInput(ID: string, Type: string, Value: string, MaxLength?: string | number, form?: HTMLFormElement): HTMLInputElement;
 /**
  * Creates a new range input element in the main document. Does not create a new element if there is already an
  * existing one with the same id
@@ -35,12 +44,12 @@ declare function ElementCreateInput(ID: string, Type: string, Value: string, Max
  * @param {number} min - The minimum value of the input
  * @param {number} max - The maximum value of the input
  * @param {number} step - The increment size of the input
- * @param {string} [thumbIcon] - The icon to use for the range input's "thumb" (handle). Can currently be set to "lock"
- * or "blindfold". If not set, the slider will have a default appearance with no custom thumb.
+ * @param {ThumbIcon} [thumbIcon] - The icon to use for the range input's "thumb" (handle). If not set, the slider will
+ * have a default appearance with no custom thumb.
  * @param {boolean} [vertical] - Whether this range input is a vertical slider (defaults to false)
  * @returns {HTMLInputElement} - The created HTML input element
  */
-declare function ElementCreateRangeInput(id: string, value: number, min: number, max: number, step: number, thumbIcon?: string, vertical?: boolean): HTMLInputElement;
+declare function ElementCreateRangeInput(id: string, value: number, min: number, max: number, step: number, thumbIcon?: ThumbIcon, vertical?: boolean): HTMLInputElement;
 /**
  * Creates a dropdown element and adjusts it to the BC look and feel. In the HTML Code this will look like this:
  * <div> -- enclosing div used for css and postioning
@@ -121,6 +130,13 @@ declare function ElementSetDataAttribute(ID: string, Name: string, Value: string
  * @returns {void} - Nothing
  */
 declare function ElementSetAttribute(ID: string, Name: string, Value: string): void;
+/**
+ * Removes an attribute from a specified element.
+ * @param {string} ID - The id of the element from which to remove the attribute.
+ * @param {string} Name - Name of the attribute to remove.
+ * @returns {void} - Nothing
+ */
+declare function ElementRemoveAttribute(ID: string, Name: string): void;
 /**
  * Scrolls to the end of a specified element
  * @param {string} ID - The id of the element to scroll down to the bottom of.

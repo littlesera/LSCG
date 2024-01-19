@@ -50,17 +50,18 @@ declare var ChatCreateMessage: string;
 declare var ChatCreatePrivate: null | boolean;
 /** @type {null | boolean} */
 declare var ChatCreateLocked: null | boolean;
-/** @type {ChatRoomGame} */
-declare var ChatCreateGame: ChatRoomGame;
-/** @type {ChatRoomGame[]} */
-declare var ChatCreateGameList: ChatRoomGame[];
+declare var ChatCreateMap: string;
+/** @type {ServerChatRoomGame} */
+declare var ChatCreateGame: ServerChatRoomGame;
+/** @type {ServerChatRoomGame[]} */
+declare var ChatCreateGameList: ServerChatRoomGame[];
 declare var ChatCreateBackgroundIndex: number;
 declare var ChatCreateBackgroundSelect: string;
 /** @type {null | string[]} */
 declare var ChatCreateBackgroundList: null | string[];
 declare var ChatCreateShowBackgroundMode: boolean;
 declare var ChatCreateIsHidden: boolean;
-/** @type {ChatRoomLanguage} */
-declare var ChatCreateLanguage: ChatRoomLanguage;
-/** @type {ChatRoomLanguage[]} */
-declare var ChatCreateLanguageList: ChatRoomLanguage[];
+/** @type {ServerChatRoomLanguage} */
+declare var ChatCreateLanguage: ServerChatRoomLanguage;
+/** @type {ServerChatRoomLanguage[]} */
+declare var ChatCreateLanguageList: ServerChatRoomLanguage[];

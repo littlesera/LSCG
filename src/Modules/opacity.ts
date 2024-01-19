@@ -203,7 +203,7 @@ export class OpacityModule extends BaseModule {
             C.AppearanceLayers?.forEach((Layer) => {
                 const A = Layer.Asset;
                 if (isCloth(A)) {
-                    A.DynamicBeforeDraw = true;
+                    (<any>A).DynamicBeforeDraw = true;
                 }
             });
             let ret = next(args);
@@ -221,25 +221,25 @@ export class OpacityModule extends BaseModule {
                 let hasOpacitySettings = !!item.Property?.LSCGOpacity && item.Property?.LSCGOpacity != 1;
                 if (hasOpacitySettings || xrayActive) {
                     item.Asset = Object.assign({}, item.Asset);
-                    item.Asset.Layer = item.Asset.Layer.map(l => Object.assign({}, l));
+                    (<any>item.Asset).Layer = item.Asset.Layer.map(l => Object.assign({}, l));
                     item?.Asset?.Layer?.forEach(layer => {
-                        layer.Alpha = [];
+                        (<any>layer).Alpha = [];
                     });
-                    item.Asset.Hide = [];
-                    item.Asset.HideItem = [];
-                    item.Asset.HideItemAttribute = [];
+                    (<any>item.Asset).Hide = [];
+                    (<any>item.Asset).HideItem = [];
+                    (<any>item.Asset).HideItemAttribute = [];
                 } else {
                     item.Asset = Object.assign({}, item.Asset);
-                    item.Asset.Layer = item.Asset.Layer.map(l => Object.assign({}, l));
+                    (<any>item.Asset).Layer = item.Asset.Layer.map(l => Object.assign({}, l));
                     let defaultAsset = AssetMap.get(`${item?.Asset?.Group?.Name}/${item.Asset.Name}`);
                     if (!!defaultAsset) {
                         item?.Asset?.Layer?.forEach((layer, ix, arr) => {
                             if (defaultAsset!.Alpha)
-                                layer.Alpha = defaultAsset!.Alpha;
+                                (<any>layer).Alpha = defaultAsset!.Alpha;
                         });
-                        item.Asset.Hide = defaultAsset.Hide;
-                        item.Asset.HideItem = defaultAsset.HideItem;
-                        item.Asset.HideItemAttribute = defaultAsset.HideItemAttribute;
+                        (<any>item.Asset).Hide = defaultAsset.Hide;
+                        (<any>item.Asset).HideItem = defaultAsset.HideItem;
+                        (<any>item.Asset).HideItemAttribute = defaultAsset.HideItemAttribute;
                     }
                 }
 

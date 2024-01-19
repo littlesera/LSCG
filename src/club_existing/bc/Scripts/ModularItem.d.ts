@@ -1,8 +1,5 @@
 /**
- * Registers a modular extended item. This automatically creates the item's load, draw and click functions. It will
- * also generate the asset's AllowType array, as AllowType arrays on modular items can get long due to the
- * multiplicative nature of the item's types, and also converts the AllowModuleTypes property on any asset layers into
- * an AllowTypes property, if present.
+ * Registers a modular extended item. This automatically creates the item's load, draw and click functions.
  * @param {Asset} asset - The asset being registered
  * @param {ModularItemConfig} config - The item's modular item configuration
  * @returns {ModularItemData} - The generated extended item data for the asset
@@ -13,10 +10,11 @@ declare function ModularItemRegister(asset: Asset, config: ModularItemConfig): M
  * @param {ModularItemData} Data - The item's extended item data
  * @param {Item} Item - The item in question
  * @param {Character} C - The character that has the item equiped
- * @param {boolean} Refresh - Whether the character and relevant item should be refreshed and pushed to the server
+ * @param {boolean} Push - Whether to push to changes to the server
+ * @param {boolean} Refresh - Whether to refresh the character. This should generally be `true`, with custom script hooks being a potential exception.
  * @returns {boolean} Whether properties were initialized or not
  */
-declare function ModularItemInit(Data: ModularItemData, C: Character, Item: Item, Refresh?: boolean): boolean;
+declare function ModularItemInit(Data: ModularItemData, C: Character, Item: Item, Push?: boolean, Refresh?: boolean): boolean;
 /**
  * @param {ModularItemData} data
  */
@@ -41,9 +39,10 @@ declare function ModularItemBuildModules(asset: Asset, modules: readonly Modular
  * Generates an asset's modular item data
  * @param {Asset} asset - The asset to generate modular item data for
  * @param {ModularItemConfig} config - The item's extended item configuration
+ * @param {null | ExtendedItemOption} parentOption - The parent extended item option of the super screens (if any)
  * @returns {ModularItemData} - The generated modular item data for the asset
  */
-declare function ModularItemCreateModularData(asset: Asset, { Modules, ChatSetting, ChatTags, ChangeWhenLocked, DialogPrefix, ScriptHooks, Dictionary, DrawData, BaselineProperty, DrawImages, }: ModularItemConfig): ModularItemData;
+declare function ModularItemCreateModularData(asset: Asset, { Modules, ChatSetting, ChatTags, ChangeWhenLocked, DialogPrefix, ScriptHooks, Dictionary, DrawData, BaselineProperty, AllowEffect, DrawImages, Name, }: ModularItemConfig, parentOption?: null | ExtendedItemOption): ModularItemData;
 /**
  * Creates a modular item's base draw function (for the module selection screen)
  * @param {ModularItemData} data - The modular item data for the asset
@@ -117,10 +116,18 @@ declare function ModularItemModuleTransition(newModule: string, data: ModularIte
 /**
  * Parses the focus item's current type into an array representing the currently selected module options
  * @param {ModularItemData} data - The modular item's data
- * @param {string?} type - The type string for a modular item. If null, use a type string extracted from the selected module options
+ * @param {null | TypeRecord} typeRecord - The type string for a modular item. If null, use a type string extracted from the selected module options
  * @returns {number[]} - An array of numbers representing the currently selected options for each of the item's modules
  */
-declare function ModularItemParseCurrent({ asset, modules }: ModularItemData, type?: string | null): number[];
+declare function ModularItemParseCurrent({ asset, modules }: ModularItemData, typeRecord: null | TypeRecord): number[];
+/**
+ * Generates the type string for a modular item from its modules and their current values.
+ * @deprecated To-be removed in R99
+ * @param {ModularItemModule[]} modules - The modules array for the modular item
+ * @param {readonly number[]} [values] - The numeric values representing the current options for each module
+ * @returns {string} - A string type generated from the selected option values for each module
+ */
+declare function ModularItemConstructType(modules: ModularItemModule[], values?: readonly number[]): string;
 /**
  * Merges all of the selected module options for a modular item into a single Property object to set on the item
  * @param {ModularItemData} data - The modular item's data
@@ -145,19 +152,6 @@ declare function ModularItemSanitizeProperties(Property: ItemProperties, mergedP
  */
 declare function ModularItemMergeOverrideHeight(currentValue: AssetOverrideHeight, newValue: AssetOverrideHeight): AssetOverrideHeight | undefined;
 /**
- * Generates the type string for a modular item from its modules and their current values.
- * @param {ModularItemModule[]} modules - The modules array for the modular item
- * @param {readonly number[]} [values] - The numeric values representing the current options for each module
- * @returns {string} - A string type generated from the selected option values for each module
- */
-declare function ModularItemConstructType(modules: ModularItemModule[], values?: readonly number[]): string;
-/**
- * Separate a modular item type string into a list with the types of each individual module.
- * @param {string} Type - The modular item type string
- * @returns {string[] | null} - A list with the options of each individual module or `null` if the input type wasn't a string
- */
-declare function ModularItemDeconstructType(Type: string): string[] | null;
-/**
  * Sets a modular item's type based on a change in a module's option selection.
  * @param {ModularItemModule} module - The module that changed
  * @param {number} index - The index of the newly chosen option within the module
@@ -165,18 +159,6 @@ declare function ModularItemDeconstructType(Type: string): string[] | null;
  * @returns {void} - Nothing
  */
 declare function ModularItemSetType(module: ModularItemModule, index: number, data: ModularItemData): void;
-/**
- * Sets a modular item's type and properties to the option whose name matches the provided option name parameter.
- * @param {Character} C - The character on whom the item is equipped
- * @param {Item | AssetGroupName} itemOrGroupName - The item whose type to set, or the group name for the item
- * @param {string} optionNames - The name of the option to set
- * @param {boolean} [push] - Whether or not appearance updates should be persisted (only applies if the character is the
- * player) - defaults to false.
- * @param {null | Character} [C_Source] - The character setting the new item option. If `null`, assume that it is _not_ the player character.
- * @returns {string|undefined} - undefined or an empty string if the type was set correctly. Otherwise, returns a string
- * informing the player of the requirements that are not met.
- */
-declare function ModularItemSetOptionByName(C: Character, itemOrGroupName: Item | AssetGroupName, optionNames: string, push?: boolean, C_Source?: null | Character): string | undefined;
 /**
  * Publishes the chatroom message for a modular item when one of its modules has changed.
  * @param {ModularItemData} data
@@ -188,22 +170,13 @@ declare function ModularItemSetOptionByName(C: Character, itemOrGroupName: Item 
  */
 declare function ModularItemPublishAction(data: ModularItemData, C: Character, item: Item, newOption: ModularItemOption, previousOption: ModularItemOption): void;
 /**
- * Generates an array of all types available for an asset based on its modular item data, filtered by the provided
- * predicate function, if needed.
- * @param {ModularItemData} data - The modular item's data
- * @param {(typeObject: Record<string, number>) => boolean} [predicate] - An optional predicate for filtering the
- * resulting types
- * @returns {string[]} - The generated array of types
- */
-declare function ModularItemGenerateTypeList({ modules }: ModularItemData, predicate?: (typeObject: Record<string, number>) => boolean): string[];
-/**
  * Generates and sets the AllowLock and AllowLockType properties for an asset based on its modular item data. For types
  * where two independent options declare conflicting AllowLock properties (i.e. one option declares AllowLock: false and
  * another declares AllowLock: true), the resulting type will permit locking (i.e. true overrides false).
  * @param {ModularItemData} data - The modular item's data
  * @returns {void} - Nothing
  */
-declare function ModularItemGenerateAllowLockType(data: ModularItemData): void;
+declare function ModularItemGenerateAllowLockType({ asset, modules }: ModularItemData): void;
 /**
  * Generates and assigns a modular asset's AllowType, AllowEffect and AllowBlock properties, along with the AllowTypes
  * properties on the asset layers based on the values set in its module definitions.
@@ -280,7 +253,3 @@ declare const ModularItemDataLookup: Record<string, ModularItemData>;
  * @type {Record<"PER_MODULE"|"PER_OPTION", ModularItemChatSetting>}
  */
 declare const ModularItemChatSetting: Record<"PER_MODULE" | "PER_OPTION", ModularItemChatSetting>;
-/** A regular expression that knows how to split modular types into [module key, option index] components */
-declare const ModularItemTypeSplitter: RegExp;
-/** A regular expression that knows how to split a [key, index] into its parts */
-declare const ModularItemSubtypeSplitter: RegExp;

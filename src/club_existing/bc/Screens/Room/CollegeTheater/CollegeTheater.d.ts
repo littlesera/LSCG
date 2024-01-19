@@ -20,6 +20,16 @@ declare function CollegeTheaterCanChooseRole(): boolean;
  */
 declare function CollegeTheaterGetTeacherKey(): void;
 /**
+ * Checks if Julia stopped rebellion as Queen in College and if player doesn't have owner.
+ * @returns {boolean} - Returns TRUE if Julia stopped rebellion as Queen in College and if player doesn't have owner
+ */
+declare function CollegeTheaterIsJuliaQueen(): boolean;
+/**
+ * Checks if Julia submitted as a damsel in College.
+ * @returns {boolean} - Returns TRUE if Julia submitted as a damsel in College
+ */
+declare function CollegeTheaterIsJuliaDamsel(): boolean;
+/**
  * Dresses Julia in her full theater outfit.
  * @param {Character} C - The character object to dress up
  * @returns {void} - Nothing

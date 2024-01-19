@@ -404,7 +404,7 @@ export function addCustomEffect(C: Character | null, effect: EffectName): boolea
 	if (Array.isArray(emoticon.Asset.AllowEffect))
 		emoticon.Asset.AllowEffect.push(effect);
 	else
-		emoticon.Asset.AllowEffect = [effect];
+		(<any>emoticon.Asset).AllowEffect = [effect];
 
 	if (!emoticon.Property) {
 		emoticon.Property = { Effect: [effect] };
@@ -479,7 +479,7 @@ export function getPlayerVolume(modifier: number) {
 }
 
 export function sendLSCGMessage(msg: LSCGMessageModel) {
-	const packet = <IChatRoomMessage>{
+	const packet = <ServerChatRoomMessage>{
 		Type: "Hidden",
 		Content: "LSCGMsg",
 		Sender: Player.MemberNumber,
@@ -572,18 +572,18 @@ export function IsIncapacitated(C?: OtherCharacter | PlayerCharacter): boolean {
 	// || getModule<MiscModule>("MiscModule")?.isChloroformed; -- Need to push chloroform status to public for this to work.
 }
 
-export function GetMetadata(data: IChatRoomMessage): IChatRoomMessageMetadata | undefined {
-	let sender = getCharacter(data.Sender);
+export function GetMetadata(data: ServerChatRoomMessage): IChatRoomMessageMetadata | undefined {
+	let sender = getCharacter(data.Sender ?? -1);
 	if (!sender)
 		sender = Player; // No sender usually means we're actively sending it..
 	return ChatRoomMessageRunExtractors(data, sender).metadata;
 }
 
-export function GetTargetCharacter(data: IChatRoomMessage): number | undefined {
+export function GetTargetCharacter(data: ServerChatRoomMessage): number | undefined {
 	return GetMetadata(data)?.TargetMemberNumber;
 }
 
-export function GetActivityName(data: IChatRoomMessage): string | undefined {
+export function GetActivityName(data: ServerChatRoomMessage): string | undefined {
 	return GetMetadata(data)?.ActivityName;
 }
 

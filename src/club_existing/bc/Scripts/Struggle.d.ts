@@ -1,5 +1,6 @@
 /**
  * Get the list of struggle minigames.
+ * @returns {[StruggleKnownMinigames, StruggleMinigame][]}
  */
 declare function StruggleGetMinigames(): [StruggleKnownMinigames, StruggleMinigame][];
 /**
@@ -86,17 +87,21 @@ declare function StruggleMinigameIsRunning(): boolean;
  * This function initializes the common state and calls the requested minigame
  * setup function.
  *
- * @param {Character} C
- * @param {StruggleKnownMinigames} MiniGame
- * @param {Item} PrevItem
- * @param {Item} NextItem
- * @param {StruggleCompletionCallback} Completion
+ * @param {Character} C - The character currently doing the struggling, either on itself (ie. as Player), or on someone else.
+ * @param {StruggleKnownMinigames} MiniGame - The minigame to start
+ * @param {Item | null} PrevItem - The item currently being present on the character, or null if none
+ * @param {Item} NextItem - The item currently being added on the character, or null if it's a removal
+ * @param {StruggleCompletionCallback} Completion - A callback that will be called when the minigame ends
  */
-declare function StruggleMinigameStart(C: Character, MiniGame: StruggleKnownMinigames, PrevItem: Item, NextItem: Item, Completion: StruggleCompletionCallback): void;
+declare function StruggleMinigameStart(C: Character, MiniGame: StruggleKnownMinigames, PrevItem: Item | null, NextItem: Item, Completion: StruggleCompletionCallback): void;
 /**
  * Stop the struggle minigame and reset it so it can be reentered.
  *
  * If the game was already played a bit, it will also log the failure in chat.
+ *
+ * Do not call this from within minigames, use {@link StruggleMinigameCheckCancel}
+ * and {@link StruggleProgressCheckEnd} instead so whoever started the minigame
+ * knows it has ended and can react accordingly.
  *
  * @returns {void}
  */
@@ -300,6 +305,11 @@ declare var StruggleLoosenSpeed: number;
 declare var StruggleLoosenAngle: number;
 declare var StruggleLoosenHoleAngle: number;
 /**
+ * Character expression at the beginning of the minigame; player-only
+ * @type {Partial<Record<ExpressionGroupName, ExpressionName>> | undefined}
+ */
+declare var StruggleExpressionStore: Partial<Record<ExpressionGroupName, ExpressionName>> | undefined;
+/**
  * The struggle minigame progress
  *
  * -1 means there's no game running. 0 and StruggleProgressCurrentMinigame
@@ -314,12 +324,24 @@ declare let StruggleProgress: number;
  */
 declare var StruggleProgressCurrentMinigame: StruggleKnownMinigames | "";
 /**
- * The item worn at the beginning of the minigame
+ * The item worn at the beginning of the minigame.
+ *
+ * This is a (shallow) copy so that changes made outside of the minigame
+ * don't cause crashes if the data gets changed externally —
+ * which can happen if someone else removes the item we're currently
+ * struggling with. Changes made to it might be ignored!
+ *
  * @type {Item | null}
  */
 declare var StruggleProgressPrevItem: Item | null;
 /**
  * The item that should be worn at the end of the minigame
+ *
+ * This is a (shallow) copy so that changes made outside of the minigame
+ * don't cause crashes if the data gets changed externally —
+ * which can happen if someone else removes the item we're currently
+ * struggling with. Changes made to it might be ignored!
+ *
  * @type {Item | null}
  */
 declare var StruggleProgressNextItem: Item | null;
@@ -343,5 +365,10 @@ declare var StruggleProgressDexTarget: number;
 declare var StruggleProgressDexCurrent: number;
 declare var StruggleProgressDexMax: number;
 declare var StruggleProgressDexDirectionRight: boolean;
-/** @type {Record<string, StruggleMinigame>} */
-declare const StruggleMinigames: Record<string, StruggleMinigame>;
+/** @type {Record<StruggleKnownMinigames, StruggleMinigame>} */
+declare const StruggleMinigames: Record<StruggleKnownMinigames, StruggleMinigame>;
+/**
+ * List of expressions to go through while struggling, keyed by duration
+ * @type {Record<number, Partial<Record<ExpressionGroupName, ExpressionName>>>}
+ */
+declare const StruggleFacesList: Record<number, Partial<Record<ExpressionGroupName, ExpressionName>>>;

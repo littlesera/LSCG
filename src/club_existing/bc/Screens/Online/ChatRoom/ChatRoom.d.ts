@@ -56,6 +56,11 @@ declare function ChatRoomOwnershipOptionIs(Option: ChatRoomOwnershipOption): boo
  */
 declare function ChatRoomLovershipOptionIs(Option: ChatRoomLovershipOption): boolean;
 /**
+ * Returns TRUE if the room customization button can be used
+ * @returns {boolean} - TRUE if can be used
+ */
+declare function ChatRoomCustomizationButton(): boolean;
+/**
  * Checks if the player can take a drink from the current character's tray.
  * @returns {boolean} - TRUE if the current character is wearing a drinks tray and the player can interact.
  */
@@ -265,6 +270,15 @@ declare function DialogCanCallMaidsPunishmentOff(): boolean;
  * @returns {void} - Nothing.
  */
 declare function ChatRoomCreateElement(): void;
+/** Hide the UI elements of the chatroom screen */
+declare function ChatRoomShowElements(): void;
+/** Show the UI elements of the chatroom screen */
+declare function ChatRoomHideElements(): void;
+/**
+ * Append an element to the chatroom's chat log, scroll it down and restore focus
+ * @param {HTMLElement} div
+ */
+declare function ChatRoomAppendChat(div: HTMLElement): void;
 /**
  * Loads the chat room screen by displaying the proper inputs.
  * @returns {void} - Nothing.
@@ -276,15 +290,15 @@ declare function ChatRoomLoad(): void;
 declare function ChatRoomClearAllElements(): void;
 /**
  * Starts the chatroom selection screen.
- * @param {ChatRoomSpaceType} Space - Name of the chatroom space
- * @param {ChatRoomGame} Game - Name of the chatroom game to play
- * @param {null | string} LeaveRoom - Name of the room to go back to when exiting chatsearch.
- * @param {null | ModuleType} LeaveSpace - Name of the space to go back to when exiting chatsearch.
+ * @param {ServerChatRoomSpace} Space - Name of the chatroom space
+ * @param {ServerChatRoomGame} Game - Name of the chatroom game to play
+ * @param {string | null} LeaveRoom - Name of the room to go back to when exiting chatsearch.
+ * @param {ModuleType | null} LeaveSpace - Name of the space to go back to when exiting chatsearch.
  * @param {string} Background - Name of the background to use in chatsearch.
  * @param {BackgroundTag[]} BackgroundTagList - List of available backgrounds in the chatroom space.
  * @returns {void} - Nothing.
  */
-declare function ChatRoomStart(Space: ChatRoomSpaceType, Game: ChatRoomGame, LeaveRoom: null | string, LeaveSpace: null | ModuleType, Background: string, BackgroundTagList: BackgroundTag[]): void;
+declare function ChatRoomStart(Space: ServerChatRoomSpace, Game: ServerChatRoomGame, LeaveRoom: string | null, LeaveSpace: ModuleType | null, Background: string, BackgroundTagList: BackgroundTag[]): void;
 /**
  * Create the list of chat room menu buttons
  * @returns {void} - Nothing
@@ -311,11 +325,18 @@ declare function ChatRoomUpdateDisplay(): void;
  */
 declare function DrawStatus(C: Character, X: number, Y: number, Zoom: number): void;
 /**
+ * Iterate over a room's characters
+ *
+ * This function takes a callback it will call for each character in turn after having
+ * calculated their respective drawing parameters (location), accounting for the smooth zoom effect
+ * @param {(charIdx: number, charX: number, charY: number, space: number, zoom: number) => boolean | void} callback
+ */
+declare function ChatRoomLoopCharacters(callback: (charIdx: number, charX: number, charY: number, space: number, zoom: number) => boolean | void): void;
+/**
  * Draws the chatroom characters.
- * @param {boolean} DoClick - Whether or not a click was registered.
  * @returns {void} - Nothing.
  */
-declare function ChatRoomDrawCharacter(DoClick: boolean): void;
+declare function ChatRoomDrawCharacter(): void;
 /**
  * Draw the background of a chat room
  * @param {string} Background - The name of the background image file
@@ -375,10 +396,10 @@ declare function ChatRoomSetTarget(MemberNumber: number): void;
 declare function ChatRoomTarget(): void;
 /**
  * Updates the account to set the last chat room
- * @param {string} room - room to set it to. "" to reset.
+ * @param {ChatRoom|null} room - room to set it to. null to reset.
  * @returns {void} - Nothing
  */
-declare function ChatRoomSetLastChatRoom(room: string): void;
+declare function ChatRoomSetLastChatRoom(room: ChatRoom | null): void;
 /**
  * Triggers a chat room message for stimulation events.
  *
@@ -453,6 +474,16 @@ declare function ChatRoomStatusUpdateTalk(Key: KeyboardEvent): void;
  */
 declare function ChatRoomStatusCheckExpiration(): void;
 /**
+ * Clears the room customization data
+ * @returns {void} - Nothing.
+ */
+declare function ChatRoomCustomizationClear(): void;
+/**
+ * Use the room customization features if needed
+ * @returns {void} - Nothing.
+ */
+declare function ChatRoomCustomizationRun(): void;
+/**
  * Runs the chatroom screen.
  * @returns {void} - Nothing.
  */
@@ -478,6 +509,28 @@ declare function ChatRoomAttemptStandMinigameEnd(): void;
  * @returns {boolean} - Returns TRUE if the player can leave the current chat room.
  */
 declare function ChatRoomCanLeave(): boolean;
+/**
+ * Calculates the slow leave duration
+ *
+ * @param {number} level - The slow level
+ * @param {number} skill - The evasion skill level
+ * @param {number} min - The minimum cap
+ * @returns {number} The slow leave duration
+ */
+declare function ChatRoomSlowLeaveDuration(level: number, skill: number, min: number): number;
+declare function ChatRoomAttemptLeave(): void;
+/**
+ * Whether the player is currently leaving slowly
+ */
+declare function ChatRoomIsLeavingSlowly(): boolean;
+/**
+ * Cancel our attempt at leaving slowly
+ */
+declare function ChatRoomSlowLeaveCancel(): void;
+/**
+ * Processing function for the slow-leave "state machine"
+ */
+declare function ChatRoomProcessSlowLeave(): void;
 /**
  * Make the player exit from the current chatroom
  * @param {boolean} clearCharacters - Whether the online character cache should be cleared
@@ -508,7 +561,11 @@ declare function ChatRoomSendLocal(Content: string, Timeout?: number): void;
  */
 declare function ChatRoomSendEmote(msg: string): void;
 /**
- * Publishes common player actions (add, remove, swap) to the chat.
+ * Publishes common player actions (add, remove, swap) to the rest of the chatroom.
+ *
+ * Note that this will *not* update the server database,
+ * which requires either {@link CharacterRefresh}, {@link ServerPlayerAppearanceSync} or {@link ChatRoomCharacterUpdate}.
+ *
  * @param {Character} C - Character on which the action is done.
  * @param {string} Action - Action modifier
  * @param {Item} PrevItem - The item that has been removed.
@@ -519,7 +576,8 @@ declare function ChatRoomPublishAction(C: Character, Action: string, PrevItem: I
 /**
  * Updates an item on character for everyone in a chat room - replaces ChatRoomCharacterUpdate to cut on the lag.
  *
- * DO NOT USE. The server doesn't persist changes made that way to the database.
+ * Note that this will *not* update the server database,
+ * which requires either {@link CharacterRefresh}, {@link ServerPlayerAppearanceSync} or {@link ChatRoomCharacterUpdate}.
  *
  * @param {Character} C - Character to update.
  * @param {AssetGroupName} [Group] - Item group to update.
@@ -527,7 +585,21 @@ declare function ChatRoomPublishAction(C: Character, Action: string, PrevItem: I
  */
 declare function ChatRoomCharacterItemUpdate(C: Character, Group?: AssetGroupName): void;
 /**
- * Publishes a custom action to the chat
+ * Updates an item on a character for everyone in a chat room, for expression changes only.
+ *
+ * Note that this will *not* update the server database,
+ * which requires either {@link CharacterRefresh}, {@link ServerPlayerAppearanceSync} or {@link ChatRoomCharacterUpdate}.
+ *
+ * @param {Character} C
+ * @param {ExpressionGroupName} Group
+ */
+declare function ChatRoomCharacterExpressionUpdate(C: Character, Group: ExpressionGroupName): void;
+/**
+ * Publishes a custom action to the rest of the chatroom.
+ *
+ * Note that this will *not* update the server database,
+ * which requires either {@link CharacterRefresh}, {@link ServerPlayerAppearanceSync} or {@link ChatRoomCharacterUpdate}.
+ *
  * @param {string} msg - Tag of the action to send
  * @param {boolean} LeaveDialog - Whether or not the dialog should be left.
  * @param {ChatMessageDictionary} Dictionary - Dictionary of tags and data to send
@@ -536,7 +608,11 @@ declare function ChatRoomCharacterItemUpdate(C: Character, Group?: AssetGroupNam
  */
 declare function ChatRoomPublishCustomAction(msg: string, LeaveDialog: boolean, Dictionary: ChatMessageDictionary): void;
 /**
- * Pushes the new character data/appearance to the server.
+ * Pushes the new character data/appearance to everyone else in a chat room and updates the server database.
+ *
+ * Note that this will *not* update the server database,
+ * which requires either {@link CharacterRefresh} or {@link ServerPlayerAppearanceSync}.
+ *
  * @param {Character} C - Character to update.
  * @returns {void} - Nothing.
  */
@@ -557,10 +633,10 @@ declare function ChatRoomHTMLEntities(str: string): string;
 /**
  * Check is the player is either the sender of a message, or its target.
  *
- * @param {IChatRoomMessage} data - The chat message to check for involvment.
+ * @param {ServerChatRoomMessage} data - The chat message to check for involvment.
  * @returns {boolean} true if the player is involved, false otherwise.
  */
-declare function ChatRoomMessageInvolvesPlayer(data: IChatRoomMessage): boolean;
+declare function ChatRoomMessageInvolvesPlayer(data: ServerChatRoomMessage): boolean;
 /**
  * Checks whether the given character's interactions are impacted by the player's sensory-deprivation.
  *
@@ -587,28 +663,29 @@ declare function ChatRoomRegisterMessageHandler(handler: ChatRoomMessageHandler)
 /**
  * Performs the processing for an hidden message.
  *
- * @param {IChatRoomMessage} data
+ * @param {ServerChatRoomMessage} data
  * @param {Character} SenderCharacter
+ * @returns {boolean}
  */
-declare function ChatRoomMessageProcessHidden(data: IChatRoomMessage, SenderCharacter: Character): boolean;
+declare function ChatRoomMessageProcessHidden(data: ServerChatRoomMessage, SenderCharacter: Character): boolean;
 /**
  * Extracts the metadata and message substitutions from a message's dictionary.
  *
- * @param {IChatRoomMessage} data - The message to parse.
+ * @param {ServerChatRoomMessage} data - The message to parse.
  * @param {Character} SenderCharacter - The resolved character that sent that message.
  * @returns {{ metadata: IChatRoomMessageMetadata, substitutions: CommonSubtituteSubstitution[] }}
  */
-declare function ChatRoomMessageDefaultMetadataExtractor(data: IChatRoomMessage, SenderCharacter: Character): {
+declare function ChatRoomMessageDefaultMetadataExtractor(data: ServerChatRoomMessage, SenderCharacter: Character): {
     metadata: IChatRoomMessageMetadata;
     substitutions: CommonSubtituteSubstitution[];
 };
 /**
  * Gets a set of dictionary substitutions used when the given character is the source character of a chat message.
- * @param {IChatRoomMessage} data - The raw message data
+ * @param {ServerChatRoomMessage} data - The raw message data
  * @param {Character} character - The source character
  * @returns {CommonSubtituteSubstitution[]} - A list of dictionary substitutions that should be applied
  */
-declare function ChatRoomGetSourceCharacterSubstitutions(data: IChatRoomMessage, character: Character): CommonSubtituteSubstitution[];
+declare function ChatRoomGetSourceCharacterSubstitutions(data: ServerChatRoomMessage, character: Character): CommonSubtituteSubstitution[];
 /**
  * Gets a set of dictionary substitutions used when the given character is the target character of a chat message.
  * @param {Character} character - The target character
@@ -621,23 +698,23 @@ declare function ChatRoomGetSourceCharacterSubstitutions(data: IChatRoomMessage,
 declare function ChatRoomGetTargetCharacterSubstitutions(character: Character, isSelf: boolean, index?: number): CommonSubtituteSubstitution[];
 /**
  * Gets a set of dictionary substitutions used for the focus group
- * @param {IChatRoomMessage} data - The raw message data
+ * @param {ServerChatRoomMessage} data - The raw message data
  * @param {AssetGroup} focusGroup - The group being acted upon by the chat message
  * @param {Character} targetCharacter - The target character of the message
  * @returns {[string,string][]} - A list of dictionary substitutions that should be applied
  */
-declare function ChatRoomGetFocusGroupSubstitutions(data: IChatRoomMessage, focusGroup: AssetGroup, targetCharacter: Character): [string, string][];
+declare function ChatRoomGetFocusGroupSubstitutions(data: ServerChatRoomMessage, focusGroup: AssetGroup, targetCharacter: Character): [string, string][];
 /**
  * Extracts all metadata and substitutions requested by a message.
  *
  * This goes through ChatRoomMessageExtractors and calls them in order
  * on the recieved message, collecting their output (metadata & tag substitutions).
  *
- * @param {IChatRoomMessage} data
+ * @param {ServerChatRoomMessage} data
  * @param {Character} sender
  * @returns {{ metadata?: IChatRoomMessageMetadata, substitutions?: CommonSubtituteSubstitution[] }}
  */
-declare function ChatRoomMessageRunExtractors(data: IChatRoomMessage, sender: Character): {
+declare function ChatRoomMessageRunExtractors(data: ServerChatRoomMessage, sender: Character): {
     metadata?: IChatRoomMessageMetadata;
     substitutions?: CommonSubtituteSubstitution[];
 };
@@ -649,30 +726,31 @@ declare function ChatRoomMessageRunExtractors(data: IChatRoomMessage, sender: Ch
  * requests it, ignoring the rest.
  *
  * @param {"pre"|"post"} type - The type of processing to perform
- * @param {IChatRoomMessage} data - The recieved message
+ * @param {ServerChatRoomMessage} data - The recieved message
  * @param {Character} sender - The actual message sender character object
  * @param {string} msg - The escaped message, likely different from data.Contents
  * @param {IChatRoomMessageMetadata} [metadata] - The message metadata, only available for post-handlers
+ * @returns {boolean | string}
  */
-declare function ChatRoomMessageRunHandlers(type: "pre" | "post", data: IChatRoomMessage, sender: Character, msg: string, metadata?: IChatRoomMessageMetadata): string | boolean;
+declare function ChatRoomMessageRunHandlers(type: "pre" | "post", data: ServerChatRoomMessage, sender: Character, msg: string, metadata?: IChatRoomMessageMetadata): boolean | string;
 /**
  * Handles the reception of a chatroom message.
  *
  * @see ChatRoomMessageHandler for more information
- * @param {IChatRoomMessage} data - Message object containing things like the message type, sender, content, etc.
+ * @param {ServerChatRoomMessage} data - Message object containing things like the message type, sender, content, etc.
  * @returns {void} - Nothing.
  */
-declare function ChatRoomMessage(data: IChatRoomMessage): void;
+declare function ChatRoomMessage(data: ServerChatRoomMessage): void;
 /**
  * Update the Chat log with the recieved message
  *
- * @param {IChatRoomMessage} data
+ * @param {ServerChatRoomMessage} data
  * @param {string} msg
  * @param {Character} SenderCharacter
  * @param {IChatRoomMessageMetadata} metadata
  * @returns {void}
  */
-declare function ChatRoomMessageDisplay(data: IChatRoomMessage, msg: string, SenderCharacter: Character, metadata: IChatRoomMessageMetadata): void;
+declare function ChatRoomMessageDisplay(data: ServerChatRoomMessage, msg: string, SenderCharacter: Character, metadata: IChatRoomMessageMetadata): void;
 /**
  * Whether to replace message details which reveal information about an unseen/unheard character
  * @param {Character} C - The character whose identity should remain unknown
@@ -682,82 +760,82 @@ declare function ChatRoomHideIdentity(C: Character): boolean;
 /**
  * Adds a character into the chat room.
  * @param {Character} newCharacter - The new character to be added to the chat room.
- * @param {object} newRawCharacter - The raw character data of the new character as it was received from the server.
+ * @param {ServerChatRoomSyncCharacterResponse["Character"]} newRawCharacter - The raw character data of the new character as it was received from the server.
  * @returns {void} - Nothing
  */
-declare function ChatRoomAddCharacterToChatRoom(newCharacter: Character, newRawCharacter: object): void;
+declare function ChatRoomAddCharacterToChatRoom(newCharacter: Character, newRawCharacter: ServerChatRoomSyncCharacterResponse["Character"]): void;
 /**
  * Handles the reception of the complete room data from the server.
- * @param {IChatRoomSyncMessage} chatRoomProperties - Room object containing the updated chatroom data.
- * @returns {boolean} - Returns true if the passed properties are valid and false if they're invalid.
+ * @param {unknown} obj - Room object containing the updated chatroom data.
+ * @returns {obj is ChatRoom} - Returns true if the passed properties are valid and false if they're invalid.
  */
-declare function ChatRoomValidateProperties(chatRoomProperties: IChatRoomSyncMessage): boolean;
+declare function ChatRoomValidateProperties(obj: unknown): obj is ServerChatRoomData;
 /**
  * Handles the reception of the new room data from the server.
- * @param {IChatRoomSyncMessage} data - Room object containing the updated chatroom data.
+ * @param {ServerChatRoomSyncMessage} data - Room object containing the updated chatroom data.
  * @returns {void} - Nothing.
  */
-declare function ChatRoomSync(data: IChatRoomSyncMessage): void;
+declare function ChatRoomSync(data: ServerChatRoomSyncMessage): void;
 /**
  * Handles the reception of the character data of a single player from the server.
- * @param {object} data - object containing the character's data.
+ * @param {ServerChatRoomSyncCharacterResponse} data - object containing the character's data.
  * @returns {void} - Nothing.
  */
-declare function ChatRoomSyncCharacter(data: object): void;
+declare function ChatRoomSyncCharacter(data: ServerChatRoomSyncCharacterResponse): void;
 /**
  * Handles the reception of the character data of a newly joined player from the server.
- * @param {object} data - object containing the joined character's data.
+ * @param {ServerChatRoomSyncMemberJoinResponse} data - object containing the joined character's data.
  * @returns {void} - Nothing.
  */
-declare function ChatRoomSyncMemberJoin(data: object): void;
+declare function ChatRoomSyncMemberJoin(data: ServerChatRoomSyncMemberJoinResponse): void;
 /**
  * Handles the reception of the leave notification of a player from the server.
- * @param {object} data - Room object containing the leaving character's member number.
+ * @param {ServerChatRoomLeaveResponse} data - Room object containing the leaving character's member number.
  * @returns {void} - Nothing.
  */
-declare function ChatRoomSyncMemberLeave(data: object): void;
+declare function ChatRoomSyncMemberLeave(data: ServerChatRoomLeaveResponse): void;
 /**
  * Handles the reception of the room properties from the server.
- * @param {object} data - Room object containing the updated chatroom properties.
+ * @param {ServerChatRoomSyncMessage} data - Room object containing the updated chatroom properties.
  * @returns {void} - Nothing.
  */
-declare function ChatRoomSyncRoomProperties(data: object): void;
+declare function ChatRoomSyncRoomProperties(data: ServerChatRoomSyncMessage): void;
 /**
  * Handles the swapping of two players by a room administrator.
- * @param {object} data - Object containing the member numbers of the swapped characters.
+ * @param {ServerChatRoomReorderResponse} data - Object containing the member numbers of the swapped characters.
  * @returns {void} - Nothing.
  */
-declare function ChatRoomSyncReorderPlayers(data: object): void;
+declare function ChatRoomSyncReorderPlayers(data: ServerChatRoomReorderResponse): void;
 /**
  * Updates a single character in the chatroom
- * @param {object} data - Data object containing the new character data.
+ * @param {ServerChatRoomSyncCharacterResponse} data - Data object containing the new character data.
  * @returns {void} - Nothing.
  */
-declare function ChatRoomSyncSingle(data: object): void;
+declare function ChatRoomSyncSingle(data: ServerChatRoomSyncCharacterResponse): void;
 /**
  * Updates a single character's expression in the chatroom.
- * @param {IChatRoomSyncExpressionMessage} data - Data object containing the new character expression data.
+ * @param {ServerCharacterExpressionResponse} data - Data object containing the new character expression data.
  * @returns {void} - Nothing.
  */
-declare function ChatRoomSyncExpression(data: IChatRoomSyncExpressionMessage): void;
+declare function ChatRoomSyncExpression(data: ServerCharacterExpressionResponse): void;
 /**
  * Updates a single character's pose in the chatroom.
- * @param {IChatRoomSyncPoseMessage} data - Data object containing the new character pose data.
+ * @param {ServerCharacterPoseResponse} data - Data object containing the new character pose data.
  * @returns {void} - Nothing.
  */
-declare function ChatRoomSyncPose(data: IChatRoomSyncPoseMessage): void;
+declare function ChatRoomSyncPose(data: ServerCharacterPoseResponse): void;
 /**
  * Updates a single character's arousal progress in the chatroom.
- * @param {IChatRoomSyncArousalMessage} data - Data object containing the new character arousal data.
+ * @param {ServerCharacterArousalResponse} data - Data object containing the new character arousal data.
  * @returns {void} - Nothing.
  */
-declare function ChatRoomSyncArousal(data: IChatRoomSyncArousalMessage): void;
+declare function ChatRoomSyncArousal(data: ServerCharacterArousalResponse): void;
 /**
  * Updates a single item on a specific character in the chatroom.
- * @param {object} data - Data object containing the data pertaining to the singular item to update.
+ * @param {ServerChatRoomSyncItemResponse} data - Data object containing the data pertaining to the singular item to update.
  * @returns {void} - Nothing.
  */
-declare function ChatRoomSyncItem(data: object): void;
+declare function ChatRoomSyncItem(data: ServerChatRoomSyncItemResponse): void;
 /**
  * Refreshes the chat log elements for Player
  * @returns {void} - Nothing.
@@ -832,18 +910,18 @@ declare function ChatRoomKneelStandAssist(): void;
 declare function ChatRoomStopLeave(): void;
 /**
  * Sends an administrative command to the server for the chat room from the character dialog.
- * @param {string} ActionType - Type of action performed.
+ * @param {"Move"|"Kick"|"Ban"} ActionType - Type of action performed.
  * @param {boolean | string} [Publish=true] - Whether or not the action should be published.
  * @returns {void} - Nothing
  */
-declare function ChatRoomAdminAction(ActionType: string, Publish?: boolean | string): void;
+declare function ChatRoomAdminAction(ActionType: "Move" | "Kick" | "Ban", Publish?: boolean | string): void;
 /**
  * Sends an administrative command to the server from the chat text field.
- * @param {string} ActionType - Type of action performed.
+ * @param {"Ban"|"Unban"|"Kick"|"Promote"|"Demote"} ActionType - Type of action performed.
  * @param {string} Argument - Target number of the action.
  * @returns {void} - Nothing
  */
-declare function ChatRoomAdminChatAction(ActionType: string, Argument: string): void;
+declare function ChatRoomAdminChatAction(ActionType: "Ban" | "Unban" | "Kick" | "Promote" | "Demote", Argument: string): void;
 /**
  * Gets the player's current time as a string.
  * @returns {string} - The player's current local time as a string.
@@ -858,10 +936,10 @@ declare function ChatRoomGetTransparentColor(Color: HexColor): string;
 /**
  * Adds or removes an online member to/from a specific list. (From the dialog menu)
  * @param {"Add" | "Remove"} Operation - Operation to perform.
- * @param {string} ListType - Name of the list to alter. (Whitelist, friendlist, blacklist, ghostlist)
+ * @param {"WhiteList" | "FriendList" | "BlackList" | "GhostList"} ListType - Name of the list to alter. (Whitelist, friendlist, blacklist, ghostlist)
  * @returns {void} - Nothing
  */
-declare function ChatRoomListManage(Operation: "Add" | "Remove", ListType: string): void;
+declare function ChatRoomListManage(Operation: "Add" | "Remove", ListType: "WhiteList" | "FriendList" | "BlackList" | "GhostList"): void;
 /**
  * Adds or removes an online member to/from a specific list from a typed message.
  * @param {number[]|null} List - List to add to or remove from.
@@ -880,10 +958,15 @@ declare function ChatRoomListManipulation(List: number[] | null, Adding: boolean
 declare function ChatRoomListUpdate(list: number[], adding: boolean, memberNumber: number): void;
 /**
  * Handles reception of data pertaining to if applying an item is allowed.
- * @param {object} data - Data object containing if the player is allowed to interact with a character.
+ * @param {ServerChatRoomAllowItemResponse} data - Data object containing if the player is allowed to interact with a character.
  * @returns {void} - Nothing
  */
-declare function ChatRoomAllowItem(data: object): void;
+declare function ChatRoomAllowItem(data: ServerChatRoomAllowItemResponse): void;
+/**
+ * Opens the appearance editor for the given character
+ * @param {Character} C
+ */
+declare function ChatRoomAppearanceLoadCharacter(C: Character): void;
 /**
  * Triggered when the player wants to change another player's outfit.
  * @returns {void} - Nothing
@@ -891,16 +974,16 @@ declare function ChatRoomAllowItem(data: object): void;
 declare function DialogChangeClothes(): void;
 /**
  * Triggered when the player selects an ownership dialog option. (It can change money and reputation)
- * @param {"Propose" | "Accept" | "Release"} RequestType - Type of request being performed.
+ * @param {"Propose" | "Accept" | "Release" | "Break"} RequestType - Type of request being performed.
  * @returns {void} - Nothing
  */
-declare function ChatRoomSendOwnershipRequest(RequestType: "Propose" | "Accept" | "Release"): void;
+declare function ChatRoomSendOwnershipRequest(RequestType: "Propose" | "Accept" | "Release" | "Break"): void;
 /**
  * Triggered when the player selects an lovership dialog option. (It can change money and reputation)
- * @param {"Propose" | "Accept" | "Break"} RequestType - Type of request being performed.
+ * @param {"Propose" | "Accept" | "Release" | "Break"} RequestType - Type of request being performed.
  * @returns {void} - Nothing
  */
-declare function ChatRoomSendLovershipRequest(RequestType: "Propose" | "Accept" | "Break"): void;
+declare function ChatRoomSendLovershipRequest(RequestType: "Propose" | "Accept" | "Release" | "Break"): void;
 /**
  * Triggered when the player picks a drink from a character's maid tray.
  * @param {string} DrinkType - Drink chosen.
@@ -908,9 +991,9 @@ declare function ChatRoomSendLovershipRequest(RequestType: "Propose" | "Accept" 
  * @returns {void} - Nothing
  */
 declare function ChatRoomDrinkPick(DrinkType: string, Money: number): void;
-declare function ChatRoomSendLoverRule(RuleType: any, Option: any): void;
-declare function ChatRoomSendOwnerRule(RuleType: any, Option: any): void;
-declare function ChatRoomAdvancedRule(RuleType: any): void;
+declare function ChatRoomSendLoverRule(RuleType: LogNameType[keyof LogNameType], Option: "Quest" | "Leave"): void;
+declare function ChatRoomSendOwnerRule(RuleType: LogNameType[keyof LogNameType], Option: "Quest" | "Leave"): void;
+declare function ChatRoomAdvancedRule(RuleType: LogNameAdvanced): void;
 declare function ChatRoomForbiddenWords(): void;
 /**
  * Sends a rule / restriction / punishment to the player's slave/lover client, it will be handled on the slave/lover's
@@ -940,10 +1023,10 @@ declare function ChatRoomGetOwnerRule(RuleType: LogNameType["OwnerRule"]): boole
 declare function ChatRoomGetRule(RuleType: LogNameType["OwnerRule" | "LoverRule"], Sender: "Owner" | "Lover"): boolean;
 /**
  * Processes a rule sent to the player from her owner or from her lover.
- * @param {object} data - Received rule data object.
+ * @param {ServerChatRoomMessage} data - Received rule data object.
  * @returns {void}
  */
-declare function ChatRoomSetRule(data: object): void;
+declare function ChatRoomSetRule(data: ServerChatRoomMessage): void;
 /**
  * Sends quest money to the player's owner.
  * @returns {void} - Nothing
@@ -958,16 +1041,17 @@ declare function ChatRoomGiveMoneyForOwner(): void;
 declare function ChatRoomPayQuest(questGiverNumber: number, paymentAmount: number): void;
 /**
  * Triggered when online game data comes in
- * @param {object} data - Game data to process, sent to the current game handler.
+ * @param {ServerChatRoomGameBountyUpdateRequest["OnlineBounty"]} data - Game data to process, sent to the current game handler.
+ * @param {number} sender
  * @returns {void} - Nothing
  */
-declare function ChatRoomOnlineBountyHandleData(data: object, sender: any): void;
+declare function ChatRoomOnlineBountyHandleData(data: ServerChatRoomGameBountyUpdateRequest["OnlineBounty"], sender: number): void;
 /**
  * Triggered when a game message comes in, we forward it to the current online game being played.
- * @param {IChatRoomGameResponse} data - Game data to process, sent to the current game handler.
+ * @param {ServerChatRoomGameResponse} data - Game data to process, sent to the current game handler.
  * @returns {void} - Nothing
  */
-declare function ChatRoomGameResponse(data: IChatRoomGameResponse): void;
+declare function ChatRoomGameResponse(data: ServerChatRoomGameResponse): void;
 /**
  * Triggered when the player uses the /safeword command, we revert the character if safewords are enabled, and display
  * a warning in chat if not.
@@ -990,18 +1074,18 @@ declare function ChatRoomSafewordRelease(): void;
  * Concatenates the list of users to ban.
  * @param {boolean} IncludesBlackList - Adds the blacklist to the banlist
  * @param {boolean} IncludesGhostList - Adds the ghostlist to the banlist
- * @param {number[]} [ExistingList] - The existing Banlist, if applicable
+ * @param {readonly number[]} [ExistingList] - The existing Banlist, if applicable
  * @returns {number[]} Complete array of members to ban
  */
-declare function ChatRoomConcatenateBanList(IncludesBlackList: boolean, IncludesGhostList: boolean, ExistingList?: number[]): number[];
+declare function ChatRoomConcatenateBanList(IncludesBlackList: boolean, IncludesGhostList: boolean, ExistingList?: readonly number[]): number[];
 /**
  * Concatenates the list of users for Admin list.
  * @param {boolean} IncludesOwner - Adds the owner to the admin list
  * @param {boolean} IncludesLovers - Adds lovers to the admin list
- * @param {number[]} [ExistingList] - The existing Admin list, if applicable
+ * @param {readonly number[]} [ExistingList] - The existing Admin list, if applicable
  * @returns {number[]} Complete array of admin members
  */
-declare function ChatRoomConcatenateAdminList(IncludesOwner: boolean, IncludesLovers: boolean, ExistingList?: number[]): number[];
+declare function ChatRoomConcatenateAdminList(IncludesOwner: boolean, IncludesLovers: boolean, ExistingList?: readonly number[]): number[];
 /**
  * Handles a request from another player to read the player's log entries that they are permitted to read. Lovers and
  * owners can read certain entries from the player's log.
@@ -1076,7 +1160,7 @@ declare function ChatRoomRecreate(): void;
  */
 declare function ChatRoomCheckForLastChatRoomUpdates(): void;
 /**
- * Determines whether or not the current chatroom data differs from the locally stroed chatroom data
+ * Determines whether or not the current chatroom data differs from the locally stored chatroom data
  * @returns {boolean} - TRUE if the stored chatroom data is different from the current chatroom data, FALSE otherwise
  */
 declare function ChatRoomDataChanged(): boolean;
@@ -1110,19 +1194,28 @@ declare function ChatRoomOwnerPresenceRule(RuleName: LogNameType["OwnerRule"], T
  */
 declare function ChatRoomPronounSubstitutions(C: Character, key: string, hideIdentity: boolean): CommonSubtituteSubstitution[];
 /**
- * An enum for the options for chat room spaces
- * @type {{ MIXED: "X", FEMALE_ONLY: "", MALE_ONLY: "M", ASYLUM: "Asylum" }}
+ * Gets only the settings/configurable properties of a chat room.
+ * @param {ChatRoom} room
+ * @return {ChatRoomSettings}
  */
-declare const ChatRoomSpaceType: {
-    MIXED: "X";
-    FEMALE_ONLY: "";
-    MALE_ONLY: "M";
-    ASYLUM: "Asylum";
-};
+declare function ChatRoomGetSettings(room: ChatRoom): ChatRoomSettings;
+declare namespace ChatRoomSpaceType {
+    let MIXED: "X";
+    let FEMALE_ONLY: "";
+    let MALE_ONLY: "M";
+    let ASYLUM: "Asylum";
+}
 declare var ChatRoomBackground: string;
-/** @type {null | ChatRoom} */
-declare let ChatRoomData: null | ChatRoom;
-/** @type {Character[]} */
+/**
+ * The data for the current chatroom, as recieved from the server.
+ * @type {null | ServerChatRoomData}
+ */
+declare let ChatRoomData: null | ServerChatRoomData;
+/**
+ * The list of chatroom characters.
+ * This is unpacked characters from the data recieved from the server in {@link ChatRoomData.Character}.
+ * @type {Character[]}
+ */
 declare var ChatRoomCharacter: Character[];
 /** @type {ChatRoomChatLogEntry[]} */
 declare var ChatRoomChatLog: ChatRoomChatLogEntry[];
@@ -1138,10 +1231,10 @@ declare var ChatRoomPlayerCanJoin: boolean;
 declare var ChatRoomMoneyForOwner: number;
 /** @type {number[]} */
 declare var ChatRoomQuestGiven: number[];
-/** @type {ChatRoomSpaceType} */
-declare var ChatRoomSpace: ChatRoomSpaceType;
-/** @type {ChatRoomGame} */
-declare var ChatRoomGame: ChatRoomGame;
+/** @type {ServerChatRoomSpace} */
+declare var ChatRoomSpace: ServerChatRoomSpace;
+/** @type {ServerChatRoomGame} */
+declare var ChatRoomGame: ServerChatRoomGame;
 /** @type {null | number} */
 declare var ChatRoomMoveTarget: null | number;
 declare var ChatRoomHelpSeen: boolean;
@@ -1158,39 +1251,31 @@ declare var ChatRoomSlowtimer: number;
  * @type {boolean}
  */
 declare var ChatRoomSlowStop: boolean;
+/**
+ * Default position of the chat log field
+ * @type {RectTuple}
+ */
+declare var ChatRoomChatLogRect: RectTuple;
+/**
+ * Default position of the chat input field
+ * @type {RectTuple}
+ */
+declare var ChatRoomChatInputRect: RectTuple;
 declare var ChatRoomChatHidden: boolean;
 declare var ChatRoomCharacterCount: number;
-/** @type {Character[]} */
+/**
+ * The chatroom characters that were drawn in the last frame.
+ * Used for limiting the "fov". Characters come from {@link ChatRoomCharacter}
+ * @type {Character[]}
+ */
 declare var ChatRoomCharacterDrawlist: Character[];
 declare var ChatRoomSenseDepBypass: boolean;
 declare var ChatRoomGetUpTimer: number;
-declare var ChatRoomLastName: string;
-declare var ChatRoomLastBG: string;
-declare var ChatRoomLastPrivate: boolean;
-declare var ChatRoomLastSize: number;
-/** @type {ChatRoomLanguage} */
-declare var ChatRoomLastLanguage: ChatRoomLanguage;
-declare var ChatRoomLastDesc: string;
-/** @type {number[]} */
-declare var ChatRoomLastAdmin: number[];
-/** @type {number[]} */
-declare var ChatRoomLastBan: number[];
-/** @type {string[]} */
-declare var ChatRoomLastBlockCategory: string[];
-declare var ChatRoomLastSpace: string;
-/** @type {null | { Name: string, Description: string, Background: string, Private: boolean, Space: string, Game: ChatRoomGame, Admin: number[], Limit: string, Language: ChatRoomLanguage, BlockCategory: ChatRoomBlockCategory[] }} */
-declare var ChatRoomNewRoomToUpdate: null | {
-    Name: string;
-    Description: string;
-    Background: string;
-    Private: boolean;
-    Space: string;
-    Game: ChatRoomGame;
-    Admin: number[];
-    Limit: string;
-    Language: ChatRoomLanguage;
-    BlockCategory: ChatRoomBlockCategory[];
-};
+/**
+ * The complete data to update a recreated room with once the creation is successful
+ * @type {ChatRoomSettings}
+ * */
+declare var ChatRoomNewRoomToUpdate: ChatRoomSettings;
 declare var ChatRoomNewRoomToUpdateTimer: number;
 /**
  * The list of MemberNumbers whose characters we're holding the leash of
@@ -1208,6 +1293,9 @@ declare var ChatRoomLeashPlayer: number | null;
  */
 declare var ChatRoomJoinLeash: string;
 declare var ChatRoomTargetDirty: boolean;
+declare var ChatRoomCustomized: boolean;
+declare var ChatRoomCustomBackground: string;
+declare var ChatRoomCustomFilter: string;
 /**
  * Chances of a chat message popping up reminding you of some stimulation.
  *
@@ -1215,58 +1303,58 @@ declare var ChatRoomTargetDirty: boolean;
  */
 declare const ChatRoomStimulationEvents: Record<StimulationAction, StimulationEvent>;
 declare namespace ChatRoomArousalMsg_Chance {
-    const Kneel: number;
-    const Walk: number;
-    const StruggleFail: number;
-    const StruggleAction: number;
-    const Gag: number;
+    let Kneel: number;
+    let Walk: number;
+    let StruggleFail: number;
+    let StruggleAction: number;
+    let Gag: number;
 }
 declare namespace ChatRoomArousalMsg_ChanceScaling {
-    const Kneel_1: number;
+    let Kneel_1: number;
     export { Kneel_1 as Kneel };
-    const Walk_1: number;
+    let Walk_1: number;
     export { Walk_1 as Walk };
-    const StruggleFail_1: number;
+    let StruggleFail_1: number;
     export { StruggleFail_1 as StruggleFail };
-    const StruggleAction_1: number;
+    let StruggleAction_1: number;
     export { StruggleAction_1 as StruggleAction };
-    const Gag_1: number;
+    let Gag_1: number;
     export { Gag_1 as Gag };
 }
 declare namespace ChatRoomArousalMsg_ChanceVibeMod {
-    const Kneel_2: number;
+    let Kneel_2: number;
     export { Kneel_2 as Kneel };
-    const Walk_2: number;
+    let Walk_2: number;
     export { Walk_2 as Walk };
-    const StruggleFail_2: number;
+    let StruggleFail_2: number;
     export { StruggleFail_2 as StruggleFail };
-    const StruggleAction_2: number;
+    let StruggleAction_2: number;
     export { StruggleAction_2 as StruggleAction };
-    const Gag_2: number;
+    let Gag_2: number;
     export { Gag_2 as Gag };
 }
 declare namespace ChatRoomArousalMsg_ChanceInflationMod {
-    const Kneel_3: number;
+    let Kneel_3: number;
     export { Kneel_3 as Kneel };
-    const Walk_3: number;
+    let Walk_3: number;
     export { Walk_3 as Walk };
-    const StruggleFail_3: number;
+    let StruggleFail_3: number;
     export { StruggleFail_3 as StruggleFail };
-    const StruggleAction_3: number;
+    let StruggleAction_3: number;
     export { StruggleAction_3 as StruggleAction };
-    const Gag_3: number;
+    let Gag_3: number;
     export { Gag_3 as Gag };
 }
 declare namespace ChatRoomArousalMsg_ChanceGagMod {
-    const Kneel_4: number;
+    let Kneel_4: number;
     export { Kneel_4 as Kneel };
-    const Walk_4: number;
+    let Walk_4: number;
     export { Walk_4 as Walk };
-    const StruggleFail_4: number;
+    let StruggleFail_4: number;
     export { StruggleFail_4 as StruggleFail };
-    const StruggleAction_4: number;
+    let StruggleAction_4: number;
     export { StruggleAction_4 as StruggleAction };
-    const Gag_4: number;
+    let Gag_4: number;
     export { Gag_4 as Gag };
 }
 declare var ChatRoomHideIconState: number;
@@ -1277,9 +1365,9 @@ declare var ChatRoomHideIconState: number;
 declare var ChatRoomMenuButtons: string[];
 declare let ChatRoomFontSize: number;
 declare namespace ChatRoomFontSizes {
-    const Small: number;
-    const Medium: number;
-    const Large: number;
+    let Small: number;
+    let Medium: number;
+    let Large: number;
 }
 declare var ChatRoomCharacterX_Upper: number;
 declare var ChatRoomCharacterX_Lower: number;
@@ -1296,15 +1384,23 @@ declare function ChatRoomListOperationTriggers(): {
     }[];
 }[];
 declare namespace ChatRoomResizeManager {
-    const atStart: boolean;
-    const timer: null | number;
-    const timeOut: number;
-    const ChatRoomScrollPercentage: number;
-    const ChatLogScrolledToEnd: boolean;
+    let atStart: boolean;
+    let timer: null | number;
+    let timeOut: number;
+    let ChatRoomScrollPercentage: number;
+    let ChatLogScrolledToEnd: boolean;
     function ChatRoomResizeEvent(): void;
     function ChatRoomResizeEventsEnd(): void;
 }
 declare let ChatRoomStatusDeadKeys: string[];
+/** When slowed, we can't leave quicker than this */
+declare const ChatRoomSlowLeaveMinTime: 5000;
+/**
+ * Regex used to split out a string at word boundaries
+ *
+ * Note that due to a bug in Safari, we can't use the one that handles chinese characters properly.
+ */
+declare const mentionNameSplitter: RegExp;
 /** @type {ChatRoomMessageExtractor[]} */
 declare var ChatRoomMessageExtractors: ChatRoomMessageExtractor[];
 /**

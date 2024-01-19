@@ -50,21 +50,28 @@ declare function CharacterAppearanceNaked(C: Character): void;
  */
 declare function CharacterAppearanceStripLayer(C: Character): void;
 /**
+ * Check whether a layer must be visible given a provided type record.
+ * @param {AllowTypes.Data} allowTypes - The layer's allowed types
+ * @param {TypeRecord} typeRecord - The type record in question.
+ * @returns {boolean} - Whether the layer should be visible
+ */
+declare function CharacterAppearanceAllowForTypes(allowTypes: AllowTypes.Data, typeRecord: TypeRecord): boolean;
+/**
  * Determines whether an asset layer should be rendered, assuming the asset itself is visible.
  * @param {Character} C - The character wearing the item
  * @param {AssetLayer} layer - The layer to check visibility for
  * @param {Asset} asset - The asset that the layer belongs to
- * @param {string} [type] - The item's type, if it has one
+ * @param {TypeRecord} [typeRecord] - The item's type, if it has one
  * @returns {boolean} - TRUE if the layer should be visible, FALSE otherwise
  */
-declare function CharacterAppearanceIsLayerVisible(C: Character, layer: AssetLayer, asset: Asset, type?: string): boolean;
+declare function CharacterAppearanceIsLayerVisible(C: Character, layer: AssetLayer, asset: Asset, typeRecord?: TypeRecord): boolean;
 /**
  * Builds a filtered and sorted set of appearance layers, each representing a drawable layer of a character's current appearance. Layers
  * that will not be drawn (because their asset is not visible or they do not permit the current asset type) are filtered out at this stage.
  * @param {Character} C - The character to build the layers for
- * @return {AssetLayer[]} - A sorted set of layers, sorted by layer drawing priority
+ * @return {Mutable<AssetLayer>[]} - A sorted set of (shallow copied) layers, sorted by layer drawing priority
  */
-declare function CharacterAppearanceSortLayers(C: Character): AssetLayer[];
+declare function CharacterAppearanceSortLayers(C: Character): Mutable<AssetLayer>[];
 /**
  * Determines whether an item or a whole item group is visible or not
  * @param {Character} C - The character whose assets are checked
@@ -207,7 +214,7 @@ declare function CharacterAppearanceNextColor(C: Character, Group: AssetGroupNam
  * @param {number} Move - The amount the next asset group should be moved before it is displayed
  * @returns {void} - Nothing
  */
-declare function CharacterAppearanceMoveOffset(C: Character, Move: number): void;
+declare function CharacterAppearanceMoveGroup(C: Character, Move: number): void;
 /**
  * Sets the color for a specific group
  * @param {Character} C - The character whose item group should be colored
@@ -216,6 +223,14 @@ declare function CharacterAppearanceMoveOffset(C: Character, Move: number): void
  * @returns {void} - Nothing
  */
 declare function CharacterAppearanceSetColorForGroup(C: Character, Color: string, Group: AssetGroupName): void;
+/**
+ * Advance to the next reordering mode, or set the mode to the specified
+ * value.  The reordering mode cycles through the values:
+ * "None" -> "Select" -> "Place"
+ *
+ * @param {WardrobeReorderType} newmode - The mode to set.  If null, advance to next mode.
+ */
+declare function AppearanceWardrobeReorderModeSet(newmode?: WardrobeReorderType): void;
 /**
  * Handle the clicks in the character appearance selection screen. The function name is created dynamically.
  * @returns {void} - Nothing
@@ -232,6 +247,10 @@ declare function AppearanceMenuClick(C: Character): void;
  * @returns {void} - Nothing
  */
 declare function AppearanceExit(): void;
+/**
+ * Common cleanup that must happen when the appearance editor closes
+ */
+declare function CharacterAppearanceClose(): void;
 /**
  * Restore the characters appearance backup, if the exit button is clicked
  * @param {Character} C - The character, whose appearance backup should be used
@@ -253,9 +272,12 @@ declare function CharacterAppearanceCopy(FromC: Character, ToC: Character): void
 /**
  * Loads the appearance editing screen for a character
  * @param {Character} C - The character for whom the appearance screen should be loaded
+ * @param {(result: boolean) => void} [resultCallback] - A callback executed when the appearance editor closes.
+ *  If not specified, it will change back to the previous screen automatically, otherwise the caller is
+ *  reponsible for screen changes, and `result` will be true if the appearance change was made, false otherwise.
  * @returns {void} - nothing
  */
-declare function CharacterAppearanceLoadCharacter(C: Character): void;
+declare function CharacterAppearanceLoadCharacter(C: Character, resultCallback?: (result: boolean) => void): void;
 /**
  * Load wardrobe menu in appearance selection screen
  * @param {Character} C - The character whose wardrobe should be loaded
@@ -268,7 +290,13 @@ declare function CharacterAppearanceWardrobeLoad(C: Character): void;
  * @returns {string} - A serialised version of the character's current appearance
  */
 declare function CharacterAppearanceStringify(C: Character): string;
-declare function AppearanceItemStringify(Item: any): string;
+/**
+ * Serialize items to JSON, breaking the cyclic link between Item, Asset & Group
+ * by serializing that into a single string representing the link.
+ * @param {readonly Item[] | Item | any} Item
+ * @returns {string}
+ */
+declare function AppearanceItemStringify(Item: readonly Item[] | Item | any): string;
 /**
  * Restores a character's appearance from a serialised string generated by CharacterAppearanceStringify
  * @param {Character} C - The character whose appearance should be restored
@@ -276,7 +304,11 @@ declare function AppearanceItemStringify(Item: any): string;
  * @returns {void} - Nothing
  */
 declare function CharacterAppearanceRestore(C: Character, backup: string): void;
-declare function AppearanceItemParse(stringified: any): any;
+/**
+ * @param {string} stringified
+ * @returns {any}
+ */
+declare function AppearanceItemParse(stringified: string): any;
 /**
  * Opens the color picker for a selected item
  * @param {Character} C - The character the appearance is being changed for
@@ -315,14 +347,25 @@ declare function CharacterAppearanceResolveSync(C: Character, currentAppearance:
  */
 declare function CharacterAppearanceGenderAllowed(asset: Asset): boolean;
 declare var AppearanceBackground: string;
+/** Offset for the group view */
 declare var CharacterAppearanceOffset: number;
-declare var CharacterAppearanceNumPerPage: number;
+/** Number of entries per group page */
+declare var CharacterAppearanceNumGroupPerPage: number;
+/** Number of entries per cloth page */
+declare var CharacterAppearanceNumClothPerPage: number;
+/** Number of entries per wardrobe page */
+declare var CharacterAppearanceWardrobeNumPerPage: number;
 declare var CharacterAppearanceHeaderText: string;
 declare var CharacterAppearanceHeaderTextTime: number;
 /** @type {null | string} */
 declare var CharacterAppearanceBackup: null | string;
 /** @type {null | string} */
 declare var CharacterAppearanceInProgressBackup: null | string;
+/**
+ * The list of all customizable groups
+ * @type {AssetGroup[]}
+ */
+declare var CharacterAppearanceGroups: AssetGroup[];
 /**
  * The list of all assets (owned or available)
  *
@@ -335,6 +378,8 @@ declare var CharacterAppearanceColorPickerBackup: string;
 declare var CharacterAppearanceColorPickerRefreshTimer: any;
 /** @type {Character | null} */
 declare var CharacterAppearanceSelection: Character | null;
+/** @type {(accept: boolean) => void} */
+declare var CharacterAppearanceResultCallback: (accept: boolean) => void;
 declare var CharacterAppearanceReturnRoom: string;
 /** @type {ModuleType} */
 declare var CharacterAppearanceReturnModule: ModuleType;
@@ -350,17 +395,24 @@ declare var CharacterAppearanceMode: "" | "Wardrobe" | "Cloth" | "Color";
 declare var CharacterAppearanceMenuMode: "" | "Wardrobe" | "Cloth" | "Color";
 /** @type {null | Item} */
 declare var CharacterAppearanceCloth: null | Item;
-/** @type {string[]} */
-declare var AppearanceMenu: string[];
+/** @type {DialogMenuButton[]} */
+declare var AppearanceMenu: DialogMenuButton[];
 /** @type {Character[]} */
 declare var AppearancePreviews: Character[];
 declare var AppearanceUseCharacterInPreviewsSetting: boolean;
+/**
+ * List of item indices collected for swapping.
+ * #type {number[]}
+ */
+declare let AppearanceWardrobeReorderList: any[];
+/** @type {WardrobeReorderType} */
+declare let AppearanceWardrobeReorderMode: WardrobeReorderType;
 declare const CanvasUpperOverflow: 700;
 declare const CanvasLowerOverflow: 150;
 declare const CanvasDrawWidth: 500;
 declare const CanvasDrawHeight: number;
 declare namespace AppearancePermissionColors {
-    const red: string[];
-    const amber: string[];
-    const green: string[];
+    let red: string[];
+    let amber: string[];
+    let green: string[];
 }

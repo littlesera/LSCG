@@ -97,11 +97,11 @@ declare function GameMagicBattleCharacterClick(C: Character): boolean;
  * @param {string} Msg - Message tag
  * @param {Character} Source - Source character of the message
  * @param {Character} Target - Character targetted by the message
- * @param {IChatRoomGameResponse["Data"]} Data - The data linked to the packet
+ * @param {ServerChatRoomGameResponse["Data"]} Data - The data linked to the packet
  * @param {string} [Color] - Color of the message to add.
  * @returns {void} - Nothing
  */
-declare function GameMagicBattleAddChatLog(Msg: string, Source: Character, Target: Character, Data: IChatRoomGameResponse["Data"], Color?: string): void;
+declare function GameMagicBattleAddChatLog(Msg: string, Source: Character, Target: Character, Data: ServerChatRoomGameResponse["Data"], Color?: string): void;
 /**
  * Builds the game player list.
  * @returns {void} - Nothing
@@ -114,10 +114,10 @@ declare function GameMagicBattleBuildPlayerList(): void;
 declare function GameMagicBattleCalculateTurnWinner(): OnlineGameStatus;
 /**
  * Processes the Magic Battle game messages for turns and actions.
- * @param {IChatRoomGameResponse} P - Data object containing the message data.
+ * @param {ServerChatRoomGameResponse} P - Data object containing the message data.
  * @returns {void} - Nothing
  */
-declare function GameMagicBattleProcess(P: IChatRoomGameResponse): void;
+declare function GameMagicBattleProcess(P: ServerChatRoomGameResponse): void;
 /**
  * Resets the Magic Battle game so a new game might be started
  * @returns {void} - Nothing
@@ -148,8 +148,8 @@ declare var GameMagicBattleTurnDone: boolean;
 declare var GameMagicBattleTurnTimer: null | number;
 /** @type {null | Character} */
 declare var GameMagicBattleFocusCharacter: null | Character;
-/** @type {Pick<IChatRoomGameResponse, "Sender" | "Data">[]} */
-declare var GameMagicBattleLog: Pick<IChatRoomGameResponse, "Sender" | "Data">[];
+/** @type {Pick<ServerChatRoomGameResponse, "Sender" | "Data">[]} */
+declare var GameMagicBattleLog: Pick<ServerChatRoomGameResponse, "Sender" | "Data">[];
 /** @type {{ X: number, Y: number, W: number, H: number}[]} */
 declare var GameMagicBattleButton: {
     X: number;
