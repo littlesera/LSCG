@@ -63,7 +63,7 @@ export interface RopeTarget {
 	Location: string;
 	LocationLabel: string;
 	ItemName: string;
-	Type?: string;
+	Type?: number;
 }
 
 export interface GagTarget {
@@ -74,7 +74,7 @@ export interface GagTarget {
 	OverrideNeckLocation?: string;
 	LeaveHandItem?: boolean;
 	CraftedKeys?: string[];
-	PreferredTypes?: {Location: string, Type: string}[];
+	PreferredTypes?: {Location: string, Type: number}[];
 	UsedAssetOverride?: string;
 }
 
@@ -90,7 +90,7 @@ export class ItemUseModule extends BaseModule {
 			MouthItemName: "BallGag",
 			HandItemName: "Ballgag",
 			NeckItemName: "NecklaceBallGag",
-			PreferredTypes: [{Location: "ItemMouth", Type: "Tight"}]
+			PreferredTypes: [{Location: "ItemMouth", Type: 2}]
 		},{
 			MouthItemName: "PantyStuffing",
 			HandItemName: "Panties"
@@ -116,8 +116,8 @@ export class ItemUseModule extends BaseModule {
 			NeckItemName: "NecklaceRope",
 			//LeaveHandItem: true,
 			PreferredTypes: [
-				{Location: "ItemMouth", Type: "Tight"},
-				{Location: "Necklace", Type: "Long"}
+				{Location: "ItemMouth", Type: 2},
+				{Location: "Necklace", Type: 1}
 			]
 		},{
 			MouthItemName: "RopeGag",
@@ -129,20 +129,20 @@ export class ItemUseModule extends BaseModule {
 			HandItemName: "TapeRoll",
 			LeaveHandItem: true,
 			PreferredTypes: [
-				{Location: "ItemMouth", Type: "Crossed"},
-				{Location: "ItemMouth2", Type: "Double"},
-				{Location: "ItemMouth3", Type: "Cover"}
+				{Location: "ItemMouth", Type: 1},
+				{Location: "ItemMouth2", Type: 3},
+				{Location: "ItemMouth3", Type: 4}
 			]
 		},{
 			MouthItemName: "ScarfGag",
 			NeckItemName: "Bandana",			
-			PreferredTypes: [{Location: "ItemMouth", Type: "OTN"}],
+			PreferredTypes: [{Location: "ItemMouth", Type: 1}],
 			UsedAssetOverride: "bandana"
 		},{
 			MouthItemName: "ClothGag",
 			NeckItemName: "Scarf",
 			OverrideNeckLocation: "ClothAccessory",
-			PreferredTypes: [{Location: "ItemMouth", Type: "OTM"}]
+			PreferredTypes: [{Location: "ItemMouth", Type: 3}]
 		},{
 			MouthItemName: "FurScarf",
 			NeckItemName: "FurScarf"
@@ -930,12 +930,12 @@ export class ItemUseModule extends BaseModule {
 				Location: "ItemTorso",
 				LocationLabel: "breasts",
 				ItemName: "HempRopeHarness",
-				Type: "Star"
+				Type: 3
 			},{
 				Location: "ItemTorso2",
 				LocationLabel: "waist",
 				ItemName: "HempRopeHarness",
-				Type: "Waist"
+				Type: 1
 			},{
 				Location: "ItemBoots",
 				LocationLabel: "toes",
@@ -973,7 +973,10 @@ export class ItemUseModule extends BaseModule {
 				var prefType = gagTarget.PreferredTypes.find(tgt => tgt.Location == targetLocation) ?? gagTarget.PreferredTypes.find(tgt => targetLocation.startsWith(tgt.Location));
 				if (!!gag && !!prefType) {
 					if (!gag.Property) gag.Property = {};
-					gag!.Property!.Type = prefType.Type;
+					if (!gag.Property.TypeRecord)
+						gag.Property.TypeRecord = {"typed": prefType.Type};
+					else
+						gag!.Property!.TypeRecord["typed"] = prefType.Type;
 				}
 			}
 			ChatRoomCharacterUpdate(target);
@@ -1003,7 +1006,10 @@ export class ItemUseModule extends BaseModule {
 				var prefType = gagTarget.PreferredTypes.find(tgt => tgt.Location == targetLocation) ?? gagTarget.PreferredTypes.find(tgt => targetLocation.startsWith(tgt.Location));
 				if (!!item && !!prefType) {
 					if (!item.Property) item.Property = {};
-					item!.Property!.Type = prefType.Type;
+					if (!item.Property.TypeRecord)
+						item.Property.TypeRecord = {"typed": prefType.Type};
+					else
+						item!.Property!.TypeRecord["typed"] = prefType.Type;
 				}
 			}
 			ChatRoomCharacterUpdate(target);
@@ -1016,7 +1022,7 @@ export class ItemUseModule extends BaseModule {
 		if (handRope?.Asset.Name.startsWith("RopeCoil")) {
 			var ropeTie = InventoryWear(target, rope.ItemName, rope.Location, handRope?.Color, undefined, source.MemberNumber, handRope?.Craft);
 			if (!!rope.Type && !!ropeTie)
-				(<any>ropeTie!.Property!.Type!) = rope.Type;
+				(<any>ropeTie!.Property!.TypeRecord) = {"typed": rope.Type};
 			ChatRoomCharacterUpdate(target);
 		}
 	}
@@ -1066,15 +1072,7 @@ export class ItemUseModule extends BaseModule {
 	
 		let handled = false;
 		for (const item of items) {
-			/** @type {null[] | string[]} */
-			let types;
-			if (!item.Property) {
-				types = [null];
-			} else if (item.Asset.Archetype === ExtendedArchetype.MODULAR) {
-				types = ModularItemDeconstructType(item.Property.Type ?? "") || [null];
-			} else {
-				types = [item.Property.Type];
-			}
+			const types = (!!item.Property && CommonIsObject(item.Property?.TypeRecord)) ? PropertyTypeRecordToStrings(item.Property?.TypeRecord ?? <TypeRecord>{}) : [null];
 	
 			let blocked: ItemActivityRestriction | null = null;
 			let focusGroup = acted.FocusGroup?.Name;
@@ -1110,12 +1108,5 @@ export class ItemUseModule extends BaseModule {
 			handled = true;
 		}
 		return handled;
-	}
-
-	HackAssetPrereqs() {
-		if (!AssetMap)
-			return;
-		AssetMap.get("ItemHandheld/Phone2")!.Prerequisite = [];
-		AssetMap.get("ItemHandheld/Phone1")!.Prerequisite = [];
 	}
 }

@@ -38,8 +38,11 @@ declare function ServerDisconnect(data: any, close?: boolean): void;
  * @returns {boolean} - True if in a chatroom
  */
 declare function ServerPlayerIsInChatRoom(): boolean;
-/** Sends a message with the given data to the server via socket.emit */
-declare function ServerSend(Message: any, Data: any): void;
+declare function ServerSend<Ev extends "AccountCreate" | "AccountLogin" | "PasswordReset" | "PasswordResetProcess" | "AccountUpdate" | "AccountUpdateEmail" | "AccountQuery" | "AccountBeep" | "AccountOwnership" | "AccountLovership" | "AccountDifficulty" | "AccountDisconnect" | "ChatRoomSearch" | "ChatRoomCreate" | "ChatRoomJoin" | "ChatRoomLeave" | "ChatRoomChat" | "ChatRoomCharacterUpdate" | "ChatRoomCharacterExpressionUpdate" | "ChatRoomCharacterPoseUpdate" | "ChatRoomCharacterArousalUpdate" | "ChatRoomCharacterItemUpdate" | "ChatRoomAdmin" | "ChatRoomAllowItem" | "ChatRoomGame">(ev: Ev, ...args: Parameters<ClientToServerEvents[Ev]>): void;
+/**
+ * Process the outgoing server messages queue
+ */
+declare function ServerSendQueueProcess(): void;
 /**
  * Syncs Money, owner name and lover name with the server
  * @returns {void} - Nothing
@@ -75,6 +78,12 @@ declare function ServerPlayerSkillSync(): void;
  * @returns {void} - Nothing
  */
 declare function ServerPlayerRelationsSync(): void;
+/**
+ * Syncs {@link Player.ExtensionSettings} to the server.
+ * @param {keyof ExtensionSettings} dataKeyName - The single key to sync
+ * @param {boolean} [_force] - unused
+ */
+declare function ServerPlayerExtensionSettingsSync(dataKeyName: keyof ExtensionSettings, _force?: boolean): void;
 /**
  * Prepares an appearance bundle so we can push it to the server. It minimizes it by keeping only the necessary
  * information. (Asset name, group name, color, properties and difficulty)
@@ -136,7 +145,11 @@ declare function ServerAddRequiredAppearance(assetFamily: IAssetFamily, diffMap:
  */
 declare function ServerValidateColorAgainstSchema(Color: string, Schema: readonly string[]): string;
 /**
- * Syncs the player appearance with the server
+ * Syncs the player appearance with the server database.
+ *
+ * Note that this will *not* push appearance changes to the rest of the chatroom,
+ * which requires either {@link ChatRoomCharacterItemUpdate} or {@link ChatRoomCharacterUpdate}.
+ *
  * @returns {void} - Nothing
  */
 declare function ServerPlayerAppearanceSync(): void;
@@ -148,10 +161,10 @@ declare function ServerPrivateCharacterSync(): void;
 /**
  * Callback used to parse received information related to a query made by the player such as viewing their online
  * friends or current email status
- * @param {object} data - Data object containing the query data
+ * @param {ServerAccountQueryResponse} data - Data object containing the query data
  * @returns {void} - Nothing
  */
-declare function ServerAccountQueryResult(data: object): void;
+declare function ServerAccountQueryResult(data: ServerAccountQueryResponse): void;
 /**
  * Callback used to parse received information related to a beep from another account
  * @param {object} data - Data object containing the beep object which contain at the very least a name and a member
@@ -177,14 +190,6 @@ declare function ServerAccountOwnership(data: object): void;
  * @returns {void} - Nothing
  */
 declare function ServerAccountLovership(data: object): void;
-
-/**
- * Syncs {@link Player.ExtensionSettings} to the server.
- * @param {keyof ExtensionSettings} dataKeyName - The single key to sync
- * @param {boolean} [_force] - unused
- */
-declare function ServerPlayerExtensionSettingsSync(dataKeyName: string, _force?: boolean): void;
-
 /**
  * Compares the source account and target account to check if we allow using an item
  *
@@ -240,8 +245,29 @@ declare var ServerAccountUpdate: {
      */
     QueueData(Data: object, Force?: true): void;
 };
+/** Ratelimit: Max number of messages per interval */
+declare var ServerSendRateLimit: number;
+/** Ratelimit: Length of the rate-limit window, in msec */
+declare var ServerSendRateLimitInterval: number;
+/**
+ * Queued messages waiting to be sent
+ *
+ * @typedef {{ Message: ClientEvent, args: ClientEventParams<ClientEvent>}} SendRateLimitQueueItem
+ *
+ * @type {SendRateLimitQueueItem[]}
+ */
+declare const ServerSendRateLimitQueue: SendRateLimitQueueItem[];
+/** @type {number[]} */
+declare let ServerSendRateLimitTimes: number[];
 /**
  * A map containing appearance item diffs, keyed according to the item group. Used to compare and validate before/after
  * for appearance items.
  */
 type AppearanceDiffMap = Partial<Record<AssetGroupName, Item[]>>;
+/**
+ * Queued messages waiting to be sent
+ */
+type SendRateLimitQueueItem = {
+    Message: ClientEvent;
+    args: ClientEventParams<ClientEvent>;
+};

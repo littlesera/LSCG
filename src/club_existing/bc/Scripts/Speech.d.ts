@@ -36,7 +36,6 @@ declare function SpeechGetTotalGagLevel(C: Character, NoDeaf?: boolean): number;
  * @returns {string} - Returns the dialog after speech effects were processed (Garbling, Stuttering, Baby talk)
  */
 declare function SpeechGarble(C: Character, CD: string, NoDeaf?: boolean): string;
-declare function sfc32(a: any, b: any, c: any, d: any): () => number;
 /**
  * A PRNG(Pseudo random number generator) helper to generate random number sequence by seed.
  * Stole this function and the function below from {@link https://stackoverflow.com/questions/521295/seeding-the-random-number-generator-in-javascript stackoverflow}
@@ -137,9 +136,16 @@ declare function SpeechBabyTalk(C: Character, CD: string): string;
 declare function SpeechAnonymize(msg: string, characters: readonly Character[]): string;
 declare const chineseRegex: RegExp;
 declare const chineseRandomGarbledSound: string[];
-/**
- * A lookup mapping the gag effect names to their corresponding gag level numbers.
- * @type {Partial<Record<EffectName, number>>}
- * @constant
- */
-declare var SpeechGagLevelLookup: Partial<Record<EffectName, number>>;
+declare namespace SpeechGagLevelLookup {
+    let GagTotal4: 20;
+    let GagTotal3: 16;
+    let GagTotal2: 12;
+    let GagTotal: 8;
+    let GagVeryHeavy: 7;
+    let GagHeavy: 6;
+    let GagMedium: 5;
+    let GagNormal: 4;
+    let GagEasy: 3;
+    let GagLight: 2;
+    let GagVeryLight: 1;
+}

@@ -20,15 +20,14 @@ declare function CommonDrawColorValid(Color: string, AssetGroup: AssetGroup): bo
 /**
  * Finds the correct pose to draw for drawable layer for the provided character from the provided list of allowed poses
  * @param {Character} C - The character to check for poses against
- * @param {readonly AssetPoseName[]} AllowedPoses - The list of permitted poses for the current layer
- * @return {null | AssetPoseName} - The name of the pose to draw for the layer, or an empty string if no pose should be drawn
+ * @param {Partial<Record<AssetPoseCategory, readonly AssetPoseName[]>>} AllowedPoses - The list of permitted poses for the current layer
+ * @return {AssetPoseName | null} - The name of the pose to draw for the layer, or an empty string if no pose should be drawn
  */
-declare function CommonDrawFindPose(C: Character, AllowedPoses: readonly AssetPoseName[]): null | AssetPoseName;
+declare function CommonDrawFindPose(C: Character, AllowedPoses: Partial<Record<AssetPoseCategory, readonly AssetPoseName[]>>): AssetPoseName | null;
 /**
  * Finds the pose that should be used when a given asset (and optionally layer) is drawn.
  * @param {Character} C - The character whose poses to check
- * @param {Asset} A - The asset to check
  * @param {AssetLayer} [Layer] - The layer to check (optional)
- * @returns {null | AssetPoseName} - The pose to use when drawing the given asset (or layer)
+ * @returns {AssetPoseName | null} - The pose to use when drawing the given asset (or layer)
  */
-declare function CommonDrawResolveAssetPose(C: Character, A: Asset, Layer?: AssetLayer): null | AssetPoseName;
+declare function CommonDrawResolveAssetPose(C: Character, Layer?: AssetLayer): AssetPoseName | null;

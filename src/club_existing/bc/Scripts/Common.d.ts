@@ -278,12 +278,23 @@ declare function CommonCompareVersion(Current: string, Other: string): -1 | 0 | 
 /**
  * A simple deep equality check function which checks whether two objects are equal. The function traverses recursively
  * into objects and arrays to check for equality. Primitives and simple types are considered equal as defined by `===`.
- * @param {*} obj1 - The first object to compare
- * @param {*} obj2 - The second object to compare
- * @returns {boolean} - TRUE if both objects are equal, up to arbitrarily deeply nested property values, FALSE
+ * @template T
+ * @param {unknown} obj1 - The first object to compare
+ * @param {T} obj2 - The second object to compare
+ * @returns {obj1 is T} - TRUE if both objects are equal, up to arbitrarily deeply nested property values, FALSE
  * otherwise.
  */
-declare function CommonDeepEqual(obj1: any, obj2: any): boolean;
+declare function CommonDeepEqual<T>(obj1: unknown, obj2: T): obj1 is T;
+/**
+ * A simple deep equality check function which checks whether two objects are equal for all properties in `subRec`.
+ * The function traverses recursively into objects and arrays to check for equality.
+ * Primitives and simple types are considered equal as defined by `===`.
+ * @template T
+ * @param {unknown} subRec - The subset-containg object to compare
+ * @param {T} superRec - The superset-containg object to compare
+ * @returns {subRec is Partial<T>} - Whether `subRec` is a subset of `superRec` up to arbitrarily deeply nested property values
+ */
+declare function CommonDeepIsSubset<T>(subRec: unknown, superRec: T): subRec is Partial<T>;
 /**
  * Adds all items from the source array to the destination array if they aren't already included
  * @template T
@@ -317,6 +328,14 @@ declare function CommonGetServer(): string;
  * @param {CommonSubtituteSubstitution[]} substitutions - An array of [string, replacement, replacer?] subtitutions.
  */
 declare function CommonStringSubstitute(msg: string, substitutions: CommonSubtituteSubstitution[]): string;
+/**
+ * Returns a nice version of the passed strings
+ *
+ * This turns ["this", "this", "that"] into "this, this, and that" using appropriate localization
+ *
+ * @param {string[]} strings The strings to join
+ */
+declare function CommonArrayJoinPretty(strings: string[]): string;
 /**
  * Returns a titlecased version of the given string.
  * @param {string} str
@@ -395,22 +414,31 @@ declare function CommonIncludes<T>(array: readonly T[], searchElement: unknown, 
  * so you don't keep checking items after handling one.
  *
  * @template T
- * @param {T[]} items
+ * @param {readonly T[]} items
  * @param {number} offset
  * @param {CommonGenerateGridParameters} grid
  * @param {CommonGenerateGridCallback<T>} callback
  * @returns {number}
  */
-declare function CommonGenerateGrid<T>(items: T[], offset: number, grid: CommonGenerateGridParameters, callback: CommonGenerateGridCallback<T>): number;
+declare function CommonGenerateGrid<T>(items: readonly T[], offset: number, grid: CommonGenerateGridParameters, callback: CommonGenerateGridCallback<T>): number;
 /**
  * Create a copy of the passed record with all specified keys removed
  * @template {keyof RecordType} KeyType
  * @template {{}} RecordType
  * @param {RecordType} object - The to-be copied record
- * @param {KeyType[]} keys - The to-be removed keys from the record
+ * @param {Iterable<KeyType>} keys - The to-be removed keys from the record
  * @returns {Omit<RecordType, KeyType>}
  */
-declare function CommonOmit<KeyType_1 extends keyof RecordType, RecordType extends {}>(object: RecordType, keys: KeyType_1[]): Omit<RecordType, KeyType_1>;
+declare function CommonOmit<KeyType_1 extends keyof RecordType, RecordType extends {}>(object: RecordType, keys: Iterable<KeyType_1>): Omit<RecordType, KeyType_1>;
+/**
+ * Create a copy of the passed record with all specified keys removed
+ * @template {keyof RecordType} KeyType
+ * @template {{}} RecordType
+ * @param {RecordType} object - The to-be copied record
+ * @param {Iterable<KeyType>} keys - The to-be removed keys from the record
+ * @returns {Pick<RecordType, KeyType>}
+ */
+declare function CommonPick<KeyType_1 extends keyof RecordType, RecordType extends {}>(object: RecordType, keys: Iterable<KeyType_1>): Pick<RecordType, KeyType_1>;
 /**
  * Iterate through the passed iterable and yield index/value pairs.
  * @template T
@@ -420,6 +448,46 @@ declare function CommonOmit<KeyType_1 extends keyof RecordType, RecordType exten
  * @returns {Generator<[index: number, value: T], void>}
  */
 declare function CommonEnumerate<T>(iterable: Iterable<T>, start?: number, step?: number): Generator<[index: number, value: T], void, any>;
+/**
+ * Return a value clamped to a minimum and maximum
+ * @param {number} value
+ * @param {number} min
+ * @param {number} max
+ * @returns {number}
+ */
+declare function CommonClamp(value: number, min: number, max: number): number;
+/**
+ * Returns TRUE if the URL is valid, is from http or https or screens/ or backgrounds/ and has the required extension
+ * @param {string} TestURL - The URL to test
+ * @param {readonly string[]} Extension - An array containing the valid extensions
+ * @returns {boolean}
+*/
+declare function CommonURLHasExtension(TestURL: string, Extension: readonly string[]): boolean;
+/**
+ * Return whether two records are equivalent for all fields as returned by {@link Object.keys}.
+ * @note does *not* support the comparison of nested structures.
+ * @template T
+ * @param {T} rec1
+ * @param {unknown} rec2
+ * @returns {rec2 is T}
+ */
+declare function CommonObjectEqual<T>(rec1: T, rec2: unknown): rec2 is T;
+/**
+ * Return if the key/value pairs of `subRec` form a subset of `superRec`
+ * @template T
+ * @param {unknown} subRec
+ * @param {T} superRec
+ * @returns {subRec is Partial<T>}
+ */
+declare function CommonObjectIsSubset<T>(subRec: unknown, superRec: T): subRec is Partial<T>;
+/**
+ * Parse the passed stringified JSON data and catch any exceptions.
+ * Exceptions will cause the function to return `undefined`.
+ * @param {string} data
+ * @returns {any}
+ * @see {@link JSON.parse}
+ */
+declare function CommonJSONParse(data: string): any;
 /** @type {PlayerCharacter} */
 declare var Player: PlayerCharacter;
 /** @type {number|string} */
@@ -433,6 +501,7 @@ declare var CurrentScreenFunctions: ScreenFunctions;
 /** @type {Character|NPCCharacter|null} */
 declare var CurrentCharacter: Character | NPCCharacter | null;
 declare var CurrentOnlinePlayers: number;
+/** A per-screen ratio of how darkened the background must be */
 declare var CurrentDarkFactor: number;
 declare var CommonIsMobile: boolean;
 /** @type {Record<string, string[][]>} */

@@ -25,6 +25,21 @@ declare function AsylumGGTSLevelCompleted(): boolean;
  */
 declare function AsylumGGTSGetLevel(C: Character): number;
 /**
+ * Returns the character's current level timer
+ * @param {Character} C
+ */
+declare function AsylumGGTSGetLevelTime(C: Character): number;
+/**
+ * Returns the character's current strike count
+ * @param {Character} C
+ */
+declare function AsylumGGTSGetStrikes(C: Character): number;
+/**
+ * Returns the character's currently set GGTS rules
+ * @param {Character} C
+ */
+declare function AsylumGGTSGetRules(C: Character): string[];
+/**
  * Sets the computer image based on the player level
  * @param {number} Level - The player GGTS level
  * @returns {void} - Nothing
@@ -139,13 +154,6 @@ declare function AsylumGGTSTransformGag(Group: AssetGroupName): void;
  * @returns {void} - Nothing
  */
 declare function AsylumGGTSConfigureGag(Group: AssetGroupName): void;
-/**
- * Selects a random pose for an item and picks one, applying effects as appropriate
- * @param {Item} Item
- * @param {AssetPoseName[]} AdditionalPoses
- * @param {EffectName[]} Effects
- */
-declare function AsylumGGTSSetForcedPoseForItem(Item: Item, AdditionalPoses: AssetPoseName[], Effects: EffectName[]): void;
 /**
  * Processes the tasks that doesn't need any player input. GGTS does everything and ends the task automatically.
  * @returns {void} - Nothing
@@ -296,10 +304,10 @@ declare function AsylumGGTSDialogInteraction(Interaction: string): void;
  * Called from chat room, processes hidden GGTS messages
  * @param {Character} SenderCharacter - The character sending the message
  * @param {String} Interaction - The message sent
- * @param {IChatRoomMessage} data - The full message recieved
+ * @param {ServerChatRoomMessage} data - The full message recieved
  * @returns {Object} - Nothing to be used
  */
-declare function AsylumGGTSHiddenMessage(SenderCharacter: Character, Interaction: string, data: IChatRoomMessage): any;
+declare function AsylumGGTSHiddenMessage(SenderCharacter: Character, Interaction: string, data: ServerChatRoomMessage): any;
 /**
  * GGTS Draws the level, the number of strikes and a progress bar, level 6 shows the time in a gold frame
  * @param {Character} C - Character to draw the info for
@@ -331,7 +339,10 @@ declare var AsylumGGTSTaskEnd: number;
  */
 declare var AsylumGGTSTaskList: string[][];
 declare var AsylumGGTSLevelTime: number[];
-/** The last pose the character had. Used to enforce KeepPose rules */
-declare var AsylumGGTSPreviousPose: any[];
+/**
+ * The last pose the character had. Used to enforce KeepPose rules.
+ * @type {null | Partial<Record<AssetPoseCategory, AssetPoseName>>}
+ */
+declare var AsylumGGTSPreviousPose: null | Partial<Record<AssetPoseCategory, AssetPoseName>>;
 declare var AsylumGGTSWordCheck: number;
 declare var AsylumGGTSSpeed: number;

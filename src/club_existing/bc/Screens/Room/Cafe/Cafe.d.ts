@@ -55,6 +55,11 @@ declare function CafeCanDildo(): boolean;
  */
 declare function CafeEquired(Type: string): boolean;
 /**
+ * Returns TRUE if the player and the current character can play Club Card
+ * @returns {boolean} - Returns TRUE if both aren't restrained
+ */
+declare function CafeCanPlayClubCard(): boolean;
+/**
  * Loads the Cafe room and initializes the NPCs. This function is called dynamically
  * @returns {void} - Nothing
  */
@@ -110,6 +115,21 @@ declare function CafeGivenDildo(): void;
  * @returns {void} - Nothing
  */
 declare function CafeTurnDildoUp(): void;
+/**
+ * When the player starts a club card game
+ * @returns {void} - Nothing
+ */
+declare function CafeClubCardStart(): void;
+/**
+ * When the player ends a club card game
+ * @returns {void} - Nothing
+ */
+declare function CafeClubCardEnd(): void;
+/**
+ * Sends the bound player back to the main hall
+ * @returns {void} - Nothing
+ */
+declare function CafeClubCardMainHall(): void;
 declare var CafeBackground: string;
 /** @type {null | NPCCharacter} */
 declare var CafeMaid: null | NPCCharacter;

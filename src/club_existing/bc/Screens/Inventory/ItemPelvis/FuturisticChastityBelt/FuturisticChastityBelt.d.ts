@@ -15,11 +15,7 @@ declare function AssetsItemPelvisFuturisticChastityBeltScriptUpdatePlayer(data: 
  * @param {boolean} [NoShock]
  */
 declare function AssetsItemPelvisFuturisticChastityBeltScriptTrigger(C: Character, Item: Item, ShockType: string, ReplacementWord?: string, NoShock?: boolean): void;
-/**
- * @typedef {{ UpdateTime?: number, LastMessageLen?: number }} FuturisticChastityBeltPersistentData
- */
-/** @type {ExtendedItemCallbacks.ScriptDraw<FuturisticChastityBeltPersistentData>} */
-declare function AssetsItemPelvisFuturisticChastityBeltScriptDraw(data: DynamicScriptCallbackData<FuturisticChastityBeltPersistentData>): void;
+declare function AssetsItemPelvisFuturisticChastityBeltScriptDraw(drawData: DynamicScriptCallbackData<FuturisticChastityBeltPersistentData>): void;
 declare var FuturisticChastityBeltShockCooldownOrgasm: number;
 declare var InventoryItemPelvisFuturisticChastityBeltTamperZones: string[];
 type FuturisticChastityBeltPersistentData = {

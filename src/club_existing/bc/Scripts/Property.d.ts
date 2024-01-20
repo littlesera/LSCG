@@ -9,10 +9,10 @@ declare function PropertyGetID(Name: string, Item?: Item): string;
  * Load function for items with opacity sliders. Constructs the opacity slider.
  * @param {null | ExtendedItemData<any>} Data - The items extended item data
  * @param {null | (() => void)} OriginalFunction - The function that is normally called when an archetypical item reaches this point (if any).
- * @param {string} thumbIcon The icon to use for the range input's "thumb" (handle).
+ * @param {ThumbIcon} thumbIcon The icon to use for the range input's "thumb" (handle).
  * @returns {HTMLInputElement} - The new or pre-existing range input element of the opacity slider
  */
-declare function PropertyOpacityLoad(Data?: null | ExtendedItemData<any>, OriginalFunction?: null | (() => void), thumbIcon?: string): HTMLInputElement;
+declare function PropertyOpacityLoad(Data?: null | ExtendedItemData<any>, OriginalFunction?: null | (() => void), thumbIcon?: ThumbIcon): HTMLInputElement;
 /**
  * Draw function for items with opacity sliders. Draws the opacity slider and further opacity-related information.
  * @param {null | ExtendedItemData<any>} Data - The items extended item data
@@ -31,11 +31,7 @@ declare function PropertyOpacityDraw(Data?: null | ExtendedItemData<any>, Origin
  * @returns {boolean} Whether the opacity was updated or not
  */
 declare function PropertyOpacityExit(Data?: null | ExtendedItemData<any>, OriginalFunction?: null | (() => void), Refresh?: boolean): boolean;
-/**
- * Validation function for items with opacity sliders.
- * @type {ExtendedItemScriptHookCallbacks.Validate<ExtendedItemData<any>, any>}
- */
-declare function PropertyOpacityValidate(Data: ExtendedItemData<any>, OriginalFunction: (C: Character, item: Item, newOption: any, previousOption: any) => string, C: Character, Item: Item, Option: any, CurrentOption: any): string;
+declare function PropertyOpacityValidate(data: ExtendedItemData<any>, originalFunction: (C: Character, item: Item, newOption: any, previousOption: any, permitExisting?: boolean) => string, C: Character, item: Item, newOption: any, previousOption: any, permitExisting?: boolean): string;
 /**
  * Helper fuction for publishing shock-related actions.
  * @param {Character} C - The shocked character; defaults to the {@link CharacterGetCurrent} output
@@ -58,6 +54,14 @@ declare function PropertyAutoPunishParseMessage(Sensitivity: 0 | 1 | 2 | 3, msg:
  */
 declare function PropertyAutoPunishDetectSpeech(Item: Item, LastMessageLen?: number | null): boolean;
 /**
+ * Check if the player character has performed one or more of the passed activities ever since the last {@link PropertyPunishActivityNames} refresh.
+ * @param {null | ActivityName | readonly ActivityName[]} name - The name(s) of the activity to check. If `null`, check if any activity at all is present
+ * @param {boolean} clearCache - Whether to automatically remove `name` from the {@link PropertyPunishActivityNames} cache.
+ * `name == null` implies that all entries should be removed.
+ * @returns {boolean}
+ */
+declare function PropertyPunishActivityCheck(name?: null | ActivityName | readonly ActivityName[], clearCache?: boolean): boolean;
+/**
  * Merge all passed item properties into the passed output, merging (and shallow copying) arrays if necessary.
  * @param {ItemProperties} output - The to be updated properties
  * @param {readonly ItemProperties[]} args - The additional item properties to be merged into the output
@@ -71,6 +75,12 @@ declare function PropertyUnion(output: ItemProperties, ...args: readonly ItemPro
  * @returns {ItemProperties} - The passed output modified inplace
  */
 declare function PropertyDifference(output: ItemProperties, ...args: readonly ItemProperties[]): ItemProperties;
+/**
+ * Convert the passed type record into a list of stringified key/value pairs.
+ * @param {TypeRecord} typeRecord
+ * @returns {string[]}
+ */
+declare function PropertyTypeRecordToStrings(typeRecord: TypeRecord): string[];
 /**
  * Property.js
  * -----------
@@ -91,6 +101,12 @@ declare function PropertyOpacityChange(C: any, Item: any, Opacity: any): void;
  * @type {Set<AssetGroupName>}
  */
 declare let PropertyAutoPunishHandled: Set<AssetGroupName>;
+/**
+ * A set with the names of all activities as performed by the player.
+ * Functions as a cache for {@link PropertyPunishActivityCheck} and can be automatically emptied out by the latter.
+ * @type {Set<ActivityName>}
+ */
+declare let PropertyPunishActivityCache: Set<ActivityName>;
 /**
  * A list of keywords that can trigger automatic punishment when included in `/me`- or `*`-based messages
  * @type {readonly string[]}

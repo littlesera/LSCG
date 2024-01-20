@@ -10,6 +10,16 @@ declare function CollegeTeacherCanInviteToPrivateRoom(): boolean;
  */
 declare function CollegeTeacherMildredLoveIs(LoveLevel: string): boolean;
 /**
+ * Checks, if Mildred won the Literature Class quiz and player is not owned
+ * @returns {boolean} - Returns true if Mildred is Dominant and player is not owned
+ */
+declare function CollegeTeacherIsMildredDominant(): boolean;
+/**
+ * Checks, if Mildred lost the Literature Class quiz
+ * @returns {boolean} - Returns true if Mildred is Submissive
+ */
+declare function CollegeTeacherIsMildredSubmissive(): boolean;
+/**
  * Fully dress-up Mildred
  * @param {Character} C - The character object to dress up
  * @returns {void} - Nothing
@@ -51,9 +61,10 @@ declare function CollegeTeacherDressBack(): void;
 declare function CollegeTeacherNewBackground(New: string): void;
 /**
  * When the plater invites Mildred to her room, she gets the pillory
+ * @param {string} Role - How Mildred should join private room (Default: "None")
  * @returns {void} - Nothing
  */
-declare function CollegeTeacherInviteToPrivateRoom(): void;
+declare function CollegeTeacherInviteToPrivateRoom(Role?: string): void;
 declare var CollegeTeacherBackground: string;
 /** @type {null | NPCCharacter} */
 declare var CollegeTeacherMildred: null | NPCCharacter;

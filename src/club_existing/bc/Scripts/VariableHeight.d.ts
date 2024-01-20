@@ -16,10 +16,10 @@ declare function VariableHeightGetDrawData(drawData: VariableHeightConfigDrawDat
  * Generates an asset's variable height data
  * @param {Asset} asset - The asset to generate modular item data for
  * @param {VariableHeightConfig} config - The variable height configuration
- * @param {null | ExtendedItemOption} parentOption
+ * @param {null | ExtendedItemOption} parentOption - The parent extended item option of the super screens (if any)
  * @returns {VariableHeightData} - The generated variable height data for the asset
  */
-declare function VariableHeightCreateData(asset: Asset, { MaxHeight, MinHeight, DialogPrefix, ChatTags, Dictionary, GetHeightFunction, SetHeightFunction, ScriptHooks, BaselineProperty, DrawData, }: VariableHeightConfig, parentOption?: null | ExtendedItemOption): VariableHeightData;
+declare function VariableHeightCreateData(asset: Asset, { MaxHeight, MinHeight, DialogPrefix, ChatTags, Dictionary, GetHeightFunction, SetHeightFunction, ScriptHooks, BaselineProperty, DrawData, AllowEffect, Name, }: VariableHeightConfig, parentOption?: null | ExtendedItemOption): VariableHeightData;
 /**
  * @param {VariableHeightData} data - The variable height data for the asset
  */
@@ -68,10 +68,11 @@ declare function VariableHeightSetOverrideHeight(property: ItemProperties, heigh
  * @param {VariableHeightData} Data
  * @param {Item} Item - The item in question
  * @param {Character} C - The character that has the item equiped
- * @param {boolean} Refresh -  Whether the character and relevant item should be refreshed and pushed to the server
+ * @param {boolean} Push - Whether to push to changes to the server
+ * @param {boolean} Refresh - Whether to refresh the character. This should generally be `true`, with custom script hooks being a potential exception.
  * @returns {boolean} Whether properties were initialized or not
  */
-declare function VariableHeightInit(Data: VariableHeightData, C: Character, Item: Item, Refresh: boolean): boolean;
+declare function VariableHeightInit(Data: VariableHeightData, C: Character, Item: Item, Push: boolean, Refresh: boolean): boolean;
 /**
  * Dynamically construct the next and previous extended item option for the passed item
  * @param {VariableHeightData} data - The extended item data

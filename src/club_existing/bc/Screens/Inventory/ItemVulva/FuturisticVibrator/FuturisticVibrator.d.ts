@@ -1,13 +1,9 @@
-/** @type {ExtendedItemScriptHookCallbacks.Load<VibratingItemData>} */
 declare function InventoryItemVulvaFuturisticVibratorLoadHook(data: VibratingItemData, originalFunction: () => void): void;
-/** @type {ExtendedItemScriptHookCallbacks.Draw<VibratingItemData>} */
 declare function InventoryItemVulvaFuturisticVibratorDrawHook(data: VibratingItemData, originalFunction: () => void): void;
 declare function InventoryItemVulvaFuturisticVibratorPreviousAccessMode(current: any): "" | "ProhibitSelf" | "LockMember";
 declare function InventoryItemVulvaFuturisticVibratorNextAccessMode(current: any): "" | "ProhibitSelf" | "LockMember";
-/** @type {ExtendedItemScriptHookCallbacks.Click<VibratingItemData>} */
 declare function InventoryItemVulvaFuturisticVibratorClickHook(data: VibratingItemData, originalFunction: () => void): void;
 declare function InventoryItemVulvaFuturisticVibratorClickSet(): void;
-/** @type {ExtendedItemScriptHookCallbacks.Exit<VibratingItemData>} */
 declare function InventoryItemVulvaFuturisticVibratorExitHook(data: VibratingItemData, originalFunction: () => void): void;
 /**
  * @param {string} msg
@@ -42,10 +38,6 @@ declare function InventoryItemVulvaFuturisticVibratorSetMode(data: VibratingItem
  * @param {number} LastTime
  */
 declare function InventoryItemVulvaFuturisticVibratorHandleChat(data: VibratingItemData, C: Character, Item: Item, LastTime: number): void;
-/**
- * @typedef {{ CheckTime?: number, Mode?: VibratorMode, ChangeTime?: number, LastChange?: number }} FuturisticVibratorPersistentData
- */
-/** @type {ExtendedItemScriptHookCallbacks.ScriptDraw<VibratingItemData, FuturisticVibratorPersistentData>} */
 declare function AssetsItemVulvaFuturisticVibratorScriptDrawHook(data: VibratingItemData, originalFunction: (drawData: DynamicScriptCallbackData<FuturisticVibratorPersistentData>) => void, drawData: DynamicScriptCallbackData<FuturisticVibratorPersistentData>): void;
 declare var ItemVulvaFuturisticVibratorTriggers: string[];
 /** @type {string[]} */
