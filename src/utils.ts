@@ -285,11 +285,9 @@ export function settingsSave(publish: boolean = false) {
 		let cleanedAndCompressed = LZString.compressToBase64(JSON.stringify(cleaned));
 		let cleanedDataSize = GetDataSizeReport(cleanedAndCompressed, false);
 		let currentDataSize = GetDataSizeReport(Player.ExtensionSettings.LSCG, false);
-		console.log(`LSCG Save Size: ${currentDataSize} bytes, with clean it could be: ${cleanedDataSize} bytes`);
-		console.debug("Cleaned:");
-		console.debug(cleaned);
+		//console.debug(`LSCG Save Size: ${currentDataSize} bytes, with clean it could be: ${cleanedDataSize} bytes`);
 	} catch (error) {
-		console.warn(`Error during experimental clean: ${error}`);
+		console.debug(`Error during experimental clean: ${error}`);
 	}
 
 	if (!savingFlag)
