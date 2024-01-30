@@ -1816,6 +1816,29 @@ export class ActivityModule extends BaseModule {
             });
         }, ModuleCategory.Activities);
 
+        hookFunction("ChatRoomMapLeash", 1, (args, next) => {
+            if (this.Enabled && this.customLeashedByMemberNumbers.length > 0) {
+                let totalLeashedBy = this.customLeashedByMemberNumbers.filter(num => !!num && num >=0);
+                let leashedByMovedAway = totalLeashedBy.filter(leashedByNum => {
+                    let C = getCharacter(leashedByNum);
+                    if (!C) return false;
+                    if ((Player.MapData == null) || (Player.MapData.Pos.X == null) || (Player.MapData.Pos.Y == null)) return false;
+			        if ((C.MapData?.Pos == null) || (C.MapData.Pos.X == null) || (C.MapData.Pos.Y == null)) return false;
+                    let Distance = Math.max(Math.abs(Player.MapData.Pos.X - C.MapData.Pos.X), Math.abs(Player.MapData.Pos.Y - C.MapData.Pos.Y));
+			        if (Distance <= 2) return false;
+                    return leashedByNum;
+                });
+                next(args);
+                let temp = ChatRoomLeashPlayer;
+                leashedByMovedAway.forEach(num => {
+                    ChatRoomLeashPlayer = num;
+                    next(args);
+                });
+                ChatRoomLeashPlayer = temp;
+            } else
+                return next(args);
+        })
+
         OnAction(1, ModuleCategory.Activities, (data, sender, msg, metadata) => {
             if (data?.Content == "ServerDisconnect") {
                 let num = sender?.MemberNumber;
