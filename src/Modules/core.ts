@@ -108,7 +108,7 @@ export class CoreModule extends BaseModule {
         // Pull other public crafts from the room
         hookFunction("DialogInventoryBuild", 1, (args, next) => {
             next(args);
-            if (this.settings.seeSharedCrafts) {
+            if (this.settings.seeSharedCrafts && DialogMenuMode !== "permissions") {
                 let target = args[0];
                 if (!target.FocusGroup)
                     return;
