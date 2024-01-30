@@ -7,13 +7,18 @@ declare function ItemDevicesLuckyWheelLabelForNum(num: number): string;
 declare function InventoryItemDevicesLuckyWheelDrawHook(data: ModularItemData, originalFunction: () => void): void;
 declare function InventoryItemDevicesLuckyWheelClickHook(data: ModularItemData, originalFunction: () => void): void;
 declare function InventoryItemDevicesLuckyWheelInitHook(data: ModularItemData, originalFunction: (C: Character, item: Item, push: boolean, refresh: boolean) => boolean, C: Character, item: Item, push: boolean, refresh: boolean): boolean;
-declare function InventoryItemDevicesLuckyWheelg0Load(): void;
-declare function InventoryItemDevicesLuckyWheelg0Draw(): void;
-declare function InventoryItemDevicesLuckyWheelg0Click(): void;
-declare function InventoryItemDevicesLuckyWheelg0Exit(): void;
+declare function InventoryItemDevicesLuckyWheelg0LoadHook(data: NoArchItemData, originalFunction: () => void): void;
+declare function InventoryItemDevicesLuckyWheelg0DrawHook(data: NoArchItemData, originalFunction: () => void): void;
+declare function InventoryItemDevicesLuckyWheelg0ClickHook(data: NoArchItemData, originalFunction: () => void): void;
+declare function InventoryItemDevicesLuckyWheelg0ExitHook(data: NoArchItemData, originalFunction: () => void): void;
 declare function InventoryItemDevicesLuckyWheelUpdate(): void;
 declare function InventoryItemDevicesLuckyWheelTrigger(): void;
-declare function InventoryItemDevicesLuckyWheelStoppedTurning(C: any, Item: any, Angle: any): void;
+/**
+ * @param {Character} C
+ * @param {Item} Item
+ * @param {number} Angle
+ */
+declare function InventoryItemDevicesLuckyWheelStoppedTurning(C: Character, Item: Item, Angle: number): void;
 declare function AssetsItemDevicesLuckyWheelScriptDraw(drawData: DynamicScriptCallbackData<LuckyWheelPersistentData>): void;
 declare function AssetsItemDevicesLuckyWheelAfterDraw(drawData: DynamicDrawingData<LuckyWheelPersistentData>): void;
 declare var ItemDevicesLuckyWheelMinTexts: number;

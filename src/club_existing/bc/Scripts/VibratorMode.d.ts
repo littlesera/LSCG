@@ -35,6 +35,7 @@ declare function VibratorModeGetDrawData(modeSet: readonly VibratorModeSet[], dr
  * @returns {VibratingItemData} - The generated vibrating item data for the asset
  */
 declare function VibratorModeCreateData(asset: Asset, { Options, ScriptHooks, BaselineProperty, Dictionary, DialogPrefix, DrawData, ChatTags, AllowEffect, Name, }: VibratingItemConfig, parentOption?: null | ExtendedItemOption): VibratingItemData;
+declare function VibratorModeDialogPrefix(data: VibratingItemData, C: Character, item: Item): string;
 /**
  * Construct all extended item options for a given list of modes.
  * @param {VibratingItemData} data - The extended item data
@@ -42,11 +43,6 @@ declare function VibratorModeCreateData(asset: Asset, { Options, ScriptHooks, Ba
  * @returns {VibratingItemOption[]} - The generated vibrating item options
  */
 declare function VibratorModeGetOptions(data: VibratingItemData, modeSet: readonly VibratorModeSet[]): VibratingItemOption[];
-/**
- * Loads the vibrating item's extended item menu.
- * @param {VibratingItemData} data
- */
-declare function VibratorModeLoad({ dialogPrefix: { header } }: VibratingItemData): void;
 /**
  * @param {VibratingItemData} data
  * @param {Character} C - The character on whom the item is equipped

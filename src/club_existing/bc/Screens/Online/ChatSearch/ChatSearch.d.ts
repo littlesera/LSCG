@@ -14,6 +14,28 @@ declare function ChatSearchRun(): void;
  */
 declare function ChatSearchClick(): void;
 /**
+ * Draws buttons and text for selection of room space.
+ * @returns {void} - Nothing
+ */
+declare function ChatSearchRoomSpaceSelectDraw(): void;
+/**
+ * Handles clicks on selection of room space.
+ * @returns {void} - Nothing
+ */
+declare function ChatSearchRoomSpaceSelectClick(): void;
+/**
+ * While in normal view, called when player clicks apply or presses enter.
+ * Saves the "temp" options into their normal variables, and sends them to the server.
+ * @returns {void} - Nothing
+ */
+declare function ChatSearchSaveLanguageFiltering(): void;
+/**
+ * While in normal view, calls when player clicks revert.
+ * Loads the "temp" options from their normal variables.
+ * @returns {void} - Nothing
+ */
+declare function ChatSearchLoadLanguageFiltering(): void;
+/**
  * @returns {boolean} - True if the player changed the options and the apply/revert buttons should show
  */
 declare function ChatSearchChangedLanguageOrFilterTerms(): boolean;
@@ -194,6 +216,8 @@ declare var ChatSearchLastQueryJoin: string;
 declare var ChatSearchLastQueryJoinTime: number;
 declare var ChatSearchResultOffset: number;
 declare var ChatSearchRoomsPerPage: number;
+declare var ChatSearchPageX: number;
+declare var ChatSearchPageY: number;
 declare var ChatSearchMessage: string;
 declare var ChatSearchLeaveRoom: string;
 /** @type {ModuleType} */
@@ -226,3 +250,5 @@ declare var ChatSearchLanguage: "" | ServerChatRoomLanguage;
 /** @type {"" | ServerChatRoomLanguage} */
 declare var ChatSearchLanguageTemp: "" | ServerChatRoomLanguage;
 declare var ChatSearchFilterTermsTemp: string;
+declare var ChatSearchRoomSpaces: string[];
+declare var ChatSearchCurrentRoomSpaceIndex: number;

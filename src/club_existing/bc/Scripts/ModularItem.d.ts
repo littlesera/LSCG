@@ -90,13 +90,14 @@ declare function ModularItemClickModule(module: ModularItemModule, data: Modular
 /**
  * A common click handler for modular item screens. Note that pagination is not currently handled, but will be added
  * in the future.
+ * @param {ModularItemData} data
  * @param {ExtendedItemDrawData<ElementMetaData.Modular>} drawData
  * @param {function(): void} exitCallback - A callback to be called when the exit button has been clicked
  * @param {function(number): void} itemCallback - A callback to be called when an item has been clicked
  * @param {function(number): void} paginateCallback - A callback to be called when a pagination button has been clicked
  * @returns {void} - Nothing
  */
-declare function ModularItemClickCommon({ paginate, elementData }: ExtendedItemDrawData<ElementMetaData.Modular>, exitCallback: () => void, itemCallback: (arg0: number) => void, paginateCallback: (arg0: number) => void): void;
+declare function ModularItemClickCommon(data: ModularItemData, { paginate, elementData }: ExtendedItemDrawData<ElementMetaData.Modular>, exitCallback: () => void, itemCallback: (arg0: number) => void, paginateCallback: (arg0: number) => void): void;
 /**
  * Handles page changing for modules
  * @param {string} moduleName - The name of the module whose page should be modified
@@ -120,14 +121,6 @@ declare function ModularItemModuleTransition(newModule: string, data: ModularIte
  * @returns {number[]} - An array of numbers representing the currently selected options for each of the item's modules
  */
 declare function ModularItemParseCurrent({ asset, modules }: ModularItemData, typeRecord: null | TypeRecord): number[];
-/**
- * Generates the type string for a modular item from its modules and their current values.
- * @deprecated To-be removed in R99
- * @param {ModularItemModule[]} modules - The modules array for the modular item
- * @param {readonly number[]} [values] - The numeric values representing the current options for each module
- * @returns {string} - A string type generated from the selected option values for each module
- */
-declare function ModularItemConstructType(modules: ModularItemModule[], values?: readonly number[]): string;
 /**
  * Merges all of the selected module options for a modular item into a single Property object to set on the item
  * @param {ModularItemData} data - The modular item's data

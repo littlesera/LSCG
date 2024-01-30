@@ -215,13 +215,13 @@ declare function ValidationSanitizeLock(C: Character, item: Item): boolean;
  * "allow" array for that item.
  * @param {Character} C - The character on whom the item is equipped
  * @param {Item} item - The item whose property should be sanitized
- * @param {keyof ItemProperties & keyof Asset} propertyName - The name of the property
- * @param {keyof Asset} allowPropertyName - The name of the property corresponding to the list of allowed property
- * values on the asset
+ * @param {keyof (PropertiesArray.Asset | PropertiesArray.Item)} propertyName - The name of the property
+ * @param {keyof PropertiesArray.Asset} allowPropertyName - The name of the property corresponding to the list of allowed property
+ * values on the asset (e.g. `AllowHide` or `AllowEffect`)
  * @returns {boolean} - TRUE if the item's property was modified as part of the sanitization process
  * (indicating it was not a valid string array, or that invalid entries were present), FALSE otherwise
  */
-declare function ValidationSanitizeAllowedPropertyArray(C: Character, item: Item, propertyName: keyof ItemProperties & keyof Asset, allowPropertyName: keyof Asset): boolean;
+declare function ValidationSanitizeAllowedPropertyArray(C: Character, item: Item, propertyName: keyof (PropertiesArray.Asset | PropertiesArray.Item), allowPropertyName: keyof PropertiesArray.Asset): boolean;
 /**
  * Sanitizes the `SetPose` array on an item's Property object, if present. This ensures that it is a valid array of
  * strings, and that each item in the array is present in the list of poses available in the game.
@@ -309,6 +309,17 @@ declare function ValidationHasScriptPermission(character: Character, property: S
  * @returns {boolean} TRUE if the character permits modifications to the provided property
  */
 declare function ValidationHasSomeScriptPermission(character: Character, property: ScriptPermissionProperty, permissionLevels: readonly ScriptPermissionLevel[]): boolean;
+/**
+ * @template {{ [key: string]: (arg: any, C: Character) => any }} T
+ * @param {unknown} arg The to-be validated record
+ * @param {Character} C The character in question
+ * @param {T} validators A record of validation functions; one for each property in `arg`
+ * @param {boolean} allowExtraKeys whether to allow extra key/value pairs in `arg` (absent from the `validators` record) to-be returned
+ * @returns {{ [k in keyof T]: ReturnType<T[k]> }} The validated `arg`
+ */
+declare function ValdiationApplyRecord<T extends {
+    [key: string]: (arg: any, C: Character) => any;
+}>(arg: unknown, C: Character, validators: T, allowExtraKeys?: boolean): { [k in keyof T]: ReturnType<T[k]>; };
 declare const ValidationCombinationNumberRegex: RegExp;
 declare const ValidationPasswordRegex: RegExp;
 declare const ValidationDefaultCombinationNumber: "0000";

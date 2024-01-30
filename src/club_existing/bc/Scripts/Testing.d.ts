@@ -28,5 +28,6 @@ declare var TestingTypedItemDataLookup: Record<string, TypedItemData>;
 declare var TestingVibratingItemDataLookup: Record<string, VibratingItemData>;
 declare var TestingVariableHeightItemDataLookup: Record<string, VariableHeightData>;
 declare var TestingTextItemDataLookup: Record<string, TextItemData>;
+declare var TestingNoArchItemDataLookup: Record<string, NoArchItemData>;
 /** A record mapping pose categories to pose names */
 declare var TestingPoseMap: Record<keyof AssetPoseMap, Set<AssetPoseName>>;

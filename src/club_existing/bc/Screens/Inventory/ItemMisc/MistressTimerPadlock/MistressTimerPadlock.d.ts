@@ -1,8 +1,10 @@
-declare function InventoryItemMiscMistressTimerPadlockInit(C: Character, item: Item, push: boolean, refresh: boolean): boolean;
-declare function InventoryItemMiscMistressTimerPadlockLoad(): void;
-declare function InventoryItemMiscMistressTimerPadlockDraw(): void;
-declare function InventoryItemMiscMistressTimerPadlockClick(): void;
-declare function InventoryItemMiscMistressTimerPadlockAdd(TimeToAdd: any, PlayerMemberNumberToList: any): void;
-declare function InventoryItemMiscMistressTimerPadlockExit(): void;
+declare function InventoryItemMiscMistressTimerPadlockDrawHook(data: NoArchItemData, originalFunction: () => void): void;
+declare function InventoryItemMiscMistressTimerPadlockClickHook(data: NoArchItemData, originalFunction: () => void): void;
+/**
+ *
+ * @param {number} TimeToAdd
+ * @param {boolean} PlayerMemberNumberToList
+ */
+declare function InventoryItemMiscMistressTimerPadlockAdd(TimeToAdd: number, PlayerMemberNumberToList?: boolean): void;
 declare const MistressTimerChooseList: number[];
 declare let MistressTimerChooseIndex: number;

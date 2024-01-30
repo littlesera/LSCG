@@ -54,6 +54,10 @@ declare function CommonGet(Path: string, Callback: (this: XMLHttpRequest, xhr: X
  * @returns {void} - Nothing
  */
 declare function CommonGetRetry(Path: string, Callback: (this: XMLHttpRequest, xhr: XMLHttpRequest) => void, RetriesLeft?: number): void;
+declare function CommonMouseDown(event: any): void;
+declare function CommonMouseUp(event: any): void;
+declare function CommonMouseMove(event: any): void;
+declare function CommonMouseWheel(event: any): void;
 /**
  * Catches the clicks on the main screen and forwards it to the current screen click function if it exists, otherwise it sends it to the dialog click function
  * @param {MouseEvent | TouchEvent} event - The event that triggered this
@@ -72,6 +76,7 @@ declare function CommonClick(event: MouseEvent | TouchEvent): void;
 declare function CommonTouchActive(X: number, Y: number, W: number, H: number, TL?: TouchList): boolean;
 /**
  * Catches key presses on the main screen and forwards it to the current screen key down function if it exists, otherwise it sends it to the dialog key down function
+ * @deprecated Use GameKeyDown instead
  * @param {KeyboardEvent} event - The event that triggered this
  * @returns {void} - Nothing
  */
@@ -242,32 +247,17 @@ declare function CommonMemoize<T extends (...args: any) => any>(func: T, argConv
 declare function CommonTakePhoto(Left: number, Top: number, Width: number, Height: number): void;
 /**
  * Takes an array of items and converts it to record format
- * @param { { Group: string; Name: string; Type?: string|null }[] } arr The array of items
- * @returns { { [group: string]: { [name: string]: string[] } } } Output in object foramat
+ * @param {readonly ItemPermissions[]} arr The array of items
+ * @returns {ItemPermissionsPacked} Output in object foramat
  */
-declare function CommonPackItemArray(arr: {
-    Group: string;
-    Name: string;
-    Type?: string | null;
-}[]): {
-    [group: string]: {
-        [name: string]: string[];
-    };
-};
+declare function CommonPackItemArray(arr: readonly ItemPermissions[]): ItemPermissionsPacked;
 /**
- * Takes an record format of items and converts it to array
- * @param { { [group: string]: { [name: string]: string[] } } } arr Object defining items
- * @return { { Group: string; Name: string; Type?: string }[] } The array of items
+ * Takes an record format of items and converts it to array.
+ * @note This function *must* be able to handle unsantized data as received from the server
+ * @param {ItemPermissionsPacked} rec Object defining items
+ * @return {ItemPermissions[]} The array of items
  */
-declare function CommonUnpackItemArray(arr: {
-    [group: string]: {
-        [name: string]: string[];
-    };
-}): {
-    Group: string;
-    Name: string;
-    Type?: string;
-}[];
+declare function CommonUnpackItemArray(rec: ItemPermissionsPacked): ItemPermissions[];
 /**
  * Compares two version numbers and returns -1/0/1 if Other number is smaller/same/larger than Current one
  * @param {string} Current Current version number
@@ -366,8 +356,25 @@ declare function CommonCloneDeep<T>(obj: T): T;
  * Type guard which checks that a value is a non-negative (i.e. positive or zero) integer
  * @param {unknown} value - The value to test
  * @returns {value is number}
+ * @see {@link CommonIsInteger}
  */
 declare function CommonIsNonNegativeInteger(value: unknown): value is number;
+/**
+ * Type guard which checks that a value is an integer that, optionally, falls within the specified range
+ * @param {unknown} value - The value to test
+ * @param {number} min - The minimum allowed value
+ * @param {number} max - The maximum allowed value
+ * @returns {value is number}
+ */
+declare function CommonIsInteger(value: unknown, min?: number, max?: number): value is number;
+/**
+ * Type guard which checks that a value is a finite number that, optionally, falls within the specified range
+ * @param {unknown} value - The value to test
+ * @param {number} min - The minimum allowed value
+ * @param {number} max - The maximum allowed value
+ * @returns {value is number}
+ */
+declare function CommonIsFinite(value: unknown, min?: number, max?: number): value is number;
 /**
  * Return whether BC is running in a browser environment (as opposed to Node.js as used for the test suite).
  * @returns {boolean}
@@ -403,6 +410,15 @@ declare function CommonEntries<KT extends string, VT>(record: Partial<Record<KT,
  * @returns {searchElement is T} Whether the array contains the passed element
  */
 declare function CommonIncludes<T>(array: readonly T[], searchElement: unknown, fromIndex?: number): searchElement is T;
+/**
+ * A {@link Object.fromEntries} variant annotated to return respect literal key types.
+ * @note The returned record is typed as being non-{@link Partial}, an assumption that may not hold in practice
+ * @template {string} KT
+ * @template VT
+ * @param {Iterable<[key: KT, value: VT]>} iterable An iterable object that contains key-value entries for properties and methods
+ * @returns {Record<KT, VT>} A record created from the passed key/value pairs
+ */
+declare function CommonFromEntries<KT extends string, VT>(iterable: Iterable<[key: KT, value: VT]>): Record<KT, VT>;
 /**
  * Automatically generate a grid based on parameters.
  *
@@ -488,6 +504,25 @@ declare function CommonObjectIsSubset<T>(subRec: unknown, superRec: T): subRec i
  * @see {@link JSON.parse}
  */
 declare function CommonJSONParse(data: string): any;
+/**
+ * Translates the current event into movement directions
+ *
+ * This returns a layout independent u/d/l/r string
+ *
+ * @param {KeyboardEvent} event
+ * @returns {"u"|"d"|"l"|"r"|undefined}
+ */
+declare function CommonKeyMove(event: KeyboardEvent, allowArrowKeys?: boolean): "u" | "d" | "l" | "r" | undefined;
+/**
+ * A {@link Set.has}/{@link Map.has} version annotated to return a type guard.
+ * @template T
+ * @param {{ has: (key: T) => boolean }} obj The set or map in question
+ * @param {unknown} key The key to search for
+ * @returns {key is T} Whether the object contains the passed key
+ */
+declare function CommonHas<T>(obj: {
+    has: (key: T) => boolean;
+}, key: unknown): key is T;
 /** @type {PlayerCharacter} */
 declare var Player: PlayerCharacter;
 /** @type {number|string} */

@@ -100,11 +100,19 @@ declare function DialogLogQuery<T extends keyof LogNameType>(LogType: LogNameTyp
 declare function DialogAllowItem(Allow: string): boolean;
 /**
  * Returns the value of the AllowItem flag of a given character
- * @param {string | Character} C - The character whose flag should be returned.
- * Either the player (value: Player) or the current character (value: CurrentCharacter)
  * @returns {boolean} - The value of the given character's AllowItem flag
  */
-declare function DialogDoAllowItem(C: string | Character): boolean;
+declare function DialogDoAllowItem(): boolean;
+/**
+ * Returns TRUE if the AllowItem flag doesn't allow putting an item on the current character
+ * @returns {boolean} - The reversed value of the given character's AllowItem flag
+ */
+declare function DialogDontAllowItemPermission(): boolean;
+/**
+ * Returns TRUE if no item can be used by the player on the current character because of the map distance
+ * @returns {boolean} - TRUE if distance is too far (more than 1 tile)
+ */
+declare function DialogDontAllowItemDistance(): boolean;
 /**
  * Determines if the given character is kneeling
  * @param {string | Character} C - The character to check
@@ -737,6 +745,14 @@ declare function DialogSelfMenuClick(C: Character): void;
  */
 declare function DialogDraw(): void;
 /**
+ * Changes to previous dialog page
+ */
+declare function DialogMenuPrev(): void;
+/**
+ * Changes to next dialog page
+ */
+declare function DialogMenuNext(): void;
+/**
  * Draw a single line of text with an optional item preview icon.
  *
  * This function is used when the character's group is somehow unavailable.
@@ -831,6 +847,7 @@ declare function DialogActualNameForGroup(C: Character, G: AssetGroup): string;
  */
 declare function DialogStruggleStart(C: Character, Action: DialogStruggleActionType, PrevItem: Item, NextItem: Item): void;
 declare function DialogStruggleStop(character: Character, game: StruggleKnownMinigames, data: StruggleCompletionData): void;
+declare function DialogKeyDown(event: KeyboardEvent): boolean;
 declare var DialogText: string;
 declare var DialogTextDefault: string;
 declare var DialogTextDefaultTimer: number;
@@ -981,3 +998,4 @@ declare namespace DialogEffectIcons {
     let _GagLevelToIcon: (level?: number) => InventoryIcon;
     let _BlindLevelToIcon: (level?: number) => InventoryIcon;
 }
+declare function DialogMouseWheel(Event: any): boolean;

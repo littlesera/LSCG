@@ -118,7 +118,7 @@ declare function DrawClearRect(Canvas: CanvasRenderingContext2D, x: number, y: n
 declare function DrawClearAlphaMasks(Canvas: CanvasRenderingContext2D, X: number, Y: number, AlphaMasks: readonly RectTuple[]): void;
 /**
  * Draws a zoomed image from a source to a specific canvas
- * @param {string} Source - URL of the image
+ * @param {string | HTMLImageElement | HTMLCanvasElement} Source - URL of image or image itself
  * @param {CanvasRenderingContext2D} Canvas - Canvas on which to draw the image
  * @param {number} SX - The X coordinate where to start clipping
  * @param {number} SY - The Y coordinate where to start clipping
@@ -131,17 +131,17 @@ declare function DrawClearAlphaMasks(Canvas: CanvasRenderingContext2D, X: number
  * @param {boolean} [Invert] - Flips the image vertically
  * @returns {boolean} - whether the image was complete or not
  */
-declare function DrawImageZoomCanvas(Source: string, Canvas: CanvasRenderingContext2D, SX: number, SY: number, SWidth: number, SHeight: number, X: number, Y: number, Width: number, Height: number, Invert?: boolean): boolean;
+declare function DrawImageZoomCanvas(Source: string | HTMLImageElement | HTMLCanvasElement, Canvas: CanvasRenderingContext2D, SX: number, SY: number, SWidth: number, SHeight: number, X: number, Y: number, Width: number, Height: number, Invert?: boolean): boolean;
 /**
  * Draws a resized image from a source to the main canvas
- * @param {string} Source - URL of the image
+ * @param {string | HTMLImageElement | HTMLCanvasElement} Source - URL of image or image itself
  * @param {number} X - Position of the image on the X axis
  * @param {number} Y - Position of the image on the Y axis
  * @param {number} Width - Width of the image after being resized
  * @param {number} Height - Height of the image after being resized
  * @returns {boolean} - whether the image was complete or not
  */
-declare function DrawImageResize(Source: string, X: number, Y: number, Width: number, Height: number): boolean;
+declare function DrawImageResize(Source: string | HTMLImageElement | HTMLCanvasElement, X: number, Y: number, Width: number, Height: number): boolean;
 /**
  * Draws a zoomed image from a source to a specific canvas
  * @param {string | HTMLImageElement | HTMLCanvasElement} Source - URL of the image
@@ -164,13 +164,13 @@ declare function DrawImageCanvas(Source: string | HTMLImageElement | HTMLCanvasE
 declare function DrawCanvas(Img: HTMLImageElement | HTMLCanvasElement, Canvas: CanvasRenderingContext2D, X: number, Y: number, AlphaMasks: readonly RectTuple[]): boolean;
 /**
  * Draws an image from a source on the main canvas
- * @param {string} Source - URL of the image
+ * @param {string | HTMLImageElement | HTMLCanvasElement} Source - URL of image or image itself
  * @param {number} X - Position of the image on the X axis
  * @param {number} Y - Position of the image on the Y axis
  * @param {boolean} [Invert] - Flips the image vertically
  * @returns {boolean} - whether the image was complete or not
  */
-declare function DrawImage(Source: string, X: number, Y: number, Invert?: boolean): boolean;
+declare function DrawImage(Source: string | HTMLImageElement | HTMLCanvasElement, X: number, Y: number, Invert?: boolean): boolean;
 /**
  * Draws an image on canvas, applying all options
  * @param {string | HTMLImageElement | HTMLCanvasElement} Source - URL of image or image itself

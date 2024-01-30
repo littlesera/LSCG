@@ -26,15 +26,7 @@ declare function StruggleProgressGetOperation(C: Character, PrevItem: Item, Next
  * @returns {boolean} - TRUE if it's allowed
  */
 declare function StruggleAllowLoosen(): boolean;
-/**
- * Handles the minigames' KeyDown event.
- *
- * Only applicable for the Strength minigame.
- *
- * Increases or decreases the struggle mini-game, if a/A or s/S were pressed.
- * @returns {void} - Nothing
- */
-declare function StruggleKeyDown(): void;
+declare function StruggleKeyDown(event: KeyboardEvent): boolean;
 /**
  * Handles the minigames' Click event, whether on the selection screen or in the minigame themselves.
  *
@@ -130,9 +122,9 @@ declare function StruggleStrengthDraw(C: Character): void;
  * Handle events for the Strength minigame
  *
  * @param {"Click"|"KeyDown"} EventType
- * @returns {void}
+ * @returns {boolean}
  */
-declare function StruggleStrengthHandleEvent(EventType: "Click" | "KeyDown"): void;
+declare function StruggleStrengthHandleEvent(EventType: "Click" | "KeyDown", event: any): boolean;
 /**
  * Advances the Struggle minigame progress
  *
@@ -172,9 +164,10 @@ declare function StruggleLoosenSetup(): void;
 /**
  * Handle events for the loosen minigame
  * @param {"Click"|"KeyDown"} EventType
- * @returns {void}
+ * @param {KeyboardEvent} event
+ * @returns {boolean}
  */
-declare function StruggleLoosenHandleEvent(EventType: "Click" | "KeyDown"): void;
+declare function StruggleLoosenHandleEvent(EventType: "Click" | "KeyDown", event: KeyboardEvent): boolean;
 /**
  * Starts the dialog progress bar for struggling out of bondage and keeps the items that needs to be added / swapped / removed.
  * First the challenge level is calculated based on the base item difficulty, the skill of the rigger and the escapee and modified, if
@@ -200,9 +193,8 @@ declare function StruggleFlexibilityCheck(): boolean;
  * Handle events for the Flexibility minigame
  *
  * @param {"Click"|"KeyDown"} EventType
- * @returns {void}
  */
-declare function StruggleFlexibilityHandleEvent(EventType: "Click" | "KeyDown"): void;
+declare function StruggleFlexibilityHandleEvent(EventType: "Click" | "KeyDown", event: any): boolean;
 /**
  * Advances the Flexibility minigame progress
  *
@@ -230,9 +222,9 @@ declare function StruggleDexterityDraw(C: Character): void;
  * Handle events for the Flexibility minigame
  *
  * @param {"Click"|"KeyDown"} EventType
- * @returns {void}
+ * @returns {boolean}
  */
-declare function StruggleDexterityHandleEvent(EventType: "Click" | "KeyDown"): void;
+declare function StruggleDexterityHandleEvent(EventType: "Click" | "KeyDown", event: any): boolean;
 /**
  * Advances the Dexterity minigame progress
  *
@@ -242,9 +234,9 @@ declare function StruggleDexterityProcess(): void;
 /**
  * Handles events for the LockPicking minigame
  * @param {"Click"|"KeyDown"} EventType
- * @returns {void} - Nothing
+ * @returns {boolean} - Nothing
  */
-declare function StruggleLockPickHandleEvent(EventType: "Click" | "KeyDown"): void;
+declare function StruggleLockPickHandleEvent(EventType: "Click" | "KeyDown", event: any): boolean;
 /**
  * Advances the lock picking dialog
  * @returns {void} - Nothing
@@ -299,7 +291,7 @@ declare var StruggleProgressStruggleCount: number;
 declare var StruggleProgressAuto: number;
 declare var StruggleProgressOperation: string;
 declare var StruggleProgressSkill: number;
-declare var StruggleProgressLastKeyPress: number;
+declare var StruggleProgressLastKeyPress: any;
 declare var StruggleProgressChallenge: number;
 declare var StruggleLoosenSpeed: number;
 declare var StruggleLoosenAngle: number;
