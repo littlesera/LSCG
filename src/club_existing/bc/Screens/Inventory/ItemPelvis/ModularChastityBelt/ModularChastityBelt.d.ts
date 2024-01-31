@@ -2,6 +2,10 @@ declare function InventoryItemPelvisModularChastityBeltDrawHook(data: ModularIte
 /**
  * @param {number} _offset //How many pixels down will the UI be shifted
  */
+declare function InventoryItemPelvisModularChastityBeltDrawBase(_offset: number): void;
+/**
+ * @param {number} _offset //How many pixels down will the UI be shifted
+ */
 declare function InventoryItemPelvisModularChastityBeltDrawIntensity(_offset: number): void;
 /**
  * @param {number} _offset //How many pixels down will the UI be shifted
@@ -51,21 +55,24 @@ declare function InventoryItemPelvisModularChastityBeltDetectMsg(msg: string, Tr
  * @param {Character} C
  * @param {boolean} OrgasmDetected
  * @param {boolean} isPlayerInChatRoom
+ * @param {number} ShockCooldown
  */
-declare function InventoryItemPelvisModularChastityBeltCheckPunish(Item: Item, C: Character, OrgasmDetected: boolean, isPlayerInChatRoom: boolean): "Struggle" | "Orgasm" | "StandUp" | "StruggleOther";
+declare function InventoryItemPelvisModularChastityBeltCheckPunish(Item: Item, C: Character, OrgasmDetected: boolean, isPlayerInChatRoom: boolean, ShockCooldown: number): "Struggle" | "Orgasm" | "StandUp" | "StruggleOther";
 /**
  * @param {boolean} PunishStandup
  * @param {Character} C
  * @param {boolean} isPlayerInChatRoom
+ * @param {number} ShockCooldown
  * @returns {boolean}
  */
-declare function InventoryItemPelvisModularChastityBeltCheckStanding(PunishStandup: boolean, C: Character, isPlayerInChatRoom: boolean): boolean;
+declare function InventoryItemPelvisModularChastityBeltCheckStanding(PunishStandup: boolean, C: Character, isPlayerInChatRoom: boolean, ShockCooldown: number): boolean;
 declare function InventoryItemPelvisModularChastityBeltForceKneel(): void;
 declare var InventoryItemPelvisModularChastityBeltVoiceTriggers: string[];
 /** @type {string[]} */
 declare var InventoryItemPelvisModularChastityBeltVoiceTriggerValues: string[];
 type ModularChastityBeltPersistentData = {
     Cooldown?: number;
+    ShockCooldown?: number;
     LastMessage?: number;
     DenyDetected?: boolean;
     OrgasmDetected?: boolean;

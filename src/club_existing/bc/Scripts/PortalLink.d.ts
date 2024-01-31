@@ -1,13 +1,11 @@
-declare function PortalLinkRecieverInit(C: Character, item: Item, push: boolean, refresh: boolean): boolean;
-declare function PortalLinkRecieverLoad(): void;
-declare function PortalLinkRecieverDraw(): void;
-declare function PortalLinkRecieverClick(): void;
-declare function PortalLinkRecieverExit(): void;
-declare function PortalLinkTransmitterInit(C: Character, item: Item, push: boolean, refresh: boolean): boolean;
-declare function PortalLinkTransmitterLoad(): void;
-declare function PortalLinkTransmitterDraw(): void;
-declare function PortalLinkTransmitterClick(): void;
-declare function PortalLinkTransmitterExit(): void;
+declare function PortalLinkRecieverLoadHook(data: ExtendedItemData<any>, originalFunction: () => void): void;
+declare function PortalLinkRecieverDrawHook(data: ExtendedItemData<any>, originalFunction: () => void): void;
+declare function PortalLinkRecieverClickHook(data: ExtendedItemData<any>, originalFunction: () => void): void;
+declare function PortalLinkRecieverExitHook(data: ExtendedItemData<any>, originalFunction: () => void): void;
+declare function PortalLinkTransmitterLoadHook(data: ExtendedItemData<any>, originalFunction: () => void): void;
+declare function PortalLinkTransmitterDrawHook(data: ExtendedItemData<any>, originalFunction: () => void): void;
+declare function PortalLinkTransmitterClickHook(data: ExtendedItemData<any>, originalFunction: () => void): void;
+declare function PortalLinkTransmitterExitHook(data: ExtendedItemData<any>, originalFunction: () => void): void;
 /**
  * Draw the sync code UI depending on the mode.
  * Reciever has Random and Copy to clipboard buttons, transmitter has
@@ -69,7 +67,7 @@ declare function PortalLinkProcessMessage(sender: Character, data: ServerChatRoo
  * This file contains everything needed to add remote-style functions
  * (a.k.a PortalLink compatibility) to an asset, both as a transmitter
  * or a reciever item.
- * For transmitters, you'll need to call the following {@link ExtendedItemCallbacks}
+ * For transmitters, you'll need to call the following {@link ExtendedItemScriptHookCallbacks}
  * callbacks:
  * - {@link PortalLinkTransmitterInit}
  * - {@link PortalLinkTransmitterLoad}

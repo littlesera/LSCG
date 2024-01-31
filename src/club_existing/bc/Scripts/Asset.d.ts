@@ -133,7 +133,7 @@ declare function AssetLoadAll(): void;
  * @param {IAssetFamily} Family - The family to search in (Ignored until other family is added)
  * @param {AssetGroupName} Group - Name of the group of the searched asset
  * @param {string} Name - Name of the searched asset
- * @returns {Asset|null}
+ * @returns {Asset | null}
  */
 declare function AssetGet(Family: IAssetFamily, Group: AssetGroupName, Name: string): Asset | null;
 /**
@@ -198,16 +198,17 @@ declare function AssetLayerSort(layers: AssetLayer[]): AssetLayer[];
 /**
  * Convert {@link AssetDefinition} default color into a {@link Asset} default color list
  * @param {number} colorableLayerCount The number of colorable layers
+ * @param {string} fillValue The default color. Usually `"Default"` though skin colors can also be supplied on occasion.
  * @param {string | readonly string[]} [color] See {@link AssetDefinition.DefaultColor}
  * @returns {string[]} See {@link Asset.DefaultColor}
  */
-declare function AssetParseDefaultColor(colorableLayerCount: number, color?: string | readonly string[]): string[];
+declare function AssetParseDefaultColor(colorableLayerCount: number, fillValue: string, color?: string | readonly string[]): string[];
 /** @type {Asset[]} */
 declare var Asset: Asset[];
 /** @type {AssetGroup[]} */
 declare var AssetGroup: AssetGroup[];
-/** @type {Map<string, Asset>} */
-declare var AssetMap: Map<string, Asset>;
+/** @type {Map<`${AssetGroupName}/${string}`, Asset>} */
+declare var AssetMap: Map<`${AssetGroupName}/${string}`, Asset>;
 /** @type {Map<AssetGroupName, AssetGroup>} */
 declare var AssetGroupMap: Map<AssetGroupName, AssetGroup>;
 /** @type {Pose[]} */

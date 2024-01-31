@@ -1,7 +1,6 @@
-declare function InventoryItemNeckSlaveCollarInit(C: Character, item: Item, push: boolean, refresh: boolean): boolean;
-declare function InventoryItemNeckSlaveCollarLoad(): void;
-declare function InventoryItemNeckSlaveCollarDraw(): void;
-declare function InventoryItemNeckSlaveCollarClick(): void;
+declare function InventoryItemNeckSlaveCollarLoadHook(data: NoArchItemData, originalFunction: () => void): void;
+declare function InventoryItemNeckSlaveCollarDrawHook(data: NoArchItemData, originalFunction: () => void): void;
+declare function InventoryItemNeckSlaveCollarClickHook(data: NoArchItemData, originalFunction: () => void): void;
 /**
  * Sets the slave collar model
  * @param {number} NewType

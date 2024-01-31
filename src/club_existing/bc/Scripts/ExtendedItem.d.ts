@@ -47,7 +47,7 @@ declare function ExtendedItemInitNoArch(C: Character, Item: Item, Properties: It
  * @param {ExtendedItemData<any>} data
  * @returns {void} Nothing
  */
-declare function ExtendedItemLoad({ functionPrefix, dialogPrefix, parentOption }: ExtendedItemData<any>): void;
+declare function ExtendedItemLoad(data: ExtendedItemData<any>): void;
 /**
  * Draw a single button in the extended item type selection screen.
  * @param {ExtendedItemOption | ModularItemModule} Option - The new extended item option
@@ -335,18 +335,18 @@ declare function ExtendedItemGetDrawData<MetaData extends ElementMetaData>(drawD
  */
 declare function ExtendedItemParseOptions<T extends Pick<ExtendedItemOption, "Prerequisite" | "Property">>(option: T, asset: Asset): T;
 /**
- *
- * @param {Character} C
- * @param {AssetGroupName | Item} itemOrGroupName
- * @param {TypeRecord} typeRecord
+ * Set an extended items properties based on the passed type record
+ * @param {Character} C - The character in question
+ * @param {AssetGroupName | Item} itemOrGroupName - The item or the item's group
+ * @param {null | TypeRecord} typeRecord - The archetypical items type record. If `null` only apply `options.properties`
  * @param {Object} options
- * @param {boolean} [options.push]
- * @param {Character} [options.C_Source]
- * @param {boolean} [options.refresh]
- * @param {ItemProperties} [options.properties]
+ * @param {boolean} [options.push] - Whether to push the item changes to the server
+ * @param {Character} [options.C_Source] - The character updating the item (if any)
+ * @param {boolean} [options.refresh] - Whether to refresh the character after setting the item properties
+ * @param {ItemProperties} [options.properties] - Extra item properties to be set on the item, the allowed list of properties being defined by {@link ExtendedItemData.baselineProperty}
  * @returns {void}
  */
-declare function ExtendedItemSetOptionByRecord(C: Character, itemOrGroupName: AssetGroupName | Item, typeRecord: TypeRecord, options?: {
+declare function ExtendedItemSetOptionByRecord(C: Character, itemOrGroupName: AssetGroupName | Item, typeRecord?: null | TypeRecord, options?: {
     push?: boolean;
     C_Source?: Character;
     refresh?: boolean;
@@ -409,3 +409,7 @@ declare var ExtendedItemPermissionMode: boolean;
  */
 declare var ExtendedItemSubscreen: string | null;
 declare function ExtendedItemGatherOptions(item: Item): ExtendedItemOptionUnion[];
+declare namespace ExtendedItemTighten {
+    function Draw({ asset }: ExtendedItemData<any>, item: Item, buttonCoords: RectTuple): void;
+    function Click({ asset }: ExtendedItemData<any>, item: Item, buttonCoords: RectTuple): boolean;
+}

@@ -1,7 +1,5 @@
-declare function InventoryItemPelvisObedienceBelts1Load(): void;
-declare function InventoryItemPelvisObedienceBelts1Draw(): void;
-declare function InventoryItemPelvisObedienceBelts1Click(): void;
-declare function InventoryItemPelvisObedienceBelts1Exit(): void;
+declare function InventoryItemPelvisObedienceBelts1DrawHook(data: NoArchItemData, originalFunction: () => void): void;
+declare function InventoryItemPelvisObedienceBelts1ClickHook(data: NoArchItemData, originalFunction: () => void): void;
 /**
  * @param {Item} Item
  * @param {Character} C

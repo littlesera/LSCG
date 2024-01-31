@@ -56,17 +56,17 @@ declare function CharacterLoadSimple(AccName: string): Character;
 /**
  * Sets up an online character
  * @param {Character} Char - Online character to set up
- * @param {object} data - Character data received
+ * @param {ServerAccountDataSynced} data - Character data received
  * @param {number} SourceMemberNumber - Source number of the refresh
  */
-declare function CharacterOnlineRefresh(Char: Character, data: object, SourceMemberNumber: number): void;
+declare function CharacterOnlineRefresh(Char: Character, data: ServerAccountDataSynced, SourceMemberNumber: number): void;
 /**
  * Loads an online character and flags it for a refresh if any data was changed
- * @param {object} data - Character data received
+ * @param {ServerAccountDataSynced} data - Character data received
  * @param {number} SourceMemberNumber - Source number of the load trigger
  * @returns {Character} - The reloaded character
  */
-declare function CharacterLoadOnline(data: object, SourceMemberNumber: number): Character;
+declare function CharacterLoadOnline(data: ServerAccountDataSynced, SourceMemberNumber: number): Character;
 /**
  * Deletes an NPC from the buffer
  * @param {string} NPCType - Account name of the npc to delete
@@ -243,11 +243,11 @@ declare function CharacterFullRandomRestrain(C: Character, Ratio?: "FEW" | "LOT"
  * @param {ExpressionGroupName | "Eyes1"} AssetGroup - Asset group for the expression
  * @param {null | ExpressionName} Expression - Name of the expression to use
  * @param {number} [Timer] - Optional: time the expression will last
- * @param {string|string[]} [Color] - Optional: color of the expression to set
+ * @param {ItemColor} [Color] - Optional: color of the expression to set
  * @param {boolean} [fromQueue] - Internal: used to skip queuing the expression change if it comes from the queued expressions
  * @returns {void} - Nothing
  */
-declare function CharacterSetFacialExpression(C: Character, AssetGroup: ExpressionGroupName | "Eyes1", Expression: null | ExpressionName, Timer?: number, Color?: string | string[], fromQueue?: boolean): void;
+declare function CharacterSetFacialExpression(C: Character, AssetGroup: ExpressionGroupName | "Eyes1", Expression: null | ExpressionName, Timer?: number, Color?: ItemColor, fromQueue?: boolean): void;
 /**
  * Resets the character's facial expression to the default
  * @param {Character} C - Character for which to reset the expression of
@@ -425,6 +425,24 @@ declare function CharacterScriptRefresh(C: Character): void;
  * @param {Character} C
  */
 declare function CharacterScriptRemove(C: Character): void;
+/**
+ * Sets a new pose for the character
+ * @param {Character} C - Character for which to set the pose
+ * @param {null | AssetPoseName} poseName - Name of the pose to set as active or `null` to return to the default pose
+ * @param {boolean} [forceChange=false] - TRUE if the set pose(s) should overwrite current active pose(s)
+ * @returns {void} - Nothing
+ * @deprecated - Deprecated alias for {@link PoseSetActive}
+ */
+declare function CharacterSetActivePose(C: Character, poseName: null | AssetPoseName, forceChange?: boolean): void;
+/**
+ * Checks whether the given character can change to the named pose (without aid by default).
+ * @param {Character} C - The character to check
+ * @param {AssetPoseName} poseName - The name of the pose to check for
+ * @returns {boolean} - Returns true if the character has no conflicting items and is not prevented from changing to
+ * the provided pose
+ * @deprecated Superseded by {@link PoseCanChangeUnaided}
+ */
+declare function CharacterCanChangeToPose(C: Character, poseName: AssetPoseName): boolean;
 /** @type Character[] */
 declare var Character: Character[];
 declare var CharacterNextId: number;
@@ -442,21 +460,3 @@ declare const CharacterBlurLevels: Map<BlurEffectName, number>;
  * @type {Record<"ONLINE"|"NPC"|"SIMPLE", CharacterType>}
  */
 declare var CharacterType: Record<"ONLINE" | "NPC" | "SIMPLE", CharacterType>;
-/**
- * Sets a new pose for the character
- * @param {Character} C - Character for which to set the pose
- * @param {null | AssetPoseName} poseName - Name of the pose to set as active or `null` to return to the default pose
- * @param {boolean} [ForceChange=false] - TRUE if the set pose(s) should overwrite current active pose(s)
- * @returns {void} - Nothing
- * @deprecated - Deprecated alias for {@link PoseSetActive}
- */
-declare var CharacterSetActivePose: typeof PoseSetActive;
-/**
- * Checks whether the given character can change to the named pose (without aid by default).
- * @param {Character} C - The character to check
- * @param {AssetPoseName} poseName - The name of the pose to check for
- * @returns {boolean} - Returns true if the character has no conflicting items and is not prevented from changing to
- * the provided pose
- * @deprecated Superseded by {@link PoseCanChangeUnaided}
- */
-declare var CharacterCanChangeToPose: typeof PoseCanChangeUnaided;

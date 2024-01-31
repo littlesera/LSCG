@@ -541,3 +541,7 @@ declare var FetishFemale3DCG: {
     Name: FetishName;
     GetFactor(C: Character): number;
 }[];
+/**
+ * A set with all available fetish names.
+ */
+declare const FetishFemale3DCGNames: Set<FetishName>;

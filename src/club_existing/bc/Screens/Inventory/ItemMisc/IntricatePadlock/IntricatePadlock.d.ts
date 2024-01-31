@@ -1,3 +1,1 @@
-declare function InventoryItemMiscIntricatePadlockLoad(): void;
-declare function InventoryItemMiscIntricatePadlockDraw(): void;
-declare function InventoryItemMiscIntricatePadlockClick(): void;
+declare function InventoryItemMiscIntricatePadlockDrawHook(data: NoArchItemData, originalFunction: () => void): void;

@@ -37,7 +37,7 @@ export class ArousalPairedState extends PairedBaseState {
         let isSiphoned = this.StateModule.OrgasmSiphonedState.Pairings.filter(p => p.IsSource).length > 0;
         let progress = Math.min(Player.ArousalSettings?.Progress ?? 0, isSiphoned ? 99 : 100);
         this.Pairings.forEach(p => {
-            sendLSCGCommandBeep(p.PairedBy, "pairing-update", [
+            sendLSCGCommandBeep(p.PairedMember, "pairing-update", [
                 {
                     name: "type",
                     value: this.Type

@@ -1,3 +1,1 @@
-declare function InventoryItemMiscMistressPadlockLoad(): void;
-declare function InventoryItemMiscMistressPadlockDraw(): void;
-declare function InventoryItemMiscMistressPadlockClick(): void;
+declare function InventoryItemMiscMistressPadlockDrawHook(data: NoArchItemData, originalFunction: () => void): void;

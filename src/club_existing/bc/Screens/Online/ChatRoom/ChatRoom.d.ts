@@ -196,6 +196,26 @@ declare function ChatRoomCanAssistStruggle(): boolean;
  */
 declare function DialogCanPerformCharacterAction(): boolean;
 /**
+ * Returns TRUE if the player can enter in whisper mode with the currently focused character
+ * @returns {boolean} - TRUE is whipser can be started
+ */
+declare function ChatRoomCanStartWhisper(): boolean;
+/**
+ * Enters whisper mode with the current character
+ * @returns {void} - Nothing
+ */
+declare function ChatRoomStartWhisper(): void;
+/**
+ * Returns TRUE if the player can leave whisper mode with the currently focused character
+ * @returns {boolean} - TRUE is whipser can exited
+ */
+declare function ChatRoomCanStopWhisper(): boolean;
+/**
+ * Leaves whisper mode
+ * @returns {void} - Nothing
+ */
+declare function ChatRoomStopWhisper(): void;
+/**
  * Checks if the target character can be helped back on her feet. This is different than CurrentCharacter.CanKneel()
  * because it listens for the current active pose and removes certain checks that are not required for someone else to
  * help a person kneel down.
@@ -348,6 +368,14 @@ declare function ChatRoomDrawCharacter(): void;
  */
 declare function ChatRoomDrawBackground(Background: string, Y: number, Zoom: number, DarkFactor: number, InvertRoom: boolean): void;
 /**
+ * Draws the status icons of a character
+ * @param {Character} C The target character
+ * @param {number} CharX Character's X position on canvas
+ * @param {number} CharY Character's Y position on canvas
+ * @param {number} Zoom Room zoom
+ */
+declare function ChatRoomDrawCharacterStatusIcons(C: Character, CharX: number, CharY: number, Zoom: number): void;
+/**
  * Draws any overlays on top of character
  * @param {Character} C The target character
  * @param {number} CharX Character's X position on canvas
@@ -494,6 +522,26 @@ declare function ChatRoomRun(): void;
  */
 declare function ChatRoomMenuDraw(): void;
 /**
+ * Redirects the Mouse Down event to the map if needed
+ * @returns {void} - Nothing
+ */
+declare function ChatRoomMouseDown(event: any): void;
+/**
+ * Redirects the Mouse Up event to the map if needed
+ * @returns {void} - Nothing
+ */
+declare function ChatRoomMouseUp(event: any): void;
+/**
+ * Redirects the Mouse Move event to the map if needed
+ * @returns {void} - Nothing
+ */
+declare function ChatRoomMouseMove(event: any): void;
+/**
+ * Redirects the Mouse Wheel event to the map if needed
+ * @returns {void} - Nothing
+ */
+declare function ChatRoomMouseWheel(event: any): void;
+/**
  * Handles clicks the chatroom screen.
  * @returns {void} - Nothing.
  */
@@ -539,9 +587,16 @@ declare function ChatRoomLeave(clearCharacters?: boolean): void;
 /**
  * Handles keyboard shortcuts in the chatroom screen.
  * @param {KeyboardEvent} event - The event that triggered this
- * @returns {void} - Nothing.
+ * @returns {boolean} - Nothing.
  */
-declare function ChatRoomKeyDown(event: KeyboardEvent): void;
+declare function ChatRoomKeyDown(event: KeyboardEvent): boolean;
+/**
+ * Scroll through the chat history
+ *
+ * @param {boolean} up Whether to scroll up or down
+ * @returns {void}
+ */
+declare function ChatRoomScrollHistory(up: boolean): void;
 /**
  * Sends the chat message to the room
  * @returns {void} - Nothing.

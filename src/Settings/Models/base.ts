@@ -12,6 +12,7 @@ export interface GlobalSettingsModel extends GlobalPublicSettingsModel {
     blockSettingsWhileRestrained: boolean;
     seeSharedCrafts: boolean;
     hideResizing: boolean;
+    erectionDetection: boolean;
 }
 
 export interface GlobalPublicSettingsModel extends BaseSettingsModel {

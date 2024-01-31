@@ -173,7 +173,7 @@ declare function TypedItemInit({ options, name, baselineProperty, asset }: Typed
  *     in the array should be the default option.
  * @returns {void} Nothing
  */
-declare function TypedItemDraw({ functionPrefix, options, parentOption, dialogPrefix, drawData, name }: TypedItemData | VibratingItemData): void;
+declare function TypedItemDraw(data: TypedItemData | VibratingItemData): void;
 /**
  * Handles clicks on the extended item type selection screen
  * @param {TypedItemData | VibratingItemData} data

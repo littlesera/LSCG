@@ -105,6 +105,17 @@ declare function ElementRemove(ID: string): void;
 declare function ElementPosition(ElementID: string, X: number, Y: number, W: number, H?: number): void;
 /**
  * Draws an existing HTML element at a specific position within the document. The element will not be centered on its given coordinates unlike the ElementPosition function.
+ * Not same as ElementPositionFix. Calculates Font size itself.
+ * @param {string} ElementID - The id of the input tag to (re-)position.
+ * @param {number} X - Starting point of the element on the X axis.
+ * @param {number} Y - Starting point of the element on the Y axis.
+ * @param {number} W - Width of the element.
+ * @param {number} [H] - Height of the element.
+ * @returns {void} - Nothing
+ */
+declare function ElementPositionFixed(ElementID: string, X: number, Y: number, W: number, H?: number): void;
+/**
+ * Draws an existing HTML element at a specific position within the document. The element will not be centered on its given coordinates unlike the ElementPosition function.
  * @param {string} ElementID - The id of the input tag to (re-)position.
  * @param {number} Font - The size of the font to use.
  * @param {number} X - Starting point of the element on the X axis.

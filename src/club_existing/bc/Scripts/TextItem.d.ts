@@ -47,8 +47,7 @@ declare const TextItemDataLookup: Record<string, TextItemData>;
 declare namespace TextItem {
     function Init({ asset, font, baselineProperty, maxLength }: TextItemData, C: Character, item: Item, push?: boolean, refresh?: boolean): boolean;
     function Load(data: TextItemData): void;
-    function Draw({ asset, drawData, textNames }: TextItemData): void;
-    function Click({ functionPrefix, drawData }: TextItemData): void;
+    function Draw(data: TextItemData): void;
     function Exit(data: TextItemData, publishAction?: boolean): void;
     function PublishAction(data: TextItemData, C: Character, item: Item, newOption: TextItemOption, previousOption: TextItemOption): void;
 }

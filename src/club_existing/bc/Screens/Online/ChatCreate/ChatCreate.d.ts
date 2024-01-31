@@ -50,7 +50,8 @@ declare var ChatCreateMessage: string;
 declare var ChatCreatePrivate: null | boolean;
 /** @type {null | boolean} */
 declare var ChatCreateLocked: null | boolean;
-declare var ChatCreateMap: string;
+/** @type {ChatRoomMapType} */
+declare var ChatCreateMap: ChatRoomMapType;
 /** @type {ServerChatRoomGame} */
 declare var ChatCreateGame: ServerChatRoomGame;
 /** @type {ServerChatRoomGame[]} */

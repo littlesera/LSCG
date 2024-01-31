@@ -673,6 +673,8 @@ export class MagicModule extends BaseModule {
                         state = this.stateModule.XRayState.Activate(sender?.MemberNumber, duration);
                         break;
                 }
+                if (ix == arr.length - 1)
+                    settingsSave(true);
             }, 2000 * ix);
         });
     }
@@ -723,6 +725,8 @@ export class MagicModule extends BaseModule {
                     break;
             }
         }
+
+        settingsSave(true);
     }
 
     WhitelistBlocked(sender: Character) {
@@ -783,8 +787,9 @@ export class MagicModule extends BaseModule {
 
     ProcessPotion(sender: Character, spell: SpellDefinition) {
         setTimeout(() => {
-            if (!!spell && this.Enabled)
-                this.IncomingSpell(sender, spell)
+            if (!!spell && this.Enabled) {
+                this.IncomingSpell(sender, spell);
+            }
         }, 1000);
     }
 

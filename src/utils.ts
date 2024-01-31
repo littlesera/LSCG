@@ -274,6 +274,7 @@ export function getRandomInt(max: number) {
 }
 
 let savingFlag = 0;
+let savingPublishFlag = false;
 
 export function settingsSave(publish: boolean = false) {
 	if (!Player.ExtensionSettings)
@@ -285,20 +286,20 @@ export function settingsSave(publish: boolean = false) {
 		let cleanedAndCompressed = LZString.compressToBase64(JSON.stringify(cleaned));
 		let cleanedDataSize = GetDataSizeReport(cleanedAndCompressed, false);
 		let currentDataSize = GetDataSizeReport(Player.ExtensionSettings.LSCG, false);
-		console.log(`LSCG Save Size: ${currentDataSize} bytes, with clean it could be: ${cleanedDataSize} bytes`);
-		console.debug("Cleaned:");
-		console.debug(cleaned);
+		//console.debug(`LSCG Save Size: ${currentDataSize} bytes, with clean it could be: ${cleanedDataSize} bytes`);
 	} catch (error) {
-		console.warn(`Error during experimental clean: ${error}`);
+		console.debug(`Error during experimental clean: ${error}`);
 	}
 
+	savingPublishFlag = savingPublishFlag || publish;
 	if (!savingFlag)
 		savingFlag = setTimeout(() => {
 			ServerPlayerExtensionSettingsSync("LSCG");
-			if (publish) {
+			if (savingPublishFlag) {
 				getModule<CoreModule>("CoreModule")?.SendPublicPacket(false, "sync");
 			}
 			clearTimeout(savingFlag);
+			savingPublishFlag = false;
 			savingFlag = 0;
 		}, 500);
 }
@@ -709,7 +710,7 @@ export function GetHandheldItemNameAndDescriptionConcat(C?: Character | null): s
 }	
 
 export function GetItemNameAndDescriptionConcat(item: Item | null): string | undefined {
-	if (!item?.Craft)
+	if (!item || !item.Craft)
 		return;
 	
 	var name = item.Craft.Name;

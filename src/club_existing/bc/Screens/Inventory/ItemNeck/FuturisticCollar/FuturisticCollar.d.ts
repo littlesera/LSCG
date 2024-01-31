@@ -1,8 +1,7 @@
-declare function InventoryItemNeckFuturisticCollarInit(C: Character, item: Item, push: boolean, refresh: boolean): boolean;
-declare function InventoryItemNeckFuturisticCollarLoad(): void;
-declare function InventoryItemNeckFuturisticCollarDraw(): void;
-declare function InventoryItemNeckFuturisticCollarExit(): void;
-declare function InventoryItemNeckFuturisticCollarClick(): void;
+declare function InventoryItemNeckFuturisticCollarLoadHook(data: NoArchItemData, originalFunction: () => void): void;
+declare function InventoryItemNeckFuturisticCollarDrawHook(data: NoArchItemData, originalFunction: () => void): void;
+declare function InventoryItemNeckFuturisticCollarExitHook(data: NoArchItemData, originalFunction: () => void): void;
+declare function InventoryItemNeckFuturisticCollarClickHook(data: NoArchItemData, originalFunction: () => void): void;
 /**
  * @param {Character} C
  * @param {AssetLockType} LockType
@@ -15,7 +14,6 @@ declare function InventoryItemNeckFuturisticCollarCanLock(C: Character, LockType
  * @returns
  */
 declare function InventoryItemNeckFuturisticCollarGetItems(C: Character, OnlyUnlockable?: boolean): Item[];
-declare function InventoryItemNeckFuturisticCollarValidate(C: Character, item: Item, newOption: any, previousOption: any, permitExisting?: boolean): string;
 /**
  * @param {Character} C
  * @param {AssetLockType} LockType

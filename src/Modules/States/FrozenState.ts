@@ -23,12 +23,6 @@ export class FrozenState extends BaseState {
     }
 
     Init(): void {
-        hookFunction("CharacterCanChangeToPose", 1, (args, next) => {
-            if (this.Active)
-                return false;
-            return next(args);
-        });
-
         hookFunction("Player.IsEnclose", 1, (args, next) => {
             return this.Active || next(args);
         });
