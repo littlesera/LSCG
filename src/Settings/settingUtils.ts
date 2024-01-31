@@ -87,7 +87,8 @@ export class GUI extends BaseModule {
 			blockSettingsWhileRestrained: false,
 			sharePublicCrafting: false,
 			seeSharedCrafts: true,
-			hideResizing: false
+			hideResizing: false,
+			erectionDetection: true
 		};
     }
 

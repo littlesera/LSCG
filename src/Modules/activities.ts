@@ -1424,6 +1424,9 @@ export class ActivityModule extends BaseModule {
             },
             CustomImage: "Assets/Female3DCG/Activity/Kiss.png"
         });
+
+        // Erect Penis Detection...
+        this.PatchActivitiesForErectionCheck();
     }
 
     get customGagged(): boolean {
@@ -2175,6 +2178,51 @@ export class ActivityModule extends BaseModule {
             case "horn":
             case "arm": 
             default: return "Icons/Battle.png";
+        }
+    }
+
+    PatchActivitiesForErectionCheck() {
+        new Map(
+            [
+                ["Sit", ["ItemLegs"]],
+                ["RestHead", ["ItemLegs"]],
+                ["Rub", ["ItemTorso"]],
+                ["Caress", ["ItemVulva", "ItemVulvaPiercings"]],
+                ["Kiss", ["ItemVulva", "ItemVulvaPiercings"]],
+                ["Slap", ["ItemVulva", "ItemVulvaPiercings"]],
+                ["Scratch", ["ItemVulva", "ItemVulvaPiercings"]],
+                ["Kick", ["ItemVulva", "ItemVulvaPiercings"]],
+            ]
+        ).forEach((locations, activityName, map) => {
+            this.PatchActivity(<ActivityPatch>{
+                ActivityName: activityName,
+                CustomAction: <CustomAction>{
+                    Func: (target, args, next) => this.CheckForErectionCustomAction(target, args, next, locations ?? ["ItemPenis"])
+                },
+            });
+        });
+    }
+
+    CheckForErectionCustomAction(target: Character | null, args: any[], next: (args: any[]) => any, allowedLocations: string[]): any {
+        if (Player.LSCG.GlobalModule.erectionDetection) {
+            var location = GetMetadata(args[1])?.GroupName;
+            if (!!target && !!location && allowedLocations.some(loc => loc == location))
+                this.CheckForErection(target);
+        }
+        return next(args);
+    }
+
+    CheckForErection(target: Character) {
+        let isChastity = target.IsVulvaChaste();
+        let isClothed = InventoryPrerequisiteMessage(target, "AccessCrotch") === "RemoveClothesForItem";
+        if (target.HasPenis() && 
+        isClothed &&
+        (WardrobeGetExpression(target)?.Pussy ?? "") == "Hard") {
+            if (!isChastity) {
+                LSCG_SendLocal(`You can feel ${CharacterNickname(target)}'s erect penis through their clothes.`, 8000);
+            } else {
+                LSCG_SendLocal(`You can feel something hard under ${CharacterNickname(target)}'s clothes.`, 8000);
+            }
         }
     }
 }
