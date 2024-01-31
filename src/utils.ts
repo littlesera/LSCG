@@ -274,6 +274,7 @@ export function getRandomInt(max: number) {
 }
 
 let savingFlag = 0;
+let savingPublishFlag = false;
 
 export function settingsSave(publish: boolean = false) {
 	if (!Player.ExtensionSettings)
@@ -290,13 +291,15 @@ export function settingsSave(publish: boolean = false) {
 		console.debug(`Error during experimental clean: ${error}`);
 	}
 
+	savingPublishFlag = savingPublishFlag || publish;
 	if (!savingFlag)
 		savingFlag = setTimeout(() => {
 			ServerPlayerExtensionSettingsSync("LSCG");
-			if (publish) {
+			if (savingPublishFlag) {
 				getModule<CoreModule>("CoreModule")?.SendPublicPacket(false, "sync");
 			}
 			clearTimeout(savingFlag);
+			savingPublishFlag = false;
 			savingFlag = 0;
 		}, 500);
 }
