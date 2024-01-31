@@ -710,7 +710,7 @@ export function GetHandheldItemNameAndDescriptionConcat(C?: Character | null): s
 }	
 
 export function GetItemNameAndDescriptionConcat(item: Item | null): string | undefined {
-	if (!item?.Craft)
+	if (!item || !item.Craft)
 		return;
 	
 	var name = item.Craft.Name;
