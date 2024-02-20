@@ -85,7 +85,7 @@ export class CoreModule extends BaseModule {
                 return next(args);
         }, ModuleCategory.Core);
 
-        hookFunction("ChatRoomDrawCharacterOverlay", 1, (args, next) => {
+        hookFunction("ChatRoomCharacterViewDrawOverlay", 1, (args, next) => {
             next(args);
             const [C, CharX, CharY, Zoom] = args as [Character, number, number, number];
             const Char = getCharacter(C.MemberNumber!) as OtherCharacter | PlayerCharacter;

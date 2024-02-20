@@ -819,7 +819,7 @@ export class ItemUseModule extends BaseModule {
 		CommonPhotoMode = true;
 		let temp = C.FocusGroup;
 		C.FocusGroup = null;
-		ChatRoomDrawBackground(ChatRoomData?.Background ?? "", 0, 1, 1, false);
+		ChatRoomCharacterViewDrawBackground(ChatRoomData?.Background ?? "", 0, 1, 1, false);
 		DrawCharacter(C, 0, 0, 1);
 
 		// Capture screen as image URL
