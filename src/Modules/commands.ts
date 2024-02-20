@@ -271,16 +271,18 @@ export class CommandModule extends BaseModule {
 			Tag: "import",
 			Description: " : Imports all LSCG settings from the clipboard, overwriting any current configuration.",
 			Action: (args, msg, parsed) => {
-				let compressed = window.prompt("LSCG Export string:");
-				if (!compressed) {
-					LSCG_SendLocal("No content entered.", 5000);
-					return;
+				if (confirm("Importing settings will overwrite existing settings. \nAre you sure?")) {
+					let compressed = window.prompt("LSCG Export string:");
+					if (!compressed) {
+						LSCG_SendLocal("No content entered.", 5000);
+						return;
+					}
+					localStorage.setItem(`LSCG_${Player.MemberNumber}_Backup`, ExportSettings());
+					if (ImportSettings(compressed))
+						LSCG_SendLocal(`<div><b>LSCG</b> settings Imported from clipboard. If this was in error, try using /lscg restore</div>`, 30000);
+					else
+						LSCG_SendLocal(`Failed to import LSCG settings from clipboard.`, 30000);
 				}
-				localStorage.setItem(`LSCG_${Player.MemberNumber}_Backup`, ExportSettings());
-				if (ImportSettings(compressed))
-					LSCG_SendLocal(`<div><b>LSCG</b> settings Imported from clipboard. If this was in error, try using /lscg restore</div>`, 30000);
-				else
-					LSCG_SendLocal(`Failed to import LSCG settings from clipboard.`, 30000);
 			}
 		}
 	]
