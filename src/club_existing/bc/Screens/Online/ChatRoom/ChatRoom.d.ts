@@ -367,6 +367,8 @@ declare function ChatRoomDrawCharacter(): void;
  * @returns {void} - Nothing
  */
 declare function ChatRoomDrawBackground(Background: string, Y: number, Zoom: number, DarkFactor: number, InvertRoom: boolean): void;
+declare function ChatRoomCharacterViewDrawBackground(Background: string, Y: number, Zoom: number, DarkFactor: number, InvertRoom: boolean): void;
+
 /**
  * Draws the status icons of a character
  * @param {Character} C The target character

@@ -146,16 +146,13 @@ export class MainMenu extends GuiSubscreen {
 		if (MouseIn(1710, 620, 190, 80)) {
 			if (confirm("Importing settings will overwrite existing settings. \nAre you sure?")) {
 				setTimeout(() => {
-					navigator.clipboard
-					.readText()
-					.then(compressed => {
+						let compressed = window.prompt("LSCG Export String:");
 						if (!compressed)
-							alert("No content in clipboard.");
+							return;
 						if (ImportSettings(compressed))
 							alert(`LSCG settings Imported from clipboard.`);
 						else
 							alert(`Failed to import LSCG settings from clipboard.`);
-					});
 				}, 500);
 			}
 		}

@@ -1681,7 +1681,7 @@ export class ActivityModule extends BaseModule {
             return next(args);
         }, ModuleCategory.Activities);
 
-        hookFunction("ChatRoomDrawCharacterOverlay", 1, (args, next) => {
+        hookFunction("ChatRoomCharacterViewDrawOverlay", 1, (args, next) => {
             const ret = next(args) as any;
             const [C, CharX, CharY, Zoom] = args;
             if (
@@ -1819,7 +1819,7 @@ export class ActivityModule extends BaseModule {
             });
         }, ModuleCategory.Activities);
 
-        hookFunction("ChatRoomMapLeash", 1, (args, next) => {
+        hookFunction("ChatRoomMapViewLeash", 1, (args, next) => {
             if (this.Enabled && this.customLeashedByMemberNumbers.length > 0) {
                 let totalLeashedBy = this.customLeashedByMemberNumbers.filter(num => !!num && num >=0);
                 let leashedByMovedAway = totalLeashedBy.filter(leashedByNum => {
