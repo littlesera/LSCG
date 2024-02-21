@@ -880,7 +880,8 @@ export class InjectorModule extends BaseModule {
 
     GetChaoticNetTarget(intendedTarget: Character) {
         // 50/50 chance to hit intended target..
-        if (getRandomInt(2) == 1)
+        let val = getRandomInt(2);
+        if (val == 1)
             return intendedTarget;
         var filteredList = ChatRoomCharacterDrawlist.filter(c => !InventoryGet(c, "ItemDevices"));
         if (filteredList.length <= 0)
