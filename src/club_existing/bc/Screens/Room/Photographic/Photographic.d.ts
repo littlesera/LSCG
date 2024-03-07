@@ -32,17 +32,45 @@ declare function PhotographicLoad(): void;
 declare function PhotographicRun(): void;
 declare function PhotographicClick(): void;
 declare function PhotographicShotThePlayerPhoto(): void;
-declare function PhotographicPlayerClothRemove(Group: any): void;
-declare function PhotographicAppearanceAvailable(C: any, Group: any): boolean;
-declare function PhotographicPlayerAssetAvailable(Asset: any, Group: any): boolean;
+/**
+ * @param {AssetGroupName} Group
+ */
+declare function PhotographicPlayerClothRemove(Group: AssetGroupName): void;
+/**
+ * @param {Character} C
+ * @param {AssetGroupName} Group
+ */
+declare function PhotographicAppearanceAvailable(C: Character, Group: AssetGroupName): boolean;
+/**
+ * @param {string} Asset
+ * @param {AssetGroupName} Group
+ */
+declare function PhotographicPlayerAssetAvailable(Asset: string, Group: AssetGroupName): boolean;
 declare function PhotographicPlayerRelease(): void;
-declare function PhotographicUseAsset(Asset: any, Group: any): void;
+/**
+ * @param {string} Asset
+ * @param {AssetGroupName} Group
+ */
+declare function PhotographicUseAsset(Asset: string, Group: AssetGroupName): void;
 declare function PhotographicPlayerDressBack(): void;
 declare function PhotographicSubDressBack(): void;
-declare function PhotographicSubPoseCategoryAllowed(PoseCategory: any): boolean;
-declare function PhotographicSubSetPose(PoseName: any): void;
-declare function PhotographicSubClothRemove(Group: any): void;
-declare function PhotographicStartInventoryPlayer(ItemGroup: any): void;
+/**
+ * @param {AssetPoseCategory} PoseCategory
+ * @returns {boolean}
+ */
+declare function PhotographicSubPoseCategoryAllowed(PoseCategory: AssetPoseCategory): boolean;
+/**
+ * @param {AssetPoseName} PoseName
+ */
+declare function PhotographicSubSetPose(PoseName: AssetPoseName): void;
+/**
+ * @param {AssetGroupName} Group
+ */
+declare function PhotographicSubClothRemove(Group: AssetGroupName): void;
+/**
+ * @param {AssetGroupName} ItemGroup
+ */
+declare function PhotographicStartInventoryPlayer(ItemGroup: AssetGroupName): void;
 declare var PhotographicBackground: string;
 /** @type {null | NPCCharacter} */
 declare var PhotographicSub: null | NPCCharacter;

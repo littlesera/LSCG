@@ -46,14 +46,7 @@ declare function FriendListExit(): void;
 declare function FriendListChatSearch(room: string): void;
 /**
  * Loads the friend list data into the HTML div element.
- * @param {{
- * MemberName: string;
- * MemberNumber: number;
- * ChatRoomName: string | null;
- * ChatRoomSpace: ChatRoomSpaceType | null;
- * Private?: boolean
- * Type: "Submissive" | "Friend";
- * }[]} data - An array of data, we receive from the server
+ * @param {ServerFriendInfo[]} data - An array of data, we receive from the server
  *
  * `data.MemberName` - The name of the player
  *
@@ -67,14 +60,7 @@ declare function FriendListChatSearch(room: string): void;
  * Currently, only "submissive" is supported
  * @returns {void} - Nothing
  */
-declare function FriendListLoadFriendList(data: {
-    MemberName: string;
-    MemberNumber: number;
-    ChatRoomName: string | null;
-    ChatRoomSpace: ChatRoomSpaceType | null;
-    Private?: boolean;
-    Type: "Submissive" | "Friend";
-}[]): void;
+declare function FriendListLoadFriendList(data: ServerFriendInfo[]): void;
 /**
  * When the user wants to delete someone from her friend list this must be confirmed.
  * This function either displays the confirm message or deletes the friend from the player's friendlist

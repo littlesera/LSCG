@@ -48,11 +48,7 @@ declare function ControllerManagedByGame(Buttons: readonly {
  * @param {readonly GamepadButton[]} buttons raw buttons data
  */
 declare function ControllerButton(buttons: readonly GamepadButton[]): void;
-/**
- * handles keyboard inputs in controller mode
- * @returns {void} Nothing
- */
-declare function ControllerSupportKeyDown(): void;
+declare function ControllerSupportKeyDown(event: KeyboardEvent): boolean;
 /**
  * A -> Click
  */

@@ -31,7 +31,7 @@ declare function CommandCombine(add: ICommand | ICommand[]): void;
  */
 declare function CommandParse(msg: string): void;
 /**
- * Prints out the help for commands with tags that include low
+ * Prints out the help for commands with tags that include `low`
  * @param {string} low - lower case search keyword for tags
  * @param {number} [timeout] - total time to display the help message in ms
  * @returns {void} - Nothing
@@ -40,9 +40,10 @@ declare function CommandHelp(low: string, timeout?: number): void;
 /**
  * Prints out the help for commands
  * @param {Optional<ICommand, 'Action'>[]} CommandList - list of commands
- * @param {number} Timeout - total time to display the help message in ms
+ * @param {number} [Timeout] - total time to display the help message in ms
+ * @param {boolean} [DoShowEscapeHint] - if message about message escaping should be shown
  */
-declare function CommandPrintHelpFor(CommandList: Optional<ICommand, 'Action'>[], Timeout: number): void;
+declare function CommandPrintHelpFor(CommandList: Optional<ICommand, 'Action'>[], Timeout?: number, DoShowEscapeHint?: boolean): void;
 /**
  * Finds command and executes it from the message
  * @param {string} msg - User input

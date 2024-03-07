@@ -1,9 +1,22 @@
-import { SendAction, addCustomEffect, getRandomInt, hookFunction, isBind, isCloth, removeCustomEffect } from "utils";
+import { GetItemNameAndDescriptionConcat, SendAction, addCustomEffect, getRandomInt, hookFunction, isBind, isCloth, isPhraseInString, removeCustomEffect } from "utils";
 import { BaseState, StateRestrictions } from "./BaseState";
 import { StateModule } from "Modules/states";
 import { ModuleCategory } from "Settings/setting_definitions";
 
 export class XRayVisionState extends BaseState {
+    XRayKeywords: string[] = [
+        "xray",
+        "x-ray",
+        "x ray"
+    ];
+    PossibleXRayEyewear: string[] = [
+        "InteractiveVisor",
+        "InteractiveVRHeadset",
+        "FuturisticMask",
+        "BlackoutLenses",
+        "DroneMask",
+        "AnimeLenses"
+    ]
     Type: LSCGState = "x-ray-vision";
 
     Icon(C: OtherCharacter): string {
@@ -15,6 +28,30 @@ export class XRayVisionState extends BaseState {
 
     constructor(state: StateModule) {
         super(state);
+    }
+
+    get Active(): boolean {
+        return this.config.active || this.WearingGlasses;
+    }
+
+    _WearingGlasses: boolean = false;
+    get WearingGlasses(): boolean {
+        let newWearingState = false;
+        let eyewear = InventoryGet(Player, "ItemHead");
+        if (!!eyewear && this.PossibleXRayEyewear.some(name => name == eyewear?.Asset?.Name ?? "")) {
+            let itemStr = GetItemNameAndDescriptionConcat(eyewear) ?? "";
+            newWearingState = this.XRayKeywords.some(key => isPhraseInString(itemStr ?? "", key));
+        }
+        if (this._WearingGlasses != newWearingState) {
+            setTimeout(() => {
+                // If glasses change, queue a redraw
+                ChatRoomCharacter.forEach(C => {
+                    CharacterLoadCanvas(C);
+                });
+            }, 1000);
+        }            
+        this._WearingGlasses = newWearingState;
+        return this._WearingGlasses
     }
 
     Init(): void {

@@ -1,6 +1,1 @@
-/** @type {ExtendedItemCallbacks.Load} */
-declare function InventoryItemMiscExclusivePadlockLoad(): void;
-/** @type {ExtendedItemCallbacks.Draw} */
-declare function InventoryItemMiscExclusivePadlockDraw(): void;
-/** @type {ExtendedItemCallbacks.Click} */
-declare function InventoryItemMiscExclusivePadlockClick(): void;
+declare function InventoryItemMiscExclusivePadlockDrawHook(data: NoArchItemData, originalFunction: () => void): void;

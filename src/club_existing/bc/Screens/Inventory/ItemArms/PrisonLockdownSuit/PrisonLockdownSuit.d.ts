@@ -1,4 +1,2 @@
-/** @type {ExtendedItemScriptHookCallbacks.Draw<ModularItemData>} */
-declare function InventoryItemArmsPrisonLockdownSuitDrawHook(Data: ModularItemData, OriginalFunction: () => void): void;
-/** @type {ExtendedItemScriptHookCallbacks.Click<ModularItemData>} */
-declare function InventoryItemArmsPrisonLockdownSuitClickHook(Data: ModularItemData, OriginalFunction: () => void): void;
+declare function InventoryItemArmsPrisonLockdownSuitDrawHook(data: ModularItemData, originalFunction: () => void): void;
+declare function InventoryItemArmsPrisonLockdownSuitClickHook(data: ModularItemData, originalFunction: () => void): void;

@@ -124,6 +124,13 @@ declare class DictionaryBuilder {
      */
     targetCharacterName(character: Character): this;
     /**
+     * Adds a dictionary entry which identifies a given group.
+     * @param {string} tag - The tag to use as the substitution
+     * @param {AssetGroupName} groupName - The name of the group
+     * @returns {this}
+     */
+    group(tag: string, groupName: AssetGroupName): this;
+    /**
      * Adds a dictionary entry which identifies the focused group - the group that was acted upon to generate the message, if applicable.
      * @param {AssetGroupItemName} groupName - The name of the focus group
      * @returns {this}
@@ -154,6 +161,12 @@ declare class DictionaryBuilder {
      */
     textLookup(tag: string, lookupText: string): this;
     /**
+     * Add a suction intensity entry
+     * @param {number} intensity - The intensity of the suction applied
+     * @returns {this}
+     */
+    suctionLevel(intensity: number): this;
+    /**
      * Adds a shock intensity entry.
      * @param {number} intensity - The intensity of the shock applied
      * @returns {this}
@@ -165,6 +178,15 @@ declare class DictionaryBuilder {
      * @returns {this}
      */
     markAutomatic(): this;
+    /**
+     * Adds an activity entry to the dictionary.
+     * @param {ActivityName} name - The activity performed
+     * @param {AssetGroup} group - The group the activity is being performed on
+     * @param {Item} [item] - The item used to perform the activity
+     * @param {number} [count] - The number of times the activity is done
+     * @returns
+     */
+    performActivity(name: ActivityName, group: AssetGroup, item?: Item, count?: number): this;
     /**
      * Adds a dictionary entry to the builder
      * @param {ChatMessageDictionaryEntry} entry - The dictionary entry to add

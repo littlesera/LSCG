@@ -186,22 +186,17 @@ declare function ItemColorReset(): void;
  */
 declare function ItemColorIsDefault(Item: Item): boolean;
 declare namespace ItemColorConfig {
-    const buttonSpacing: number;
-    const buttonSize: number;
-    const headerButtonSize: number;
-    const colorPickerButtonWidth: number;
-    const colorDisplayWidth: number;
-    const colorInputHeight: number;
+    let buttonSpacing: 20;
+    let buttonSize: 65;
+    let headerButtonSize: 90;
+    let colorPickerButtonWidth: 65;
+    let colorDisplayWidth: 160;
+    let colorInputHeight: 45;
 }
-/**
- * An enum for the possible item color UI modes
- * @readonly
- * @type {{DEFAULT: "Default", COLOR_PICKER: "ColorPicker"}}
- */
-declare const ItemColorMode: {
-    DEFAULT: "Default";
-    COLOR_PICKER: "ColorPicker";
-};
+declare namespace ItemColorMode {
+    let DEFAULT: "Default";
+    let COLOR_PICKER: "ColorPicker";
+}
 /** @type {Character} */
 declare let ItemColorCharacter: Character;
 /** @type {Item} */
@@ -229,4 +224,9 @@ declare let ItemColorText: TextCache;
 declare let ItemColorLayerNames: TextCache;
 /** @type {TextCache} */
 declare let ItemColorGroupNames: TextCache;
-declare function ItemColorOnPickerChange(color: any): void;
+/**
+ * A debounced callback for when the item color picker changes its value. This sets the color for the currently selected set of color
+ * indices
+ * @type {(color: string) => void}
+ */
+declare const ItemColorOnPickerChange: (color: string) => void;

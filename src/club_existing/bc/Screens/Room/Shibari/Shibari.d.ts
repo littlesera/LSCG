@@ -51,6 +51,11 @@ declare function ShibariCanTrain(): boolean;
  */
 declare function ShibariCannotTrainDelay(): boolean;
 /**
+ * Returns TRUE if the player and the current character can play Club Card
+ * @returns {boolean} - Returns TRUE if both aren't restrained
+ */
+declare function ShibariCanPlayClubCard(): boolean;
+/**
  * Puts a character in a random bondage position.
  * @param {Character} C - Character to restrain.
  * @param {number} Level - Level of bondage, higher is more complex bondage
@@ -125,6 +130,16 @@ declare function ShibariCalculateTrainingPrice(SkillType: SkillType): void;
  * @returns {void} - Nothing
  */
 declare function ShibariPayForTraining(SkillType: SkillType): void;
+/**
+ * When the player starts a club card game against the shibari student
+ * @returns {void} - Nothing
+ */
+declare function ShibariClubCardStart(): void;
+/**
+ * When the player ends a club card game against the shibari student
+ * @returns {void} - Nothing
+ */
+declare function ShibariClubCardEnd(): void;
 declare var ShibariBackground: string;
 /** @type {null | NPCCharacter} */
 declare var ShibariTeacher: null | NPCCharacter;

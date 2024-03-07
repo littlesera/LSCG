@@ -1,27 +1,17 @@
-/** @type {ExtendedItemCallbacks.Load} */
-declare function InventoryItemPelvisObedienceBelts1Load(): void;
-/** @type {ExtendedItemCallbacks.Draw} */
-declare function InventoryItemPelvisObedienceBelts1Draw(): void;
-/** @type {ExtendedItemCallbacks.Click} */
-declare function InventoryItemPelvisObedienceBelts1Click(): void;
-/** @type {ExtendedItemCallbacks.Exit} */
-declare function InventoryItemPelvisObedienceBelts1Exit(): void;
+declare function InventoryItemPelvisObedienceBelts1DrawHook(data: NoArchItemData, originalFunction: () => void): void;
+declare function InventoryItemPelvisObedienceBelts1ClickHook(data: NoArchItemData, originalFunction: () => void): void;
 /**
  * @param {Item} Item
+ * @param {Character} C
  */
-declare function InventoryObedienceBeltCheckPunish(Item: Item): "" | "Orgasm" | "StandUp";
+declare function InventoryObedienceBeltCheckPunish(Item: Item, C: Character): "" | "Struggle" | "Orgasm" | "StandUp";
 /**
  * @param {DynamicScriptCallbackData<ObedienceBeltPersistentData>} data
  * @param {number} LastTime
  */
 declare function AssetsItemPelvisObedienceBeltUpdate(data: DynamicScriptCallbackData<ObedienceBeltPersistentData>, LastTime: number): void;
-/**
- * @typedef {{ UpdateTime?: number, LastMessageLen?: number, CheckTime?: number }} ObedienceBeltPersistentData
- */
-/** @type {ExtendedItemCallbacks.ScriptDraw<ObedienceBeltPersistentData>} */
-declare function AssetsItemPelvisObedienceBeltScriptDraw(data: DynamicScriptCallbackData<ObedienceBeltPersistentData>): void;
-/** @type {ExtendedItemScriptHookCallbacks.AfterDraw<TextItemData, ObedienceBeltPersistentData>} */
-declare function AssetsItemPelvisObedienceBeltAfterDrawHook(data: TextItemData, originalFunction: (drawData: DynamicDrawingData<ObedienceBeltPersistentData>) => void, { C, A, CA, X, Y, drawCanvas, drawCanvasBlink, AlphaMasks, L, Color }: DynamicDrawingData<ObedienceBeltPersistentData>): void;
+declare function AssetsItemPelvisObedienceBeltScriptDraw(drawData: DynamicScriptCallbackData<ObedienceBeltPersistentData>): void;
+declare function AssetsItemPelvisObedienceBeltAfterDrawHook(data: TextItemData, originalFunction: (drawData: DynamicDrawingData<ObedienceBeltPersistentData>) => void, drawData: DynamicDrawingData<ObedienceBeltPersistentData>): void;
 type ObedienceBeltPersistentData = {
     UpdateTime?: number;
     LastMessageLen?: number;

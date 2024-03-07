@@ -31,31 +31,30 @@ declare function VibratorModeGetDrawData(modeSet: readonly VibratorModeSet[], dr
  * Generates an asset's vibrating item data
  * @param {Asset} asset - The asset to generate vibrating item data for
  * @param {VibratingItemConfig} config - The item's extended item configuration
+ * @param {null | ExtendedItemOption} parentOption - The parent extended item option of the super screens (if any)
  * @returns {VibratingItemData} - The generated vibrating item data for the asset
  */
-declare function VibratorModeCreateData(asset: Asset, { Options, ScriptHooks, BaselineProperty, Dictionary, DialogPrefix, DrawData, ChatTags }: VibratingItemConfig, parentOption?: any): VibratingItemData;
+declare function VibratorModeCreateData(asset: Asset, { Options, ScriptHooks, BaselineProperty, Dictionary, DialogPrefix, DrawData, ChatTags, AllowEffect, Name, }: VibratingItemConfig, parentOption?: null | ExtendedItemOption): VibratingItemData;
+declare function VibratorModeDialogPrefix(data: VibratingItemData, C: Character, item: Item): string;
 /**
- * Gather all extended item options for a given list of modes.
+ * Construct all extended item options for a given list of modes.
  * @param {VibratingItemData} data - The extended item data
  * @param {readonly VibratorModeSet[]} modeSet - The vibrator mods
  * @returns {VibratingItemOption[]} - The generated vibrating item options
  */
 declare function VibratorModeGetOptions(data: VibratingItemData, modeSet: readonly VibratorModeSet[]): VibratingItemOption[];
 /**
- * Loads the vibrating item's extended item menu.
- * @param {VibratingItemData} data
- */
-declare function VibratorModeLoad({ dialogPrefix: { header } }: VibratingItemData): void;
-/**
  * @param {VibratingItemData} data
  * @param {Character} C - The character on whom the item is equipped
  * @param {Item} item - The item whose options are being validated
  * @param {VibratingItemOption} newOption - The new option
  * @param {VibratingItemOption} previousOption - The previously applied option
+ * @param {boolean} permitExisting - Determines whether the validation should allow the new option and previous option
+ * to be identical. Defaults to `false`.
  * @returns {string|undefined} - undefined or an empty string if the validation passes. Otherwise, returns a string
  * message informing the player of the requirements that are not met.
  */
-declare function VibratorModeValidate(data: VibratingItemData, C: Character, item: Item, newOption: VibratingItemOption, previousOption: VibratingItemOption): string | undefined;
+declare function VibratorModeValidate(data: VibratingItemData, C: Character, item: Item, newOption: VibratingItemOption, previousOption: VibratingItemOption, permitExisting?: boolean): string | undefined;
 /**
  * Publish a vibrator action and exit the dialog of applicable
  * @param {VibratingItemData} data
@@ -71,18 +70,6 @@ declare function VibratorModePublishAction(data: VibratingItemData, C: Character
  * @returns {void} - Nothing
  */
 declare function VibratorModeSetAssetProperties(data: VibratingItemData): void;
-/**
- * Sets the AllowEffect property for a vibrating item
- * @param {VibratingItemData} data - The vibrating item data for the asset
- * @returns {void} - Nothing
- */
-declare function VibratorModeSetAllowEffect({ asset, modeSet }: VibratingItemData): void;
-/**
- * Sets the Effect property for a vibrating item
- * @param {VibratingItemData} data - The vibrating item data for the asset
- * @returns {void} - Nothing
- */
-declare function VibratorModeSetEffect({ asset }: VibratingItemData): void;
 /**
  * @typedef {{ Mode?: VibratorMode, ChangeTime?: number, LastChange?: number }} VibratorModePersistentData
  */
@@ -119,17 +106,21 @@ declare function VibratorModePublish(data: VibratingItemData, C: Character, item
 /**
  * Initialize the vibrating item properties
  * @param {VibratingItemData} data
- * @param {Item} Item - The item in question
+ * @param {Item} item - The item in question
  * @param {Character} C - The character that has the item equiped
- * @param {boolean} Refresh - Whether the character and relevant item should be refreshed and pushed to the server
+ * @param {boolean} push - Whether to push to changes to the server
+ * @param {boolean} refresh - Whether to refresh the character. This should generally be `true`, with custom script hooks being a potential exception.
  * @returns {boolean} Whether properties were initialized or not
  */
-declare function VibratorModeInit(data: VibratingItemData, C: Character, Item: Item, Refresh?: boolean): boolean;
+declare function VibratorModeInit(data: VibratingItemData, C: Character, item: Item, push?: boolean, refresh?: boolean): boolean;
+declare function VibratorModeSetOptionByName(C: Character, itemOrGroupName: AssetGroupName | Item, optionName: string, push?: boolean, C_Source?: Character, refresh?: boolean): string;
 /**
- * An alias for {@link TypedItemSetOptionByName}.
- * @type {typeof TypedItemSetOptionByName}
+ * Return the (standard) vibrator mode one would get by incrementing/decrementing the passed mode.
+ * @param {VibratorMode} mode - The current vibrator mode
+ * @param {boolean} decrement - Whether the mode should be decremented rather than incremented
+ * @returns {VibratorMode} The new vibrator mode
  */
-declare function VibratorModeSetOptionByName(C: Character, itemOrGroupName: AssetGroupName | Item, optionName: string, push?: boolean, C_Source?: Character, subscreen?: [archetype: "typed" | "vibrating", screen: string]): string;
+declare function VibratorModeIntensityIncrement(mode: VibratorMode, decrement?: boolean): VibratorMode;
 /**
  * An enum for the possible vibrator modes
  * @readonly

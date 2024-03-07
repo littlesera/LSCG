@@ -287,7 +287,7 @@ export class StateModule extends BaseModule {
             return next(args);
         }, ModuleCategory.States);
 
-        hookFunction('CharacterCanChangeToPose', 6, (args, next) => {
+        hookFunction('PoseCanChangeUnaided', 6, (args, next) => {
             if (this.Enabled && this.AnyRestrictions(r => r.Move)) {
                 return;
             }

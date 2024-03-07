@@ -1,6 +1,6 @@
 /**
- * Registers a typed extended item. This automatically creates the item's load, draw and click functions. It will also
- * generate the asset's AllowType array.
+ * Registers a typed extended item.
+ * This automatically creates the item's archetype-specific functions (load, draw, etc.) and asset properties.
  * @param {Asset} asset - The asset being registered
  * @param {TypedItemConfig} config - The item's typed item configuration
  * @returns {TypedItemData} - The generated extended item data for the asset
@@ -10,10 +10,11 @@ declare function TypedItemRegister(asset: Asset, config: TypedItemConfig): Typed
  * Parse and pre-process the passed item options.
  * @param {Asset} asset - The item options asset
  * @param {readonly TypedItemOptionConfig[]} protoOptions - The unparsed extended item options
- * @param {boolean} [changeWhenLocked] - See {@link TypedItemConfig.ChangeWhenLocked}
+ * @param {undefined | boolean} changeWhenLocked - See {@link TypedItemConfig.ChangeWhenLocked}
+ * @param {string} screenName
  * @returns {TypedItemOption[]} The newly generated extended item options
  */
-declare function TypedItemBuildOptions(protoOptions: readonly TypedItemOptionConfig[], asset: Asset, changeWhenLocked?: boolean): TypedItemOption[];
+declare function TypedItemBuildOptions(protoOptions: readonly TypedItemOptionConfig[], asset: Asset, changeWhenLocked: undefined | boolean, screenName: string): TypedItemOption[];
 /**
  * Parse the passed typed item draw data as passed via the extended item config
  * @param {Asset} asset - The asset in question
@@ -29,9 +30,10 @@ declare function TypedItemGetDrawData(asset: Asset, drawData: ExtendedItemConfig
  * Generates an asset's typed item data
  * @param {Asset} asset - The asset to generate modular item data for
  * @param {TypedItemConfig} config - The item's extended item configuration
+ * @param {null | ExtendedItemOption} parentOption - The parent extended item option of the super screens (if any)
  * @returns {TypedItemData} - The generated typed item data for the asset
  */
-declare function TypedItemCreateTypedItemData(asset: Asset, { Options, DialogPrefix, ChatTags, Dictionary, ChatSetting, DrawImages, ChangeWhenLocked, ScriptHooks, DrawData, BaselineProperty, }: TypedItemConfig): TypedItemData;
+declare function TypedItemCreateTypedItemData(asset: Asset, { Options, DialogPrefix, ChatTags, Dictionary, ChatSetting, DrawImages, ChangeWhenLocked, ScriptHooks, DrawData, AllowEffect, BaselineProperty, Name, }: TypedItemConfig, parentOption?: null | ExtendedItemOption): TypedItemData;
 /**
  *
  * @param {TypedItemData} data
@@ -42,17 +44,11 @@ declare function TypedItemCreateTypedItemData(asset: Asset, { Options, DialogPre
  */
 declare function TypedItemPublishAction(data: TypedItemData, C: Character, item: Item, newOption: TypedItemOption, previousOption: TypedItemOption): void;
 /**
- * Generates an asset's AllowType property based on its typed item data.
- * @param {TypedItemData} data - The typed item's data
- * @returns {void} - Nothing
- */
-declare function TypedItemGenerateAllowType({ asset, options }: TypedItemData): void;
-/**
  * Generates an asset's AllowEffect property based on its typed item data.
- * @param {TypedItemData} data - The typed item's data
+ * @param {TypedItemData | VibratingItemData} data - The typed item's data
  * @returns {void} - Nothing
  */
-declare function TypedItemGenerateAllowEffect({ asset, options }: TypedItemData): void;
+declare function TypedItemGenerateAllowEffect({ asset, options, allowEffect }: TypedItemData | VibratingItemData): void;
 /**
  * Generates an asset's AllowBlock property based on its typed item data.
  * @param {TypedItemData} data - The typed item's data
@@ -76,16 +72,16 @@ declare function TypedItemGenerateAllowTint({ asset, options }: TypedItemData): 
  * @param {TypedItemData} data - The typed item's data
  * @returns {void} - Nothing
  */
-declare function TypedItemGenerateAllowLockType({ asset, options }: TypedItemData): void;
+declare function TypedItemGenerateAllowLockType({ name, asset, options }: TypedItemData): void;
 /**
  * Sets the AllowLock and AllowLockType properties on an asset based on an AllowLockType array and the total number of
  * possible types.
- * @param {Asset} asset - The asset to set properties on
- * @param {readonly string[]} allowLockType - The AllowLockType array indicating which of the asset's types permit locks
- * @param {number} typeCount - The total number of types available on the asset
+ * @param {Mutable<Asset>} asset - The asset to set properties on
+ * @param {Record<string, Set<number>>} allowLockType - The AllowLockType record indicating which of the asset's types permit locks
+ * @param {boolean} allowAll
  * @returns {void} - Nothing
  */
-declare function TypedItemSetAllowLockType(asset: Asset, allowLockType: readonly string[], typeCount: number): void;
+declare function TypedItemSetAllowLockType(asset: Mutable<Asset>, allowLockType: Record<string, Set<number>>, allowAll?: boolean): void;
 /**
  * Returns the options configuration array for a typed item
  * @param {AssetGroupName} groupName - The name of the asset group
@@ -119,10 +115,12 @@ declare function TypedItemGetOption(groupName: AssetGroupName, assetName: string
  * @param {Item} item - The item whose options are being validated
  * @param {T} option - The new option
  * @param {T} previousOption - The previously applied option
+ * @param {boolean} [permitExisting] - Determines whether the validation should allow the new option and previous option
+ * to be identical. Defaults to false.
  * @returns {string|undefined} - undefined or an empty string if the validation passes. Otherwise, returns a string
  * message informing the player of the requirements that are not met.
  */
-declare function TypedItemValidateOption<T extends ExtendedItemOption>(data: ExtendedItemData<T>, C: Character, item: Item, option: T, previousOption: T): string | undefined;
+declare function TypedItemValidateOption<T extends ExtendedItemOption>(data: ExtendedItemData<T>, C: Character, item: Item, option: T, previousOption: T, permitExisting?: boolean): string | undefined;
 /**
  * Sets a typed item's type and properties to the option whose name matches the provided option name parameter.
  * @param {Character} C - The character on whom the item is equipped
@@ -131,21 +129,22 @@ declare function TypedItemValidateOption<T extends ExtendedItemOption>(data: Ext
  * @param {boolean} [push] - Whether or not appearance updates should be persisted (only applies if the character is the
  * player) - defaults to false.
  * @param {null | Character} [C_Source] - The character setting the new item option. If `null`, assume that it is _not_ the player character.
- * @param {null | [archetype: "typed" | "vibrating", screen: string]} [subscreen]
+ * @param refresh Whether to refresh the character. This should generally be `true`, with custom script hooks being a potential exception.
  * @returns {string|undefined} - undefined or an empty string if the type was set correctly. Otherwise, returns a string
  * informing the player of the requirements that are not met.
  */
-declare function TypedItemSetOptionByName(C: Character, itemOrGroupName: Item | AssetGroupName, optionName: string, push?: boolean, C_Source?: null | Character, subscreen?: null | [archetype: "typed" | "vibrating", screen: string]): string | undefined;
+declare function TypedItemSetOptionByName(C: Character, itemOrGroupName: Item | AssetGroupName, optionName: string, push?: boolean, C_Source?: null | Character, refresh?: boolean): string | undefined;
 /**
  * Finds the currently set option on the given typed item
  * @template {TypedItemOption | VibratingItemOption} T
+ * @param {ExtendedItemData<T> & { options: T[] }} data
  * @param {Item} item - The equipped item
- * @param {readonly T[]} options - The list of available options for the item
- * @param {"Type" | "Mode"} typeField - The name of the item property field containing the item's type (or equivalent thereof)
  * @returns {T} - The option which is currently applied to the item, or the first item in the options
  * array if no type is set.
  */
-declare function TypedItemFindPreviousOption<T extends TypedItemOption | VibratingItemOption>(item: Item, options: readonly T[], typeField?: "Type" | "Mode"): T;
+declare function TypedItemFindPreviousOption<T extends TypedItemOption | VibratingItemOption>({ name, options }: ExtendedItemData<T> & {
+    options: T[];
+}, item: Item): T;
 /**
  * Sets a typed item's type to a random option, respecting prerequisites and option validation.
  * @param {Character} C - The character on whom the item is equipped
@@ -159,20 +158,22 @@ declare function TypedItemFindPreviousOption<T extends TypedItemOption | Vibrati
 declare function TypedItemSetRandomOption(C: Character, itemOrGroupName: Item | AssetGroupName, push?: boolean, C_Source?: null | Character): string | undefined;
 /**
  * Initialize the typed item properties
- * @param {TypedItemData} Data - The item's extended item data
+ * @param {TypedItemData | VibratingItemData} Data - The item's extended item data
  * @param {Item} Item - The item in question
  * @param {Character} C - The character that has the item equiped
- * @param {boolean} Refresh - Whether the character and relevant item should be refreshed and pushed to the server
+ * @param {boolean} Push - Whether to push to changes to the server
+ * @param {boolean} Refresh - Whether to refresh the character. This should generally be `true`, with custom script hooks being a potential exception.
+ * @param {"Type" | "Mode"} field
  * @returns {boolean} Whether properties were initialized or not
  */
-declare function TypedItemInit(Data: TypedItemData, C: Character, Item: Item, Refresh?: boolean): boolean;
+declare function TypedItemInit({ options, name, baselineProperty, asset }: TypedItemData | VibratingItemData, C: Character, Item: Item, Push?: boolean, Refresh?: boolean, field?: "Type" | "Mode"): boolean;
 /**
  * Draws the extended item type selection screen
  * @param {TypedItemData | VibratingItemData} data - An Array of type definitions for each allowed extended type. The first item
  *     in the array should be the default option.
  * @returns {void} Nothing
  */
-declare function TypedItemDraw({ functionPrefix, options, parentOption, dialogPrefix, drawData, archetype }: TypedItemData | VibratingItemData): void;
+declare function TypedItemDraw(data: TypedItemData | VibratingItemData): void;
 /**
  * Handles clicks on the extended item type selection screen
  * @param {TypedItemData | VibratingItemData} data

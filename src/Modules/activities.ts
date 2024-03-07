@@ -1424,6 +1424,9 @@ export class ActivityModule extends BaseModule {
             },
             CustomImage: "Assets/Female3DCG/Activity/Kiss.png"
         });
+
+        // Erect Penis Detection...
+        this.PatchActivitiesForErectionCheck();
     }
 
     get customGagged(): boolean {
@@ -1678,7 +1681,7 @@ export class ActivityModule extends BaseModule {
             return next(args);
         }, ModuleCategory.Activities);
 
-        hookFunction("ChatRoomDrawCharacterOverlay", 1, (args, next) => {
+        hookFunction("ChatRoomCharacterViewDrawOverlay", 1, (args, next) => {
             const ret = next(args) as any;
             const [C, CharX, CharY, Zoom] = args;
             if (
@@ -1815,6 +1818,29 @@ export class ActivityModule extends BaseModule {
                 ServerSend("AccountBeep", { MemberNumber: memberNumber, BeepType: "Leash"});
             });
         }, ModuleCategory.Activities);
+
+        hookFunction("ChatRoomMapViewLeash", 1, (args, next) => {
+            if (this.Enabled && this.customLeashedByMemberNumbers.length > 0) {
+                let totalLeashedBy = this.customLeashedByMemberNumbers.filter(num => !!num && num >=0);
+                let leashedByMovedAway = totalLeashedBy.filter(leashedByNum => {
+                    let C = getCharacter(leashedByNum);
+                    if (!C) return false;
+                    if ((Player.MapData == null) || (Player.MapData.Pos.X == null) || (Player.MapData.Pos.Y == null)) return false;
+			        if ((C.MapData?.Pos == null) || (C.MapData.Pos.X == null) || (C.MapData.Pos.Y == null)) return false;
+                    let Distance = Math.max(Math.abs(Player.MapData.Pos.X - C.MapData.Pos.X), Math.abs(Player.MapData.Pos.Y - C.MapData.Pos.Y));
+			        if (Distance <= 2) return false;
+                    return leashedByNum;
+                });
+                next(args);
+                let temp = ChatRoomLeashPlayer;
+                leashedByMovedAway.forEach(num => {
+                    ChatRoomLeashPlayer = num;
+                    next(args);
+                });
+                ChatRoomLeashPlayer = temp;
+            } else
+                return next(args);
+        })
 
         OnAction(1, ModuleCategory.Activities, (data, sender, msg, metadata) => {
             if (data?.Content == "ServerDisconnect") {
@@ -2152,6 +2178,51 @@ export class ActivityModule extends BaseModule {
             case "horn":
             case "arm": 
             default: return "Icons/Battle.png";
+        }
+    }
+
+    PatchActivitiesForErectionCheck() {
+        new Map(
+            [
+                ["Sit", ["ItemLegs"]],
+                ["RestHead", ["ItemLegs"]],
+                ["Rub", ["ItemTorso"]],
+                ["Caress", ["ItemVulva", "ItemVulvaPiercings"]],
+                ["Kiss", ["ItemVulva", "ItemVulvaPiercings"]],
+                ["Slap", ["ItemVulva", "ItemVulvaPiercings"]],
+                ["Scratch", ["ItemVulva", "ItemVulvaPiercings"]],
+                ["Kick", ["ItemVulva", "ItemVulvaPiercings"]],
+            ]
+        ).forEach((locations, activityName, map) => {
+            this.PatchActivity(<ActivityPatch>{
+                ActivityName: activityName,
+                CustomAction: <CustomAction>{
+                    Func: (target, args, next) => this.CheckForErectionCustomAction(target, args, next, locations ?? ["ItemPenis"])
+                },
+            });
+        });
+    }
+
+    CheckForErectionCustomAction(target: Character | null, args: any[], next: (args: any[]) => any, allowedLocations: string[]): any {
+        if (Player.LSCG.GlobalModule.erectionDetection) {
+            var location = GetMetadata(args[1])?.GroupName;
+            if (!!target && !!location && allowedLocations.some(loc => loc == location))
+                this.CheckForErection(target);
+        }
+        return next(args);
+    }
+
+    CheckForErection(target: Character) {
+        let isChastity = target.IsVulvaChaste();
+        let isClothed = InventoryPrerequisiteMessage(target, "AccessCrotch") === "RemoveClothesForItem";
+        if (target.HasPenis() && 
+        isClothed &&
+        (WardrobeGetExpression(target)?.Pussy ?? "") == "Hard") {
+            if (!isChastity) {
+                LSCG_SendLocal(`You can feel ${CharacterNickname(target)}'s erect penis through their clothes.`, 8000);
+            } else {
+                LSCG_SendLocal(`You can feel something hard under ${CharacterNickname(target)}'s clothes.`, 8000);
+            }
         }
     }
 }

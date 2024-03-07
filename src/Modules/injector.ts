@@ -326,7 +326,7 @@ export class InjectorModule extends BaseModule {
                         Name: "CanPourIntoFunnel",
                         Func: (acting, acted, group) => {
                             let gag = InventoryGet(acted, "ItemMouth");
-                            return !!gag && gag.Asset.Name == "FunnelGag" && gag.Property?.Type == "Funnel";
+                            return !!gag && gag.Asset.Name == "FunnelGag" && (gag.Property?.TypeRecord ?? {})["typed"] == 1;
                         }
                     }
                 ]
@@ -880,7 +880,8 @@ export class InjectorModule extends BaseModule {
 
     GetChaoticNetTarget(intendedTarget: Character) {
         // 50/50 chance to hit intended target..
-        if (getRandomInt(2) == 1)
+        let val = getRandomInt(2);
+        if (val == 1)
             return intendedTarget;
         var filteredList = ChatRoomCharacterDrawlist.filter(c => !InventoryGet(c, "ItemDevices"));
         if (filteredList.length <= 0)
@@ -902,7 +903,7 @@ export class InjectorModule extends BaseModule {
         if (!!craftingMember && craftingMember >= 0 && craftingMember != Player.MemberNumber) {
             let craftingChar = getCharacter(craftingMember);
             if (!!craftingChar) {
-                craftedNets = craftedNets?.concat(CraftingDecompressServerData(<string>(<any>craftingChar.Crafting)).filter(x => x?.Item == "Net"));
+                craftedNets = craftedNets?.concat(<CraftingItem[]>CraftingDecompressServerData(craftingChar.Crafting?.filter(x => x?.Item == "Net") ?? ""));
             }
         }
         
@@ -1015,14 +1016,14 @@ export class InjectorModule extends BaseModule {
             InventoryGet(C, "ItemMouth3"),
         ].filter(g => !!g);
         let gagOverrideAllowChecks = [
-            ["FunnelGag", "Funnel"],
+            ["FunnelGag", 1],
             ["RingGag"]
         ];
 
         var overrideGag = mouthItems.find(gag => gagOverrideAllowChecks.map(o => o[0]).indexOf(gag?.Asset.Name!) > -1);
         if (!!overrideGag) {
             let check = gagOverrideAllowChecks.find(x => x[0] == overrideGag?.Asset.Name);
-            if (!!check && (check.length == 1 || check[1] == overrideGag.Property?.Type))
+            if (!!check && (check.length == 1 || check[1] == (overrideGag.Property?.TypeRecord ?? {})["typed"]))
                 return "open";
         }
 
@@ -1078,7 +1079,10 @@ export class InjectorModule extends BaseModule {
                 } else 
                     SendAction("%OPP_NAME% switches on %NAME%'s mask, filling %POSSESSIVE% lungs.", sender);
             } else {
-                SendAction("%OPP_NAME% switches off %NAME%'s mask, halting the flow of gas.", sender);
+                if (sender.IsPlayer())
+                    SendAction("%NAME% switches off %POSSESSIVE% own mask, halting the flow of gas.", sender);
+                else
+                    SendAction("%OPP_NAME% switches off %NAME%'s mask, halting the flow of gas.", sender);
             }
         }
     }
@@ -1111,8 +1115,8 @@ export class InjectorModule extends BaseModule {
         if (!hasGas && this.IsWearingRespirator && this.IsRespiratorOn) {
             SendAction("%NAME%'s mask hisses quietly as it runs out of its supply of gas.");
             let item = InventoryGet(Player, "ItemMouth3");
-            if (!!item && !!item.Property && item.Property.Type) {
-                item.Property.Type = item.Property.Type.replace("g1", "g0");
+            if (!!item && !!item.Property && item.Property.TypeRecord) {
+                item.Property.TypeRecord["g"] = 0;
                 CharacterRefresh(Player, true);
             }
         }
@@ -1121,7 +1125,10 @@ export class InjectorModule extends BaseModule {
 
     get IsRespiratorOn(): boolean {
         let item = InventoryGet(Player, "ItemMouth3");
-        return item?.Property?.Type?.substring(3,4) == "1";
+        if (!!item && !!item.Property && !!item.Property.TypeRecord)
+            return item.Property.TypeRecord["g"] == 1;
+        else
+            return false;
     }
 
     get IsContinuousDeliveryActive(): boolean {
@@ -1135,13 +1142,11 @@ export class InjectorModule extends BaseModule {
             !item.Craft || 
             item.Asset.Name != "LatexRespirator" || 
             !item.Property || 
-            !item.Property.Type)
+            !item.Property.TypeRecord)
             return false;
 
         //Type: "f2g1s0m0l0"
-        let typeString = item.Property.Type;
-        
-        let hasHose = typeString.substring(1,2) == '2' || typeString.substring(1,2) == '3';        
+        let hasHose = item.Property.TypeRecord["f"] == 2 || item.Property.TypeRecord["f"] == 3;
         let isDrugged = this.GetDrugTypes(item.Craft).length > 0
         
         return hasHose && isDrugged;
@@ -1159,8 +1164,8 @@ export class InjectorModule extends BaseModule {
         var headItem = InventoryGet(Player, "ItemHead");
         var hoodItem = InventoryGet(Player, "ItemHood");
         let isWearingActiveHeadset = 
-            (headItem?.Asset?.Name == "InteractiveVRHeadset" && !!headItem?.Property?.Type && headItem?.Property?.Type[1] == "5") ||
-            (hoodItem?.Asset?.Name == "TechnoHelmet1" && !!hoodItem?.Property?.Type && hoodItem?.Property?.Type[1] == "5");
+            (headItem?.Asset?.Name == "InteractiveVRHeadset" && !!headItem?.Property?.TypeRecord && headItem?.Property?.TypeRecord["b"] == 5) ||
+            (hoodItem?.Asset?.Name == "TechnoHelmet1" && !!hoodItem?.Property?.TypeRecord && hoodItem?.Property?.TypeRecord["v"] == 5);
         if (isWearingActiveHeadset) {
             let randomLevelIncrease = (getRandomInt(4) + 2) / 10; // .2 to .5
             if (getRandomInt(50) == 0) { // Odds are big jump once every 10 seconds

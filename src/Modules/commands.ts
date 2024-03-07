@@ -241,11 +241,11 @@ export class CommandModule extends BaseModule {
 			Tag: "parse-code",
 			Description: " : Reports what items/assets are in a compressed item code stored in the clipboard.",
 			Action: (args, msg, parsed) => {
-				navigator.clipboard
-				.readText()
-				.then(code => {
-					if (!code)
-					LSCG_SendLocal("No code in clipboard.", 5000);
+					let code = window.prompt("Compressed item code:")
+					if (!code) {
+						LSCG_SendLocal("No code entered.", 5000);
+						return;
+					}
 				
 					let items: ItemBundle[] = [];
 					try {
@@ -258,7 +258,6 @@ export class CommandModule extends BaseModule {
 
 					let itemList = items.map(item => `<li>${item.Group} - ${item.Name}</li>`).join("");
 					LSCG_SendLocal(`<div><b>Encoded Items:</b><ul>${itemList}</ul></div>`, 30000);
-				});
 			}
 		}, {
 			Tag: "export",
@@ -272,17 +271,18 @@ export class CommandModule extends BaseModule {
 			Tag: "import",
 			Description: " : Imports all LSCG settings from the clipboard, overwriting any current configuration.",
 			Action: (args, msg, parsed) => {
-				navigator.clipboard
-				.readText()
-				.then(compressed => {
-					if (!compressed)
-						LSCG_SendLocal("No content in clipboard.", 5000);
+				if (confirm("Importing settings will overwrite existing settings. \nAre you sure?")) {
+					let compressed = window.prompt("LSCG Export string:");
+					if (!compressed) {
+						LSCG_SendLocal("No content entered.", 5000);
+						return;
+					}
 					localStorage.setItem(`LSCG_${Player.MemberNumber}_Backup`, ExportSettings());
 					if (ImportSettings(compressed))
 						LSCG_SendLocal(`<div><b>LSCG</b> settings Imported from clipboard. If this was in error, try using /lscg restore</div>`, 30000);
 					else
 						LSCG_SendLocal(`Failed to import LSCG settings from clipboard.`, 30000);
-				});
+				}
 			}
 		}
 	]

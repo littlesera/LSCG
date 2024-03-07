@@ -25,6 +25,16 @@ declare function CollegeDetentionGetTeacherKey(): void;
  */
 declare function CollegeDetentionYukiWillRelease(): boolean;
 /**
+ * Checks, if Yuki dominated the player in the library and player is not owned
+ * @returns {boolean} - Returns true if Yuki is Dominant and player is not owned
+ */
+declare function CollegeDetentionIsYukiDominant(): boolean;
+/**
+ * Checks, if Yuki was blackmailed in the library
+ * @returns {boolean} - Returns true if Yuki is Submissive
+ */
+declare function CollegeDetentionIsYukiSubmissive(): boolean;
+/**
  * Creates a fully dressed Yuki
  * @param {Character} C - The character object to dress up
  * @returns {void} - Nothing
@@ -77,9 +87,10 @@ declare function CollegeDetentionPleaseYuki(Factor: string): void;
 declare function CollegeDetentionRestrainPlayer(Type: "Arms" | "Legs" | "Mouth"): void;
 /**
  * The player invites Yuki to her room. Add her ribbon and the sleeping pill to the player's inventory
+ * @param {string} Role - How Yuki should join private room (Default: "None")
  * @returns {void} - Nothing
  */
-declare function CollegeDetentionInviteToPrivateRoom(): void;
+declare function CollegeDetentionInviteToPrivateRoom(Role?: string): void;
 declare var CollegeDetentionBackground: string;
 /** @type {null | NPCCharacter} */
 declare var CollegeDetentionYuki: null | NPCCharacter;

@@ -14,6 +14,28 @@ declare function ChatSearchRun(): void;
  */
 declare function ChatSearchClick(): void;
 /**
+ * Draws buttons and text for selection of room space.
+ * @returns {void} - Nothing
+ */
+declare function ChatSearchRoomSpaceSelectDraw(): void;
+/**
+ * Handles clicks on selection of room space.
+ * @returns {void} - Nothing
+ */
+declare function ChatSearchRoomSpaceSelectClick(): void;
+/**
+ * While in normal view, called when player clicks apply or presses enter.
+ * Saves the "temp" options into their normal variables, and sends them to the server.
+ * @returns {void} - Nothing
+ */
+declare function ChatSearchSaveLanguageFiltering(): void;
+/**
+ * While in normal view, calls when player clicks revert.
+ * Loads the "temp" options from their normal variables.
+ * @returns {void} - Nothing
+ */
+declare function ChatSearchLoadLanguageFiltering(): void;
+/**
  * @returns {boolean} - True if the player changed the options and the apply/revert buttons should show
  */
 declare function ChatSearchChangedLanguageOrFilterTerms(): boolean;
@@ -181,24 +203,11 @@ declare function ChatSearchMatchesTerms(Room: {
  */
 declare function ChatSearchCalculateIgnoredRoomsOffset(shownRooms: number): number;
 declare var ChatSearchBackground: string;
-/** @type {{ Name: string, CreatorMemberNumber: number, MemberLimit: number, MemberCount: number, DisplayName: string, BlockCategory: ChatRoomBlockCategory[], Game: ChatRoomGame, Friends: { MemberName: string, MemberNumber: number, Type: string }[], Description: string, Creator: string, Order: number }[]} */
-declare var ChatSearchResult: {
-    Name: string;
-    CreatorMemberNumber: number;
-    MemberLimit: number;
-    MemberCount: number;
+/** @type {(ServerChatRoomSearchData & { DisplayName: string, Order: number })[]} */
+declare var ChatSearchResult: (ServerChatRoomSearchData & {
     DisplayName: string;
-    BlockCategory: ChatRoomBlockCategory[];
-    Game: ChatRoomGame;
-    Friends: {
-        MemberName: string;
-        MemberNumber: number;
-        Type: string;
-    }[];
-    Description: string;
-    Creator: string;
     Order: number;
-}[];
+})[];
 /** @type {typeof ChatSearchResult} */
 declare var ChatSearchHiddenResult: typeof ChatSearchResult;
 declare var ChatSearchLastSearchDataJSON: string;
@@ -207,16 +216,18 @@ declare var ChatSearchLastQueryJoin: string;
 declare var ChatSearchLastQueryJoinTime: number;
 declare var ChatSearchResultOffset: number;
 declare var ChatSearchRoomsPerPage: number;
+declare var ChatSearchPageX: number;
+declare var ChatSearchPageY: number;
 declare var ChatSearchMessage: string;
 declare var ChatSearchLeaveRoom: string;
 /** @type {ModuleType} */
 declare var ChatSearchLeaveSpace: ModuleType;
 /** @type {null | Item[]} */
 declare var ChatSearchSafewordAppearance: null | Item[];
-/** @type {null | AssetPoseName[]} */
-declare var ChatSearchSafewordPose: null | AssetPoseName[];
-/** @type {null | AssetPoseName[]} */
-declare var ChatSearchPreviousActivePose: null | AssetPoseName[];
+/** @type {null | Partial<Record<AssetPoseCategory, AssetPoseName>>} */
+declare var ChatSearchSafewordPose: null | Partial<Record<AssetPoseCategory, AssetPoseName>>;
+/** @type {null | Partial<Record<AssetPoseCategory, AssetPoseName>>} */
+declare var ChatSearchPreviousActivePose: null | Partial<Record<AssetPoseCategory, AssetPoseName>>;
 /** @type {number[]} */
 declare var ChatSearchTempHiddenRooms: number[];
 /** @type {"" | "Filter"} */
@@ -234,8 +245,10 @@ declare var ChatSearchFilterUnhideConfirm: null | {
 declare var ChatSearchRejoinIncrement: number;
 /** @type {null | string} */
 declare var ChatSearchReturnToScreen: null | string;
-/** @type {"" | ChatRoomLanguage} */
-declare var ChatSearchLanguage: "" | ChatRoomLanguage;
-/** @type {"" | ChatRoomLanguage} */
-declare var ChatSearchLanguageTemp: "" | ChatRoomLanguage;
+/** @type {"" | ServerChatRoomLanguage} */
+declare var ChatSearchLanguage: "" | ServerChatRoomLanguage;
+/** @type {"" | ServerChatRoomLanguage} */
+declare var ChatSearchLanguageTemp: "" | ServerChatRoomLanguage;
 declare var ChatSearchFilterTermsTemp: string;
+declare var ChatSearchRoomSpaces: string[];
+declare var ChatSearchCurrentRoomSpaceIndex: number;

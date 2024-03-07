@@ -1,15 +1,15 @@
-/** @type {ExtendedItemCallbacks.Init} */
-declare function InventoryItemMiscCombinationPadlockInit(C: Character, Item: Item): boolean;
-/** @type {ExtendedItemCallbacks.Load} */
-declare function InventoryItemMiscCombinationPadlockLoad(): void;
-declare function InventoryItemMiscCombinationPadlockModifyInput(e: any): void;
-/** @type {ExtendedItemCallbacks.Draw} */
-declare function InventoryItemMiscCombinationPadlockDraw(): void;
-declare function InventoryItemMiscCombinationPadlockUnlock(C: any, Item: any): void;
-/** @type {ExtendedItemCallbacks.Click} */
-declare function InventoryItemMiscCombinationPadlockClick(): void;
-/** @type {ExtendedItemCallbacks.Exit} */
-declare function InventoryItemMiscCombinationPadlockExit(): void;
+declare function InventoryItemMiscCombinationPadlockLoadHook(data: NoArchItemData, originalFunction: () => void): void;
+/**
+ * @param {Event & { target: { value: string }}} e
+ */
+declare function InventoryItemMiscCombinationPadlockModifyInput(e: Event & {
+    target: {
+        value: string;
+    };
+}): void;
+declare function InventoryItemMiscCombinationPadlockDrawHook(data: NoArchItemData, originalFunction: () => void): void;
+declare function InventoryItemMiscCombinationPadlockClickHook(data: NoArchItemData, originalFunction: () => void): void;
+declare function InventoryItemMiscCombinationPadlockExitHook(data: NoArchItemData, originalFunction: () => void): void;
 declare let CombinationPadlockPlayerIsBlind: boolean;
 declare let CombinationPadlockBlindCombinationOffset: any;
 declare let CombinationPadlockCombinationLastValue: string;

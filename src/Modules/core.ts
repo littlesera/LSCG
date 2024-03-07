@@ -85,7 +85,7 @@ export class CoreModule extends BaseModule {
                 return next(args);
         }, ModuleCategory.Core);
 
-        hookFunction("ChatRoomDrawCharacterOverlay", 1, (args, next) => {
+        hookFunction("ChatRoomCharacterViewDrawOverlay", 1, (args, next) => {
             next(args);
             const [C, CharX, CharY, Zoom] = args as [Character, number, number, number];
             const Char = getCharacter(C.MemberNumber!) as OtherCharacter | PlayerCharacter;
@@ -108,7 +108,7 @@ export class CoreModule extends BaseModule {
         // Pull other public crafts from the room
         hookFunction("DialogInventoryBuild", 1, (args, next) => {
             next(args);
-            if (this.settings.seeSharedCrafts) {
+            if (this.settings.seeSharedCrafts && DialogMenuMode !== "permissions") {
                 let target = args[0];
                 if (!target.FocusGroup)
                     return;
@@ -215,8 +215,8 @@ export class CoreModule extends BaseModule {
         });
     }
 
-    CheckForPublicPacket(data: IChatRoomMessage) {
-        if (data.Sender != Player.MemberNumber && data.Type == "Hidden" && data.Content == "LSCGMsg" && !!data.Dictionary && !!data.Dictionary[0]) {
+    CheckForPublicPacket(data: ServerChatRoomMessage) {
+        if (!!data.Sender && data.Sender != Player.MemberNumber && data.Type == "Hidden" && data.Content == "LSCGMsg" && !!data.Dictionary && !!data.Dictionary[0]) {
             var C = getCharacter(data.Sender) as OtherCharacter;
             var msg = (<LSCGMessageDictionaryEntry>data.Dictionary[0]).message;
             switch (msg.type) {

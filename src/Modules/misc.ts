@@ -44,8 +44,9 @@ export class MiscModule extends BaseModule {
             if (!!target && 
                 sender?.MemberNumber == Player.MemberNumber && 
                 data.Content == "ChatOther-ItemLegs-Sit" &&
-                CharacterCanChangeToPose(Player, "Kneel")) {
-                CharacterSetActivePose(Player, "Kneel");
+                PoseCanChangeUnaided(Player, "Kneel")) {
+                PoseSetActive(Player, "Kneel", true);
+                ServerSend("ChatRoomCharacterPoseUpdate", { Pose: Player.ActivePose });
             }
         });
 

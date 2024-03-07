@@ -95,6 +95,12 @@ export class GuiGlobal extends GuiSubscreen {
 				description: "If checked, other players will not be able to directly modify the opacity settings on your wardrobe items.",
 				setting: () => Player.LSCG.OpacityModule.preventExternalMod ?? false,
 				setSetting: (val) => Player.LSCG.OpacityModule.preventExternalMod = val
+			},<Setting>{
+				type: "checkbox",
+				label: "Enable Clothed Erection Detection:",
+				description: "If checked, you will get a private message if you can feel an erection during certain activities.",
+				setting: () => this.settings.erectionDetection ?? false,
+				setSetting: (val) => this.settings.erectionDetection = val
 			}
 		]
 	}

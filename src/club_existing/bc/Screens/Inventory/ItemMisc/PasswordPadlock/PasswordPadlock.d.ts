@@ -1,17 +1,11 @@
-/** @type {ExtendedItemCallbacks.Init} */
-declare function InventoryItemMiscPasswordPadlockInit(C: Character, Item: Item): boolean;
-/** @type {ExtendedItemCallbacks.Load} */
-declare function InventoryItemMiscPasswordPadlockLoad(): void;
-/** @type {ExtendedItemCallbacks.Draw} */
-declare function InventoryItemMiscPasswordPadlockDraw(): void;
+declare function InventoryItemMiscPasswordPadlockLoadHook(data: NoArchItemData, originalFunction: () => void): void;
+declare function InventoryItemMiscPasswordPadlockDrawHook(data: NoArchItemData, originalFunction: () => void): void;
 declare function InventoryItemMiscPasswordPadlockDrawControls(): void;
-/** @type {ExtendedItemCallbacks.Click} */
-declare function InventoryItemMiscPasswordPadlockClick(): void;
-declare function InventoryItemMiscPasswordPadlockControlsClick(ExitCallback: any): void;
-declare function InventoryItemMiscPasswordPadlockHandleOpenClick(ExitCallback: any): void;
-declare function InventoryItemMiscPasswordPadlockHandleFirstSet(ExitCallback: any): void;
-/** @type {ExtendedItemCallbacks.Exit} */
-declare function InventoryItemMiscPasswordPadlockExit(): void;
+declare function InventoryItemMiscPasswordPadlockClickHook(data: NoArchItemData, originalFunction: () => void): void;
+declare function InventoryItemMiscPasswordPadlockControlsClick(): void;
+declare function InventoryItemMiscPasswordPadlockHandleOpenClick(): void;
+declare function InventoryItemMiscPasswordPadlockHandleFirstSet(): void;
+declare function InventoryItemMiscPasswordPadlockExitHook(data: NoArchItemData, originalFunction: () => void): void;
 declare function InventoryItemMiscPasswordPadlockIsSet(): boolean;
 declare function InventoryItemMiscPasswordPadlockPublishPasswordChange(C: any): void;
 declare const InventoryItemMiscPasswordPadlockPasswordRegex: RegExp;

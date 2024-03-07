@@ -88,7 +88,7 @@ export abstract class BaseState {
 
     Tick(now: number): void {
         if (!!this.config.duration && this.config.duration > 0) {
-            let isExpired = this.Active && this.config.activatedAt + this.config.duration < now;
+            let isExpired = this.config.active && this.config.activatedAt + this.config.duration < now;
             if (isExpired)
                 this.Recover(true);
         }

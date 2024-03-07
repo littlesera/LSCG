@@ -44,9 +44,9 @@ declare function InventoryDeleteGroup(C: Character, group: AssetGroupName, push?
 * Loads the current inventory for a character, can be loaded from an object of Name/Group or a compressed array using
 * LZString
 * @param {Character} C - The character on which we should load the inventory
-* @param {string | readonly ItemBundle[] | Partial<Record<AssetGroupName, readonly string[]>>} Inventory - An array of Name / Group of items to load
+* @param {string | readonly ItemBundle[] | Partial<Record<AssetGroupName, readonly AssetGroupName[]>>} Inventory - An array of Name / Group of items to load
 */
-declare function InventoryLoad(C: Character, Inventory: string | readonly ItemBundle[] | Partial<Record<AssetGroupName, readonly string[]>>): void;
+declare function InventoryLoad(C: Character, Inventory: string | readonly ItemBundle[] | Partial<Record<AssetGroupName, readonly AssetGroupName[]>>): void;
 /**
 * Checks if the character has the inventory available
 * @param {Character} C - The character on which we should remove the item
@@ -209,17 +209,17 @@ declare function InventoryLocked(C: Character, AssetGroup: AssetGroupItemName, C
  * @param {readonly string[]} [AllowedAssets=null] - A list of assets from which one must be selected
  * @param {boolean} [IgnoreRequirements=false] - If True, the group being blocked and prerequisites will not prevent the item being added.
  *  NOTE: Long-term this should be replaced with better checks before calling this function.
- * @returns {void} - Nothing
+ * @returns {Item | null} - The equipped item (if any)
  */
-declare function InventoryWearRandom(C: Character, GroupName: AssetGroupName, Difficulty?: number, Refresh?: boolean, MustOwn?: boolean, Extend?: boolean, AllowedAssets?: readonly string[], IgnoreRequirements?: boolean): void;
+declare function InventoryWearRandom(C: Character, GroupName: AssetGroupName, Difficulty?: number, Refresh?: boolean, MustOwn?: boolean, Extend?: boolean, AllowedAssets?: readonly string[], IgnoreRequirements?: boolean): Item | null;
 /**
  * Randomly extends an item (sets an item type, etc.) on a character
  * @param {Character} C - The character wearing the item
  * @param {AssetGroupName} GroupName - The name of the item's group
  * @param {null | Character} [C_Source] - The character setting the new item option. If `null`, assume that it is _not_ the player character.
- * @returns {void} - Nothing
+ * @returns {Item | null} - The equipped item (if any)
  */
-declare function InventoryRandomExtend(C: Character, GroupName: AssetGroupName, C_Source?: null | Character): void;
+declare function InventoryRandomExtend(C: Character, GroupName: AssetGroupName, C_Source?: null | Character): Item;
 /**
  * Select a random asset from a group, narrowed to the most preferable available options (i.e
  * unblocked/visible/unlimited) based on their binary "rank"
@@ -287,7 +287,7 @@ declare function InventoryItemIsPickable(Item: Item): boolean;
  * @returns {(ItemProperties & Asset & AssetGroup)[Name] | undefined} - The value of the requested property for the given item.
  * Returns either undefined, an empty array or object if the property or the item itself does not exist.
  */
-declare function InventoryGetItemProperty<Name extends "Name" | "Gender" | "BuyGroup" | "ParentItem" | "Enable" | "Visible" | "NotVisibleOnScreen" | "Wear" | "Activity" | "AllowActivity" | "ActivityAudio" | "ActivityExpression" | "AllowActivityOn" | "PrerequisiteBuyGroups" | "Effect" | "Block" | "BlockRemotes" | "OpenPermission" | "OpenPermissionArm" | "OpenPermissionLeg" | "OpenPermissionChastity" | "Bonus" | "Expose" | "Hide" | "HideItem" | "HideItemExclude" | "Require" | "SetPose" | "AllowPose" | "HideForPose" | "PoseMapping" | "AllowActivePose" | "WhitelistActivePose" | "Value" | "Difficulty" | "SelfBondage" | "SelfUnlock" | "ExclusiveUnlock" | "Random" | "RemoveAtLogin" | "LayerVisibility" | "RemoveTime" | "RemoveTimer" | "MaxTimer" | "Alpha" | "Prerequisite" | "Extended" | "AlwaysExtend" | "AlwaysInteract" | "AllowLock" | "IsLock" | "PickDifficulty" | "OwnerOnly" | "LoverOnly" | "FamilyOnly" | "ExpressionTrigger" | "RemoveItemOnRemove" | "AllowEffect" | "AllowBlock" | "AllowHide" | "AllowHideItem" | "AllowType" | "AllowTighten" | "DefaultColor" | "Opacity" | "MinOpacity" | "MaxOpacity" | "Audio" | "Category" | "Fetish" | "ArousalZone" | "IsRestraint" | "BodyCosplay" | "OverrideBlinking" | "DialogSortOverride" | "DynamicDescription" | "DynamicPreviewImage" | "DynamicAllowInventoryAdd" | "DynamicName" | "DynamicGroupName" | "DynamicActivity" | "DynamicAudio" | "CharacterRestricted" | "AllowRemoveExclusive" | "InheritColor" | "DynamicBeforeDraw" | "DynamicAfterDraw" | "DynamicScriptDraw" | "HasType" | "AllowLockType" | "AllowColorize" | "AllowColorizeAll" | "AvailableLocations" | "OverrideHeight" | "FreezeActivePose" | "DrawLocks" | "AllowExpression" | "MirrorExpression" | "FixedPosition" | "CustomBlindBackground" | "Layer" | "Archetype" | "Attribute" | "HideItemAttribute" | "PreviewIcons" | "Tint" | "DefaultTint" | "CraftGroup" | "ExpressionPrerequisite" | "Text" | "LockPickSeed" | "CombinationNumber" | "Password" | "Hint" | "LockSet" | "Padding" | "Type" | "Door" | "Expression" | "OverrideAssetEffect" | "Mode" | "Intensity" | "State" | "HeightModifier" | "OverridePriority" | "ItemMemberNumber" | "LockedBy" | "LockMemberNumber" | "MemberNumberListKeys" | "RemoveItem" | "RemoveOnUnlock" | "ShowTimer" | "EnableRandomInput" | "MemberNumberList" | "InflateLevel" | "SuctionLevel" | "Text2" | "Text3" | "LockButt" | "HeartRate" | "HeartIcon" | "AutoPunish" | "AutoPunishUndoTime" | "AutoPunishUndoTimeSetting" | "OriginalSetting" | "BlinkState" | "Option" | "PunishStruggle" | "PunishStruggleOther" | "PunishOrgasm" | "PunishStandup" | "PunishSpeech" | "PunishRequiredSpeech" | "PunishRequiredSpeechWord" | "PunishProhibitedSpeech" | "PunishProhibitedSpeechWords" | "NextShockTime" | "PublicModeCurrent" | "PublicModePermission" | "TriggerValues" | "AccessMode" | "ShockLevel" | "InsertedBeads" | "ShowText" | "TriggerCount" | "Iterations" | "Revert" | "UnHide" | "Texts" | "TargetAngle" | "PortalLinkCode" | "Underwear" | "Description" | "Group" | "ParentGroupName" | "WearTime" | "DrawingPriority" | "DrawingLeft" | "DrawingTop" | "ZoomModifier" | "ColorableLayerCount" | "AllowTint" | "ColorSuffix" | "Family" | "Asset" | "IsDefault" | "AllowNone" | "AllowCustomize" | "ColorSchema" | "ParentSize" | "ParentColor" | "Clothing" | "Zone" | "MirrorGroup" | "DrawingFullAlpha" | "DrawingBlink" | "PreviewZone" | "MirrorActivitiesFrom" | "HasPreviewImages" | "IsAppearance" | "IsItem" | "IsScript">(Item: Item, PropertyName: Name, CheckGroup?: boolean): (ItemProperties & Asset & AssetGroup)[Name];
+declare function InventoryGetItemProperty<Name extends "Block" | "BlockRemotes" | "OpenPermission" | "OpenPermissionArm" | "OpenPermissionLeg" | "OpenPermissionChastity" | "Hide" | "Name" | "Gender" | "BuyGroup" | "AllowLock" | "IsLock" | "PickDifficulty" | "OwnerOnly" | "LoverOnly" | "FamilyOnly" | "AllowTighten" | "DrawLocks" | "CustomBlindBackground" | "CraftGroup" | "AllowLockType" | "CharacterRestricted" | "AllowRemoveExclusive" | "ArousalZone" | "Difficulty" | "SelfBondage" | "SelfUnlock" | "RemoveTime" | "AlwaysInteract" | "IsRestraint" | "ParentItem" | "Enable" | "Visible" | "NotVisibleOnScreen" | "Wear" | "Activity" | "AllowActivity" | "ActivityAudio" | "ActivityExpression" | "AllowActivityOn" | "PrerequisiteBuyGroups" | "Bonus" | "Expose" | "HideItem" | "HideItemExclude" | "Require" | "AllowActivePose" | "WhitelistActivePose" | "Value" | "ExclusiveUnlock" | "RemoveAtLogin" | "LayerVisibility" | "RemoveTimer" | "MaxTimer" | "Prerequisite" | "Extended" | "AlwaysExtend" | "ExpressionTrigger" | "RemoveItemOnRemove" | "AllowEffect" | "AllowBlock" | "AllowHide" | "AllowHideItem" | "AllowTypes" | "CreateLayerTypes" | "DefaultColor" | "Audio" | "Category" | "Fetish" | "OverrideBlinking" | "DialogSortOverride" | "DynamicDescription" | "DynamicPreviewImage" | "DynamicAllowInventoryAdd" | "DynamicName" | "DynamicGroupName" | "DynamicActivity" | "DynamicAudio" | "DynamicBeforeDraw" | "DynamicAfterDraw" | "DynamicScriptDraw" | "AllowColorizeAll" | "AvailableLocations" | "OverrideHeight" | "FullAlpha" | "MirrorExpression" | "Layer" | "Attribute" | "HideItemAttribute" | "PreviewIcons" | "Tint" | "DefaultTint" | "ExpressionPrerequisite" | "Effect" | "SetPose" | "FreezeActivePose" | "AllowExpression" | "Random" | "BodyCosplay" | "HideForPose" | "Alpha" | "ColorSuffix" | "FixedPosition" | "Opacity" | "MinOpacity" | "MaxOpacity" | "InheritColor" | "AllowPose" | "PoseMapping" | "AllowColorize" | "Group" | "Text" | "Padding" | "TypeRecord" | "Door" | "Type" | "Expression" | "Mode" | "Intensity" | "State" | "Modules" | "HeightModifier" | "OverridePriority" | "ItemMemberNumber" | "LockedBy" | "LockMemberNumber" | "Password" | "LockPickSeed" | "CombinationNumber" | "MemberNumberListKeys" | "Hint" | "LockSet" | "RemoveItem" | "RemoveOnUnlock" | "ShowTimer" | "EnableRandomInput" | "MemberNumberList" | "InflateLevel" | "SuctionLevel" | "Text2" | "Text3" | "LockButt" | "HeartRate" | "AutoPunish" | "AutoPunishUndoTime" | "AutoPunishUndoTimeSetting" | "OriginalSetting" | "BlinkState" | "Option" | "PunishStruggle" | "PunishStruggleOther" | "PunishOrgasm" | "PunishStandup" | "PunishActivity" | "PunishSpeech" | "PunishRequiredSpeech" | "PunishRequiredSpeechWord" | "PunishProhibitedSpeech" | "PunishProhibitedSpeechWords" | "NextShockTime" | "PublicModeCurrent" | "PublicModePermission" | "TriggerValues" | "AccessMode" | "ShockLevel" | "InsertedBeads" | "ShowText" | "TriggerCount" | "OrgasmCount" | "RuinedOrgasmCount" | "TimeWorn" | "TimeSinceLastOrgasm" | "Iterations" | "Revert" | "UnHide" | "Texts" | "TargetAngle" | "PortalLinkCode" | "Underwear" | "Asset" | "Clothing" | "AllowNone" | "AllowCustomize" | "ParentSize" | "ParentColor" | "Zone" | "MirrorGroup" | "PreviewZone" | "MirrorActivitiesFrom" | "HasPreviewImages" | "HasType" | "ParentGroupName" | "DrawingLeft" | "DrawingTop" | "Description" | "WearTime" | "DrawingPriority" | "ZoomModifier" | "ColorableLayerCount" | "Archetype" | "AllowTint" | "Family" | "IsDefault" | "ColorSchema" | "DrawingBlink" | "IsAppearance" | "IsItem" | "IsScript">(Item: Item, PropertyName: Name, CheckGroup?: boolean): (ItemProperties & Asset & AssetGroup)[Name];
 /**
  * Apply an item's expression trigger to a character if able
  * @param {Character} C - The character to update
@@ -488,10 +488,10 @@ declare function InventoryIsKey(Item: Item): boolean;
 declare function InventoryStringify(C: Character): string;
 /**
  * Returns TRUE if the inventory category is blocked in the current chat room
- * @param {readonly ChatRoomBlockCategory[]} Category - An array of string containing all the categories to validate
+ * @param {readonly ServerChatRoomBlockCategory[]} Category - An array of string containing all the categories to validate
  * @return {boolean} - TRUE if it's blocked
  */
-declare function InventoryChatRoomAllow(Category: readonly ChatRoomBlockCategory[]): boolean;
+declare function InventoryChatRoomAllow(Category: readonly ServerChatRoomBlockCategory[]): boolean;
 /**
  * Applies a preset expression from being shocked to the character if able
  * @param {Character} C - The character to update
@@ -505,5 +505,7 @@ declare function InventoryShockExpression(C: Character): void;
  * object
  */
 declare function InventoryExtractLockProperties(property: ItemProperties): ItemProperties;
-declare const PropertiesArrayLike: Set<string>;
-declare const PropertiesObjectLike: Set<string>;
+/** @satisfies {Set<keyof PropertiesArray>} */
+declare const PropertiesArrayLike: Set<"Block" | "Hide" | "AllowActivity" | "AllowActivityOn" | "Expose" | "HideItem" | "HideItemExclude" | "Require" | "AllowActivePose" | "Prerequisite" | "ExpressionTrigger" | "AllowEffect" | "AllowBlock" | "AllowHide" | "AllowHideItem" | "DefaultColor" | "Category" | "Fetish" | "AvailableLocations" | "Attribute" | "Tint" | "ExpressionPrerequisite" | "Effect" | "SetPose" | "AllowExpression" | "Alpha" | "MemberNumberList" | "UnHide" | "Texts">;
+/** @satisfies {Set<keyof PropertiesRecord>} */
+declare const PropertiesObjectLike: Set<"AllowLockType" | "ActivityExpression" | "RemoveItemOnRemove" | "PoseMapping" | "TypeRecord">;

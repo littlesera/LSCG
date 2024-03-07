@@ -1,21 +1,20 @@
-/** @type {ExtendedItemCallbacks.Init} */
-declare function InventoryItemNeckSlaveCollarInit(C: Character, Item: Item, Refresh: boolean): boolean;
-/** @type {ExtendedItemCallbacks.Load} */
-declare function InventoryItemNeckSlaveCollarLoad(): void;
-/** @type {ExtendedItemCallbacks.Draw} */
-declare function InventoryItemNeckSlaveCollarDraw(): void;
-/** @type {ExtendedItemCallbacks.Click} */
-declare function InventoryItemNeckSlaveCollarClick(): void;
+declare function InventoryItemNeckSlaveCollarLoadHook(data: NoArchItemData, originalFunction: () => void): void;
+declare function InventoryItemNeckSlaveCollarDrawHook(data: NoArchItemData, originalFunction: () => void): void;
+declare function InventoryItemNeckSlaveCollarClickHook(data: NoArchItemData, originalFunction: () => void): void;
 /**
  * Sets the slave collar model
- * @type {TypedItemSetTypeCallback}
+ * @param {number} NewType
  */
-declare function InventoryItemNeckSlaveCollarSetType(NewType: string): void;
+declare function InventoryItemNeckSlaveCollarSetType(NewType: number): void;
 declare var InventoryItemNeckSlaveCollarColorMode: boolean;
 /** @type {ItemColor} */
 declare var InventoryItemNeckSlaveCollarColor: ItemColor;
 declare var InventoryItemNeckSlaveCollarOffset: number;
-/** @type {(TypedItemOption & { Image: string })[]} */
-declare var InventoryItemNeckSlaveCollarTypes: (TypedItemOption & {
+/** @type {{ Name: string, Property: ItemProperties & { TypeRecord: TypeRecord }, Image: string }[]} */
+declare var InventoryItemNeckSlaveCollarTypes: {
+    Name: string;
+    Property: ItemProperties & {
+        TypeRecord: TypeRecord;
+    };
     Image: string;
-})[];
+}[];

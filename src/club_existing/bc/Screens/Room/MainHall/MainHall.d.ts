@@ -213,6 +213,9 @@ declare var MainHallTipCycleDelay: number;
 declare var MainHallTipCycleTimer: number;
 declare var MainHallMaidWasCalledManually: boolean;
 declare var MainHallAsylumOpen: boolean;
+/**
+ * Whether the player just got safeworded out of a chatroom and needs punishment
+ */
 declare var MainHallBeingPunished: boolean;
 declare var MainHallFirstFrame: boolean;
 /** @type {AssetLockType[]} */

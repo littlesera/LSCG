@@ -30,6 +30,11 @@ declare function MovieStudioCanGetForSaleSign(): boolean;
  */
 declare function MovieStudioDailyMovieIs(Type: string): boolean;
 /**
+ * Returns TRUE if the player and the current character can play Club Card
+ * @returns {boolean} - Returns TRUE if both aren't restrained
+ */
+declare function MovieStudioCanPlayClubCard(): boolean;
+/**
  * When the player fails the movie, we jump back to the director
  * @returns {void} - Nothing
  */
@@ -141,6 +146,16 @@ declare function MovieStudioGetForSaleSign(): void;
  * @returns {void} - Nothing
  */
 declare function MovieStudioGetMoney(): void;
+/**
+ * When the player starts a club card game
+ * @returns {void} - Nothing
+ */
+declare function MovieStudioClubCardStart(): void;
+/**
+ * When the player ends a club card game
+ * @returns {void} - Nothing
+ */
+declare function MovieStudioClubCardEnd(): void;
 declare var MovieStudioBackground: string;
 /** @type {null | NPCCharacter} */
 declare var MovieStudioDirector: null | NPCCharacter;

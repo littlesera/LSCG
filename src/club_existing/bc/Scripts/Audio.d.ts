@@ -32,13 +32,13 @@ declare function AudioVolumeFromModifier(modifier: number): number;
 declare function AudioShouldSilenceSound(IsPlayerInvolved?: boolean): boolean;
 /**
  * Takes the received data dictionary content and identifies the audio to be played
- * @param {IChatRoomMessage} data - Data received
+ * @param {ServerChatRoomMessage} data - Data received
  * @param {Character} sender
  * @param {string} msg
  * @param {IChatRoomMessageMetadata} metadata
  * @returns {boolean}
  */
-declare function AudioPlaySoundForChatMessage(data: IChatRoomMessage, sender: Character, msg: string, metadata: IChatRoomMessageMetadata): boolean;
+declare function AudioPlaySoundForChatMessage(data: ServerChatRoomMessage, sender: Character, msg: string, metadata: IChatRoomMessageMetadata): boolean;
 /**
  * Low-level function to play a sound effect.
  * @param {AudioSoundEffect|string} soundEffect
@@ -70,24 +70,24 @@ declare function AudioGetSoundFromAsset(character: Character, groupName: AssetGr
 declare function AudioGetFileName(sound: string): string | null;
 /**
  * Processes which sound should be played for items
- * @param {IChatRoomMessage} data - Data content triggering the potential sound
+ * @param {ServerChatRoomMessage} data - Data content triggering the potential sound
  * @param {IChatRoomMessageMetadata} metadata - The chat message metadata
  * @returns {AudioSoundEffect | undefined} - The name of the sound to play, followed by the noise modifier
  */
-declare function AudioGetSoundFromChatMessage(data: IChatRoomMessage, metadata: IChatRoomMessageMetadata): AudioSoundEffect | undefined;
+declare function AudioGetSoundFromChatMessage(data: ServerChatRoomMessage, metadata: IChatRoomMessageMetadata): AudioSoundEffect | undefined;
 /**
  * Processes the sound for vibrators
- * @param {IChatRoomMessage} data - Represents the chat message received
+ * @param {ServerChatRoomMessage} data - Represents the chat message received
  * @param {IChatRoomMessageMetadata} metadata - The metadata from the recieved message
  * @returns {[string, number]} - The name of the sound to play, followed by the noise modifier
  */
-declare function AudioVibratorSounds(data: IChatRoomMessage, metadata: IChatRoomMessageMetadata): [string, number];
+declare function AudioVibratorSounds(data: ServerChatRoomMessage, metadata: IChatRoomMessageMetadata): [string, number];
 /**
  * Processes the sound for shocks
- * @param {IChatRoomMessage} data - Represents the chat message received
+ * @param {ServerChatRoomMessage} data - Represents the chat message received
  * @returns {[string, number]} - The name of the sound to play, followed by the noise modifier
  */
-declare function AudioShockSounds(data: IChatRoomMessage): [string, number];
+declare function AudioShockSounds(data: ServerChatRoomMessage): [string, number];
 declare var AudioDialog: HTMLAudioElement;
 /** @type AudioEffect[] */
 declare var AudioList: AudioEffect[];

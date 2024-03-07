@@ -1,4 +1,4 @@
-import { CleanDefaultsFromSettings, ExportSettings, GetDataSizeReport, hookFunction, ICONS, ImportSettings, isObject, settingsSave } from './utils';
+import { CleanDefaultsFromSettings, ExportSettings, GetDataSizeReport, hookFunction, ICONS, ImportSettings, isObject, sendLSCGBeep, settingsSave } from './utils';
 import { ConfiguredActivities, CraftableItemSpellNames, DrugKeywords, getModule, HypnoTriggers, modules, NetgunKeywords, registerModule } from 'modules';
 import { SettingsModel } from 'Settings/Models/settings';
 import { HypnoModule } from './Modules/hypno';
@@ -28,7 +28,8 @@ export {
 	CleanDefaultsFromSettings,
 	ExportSettings,
 	ImportSettings,
-	getModule
+	getModule,
+	sendLSCGBeep
 };
 
 function initWait() {

@@ -1,2 +1,1 @@
-/** @type {ExtendedItemScriptHookCallbacks.Draw<ModularItemData>} */
-declare function InventoryItemButtInflVibeButtPlugDrawHook(Data: ModularItemData, OriginalFunction: () => void): void;
+declare function InventoryItemButtInflVibeButtPlugDrawHook(data: ModularItemData, originalFunction: () => void): void;

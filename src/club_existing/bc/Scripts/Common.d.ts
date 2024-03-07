@@ -54,6 +54,10 @@ declare function CommonGet(Path: string, Callback: (this: XMLHttpRequest, xhr: X
  * @returns {void} - Nothing
  */
 declare function CommonGetRetry(Path: string, Callback: (this: XMLHttpRequest, xhr: XMLHttpRequest) => void, RetriesLeft?: number): void;
+declare function CommonMouseDown(event: any): void;
+declare function CommonMouseUp(event: any): void;
+declare function CommonMouseMove(event: any): void;
+declare function CommonMouseWheel(event: any): void;
 /**
  * Catches the clicks on the main screen and forwards it to the current screen click function if it exists, otherwise it sends it to the dialog click function
  * @param {MouseEvent | TouchEvent} event - The event that triggered this
@@ -72,6 +76,7 @@ declare function CommonClick(event: MouseEvent | TouchEvent): void;
 declare function CommonTouchActive(X: number, Y: number, W: number, H: number, TL?: TouchList): boolean;
 /**
  * Catches key presses on the main screen and forwards it to the current screen key down function if it exists, otherwise it sends it to the dialog key down function
+ * @deprecated Use GameKeyDown instead
  * @param {KeyboardEvent} event - The event that triggered this
  * @returns {void} - Nothing
  */
@@ -242,32 +247,17 @@ declare function CommonMemoize<T extends (...args: any) => any>(func: T, argConv
 declare function CommonTakePhoto(Left: number, Top: number, Width: number, Height: number): void;
 /**
  * Takes an array of items and converts it to record format
- * @param { { Group: string; Name: string; Type?: string|null }[] } arr The array of items
- * @returns { { [group: string]: { [name: string]: string[] } } } Output in object foramat
+ * @param {readonly ItemPermissions[]} arr The array of items
+ * @returns {ItemPermissionsPacked} Output in object foramat
  */
-declare function CommonPackItemArray(arr: {
-    Group: string;
-    Name: string;
-    Type?: string | null;
-}[]): {
-    [group: string]: {
-        [name: string]: string[];
-    };
-};
+declare function CommonPackItemArray(arr: readonly ItemPermissions[]): ItemPermissionsPacked;
 /**
- * Takes an record format of items and converts it to array
- * @param { { [group: string]: { [name: string]: string[] } } } arr Object defining items
- * @return { { Group: string; Name: string; Type?: string }[] } The array of items
+ * Takes an record format of items and converts it to array.
+ * @note This function *must* be able to handle unsantized data as received from the server
+ * @param {ItemPermissionsPacked} rec Object defining items
+ * @return {ItemPermissions[]} The array of items
  */
-declare function CommonUnpackItemArray(arr: {
-    [group: string]: {
-        [name: string]: string[];
-    };
-}): {
-    Group: string;
-    Name: string;
-    Type?: string;
-}[];
+declare function CommonUnpackItemArray(rec: ItemPermissionsPacked): ItemPermissions[];
 /**
  * Compares two version numbers and returns -1/0/1 if Other number is smaller/same/larger than Current one
  * @param {string} Current Current version number
@@ -278,12 +268,23 @@ declare function CommonCompareVersion(Current: string, Other: string): -1 | 0 | 
 /**
  * A simple deep equality check function which checks whether two objects are equal. The function traverses recursively
  * into objects and arrays to check for equality. Primitives and simple types are considered equal as defined by `===`.
- * @param {*} obj1 - The first object to compare
- * @param {*} obj2 - The second object to compare
- * @returns {boolean} - TRUE if both objects are equal, up to arbitrarily deeply nested property values, FALSE
+ * @template T
+ * @param {unknown} obj1 - The first object to compare
+ * @param {T} obj2 - The second object to compare
+ * @returns {obj1 is T} - TRUE if both objects are equal, up to arbitrarily deeply nested property values, FALSE
  * otherwise.
  */
-declare function CommonDeepEqual(obj1: any, obj2: any): boolean;
+declare function CommonDeepEqual<T>(obj1: unknown, obj2: T): obj1 is T;
+/**
+ * A simple deep equality check function which checks whether two objects are equal for all properties in `subRec`.
+ * The function traverses recursively into objects and arrays to check for equality.
+ * Primitives and simple types are considered equal as defined by `===`.
+ * @template T
+ * @param {unknown} subRec - The subset-containg object to compare
+ * @param {T} superRec - The superset-containg object to compare
+ * @returns {subRec is Partial<T>} - Whether `subRec` is a subset of `superRec` up to arbitrarily deeply nested property values
+ */
+declare function CommonDeepIsSubset<T>(subRec: unknown, superRec: T): subRec is Partial<T>;
 /**
  * Adds all items from the source array to the destination array if they aren't already included
  * @template T
@@ -318,6 +319,14 @@ declare function CommonGetServer(): string;
  */
 declare function CommonStringSubstitute(msg: string, substitutions: CommonSubtituteSubstitution[]): string;
 /**
+ * Returns a nice version of the passed strings
+ *
+ * This turns ["this", "this", "that"] into "this, this, and that" using appropriate localization
+ *
+ * @param {string[]} strings The strings to join
+ */
+declare function CommonArrayJoinPretty(strings: string[]): string;
+/**
  * Returns a titlecased version of the given string.
  * @param {string} str
  * @returns {string}
@@ -347,8 +356,25 @@ declare function CommonCloneDeep<T>(obj: T): T;
  * Type guard which checks that a value is a non-negative (i.e. positive or zero) integer
  * @param {unknown} value - The value to test
  * @returns {value is number}
+ * @see {@link CommonIsInteger}
  */
 declare function CommonIsNonNegativeInteger(value: unknown): value is number;
+/**
+ * Type guard which checks that a value is an integer that, optionally, falls within the specified range
+ * @param {unknown} value - The value to test
+ * @param {number} min - The minimum allowed value
+ * @param {number} max - The maximum allowed value
+ * @returns {value is number}
+ */
+declare function CommonIsInteger(value: unknown, min?: number, max?: number): value is number;
+/**
+ * Type guard which checks that a value is a finite number that, optionally, falls within the specified range
+ * @param {unknown} value - The value to test
+ * @param {number} min - The minimum allowed value
+ * @param {number} max - The maximum allowed value
+ * @returns {value is number}
+ */
+declare function CommonIsFinite(value: unknown, min?: number, max?: number): value is number;
 /**
  * Return whether BC is running in a browser environment (as opposed to Node.js as used for the test suite).
  * @returns {boolean}
@@ -385,6 +411,15 @@ declare function CommonEntries<KT extends string, VT>(record: Partial<Record<KT,
  */
 declare function CommonIncludes<T>(array: readonly T[], searchElement: unknown, fromIndex?: number): searchElement is T;
 /**
+ * A {@link Object.fromEntries} variant annotated to return respect literal key types.
+ * @note The returned record is typed as being non-{@link Partial}, an assumption that may not hold in practice
+ * @template {string} KT
+ * @template VT
+ * @param {Iterable<[key: KT, value: VT]>} iterable An iterable object that contains key-value entries for properties and methods
+ * @returns {Record<KT, VT>} A record created from the passed key/value pairs
+ */
+declare function CommonFromEntries<KT extends string, VT>(iterable: Iterable<[key: KT, value: VT]>): Record<KT, VT>;
+/**
  * Automatically generate a grid based on parameters.
  *
  * This function takes a list of items, grid parameters, and a callback to manage
@@ -395,22 +430,31 @@ declare function CommonIncludes<T>(array: readonly T[], searchElement: unknown, 
  * so you don't keep checking items after handling one.
  *
  * @template T
- * @param {T[]} items
+ * @param {readonly T[]} items
  * @param {number} offset
  * @param {CommonGenerateGridParameters} grid
  * @param {CommonGenerateGridCallback<T>} callback
  * @returns {number}
  */
-declare function CommonGenerateGrid<T>(items: T[], offset: number, grid: CommonGenerateGridParameters, callback: CommonGenerateGridCallback<T>): number;
+declare function CommonGenerateGrid<T>(items: readonly T[], offset: number, grid: CommonGenerateGridParameters, callback: CommonGenerateGridCallback<T>): number;
 /**
  * Create a copy of the passed record with all specified keys removed
  * @template {keyof RecordType} KeyType
  * @template {{}} RecordType
  * @param {RecordType} object - The to-be copied record
- * @param {KeyType[]} keys - The to-be removed keys from the record
+ * @param {Iterable<KeyType>} keys - The to-be removed keys from the record
  * @returns {Omit<RecordType, KeyType>}
  */
-declare function CommonOmit<KeyType_1 extends keyof RecordType, RecordType extends {}>(object: RecordType, keys: KeyType_1[]): Omit<RecordType, KeyType_1>;
+declare function CommonOmit<KeyType_1 extends keyof RecordType, RecordType extends {}>(object: RecordType, keys: Iterable<KeyType_1>): Omit<RecordType, KeyType_1>;
+/**
+ * Create a copy of the passed record with all specified keys removed
+ * @template {keyof RecordType} KeyType
+ * @template {{}} RecordType
+ * @param {RecordType} object - The to-be copied record
+ * @param {Iterable<KeyType>} keys - The to-be removed keys from the record
+ * @returns {Pick<RecordType, KeyType>}
+ */
+declare function CommonPick<KeyType_1 extends keyof RecordType, RecordType extends {}>(object: RecordType, keys: Iterable<KeyType_1>): Pick<RecordType, KeyType_1>;
 /**
  * Iterate through the passed iterable and yield index/value pairs.
  * @template T
@@ -420,6 +464,65 @@ declare function CommonOmit<KeyType_1 extends keyof RecordType, RecordType exten
  * @returns {Generator<[index: number, value: T], void>}
  */
 declare function CommonEnumerate<T>(iterable: Iterable<T>, start?: number, step?: number): Generator<[index: number, value: T], void, any>;
+/**
+ * Return a value clamped to a minimum and maximum
+ * @param {number} value
+ * @param {number} min
+ * @param {number} max
+ * @returns {number}
+ */
+declare function CommonClamp(value: number, min: number, max: number): number;
+/**
+ * Returns TRUE if the URL is valid, is from http or https or screens/ or backgrounds/ and has the required extension
+ * @param {string} TestURL - The URL to test
+ * @param {readonly string[]} Extension - An array containing the valid extensions
+ * @returns {boolean}
+*/
+declare function CommonURLHasExtension(TestURL: string, Extension: readonly string[]): boolean;
+/**
+ * Return whether two records are equivalent for all fields as returned by {@link Object.keys}.
+ * @note does *not* support the comparison of nested structures.
+ * @template T
+ * @param {T} rec1
+ * @param {unknown} rec2
+ * @returns {rec2 is T}
+ */
+declare function CommonObjectEqual<T>(rec1: T, rec2: unknown): rec2 is T;
+/**
+ * Return if the key/value pairs of `subRec` form a subset of `superRec`
+ * @template T
+ * @param {unknown} subRec
+ * @param {T} superRec
+ * @returns {subRec is Partial<T>}
+ */
+declare function CommonObjectIsSubset<T>(subRec: unknown, superRec: T): subRec is Partial<T>;
+/**
+ * Parse the passed stringified JSON data and catch any exceptions.
+ * Exceptions will cause the function to return `undefined`.
+ * @param {string} data
+ * @returns {any}
+ * @see {@link JSON.parse}
+ */
+declare function CommonJSONParse(data: string): any;
+/**
+ * Translates the current event into movement directions
+ *
+ * This returns a layout independent u/d/l/r string
+ *
+ * @param {KeyboardEvent} event
+ * @returns {"u"|"d"|"l"|"r"|undefined}
+ */
+declare function CommonKeyMove(event: KeyboardEvent, allowArrowKeys?: boolean): "u" | "d" | "l" | "r" | undefined;
+/**
+ * A {@link Set.has}/{@link Map.has} version annotated to return a type guard.
+ * @template T
+ * @param {{ has: (key: T) => boolean }} obj The set or map in question
+ * @param {unknown} key The key to search for
+ * @returns {key is T} Whether the object contains the passed key
+ */
+declare function CommonHas<T>(obj: {
+    has: (key: T) => boolean;
+}, key: unknown): key is T;
 /** @type {PlayerCharacter} */
 declare var Player: PlayerCharacter;
 /** @type {number|string} */
@@ -433,6 +536,7 @@ declare var CurrentScreenFunctions: ScreenFunctions;
 /** @type {Character|NPCCharacter|null} */
 declare var CurrentCharacter: Character | NPCCharacter | null;
 declare var CurrentOnlinePlayers: number;
+/** A per-screen ratio of how darkened the background must be */
 declare var CurrentDarkFactor: number;
 declare var CommonIsMobile: boolean;
 /** @type {Record<string, string[][]>} */
