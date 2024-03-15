@@ -1,3 +1,5 @@
+declare function ChatRoomIsViewActive(viewName: string): boolean;
+
 /**
  * Checks if the player can add the current character to her whitelist.
  * @returns {boolean} - TRUE if the current character is not in the player's whitelist nor blacklist.

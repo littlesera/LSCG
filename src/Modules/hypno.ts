@@ -94,7 +94,7 @@ export class HypnoModule extends BaseModule {
                 return next(args);
 
             const C = args[0] as Character;
-            if (ChatRoomMapVisible && !ChatRoomMapCharacterIsHearable(C))
+            if (ChatRoomIsViewActive(ChatRoomMapViewName) && !ChatRoomMapViewCharacterIsHearable(C))
                 return next(args);
                 
             // Check for non-garbled trigger word, this means a trigger word could be set to what garbled speech produces >.>
