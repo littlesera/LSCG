@@ -1,3 +1,5 @@
+declare function ChatRoomIsViewActive(viewName: string): boolean;
+
 /**
  * Checks if the player can add the current character to her whitelist.
  * @returns {boolean} - TRUE if the current character is not in the player's whitelist nor blacklist.
@@ -1320,6 +1322,7 @@ declare var ChatRoomChatLogRect: RectTuple;
 declare var ChatRoomChatInputRect: RectTuple;
 declare var ChatRoomChatHidden: boolean;
 declare var ChatRoomCharacterCount: number;
+declare var ChatRoomCharacterViewCharacterCount: number
 /**
  * The chatroom characters that were drawn in the last frame.
  * Used for limiting the "fov". Characters come from {@link ChatRoomCharacter}

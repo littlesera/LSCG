@@ -2,39 +2,39 @@
  * Returns TRUE if the map button can be used
  * @returns {boolean} - TRUE if can be used
  */
-declare function ChatRoomMapButton(): boolean;
+declare function ChatRoomMapViewButton(): boolean;
 /**
  * Returns TRUE if the player is an admin and activated her super powers on the map
  * @returns {boolean} - TRUE if super powers are active
  */
-declare function ChatRoomMapHasSuperPowers(): boolean;
+declare function ChatRoomMapViewHasSuperPowers(): boolean;
 /**
  * Initializes the map to its default blank state
  * @param {ChatRoomMapType} mode
  * @returns {ServerChatRoomMapData}
  */
-declare function ChatRoomMapInitialize(mode: ChatRoomMapType): ServerChatRoomMapData;
+declare function ChatRoomMapViewInitialize(mode: ChatRoomMapType): ServerChatRoomMapData;
 /**
  * Initializes the player map data to its default blank state
  * @param {Character} C - The character to be initialized
  * @returns {ChatRoomMapData}
  */
-declare function ChatRoomMapInitializeCharacter(C: Character): ChatRoomMapData;
+declare function ChatRoomMapViewInitializeCharacter(C: Character): ChatRoomMapData;
 /**
  * Performs cleanup when leaving the chat room map
  * @returns {void} - Nothing
  */
-declare function ChatRoomMapLeave(): void;
+declare function ChatRoomMapViewLeave(): void;
 /**
  * Activates the chat room map
  * @returns {void} - Nothing
  */
-declare function ChatRoomMapActivate(): void;
+declare function ChatRoomMapViewActivate(): void;
 /**
  * Deactivates the chat room map
  * @returns {void} - Nothing
  */
-declare function ChatRoomMapDeactivate(): void;
+declare function ChatRoomMapViewDeactivate(): void;
 /**
  * Gets a index number for the tile and obejct lists and returns the corrosponting coordinates in X and Y
  * @param {number} index - Index number for the tile and object lists
@@ -50,40 +50,40 @@ declare function ChatRoomMapIndexToCoordinates(index: number): {
  * @param {number} y - Y-coordinate to be translated
  * @returns {number} - Index number for the tile and object lists
  */
-declare function ChatRoomMapCoordinatesToIndex(x: number, y: number): number;
+declare function ChatRoomMapViewCoordinatesToIndex(x: number, y: number): number;
 /**
  * Calculates the visibility mask and audibility mask for the map
  * @returns {void} - Nothing
  */
-declare function ChatRoomMapCalculatePerceptionMasks(): void;
+declare function ChatRoomMapViewCalculatePerceptionMasks(): void;
 /**
  * Returns the sight range for the current player, based on the blindness level
  * @returns {number} - The number of visible tiles
  */
-declare function ChatRoomMapGetSightRange(): number;
+declare function ChatRoomMapViewGetSightRange(): number;
 /**
  * Returns the hearing range for the current player, based on the deafness level
  * @returns {number} - The number of tiles
  */
-declare function ChatRoomMapGetHearingRange(): number;
+declare function ChatRoomMapViewGetHearingRange(): number;
 /**
  * Returns TRUE if the player can see a character at her sight range
  * @param {Character} C - The character to evaluate
  * @returns {boolean} - TRUE if visible
  */
-declare function ChatRoomMapCharacterIsVisible(C: Character): boolean;
+declare function ChatRoomMapViewCharacterIsVisible(C: Character): boolean;
 /**
  * Returns TRUE if the player can see hear a character at her hearing range
  * @param {Character} C - The character to evaluate
  * @returns {boolean} - TRUE if hearable
  */
-declare function ChatRoomMapCharacterIsHearable(C: Character): boolean;
+declare function ChatRoomMapViewCharacterIsHearable(C: Character): boolean;
 /**
  * Returns TRUE if the player is on whisper range to another character (1 tile)
  * @param {Character} C - The character to evaluate
  * @returns {boolean} - TRUE if on whisper range
  */
-declare function ChatRoomMapCharacterOnWhisperRange(C: Character): boolean;
+declare function ChatRoomMapViewCharacterOnWhisperRange(C: Character): boolean;
 /**
  * Sets the correct wall tile based on it's surrounding (North-West, North-Center, etc.)
  * @param {boolean} CW - If Center West is a wall
@@ -93,35 +93,35 @@ declare function ChatRoomMapCharacterOnWhisperRange(C: Character): boolean;
  * @param {boolean} SE - If South East is a wall
  * @returns {number} - a number linked on the image to use
  */
-declare function ChatRoomMapFindWallEffectTile(CW: boolean, CE: boolean, SW: boolean, SC: boolean, SE: boolean): number;
+declare function ChatRoomMapViewFindWallEffectTile(CW: boolean, CE: boolean, SW: boolean, SC: boolean, SE: boolean): number;
 /**
  * Returns TRUE if the X and Y coordinates is a wall tile, if out of bound we also return TRUE
  * @param {number} X - The X position on the map
  * @param {number} Y - The Y position on the map
  * @returns {boolean} - TRUE if it's a wall
  */
-declare function ChatRoomMapIsWall(X: number, Y: number): boolean;
+declare function ChatRoomMapViewIsWall(X: number, Y: number): boolean;
 /**
  * Returns the object located at a X and Y position on the map, or NULL if nothing
  * @param {number} X - The X position on the map
  * @param {number} Y - The Y position on the map
  * @returns {ChatRoomMapTile | null} - The object at the position
  */
-declare function ChatRoomMapGetTileAtPos(X: number, Y: number): ChatRoomMapTile | null;
+declare function ChatRoomMapViewGetTileAtPos(X: number, Y: number): ChatRoomMapTile | null;
 /**
  * Returns the object located at a X and Y position on the map, or NULL if nothing
  * @param {number} X - The X position on the map
  * @param {number} Y - The Y position on the map
  * @returns {ChatRoomMapObject | null} - The object at the position
  */
-declare function ChatRoomMapGetObjectAtPos(X: number, Y: number): ChatRoomMapObject | null;
+declare function ChatRoomMapViewGetObjectAtPos(X: number, Y: number): ChatRoomMapObject | null;
 /**
  * Returns TRUE if there's a wall path on the X, Y position that the player can enter
  * @param {number} X - The X position on the map
  * @param {number} Y - The Y position on the map
  * @returns {boolean} - TRUE if we can enter
  */
-declare function ChatRoomMapCanEnterWall(X: number, Y: number): boolean;
+declare function ChatRoomMapViewCanEnterWall(X: number, Y: number): boolean;
 /**
  * Apply a wall "3D" effect on the curent map
  * @param {number} X - The X position on the map
@@ -132,26 +132,26 @@ declare function ChatRoomMapCanEnterWall(X: number, Y: number): boolean;
  * @param {number} TileHeight - The visible height of a tile
  * @returns {void} - Nothing
  */
-declare function ChatRoomMapWallEffect(X: number, Y: number, ScreenX: number, ScreenY: number, TileWidth: number, TileHeight: number): void;
+declare function ChatRoomMapViewWallEffect(X: number, Y: number, ScreenX: number, ScreenY: number, TileWidth: number, TileHeight: number): void;
 /**
  * Apply a wall "3D" effect on the curent map
  * @param {number} X - The X position on the map
  * @param {number} Y - The Y position on the map
  * @returns {number} - The effect number
  */
-declare function ChatRoomMapFloorWallEffect(X: number, Y: number): number;
+declare function ChatRoomMapViewFloorWallEffect(X: number, Y: number): number;
 /**
  * Manages collisions, moves the player if she's on a tile that cannot be entered
  * @returns {void} - Nothing
  */
-declare function ChatRoomMapCollision(): void;
+declare function ChatRoomMapViewCollision(): void;
 /**
  * Find the first {@link ChatRoomCharacter} members at the specified X & Y position
  * @param {number} X - The X position on the screen
  * @param {number} Y - The Y position on the screen
  * @returns {null | Character} A character at the specified X & Y position or, if none can be found, `null`
  */
-declare function ChatRoomMapGetCharacterAtPos(X: number, Y: number): null | Character;
+declare function ChatRoomMapViewGetCharacterAtPos(X: number, Y: number): null | Character;
 /**
  * Returns a object that contains the entry flag's position with x and y parameters or null if no entry flag is set
  * @returns {ChatRoomMapPos|null}
@@ -283,6 +283,7 @@ declare function ChatRoomMapPaste(Param: string): void;
  * @returns {void} - Nothing
  */
 declare function ChatRoomMapWhisperValid(): void;
+declare var ChatRoomMapViewName: string;
 declare var ChatRoomMapVisible: boolean;
 declare var ChatRoomMapAllow: boolean;
 declare var ChatRoomMapWidth: number;

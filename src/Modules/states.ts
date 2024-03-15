@@ -150,7 +150,7 @@ export class StateModule extends BaseModule {
                 let validStates = C.LSCG?.StateModule.states.filter(s => s.active);
                 let validStateCount = validStates.length;
                 let tooltip = undefined;
-                let lineWidth = ChatRoomCharacterCount > 5 ? 1 : 2;
+                let lineWidth = ChatRoomCharacterViewCharacterCount > 5 ? 1 : 2;
                 validStates.forEach((state, ix, arr) => {
                     let durationEnabled = (state.duration ?? 0) > 0;
                     let iconSize = 30;
