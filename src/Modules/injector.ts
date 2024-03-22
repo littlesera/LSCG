@@ -1089,8 +1089,8 @@ export class InjectorModule extends BaseModule {
 
     _wasWearingRespirator: boolean = false;
     get IsWearingRespirator(): boolean {
-        let item = InventoryGet(Player, "ItemMouth3");
-        let isWearing = this.IsValidRespirator(item);
+        let items = [InventoryGet(Player, "ItemMouth"), InventoryGet(Player, "ItemMouth2"), InventoryGet(Player, "ItemMouth3")];
+        let isWearing = items.some(item => this.IsValidRespirator(item));
         if (!this._wasWearingRespirator && isWearing) {
             if (!this.asleep && !this.brainwashed && this.IsRespiratorOn) {
                 SendAction("%NAME%'s eyes widen as %POSSESSIVE% mask activates, slowly filling %POSSESSIVE% lungs with its drug.");
