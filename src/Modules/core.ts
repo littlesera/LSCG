@@ -16,8 +16,16 @@ import { MagicModule } from "./magic";
 import { StateModule } from "./states";
 import { drawTooltip } from "Settings/settingUtils";
 
+
+/**
+ * A record mapping all crafting-valid asset names to a list of matching elligble assets.
+ * Elligble assets are defined as crafting-valid assets with either a matching {@link Asset.Name} or {@link Asset.CraftGroup}.
+ * @version R103
+ */
+declare let CraftingAssets: undefined | Record<string, Asset[]>;
+
 // Core Module that can handle basic functionality like server handshakes etc.
-export class CoreModule extends BaseModule {   
+export class CoreModule extends BaseModule {
 
     toggleSharedButton = {
         x: 1898,
@@ -120,10 +128,21 @@ export class CoreModule extends BaseModule {
                                 if ((Craft.Private == null) || (Craft.Private == false)) {
                                     Craft.MemberName = CharacterNickname(C);
                                     Craft.MemberNumber = C.MemberNumber;
-                                    const group = AssetGroupGet(target.AssetFamily, target.FocusGroup.Name);
-                                    for (let A of group.Asset)
-                                        if (CraftingAppliesToItem(Craft, A) && DialogCanUseCraftedItem(target, Craft))
-                                            DialogInventoryAdd(target, { Asset: A, Craft: Craft }, false);
+
+                                    // TODO: Remove the `else` branch once R103 is live
+                                    if (typeof CraftingAssets !== "undefined") { // R103
+                                        const canUseCraftedItem = DialogCanUseCraftedItem as (C: Character, Craft: CraftingItem, asset: Asset) => boolean;
+                                        for (const Asset of (CraftingAssets[Craft.Item] ?? [])) {
+                                            if (Asset.Group.Name === target.FocusGroup.Name && canUseCraftedItem(C, Craft, Asset)) {
+                                                DialogInventoryAdd(C, { Asset, Craft }, false);
+                                            }
+                                        }
+                                    } else { // R102
+                                        const group = AssetGroupGet(target.AssetFamily, target.FocusGroup.Name);
+                                        for (let A of group.Asset)
+                                            if (CraftingAppliesToItem(Craft, A) && DialogCanUseCraftedItem(target, Craft))
+                                                DialogInventoryAdd(target, { Asset: A, Craft: Craft }, false);
+                                    }
                                 }
                     }
                 });
