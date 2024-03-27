@@ -420,7 +420,7 @@ export function addCustomEffect(C: Character | null, effect: EffectName): boolea
 
 	if (updated && ServerPlayerIsInChatRoom() && C == Player) {
 		ChatRoomCharacterUpdate(Player);
-		CharacterRelease(Player, true);
+		//CharacterRelease(Player, true);
 	}
 	return updated;
 }

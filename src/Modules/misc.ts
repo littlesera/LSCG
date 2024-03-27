@@ -1,7 +1,7 @@
 import { BaseModule } from "base";
 import { MiscSettingsModel } from "Settings/Models/base";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { addCustomEffect, GetMetadata, getRandomInt, GetTargetCharacter, hookFunction, LSCG_SendLocal, OnAction, OnActivity, removeAllHooksByModule, removeCustomEffect, SendAction, setOrIgnoreBlush, settingsSave } from "../utils";
+import { GetMetadata, getRandomInt, GetTargetCharacter, hookFunction, LSCG_SendLocal, OnAction, OnActivity, removeAllHooksByModule, SendAction, settingsSave } from "../utils";
 import { getModule } from "modules";
 import { StateModule } from "./states";
 import { SleepState } from "./States/SleepState";

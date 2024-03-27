@@ -1,5 +1,5 @@
-import { SendAction, addCustomEffect, getRandomInt, removeCustomEffect } from "utils";
-import { BaseState, StateRestrictions } from "./BaseState";
+import { SendAction, getRandomInt } from "utils";
+import { BaseState } from "./BaseState";
 import { StateModule } from "Modules/states";
 
 export class GaggedState extends BaseState {

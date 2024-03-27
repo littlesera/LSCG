@@ -1,5 +1,5 @@
-import { SendAction, addCustomEffect, getRandomInt, hookFunction, removeCustomEffect } from "utils";
-import { BaseState, StateRestrictions } from "./BaseState";
+import { hookFunction } from "utils";
+import { BaseState } from "./BaseState";
 import { StateModule } from "Modules/states";
 import { ModuleCategory } from "Settings/setting_definitions";
 
