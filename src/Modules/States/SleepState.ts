@@ -1,5 +1,5 @@
-import { ICONS, SendAction, addCustomEffect, getRandomInt, removeCustomEffect } from "utils";
-import { BaseState, StateRestrictions } from "./BaseState";
+import { SendAction, addCustomEffect, getRandomInt, removeCustomEffect } from "utils";
+import { BaseState } from "./BaseState";
 import { StateModule } from "Modules/states";
 
 export class SleepState extends BaseState {
@@ -79,7 +79,7 @@ export class SleepState extends BaseState {
 
     FallDownIfPossible() {
         if (Player.CanKneel()) {
-            CharacterSetActivePose(Player, "Kneel", true);
+            PoseSetActive(Player, "Kneel", true);
         }
     }
 }

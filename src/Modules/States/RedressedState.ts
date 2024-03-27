@@ -1,7 +1,7 @@
-import { BC_ItemsToItemBundles, SendAction, addCustomEffect, getCharacter, getRandomInt, isBind, isCloth, removeCustomEffect, settingsSave, waitFor } from "utils";
-import { BaseState, StateRestrictions } from "./BaseState";
+import { getCharacter, isBind, isCloth } from "utils";
+import { BaseState } from "./BaseState";
 import { StateModule } from "Modules/states";
-import { OutfitConfig, OutfitOption, SpellDefinition } from "Settings/Models/magic";
+import { OutfitOption, SpellDefinition } from "Settings/Models/magic";
 import { ItemBundleBaseState } from "./ItemBundleBaseState";
 
 export class RedressedState extends ItemBundleBaseState {

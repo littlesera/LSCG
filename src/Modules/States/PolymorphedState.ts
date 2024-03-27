@@ -1,7 +1,7 @@
-import { BC_ItemsToItemBundles, SendAction, addCustomEffect, getCharacter, getRandomInt, isBind, isBody, isCloth, isCosplay, isGenitals, isHair, isPronouns, isSkin, removeCustomEffect, settingsSave, waitFor } from "utils";
-import { BaseState, StateRestrictions } from "./BaseState";
+import { getCharacter, isBody, isCosplay, isGenitals, isHair, isPronouns, isSkin } from "utils";
+import { BaseState } from "./BaseState";
 import { StateModule } from "Modules/states";
-import { PolymorphConfig, PolymorphOption, SpellDefinition } from "Settings/Models/magic";
+import { SpellDefinition } from "Settings/Models/magic";
 import { ItemBundleBaseState } from "./ItemBundleBaseState";
 
 export class PolymorphedState extends ItemBundleBaseState {

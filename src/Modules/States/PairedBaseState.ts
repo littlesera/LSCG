@@ -1,6 +1,5 @@
-import { SendAction, addCustomEffect, getRandomInt, removeCustomEffect, sendLSCGCommand, sendLSCGCommandBeep, settingsSave } from "utils";
-import { BaseState, StateRestrictions } from "./BaseState";
-import { StateModule } from "Modules/states";
+import { SendAction, sendLSCGCommandBeep, settingsSave } from "utils";
+import { BaseState } from "./BaseState";
 
 export interface Pairing {
     PairedMember: number;
