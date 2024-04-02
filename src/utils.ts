@@ -1,18 +1,19 @@
+//import bcModSDKRef from "bondage-club-mod-sdk";
+import { GetDotedPathType, PatchHook } from "bondage-club-mod-sdk";
 import bcModSDKRef from "bondage-club-mod-sdk";
 import { getModule } from "modules";
 import { CoreModule } from "Modules/core";
-import { MiscModule } from "Modules/misc";
 import { ActivityEntryModel } from "Settings/Models/activities";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { cloneDeep, clone } from "lodash-es";
-import { PublicSettingsModel, SettingsModel } from "Settings/Models/settings";
+import { clone } from "lodash-es";
+import { SettingsModel } from "Settings/Models/settings";
 import { lt } from "semver";
-import { BaseSettingsModel } from "Settings/Models/base";
 
 export const LSCG_CHANGES: string = "https://github.com/littlesera/LSCG/releases/latest";
 export const LSCG_TEAL: string = "#00d5d5";
 
-type PatchHook = (args: any[], next: (args: any[]) => any) => any;
+// Included in bcModSDK now
+//type PatchHook = (args: any[], next: (args: any[]) => any) => any;
 interface IPatchedFunctionData {
 	name: string;
 	hooks: {
@@ -36,7 +37,11 @@ export function patchFunction(target: string, patches: Record<string, string>): 
 	bcModSDK.patchFunction(target, patches);
 }
 
-export function callOriginal(target: string, args: any[]): any {
+export function callOriginal<TFunctionName extends string>(
+	target: TFunctionName,
+	args: [...Parameters<GetDotedPathType<typeof globalThis, TFunctionName>>],
+	context?: any
+): ReturnType<GetDotedPathType<typeof globalThis, TFunctionName>> {
 	return bcModSDK.callOriginal(target, args);
 }
 
