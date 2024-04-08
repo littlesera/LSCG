@@ -464,7 +464,7 @@ export class CollarModule extends BaseModule {
                 CharacterSetFacialExpression(Player, "Eyes", "Surprised");
                 break;
             case 3:
-                SendAction("%NAME%'s face runs flush, choking as %OPP_NAME% presses firmly against %OPP_POSSESSIVE% neck, barely allowing any air to %POSSESSIVE% lungs.", chokingMember);
+                SendAction("%NAME%'s face runs flush, choking as %OPP_NAME% presses firmly against %POSSESSIVE% neck, barely allowing any air to %POSSESSIVE% lungs.", chokingMember);
                 setOrIgnoreBlush("High");
                 CharacterSetFacialExpression(Player, "Eyes", "Scared");
                 break;
