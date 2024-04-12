@@ -1,7 +1,7 @@
 import { BaseModule } from "base";
 import { getModule } from "modules";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
-import { GetConfiguredItemBundlesFromSavedCode, GetDelimitedList, GetHandheldItemNameAndDescriptionConcat, GetItemNameAndDescriptionConcat, GetMetadata, ICONS, LSCG_SendLocal, LSCG_TEAL, OnActivity, SendAction, getCharacter, getRandomInt, hookFunction, isPhraseInString, removeAllHooksByModule, sendLSCGCommand, sendLSCGCommandBeep, settingsSave } from "../utils";
+import { GetConfiguredItemBundlesFromSavedCode, GetDelimitedList, GetHandheldItemNameAndDescriptionConcat, GetItemNameAndDescriptionConcat, GetMetadata, ICONS, LSCG_SendLocal, LSCG_TEAL, OnActivity, SendAction, forceOrgasm, getCharacter, getRandomInt, hookFunction, isPhraseInString, removeAllHooksByModule, sendLSCGCommand, sendLSCGCommandBeep, settingsSave } from "../utils";
 import { ActivityModule, ActivityTarget } from "./activities";
 import { KNOWN_SPELLS_LIMIT, LSCGSpellEffect, MagicSettingsModel, OutfitConfig, OutfitOption, SpellDefinition } from "Settings/Models/magic";
 import { GuiMagic, pairedSpellEffects } from "Settings/magic";
@@ -607,6 +607,9 @@ export class MagicModule extends BaseModule {
                     case LSCGSpellEffect.horny:
                         this.stateModule.GaggedState.Active ? SendAction("A blush runs into %NAME%'s cheeks uncontrollably.") : SendAction("A moan escapes %NAME%'s lips uncontrollably.");
                         state = this.stateModule.HornyState.Activate(sender?.MemberNumber, duration);
+                        break;
+                    case LSCGSpellEffect.orgasm:
+                        forceOrgasm();
                         break;
                     case LSCGSpellEffect.denial:
                         this.stateModule.GaggedState.Active ? 
