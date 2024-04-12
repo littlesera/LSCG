@@ -608,6 +608,12 @@ export class MagicModule extends BaseModule {
                         this.stateModule.GaggedState.Active ? SendAction("A blush runs into %NAME%'s cheeks uncontrollably.") : SendAction("A moan escapes %NAME%'s lips uncontrollably.");
                         state = this.stateModule.HornyState.Activate(sender?.MemberNumber, duration);
                         break;
+                    case LSCGSpellEffect.denial:
+                        this.stateModule.GaggedState.Active ? 
+                                SendAction(`%NAME% quivers as %PRONOUN% feels %POSSESSIVE% impending denial.`) :
+                                SendAction(`%NAME% whimpers as %PRONOUN% feels %POSSESSIVE% impending denial.`);
+                        state = this.stateModule.DeniedState.Activate(sender?.MemberNumber, duration);
+                        break;
                     case LSCGSpellEffect.hypnotizing:
                         SendAction("%NAME% is unable to fight the spell's hypnotizing influence, slumping weakly as %POSSESSIVE% eyes go blank.");
                         state = this.stateModule.HypnoState.Activate(sender?.MemberNumber, duration);
@@ -623,9 +629,6 @@ export class MagicModule extends BaseModule {
                     case LSCGSpellEffect.enlarge:
                         state = this.stateModule.ResizedState.Enlarge(sender?.MemberNumber, duration, true);
                         break;
-                    // case LSCGSpellEffect.reduce:
-                    //     state = this.stateModule.ResizedState.Reduce(sender?.MemberNumber, duration, true);
-                    //     break;
                     case LSCGSpellEffect.dispell:
                         SendAction("%NAME% gasps, blinking as the magic affecting %INTENSIVE% is removed.");
                         this.stateModule.Clear(false);
