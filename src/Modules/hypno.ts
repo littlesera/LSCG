@@ -1,13 +1,39 @@
 import { BaseModule } from 'base';
-import { HypnoSettingsModel } from 'Settings/Models/hypno';
+import { HypnoSettingsModel, LSCGHypnoInstruction } from 'Settings/Models/hypno';
 import { ModuleCategory, Subscreen } from 'Settings/setting_definitions';
-import { settingsSave, parseMsgWords, OnAction, OnActivity, SendAction, getRandomInt, hookFunction, removeAllHooksByModule, callOriginal, setOrIgnoreBlush, isAllowedMember, isPhraseInString, GetTargetCharacter, GetDelimitedList, GetActivityEntryFromContent, escapeRegExp, IsActivityAllowed } from '../utils';
+import { settingsSave, parseMsgWords, OnAction, OnActivity, SendAction, getRandomInt, hookFunction, removeAllHooksByModule, callOriginal, setOrIgnoreBlush, isAllowedMember, isPhraseInString, GetTargetCharacter, GetDelimitedList, GetActivityEntryFromContent, escapeRegExp, IsActivityAllowed, LSCG_SendLocal, getCharacter, sendLSCGCommandBeep } from '../utils';
 import { GuiHypno } from 'Settings/hypno';
 import { ActivityModule } from './activities';
 import { getModule } from 'modules';
 import { ActivityEntryModel } from 'Settings/Models/activities';
 import { InjectorModule } from './injector';
 import { StateModule } from './states';
+import { CommandListener, CoreModule } from './core';
+import { uniqueId } from 'lodash-es';
+
+export class HypnoInstruction {
+    constructor(type: LSCGHypnoInstruction) {
+        this.type = type;
+        this.arguments = new Map<string, any>();
+    }
+    type: LSCGHypnoInstruction = LSCGHypnoInstruction.none;
+    arguments: Map<string, any> = new Map<string, any>();
+}
+export class HypnoSuggestion {
+    constructor(name: string) {
+        this.id = uniqueId("suggestion");
+        this.name = name;
+        this.installedBy = Player.MemberNumber ?? -1;
+        this.installedByName = Player.Name ?? "";
+    }
+    id: string = "";
+    name: string = "";
+    trigger: string = "";
+    installedBy: number = -1;
+    installedByName: string = "";
+    exclusive: boolean = false;
+    instructions: HypnoInstruction[] = [];
+}
 
 export class HypnoModule extends BaseModule {
     get settings(): HypnoSettingsModel {
@@ -21,8 +47,6 @@ export class HypnoModule extends BaseModule {
     get defaultSettings(){
         return <HypnoSettingsModel>{
             enabled: false,
-            //activatedAt: 0,
-            //recoveredAt: 0,
             cycleTime: 30,
             enableCycle: true,
             triggerCycled: true,
@@ -34,19 +58,19 @@ export class HypnoModule extends BaseModule {
             allowRemoteModificationOfMemberOverride: false,
             cooldownTime: 0,
             enableArousal: false,
-            //immersive: false,
             trigger: "",
+            triggerRevealed: false,
             triggerTime: 5,
             locked: false,
             awakeners: "",
-            //hypnotized: false,
-            //hypnotizedBy: -1,
             limitRemoteAccessToHypnotizer: false,
             hypnoEyeColor: "#A2A2A2",
             hypnoEyeType: 9,
             speakTriggers: "",
             silenceTriggers: "",
-            stats: {}
+            stats: {},
+            influence: new Map<number, number>(),
+            suggestions: <HypnoSuggestion[]>[]
         };
     }
 
@@ -56,6 +80,49 @@ export class HypnoModule extends BaseModule {
 
     get StateModule(): StateModule {
         return getModule<StateModule>("StateModule");
+    }
+
+    get commands(): ICommand[] {
+        return [{
+			Tag: 'zonk',
+			Description: ": Hypnotize yourself",
+			Action: () => {
+				if (!this.Enabled)
+					return;
+
+				if (this.StateModule.settings.immersive) {
+					LSCG_SendLocal("/zonk disabled while immersive", 5000);
+					return;
+				}
+				if (!this.hypnoActivated)
+					this.StartTriggerWord(true, Player.MemberNumber);
+			}
+		}, {
+			Tag: 'unzonk',
+			Description: ": Awaken yourself",
+			Action: () => {
+				if (!this.Enabled)
+					return;
+
+				if (this.StateModule.settings.immersive) {
+					LSCG_SendLocal("/unzonk disabled while immersive", 5000);
+					return;
+				}
+				if (this.hypnoActivated)
+					this.TriggerRestoreTimeout();
+			}
+		}, {
+			Tag: "cycle-trigger",
+			Description: ": Force a cycle to a new trigger word if enabled",
+			Action: () => {
+				if (this.StateModule.settings.immersive) {
+					LSCG_SendLocal("/cycle-trigger disabled while immersive", 5000);
+					return;
+				}
+				if (this.settings.enableCycle)
+					this.RollTriggerWord();
+			}
+		}];
     }
 
     load(): void {
@@ -148,10 +215,50 @@ export class HypnoModule extends BaseModule {
             return next(args);
         }, ModuleCategory.Injector);
 
+        getModule<CoreModule>("CoreModule").RegisterCommandListener(<CommandListener>{
+            id: "suggestions_get_responder",
+            command: "get-suggestions",
+            func: (sender: number, msg: LSCGMessageModel) => this.SuggestionsRequestHandler(sender, msg)
+        });
+
+        getModule<CoreModule>("CoreModule").RegisterCommandListener(<CommandListener>{
+            id: "suggestions_set_responder",
+            command: "set-suggestions",
+            func: (sender: number, msg: LSCGMessageModel) => this.SuggestionsPushHandler(sender, msg)
+        })
+
         // Set Trigger
         if (!this.settings.trigger) {
             this.settings.trigger = this.getNewTriggerWord();            
         }
+    }
+
+    SuggestionsRequestHandler(sender: number, msg: LSCGMessageModel){
+        if (this.Enabled &&
+            this.hypnoActivated &&
+            this.settings.allowSuggestions &&
+            this.allowedSpeaker(getCharacter(sender) ?? undefined)) {
+                sendLSCGCommandBeep(sender, "get-suggestions-response", [{
+                    name: "suggestions",
+                    value: this.settings.suggestions?.filter(s => s.installedBy == sender || !s.exclusive) ?? []
+                }, {
+                    name: "total",
+                    value: this.settings.suggestions?.length ?? 0
+                }])
+            }
+    }
+
+    SuggestionsPushHandler(sender: number, msg: LSCGMessageModel) {
+        if (!this.settings.suggestions)
+            this.settings.suggestions = [];
+        let incomingSuggestions = msg.command?.args.find(a => a.name == "suggestions")?.value as HypnoSuggestion[];
+        if (!incomingSuggestions)
+            return;
+        incomingSuggestions.forEach(incoming => {
+            let existing = this.settings.suggestions.find(s => s.id == incoming.id);
+            if (!existing) this.settings.suggestions.push(incoming);
+            else Object.assign(existing, incoming);
+        })
     }
 
     initializeTriggerWord() {
