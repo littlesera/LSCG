@@ -81,6 +81,6 @@ export abstract class RemoteGuiSubscreen extends GuiSubscreen {
 		this.settingsSave();
 		var rootModule = getModule<RemoteUIModule>("RemoteUIModule")
 		if (!!rootModule)
-		rootModule.currentSubscreen = new RemoteMainMenu(rootModule, this.Character);
+			rootModule.currentSubscreen = new RemoteMainMenu(rootModule, this.Character);
 	}
 }

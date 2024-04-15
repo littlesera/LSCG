@@ -1,27 +1,26 @@
 import { BaseModule } from 'base';
-import { HypnoSettingsModel, LSCGHypnoInstruction } from 'Settings/Models/hypno';
+import { HypnoInfluence, HypnoSettingsModel, LSCGHypnoInstruction } from 'Settings/Models/hypno';
 import { ModuleCategory, Subscreen } from 'Settings/setting_definitions';
-import { settingsSave, parseMsgWords, OnAction, OnActivity, SendAction, getRandomInt, hookFunction, removeAllHooksByModule, callOriginal, setOrIgnoreBlush, isAllowedMember, isPhraseInString, GetTargetCharacter, GetDelimitedList, GetActivityEntryFromContent, escapeRegExp, IsActivityAllowed, LSCG_SendLocal, getCharacter, sendLSCGCommandBeep } from '../utils';
+import { settingsSave, parseMsgWords, OnAction, OnActivity, SendAction, getRandomInt, hookFunction, removeAllHooksByModule, callOriginal, setOrIgnoreBlush, isAllowedMember, isPhraseInString, GetTargetCharacter, GetDelimitedList, GetActivityEntryFromContent, escapeRegExp, IsActivityAllowed, LSCG_SendLocal, getCharacter, sendLSCGCommandBeep, htmlToElement, OnChat, getDominance } from '../utils';
 import { GuiHypno } from 'Settings/hypno';
-import { ActivityModule } from './activities';
 import { getModule } from 'modules';
 import { ActivityEntryModel } from 'Settings/Models/activities';
 import { InjectorModule } from './injector';
 import { StateModule } from './states';
 import { CommandListener, CoreModule } from './core';
-import { uniqueId } from 'lodash-es';
+import { ActivitySelection, ClothingSelection, PoseSelection } from 'Settings/Remote/suggestions';
 
 export class HypnoInstruction {
     constructor(type: LSCGHypnoInstruction) {
         this.type = type;
-        this.arguments = new Map<string, any>();
+        this.arguments = {};
     }
     type: LSCGHypnoInstruction = LSCGHypnoInstruction.none;
-    arguments: Map<string, any> = new Map<string, any>();
+    arguments: any = {};
 }
 export class HypnoSuggestion {
     constructor(name: string) {
-        this.id = uniqueId("suggestion");
+        this.id = `suggestion-${new Date().getTime()}`;
         this.name = name;
         this.installedBy = Player.MemberNumber ?? -1;
         this.installedByName = Player.Name ?? "";
@@ -69,7 +68,7 @@ export class HypnoModule extends BaseModule {
             speakTriggers: "",
             silenceTriggers: "",
             stats: {},
-            influence: new Map<number, number>(),
+            influence: <HypnoInfluence[]>[],
             suggestions: <HypnoSuggestion[]>[]
         };
     }
@@ -156,7 +155,12 @@ export class HypnoModule extends BaseModule {
             }
         });
 
-        hookFunction("SpeechGarble", 69, (args, next) => { // high priority for now.. nice.
+        OnChat(69, ModuleCategory.Hypno, (data, sender, msg, metadata) => {
+            if (!!sender)
+                setTimeout(() => this.CheckSuggestions(msg, sender), 500);
+        });
+
+        hookFunction("SpeechGarble", 69, (args, next) => { // high priority for now.. nice.            
             if (!this.Enabled)
                 return next(args);
 
@@ -191,11 +195,10 @@ export class HypnoModule extends BaseModule {
                 else
                     args[1] =  args[1].replace(/\S/gm, '-');
             }
-            
+
             return next(args);
         }, ModuleCategory.Hypno);
 
-        let lastHornyCheck = 0;
         let lastCycleCheck = 0;
         hookFunction('TimerProcess', 1, (args, next) => {
             if (ActivityAllowed()) {
@@ -235,9 +238,10 @@ export class HypnoModule extends BaseModule {
 
     SuggestionsRequestHandler(sender: number, msg: LSCGMessageModel){
         if (this.Enabled &&
-            this.hypnoActivated &&
-            this.settings.allowSuggestions &&
-            this.allowedSpeaker(getCharacter(sender) ?? undefined)) {
+            Player.IsOwnedByMemberNumber(sender) ||
+                (this.hypnoActivated &&
+                this.settings.allowSuggestions &&
+                this.allowedSpeaker(getCharacter(sender) ?? undefined))) {
                 sendLSCGCommandBeep(sender, "get-suggestions-response", [{
                     name: "suggestions",
                     value: this.settings.suggestions?.filter(s => s.installedBy == sender || !s.exclusive) ?? []
@@ -249,16 +253,45 @@ export class HypnoModule extends BaseModule {
     }
 
     SuggestionsPushHandler(sender: number, msg: LSCGMessageModel) {
-        if (!this.settings.suggestions)
-            this.settings.suggestions = [];
-        let incomingSuggestions = msg.command?.args.find(a => a.name == "suggestions")?.value as HypnoSuggestion[];
-        if (!incomingSuggestions)
-            return;
-        incomingSuggestions.forEach(incoming => {
-            let existing = this.settings.suggestions.find(s => s.id == incoming.id);
-            if (!existing) this.settings.suggestions.push(incoming);
-            else Object.assign(existing, incoming);
-        })
+        if (this.Enabled &&
+            Player.IsOwnedByMemberNumber(sender) ||
+                (this.hypnoActivated &&
+                this.settings.allowSuggestions &&
+                this.allowedSpeaker(getCharacter(sender) ?? undefined))) {
+                    if (!this.settings.suggestions)
+                        this.settings.suggestions = [];
+                    let incomingSuggestions = (msg.command?.args.find(a => a.name == "suggestions")?.value as HypnoSuggestion[]).filter(s => !!s.trigger) ?? [];
+                    let removedSuggestions = msg.command?.args.find(a => a.name == "removed")?.value as HypnoSuggestion[];
+                    if (!incomingSuggestions)
+                        return;
+                    incomingSuggestions.forEach(incoming => {
+                        let existing = this.settings.suggestions.find(s => s.id == incoming.id);
+                        if (!existing) {
+                            this.settings.suggestions.push(incoming);
+                            if (!(this.settings.influence as HypnoInfluence[]))
+                                this.settings.influence = <HypnoInfluence[]>[];
+                            let influence = this.settings.influence.find(i => i.memberId == sender);
+                            if (!influence) {
+                                this.settings.influence.push(<HypnoInfluence>{
+                                    memberId: sender,
+                                    memberName: getCharacter(sender)?.Name ?? sender + "",
+                                    lastInfluenced: new Date().getTime(),
+                                    influence: 10
+                                });
+                            } else {
+                                influence.lastInfluenced = new Date().getTime();
+                                influence.influence = Math.max(influence.influence + 5, 100);
+                                influence.memberName = getCharacter(influence.memberId)?.Name ?? influence.memberName;
+                            }
+                        }
+                        else Object.assign(existing, incoming);
+                    });
+                    removedSuggestions.forEach(removed => {
+                        let ix = this.settings.suggestions.findIndex(s => s.id == removed.id);
+                        this.settings.suggestions.splice(ix, 1);
+                    });
+                    settingsSave();
+                }
     }
 
     initializeTriggerWord() {
@@ -398,6 +431,14 @@ export class HypnoModule extends BaseModule {
         }
     }
 
+    CheckSuggestions(msg: string, sender: Character) {
+        this.settings.suggestions?.forEach(s => {            
+            if (this._CheckForTriggers(msg, sender, [s.trigger], this.hypnoActivated)) {
+                this.CompelSuggestion(s, sender, msg);
+            }
+        });
+    }
+
     CheckTrigger(msg: string, sender: Character): boolean {
         return this._CheckForTriggers(msg, sender, this.triggers);
     }
@@ -473,28 +514,6 @@ export class HypnoModule extends BaseModule {
         this.StateModule.HypnoState.Recover();
     }
 
-    // _resetHypno() {
-    //     this.ResetEyes();
-    //     CharacterSetFacialExpression(Player, "Eyes", null);
-    //     this.hypnoActivated = false;
-    //     this.settings.recoveredAt = new Date().getTime();
-    //     settingsSave(true);
-    // }
-
-    // HypnoHorny() {
-    //     if (this.hypnoActivated) {
-    //         // enforce eye expression
-    //         this.EnforceEyes();
-    //         CharacterSetFacialExpression(Player, "Eyebrows", "Lowered");
-    //         CharacterSetFacialExpression(Player, "Eyes", "Dazed");
-
-    //         if (this.settings.enableArousal) {
-    //             var progress = Math.min(99, (Player.ArousalSettings?.Progress ?? 0) + 5);
-    //             ActivitySetArousal(Player, progress);
-    //         }
-    //     }
-    // }
-
     CheckNewTrigger() {
         if (this.hypnoActivated || !this.settings.enableCycle || this.settings.triggerCycled)
             return;
@@ -515,20 +534,133 @@ export class HypnoModule extends BaseModule {
     cooldownMsgSent = false;
     get hypnoActivated(): boolean {
         return this.StateModule?.HypnoState?.config.active ?? false;
-        //return this.settings.hypnotized;
     }
-    // set hypnoActivated(val) {
-    //     this.settings.hypnotized = val;
-    //     settingsSave(true);
-    // }
+
+    GetSuggestionInfluence(suggestion: HypnoSuggestion, sender: Character) {
+        let suggestionInfluenceVal = this.settings.influence.find(i => i.memberId == suggestion.installedBy)?.influence ?? 0;
+        let speakerInfluenceVal = this.settings.influence.find(i => i.memberId == sender.MemberNumber)?.influence ?? 0;
+        let totalInfluence = suggestionInfluenceVal + speakerInfluenceVal;
+        if (this.hypnoActivated)
+            totalInfluence *= 2;
+        return totalInfluence;
+    }
+
+    GetResistRoll() {
+        return getRandomInt(100) + (getDominance(Player) / 2);
+    }
+
+    CompelSuggestion(suggestion: HypnoSuggestion, sender: Character, command: string) {
+        // Calculate chance to resist suggestion, if 0 force activate
+        // Otherwise prompt user in local chat with constructed message based on instructions
+        if (this.GetSuggestionInfluence(suggestion, sender) >= 100)
+            this.DoSuggestion(suggestion, sender, command);
+        else
+            this.PromptResistSuggestion(suggestion, sender, command);
+    }
+
+    ReduceSpeakerInfluence(memberNumber: number) {
+        let influence = this.settings.influence.find(i => i.memberId == memberNumber);
+        if (!!influence) {
+            influence.influence--;
+            influence.lastInfluenced = new Date().getTime();
+            settingsSave();
+        }
+    }
+
+    IncreaseSpeakerInfluence(memberNumber: number) {
+        let influence = this.settings.influence.find(i => i.memberId == memberNumber);
+        if (!!influence) {
+            influence.influence = Math.min(influence.influence + 2, 100);
+            influence.lastInfluenced = new Date().getTime();
+            settingsSave();
+        }
+    }
+
+    ResistSuggestion(suggestion: HypnoSuggestion, sender: Character, command: string) {
+        // Attempt resist roll!
+        // Send emote or private whisper to sender informing of the resist 
+        let roll = this.GetResistRoll();
+        let influence = this.GetSuggestionInfluence(suggestion, sender);
+        if (roll > influence) {
+            LSCG_SendLocal(`Successfully resisted the suggestion! [${roll}/${influence}]`);
+            this.ReduceSpeakerInfluence(sender.MemberNumber ?? -1);
+            if (suggestion.installedBy != sender.MemberNumber)
+                this.ReduceSpeakerInfluence(suggestion.installedBy);
+        } else {
+            LSCG_SendLocal(`Failed to resist the suggestion [${roll}/${influence}], submitting to instructions.`);
+            this.DoSuggestion(suggestion, sender, command);
+        }
+    }
+
+    DoSuggestion(suggestion: HypnoSuggestion, sender: Character, command: string) {
+        // Iterate through instructions, calculating the configuration and target
+        // Wait 2s between intstructions similar to magic
+        // Send emote as player performs each instruction
+        this.IncreaseSpeakerInfluence(sender.MemberNumber ?? -1);
+        if (suggestion.installedBy != sender.MemberNumber)
+            this.IncreaseSpeakerInfluence(suggestion.installedBy);
+        suggestion.instructions.forEach((instruction, ix, arr) => {
+            setTimeout(() => {
+                let config = instruction.arguments["config"];
+                switch (instruction.type) {
+                    case LSCGHypnoInstruction.activity:
+                        let activitySelection = instruction.arguments["selection"] as ActivitySelection;
+                        LSCG_SendLocal(`Activity -- target: ${config ?? "speaker"}, activity: ${activitySelection?.group}::${activitySelection?.name}`);
+                        break;
+                    case LSCGHypnoInstruction.follow:
+                        LSCG_SendLocal(`Follow -- ${config ?? "speaker"}`);
+                        break;
+                    case LSCGHypnoInstruction.maid:
+                        LSCG_SendLocal(`Maid`);
+                        break;
+                    case LSCGHypnoInstruction.orgasm:
+                        LSCG_SendLocal(`Orgasm`);
+                        break;
+                    case LSCGHypnoInstruction.pose:
+                        let poseSelection = instruction.arguments["selection"] as PoseSelection;
+                        LSCG_SendLocal(`Pose -- ${poseSelection?.upper ?? 'none'} :: ${poseSelection?.lower ?? 'none'} :: ${poseSelection.full ?? 'none'}`);
+                        break;
+                    case LSCGHypnoInstruction.say:
+                        LSCG_SendLocal(`Say -- ${config}`);    
+                        break;
+                    case LSCGHypnoInstruction.strip:
+                        let clothing = instruction.arguments["selection"] as ClothingSelection;
+                        LSCG_SendLocal(`Strip -- all: ${clothing?.all ?? false} -- slots: \n${clothing?.groups?.join("\n")}`);
+                        break;
+                    default:
+                        break;
+                }
+            }, ix * 2000);            
+        })
+    }
+
+	//Show a button on screen to accept or reject money from sender
+	PromptResistSuggestion(suggestion: HypnoSuggestion, sender: Character, msg: string) {
+		const senderId = sender.MemberNumber ?? -1;
+        const senderName = CharacterNickname(sender);
+        const timeKey = new Date().getTime();
+		const resistDiv = `
+            <div id="suggestion-resist" class="ChatMessage ChatMessageChat" data-time="${ChatRoomCurrentTime()}" data-sender="${sender.MemberNumber}">
+                <span class="ChatMessageName" style="color:${sender.LabelColor};">${senderName}'s words compel you...</span>
+                <div style="display:flex;flex-direction:row;">
+                    <button id="suggestion-submit-${senderId}-${suggestion.id}-${timeKey}" class="ChatMessageName" style="color:#572844;background-color: lightgreen;margin-left: 5px;font-size: inherit;"> Submit </button>
+                    <button id="suggestion-resist-${senderId}-${suggestion.id}-${timeKey}" class="ChatMessageName" style="color:#572844;background-color: red;margin-left: 5px;font-size: inherit;"> Resist </button>
+                </div>
+            </div>`;
+		const div = htmlToElement(resistDiv);
+		ChatRoomAppendChat(div as HTMLElement);
+		const accbtn = document.getElementById(`suggestion-submit-${senderId}-${suggestion.id}-${timeKey}`);		
+		const decbtn = document.getElementById(`suggestion-resist-${senderId}-${suggestion.id}-${timeKey}`);
+		accbtn?.addEventListener("click", (_ => this.ClickSuggestionButton(suggestion, sender, msg, false, [accbtn!, decbtn!])));
+        decbtn?.addEventListener("click", (_ => this.ClickSuggestionButton(suggestion, sender, msg, true, [accbtn!, decbtn!])));
+	}
+
+    ClickSuggestionButton(suggestion: HypnoSuggestion, sender: Character, msg: string, resist: boolean, buttons: HTMLElement[]) {
+        buttons.forEach(btn => btn.remove());
+        if (resist) this.ResistSuggestion(suggestion, sender, msg);
+        else this.DoSuggestion(suggestion, sender, msg);
+    }
 }
 
-// Trigger Words
+// Random Trigger Word List
 const commonWords = [ "able", "about", "absolute", "accept", "account", "achieve", "across", "act", "active", "actual", "add", "address", "admit", "advertise", "affect", "afford", "after", "afternoon", "again", "against", "age", "agent", "ago", "agree", "air", "all", "allow", "almost", "along", "already", "alright", "although", "always", "america", "amount", "another", "answer", "apart", "apparent", "appear", "apply", "appoint", "approach", "appropriate", "area", "argue", "arm", "around", "arrange", "art", "ask", "associate", "assume", "attend", "authority", "available", "aware", "away", "awful", "baby", "back", "bad", "bag", "balance", "ball", "bank", "bar", "base", "basis", "bear", "beat", "beauty", "because", "become", "bed", "before", "begin", "behind", "believe", "benefit", "best", "bet", "between", "big", "bill", "birth", "bit", "black", "bloke", "blood", "blow", "blue", "board", "boat", "body", "book", "both", "bother", "bottle", "bottom", "box", "boy", "break", "brief", "brilliant", "bring", "britain", "brother", "budget", "build", "bus", "business", "busy", "buy", "cake", "call", "car", "card", "care", "carry", "case", "cat", "catch", "cause", "cent", "centre", "certain", "chair", "chairman", "chance", "change", "chap", "character", "charge", "cheap", "check", "child", "choice", "choose", "church", "city", "claim", "class", "clean", "clear", "client", "clock", "close", "closes", "clothe", "club", "coffee", "cold", "colleague", "collect", "college", "colour", "come", "comment", "commit", "committee", "common", "community", "company", "compare", "complete", "compute", "concern", "condition", "confer", "consider", "consult", "contact", "continue", "contract", "control", "converse", "cook", "copy", "corner", "correct", "cost", "could", "council", "count", "country", "county", "couple", "course", "court", "cover", "create", "cross", "cup", "current", "cut", "dad", "danger", "date", "day", "dead", "deal", "dear", "debate", "decide", "decision", "deep", "definite", "degree", "department", "depend", "describe", "design", "detail", "develop", "die", "difference", "difficult", "dinner", "direct", "discuss", "district", "divide", "doctor", "document", "dog", "door", "double", "doubt", "down", "draw", "dress", "drink", "drive", "drop", "dry", "due", "during", "each", "early", "east", "easy", "eat", "economy", "educate", "effect", "egg", "eight", "either", "elect", "electric", "eleven", "else", "employ", "encourage", "end", "engine", "english", "enjoy", "enough", "enter", "environment", "equal", "especial", "europe", "even", "evening", "ever", "every", "evidence", "exact", "example", "except", "excuse", "exercise", "exist", "expect", "expense", "experience", "explain", "express", "extra", "eye", "face", "fact", "fair", "fall", "family", "far", "farm", "fast", "father", "favour", "feed", "feel", "few", "field", "fight", "figure", "file", "fill", "film", "final", "finance", "find", "fine", "finish", "fire", "first", "fish", "fit", "five", "flat", "floor", "fly", "follow", "food", "foot", "force", "forget", "form", "fortune", "forward", "four", "france", "free", "friday", "friend", "from", "front", "full", "fun", "function", "fund", "further", "future", "game", "garden", "gas", "general", "germany", "girl", "give", "glass", "good", "goodbye", "govern", "grand", "grant", "great", "green", "ground", "group", "grow", "guess", "guy", "hair", "half", "hall", "hand", "hang", "happen", "happy", "hard", "hate", "have", "head", "health", "hear", "heart", "heat", "heavy", "hell", "help", "here", "high", "history", "hit", "hold", "holiday", "home", "honest", "hope", "horse", "hospital", "hot", "hour", "house", "however", "hullo", "hundred", "husband", "idea", "identify", "imagine", "important", "improve", "include", "income", "increase", "indeed", "individual", "industry", "inform", "inside", "instead", "insure", "interest", "into", "introduce", "invest", "involve", "issue", "item", "job", "join", "judge", "jump", "just", "keep", "key", "kid", "kill", "kind", "king", "kitchen", "knock", "know", "labour", "lad", "lady", "land", "language", "large", "last", "late", "laugh", "law", "lay", "lead", "learn", "leave", "left", "leg", "less", "letter", "level", "lie", "life", "light", "like", "likely", "limit", "line", "link", "list", "listen", "little", "live", "load", "local", "lock", "london", "long", "look", "lord", "lose", "lot", "love", "low", "luck", "lunch", "machine", "main", "major", "make", "man", "manage", "many", "mark", "market", "marry", "match", "matter", "may", "mean", "meaning", "measure", "meet", "member", "mention", "middle", "might", "mile", "milk", "million", "mind", "minister", "minus", "minute", "miss", "mister", "moment", "monday", "money", "month", "more", "morning", "most", "mother", "motion", "move", "much", "music", "must", "name", "nation", "nature", "near", "necessary", "need", "never", "news", "next", "nice", "night", "nine", "none", "normal", "north", "not", "note", "notice", "number", "obvious", "occasion", "odd", "off", "offer", "office", "often", "okay", "old", "on", "once", "one", "only", "open", "operate", "opportunity", "oppose", "order", "organize", "original", "other", "otherwise", "ought", "out", "over", "own", "pack", "page", "paint", "pair", "paper", "paragraph", "pardon", "parent", "park", "part", "particular", "party", "pass", "past", "pay", "pence", "pension", "people", "percent", "perfect", "perhaps", "period", "person", "photograph", "pick", "picture", "piece", "place", "plan", "play", "please", "plus", "point", "police", "policy", "politic", "poor", "position", "positive", "possible", "post", "pound", "power", "practise", "prepare", "present", "press", "pressure", "presume", "pretty", "previous", "price", "print", "private", "probable", "problem", "proceed", "process", "produce", "product", "programme", "project", "proper", "propose", "protect", "provide", "public", "pull", "purpose", "push", "quality", "quarter", "question", "quick", "quid", "quiet", "quite", "radio", "rail", "raise", "range", "rate", "rather", "read", "ready", "real", "realise", "really", "reason", "receive", "recent", "reckon", "recognize", "recommend", "record", "red", "reduce", "refer", "regard", "region", "relation", "remember", "report", "represent", "require", "research", "resource", "respect", "responsible", "rest", "result", "return", "right", "ring", "rise", "road", "role", "roll", "room", "round", "rule", "run", "safe", "sale", "same", "saturday", "save", "say", "scheme", "school", "science", "score", "scotland", "seat", "second", "secretary", "section", "secure", "see", "seem", "self", "sell", "send", "sense", "separate", "serious", "serve", "service", "set", "settle", "seven", "sex", "shall", "share", "she", "sheet", "shoe", "shoot", "shop", "short", "should", "show", "shut", "sick", "side", "sign", "similar", "simple", "since", "sing", "single", "sir", "sister", "sit", "site", "situate", "six", "size", "sleep", "slight", "slow", "small", "smoke", "social", "society", "some", "son", "soon", "sorry", "sort", "sound", "south", "space", "speak", "special", "specific", "speed", "spell", "spend", "square", "staff", "stage", "stairs", "stand", "standard", "start", "state", "station", "stay", "step", "stick", "still", "stop", "story", "straight", "strategy", "street", "strike", "strong", "structure", "student", "study", "stuff", "stupid", "subject", "succeed", "such", "sudden", "suggest", "suit", "summer", "sun", "sunday", "supply", "support", "suppose", "sure", "surprise", "switch", "system", "table", "take", "talk", "tape", "tax", "tea", "teach", "team", "telephone", "television", "tell", "ten", "tend", "term", "terrible", "test", "than", "thank", "the", "then", "there", "therefore", "they", "thing", "think", "thirteen", "thirty", "this", "thou", "though", "thousand", "three", "through", "throw", "thursday", "tie", "time", "today", "together", "tomorrow", "tonight", "too", "top", "total", "touch", "toward", "town", "trade", "traffic", "train", "transport", "travel", "treat", "tree", "trouble", "true", "trust", "try", "tuesday", "turn", "twelve", "twenty", "two", "type", "under", "understand", "union", "unit", "unite", "university", "unless", "until", "up", "upon", "use", "usual", "value", "various", "very", "video", "view", "village", "visit", "vote", "wage", "wait", "walk", "wall", "want", "war", "warm", "wash", "waste", "watch", "water", "way", "we", "wear", "wednesday", "week", "weigh", "welcome", "well", "west", "what", "when", "where", "whether", "which", "while", "white", "who", "whole", "why", "wide", "wife", "will", "win", "wind", "window", "wish", "with", "within", "without", "woman", "wonder", "wood", "word", "work", "world", "worry", "worse", "worth", "would", "write", "wrong", "year", "yes", "yesterday", "yet", "you", "young" ];
-
-
-
-// ****************** Functions *****************
-
-//let triggerActivated = false;
-//let triggeredBy = 0;
