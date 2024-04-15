@@ -9,6 +9,7 @@ import { RemoteCollar } from "./collar";
 import { CollarModule } from "Modules/collar";
 import { MagicModule } from "Modules/magic";
 import { RemoteMagic } from "./magic";
+import { RemoteSuggestions } from "./suggestions";
 
 export class RemoteMainMenu extends RemoteGuiSubscreen {
 	subscreens: RemoteGuiSubscreen[] = [];
@@ -38,6 +39,7 @@ export class RemoteMainMenu extends RemoteGuiSubscreen {
 	Load(): void {
 		this.subscreens = [
 			new RemoteHypno(getModule<HypnoModule>("HypnoModule"), this.Character),
+			new RemoteSuggestions(getModule<HypnoModule>("HypnoModule"), this.Character),
 			new RemoteCollar(getModule<CollarModule>("CollarModule"), this.Character),
 			new RemoteMagic(getModule<MagicModule>("MagicModule"), this.Character)
 		];

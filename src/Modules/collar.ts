@@ -84,6 +84,45 @@ export class CollarModule extends BaseModule {
         this.ResetChoke();
     }
 
+    get commands(): ICommand[] {
+        return [{
+			Tag: "collar",
+			Description: " [tight/loose/stat] : Use to self-tighten, self-loosen, or read out information about your collar if allowed. Must be unrestrained to use.",
+			Action: (args, msg, parsed) => {
+				if (!this.settings.collarPurchased) {
+					LSCG_SendLocal(`Collar module not purchased.`);
+					return;
+				}
+
+				if (!this.wearingCorrectCollar) {
+					LSCG_SendLocal(`You are not wearing a properly configured collar.`);
+					return;
+				}
+				if (!this.Enabled)
+					return;
+
+				if (parsed.length == 1) {
+					switch (parsed[0].toLocaleLowerCase()) {
+						case "tight":
+						case "tighten":
+							this.TightenButtonPress(Player);
+							break;
+						case "loose":
+						case "loosen":
+							this.LoosenButtonPress(Player);
+							break;
+						case "stat":
+						case "stats":
+							this.StatsButtonPress(Player);
+							break;
+					} 
+				} else if (parsed.length == 0) {
+					LSCG_SendLocal(`<b>/lscg collar</b> [tight/loose/stat] : Use to self-tighten, self-loosen, or read out information about your collar if allowed. Must be unrestrained to use."`);
+				}
+			}
+		}];
+    }
+
     load(): void {
         OnChat(1, ModuleCategory.Collar, (data, sender, msg, metadata) => {
             if (!this.Enabled)

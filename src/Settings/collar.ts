@@ -46,6 +46,7 @@ export class GuiCollar extends GuiSubscreen {
 					disabled: !this.settings.knockout,
 					hidden: false,
 					options: [],
+					overrideWidth: 255,
 					setting: () => (this.settings.knockoutMinutes ?? 2),
 					setSetting: (val) => this.settings.knockoutMinutes = Math.max(Math.min(val, 10), 1)
 				}

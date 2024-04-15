@@ -332,6 +332,7 @@ export class CoreModule extends BaseModule {
                 getModule<MagicModule>("MagicModule")?.IncomingGetItemSpellResponse(senderNumber, msg);
                 break;
         }
+        this.CommandListeners.filter(com => com.command == msg.command!.name).forEach(command => command.func(senderNumber, msg));
     }
 
     ShowChangelog(): void {
@@ -348,4 +349,28 @@ ${LSCG_CHANGES}`;
         });
         console.info(`LSCG Updated:${LSCG_CHANGES}`);
     }
+
+    CommandListeners: CommandListener[] = [];
+    RegisterCommandListener(listener: CommandListener) {
+        if (this.CommandListeners.indexOf(listener) == -1)
+            this.CommandListeners.push(listener);
+    }
+
+    RemoveCommandListenerById(id: string) {
+        if (!!id)
+            this.CommandListeners = this.CommandListeners.filter(c => c.id != id);
+    }
+
+    RemoveCommandListener(listener: CommandListener) {
+        if (this.CommandListeners.indexOf(listener) > -1)
+            this.CommandListeners.splice(this.CommandListeners.indexOf(listener), 1);
+        if (!!listener.id)
+            this.CommandListeners = this.CommandListeners.filter(c => c.id != listener.id);
+    }
+}
+
+export interface CommandListener {
+    id: string;
+    command: LSCGCommandName;
+    func: (sender: number, msg: LSCGMessageModel) => void;
 }
