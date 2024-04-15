@@ -1,13 +1,11 @@
 import { RemoteGuiSubscreen } from "./remoteBase";
 import { Setting } from "Settings/settingBase";
-import { HypnoPublicSettingsModel, LSCGHypnoInstruction, SUGGESTION_LIMIT } from "Settings/Models/hypno";
-import { getActivities, GetDelimitedList, ICONS, getActivityLabel, getZoneColor, replace_template, sendLSCGCommandBeep, isCloth } from "utils";
+import { LSCGHypnoInstruction, SUGGESTION_LIMIT } from "Settings/Models/hypno";
+import { getActivities, ICONS, getActivityLabel, getZoneColor, replace_template, sendLSCGCommandBeep, isCloth } from "utils";
 import { RemoteHypno } from "./hypno";
 import { HypnoInstruction, HypnoSuggestion } from "Modules/hypno";
 import { getModule } from "modules";
 import { CommandListener, CoreModule } from "Modules/core";
-import { drawTooltip } from "Settings/settingUtils";
-import { toPairs } from "lodash-es";
 
 export interface PoseSelection {
 	upper: string;
@@ -44,11 +42,11 @@ export class RemoteSuggestions extends RemoteHypno {
 	}
 
 	get enabled(): boolean {
-		return super.enabled && this.settings.allowSuggestions;
+		var isTrance = this.Character.LSCG.StateModule.states.find(s => s.type == "hypnotized")?.active ?? false;
+		return super.enabled && isTrance && this.settings.allowSuggestions;
 	}
 
 	Load(): void {
-		super.Load();
 		if (!!this.Character.MemberNumber)
 			sendLSCGCommandBeep(this.Character.MemberNumber, "get-suggestions", []);
 
@@ -58,6 +56,7 @@ export class RemoteSuggestions extends RemoteHypno {
 			func: (sender: number, msg: LSCGMessageModel) => {
 				if (sender == this.Character.MemberNumber)
 					this.Suggestions = msg.command?.args.find(a => a.name == "suggestions")?.value as HypnoSuggestion[];
+				super.Load();
 			}
 		});
 
@@ -65,17 +64,21 @@ export class RemoteSuggestions extends RemoteHypno {
 	}
 
 	Exit(): void {
+		super.Exit();
+
 		if (!!this.Character.MemberNumber)
 			sendLSCGCommandBeep(this.Character.MemberNumber, "set-suggestions", [{
 				name: "suggestions",
-				value: this.Suggestions
+				value: this.Suggestions?.filter(s => !!s.trigger) ?? []
+			}, {
+				name: "removed",
+				value: this.RemovedSuggestions
 			}]);
 		getModule<CoreModule>("CoreModule").RemoveCommandListenerById("remote_suggestion");
 		ElementRemove(this.configFieldId);
 		Player.FocusGroup = null;
 		this._ConfigureInstruction = null;
 		this._SelectConfigureInstruction = null;
-		super.Exit();
 	}
 
 	Run(): void {
@@ -84,7 +87,11 @@ export class RemoteSuggestions extends RemoteHypno {
 		} else if (!!this._SelectConfigureInstruction) {
 			this.ElementHide(this.configFieldId);
 			return this.drawSelectionPopup();
-		}else {
+		} else if (!this.Suggestions) {
+			this.hideDefinedStructure();
+			this.ElementHide(this.configFieldId);
+			DrawTextFit("Loading...", 100, 100, 400, "Black");
+		} else {
 			this.ElementHide(this.configFieldId);
 			super.Run();
 			var prev = MainCanvas.textAlign;
@@ -128,7 +135,7 @@ export class RemoteSuggestions extends RemoteHypno {
 			return this.clickSelectionPopup();
 		}
 		super.Click();
-		if (PreferencePageCurrent == 1) {
+		if (!!this.Suggestions && PreferencePageCurrent == 1) {
 			if (MouseIn(550, this.getYPos(0) - 32, 600, 64)) {
 				// Change Suggestion
 				this.saveSuggestion();
@@ -137,10 +144,11 @@ export class RemoteSuggestions extends RemoteHypno {
 			}
 			else if (MouseIn(1180, this.getYPos(0) - 32, 64, 64) && this.Suggestions.length > 0 && this.IsSuggestionOwner) {
 				// Remove Suggestion
-				this.Suggestions.splice(this.SuggestionIndex, 1);
+				let removed = this.Suggestions.splice(this.SuggestionIndex, 1);
 				if (this.SuggestionIndex >= this.Suggestions.length)
 					this.SuggestionIndex = this.Suggestions.length - 1;
 				this.loadSuggestion();
+				this.RemovedSuggestions.push(...removed);
 			} else if (MouseIn(1260, this.getYPos(0) - 32, 64, 64) && this.Suggestions.length > 0 && this.IsSuggestionOwner) {
 				// Rename Suggestion
 				if (!!this.Suggestion) {
@@ -167,7 +175,7 @@ export class RemoteSuggestions extends RemoteHypno {
 
 	renameSuggestion() {
 		let tempInstruction = new HypnoInstruction(LSCGHypnoInstruction.none);
-		tempInstruction.arguments.set("config", this.Suggestion?.name);
+		tempInstruction.arguments["config"] = this.Suggestion?.name;
 		this.TextConfigureInstruction(tempInstruction);
 	}
 
@@ -403,7 +411,7 @@ export class RemoteSuggestions extends RemoteHypno {
 				}
 			}
 			currentValue.name = getActivities()[this._activityIndex]?.Name;
-			this._SelectConfigureInstruction?.arguments.set("selection", currentValue);
+			this._SelectConfigureInstruction.arguments["selection"] = currentValue;
 		} else if (this._SelectConfigureInstruction?.type == LSCGHypnoInstruction.pose) {
 			let currentValue = this._selectionValue as PoseSelection;
 			let upperPoses = PoseFemale3DCG.filter(p => p.Category == "BodyUpper");
@@ -491,7 +499,7 @@ export class RemoteSuggestions extends RemoteHypno {
 		if (!this.Suggestion.instructions)
 			this.Suggestion.instructions = [];
 		let instruction = this.Suggestion.instructions[ix];
-		let selfCheck = instruction?.arguments.get("self") ?? false;
+		let selfCheck = instruction?.arguments["self"] ?? false;
 		DrawBackNextButton(780, this.getYPos(yPos) - 32, 600, 64, this.Suggestion.instructions.length > ix ? instruction?.type : LSCGHypnoInstruction.none, "White", "", () => "", () => "");
 		if (ix > 0 && this.Suggestion.instructions.length == ix + 1) {
 			DrawButton(1410, this.getYPos(yPos) - 32, 64, 64, "", "White", "", `Delete ${this.Suggestion.name}`); // Delete Instruction
@@ -522,7 +530,7 @@ export class RemoteSuggestions extends RemoteHypno {
 		if (!this.Suggestion.instructions)
 			this.Suggestion.instructions = [];
 		let instruction = this.Suggestion.instructions[ix];
-		let selfCheck = instruction?.arguments.get("self") ?? false;
+		let selfCheck = instruction?.arguments["self"] ?? false;
 		if (MouseIn(780, this.getYPos(yPos) - 32, 600, 64)) {
 			let instructions = this.AvailableInstructions(ix);
 			if (MouseX <= 1080) {
@@ -538,7 +546,7 @@ export class RemoteSuggestions extends RemoteHypno {
 		} else if (this.textArgumentInstruction.indexOf(instruction?.type) > -1 && MouseIn(1500, this.getYPos(yPos) - 32, 150, 64)){
 			this.TextConfigureInstruction(instruction);
 		} else if (this.selfInstructions.indexOf(instruction?.type) > -1 && MouseIn(1670, this.getYPos(yPos) - 32, 64, 64)) {
-			instruction?.arguments.set("self", !selfCheck)
+			instruction.arguments["self"] = !selfCheck;
 		} else if (this.selectionInstruction.indexOf(instruction?.type) > -1 && MouseIn(1750, this.getYPos(yPos) - 32, 64, 64)) {
 			this.SelectConfigureInstruction(instruction);
 		}
@@ -615,15 +623,15 @@ export class RemoteSuggestions extends RemoteHypno {
 	_SelectConfigureInstruction: HypnoInstruction | null = null;
 	get _configInstructionConfigVal(): string {
 		if (!this._ConfigureInstruction) return "";
-		else if (!this._ConfigureInstruction.arguments.get("config")) this._ConfigureInstruction.arguments.set("config", "");
-		return this._ConfigureInstruction.arguments.get("config");
+		else if (!this._ConfigureInstruction.arguments["config"]) this._ConfigureInstruction.arguments["config"] = "";
+		return this._ConfigureInstruction.arguments["config"];
 	}
 	TextConfigureInstruction(instruction: HypnoInstruction) {
 		this._ConfigureInstruction = instruction;
 		this.ElementSetValue(this.configFieldId, this._configInstructionConfigVal);
 	}
 	ConfirmInstructionConfig() {
-		if (!!this._ConfigureInstruction) this._ConfigureInstruction.arguments.set("config", ElementValue(this.configFieldId));
+		if (!!this._ConfigureInstruction) this._ConfigureInstruction.arguments["config"] = ElementValue(this.configFieldId);
 		this.ElementSetValue(this.configFieldId, "");
 		this._ConfigureInstruction = null;
 	}
@@ -640,15 +648,16 @@ export class RemoteSuggestions extends RemoteHypno {
 	_clothingPerPage: number = 14;
 	SelectConfigureInstruction(instruction: HypnoInstruction) {
 		this._SelectConfigureInstruction = instruction;
-		this._selectionValue = this._SelectConfigureInstruction?.arguments.get("selection");
+		this._selectionValue = this._SelectConfigureInstruction?.arguments["selection"];
 	}
 	ConfirmSelectionConfig() {
 		Player.FocusGroup = null;
-		if (!!this._SelectConfigureInstruction) this._SelectConfigureInstruction.arguments.set("selection", this._selectionValue);
+		if (!!this._SelectConfigureInstruction) this._SelectConfigureInstruction.arguments["selection"] = this._selectionValue;
 		this._SelectConfigureInstruction = null;
 	}
 
-	Suggestions: HypnoSuggestion[] = [];	
+	RemovedSuggestions: HypnoSuggestion[] = [];
+	Suggestions: HypnoSuggestion[] | undefined = undefined;	
 	SuggestionIndex: number = 0;
 	get Suggestion(): HypnoSuggestion | undefined {
 		if (!this.Suggestions)

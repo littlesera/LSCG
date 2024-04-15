@@ -1,7 +1,7 @@
 import { BaseModule } from "base";
 import { getModule } from "modules";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { getRandomInt, hookFunction, IsIncapacitated, removeAllHooksByModule, SendAction, sendLSCGCommand } from "../utils";
+import { getDominance, getRandomInt, hookFunction, IsIncapacitated, removeAllHooksByModule, SendAction, sendLSCGCommand } from "../utils";
 import { ActivityBundle, ActivityModule, ActivityTarget } from "./activities";
 import { BoopsModule } from "./boops";
 import { CollarModule } from "./collar";
@@ -854,20 +854,11 @@ export class ItemUseModule extends BaseModule {
 		return getRandomInt(20) + 1;
 	}
 	
-	getDominance(C: Character) {
-		return C.Reputation.find(r => r.Type == "Dominant")?.Value ?? 0;
-	};
-	
-	getSkill(C: Character, skillName: string): number {
-		let skill = C.Skill.find(r => r.Type == skillName);
-		return ((skill?.Level ?? 0) * (skill?.Ratio ?? 1));
-	}
-	
 	getRollMod(C: Character, Opponent?: Character, isAggressor: boolean = false): number {
 		let buffState = (C as OtherCharacter)?.LSCG?.StateModule?.states?.find(s => s.type == "buffed");
 
 		// Dominant vs Submissive ==> -3 to +3 modifier
-		let dominanceMod = Math.floor(this.getDominance(C) / 33);
+		let dominanceMod = Math.floor(getDominance(C) / 33);
 		// +5 if we own our opponent
 		let ownershipMod = Opponent?.IsOwnedByMemberNumber(C.MemberNumber!) ? 5 : 0 ?? 0;
 		// -4 if we're restrained

@@ -18,6 +18,13 @@ export interface HypnoModuleStats extends ModuleStats {
     hypnotizedCount: number;
 }
 
+export interface HypnoInfluence {
+    memberId: number;
+    memberName: string;
+    influence: number;
+    lastInfluenced: number;
+}
+
 export interface HypnoSettingsModel extends HypnoPublicSettingsModel {
     trigger: string;
     hypnoEyeColor: string | undefined;
@@ -26,7 +33,7 @@ export interface HypnoSettingsModel extends HypnoPublicSettingsModel {
     stats: HypnoModuleStats;
     triggerCycled: boolean;
     triggerRevealed: boolean;
-    influence: Map<number, number>;
+    influence: HypnoInfluence[];
     suggestions: HypnoSuggestion[];
 }
 
