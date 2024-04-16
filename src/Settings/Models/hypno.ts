@@ -11,7 +11,8 @@ export enum LSCGHypnoInstruction {
     pose = "Assume Pose",
     follow = "Follow",
     say = "Speak Phrase",
-    maid = "Serve"
+    maid = "Serve",
+    clear = "Clear"
 }
 
 export interface HypnoModuleStats extends ModuleStats {

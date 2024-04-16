@@ -206,14 +206,14 @@ export class HypnoState extends BaseState {
     }
     
     AllowSpeech() {
-        if (this.Restrictions.Speech != "false") {
+        if (this.Active && this.Restrictions.Speech != "false") {
             this.Restrictions.Speech = "false";
             SendAction(this.allowSpeechStrings[getRandomInt(this.allowSpeechStrings.length)]);
         }
     }
 
     PreventSpeech() {
-        if (this.Restrictions.Speech != "true") {
+        if (this.Active && this.Restrictions.Speech != "true") {
             this.Restrictions.Speech = "true";
             SendAction(this.blockSpeechStrings[getRandomInt(this.blockSpeechStrings.length)]);
         }
