@@ -69,6 +69,8 @@ export function getCharacter(memberNumber: number) {
 }
 
 export function getCharacterByNicknameOrMemberNumber(tgt: string): Character | undefined {
+	if (!tgt)
+		return undefined;
 	tgt = tgt.toLocaleLowerCase();
 	let tgtC: Character | undefined | null;
 	if (CommonIsNumeric(tgt))

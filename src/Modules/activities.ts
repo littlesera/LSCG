@@ -55,7 +55,7 @@ export interface ActivityBundle extends ActivityBundleBase {
     Targets?: ActivityTarget[];
 }
 
-export type GrabType = "hand"  | "ear" | "tongue" | "arm" | "neck" | "mouth" | "horn" | "mouth-with-foot" | "chomp"
+export type GrabType = "hand"  | "ear" | "tongue" | "arm" | "neck" | "mouth" | "horn" | "mouth-with-foot" | "chomp" | "compulsion"
 
 export interface HandOccupant {
     Member: number,

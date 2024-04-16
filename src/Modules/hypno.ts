@@ -1,7 +1,7 @@
 import { BaseModule } from 'base';
 import { HypnoInfluence, HypnoSettingsModel, LSCGHypnoInstruction } from 'Settings/Models/hypno';
 import { ModuleCategory, Subscreen } from 'Settings/setting_definitions';
-import { settingsSave, parseMsgWords, OnAction, OnActivity, SendAction, getRandomInt, hookFunction, removeAllHooksByModule, callOriginal, setOrIgnoreBlush, isAllowedMember, isPhraseInString, GetTargetCharacter, GetDelimitedList, GetActivityEntryFromContent, escapeRegExp, IsActivityAllowed, LSCG_SendLocal, getCharacter, sendLSCGCommandBeep, htmlToElement, OnChat, getDominance } from '../utils';
+import { settingsSave, parseMsgWords, OnAction, OnActivity, SendAction, getRandomInt, hookFunction, removeAllHooksByModule, callOriginal, setOrIgnoreBlush, isAllowedMember, isPhraseInString, GetTargetCharacter, GetDelimitedList, GetActivityEntryFromContent, escapeRegExp, IsActivityAllowed, LSCG_SendLocal, getCharacter, sendLSCGCommandBeep, htmlToElement, OnChat, getDominance, getCharacterByNicknameOrMemberNumber, getActivities, isCloth } from '../utils';
 import { GuiHypno } from 'Settings/hypno';
 import { getModule } from 'modules';
 import { ActivityEntryModel } from 'Settings/Models/activities';
@@ -9,6 +9,28 @@ import { InjectorModule } from './injector';
 import { StateModule } from './states';
 import { CommandListener, CoreModule } from './core';
 import { ActivitySelection, ClothingSelection, PoseSelection } from 'Settings/Remote/suggestions';
+import { SuggestionMiniGame } from 'MiniGames/Suggestion';
+import { registerMiniGame } from 'MiniGames/minigames';
+import { StateRestrictions } from './States/BaseState';
+
+export class SuggestionMiniGameOptions {
+    constructor(suggestion: HypnoSuggestion, sender: Character, command: string) {
+        this.suggestion = suggestion;
+        this.sender = sender;
+        this.msg = command;
+    }
+    suggestion: HypnoSuggestion;
+    sender: Character;
+    msg: string = "";
+    tintColor: {r: number, g: number, b: number, a: number}[] = [{r: 148, g: 0, b: 211, a: 0}];
+    gameLength: number = 6000;
+    get senderNum(): number { return this.sender?.MemberNumber ?? -1; }
+    get senderName(): string { return !!this.sender ? CharacterNickname(this.sender) : ""; }
+    get hintText(): string { return `${this.senderName}'s words compel you...`; }
+    get failText(): string { return `You fail to resist ${this.senderName}'s suggestion.`; }
+    get successText(): string { return `You shake off ${this.senderName}'s suggestion!`; }
+    get submissionText(): string { return `You submit to ${this.senderName}'s suggestion...`; }
+}
 
 export class HypnoInstruction {
     constructor(type: LSCGHypnoInstruction) {
@@ -24,12 +46,14 @@ export class HypnoSuggestion {
         this.name = name;
         this.installedBy = Player.MemberNumber ?? -1;
         this.installedByName = Player.Name ?? "";
+        this.installedAt = new Date().getTime();
     }
     id: string = "";
     name: string = "";
     trigger: string = "";
     installedBy: number = -1;
     installedByName: string = "";
+    installedAt: number = 0;
     exclusive: boolean = false;
     instructions: HypnoInstruction[] = [];
 }
@@ -90,7 +114,7 @@ export class HypnoModule extends BaseModule {
 					return;
 
 				if (this.StateModule.settings.immersive) {
-					LSCG_SendLocal("/zonk disabled while immersive", 5000);
+					LSCG_SendLocal("zonk disabled while immersive", 5000);
 					return;
 				}
 				if (!this.hypnoActivated)
@@ -104,7 +128,7 @@ export class HypnoModule extends BaseModule {
 					return;
 
 				if (this.StateModule.settings.immersive) {
-					LSCG_SendLocal("/unzonk disabled while immersive", 5000);
+					LSCG_SendLocal("unzonk disabled while immersive", 5000);
 					return;
 				}
 				if (this.hypnoActivated)
@@ -115,14 +139,53 @@ export class HypnoModule extends BaseModule {
 			Description: ": Force a cycle to a new trigger word if enabled",
 			Action: () => {
 				if (this.StateModule.settings.immersive) {
-					LSCG_SendLocal("/cycle-trigger disabled while immersive", 5000);
+					LSCG_SendLocal("cycle-trigger disabled while immersive", 5000);
 					return;
 				}
 				if (this.settings.enableCycle)
 					this.RollTriggerWord();
 			}
-		}];
+		}, {
+            Tag: "show-influence",
+            Description: ": Display which characters have hypnotic influence over you",
+            Action: () => {
+                if (this.StateModule.settings.immersive) {
+					LSCG_SendLocal("show-influence disabled while immersive", 5000);
+					return;
+				}
+                this.settings.influence.forEach(inf => {
+                    let fmt = new Intl.RelativeTimeFormat("en", {
+                        style: "long"
+                    });
+                    let diff = new Date().getTime() - new Date(inf.lastInfluenced).getTime();
+                    let minutes = diff / 1000 / 60;
+                    let hours = minutes / 60;
+                    let days = hours / 24;
+                    let weeks = days / 7;
+                    let diffStr = weeks > 1 ? fmt.format(-weeks, "weeks") :
+                        days > 1 ? fmt.format(-days, "days") :
+                        hours > 1 ? fmt.format(-hours, "hours") :
+                        fmt.format(-Math.floor(minutes), "minutes");
+                    LSCG_SendLocal(`${inf.memberName} [<i>${inf.memberId}</i>] -- <br>&emsp;<b>Influence:</b> ${inf.influence}, <b>Last Update:</b> ${diffStr}`);
+                });
+            }
+        }, {
+            Tag: "show-suggestions",
+            Description: ": Display which suggestions currently reside in your mind",
+            Action: () => {
+                if (this.StateModule.settings.immersive) {
+					LSCG_SendLocal("show-suggestions disabled while immersive", 5000);
+					return;
+				}
+                this.settings.suggestions.forEach(s => {
+                    LSCG_SendLocal(`<b>${s.name}</b> -- <br>&emsp;Installed By: <i>${s.installedByName} [${s.installedBy}]</i>, trigger: <i>${s.trigger}</i>`);
+                });
+            }
+        }];
     }
+
+    SuggestionGame: SuggestionMiniGame = registerMiniGame(new SuggestionMiniGame(this));
+    MiniGameOptions?: SuggestionMiniGameOptions;
 
     load(): void {
         OnAction(1, ModuleCategory.Hypno, (data, sender, msg, metadata) => {
@@ -156,7 +219,7 @@ export class HypnoModule extends BaseModule {
         });
 
         OnChat(69, ModuleCategory.Hypno, (data, sender, msg, metadata) => {
-            if (!!sender)
+            if (!!sender && this.settings.allowSuggestions)
                 setTimeout(() => this.CheckSuggestions(msg, sender), 500);
         });
 
@@ -200,6 +263,8 @@ export class HypnoModule extends BaseModule {
         }, ModuleCategory.Hypno);
 
         let lastCycleCheck = 0;
+        let downgradeInterval = (10 * 60 * 1000); // 10 min downgrade ticks
+        let lastInfluenceCheck = CommonTime();
         hookFunction('TimerProcess', 1, (args, next) => {
             if (ActivityAllowed()) {
                 var now = CommonTime();
@@ -214,9 +279,14 @@ export class HypnoModule extends BaseModule {
                     lastCycleCheck = now;
                     this.CheckNewTrigger();
                 }
+
+                if ((now - lastInfluenceCheck) > (5 * 60 * 1000)) {
+                    this.DowngradeInfluences();
+                    lastInfluenceCheck = now;
+                }
             }
             return next(args);
-        }, ModuleCategory.Injector);
+        }, ModuleCategory.Hypno);
 
         getModule<CoreModule>("CoreModule").RegisterCommandListener(<CommandListener>{
             id: "suggestions_get_responder",
@@ -234,6 +304,54 @@ export class HypnoModule extends BaseModule {
         if (!this.settings.trigger) {
             this.settings.trigger = this.getNewTriggerWord();            
         }
+
+        (<any>window).LSCG_SuggestionEnd = () => this.MiniGameEnd(MiniGameVictory);
+
+        this.RegisterSuggestionHooks();
+    }
+
+    _suggestionHooks: any[] = []
+    RegisterSuggestionHooks() {
+        // Suggestion Hooks
+        // this._suggestionHooks.push(hookFunction("ChatRoomSync", 1, (args, next) => {
+        //     const data = args[0];
+        //     if (data.Name !== this.forceSay_lastRoomName) {
+        //         this.forceSay_sayText = "";
+        //         this.forceSay_senderNumber = null;
+        //     }
+        //     next(args);
+        // }, ModuleCategory.Hypno));
+
+        // this._suggestionHooks.push(hookFunction("ChatRoomKeyDown", 5, (args, next) => {
+        //     if (CurrentScreen === "ChatRoom" && this.forceSay_sayText) {
+        //         const chatHasFocus = document.activeElement?.id === "InputChat";
+        //         if (chatHasFocus) {
+        //             this.forceSay_count++;
+        //         }
+        //     }
+        //     return next(args);
+        // }, ModuleCategory.Hypno));
+
+        this._suggestionHooks.push(hookFunction("CommandParse", 6, (args, next) => {
+			const msg = args[0].trim() as string;
+            const isChat = !/^[*!/.]/.test((msg ?? "")[0]);
+			if (this.forceSay_sayText && msg && ChatRoomTargetMemberNumber == null && !msg.includes("(") && isChat) {
+				if (msg.toLocaleLowerCase() === this.forceSay_sayText.toLocaleLowerCase()) {
+                    this.forceSay_sayText = "";
+                    let ret = next(args);
+                    if (this.forceSay_BypassingSpeechBlock) {
+                        this.forceSay_BypassingSpeechBlock = false;
+                        this.StateModule.HypnoState.PreventSpeech();
+                    }
+                    return ret;
+                } else {
+                    LSCG_SendLocal(`You find it absurd to say anything other than '${this.forceSay_sayText}'.`);
+                    SendAction("%NAME% opens %POSSESSIVE% mouth but no sound comes out.");
+                    return null;
+                }
+			}
+            return next(args);
+		}));
     }
 
     SuggestionsRequestHandler(sender: number, msg: LSCGMessageModel){
@@ -253,11 +371,12 @@ export class HypnoModule extends BaseModule {
     }
 
     SuggestionsPushHandler(sender: number, msg: LSCGMessageModel) {
+        let senderChar = getCharacter(sender);
         if (this.Enabled &&
             Player.IsOwnedByMemberNumber(sender) ||
                 (this.hypnoActivated &&
                 this.settings.allowSuggestions &&
-                this.allowedSpeaker(getCharacter(sender) ?? undefined))) {
+                this.allowedSpeaker(senderChar ?? undefined))) {
                     if (!this.settings.suggestions)
                         this.settings.suggestions = [];
                     let incomingSuggestions = (msg.command?.args.find(a => a.name == "suggestions")?.value as HypnoSuggestion[]).filter(s => !!s.trigger) ?? [];
@@ -274,14 +393,13 @@ export class HypnoModule extends BaseModule {
                             if (!influence) {
                                 this.settings.influence.push(<HypnoInfluence>{
                                     memberId: sender,
-                                    memberName: getCharacter(sender)?.Name ?? sender + "",
+                                    memberName: senderChar?.Name ?? sender + "",
                                     lastInfluenced: new Date().getTime(),
                                     influence: 10
                                 });
                             } else {
                                 influence.lastInfluenced = new Date().getTime();
                                 influence.influence = Math.max(influence.influence + 5, 100);
-                                influence.memberName = getCharacter(influence.memberId)?.Name ?? influence.memberName;
                             }
                         }
                         else Object.assign(existing, incoming);
@@ -290,6 +408,9 @@ export class HypnoModule extends BaseModule {
                         let ix = this.settings.suggestions.findIndex(s => s.id == removed.id);
                         this.settings.suggestions.splice(ix, 1);
                     });
+                    if (!AudioShouldSilenceSound(true))
+                        AudioPlaySoundEffect("BellSmall");
+                    LSCG_SendLocal(`${!!senderChar ? CharacterNickname(senderChar) : "Someone"} whispers into your ear, burying suggestions deep into your mind.`)
                     settingsSave();
                 }
     }
@@ -432,11 +553,11 @@ export class HypnoModule extends BaseModule {
     }
 
     CheckSuggestions(msg: string, sender: Character) {
-        this.settings.suggestions?.forEach(s => {            
-            if (this._CheckForTriggers(msg, sender, [s.trigger], this.hypnoActivated)) {
-                this.CompelSuggestion(s, sender, msg);
+        let suggestion = this.settings.suggestions.find(s => this._CheckForTriggers(msg, sender, [s.trigger], this.hypnoActivated) && (!s.exclusive || s.installedBy == sender.MemberNumber))
+        if (!!suggestion) {
+                let commandArgs = msg.slice(msg.toLocaleLowerCase().indexOf(suggestion.trigger.toLocaleLowerCase()) + suggestion.trigger.length)?.trim() ?? "";
+                this.CompelSuggestion(suggestion, sender, commandArgs);
             }
-        });
     }
 
     CheckTrigger(msg: string, sender: Character): boolean {
@@ -542,7 +663,7 @@ export class HypnoModule extends BaseModule {
         let totalInfluence = suggestionInfluenceVal + speakerInfluenceVal;
         if (this.hypnoActivated)
             totalInfluence *= 2;
-        return totalInfluence;
+        return Math.min(100, totalInfluence);
     }
 
     GetResistRoll() {
@@ -550,20 +671,31 @@ export class HypnoModule extends BaseModule {
     }
 
     CompelSuggestion(suggestion: HypnoSuggestion, sender: Character, command: string) {
+        if (!this.settings.allowSuggestions)
+            return;
+
+        if (!AudioShouldSilenceSound(true))
+            AudioPlaySoundEffect("BellMedium");
+
+        let totalInfluence = this.GetSuggestionInfluence(suggestion, sender);
         // Calculate chance to resist suggestion, if 0 force activate
         // Otherwise prompt user in local chat with constructed message based on instructions
         if (this.GetSuggestionInfluence(suggestion, sender) >= 100)
-            this.DoSuggestion(suggestion, sender, command);
-        else
-            this.PromptResistSuggestion(suggestion, sender, command);
+            this.DoSuggestion(new SuggestionMiniGameOptions(suggestion, sender, command));
+        else {
+            // Start Resist Game
+            this.MiniGameOptions = new SuggestionMiniGameOptions(suggestion, sender, command);
+            MiniGameStart(this.SuggestionGame.name, totalInfluence, "LSCG_SuggestionEnd");
+            //this.PromptResistSuggestion(suggestion, sender, command);
+        }
     }
 
-    ReduceSpeakerInfluence(memberNumber: number) {
+    ReduceSpeakerInfluence(memberNumber: number, forceSave: boolean = false) {
         let influence = this.settings.influence.find(i => i.memberId == memberNumber);
         if (!!influence) {
             influence.influence--;
             influence.lastInfluenced = new Date().getTime();
-            settingsSave();
+            if (forceSave) settingsSave();
         }
     }
 
@@ -576,7 +708,7 @@ export class HypnoModule extends BaseModule {
         }
     }
 
-    ResistSuggestion(suggestion: HypnoSuggestion, sender: Character, command: string) {
+    AttemptResistSuggestion(suggestion: HypnoSuggestion, sender: Character, command: string) {
         // Attempt resist roll!
         // Send emote or private whisper to sender informing of the resist 
         let roll = this.GetResistRoll();
@@ -586,51 +718,67 @@ export class HypnoModule extends BaseModule {
             this.ReduceSpeakerInfluence(sender.MemberNumber ?? -1);
             if (suggestion.installedBy != sender.MemberNumber)
                 this.ReduceSpeakerInfluence(suggestion.installedBy);
+            settingsSave();
         } else {
             LSCG_SendLocal(`Failed to resist the suggestion [${roll}/${influence}], submitting to instructions.`);
-            this.DoSuggestion(suggestion, sender, command);
+            this.DoSuggestion(new SuggestionMiniGameOptions(suggestion, sender, command));
         }
     }
 
-    DoSuggestion(suggestion: HypnoSuggestion, sender: Character, command: string) {
+    ResistSuggestion(opts: SuggestionMiniGameOptions) {
+        this.ReduceSpeakerInfluence(opts.senderNum);
+        if (opts.suggestion.installedBy != opts.senderNum)
+            this.ReduceSpeakerInfluence(opts.suggestion.installedBy);
+        settingsSave();
+    }
+
+    DoSuggestion(opts: SuggestionMiniGameOptions) {
         // Iterate through instructions, calculating the configuration and target
         // Wait 2s between intstructions similar to magic
         // Send emote as player performs each instruction
+        let suggestion = opts.suggestion;
+        let sender = opts.sender;
+        let command = opts.msg;
+
         this.IncreaseSpeakerInfluence(sender.MemberNumber ?? -1);
         if (suggestion.installedBy != sender.MemberNumber)
             this.IncreaseSpeakerInfluence(suggestion.installedBy);
+        
         suggestion.instructions.forEach((instruction, ix, arr) => {
             setTimeout(() => {
                 let config = instruction.arguments["config"];
                 switch (instruction.type) {
                     case LSCGHypnoInstruction.activity:
-                        let activitySelection = instruction.arguments["selection"] as ActivitySelection;
-                        LSCG_SendLocal(`Activity -- target: ${config ?? "speaker"}, activity: ${activitySelection?.group}::${activitySelection?.name}`);
+                        this.ForceActivity(opts, instruction);
                         break;
                     case LSCGHypnoInstruction.follow:
-                        LSCG_SendLocal(`Follow -- ${config ?? "speaker"}`);
+                        LSCG_SendLocal(`[NOT YET IMPLEMENTED] Follow -- ${config ?? "speaker"}`);
                         break;
                     case LSCGHypnoInstruction.maid:
-                        LSCG_SendLocal(`Maid`);
+                        this.ForceMaidWork(opts, instruction);
                         break;
                     case LSCGHypnoInstruction.orgasm:
-                        LSCG_SendLocal(`Orgasm`);
+                        SendAction(`%NAME% ${Player.IsGagged() ? "trembled" : "gasps"} as pleasure rushes over %INTENSIVE%.`);
+                        if (!!Player.ArousalSettings) {
+                            Player.ArousalSettings.Progress = 100;
+                            Player.ArousalSettings.OrgasmTimer = CurrentTime - 1;
+                        }
+                        ActivityOrgasmPrepare(Player);
                         break;
                     case LSCGHypnoInstruction.pose:
-                        let poseSelection = instruction.arguments["selection"] as PoseSelection;
-                        LSCG_SendLocal(`Pose -- ${poseSelection?.upper ?? 'none'} :: ${poseSelection?.lower ?? 'none'} :: ${poseSelection.full ?? 'none'}`);
+                        this.ForcePose(opts, instruction);
                         break;
                     case LSCGHypnoInstruction.say:
-                        LSCG_SendLocal(`Say -- ${config}`);    
+                        this.ForceSay(opts, instruction);
                         break;
                     case LSCGHypnoInstruction.strip:
-                        let clothing = instruction.arguments["selection"] as ClothingSelection;
-                        LSCG_SendLocal(`Strip -- all: ${clothing?.all ?? false} -- slots: \n${clothing?.groups?.join("\n")}`);
+                        this.ForceStrip(opts, instruction);
                         break;
                     default:
                         break;
                 }
-            }, ix * 2000);            
+                settingsSave();
+            }, ix * 1000);
         })
     }
 
@@ -643,8 +791,8 @@ export class HypnoModule extends BaseModule {
             <div id="suggestion-resist" class="ChatMessage ChatMessageChat" data-time="${ChatRoomCurrentTime()}" data-sender="${sender.MemberNumber}">
                 <span class="ChatMessageName" style="color:${sender.LabelColor};">${senderName}'s words compel you...</span>
                 <div style="display:flex;flex-direction:row;">
-                    <button id="suggestion-submit-${senderId}-${suggestion.id}-${timeKey}" class="ChatMessageName" style="color:#572844;background-color: lightgreen;margin-left: 5px;font-size: inherit;"> Submit </button>
-                    <button id="suggestion-resist-${senderId}-${suggestion.id}-${timeKey}" class="ChatMessageName" style="color:#572844;background-color: red;margin-left: 5px;font-size: inherit;"> Resist </button>
+                    <button id="suggestion-submit-${senderId}-${suggestion.id}-${timeKey}" class="ChatMessageName" style="cursor:pointer;color:#572844;background-color: lightgreen;margin-left: 5px;font-size: inherit;"> Submit </button>
+                    <button id="suggestion-resist-${senderId}-${suggestion.id}-${timeKey}" class="ChatMessageName" style="cursor:pointer;color:#572844;background-color: red;margin-left: 5px;font-size: inherit;"> Resist </button>
                 </div>
             </div>`;
 		const div = htmlToElement(resistDiv);
@@ -657,8 +805,185 @@ export class HypnoModule extends BaseModule {
 
     ClickSuggestionButton(suggestion: HypnoSuggestion, sender: Character, msg: string, resist: boolean, buttons: HTMLElement[]) {
         buttons.forEach(btn => btn.remove());
-        if (resist) this.ResistSuggestion(suggestion, sender, msg);
-        else this.DoSuggestion(suggestion, sender, msg);
+        if (resist) this.AttemptResistSuggestion(suggestion, sender, msg);
+        else this.DoSuggestion(new SuggestionMiniGameOptions(suggestion, sender, msg));
+    }
+
+    MiniGameEnd(resisted: boolean) {
+        console.info("suggestion minigame ended - " + resisted);
+        CommonSetScreen("Online", "ChatRoom");
+        if (!!this.MiniGameOptions) {
+            if (resisted) this.ResistSuggestion(this.MiniGameOptions);
+            else this.DoSuggestion(this.MiniGameOptions);
+            this.MiniGameOptions = undefined;
+        }
+    }
+
+    FindConfigurableTarget(instruction: HypnoInstruction, sender: Character, msg: string) {
+        if (instruction.arguments["self"] as boolean == true)
+            return Player;
+        let target = getCharacterByNicknameOrMemberNumber(instruction.arguments["config"] as string ?? "");
+        if (!target)
+            target = getCharacterByNicknameOrMemberNumber(msg ?? "");
+        if (!target)
+            target = getCharacterByNicknameOrMemberNumber(sender.MemberNumber + "");
+        return target;
+    }
+
+    ForcePose(opts: SuggestionMiniGameOptions, instruction: HypnoInstruction) {
+        let poseSelection = instruction.arguments["selection"] as PoseSelection;
+        console.debug(`Pose -- ${poseSelection?.upper ?? "none"} :: ${poseSelection?.lower ?? "none"} :: ${poseSelection.full ?? "none"}`);
+        SendAction(`%NAME% moves their body into a pose obediently.`);
+        let blocked = false;
+        CharacterRefresh(Player, false);
+        if (!!poseSelection.full) {
+            if (PoseCategoryAvailable(Player, "BodyFull"))
+                PoseSetActive(Player, poseSelection.full);
+            else 
+                blocked = true;
+        }
+        else {
+            if (!!poseSelection.lower) {
+                if (PoseCategoryAvailable(Player, "BodyLower"))
+                    PoseSetActive(Player, poseSelection.lower);
+                else 
+                    blocked = true;
+            }
+            if (!!poseSelection.upper) {
+                if (PoseCategoryAvailable(Player, "BodyUpper"))
+                    PoseSetActive(Player, poseSelection.upper);
+                else 
+                    blocked = true;
+            }
+        }
+        if (blocked) {
+            LSCG_SendLocal(`Your current state prevents you from fully following your instruction and you shake a little bit of ${opts.senderName}'s influence.`);
+            this.ReduceSpeakerInfluence(opts.senderNum);
+        }
+        if (CurrentScreen == "ChatRoom") {
+            ServerSend("ChatRoomCharacterPoseUpdate", { Pose: Player.ActivePose })
+            CharacterRefresh(Player, true);
+        }
+    }
+
+    ForceMaidWork(opts: SuggestionMiniGameOptions, instruction: HypnoInstruction) {
+        // Code borrowed from BCX~
+        let senderName = CharacterNickname(opts.sender);
+        if (ReputationCharacterGet(Player, "Maid") < 1) {
+            LSCG_SendLocal(`The maids don't allow you to fulfill your instruction and you shake a little bit of ${senderName}'s influence.`);
+            SendAction("%NAME% looks confused as the maids refuse their attempt to serve drinks.");
+            this.ReduceSpeakerInfluence(opts.sender.MemberNumber ?? -1);
+            return;
+        }
+        if (!Player.CanWalk() || !Player.CanTalk()) {
+            LSCG_SendLocal(`Your current state prevents you from following your instruction and you shake a little bit of ${senderName}'s influence.`);
+            SendAction("%NAME% looks frustrated, their inability to both walk and talk preventing them from serving drinks.");
+            this.ReduceSpeakerInfluence(opts.sender.MemberNumber ?? -1);
+            return;
+        }
+        PoseSetActive(Player, null);
+        const D = `(You find yourself in the maid sorority with only a fuzzy memory of walking here.  Another maid addresses you.) Thank you for agreeing to work!`;
+        SendAction(`%NAME% suddenly walks off in the direction of the maid quarters.`);
+        ChatRoomLeave();
+        CommonSetScreen("Room", "MaidQuarters");
+        if (MaidQuartersMaid == null)
+            throw new Error("LSCG: Missing MaidQuartersMaid when expected");
+        CharacterSetCurrent(MaidQuartersMaid);
+        MaidQuartersMaid.CurrentDialog = D;
+        MaidQuartersMaid.Stage = "205";
+        MaidQuartersOnlineDrinkFromOwner = true;
+    }
+
+	forceSay_sayText: string = "";
+    forceSay_BypassingSpeechBlock: boolean = false;
+    ForceSay(opts: SuggestionMiniGameOptions, instruction: HypnoInstruction) {
+        let sentence = instruction.arguments["config"] as string
+        if (!sentence) sentence = opts.msg;
+        if (!sentence) {
+            LSCG_SendLocal(`You are prompted no sentence... You shake a little bit of ${opts.senderName}'s influence.`);
+            this.ReduceSpeakerInfluence(opts.sender.MemberNumber ?? -1);
+            return;
+        }
+        if (sentence.includes("(") || /^[*!/.]/.test(sentence[0])) {
+            LSCG_SendLocal(`The sentence you are compelled to speak is invalid... You shake a little bit of ${opts.senderName}'s influence.`);
+            this.ReduceSpeakerInfluence(opts.sender.MemberNumber ?? -1);
+            return;
+        }
+        if (!!this.forceSay_sayText)
+            LSCG_SendLocal(`A new phrase enters your mind...`);
+        this.forceSay_sayText = sentence;
+        if (this.StateModule.HypnoState.Restrictions.Speech == "true") {
+            this.forceSay_BypassingSpeechBlock = true;
+            this.StateModule.HypnoState.AllowSpeech();
+        }
+        LSCG_SendLocal(`You want nothing else but to loudly say '${this.forceSay_sayText}'.`);
+        SendAction("%NAME% mouth starts to move automatically.");
+    }
+
+    ForceActivity(opts: SuggestionMiniGameOptions, instruction: HypnoInstruction) {
+        let target = this.FindConfigurableTarget(instruction, opts.sender, opts.msg);
+        let activitySelection = instruction.arguments["selection"] as ActivitySelection;
+        let activityGroup = AssetGroup.find(a => a.Name == activitySelection?.group);
+        let activity = !!activityGroup ? getActivities(activityGroup).find(a => a.Name == activitySelection?.name) : undefined;
+        if (!!target && !!activityGroup && !!activity) {
+            let tmp = this.StateModule.HypnoState.Restrictions;
+            this.StateModule.HypnoState.Restrictions = <StateRestrictions>{
+                Walk: "false",
+                Stand: "false",
+                Hearing: "false",
+                Sight: "false",
+                Wardrobe: "false",
+                Move: "false",
+                Speech: "false"
+            };
+            let isAllowed = ActivityAllowedForGroup(target, activityGroup?.Name).filter(a => !a.Blocked).findIndex(a => a.Activity.Name == activity?.Name) > -1;
+            if (isAllowed) ActivityRun(Player, target, activityGroup, <ItemActivity>{Activity: activity}, true);
+            else {
+                SendAction("%NAME% struggles to perform some action.");
+                LSCG_SendLocal(`Something beyond your control is preventing you from following your activity instruction... You shake a little bit of ${opts.senderName}'s influence.`);
+                this.ReduceSpeakerInfluence(opts.sender.MemberNumber ?? -1);
+            }
+            this.StateModule.HypnoState.Restrictions = tmp;
+        } else {
+            LSCG_SendLocal(`You are unable to interpret your activity instruction and shake a little bit of ${opts.senderName}'s influence.`);
+            this.ReduceSpeakerInfluence(opts.sender.MemberNumber ?? -1);
+        }
+    }
+
+    ForceStrip(opts: SuggestionMiniGameOptions, instruction: HypnoInstruction) {
+        if (!Player.CanChangeOwnClothes()) {
+            LSCG_SendLocal(`You struggle to remove any of your clothing and shake a little bit of ${opts.senderName}'s influence.`);
+            this.ReduceSpeakerInfluence(opts.sender.MemberNumber ?? -1);
+            return;
+        }
+        
+        let clothing = instruction.arguments["selection"] as ClothingSelection;
+        let groups = clothing.groups;
+        SendAction(`%NAME% starts to remove clothing from %POSSESSIVE% body.`);
+
+        if (clothing.all) 
+            groups = AssetGroup.filter(g => g.Family === Player.AssetFamily && g.Category === "Appearance" && g.AllowCustomize && isCloth(g, false)).map(g => g.Name);
+        
+        groups.forEach(grp => {
+            InventoryRemove(Player, grp, false);
+        });
+        
+        ServerPlayerAppearanceSync();
+        CharacterLoadCanvas(Player);
+    }
+
+    DowngradeInfluences() {
+        // Downgrade influences over time logarithmically...
+        console.info("Downgrading influences...");
+        if (!this.settings.influence || !this.settings.influence.forEach) {
+            this.settings.influence = [];
+        }
+        this.settings.influence?.forEach(entry => {
+            let newVal = entry.influence - Math.ceil(Math.log10(entry.influence));
+            console.debug(`pre: ${entry.influence}, post: ${newVal}`);
+            entry.influence = newVal;
+        });
+        settingsSave();
     }
 }
 

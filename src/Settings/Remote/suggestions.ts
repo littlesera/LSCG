@@ -8,9 +8,9 @@ import { getModule } from "modules";
 import { CommandListener, CoreModule } from "Modules/core";
 
 export interface PoseSelection {
-	upper: string;
-	lower: string;
-	full: string;
+	upper: AssetPoseName | undefined | "";
+	lower: AssetPoseName | undefined | "";
+	full: AssetPoseName | undefined | "";
 }
 
 export interface ActivitySelection {
@@ -123,6 +123,12 @@ export class RemoteSuggestions extends RemoteHypno {
 
 				DrawButton(1340 - 4, this.getYPos(0) - 32 - 4, 72, 72, "", "White", "", `Induce New Suggestion`); // Add New Suggestion
 				DrawImageResize("Icons/Plus.png", 1340, this.getYPos(0) - 32, 64, 64);
+
+				if (!!this.Suggestion) {
+					MainCanvas.textAlign = "left";
+					DrawTextFit(`Installed by: ${this.Suggestion.installedByName} [${this.Suggestion.installedBy}]`, 1420, this.getYPos(0), 400, "grey", "black");
+					MainCanvas.textAlign = "center";
+				}
 			}
 			MainCanvas.textAlign = prev;
 		}
@@ -491,7 +497,7 @@ export class RemoteSuggestions extends RemoteHypno {
 	}
 
 	drawInstructionSelector(ix: number) {
-		if (!this.Suggestion) {
+		if (!this.Suggestion || this.PreviousInstructionIsTerminating(ix)) {
 			return;
 		}
 		
@@ -522,7 +528,7 @@ export class RemoteSuggestions extends RemoteHypno {
 	}
 
 	clickInstructionSelector(ix: number) {
-		if (!this.Suggestion) {
+		if (!this.Suggestion || this.PreviousInstructionIsTerminating(ix)) {
 			return;
 		}
 		
@@ -570,7 +576,7 @@ export class RemoteSuggestions extends RemoteHypno {
 			},<Setting>{
 				type: "checkbox",
 				label: "Exclusive:",
-				description: "If checked, only the creator of this suggestion can view and edit it.",
+				description: "If checked, only the creator of this suggestion can view, edit, or trigger it.",
 				disabled: !this.IsSuggestionOwner,
 				setting: () => this.Suggestion?.exclusive ?? false,
 				setSetting: (val) => this.Suggestion!.exclusive = val,
@@ -594,7 +600,7 @@ export class RemoteSuggestions extends RemoteHypno {
 				label: "Instruction #2:",
 				description: "A suggested instruction.",
 				options: this.Instructions,
-				hidden: !this.Suggestion,
+				hidden: !this.Suggestion || this.PreviousInstructionIsTerminating(1),
 				setting: () => this.Suggestion?.instructions.length ?? 0 > 1 ? (this.Suggestion?.instructions[1] ?? "None") : "None",
 				setSetting: (val) => { if (!!this.Suggestion) this.Suggestion.instructions = this.Suggestion.instructions.concat(val).filter((eff, ix, arr) => arr.indexOf(eff) == ix) },
 			},<Setting>{
@@ -607,7 +613,7 @@ export class RemoteSuggestions extends RemoteHypno {
 				label: "Instruction #3:",
 				description: "A suggested instruction.",
 				options: this.Instructions,
-				hidden: !this.Suggestion,
+				hidden: !this.Suggestion || this.PreviousInstructionIsTerminating(2),
 				setting: () => this.Suggestion?.instructions.length ?? 0 > 2 ? (this.Suggestion?.instructions[2] ?? "None") : "None",
 				setSetting: (val) => { if (!!this.Suggestion) this.Suggestion.instructions = this.Suggestion.instructions.concat(val).filter((eff, ix, arr) => arr.indexOf(eff) == ix) },
 			},<Setting>{
@@ -616,6 +622,12 @@ export class RemoteSuggestions extends RemoteHypno {
 				description: ""
 			}
 		]];
+	}
+
+	PreviousInstructionIsTerminating(currentIx: number) {
+		if (!this.Suggestion || !this.Suggestion.instructions || currentIx <= 0)
+			return false;
+		return this.terminatingInstruction.indexOf(this.Suggestion.instructions[currentIx-1]?.type ?? LSCGHypnoInstruction.none) > -1;
 	}
 
 	configFieldId: string = "instruction_configureField";
@@ -677,7 +689,7 @@ export class RemoteSuggestions extends RemoteHypno {
 		if (!this.Suggestion)
 			return this.ActualInstructions;
 		let otherInstructions = this.Suggestion.instructions.map(i => i.type).filter((v, i, arr) => i != ix).filter(i => this.unrepeatableInstruction.indexOf(i) > -1);
-		return this.ActualInstructions.filter(eff => otherInstructions.indexOf(eff) == -1);
+		return this.ActualInstructions.filter(eff => otherInstructions.indexOf(eff) == -1 && eff != LSCGHypnoInstruction.follow);
 	}
 	get Instruction(): LSCGHypnoInstruction {
 		return this.ActualInstructions[this.InstructionIndex];
@@ -697,8 +709,7 @@ export class RemoteSuggestions extends RemoteHypno {
 	textArgumentInstruction: LSCGHypnoInstruction[] = [
 		LSCGHypnoInstruction.activity,
 		LSCGHypnoInstruction.follow,
-		LSCGHypnoInstruction.say,
-		LSCGHypnoInstruction.strip
+		LSCGHypnoInstruction.say
 	]
 
 	selectionInstruction: LSCGHypnoInstruction[] = [
@@ -708,6 +719,11 @@ export class RemoteSuggestions extends RemoteHypno {
 	];
 
 	unrepeatableInstruction: LSCGHypnoInstruction[] = [
+		LSCGHypnoInstruction.maid,
+		LSCGHypnoInstruction.say
+	]
+
+	terminatingInstruction: LSCGHypnoInstruction[] = [
 		LSCGHypnoInstruction.maid
 	]
 
