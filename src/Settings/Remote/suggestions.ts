@@ -23,6 +23,11 @@ export interface ClothingSelection {
 	groups: string[];
 }
 
+export interface ForgetSelection {
+	all: boolean;
+	instructions: LSCGHypnoInstruction[];
+}
+
 export class RemoteSuggestions extends RemoteHypno {
 	subscreens: RemoteGuiSubscreen[] = [];
 
@@ -226,6 +231,9 @@ export class RemoteSuggestions extends RemoteHypno {
 			case LSCGHypnoInstruction.strip:
 				coords = {x: 600, y: 100, w: 800, h: 800};
 				break;
+			case LSCGHypnoInstruction.forget:
+				coords = {x: 800, y: 200, w: 600, h: 600};
+				break;
 		}
 
 		// Draw Popup Box
@@ -367,6 +375,28 @@ export class RemoteSuggestions extends RemoteHypno {
 					w: 200
 				}, currentValue.all);
 			});
+		} else if (this._SelectConfigureInstruction?.type == LSCGHypnoInstruction.forget) {
+			let currentValue = this._selectionValue as ForgetSelection;
+			if (!currentValue) {
+				this._selectionValue = <ForgetSelection>{all: false, instructions: []};
+				currentValue = this._selectionValue as ForgetSelection;
+			}
+
+			this.DrawCheckboxAbsolute("All Instructions", "", currentValue.all, {
+				x: coords.x + coords.w/2 - 200,
+				y: coords.y + 20 + 32,
+				w: 200
+			});
+
+			DrawTextFit("Select Instructions to Forget:", coords.x + 20, coords.y + 120, 600, "Black", "");
+
+			this.forgettableInstruction.forEach((instruction, ix, arr) => {
+				this.DrawCheckboxAbsolute(instruction, "", currentValue.all || currentValue.instructions.indexOf(instruction) > -1, {
+					x: coords.x + 100,
+					y: coords.y + 200 + (80*ix),
+					w: 200
+				}, currentValue.all);
+			});
 		}
 	}
 
@@ -417,7 +447,6 @@ export class RemoteSuggestions extends RemoteHypno {
 				}
 			}
 			currentValue.name = getActivities()[this._activityIndex]?.Name;
-			this._SelectConfigureInstruction.arguments["selection"] = currentValue;
 		} else if (this._SelectConfigureInstruction?.type == LSCGHypnoInstruction.pose) {
 			let currentValue = this._selectionValue as PoseSelection;
 			let upperPoses = PoseFemale3DCG.filter(p => p.Category == "BodyUpper");
@@ -491,6 +520,19 @@ export class RemoteSuggestions extends RemoteHypno {
 				});
 				currentValue.groups = currentValue.groups.filter((grp, ix, arr) => arr.indexOf(grp) == ix);
 			}
+		} else if (this._SelectConfigureInstruction?.type == LSCGHypnoInstruction.forget) {
+			coords = {x: 800, y: 200, w: 600, h: 600};
+			let currentValue = this._selectionValue as ForgetSelection;
+			if (MouseIn(coords.x + coords.w/2 - 200, coords.y + 20, 200 + 64, 64)) {
+				// All
+				currentValue.all = !currentValue.all;
+			}
+			this.forgettableInstruction.forEach((instruction, ix, arr) => {
+				if (MouseIn(coords.x + 100, coords.y + 200 + (80*ix) - 32, 200 + 64, 64)) {
+					if (currentValue.instructions.indexOf(instruction) == -1) currentValue.instructions.push(instruction);
+					else currentValue.instructions.splice(currentValue.instructions.indexOf(instruction), 1);
+				}
+			});
 		}
 
 		if (MouseIn(coords.x + coords.w - 130, coords.y + coords.h - 84, 100, 64)) return this.ConfirmSelectionConfig();
@@ -715,27 +757,35 @@ export class RemoteSuggestions extends RemoteHypno {
 	selectionInstruction: LSCGHypnoInstruction[] = [
 		LSCGHypnoInstruction.activity,
 		LSCGHypnoInstruction.strip,
-		LSCGHypnoInstruction.pose
+		LSCGHypnoInstruction.pose,
+		LSCGHypnoInstruction.forget
 	];
 
 	unrepeatableInstruction: LSCGHypnoInstruction[] = [
 		LSCGHypnoInstruction.maid,
-		LSCGHypnoInstruction.say
+		LSCGHypnoInstruction.say,
+		LSCGHypnoInstruction.denial,
+		LSCGHypnoInstruction.insatiable
 	]
 
 	terminatingInstruction: LSCGHypnoInstruction[] = [
 		LSCGHypnoInstruction.maid
 	]
 
+	forgettableInstruction: LSCGHypnoInstruction[] = [
+		LSCGHypnoInstruction.denial,
+		LSCGHypnoInstruction.insatiable,
+		LSCGHypnoInstruction.follow,
+		LSCGHypnoInstruction.say
+	]
+
 	configLabels(instruction: LSCGHypnoInstruction): [string, string] {
 		switch (instruction) {
 			case LSCGHypnoInstruction.activity:
 			case LSCGHypnoInstruction.follow:
-				return ["Target", "Configure specific target member id number"];
+				return ["Target", "Configure specific target member id number or name"];
 			case LSCGHypnoInstruction.say:
 				return ["Phrase", "Configure specific phrase"];
-			case LSCGHypnoInstruction.strip:
-				return ["Slots", "Configure specific clothing slots, comma-separated"];
 			case LSCGHypnoInstruction.none:
 				return ["Name", "Name this hypnotic suggestion for future reference"];
 			default:
@@ -786,6 +836,12 @@ export class RemoteSuggestions extends RemoteHypno {
 				return "Compel the subject to speak a phrase.";
 			case LSCGHypnoInstruction.strip:
 				return "Make the subjects clothing uncomfortable.";
+			case LSCGHypnoInstruction.denial:
+				return "Prevent the subject from achieving orgasm.";
+			case LSCGHypnoInstruction.insatiable:
+				return "Infuse the subject with an endless arousal.";
+			case LSCGHypnoInstruction.forget:
+				return "Remove a previous instruction from the subject.";
 			case LSCGHypnoInstruction.none:
 				return "None";
 			default:

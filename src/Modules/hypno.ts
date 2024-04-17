@@ -658,8 +658,8 @@ export class HypnoModule extends BaseModule {
     }
 
     GetSuggestionInfluence(suggestion: HypnoSuggestion, sender: Character) {
-        let suggestionInfluenceVal = this.settings.influence.find(i => i.memberId == suggestion.installedBy)?.influence ?? 0;
-        let speakerInfluenceVal = this.settings.influence.find(i => i.memberId == sender.MemberNumber)?.influence ?? 0;
+        let suggestionInfluenceVal = (this.settings.influence.find(i => i.memberId == suggestion.installedBy)?.influence ?? 0)/2;
+        let speakerInfluenceVal = (this.settings.influence.find(i => i.memberId == sender.MemberNumber)?.influence ?? 0)/2;
         let totalInfluence = suggestionInfluenceVal + speakerInfluenceVal;
         if (this.hypnoActivated)
             totalInfluence *= 2;
@@ -968,7 +968,8 @@ export class HypnoModule extends BaseModule {
             InventoryRemove(Player, grp, false);
         });
         
-        ServerPlayerAppearanceSync();
+        ChatRoomStatusUpdate(null);
+        ChatRoomCharacterUpdate(Player);
         CharacterLoadCanvas(Player);
     }
 
