@@ -293,18 +293,16 @@ export class LeashingModule extends BaseModule {
 
         hookFunction("ChatRoomDoPingLeashedPlayers", 1, (args, next) => {
             next(args);
-            if (this.Enabled) {
-                let SenderCharacter = args[0];
-                if (!ChatRoomCanBeLeashedBy(SenderCharacter.MemberNumber, Player)) {
-                    this.DoEscape(SenderCharacter);
-                }
+            let SenderCharacter = args[0];
+            if (!ChatRoomCanBeLeashedBy(SenderCharacter.MemberNumber, Player)) {
+                this.DoEscape(SenderCharacter);
             }
         }, ModuleCategory.Leashed);
 
         hookFunction("ServerAccountBeep", 1, (args, next) => {
             next(args);
             let data = args[0];
-            if (data.BeepType == "Leash" && this.LeashedByPairings.map(p => p.PairedMember).indexOf(data.MemberNumber) > -1 && data.ChatRoomName) {
+            if (this.Enabled && data.BeepType == "Leash" && this.LeashedByPairings.map(p => p.PairedMember).indexOf(data.MemberNumber) > -1 && data.ChatRoomName) {
                 if (Player.OnlineSharedSettings && Player.OnlineSharedSettings.AllowPlayerLeashing != false && (CurrentScreen != "ChatRoom" || !ChatRoomData || (CurrentScreen == "ChatRoom" && ChatRoomData.Name != data.ChatRoomName))) {
                     if (ChatRoomCanBeLeashedBy(data.MemberNumber, Player) && ChatSelectGendersAllowed(data.ChatRoomSpace, Player.GetGenders())) {
                         ChatRoomJoinLeash = data.ChatRoomName;
