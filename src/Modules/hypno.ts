@@ -12,6 +12,7 @@ import { ActivitySelection, ClothingSelection, ForgetSelection, PoseSelection } 
 import { SuggestionMiniGame } from 'MiniGames/Suggestion';
 import { registerMiniGame } from 'MiniGames/minigames';
 import { StateRestrictions } from './States/BaseState';
+import { Leashing, LeashingModule } from './leashing';
 
 export class SuggestionMiniGameOptions {
     constructor(suggestion: HypnoSuggestion, sender: Character, command: string) {
@@ -23,7 +24,7 @@ export class SuggestionMiniGameOptions {
     sender: Character;
     msg: string = "";
     tintColor: {r: number, g: number, b: number, a: number}[] = [{r: 148, g: 0, b: 211, a: 0}];
-    gameLength: number = 6000;
+    gameLength: number = 4000;
     get senderNum(): number { return this.sender?.MemberNumber ?? -1; }
     get senderName(): string { return !!this.sender ? CharacterNickname(this.sender) : ""; }
     get hintText(): string { return `${this.senderName}'s words compel you...`; }
@@ -389,18 +390,7 @@ export class HypnoModule extends BaseModule {
                             this.settings.suggestions.push(incoming);
                             if (!(this.settings.influence as HypnoInfluence[]))
                                 this.settings.influence = <HypnoInfluence[]>[];
-                            let influence = this.settings.influence.find(i => i.memberId == sender);
-                            if (!influence) {
-                                this.settings.influence.push(<HypnoInfluence>{
-                                    memberId: sender,
-                                    memberName: senderChar?.Name ?? sender + "",
-                                    lastInfluenced: new Date().getTime(),
-                                    influence: 10
-                                });
-                            } else {
-                                influence.lastInfluenced = new Date().getTime();
-                                influence.influence = Math.max(influence.influence + 5, 100);
-                            }
+                            this.IncreaseSpeakerInfluence(sender, 4);
                         }
                         else Object.assign(existing, incoming);
                     });
@@ -699,13 +689,23 @@ export class HypnoModule extends BaseModule {
         }
     }
 
-    IncreaseSpeakerInfluence(memberNumber: number) {
+    IncreaseSpeakerInfluence(memberNumber: number, multi: number = 1) {
+        let increaseAmt = 2 * multi;
+        let sender = getCharacter(memberNumber);
         let influence = this.settings.influence.find(i => i.memberId == memberNumber);
         if (!!influence) {
-            influence.influence = Math.min(influence.influence + 2, 100);
+            influence.influence = Math.min(influence.influence + increaseAmt, 100);
             influence.lastInfluenced = new Date().getTime();
-            settingsSave();
+            if (!!sender) influence.memberName = CharacterNickname(sender);
+        } else {
+            this.settings.influence.push(<HypnoInfluence>{
+                memberId: memberNumber,
+                memberName: !!sender ? CharacterNickname(sender) : "Someone",
+                lastInfluenced: new Date().getTime(),
+                influence: increaseAmt
+            });
         }
+        settingsSave();
     }
 
     AttemptResistSuggestion(suggestion: HypnoSuggestion, sender: Character, command: string) {
@@ -752,7 +752,7 @@ export class HypnoModule extends BaseModule {
                         this.ForceActivity(opts, instruction);
                         break;
                     case LSCGHypnoInstruction.follow:
-                        LSCG_SendLocal(`[NOT YET IMPLEMENTED] Follow -- ${config ?? "speaker"}`);
+                        this.ForceFollow(opts, instruction);
                         break;
                     case LSCGHypnoInstruction.maid:
                         this.ForceMaidWork(opts, instruction);
@@ -785,7 +785,7 @@ export class HypnoModule extends BaseModule {
                         if (!selection)
                             break;
                         HypnoModule.forgettableInstruction.forEach(i => {
-                            if (selection.all || selection.instructions.indexOf(i)) {
+                            if (selection.all || selection.instructions.indexOf(i) > -1) {
                                 switch (i) {
                                     case LSCGHypnoInstruction.denial:
                                         this.StateModule.DeniedState.Recover();
@@ -794,6 +794,7 @@ export class HypnoModule extends BaseModule {
                                         this.StateModule.HornyState.Recover();
                                         break;
                                     case LSCGHypnoInstruction.follow:
+                                        this.BreakFollow(opts, instruction);
                                         break;
                                     case LSCGHypnoInstruction.say:
                                         this.forceSay_sayText = "";
@@ -852,9 +853,14 @@ export class HypnoModule extends BaseModule {
     FindConfigurableTarget(instruction: HypnoInstruction, sender: Character, msg: string) {
         if (instruction.arguments["self"] as boolean == true)
             return Player;
+        if (instruction.arguments["speakerOnly"] as boolean == true) {
+            return getCharacterByNicknameOrMemberNumber(sender.MemberNumber + "");
+        }
         let target = getCharacterByNicknameOrMemberNumber(instruction.arguments["config"] as string ?? "");
-        if (!target)
-            target = getCharacterByNicknameOrMemberNumber(msg ?? "");
+        if (!target) {
+            let parsedMsg = msg.replace(/[^a-zA-Z ]/, "");
+            target = getCharacterByNicknameOrMemberNumber(parsedMsg ?? "");
+        }
         if (!target)
             target = getCharacterByNicknameOrMemberNumber(sender.MemberNumber + "");
         return target;
@@ -1001,6 +1007,49 @@ export class HypnoModule extends BaseModule {
         ChatRoomStatusUpdate(null);
         ChatRoomCharacterUpdate(Player);
         CharacterLoadCanvas(Player);
+    }
+
+    ForceFollow(opts: SuggestionMiniGameOptions, instruction: HypnoInstruction) {
+        let target = this.FindConfigurableTarget(instruction, opts.sender, opts.msg);
+        if (!target || !target.MemberNumber || target.IsPlayer()) {
+            LSCG_SendLocal(`You are unable to find the person you are supposed to follow and shake some of ${opts.senderName}'s influence.`);
+            this.ReduceSpeakerInfluence(opts.sender.MemberNumber ?? -1);
+            return;
+        }
+        let module = getModule<LeashingModule>("LeashingModule");
+        module.AddLeashing(new Leashing(target.MemberNumber, opts.senderNum, false, "compulsion"));
+        sendLSCGCommandBeep(target.MemberNumber, "add-leashing", [{
+            name: "pairedMember",
+            value: Player.MemberNumber
+        }, {
+            name: "type",
+            value: "compulsion"
+        }, {
+            name: "isSource",
+            value: true
+        }]);
+        SendAction("%NAME%'s eyes start to follow %OPP_NAME%'s every movement.", target);
+    }
+
+    BreakFollow(opts: SuggestionMiniGameOptions, instruction: HypnoInstruction) {
+        let module = getModule<LeashingModule>("LeashingModule");
+        let allCompelledTargets = module.Pairings.filter(p => !p.IsSource && p.Type == "compulsion").map(p => p.PairedMember);
+        if (allCompelledTargets.length > 0) {
+            module.RemoveAllLeashingsOfType("compulsion");
+            allCompelledTargets.filter(m => !!m).forEach(memberNum => {
+                sendLSCGCommandBeep(memberNum, "remove-leashing", [{
+                    name: "pairedMember",
+                    value: Player.MemberNumber
+                }, {
+                    name: "type",
+                    value: "compulsion"
+                }, {
+                    name: "isSource",
+                    value: true
+                }]);
+            });
+            SendAction("%NAME% looks around, a little confused about how %PRONOUN% got here.");
+        }
     }
 
     DowngradeInfluences() {

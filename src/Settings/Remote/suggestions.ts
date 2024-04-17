@@ -214,7 +214,15 @@ export class RemoteSuggestions extends RemoteHypno {
 			this.Tooltip(configLabels[1]);
 		MainCanvas.textAlign = "center";
 		ElementPosition(this.configFieldId, coords.x + (coords.w/2) - (buttonWidth/2), (coords.y + coords.h/2) + 20, coords.w - 100 - buttonWidth);
-		DrawButton(1350, 500 - 32, 100, 64, "Confirm", "White");
+		DrawButton(coords.x + coords.w - 150, coords.y + coords.h - 100 - 32, 100, 64, "Confirm", "White");
+
+		if (this.speakerOnlyInstructions.indexOf(this._ConfigureInstruction?.type ?? LSCGHypnoInstruction.none) > -1) {
+			let targetSpkr = this._ConfigureInstruction?.arguments["speakerOnly"] ?? false;
+			this.DrawCheckboxAbsolute("Speaker Only", "Subject will always target the speaker", targetSpkr, {
+				x: coords.x + coords.w - 500,
+				y: coords.y + 80 - 32,
+				w: 140});
+		}
 	}
 
 	drawSelectionPopup() {
@@ -419,6 +427,12 @@ export class RemoteSuggestions extends RemoteHypno {
 		if (!MouseIn(coords.x, coords.y, coords.w, coords.h)) this._ConfigureInstruction = null;
 		else if (MouseIn(1350, 500 - 32, 100, 64) && this._ConfigureInstruction?.type == LSCGHypnoInstruction.none) return this.ConfirmSuggestionName();
 		else if (MouseIn(1350, 500 - 32, 100, 64)) return this.ConfirmInstructionConfig();
+		else if (this.speakerOnlyInstructions.indexOf(this._ConfigureInstruction?.type ?? LSCGHypnoInstruction.none) > -1 &&
+			!!this._ConfigureInstruction && 
+			MouseIn(coords.x + coords.w - 500, coords.y + 80 - 64, 140 + 64, 64)) {
+			let targetSpkr = this._ConfigureInstruction?.arguments["speakerOnly"] ?? false;
+			this._ConfigureInstruction.arguments["speakerOnly"] = !targetSpkr;
+		}
 	}
 
 	clickSelectionPopup() {
@@ -731,7 +745,7 @@ export class RemoteSuggestions extends RemoteHypno {
 		if (!this.Suggestion)
 			return this.ActualInstructions;
 		let otherInstructions = this.Suggestion.instructions.map(i => i.type).filter((v, i, arr) => i != ix).filter(i => this.unrepeatableInstruction.indexOf(i) > -1);
-		return this.ActualInstructions.filter(eff => otherInstructions.indexOf(eff) == -1 && eff != LSCGHypnoInstruction.follow);
+		return this.ActualInstructions.filter(eff => otherInstructions.indexOf(eff) == -1);
 	}
 	get Instruction(): LSCGHypnoInstruction {
 		return this.ActualInstructions[this.InstructionIndex];
@@ -746,6 +760,11 @@ export class RemoteSuggestions extends RemoteHypno {
 
 	selfInstructions: LSCGHypnoInstruction[] = [
 		LSCGHypnoInstruction.activity
+	]
+
+	speakerOnlyInstructions: LSCGHypnoInstruction[] = [
+		LSCGHypnoInstruction.activity,
+		LSCGHypnoInstruction.follow
 	]
 
 	textArgumentInstruction: LSCGHypnoInstruction[] = [
@@ -818,7 +837,7 @@ export class RemoteSuggestions extends RemoteHypno {
 			case LSCGHypnoInstruction.activity:
 				return "Compel the subject to perform an activity.";
 			case LSCGHypnoInstruction.follow:
-				return "Compel the subject to follow someone.";
+				return "Compel the subject to follow someone. (Requires LSCG leashing enabled on both)";
 			case LSCGHypnoInstruction.maid:
 				return "Compel the subject to serve drinks.";
 			case LSCGHypnoInstruction.orgasm:

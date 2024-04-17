@@ -15,7 +15,7 @@ export class SuggestionMiniGame extends BaseMiniGame {
 
     GameStartTime: number = 0;
     GameEndTime: number = 0;
-    StartDelay: number = 2000; // 2 second delay before prompting
+    StartDelay: number = 1500; // 1.5 second delay before prompting
     ResistTime: number = 1200;
     
     Suggestion: HypnoSuggestion | undefined;
@@ -100,7 +100,7 @@ export class SuggestionMiniGame extends BaseMiniGame {
     }
 
     get IsEndGameReport() {
-        return MiniGameEnded && CommonTime() < (this.GameEndTime + 5000);
+        return MiniGameEnded && CommonTime() < (this.GameEndTime + 2000);
     }
 
     GameFailed: boolean = false;

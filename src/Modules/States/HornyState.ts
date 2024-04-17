@@ -1,4 +1,4 @@
-import { hookFunction } from "utils";
+import { getRandomInt, hookFunction } from "utils";
 import { BaseState } from "./BaseState";
 import { StateModule } from "Modules/states";
 import { ModuleCategory } from "Settings/setting_definitions";
@@ -32,7 +32,7 @@ export class HornyState extends BaseState {
     }
 
     Tick(now: number): void {
-        if (this.Active && !!Player.ArousalSettings) {
+        if (this.Active && !!Player.ArousalSettings && getRandomInt(1) == 0) {
             Player.ArousalSettings.Progress++;
         }
     }
