@@ -66,4 +66,9 @@ export abstract class BaseModule {
 	safeword() {
 		// Empty
 	}
+
+	get commands(): ICommand[] {
+		// Empty
+		return [];
+	}
 }

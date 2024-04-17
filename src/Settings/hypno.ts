@@ -123,6 +123,13 @@ export class GuiHypno extends GuiSubscreen {
 						setSetting: (val) => this.settings.allowRemoteModificationOfMemberOverride = val
 					},<Setting>{
 						type: "checkbox",
+						label: "Enable Suggestion Programming",
+						description: "If checked, your hypnotizer may induce hypnotic suggestions within you.",
+						disabled: !this.settings.enabled,
+						setting: () => this.settings.allowSuggestions ?? false,
+						setSetting: (val) => this.settings.allowSuggestions = val
+					},<Setting>{
+						type: "checkbox",
 						label: "Lockable:",
 						description: "If checked, allowed users can lock you out of these settings.",
 						disabled: !this.settings.enabled || !this.settings.remoteAccess,

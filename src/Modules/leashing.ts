@@ -8,8 +8,9 @@ import { Pairing } from "./States/PairedBaseState";
 import { ItemUseModule } from "./item-use";
 import { CollarModel } from "Settings/Models/collar";
 import { CollarModule } from "./collar";
+import { CommandListener, CoreModule } from "./core";
 
-export type GrabType = "hand"  | "ear" | "tongue" | "arm" | "neck" | "mouth" | "horn" | "mouth-with-foot" | "chomp" | "eyes"
+export type GrabType = "hand"  | "ear" | "tongue" | "arm" | "neck" | "mouth" | "horn" | "mouth-with-foot" | "chomp" | "eyes" | "compulsion"
 
 export interface LeashDefinition {
     Type: GrabType;
@@ -61,7 +62,8 @@ export const LeashDefinitions: Map<GrabType, LeashDefinition> = new Map<GrabType
         OnRemove: (pairing) => {
             if (!pairing.IsSource) CharacterSetFacialExpression(Player, "Mouth", (<any>pairing)['temp'] ?? null);
         }
-    }]
+    }],
+    ["compulsion", <LeashDefinition>{Type: "compulsion", LabelTarget: "Compelled to follow %OPP_NAME%", LabelSource: "Followed by %OPP_NAME%", Icon: ICONS.PENDANT}]
 ]);
 
 export class Leashing implements Pairing {
@@ -176,6 +178,7 @@ export class LeashingModule extends BaseModule {
                 let armGrabbingMemberList = this.Pairings.filter(p => p.IsSource && p.Type == "arm").map(p => p.PairedMember);
                 let tongueGrabbedMemberList = this.Pairings.filter(p => p.IsSource && p.Type == "tongue").map(p => p.PairedMember);
                 let chompedBy = this.Pairings.filter(p => !p.IsSource && p.Type == "chomp").map(p => p.PairedMember);
+                let compellingList = this.Pairings.filter(p => p.IsSource && p.Type == "compulsion").map(p => p.PairedMember)
 
                 if (earPinchingMemberList.length > 0) {
                     var chars = earPinchingMemberList.map(id => getCharacter(id));
@@ -205,6 +208,17 @@ export class LeashingModule extends BaseModule {
                             nameStr = chars.slice(0, chars.length - 2).map(c => CharacterNickname(c!)).join(", ") + ", and " + CharacterNickname(chars[chars.length - 1]!)
                         } catch {}
                         SendAction(`%NAME% drags ${nameStr} out of the room with a wince.`);
+                    }
+                } else if (compellingList.length > 0) {
+                    var chars = compellingList.map(id => getCharacter(id));
+                    if (chars.length == 1)
+                        SendAction(`%OPP_NAME%'s eyes lock on to %NAME% and %PRONOUN% follows %INTENSIVE% out of the room obediently.`, chars[0]);
+                    else {
+                        let nameStr = "";
+                        try {
+                            nameStr = chars.slice(0, chars.length - 2).map(c => CharacterNickname(c!)).join(", ") + ", and " + CharacterNickname(chars[chars.length - 1]!)
+                        } catch {}
+                        SendAction(`${nameStr} follow %NAME% out of the room obediently.`);
                     }
                 } else if (this.Leashings.length > 0) {
                     if (this.Leashings.length == 1)
@@ -401,6 +415,18 @@ export class LeashingModule extends BaseModule {
                 return next(args);
             }
         }, ModuleCategory.Leashed);
+
+        getModule<CoreModule>("CoreModule").RegisterCommandListener(<CommandListener>{
+            id: "leashing-listener",
+            command: "add-leashing",
+            func: (sender, msg) => this.HandleLeashingRequest(sender, msg)
+        });
+
+        getModule<CoreModule>("CoreModule").RegisterCommandListener(<CommandListener>{
+            id: "leashing-removal-listener",
+            command: "remove-leashing",
+            func: (sender, msg) => this.HandleLeashRemovalRequest(sender, msg)
+        });
     }
 
     RoomSync(): void {}
@@ -545,6 +571,26 @@ export class LeashingModule extends BaseModule {
 
     // **** COMMS ****
 
+    HandleLeashingRequest(sender: number, msg: LSCGMessageModel) {
+        let args = msg.command?.args;
+        if (!args || msg.command?.name != "add-leashing")
+            return;
+        let pairedMember = args.find(a => a.name == "pairedMember")?.value as number;
+        let type = args.find(a => a.name == "type")?.value as GrabType;
+        let isSource = args.find(a => a.name == "isSource")?.value as boolean;
+        this.AddLeashing(new Leashing(pairedMember, sender, isSource, type));
+    }
+
+    HandleLeashRemovalRequest(sender: number, msg: LSCGMessageModel) {
+        let args = msg.command?.args;
+        if (!args || msg.command?.name != "remove-leashing")
+            return;
+        let pairedMember = args.find(a => a.name == "pairedMember")?.value as number;
+        let type = args.find(a => a.name == "type")?.value as GrabType;
+        let isSource = args.find(a => a.name == "isSource")?.value as boolean;
+        this.RemoveLeashings(pairedMember, isSource, type);
+    }
+
     DoGrab(target: Character, type: GrabType) {
         let definition = LeashDefinitions.get(type);
         if (!target.MemberNumber || 
@@ -607,10 +653,6 @@ export class LeashingModule extends BaseModule {
         if (!!sender && !!sender.MemberNumber && escapeFromMemberNumber == Player.MemberNumber) {
             this.RemoveLeashingsWithMember(sender.MemberNumber, true);
         }
-    }
-
-    NotifyAboutEscape(escapee: Character) {
-        LSCG_SendLocal(`${CharacterNickname(escapee)} has escaped from your grasp!`);
     }
 
     NotifyAboutEscapeCommand(grabber: Character, type: GrabType) {

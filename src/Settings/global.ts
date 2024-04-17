@@ -117,7 +117,7 @@ export class GuiGlobal extends GuiSubscreen {
 			},<Setting>{
 				type: "checkbox",
 				label: "Allow LSCG Leashing:",
-				description: "Allow custom leashing from LSCG activities such as hand-holding, ear pinching, etc.",
+				description: "Allow custom leashing from LSCG activities such as hand-holding, hypnosis, etc.",
 				setting: () => Player.LSCG.LeashingModule.enabled ?? true,
 				setSetting: (val) => Player.LSCG.LeashingModule.enabled = val,
 				disabled: !this.settings.enabled
