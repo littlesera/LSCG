@@ -238,7 +238,7 @@ export function SendChat(msg: string) {
     ServerSend("ChatRoomChat", {Type: "Chat", Content: msg})
 }
 
-export function replace_template(text: string, source: Character | null = null) {
+export function replace_template(text: string, source: Character | null = null, fallbackSourceName: string = "") {
     let result = text;
 
 	let pronounItem = CharacterPronounDescription(Player);
@@ -248,10 +248,10 @@ export function replace_template(text: string, source: Character | null = null) 
 	let intensive = isPlayerMale ? "Him" : "Her";
 	let pronoun = isPlayerMale ? "He" : "She";
 
-	let opp_pronounItem = !source ? null : CharacterPronounDescription(source);
+	let opp_pronounItem = !source ? "They/Them" : CharacterPronounDescription(source);
 	let isOppMale = opp_pronounItem == "He/Him" ?? false;
 
-	let oppName = source == Player ? (isOppMale ? "himself" : "herself") : !!source ? CharacterNickname(source) : "";
+	let oppName = source == Player ? (isOppMale ? "himself" : "herself") : !!source ? CharacterNickname(source) : fallbackSourceName;
 	let oppPossessive = isOppMale ? "His" : "Her";
 	let oppIntensive = source == Player ? (isOppMale ? "Himself" : "Herself") : (isOppMale ? "Him" : "Her");
 	let oppPronoun = isOppMale ? "He" : "She";

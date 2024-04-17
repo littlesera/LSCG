@@ -27,8 +27,7 @@ export abstract class PairedBaseState extends BaseState {
             IsSource: true
         };
         this.AddPairing(newPairing);
-        this.Activate(matchmaker?.MemberNumber, duration);
-        return newPairing;
+        return this.Activate(matchmaker?.MemberNumber, duration);
     }
 
     RespondToPairing(source: Character, matchmaker: Character | null, duration?: number) {

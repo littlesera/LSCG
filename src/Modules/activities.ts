@@ -1052,12 +1052,22 @@ export class ActivityModule extends BaseModule {
         // Patch HandGag
         this.PatchActivity(<ActivityPatch>{
             ActivityName: "HandGag",
+            AddedTargets: [
+                <ActivityTarget>{
+                    Name: "ItemHead",
+                    SelfAllowed: true,
+                    TargetLabel: "Clamp Hand over Eyes",
+                    TargetAction: "SourceCharacter clamps her hand over TargetCharacter's eyes."
+                }
+            ],
             CustomPrereqs: [
                 {
                     Name: "TargetNotAlreadyHandGagged",
                     Func: (acting, acted, group) => {
                         if (group.Name == "ItemMouth")
                             return !this.leashingModule.ContainsLeashing(acted.MemberNumber!, "mouth");
+                        else if (group.Name == "ItemHead")
+                            return !this.leashingModule.ContainsLeashing(acted.MemberNumber!, "eyes");
                         return true;
                     }
                 }
@@ -1067,6 +1077,8 @@ export class ActivityModule extends BaseModule {
                     var location = GetMetadata(args[1])?.GroupName;
                     if (!!target && !!location && location == "ItemMouth")
                         this.leashingModule.DoGrab(target, "mouth");
+                    if (!!target && !!location && location == "ItemHead")
+                        this.leashingModule.DoGrab(target, "eyes");
                     return next(args);
                 }
             },
@@ -1082,9 +1094,14 @@ export class ActivityModule extends BaseModule {
             Targets: [
                 {
                     Name: "ItemMouth",
-                    SelfAllowed: false,
+                    SelfAllowed: true,
                     TargetLabel: "Release Mouth",
                     TargetAction: "SourceCharacter releases TargetCharacter's mouth."
+                }, {
+                    Name: "ItemHead",
+                    SelfAllowed: true,
+                    TargetLabel: "Release Eyes",
+                    TargetAction: "SourceCharacter releases TargetCharacter's eyes."
                 }
             ],
             CustomPrereqs: [
@@ -1093,14 +1110,19 @@ export class ActivityModule extends BaseModule {
                     Func: (acting, acted, group) => {
                         if (group.Name == "ItemMouth")
                             return this.leashingModule.ContainsLeashing(acted.MemberNumber!, "mouth");
+                        if (group.Name == "ItemHead")
+                            return this.leashingModule.ContainsLeashing(acted.MemberNumber!, "eyes");
                         return false;
                     }
                 }
             ],
             CustomAction: <CustomAction>{
                 Func: (target, args, next) => {
-                    if (!!target)
+                    var location = GetMetadata(args[1])?.GroupName;
+                    if (!!target && !!location && location == "ItemMouth")
                         this.leashingModule.DoRelease(target, "mouth");
+                    if (!!target && !!location && location == "ItemHead")
+                        this.leashingModule.DoRelease(target, "eyes");
                     return next(args);
                 }
             },

@@ -2,15 +2,19 @@ import { BaseModule } from "base";
 import { getModule } from "modules";
 import { BaseSettingsModel } from "Settings/Models/base";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { GetActivityName, GetTargetCharacter, ICONS, IsIncapacitated, LSCG_SendLocal, OnAction, OnActivity, SendAction, callOriginal, getCharacter, getRandomInt, hookFunction, removeAllHooksByModule, replace_template, sendLSCGCommand, sendLSCGCommandBeep, setOrIgnoreBlush } from "../utils";
+import { GetActivityName, GetTargetCharacter, ICONS, IsIncapacitated, LSCG_SendLocal, OnAction, OnActivity, SendAction, callOriginal, getCharacter, getRandomInt, hookFunction, mouseTooltip, removeAllHooksByModule, replace_template, sendLSCGCommand, sendLSCGCommandBeep, setOrIgnoreBlush } from "../utils";
 import { MiscModule } from "./misc";
 import { Pairing } from "./States/PairedBaseState";
 import { ItemUseModule } from "./item-use";
+import { CollarModel } from "Settings/Models/collar";
+import { CollarModule } from "./collar";
 
-export type GrabType = "hand"  | "ear" | "tongue" | "arm" | "neck" | "mouth" | "horn" | "mouth-with-foot" | "chomp"
+export type GrabType = "hand"  | "ear" | "tongue" | "arm" | "neck" | "mouth" | "horn" | "mouth-with-foot" | "chomp" | "eyes"
 
 export interface LeashDefinition {
     Type: GrabType;
+    LabelTarget: string;
+    LabelSource: string;
     Reverse: boolean; // Victim will drag initiator
     Bidirectional: boolean; // Will drag if any member leaves
     Ephemeral: boolean; // Will not drag, but prevents leaving
@@ -22,27 +26,40 @@ export interface LeashDefinition {
 }
 
 export const LeashDefinitions: Map<GrabType, LeashDefinition> = new Map<GrabType, LeashDefinition>([
-    ["arm", <LeashDefinition>{Type: "arm"}],
-    ["chomp", <LeashDefinition>{Type: "chomp", Icon: "Assets/Female3DCG/Mouth/Angry/Icon.png", Reverse: true, Gags: true,
+    ["arm", <LeashDefinition>{Type: "arm", LabelTarget: "Arm grabbed by %OPP_NAME%", LabelSource: "Grabbing %OPP_NAME%'s arm"}],
+    ["chomp", <LeashDefinition>{Type: "chomp", LabelTarget: "Chomped on by %OPP_NAME%", LabelSource: "Chomping on %OPP_NAME%", Icon: "Assets/Female3DCG/Mouth/Angry/Icon.png", Reverse: true, Gags: true,
         OnAdd: (pairing) => {
-            if (pairing.IsSource) CharacterSetFacialExpression(Player, "Mouth", "Angry");
+            if (pairing.IsSource) {(<any>pairing)['temp'] = (WardrobeGetExpression(Player)?.Mouth ?? null); CharacterSetFacialExpression(Player, "Mouth", "Angry")};
         },
         OnRemove: (pairing) => {
-            if (pairing.IsSource) CharacterSetFacialExpression(Player, "Mouth", null);
+            if (pairing.IsSource) CharacterSetFacialExpression(Player, "Mouth", (<any>pairing)['temp'] ?? null);
         }
     }],
-    ["ear", <LeashDefinition>{Type: "ear", Icon: ICONS.EAR}],
-    ["hand", <LeashDefinition>{Type: "hand", Icon: ICONS.HOLD_HANDS, Bidirectional: true}],
-    ["horn", <LeashDefinition>{Type: "horn"}],
-    ["mouth", <LeashDefinition>{Type: "mouth", Icon: ICONS.MUTE, Gags: true}],
-    ["mouth-with-foot", <LeashDefinition>{Type: "mouth-with-foot", Icon: "Icons/Management.png", Ephemeral: true, Gags: true}],
-    ["neck", <LeashDefinition>{Type: "neck", Icon: ICONS.NECK}],
-    ["tongue", <LeashDefinition>{Type: "tongue", Icon: ICONS.TONGUE, Gags: true,
+    ["ear", <LeashDefinition>{Type: "ear", LabelTarget: "Ear pinched by %OPP_NAME%", LabelSource: "Pinching %OPP_NAME%'s ear", Icon: ICONS.EAR}],
+    ["hand", <LeashDefinition>{Type: "hand", LabelTarget: "Holding %OPP_NAME%'s hand", Icon: ICONS.HOLD_HANDS, Bidirectional: true}],
+    ["horn", <LeashDefinition>{Type: "horn", LabelTarget: "Horn grabbed by %OPP_NAME%", LabelSource: "Grabbing %OPP_NAME%'s horn"}],
+    ["mouth", <LeashDefinition>{Type: "mouth", LabelTarget: "Mouth clamped by %OPP_NAME%", LabelSource: "Clamping over %OPP_NAME%'s mouth", Icon: ICONS.MUTE, Gags: true}],
+    ["eyes", <LeashDefinition>{Type: "eyes", LabelTarget: "Eyes covered by %OPP_NAME%", LabelSource: "Covering %OPP_NAME%'s eyes", Icon: "Icons/Private.png", Blinds: true,
         OnAdd: (pairing) => {
-            if (!pairing.IsSource) CharacterSetFacialExpression(Player, "Mouth", "Ahegao");;
+            if (!pairing.IsSource) {(<any>pairing)['temp'] = (WardrobeGetExpression(Player)?.Eyes ?? null); CharacterSetFacialExpression(Player, "Eyes", "Closed")};
         },
         OnRemove: (pairing) => {
-            if (!pairing.IsSource) CharacterSetFacialExpression(Player, "Mouth", null);
+            if (!pairing.IsSource) CharacterSetFacialExpression(Player, "Eyes", (<any>pairing)['temp'] ?? null);
+        }}],
+    ["mouth-with-foot", <LeashDefinition>{Type: "mouth-with-foot", LabelTarget: "Mouth filled with %OPP_NAME%'s foot", LabelSource: "Filling %OPP_NAME%'s mouth with foot", Icon: "Icons/Management.png", Ephemeral: true, Gags: true}],
+    ["neck", <LeashDefinition>{Type: "neck", LabelTarget: "Choked by %OPP_NAME%", LabelSource: "Choking %OPP_NAME%", Icon: ICONS.NECK,
+        OnAdd: (pairing) => {
+            if (!pairing.IsSource) getModule<CollarModule>("CollarModule")?.HandChoke(getCharacter(pairing.PairedMember))
+        },
+        OnRemove: (pairing) => {
+            if (!pairing.IsSource) getModule<CollarModule>("CollarModule")?.ReleaseHandChoke(getCharacter(pairing.PairedMember), true)
+        }}],
+    ["tongue", <LeashDefinition>{Type: "tongue", LabelTarget: "Tongue held by %OPP_NAME%", LabelSource: "Holding %OPP_NAME%'s tongue", Icon: ICONS.TONGUE, Gags: true,
+        OnAdd: (pairing) => {
+            if (!pairing.IsSource) {(<any>pairing)['temp'] = (WardrobeGetExpression(Player)?.Mouth ?? null); CharacterSetFacialExpression(Player, "Mouth", "Ahegao")};
+        },
+        OnRemove: (pairing) => {
+            if (!pairing.IsSource) CharacterSetFacialExpression(Player, "Mouth", (<any>pairing)['temp'] ?? null);
         }
     }]
 ]);
@@ -63,13 +80,9 @@ export class Leashing implements Pairing {
 export class LeashingModule extends BaseModule {
     Pairings: Leashing[] = [];
 
-    get Category(): ModuleCategory {
-        return ModuleCategory.Leashed;
-    }
-
     get defaultSettings() {
         return <BaseSettingsModel>{
-            enabled: false
+            enabled: true
         };
     }
 
@@ -146,13 +159,17 @@ export class LeashingModule extends BaseModule {
         this.ClearAllLeashings();
     }
 
+    unload(): void {
+        removeAllHooksByModule(ModuleCategory.Leashed);
+    }
+
     load(): void {
         hookFunction('Player.CanWalk', 1, (args, next) => {
-            if (this.Pairings.filter(p => (!p.IsSource && p.Type != "hand") || (!p.IsSource && p.Type == "chomp")))
+            if (this.Pairings.some(p => (this.CanDragPlayer(p) && p.Type != "hand")))
                 return false;
             return next(args);
-        }, this.Category);
-        
+        }, ModuleCategory.Leashed);
+
         hookFunction("ChatRoomLeave", 1, (args, next) => {
             if (this.RoomAllowsLeashing) {
                 let earPinchingMemberList = this.Pairings.filter(p => p.IsSource && p.Type == "ear").map(p => p.PairedMember);
@@ -178,11 +195,6 @@ export class LeashingModule extends BaseModule {
                         SendAction("%NAME% tugs %OPP_NAME% out of the room by the tongue.", chars[0]);
                     else
                         SendAction("%NAME% tugs " + CharacterNickname(chars[0]!) + " and " + CharacterNickname(chars[1]!) + " out of the room by their tongues.");
-                } else if (this.Leashings.length > 0) {
-                    if (this.Leashings.length == 1)
-                        SendAction(`%NAME% leads %OPP_NAME% out of the room by the ${this.Leashings[0].Type}.`, getCharacter(this.Leashings[0].PairedMember));
-                    else
-                        SendAction("%NAME% leads " + CharacterNickname(getCharacter(this.Leashings[0].PairedMember)!) + " and " + CharacterNickname(getCharacter(this.Leashings[1].PairedMember)!) + " out of the room.");
                 } else if (chompedBy.length > 0) {
                     var chars = chompedBy.map(id => getCharacter(id));
                     if (chars.length == 1)
@@ -194,13 +206,18 @@ export class LeashingModule extends BaseModule {
                         } catch {}
                         SendAction(`%NAME% drags ${nameStr} out of the room with a wince.`);
                     }
+                } else if (this.Leashings.length > 0) {
+                    if (this.Leashings.length == 1)
+                        SendAction(`%NAME% leads %OPP_NAME% out of the room by the ${this.Leashings[0].Type}.`, getCharacter(this.Leashings[0].PairedMember));
+                    else
+                        SendAction("%NAME% leads " + CharacterNickname(getCharacter(this.Leashings[0].PairedMember)!) + " and " + CharacterNickname(getCharacter(this.Leashings[1].PairedMember)!) + " out of the room.");
                 }
             }
 
             this.RemoveAllLeashingsOfType("mouth-with-foot");
 
             return next(args);
-        }, this.Category);
+        }, ModuleCategory.Leashed);
 
         hookFunction("ChatRoomCharacterViewDrawOverlay", 1, (args, next) => {
             const ret = next(args) as any;
@@ -209,26 +226,36 @@ export class LeashingModule extends BaseModule {
                 typeof CharX === "number" &&
                 typeof CharY === "number" &&
                 typeof Zoom === "number" &&
-                ChatRoomHideIconState === 0
+                ChatRoomHideIconState === 0 &&
+                C.IsPlayer()
             ) {
-                this.Pairings.forEach((p, ix, arr) => {
-                    let yOffset = ix * 40 * Zoom;
-                    let icon = this.GetIconForGrabType(p.Type)
-                    DrawCircle(CharX + 420 * Zoom, CharY + 60 * Zoom + yOffset, 20 * Zoom, 1, "Black", p.IsSource ? "White" : "#90E4C1")
-                    DrawImageResize(
-                        icon,
-                        CharX + 405 * Zoom, CharY + 45 * Zoom + yOffset, 30 * Zoom, 30 * Zoom
-                    );
-                });
+                let tooltip = undefined;
+                this.Pairings
+                    .forEach((p, ix, arr) => {                    
+                        let targetIsGrabbed = !p.IsSource;
+                        let yOffset = ix * 40 * Zoom;
+                        let icon = this.GetIconForGrabType(p.Type)
+                        DrawCircle(CharX + 420 * Zoom, CharY + 60 * Zoom + yOffset, 20 * Zoom, 1, "Black", targetIsGrabbed ? "White" : "#90E4C1")
+                        DrawImageResize(
+                            icon,
+                            CharX + 405 * Zoom, CharY + 45 * Zoom + yOffset, 30 * Zoom, 30 * Zoom
+                        );
+                        if (MouseIn(CharX + 400 * Zoom, CharY + 40 * Zoom + yOffset, 40 * Zoom, 40 * Zoom)) {
+                            let def = LeashDefinitions.get(p.Type);
+                            tooltip = replace_template((p.IsSource ? def?.LabelSource ?? def?.LabelTarget : def?.LabelTarget ?? def?.LabelSource) ?? "", getCharacter(p.PairedMember), p.PairedMember + "");
+                        }
+                    });
+                if (!!tooltip)
+                    mouseTooltip(tooltip);
             }
             return ret;
-        }, this.Category);
+        }, ModuleCategory.Leashed);
 
         hookFunction("ChatRoomCanBeLeashedBy", 1, (args, next) => {
             let sourceMemberNumber = args[0];
             let C = args[1];
 
-            if (this.IsLeashedBy(sourceMemberNumber) && this.RoomAllowsLeashing) {
+            if (this.Enabled && this.IsLeashedBy(sourceMemberNumber) && this.RoomAllowsLeashing) {
                 // Have to not be tethered, and need a leash
                 var isTrapped = false;
                 var neckLock = null;
@@ -252,23 +279,27 @@ export class LeashingModule extends BaseModule {
             }
             else    
                 return next(args);
-        }, this.Category);
+        }, ModuleCategory.Leashed);
 
         hookFunction("ChatRoomPingLeashedPlayers", 1, (args, next) => {
             next(args);
-            this.Leashings.forEach(l => {
-                ServerSend("ChatRoomChat", { Content: "PingHoldLeash", Type: "Hidden", Target: l.PairedMember });
-                ServerSend("AccountBeep", { MemberNumber: l.PairedMember, BeepType: "Leash"});
-            });
-        }, this.Category);
+            if (this.Enabled) {
+                this.Leashings.forEach(l => {
+                    ServerSend("ChatRoomChat", { Content: "PingHoldLeash", Type: "Hidden", Target: l.PairedMember });
+                    ServerSend("AccountBeep", { MemberNumber: l.PairedMember, BeepType: "Leash"});
+                });
+            }
+        }, ModuleCategory.Leashed);
 
         hookFunction("ChatRoomDoPingLeashedPlayers", 1, (args, next) => {
             next(args);
-            let SenderCharacter = args[0];
-            if (!ChatRoomCanBeLeashedBy(SenderCharacter.MemberNumber, Player)) {
-                this.DoEscape(SenderCharacter);
+            if (this.Enabled) {
+                let SenderCharacter = args[0];
+                if (!ChatRoomCanBeLeashedBy(SenderCharacter.MemberNumber, Player)) {
+                    this.DoEscape(SenderCharacter);
+                }
             }
-        }, this.Category);
+        }, ModuleCategory.Leashed);
 
         hookFunction("ServerAccountBeep", 1, (args, next) => {
             next(args);
@@ -287,11 +318,11 @@ export class LeashingModule extends BaseModule {
                         else ChatRoomStart(data.ChatRoomSpace, "", null, null, "Introduction", BackgroundsTagList); //CommonSetScreen("Room", "ChatSearch")
                     } else {
                         // If the leading character is no longer allowed or goes somewhere blocked, remove them from our leading lists.
-                        this.RemoveLeashings(data.MemberNumber);
+                        this.RemoveLeashingsWithMember(data.MemberNumber, false);
                     }
                 }
             }
-        }, this.Category);
+        }, ModuleCategory.Leashed);
 
         hookFunction("ChatRoomSync", 1, (args, next) => {
             var ret = next(args) as any;
@@ -299,7 +330,7 @@ export class LeashingModule extends BaseModule {
             this.LeashingsMemberNumbers.filter(id => currentRoomIds.indexOf(id) == -1).forEach(memberNumber => {
                 ServerSend("AccountBeep", { MemberNumber: memberNumber, BeepType: "Leash"});
             });
-        }, this.Category);
+        }, ModuleCategory.Leashed);
 
         hookFunction("ChatRoomMapViewLeash", 1, (args, next) => {
             if (this.Enabled && this.IsLeashed) {
@@ -322,13 +353,13 @@ export class LeashingModule extends BaseModule {
                 ChatRoomLeashPlayer = temp;
             } else
                 return next(args);
-        }, this.Category)
+        }, ModuleCategory.Leashed)
 
-        OnAction(1, this.Category, (data, sender, msg, metadata) => {
+        OnAction(1, ModuleCategory.Leashed, (data, sender, msg, metadata) => {
             if (data?.Content == "ServerDisconnect") {
                 let num = sender?.MemberNumber;
                 if (!!num) {
-                    this.RemoveLeashings(num);
+                    this.RemoveAllLeashingsWithMember(num);
                 }
             }
         });
@@ -345,7 +376,13 @@ export class LeashingModule extends BaseModule {
                 }
             }
             next(args);
-        })
+        }, ModuleCategory.Leashed);
+
+        hookFunction('Player.GetBlindLevel', 1, (args, next) => {
+            if (this.IsCustomBlinded)
+                return Player.GameplaySettings?.SensDepChatLog == "SensDepLight" ? 2 : 3;
+            return next(args);
+        }, ModuleCategory.Leashed);
 
         let failedLinkActions = [
             "%NAME%'s whimpers, %POSSESSIVE% tongue held tightly.",
@@ -365,7 +402,7 @@ export class LeashingModule extends BaseModule {
             } else {
                 return next(args);
             }
-        }, ModuleCategory.Activities);
+        }, ModuleCategory.Leashed);
     }
 
     RoomSync(): void {}
@@ -397,7 +434,7 @@ export class LeashingModule extends BaseModule {
     }
 
     AddLeashing(pairing: Leashing) {
-        let exists = this.Pairings.find(p => p.PairedMember == pairing.PairedMember);
+        let exists = this.Pairings.find(p => p.PairedMember == pairing.PairedMember && p.Type == pairing.Type && p.IsSource == pairing.IsSource);
         if (!exists)
             this.Pairings.push(pairing);
         else // Update if existing pairing to member of matching type
@@ -407,31 +444,38 @@ export class LeashingModule extends BaseModule {
             definition.OnAdd(pairing);
     }
 
-    RemoveLeashings(pairedMember: number) {
+    RemoveAllLeashingsWithMember(pairedMember: number) {
         this.Pairings = this.Pairings.filter(p => {
-            if (p.PairedMember != pairedMember) return true;
-            else return this.RemoveCallback(p);
+            if (p.PairedMember == pairedMember) return this.RemoveCallback(p);
+            else return true;
         });
     }
 
-    RemoveLeashingsByMember(matchmaker: number) {
+    RemoveLeashingsWithMember(pairedMember: number, isSource: boolean) {
         this.Pairings = this.Pairings.filter(p => {
-            if (p.PairedBy != matchmaker) return true;
-            else return this.RemoveCallback(p);
+            if (p.PairedMember == pairedMember && p.IsSource == isSource) return this.RemoveCallback(p);
+            else return true;
+        });
+    }
+
+    RemoveLeashings(pairedMember: number, isSource: boolean, type: GrabType) {
+        this.Pairings = this.Pairings.filter(p => {
+            if (p.PairedMember == pairedMember && p.Type == type && p.IsSource == isSource) return this.RemoveCallback(p);
+            else return true;
+        });
+    }
+
+    RemoveLeashingsCreatedByMember(matchmaker: number) {
+        this.Pairings = this.Pairings.filter(p => {
+            if (p.PairedBy == matchmaker) return this.RemoveCallback(p);
+            else return true;
         });
     }
 
     RemoveAllLeashingsOfType(type: GrabType) {
         this.Pairings = this.Pairings.filter(p => {
-            if (p.Type != type) return true;
-            else return this.RemoveCallback(p);
-        });
-    }
-
-    RemoveLeashingType(member: number, type: GrabType) {
-        this.Pairings = this.Pairings.filter(p => {
-            if (this.PlayerCanDrag(p) && (p.PairedMember != member || p.Type != type)) return true;
-            else return this.RemoveCallback(p);
+            if (p.Type == type) return this.RemoveCallback(p);
+            else return true;
         });
     }
 
@@ -470,27 +514,31 @@ export class LeashingModule extends BaseModule {
     }
 
     CanDragPlayer(leashing: Leashing) {
-        let definition = LeashDefinitions.get(leashing.Type);
-        return !definition?.Ephemeral && (!leashing.IsSource || (leashing.IsSource && definition?.Reverse) || definition?.Bidirectional)
+        let def = LeashDefinitions.get(leashing.Type);
+        return !def?.Ephemeral && 
+        ((!leashing.IsSource && !def?.Reverse) || (leashing.IsSource && def?.Reverse) || def?.Bidirectional)
     }
 
     PlayerCanDrag(leashing: Leashing) {
-        let definition = LeashDefinitions.get(leashing.Type);
-        return !definition?.Ephemeral && (leashing.IsSource || (!leashing.IsSource && definition?.Reverse) || definition?.Bidirectional)
+        let def = LeashDefinitions.get(leashing.Type);
+        return !def?.Ephemeral && 
+        ((leashing.IsSource && !def?.Reverse) || (!leashing.IsSource && def?.Reverse) || def?.Bidirectional)
     }
 
     IsGagging(leashing: Leashing) {
         let def = LeashDefinitions.get(leashing.Type);
-        return def?.Gags && (!leashing.IsSource || (!leashing.IsSource && def?.Reverse) || def?.Bidirectional);
+        return def?.Gags && 
+        ((!leashing.IsSource && !def?.Reverse) || (leashing.IsSource && def?.Reverse) || def?.Bidirectional);
     }
 
     IsBlinding(leashing: Leashing) {
         let def = LeashDefinitions.get(leashing.Type);
-        return def?.Blinds && (!leashing.IsSource || (!leashing.IsSource && def?.Reverse) || def?.Bidirectional);
+        return def?.Blinds && 
+        ((!leashing.IsSource && !def?.Reverse) || (leashing.IsSource && def?.Reverse) || def?.Bidirectional);
     }
 
     IsLeashedBy(member: number) {
-        return this.LeashedByMemberNumbers.indexOf(member);
+        return this.LeashedByMemberNumbers.indexOf(member) > -1;
     }
 
     GetIconForGrabType(type: GrabType) {
@@ -502,7 +550,7 @@ export class LeashingModule extends BaseModule {
     DoGrab(target: Character, type: GrabType) {
         let definition = LeashDefinitions.get(type);
         if (!target.MemberNumber || 
-            target.IsPlayer() || 
+            //target.IsPlayer() || 
             !this.CanAddLeashingType(type))
             return;
 
@@ -513,29 +561,31 @@ export class LeashingModule extends BaseModule {
             type
         ));
 
-        sendLSCGCommandBeep(target.MemberNumber, "grab", [{
-            name: "type",
-            value: type
-        }]);
+        if (!target.IsPlayer()) 
+            sendLSCGCommandBeep(target.MemberNumber, "grab", [{
+                name: "type",
+                value: type
+            }]);
     };
 
     DoRelease(target: Character, type: GrabType) {
         if (!target.MemberNumber)
             return;
 
-        sendLSCGCommand(target, "release", [{
-            name: "type",
-            value: type
-        }]);
+        if (!target.IsPlayer()) 
+            sendLSCGCommand(target, "release", [{
+                name: "type",
+                value: type
+            }]);
      
-        this.RemoveLeashingType(target.MemberNumber, type);
+        this.RemoveLeashings(target.MemberNumber, true, type);
     }
 
     DoEscape(escapeFrom: Character) {
         if (!escapeFrom.MemberNumber)
             return;
 
-        this.RemoveLeashingsByMember(escapeFrom.MemberNumber);
+        this.RemoveLeashingsWithMember(escapeFrom.MemberNumber, false);
         sendLSCGCommand(escapeFrom, "escape");
     }
 
@@ -552,12 +602,12 @@ export class LeashingModule extends BaseModule {
 
     IncomingRelease(sender: OtherCharacter | null, grabType: GrabType) {
         if (!!sender && !!sender.MemberNumber)
-            this.RemoveLeashingType(sender.MemberNumber, grabType);
+            this.RemoveLeashings(sender.MemberNumber, false, grabType);
     }
 
     IncomingEscape(sender: OtherCharacter | null, escapeFromMemberNumber: number) {
         if (!!sender && !!sender.MemberNumber && escapeFromMemberNumber == Player.MemberNumber) {
-            this.RemoveLeashings(sender.MemberNumber);
+            this.RemoveLeashingsWithMember(sender.MemberNumber, true);
         }
     }
 

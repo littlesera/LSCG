@@ -6,6 +6,7 @@ import { GuiCollar } from 'Settings/collar';
 import { ActivityBundle, ActivityModule, ActivityTarget, CustomPrerequisite } from './activities';
 import { getModule } from 'modules';
 import { InjectorModule } from './injector';
+import { LeashingModule } from './leashing';
 
 enum PassoutReason {
     COLLAR,
@@ -442,8 +443,8 @@ export class CollarModule extends BaseModule {
             this.chokeTimeout = setTimeout(() => f(), delay);
     }
 
-    HandChoke(chokingMember: Character) {        
-        if (this.handChokeModifier >= 4 || !Player.LSCG.MiscModule.handChokeEnabled)
+    HandChoke(chokingMember: Character | undefined | null) {        
+        if (this.handChokeModifier >= 4 || !Player.LSCG.MiscModule.handChokeEnabled || !chokingMember)
             return;
             
         this.handChokingMember = chokingMember.MemberNumber ?? 0;
@@ -724,7 +725,7 @@ export class CollarModule extends BaseModule {
         else if (reason == PassoutReason.HAND) {
             SendAction("As %NAME% collapses unconscious, %OPP_NAME% releases %POSSESSIVE% neck.", chokingMember);
             if (!!chokingMember)
-                getModule<ActivityModule>("ActivityModule").DoEscape(chokingMember);
+                getModule<LeashingModule>("LeashingModule").DoEscape(chokingMember);
             else
                 this.ReleaseHandChoke(chokingMember);
             this.settings.stats.handPassoutCount++;
