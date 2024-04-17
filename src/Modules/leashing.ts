@@ -212,7 +212,7 @@ export class LeashingModule extends BaseModule {
                 } else if (compellingList.length > 0) {
                     var chars = compellingList.map(id => getCharacter(id));
                     if (chars.length == 1)
-                        SendAction(`%OPP_NAME%'s eyes lock on to %NAME% and follows %INTENSIVE% out of the room obediently.`, chars[0]);
+                        SendAction(`%OPP_NAME%'s eyes lock on to %NAME% and %PRONOUN% follows %INTENSIVE% out of the room obediently.`, chars[0]);
                     else {
                         let nameStr = "";
                         try {
