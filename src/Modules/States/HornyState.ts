@@ -31,6 +31,12 @@ export class HornyState extends BaseState {
         }, ModuleCategory.States);
     }
 
+    Tick(now: number): void {
+        if (this.Active && !!Player.ArousalSettings) {
+            Player.ArousalSettings.Progress++;
+        }
+    }
+
     RoomSync(): void {}
 
     SpeechBlock(): void {}
