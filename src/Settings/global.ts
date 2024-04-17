@@ -6,6 +6,7 @@ import { ICONS } from "utils";
 import { GlobalSettingsModel } from "./Models/base";
 import { GuiSubscreen, Setting } from "./settingBase";
 import { OpacityModule } from "Modules/opacity";
+import { LeashingModule } from "Modules/leashing";
 
 export class GuiGlobal extends GuiSubscreen {
 
@@ -128,6 +129,7 @@ export class GuiGlobal extends GuiSubscreen {
 		// Load up module settings to ensure defaults..
 		getModule<MiscModule>("MiscModule")?.settings;
 		getModule<LipstickModule>("LipstickModule")?.settings;
+		getModule<LeashingModule>("LeashingModule")?.settings;
 		getModule<BoopsModule>("BoopsModule")?.settings;
 		getModule<OpacityModule>("OpacityModule")?.settings;
 		super.Load();
