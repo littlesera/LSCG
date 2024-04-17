@@ -9,6 +9,7 @@ import { CollarModule } from "./collar";
 import { StateModule } from "./states";
 import { PolymorphedState } from "./States/PolymorphedState";
 import { RedressedState } from "./States/RedressedState";
+import { LeashingModule } from "./leashing";
 
 // Remote UI Module to handle configuration on other characters
 // Can be used to "program" another character's hypnosis, collar, etc.
@@ -129,11 +130,7 @@ export class CommandModule extends BaseModule {
 			Tag: "escape",
 			Description: " : If you are arm-grabbed or ear-pinched, will attempt to escape from their grip.",
 			Action: (args, msg, parsed) => {
-				var module = getModule<ActivityModule>("ActivityModule");
-				if (!module)
-					return;
-
-				module.TryEscape();
+				getModule<LeashingModule>("LeashingModule")?.TryEscape();
 			}
 		}, {
 			Tag: "emergency",

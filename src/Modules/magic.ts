@@ -633,8 +633,8 @@ export class MagicModule extends BaseModule {
                         state = this.stateModule.ResizedState.Enlarge(sender?.MemberNumber, duration, true);
                         break;
                     case LSCGSpellEffect.dispell:
-                        SendAction("%NAME% gasps, blinking as the magic affecting %INTENSIVE% is removed.");
-                        this.stateModule.Clear(false);
+                        SendAction("%NAME% gasps, blinking as any magic affecting %INTENSIVE% is removed.");
+                        this.stateModule.Clear(false, true);
                         break;
                     case LSCGSpellEffect.bless:
                         state = this.stateModule.BuffedState.Bless(sender?.MemberNumber, true, duration);

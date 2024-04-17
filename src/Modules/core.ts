@@ -3,8 +3,7 @@ import { getModule, modules } from "modules";
 import { BaseSettingsModel, GlobalSettingsModel } from "Settings/Models/base";
 import { IPublicSettingsModel, PublicSettingsModel, SettingsModel } from "Settings/Models/settings";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { removeAllHooksByModule, hookFunction, getCharacter, drawSvg, SVG_ICONS, sendLSCGMessage, settingsSave, LSCG_CHANGES, LSCG_SendLocal, mouseTooltip, isCloth } from "../utils";
-import { ActivityModule, GrabType } from "./activities";
+import { removeAllHooksByModule, hookFunction, getCharacter, drawSvg, SVG_ICONS, sendLSCGMessage, settingsSave, LSCG_CHANGES, LSCG_SendLocal, mouseTooltip } from "../utils";
 import { HypnoModule } from "./hypno";
 import { CollarModule } from "./collar";
 
@@ -15,6 +14,7 @@ import { StateMigrator } from "./Migrators/StateMigrator";
 import { MagicModule } from "./magic";
 import { StateModule } from "./states";
 import { drawTooltip } from "Settings/settingUtils";
+import { GrabType, LeashingModule } from "./leashing";
 
 
 /**
@@ -275,13 +275,13 @@ export class CoreModule extends BaseModule {
                 LSCG_SendLocal(msg.command.args[0].value as string, 10000);
                 break;
             case "grab":
-                getModule<ActivityModule>("ActivityModule")?.IncomingGrab(Sender, msg.command.args.find(a => a.name == "type")?.value as GrabType);
+                getModule<LeashingModule>("LeashingModule")?.IncomingGrab(Sender, msg.command.args.find(a => a.name == "type")?.value as GrabType);
                 break;
             case "release":
-                getModule<ActivityModule>("ActivityModule")?.IncomingRelease(Sender, msg.command.args.find(a => a.name == "type")?.value as GrabType);
+                getModule<LeashingModule>("LeashingModule")?.IncomingRelease(Sender, msg.command.args.find(a => a.name == "type")?.value as GrabType);
                 break;
             case "escape":
-                getModule<ActivityModule>("ActivityModule")?.IncomingEscape(Sender, msg.target);
+                getModule<LeashingModule>("LeashingModule")?.IncomingEscape(Sender, msg.target);
                 break;
             case "remote":
                 let prevCollarPurchase = Player.LSCG?.CollarModule?.collarPurchased;
