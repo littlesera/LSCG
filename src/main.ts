@@ -17,6 +17,7 @@ import { StateModule } from 'Modules/states';
 import { MagicModule } from 'Modules/magic';
 import { OpacityModule } from 'Modules/opacity';
 import { lt } from 'semver';
+import { LeashingModule } from 'Modules/leashing';
 
 export { 
 	DrugKeywords, 
@@ -166,6 +167,7 @@ function init_modules(): boolean {
 	registerModule(new MagicModule());
 	registerModule(new RemoteUIModule());
 	registerModule(new CommandModule());
+	registerModule(new LeashingModule());
 
 	for (const m of modules()) {
 		m.init();

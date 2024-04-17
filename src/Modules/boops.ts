@@ -10,11 +10,6 @@ export class BoopsModule extends BaseModule {
     boopShutdown: boolean = false;
     boopDecreaseLoop: number = 0;
 
-    // Disabled as it's managed via General
-    // get settingsScreen(): Subscreen | null {
-    //     return GuiBoops;
-    // }
-
     get defaultSettings() {
         return <BaseSettingsModel>{
             enabled: false

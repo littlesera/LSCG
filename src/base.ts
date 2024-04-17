@@ -1,8 +1,13 @@
 import { BaseSettingsModel } from "Settings/Models/base";
 import { SettingsModel } from "Settings/Models/settings";
-import { Subscreen } from "Settings/setting_definitions";
+import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
+import { removeAllHooksByModule } from "utils";
 
 export abstract class BaseModule {
+	get Category(): ModuleCategory {
+		return ModuleCategory.Global;
+	}
+
 	get settingsScreen() : Subscreen | null {
 		return null;
 	};
@@ -57,6 +62,7 @@ export abstract class BaseModule {
 
 	unload() {
 		// Empty
+		removeAllHooksByModule(this.Category);
 	}
 
 	reload() {

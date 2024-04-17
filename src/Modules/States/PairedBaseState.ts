@@ -21,25 +21,35 @@ export abstract class PairedBaseState extends BaseState {
     abstract Update(source: number, args: {name: string, value: any}[]): void;
 
     DoPair(target: Character, matchmaker: Character | null, duration?: number) {
-        this.AddPairing(<Pairing>{
+        let newPairing = <Pairing>{
             PairedMember: target.MemberNumber,
             PairedBy: matchmaker?.MemberNumber,
             IsSource: true
-        });
-        return this.Activate(matchmaker?.MemberNumber, duration);
+        };
+        this.AddPairing(newPairing);
+        this.Activate(matchmaker?.MemberNumber, duration);
+        return newPairing;
     }
 
     RespondToPairing(source: Character, matchmaker: Character | null, duration?: number) {
-        this.AddPairing(<Pairing>{
+        let newPairing = <Pairing>{
             PairedMember: source.MemberNumber,
             PairedBy: matchmaker?.MemberNumber,
             IsSource: false
-        });
+        };
+        this.AddPairing(newPairing);
         this.Activate(matchmaker?.MemberNumber, duration);
+        return newPairing
+    }
+
+    NotifyUnpair(member: number) {
+        sendLSCGCommandBeep(member, "unpair", [{
+            name: "type",
+            value: this.Type
+        }]);
     }
 
     Recover(emote?: boolean | undefined): BaseState | undefined {
-        if (emote) SendAction("%NAME%'s breathing calms down as %PRONOUN% regains control of %POSSESSIVE% arousal.")
         this.Pairings.forEach(pair => {
             sendLSCGCommandBeep(pair.PairedMember, "unpair", [{
                 name: "type",
@@ -63,20 +73,21 @@ export abstract class PairedBaseState extends BaseState {
         if (!exists)
             this.Pairings.push(pairing);
         else // Update if existing pairing to member of matching type
-            Object.assign(exists, pairing);
+            pairing = Object.assign(exists, pairing);
         settingsSave();
     }
 
-    RemovePairing(paired: number) {
-        this.Pairings = this.Pairings.filter(p => p.PairedMember != paired)
-        if (this.Pairings.length <= 0)
-            super.Recover();
-        else
-            settingsSave();
+    RemovePairing(pairedMember: number) {
+        this.Pairings = this.Pairings.filter(p => p.PairedMember != pairedMember)
+        this.CheckIfPairingsEmpty();
     }
 
     RemovePairingsByMember(matchmaker: number) {
         this.Pairings = this.Pairings.filter(p => p.PairedBy != matchmaker);
+        this.CheckIfPairingsEmpty();
+    }
+
+    CheckIfPairingsEmpty() {
         if (this.Pairings.length <= 0)
             super.Recover();
         else

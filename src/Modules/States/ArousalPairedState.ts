@@ -1,7 +1,8 @@
 import { StateModule } from "Modules/states";
 import { PairedBaseState } from "./PairedBaseState";
-import { getCharacter, hookFunction, sendLSCGCommandBeep } from "utils";
+import { SendAction, getCharacter, hookFunction, sendLSCGCommandBeep } from "utils";
 import { ModuleCategory } from "Settings/setting_definitions";
+import { BaseState } from "./BaseState";
 
 export class ArousalPairedState extends PairedBaseState {
     Type: LSCGState = "arousal-paired";
@@ -57,6 +58,11 @@ export class ArousalPairedState extends PairedBaseState {
             this.PingArousal();
         }
         super.Tick(now);
+    }
+
+    Recover(emote?: boolean | undefined): BaseState | undefined {
+        if (emote) SendAction("%NAME%'s breathing calms down as %PRONOUN% regains control of %POSSESSIVE% arousal.")
+        return super.Recover(emote);
     }
 
     RoomSync(): void {}

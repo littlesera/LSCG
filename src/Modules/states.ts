@@ -349,7 +349,7 @@ export class StateModule extends BaseModule {
         };
     }
 
-    Clear(emote: boolean) {
+    Clear(emote: boolean, magical: boolean = false) {
         this.States.forEach(s => s.Recover(emote));
     }
 
