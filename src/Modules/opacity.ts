@@ -1,9 +1,8 @@
 import { BaseModule } from "base";
 import { getModule } from "modules";
-import { BaseSettingsModel, OpacitySettingsModel } from "Settings/Models/base";
+import { OpacitySettingsModel } from "Settings/Models/base";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { GetTargetCharacter, IsIncapacitated, OnActivity, SendAction, getRandomInt, hookFunction, isCloth, removeAllHooksByModule, setOrIgnoreBlush } from "../utils";
-import { MiscModule } from "./misc";
+import { hookFunction, isCloth } from "../utils";
 import { StateModule } from "./states";
 import { drawTooltip } from "Settings/settingUtils";
 
@@ -182,7 +181,9 @@ export class OpacityModule extends BaseModule {
             if (regex.test(funcName)) {
                 let ret = CommonCallFunctionByName(args[0], args[1]) ?? {};
                 if (this.Enabled && !!CA && isCloth(CA) && !!Property) {
-                    let layerName = (params['L'] as string ?? "").trim().slice(1);
+                    let layerName = (params['L'] as string ?? "").trim();
+                    if (layerName[0] == '_')
+                        layerName = layerName.slice(1);
                     let layerIx = CA.Asset.Layer.findIndex(l => l.Name == layerName);
                     let originalLayerOpacity = CA.Asset.Layer[layerIx]?.Opacity ?? CA.Asset.Opacity ?? 1;
                     let overrideOpacity = Array.isArray(Property?.LSCGOpacity) ? Property?.LSCGOpacity[layerIx] : Property?.LSCGOpacity;
