@@ -8,7 +8,7 @@ import { ActivityEntryModel } from 'Settings/Models/activities';
 import { InjectorModule } from './injector';
 import { StateModule } from './states';
 import { CommandListener, CoreModule } from './core';
-import { ActivitySelection, ClothingSelection, PoseSelection } from 'Settings/Remote/suggestions';
+import { ActivitySelection, ClothingSelection, ForgetSelection, PoseSelection } from 'Settings/Remote/suggestions';
 import { SuggestionMiniGame } from 'MiniGames/Suggestion';
 import { registerMiniGame } from 'MiniGames/minigames';
 import { StateRestrictions } from './States/BaseState';
@@ -774,6 +774,36 @@ export class HypnoModule extends BaseModule {
                     case LSCGHypnoInstruction.strip:
                         this.ForceStrip(opts, instruction);
                         break;
+                    case LSCGHypnoInstruction.denial:
+                        SendAction("%NAME%'s blank expression hides %POSSESSIVE% impending denial.")
+                        this.StateModule.DeniedState.Activate(opts.senderNum);
+                    case LSCGHypnoInstruction.insatiable:
+                        SendAction("%NAME%'s face begins to blush and %POSSESSIVE% breathing speeds up.");
+                        this.StateModule.HornyState.Activate(opts.senderNum);
+                    case LSCGHypnoInstruction.forget:
+                        let selection = instruction.arguments["selection"] as ForgetSelection;
+                        if (!selection)
+                            break;
+                        HypnoModule.forgettableInstruction.forEach(i => {
+                            if (selection.all || selection.instructions.indexOf(i)) {
+                                switch (i) {
+                                    case LSCGHypnoInstruction.denial:
+                                        this.StateModule.DeniedState.Recover();
+                                        break;
+                                    case LSCGHypnoInstruction.insatiable:
+                                        this.StateModule.HornyState.Recover();
+                                        break;
+                                    case LSCGHypnoInstruction.follow:
+                                        break;
+                                    case LSCGHypnoInstruction.say:
+                                        this.forceSay_sayText = "";
+                                        if (this.forceSay_BypassingSpeechBlock) this.StateModule.HypnoState.PreventSpeech();
+                                        break;
+                                    default:
+                                        break;
+                                }
+                            }
+                        })
                     default:
                         break;
                 }
@@ -986,6 +1016,13 @@ export class HypnoModule extends BaseModule {
         });
         settingsSave();
     }
+
+    static forgettableInstruction: LSCGHypnoInstruction[] = [
+		LSCGHypnoInstruction.denial,
+		LSCGHypnoInstruction.insatiable,
+		LSCGHypnoInstruction.follow,
+		LSCGHypnoInstruction.say
+	]
 }
 
 // Random Trigger Word List

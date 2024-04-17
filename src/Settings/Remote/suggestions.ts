@@ -3,7 +3,7 @@ import { Setting } from "Settings/settingBase";
 import { LSCGHypnoInstruction, SUGGESTION_LIMIT } from "Settings/Models/hypno";
 import { getActivities, ICONS, getActivityLabel, getZoneColor, replace_template, sendLSCGCommandBeep, isCloth } from "utils";
 import { RemoteHypno } from "./hypno";
-import { HypnoInstruction, HypnoSuggestion } from "Modules/hypno";
+import { HypnoInstruction, HypnoModule, HypnoSuggestion } from "Modules/hypno";
 import { getModule } from "modules";
 import { CommandListener, CoreModule } from "Modules/core";
 
@@ -390,7 +390,7 @@ export class RemoteSuggestions extends RemoteHypno {
 
 			DrawTextFit("Select Instructions to Forget:", coords.x + 20, coords.y + 120, 600, "Black", "");
 
-			this.forgettableInstruction.forEach((instruction, ix, arr) => {
+			HypnoModule.forgettableInstruction.forEach((instruction, ix, arr) => {
 				this.DrawCheckboxAbsolute(instruction, "", currentValue.all || currentValue.instructions.indexOf(instruction) > -1, {
 					x: coords.x + 100,
 					y: coords.y + 200 + (80*ix),
@@ -527,7 +527,7 @@ export class RemoteSuggestions extends RemoteHypno {
 				// All
 				currentValue.all = !currentValue.all;
 			}
-			this.forgettableInstruction.forEach((instruction, ix, arr) => {
+			HypnoModule.forgettableInstruction.forEach((instruction, ix, arr) => {
 				if (MouseIn(coords.x + 100, coords.y + 200 + (80*ix) - 32, 200 + 64, 64)) {
 					if (currentValue.instructions.indexOf(instruction) == -1) currentValue.instructions.push(instruction);
 					else currentValue.instructions.splice(currentValue.instructions.indexOf(instruction), 1);
@@ -770,13 +770,6 @@ export class RemoteSuggestions extends RemoteHypno {
 
 	terminatingInstruction: LSCGHypnoInstruction[] = [
 		LSCGHypnoInstruction.maid
-	]
-
-	forgettableInstruction: LSCGHypnoInstruction[] = [
-		LSCGHypnoInstruction.denial,
-		LSCGHypnoInstruction.insatiable,
-		LSCGHypnoInstruction.follow,
-		LSCGHypnoInstruction.say
 	]
 
 	configLabels(instruction: LSCGHypnoInstruction): [string, string] {
