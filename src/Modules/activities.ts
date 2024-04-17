@@ -1057,7 +1057,8 @@ export class ActivityModule extends BaseModule {
                     Name: "ItemHead",
                     SelfAllowed: true,
                     TargetLabel: "Clamp Hand over Eyes",
-                    TargetAction: "SourceCharacter clamps her hand over TargetCharacter's eyes."
+                    TargetAction: "SourceCharacter clamps her hand over TargetCharacter's eyes.",
+                    TargetSelfAction: "SourceCharacter clamps her hand over PronounPossessive own eyes."
                 }
             ],
             CustomPrereqs: [
