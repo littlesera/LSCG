@@ -552,13 +552,14 @@ export class LeashingModule extends BaseModule {
     IsGagging(leashing: Leashing) {
         let def = LeashDefinitions.get(leashing.Type);
         return def?.Gags && 
-        ((!leashing.IsSource && !def?.Reverse) || (leashing.IsSource && def?.Reverse) || def?.Bidirectional);
+        ((!leashing.IsSource && !def?.Reverse) || (leashing.IsSource && def?.Reverse) || def?.Bidirectional || leashing.PairedMember == Player.MemberNumber);
     }
 
     IsBlinding(leashing: Leashing) {
         let def = LeashDefinitions.get(leashing.Type);
+        
         return def?.Blinds && 
-        ((!leashing.IsSource && !def?.Reverse) || (leashing.IsSource && def?.Reverse) || def?.Bidirectional);
+        ((!leashing.IsSource && !def?.Reverse) || (leashing.IsSource && def?.Reverse) || def?.Bidirectional || leashing.PairedMember == Player.MemberNumber);
     }
 
     IsLeashedBy(member: number) {

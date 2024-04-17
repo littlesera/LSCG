@@ -1097,12 +1097,14 @@ export class ActivityModule extends BaseModule {
                     Name: "ItemMouth",
                     SelfAllowed: true,
                     TargetLabel: "Release Mouth",
-                    TargetAction: "SourceCharacter releases TargetCharacter's mouth."
+                    TargetAction: "SourceCharacter releases TargetCharacter's mouth.",
+                    TargetSelfAction: "SourceCharacter releases PronounPossessive own mouth."
                 }, {
                     Name: "ItemHead",
                     SelfAllowed: true,
                     TargetLabel: "Release Eyes",
-                    TargetAction: "SourceCharacter releases TargetCharacter's eyes."
+                    TargetAction: "SourceCharacter removes their hand from TargetCharacter's eyes.",
+                    TargetSelfAction: "SourceCharacter pulls their hand away from PronounPossessive eyes."
                 }
             ],
             CustomPrereqs: [
