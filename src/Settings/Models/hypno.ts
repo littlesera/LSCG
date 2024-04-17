@@ -6,13 +6,15 @@ export const SUGGESTION_LIMIT: number = 64;
 export enum LSCGHypnoInstruction {
     none = "None",
     orgasm = "Orgasm",
+    denial = "Denial",
+    insatiable = "Insatiable",
     activity = "Perform Activity",
     strip = "Strip",
     pose = "Assume Pose",
     follow = "Follow",
     say = "Speak Phrase",
     maid = "Serve",
-    clear = "Clear"
+    forget = "Forget"
 }
 
 export interface HypnoModuleStats extends ModuleStats {
