@@ -219,6 +219,7 @@ export class HypnoModule extends BaseModule {
             }
         });
 
+        
         let handlerPriority = (ChatRoomMessageHandlers.find(h => h.Description == "Save chats and whispers to the chat log")?.Priority ?? 110) - 1;
         ChatRoomRegisterMessageHandler(<ChatRoomMessageHandler>{
             Priority: handlerPriority, // Try to make sure we run last. Other mods could potentially add handlers after this depending on arbitrary load order.
