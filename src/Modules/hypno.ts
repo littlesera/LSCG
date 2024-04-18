@@ -94,41 +94,44 @@ export class HypnoModule extends BaseModule {
             Priority: handlerPriority, // Try to make sure we run last. Other mods could potentially add handlers after this depending on arbitrary load order.
             Description: "LSCG Hypnosis Trigger Checks",
             Callback: (data: ServerChatRoomMessage, sender: Character, msg: string, metadata?: IChatRoomMessageMetadata) => {
-                if (!this.Enabled)
-                    return {msg: msg};
+                if (data.Type == "Chat" || data.Type == "Whisper") {
+                    if (!this.Enabled)
+                        return {msg: msg};
 
-                const C = sender;
-                if (ChatRoomIsViewActive(ChatRoomMapViewName) && !ChatRoomMapViewCharacterIsHearable(C))
-                    return {msg: msg};
-                    
-                // Check for non-garbled trigger word, this means a trigger word could be set to what garbled speech produces >.>
-                if (this.CheckTrigger(msg, C) && !this.IsOnCooldown()) {
-                    msg = this.BlankOutTriggers(msg);
-                    this.StartTriggerWord(true, C.MemberNumber);
-                    return {msg: msg};
-                }
-
-                if (this.hypnoActivated) {
-                    var lowerMsg = msg.toLowerCase();
-                    var names = [CharacterNickname(Player)];
-                    if (!!Player.Name && names.indexOf(Player.Name) == -1)
-                        names.push(Player.Name);
-                    if (names.some(n => isPhraseInString(lowerMsg, n)) || 
-                        this.StateModule.HypnoState.config.activatedBy == C.MemberNumber || 
-                        this.StateModule.HypnoState.config.activatedBy == -1 ||
-                        C.MemberNumber == Player.MemberNumber) {
-                        if (this.CheckAwakener(msg, C)) {
-                            this.TriggerRestoreWord(C);
-                        } else  {
-                            this.CheckSpeechTriggers(msg, C);
-                        }
+                    const C = sender;
+                    if (ChatRoomIsViewActive(ChatRoomMapViewName) && !ChatRoomMapViewCharacterIsHearable(C))
+                        return {msg: msg};
+                        
+                    // Check for non-garbled trigger word, this means a trigger word could be set to what garbled speech produces >.>
+                    if (this.CheckTrigger(msg, C) && !this.IsOnCooldown()) {
                         msg = this.BlankOutTriggers(msg);
+                        this.StartTriggerWord(true, C.MemberNumber);
+                        return {msg: msg};
                     }
-                    else
-                        msg =  msg.replace(/\S/gm, '-');
+
+                    if (this.hypnoActivated) {
+                        var lowerMsg = msg.toLowerCase();
+                        var names = [CharacterNickname(Player)];
+                        if (!!Player.Name && names.indexOf(Player.Name) == -1)
+                            names.push(Player.Name);
+                        if (names.some(n => isPhraseInString(lowerMsg, n)) || 
+                            this.StateModule.HypnoState.config.activatedBy == C.MemberNumber || 
+                            this.StateModule.HypnoState.config.activatedBy == -1 ||
+                            C.MemberNumber == Player.MemberNumber) {
+                            if (this.CheckAwakener(msg, C)) {
+                                this.TriggerRestoreWord(C);
+                            } else  {
+                                this.CheckSpeechTriggers(msg, C);
+                            }
+                            msg = this.BlankOutTriggers(msg);
+                        }
+                        else
+                            msg =  msg.replace(/\S/gm, '-');
+                    }
+                    
+                    return { msg: msg }
                 }
-                
-                return { msg: msg }
+                return false;
             }
         });
 
