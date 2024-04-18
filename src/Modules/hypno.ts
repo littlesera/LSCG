@@ -237,7 +237,7 @@ export class HypnoModule extends BaseModule {
             console.debug(args);
             // Check for non-garbled trigger word, this means a trigger word could be set to what garbled speech produces >.>
             let msg = callOriginal("SpeechGarble", [args[0], args[1]]);
-            console.debug(`checking hypno trigger against ${msg}...`);
+            console.debug(`checking hypno trigger against "${msg}"...`);
             if (this.CheckTrigger(msg, C) && !this.IsOnCooldown()) {
                 console.debug("Trigger detected, starting hypno...");
                 args[1] = this.BlankOutTriggers(args[1]);
