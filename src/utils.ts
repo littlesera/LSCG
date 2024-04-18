@@ -596,7 +596,7 @@ export function GetActivityName(data: ServerChatRoomMessage): string | undefined
 }
 
 export function GetDelimitedList(source: string, delimiter: string = ","): string[] {
-	return source?.split(delimiter)?.filter(entry => !!entry).map(entry => entry.toLocaleLowerCase()) ?? [];
+	return source?.split(delimiter)?.filter(entry => !!entry).map(entry => entry.toLocaleLowerCase().trim()) ?? [];
 }
 
 export function GetActivityEntry(actName: string, grpName: string): ActivityEntryModel | undefined {
