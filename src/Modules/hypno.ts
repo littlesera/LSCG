@@ -218,7 +218,6 @@ export class HypnoModule extends BaseModule {
                 }
             }
         });
-
         
         let handlerPriority = (ChatRoomMessageHandlers.find(h => h.Description == "Save chats and whispers to the chat log")?.Priority ?? 110) - 1;
         ChatRoomRegisterMessageHandler(<ChatRoomMessageHandler>{
@@ -545,7 +544,9 @@ export class HypnoModule extends BaseModule {
         let suggestion = this.settings.suggestions.find(s => this._CheckForTriggers(msg, sender, [s.trigger], this.hypnoActivated) && (!s.exclusive || s.installedBy == sender.MemberNumber))
         if (!!suggestion) {
             let commandArgs = msg.slice(msg.toLocaleLowerCase().indexOf(suggestion.trigger.toLocaleLowerCase()) + suggestion.trigger.length)?.trim() ?? "";
-            this.CompelSuggestion(suggestion, sender, commandArgs);
+            setTimeout(() => {
+                if (!!suggestion) this.CompelSuggestion(suggestion, sender, commandArgs)
+            }, 500);
         }
     }
 

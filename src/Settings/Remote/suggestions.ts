@@ -119,7 +119,7 @@ export class RemoteSuggestions extends RemoteHypno {
 					if (this.Suggestion.instructions.length > 0) this.drawInstructionSelector(1);
 					if (this.Suggestion.instructions.length > 1) this.drawInstructionSelector(2);
 
-					DrawButton(1260 - 4, this.getYPos(0) - 32 - 4, 72, 72, "", "White", "", `Rename Suggestion`, !this.IsSuggestionOwner); // Add New Suggestion
+					DrawButton(1260 - 4, this.getYPos(0) - 32 - 4, 72, 72, "", this.IsSuggestionOwner ? "White" : "LightGrey", "", `Rename Suggestion`, !this.IsSuggestionOwner); // Add New Suggestion
 					DrawImageResize("Icons/Title.png", 1260, this.getYPos(0) - 32, 64, 64);
 				}
 				else {
@@ -625,6 +625,7 @@ export class RemoteSuggestions extends RemoteHypno {
 				label: "Trigger Phrase:",
 				description: "Trigger phrase for this suggestion.",
 				id: "suggestionTrigger",
+				disabled: !this.IsSuggestionOwner,
 				setting: () => this.Suggestion?.trigger ?? "",
 				setSetting: (val) => { if (!!this.Suggestion) this.Suggestion.trigger = val},
 				hidden: !this.Suggestion,
