@@ -668,15 +668,15 @@ export class HypnoModule extends BaseModule {
             AudioPlaySoundEffect("BellMedium");
 
         let totalInfluence = this.GetSuggestionInfluence(suggestion, sender);
+        let playerDomRepMod = getDominance(Player) / 2;
         // Calculate chance to resist suggestion, if 0 force activate
         // Otherwise prompt user in local chat with constructed message based on instructions
-        if (this.GetSuggestionInfluence(suggestion, sender) >= 100)
+        if (totalInfluence >= (100 + playerDomRepMod))
             this.DoSuggestion(new SuggestionMiniGameOptions(suggestion, sender, command));
         else {
             // Start Resist Game
             this.MiniGameOptions = new SuggestionMiniGameOptions(suggestion, sender, command);
             MiniGameStart(this.SuggestionGame.name, totalInfluence, "LSCG_SuggestionEnd");
-            //this.PromptResistSuggestion(suggestion, sender, command);
         }
     }
 
