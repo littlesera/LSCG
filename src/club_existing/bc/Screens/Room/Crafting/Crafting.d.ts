@@ -185,6 +185,15 @@ declare let CraftingReorderMode: CraftingReorderType;
  * @type {null | TextCache}
  */
 declare let CraftingLayerNames: null | TextCache;
+/**
+ * A record mapping all crafting-valid asset names to a list of matching elligble assets.
+ *
+ * Elligble assets are defined as crafting-valid assets with either a matching {@link Asset.Name} or {@link Asset.CraftGroup}.
+ *
+ * The first asset in each list is guaranteed to satisfy `Asset.Group.Name === Asset.DynamicGroupName` _if_ any of the list members satisfy this condition.
+ * @type {Record<string, Asset[]>}
+ */
+declare let CraftingAssets: Record<string, Asset[]>;
 /** The separator used between different crafted items when serializing them. */
 declare const CraftingSerializeItemSep: "§";
 /** The separator used between fields within a single crafted item when serializing them. */
