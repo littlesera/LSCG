@@ -224,41 +224,40 @@ export class HypnoModule extends BaseModule {
             Priority: handlerPriority, // Try to make sure we run last. Other mods could potentially add handlers after this depending on arbitrary load order.
             Description: "LSCG Hypnosis Trigger Checks",
             Callback: (data: ServerChatRoomMessage, sender: Character, msg: string, metadata?: IChatRoomMessageMetadata) => {
-                if (!this.Enabled)
-                    return {msg: msg};
-
-                const C = sender;
-                if (ChatRoomIsViewActive(ChatRoomMapViewName) && !ChatRoomMapViewCharacterIsHearable(C))
-                    return {msg: msg};
-                    
-                // Check for non-garbled trigger word, this means a trigger word could be set to what garbled speech produces >.>
-                if (this.CheckTrigger(msg, C) && !this.IsOnCooldown()) {
-                    msg = this.BlankOutTriggers(msg);
-                    this.StartTriggerWord(true, C.MemberNumber);
-                    return {msg: msg};
-                }
-
-                if (this.hypnoActivated) {
-                    var lowerMsg = msg.toLowerCase();
-                    var names = [CharacterNickname(Player)];
-                    if (!!Player.Name && names.indexOf(Player.Name) == -1)
-                        names.push(Player.Name);
-                    if (names.some(n => isPhraseInString(lowerMsg, n)) || 
-                        this.StateModule.HypnoState.config.activatedBy == C.MemberNumber || 
-                        this.StateModule.HypnoState.config.activatedBy == -1 ||
-                        C.MemberNumber == Player.MemberNumber) {
-                        if (this.CheckAwakener(msg, C)) {
-                            this.TriggerRestoreWord(C);
-                        } else  {
-                            this.CheckSpeechTriggers(msg, C);
+                if (data.Type == "Chat" || data.Type == "Whisper") {
+                    if (!this.Enabled || (ChatRoomIsViewActive(ChatRoomMapViewName) && !ChatRoomMapViewCharacterIsHearable(sender)))
+                        return false;
+    
+                    // Check for non-garbled trigger word, this means a trigger word could be set to what garbled speech produces >.>
+                    if (!this.hypnoActivated && this.CheckTrigger(msg, sender) && !this.IsOnCooldown()) {
+                        this.StartTriggerWord(true, sender.MemberNumber);
+                    } else if (this.hypnoActivated) {
+                        var lowerMsg = msg.toLowerCase();
+                        var names = [CharacterNickname(Player)];
+                        if (!!Player.Name && names.indexOf(Player.Name) == -1)
+                            names.push(Player.Name);
+                        if (names.some(n => isPhraseInString(lowerMsg, n)) || 
+                            this.StateModule.HypnoState.config.activatedBy == sender.MemberNumber || 
+                            this.StateModule.HypnoState.config.activatedBy == -1 ||
+                            sender.MemberNumber == Player.MemberNumber) {
+                            if (this.CheckAwakener(msg, sender)) {
+                                this.TriggerRestoreWord(sender);
+                            } else  {
+                                this.CheckSpeechTriggers(msg, sender);
+                            }
                         }
-                        msg = this.BlankOutTriggers(msg);
+                        else
+                            msg =  msg.replace(/\S/gm, '-');
                     }
-                    else
-                        msg =  msg.replace(/\S/gm, '-');
-                }
-                
-                return { msg: msg }
+                    
+                    if (this.settings.allowSuggestions)
+                        this.CheckSuggestions(msg, sender);
+
+                    msg = this.BlankOutTriggers(msg);
+                    
+                    return { msg: msg }
+                } 
+                return false;
             }
         });
 
@@ -280,7 +279,7 @@ export class HypnoModule extends BaseModule {
                     this.CheckNewTrigger();
                 }
 
-                if ((now - lastInfluenceCheck) > (5 * 60 * 1000)) {
+                if ((now - lastInfluenceCheck) > downgradeInterval) {
                     this.DowngradeInfluences();
                     lastInfluenceCheck = now;
                 }
@@ -544,9 +543,9 @@ export class HypnoModule extends BaseModule {
     CheckSuggestions(msg: string, sender: Character) {
         let suggestion = this.settings.suggestions.find(s => this._CheckForTriggers(msg, sender, [s.trigger], this.hypnoActivated) && (!s.exclusive || s.installedBy == sender.MemberNumber))
         if (!!suggestion) {
-                let commandArgs = msg.slice(msg.toLocaleLowerCase().indexOf(suggestion.trigger.toLocaleLowerCase()) + suggestion.trigger.length)?.trim() ?? "";
-                this.CompelSuggestion(suggestion, sender, commandArgs);
-            }
+            let commandArgs = msg.slice(msg.toLocaleLowerCase().indexOf(suggestion.trigger.toLocaleLowerCase()) + suggestion.trigger.length)?.trim() ?? "";
+            this.CompelSuggestion(suggestion, sender, commandArgs);
+        }
     }
 
     CheckTrigger(msg: string, sender: Character): boolean {
