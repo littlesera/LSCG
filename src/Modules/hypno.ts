@@ -228,18 +228,13 @@ export class HypnoModule extends BaseModule {
             if (!this.Enabled)
                 return next(args);
 
-            console.debug("checking map chat room hearable...");
             const C = args[0] as Character;
             if (ChatRoomIsViewActive(ChatRoomMapViewName) && !ChatRoomMapViewCharacterIsHearable(C))
                 return next(args);
                 
-            console.debug("checking garbled incoming...");
-            console.debug(args);
             // Check for non-garbled trigger word, this means a trigger word could be set to what garbled speech produces >.>
             let msg = callOriginal("SpeechGarble", [args[0], args[1]]);
-            console.debug(`checking hypno trigger against "${msg}"...`);
             if (this.CheckTrigger(msg, C) && !this.IsOnCooldown()) {
-                console.debug("Trigger detected, starting hypno...");
                 args[1] = this.BlankOutTriggers(args[1]);
                 this.StartTriggerWord(true, C.MemberNumber);
                 return next(args);

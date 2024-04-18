@@ -288,7 +288,7 @@ export class ItemUseModule extends BaseModule {
 				{
 					Name: "HoldingGag",
 					Func: (acting, acted, group) => {
-						var location = acted.FocusGroup?.Name!;
+						var location = acted.FocusGroup?.Name ?? group.Name;
 						let heldItemName = InventoryGet(acting, "ItemHandheld")?.Asset.Name ?? "";
 						let gagTarget = this.GagTargets.find(t => t.HandItemName == heldItemName);
 						
@@ -323,7 +323,7 @@ export class ItemUseModule extends BaseModule {
 					if (!target)
 						return;
 					let ret = next(args);
-					var location = target.FocusGroup?.Name!;
+					var location = target.FocusGroup?.Name  ?? args[1].Dictionary.find((entry: { Tag: string; }) => entry?.Tag == "FocusAssetGroup")?.FocusGroupName;
 					let heldItemName = InventoryGet(Player, "ItemHandheld")?.Asset.Name ?? "";
 					let gagTarget = this.GagTargets.find(t => t.HandItemName == heldItemName);
 					if (!!gagTarget) {
@@ -401,7 +401,7 @@ export class ItemUseModule extends BaseModule {
 				Func: (target, args, next) => {
 					if (!target)
 						return;
-					let location = target.FocusGroup?.Name!;
+					let location = target.FocusGroup?.Name ?? args[1].Dictionary.find((entry: { Tag: string; }) => entry?.Tag == "FocusAssetGroup")?.FocusGroupName;
 					let itemName: string | undefined;
 					let gagTarget: GagTarget | undefined;
 					if (location == "ItemNeck") {
@@ -447,7 +447,7 @@ export class ItemUseModule extends BaseModule {
 				{
 					Name: "TargetIsWearingGagNecklace",
 					Func: (acting, acted, group) => {
-						var location = acted.FocusGroup?.Name!;
+						var location = acted.FocusGroup?.Name ?? group.Name;
 						var existing = InventoryGet(acted, location);
 						if (!!existing)
 							return false;
@@ -469,7 +469,7 @@ export class ItemUseModule extends BaseModule {
 					if (!target || !dict)
 						return;
 					var activityAsset = dict.find((x: { Tag: string; }) => x.Tag == "ActivityAsset");
-					var location = target.FocusGroup?.Name!;
+					var location = target.FocusGroup?.Name ?? dict.find((entry: { Tag: string; }) => entry?.Tag == "FocusAssetGroup")?.FocusGroupName;
 					let heldItemName = InventoryGet(target, activityAsset.GroupName)?.Asset.Name ?? "";
 					let gagTarget = this.GagTargets.find(t => t.NeckItemName == heldItemName);
 					//if (!gagTarget) gagTarget = this.GagTargets.find(t => t.NeckItemName == (InventoryGet(target, "ClothAccessory")?.Asset.Name ?? "") && t.OverrideNeckLocation == "ClothAccessory");
@@ -503,7 +503,7 @@ export class ItemUseModule extends BaseModule {
 				{
 					Name: "TargetIsGaggedWithNecklace",
 					Func: (acting, acted, group) => {
-						var location = acted.FocusGroup?.Name!;
+						var location = acted.FocusGroup?.Name ?? group.Name;
 						var item = InventoryGet(acted, location);
 						
 						if (InventoryGroupIsBlocked(acted, location))
@@ -530,7 +530,7 @@ export class ItemUseModule extends BaseModule {
 				Func: (target, args, next) => {
 					if (!target)
 						return;
-					var location = target.FocusGroup?.Name!;
+					var location = target.FocusGroup?.Name ?? args[1].Dictionary.find((entry: { Tag: string; }) => entry?.Tag == "FocusAssetGroup")?.FocusGroupName;
 					let mouthItemName = InventoryGet(target, location)?.Asset.Name ?? "";
 					let gagTarget = this.GagTargets.find(t => t.MouthItemName == mouthItemName);
 					if (!!gagTarget)
@@ -560,7 +560,7 @@ export class ItemUseModule extends BaseModule {
 				{
 					Name: "HasCoiledRope",
 					Func: (acting, acted, group) => {
-						var location = acted.FocusGroup?.Name;
+						var location = acted.FocusGroup?.Name ?? group.Name;
 						if (!location)
 							return false;
 						var ropeTarget = this.GetHempRopeLocations().find(t => t.Location == location);
@@ -577,7 +577,7 @@ export class ItemUseModule extends BaseModule {
 				Func: (target, args, next) => {
 					if (!target)
 						return;
-					var location = target.FocusGroup?.Name!;
+					var location = target.FocusGroup?.Name ?? args[1].Dictionary.find((entry: { Tag: string; }) => entry?.Tag == "FocusAssetGroup")?.FocusGroupName ?? "";
 					let ropeTarget = this.GetHempRopeLocations().find(loc => loc.Location == location);
 					if (!!ropeTarget)
 						this.TieUp(target, Player, ropeTarget);
