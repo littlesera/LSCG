@@ -89,46 +89,49 @@ export class HypnoModule extends BaseModule {
             }
         });
 
-        hookFunction("SpeechGarble", 69, (args, next) => { // high priority for now.. nice.
-            if (!this.Enabled)
-                return next(args);
+        let handlerPriority = (ChatRoomMessageHandlers.find(h => h.Description == "Save chats and whispers to the chat log")?.Priority ?? 110) - 1;
+        ChatRoomRegisterMessageHandler(<ChatRoomMessageHandler>{
+            Priority: handlerPriority, // Try to make sure we run last. Other mods could potentially add handlers after this depending on arbitrary load order.
+            Description: "LSCG Hypnosis Trigger Checks",
+            Callback: (data: ServerChatRoomMessage, sender: Character, msg: string, metadata?: IChatRoomMessageMetadata) => {
+                if (!this.Enabled)
+                    return {msg: msg};
 
-            const C = args[0] as Character;
-            if (ChatRoomIsViewActive(ChatRoomMapViewName) && !ChatRoomMapViewCharacterIsHearable(C))
-                return next(args);
-                
-            // Check for non-garbled trigger word, this means a trigger word could be set to what garbled speech produces >.>
-            let msg = callOriginal("SpeechGarble", [args[0], args[1]]);
-            if (this.CheckTrigger(msg, C) && !this.IsOnCooldown()) {
-                args[1] = this.BlankOutTriggers(args[1]);
-                this.StartTriggerWord(true, C.MemberNumber);
-                return next(args);
-            }
-
-            if (this.hypnoActivated) {
-                var lowerMsg = args[1].toLowerCase();
-                var names = [CharacterNickname(Player)];
-                if (!!Player.Name && names.indexOf(Player.Name) == -1)
-                    names.push(Player.Name);
-                if (names.some(n => isPhraseInString(lowerMsg, n)) || 
-                    this.StateModule.HypnoState.config.activatedBy == C.MemberNumber || 
-                    this.StateModule.HypnoState.config.activatedBy == -1 ||
-                    C.MemberNumber == Player.MemberNumber) {
-                    args[1] = this.BlankOutTriggers(args[1]);
-                    if (this.CheckAwakener(msg, C)) {
-                        this.TriggerRestoreWord(C);
-                    } else  {
-                        this.CheckSpeechTriggers(msg, C);
-                    }
+                const C = sender;
+                if (ChatRoomIsViewActive(ChatRoomMapViewName) && !ChatRoomMapViewCharacterIsHearable(C))
+                    return {msg: msg};
+                    
+                // Check for non-garbled trigger word, this means a trigger word could be set to what garbled speech produces >.>
+                if (this.CheckTrigger(msg, C) && !this.IsOnCooldown()) {
+                    msg = this.BlankOutTriggers(msg);
+                    this.StartTriggerWord(true, C.MemberNumber);
+                    return {msg: msg};
                 }
-                else
-                    args[1] =  args[1].replace(/\S/gm, '-');
-            }
-            
-            return next(args);
-        }, ModuleCategory.Hypno);
 
-        let lastHornyCheck = 0;
+                if (this.hypnoActivated) {
+                    var lowerMsg = msg.toLowerCase();
+                    var names = [CharacterNickname(Player)];
+                    if (!!Player.Name && names.indexOf(Player.Name) == -1)
+                        names.push(Player.Name);
+                    if (names.some(n => isPhraseInString(lowerMsg, n)) || 
+                        this.StateModule.HypnoState.config.activatedBy == C.MemberNumber || 
+                        this.StateModule.HypnoState.config.activatedBy == -1 ||
+                        C.MemberNumber == Player.MemberNumber) {
+                        if (this.CheckAwakener(msg, C)) {
+                            this.TriggerRestoreWord(C);
+                        } else  {
+                            this.CheckSpeechTriggers(msg, C);
+                        }
+                        msg = this.BlankOutTriggers(msg);
+                    }
+                    else
+                        msg =  msg.replace(/\S/gm, '-');
+                }
+                
+                return { msg: msg }
+            }
+        });
+
         let lastCycleCheck = 0;
         hookFunction('TimerProcess', 1, (args, next) => {
             if (ActivityAllowed()) {
