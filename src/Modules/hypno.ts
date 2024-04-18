@@ -897,8 +897,8 @@ export class HypnoModule extends BaseModule {
             this.ReduceSpeakerInfluence(opts.senderNum);
         }
         if (CurrentScreen == "ChatRoom") {
-            ServerSend("ChatRoomCharacterPoseUpdate", { Pose: Player.ActivePose })
-            CharacterRefresh(Player, true);
+            ServerSend("ChatRoomCharacterPoseUpdate", { Pose: Player.ActivePose });
+            CharacterLoadCanvas(Player);
         }
     }
 
@@ -1004,7 +1004,6 @@ export class HypnoModule extends BaseModule {
             InventoryRemove(Player, grp, false);
         });
         
-        ChatRoomStatusUpdate(null);
         ChatRoomCharacterUpdate(Player);
         CharacterLoadCanvas(Player);
     }

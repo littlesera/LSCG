@@ -1024,9 +1024,10 @@ export class ActivityModule extends BaseModule {
             Targets: [
                 {
                     Name: "ItemNeck",
-                    SelfAllowed: false,
+                    SelfAllowed: true,
                     TargetLabel: "Release Neck",
-                    TargetAction: "SourceCharacter releases TargetCharacter's neck."
+                    TargetAction: "SourceCharacter releases TargetCharacter's neck.",
+                    TargetSelfAction: "SourceCharacter releases PronounPossessive own neck."
                 }
             ],
             CustomPrereqs: [
