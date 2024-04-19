@@ -104,7 +104,7 @@ export class HypnoModule extends BaseModule {
                         
                     // Check for non-garbled trigger word, this means a trigger word could be set to what garbled speech produces >.>
                     if (this.CheckTrigger(msg, C) && !this.IsOnCooldown()) {
-                        msg = this.BlankOutTriggers(msg);
+                        msg = this.BlankOutTriggers(msg, C);
                         this.StartTriggerWord(true, C.MemberNumber);
                         return {msg: msg};
                     }
@@ -123,7 +123,7 @@ export class HypnoModule extends BaseModule {
                             } else  {
                                 this.CheckSpeechTriggers(msg, C);
                             }
-                            msg = this.BlankOutTriggers(msg);
+                            msg = this.BlankOutTriggers(msg, C);
                         }
                         else
                             msg =  msg.replace(/\S/gm, '-');
@@ -220,8 +220,8 @@ export class HypnoModule extends BaseModule {
         else return allowedMembers.includes(memberId);
     }
 
-    BlankOutTriggers(msg: string) {
-        if (!this.StateModule.settings.immersive)
+    BlankOutTriggers(msg: string, speaker: Character) {
+        if (!this.StateModule.settings.immersive || !this.allowedSpeaker(speaker))
             return msg;
 
         let triggers = this.triggers.concat(this.awakeners);
