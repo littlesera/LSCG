@@ -57,4 +57,5 @@ export interface HypnoPublicSettingsModel extends BaseSettingsModel {
     speakTriggers: string;
     silenceTriggers: string;
     allowSuggestions: boolean;
+    allowSuggestionRemoval: boolean;
 }

@@ -100,6 +100,9 @@ export class HypnoModule extends BaseModule {
 
     safeword(): void {
         this.StateModule.HypnoState.Recover();
+        this.settings.allowSuggestions = false;
+        this.settings.allowSuggestionRemoval = true;
+        this.settings.remoteAccess = false;
     }
 
     get StateModule(): StateModule {
@@ -181,6 +184,37 @@ export class HypnoModule extends BaseModule {
                 this.settings.suggestions.forEach(s => {
                     LSCG_SendLocal(`<b>${s.name}</b> -- <br>&emsp;Installed By: <i>${s.installedByName} [${s.installedBy}]</i>, trigger: <i>${s.trigger}</i>`);
                 });
+            }
+        }, {
+            Tag: "remove-suggestion",
+            Description: ": Remove an installed suggestion",
+            Action: (args: string, msg: string, parsed: string[]) => {
+                if (!this.settings.allowSuggestionRemoval) {
+                    LSCG_SendLocal("remove-suggestions disabled in settings", 5000);
+					return;
+                }
+                else if (this.StateModule.settings.immersive) {
+					LSCG_SendLocal("remove-suggestions disabled while immersive", 5000);
+					return;
+				} else if (Player.GetDifficulty() >= 3) {
+                    LSCG_SendLocal("remove-suggestions unavailable on extreme difficulty", 5000);
+					return;
+                } else if (!args.trim()) {
+                    LSCG_SendLocal("No suggestion name provided", 5000);
+					return;
+                }
+
+                let suggestionName = args.trim();
+                let ix = this.settings.suggestions.findIndex(s => s.name.toLocaleLowerCase() == suggestionName.toLocaleLowerCase());
+                let suggestion = this.settings.suggestions[ix];
+                if (ix < 0 || !suggestion) {
+                    LSCG_SendLocal(`Suggestion '${suggestionName}' not found`, 5000);
+					return;
+                } else {
+                    this.settings.suggestions.splice(ix, 1);
+                    settingsSave();
+                    LSCG_SendLocal(`Suggestion '${suggestion.name}' by ${suggestion.installedByName} [${suggestion.installedBy}] removed`)
+                }
             }
         }];
     }

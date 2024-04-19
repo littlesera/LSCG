@@ -185,6 +185,7 @@ function init_modules(): boolean {
 		for (const m of modules()) {
 			m.safeword();
 		}
+		settingsSave(true);
 		return next(args);
 	});
 
@@ -193,6 +194,7 @@ function init_modules(): boolean {
 		for (const m of modules()) {
 			m.safeword();
 		}
+		settingsSave(true);
 		return ret;
 	});
 

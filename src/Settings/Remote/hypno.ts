@@ -160,6 +160,12 @@ export class RemoteHypno extends RemoteGuiSubscreen {
 				setSetting: (val) => this.settings.limitRemoteAccessToHypnotizer = val
 			},<Setting>{
 				type: "checkbox",
+				label: "Allow Suggestion Removal:",
+				description: "If checked, the user will be allowed to remove installed suggestions.",
+				setting: () => this.settings.allowSuggestionRemoval ?? true,
+				setSetting: (val) => this.settings.allowSuggestionRemoval = val
+			},<Setting>{
+				type: "checkbox",
 				label: "Locked:",
 				disabled: !this.settings.allowLocked,
 				description: "If checked, locks the user out of their own hypnosis settings.",
