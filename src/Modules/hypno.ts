@@ -253,7 +253,7 @@ export class HypnoModule extends BaseModule {
                     if (this.settings.allowSuggestions)
                         this.CheckSuggestions(msg, sender);
 
-                    msg = this.BlankOutTriggers(msg);
+                    msg = this.BlankOutTriggers(msg, sender);
                     
                     return { msg: msg }
                 } 
@@ -463,8 +463,8 @@ export class HypnoModule extends BaseModule {
         else return allowedMembers.includes(memberId);
     }
 
-    BlankOutTriggers(msg: string) {
-        if (!this.StateModule.settings.immersive)
+    BlankOutTriggers(msg: string, speaker: Character) {
+        if (!this.StateModule.settings.immersive || !this.allowedSpeaker(speaker))
             return msg;
 
         let triggers = this.triggers.concat(this.awakeners);
