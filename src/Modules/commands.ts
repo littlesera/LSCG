@@ -9,6 +9,7 @@ import { CollarModule } from "./collar";
 import { StateModule } from "./states";
 import { PolymorphedState } from "./States/PolymorphedState";
 import { RedressedState } from "./States/RedressedState";
+import { LeashingModule } from "./leashing";
 
 // Remote UI Module to handle configuration on other characters
 // Can be used to "program" another character's hypnosis, collar, etc.
@@ -19,8 +20,8 @@ export class CommandModule extends BaseModule {
 	get hypno(): HypnoModule { return getModule<HypnoModule>("HypnoModule")! }
 	get collar(): CollarModule { return getModule<CollarModule>("CollarModule")! }
 
-	lscgCommands: ICommand[] = [
-		{
+	get commands(): ICommand[] {
+		return [{
 			Tag: "help",
 			Description: ": Opens the help for LSCG commands",
 			Action: (args, msg, parsed) => {
@@ -31,34 +32,6 @@ export class CommandModule extends BaseModule {
 				let helpText = `<b>- Little Sera's Club Games -</b>${helpLines.join()}<br>More to come...`;
 				LSCG_SendLocal(helpText);
 			},
-		}, {
-			Tag: 'zonk',
-			Description: ": Hypnotize yourself",
-			Action: () => {
-				if (!this.hypno.Enabled)
-					return;
-
-				if (this.states.settings.immersive) {
-					LSCG_SendLocal("/zonk disabled while immersive", 5000);
-					return;
-				}
-				if (!this.hypno.hypnoActivated)
-					this.hypno.StartTriggerWord(true, Player.MemberNumber);
-			}
-		}, {
-			Tag: 'unzonk',
-			Description: ": Awaken yourself",
-			Action: () => {
-				if (!this.hypno.Enabled)
-					return;
-
-				if (this.states.settings.immersive) {
-					LSCG_SendLocal("/unzonk disabled while immersive", 5000);
-					return;
-				}
-				if (this.hypno.hypnoActivated)
-					this.hypno.TriggerRestoreTimeout();
-			}
 		}, {
 			Tag: "show-triggers",
 			Description: ": Reveal your current trigger word(s) to yourself",
@@ -72,17 +45,6 @@ export class CommandModule extends BaseModule {
 				let collarStr = !this.collar.settings.enabled ? "<i>Breathplay Collar not enabled.</i>" : (this.collar.settings.immersive ? "<i>Collar triggers hidden while immersive...</i>" : `<b>Collar Tighten:</b> ${tightenTrigger}<br><b>Collar Loosen:</b> ${loosenTrigger}`);
 
 				LSCG_SendLocal(`Your current triggers are: <br>${hypnoStr}<br>${collarStr}`);
-			}
-		}, {
-			Tag: "cycle-trigger",
-			Description: ": Force a cycle to a new trigger word if enabled",
-			Action: () => {
-				if (this.states.settings.immersive) {
-					LSCG_SendLocal("/cycle-trigger disabled while immersive", 5000);
-					return;
-				}
-				if (this.hypno.settings.enableCycle)
-					this.hypno.RollTriggerWord();
 			}
 		}, {
 			Tag: "roll",
@@ -129,52 +91,13 @@ export class CommandModule extends BaseModule {
 			Tag: "escape",
 			Description: " : If you are arm-grabbed or ear-pinched, will attempt to escape from their grip.",
 			Action: (args, msg, parsed) => {
-				var module = getModule<ActivityModule>("ActivityModule");
-				if (!module)
-					return;
-
-				module.TryEscape();
+				getModule<LeashingModule>("LeashingModule")?.TryEscape();
 			}
 		}, {
 			Tag: "emergency",
 			Description: " : Use in case of emergency to revert all LSCG settings to their default values.",
 			Action: (args, msg, parsed) => {
 				this.EmergencyRelease();	
-			}
-		}, {
-			Tag: "collar",
-			Description: " [tight/loose/stat] : Use to self-tighten, self-loosen, or read out information about your collar if allowed. Must be unrestrained to use.",
-			Action: (args, msg, parsed) => {
-				if (!this.collar.settings.collarPurchased) {
-					LSCG_SendLocal(`Collar module not purchased.`);
-					return;
-				}
-
-				if (!this.collar.wearingCorrectCollar) {
-					LSCG_SendLocal(`You are not wearing a properly configured collar.`);
-					return;
-				}
-				if (!this.collar.Enabled)
-					return;
-
-				if (parsed.length == 1) {
-					switch (parsed[0].toLocaleLowerCase()) {
-						case "tight":
-						case "tighten":
-							this.collar.TightenButtonPress(Player);
-							break;
-						case "loose":
-						case "loosen":
-							this.collar.LoosenButtonPress(Player);
-							break;
-						case "stat":
-						case "stats":
-							this.collar.StatsButtonPress(Player);
-							break;
-					} 
-				} else if (parsed.length == 0) {
-					LSCG_SendLocal(`<b>/lscg collar</b> [tight/loose/stat] : Use to self-tighten, self-loosen, or read out information about your collar if allowed. Must be unrestrained to use."`);
-				}
 			}
 		}, {
 			Tag: "conditions",
@@ -284,12 +207,20 @@ export class CommandModule extends BaseModule {
 						LSCG_SendLocal(`Failed to import LSCG settings from clipboard.`, 30000);
 				}
 			}
-		}
-	]
+		}];
+	}
+
+	get moduleCommands(): ICommand[] {
+		return modules().map(m => m.commands).reduce((a, b) => a.concat(b));
+	}
+
+	get allCommands(): ICommand[] {
+		return this.moduleCommands.filter((c, ix, arr) => arr.indexOf(c) == ix);
+	}
 
 	get orderedCommands(): ICommand[] {
 		var helpCommand = this.getSubcommand("help")!;
-		var sorted = this.lscgCommands.filter(c => c.Tag != "help").sort((a, b) => a.Tag.localeCompare(b.Tag));
+		var sorted = this.allCommands.filter(c => c.Tag != "help").sort((a, b) => a.Tag.localeCompare(b.Tag));
 		return [helpCommand, ...sorted];
 	}
 
@@ -298,7 +229,7 @@ export class CommandModule extends BaseModule {
 	}
 
 	getSubcommand(name: string): ICommand | undefined {
-		return this.lscgCommands.find(c => c.Tag.toLocaleLowerCase() == name.toLocaleLowerCase());
+		return this.allCommands.find(c => c.Tag.toLocaleLowerCase() == name.toLocaleLowerCase());
 	}
 
     load(): void {

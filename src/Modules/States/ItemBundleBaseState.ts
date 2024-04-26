@@ -1,7 +1,6 @@
-import { BC_ItemsToItemBundles, SendAction, addCustomEffect, getRandomInt, isBind, isCloth, removeCustomEffect, settingsSave, stringIsCompressedItemBundleArray, waitFor } from "utils";
-import { BaseState, StateRestrictions } from "./BaseState";
-import { StateModule } from "Modules/states";
-import { OutfitConfig, OutfitOption, PolymorphOption, SpellDefinition } from "Settings/Models/magic";
+import { BC_ItemsToItemBundles, settingsSave, stringIsCompressedItemBundleArray } from "utils";
+import { BaseState } from "./BaseState";
+import { SpellDefinition } from "Settings/Models/magic";
 
 export abstract class ItemBundleBaseState extends BaseState {
     storedOutfitKey: string = "stored-outfit";

@@ -6,13 +6,12 @@ import { getModule } from "modules";
 import { GuiInjector } from "Settings/injector";
 import { InjectorSettingsModel } from "Settings/Models/injector";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
-import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, setOrIgnoreBlush, isPhraseInString, settingsSave, hookFunction, getCharacter, AUDIO, getPlayerVolume, OnAction, LSCG_SendLocal, addCustomEffect, removeCustomEffect, hookBCXCurse, GetTargetCharacter, GetActivityName, GetMetadata, GetActivityEntryFromContent, IsActivityAllowed, GetHandheldItemNameAndDescriptionConcat } from "../utils";
-import { ActivityBundle, ActivityModule, ActivityPatch, ActivityTarget, CustomAction, CustomPrerequisite } from "./activities";
+import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, isPhraseInString, settingsSave, hookFunction, getCharacter, AUDIO, getPlayerVolume, OnAction, hookBCXCurse, GetTargetCharacter, GetActivityName, GetMetadata, GetActivityEntryFromContent, IsActivityAllowed, GetHandheldItemNameAndDescriptionConcat } from "../utils";
+import { ActivityBundle, ActivityModule, ActivityTarget, CustomAction, CustomPrerequisite } from "./activities";
 import { HypnoModule } from "./hypno";
 import { MiscModule } from "./misc";
 import { ItemUseModule } from "./item-use";
 import { StateModule } from "./states";
-import { MagicModule } from "./magic";
 
 type DrugType = "sedative" | "mindcontrol" | "horny" | "antidote";
 
@@ -421,7 +420,7 @@ export class InjectorModule extends BaseModule {
         }, ModuleCategory.Injector);
 
         OnAction(1, ModuleCategory.Injector, (data, sender, msg, metadata) => {
-            let deliverySlots = ["ItemMouth3"];
+            let deliverySlots = ["ItemMouth", "ItemMouth2", "ItemMouth3"];
             let messagesToCheck = [
                 "ActionUse",
                 "ActionSwap",
@@ -435,14 +434,14 @@ export class InjectorModule extends BaseModule {
                 (!targetGroup || deliverySlots.indexOf(targetGroup) > -1) &&
                 messagesToCheck.some(x => msg.startsWith(x))) {
                 let _ = this.IsWearingRespirator;
-            } else if (target == Player.MemberNumber && msg == "ItemMouth3LatexRespiratorSetGlow" && !!sender) {
+            } else if (target == Player.MemberNumber && msg.indexOf("LatexRespiratorSetGlow") > -1 && !!sender) {
                 this.CheckForContinuousToggle(sender);
             }
         });
 
         // Check for respirator curses
         hookBCXCurse("curseTrigger", (evt) => {
-            if (evt.group == "ItemMouth3" && this.Enabled && this.settings.enableContinuousDelivery)
+            if (evt.group.startsWith("ItemMouth") && this.Enabled && this.settings.enableContinuousDelivery)
                 this.CheckRespiratorCurseUpdate();
         })
 
@@ -1053,8 +1052,7 @@ export class InjectorModule extends BaseModule {
     }
 
     InitStates() {
-        let item = InventoryGet(Player, "ItemMouth3");
-        this._wasWearingRespirator = this.IsValidRespirator(item);
+        this._wasWearingRespirator = this.WornRespirator != null;
     }
 
     CheckRespiratorCurseUpdate() {
@@ -1076,7 +1074,9 @@ export class InjectorModule extends BaseModule {
                     SendAction("%OPP_NAME% reloads %NAME%'s mask and turns it back on, pumping gas back into %POSSESSIVE% lungs.", sender);
                     this.settings.continuousDeliveryActivatedAt = CommonTime();
                     settingsSave()
-                } else 
+                } else if (sender.IsPlayer())
+                    SendAction("%NAME% switches on %POSSESSIVE% own mask, filling %POSSESSIVE% lungs.", sender);
+                else
                     SendAction("%OPP_NAME% switches on %NAME%'s mask, filling %POSSESSIVE% lungs.", sender);
             } else {
                 if (sender.IsPlayer())
@@ -1089,8 +1089,7 @@ export class InjectorModule extends BaseModule {
 
     _wasWearingRespirator: boolean = false;
     get IsWearingRespirator(): boolean {
-        let item = InventoryGet(Player, "ItemMouth3");
-        let isWearing = this.IsValidRespirator(item);
+        let isWearing = this.WornRespirator != null;
         if (!this._wasWearingRespirator && isWearing) {
             if (!this.asleep && !this.brainwashed && this.IsRespiratorOn) {
                 SendAction("%NAME%'s eyes widen as %POSSESSIVE% mask activates, slowly filling %POSSESSIVE% lungs with its drug.");
@@ -1114,7 +1113,7 @@ export class InjectorModule extends BaseModule {
         let hasGas = this._respiratorHasGas;
         if (!hasGas && this.IsWearingRespirator && this.IsRespiratorOn) {
             SendAction("%NAME%'s mask hisses quietly as it runs out of its supply of gas.");
-            let item = InventoryGet(Player, "ItemMouth3");
+            let item = this.WornRespirator;
             if (!!item && !!item.Property && item.Property.TypeRecord) {
                 item.Property.TypeRecord["g"] = 0;
                 CharacterRefresh(Player, true);
@@ -1123,8 +1122,12 @@ export class InjectorModule extends BaseModule {
         return hasGas;
     }
 
+    get WornRespirator(): Item | null {
+        return [InventoryGet(Player, "ItemMouth"), InventoryGet(Player, "ItemMouth2"), InventoryGet(Player, "ItemMouth3")].filter(item => this.IsValidRespirator(item))[0] ?? null;
+    }
+
     get IsRespiratorOn(): boolean {
-        let item = InventoryGet(Player, "ItemMouth3");
+        let item = this.WornRespirator;
         if (!!item && !!item.Property && !!item.Property.TypeRecord)
             return item.Property.TypeRecord["g"] == 1;
         else
@@ -1201,7 +1204,7 @@ export class InjectorModule extends BaseModule {
 
     BreathInDrugEvent() {
         if (this.IsContinuousDeliveryActive) {
-            let mask = InventoryGet(Player, "ItemMouth3");
+            let mask = this.WornRespirator;
             if (!mask)
                 return;
             let types = this.GetDrugTypes(mask.Craft!);

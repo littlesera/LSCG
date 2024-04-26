@@ -173,6 +173,20 @@ export class GuiHypno extends GuiSubscreen {
 						disabled: !this.settings.enabled,
 						setting: () => this.settings.silenceTriggers ?? "",
 						setSetting: (val) => this.settings.silenceTriggers = val
+					}, <Setting>{
+						type: "checkbox",
+						label: "Enable Suggestion Programming",
+						description: "If checked, your hypnotizer may induce hypnotic suggestions within you.",
+						disabled: !this.settings.enabled,
+						setting: () => this.settings.allowSuggestions ?? false,
+						setSetting: (val) => this.settings.allowSuggestions = val
+					}, <Setting>{
+						type: "checkbox",
+						label: "Allow Suggestion Removal",
+						description: "If checked, you can remove suggestions installed in you with '/lscg remove-suggestion' if you are not immersive and not on extreme difficulty.",
+						disabled: !this.settings.enabled || (Player.LSCG?.StateModule?.immersive ?? false) || Player.GetDifficulty() >= 3,
+						setting: () => (this.settings.allowSuggestionRemoval ?? false) && !((Player.LSCG?.StateModule?.immersive ?? false) || Player.GetDifficulty() >= 3),
+						setSetting: (val) => this.settings.allowSuggestionRemoval = val
 					}
 				]
 			]

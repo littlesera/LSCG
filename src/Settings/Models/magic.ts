@@ -20,7 +20,9 @@ export enum LSCGSpellEffect {
     outfit = "Outfit",
     polymorph = "Polymorph",
     dispell = "Dispell",
-    xRay = "X-Ray Vision"
+    xRay = "X-Ray Vision",
+    denial = "Denying",
+    orgasm = "Forced Orgasm"
 }
 
 export enum OutfitOption {

@@ -23,6 +23,7 @@ export interface SettingsModel {
     StateModule: StateSettingsModel;
     MagicModule: MagicSettingsModel;
     OpacityModule: OpacitySettingsModel;
+    LeashingModule: BaseSettingsModel;
 }
 
 export interface IPublicSettingsModel extends BaseSettingsModel {
@@ -37,6 +38,7 @@ export interface IPublicSettingsModel extends BaseSettingsModel {
     StateModule: StatePublicSettingsModel;
     MagicModule: MagicPublicSettingsModel;
     OpacityModule: OpacityPublicSettingsModel;
+    LeashingModule: BaseSettingsModel;
 }
 
 export class PublicSettingsModel implements IPublicSettingsModel {
@@ -84,9 +86,12 @@ export class PublicSettingsModel implements IPublicSettingsModel {
         hypnotized: false,
         hypnotizedBy: 0,
         speakTriggers: "",
-        silenceTriggers: ""
+        silenceTriggers: "",
+        allowSuggestions: false,
+        allowSuggestionRemoval: true
     };
     BoopsModule: BaseSettingsModel = <BaseSettingsModel>{enabled: false};
+    LeashingModule: BaseSettingsModel = <BaseSettingsModel>{enabled: false};
     LipstickModule: LipstickSettingsModel = <LipstickSettingsModel>{
         enabled: false,
         dry: false

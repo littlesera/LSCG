@@ -6,6 +6,7 @@ import { ICONS } from "utils";
 import { GlobalSettingsModel } from "./Models/base";
 import { GuiSubscreen, Setting } from "./settingBase";
 import { OpacityModule } from "Modules/opacity";
+import { LeashingModule } from "Modules/leashing";
 
 export class GuiGlobal extends GuiSubscreen {
 
@@ -34,73 +35,92 @@ export class GuiGlobal extends GuiSubscreen {
 				label: "Block Settings While Restrained:",
 				description: "Prevents LSCG settings access while restrained.",
 				setting: () => this.settings.blockSettingsWhileRestrained ?? false,
-				setSetting: (val) => this.settings.blockSettingsWhileRestrained = val
+				setSetting: (val) => this.settings.blockSettingsWhileRestrained = val,
+				disabled: !this.settings.enabled
 			},<Setting>{
 				type: "checkbox",
 				label: "Immersive Conditions:",
 				description: "Applies a more restrictive set of conditional states while incapacitated by LSCG.",
 				setting: () => Player.LSCG.StateModule.immersive ?? false,
-				setSetting: (val) => Player.LSCG.StateModule.immersive = val
+				setSetting: (val) => Player.LSCG.StateModule.immersive = val,
+				disabled: !this.settings.enabled
 			},<Setting>{
 				type: "checkbox",
 				label: "Blur While Edged:",
 				description: "Apply extra blurring to the screen while edging.",
 				setting: () => this.settings.edgeBlur ?? false,
-				setSetting: (val) => this.settings.edgeBlur = val
+				setSetting: (val) => this.settings.edgeBlur = val,
+				disabled: !this.settings.enabled
 			},<Setting>{
 				type: "checkbox",
 				label: "Enable Lipstick Marks:",
 				description: "Apply kiss marks when lipstick-wearing people kiss you on the cheek/forehead/neck.",
 				setting: () => Player.LSCG.LipstickModule.enabled ?? false,
-				setSetting: (val) => Player.LSCG.LipstickModule.enabled = val
+				setSetting: (val) => Player.LSCG.LipstickModule.enabled = val,
+				disabled: !this.settings.enabled
 			},<Setting>{
 				type: "checkbox",
 				label: "Dry Lipstick:",
 				description: "Never apply kissmarks when you are the kisser.",
 				setting: () => Player.LSCG.LipstickModule.dry ?? false,
-				setSetting: (val) => Player.LSCG.LipstickModule.dry = val
+				setSetting: (val) => Player.LSCG.LipstickModule.dry = val,
+				disabled: !this.settings.enabled
 			},<Setting>{
 				type: "checkbox",
 				label: "Enable Boop Reactions:",
 				description: "Auto-react when booped.",
 				setting: () => Player.LSCG.BoopsModule.enabled ?? false,
-				setSetting: (val) => Player.LSCG.BoopsModule.enabled = val
+				setSetting: (val) => Player.LSCG.BoopsModule.enabled = val,
+				disabled: !this.settings.enabled
 			},<Setting>{
 				type: "checkbox",
 				label: "Show Check Rolls:",
 				description: "If enabled, will display the attacker/defender roll values for activity checks.",
 				setting: () => this.settings.showCheckRolls ?? true,
-				setSetting: (val) => this.settings.showCheckRolls = val
+				setSetting: (val) => this.settings.showCheckRolls = val,
+				disabled: !this.settings.enabled
 			},<Setting>{
 				type: "checkbox",
 				label: "Share Public Craftings:",
 				description: "If enabled, other LSCG users in the room will be able to use your crafted items on other people.",
 				setting: () => this.settings.sharePublicCrafting ?? false,
-				setSetting: (val) => this.settings.sharePublicCrafting = val
+				setSetting: (val) => this.settings.sharePublicCrafting = val,
+				disabled: !this.settings.enabled
 			},<Setting>{
 				type: "checkbox",
 				label: "Hide Resizing Effects:",
 				description: "If checked, you will not see any LSCG resizing effects. (eg. from magic)",
 				setting: () => this.settings.hideResizing ?? false,
-				setSetting: (val) => this.settings.hideResizing = val
+				setSetting: (val) => this.settings.hideResizing = val,
+				disabled: !this.settings.enabled
 			},<Setting>{
 				type: "checkbox",
 				label: "Hide all Opacity Overrides:",
 				description: "If checked, will skip any opacity override effects. (includes x-ray vision)",
 				setting: () => !(Player.LSCG.OpacityModule.enabled ?? true),
-				setSetting: (val) => { Player.LSCG.OpacityModule.enabled = (val === false) }
+				setSetting: (val) => { Player.LSCG.OpacityModule.enabled = (val === false) },
+				disabled: !this.settings.enabled
 			},<Setting>{
 				type: "checkbox",
 				label: "Prevent Remote Opacity Changes:",
 				description: "If checked, other players will not be able to directly modify the opacity settings on your wardrobe items.",
 				setting: () => Player.LSCG.OpacityModule.preventExternalMod ?? false,
-				setSetting: (val) => Player.LSCG.OpacityModule.preventExternalMod = val
+				setSetting: (val) => Player.LSCG.OpacityModule.preventExternalMod = val,
+				disabled: !this.settings.enabled
 			},<Setting>{
 				type: "checkbox",
 				label: "Enable Clothed Erection Detection:",
 				description: "If checked, you will get a private message if you can feel an erection during certain activities.",
 				setting: () => this.settings.erectionDetection ?? false,
-				setSetting: (val) => this.settings.erectionDetection = val
+				setSetting: (val) => this.settings.erectionDetection = val,
+				disabled: !this.settings.enabled
+			},<Setting>{
+				type: "checkbox",
+				label: "Allow LSCG Leashing:",
+				description: "Allow custom leashing from LSCG activities such as hand-holding, hypnosis, etc.",
+				setting: () => Player.LSCG.LeashingModule.enabled ?? true,
+				setSetting: (val) => Player.LSCG.LeashingModule.enabled = val,
+				disabled: !this.settings.enabled
 			}
 		]
 	}
@@ -109,6 +129,7 @@ export class GuiGlobal extends GuiSubscreen {
 		// Load up module settings to ensure defaults..
 		getModule<MiscModule>("MiscModule")?.settings;
 		getModule<LipstickModule>("LipstickModule")?.settings;
+		getModule<LeashingModule>("LeashingModule")?.settings;
 		getModule<BoopsModule>("BoopsModule")?.settings;
 		getModule<OpacityModule>("OpacityModule")?.settings;
 		super.Load();

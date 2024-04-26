@@ -6,6 +6,7 @@ import { GuiCollar } from 'Settings/collar';
 import { ActivityBundle, ActivityModule, ActivityTarget, CustomPrerequisite } from './activities';
 import { getModule } from 'modules';
 import { InjectorModule } from './injector';
+import { LeashingModule } from './leashing';
 
 enum PassoutReason {
     COLLAR,
@@ -82,6 +83,45 @@ export class CollarModule extends BaseModule {
     safeword(): void {
         this.handChokeModifier = 0;
         this.ResetChoke();
+    }
+
+    get commands(): ICommand[] {
+        return [{
+			Tag: "collar",
+			Description: " [tight/loose/stat] : Use to self-tighten, self-loosen, or read out information about your collar if allowed. Must be unrestrained to use.",
+			Action: (args, msg, parsed) => {
+				if (!this.settings.collarPurchased) {
+					LSCG_SendLocal(`Collar module not purchased.`);
+					return;
+				}
+
+				if (!this.wearingCorrectCollar) {
+					LSCG_SendLocal(`You are not wearing a properly configured collar.`);
+					return;
+				}
+				if (!this.Enabled)
+					return;
+
+				if (parsed.length == 1) {
+					switch (parsed[0].toLocaleLowerCase()) {
+						case "tight":
+						case "tighten":
+							this.TightenButtonPress(Player);
+							break;
+						case "loose":
+						case "loosen":
+							this.LoosenButtonPress(Player);
+							break;
+						case "stat":
+						case "stats":
+							this.StatsButtonPress(Player);
+							break;
+					} 
+				} else if (parsed.length == 0) {
+					LSCG_SendLocal(`<b>/lscg collar</b> [tight/loose/stat] : Use to self-tighten, self-loosen, or read out information about your collar if allowed. Must be unrestrained to use."`);
+				}
+			}
+		}];
     }
 
     load(): void {
@@ -442,8 +482,8 @@ export class CollarModule extends BaseModule {
             this.chokeTimeout = setTimeout(() => f(), delay);
     }
 
-    HandChoke(chokingMember: Character) {        
-        if (this.handChokeModifier >= 4 || !Player.LSCG.MiscModule.handChokeEnabled)
+    HandChoke(chokingMember: Character | undefined | null) {        
+        if (this.handChokeModifier >= 4 || !Player.LSCG.MiscModule.handChokeEnabled || !chokingMember)
             return;
             
         this.handChokingMember = chokingMember.MemberNumber ?? 0;
@@ -464,7 +504,7 @@ export class CollarModule extends BaseModule {
                 CharacterSetFacialExpression(Player, "Eyes", "Surprised");
                 break;
             case 3:
-                SendAction("%NAME%'s face runs flush, choking as %OPP_NAME% presses firmly against %OPP_POSSESSIVE% neck, barely allowing any air to %POSSESSIVE% lungs.", chokingMember);
+                SendAction("%NAME%'s face runs flush, choking as %OPP_NAME% presses firmly against %POSSESSIVE% neck, barely allowing any air to %POSSESSIVE% lungs.", chokingMember);
                 setOrIgnoreBlush("High");
                 CharacterSetFacialExpression(Player, "Eyes", "Scared");
                 break;
@@ -724,7 +764,7 @@ export class CollarModule extends BaseModule {
         else if (reason == PassoutReason.HAND) {
             SendAction("As %NAME% collapses unconscious, %OPP_NAME% releases %POSSESSIVE% neck.", chokingMember);
             if (!!chokingMember)
-                getModule<ActivityModule>("ActivityModule").DoEscape(chokingMember);
+                getModule<LeashingModule>("LeashingModule").DoEscape(chokingMember);
             else
                 this.ReleaseHandChoke(chokingMember);
             this.settings.stats.handPassoutCount++;

@@ -1,5 +1,4 @@
-import { SendAction, addCustomEffect, getRandomInt, removeCustomEffect } from "utils";
-import { BaseState, StateRestrictions } from "./BaseState";
+import { BaseState } from "./BaseState";
 import { StateModule } from "Modules/states";
 
 export class DeafState extends BaseState {

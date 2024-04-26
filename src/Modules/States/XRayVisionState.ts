@@ -1,5 +1,5 @@
-import { GetItemNameAndDescriptionConcat, SendAction, addCustomEffect, getRandomInt, hookFunction, isBind, isCloth, isPhraseInString, removeCustomEffect } from "utils";
-import { BaseState, StateRestrictions } from "./BaseState";
+import { GetItemNameAndDescriptionConcat, hookFunction, isCloth, isPhraseInString } from "utils";
+import { BaseState } from "./BaseState";
 import { StateModule } from "Modules/states";
 import { ModuleCategory } from "Settings/setting_definitions";
 

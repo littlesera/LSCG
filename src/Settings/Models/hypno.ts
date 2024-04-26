@@ -1,25 +1,46 @@
+import { HypnoSuggestion } from "Modules/hypno";
 import { BaseSettingsModel, ModuleStats } from "./base";
+
+export const SUGGESTION_LIMIT: number = 64;
+
+export enum LSCGHypnoInstruction {
+    none = "None",
+    orgasm = "Orgasm",
+    denial = "Denial",
+    insatiable = "Insatiable",
+    activity = "Perform Activity",
+    strip = "Strip",
+    pose = "Assume Pose",
+    follow = "Follow",
+    say = "Speak Phrase",
+    maid = "Serve",
+    forget = "Forget"
+}
 
 export interface HypnoModuleStats extends ModuleStats {
     hypnotizedCount: number;
 }
 
+export interface HypnoInfluence {
+    memberId: number;
+    memberName: string;
+    influence: number;
+    lastInfluenced: number;
+}
+
 export interface HypnoSettingsModel extends HypnoPublicSettingsModel {
     trigger: string;
-    // existingEye1Color: ItemColor | undefined;
-    // existingEye1Name: string | undefined;
-    // existingEye2Color: ItemColor | undefined;
-    // existingEye2Name: string | undefined;
-    // existingEyeExpression: ExpressionName | null;
     hypnoEyeColor: string | undefined;
     hypnoEyeType: number | undefined;
     enableArousal: boolean;
     stats: HypnoModuleStats;
     triggerCycled: boolean;
+    triggerRevealed: boolean;
+    influence: HypnoInfluence[];
+    suggestions: HypnoSuggestion[];
 }
 
 export interface HypnoPublicSettingsModel extends BaseSettingsModel {
-    //immersive: boolean;
     triggerTime: number;
     cooldownTime: number;
     enableCycle: boolean;
@@ -27,16 +48,14 @@ export interface HypnoPublicSettingsModel extends BaseSettingsModel {
     awakeners: string;
     overrideWords: string;
     overrideMemberIds: string;
-    //activatedAt: number;
-    //recoveredAt: number;
     remoteAccess: boolean;
     remoteAccessRequiredTrance: boolean;
     limitRemoteAccessToHypnotizer: boolean;
     allowRemoteModificationOfMemberOverride: boolean;
     allowLocked: boolean;
     locked: boolean;
-    //hypnotized: boolean;
-    //hypnotizedBy: number;
     speakTriggers: string;
     silenceTriggers: string;
+    allowSuggestions: boolean;
+    allowSuggestionRemoval: boolean;
 }
