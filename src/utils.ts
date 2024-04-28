@@ -78,6 +78,9 @@ export function getCharacterByNicknameOrMemberNumber(tgt: string): Character | u
 	if (!tgtC) {
 		tgtC = ChatRoomCharacter.find(c => CharacterNickname(c).toLocaleLowerCase() == tgt);
 	}
+	if (!tgtC) {
+		tgtC = ChatRoomCharacter.find(c => c.Name.toLocaleLowerCase() == tgt);
+	}
 	return tgtC;
 }
 
