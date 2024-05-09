@@ -1225,7 +1225,7 @@ export class ActivityModule extends BaseModule {
                     }
                 }
             ],
-            CustomImage: "Assets/Female3DCG/ItemPelvis/HempRope_NormalOverPanties.png"
+            CustomImage: "Assets/Female3DCG/ItemPelvis/HempRope_Normal_typed1.png.png"
         });
 
         // Flick
