@@ -170,6 +170,9 @@ export class CollarModule extends BaseModule {
             if (lastCheckedForGags + 10000 < now) {
                 lastCheckedForGags = now;
                 this.CheckGagSuffocate("TimerProcess", null);
+                if (!this.wearingCorrectCollar && this.settings.chokeLevel > 0) {
+                    this.ReleaseCollar();
+                }
             }
             return next(args);
         }, ModuleCategory.Collar)
