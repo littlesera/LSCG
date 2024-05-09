@@ -88,7 +88,8 @@ export class PublicSettingsModel implements IPublicSettingsModel {
         speakTriggers: "",
         silenceTriggers: "",
         allowSuggestions: false,
-        allowSuggestionRemoval: true
+        allowSuggestionRemoval: true,
+        blockedInstructions: []
     };
     BoopsModule: BaseSettingsModel = <BaseSettingsModel>{enabled: false};
     LeashingModule: BaseSettingsModel = <BaseSettingsModel>{enabled: false};

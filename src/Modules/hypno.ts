@@ -781,6 +781,9 @@ export class HypnoModule extends BaseModule {
         suggestion.instructions.forEach((instruction, ix, arr) => {
             setTimeout(() => {
                 let config = instruction.arguments["config"];
+                if (this.settings.blockedInstructions.indexOf(instruction.type)) {
+                    return this.BlockedInstruction(opts, instruction);
+                }
                 switch (instruction.type) {
                     case LSCGHypnoInstruction.activity:
                         this.ForceActivity(opts, instruction);
@@ -1083,6 +1086,12 @@ export class HypnoModule extends BaseModule {
             });
             SendAction("%NAME% looks around, a little confused about how %PRONOUN% got here.");
         }
+    }
+
+    BlockedInstruction(opts: SuggestionMiniGameOptions, instruction: HypnoInstruction) {
+        LSCG_SendLocal(`You are immune to the suggestion's "${instruction.type}" instruction and shake some of ${opts.senderName}'s influence.`);
+        this.ReduceSpeakerInfluence(opts.sender.MemberNumber ?? -1);
+        return;
     }
 
     DowngradeInfluences() {
