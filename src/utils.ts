@@ -290,6 +290,7 @@ export function settingsSave(publish: boolean = false) {
 	if (!Player.ExtensionSettings)
 		Player.ExtensionSettings = <PlayerExtensionSettings>{};
 	Player.ExtensionSettings.LSCG = LZString.compressToBase64(JSON.stringify(Player.LSCG));
+	localStorage.setItem(`LSCG_${Player.MemberNumber}_Backup`, Player.ExtensionSettings.LSCG);
 	
 	try {
 		let cleaned = CleanDefaultsFromSettings(Player.LSCG);
