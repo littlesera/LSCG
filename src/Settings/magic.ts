@@ -691,6 +691,10 @@ export class GuiMagic extends GuiSubscreen {
 				return "Petrifies the target.";
 			case LSCGSpellEffect.horny:
 				return "Arouses the target.";
+			case LSCGSpellEffect.denial:
+				return "Denies the target any orgasms.";
+			case LSCGSpellEffect.orgasm:
+				return "Forced an orgasm upon the target.";
 			case LSCGSpellEffect.hypnotizing:
 				return "Hypnotizes the target.";
 			case LSCGSpellEffect.slumber:

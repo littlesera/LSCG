@@ -3,8 +3,7 @@ import { getModule, modules } from "modules";
 import { BaseSettingsModel, GlobalSettingsModel } from "Settings/Models/base";
 import { IPublicSettingsModel, PublicSettingsModel, SettingsModel } from "Settings/Models/settings";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { removeAllHooksByModule, hookFunction, getCharacter, drawSvg, SVG_ICONS, sendLSCGMessage, settingsSave, LSCG_CHANGES, LSCG_SendLocal, mouseTooltip, isCloth } from "../utils";
-import { ActivityModule, GrabType } from "./activities";
+import { removeAllHooksByModule, hookFunction, getCharacter, drawSvg, SVG_ICONS, sendLSCGMessage, settingsSave, LSCG_CHANGES, LSCG_SendLocal, mouseTooltip } from "../utils";
 import { HypnoModule } from "./hypno";
 import { CollarModule } from "./collar";
 
@@ -15,6 +14,7 @@ import { StateMigrator } from "./Migrators/StateMigrator";
 import { MagicModule } from "./magic";
 import { StateModule } from "./states";
 import { drawTooltip } from "Settings/settingUtils";
+import { GrabType, LeashingModule } from "./leashing";
 
 // Core Module that can handle basic functionality like server handshakes etc.
 export class CoreModule extends BaseModule {
@@ -259,13 +259,13 @@ export class CoreModule extends BaseModule {
                 LSCG_SendLocal(msg.command.args[0].value as string, 10000);
                 break;
             case "grab":
-                getModule<ActivityModule>("ActivityModule")?.IncomingGrab(Sender, msg.command.args.find(a => a.name == "type")?.value as GrabType);
+                getModule<LeashingModule>("LeashingModule")?.IncomingGrab(Sender, msg.command.args.find(a => a.name == "type")?.value as GrabType);
                 break;
             case "release":
-                getModule<ActivityModule>("ActivityModule")?.IncomingRelease(Sender, msg.command.args.find(a => a.name == "type")?.value as GrabType);
+                getModule<LeashingModule>("LeashingModule")?.IncomingRelease(Sender, msg.command.args.find(a => a.name == "type")?.value as GrabType);
                 break;
             case "escape":
-                getModule<ActivityModule>("ActivityModule")?.IncomingEscape(Sender, msg.target);
+                getModule<LeashingModule>("LeashingModule")?.IncomingEscape(Sender, msg.target);
                 break;
             case "remote":
                 let prevCollarPurchase = Player.LSCG?.CollarModule?.collarPurchased;
@@ -316,6 +316,7 @@ export class CoreModule extends BaseModule {
                 getModule<MagicModule>("MagicModule")?.IncomingGetItemSpellResponse(senderNumber, msg);
                 break;
         }
+        this.CommandListeners.filter(com => com.command == msg.command!.name).forEach(command => command.func(senderNumber, msg));
     }
 
     ShowChangelog(): void {
@@ -332,4 +333,28 @@ ${LSCG_CHANGES}`;
         });
         console.info(`LSCG Updated:${LSCG_CHANGES}`);
     }
+
+    CommandListeners: CommandListener[] = [];
+    RegisterCommandListener(listener: CommandListener) {
+        if (this.CommandListeners.indexOf(listener) == -1)
+            this.CommandListeners.push(listener);
+    }
+
+    RemoveCommandListenerById(id: string) {
+        if (!!id)
+            this.CommandListeners = this.CommandListeners.filter(c => c.id != id);
+    }
+
+    RemoveCommandListener(listener: CommandListener) {
+        if (this.CommandListeners.indexOf(listener) > -1)
+            this.CommandListeners.splice(this.CommandListeners.indexOf(listener), 1);
+        if (!!listener.id)
+            this.CommandListeners = this.CommandListeners.filter(c => c.id != listener.id);
+    }
+}
+
+export interface CommandListener {
+    id: string;
+    command: LSCGCommandName;
+    func: (sender: number, msg: LSCGMessageModel) => void;
 }

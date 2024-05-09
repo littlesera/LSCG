@@ -1,7 +1,7 @@
 import { BaseModule } from "base";
 import { getModule } from "modules";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { getRandomInt, hookFunction, IsIncapacitated, removeAllHooksByModule, SendAction, sendLSCGCommand } from "../utils";
+import { getDominance, getRandomInt, hookFunction, IsIncapacitated, removeAllHooksByModule, SendAction, sendLSCGCommand } from "../utils";
 import { ActivityBundle, ActivityModule, ActivityTarget } from "./activities";
 import { BoopsModule } from "./boops";
 import { CollarModule } from "./collar";
@@ -288,7 +288,7 @@ export class ItemUseModule extends BaseModule {
 				{
 					Name: "HoldingGag",
 					Func: (acting, acted, group) => {
-						var location = acted.FocusGroup?.Name!;
+						var location = acted.FocusGroup?.Name ?? group.Name;
 						let heldItemName = InventoryGet(acting, "ItemHandheld")?.Asset.Name ?? "";
 						let gagTarget = this.GagTargets.find(t => t.HandItemName == heldItemName);
 						
@@ -323,7 +323,7 @@ export class ItemUseModule extends BaseModule {
 					if (!target)
 						return;
 					let ret = next(args);
-					var location = target.FocusGroup?.Name!;
+					var location = target.FocusGroup?.Name  ?? args[1].Dictionary.find((entry: { Tag: string; }) => entry?.Tag == "FocusAssetGroup")?.FocusGroupName;
 					let heldItemName = InventoryGet(Player, "ItemHandheld")?.Asset.Name ?? "";
 					let gagTarget = this.GagTargets.find(t => t.HandItemName == heldItemName);
 					if (!!gagTarget) {
@@ -401,7 +401,7 @@ export class ItemUseModule extends BaseModule {
 				Func: (target, args, next) => {
 					if (!target)
 						return;
-					let location = target.FocusGroup?.Name!;
+					let location = target.FocusGroup?.Name ?? args[1].Dictionary.find((entry: { Tag: string; }) => entry?.Tag == "FocusAssetGroup")?.FocusGroupName;
 					let itemName: string | undefined;
 					let gagTarget: GagTarget | undefined;
 					if (location == "ItemNeck") {
@@ -447,7 +447,7 @@ export class ItemUseModule extends BaseModule {
 				{
 					Name: "TargetIsWearingGagNecklace",
 					Func: (acting, acted, group) => {
-						var location = acted.FocusGroup?.Name!;
+						var location = acted.FocusGroup?.Name ?? group.Name;
 						var existing = InventoryGet(acted, location);
 						if (!!existing)
 							return false;
@@ -469,7 +469,7 @@ export class ItemUseModule extends BaseModule {
 					if (!target || !dict)
 						return;
 					var activityAsset = dict.find((x: { Tag: string; }) => x.Tag == "ActivityAsset");
-					var location = target.FocusGroup?.Name!;
+					var location = target.FocusGroup?.Name ?? dict.find((entry: { Tag: string; }) => entry?.Tag == "FocusAssetGroup")?.FocusGroupName;
 					let heldItemName = InventoryGet(target, activityAsset.GroupName)?.Asset.Name ?? "";
 					let gagTarget = this.GagTargets.find(t => t.NeckItemName == heldItemName);
 					//if (!gagTarget) gagTarget = this.GagTargets.find(t => t.NeckItemName == (InventoryGet(target, "ClothAccessory")?.Asset.Name ?? "") && t.OverrideNeckLocation == "ClothAccessory");
@@ -503,7 +503,7 @@ export class ItemUseModule extends BaseModule {
 				{
 					Name: "TargetIsGaggedWithNecklace",
 					Func: (acting, acted, group) => {
-						var location = acted.FocusGroup?.Name!;
+						var location = acted.FocusGroup?.Name ?? group.Name;
 						var item = InventoryGet(acted, location);
 						
 						if (InventoryGroupIsBlocked(acted, location))
@@ -530,7 +530,7 @@ export class ItemUseModule extends BaseModule {
 				Func: (target, args, next) => {
 					if (!target)
 						return;
-					var location = target.FocusGroup?.Name!;
+					var location = target.FocusGroup?.Name ?? args[1].Dictionary.find((entry: { Tag: string; }) => entry?.Tag == "FocusAssetGroup")?.FocusGroupName;
 					let mouthItemName = InventoryGet(target, location)?.Asset.Name ?? "";
 					let gagTarget = this.GagTargets.find(t => t.MouthItemName == mouthItemName);
 					if (!!gagTarget)
@@ -560,7 +560,7 @@ export class ItemUseModule extends BaseModule {
 				{
 					Name: "HasCoiledRope",
 					Func: (acting, acted, group) => {
-						var location = acted.FocusGroup?.Name;
+						var location = acted.FocusGroup?.Name ?? group.Name;
 						if (!location)
 							return false;
 						var ropeTarget = this.GetHempRopeLocations().find(t => t.Location == location);
@@ -577,7 +577,7 @@ export class ItemUseModule extends BaseModule {
 				Func: (target, args, next) => {
 					if (!target)
 						return;
-					var location = target.FocusGroup?.Name!;
+					var location = target.FocusGroup?.Name ?? args[1].Dictionary.find((entry: { Tag: string; }) => entry?.Tag == "FocusAssetGroup")?.FocusGroupName ?? "";
 					let ropeTarget = this.GetHempRopeLocations().find(loc => loc.Location == location);
 					if (!!ropeTarget)
 						this.TieUp(target, Player, ropeTarget);
@@ -854,20 +854,11 @@ export class ItemUseModule extends BaseModule {
 		return getRandomInt(20) + 1;
 	}
 	
-	getDominance(C: Character) {
-		return C.Reputation.find(r => r.Type == "Dominant")?.Value ?? 0;
-	};
-	
-	getSkill(C: Character, skillName: string): number {
-		let skill = C.Skill.find(r => r.Type == skillName);
-		return ((skill?.Level ?? 0) * (skill?.Ratio ?? 1));
-	}
-	
 	getRollMod(C: Character, Opponent?: Character, isAggressor: boolean = false): number {
 		let buffState = (C as OtherCharacter)?.LSCG?.StateModule?.states?.find(s => s.type == "buffed");
 
 		// Dominant vs Submissive ==> -3 to +3 modifier
-		let dominanceMod = Math.floor(this.getDominance(C) / 33);
+		let dominanceMod = Math.floor(getDominance(C) / 33);
 		// +5 if we own our opponent
 		let ownershipMod = Opponent?.IsOwnedByMemberNumber(C.MemberNumber!) ? 5 : 0 ?? 0;
 		// -4 if we're restrained

@@ -2,7 +2,7 @@ import { getModule } from "modules";
 import { BoopsModule } from "Modules/boops";
 import { LipstickModule } from "Modules/lipstick";
 import { MiscModule } from "Modules/misc";
-import { GetDelimitedList, ICONS } from "utils";
+import { GetDelimitedList, ICONS, getActivities, getActivityLabel, getZoneColor } from "utils";
 import { GlobalSettingsModel } from "./Models/base";
 import { GuiSubscreen, Setting } from "./settingBase";
 import { ActivityEntryModel, ActivitySettingsModel } from "./Models/activities";
@@ -25,13 +25,8 @@ export class GuiActivities extends GuiSubscreen {
 		return []
 	}
 
-	getZoneColor(groupName: string): string {
-		let hasConfiguration = this.settings.activities.some(a => a.group == groupName);
-		return hasConfiguration ? "#00FF0044" : "#80808044";
-	}
-
 	get currentActivityEntry(): ActivityEntryModel | undefined {
-		let actName = this.Activities[this.activityIndex]?.Name;
+		let actName = getActivities()[this.activityIndex]?.Name;
 		let groupName = Player.FocusGroup?.Name ?? "";
 		let entry = this.getActivityEntry(actName, groupName);
 		return entry;
@@ -42,44 +37,6 @@ export class GuiActivities extends GuiSubscreen {
 	}
 
 	activityIndex: number = 0;
-
-	get Activities(): Activity[] {
-		if (!Player.FocusGroup)
-			return [];
-		else
-			return AssetActivitiesForGroup("Female3DCG", Player.FocusGroup.Name, "any").filter(a => this.ActivityHasDictionaryText(this.getActivityLabelTag(a, Player.FocusGroup!)));
-	}
-
-	ActivityHasDictionaryText(KeyWord: string) {
-		if (!ActivityDictionary)
-			ActivityDictionaryLoad();
-		if (!ActivityDictionary)
-			return;
-
-		for (let D = 0; D < ActivityDictionary.length; D++)
-			if (ActivityDictionary[D][0] == KeyWord)
-				return true;
-		return false;
-	}
-
-	getActivityLabelTag(activity: Activity, group: AssetGroup) {
-		let groupName = group.Name;
-		if (Player.HasPenis()) {
-			if (groupName == "ItemVulva") groupName = "ItemPenis";
-			if (groupName == "ItemVulvaPiercings") groupName = "ItemGlans";
-		}
-	
-		return `Label-ChatOther-${groupName}-${activity.Name}`;
-	}
-
-	getActivityLabel(activity: Activity, group: AssetGroup) {
-		if (!activity)
-			return "ACTIVITY NOT FOUND";
-		
-		let tag = this.getActivityLabelTag(activity, group);
-
-		return ActivityDictionaryText(tag);
-	}
 
 	Load() {
 		super.Load();
@@ -107,14 +64,14 @@ export class GuiActivities extends GuiSubscreen {
 		// Draws all the available character zones
 		for (let Group of AssetGroup) {
 			if (Group.IsItem() && !Group.MirrorActivitiesFrom && AssetActivitiesForGroup("Female3DCG", Group.Name).length)
-				DrawAssetGroupZone(Player, Group.Zone, 0.9, 50, 50, 1, "#808080FF", 3, this.getZoneColor(Group.Name));
+				DrawAssetGroupZone(Player, Group.Zone, 0.9, 50, 50, 1, "#808080FF", 3, getZoneColor(Group.Name, this.settings.activities.some(a => a.group == Group.Name)));
 		}
 
 		if (Player.FocusGroup != null) {
-			let activity = this.Activities[this.activityIndex ?? 0];
+			let activity = getActivities()[this.activityIndex ?? 0];
 			DrawAssetGroupZone(Player, Player.FocusGroup.Zone, 0.9, 50, 50, 1, "cyan");
 			MainCanvas.textAlign = "center";
-			DrawBackNextButton(550, this.getYPos(0), 600, 64, this.getActivityLabel(activity, Player.FocusGroup), "White", "", () => "", () => "");
+			DrawBackNextButton(550, this.getYPos(0), 600, 64, getActivityLabel(activity, Player.FocusGroup), "White", "", () => "", () => "");
 			MainCanvas.textAlign = "left";
 			if (!!activity) {
 				let image = "Assets/" + Player.AssetFamily + "/Activity/" + activity.Name + ".png";
@@ -144,7 +101,7 @@ export class GuiActivities extends GuiSubscreen {
 				if (Zone) {
 					this.SetActivityEntryVals(this.currentActivityEntry);
 					Player.FocusGroup = Group;
-					let activities = this.Activities;
+					let activities = getActivities();
 					if (this.activityIndex >= activities.length)
 						this.activityIndex = 0;
 					this.LoadActivityEntry(this.currentActivityEntry);
@@ -153,7 +110,7 @@ export class GuiActivities extends GuiSubscreen {
 		}
 
 		if (Player.FocusGroup != null) {
-			let activities = this.Activities;
+			let activities = getActivities();
 			// Arousal activity control
 			if (MouseIn(this.getXPos(0), this.getYPos(0), 600, 64)) {
 				this.SetActivityEntryVals(this.currentActivityEntry);
@@ -225,7 +182,7 @@ export class GuiActivities extends GuiSubscreen {
 
 	createEntryIfNeeded(existing: ActivityEntryModel | undefined): ActivityEntryModel {
 		if (!existing) {
-			existing = this.newDefaultEntry(this.Activities[this.activityIndex].Name, Player.FocusGroup?.Name ?? "");
+			existing = this.newDefaultEntry(getActivities()[this.activityIndex].Name, Player.FocusGroup?.Name ?? "");
 			this.settings.activities.push(existing);
 			this.LoadActivityEntry(this.currentActivityEntry);
 		}
