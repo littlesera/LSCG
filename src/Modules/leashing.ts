@@ -181,25 +181,25 @@ export class LeashingModule extends BaseModule {
                 let compellingList = this.Pairings.filter(p => p.IsSource && p.Type == "compulsion").map(p => p.PairedMember)
 
                 if (earPinchingMemberList.length > 0) {
-                    var chars = earPinchingMemberList.map(id => getCharacter(id));
+                    var chars = earPinchingMemberList.map(id => getCharacter(id)).filter(c => !!c);
                     if (chars.length == 1)
                         SendAction("%NAME% leads %OPP_NAME% out of the room by the ear.", chars[0]);
                     else
                         SendAction("%NAME% leads " + CharacterNickname(chars[0]!) + " and " + CharacterNickname(chars[1]!) + " out of the room by their ears.");
                 } else if (armGrabbingMemberList.length > 0) {
-                    var chars = armGrabbingMemberList.map(id => getCharacter(id));
+                    var chars = armGrabbingMemberList.map(id => getCharacter(id)).filter(c => !!c);
                     if (chars.length == 1)
                         SendAction("%NAME% roughly pulls %OPP_NAME% out of the room by the arm.", chars[0]);
                     else
                         SendAction("%NAME% roughly pulls " + CharacterNickname(chars[0]!) + " and " + CharacterNickname(chars[1]!) + " out of the room by their arms.");
                 } else if (tongueGrabbedMemberList.length > 0) {
-                    var chars = tongueGrabbedMemberList.map(id => getCharacter(id));
+                    var chars = tongueGrabbedMemberList.map(id => getCharacter(id)).filter(c => !!c);
                     if (chars.length == 1)
                         SendAction("%NAME% tugs %OPP_NAME% out of the room by the tongue.", chars[0]);
                     else
                         SendAction("%NAME% tugs " + CharacterNickname(chars[0]!) + " and " + CharacterNickname(chars[1]!) + " out of the room by their tongues.");
                 } else if (chompedBy.length > 0) {
-                    var chars = chompedBy.map(id => getCharacter(id));
+                    var chars = chompedBy.map(id => getCharacter(id)).filter(c => !!c);
                     if (chars.length == 1)
                         SendAction(`%NAME% drags %OPP_NAME% out of the room with a wince.`, chars[0]);
                     else {
@@ -210,7 +210,7 @@ export class LeashingModule extends BaseModule {
                         SendAction(`%NAME% drags ${nameStr} out of the room with a wince.`);
                     }
                 } else if (compellingList.length > 0) {
-                    var chars = compellingList.map(id => getCharacter(id));
+                    var chars = compellingList.map(id => getCharacter(id)).filter(c => !!c);
                     if (chars.length == 1)
                         SendAction(`%OPP_NAME%'s eyes lock on to %NAME% and %PRONOUN% follows %INTENSIVE% out of the room obediently.`, chars[0]);
                     else {
@@ -323,11 +323,12 @@ export class LeashingModule extends BaseModule {
     
                         DialogLeave();
                         ChatRoomClearAllElements();
-                        if (CurrentScreen == "ChatRoom") {
-                            ServerSend("ChatRoomLeave", "");
-                            CommonSetScreen("Online", "ChatSearch");
-                        }
-                        else ChatRoomStart(data.ChatRoomSpace, "", null, null, "Introduction", BackgroundsTagList); //CommonSetScreen("Room", "ChatSearch")
+                        this.JoinRoom(data.ChatRoomName);
+                        // if (CurrentScreen == "ChatRoom") {
+                        //     ServerSend("ChatRoomLeave", "");
+                        //     CommonSetScreen("Online", "ChatSearch");
+                        // }
+                        // else ChatRoomStart(data.ChatRoomSpace, "", null, null, "Introduction", BackgroundsTagList); //CommonSetScreen("Room", "ChatSearch")
                     } else {
                         // If the leading character is no longer allowed or goes somewhere blocked, remove them from our leading lists.
                         this.RemoveLeashingsWithMember(data.MemberNumber, false);
@@ -427,6 +428,13 @@ export class LeashingModule extends BaseModule {
             command: "remove-leashing",
             func: (sender, msg) => this.HandleLeashRemovalRequest(sender, msg)
         });
+    }
+
+    JoinRoom(roomName: string) {
+        ChatSearchLastQueryJoinTime = CommonTime();
+        ChatSearchLastQueryJoin = roomName;
+        ChatRoomPlayerCanJoin = true;
+        ServerSend("ChatRoomJoin", { Name: roomName });
     }
 
     RoomSync(): void {}
