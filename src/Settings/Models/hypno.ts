@@ -56,9 +56,13 @@ export interface HypnoPublicSettingsModel extends BaseSettingsModel {
     locked: boolean;
     speakTriggers: string;
     silenceTriggers: string;
+
+    // Suggestion Settings
     allowSuggestions: boolean;
     allowSuggestionRemoval: boolean;
     blockedInstructions: LSCGHypnoInstruction[];
+    alwaysSubmit: boolean;
+    alwaysSubmitMemberIds: string;
 }
 
 export function InstructionDescription(instruction: LSCGHypnoInstruction): string {
