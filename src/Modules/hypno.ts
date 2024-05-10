@@ -244,11 +244,8 @@ export class HypnoModule extends BaseModule {
                     return;
                 if (activityEntry?.awakener && this.hypnoActivated && !sender?.IsPlayer())
                     this.TriggerRestoreBoop();
-                // Special tummy rub hypno action for Bean
                 else if (activityEntry?.hypno && !this.hypnoActivated && !this.IsOnCooldown() && (Player.ArousalSettings?.Progress ?? 0) >= activityEntry.hypnoThreshold) {
                     this.DelayedTrigger(activityEntry, sender?.MemberNumber);
-                } else if (activityEntry?.sleep && !getModule<InjectorModule>("InjectorModule")?.asleep) {
-                    this.DelayedTrigger(activityEntry, sender?.MemberNumber, true);
                 }
             }
         });

@@ -7,6 +7,9 @@ import { CollarModule } from "./collar";
 import { ActivitySettingsModel } from "Settings/Models/activities";
 import { GuiActivities } from "Settings/activities";
 import { LeashingModule } from "./leashing";
+import { HypnoModule } from "./hypno";
+import { StateMigrator } from "./Migrators/StateMigrator";
+import { StateModule } from "./states";
 
 export interface ActivityTarget {
     Name: AssetGroupItemName;
@@ -165,6 +168,9 @@ export class ActivityModule extends BaseModule {
                         if (!!Player.ArousalSettings) Player.ArousalSettings.Progress = 100;
                         ActivityOrgasmPrepare(Player);
                     }
+                }
+                if (activityEntry?.sleep && !getModule<StateModule>("StateModule")?.SleepState.Active) {
+                    getModule<HypnoModule>("HypnoModule")?.DelayedTrigger(activityEntry, sender?.MemberNumber, true);
                 }
             }
         })
