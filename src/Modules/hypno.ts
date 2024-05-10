@@ -691,7 +691,7 @@ export class HypnoModule extends BaseModule {
     }
 
     GetResistRoll() {
-        return getRandomInt(100) + (getDominance(Player) / 2);
+        return getRandomInt(100);// + (getDominance(Player) / 2);
     }
 
     CompelSuggestion(suggestion: HypnoSuggestion, sender: Character, command: string) {
@@ -702,7 +702,7 @@ export class HypnoModule extends BaseModule {
             AudioPlaySoundEffect("BellMedium");
 
         let totalInfluence = this.GetSuggestionInfluence(suggestion, sender);
-        let playerDomRepMod = getDominance(Player) / 2;
+        let playerDomRepMod = 0;//getDominance(Player) / 2;
         // Calculate chance to resist suggestion, if 0 force activate
         // Otherwise prompt user in local chat with constructed message based on instructions
         if (totalInfluence >= (100 + playerDomRepMod))
@@ -781,7 +781,7 @@ export class HypnoModule extends BaseModule {
         suggestion.instructions.forEach((instruction, ix, arr) => {
             setTimeout(() => {
                 let config = instruction.arguments["config"];
-                if (this.settings.blockedInstructions.indexOf(instruction.type)) {
+                if (this.settings.blockedInstructions.indexOf(instruction.type) > -1) {
                     return this.BlockedInstruction(opts, instruction);
                 }
                 switch (instruction.type) {

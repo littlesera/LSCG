@@ -89,7 +89,9 @@ export class PublicSettingsModel implements IPublicSettingsModel {
         silenceTriggers: "",
         allowSuggestions: false,
         allowSuggestionRemoval: true,
-        blockedInstructions: []
+        blockedInstructions: [],
+        alwaysSubmit: false,
+        alwaysSubmitMemberIds: ""
     };
     BoopsModule: BaseSettingsModel = <BaseSettingsModel>{enabled: false};
     LeashingModule: BaseSettingsModel = <BaseSettingsModel>{enabled: false};

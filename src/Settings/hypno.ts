@@ -187,10 +187,19 @@ export class GuiHypno extends GuiSubscreen {
 						setting: () => (this.settings.allowSuggestionRemoval ?? false) && !((Player.LSCG?.StateModule?.immersive ?? false) || Player.GetDifficulty() >= 3),
 						setSetting: (val) => this.settings.allowSuggestionRemoval = val
 					}, <Setting>{
-						type: "label", // Blank Spot
-						label: "",
-						description: "",
-						hidden: this.settings.locked
+						type: "checkbox",
+						label: "Always Submit to Suggestions:",
+						description: "If checked, you will always submit to suggestions.",
+						setting: () => this.settings.alwaysSubmit ?? false,
+						setSetting: (val) => this.settings.alwaysSubmit = val
+					}, <Setting>{
+						type: "text",
+						id: "suggestion_alwaysSubmitMembers",
+						label: "Always Submit to Member IDs:",
+						description: "Comma separated list of member IDs. If empty will use standard Item Permissions. You will always submit to their suggestions.",
+						disabled: this.settings.alwaysSubmit,
+						setting: () => this.settings.alwaysSubmitMemberIds ?? "",
+						setSetting: (val) => this.settings.alwaysSubmitMemberIds = val
 					}, <Setting>{
 						type: "label",
 						label: "Blocked Instructions:",
@@ -215,11 +224,11 @@ export class GuiHypno extends GuiSubscreen {
 				this.settings.blockedInstructions = [];
 			let val = this.settings.blockedInstructions.indexOf(this.Instruction) > -1;
 			let blockedStr = val ? "Blocked" : "Allowed";
-			DrawBackNextButton(780, this.getYPos(5)-32, 600, 64, this.Instruction, "White", "", () => blockedStr, () => blockedStr);
-			DrawCheckbox(780 + 600 + 64, this.getYPos(5) - 32, 64, 64, "", val);
+			DrawBackNextButton(780, this.getYPos(6)-32, 600, 64, this.Instruction, "White", "", () => blockedStr, () => blockedStr);
+			DrawCheckbox(780 + 600 + 64, this.getYPos(6) - 32, 64, 64, "", val);
 
 			MainCanvas.textAlign = "left";
-			DrawTextFit(InstructionDescription(this.Instruction), 780, this.getYPos(6), 1000, "Black");
+			DrawTextFit(InstructionDescription(this.Instruction), 780, this.getYPos(7), 1000, "Black");
 			MainCanvas.textAlign = "center";
 		}
 	}
@@ -228,9 +237,9 @@ export class GuiHypno extends GuiSubscreen {
 		super.Click();
 
 		if (!this.settings.locked && PreferencePageCurrent == 3) {
-			if (MouseIn(780, this.getYPos(5)-32, 600, 64)) {
+			if (MouseIn(780, this.getYPos(6)-32, 600, 64)) {
 				this.InstructionIndex = this.GetNewIndexFromNextPrevClick(1080, this.InstructionIndex, this.ActualInstructions.length);
-			} else if (MouseIn(780 + 600 + 64, this.getYPos(5) - 32, 64, 64)) {
+			} else if (MouseIn(780 + 600 + 64, this.getYPos(6) - 32, 64, 64)) {
 				if (this.settings.blockedInstructions.indexOf(this.Instruction) > -1)
 					this.settings.blockedInstructions = this.settings.blockedInstructions.filter(i => i != this.Instruction);
 				else this.settings.blockedInstructions.push(this.Instruction);

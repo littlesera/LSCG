@@ -64,23 +64,6 @@ export class RemoteHypno extends RemoteGuiSubscreen {
 	get multipageStructure(): Setting[][] {
 		return [[
 			<Setting>{
-			// 	type: "checkbox",
-			// 	label: "Immersive Hypnosis:",
-			// 	description: "Makes the hypnotized experience more restrictive. LSCG settings will be unavailable while hypnotized.",
-			// 	setting: () => this.Character.LSCG.StateModule.states.find(s => s.type == "hypnotized")?.immersive ?? false,
-			// 	setSetting: (val) => {
-			// 		let hypnoSetting = this.Character.LSCG.StateModule.states.find(s => s.type == "hypnotized");
-			// 		if (!hypnoSetting) {
-			// 			hypnoSetting = <StateConfig>{
-			// 				type: "hypnotized",
-			// 				extensions: {},
-			// 				immersive: val
-			// 			}
-			// 			this.Character.LSCG.StateModule.states.push(hypnoSetting);
-			// 		} else
-			// 			hypnoSetting.immersive = val;
-			// 	}
-			// },<Setting>{
 				type: "text",
 				id: "hypno_overrideWords",
 				label: "Override Trigger Words:",
@@ -164,6 +147,20 @@ export class RemoteHypno extends RemoteGuiSubscreen {
 				description: "If checked, the user will be allowed to remove installed suggestions.",
 				setting: () => this.settings.allowSuggestionRemoval ?? true,
 				setSetting: (val) => this.settings.allowSuggestionRemoval = val
+			},<Setting>{
+				type: "checkbox",
+				label: "Always Submit to Suggestions:",
+				description: "If checked, you will always submit to suggestions.",
+				setting: () => this.settings.alwaysSubmit ?? false,
+				setSetting: (val) => this.settings.alwaysSubmit = val
+			},<Setting>{
+				type: "text",
+				id: "suggestion_alwaysSubmitMembers",
+				label: "Always Submit to Member IDs:",
+				description: "Comma separated list of member IDs. If empty will use standard Item Permissions. You will always submit to their suggestions.",
+				disabled: this.settings.alwaysSubmit,
+				setting: () => this.settings.alwaysSubmitMemberIds ?? "",
+				setSetting: (val) => this.settings.alwaysSubmitMemberIds = val
 			},<Setting>{
 				type: "checkbox",
 				label: "Locked:",
