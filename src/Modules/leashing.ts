@@ -632,6 +632,9 @@ export class LeashingModule extends BaseModule {
             }]);
      
         this.RemoveLeashings(target.MemberNumber, true, type);
+        if (LeashDefinitions.get(type)?.Bidirectional) {
+            this.RemoveLeashings(target.MemberNumber, false, type);
+        }
     }
 
     DoEscape(escapeFrom: Character) {
@@ -654,8 +657,11 @@ export class LeashingModule extends BaseModule {
     }
 
     IncomingRelease(sender: OtherCharacter | null, grabType: GrabType) {
-        if (!!sender && !!sender.MemberNumber)
+        if (!!sender && !!sender.MemberNumber) {
             this.RemoveLeashings(sender.MemberNumber, false, grabType);
+            if (LeashDefinitions.get(grabType)?.Bidirectional)
+                this.RemoveLeashings(sender.MemberNumber, true, grabType);
+        }
     }
 
     IncomingEscape(sender: OtherCharacter | null, escapeFromMemberNumber: number) {
