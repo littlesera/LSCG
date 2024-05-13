@@ -392,7 +392,7 @@ export class HypnoModule extends BaseModule {
                 this.allowedSpeaker(getCharacter(sender) ?? undefined))) {
                 sendLSCGCommandBeep(sender, "get-suggestions-response", [{
                     name: "suggestions",
-                    value: this.settings.suggestions?.filter(s => s.installedBy == sender || !s.exclusive) ?? []
+                    value: this.settings.suggestions?.filter(s => s.installedBy == sender || !s.exclusive || Player.IsOwnedByMemberNumber(sender)) ?? []
                 }, {
                     name: "total",
                     value: this.settings.suggestions?.length ?? 0

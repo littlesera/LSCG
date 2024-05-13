@@ -739,7 +739,7 @@ export class RemoteSuggestions extends RemoteHypno {
 	}
 
 	get IsSuggestionOwner(): boolean {
-		return this.Suggestion?.installedBy == Player.MemberNumber;
+		return this.Suggestion?.installedBy == Player.MemberNumber || this.Character.IsOwnedByPlayer();
 	}
 
 	AvailableInstructions(ix: number) {
