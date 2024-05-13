@@ -698,11 +698,12 @@ export class HypnoModule extends BaseModule {
         if (!AudioShouldSilenceSound(true))
             AudioPlaySoundEffect("BellMedium");
 
+        let bypassResistance = this.settings.alwaysSubmit || (this.settings.alwaysSubmitMemberIds.split(",").map(id => id.trim()).indexOf(sender.MemberNumber + "") > -1)
         let totalInfluence = this.GetSuggestionInfluence(suggestion, sender);
         let playerDomRepMod = 0;//getDominance(Player) / 2;
         // Calculate chance to resist suggestion, if 0 force activate
         // Otherwise prompt user in local chat with constructed message based on instructions
-        if (totalInfluence >= (100 + playerDomRepMod))
+        if (bypassResistance || totalInfluence >= (100 + playerDomRepMod))
             this.DoSuggestion(new SuggestionMiniGameOptions(suggestion, sender, command));
         else {
             // Start Resist Game
