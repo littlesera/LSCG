@@ -1001,7 +1001,7 @@ export class InjectorModule extends BaseModule {
     }
 
     HoldingDruggedDrink(C: Character): boolean {
-        var item = InventoryGet(C, "Handheld");
+        var item = InventoryGet(C, "ItemHandheld");
         if (!item || (item.Asset.Name != "GlassFilled" && item.Asset.Name != "Mug") || !item.Craft)
             return false;
         var drugTypes = this.GetDrugTypes(item.Craft!);
