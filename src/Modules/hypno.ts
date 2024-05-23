@@ -1,7 +1,7 @@
 import { BaseModule } from 'base';
 import { HypnoInfluence, HypnoSettingsModel, LSCGHypnoInstruction } from 'Settings/Models/hypno';
 import { ModuleCategory, Subscreen } from 'Settings/setting_definitions';
-import { settingsSave, parseMsgWords, OnAction, OnActivity, SendAction, getRandomInt, hookFunction, removeAllHooksByModule, callOriginal, setOrIgnoreBlush, isAllowedMember, isPhraseInString, GetTargetCharacter, GetDelimitedList, GetActivityEntryFromContent, escapeRegExp, IsActivityAllowed, LSCG_SendLocal, getCharacter, sendLSCGCommandBeep, htmlToElement, OnChat, getDominance, getCharacterByNicknameOrMemberNumber, getActivities, isCloth } from '../utils';
+import { settingsSave, parseMsgWords, OnAction, OnActivity, SendAction, getRandomInt, hookFunction, removeAllHooksByModule, callOriginal, setOrIgnoreBlush, isAllowedMember, isPhraseInString, GetTargetCharacter, GetDelimitedList, GetActivityEntryFromContent, escapeRegExp, IsActivityAllowed, LSCG_SendLocal, getCharacter, sendLSCGCommandBeep, htmlToElement, OnChat, getDominance, getCharacterByNicknameOrMemberNumber, getActivities, isCloth, replace_template } from '../utils';
 import { GuiHypno } from 'Settings/hypno';
 import { getModule } from 'modules';
 import { ActivityEntryModel } from 'Settings/Models/activities';
@@ -342,30 +342,10 @@ export class HypnoModule extends BaseModule {
 
     _suggestionHooks: any[] = []
     RegisterSuggestionHooks() {
-        // Suggestion Hooks
-        // this._suggestionHooks.push(hookFunction("ChatRoomSync", 1, (args, next) => {
-        //     const data = args[0];
-        //     if (data.Name !== this.forceSay_lastRoomName) {
-        //         this.forceSay_sayText = "";
-        //         this.forceSay_senderNumber = null;
-        //     }
-        //     next(args);
-        // }, ModuleCategory.Hypno));
-
-        // this._suggestionHooks.push(hookFunction("ChatRoomKeyDown", 5, (args, next) => {
-        //     if (CurrentScreen === "ChatRoom" && this.forceSay_sayText) {
-        //         const chatHasFocus = document.activeElement?.id === "InputChat";
-        //         if (chatHasFocus) {
-        //             this.forceSay_count++;
-        //         }
-        //     }
-        //     return next(args);
-        // }, ModuleCategory.Hypno));
-
         this._suggestionHooks.push(hookFunction("CommandParse", 6, (args, next) => {
 			const msg = args[0].trim() as string;
             const isChat = !/^[*!/.]/.test((msg ?? "")[0]);
-			if (this.forceSay_sayText && msg && ChatRoomTargetMemberNumber == null && !msg.includes("(") && isChat) {
+			if (this.forceSay_sayText && msg && (ChatRoomTargetMemberNumber ?? -1) == -1 && !msg.includes("(") && isChat) {
 				if (msg.toLocaleLowerCase() === this.forceSay_sayText.toLocaleLowerCase()) {
                     this.forceSay_sayText = "";
                     let ret = next(args);
@@ -376,8 +356,7 @@ export class HypnoModule extends BaseModule {
                     return ret;
                 } else {
                     LSCG_SendLocal(`You find it absurd to say anything other than '${this.forceSay_sayText}'.`);
-                    SendAction("%NAME% opens %POSSESSIVE% mouth but no sound comes out.");
-                    return null;
+                    return replace_template("*opens %POSSESSIVE% mouth but no sound comes out.");
                 }
 			}
             return next(args);
