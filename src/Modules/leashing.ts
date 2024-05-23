@@ -100,6 +100,10 @@ export class LeashingModule extends BaseModule {
         return 2;
     }
 
+    get EscapablePairings(): Leashing[] {
+        return this.Pairings.filter(p => this.CanEscape(p));
+    }
+
     get LeashedByPairings(): Leashing[] {
         return this.Pairings.filter(p => this.CanDragPlayer(p));
     }
@@ -545,6 +549,11 @@ export class LeashingModule extends BaseModule {
         return LeashDefinitions.get(type)?.Bidirectional ?? false;
     }
 
+    CanEscape(leashing: Leashing) {
+        let def = LeashDefinitions.get(leashing.Type);
+        return !leashing.IsSource;
+    }
+
     CanDragPlayer(leashing: Leashing) {
         let def = LeashDefinitions.get(leashing.Type);
         return !def?.Ephemeral && 
@@ -690,18 +699,14 @@ export class LeashingModule extends BaseModule {
                 this.escapeAttempted = 0;
             }
         }
-        let grabbingMembers = this.LeashedByMemberNumbers;
-        let grabbingMemberNumber = grabbingMembers[0];
-        if (grabbingMemberNumber < 0) {
-            LSCG_SendLocal(`You are not grabbed by anyone!`);
+        let grabbingMembers = this.EscapablePairings.map(p => p.PairedMember);
+        
+        let grabbers = grabbingMembers.map(m => getCharacter(m)).filter(g => !!g);
+        if (grabbers.length <= 0) {
+            LSCG_SendLocal(`You are not grabbed by anyone! (Try refreshing if you're stuck)`);
             return;
         }
-
-        var grabber = getCharacter(grabbingMemberNumber);
-        if (!grabber) {
-            LSCG_SendLocal(`Cannot locate grabber! [Try refreshing if they DC'd]`);
-            return;
-        }
+        var grabber = grabbers[0];
 
         SendAction(`${CharacterNickname(Player)} tries %POSSESSIVE% best to escape from %OPP_NAME%'s grip...`, grabber);
         setTimeout(() => {

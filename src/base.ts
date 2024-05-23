@@ -28,7 +28,9 @@ export abstract class BaseModule {
 			return false;
 		return Player.LSCG.GlobalModule.enabled && this.settings.enabled && 
 			(ServerPlayerIsInChatRoom() || 
-			(CurrentModule == "Room" && CurrentScreen == "Crafting"));
+			(CurrentModule == "Room" && CurrentScreen == "Crafting") ||
+			(CurrentModule == "Room" && CurrentScreen == "MainHall") ||
+			(CurrentModule == "Character" && CurrentScreen == "Appearance"));
 	}
 
 	init() {
