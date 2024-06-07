@@ -203,19 +203,20 @@ export class OpacityModule extends BaseModule {
         hookFunction("CommonDrawAppearanceBuild", 1, (args, next) => {
             let C = args[0] as OtherCharacter;
             let callbacks = args[1];
-            C.AppearanceLayers?.forEach((Layer) => {
-                const A = Layer.Asset;
-                if (isCloth(A)) {
-                    (<any>A).DynamicBeforeDraw = true;
-                }
-            });
-            let ret = next(args);
-            return ret;
+            if (this.Enabled) {
+                C.AppearanceLayers?.forEach((Layer) => {
+                    const A = Layer.Asset;
+                    if (isCloth(A)) {
+                        (<any>A).DynamicBeforeDraw = true;
+                    }
+                });
+            }
+            return next(args);
         }, ModuleCategory.Opacity);
 
         hookFunction("CharacterAppearanceSortLayers", 1, (args, next) => {
             let C = args[0] as OtherCharacter;
-            if (!C.MemberNumber)
+            if (!C.MemberNumber || !this.Enabled)
                 return next(args);
 
             let xray = getModule<StateModule>("StateModule")?.XRayState;
@@ -232,17 +233,10 @@ export class OpacityModule extends BaseModule {
                     (<any>item.Asset).HideItem = [];
                     (<any>item.Asset).HideItemAttribute = [];
                 } else {
-                    item.Asset = Object.assign({}, item.Asset);
-                    (<any>item.Asset).Layer = item.Asset.Layer.map(l => Object.assign({}, l));
                     let defaultAsset = AssetMap.get(`${item?.Asset?.Group?.Name}/${item.Asset.Name}`);
                     if (!!defaultAsset) {
-                        item?.Asset?.Layer?.forEach((layer, ix, arr) => {
-                            if (defaultAsset!.Alpha)
-                                (<any>layer).Alpha = defaultAsset!.Alpha;
-                        });
-                        (<any>item.Asset).Hide = defaultAsset.Hide;
-                        (<any>item.Asset).HideItem = defaultAsset.HideItem;
-                        (<any>item.Asset).HideItemAttribute = defaultAsset.HideItemAttribute;
+                        item.Asset = Object.assign({}, defaultAsset);
+                        (<any>item.Asset).Layer = defaultAsset.Layer.map(l => Object.assign({}, l));
                     }
                 }
 
