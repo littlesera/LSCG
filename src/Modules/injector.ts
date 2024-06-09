@@ -248,6 +248,15 @@ export class InjectorModule extends BaseModule {
         this.hornyCooldownInterval = setInterval(() => this.HornyCooldown(), this.cooldownTickMs);
     }
 
+    hookBCX() {
+        if (!this._bcxHooked) {
+            this._bcxHooked = hookBCXCurse((evt) => {
+                if (evt.group.startsWith("ItemMouth") && this.Enabled && this.settings.enableContinuousDelivery)
+                    this.CheckRespiratorCurseUpdate();
+            });
+        }
+    }
+
     run(): void {
         this.hypnoModule = getModule<HypnoModule>("HypnoModule");
         this.activityModule = getModule<ActivityModule>("ActivityModule");
@@ -343,6 +352,8 @@ export class InjectorModule extends BaseModule {
     unload(): void {
         removeAllHooksByModule(ModuleCategory.Injector);
     }
+
+    _bcxHooked: boolean = false;
 
     InitializeRestrictiveHooks() {
         // hookFunction('ServerSend', 5, (args, next) => {
@@ -440,7 +451,7 @@ export class InjectorModule extends BaseModule {
         });
 
         // Check for respirator curses
-        hookBCXCurse("curseTrigger", (evt) => {
+        this._bcxHooked = hookBCXCurse((evt) => {
             if (evt.group.startsWith("ItemMouth") && this.Enabled && this.settings.enableContinuousDelivery)
                 this.CheckRespiratorCurseUpdate();
         })
@@ -466,6 +477,7 @@ export class InjectorModule extends BaseModule {
 
             // Check every minute for breath drug event
             if (this.settings.enableContinuousDelivery && lastBreathEvent + breathInterval < now) {
+                this.hookBCX(); // Temp location...
                 lastBreathEvent = now;
                 this.BreathInDrugEvent();
                 this.CheckForHypnoHelmet();

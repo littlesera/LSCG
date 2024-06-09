@@ -205,19 +205,14 @@ export class CollarModule extends BaseModule {
                 this.CheckGagSuffocate(msg, sender);
             }
             return;
-        })
+        });
 
-        hookBCXCurse("curseTrigger", (evt) => {
+        hookBCXCurse((evt) => {
             if (evt.group == "ItemNose")
                 setTimeout(() => {
                     this.CheckGagSuffocate("CurseUpdate", Player);
                 }, 2000);
-        })
-
-        // setTimeout(() => {
-        //     window.bcx?.getModApi("LSCG").on?.("curseTrigger", (event) => {
-        //         console.log("I see a curse event!", event);
-        //     })}, 10000);
+        });
 
         // event on room join
         hookFunction("ChatRoomSync", 4, (args, next) => {

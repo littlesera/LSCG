@@ -155,8 +155,18 @@ function initPatchableFunction(target: string): IPatchedFunctionData {
 	return result;
 }
 
-export function hookBCXCurse(trigger: "curseTrigger", listener: (v: { action: "remove" | "add" | "swap" | "update" | "color" | "autoremove"; group: string; }) => void) {
-	window.bcx?.getModApi("LSCG").on?.(trigger, listener);
+export function hookBCXCurse(listener: (v: { action: "remove" | "add" | "swap" | "update" | "color" | "autoremove"; group: string; }) => void): boolean {
+	if (!window.bcx)
+		return false;
+	window.bcx?.getModApi("LSCG").on?.("curseTrigger", listener);
+	return true;
+}
+
+export function hookBCXVoice(listener: (v: {message: string, timer: number, sender: number}) => void) {
+	if (!window.bcx)
+		return false;
+	window.bcx?.getModApi("LSCG").on?.("bcxLocalMessage", listener);
+	return true;
 }
 
 export function hookFunction(target: string, priority: number, hook: PatchHook, module: ModuleCategory | null = null): () => void {
