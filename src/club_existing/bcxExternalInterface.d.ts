@@ -13,6 +13,12 @@ interface BCX_Events {
 		/** Name of asset group that was changed */
 		group: string;
 	};
+
+	bcxLocalMessage: {
+		message: string;
+		timer: number;
+		sender: number;
+	}
 }
 
 interface BCX_ModAPI extends BCXEventEmitter<BCX_Events> {
