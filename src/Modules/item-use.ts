@@ -11,7 +11,8 @@ export const CameraItems: string[] = [
 	"Phone1",
 	"Phone2",
 	"PortalTablet",
-	"Camera1"
+	"Camera1",
+	"Smartphone"
 ];
 
 export const MagicWandItems: string[] = [
