@@ -151,6 +151,8 @@ export class ActivityModule extends BaseModule {
         OnActivity(1, ModuleCategory.Activities, (data, sender, msg, metadata) => {
             let target = GetTargetCharacter(data);
             let activityName = GetActivityName(data);
+            if (!this.Enabled)
+                return;
             if (target == Player.MemberNumber && !!activityName && this.CustomIncomingActivityReactions.has(activityName)) {
                 var reactionFunc = this.CustomIncomingActivityReactions.get(activityName);
                 if (!!reactionFunc)
