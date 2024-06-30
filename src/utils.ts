@@ -78,6 +78,9 @@ export function getCharacterByNicknameOrMemberNumber(tgt: string): Character | u
 	if (!tgtC) {
 		tgtC = ChatRoomCharacter.find(c => CharacterNickname(c).toLocaleLowerCase() == tgt);
 	}
+	if (!tgtC) {
+		tgtC = ChatRoomCharacter.find(c => c.Name.toLocaleLowerCase() == tgt);
+	}
 	return tgtC;
 }
 
@@ -152,8 +155,18 @@ function initPatchableFunction(target: string): IPatchedFunctionData {
 	return result;
 }
 
-export function hookBCXCurse(trigger: "curseTrigger", listener: (v: { action: "remove" | "add" | "swap" | "update" | "color" | "autoremove"; group: string; }) => void) {
-	window.bcx?.getModApi("LSCG").on?.(trigger, listener);
+export function hookBCXCurse(listener: (v: { action: "remove" | "add" | "swap" | "update" | "color" | "autoremove"; group: string; }) => void): boolean {
+	if (!window.bcx)
+		return false;
+	window.bcx?.getModApi("LSCG").on?.("curseTrigger", listener);
+	return true;
+}
+
+export function hookBCXVoice(listener: (v: {message: string, timer: number, sender: number}) => void) {
+	if (!window.bcx)
+		return false;
+	window.bcx?.getModApi("LSCG").on?.("bcxLocalMessage", listener);
+	return true;
 }
 
 export function hookFunction(target: string, priority: number, hook: PatchHook, module: ModuleCategory | null = null): () => void {
@@ -287,6 +300,7 @@ export function settingsSave(publish: boolean = false) {
 	if (!Player.ExtensionSettings)
 		Player.ExtensionSettings = <PlayerExtensionSettings>{};
 	Player.ExtensionSettings.LSCG = LZString.compressToBase64(JSON.stringify(Player.LSCG));
+	localStorage.setItem(`LSCG_${Player.MemberNumber}_Backup`, Player.ExtensionSettings.LSCG);
 	
 	try {
 		let cleaned = CleanDefaultsFromSettings(Player.LSCG);

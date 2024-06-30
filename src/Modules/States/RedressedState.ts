@@ -44,13 +44,15 @@ export class RedressedState extends ItemBundleBaseState {
             return false;
         if (!spell)
             return RedressedState.AssetIsAllowed(asset);
+
+        let neckExclusions = Player.LSCG.MagicModule.allowOutfitToChangeNeckItems ? [] : ["ItemNeck", "ItemNeckAccessories", "ItemNeckRestraints"];
         switch(spell.Outfit?.Option) {
             case OutfitOption.clothes_only:
                 return isCloth(asset);
             case OutfitOption.binds_only:
-                return isBind(asset, Player.LSCG.MagicModule.allowOutfitToChangeNeckItems ? [] : ["ItemNeck", "ItemNeckAccessories", "ItemNeckRestraints"]);
+                return isBind(asset, neckExclusions);
             case OutfitOption.both:
-                return isCloth(asset) || isBind(asset);
+                return isCloth(asset) || isBind(asset, neckExclusions);
             default:
                 return false;
         }

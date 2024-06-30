@@ -1,6 +1,6 @@
 import { RemoteGuiSubscreen } from "./remoteBase";
 import { Setting } from "Settings/settingBase";
-import { LSCGHypnoInstruction, SUGGESTION_LIMIT } from "Settings/Models/hypno";
+import { InstructionDescription, LSCGHypnoInstruction, SUGGESTION_LIMIT } from "Settings/Models/hypno";
 import { getActivities, ICONS, getActivityLabel, getZoneColor, replace_template, sendLSCGCommandBeep, isCloth } from "utils";
 import { RemoteHypno } from "./hypno";
 import { HypnoInstruction, HypnoModule, HypnoSuggestion } from "Modules/hypno";
@@ -579,7 +579,7 @@ export class RemoteSuggestions extends RemoteHypno {
 			DrawImageResize("Icons/General.png", 1750 + 2, this.getYPos(yPos) - 30, 60, 60);
 		}
 		MainCanvas.textAlign = "left";
-		DrawTextFit(RemoteSuggestions.InstructionDescription(instruction?.type), 780, this.getYPos(yPos + 1), 1000, "Black");
+		DrawTextFit(InstructionDescription(instruction?.type), 780, this.getYPos(yPos + 1), 1000, "Black");
 		MainCanvas.textAlign = "center";
 	}
 
@@ -739,7 +739,7 @@ export class RemoteSuggestions extends RemoteHypno {
 	}
 
 	get IsSuggestionOwner(): boolean {
-		return this.Suggestion?.installedBy == Player.MemberNumber;
+		return this.Suggestion?.installedBy == Player.MemberNumber || this.Character.IsOwnedByPlayer();
 	}
 
 	AvailableInstructions(ix: number) {
@@ -752,7 +752,7 @@ export class RemoteSuggestions extends RemoteHypno {
 		return this.ActualInstructions[this.InstructionIndex];
 	}
 	get ActualInstructions(): LSCGHypnoInstruction[] {
-		return this.Instructions.filter(e => e != LSCGHypnoInstruction.none);
+		return this.Instructions.filter(e => e != LSCGHypnoInstruction.none && this.settings.blockedInstructions.indexOf(e) == -1);
 	}
 	get Instructions(): LSCGHypnoInstruction[] {
 		return Object.values(LSCGHypnoInstruction);
@@ -831,34 +831,5 @@ export class RemoteSuggestions extends RemoteHypno {
 					break;
 			}
 		});
-	}
-
-	static InstructionDescription(instruction: LSCGHypnoInstruction): string {
-		switch (instruction) {
-			case LSCGHypnoInstruction.activity:
-				return "Compel the subject to perform an activity.";
-			case LSCGHypnoInstruction.follow:
-				return "Compel the subject to follow someone. (Requires LSCG leashing enabled on both)";
-			case LSCGHypnoInstruction.maid:
-				return "Compel the subject to serve drinks.";
-			case LSCGHypnoInstruction.orgasm:
-				return "Induce overwhelming pleasure in the subject.";
-			case LSCGHypnoInstruction.pose:
-				return "Compel the subject to assume a pose.";
-			case LSCGHypnoInstruction.say:
-				return "Compel the subject to speak a phrase.";
-			case LSCGHypnoInstruction.strip:
-				return "Make the subjects clothing uncomfortable.";
-			case LSCGHypnoInstruction.denial:
-				return "Prevent the subject from achieving orgasm.";
-			case LSCGHypnoInstruction.insatiable:
-				return "Infuse the subject with an endless arousal.";
-			case LSCGHypnoInstruction.forget:
-				return "Remove a previous instruction from the subject.";
-			case LSCGHypnoInstruction.none:
-				return "None";
-			default:
-				return "";
-		}
 	}
 }

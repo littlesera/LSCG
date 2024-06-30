@@ -11,7 +11,8 @@ export const CameraItems: string[] = [
 	"Phone1",
 	"Phone2",
 	"PortalTablet",
-	"Camera1"
+	"Camera1",
+	"Smartphone"
 ];
 
 export const MagicWandItems: string[] = [
@@ -438,7 +439,7 @@ export class ItemUseModule extends BaseModule {
 				<ActivityTarget>{
 					Name: "ItemMouth",
 					TargetLabel: "Move to Mouth",
-					TargetAction: "SourceCharacter moves TargetCharacter's ActivityAsset up to PronounPossessive mouth.",
+					TargetAction: "SourceCharacter moves TargetCharacter's ActivityAsset up to TargetPronounPossessive mouth.",
 					TargetSelfAction: "SourceCharacter moves PronounPossessive own ActivityAsset up to PronounPossessive mouth.",
 					SelfAllowed: true
 				},

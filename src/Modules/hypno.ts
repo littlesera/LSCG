@@ -1,7 +1,7 @@
 import { BaseModule } from 'base';
 import { HypnoInfluence, HypnoSettingsModel, LSCGHypnoInstruction } from 'Settings/Models/hypno';
 import { ModuleCategory, Subscreen } from 'Settings/setting_definitions';
-import { settingsSave, parseMsgWords, OnAction, OnActivity, SendAction, getRandomInt, hookFunction, removeAllHooksByModule, callOriginal, setOrIgnoreBlush, isAllowedMember, isPhraseInString, GetTargetCharacter, GetDelimitedList, GetActivityEntryFromContent, escapeRegExp, IsActivityAllowed, LSCG_SendLocal, getCharacter, sendLSCGCommandBeep, htmlToElement, OnChat, getDominance, getCharacterByNicknameOrMemberNumber, getActivities, isCloth } from '../utils';
+import { settingsSave, parseMsgWords, OnAction, OnActivity, SendAction, getRandomInt, hookFunction, removeAllHooksByModule, callOriginal, setOrIgnoreBlush, isAllowedMember, isPhraseInString, GetTargetCharacter, GetDelimitedList, GetActivityEntryFromContent, escapeRegExp, IsActivityAllowed, LSCG_SendLocal, getCharacter, sendLSCGCommandBeep, htmlToElement, OnChat, getDominance, getCharacterByNicknameOrMemberNumber, getActivities, isCloth, replace_template, hookBCXVoice } from '../utils';
 import { GuiHypno } from 'Settings/hypno';
 import { getModule } from 'modules';
 import { ActivityEntryModel } from 'Settings/Models/activities';
@@ -244,51 +244,21 @@ export class HypnoModule extends BaseModule {
                     return;
                 if (activityEntry?.awakener && this.hypnoActivated && !sender?.IsPlayer())
                     this.TriggerRestoreBoop();
-                // Special tummy rub hypno action for Bean
                 else if (activityEntry?.hypno && !this.hypnoActivated && !this.IsOnCooldown() && (Player.ArousalSettings?.Progress ?? 0) >= activityEntry.hypnoThreshold) {
                     this.DelayedTrigger(activityEntry, sender?.MemberNumber);
-                } else if (activityEntry?.sleep && !getModule<InjectorModule>("InjectorModule")?.asleep) {
-                    this.DelayedTrigger(activityEntry, sender?.MemberNumber, true);
                 }
             }
         });
-        
+
         let handlerPriority = (ChatRoomMessageHandlers.find(h => h.Description == "Save chats and whispers to the chat log")?.Priority ?? 110) - 1;
         ChatRoomRegisterMessageHandler(<ChatRoomMessageHandler>{
             Priority: handlerPriority, // Try to make sure we run last. Other mods could potentially add handlers after this depending on arbitrary load order.
             Description: "LSCG Hypnosis Trigger Checks",
             Callback: (data: ServerChatRoomMessage, sender: Character, msg: string, metadata?: IChatRoomMessageMetadata) => {
                 if (data.Type == "Chat" || data.Type == "Whisper") {
-                    if (!this.Enabled || (ChatRoomIsViewActive(ChatRoomMapViewName) && !ChatRoomMapViewCharacterIsHearable(sender)))
+                    if (!this.TopLevelCheckTriggers(msg, sender))
                         return false;
-    
-                    // Check for non-garbled trigger word, this means a trigger word could be set to what garbled speech produces >.>
-                    if (!this.hypnoActivated && this.CheckTrigger(msg, sender) && !this.IsOnCooldown()) {
-                        this.StartTriggerWord(true, sender.MemberNumber);
-                    } else if (this.hypnoActivated) {
-                        var lowerMsg = msg.toLowerCase();
-                        var names = [CharacterNickname(Player)];
-                        if (!!Player.Name && names.indexOf(Player.Name) == -1)
-                            names.push(Player.Name);
-                        if (names.some(n => isPhraseInString(lowerMsg, n)) || 
-                            this.StateModule.HypnoState.config.activatedBy == sender.MemberNumber || 
-                            this.StateModule.HypnoState.config.activatedBy == -1 ||
-                            sender.MemberNumber == Player.MemberNumber) {
-                            if (this.CheckAwakener(msg, sender)) {
-                                this.TriggerRestoreWord(sender);
-                            } else  {
-                                this.CheckSpeechTriggers(msg, sender);
-                            }
-                        }
-                        else
-                            msg =  msg.replace(/\S/gm, '-');
-                    }
-                    
-                    if (this.settings.allowSuggestions)
-                        this.CheckSuggestions(msg, sender);
-
-                    msg = this.BlankOutTriggers(msg, sender);
-                    
+                    msg = this.BlankOutTriggers(msg, sender);                    
                     return { msg: msg }
                 } 
                 return false;
@@ -298,6 +268,9 @@ export class HypnoModule extends BaseModule {
         let lastCycleCheck = 0;
         let downgradeInterval = (10 * 60 * 1000); // 10 min downgrade ticks
         let lastInfluenceCheck = CommonTime();
+
+        let bcxCheckInterval = (2000); // 2 s bcx check ticks
+        let lastbcxCheck = CommonTime();
         hookFunction('TimerProcess', 1, (args, next) => {
             if (ActivityAllowed()) {
                 var now = CommonTime();
@@ -316,6 +289,10 @@ export class HypnoModule extends BaseModule {
                 if ((now - lastInfluenceCheck) > downgradeInterval) {
                     this.DowngradeInfluences();
                     lastInfluenceCheck = now;
+                }
+
+                if ((now - lastbcxCheck) > bcxCheckInterval) {
+                    this.hookBCX();
                 }
             }
             return next(args);
@@ -343,32 +320,59 @@ export class HypnoModule extends BaseModule {
         this.RegisterSuggestionHooks();
     }
 
+    _bcxHooked: boolean = false;
+    hookBCX() {
+        if (!this._bcxHooked) {
+            this._bcxHooked = hookBCXVoice((evt) => {
+                let msg = evt.message;
+                if (msg.startsWith("[Voice]")) {
+                    msg = msg.substring(7);
+                    let senderChar = getCharacter(evt.sender);
+                    if (!!senderChar)
+                        this.TopLevelCheckTriggers(msg, senderChar);
+                }
+            });
+        }
+    }
+
+    TopLevelCheckTriggers(msg: string, sender: Character) {
+        if (!this.Enabled || (ChatRoomIsViewActive(ChatRoomMapViewName) && !ChatRoomMapViewCharacterIsHearable(sender)))
+            return false;
+
+        // Check for non-garbled trigger word, this means a trigger word could be set to what garbled speech produces >.>
+        if (!this.hypnoActivated && this.CheckTrigger(msg, sender) && !this.IsOnCooldown()) {
+            this.StartTriggerWord(true, sender.MemberNumber);
+        } else if (this.hypnoActivated) {
+            var lowerMsg = msg.toLowerCase();
+            var names = [CharacterNickname(Player)];
+            if (!!Player.Name && names.indexOf(Player.Name) == -1)
+                names.push(Player.Name);
+            if (names.some(n => isPhraseInString(lowerMsg, n)) || 
+                this.StateModule.HypnoState.config.activatedBy == sender.MemberNumber || 
+                this.StateModule.HypnoState.config.activatedBy == -1 ||
+                sender.MemberNumber == Player.MemberNumber) {
+                if (this.CheckAwakener(msg, sender)) {
+                    this.TriggerRestoreWord(sender);
+                } else  {
+                    this.CheckSpeechTriggers(msg, sender);
+                }
+            }
+            else
+                msg =  msg.replace(/\S/gm, '-');
+        }
+        
+        if (this.settings.allowSuggestions)
+            this.CheckSuggestions(msg, sender);
+
+        return true;
+    }
+
     _suggestionHooks: any[] = []
     RegisterSuggestionHooks() {
-        // Suggestion Hooks
-        // this._suggestionHooks.push(hookFunction("ChatRoomSync", 1, (args, next) => {
-        //     const data = args[0];
-        //     if (data.Name !== this.forceSay_lastRoomName) {
-        //         this.forceSay_sayText = "";
-        //         this.forceSay_senderNumber = null;
-        //     }
-        //     next(args);
-        // }, ModuleCategory.Hypno));
-
-        // this._suggestionHooks.push(hookFunction("ChatRoomKeyDown", 5, (args, next) => {
-        //     if (CurrentScreen === "ChatRoom" && this.forceSay_sayText) {
-        //         const chatHasFocus = document.activeElement?.id === "InputChat";
-        //         if (chatHasFocus) {
-        //             this.forceSay_count++;
-        //         }
-        //     }
-        //     return next(args);
-        // }, ModuleCategory.Hypno));
-
         this._suggestionHooks.push(hookFunction("CommandParse", 6, (args, next) => {
 			const msg = args[0].trim() as string;
             const isChat = !/^[*!/.]/.test((msg ?? "")[0]);
-			if (this.forceSay_sayText && msg && ChatRoomTargetMemberNumber == null && !msg.includes("(") && isChat) {
+			if (this.forceSay_sayText && msg && (ChatRoomTargetMemberNumber ?? -1) == -1 && !msg.includes("(") && isChat) {
 				if (msg.toLocaleLowerCase() === this.forceSay_sayText.toLocaleLowerCase()) {
                     this.forceSay_sayText = "";
                     let ret = next(args);
@@ -379,8 +383,7 @@ export class HypnoModule extends BaseModule {
                     return ret;
                 } else {
                     LSCG_SendLocal(`You find it absurd to say anything other than '${this.forceSay_sayText}'.`);
-                    SendAction("%NAME% opens %POSSESSIVE% mouth but no sound comes out.");
-                    return null;
+                    return replace_template("*opens %POSSESSIVE% mouth but no sound comes out.");
                 }
 			}
             return next(args);
@@ -395,7 +398,7 @@ export class HypnoModule extends BaseModule {
                 this.allowedSpeaker(getCharacter(sender) ?? undefined))) {
                 sendLSCGCommandBeep(sender, "get-suggestions-response", [{
                     name: "suggestions",
-                    value: this.settings.suggestions?.filter(s => s.installedBy == sender || !s.exclusive) ?? []
+                    value: this.settings.suggestions?.filter(s => s.installedBy == sender || !s.exclusive || Player.IsOwnedByMemberNumber(sender)) ?? []
                 }, {
                     name: "total",
                     value: this.settings.suggestions?.length ?? 0
@@ -691,7 +694,7 @@ export class HypnoModule extends BaseModule {
     }
 
     GetResistRoll() {
-        return getRandomInt(100) + (getDominance(Player) / 2);
+        return getRandomInt(100);// + (getDominance(Player) / 2);
     }
 
     CompelSuggestion(suggestion: HypnoSuggestion, sender: Character, command: string) {
@@ -701,11 +704,12 @@ export class HypnoModule extends BaseModule {
         if (!AudioShouldSilenceSound(true))
             AudioPlaySoundEffect("BellMedium");
 
+        let bypassResistance = this.settings.alwaysSubmit || (this.settings.alwaysSubmitMemberIds.split(",").map(id => id.trim()).indexOf(sender.MemberNumber + "") > -1)
         let totalInfluence = this.GetSuggestionInfluence(suggestion, sender);
-        let playerDomRepMod = getDominance(Player) / 2;
+        let playerDomRepMod = 0;//getDominance(Player) / 2;
         // Calculate chance to resist suggestion, if 0 force activate
         // Otherwise prompt user in local chat with constructed message based on instructions
-        if (totalInfluence >= (100 + playerDomRepMod))
+        if (bypassResistance || totalInfluence >= (100 + playerDomRepMod))
             this.DoSuggestion(new SuggestionMiniGameOptions(suggestion, sender, command));
         else {
             // Start Resist Game
@@ -781,6 +785,9 @@ export class HypnoModule extends BaseModule {
         suggestion.instructions.forEach((instruction, ix, arr) => {
             setTimeout(() => {
                 let config = instruction.arguments["config"];
+                if (this.settings.blockedInstructions.indexOf(instruction.type) > -1) {
+                    return this.BlockedInstruction(opts, instruction);
+                }
                 switch (instruction.type) {
                     case LSCGHypnoInstruction.activity:
                         this.ForceActivity(opts, instruction);
@@ -1006,7 +1013,8 @@ export class HypnoModule extends BaseModule {
                 Move: "false",
                 Speech: "false"
             };
-            let isAllowed = ActivityAllowedForGroup(target, activityGroup?.Name).filter(a => !a.Blocked).findIndex(a => a.Activity.Name == activity?.Name) > -1;
+            let hasItemPermission = ServerChatRoomGetAllowItem(Player, target);
+            let isAllowed = hasItemPermission && ActivityAllowedForGroup(target, activityGroup?.Name).filter(a => !a.Blocked).findIndex(a => a.Activity.Name == activity?.Name) > -1;
             if (isAllowed) ActivityRun(Player, target, activityGroup, <ItemActivity>{Activity: activity}, true);
             else {
                 SendAction("%NAME% struggles to perform some action.");
@@ -1083,6 +1091,12 @@ export class HypnoModule extends BaseModule {
             });
             SendAction("%NAME% looks around, a little confused about how %PRONOUN% got here.");
         }
+    }
+
+    BlockedInstruction(opts: SuggestionMiniGameOptions, instruction: HypnoInstruction) {
+        LSCG_SendLocal(`You are immune to the suggestion's "${instruction.type}" instruction and shake some of ${opts.senderName}'s influence.`);
+        this.ReduceSpeakerInfluence(opts.sender.MemberNumber ?? -1);
+        return;
     }
 
     DowngradeInfluences() {

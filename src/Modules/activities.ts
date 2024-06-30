@@ -7,6 +7,9 @@ import { CollarModule } from "./collar";
 import { ActivitySettingsModel } from "Settings/Models/activities";
 import { GuiActivities } from "Settings/activities";
 import { LeashingModule } from "./leashing";
+import { HypnoModule } from "./hypno";
+import { StateMigrator } from "./Migrators/StateMigrator";
+import { StateModule } from "./states";
 
 export interface ActivityTarget {
     Name: AssetGroupItemName;
@@ -148,6 +151,8 @@ export class ActivityModule extends BaseModule {
         OnActivity(1, ModuleCategory.Activities, (data, sender, msg, metadata) => {
             let target = GetTargetCharacter(data);
             let activityName = GetActivityName(data);
+            if (!this.Enabled)
+                return;
             if (target == Player.MemberNumber && !!activityName && this.CustomIncomingActivityReactions.has(activityName)) {
                 var reactionFunc = this.CustomIncomingActivityReactions.get(activityName);
                 if (!!reactionFunc)
@@ -165,6 +170,9 @@ export class ActivityModule extends BaseModule {
                         if (!!Player.ArousalSettings) Player.ArousalSettings.Progress = 100;
                         ActivityOrgasmPrepare(Player);
                     }
+                }
+                if (activityEntry?.sleep && !getModule<StateModule>("StateModule")?.SleepState.Active) {
+                    getModule<HypnoModule>("HypnoModule")?.DelayedTrigger(activityEntry, sender?.MemberNumber, true);
                 }
             }
         })
@@ -1225,7 +1233,7 @@ export class ActivityModule extends BaseModule {
                     }
                 }
             ],
-            CustomImage: "Assets/Female3DCG/ItemPelvis/HempRope_NormalOverPanties.png"
+            CustomImage: "Assets/Female3DCG/ItemPelvis/HempRope_Normal_typed1.png"
         });
 
         // Flick

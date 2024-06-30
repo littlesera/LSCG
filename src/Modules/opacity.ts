@@ -54,12 +54,12 @@ export class OpacityModule extends BaseModule {
                 this.OpacityCharacter = C;
                 this.OpacityItem = Item;
 
-                this.OpacityMainSlider.Element = ElementCreateRangeInput(this.OpacityMainSlider.ElementId, 1, 0, 1, 0.01);
+                this.OpacityMainSlider.Element = ElementCreateRangeInput(this.OpacityMainSlider.ElementId, 100, 0, 100, 1);
                 this.OpacityMainSlider.Element.addEventListener("input", (e) => this.OpacityChange(this.OpacityMainSlider));
                 this.OpacityMainSlider.TextElement = ElementCreateInput(this.OpacityMainSlider.ElementId + "_Text", "number", this.OpacityMainSlider.Value + "");
                 ElementSetAttribute(this.OpacityMainSlider.ElementId + "_Text", "min", "0");
-                ElementSetAttribute(this.OpacityMainSlider.ElementId + "_Text", "max", "1");
-                ElementSetAttribute(this.OpacityMainSlider.ElementId + "_Text", "step", "0.1");
+                ElementSetAttribute(this.OpacityMainSlider.ElementId + "_Text", "max", "100");
+                ElementSetAttribute(this.OpacityMainSlider.ElementId + "_Text", "step", "1");
                 this.OpacityMainSlider.TextElement.addEventListener("input", (e) => this.OpacityTextChange(this.OpacityMainSlider));
                 this.OpacityMainSlider.Label = this.CreateOpacityLabel(this.OpacityMainSlider.LabelId, this.OpacityMainSlider.ElementId);
                 ElementPosition(this.OpacityMainSlider.ElementId, -999, -999, 300, 20);
@@ -74,12 +74,12 @@ export class OpacityModule extends BaseModule {
                             ElementId: `LSCGOpacity_${layerSuffix}`,
                             LabelId: `LSCGOpacityLabel_${layerSuffix}`,
                         };
-                        layerSlider.Element = ElementCreateRangeInput(layerSlider.ElementId, 1, 0, 1, 0.01);
+                        layerSlider.Element = ElementCreateRangeInput(layerSlider.ElementId, 100, 0, 100, 1);
                         layerSlider.Element.addEventListener("input", (e) => this.OpacityChange(layerSlider));
                         layerSlider.Element = ElementCreateInput(layerSlider.ElementId + "_Text", "number", layerSlider.Value + "");
                         ElementSetAttribute(layerSlider.ElementId + "_Text", "min", "0");
-                        ElementSetAttribute(layerSlider.ElementId + "_Text", "max", "1");
-                        ElementSetAttribute(layerSlider.ElementId + "_Text", "step", "0.1");
+                        ElementSetAttribute(layerSlider.ElementId + "_Text", "max", "100");
+                        ElementSetAttribute(layerSlider.ElementId + "_Text", "step", "1");
                         layerSlider.Element.addEventListener("input", (e) => this.OpacityTextChange(layerSlider));
                         layerSlider.Label = this.CreateOpacityLabel(layerSlider.LabelId, layerSlider.ElementId, l.Name);
                         ElementPosition(layerSlider.ElementId, -999, -999, 300, 20);
@@ -120,10 +120,12 @@ export class OpacityModule extends BaseModule {
                 MainCanvas.textAlign = "left";
                 
                 // Draw "All Layers" checkbox
-                DrawCheckbox(50, 120 - 32, 64, 64, "", this.opacityAllLayer, this.OpacityItem.Asset?.Layer.length <= 1);
-                DrawTextFit("All Layers", 120, 120, 300, "White", "Gray");
-                if (MouseIn(50, 120 - 32, 64, 64)) 
-                    drawTooltip(50, 50, 800, "Modify opacity levels for each asset layer", "left");
+                if (this.OpacityItem.Asset?.Layer.length > 1) {
+                    DrawCheckbox(50, 120 - 32, 64, 64, "", this.opacityAllLayer, this.OpacityItem.Asset?.Layer.length <= 1);
+                    DrawTextFit("All Layers", 120, 120, 300, "White", "Gray");
+                    if (MouseIn(50, 120 - 32, 64, 64)) 
+                        drawTooltip(50, 50, 800, "Modify opacity levels for each asset layer", "left");
+                }
 
                 // Draw "All Layers" checkbox
                 DrawCheckbox(350, 120 - 32, 64, 64, "", this.OpacityItem?.Property?.LSCGLeadLined ?? false);
@@ -201,25 +203,26 @@ export class OpacityModule extends BaseModule {
         hookFunction("CommonDrawAppearanceBuild", 1, (args, next) => {
             let C = args[0] as OtherCharacter;
             let callbacks = args[1];
-            C.AppearanceLayers?.forEach((Layer) => {
-                const A = Layer.Asset;
-                if (isCloth(A)) {
-                    (<any>A).DynamicBeforeDraw = true;
-                }
-            });
-            let ret = next(args);
-            return ret;
+            if (this.Enabled) {
+                C.AppearanceLayers?.forEach((Layer) => {
+                    const A = Layer.Asset;
+                    if (isCloth(A)) {
+                        (<any>A).DynamicBeforeDraw = true;
+                    }
+                });
+            }
+            return next(args);
         }, ModuleCategory.Opacity);
 
         hookFunction("CharacterAppearanceSortLayers", 1, (args, next) => {
             let C = args[0] as OtherCharacter;
-            if (!C.MemberNumber)
+            if (!C.MemberNumber || !this.Enabled)
                 return next(args);
 
             let xray = getModule<StateModule>("StateModule")?.XRayState;
             let xrayActive = xray?.Active && xray?.CanViewXRay(C);
             C.DrawAppearance?.forEach(item => {
-                let hasOpacitySettings = !!item.Property?.LSCGOpacity && item.Property?.LSCGOpacity != 1;
+                let hasOpacitySettings = item.Property?.LSCGOpacity !== undefined && item.Property?.LSCGOpacity != 1;
                 if (hasOpacitySettings || xrayActive) {
                     item.Asset = Object.assign({}, item.Asset);
                     (<any>item.Asset).Layer = item.Asset.Layer.map(l => Object.assign({}, l));
@@ -230,17 +233,10 @@ export class OpacityModule extends BaseModule {
                     (<any>item.Asset).HideItem = [];
                     (<any>item.Asset).HideItemAttribute = [];
                 } else {
-                    item.Asset = Object.assign({}, item.Asset);
-                    (<any>item.Asset).Layer = item.Asset.Layer.map(l => Object.assign({}, l));
                     let defaultAsset = AssetMap.get(`${item?.Asset?.Group?.Name}/${item.Asset.Name}`);
                     if (!!defaultAsset) {
-                        item?.Asset?.Layer?.forEach((layer, ix, arr) => {
-                            if (defaultAsset!.Alpha)
-                                (<any>layer).Alpha = defaultAsset!.Alpha;
-                        });
-                        (<any>item.Asset).Hide = defaultAsset.Hide;
-                        (<any>item.Asset).HideItem = defaultAsset.HideItem;
-                        (<any>item.Asset).HideItemAttribute = defaultAsset.HideItemAttribute;
+                        item.Asset = Object.assign({}, defaultAsset);
+                        (<any>item.Asset).Layer = defaultAsset.Layer.map(l => Object.assign({}, l));
                     }
                 }
 
@@ -268,8 +264,8 @@ export class OpacityModule extends BaseModule {
             let yMod = ix % 8;
             ElementPosition(layerSlider.LabelId, 200 + (xMod * 420), 200 + (yMod * 100), 300, 20);
             ElementPosition(layerSlider.ElementId, 200 + (xMod * 420), 260 + (yMod * 100), 300, 20);
-            ElementPosition(layerSlider.ElementId + "_Text", 400 + (xMod * 420), 260 + (yMod * 100), 128, 40);
-            let valStr = "" + ((<number[]>this.OpacityItem?.Property?.LSCGOpacity)[ix] ?? 1);
+            ElementPosition(layerSlider.ElementId + "_Text", 420 + (xMod * 420), 260 + (yMod * 100), 128, 40);
+            let valStr = "" + (((<number[]>this.OpacityItem?.Property?.LSCGOpacity)[ix] ?? 1) * 100);
             ElementValue(layerSlider.ElementId, valStr);
             ElementValue(layerSlider.ElementId + "_Text", valStr);
         });
@@ -283,11 +279,11 @@ export class OpacityModule extends BaseModule {
             ElementPosition(layerSlider.ElementId + "_Text", -999, -999, 300, 40);
         });
 
-        let opacityValue = Array.isArray(this.OpacityItem?.Property?.LSCGOpacity) ? 1 : (this.OpacityItem?.Property?.LSCGOpacity ?? 1);
+        let opacityValue = (Array.isArray(this.OpacityItem?.Property?.LSCGOpacity) ? 1 : (this.OpacityItem?.Property?.LSCGOpacity ?? 1)) * 100;
 
         ElementPosition(this.OpacityMainSlider.LabelId, 200, 200, 300, 20);
         ElementPosition(this.OpacityMainSlider.ElementId, 200, 260, 300, 20);
-        ElementPosition(this.OpacityMainSlider.ElementId + "_Text", 400, 260, 128, 40);
+        ElementPosition(this.OpacityMainSlider.ElementId + "_Text", 420, 260, 128, 40);
         ElementValue(this.OpacityMainSlider.ElementId, "" + opacityValue);
         ElementValue(this.OpacityMainSlider.ElementId + "_Text", "" + opacityValue);
     }
@@ -299,7 +295,7 @@ export class OpacityModule extends BaseModule {
             label.setAttribute("for", sliderId);
             label.style.pointerEvents = "none";
             label.style.color = "#FFF";
-            label.innerText = overrideText ?? "Opacity";
+            label.innerText = overrideText ?? "Opacity %";
             document.body.appendChild(label);
             return label;
         } else
@@ -307,14 +303,14 @@ export class OpacityModule extends BaseModule {
     }
 
     OpacityChange(slider: OpacitySlider) {
-        let value = this._updateOpacityValue(slider.ElementId);
+        let value = Math.round(this._updateOpacityValue(slider.ElementId) * 100);
         slider.Value = value;
         ElementValue(slider.ElementId + "_Text", value + "");
         this.UpdatePreview();
     }
 
     OpacityTextChange(slider: OpacitySlider) {
-        let value = this._updateOpacityValue(slider.ElementId + "_Text");
+        let value = Math.round(this._updateOpacityValue(slider.ElementId + "_Text") * 100);
         slider.Value = value;
         ElementValue(slider.ElementId, value + "");
         this.UpdatePreview();
@@ -324,7 +320,7 @@ export class OpacityModule extends BaseModule {
         if (!this.OpacityItem)
             return 1;
 
-        let value = parseFloat(ElementValue(fromElementId));
+        let value = Math.round(parseFloat(ElementValue(fromElementId))) / 100;
         let C = Player;
         if (!this.OpacityItem.Property)
             this.OpacityItem.Property = {};
