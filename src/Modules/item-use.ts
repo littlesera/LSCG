@@ -52,7 +52,7 @@ export const EnhancedItemActivityNames: string[] = [
 export function IsActivityEnhanced(data: ServerChatRoomMessage) {
 	let meta = GetMetadata(data);
 	let activityName = meta?.ActivityName;
-	return meta?.GroupName == "ItemMouth" && EnhancedItemActivityNames.indexOf(activityName ?? "");
+	return meta?.GroupName == "ItemMouth" && EnhancedItemActivityNames.indexOf(activityName ?? "") > -1;
 }
 
 export class ActivityRoll {
