@@ -1,7 +1,7 @@
 import { BaseModule } from "base";
 import { getModule } from "modules";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { getDominance, getRandomInt, hookFunction, IsIncapacitated, removeAllHooksByModule, SendAction, sendLSCGCommand } from "../utils";
+import { getDominance, GetMetadata, getRandomInt, hookFunction, IsIncapacitated, removeAllHooksByModule, SendAction, sendLSCGCommand } from "../utils";
 import { ActivityBundle, ActivityModule, ActivityTarget } from "./activities";
 import { BoopsModule } from "./boops";
 import { CollarModule } from "./collar";
@@ -39,6 +39,21 @@ export const AdditionalPenetrateItems: string[] = [
 export const EdibleItems: string[] = [
 	"Baguette"
 ]
+
+export const EnhancedItemActivityNames: string[] = [
+	"LSCG_Quaff",
+	"LSCG_Eat",
+	"LSCG_FunnelPour",
+	"SipItem",
+	"EatItem",
+	"ThrowItem"
+];
+
+export function IsActivityEnhanced(data: ServerChatRoomMessage) {
+	let meta = GetMetadata(data);
+	let activityName = meta?.ActivityName;
+	return meta?.GroupName == "ItemMouth" && EnhancedItemActivityNames.indexOf(activityName ?? "");
+}
 
 export class ActivityRoll {
 	constructor(raw: number, mod: number) {
