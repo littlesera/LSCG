@@ -214,12 +214,13 @@ export class MagicModule extends BaseModule {
             "wand",
             "enchanted",
             "magic"
-        ]
+        ];
+        let craftStr = GetItemNameAndDescriptionConcat(item) ?? "";
         if (!item || !item.Asset)
             return false;
         else if (MagicWandItems.indexOf(item?.Asset?.Name ?? "") > -1)
             return true;
-        else if (!!item?.Craft?.Description && magicItemKeywords.some(keyword => item.Craft!.Description.toLocaleLowerCase().indexOf(keyword) > -1))
+        else if (magicItemKeywords.some(keyword => isPhraseInString(craftStr, keyword)))
             return true;
         else
             return false;
@@ -229,7 +230,8 @@ export class MagicModule extends BaseModule {
         let rangedItemKeywords = [
             "wand"
         ];
-        return (!!item?.Craft?.Description && rangedItemKeywords.some(keyword => item.Craft!.Description.toLocaleLowerCase().indexOf(keyword) > -1));
+        let craftStr = GetItemNameAndDescriptionConcat(item) ?? "";
+        return rangedItemKeywords.some(keyword => isPhraseInString(craftStr, keyword));
     }
 
     CanUseMagic(target: Character) {
