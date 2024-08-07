@@ -1036,7 +1036,7 @@ export class HypnoModule extends BaseModule {
         }
         
         let clothing = instruction.arguments["selection"] as ClothingSelection;
-        if (!clothing) {
+        if (!clothing || !clothing?.groups) {
             LSCG_SendLocal(`You feel a fuzzy confusion without complete instructions and shake a little bit of ${opts.senderName}'s influence.`);
             this.ReduceSpeakerInfluence(opts.sender.MemberNumber ?? -1);
             return;
