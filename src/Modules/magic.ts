@@ -6,7 +6,7 @@ import { ActivityModule, ActivityTarget } from "./activities";
 import { KNOWN_SPELLS_LIMIT, LSCGSpellEffect, MagicSettingsModel, OutfitConfig, OutfitOption, SpellDefinition } from "Settings/Models/magic";
 import { GuiMagic, pairedSpellEffects } from "Settings/magic";
 import { StateModule } from "./states";
-import { ItemUseModule, MagicWandItems } from "./item-use";
+import { EnhancedItemActivityNames, IsActivityEnhanced, ItemUseModule, MagicWandItems } from "./item-use";
 import { InjectorModule } from "./injector";
 import { BaseState } from "./States/BaseState";
 import { RedressedState } from "./States/RedressedState";
@@ -119,13 +119,6 @@ export class MagicModule extends BaseModule {
         return ChatRoomCharacter.filter(c => !!c && !!(c as any).LSCG && !!(c as any).LSCG.MagicModule && (c as any).LSCG.MagicModule.enabled && c.MemberNumber != spellTarget?.MemberNumber);
     }
 
-    drinkActivityNames: string[] = [
-        "LSCG_Quaff",
-        "LSCG_Eat",
-        "SipItem",
-        "LSCG_FunnelPour"
-    ]
-
     load(): void {
         let activities = getModule<ActivityModule>("ActivityModule");
 
@@ -168,14 +161,15 @@ export class MagicModule extends BaseModule {
             return next(args);
         }, ModuleCategory.Magic)
 
-        OnActivity(1, ModuleCategory.Magic, (data, sender, msg, megadata) => {
+        OnActivity(1, ModuleCategory.Magic, (data: ServerChatRoomMessage, sender, msg, megadata) => {
             if (!this.Enabled)
                 return;
             let meta = GetMetadata(data);
-            var activityName = meta?.ActivityName;
-            var target = meta?.TargetMemberNumber;
+            let activityName = meta?.ActivityName;
+            let target = meta?.TargetMemberNumber;
+            let thrownInMouth = activityName == "ThrowItem" && meta?.GroupName == "ItemMouth";
             if (target == Player.MemberNumber && 
-                this.drinkActivityNames.indexOf(activityName ?? "") > -1 && 
+                IsActivityEnhanced(data) &&
                 !!sender) {
                 this.HandleQuaff(sender);
             }
@@ -802,9 +796,9 @@ export class MagicModule extends BaseModule {
                 this.TryForcePotion(sender, itemName, spell);
             } else {
                 if (sender.IsPlayer())
-                    SendAction(`%NAME% gulps down %POSSESSIVE% ${itemName}.`, sender);
+                    SendAction(`%NAME% swallows %POSSESSIVE% ${itemName}.`, sender);
                 else
-                    SendAction(`%NAME% gulps down %OPP_NAME%'s ${itemName}.`, sender)
+                    SendAction(`%NAME% swallows %OPP_NAME%'s ${itemName}.`, sender)
                 this.ProcessPotion(sender, spell);
             }
         }
@@ -820,7 +814,7 @@ export class MagicModule extends BaseModule {
             SendAction(`%OPP_NAME% ${check.AttackerRoll.TotalStr}manages to get %OPP_POSSESSIVE% ${itemName} past %NAME%'s ${check.DefenderRoll.TotalStr}lips, forcing %INTENSIVE% to swallow it.`, sender);
             this.ProcessPotion(sender, spell);
         } else {
-            SendAction(`%NAME% ${check.DefenderRoll.TotalStr}successfully defends against %OPP_NAME%'s ${check.AttackerRoll.TotalStr}attempt to force %INTENSIVE% to drink %OPP_POSSESSIVE% ${itemName}.`, sender);
+            SendAction(`%NAME% ${check.DefenderRoll.TotalStr}successfully defends against %OPP_NAME%'s ${check.AttackerRoll.TotalStr}attempt to force %INTENSIVE% to swallow %OPP_POSSESSIVE% ${itemName}.`, sender);
         }
     }
 
