@@ -469,7 +469,7 @@ export class MagicModule extends BaseModule {
             `%NAME% aims %POSSESSIVE% ${itemName} at %OPP_NAME% and, with a grin, casts ${spell.Name}${pairedDefaultStr}`
         ];
         let meleeCastingActionStrings: string[] = [
-            `%NAME% waves %POSSESSIVE% ${itemName} in front of %OPP_NAME%'s face and casts ${spell.Name} on %OPP_NAME%${pairedDefaultStr}`,
+            `%NAME% waves %POSSESSIVE% ${itemName} in front of %OPP_NAME%, and with a sudden boop, casts ${spell.Name} on %OPP_NAME%${pairedDefaultStr}`,
             `%NAME% chants an indecipherable phrase, tapping %POSSESSIVE% ${itemName} against %OPP_NAME% and casting ${spell.Name}${pairedDefaultStr}`,
             `%NAME% baps %OPP_NAME% with %POSSESSIVE% ${itemName} and, with a grin, casts ${spell.Name}${pairedDefaultStr}`
         ];
