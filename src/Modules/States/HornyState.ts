@@ -35,6 +35,7 @@ export class HornyState extends BaseState {
         if (this.Active && !!Player.ArousalSettings && getRandomInt(1) == 0) {
             Player.ArousalSettings.Progress++;
         }
+        super.Tick(now);
     }
 
     RoomSync(): void {}

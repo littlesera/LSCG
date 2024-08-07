@@ -555,9 +555,17 @@ export function sendLSCGCommandBeep(target: number, commandName: LSCGCommandName
 	});
 }
 
+function escapeHtml(html: string){
+	var text = document.createTextNode(html);
+	var p = document.createElement('p');
+	p.appendChild(text);
+	return p.innerHTML;
+  }
+
 export function LSCG_SendLocal(msg: string, time?: number) {
 	var bgColor = (Player.ChatSettings!.ColorTheme!.indexOf("Light") > -1) ? "#D7F6E9" : "#23523E";
-	let text = `<div style='background-color:${bgColor};'>${msg}</div>`;
+	let escapedMsg = escapeHtml(msg);
+	let text = `<div style='background-color:${bgColor};'>${escapedMsg}</div>`;
 	ChatRoomSendLocal(text);
 }
 
