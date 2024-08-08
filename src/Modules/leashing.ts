@@ -10,7 +10,7 @@ import { CollarModel } from "Settings/Models/collar";
 import { CollarModule } from "./collar";
 import { CommandListener, CoreModule } from "./core";
 
-export type GrabType = "hand"  | "ear" | "tongue" | "arm" | "neck" | "mouth" | "horn" | "mouth-with-foot" | "chomp" | "eyes" | "compulsion"
+export type GrabType = "hand"  | "ear" | "tongue" | "arm" | "neck" | "mouth" | "horn" | "mouth-with-foot" | "chomp" | "eyes" | "compulsion" | "tail"
 
 export interface LeashDefinition {
     Type: GrabType;
@@ -39,6 +39,7 @@ export const LeashDefinitions: Map<GrabType, LeashDefinition> = new Map<GrabType
     ["ear", <LeashDefinition>{Type: "ear", LabelTarget: "Ear pinched by %OPP_NAME%", LabelSource: "Pinching %OPP_NAME%'s ear", Icon: ICONS.EAR}],
     ["hand", <LeashDefinition>{Type: "hand", LabelTarget: "Holding %OPP_NAME%'s hand", Icon: ICONS.HOLD_HANDS, Bidirectional: true}],
     ["horn", <LeashDefinition>{Type: "horn", LabelTarget: "Horn grabbed by %OPP_NAME%", LabelSource: "Grabbing %OPP_NAME%'s horn"}],
+    ["tail", <LeashDefinition>{Type: "tail", LabelTarget: "Tail held by %OPP_NAME%", LabelSource: "Holding %OPP_NAME%'s tail"}],
     ["mouth", <LeashDefinition>{Type: "mouth", LabelTarget: "Mouth clamped by %OPP_NAME%", LabelSource: "Clamping over %OPP_NAME%'s mouth", Icon: ICONS.MUTE, Gags: true}],
     ["eyes", <LeashDefinition>{Type: "eyes", LabelTarget: "Eyes covered by %OPP_NAME%", LabelSource: "Covering %OPP_NAME%'s eyes", Icon: "Icons/Private.png", Blinds: true,
         OnAdd: (pairing) => {
@@ -148,6 +149,7 @@ export class LeashingModule extends BaseModule {
         "hand",
         "arm",
         "horn",
+        "tail",
         "ear",
         "mouth",
         "neck",
