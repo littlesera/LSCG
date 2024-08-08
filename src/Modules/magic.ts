@@ -6,7 +6,7 @@ import { ActivityModule, ActivityTarget } from "./activities";
 import { KNOWN_SPELLS_LIMIT, LSCGSpellEffect, MagicSettingsModel, OutfitConfig, OutfitOption, SpellDefinition } from "Settings/Models/magic";
 import { GuiMagic, pairedSpellEffects } from "Settings/magic";
 import { StateModule } from "./states";
-import { ItemUseModule, MagicWandItems } from "./item-use";
+import { EnhancedItemActivityNames, IsActivityEnhanced, ItemUseModule, MagicWandItems } from "./item-use";
 import { InjectorModule } from "./injector";
 import { BaseState } from "./States/BaseState";
 import { RedressedState } from "./States/RedressedState";
@@ -119,13 +119,6 @@ export class MagicModule extends BaseModule {
         return ChatRoomCharacter.filter(c => !!c && !!(c as any).LSCG && !!(c as any).LSCG.MagicModule && (c as any).LSCG.MagicModule.enabled && c.MemberNumber != spellTarget?.MemberNumber);
     }
 
-    drinkActivityNames: string[] = [
-        "LSCG_Quaff",
-        "LSCG_Eat",
-        "SipItem",
-        "LSCG_FunnelPour"
-    ]
-
     load(): void {
         let activities = getModule<ActivityModule>("ActivityModule");
 
@@ -168,14 +161,15 @@ export class MagicModule extends BaseModule {
             return next(args);
         }, ModuleCategory.Magic)
 
-        OnActivity(1, ModuleCategory.Magic, (data, sender, msg, megadata) => {
+        OnActivity(1, ModuleCategory.Magic, (data: ServerChatRoomMessage, sender, msg, megadata) => {
             if (!this.Enabled)
                 return;
             let meta = GetMetadata(data);
-            var activityName = meta?.ActivityName;
-            var target = meta?.TargetMemberNumber;
+            let activityName = meta?.ActivityName;
+            let target = meta?.TargetMemberNumber;
+            let thrownInMouth = activityName == "ThrowItem" && meta?.GroupName == "ItemMouth";
             if (target == Player.MemberNumber && 
-                this.drinkActivityNames.indexOf(activityName ?? "") > -1 && 
+                IsActivityEnhanced(data) &&
                 !!sender) {
                 this.HandleQuaff(sender);
             }
@@ -209,9 +203,34 @@ export class MagicModule extends BaseModule {
         removeAllHooksByModule(ModuleCategory.Magic);
     }
 
+    IsMagicItem(item: Item | null): boolean {
+        let magicItemKeywords = [
+            "wand",
+            "enchanted",
+            "magic"
+        ];
+        let craftStr = GetItemNameAndDescriptionConcat(item) ?? "";
+        if (!item || !item.Asset)
+            return false;
+        else if (MagicWandItems.indexOf(item?.Asset?.Name ?? "") > -1)
+            return true;
+        else if (magicItemKeywords.some(keyword => isPhraseInString(craftStr, keyword)))
+            return true;
+        else
+            return false;
+    }
+
+    IsRangedItem(item: Item | null) : boolean {
+        let rangedItemKeywords = [
+            "wand"
+        ];
+        let craftStr = GetItemNameAndDescriptionConcat(item) ?? "";
+        return rangedItemKeywords.some(keyword => isPhraseInString(craftStr, keyword));
+    }
+
     CanUseMagic(target: Character) {
         let item = InventoryGet(Player, "ItemHandheld");
-        let isWieldingMagicItem = !!item && MagicWandItems.indexOf(item.Asset.Name) > -1;
+        let isWieldingMagicItem = !!item && this.IsMagicItem(item);
         let hasItemPermission = ServerChatRoomGetAllowItem(Player, target);
         let targetHasMagicEnabled = (target as OtherCharacter).LSCG?.MagicModule?.enabled;
         let whitelisted = !(target as OtherCharacter).LSCG?.MagicModule?.requireWhitelist || (!!Player.MemberNumber && target.WhiteList.indexOf(Player.MemberNumber) > -1) || target.IsPlayer();
@@ -242,7 +261,7 @@ export class MagicModule extends BaseModule {
         return this.Enabled && 
             !target.IsPlayer() &&
             this.AvailableSpells.length > 0 &&
-            MagicWandItems.indexOf(targetItem?.Asset?.Name ?? "") > -1;
+            this.IsMagicItem(targetItem);
     }
 
     PrevScreen: string | undefined = undefined;
@@ -440,11 +459,19 @@ export class MagicModule extends BaseModule {
     getCastingActionString(spell: SpellDefinition, item: Item | null, target: Character, paired?: Character): string {
         let itemName = !!item ? (item?.Craft?.Name ?? item?.Asset.Description) : "wand";
         let pairedDefaultStr = `${!!paired ? ", the spell's power also arcing to " + CharacterNickname(paired) + "." : "."}`;
-        let castingActionStrings: string[] = [
+        let rangedCastingActionStrings: string[] = [
             `%NAME% waves %POSSESSIVE% ${itemName} in an intricate pattern and casts ${spell.Name} on %OPP_NAME%${pairedDefaultStr}`,
             `%NAME% chants an indecipherable phrase, pointing %POSSESSIVE% ${itemName} at %OPP_NAME% and casting ${spell.Name}${pairedDefaultStr}`,
             `%NAME% aims %POSSESSIVE% ${itemName} at %OPP_NAME% and, with a grin, casts ${spell.Name}${pairedDefaultStr}`
         ];
+        let meleeCastingActionStrings: string[] = [
+            `%NAME% waves %POSSESSIVE% ${itemName} in front of %OPP_NAME%, and with a sudden boop, casts ${spell.Name} on %OPP_NAME%${pairedDefaultStr}`,
+            `%NAME% chants an indecipherable phrase, tapping %POSSESSIVE% ${itemName} against %OPP_NAME% and casting ${spell.Name}${pairedDefaultStr}`,
+            `%NAME% baps %OPP_NAME% with %POSSESSIVE% ${itemName} and, with a grin, casts ${spell.Name}${pairedDefaultStr}`
+        ];
+
+        let castingActionStrings = this.IsRangedItem(item) ? rangedCastingActionStrings : meleeCastingActionStrings;
+
         return castingActionStrings[getRandomInt(castingActionStrings.length)];
     }
 
@@ -769,9 +796,9 @@ export class MagicModule extends BaseModule {
                 this.TryForcePotion(sender, itemName, spell);
             } else {
                 if (sender.IsPlayer())
-                    SendAction(`%NAME% gulps down %POSSESSIVE% ${itemName}.`, sender);
+                    SendAction(`%NAME% swallows %POSSESSIVE% ${itemName}.`, sender);
                 else
-                    SendAction(`%NAME% gulps down %OPP_NAME%'s ${itemName}.`, sender)
+                    SendAction(`%NAME% swallows %OPP_NAME%'s ${itemName}.`, sender)
                 this.ProcessPotion(sender, spell);
             }
         }
@@ -787,7 +814,7 @@ export class MagicModule extends BaseModule {
             SendAction(`%OPP_NAME% ${check.AttackerRoll.TotalStr}manages to get %OPP_POSSESSIVE% ${itemName} past %NAME%'s ${check.DefenderRoll.TotalStr}lips, forcing %INTENSIVE% to swallow it.`, sender);
             this.ProcessPotion(sender, spell);
         } else {
-            SendAction(`%NAME% ${check.DefenderRoll.TotalStr}successfully defends against %OPP_NAME%'s ${check.AttackerRoll.TotalStr}attempt to force %INTENSIVE% to drink %OPP_POSSESSIVE% ${itemName}.`, sender);
+            SendAction(`%NAME% ${check.DefenderRoll.TotalStr}successfully defends against %OPP_NAME%'s ${check.AttackerRoll.TotalStr}attempt to force %INTENSIVE% to swallow %OPP_POSSESSIVE% ${itemName}.`, sender);
         }
     }
 
