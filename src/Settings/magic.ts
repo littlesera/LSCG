@@ -4,6 +4,7 @@ import { PairedBaseState } from "Modules/States/PairedBaseState";
 import { stringIsCompressedItemBundleArray } from "utils";
 import { PolymorphedState } from "Modules/States/PolymorphedState";
 import { RedressedState } from "Modules/States/RedressedState";
+import { drawTooltip } from "./settingUtils";
 
 export const pairedSpellEffects = [
 	LSCGSpellEffect.orgasm_siphon,
@@ -375,8 +376,10 @@ export class GuiMagic extends GuiSubscreen {
 					this.settings.blockedSpellEffects = [];
 				let val = this.settings.blockedSpellEffects.indexOf(this.Effect) > -1;
 				let blockedStr = val ? "Blocked" : "Allowed";
-				DrawBackNextButton(780, this.getYPos(5)-32, 600, 64, this.Effect, "White", "", () => blockedStr, () => blockedStr);
+				DrawBackNextButton(780, this.getYPos(5)-32, 600, 64, this.Effect, "White", "", () => "", () => "");
 				DrawCheckbox(780 + 600 + 64, this.getYPos(5) - 32, 64, 64, "", val);
+				if (MouseIn(780 + 600 + 64, this.getYPos(5) - 32, 64, 64))
+					drawTooltip(MouseX, MouseY, 128, blockedStr, "left");
 
 				MainCanvas.textAlign = "left";
 				DrawTextFit(GuiMagic.SpellEffectDescription(this.Effect), 780, this.getYPos(6), 1000, "Black");
