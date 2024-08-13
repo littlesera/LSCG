@@ -224,7 +224,7 @@ export class MiscModule extends BaseModule {
                 SendAction("%NAME% eyes go wide as the sweet smell of ether fills %POSSESSIVE% nostrils.");
             else
                 SendAction("%NAME% slumps back in %POSSESSIVE% sleep as another dose of ether assails %POSSESSIVE% senses.");
-            LSCG_SendLocal("Chloroform has been forced over your mouth, you will pass out if it is not removed soon!", 30000);
+            LSCG_SendLocal("Chloroform has been forced over your mouth, you will pass out if it is not removed soon!");
             clearTimeout(this.awakenTimeout);
             this.passoutTimer = setTimeout(() => this.StartPassout_1(), 20000);
             CharacterSetFacialExpression(Player, "Eyes", "Scared");

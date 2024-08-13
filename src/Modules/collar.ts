@@ -841,7 +841,7 @@ export class CollarModule extends BaseModule {
 
     _collarPressButton(sender: Character, allowed: (c: Character) => boolean, action: () => void) {
         if (!this.settings.allowButtons) {
-            LSCG_SendLocal("Collar buttons disabled.", 8000);
+            LSCG_SendLocal("Collar buttons disabled.");
             return;
         }
         let playerName = CharacterNickname(Player);
