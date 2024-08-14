@@ -118,7 +118,7 @@ export class HypnoModule extends BaseModule {
 					return;
 
 				if (this.StateModule.settings.immersive) {
-					LSCG_SendLocal("zonk disabled while immersive", 5000);
+					LSCG_SendLocal("zonk disabled while immersive");
 					return;
 				}
 				if (!this.hypnoActivated)
@@ -132,7 +132,7 @@ export class HypnoModule extends BaseModule {
 					return;
 
 				if (this.StateModule.settings.immersive) {
-					LSCG_SendLocal("unzonk disabled while immersive", 5000);
+					LSCG_SendLocal("unzonk disabled while immersive");
 					return;
 				}
 				if (this.hypnoActivated)
@@ -143,7 +143,7 @@ export class HypnoModule extends BaseModule {
 			Description: ": Force a cycle to a new trigger word if enabled",
 			Action: () => {
 				if (this.StateModule.settings.immersive) {
-					LSCG_SendLocal("cycle-trigger disabled while immersive", 5000);
+					LSCG_SendLocal("cycle-trigger disabled while immersive");
 					return;
 				}
 				if (this.settings.enableCycle)
@@ -154,7 +154,7 @@ export class HypnoModule extends BaseModule {
             Description: ": Display which characters have hypnotic influence over you",
             Action: () => {
                 if (this.StateModule.settings.immersive) {
-					LSCG_SendLocal("show-influence disabled while immersive", 5000);
+					LSCG_SendLocal("show-influence disabled while immersive");
 					return;
 				}
                 this.settings.influence.forEach(inf => {
@@ -170,7 +170,7 @@ export class HypnoModule extends BaseModule {
                         days > 1 ? fmt.format(-days, "days") :
                         hours > 1 ? fmt.format(-hours, "hours") :
                         fmt.format(-Math.floor(minutes), "minutes");
-                    LSCG_SendLocal(`${inf.memberName} [<i>${inf.memberId}</i>] -- <br>&emsp;<b>Influence:</b> ${inf.influence}, <b>Last Update:</b> ${diffStr}`);
+                    LSCG_SendLocal(`${inf.memberName} [<i>${inf.memberId}</i>] -- <br>&emsp;<b>Influence:</b> ${inf.influence}, <b>Last Update:</b> ${diffStr}`, false);
                 });
             }
         }, {
@@ -178,11 +178,11 @@ export class HypnoModule extends BaseModule {
             Description: ": Display which suggestions currently reside in your mind",
             Action: () => {
                 if (this.StateModule.settings.immersive) {
-					LSCG_SendLocal("show-suggestions disabled while immersive", 5000);
+					LSCG_SendLocal("show-suggestions disabled while immersive");
 					return;
 				}
                 this.settings.suggestions.forEach(s => {
-                    LSCG_SendLocal(`<b>${s.name}</b> -- <br>&emsp;Installed By: <i>${s.installedByName} [${s.installedBy}]</i>, trigger: <i>${s.trigger}</i>`);
+                    LSCG_SendLocal(`<b>${s.name}</b> -- <br>&emsp;Installed By: <i>${s.installedByName} [${s.installedBy}]</i>, trigger: <i>${s.trigger}</i>`, false);
                 });
             }
         }, {
@@ -190,17 +190,17 @@ export class HypnoModule extends BaseModule {
             Description: ": Remove an installed suggestion",
             Action: (args: string, msg: string, parsed: string[]) => {
                 if (!this.settings.allowSuggestionRemoval) {
-                    LSCG_SendLocal("remove-suggestions disabled in settings", 5000);
+                    LSCG_SendLocal("remove-suggestions disabled in settings");
 					return;
                 }
                 else if (this.StateModule.settings.immersive) {
-					LSCG_SendLocal("remove-suggestions disabled while immersive", 5000);
+					LSCG_SendLocal("remove-suggestions disabled while immersive");
 					return;
 				} else if (Player.GetDifficulty() >= 3) {
-                    LSCG_SendLocal("remove-suggestions unavailable on extreme difficulty", 5000);
+                    LSCG_SendLocal("remove-suggestions unavailable on extreme difficulty");
 					return;
                 } else if (!args.trim()) {
-                    LSCG_SendLocal("No suggestion name provided", 5000);
+                    LSCG_SendLocal("No suggestion name provided");
 					return;
                 }
 
@@ -208,7 +208,7 @@ export class HypnoModule extends BaseModule {
                 let ix = this.settings.suggestions.findIndex(s => s.name.toLocaleLowerCase() == suggestionName.toLocaleLowerCase());
                 let suggestion = this.settings.suggestions[ix];
                 if (ix < 0 || !suggestion) {
-                    LSCG_SendLocal(`Suggestion '${suggestionName}' not found`, 5000);
+                    LSCG_SendLocal(`Suggestion '${suggestionName}' not found`);
 					return;
                 } else {
                     this.settings.suggestions.splice(ix, 1);

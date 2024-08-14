@@ -1710,9 +1710,9 @@ export class ActivityModule extends BaseModule {
         isClothed &&
         (WardrobeGetExpression(target)?.Pussy ?? "") == "Hard") {
             if (!isChastity) {
-                LSCG_SendLocal(`You can feel ${CharacterNickname(target)}'s erect penis through their clothes.`, 8000);
+                LSCG_SendLocal(`You can feel ${CharacterNickname(target)}'s erect penis through their clothes.`);
             } else {
-                LSCG_SendLocal(`You can feel something hard under ${CharacterNickname(target)}'s clothes.`, 8000);
+                LSCG_SendLocal(`You can feel something hard under ${CharacterNickname(target)}'s clothes.`);
             }
         }
     }

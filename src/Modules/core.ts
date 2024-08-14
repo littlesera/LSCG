@@ -256,7 +256,7 @@ export class CoreModule extends BaseModule {
         let Sender = getCharacter(senderNumber) as OtherCharacter;
         switch (msg.command!.name) {
             case "debug":
-                LSCG_SendLocal(msg.command.args[0].value as string, 10000);
+                LSCG_SendLocal(msg.command.args[0].value as string);
                 break;
             case "grab":
                 getModule<LeashingModule>("LeashingModule")?.IncomingGrab(Sender, msg.command.args.find(a => a.name == "type")?.value as GrabType);
