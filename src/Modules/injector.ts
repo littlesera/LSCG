@@ -1210,8 +1210,8 @@ export class InjectorModule extends BaseModule {
 
     breathAntidoteEventStr: string[] = [
         "%NAME% sighs with relief as %PRONOUN% takes a deep gulp of healing mist.",
-        "%NAME% feels a tingle across %POSSESSIVE% skin as %POSSESSIVE% mask heals them.",
-        "%NAME% lets out a quiet moan as %POSSESSIVE% mask releases a healing mist into her lungs."
+        "%NAME% feels a tingle across %POSSESSIVE% skin as %POSSESSIVE% mask heals %INTENSIVE%.",
+        "%NAME% lets out a quiet moan as %POSSESSIVE% mask releases a healing mist into %INTENSIVE% lungs."
     ];
 
     BreathInDrugEvent() {
