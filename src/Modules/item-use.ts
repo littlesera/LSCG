@@ -1216,7 +1216,8 @@ export class ItemUseModule extends BaseModule {
 			case "subduing":
 				SendAction(`%NAME%'s ${itemName} releases a sedating spray, resisting ${!sender ? "%POSSESSIVE%" : CharacterNickname(sender) + "'s"} meddling, and weakening %POSSESSIVE% muscles.`);
 				AudioPlaySoundEffect("Deflation", 1);
-				if (getModule<InjectorModule>("InjectorModule").Enabled)
+				let injectModule = getModule<InjectorModule>("InjectorModule");
+				if (injectModule.Enabled && injectModule.settings.enableSedative)
 					getModule<InjectorModule>("InjectorModule").AddSedative(1, getRandomInt(3) != 0);
 				break;
 			case "generic":
