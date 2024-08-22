@@ -88,7 +88,9 @@ export class GUI extends BaseModule {
 			sharePublicCrafting: false,
 			seeSharedCrafts: true,
 			hideResizing: false,
-			erectionDetection: true
+			erectionDetection: true,
+			tamperproofEnabled: true,
+			tamperproofElectricityEnabled: true
 		};
     }
 

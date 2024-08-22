@@ -1167,6 +1167,9 @@ export class ItemUseModule extends BaseModule {
 	];
 
 	PerformTamperProtection(source: "minigame" | "activity" | "assist", item: Item | undefined = undefined, sender: Character | null = null) {
+		if (!Player.LSCG.GlobalModule.tamperproofEnabled)
+			return;
+
 		if (!item) {
 			let tamperProofItems = Player.Appearance.filter(a => {
 				let itemStr = GetItemNameAndDescriptionConcat(a) ?? "";
@@ -1182,7 +1185,7 @@ export class ItemUseModule extends BaseModule {
 		let itemName = item.Craft?.Name ?? item.Asset.Name;
 		let itemTypes: string[] = [];
 		
-		if (this.electricKeywords.some(k => isPhraseInString(itemStr, k)))
+		if (this.electricKeywords.some(k => isPhraseInString(itemStr, k)) && (Player.LSCG.GlobalModule.tamperproofElectricityEnabled ?? true))
 			itemTypes.push("electric");
 		if (this.selfTighteningKeywords.some(k => isPhraseInString(itemStr, k)))
 			itemTypes.push("tightening");
