@@ -1042,11 +1042,24 @@ export class HypnoModule extends BaseModule {
             return;
         }
         let groups = clothing.groups;
+        
+
+        if (clothing.random) {
+            let allGroups = AssetGroup
+                            .filter(g => g.Family === Player.AssetFamily && g.Category === "Appearance" && g.AllowCustomize && isCloth(g, false))
+                            .map(g => g.Name)
+                            .filter(g => Player.Appearance.some(a => a.Asset.Group.Name == g));
+            groups = allGroups.length > 0 ? [allGroups[getRandomInt(allGroups.length)]] : [];
+            if (groups.length <= 0) {
+                LSCG_SendLocal(`You feel disappointed that you have no more clothes to remove.`);
+            }
+        }
+        else if (clothing.all) {
+            groups = AssetGroup.filter(g => g.Family === Player.AssetFamily && g.Category === "Appearance" && g.AllowCustomize && isCloth(g, false)).map(g => g.Name);
+        }
+        
         SendAction(`%NAME% starts to remove clothing from %POSSESSIVE% body.`);
 
-        if (clothing.all) 
-            groups = AssetGroup.filter(g => g.Family === Player.AssetFamily && g.Category === "Appearance" && g.AllowCustomize && isCloth(g, false)).map(g => g.Name);
-        
         groups.forEach(grp => {
             InventoryRemove(Player, grp, false);
         });
