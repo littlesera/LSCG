@@ -20,6 +20,7 @@ export interface ActivitySelection {
 
 export interface ClothingSelection {
 	all: boolean;
+	random: boolean;
 	groups: string[];
 }
 
@@ -351,7 +352,7 @@ export class RemoteSuggestions extends RemoteHypno {
 			let coords = {x: 600, y: 100, w: 800, h: 800};
 			let currentValue = this._selectionValue as ClothingSelection;
 			if (!currentValue) {
-				this._selectionValue = <ClothingSelection>{all: false, groups: []};
+				this._selectionValue = <ClothingSelection>{all: false, random: false, groups: []};
 				currentValue = this._selectionValue as ClothingSelection;
 			}
 
@@ -361,7 +362,13 @@ export class RemoteSuggestions extends RemoteHypno {
 			DrawImageResize("Icons/Next.png", coords.x + coords.w - 86, coords.y + 22, 60, 60);
 			
 			this.DrawCheckboxAbsolute("All Slots", "", currentValue.all, {
-				x: coords.x + coords.w/2 - 100,
+				x: coords.x + coords.w/2 - 250,
+				y: coords.y + 20 + 32,
+				w: 100
+			});
+
+			this.DrawCheckboxAbsolute("Random", "", currentValue.random, {
+				x: coords.x + coords.w/2 - 50,
 				y: coords.y + 20 + 32,
 				w: 100
 			});
@@ -370,18 +377,18 @@ export class RemoteSuggestions extends RemoteHypno {
 
 			let columns = this._getClothingSlotColumns();
 			columns[0].forEach((slot, ix, arr) => {
-				this.DrawCheckboxAbsolute(slot, "", currentValue.all || currentValue.groups.indexOf(slot) > -1, {
+				this.DrawCheckboxAbsolute(slot, "", !currentValue.random && (currentValue.all || currentValue.groups.indexOf(slot) > -1), {
 					x: coords.x + 20,
 					y: coords.y + 200 + (80*ix),
 					w: 200
-				}, currentValue.all);
+				}, currentValue.all || currentValue.random);
 			});
 			columns[1].forEach((slot, ix, arr) => {
-				this.DrawCheckboxAbsolute(slot, "", currentValue.all || currentValue.groups.indexOf(slot) > -1, {
+				this.DrawCheckboxAbsolute(slot, "", !currentValue.random && (currentValue.all || currentValue.groups.indexOf(slot) > -1), {
 					x: coords.x + 400,
 					y: coords.y + 200 + (80*ix),
 					w: 200
-				}, currentValue.all);
+				}, currentValue.all || currentValue.random);
 			});
 		} else if (this._SelectConfigureInstruction?.type == LSCGHypnoInstruction.forget) {
 			let currentValue = this._selectionValue as ForgetSelection;
@@ -513,9 +520,14 @@ export class RemoteSuggestions extends RemoteHypno {
 				// Next
 				this._clothingPageIndex++;
 				if (this._clothingPageIndex > maxPageIx) this._clothingPageIndex = 0;
-			} else if (MouseIn(coords.x + coords.w/2 - 100, coords.y + 20, 100 + 64, 64)) {
+			} else if (MouseIn(coords.x + coords.w/2 - 150, coords.y + 20, 100 + 64, 64)) {
 				// All
 				currentValue.all = !currentValue.all;
+				if (currentValue.all) currentValue.random = false;
+			} else if (MouseIn(coords.x + coords.w/2 - 50, coords.y + 20, 100 + 64, 64)) {
+				// Random
+				currentValue.random = !currentValue.random;
+				if (currentValue.random) currentValue.all = false;
 			}
 
 			if (!currentValue.all) {
