@@ -1203,7 +1203,11 @@ export class ItemUseModule extends BaseModule {
 			case "tightening":
 				SendAction(`%NAME%'s ${itemName} tightens around %INTENSIVE%, countering ${!sender ? "%POSSESSIVE%" : CharacterNickname(sender) + "'s"} tampering.`);
 				item.Difficulty = (item.Difficulty ?? 0) + 2;
-				AudioPlaySoundEffect("ZipTie", 1);
+				if (item.Asset.Group.Name == "ItemNeck" && getModule<CollarModule>("CollarModule").WearingCorrectCollar(Player)) {
+					getModule<CollarModule>("CollarModule").IncreaseCollarChoke();
+				} else {
+					AudioPlaySoundEffect("ZipTie", 1);
+				}
 				ChatRoomCharacterUpdate(Player);
 				break;
 			case "subduing":
