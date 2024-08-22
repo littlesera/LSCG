@@ -636,8 +636,10 @@ export class InjectorModule extends BaseModule {
         // else
         this.sedativeLevel = newLevel;
 
-        if (!this.asleep && minigame)
+        if (!this.asleep && minigame) {
+            DialogLeave();
             MiniGameStart(this.sleepyGame.name, ((this.sedativeLevel / this.drugLevelMultiplier) * 8), "LSCG_InjectEnd_Sedative");
+        }
 
         CurrentModule = "Online";
     }

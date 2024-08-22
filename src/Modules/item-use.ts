@@ -1,11 +1,12 @@
 import { BaseModule } from "base";
 import { getModule } from "modules";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { getDominance, GetMetadata, getRandomInt, hookFunction, IsIncapacitated, removeAllHooksByModule, SendAction, sendLSCGCommand } from "../utils";
+import { getDominance, GetItemNameAndDescriptionConcat, GetMetadata, getRandomInt, hookFunction, IsIncapacitated, isPhraseInString, OnAction, OnActivity, removeAllHooksByModule, SendAction, sendLSCGCommand } from "../utils";
 import { ActivityBundle, ActivityModule, ActivityTarget } from "./activities";
 import { BoopsModule } from "./boops";
 import { CollarModule } from "./collar";
 import { StateModule } from "./states";
+import { InjectorModule } from "./injector";
 
 export const CameraItems: string[] = [
 	"Phone1",
@@ -47,6 +48,12 @@ export const EnhancedItemActivityNames: string[] = [
 	"SipItem",
 	"EatItem",
 	"ThrowItem"
+];
+
+export const TamperProofKeywords = [
+	"tamper-proof",
+	"tamperproof",
+	"tamper proof"
 ];
 
 export function IsActivityEnhanced(data: ServerChatRoomMessage) {
@@ -272,6 +279,28 @@ export class ItemUseModule extends BaseModule {
 			}
 			return results;
 		}, ModuleCategory.ItemUse);
+
+		hookFunction("StruggleMinigameStop", 1, (args, next) => {
+			if (!!StruggleProgressPrevItem) {
+				let itemStr = GetItemNameAndDescriptionConcat(StruggleProgressPrevItem) ?? "";
+				if (StruggleProgress < 100 && TamperProofKeywords.some(kw => isPhraseInString(itemStr, kw))) {
+					this.PerformTamperProtection("minigame", StruggleProgressPrevItem);
+				}
+			}
+			next(args);
+		}, ModuleCategory.ItemUse);
+
+		OnActivity(1, ModuleCategory.ItemUse, (data, sender, msg, metadata) => {
+			if (sender?.IsPlayer() && msg == "ChatSelf-ItemArms-StruggleArms") {
+				this.PerformTamperProtection("activity");
+			}
+		});
+
+		OnAction(1, ModuleCategory.ItemUse, (data, sender, msg, metadata) => {
+			if (!sender?.IsPlayer() && msg == "StruggleAssist") {
+				this.PerformTamperProtection("assist", undefined, sender);
+			}
+		});
     }
 
 	run(): void {
@@ -1115,5 +1144,78 @@ export class ItemUseModule extends BaseModule {
 			handled = true;
 		}
 		return handled;
+	}
+
+	electricKeywords: string[] = [
+		"electric",
+		"electrified",
+		"shocking"
+	];
+
+	selfTighteningKeywords: string[] = [
+		"self-tightening",
+		"selftightening",
+		"self tightening",
+		"auto-tightening",
+		"auto tightening"
+	];
+
+	subduingKeywords: string[] = [
+		"sedating",
+		"numbing",
+		"subduing"
+	];
+
+	PerformTamperProtection(source: "minigame" | "activity" | "assist", item: Item | undefined = undefined, sender: Character | null = null) {
+		if (!item) {
+			let tamperProofItems = Player.Appearance.filter(a => {
+				let itemStr = GetItemNameAndDescriptionConcat(a) ?? "";
+				return TamperProofKeywords.some(k => isPhraseInString(itemStr, k));
+			});
+			if (tamperProofItems.length > 0)
+				item = tamperProofItems[getRandomInt(tamperProofItems.length)];
+		}
+		if (!item)
+			return;
+
+		let itemStr = GetItemNameAndDescriptionConcat(item) ?? "";
+		let itemName = item.Craft?.Name ?? item.Asset.Name;
+		let itemTypes: string[] = [];
+		
+		if (this.electricKeywords.some(k => isPhraseInString(itemStr, k)))
+			itemTypes.push("electric");
+		if (this.selfTighteningKeywords.some(k => isPhraseInString(itemStr, k)))
+			itemTypes.push("tightening");
+		if (this.subduingKeywords.some(k => isPhraseInString(itemStr, k)))
+			itemTypes.push("subduing");
+		if (itemTypes.length <= 0)
+			itemTypes = ["generic"];
+
+		let selectedType = itemTypes[getRandomInt(itemTypes.length)];
+		switch (selectedType) {
+			case "electric":
+				let shockLevel = (getRandomInt(50)/50)+0.5;
+				SendAction(`%NAME%'s ${itemName} punishes ${!sender ? "%POSSESSIVE%" : CharacterNickname(sender) + "'s"} meddling with a sharp jolt.`);
+				AudioPlaySoundEffect("Shocks", 3 + (3 * shockLevel));
+				const duration = (Math.random() + shockLevel * 1.5) * 500;
+				DrawFlashScreen("#FFFFFF", duration, 500);
+				break;
+			case "tightening":
+				SendAction(`%NAME%'s ${itemName} tightens around %INTENSIVE%, countering ${!sender ? "%POSSESSIVE%" : CharacterNickname(sender) + "'s"} tampering.`);
+				item.Difficulty = (item.Difficulty ?? 0) + 2;
+				AudioPlaySoundEffect("ZipTie", 1);
+				ChatRoomCharacterUpdate(Player);
+				break;
+			case "subduing":
+				SendAction(`%NAME%'s ${itemName} releases a sedating spray, resisting ${!sender ? "%POSSESSIVE%" : CharacterNickname(sender) + "'s"} meddling, and weakening %POSSESSIVE% muscles.`);
+				AudioPlaySoundEffect("Deflation", 1);
+				getModule<InjectorModule>("InjectorModule").AddSedative(1, getRandomInt(3) != 0);
+				break;
+			case "generic":
+			default:
+				SendAction(`%NAME%'s ${itemName} clicks menacingly as it resists ${!sender ? "%POSSESSIVE%" : CharacterNickname(sender) + "'s"} tampering.`);
+				AudioPlaySoundEffect("LockLarge");
+				break;
+		}
 	}
 }
