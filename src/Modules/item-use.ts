@@ -1182,7 +1182,7 @@ export class ItemUseModule extends BaseModule {
 		if (!item) {
 			let tamperProofItems = Player.Appearance.filter(a => {
 				let itemStr = GetItemNameAndDescriptionConcat(a) ?? "";
-				return TamperProofKeywords.some(k => isPhraseInString(itemStr, k));
+				return a.Asset.Group.Name != "ItemHandheld" && TamperProofKeywords.some(k => isPhraseInString(itemStr, k));
 			});
 			if (tamperProofItems.length > 0)
 				item = tamperProofItems[getRandomInt(tamperProofItems.length)];
@@ -1214,7 +1214,7 @@ export class ItemUseModule extends BaseModule {
 				break;
 			case "tightening":
 				SendAction(`%NAME%'s ${itemName} tightens around %INTENSIVE%, countering ${!sender ? "%POSSESSIVE%" : CharacterNickname(sender) + "'s"} tampering.`);
-				item.Difficulty = (item.Difficulty ?? 0) + 2;
+				item.Difficulty = (item.Difficulty ?? 0) + 5;
 				if (item.Asset.Group.Name == "ItemNeck" && getModule<CollarModule>("CollarModule").WearingCorrectCollar(Player)) {
 					getModule<CollarModule>("CollarModule").IncreaseCollarChoke();
 				} else {
