@@ -1,7 +1,7 @@
 import { BaseModule } from "base";
 import { getModule } from "modules";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { getDominance, GetItemNameAndDescriptionConcat, GetMetadata, getRandomInt, hookFunction, IsIncapacitated, isPhraseInString, OnAction, OnActivity, removeAllHooksByModule, SendAction, sendLSCGCommand } from "../utils";
+import { getDominance, GetItemNameAndDescriptionConcat, GetMetadata, getRandomInt, GetTargetCharacter, hookFunction, IsIncapacitated, isPhraseInString, OnAction, OnActivity, removeAllHooksByModule, SendAction, sendLSCGCommand } from "../utils";
 import { ActivityBundle, ActivityModule, ActivityTarget } from "./activities";
 import { BoopsModule } from "./boops";
 import { CollarModule } from "./collar";
@@ -280,13 +280,19 @@ export class ItemUseModule extends BaseModule {
 			return results;
 		}, ModuleCategory.ItemUse);
 
+		hookFunction("StruggleMinigameStart", 1, (args, next) => {
+			this.Struggling = true;
+			next(args);
+		})
+
 		hookFunction("StruggleMinigameStop", 1, (args, next) => {
-			if (!!StruggleProgressPrevItem) {
+			if (!!StruggleProgressPrevItem && this.Struggling) {
 				let itemStr = GetItemNameAndDescriptionConcat(StruggleProgressPrevItem) ?? "";
 				if (StruggleProgress < 100 && TamperProofKeywords.some(kw => isPhraseInString(itemStr, kw))) {
 					this.PerformTamperProtection("minigame", StruggleProgressPrevItem);
 				}
 			}
+			this.Struggling = false;
 			next(args);
 		}, ModuleCategory.ItemUse);
 
@@ -297,11 +303,14 @@ export class ItemUseModule extends BaseModule {
 		});
 
 		OnAction(1, ModuleCategory.ItemUse, (data, sender, msg, metadata) => {
-			if (!sender?.IsPlayer() && msg == "StruggleAssist") {
+			let target = GetTargetCharacter(data);
+			if (!sender?.IsPlayer() && target == Player.MemberNumber && msg == "StruggleAssist") {
 				this.PerformTamperProtection("assist", undefined, sender);
 			}
 		});
     }
+
+	Struggling: boolean = false;
 
 	run(): void {
 		this.activities = getModule<ActivityModule>("ActivityModule")
@@ -1173,7 +1182,7 @@ export class ItemUseModule extends BaseModule {
 		if (!item) {
 			let tamperProofItems = Player.Appearance.filter(a => {
 				let itemStr = GetItemNameAndDescriptionConcat(a) ?? "";
-				return TamperProofKeywords.some(k => isPhraseInString(itemStr, k));
+				return a.Asset.Group.Name != "ItemHandheld" && TamperProofKeywords.some(k => isPhraseInString(itemStr, k));
 			});
 			if (tamperProofItems.length > 0)
 				item = tamperProofItems[getRandomInt(tamperProofItems.length)];
@@ -1205,7 +1214,7 @@ export class ItemUseModule extends BaseModule {
 				break;
 			case "tightening":
 				SendAction(`%NAME%'s ${itemName} tightens around %INTENSIVE%, countering ${!sender ? "%POSSESSIVE%" : CharacterNickname(sender) + "'s"} tampering.`);
-				item.Difficulty = (item.Difficulty ?? 0) + 2;
+				item.Difficulty = (item.Difficulty ?? 0) + 5;
 				if (item.Asset.Group.Name == "ItemNeck" && getModule<CollarModule>("CollarModule").WearingCorrectCollar(Player)) {
 					getModule<CollarModule>("CollarModule").IncreaseCollarChoke();
 				} else {
