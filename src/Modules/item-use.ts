@@ -1,7 +1,7 @@
 import { BaseModule } from "base";
 import { getModule } from "modules";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { getDominance, GetItemNameAndDescriptionConcat, GetMetadata, getRandomInt, hookFunction, IsIncapacitated, isPhraseInString, OnAction, OnActivity, removeAllHooksByModule, SendAction, sendLSCGCommand } from "../utils";
+import { getDominance, GetItemNameAndDescriptionConcat, GetMetadata, getRandomInt, GetTargetCharacter, hookFunction, IsIncapacitated, isPhraseInString, OnAction, OnActivity, removeAllHooksByModule, SendAction, sendLSCGCommand } from "../utils";
 import { ActivityBundle, ActivityModule, ActivityTarget } from "./activities";
 import { BoopsModule } from "./boops";
 import { CollarModule } from "./collar";
@@ -280,13 +280,19 @@ export class ItemUseModule extends BaseModule {
 			return results;
 		}, ModuleCategory.ItemUse);
 
+		hookFunction("StruggleMinigameStart", 1, (args, next) => {
+			this.Struggling = true;
+			next(args);
+		})
+
 		hookFunction("StruggleMinigameStop", 1, (args, next) => {
-			if (!!StruggleProgressPrevItem) {
+			if (!!StruggleProgressPrevItem && this.Struggling) {
 				let itemStr = GetItemNameAndDescriptionConcat(StruggleProgressPrevItem) ?? "";
 				if (StruggleProgress < 100 && TamperProofKeywords.some(kw => isPhraseInString(itemStr, kw))) {
 					this.PerformTamperProtection("minigame", StruggleProgressPrevItem);
 				}
 			}
+			this.Struggling = false;
 			next(args);
 		}, ModuleCategory.ItemUse);
 
@@ -297,11 +303,14 @@ export class ItemUseModule extends BaseModule {
 		});
 
 		OnAction(1, ModuleCategory.ItemUse, (data, sender, msg, metadata) => {
-			if (!sender?.IsPlayer() && msg == "StruggleAssist") {
+			let target = GetTargetCharacter(data);
+			if (!sender?.IsPlayer() && target == Player.MemberNumber && msg == "StruggleAssist") {
 				this.PerformTamperProtection("assist", undefined, sender);
 			}
 		});
     }
+
+	Struggling: boolean = false;
 
 	run(): void {
 		this.activities = getModule<ActivityModule>("ActivityModule")
