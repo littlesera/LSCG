@@ -123,7 +123,7 @@ export class GuiGlobal extends GuiSubscreen {
 				disabled: !this.settings.enabled
 			},<Setting>{
 				type: "checkbox",
-				label: "Eanble Tamperproof Items:",
+				label: "Enable Tamperproof Items:",
 				description: "Enable tamperproof features on crafted items you wear.",
 				setting: () => this.settings.tamperproofEnabled ?? true,
 				setSetting: (val) => this.settings.tamperproofEnabled = val,
