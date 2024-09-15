@@ -3,7 +3,8 @@ import { GuiMagic, pairedSpellEffects } from "Settings/magic";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
 import { BaseModule } from "base";
 import { getModule } from "modules";
-import { escapeRegExp, excludeParentheticalContent, forceOrgasm, getCharacter, getCharacterByNicknameOrMemberNumber, GetConfiguredItemBundlesFromSavedCode, GetDelimitedList, GetItemNameAndDescriptionConcat, GetMetadata, getRandomInt, hookFunction, isPhraseInString, LSCG_SendLocal, LSCG_TEAL, OnActivity, OnChat, removeAllHooksByModule, SendAction, sendLSCGCommand, sendLSCGCommandBeep, settingsSave } from "../utils";
+import { forceOrgasm, getCharacter, GetConfiguredItemBundlesFromSavedCode, GetDelimitedList, GetItemNameAndDescriptionConcat, GetMetadata, getRandomInt, hookFunction, isPhraseInString, LSCG_SendLocal, LSCG_TEAL, OnActivity, removeAllHooksByModule, SendAction, sendLSCGCommand, sendLSCGCommandBeep, settingsSave } from 'utils';
+import { escapeRegExp, excludeParentheticalContent, getCharacterByNicknameOrMemberNumber, OnChat } from "../utils";
 import { BaseState } from "./States/BaseState";
 import { PolymorphedState } from "./States/PolymorphedState";
 import { RedressedState } from "./States/RedressedState";
@@ -246,11 +247,11 @@ export class MagicModule extends BaseModule {
         return this.Enabled &&
             targetHasMagicEnabled &&
             hasItemPermission &&
-            Player.CanInteract() &&
+            (!requireHands || Player.CanInteract()) &&
             whitelisted &&
-            (this.CanCastSpell(CurrentCharacter as OtherCharacter) ||
-                this.CanWildMagic(CurrentCharacter as OtherCharacter) ||
-                this.CanTeachSpell(CurrentCharacter as OtherCharacter));
+            (this.CanCastSpell(target as OtherCharacter) ||
+                this.CanWildMagic(target as OtherCharacter) ||
+                this.CanTeachSpell(target as OtherCharacter));
     }
 
     CanCastSpell(target: Character): boolean {
@@ -464,14 +465,24 @@ export class MagicModule extends BaseModule {
 
     getTeachingActionString(spell: SpellDefinition, item: Item | null, targetItem: Item | null): string {
         let teachingActionStrings: string[] = [
-            `%NAME% squints one eye aiming %POSSESSIVE% index finger at %OPP_NAME%'s head and fires a beam of raw energy of ${spell.Name}`,
-            `%NAME% with a wave of %POSSESSIVE% hand emits a splash of energy, releasing power of ${spell.Name} into %OPP_NAME%'s head`,
-            `%NAME% extends her arm with open palm, launching ${spell.Effects.length > 1 ? "a couple of magical needles" : "a magical needle"} at %OPP_NAME%'s head teaching ${spell.Name}`
+            `%NAME% squints one eye aiming %POSSESSIVE% index finger at %OPP_NAME_POSSESSIVE_DIRECT% head and fires a beam of raw energy of ${spell.Name}`,
+            `%NAME% with a wave of %POSSESSIVE% hand emits a splash of energy, releasing power of ${spell.Name} into %OPP_NAME_POSSESSIVE_DIRECT% head`,
+            `%NAME% twirls %POSSESSIVE% wrist, carving glowing runes mid-air before thrusting them into %OPP_NAME_POSSESSIVE_DIRECT% mind, embedding ${spell.Name}`,
+            `%NAME% grabs a thread of pure mana and slings it like a whip at %OPP_NAME_POSSESSIVE_DIRECT% forehead, imprinting the knowledge of ${spell.Name}`,
+            `%NAME% locks eyes with %OPP_NAME%, a spark of lightning jumps between them, zapping the essence of ${spell.Name} directly into %OPP_POSSESSIVE% brain`,
+            `%NAME% draws a symbol in the air with two fingers, then snaps—sending a blazing glyph of ${spell.Name} flying into %OPP_NAME_POSSESSIVE_DIRECT% mind`
+
         ];
         let teachingVerbalStrings: string[] = [
-            `%NAME%'s purple glowing mana covers %OPP_NAME%, as %PRONOUN% whispers "${spell.Name}", teaching %OPP_INTENSIVE% the spell`,
-            `%NAME%'s voice echoes in %OPP_NAME%'s head pronouncing "${spell.Name}" as stream of %NAME%'s magic rushes towards %OPP_NAME% teaching %OPP_INTENSIVE% the spell`,
-            `%NAME% changes fabric of reality, as %PRONOUN% pronounces "${spell.Name}", unleashing arcane insight into %OPP_NAME%'s head`
+            `%NAME_POSSESSIVE_DIRECT% purple glowing mana covers %OPP_NAME%, as %PRONOUN% whispers "${spell.Name}", teaching %OPP_INTENSIVE% the spell`,
+            `%NAME_POSSESSIVE_DIRECT% voice echoes in %OPP_NAME_POSSESSIVE_DIRECT% head pronouncing "${spell.Name}" as stream of %NAME%'s magic rushes towards %OPP_NAME% teaching %OPP_INTENSIVE% the spell`,
+            `%NAME% changes fabric of reality, as %PRONOUN% pronounces "${spell.Name}", unleashing arcane insight into %OPP_NAME_POSSESSIVE_DIRECT% head`,
+            `%NAME_POSSESSIVE_DIRECT% voice deepens, layered with arcane resonance, as %PRONOUN% chants "${spell.Name}" and brands it onto %OPP_NAME_POSSESSIVE_DIRECT% thoughts`,
+            `%NAME% whispers "${spell.Name}" with forbidden clarity, and the word itself burns into %OPP_NAME_POSSESSIVE_DIRECT% memory like a sigil`,
+            `%NAME% speaks in tongues, each syllable of "${spell.Name}" wrapping around %OPP_NAME_POSSESSIVE_DIRECT% mind like serpents of knowledge`,
+            `As %NAME% mouths "${spell.Name}", glowing glyphs swirl around %OPP_NAME%, settling into %OPP_POSSESSIVE% mind like molten wisdom`,
+            `%NAME% utters "${spell.Name}" with divine finality — reality bends and %OPP_NAME_POSSESSIVE_DIRECT% eyes flash with sudden understanding`
+
         ];
 
         const teachingActiongStrings = this.VerbalMagic ? teachingVerbalStrings : teachingActionStrings;
@@ -480,28 +491,56 @@ export class MagicModule extends BaseModule {
     }
 
     getCastingActionString(spell: SpellDefinition, item: Item | null, voiceCast: boolean, target: Character, paired?: Character): string {
-        let itemName = !!item ? (item?.Craft?.Name ?? item?.Asset.Description) : "wand";
-        let pairedDefaultStr = `${!!paired ? ", the spell's power also arcing to " + CharacterNickname(paired) + "." : "."}`;
-        let rangedCastingActionStrings: string[] = [
+        const pairedDefaultStr = `${!!paired ? ", the spell's power also arcing to " + CharacterNickname(paired) + "." : "."}`;
+
+        const rangedCastingActionStrings: string[] = [
             `%NAME% squints one eye aiming %POSSESSIVE% index finger at %OPP_NAME% and fires a beam of raw energy of ${spell.Name}${pairedDefaultStr}`,
             `%NAME% with a wave of %POSSESSIVE% hand emits a splash of energy, releasing power of ${spell.Name} at %OPP_NAME%${pairedDefaultStr}`,
-            `%NAME% extends her arm with open palm, launching ${spell.Effects.length > 1 ? "a couple of magical needles" : "a magical needle"} at %OPP_NAME% casting ${spell.Name}${pairedDefaultStr}`
+            `%NAME% traces a fractal in the air, its lines humming with ancient logic, and ${spell.Name} rushes toward %OPP_NAME%${pairedDefaultStr}`,
+            `%NAME% plucks a sigil from memory and flicks it forward, unraveling ${spell.Name} at %OPP_NAME% with surgical intent${pairedDefaultStr}`,
+            `%NAME% inscribes a geometric command mid-air—${spell.Name} executes like code written in the fabric of reality${pairedDefaultStr}`,
         ];
-        let castingVerbalStrings: string[] = [
-            `%NAME%'s purple glowing mana covers %OPP_NAME%, as %PRONOUN% whispers "${spell.Name}", casting spell on %OPP_INTENSIVE%${pairedDefaultStr}`,
-            `%NAME%'s voice echoes in %OPP_NAME%'s head pronouncing "${spell.Name}" as stream of %NAME%'s magic rushes towards %OPP_NAME% casting spell on %OPP_INTENSIVE%${pairedDefaultStr}`,
-            `%NAME% changes fabric of reality, as %PRONOUN% pronounces "${spell.Name}", unleashing arcane magics into %OPP_NAME%${pairedDefaultStr}`
+
+        const rangedCastingSelfActionStrings: string[] = [
+            `%NAME% runs a hand along %POSSESSIVE% own neck, awakening dormant glyphs — ${spell.Name} activates within %OPP_NAME% without a sound${pairedDefaultStr}`,
+            `%NAME% traces a recursive sigil upon %POSSESSIVE% skin, embedding power of ${spell.Name} into %OPP_NAME%${pairedDefaultStr}`,
+
         ];
-        let voiceCastingActionStrings: string[] = [
+
+        const castingVerbalStrings: string[] = [
+            `%NAME_POSSESSIVE_DIRECT% voice echoes in %OPP_NAME_POSSESSIVE_DIRECT% head pronouncing "${spell.Name}" as stream of %NAME%'s magic rushes towards %OPP_NAME% casting spell on %OPP_INTENSIVE%${pairedDefaultStr}`,
+            `%NAME% changes fabric of reality, as %PRONOUN% pronounces "${spell.Name}", unleashing arcane magics into %OPP_NAME%${pairedDefaultStr}`,
+            `%NAME% utters a phrase that predates language, its shape striking %OPP_NAME% with the weight of absolute knowledge of ${spell.Name}${pairedDefaultStr}`,
+            `%NAME% names a truth %OPP_NAME% was never meant to know, and ${spell.Name} blooms from the revelation${pairedDefaultStr}`,
+        ];
+
+        const castingVerbalSelfStrings: string[] = [
+            `%NAME% intones "${spell.Name}" like solving an equation, each syllable binding itself to %NAME_POSSESSIVE_DIRECT% essence${pairedDefaultStr}`,
+            `%NAME% recites a forbidden definition of "${spell.Name}" — the truth alters %POSSESSIVE% mind and flesh${pairedDefaultStr}`,
+            `%NAME% speaks a recursive truth, folding ${spell.Name} into %POSSESSIVE% mind and flesh${pairedDefaultStr}`
+        ];
+
+        const voiceCastingActionStrings: string[] = [
             `%NAME% intones with magical power, using nothing but %POSSESSIVE% voice to cast ${spell.Name} on %OPP_NAME%${pairedDefaultStr}`,
-            `%NAME% chants an indecipherable phrase containing the name of %OPP_NAME% and casting ${spell.Name}${pairedDefaultStr}`
+            `%NAME% chants an indecipherable phrase containing the name of %OPP_NAME% and casting ${spell.Name}${pairedDefaultStr}`,
+            `%NAME% declares ${spell.Name} in a tone used to command ancient engines, the sound reshaping %OPP_NAME_POSSESSIVE_DIRECT% fate${pairedDefaultStr}`,
+            `%NAME% decodes a perfect sentence — ${spell.Name} — reality obliges, binding %OPP_NAME% with its meaning${pairedDefaultStr}`,
+        ];
+
+        const voiceCastingSelfActionStrings: string[] = [
+            `%NAME% recites ${spell.Name} into the air and the words spiral inward, etching themselves onto %REFLEXIVE%'s soul${pairedDefaultStr}`,
+            `%NAME_POSSESSIVE_DIRECT% voice drops into an impossible register as ${spell.Name} unfolds inside %REFLEXIVE% like an internal rewrite${pairedDefaultStr}`,
         ];
 
         let castingActionStrings;
+        const castingSelf = target.IsPlayer();
+
         if (voiceCast)
             castingActionStrings = voiceCastingActionStrings;
+        else if (this.VerbalMagic)
+            castingActionStrings = castingVerbalStrings;
         else
-            castingActionStrings = this.VerbalMagic ? castingVerbalStrings : rangedCastingActionStrings;
+            castingActionStrings = rangedCastingActionStrings;
 
         return castingActionStrings[getRandomInt(castingActionStrings.length)];
     }
@@ -509,32 +548,34 @@ export class MagicModule extends BaseModule {
     CastSpellActual(spell: SpellDefinition | undefined, spellTarget: Character, voiceCast: boolean, pairedTarget?: Character) {
         if (!!spell && !!spellTarget) {
             if (!(spellTarget as any).LSCG?.MagicModule || !(spellTarget as any).LSCG?.MagicModule.enabled) {
-                SendAction(`%NAME% casts ${spell.Name} at %OPP_NAME% but it seems to fizzle.`, spellTarget);
-                this.CloseSpellMenu();
-                DialogLeave();
-                return;
-            }
-            else {
-                SendAction(this.getCastingActionString(spell, InventoryGet(Player, "ItemHandheld"), voiceCast, spellTarget, pairedTarget), spellTarget);
-            }
+                if (!(spellTarget as any).LSCG?.MagicModule || !(spellTarget as any).LSCG?.MagicModule.enabled) {
+                    SendAction(`%NAME% casts ${spell.Name} at %OPP_NAME% but it seems to fizzle.`, spellTarget);
+                    this.CloseSpellMenu();
+                    DialogLeave();
+                    return;
+                }
+                else {
+                    SendAction(this.getCastingActionString(spell, InventoryGet(Player, "ItemHandheld"), voiceCast, spellTarget, pairedTarget), spellTarget);
+                }
 
-            if (spellTarget.IsPlayer()) {
-                let check = getModule<ItemUseModule>("ItemUseModule").UnopposedActivityRoll(spellTarget);
-                setTimeout(() => this.IncomingSpell(Player, spell, pairedTarget, Math.max(1, check.Total / 2)), 1000);
+                if (spellTarget.IsPlayer()) {
+                    let check = getModule<ItemUseModule>("ItemUseModule").UnopposedActivityRoll(spellTarget);
+                    setTimeout(() => this.IncomingSpell(Player, spell, pairedTarget, Math.max(1, check.Total / 2)), 1000);
+                }
+                else
+                    sendLSCGCommand(spellTarget, "spell", [
+                        {
+                            name: "spell",
+                            value: spell
+                        }, {
+                            name: "paired",
+                            value: pairedTarget?.MemberNumber
+                        }
+                    ]);
             }
-            else
-                sendLSCGCommand(spellTarget, "spell", [
-                    {
-                        name: "spell",
-                        value: spell
-                    }, {
-                        name: "paired",
-                        value: pairedTarget?.MemberNumber
-                    }
-                ]);
+            this.CloseSpellMenu();
+            DialogLeave();
         }
-        this.CloseSpellMenu();
-        DialogLeave();
     }
 
     TeachSpellActual(spell: SpellDefinition, target: OtherCharacter) {
@@ -596,13 +637,14 @@ export class MagicModule extends BaseModule {
                 let check = getModule<ItemUseModule>("ItemUseModule")?.MakeActivityCheck(sender, Player);
                 if (!this.SpellIsBeneficial(spell) && this.DefendAgainst(sender.MemberNumber ?? -1)) {
                     let reflectActions = [
-                        `%NAME% with a sharp gesture of her hand reflects %OPP_NAME%'s ${spell.Name}.`,
-                        `%NAME%'s skin defends %PRONOUN% of %OPP_NAME%'s ${spell.Name}.`,
-                        `%OPP_NAME%'s ${spell.Name} fizzles of %NAME%'s skin.`
+                        `%NAME% with a sharp gesture of her hand reflects %OPP_NAME_POSSESSIVE_DIRECT% ${spell.Name}.`,
+                        `%NAME%'s skin defends %PRONOUN% of %OPP_NAME_POSSESSIVE_DIRECT% ${spell.Name}.`,
+                        `%OPP_NAME_POSSESSIVE_DIRECT% ${spell.Name} fizzles of %NAME%'s skin.`
                     ];
                     SendAction(reflectActions[getRandomInt(reflectActions.length)], sender);
                     if (magicBarrier?.active) {
-                        SendAction(`${CharacterNickname(Player)} makes the spell bounce back to ${CharacterNickname(sender)}!`);
+                        // if saved with a protected barrier, the spell will bounce back to sender
+                        SendAction(`The magical barrier around ${CharacterNickname(Player)} make the spell bounce back to ${CharacterNickname(sender)}!`);
                         sendLSCGCommand(sender, "spell", [
                             {
                                 name: "spell",
@@ -612,6 +654,8 @@ export class MagicModule extends BaseModule {
                                 value: undefined
                             }
                         ]);
+                        this.stateModule.BarrierState.Recover(false);
+                        SendAction(`The magical barrier around ${CharacterNickname(Player)} disappear, drained of all its magical power.`);
                     }
                     return;
                 }
@@ -920,7 +964,7 @@ export class MagicModule extends BaseModule {
             SendAction(`%OPP_NAME% ${check.AttackerRoll.TotalStr}manages to get %OPP_POSSESSIVE% ${itemName} past %NAME%'s ${check.DefenderRoll.TotalStr}lips, forcing %INTENSIVE% to swallow it.`, sender);
             this.ProcessPotion(sender, spell);
         } else {
-            SendAction(`%NAME% ${check.DefenderRoll.TotalStr}successfully defends against %OPP_NAME%'s ${check.AttackerRoll.TotalStr}attempt to force %INTENSIVE% to swallow %OPP_POSSESSIVE% ${itemName}.`, sender);
+            SendAction(`%NAME% ${check.DefenderRoll.TotalStr}successfully defends against %OPP_NAME_POSSESSIVE_DIRECT% ${check.AttackerRoll.TotalStr}attempt to force %INTENSIVE% to swallow %OPP_POSSESSIVE% ${itemName}.`, sender);
         }
     }
 

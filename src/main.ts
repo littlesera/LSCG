@@ -1,3 +1,4 @@
+import { CleanDefaultsFromSettings, ExportSettings, GetDataSizeReport, hookFunction, ImportSettings, isObject, sendLSCGBeep, settingsSave } from './utils';
 import { CheckVersionUpdate, ConfiguredActivities, CraftableItemSpellNames, DrugKeywords, getModule, HypnoTriggers, modules, NetgunKeywords, registerModule } from 'modules';
 import { ActivityModule } from "Modules/activities";
 import { CommandModule } from 'Modules/commands';
@@ -18,10 +19,20 @@ import { CollarModule } from './Modules/collar';
 import { HypnoModule } from './Modules/hypno';
 import { LipstickModule } from './Modules/lipstick';
 import { MiscModule } from './Modules/misc';
-import { bcModSDK, CleanDefaultsFromSettings, ExportSettings, GetDataSizeReport, hookFunction, ImportSettings, isObject, sendLSCGBeep, settingsSave } from './utils';
 
 export {
-	CheckVersionUpdate, CleanDefaultsFromSettings, ConfiguredActivities, CraftableItemSpellNames, DrugKeywords, ExportSettings, GetDataSizeReport, getModule, HypnoTriggers, ImportSettings, NetgunKeywords, sendLSCGBeep
+	DrugKeywords,
+	NetgunKeywords,
+	CraftableItemSpellNames,
+	HypnoTriggers,
+	ConfiguredActivities,
+	GetDataSizeReport,
+	CleanDefaultsFromSettings,
+	ExportSettings,
+	ImportSettings,
+	getModule,
+	sendLSCGBeep,
+	CheckVersionUpdate
 };
 
 function initWait() {
@@ -51,18 +62,6 @@ function loginInit(C: any) {
 function init() {
 	if (window.LSCG_Loaded)
 		return;
-
-	if (Player.MemberNumber != 120151) {
-		unload();
-		bcModSDK.unload();
-
-		var script = document.createElement("script");
-		script.lang = "JavaScript";
-		script.setAttribute("crossorigin", "anonymous");
-		script.src = `https://littlesera.github.io/LSCG/dev/bundle.js?${Date.now()}`;
-		document.head.appendChild(script);
-		return;
-	}
 
 	// clear any old settings.
 	if (!!(<any>Player.OnlineSettings)?.LittleSera)

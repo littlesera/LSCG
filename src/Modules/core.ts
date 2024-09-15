@@ -5,16 +5,17 @@ import { IPublicSettingsModel, PublicSettingsModel, SettingsModel } from "Settin
 import { ModuleCategory } from "Settings/setting_definitions";
 import { CUSTOM_LSCG_VERSION, drawSvg, getCharacter, hookFunction, LSCG_CHANGES, LSCG_SendLocal, mouseTooltip, removeAllHooksByModule, sendLSCGMessage, settingsSave, SVG_ICONS } from "../utils";
 import { CollarModule } from "./collar";
-import { HypnoModule } from "./hypno";
 
+import { lt } from "semver";
+import { BaseMigrator } from "./Migrators/BaseMigrator";
+import { StateMigrator } from "./Migrators/StateMigrator";
+import { MagicModule } from "./magic";
+import { StateModule } from "./states";
 import { drawTooltip } from "Settings/settingUtils";
 import { GrabType, LeashingModule } from "./leashing";
-import { MagicModule } from "./magic";
-import { BaseMigrator } from "./Migrators/BaseMigrator";
 import { OpacityMigrator } from "./Migrators/OpacityMigrator";
 import { SuggestionSettingMigrator } from "./Migrators/OpacityMigrator copy";
-import { StateMigrator } from "./Migrators/StateMigrator";
-import { StateModule } from "./states";
+import { HypnoModule } from './hypno';
 
 // >= R111
 declare var DialogMenuMapping: { items: ScreenFunctions & { C: null | Character; }; };
@@ -268,6 +269,9 @@ export class CoreModule extends BaseModule {
             // if (false) {
             //     saveRequired = saveRequired || m.Migrate(fromVersion);
             // }
+            if (lt(fromVersion, m.Version)) {
+                saveRequired = m.Migrate(fromVersion) || saveRequired;
+            }
         });
 
         return saveRequired;
