@@ -35,25 +35,19 @@ declare var ChatAdminBackgroundIndex: number;
 declare var ChatAdminBackgroundSelect: string;
 declare var ChatAdminPrivate: boolean;
 declare var ChatAdminLocked: boolean;
-/** @type {ChatRoomGame} */
-declare var ChatAdminGame: ChatRoomGame;
-/** @type {ChatRoomGame[]} */
-declare var ChatAdminGameList: ChatRoomGame[];
-/** @type {null | string} */
-declare var ChatAdminBackgroundSelected: null | string;
-/** @type {null | { Name: string, Language: ChatRoomLanguage, Description: string, Limit: string, AdminList: string, BanList: string, Private: boolean, Locked: boolean }} */
-declare var ChatAdminTemporaryData: null | {
-    Name: string;
-    Language: ChatRoomLanguage;
-    Description: string;
-    Limit: string;
-    AdminList: string;
-    BanList: string;
-    Private: boolean;
-    Locked: boolean;
-};
-/** @type {ChatRoomBlockCategory[]} */
-declare var ChatAdminBlockCategory: ChatRoomBlockCategory[];
+/** @type {object} */
+declare var ChatAdminMapData: object;
+/** @type {ServerChatRoomGame} */
+declare var ChatAdminGame: ServerChatRoomGame;
+/** @type {ServerChatRoomGame[]} */
+declare var ChatAdminGameList: ServerChatRoomGame[];
+/** @type {string | null} */
+declare var ChatAdminBackgroundSelected: string | null;
+/** @type {Partial<ServerChatRoomData> | null} */
+declare var ChatAdminTemporaryData: Partial<ServerChatRoomData> | null;
+/** @type {ServerChatRoomBlockCategory[]} */
+declare var ChatAdminBlockCategory: ServerChatRoomBlockCategory[];
 declare var ChatAdminInitialLoad: boolean;
-/** @type {ChatRoomLanguage} */
-declare var ChatAdminLanguage: ChatRoomLanguage;
+/** @type {ServerChatRoomLanguage} */
+declare var ChatAdminLanguage: ServerChatRoomLanguage;
+declare var ChatAdminCustom: any;

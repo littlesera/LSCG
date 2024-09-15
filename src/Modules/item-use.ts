@@ -1,17 +1,19 @@
 import { BaseModule } from "base";
 import { getModule } from "modules";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { getRandomInt, hookFunction, IsIncapacitated, removeAllHooksByModule, SendAction, sendLSCGCommand } from "../utils";
+import { getDominance, GetItemNameAndDescriptionConcat, GetMetadata, getRandomInt, GetTargetCharacter, hookFunction, IsIncapacitated, isPhraseInString, OnAction, OnActivity, removeAllHooksByModule, SendAction, sendLSCGCommand } from "../utils";
 import { ActivityBundle, ActivityModule, ActivityTarget } from "./activities";
 import { BoopsModule } from "./boops";
 import { CollarModule } from "./collar";
 import { StateModule } from "./states";
+import { InjectorModule } from "./injector";
 
 export const CameraItems: string[] = [
 	"Phone1",
 	"Phone2",
 	"PortalTablet",
-	"Camera1"
+	"Camera1",
+	"Smartphone"
 ];
 
 export const MagicWandItems: string[] = [
@@ -39,6 +41,27 @@ export const EdibleItems: string[] = [
 	"Baguette"
 ]
 
+export const EnhancedItemActivityNames: string[] = [
+	"LSCG_Quaff",
+	"LSCG_Eat",
+	"LSCG_FunnelPour",
+	"SipItem",
+	"EatItem",
+	"ThrowItem"
+];
+
+export const TamperProofKeywords = [
+	"tamper-proof",
+	"tamperproof",
+	"tamper proof"
+];
+
+export function IsActivityEnhanced(data: ServerChatRoomMessage) {
+	let meta = GetMetadata(data);
+	let activityName = meta?.ActivityName;
+	return meta?.GroupName == "ItemMouth" && EnhancedItemActivityNames.indexOf(activityName ?? "") > -1;
+}
+
 export class ActivityRoll {
 	constructor(raw: number, mod: number) {
 		this.Raw = raw;
@@ -63,7 +86,7 @@ export interface RopeTarget {
 	Location: string;
 	LocationLabel: string;
 	ItemName: string;
-	Type?: string;
+	Type?: number;
 }
 
 export interface GagTarget {
@@ -74,7 +97,7 @@ export interface GagTarget {
 	OverrideNeckLocation?: string;
 	LeaveHandItem?: boolean;
 	CraftedKeys?: string[];
-	PreferredTypes?: {Location: string, Type: string}[];
+	PreferredTypes?: {Location: string, Type: number}[];
 	UsedAssetOverride?: string;
 }
 
@@ -90,7 +113,7 @@ export class ItemUseModule extends BaseModule {
 			MouthItemName: "BallGag",
 			HandItemName: "Ballgag",
 			NeckItemName: "NecklaceBallGag",
-			PreferredTypes: [{Location: "ItemMouth", Type: "Tight"}]
+			PreferredTypes: [{Location: "ItemMouth", Type: 2}]
 		},{
 			MouthItemName: "PantyStuffing",
 			HandItemName: "Panties"
@@ -116,8 +139,8 @@ export class ItemUseModule extends BaseModule {
 			NeckItemName: "NecklaceRope",
 			//LeaveHandItem: true,
 			PreferredTypes: [
-				{Location: "ItemMouth", Type: "Tight"},
-				{Location: "Necklace", Type: "Long"}
+				{Location: "ItemMouth", Type: 2},
+				{Location: "Necklace", Type: 1}
 			]
 		},{
 			MouthItemName: "RopeGag",
@@ -129,20 +152,20 @@ export class ItemUseModule extends BaseModule {
 			HandItemName: "TapeRoll",
 			LeaveHandItem: true,
 			PreferredTypes: [
-				{Location: "ItemMouth", Type: "Crossed"},
-				{Location: "ItemMouth2", Type: "Double"},
-				{Location: "ItemMouth3", Type: "Cover"}
+				{Location: "ItemMouth", Type: 1},
+				{Location: "ItemMouth2", Type: 3},
+				{Location: "ItemMouth3", Type: 4}
 			]
 		},{
 			MouthItemName: "ScarfGag",
 			NeckItemName: "Bandana",			
-			PreferredTypes: [{Location: "ItemMouth", Type: "OTN"}],
+			PreferredTypes: [{Location: "ItemMouth", Type: 1}],
 			UsedAssetOverride: "bandana"
 		},{
 			MouthItemName: "ClothGag",
 			NeckItemName: "Scarf",
 			OverrideNeckLocation: "ClothAccessory",
-			PreferredTypes: [{Location: "ItemMouth", Type: "OTM"}]
+			PreferredTypes: [{Location: "ItemMouth", Type: 3}]
 		},{
 			MouthItemName: "FurScarf",
 			NeckItemName: "FurScarf"
@@ -256,7 +279,38 @@ export class ItemUseModule extends BaseModule {
 			}
 			return results;
 		}, ModuleCategory.ItemUse);
+
+		hookFunction("StruggleMinigameStart", 1, (args, next) => {
+			this.Struggling = true;
+			next(args);
+		})
+
+		hookFunction("StruggleMinigameStop", 1, (args, next) => {
+			if (!!StruggleProgressPrevItem && this.Struggling) {
+				let itemStr = GetItemNameAndDescriptionConcat(StruggleProgressPrevItem) ?? "";
+				if (StruggleProgress < 100 && TamperProofKeywords.some(kw => isPhraseInString(itemStr, kw))) {
+					this.PerformTamperProtection("minigame", StruggleProgressPrevItem);
+				}
+			}
+			this.Struggling = false;
+			next(args);
+		}, ModuleCategory.ItemUse);
+
+		OnActivity(1, ModuleCategory.ItemUse, (data, sender, msg, metadata) => {
+			if (sender?.IsPlayer() && msg == "ChatSelf-ItemArms-StruggleArms") {
+				this.PerformTamperProtection("activity");
+			}
+		});
+
+		OnAction(1, ModuleCategory.ItemUse, (data, sender, msg, metadata) => {
+			let target = GetTargetCharacter(data);
+			if (!sender?.IsPlayer() && target == Player.MemberNumber && msg == "StruggleAssist") {
+				this.PerformTamperProtection("assist", undefined, sender);
+			}
+		});
     }
+
+	Struggling: boolean = false;
 
 	run(): void {
 		this.activities = getModule<ActivityModule>("ActivityModule")
@@ -288,7 +342,7 @@ export class ItemUseModule extends BaseModule {
 				{
 					Name: "HoldingGag",
 					Func: (acting, acted, group) => {
-						var location = acted.FocusGroup?.Name!;
+						var location = acted.FocusGroup?.Name ?? group.Name;
 						let heldItemName = InventoryGet(acting, "ItemHandheld")?.Asset.Name ?? "";
 						let gagTarget = this.GagTargets.find(t => t.HandItemName == heldItemName);
 						
@@ -322,7 +376,8 @@ export class ItemUseModule extends BaseModule {
 				Func: (target, args, next) => {
 					if (!target)
 						return;
-					var location = target.FocusGroup?.Name!;
+					let ret = next(args);
+					var location = target.FocusGroup?.Name  ?? args[1].Dictionary.find((entry: { Tag: string; }) => entry?.Tag == "FocusAssetGroup")?.FocusGroupName;
 					let heldItemName = InventoryGet(Player, "ItemHandheld")?.Asset.Name ?? "";
 					let gagTarget = this.GagTargets.find(t => t.HandItemName == heldItemName);
 					if (!!gagTarget) {
@@ -330,7 +385,7 @@ export class ItemUseModule extends BaseModule {
 							location = gagTarget.OverrideNeckLocation ?? "Necklace";
 						this.ApplyGag(target, Player, gagTarget, location);
 					}
-					return next(args);
+					return ret;
 				}
 			},
 			CustomImage: "Assets/Female3DCG/ItemHandheld/Preview/Ballgag.png"
@@ -343,7 +398,7 @@ export class ItemUseModule extends BaseModule {
 				MaxProgress: 50,
 				MaxProgressSelf: 80,
 				Reverse: true,
-				Prerequisite: ["UseHands", "Needs-GagTakeItem"]
+				Prerequisite: ["Needs-GagTakeItem"]
 			},
 			Targets: [
 				<ActivityTarget>{
@@ -400,7 +455,7 @@ export class ItemUseModule extends BaseModule {
 				Func: (target, args, next) => {
 					if (!target)
 						return;
-					let location = target.FocusGroup?.Name!;
+					let location = target.FocusGroup?.Name ?? args[1].Dictionary.find((entry: { Tag: string; }) => entry?.Tag == "FocusAssetGroup")?.FocusGroupName;
 					let itemName: string | undefined;
 					let gagTarget: GagTarget | undefined;
 					if (location == "ItemNeck") {
@@ -437,7 +492,7 @@ export class ItemUseModule extends BaseModule {
 				<ActivityTarget>{
 					Name: "ItemMouth",
 					TargetLabel: "Move to Mouth",
-					TargetAction: "SourceCharacter moves TargetCharacter's ActivityAsset up to PronounPossessive mouth.",
+					TargetAction: "SourceCharacter moves TargetCharacter's ActivityAsset up to TargetPronounPossessive mouth.",
 					TargetSelfAction: "SourceCharacter moves PronounPossessive own ActivityAsset up to PronounPossessive mouth.",
 					SelfAllowed: true
 				},
@@ -446,7 +501,7 @@ export class ItemUseModule extends BaseModule {
 				{
 					Name: "TargetIsWearingGagNecklace",
 					Func: (acting, acted, group) => {
-						var location = acted.FocusGroup?.Name!;
+						var location = acted.FocusGroup?.Name ?? group.Name;
 						var existing = InventoryGet(acted, location);
 						if (!!existing)
 							return false;
@@ -468,7 +523,7 @@ export class ItemUseModule extends BaseModule {
 					if (!target || !dict)
 						return;
 					var activityAsset = dict.find((x: { Tag: string; }) => x.Tag == "ActivityAsset");
-					var location = target.FocusGroup?.Name!;
+					var location = target.FocusGroup?.Name ?? dict.find((entry: { Tag: string; }) => entry?.Tag == "FocusAssetGroup")?.FocusGroupName;
 					let heldItemName = InventoryGet(target, activityAsset.GroupName)?.Asset.Name ?? "";
 					let gagTarget = this.GagTargets.find(t => t.NeckItemName == heldItemName);
 					//if (!gagTarget) gagTarget = this.GagTargets.find(t => t.NeckItemName == (InventoryGet(target, "ClothAccessory")?.Asset.Name ?? "") && t.OverrideNeckLocation == "ClothAccessory");
@@ -502,7 +557,7 @@ export class ItemUseModule extends BaseModule {
 				{
 					Name: "TargetIsGaggedWithNecklace",
 					Func: (acting, acted, group) => {
-						var location = acted.FocusGroup?.Name!;
+						var location = acted.FocusGroup?.Name ?? group.Name;
 						var item = InventoryGet(acted, location);
 						
 						if (InventoryGroupIsBlocked(acted, location))
@@ -529,7 +584,7 @@ export class ItemUseModule extends BaseModule {
 				Func: (target, args, next) => {
 					if (!target)
 						return;
-					var location = target.FocusGroup?.Name!;
+					var location = target.FocusGroup?.Name ?? args[1].Dictionary.find((entry: { Tag: string; }) => entry?.Tag == "FocusAssetGroup")?.FocusGroupName;
 					let mouthItemName = InventoryGet(target, location)?.Asset.Name ?? "";
 					let gagTarget = this.GagTargets.find(t => t.MouthItemName == mouthItemName);
 					if (!!gagTarget)
@@ -559,7 +614,7 @@ export class ItemUseModule extends BaseModule {
 				{
 					Name: "HasCoiledRope",
 					Func: (acting, acted, group) => {
-						var location = acted.FocusGroup?.Name;
+						var location = acted.FocusGroup?.Name ?? group.Name;
 						if (!location)
 							return false;
 						var ropeTarget = this.GetHempRopeLocations().find(t => t.Location == location);
@@ -576,7 +631,7 @@ export class ItemUseModule extends BaseModule {
 				Func: (target, args, next) => {
 					if (!target)
 						return;
-					var location = target.FocusGroup?.Name!;
+					var location = target.FocusGroup?.Name ?? args[1].Dictionary.find((entry: { Tag: string; }) => entry?.Tag == "FocusAssetGroup")?.FocusGroupName ?? "";
 					let ropeTarget = this.GetHempRopeLocations().find(loc => loc.Location == location);
 					if (!!ropeTarget)
 						this.TieUp(target, Player, ropeTarget);
@@ -818,7 +873,7 @@ export class ItemUseModule extends BaseModule {
 		CommonPhotoMode = true;
 		let temp = C.FocusGroup;
 		C.FocusGroup = null;
-		ChatRoomDrawBackground(ChatRoomData?.Background ?? "", 0, 1, 1, false);
+		ChatRoomCharacterViewDrawBackground(ChatRoomData?.Background ?? "", 0, 1, 1, false);
 		DrawCharacter(C, 0, 0, 1);
 
 		// Capture screen as image URL
@@ -853,20 +908,11 @@ export class ItemUseModule extends BaseModule {
 		return getRandomInt(20) + 1;
 	}
 	
-	getDominance(C: Character) {
-		return C.Reputation.find(r => r.Type == "Dominant")?.Value ?? 0;
-	};
-	
-	getSkill(C: Character, skillName: string): number {
-		let skill = C.Skill.find(r => r.Type == skillName);
-		return ((skill?.Level ?? 0) * (skill?.Ratio ?? 1));
-	}
-	
 	getRollMod(C: Character, Opponent?: Character, isAggressor: boolean = false): number {
 		let buffState = (C as OtherCharacter)?.LSCG?.StateModule?.states?.find(s => s.type == "buffed");
 
 		// Dominant vs Submissive ==> -3 to +3 modifier
-		let dominanceMod = Math.floor(this.getDominance(C) / 33);
+		let dominanceMod = Math.floor(getDominance(C) / 33);
 		// +5 if we own our opponent
 		let ownershipMod = Opponent?.IsOwnedByMemberNumber(C.MemberNumber!) ? 5 : 0 ?? 0;
 		// -4 if we're restrained
@@ -929,12 +975,12 @@ export class ItemUseModule extends BaseModule {
 				Location: "ItemTorso",
 				LocationLabel: "breasts",
 				ItemName: "HempRopeHarness",
-				Type: "Star"
+				Type: 3
 			},{
 				Location: "ItemTorso2",
 				LocationLabel: "waist",
 				ItemName: "HempRopeHarness",
-				Type: "Waist"
+				Type: 1
 			},{
 				Location: "ItemBoots",
 				LocationLabel: "toes",
@@ -950,8 +996,11 @@ export class ItemUseModule extends BaseModule {
 			if ((sourceLocation?.startsWith("ItemMouth") && targetLocation == "Necklace") ||
 				(sourceLocation == "Necklace" && targetLocation?.startsWith("ItemMouth")))
 				color = (<string[]>(<ItemColor>color)).reverse();
-			else if (sourceLocation == "ItemHandheld")
+			else if (sourceLocation == "Necklace" && targetLocation == "ItemHandheld")
+				color = [color[1]];
+			else if (sourceLocation == "ItemHandheld") {
 				color = [color[0], color[0]];
+			}
 		}
 		return color;
 	}
@@ -961,17 +1010,21 @@ export class ItemUseModule extends BaseModule {
 		let sourceItemName = (sourceLocation == "ItemHandheld" ? gagTarget.HandItemName : gagTarget.NeckItemName) ?? "";
 		let targetItemName = (targetLocation?.startsWith("ItemMouth") ? gagTarget.MouthItemName : gagTarget.NeckItemName) ?? "";
 		if (!!gagItem && gagItem.Asset.Name == sourceItemName) {
-			if (!(gagTarget.LeaveHandItem && sourceLocation == "ItemHandheld")) InventoryRemove(source, sourceLocation, true);
+			if (!(gagTarget.LeaveHandItem && sourceLocation == "ItemHandheld")) InventoryRemove(source, sourceLocation, source.MemberNumber != target.MemberNumber);
 			var color = this._handleWeirdColorStuff(gagItem, gagTarget, sourceLocation, targetLocation);
-			var gag = InventoryWear(target, targetItemName, targetLocation, color, undefined, source.MemberNumber, gagItem?.Craft, true);
+			InventoryWear(target, targetItemName, targetLocation, color, undefined, source.MemberNumber, gagItem?.Craft, false);
+			let gag = InventoryGet(target, targetLocation);
 			if (!!gagTarget.PreferredTypes && gagTarget.PreferredTypes.length > 0) {
 				var prefType = gagTarget.PreferredTypes.find(tgt => tgt.Location == targetLocation) ?? gagTarget.PreferredTypes.find(tgt => targetLocation.startsWith(tgt.Location));
 				if (!!gag && !!prefType) {
 					if (!gag.Property) gag.Property = {};
-					gag!.Property!.Type = prefType.Type;
+					if (!gag.Property.TypeRecord)
+						gag.Property.TypeRecord = {"typed": prefType.Type};
+					else
+						gag!.Property!.TypeRecord["typed"] = prefType.Type;
 				}
 			}
-			setTimeout(() => ChatRoomCharacterUpdate(target));
+			ChatRoomCharacterUpdate(target);
 		}
     }
 
@@ -993,25 +1046,29 @@ export class ItemUseModule extends BaseModule {
 				}
 			}
 			var color = this._handleWeirdColorStuff(gag, gagTarget, sourceLocation, targetLocation);
-			let item = InventoryWear(source, targetItemName, targetLocation, color, undefined, source.MemberNumber, craft, true);			
+			let item = InventoryWear(source, targetItemName, targetLocation, color, undefined, source.MemberNumber, craft, false);			
 			if (!!gagTarget.PreferredTypes && gagTarget.PreferredTypes.length > 0) {
 				var prefType = gagTarget.PreferredTypes.find(tgt => tgt.Location == targetLocation) ?? gagTarget.PreferredTypes.find(tgt => targetLocation.startsWith(tgt.Location));
 				if (!!item && !!prefType) {
 					if (!item.Property) item.Property = {};
-					item!.Property!.Type = prefType.Type;
+					if (!item.Property.TypeRecord)
+						item.Property.TypeRecord = {"typed": prefType.Type};
+					else
+						item!.Property!.TypeRecord["typed"] = prefType.Type;
 				}
 			}
-			setTimeout(() => ChatRoomCharacterUpdate(target));
+			ChatRoomCharacterUpdate(target);
+			ChatRoomCharacterUpdate(source);
 		}
 	}
 
 	TieUp(target: Character, source: Character, rope: RopeTarget) {
 		var handRope = InventoryGet(source, "ItemHandheld");
 		if (handRope?.Asset.Name.startsWith("RopeCoil")) {
-			var ropeTie = InventoryWear(target, rope.ItemName, rope.Location, handRope?.Color, undefined, source.MemberNumber, handRope?.Craft, true);
+			var ropeTie = InventoryWear(target, rope.ItemName, rope.Location, handRope?.Color, undefined, source.MemberNumber, handRope?.Craft);
 			if (!!rope.Type && !!ropeTie)
-				(<any>ropeTie!.Property!.Type!) = rope.Type;
-			setTimeout(() => ChatRoomCharacterUpdate(target));
+				(<any>ropeTie!.Property!.TypeRecord) = {"typed": rope.Type};
+			ChatRoomCharacterUpdate(target);
 		}
 	}
 
@@ -1060,15 +1117,7 @@ export class ItemUseModule extends BaseModule {
 	
 		let handled = false;
 		for (const item of items) {
-			/** @type {null[] | string[]} */
-			let types;
-			if (!item.Property) {
-				types = [null];
-			} else if (item.Asset.Archetype === ExtendedArchetype.MODULAR) {
-				types = ModularItemDeconstructType(item.Property.Type ?? "") || [null];
-			} else {
-				types = [item.Property.Type];
-			}
+			const types = (!!item.Property && CommonIsObject(item.Property?.TypeRecord)) ? PropertyTypeRecordToStrings(item.Property?.TypeRecord ?? <TypeRecord>{}) : [null];
 	
 			let blocked: ItemActivityRestriction | null = null;
 			let focusGroup = acted.FocusGroup?.Name;
@@ -1106,10 +1155,85 @@ export class ItemUseModule extends BaseModule {
 		return handled;
 	}
 
-	HackAssetPrereqs() {
-		if (!AssetMap)
+	electricKeywords: string[] = [
+		"electric",
+		"electrified",
+		"shocking"
+	];
+
+	selfTighteningKeywords: string[] = [
+		"self-tightening",
+		"selftightening",
+		"self tightening",
+		"auto-tightening",
+		"auto tightening"
+	];
+
+	subduingKeywords: string[] = [
+		"sedating",
+		"numbing",
+		"subduing"
+	];
+
+	PerformTamperProtection(source: "minigame" | "activity" | "assist", item: Item | undefined = undefined, sender: Character | null = null) {
+		if (!Player.LSCG.GlobalModule.tamperproofEnabled)
 			return;
-		AssetMap.get("ItemHandheld/Phone2")!.Prerequisite = [];
-		AssetMap.get("ItemHandheld/Phone1")!.Prerequisite = [];
+
+		if (!item) {
+			let tamperProofItems = Player.Appearance.filter(a => {
+				let itemStr = GetItemNameAndDescriptionConcat(a) ?? "";
+				return a.Asset.Group.Name != "ItemHandheld" && TamperProofKeywords.some(k => isPhraseInString(itemStr, k));
+			});
+			if (tamperProofItems.length > 0)
+				item = tamperProofItems[getRandomInt(tamperProofItems.length)];
+		}
+		if (!item)
+			return;
+
+		let itemStr = GetItemNameAndDescriptionConcat(item) ?? "";
+		let itemName = item.Craft?.Name ?? item.Asset.Name;
+		let itemTypes: string[] = [];
+		
+		if (this.electricKeywords.some(k => isPhraseInString(itemStr, k)) && (Player.LSCG.GlobalModule.tamperproofElectricityEnabled ?? true))
+			itemTypes.push("electric");
+		if (this.selfTighteningKeywords.some(k => isPhraseInString(itemStr, k)))
+			itemTypes.push("tightening");
+		if (this.subduingKeywords.some(k => isPhraseInString(itemStr, k)))
+			itemTypes.push("subduing");
+		if (itemTypes.length <= 0)
+			itemTypes = ["generic"];
+
+		let selectedType = itemTypes[getRandomInt(itemTypes.length)];
+		switch (selectedType) {
+			case "electric":
+				let shockLevel = (getRandomInt(50)/50)+0.5;
+				SendAction(`%NAME%'s ${itemName} punishes ${!sender ? "%POSSESSIVE%" : CharacterNickname(sender) + "'s"} meddling with a sharp jolt.`);
+				AudioPlaySoundEffect("Shocks", 3 + (3 * shockLevel));
+				const duration = (Math.random() + shockLevel * 1.5) * 500;
+				DrawFlashScreen("#FFFFFF", duration, 500);
+				break;
+			case "tightening":
+				SendAction(`%NAME%'s ${itemName} tightens around %INTENSIVE%, countering ${!sender ? "%POSSESSIVE%" : CharacterNickname(sender) + "'s"} tampering.`);
+				item.Difficulty = (item.Difficulty ?? 0) + 5;
+				if (item.Asset.Group.Name == "ItemNeck" && getModule<CollarModule>("CollarModule").WearingCorrectCollar(Player)) {
+					getModule<CollarModule>("CollarModule").IncreaseCollarChoke();
+				} else {
+					AudioPlaySoundEffect("ZipTie", 1);
+				}
+				ChatRoomCharacterUpdate(Player);
+				break;
+			case "subduing":
+				SendAction(`%NAME%'s ${itemName} releases a sedating spray, resisting ${!sender ? "%POSSESSIVE%" : CharacterNickname(sender) + "'s"} meddling, and weakening %POSSESSIVE% muscles.`);
+				AudioPlaySoundEffect("Deflation", 1);
+				let injectModule = getModule<InjectorModule>("InjectorModule");
+				if (injectModule.Enabled && injectModule.settings.enableSedative)
+					getModule<InjectorModule>("InjectorModule").AddSedative(1, getRandomInt(3) != 0);
+				break;
+			case "generic":
+			default:
+				SendAction(`%NAME%'s ${itemName} clicks menacingly as it resists ${!sender ? "%POSSESSIVE%" : CharacterNickname(sender) + "'s"} tampering.`);
+				AudioPlaySoundEffect("LockLarge");
+				break;
+		}
 	}
 }

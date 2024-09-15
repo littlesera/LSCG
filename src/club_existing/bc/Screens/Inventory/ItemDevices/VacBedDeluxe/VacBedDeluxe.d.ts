@@ -1,2 +1,1 @@
-/** @type {ExtendedItemScriptHookCallbacks.Draw<ModularItemData>} */
-declare function InventoryItemDevicesVacBedDeluxeDrawHook(Data: ModularItemData, OriginalFunction: () => void): void;
+declare function InventoryItemDevicesVacBedDeluxeDrawHook(data: ModularItemData, originalFunction: () => void): void;

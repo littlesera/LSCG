@@ -1,12 +1,3 @@
-/** @type {ExtendedItemCallbacks.Init} */
-declare function InventoryItemMiscSafewordPadlockInit(C: Character, Item: Item): boolean;
-/** @type {ExtendedItemCallbacks.Init} */
-declare function InventoryItemMiscSafewordPadlockInit(C: Character, Item: Item): boolean;
-/** @type {ExtendedItemCallbacks.Load} */
-declare function InventoryItemMiscSafewordPadlockLoad(): void;
-/** @type {ExtendedItemCallbacks.Draw} */
-declare function InventoryItemMiscSafewordPadlockDraw(): void;
-/** @type {ExtendedItemCallbacks.Click} */
-declare function InventoryItemMiscSafewordPadlockClick(): void;
-/** @type {ExtendedItemCallbacks.Exit} */
-declare function InventoryItemMiscSafewordPadlockExit(): void;
+declare function InventoryItemMiscSafewordPadlockLoadHook(data: NoArchItemData, originalFunction: () => void): void;
+declare function InventoryItemMiscSafewordPadlockDrawHook(data: NoArchItemData, originalFunction: () => void): void;
+declare function InventoryItemMiscSafewordPadlockClickHook(data: NoArchItemData, originalFunction: () => void): void;

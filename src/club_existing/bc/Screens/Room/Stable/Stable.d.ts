@@ -19,6 +19,11 @@ declare function StablePlayerDisallowedPonyExamen(): boolean;
 declare function StablePlayerAllowedTrainerExamen(): boolean;
 declare function StablePlayerDisallowedTrainerExamen(): boolean;
 declare function StableCanHideDice(): boolean;
+/**
+ * Returns TRUE if the player and the current character can play Club Card
+ * @returns {boolean} - Returns TRUE if both aren't restrained
+ */
+declare function StableCanPlayClubCard(): boolean;
 declare function StableLoad(): void;
 declare function StableRun(): void;
 declare function StableClick(): void;
@@ -181,6 +186,16 @@ declare function StableGenericRun(Reverse: boolean): void;
  */
 declare function StableCharacterAppearanceGroupAvailable(C: Character, AppearanceGroup: AssetGroupName): boolean;
 declare function StableHideDice(): void;
+/**
+ * When the player starts a club card game
+ * @returns {void} - Nothing
+ */
+declare function StableClubCardStart(): void;
+/**
+ * When the player ends a club card game
+ * @returns {void} - Nothing
+ */
+declare function StableClubCardEnd(): void;
 declare var StableBackground: string;
 /** @type {null | NPCCharacter} */
 declare var StableTrainer: null | NPCCharacter;

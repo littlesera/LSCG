@@ -38,8 +38,11 @@ declare function ServerDisconnect(data: any, close?: boolean): void;
  * @returns {boolean} - True if in a chatroom
  */
 declare function ServerPlayerIsInChatRoom(): boolean;
-/** Sends a message with the given data to the server via socket.emit */
-declare function ServerSend(Message: any, Data: any): void;
+declare function ServerSend<Ev extends "AccountCreate" | "AccountLogin" | "PasswordReset" | "PasswordResetProcess" | "AccountUpdate" | "AccountUpdateEmail" | "AccountQuery" | "AccountBeep" | "AccountOwnership" | "AccountLovership" | "AccountDifficulty" | "AccountDisconnect" | "ChatRoomSearch" | "ChatRoomCreate" | "ChatRoomJoin" | "ChatRoomLeave" | "ChatRoomChat" | "ChatRoomCharacterUpdate" | "ChatRoomCharacterExpressionUpdate" | "ChatRoomCharacterPoseUpdate" | "ChatRoomCharacterArousalUpdate" | "ChatRoomCharacterItemUpdate" | "ChatRoomCharacterMapDataUpdate" | "ChatRoomAdmin" | "ChatRoomAllowItem" | "ChatRoomGame">(ev: Ev, ...args: Parameters<ClientToServerEvents[Ev]>): void;
+/**
+ * Process the outgoing server messages queue
+ */
+declare function ServerSendQueueProcess(): void;
 /**
  * Syncs Money, owner name and lover name with the server
  * @returns {void} - Nothing
@@ -75,6 +78,12 @@ declare function ServerPlayerSkillSync(): void;
  * @returns {void} - Nothing
  */
 declare function ServerPlayerRelationsSync(): void;
+/**
+ * Syncs {@link Player.ExtensionSettings} to the server.
+ * @param {keyof ExtensionSettings} dataKeyName - The single key to sync
+ * @param {boolean} [_force] - unused
+ */
+declare function ServerPlayerExtensionSettingsSync(dataKeyName: keyof ExtensionSettings, _force?: boolean): void;
 /**
  * Prepares an appearance bundle so we can push it to the server. It minimizes it by keeping only the necessary
  * information. (Asset name, group name, color, properties and difficulty)
@@ -136,7 +145,11 @@ declare function ServerAddRequiredAppearance(assetFamily: IAssetFamily, diffMap:
  */
 declare function ServerValidateColorAgainstSchema(Color: string, Schema: readonly string[]): string;
 /**
- * Syncs the player appearance with the server
+ * Syncs the player appearance with the server database.
+ *
+ * Note that this will *not* push appearance changes to the rest of the chatroom,
+ * which requires either {@link ChatRoomCharacterItemUpdate} or {@link ChatRoomCharacterUpdate}.
+ *
  * @returns {void} - Nothing
  */
 declare function ServerPlayerAppearanceSync(): void;
@@ -148,10 +161,10 @@ declare function ServerPrivateCharacterSync(): void;
 /**
  * Callback used to parse received information related to a query made by the player such as viewing their online
  * friends or current email status
- * @param {object} data - Data object containing the query data
+ * @param {ServerAccountQueryResponse} data - Data object containing the query data
  * @returns {void} - Nothing
  */
-declare function ServerAccountQueryResult(data: object): void;
+declare function ServerAccountQueryResult(data: ServerAccountQueryResponse): void;
 /**
  * Callback used to parse received information related to a beep from another account
  * @param {object} data - Data object containing the beep object which contain at the very least a name and a member
@@ -232,8 +245,96 @@ declare var ServerAccountUpdate: {
      */
     QueueData(Data: object, Force?: true): void;
 };
+/** Ratelimit: Max number of messages per interval */
+declare var ServerSendRateLimit: number;
+/** Ratelimit: Length of the rate-limit window, in msec */
+declare var ServerSendRateLimitInterval: number;
+/**
+ * Queued messages waiting to be sent
+ *
+ * @typedef {{ Message: ClientEvent, args: ClientEventParams<ClientEvent>}} SendRateLimitQueueItem
+ *
+ * @type {SendRateLimitQueueItem[]}
+ */
+declare const ServerSendRateLimitQueue: SendRateLimitQueueItem[];
+/** @type {number[]} */
+declare let ServerSendRateLimitTimes: number[];
+declare namespace ServerAccountDataSyncedValidate {
+    function Title(arg: string, C: Character): TitleName;
+    function Nickname(arg: string, C: Character): string;
+    function ItemPermission(arg: number, C: Character): 0 | 2 | 1 | 3 | 4 | 5;
+    function ArousalSettings(arg: Partial<any>, C: Character): {
+        Active: ArousalActiveName;
+        Visible: ArousalVisibleName;
+        ShowOtherMeter: boolean;
+        AffectExpression: boolean;
+        AffectStutter: ArousalAffectStutterName;
+        VFX: SettingsVFXName;
+        VFXVibrator: SettingsVFXVibratorName;
+        VFXFilter: SettingsVFXFilterName;
+        Progress: number;
+        ProgressTimer: number;
+        VibratorLevel: 0 | 2 | 1 | 3 | 4;
+        ChangeTime: number;
+        Activity: ActivityEnjoyment[];
+        Zone: ArousalZone[];
+        Fetish: ArousalFetish[];
+        OrgasmTimer: number;
+        OrgasmStage: 0 | 2 | 1;
+        OrgasmCount: number;
+        DisableAdvancedVibes: boolean;
+    };
+    function OnlineSharedSettings(arg: Partial<any>, C: Character): {
+        AllowFullWardrobeAccess: boolean;
+        BlockBodyCosplay: boolean;
+        AllowPlayerLeashing: boolean;
+        DisablePickingLocksOnSelf: boolean;
+        GameVersion: string;
+        ItemsAffectExpressions: boolean;
+        ScriptPermissions: ScriptPermissions;
+        WheelFortune: string;
+    };
+    function MapData(arg: Partial<ChatRoomMapData>, C: Character): {
+        X: any;
+        Y: any;
+    };
+    function Crafting(arg: string, C: Character): CraftingItem[];
+    function Game(arg: Partial<CharacterGameParameters>, C: Character): {
+        LARP: Record<string, unknown>;
+        MagicBattle: GameMagicBattleParameters & Record<string, unknown>;
+        GGTS: GameGGTSParameters & Record<string, unknown>;
+        Poker: Record<string, unknown>;
+        ClubCard: GameClubCardParameters & Record<string, unknown>;
+    };
+    function LabelColor(arg: string, C: Character): string;
+    function Creation(arg: number, C: Character): number;
+    function Description(arg: string, C: Character): string;
+    function Ownership(arg: Partial<ServerOwnership>, C: Character): {
+        Name: string;
+        MemberNumber: number;
+        Stage: 0 | 1;
+        Start: number;
+    };
+    function Lovership(arg: ServerLovership[], C: Character): Lovership[];
+    function Reputation(arg: {
+        Type: string;
+        Value: number;
+    }[], C: Character): Reputation[];
+    function BlockItems(arg: any[], C: Character): ItemPermissions[];
+    function LimitedItems(arg: any[], C: Character): ItemPermissions[];
+    function FavoriteItems(arg: any[], C: Character): ItemPermissions[];
+    function WhiteList(arg: number[], C: Character): number[];
+    function BlackList(arg: number[], C: Character): number[];
+}
 /**
  * A map containing appearance item diffs, keyed according to the item group. Used to compare and validate before/after
  * for appearance items.
  */
 type AppearanceDiffMap = Partial<Record<AssetGroupName, Item[]>>;
+/**
+ * Queued messages waiting to be sent
+ */
+type SendRateLimitQueueItem = {
+    Message: ClientEvent;
+    args: ClientEventParams<ClientEvent>;
+};

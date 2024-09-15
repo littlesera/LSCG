@@ -5,6 +5,7 @@ import { GetDelimitedList, ICONS, replace_template } from "utils";
 import { StateConfig } from "Settings/Models/states";
 import { LSCGSpellEffect, MagicPublicSettingsModel } from "Settings/Models/magic";
 import { GuiMagic } from "Settings/magic";
+import { drawTooltip } from "Settings/settingUtils";
 
 export class RemoteMagic extends RemoteGuiSubscreen {
 	subscreens: RemoteGuiSubscreen[] = [];
@@ -163,8 +164,8 @@ export class RemoteMagic extends RemoteGuiSubscreen {
 			}, <Setting>{
 				type: "checkbox",
 				label: "Prevent X-Ray Vision",
-				description: "Enhance your clothing with xray-vision-blockers.",
-				setting: () => this.settings.blockXRay ?? false,
+				description: "Lead-line all the target's clothing.",
+				setting: () => this.settings.blockXRay ?? true,
 				setSetting: (val) => this.settings.blockXRay = val
 			}
 		]]
@@ -179,8 +180,10 @@ export class RemoteMagic extends RemoteGuiSubscreen {
 			this.settings.blockedSpellEffects = [];
 		let val = this.settings.blockedSpellEffects.indexOf(this.Effect) > -1;
 		let blockedStr = val ? "Blocked" : "Allowed";
-		DrawBackNextButton(780, this.getYPos(7)-32, 600, 64, this.Effect, "White", "", () => blockedStr, () => blockedStr);
+		DrawBackNextButton(780, this.getYPos(7)-32, 600, 64, this.Effect, "White", "", () => "", () => "");
 		DrawCheckbox(780 + 600 + 64, this.getYPos(7) - 32, 64, 64, "", val);
+		if (MouseIn(780 + 600 + 64, this.getYPos(7) - 32, 64, 64))
+			drawTooltip(MouseX, MouseY, 128, blockedStr, "left");
 
 		MainCanvas.textAlign = "left";
 		DrawTextFit(GuiMagic.SpellEffectDescription(this.Effect), 780, this.getYPos(8), 1000, "Black");

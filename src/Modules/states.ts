@@ -20,6 +20,7 @@ import { ResizedState } from "./States/ResizedState";
 import { BuffedState } from "./States/BuffedState";
 import { PolymorphedState } from "./States/PolymorphedState";
 import { XRayVisionState } from "./States/XRayVisionState";
+import { DeniedState } from "./States/DeniedState";
 
 interface StateIcon {
     Label: string;
@@ -66,6 +67,7 @@ export class StateModule extends BaseModule {
     SleepState: SleepState;
     HypnoState: HypnoState;
     HornyState: HornyState;
+    DeniedState: DeniedState;
     BlindState: BlindState;
     DeafState: DeafState;
     FrozenState: FrozenState;
@@ -96,6 +98,7 @@ export class StateModule extends BaseModule {
         this.SleepState = new SleepState(this);
         this.HypnoState = new HypnoState(this);
         this.HornyState = new HornyState(this);
+        this.DeniedState = new DeniedState(this);
         this.BlindState = new BlindState(this);
         this.DeafState = new DeafState(this);
         this.FrozenState = new FrozenState(this);
@@ -116,6 +119,7 @@ export class StateModule extends BaseModule {
             this.BlindState, 
             this.DeafState, 
             this.HornyState,
+            this.DeniedState,
             this.RedressedState,
             this.PolymorphedState,
             this.ResizedState,
@@ -150,7 +154,7 @@ export class StateModule extends BaseModule {
                 let validStates = C.LSCG?.StateModule.states.filter(s => s.active);
                 let validStateCount = validStates.length;
                 let tooltip = undefined;
-                let lineWidth = ChatRoomCharacterCount > 5 ? 1 : 2;
+                let lineWidth = ChatRoomCharacterViewCharacterCount > 5 ? 1 : 2;
                 validStates.forEach((state, ix, arr) => {
                     let durationEnabled = (state.duration ?? 0) > 0;
                     let iconSize = 30;
@@ -287,7 +291,7 @@ export class StateModule extends BaseModule {
             return next(args);
         }, ModuleCategory.States);
 
-        hookFunction('CharacterCanChangeToPose', 6, (args, next) => {
+        hookFunction('PoseCanChangeUnaided', 6, (args, next) => {
             if (this.Enabled && this.AnyRestrictions(r => r.Move)) {
                 return;
             }
@@ -345,7 +349,7 @@ export class StateModule extends BaseModule {
         };
     }
 
-    Clear(emote: boolean) {
+    Clear(emote: boolean, magical: boolean = false) {
         this.States.forEach(s => s.Recover(emote));
     }
 

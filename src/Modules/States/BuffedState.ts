@@ -1,5 +1,5 @@
-import { ICONS, SendAction, addCustomEffect, getRandomInt, hookFunction, removeCustomEffect } from "utils";
-import { BaseState, StateRestrictions } from "./BaseState";
+import { ICONS, SendAction } from "utils";
+import { BaseState } from "./BaseState";
 import { StateModule } from "Modules/states";
 
 export class BuffedState extends BaseState {

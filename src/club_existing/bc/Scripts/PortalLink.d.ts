@@ -1,22 +1,11 @@
-/** @type {ExtendedItemCallbacks.Init} */
-declare function PortalLinkRecieverInit(C: Character, Item: Item, Refresh: boolean): boolean;
-/** @type {ExtendedItemCallbacks.Load} */
-declare function PortalLinkRecieverLoad(): void;
-/** @type {ExtendedItemCallbacks.Draw} */
-declare function PortalLinkRecieverDraw(): void;
-/** @type {ExtendedItemCallbacks.Click} */
-declare function PortalLinkRecieverClick(): void;
-declare function PortalLinkRecieverExit(): void;
-/** @type {ExtendedItemCallbacks.Init} */
-declare function PortalLinkTransmitterInit(C: Character, Item: Item, Refresh: boolean): boolean;
-/** @type {ExtendedItemCallbacks.Load} */
-declare function PortalLinkTransmitterLoad(): void;
-/** @type {ExtendedItemCallbacks.Draw} */
-declare function PortalLinkTransmitterDraw(): void;
-/** @type {ExtendedItemCallbacks.Click} */
-declare function PortalLinkTransmitterClick(): void;
-/** @type {ExtendedItemCallbacks.Exit} */
-declare function PortalLinkTransmitterExit(): void;
+declare function PortalLinkRecieverLoadHook(data: ExtendedItemData<any>, originalFunction: () => void): void;
+declare function PortalLinkRecieverDrawHook(data: ExtendedItemData<any>, originalFunction: () => void): void;
+declare function PortalLinkRecieverClickHook(data: ExtendedItemData<any>, originalFunction: () => void): void;
+declare function PortalLinkRecieverExitHook(data: ExtendedItemData<any>, originalFunction: () => void): void;
+declare function PortalLinkTransmitterLoadHook(data: ExtendedItemData<any>, originalFunction: () => void): void;
+declare function PortalLinkTransmitterDrawHook(data: ExtendedItemData<any>, originalFunction: () => void): void;
+declare function PortalLinkTransmitterClickHook(data: ExtendedItemData<any>, originalFunction: () => void): void;
+declare function PortalLinkTransmitterExitHook(data: ExtendedItemData<any>, originalFunction: () => void): void;
 /**
  * Draw the sync code UI depending on the mode.
  * Reciever has Random and Copy to clipboard buttons, transmitter has
@@ -71,14 +60,14 @@ declare function PortalLinkCycleChastityModule(sender: Character, item: Item): v
 /**
  * The handler for processing the hidden PortalLink messages
  * @param {Character} sender
- * @param {IChatRoomMessage} data
+ * @param {ServerChatRoomMessage} data
  */
-declare function PortalLinkProcessMessage(sender: Character, data: IChatRoomMessage): void;
+declare function PortalLinkProcessMessage(sender: Character, data: ServerChatRoomMessage): void;
 /**
  * This file contains everything needed to add remote-style functions
  * (a.k.a PortalLink compatibility) to an asset, both as a transmitter
  * or a reciever item.
- * For transmitters, you'll need to call the following {@link ExtendedItemCallbacks}
+ * For transmitters, you'll need to call the following {@link ExtendedItemScriptHookCallbacks}
  * callbacks:
  * - {@link PortalLinkTransmitterInit}
  * - {@link PortalLinkTransmitterLoad}
@@ -135,7 +124,7 @@ declare function PortalLinkProcessMessage(sender: Character, data: IChatRoomMess
 /** Max length of sync codes */
 declare const PortalLinkCodeLength: 8;
 /** Regex string for what consitutes a valid sync code */
-declare const PortalLinkCodeText: string;
+declare const PortalLinkCodeText: "[0-9a-f]{8}";
 /** Same thing but in regex form for quick .test and .match */
 declare const PortalLinkCodeRegex: RegExp;
 /** The DOM ID for the sync code field */

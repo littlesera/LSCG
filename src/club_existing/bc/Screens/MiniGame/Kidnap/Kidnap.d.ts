@@ -117,6 +117,12 @@ declare function KidnapRun(): void;
  */
 declare function KidnapClick(): void;
 /**
+ * Returns the experience gained from having successfully fought an opponent
+ * @param {Character} opponent
+ * @returns
+ */
+declare function KidnapSuccessWillpowerProgress(opponent: Character): number;
+/**
  * Handles the key press in the kidnap mini game, the C cheat key can help you recover some lost willpower
  * @returns {void} - Nothing
  */

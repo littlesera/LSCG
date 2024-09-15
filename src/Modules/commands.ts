@@ -9,6 +9,7 @@ import { CollarModule } from "./collar";
 import { StateModule } from "./states";
 import { PolymorphedState } from "./States/PolymorphedState";
 import { RedressedState } from "./States/RedressedState";
+import { LeashingModule } from "./leashing";
 
 // Remote UI Module to handle configuration on other characters
 // Can be used to "program" another character's hypnosis, collar, etc.
@@ -19,8 +20,8 @@ export class CommandModule extends BaseModule {
 	get hypno(): HypnoModule { return getModule<HypnoModule>("HypnoModule")! }
 	get collar(): CollarModule { return getModule<CollarModule>("CollarModule")! }
 
-	lscgCommands: ICommand[] = [
-		{
+	get commands(): ICommand[] {
+		return [{
 			Tag: "help",
 			Description: ": Opens the help for LSCG commands",
 			Action: (args, msg, parsed) => {
@@ -29,36 +30,8 @@ export class CommandModule extends BaseModule {
 					helpLines.push(`<br><b>/lscg ${c.Tag}</b> ${c.Description}`);
 				})
 				let helpText = `<b>- Little Sera's Club Games -</b>${helpLines.join()}<br>More to come...`;
-				LSCG_SendLocal(helpText);
+				LSCG_SendLocal(helpText, false);
 			},
-		}, {
-			Tag: 'zonk',
-			Description: ": Hypnotize yourself",
-			Action: () => {
-				if (!this.hypno.Enabled)
-					return;
-
-				if (this.states.settings.immersive) {
-					LSCG_SendLocal("/zonk disabled while immersive", 5000);
-					return;
-				}
-				if (!this.hypno.hypnoActivated)
-					this.hypno.StartTriggerWord(true, Player.MemberNumber);
-			}
-		}, {
-			Tag: 'unzonk',
-			Description: ": Awaken yourself",
-			Action: () => {
-				if (!this.hypno.Enabled)
-					return;
-
-				if (this.states.settings.immersive) {
-					LSCG_SendLocal("/unzonk disabled while immersive", 5000);
-					return;
-				}
-				if (this.hypno.hypnoActivated)
-					this.hypno.TriggerRestoreTimeout();
-			}
 		}, {
 			Tag: "show-triggers",
 			Description: ": Reveal your current trigger word(s) to yourself",
@@ -71,18 +44,7 @@ export class CommandModule extends BaseModule {
 				let hypnoStr = !this.hypno.Enabled ? "<i>Hypnosis not enabled.</i>" : (this.states.settings.immersive ? "<i>Hypnosis triggers hidden while immersive...</i>" : `<b>Hypnosis:</b> ${hypnoTriggers}<br><b>Awakeners:</b> ${awakenerTriggers}`);
 				let collarStr = !this.collar.settings.enabled ? "<i>Breathplay Collar not enabled.</i>" : (this.collar.settings.immersive ? "<i>Collar triggers hidden while immersive...</i>" : `<b>Collar Tighten:</b> ${tightenTrigger}<br><b>Collar Loosen:</b> ${loosenTrigger}`);
 
-				LSCG_SendLocal(`Your current triggers are: <br>${hypnoStr}<br>${collarStr}`);
-			}
-		}, {
-			Tag: "cycle-trigger",
-			Description: ": Force a cycle to a new trigger word if enabled",
-			Action: () => {
-				if (this.states.settings.immersive) {
-					LSCG_SendLocal("/cycle-trigger disabled while immersive", 5000);
-					return;
-				}
-				if (this.hypno.settings.enableCycle)
-					this.hypno.RollTriggerWord();
+				LSCG_SendLocal(`Your current triggers are: <br>${hypnoStr}<br>${collarStr}`, false);
 			}
 		}, {
 			Tag: "roll",
@@ -96,12 +58,12 @@ export class CommandModule extends BaseModule {
 			Description: "[defender] : Make a contested activity roll against another user where you are the attacker.",
 			Action: (args, msg, parsed) => {
 				if (!args) {
-					LSCG_SendLocal("Please specify a defender for your roll.", 10000);
+					LSCG_SendLocal("Please specify a defender for your roll.");
 					return;
 				}
 				let tgt = getCharacterByNicknameOrMemberNumber(args);
 				if (!tgt) {
-					LSCG_SendLocal(`Defender ${args} not found.`, 10000);
+					LSCG_SendLocal(`Defender ${args} not found.`);
 					return;
 				}
 				let check = getModule<ItemUseModule>("ItemUseModule")?.MakeActivityCheck(Player, tgt);
@@ -113,12 +75,12 @@ export class CommandModule extends BaseModule {
 			Description: "[attacker] : Make a contested activity roll where you are defending against another user.",
 			Action: (args, msg, parsed) => {
 				if (!args) {
-					LSCG_SendLocal("Please specify an attacker for your roll.", 10000);
+					LSCG_SendLocal("Please specify an attacker for your roll.");
 					return;
 				}
 				let tgt = getCharacterByNicknameOrMemberNumber(args);
 				if (!tgt) {
-					LSCG_SendLocal(`Attacker ${args} not found.`, 10000);
+					LSCG_SendLocal(`Attacker ${args} not found.`);
 					return;
 				}
 				let check = getModule<ItemUseModule>("ItemUseModule")?.MakeActivityCheck(tgt, Player);
@@ -129,52 +91,13 @@ export class CommandModule extends BaseModule {
 			Tag: "escape",
 			Description: " : If you are arm-grabbed or ear-pinched, will attempt to escape from their grip.",
 			Action: (args, msg, parsed) => {
-				var module = getModule<ActivityModule>("ActivityModule");
-				if (!module)
-					return;
-
-				module.TryEscape();
+				getModule<LeashingModule>("LeashingModule")?.TryEscape();
 			}
 		}, {
 			Tag: "emergency",
 			Description: " : Use in case of emergency to revert all LSCG settings to their default values.",
 			Action: (args, msg, parsed) => {
 				this.EmergencyRelease();	
-			}
-		}, {
-			Tag: "collar",
-			Description: " [tight/loose/stat] : Use to self-tighten, self-loosen, or read out information about your collar if allowed. Must be unrestrained to use.",
-			Action: (args, msg, parsed) => {
-				if (!this.collar.settings.collarPurchased) {
-					LSCG_SendLocal(`Collar module not purchased.`);
-					return;
-				}
-
-				if (!this.collar.wearingCorrectCollar) {
-					LSCG_SendLocal(`You are not wearing a properly configured collar.`);
-					return;
-				}
-				if (!this.collar.Enabled)
-					return;
-
-				if (parsed.length == 1) {
-					switch (parsed[0].toLocaleLowerCase()) {
-						case "tight":
-						case "tighten":
-							this.collar.TightenButtonPress(Player);
-							break;
-						case "loose":
-						case "loosen":
-							this.collar.LoosenButtonPress(Player);
-							break;
-						case "stat":
-						case "stats":
-							this.collar.StatsButtonPress(Player);
-							break;
-					} 
-				} else if (parsed.length == 0) {
-					LSCG_SendLocal(`<b>/lscg collar</b> [tight/loose/stat] : Use to self-tighten, self-loosen, or read out information about your collar if allowed. Must be unrestrained to use."`);
-				}
 			}
 		}, {
 			Tag: "conditions",
@@ -188,7 +111,7 @@ export class CommandModule extends BaseModule {
 					target.LSCG.StateModule.states.filter(s => s.active).map(s => s.type);
 				
 				let stateList = states.map(s => `<li>${s}</li>`).join("");
-				LSCG_SendLocal(`<div><b>Active Conditions on ${targetName}:</b><ul>${stateList}</ul></div>`, 12000);
+				LSCG_SendLocal(`<div><b>Active Conditions on ${targetName}:</b><ul>${stateList}</ul></div>`);
 			}
 		}, {
 			Tag: "get-outfit-code",
@@ -204,7 +127,7 @@ export class CommandModule extends BaseModule {
 				let str = LZString.compressToBase64(JSON.stringify(items));
 				str = RedressedState.CleanItemCode(str);
 				navigator.clipboard.writeText(str);
-				LSCG_SendLocal(`<div><b>Outfit Code for ${targetName} copied to clipboard.`, 8000);
+				LSCG_SendLocal(`<div><b>Outfit Code for ${targetName} copied to clipboard.`);
 			}
 		}, {
 			Tag: "get-polymorph-code",
@@ -220,7 +143,7 @@ export class CommandModule extends BaseModule {
 				let str = LZString.compressToBase64(JSON.stringify(items));
 				str = PolymorphedState.CleanItemCode(str);
 				navigator.clipboard.writeText(str);
-				LSCG_SendLocal(`<div><b>Polymorph Code for ${targetName} copied to clipboard.`, 8000);
+				LSCG_SendLocal(`<div><b>Polymorph Code for ${targetName} copied to clipboard.`);
 			}
 		}, {
 			Tag: "get-items-code",
@@ -235,30 +158,29 @@ export class CommandModule extends BaseModule {
 				let items = target.Appearance.map(item => toItemBundle(item, target));
 				let str = LZString.compressToBase64(JSON.stringify(items));
 				navigator.clipboard.writeText(str);
-				LSCG_SendLocal(`<div><b>Encoded Item Bundle Code for ${targetName} copied to clipboard.`, 8000);
+				LSCG_SendLocal(`<div><b>Encoded Item Bundle Code for ${targetName} copied to clipboard.`);
 			}
 		}, {
 			Tag: "parse-code",
 			Description: " : Reports what items/assets are in a compressed item code stored in the clipboard.",
 			Action: (args, msg, parsed) => {
-				navigator.clipboard
-				.readText()
-				.then(code => {
-					if (!code)
-					LSCG_SendLocal("No code in clipboard.", 5000);
+					let code = window.prompt("Compressed item code:")
+					if (!code) {
+						LSCG_SendLocal("No code entered.");
+						return;
+					}
 				
 					let items: ItemBundle[] = [];
 					try {
 						items = JSON.parse(LZString.decompressFromBase64(code)) as ItemBundle[];
 						if (!items)
-							LSCG_SendLocal("Invalid code.", 5000);
+							LSCG_SendLocal("Invalid code.");
 					} catch {
-						LSCG_SendLocal("Invalid code.", 5000);
+						LSCG_SendLocal("Invalid code.");
 					}
 
 					let itemList = items.map(item => `<li>${item.Group} - ${item.Name}</li>`).join("");
-					LSCG_SendLocal(`<div><b>Encoded Items:</b><ul>${itemList}</ul></div>`, 30000);
-				});
+					LSCG_SendLocal(`<div><b>Encoded Items:</b><ul>${itemList}</ul></div>`);
 			}
 		}, {
 			Tag: "export",
@@ -266,30 +188,39 @@ export class CommandModule extends BaseModule {
 			Action: (args, msg, parsed) => {
 				let compressed = ExportSettings();
 				navigator.clipboard.writeText(compressed);
-				LSCG_SendLocal(`<div><b>LSCG</b> settings copied to clipboard.`, 8000);
+				LSCG_SendLocal(`<div><b>LSCG</b> settings copied to clipboard.`);
 			}
 		}, {
 			Tag: "import",
 			Description: " : Imports all LSCG settings from the clipboard, overwriting any current configuration.",
 			Action: (args, msg, parsed) => {
-				navigator.clipboard
-				.readText()
-				.then(compressed => {
-					if (!compressed)
-						LSCG_SendLocal("No content in clipboard.", 5000);
+				if (confirm("Importing settings will overwrite existing settings. \nAre you sure?")) {
+					let compressed = window.prompt("LSCG Export string:");
+					if (!compressed) {
+						LSCG_SendLocal("No content entered.");
+						return;
+					}
 					localStorage.setItem(`LSCG_${Player.MemberNumber}_Backup`, ExportSettings());
 					if (ImportSettings(compressed))
-						LSCG_SendLocal(`<div><b>LSCG</b> settings Imported from clipboard. If this was in error, try using /lscg restore</div>`, 30000);
+						LSCG_SendLocal(`<div><b>LSCG</b> settings Imported from clipboard. If this was in error, try using /lscg restore</div>`);
 					else
-						LSCG_SendLocal(`Failed to import LSCG settings from clipboard.`, 30000);
-				});
+						LSCG_SendLocal(`Failed to import LSCG settings from clipboard.`);
+				}
 			}
-		}
-	]
+		}];
+	}
+
+	get moduleCommands(): ICommand[] {
+		return modules().map(m => m.commands).reduce((a, b) => a.concat(b));
+	}
+
+	get allCommands(): ICommand[] {
+		return this.moduleCommands.filter((c, ix, arr) => arr.indexOf(c) == ix);
+	}
 
 	get orderedCommands(): ICommand[] {
 		var helpCommand = this.getSubcommand("help")!;
-		var sorted = this.lscgCommands.filter(c => c.Tag != "help").sort((a, b) => a.Tag.localeCompare(b.Tag));
+		var sorted = this.allCommands.filter(c => c.Tag != "help").sort((a, b) => a.Tag.localeCompare(b.Tag));
 		return [helpCommand, ...sorted];
 	}
 
@@ -298,7 +229,7 @@ export class CommandModule extends BaseModule {
 	}
 
 	getSubcommand(name: string): ICommand | undefined {
-		return this.lscgCommands.find(c => c.Tag.toLocaleLowerCase() == name.toLocaleLowerCase());
+		return this.allCommands.find(c => c.Tag.toLocaleLowerCase() == name.toLocaleLowerCase());
 	}
 
     load(): void {

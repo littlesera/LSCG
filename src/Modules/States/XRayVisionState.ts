@@ -1,9 +1,22 @@
-import { SendAction, addCustomEffect, getRandomInt, hookFunction, isBind, isCloth, removeCustomEffect } from "utils";
-import { BaseState, StateRestrictions } from "./BaseState";
+import { GetItemNameAndDescriptionConcat, hookFunction, isCloth, isPhraseInString } from "utils";
+import { BaseState } from "./BaseState";
 import { StateModule } from "Modules/states";
 import { ModuleCategory } from "Settings/setting_definitions";
 
 export class XRayVisionState extends BaseState {
+    XRayKeywords: string[] = [
+        "xray",
+        "x-ray",
+        "x ray"
+    ];
+    PossibleXRayEyewear: string[] = [
+        "InteractiveVisor",
+        "InteractiveVRHeadset",
+        "FuturisticMask",
+        "BlackoutLenses",
+        "DroneMask",
+        "AnimeLenses"
+    ]
     Type: LSCGState = "x-ray-vision";
 
     Icon(C: OtherCharacter): string {
@@ -17,20 +30,54 @@ export class XRayVisionState extends BaseState {
         super(state);
     }
 
+    get Active(): boolean {
+        return this.config.active || this.WearingGlasses;
+    }
+
+    _WearingGlasses: boolean = false;
+    get WearingGlasses(): boolean {
+        let newWearingState = false;
+        let eyewear = InventoryGet(Player, "ItemHead");
+        if (!!eyewear && this.PossibleXRayEyewear.some(name => name == eyewear?.Asset?.Name ?? "")) {
+            let itemStr = GetItemNameAndDescriptionConcat(eyewear) ?? "";
+            newWearingState = this.XRayKeywords.some(key => isPhraseInString(itemStr ?? "", key));
+        }
+        if (this._WearingGlasses != newWearingState) {
+            setTimeout(() => {
+                // If glasses change, queue a redraw
+                ChatRoomCharacter.forEach(C => {
+                    CharacterLoadCanvas(C);
+                });
+            }, 1000);
+        }            
+        this._WearingGlasses = newWearingState;
+        return this._WearingGlasses
+    }
+
     Init(): void {
-        hookFunction("CommonCallFunctionByNameWarn", 1, (args, next) => {
+        hookFunction("CommonCallFunctionByName", 1, (args, next) => {
             let funcName = args[0];
-            let params = args[1]
-            let C = params['C'] as OtherCharacter;
-            let CA = params['CA'];
-            let ret = next(args) ?? {};
-            let regex = /Assets(.+)BeforeDraw/i;
-            if (regex.test(funcName) && this.Active && this.CanViewXRay(C) && !!CA && isCloth(CA)) {
-                let curOpacity = ret.Opacity ?? CA.Asset?.Opacity ?? 1;
-                ret.Opacity = curOpacity * .5;
-                ret.AlphaMasks = [];
+            let params = args[1];
+            if (!params) {
+                return next(args);
             }
-            return ret;
+            let C = params['C'] as OtherCharacter;
+            let CA = params['CA'] as Item;
+            let regex = /Assets(.+)BeforeDraw/i;
+            if (regex.test(funcName) && this.Active) {
+                let opacityEnabled = Player.IsPlayer() && (Player.LSCG?.OpacityModule?.enabled ?? true);
+                let ret = next(args) ?? {};
+                if (opacityEnabled && this.CanViewXRay(C) && !!CA && isCloth(CA) && !(params['Property']?.LSCGLeadLined ?? false)) {
+                    let layerName = (params['L'] as string ?? "")?.trim().slice(1) ?? "";
+                    let layerIx = CA.Asset.Layer.findIndex(l => l.Name == layerName);
+                    let originalLayerOpacity = CA.Asset.Layer[layerIx]?.Opacity ?? CA.Asset.Opacity;
+                    let curOpacity = ret.Opacity ?? originalLayerOpacity ?? 1;
+                    ret.Opacity = curOpacity * .5;
+                    ret.AlphaMasks = [];
+                }
+                return ret;
+            } else
+                return next(args);
         }, ModuleCategory.States);
     }
 

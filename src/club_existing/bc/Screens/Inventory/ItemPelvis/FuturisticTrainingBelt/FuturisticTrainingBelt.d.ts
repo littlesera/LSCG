@@ -1,13 +1,8 @@
-/** @type {ExtendedItemScriptHookCallbacks.Load<VibratingItemData>} */
 declare function InventoryItemPelvisFuturisticTrainingBeltLoadHook(data: VibratingItemData, originalFunction: () => void): void;
-/** @type {ExtendedItemScriptHookCallbacks.Draw<VibratingItemData>} */
 declare function InventoryItemPelvisFuturisticTrainingBeltDrawHook(data: VibratingItemData, originalFunction: () => void): void;
-/** @type {ExtendedItemScriptHookCallbacks.Click<VibratingItemData>} */
 declare function InventoryItemPelvisFuturisticTrainingBeltClickHook(data: VibratingItemData, originalFunction: () => void): void;
-/** @type {ExtendedItemScriptHookCallbacks.Exit<VibratingItemData>} */
 declare function InventoryItemPelvisFuturisticTrainingBeltExitHook(data: VibratingItemData, originalFunction: () => void): void;
-/** @type {ExtendedItemCallbacks.PublishAction<ExtendedItemOption>} */
-declare function InventoryItemPelvisFuturisticTrainingBeltPublishAction(C: Character, item: Item, newOption: ExtendedItemOption): void;
+declare function InventoryItemPelvisFuturisticTrainingBeltPublishAction(C: Character, item: Item, newOption: ExtendedItemOption, previousOption: ExtendedItemOption): void;
 /**
  * Not called.
  * @param {Character} C
@@ -63,10 +58,6 @@ declare function AssetsItemPelvisFuturisticTrainingBeltScriptUpdatePlayer(data: 
  * @returns
  */
 declare function AssetsItemPelvisFuturisticTrainingBeltScriptStateMachine(data: VibratingItemData, drawData: DynamicScriptCallbackData<FuturisticTrainingBeltPersistentData>): void;
-/**
- * @typedef {{ UpdateTime?: number, LastMessageLen?: number, CheckTime?: number, DeviceState?: number, DeviceStateTimer?: number, DeviceVibeMode?: VibratorMode }} FuturisticTrainingBeltPersistentData
- */
-/** @type {ExtendedItemScriptHookCallbacks.ScriptDraw<VibratingItemData, FuturisticTrainingBeltPersistentData>} */
 declare function AssetsItemPelvisFuturisticTrainingBeltScriptDraw(data: VibratingItemData, originalFunction: (drawData: DynamicScriptCallbackData<FuturisticTrainingBeltPersistentData>) => void, drawData: DynamicScriptCallbackData<FuturisticTrainingBeltPersistentData>): void;
 declare var FuturisticTrainingBeltPermissions: string[];
 declare var FuturisticTrainingBeltSpeechPunishments: string[];

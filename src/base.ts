@@ -1,6 +1,6 @@
 import { BaseSettingsModel } from "Settings/Models/base";
 import { SettingsModel } from "Settings/Models/settings";
-import { Subscreen } from "Settings/setting_definitions";
+import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
 
 export abstract class BaseModule {
 	get settingsScreen() : Subscreen | null {
@@ -28,7 +28,9 @@ export abstract class BaseModule {
 			return false;
 		return Player.LSCG.GlobalModule.enabled && this.settings.enabled && 
 			(ServerPlayerIsInChatRoom() || 
-			(CurrentModule == "Room" && CurrentScreen == "Crafting"));
+			(CurrentModule == "Room" && CurrentScreen == "Crafting") ||
+			(CurrentModule == "Room" && CurrentScreen == "MainHall") ||
+			(CurrentModule == "Character" && CurrentScreen == "Appearance"));
 	}
 
 	init() {
@@ -65,5 +67,10 @@ export abstract class BaseModule {
 
 	safeword() {
 		// Empty
+	}
+
+	get commands(): ICommand[] {
+		// Empty
+		return [];
 	}
 }

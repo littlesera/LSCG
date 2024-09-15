@@ -24,6 +24,11 @@ declare function AsylumEntranceCanGetNurseUniform(): boolean;
  */
 declare function AsylumEntranceNurseHasGGTSCollar(): boolean;
 /**
+ * Returns TRUE if the player and the current character can play Club Card
+ * @returns {boolean} - Returns TRUE if both aren't restrained
+ */
+declare function AsylumEntranceCanPlayClubCard(): boolean;
+/**
  * Loads the room and generates the nurse. Is called dynamically
  * @returns {void} - Nothing
  */
@@ -239,6 +244,16 @@ declare function AsylumEntranceGiveRestraints(): void;
  * @returns {void} - Nothing
  */
 declare function AsylumEntrancePayTenMinutes(): void;
+/**
+ * When the player starts a club card game
+ * @returns {void} - Nothing
+ */
+declare function AsylumEntranceClubCardStart(): void;
+/**
+ * When the player ends a club card game
+ * @returns {void} - Nothing
+ */
+declare function AsylumEntranceClubCardEnd(): void;
 declare var AsylumEntranceBackground: string;
 /** @type {null | NPCCharacter} */
 declare var AsylumEntranceNurse: null | NPCCharacter;

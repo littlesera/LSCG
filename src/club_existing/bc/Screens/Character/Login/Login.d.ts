@@ -54,6 +54,11 @@ declare function LoginValidCollar(): void;
  */
 declare function LoginMistressItems(): void;
 /**
+ * Give the matching RewardMemberNumber Club Card to the player
+ * @returns {void} Nothing
+ */
+declare function LoginClubCard(): void;
+/**
  * Adds or confiscates pony equipment from the player. Only players that are ponies or trainers can have the pony
  * equipment.
  * @returns {void} Nothing
@@ -116,6 +121,8 @@ declare function LoginQueue(Pos: number): void;
  * @returns {void} Nothing
  */
 declare function LoginResponse(C: object | string): void;
+/** Check if the player's browser has ES2020 support */
+declare function LoginCheckES2020(): void;
 /**
  * Handles player click events on the character login screen
  * @returns {void} Nothing

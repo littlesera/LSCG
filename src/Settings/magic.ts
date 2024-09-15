@@ -4,6 +4,7 @@ import { PairedBaseState } from "Modules/States/PairedBaseState";
 import { stringIsCompressedItemBundleArray } from "utils";
 import { PolymorphedState } from "Modules/States/PolymorphedState";
 import { RedressedState } from "Modules/States/RedressedState";
+import { drawTooltip } from "./settingUtils";
 
 export const pairedSpellEffects = [
 	LSCGSpellEffect.orgasm_siphon,
@@ -72,8 +73,8 @@ export class GuiMagic extends GuiSubscreen {
 				}, <Setting>{
 					type: "checkbox",
 					label: "Prevent X-Ray Vision",
-					description: "Enhance your clothing with xray-vision-blockers.",
-					setting: () => this.settings.blockXRay ?? false,
+					description: "Lead-line all your clothing.",
+					setting: () => this.settings.blockXRay ?? true,
 					setSetting: (val) => this.settings.blockXRay = val
 				}, <Setting>{
 					type: "label",
@@ -375,8 +376,10 @@ export class GuiMagic extends GuiSubscreen {
 					this.settings.blockedSpellEffects = [];
 				let val = this.settings.blockedSpellEffects.indexOf(this.Effect) > -1;
 				let blockedStr = val ? "Blocked" : "Allowed";
-				DrawBackNextButton(780, this.getYPos(5)-32, 600, 64, this.Effect, "White", "", () => blockedStr, () => blockedStr);
+				DrawBackNextButton(780, this.getYPos(5)-32, 600, 64, this.Effect, "White", "", () => "", () => "");
 				DrawCheckbox(780 + 600 + 64, this.getYPos(5) - 32, 64, 64, "", val);
+				if (MouseIn(780 + 600 + 64, this.getYPos(5) - 32, 64, 64))
+					drawTooltip(MouseX, MouseY, 128, blockedStr, "left");
 
 				MainCanvas.textAlign = "left";
 				DrawTextFit(GuiMagic.SpellEffectDescription(this.Effect), 780, this.getYPos(6), 1000, "Black");
@@ -691,6 +694,10 @@ export class GuiMagic extends GuiSubscreen {
 				return "Petrifies the target.";
 			case LSCGSpellEffect.horny:
 				return "Arouses the target.";
+			case LSCGSpellEffect.denial:
+				return "Denies the target any orgasms.";
+			case LSCGSpellEffect.orgasm:
+				return "Forced an orgasm upon the target.";
 			case LSCGSpellEffect.hypnotizing:
 				return "Hypnotizes the target.";
 			case LSCGSpellEffect.slumber:

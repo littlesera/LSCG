@@ -164,8 +164,8 @@ declare const DynamicDrawFontMeasurements: Record<string, {
  */
 type DynamicDrawTextDirection = number;
 declare namespace DynamicDrawTextDirection {
-    const CLOCKWISE: number;
-    const ANTICLOCKWISE: number;
+    let CLOCKWISE: number;
+    let ANTICLOCKWISE: number;
 }
 /**
  * An enum encapsulating the possible curve directions of circular text. Can be "SMILEY" (bottom of text on the outer arc) or "FROWNY"
@@ -173,8 +173,8 @@ declare namespace DynamicDrawTextDirection {
  */
 type DynamicDrawTextCurve = number;
 declare namespace DynamicDrawTextCurve {
-    const SMILEY: number;
-    const FROWNY: number;
+    let SMILEY: number;
+    let FROWNY: number;
 }
 /**
  * An enum encapsulating the available drawing effects that can be applied to dynamic text.

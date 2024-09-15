@@ -24,6 +24,8 @@ export enum ModuleCategory {
 	ItemUse = 7,
 	States = 8,
 	Magic = 9,
+	Opacity = 10,
+	Leashed = 11,
 	RemoteUI = 98,
 	Misc = 99,
 	Commands = 100

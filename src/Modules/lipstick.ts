@@ -12,6 +12,16 @@ export class LipstickModule extends BaseModule {
         };
     }
 
+    get baseKissTypeRecord(): TypeRecord {
+        return {
+            "c": 0,
+            "r": 1,
+            "f": 0,
+            "n": 0,
+            "l": 0
+        }
+    }
+
     safeword(): void {
         this.RemoveKissMark("all");
     }
@@ -108,8 +118,9 @@ export class LipstickModule extends BaseModule {
             InventoryRemove(Player, slot);
             InventoryWear(Player, "Kissmark", slot, "Default", 1, Player.MemberNumber ?? 0, undefined, true);
             var marks = InventoryGet(Player, slot);
+            // Maybe not needed anymore?
             if (!!marks && !!marks.Property)
-                marks.Property.Type = "c0r1f0n0l0";
+                marks.Property.TypeRecord = this.baseKissTypeRecord;
             return marks;
         } else return undefined;
     }
@@ -122,22 +133,25 @@ export class LipstickModule extends BaseModule {
         return false;
     }
     
-    getKissMarkStatus(typeString: string) {
+    getKissMarkStatus(typeRecord: TypeRecord) {
+        //"c0r1f0n0l0"
         return {
-            cheek1: typeString.substring(1,2) == '1',
-            cheek2: typeString.substring(3,4) == '0',
-            forehead: typeString.substring(5,6) == '1',
-            neck1: typeString.substring(7,8) == '1',
-            neck2: typeString.substring(9,10) == '1'
+            cheek1: typeRecord["c"] == 1,
+            cheek2: typeRecord["r"] == 0,
+            forehead: typeRecord["f"] == 1,
+            neck1: typeRecord["n"] == 1,
+            neck2: typeRecord["l"] == 1
         };
     }
     
-    getKissMarkTypeString(status: any) {
-        return "c" + (status.cheek1 ? "1" : "0") + 
-            "r" + (status.cheek2 ? "0" : "1") + 
-            "f" + (status.forehead ? "1" : "0") + 
-            "n" + (status.neck1 ? "1" : "0") + 
-            "l" + (status.neck2 ? "1" : "0");
+    getKissMarkTypeRecord(status: any) {
+        return <TypeRecord>{
+            "c": status.cheek1 ? 1 : 0,
+            "r": status.cheek2 ? 0 : 1,
+            "f": status.forehead ? 1 : 0,
+            "n": status.neck1 ? 1 : 0,
+            "l": status.neck2 ? 1 : 0
+        }
     }    
 
     RemoveKissMark(location: "cheek" | "forehead" | "neck" | "all") {
@@ -146,7 +160,7 @@ export class LipstickModule extends BaseModule {
             return;
 
         marks.forEach(mark => {
-            var status = this.getKissMarkStatus(mark?.Property?.Type ?? "c0r1f0n0l0");
+            var status = this.getKissMarkStatus(mark?.Property?.TypeRecord ?? this.baseKissTypeRecord);
 
             switch (location) {
                 case "cheek" :
@@ -171,7 +185,7 @@ export class LipstickModule extends BaseModule {
             }
         
             if (!!mark && !!mark.Property)
-                mark.Property.Type = this.getKissMarkTypeString(status);
+                mark.Property.TypeRecord = this.getKissMarkTypeRecord(status);
         })
         
         if (location == "cheek" || location == "all")
@@ -179,7 +193,7 @@ export class LipstickModule extends BaseModule {
 
         ChatRoomCharacterUpdate(Player);
     }
-    
+
     AddKissMark(sender: Character, location: string) {
         var color = this.getKisserLipColor(sender);
         if (color == "Default")
@@ -190,7 +204,7 @@ export class LipstickModule extends BaseModule {
             return;
     
         marks.Color = color;
-        var status = this.getKissMarkStatus(marks?.Property?.Type ?? "c0r1f0n0l0");
+        var status = this.getKissMarkStatus(marks?.Property?.TypeRecord ?? this.baseKissTypeRecord);
     
         // Adjust marks
         switch (location) {
@@ -214,7 +228,7 @@ export class LipstickModule extends BaseModule {
         }
     
         if (!!marks && !!marks.Property)
-            marks.Property.Type = this.getKissMarkTypeString(status);
+            marks.Property.TypeRecord = this.getKissMarkTypeRecord(status);
         ChatRoomCharacterUpdate(Player);
     }
 

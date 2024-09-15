@@ -1,5 +1,6 @@
 /**
  * Get the list of struggle minigames.
+ * @returns {[StruggleKnownMinigames, StruggleMinigame][]}
  */
 declare function StruggleGetMinigames(): [StruggleKnownMinigames, StruggleMinigame][];
 /**
@@ -25,15 +26,7 @@ declare function StruggleProgressGetOperation(C: Character, PrevItem: Item, Next
  * @returns {boolean} - TRUE if it's allowed
  */
 declare function StruggleAllowLoosen(): boolean;
-/**
- * Handles the minigames' KeyDown event.
- *
- * Only applicable for the Strength minigame.
- *
- * Increases or decreases the struggle mini-game, if a/A or s/S were pressed.
- * @returns {void} - Nothing
- */
-declare function StruggleKeyDown(): void;
+declare function StruggleKeyDown(event: KeyboardEvent): boolean;
 /**
  * Handles the minigames' Click event, whether on the selection screen or in the minigame themselves.
  *
@@ -86,17 +79,21 @@ declare function StruggleMinigameIsRunning(): boolean;
  * This function initializes the common state and calls the requested minigame
  * setup function.
  *
- * @param {Character} C
- * @param {StruggleKnownMinigames} MiniGame
- * @param {Item} PrevItem
- * @param {Item} NextItem
- * @param {StruggleCompletionCallback} Completion
+ * @param {Character} C - The character currently doing the struggling, either on itself (ie. as Player), or on someone else.
+ * @param {StruggleKnownMinigames} MiniGame - The minigame to start
+ * @param {Item | null} PrevItem - The item currently being present on the character, or null if none
+ * @param {Item} NextItem - The item currently being added on the character, or null if it's a removal
+ * @param {StruggleCompletionCallback} Completion - A callback that will be called when the minigame ends
  */
-declare function StruggleMinigameStart(C: Character, MiniGame: StruggleKnownMinigames, PrevItem: Item, NextItem: Item, Completion: StruggleCompletionCallback): void;
+declare function StruggleMinigameStart(C: Character, MiniGame: StruggleKnownMinigames, PrevItem: Item | null, NextItem: Item, Completion: StruggleCompletionCallback): void;
 /**
  * Stop the struggle minigame and reset it so it can be reentered.
  *
  * If the game was already played a bit, it will also log the failure in chat.
+ *
+ * Do not call this from within minigames, use {@link StruggleMinigameCheckCancel}
+ * and {@link StruggleProgressCheckEnd} instead so whoever started the minigame
+ * knows it has ended and can react accordingly.
  *
  * @returns {void}
  */
@@ -125,9 +122,9 @@ declare function StruggleStrengthDraw(C: Character): void;
  * Handle events for the Strength minigame
  *
  * @param {"Click"|"KeyDown"} EventType
- * @returns {void}
+ * @returns {boolean}
  */
-declare function StruggleStrengthHandleEvent(EventType: "Click" | "KeyDown"): void;
+declare function StruggleStrengthHandleEvent(EventType: "Click" | "KeyDown", event: any): boolean;
 /**
  * Advances the Struggle minigame progress
  *
@@ -167,9 +164,10 @@ declare function StruggleLoosenSetup(): void;
 /**
  * Handle events for the loosen minigame
  * @param {"Click"|"KeyDown"} EventType
- * @returns {void}
+ * @param {KeyboardEvent} event
+ * @returns {boolean}
  */
-declare function StruggleLoosenHandleEvent(EventType: "Click" | "KeyDown"): void;
+declare function StruggleLoosenHandleEvent(EventType: "Click" | "KeyDown", event: KeyboardEvent): boolean;
 /**
  * Starts the dialog progress bar for struggling out of bondage and keeps the items that needs to be added / swapped / removed.
  * First the challenge level is calculated based on the base item difficulty, the skill of the rigger and the escapee and modified, if
@@ -195,9 +193,8 @@ declare function StruggleFlexibilityCheck(): boolean;
  * Handle events for the Flexibility minigame
  *
  * @param {"Click"|"KeyDown"} EventType
- * @returns {void}
  */
-declare function StruggleFlexibilityHandleEvent(EventType: "Click" | "KeyDown"): void;
+declare function StruggleFlexibilityHandleEvent(EventType: "Click" | "KeyDown", event: any): boolean;
 /**
  * Advances the Flexibility minigame progress
  *
@@ -225,9 +222,9 @@ declare function StruggleDexterityDraw(C: Character): void;
  * Handle events for the Flexibility minigame
  *
  * @param {"Click"|"KeyDown"} EventType
- * @returns {void}
+ * @returns {boolean}
  */
-declare function StruggleDexterityHandleEvent(EventType: "Click" | "KeyDown"): void;
+declare function StruggleDexterityHandleEvent(EventType: "Click" | "KeyDown", event: any): boolean;
 /**
  * Advances the Dexterity minigame progress
  *
@@ -237,9 +234,9 @@ declare function StruggleDexterityProcess(): void;
 /**
  * Handles events for the LockPicking minigame
  * @param {"Click"|"KeyDown"} EventType
- * @returns {void} - Nothing
+ * @returns {boolean} - Nothing
  */
-declare function StruggleLockPickHandleEvent(EventType: "Click" | "KeyDown"): void;
+declare function StruggleLockPickHandleEvent(EventType: "Click" | "KeyDown", event: any): boolean;
 /**
  * Advances the lock picking dialog
  * @returns {void} - Nothing
@@ -294,11 +291,16 @@ declare var StruggleProgressStruggleCount: number;
 declare var StruggleProgressAuto: number;
 declare var StruggleProgressOperation: string;
 declare var StruggleProgressSkill: number;
-declare var StruggleProgressLastKeyPress: number;
+declare var StruggleProgressLastKeyPress: any;
 declare var StruggleProgressChallenge: number;
 declare var StruggleLoosenSpeed: number;
 declare var StruggleLoosenAngle: number;
 declare var StruggleLoosenHoleAngle: number;
+/**
+ * Character expression at the beginning of the minigame; player-only
+ * @type {Partial<Record<ExpressionGroupName, ExpressionName>> | undefined}
+ */
+declare var StruggleExpressionStore: Partial<Record<ExpressionGroupName, ExpressionName>> | undefined;
 /**
  * The struggle minigame progress
  *
@@ -314,12 +316,24 @@ declare let StruggleProgress: number;
  */
 declare var StruggleProgressCurrentMinigame: StruggleKnownMinigames | "";
 /**
- * The item worn at the beginning of the minigame
+ * The item worn at the beginning of the minigame.
+ *
+ * This is a (shallow) copy so that changes made outside of the minigame
+ * don't cause crashes if the data gets changed externally —
+ * which can happen if someone else removes the item we're currently
+ * struggling with. Changes made to it might be ignored!
+ *
  * @type {Item | null}
  */
 declare var StruggleProgressPrevItem: Item | null;
 /**
  * The item that should be worn at the end of the minigame
+ *
+ * This is a (shallow) copy so that changes made outside of the minigame
+ * don't cause crashes if the data gets changed externally —
+ * which can happen if someone else removes the item we're currently
+ * struggling with. Changes made to it might be ignored!
+ *
  * @type {Item | null}
  */
 declare var StruggleProgressNextItem: Item | null;
@@ -343,5 +357,10 @@ declare var StruggleProgressDexTarget: number;
 declare var StruggleProgressDexCurrent: number;
 declare var StruggleProgressDexMax: number;
 declare var StruggleProgressDexDirectionRight: boolean;
-/** @type {Record<string, StruggleMinigame>} */
-declare const StruggleMinigames: Record<string, StruggleMinigame>;
+/** @type {Record<StruggleKnownMinigames, StruggleMinigame>} */
+declare const StruggleMinigames: Record<StruggleKnownMinigames, StruggleMinigame>;
+/**
+ * List of expressions to go through while struggling, keyed by duration
+ * @type {Record<number, Partial<Record<ExpressionGroupName, ExpressionName>>>}
+ */
+declare const StruggleFacesList: Record<number, Partial<Record<ExpressionGroupName, ExpressionName>>>;

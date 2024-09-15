@@ -3,8 +3,7 @@ import { getModule, modules } from "modules";
 import { BaseSettingsModel, GlobalSettingsModel } from "Settings/Models/base";
 import { IPublicSettingsModel, PublicSettingsModel, SettingsModel } from "Settings/Models/settings";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { removeAllHooksByModule, hookFunction, getCharacter, drawSvg, SVG_ICONS, sendLSCGMessage, settingsSave, LSCG_CHANGES, LSCG_SendLocal, mouseTooltip, isCloth } from "../utils";
-import { ActivityModule, GrabType } from "./activities";
+import { removeAllHooksByModule, hookFunction, getCharacter, drawSvg, SVG_ICONS, sendLSCGMessage, settingsSave, LSCG_CHANGES, LSCG_SendLocal, mouseTooltip } from "../utils";
 import { HypnoModule } from "./hypno";
 import { CollarModule } from "./collar";
 
@@ -15,10 +14,10 @@ import { StateMigrator } from "./Migrators/StateMigrator";
 import { MagicModule } from "./magic";
 import { StateModule } from "./states";
 import { drawTooltip } from "Settings/settingUtils";
+import { GrabType, LeashingModule } from "./leashing";
 
 // Core Module that can handle basic functionality like server handshakes etc.
-// Maybe can consolidate things like hypnosis/suffocation basic state handling too..
-export class CoreModule extends BaseModule {   
+export class CoreModule extends BaseModule {
 
     toggleSharedButton = {
         x: 1898,
@@ -77,16 +76,16 @@ export class CoreModule extends BaseModule {
         hookFunction("ServerAccountBeep", 10, (args, next) => {
             let data = args[0];
             // Intercept LSCG beeps directly
-            if (data.BeepType == "LSCG") {
+            if (data.BeepType == "Leash" && !!data.Message && data.Message.IsLSCG === true) {
                 let msg = data.Message as LSCGMessageModel;
                 if (msg.type == "command")
-                    this.Command(data.MemberNumber, msg)
+                    this.Command(data.MemberNumber, msg);
             }
             else
                 return next(args);
-        })
+        }, ModuleCategory.Core);
 
-        hookFunction("ChatRoomDrawCharacterOverlay", 1, (args, next) => {
+        hookFunction("ChatRoomCharacterViewDrawOverlay", 1, (args, next) => {
             next(args);
             const [C, CharX, CharY, Zoom] = args as [Character, number, number, number];
             const Char = getCharacter(C.MemberNumber!) as OtherCharacter | PlayerCharacter;
@@ -99,11 +98,8 @@ export class CoreModule extends BaseModule {
                 var starColor = isAdmin ? "#008080" : "#00AEAE";
                 if (version != LSCG_VERSION)
                     starColor = "#ff4545";
-                var xOffset = 0;
-                if (!window.bcx)
-                    xOffset = -10;
-                drawSvg(MainCanvas, SVG_ICONS.STAR, CharX + (xOffset + 410) * Zoom, CharY + 8 * Zoom, 40 * Zoom, 40 * Zoom, 50, 0.8, 1, starColor);
-                if (MouseIn(CharX + 405 * Zoom, CharY + 3 * Zoom, 50 * Zoom, 50 * Zoom)) {
+                drawSvg(MainCanvas, SVG_ICONS.STAR, CharX + 400 * Zoom, CharY + 8 * Zoom, 40 * Zoom, 40 * Zoom, 50, 0.8, 1, starColor);
+                if (MouseIn(CharX + 385 * Zoom, CharY + 3 * Zoom, 50 * Zoom, 50 * Zoom)) {
                     mouseTooltip(version, CharX + 425 * Zoom, CharY + 50 * Zoom);
                 }
             }
@@ -112,7 +108,7 @@ export class CoreModule extends BaseModule {
         // Pull other public crafts from the room
         hookFunction("DialogInventoryBuild", 1, (args, next) => {
             next(args);
-            if (this.settings.seeSharedCrafts) {
+            if (this.settings.seeSharedCrafts && DialogMenuMode !== "permissions") {
                 let target = args[0];
                 if (!target.FocusGroup)
                     return;
@@ -124,10 +120,13 @@ export class CoreModule extends BaseModule {
                                 if ((Craft.Private == null) || (Craft.Private == false)) {
                                     Craft.MemberName = CharacterNickname(C);
                                     Craft.MemberNumber = C.MemberNumber;
-                                    const group = AssetGroupGet(target.AssetFamily, target.FocusGroup.Name);
-                                    for (let A of group.Asset)
-                                        if (CraftingAppliesToItem(Craft, A) && DialogCanUseCraftedItem(target, Craft))
-                                            DialogInventoryAdd(target, { Asset: A, Craft: Craft }, false);
+
+                                    const canUseCraftedItem = DialogCanUseCraftedItem as (C: Character, Craft: CraftingItem, asset: Asset) => boolean;
+                                    for (const Asset of (CraftingAssets[Craft.Item] ?? [])) {
+                                        if (Asset.Group.Name === target.FocusGroup.Name && canUseCraftedItem(target, Craft, Asset)) {
+                                            DialogInventoryAdd(target, { Asset, Craft }, false);
+                                        }
+                                    }
                                 }
                     }
                 });
@@ -165,163 +164,7 @@ export class CoreModule extends BaseModule {
                 DialogInventoryBuild(C, true, false);
             }
         });
-
-        hookFunction("ItemColorLoad", 1, (args, next) => {
-            next(args);
-            let C = args[0] as Character;
-            let Item = args[1] as Item;
-            if (C.IsPlayer() && isCloth(Item)) {
-                this.OpacityCharacter = C;
-                this.OpacityItem = Item;
-                ElementPosition(this.opacityEleId, 250, 200, 300, 20);
-                ElementPosition(this.opacityLabelId, 250, 150, 300, 20);
-                ElementValue(this.opacityEleId, "" + (this.OpacityItem?.Property?.LSCGOpacity ?? 1));
-            }
-        });
-
-        hookFunction("ItemColorFireExit", 1, (args, next) => {
-            next(args);
-            this.OpacityCharacter = null;
-            this.OpacityItem = null;
-            ElementPosition(this.opacityEleId, -999, -999, 1, 1);
-            ElementPosition(this.opacityLabelId, -999, -999, 1, 1);
-        });
-
-        hookFunction("CommonCallFunctionByNameWarn", 2, (args, next) => {
-            let funcName = args[0];
-            let params = args[1]
-            let C = params['C'] as OtherCharacter;
-            let CA = params['CA'];
-            let ret = next(args) ?? {};
-            let regex = /Assets(.+)BeforeDraw/i;
-            if (regex.test(funcName) && !!CA && isCloth(CA)) {
-                ret.Opacity = Math.min((ret.Opacity ?? 1), (CA.Property?.LSCGOpacity ?? CA.Asset?.Opacity ?? 1));
-            }
-            return ret;
-        }, ModuleCategory.Core);
-
-        // hookFunction("InventoryGetItemProperty", 1, (args, next) => {
-        //     let item = args[0];
-        //     let prop = args[1];
-        //     if (prop == "HideItemExclude" && (item?.Property?.LSCGOpacity ?? 1) < 1) {
-        //         let result = (item.Property.HideItemExclude ?? []) as string[];
-        //         let hideGroups = item.Asset.Hide as string[];
-        //         if (!hideGroups)
-        //             return result;
-        //         //hideGroups = hideGroups.filter(g => g != "Pussy");
-        //         AssetMap.forEach((a) => {
-        //             if (hideGroups.indexOf(a.Group.Name) > -1) 
-        //                 result.push(`${a.Group.Name}${a.Name}`);
-        //         });
-        //         result = result.filter((v, ix, arr) => arr.indexOf(v) == ix);
-        //         return result;
-        //     } else {
-        //         return next(args);
-        //     }
-        // }, ModuleCategory.Core);
     }
-
-    opacitySlider: HTMLInputElement | null = null;
-    opacityLabel: HTMLLabelElement | null = null;
-    opacityEleId: string = "LSCG_OpacitySlider";
-    opacityLabelId: string = "LSCG_OpacitySlider_Label";
-    OpacityItem: Item | null = null;
-    OpacityCharacter: Character | null = null;
-    run() {
-        this.opacitySlider = ElementCreateRangeInput(
-            this.opacityEleId,
-            1,
-            0,
-            1,
-            0.01
-        );
-        this.opacityLabel = this.CreateOpacityLabel();
-        ElementPosition(this.opacityEleId, -999, -999, 1, 1);
-        ElementPosition(this.opacityLabelId, -999, -999, 1, 1);
-        this.opacitySlider.addEventListener("input", (e) => this.OpacityChange());
-
-        hookFunction("CommonDrawAppearanceBuild", 1, (args, next) => {
-            let C = args[0] as OtherCharacter;
-            let callbacks = args[1];
-            C.AppearanceLayers?.forEach((Layer) => {
-                const A = Layer.Asset;
-                if (isCloth(A)) {
-                    A.DynamicBeforeDraw = true;
-                }
-            });
-            let ret = next(args);
-            return ret;
-        }, ModuleCategory.Core);
-
-        hookFunction("CharacterAppearanceSortLayers", 1, (args, next) => {
-            let C = args[0] as OtherCharacter;
-            if (!C.MemberNumber)
-                return next(args);
-
-            let xray = getModule<StateModule>("StateModule")?.XRayState;
-            let xrayActive = xray?.Active && xray?.CanViewXRay(C);
-            C.DrawAppearance?.forEach(item => {
-                if ((item.Property?.LSCGOpacity ?? 1) < 1 || xrayActive) {
-                    item.Asset = Object.assign({}, item.Asset);
-                    item?.Asset?.Layer?.forEach(layer => {
-                        layer.Alpha = [];
-                    });
-                    item.Asset.Hide = [];
-                    item.Asset.HideItem = [];
-                    item.Asset.HideItemAttribute = [];
-                } else {
-                    let defaultAsset = AssetMap.get(`${item?.Asset?.Group?.Name}/${item.Asset.Name}`);
-                    if (!!defaultAsset) {
-                        item?.Asset?.Layer?.forEach((layer, ix, arr) => {
-                            if (defaultAsset!.Alpha)
-                                layer.Alpha = defaultAsset!.Alpha;
-                        });
-                    }
-                }
-
-                if (item.Asset.Name == "Penis") {
-                    let transpPants = (InventoryGet(C, "ClothLower")?.Property?.LSCGOpacity ?? 1) > 1;
-                    let transpUnderwear = (InventoryGet(C, "Panties")?.Property?.LSCGOpacity ?? 1) > 1;
-                    if ((xrayActive || transpPants || transpUnderwear) && (!item.Property || !item.Property?.OverridePriority)) {
-                        if (!item.Property)
-                            item.Property = {};
-                        item.Property.OverridePriority = 18;
-                    }
-                }
-            });
-            return next(args);
-        }, ModuleCategory.Core);
-    }
-
-    CreateOpacityLabel() {
-        if (document.getElementById(this.opacityLabelId) == null) {
-            const label = document.createElement("label");
-            label.setAttribute("id", this.opacityLabelId);
-            label.setAttribute("for", this.opacityEleId);
-            label.style.color = "#FFF";
-            label.innerText = "Opacity";
-            document.body.appendChild(label);
-            return label;
-        } else
-            return document.getElementById(this.opacityLabelId) as HTMLLabelElement;
-    }
-
-    OpacityChange() {
-        if (!this.OpacityItem)
-            return;
-
-        let value = parseFloat(ElementValue(this.opacityEleId));
-        let C = Player;
-        if (!this.OpacityItem.Property)
-            this.OpacityItem.Property = {};
-        this.OpacityItem.Property.LSCGOpacity = value;
-        this.UpdatePreview();
-    }
-
-    UpdatePreview = CommonLimitFunction(() => {
-        if (!!this.OpacityCharacter)
-            CharacterLoadCanvas(this.OpacityCharacter);
-    });
 
     _drawShareToggleButton(X: number, Y: number, Width: number, Height: number) {
         DrawButton(X, Y, Width, Height, "", this.settings.seeSharedCrafts ? "White" : "Red", "", "Toggle Shared Crafts", false);
@@ -375,8 +218,8 @@ export class CoreModule extends BaseModule {
         });
     }
 
-    CheckForPublicPacket(data: IChatRoomMessage) {
-        if (data.Sender != Player.MemberNumber && data.Type == "Hidden" && data.Content == "LSCGMsg" && !!data.Dictionary && !!data.Dictionary[0]) {
+    CheckForPublicPacket(data: ServerChatRoomMessage) {
+        if (!!data.Sender && data.Sender != Player.MemberNumber && data.Type == "Hidden" && data.Content == "LSCGMsg" && !!data.Dictionary && !!data.Dictionary[0]) {
             var C = getCharacter(data.Sender) as OtherCharacter;
             var msg = (<LSCGMessageDictionaryEntry>data.Dictionary[0]).message;
             switch (msg.type) {
@@ -413,16 +256,16 @@ export class CoreModule extends BaseModule {
         let Sender = getCharacter(senderNumber) as OtherCharacter;
         switch (msg.command!.name) {
             case "debug":
-                LSCG_SendLocal(msg.command.args[0].value as string, 10000);
+                LSCG_SendLocal(msg.command.args[0].value as string);
                 break;
             case "grab":
-                getModule<ActivityModule>("ActivityModule")?.IncomingGrab(Sender, msg.command.args.find(a => a.name == "type")?.value as GrabType);
+                getModule<LeashingModule>("LeashingModule")?.IncomingGrab(Sender, msg.command.args.find(a => a.name == "type")?.value as GrabType);
                 break;
             case "release":
-                getModule<ActivityModule>("ActivityModule")?.IncomingRelease(Sender, msg.command.args.find(a => a.name == "type")?.value as GrabType);
+                getModule<LeashingModule>("LeashingModule")?.IncomingRelease(Sender, msg.command.args.find(a => a.name == "type")?.value as GrabType);
                 break;
             case "escape":
-                getModule<ActivityModule>("ActivityModule")?.IncomingEscape(Sender, msg.target);
+                getModule<LeashingModule>("LeashingModule")?.IncomingEscape(Sender, msg.target);
                 break;
             case "remote":
                 let prevCollarPurchase = Player.LSCG?.CollarModule?.collarPurchased;
@@ -473,6 +316,7 @@ export class CoreModule extends BaseModule {
                 getModule<MagicModule>("MagicModule")?.IncomingGetItemSpellResponse(senderNumber, msg);
                 break;
         }
+        this.CommandListeners.filter(com => com.command == msg.command!.name).forEach(command => command.func(senderNumber, msg));
     }
 
     ShowChangelog(): void {
@@ -489,4 +333,28 @@ ${LSCG_CHANGES}`;
         });
         console.info(`LSCG Updated:${LSCG_CHANGES}`);
     }
+
+    CommandListeners: CommandListener[] = [];
+    RegisterCommandListener(listener: CommandListener) {
+        if (this.CommandListeners.indexOf(listener) == -1)
+            this.CommandListeners.push(listener);
+    }
+
+    RemoveCommandListenerById(id: string) {
+        if (!!id)
+            this.CommandListeners = this.CommandListeners.filter(c => c.id != id);
+    }
+
+    RemoveCommandListener(listener: CommandListener) {
+        if (this.CommandListeners.indexOf(listener) > -1)
+            this.CommandListeners.splice(this.CommandListeners.indexOf(listener), 1);
+        if (!!listener.id)
+            this.CommandListeners = this.CommandListeners.filter(c => c.id != listener.id);
+    }
+}
+
+export interface CommandListener {
+    id: string;
+    command: LSCGCommandName;
+    func: (sender: number, msg: LSCGMessageModel) => void;
 }

@@ -1,13 +1,7 @@
-/** @type {ExtendedItemCallbacks.Init} */
-declare function InventoryItemNeckFuturisticCollarInit(C: Character, Item: Item, Refresh: boolean): boolean;
-/** @type {ExtendedItemCallbacks.Load} */
-declare function InventoryItemNeckFuturisticCollarLoad(): void;
-/** @type {ExtendedItemCallbacks.Draw} */
-declare function InventoryItemNeckFuturisticCollarDraw(): void;
-/** @type {ExtendedItemCallbacks.Exit} */
-declare function InventoryItemNeckFuturisticCollarExit(): void;
-/** @type {ExtendedItemCallbacks.Click} */
-declare function InventoryItemNeckFuturisticCollarClick(): void;
+declare function InventoryItemNeckFuturisticCollarLoadHook(data: NoArchItemData, originalFunction: () => void): void;
+declare function InventoryItemNeckFuturisticCollarDrawHook(data: NoArchItemData, originalFunction: () => void): void;
+declare function InventoryItemNeckFuturisticCollarExitHook(data: NoArchItemData, originalFunction: () => void): void;
+declare function InventoryItemNeckFuturisticCollarClickHook(data: NoArchItemData, originalFunction: () => void): void;
 /**
  * @param {Character} C
  * @param {AssetLockType} LockType
@@ -20,8 +14,6 @@ declare function InventoryItemNeckFuturisticCollarCanLock(C: Character, LockType
  * @returns
  */
 declare function InventoryItemNeckFuturisticCollarGetItems(C: Character, OnlyUnlockable?: boolean): Item[];
-/** @type {ExtendedItemCallbacks.Validate<any>} */
-declare function InventoryItemNeckFuturisticCollarValidate(C: Character, Item: Item): string;
 /**
  * @param {Character} C
  * @param {AssetLockType} LockType

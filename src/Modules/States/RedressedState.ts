@@ -1,7 +1,7 @@
-import { BC_ItemsToItemBundles, SendAction, addCustomEffect, getCharacter, getRandomInt, isBind, isCloth, removeCustomEffect, settingsSave, waitFor } from "utils";
-import { BaseState, StateRestrictions } from "./BaseState";
+import { getCharacter, isBind, isCloth } from "utils";
+import { BaseState } from "./BaseState";
 import { StateModule } from "Modules/states";
-import { OutfitConfig, OutfitOption, SpellDefinition } from "Settings/Models/magic";
+import { OutfitOption, SpellDefinition } from "Settings/Models/magic";
 import { ItemBundleBaseState } from "./ItemBundleBaseState";
 
 export class RedressedState extends ItemBundleBaseState {
@@ -44,13 +44,15 @@ export class RedressedState extends ItemBundleBaseState {
             return false;
         if (!spell)
             return RedressedState.AssetIsAllowed(asset);
+
+        let neckExclusions = Player.LSCG.MagicModule.allowOutfitToChangeNeckItems ? [] : ["ItemNeck", "ItemNeckAccessories", "ItemNeckRestraints"];
         switch(spell.Outfit?.Option) {
             case OutfitOption.clothes_only:
                 return isCloth(asset);
             case OutfitOption.binds_only:
-                return isBind(asset, Player.LSCG.MagicModule.allowOutfitToChangeNeckItems ? [] : ["ItemNeck", "ItemNeckAccessories", "ItemNeckRestraints"]);
+                return isBind(asset, neckExclusions);
             case OutfitOption.both:
-                return isCloth(asset) || isBind(asset);
+                return isCloth(asset) || isBind(asset, neckExclusions);
             default:
                 return false;
         }

@@ -15,17 +15,17 @@ declare function ChatSelectClick(): void;
 declare function ChatSelectLoad(): void;
 /**
  * Start the chat search screen for the relevant chat room space
- * @param {ChatRoomSpaceType} space - The space to join
+ * @param {ServerChatRoomSpace} space - The space to join
  */
-declare function ChatSelectStartSearch(space: ChatRoomSpaceType): void;
+declare function ChatSelectStartSearch(space: ServerChatRoomSpace): void;
 declare function ChatSelectExit(): void;
 /**
  * Returns whether all provided genders are allowed in the specified space
- * @param {string} space - The chatroom space
- * @param {string[]} genders - A list of relevant genders to check#
+ * @param {ServerChatRoomSpace} space - The chatroom space
+ * @param {AssetGender[]} genders - A list of relevant genders to check
  * @returns {boolean} - Whether the genders are allowed
  */
-declare function ChatSelectGendersAllowed(space: string, genders: string[]): boolean;
+declare function ChatSelectGendersAllowed(space: ServerChatRoomSpace, genders: AssetGender[]): boolean;
 declare var ChatSelectBackground: string;
 /** @type {boolean} */
 declare var ChatSelectAllowedInFemaleOnly: boolean;

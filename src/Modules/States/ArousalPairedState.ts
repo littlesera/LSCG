@@ -1,7 +1,8 @@
 import { StateModule } from "Modules/states";
 import { PairedBaseState } from "./PairedBaseState";
-import { getCharacter, hookFunction, sendLSCGCommandBeep } from "utils";
+import { SendAction, getCharacter, hookFunction, sendLSCGCommandBeep } from "utils";
 import { ModuleCategory } from "Settings/setting_definitions";
+import { BaseState } from "./BaseState";
 
 export class ArousalPairedState extends PairedBaseState {
     Type: LSCGState = "arousal-paired";
@@ -23,10 +24,10 @@ export class ArousalPairedState extends PairedBaseState {
             ActivityOrgasmPrepare(Player);
         if (CurrentScreen == "ChatRoom")
 		    ServerSend("ChatRoomCharacterArousalUpdate", { 
-                OrgasmTimer: Player.ArousalSettings.OrgasmTimer, 
+                OrgasmTimer: Player.ArousalSettings.OrgasmTimer!, 
                 Progress: Player.ArousalSettings.Progress, 
                 ProgressTimer: Player.ArousalSettings.ProgressTimer, 
-                OrgasmCount: Player.ArousalSettings.OrgasmCount 
+                OrgasmCount: Player.ArousalSettings.OrgasmCount! 
             });
         console.debug(`Arousal updated from ${source} to ${progress}`);
     }
@@ -37,7 +38,7 @@ export class ArousalPairedState extends PairedBaseState {
         let isSiphoned = this.StateModule.OrgasmSiphonedState.Pairings.filter(p => p.IsSource).length > 0;
         let progress = Math.min(Player.ArousalSettings?.Progress ?? 0, isSiphoned ? 99 : 100);
         this.Pairings.forEach(p => {
-            sendLSCGCommandBeep(p.PairedBy, "pairing-update", [
+            sendLSCGCommandBeep(p.PairedMember, "pairing-update", [
                 {
                     name: "type",
                     value: this.Type
@@ -57,6 +58,11 @@ export class ArousalPairedState extends PairedBaseState {
             this.PingArousal();
         }
         super.Tick(now);
+    }
+
+    Recover(emote?: boolean | undefined): BaseState | undefined {
+        if (emote) SendAction("%NAME%'s breathing calms down as %PRONOUN% regains control of %POSSESSIVE% arousal.")
+        return super.Recover(emote);
     }
 
     RoomSync(): void {}

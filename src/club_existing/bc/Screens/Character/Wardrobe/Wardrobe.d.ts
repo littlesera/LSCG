@@ -35,6 +35,14 @@ declare function WardrobeRun(): void;
  */
 declare function WardrobeClick(): void;
 /**
+ * Advance to the next reordering mode, or set the mode to the specified
+ * value.  The reordering mode cycles through the values:
+ * "None" -> "Select" -> "Place"
+ *
+ * @param {WardrobeReorderType} newmode - The mode to set.  If null, advance to next mode.
+ */
+declare function WardrobeReorderModeSet(newmode?: WardrobeReorderType): void;
+/**
  * Exits the wardorbe screen and sends the player back to her private room
  * @returns {void} - Nothing
  */
@@ -69,6 +77,22 @@ declare function WardrobeFastLoad(C: Character, W: number, Update?: boolean): vo
  */
 declare function WardrobeFastSave(C: Character, W: number, Push?: boolean): void;
 /**
+ * Swap two slots in the wardrobe.  Will silently do nothing if either
+ * index is out of range.
+ *
+ * @param {number} a - Slot index
+ * @param {number} b - The other slot index
+ * @returns {void} - Nothing
+ */
+declare function WardrobeSwapSlots(a: number, b: number): void;
+/**
+ * Unconditionally pushes entire wardrobe to the server.  Used primarily after
+ * reordering the wardrobe slots.
+ *
+ * @returns {void} - Nothing
+ */
+declare function WardrobePushAll(): void;
+/**
  * Returns the expressions of character C as a single big object
  * @param {Character} C - The character whose expressions should be returned
  * @returns {Partial<Record<ExpressionGroupName, ExpressionName>>} Expression - The expresssion of a character
@@ -91,3 +115,7 @@ declare var WardrobeCharacter: Character[];
 declare var WardrobeSelection: number;
 declare var WardrobeOffset: number;
 declare var WardrobeSize: number;
+/** @type {WardrobeReorderType} */
+declare var WardrobeReorderMode: WardrobeReorderType;
+/** @type {number[]} */
+declare var WardrobeReorderList: number[];

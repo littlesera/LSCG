@@ -100,11 +100,19 @@ declare function DialogLogQuery<T extends keyof LogNameType>(LogType: LogNameTyp
 declare function DialogAllowItem(Allow: string): boolean;
 /**
  * Returns the value of the AllowItem flag of a given character
- * @param {string | Character} C - The character whose flag should be returned.
- * Either the player (value: Player) or the current character (value: CurrentCharacter)
  * @returns {boolean} - The value of the given character's AllowItem flag
  */
-declare function DialogDoAllowItem(C: string | Character): boolean;
+declare function DialogDoAllowItem(): boolean;
+/**
+ * Returns TRUE if the AllowItem flag doesn't allow putting an item on the current character
+ * @returns {boolean} - The reversed value of the given character's AllowItem flag
+ */
+declare function DialogDontAllowItemPermission(): boolean;
+/**
+ * Returns TRUE if no item can be used by the player on the current character because of the map distance
+ * @returns {boolean} - TRUE if distance is too far (more than 1 tile)
+ */
+declare function DialogDontAllowItemDistance(): boolean;
 /**
  * Determines if the given character is kneeling
  * @param {string | Character} C - The character to check
@@ -285,6 +293,14 @@ declare function DialogCanUnlock(C: Character, Item: Item): boolean;
  */
 declare function DialogCanPickLock(C: Character, Item: Item): boolean;
 /**
+ * Checks whether we can lockpick a lock and return an appropriate dialog key.
+ * `"PickLock"` will be returned if the lock can be picked.
+ * @param {Character} C
+ * @param {Item} Item
+ * @returns {`PickLock${PickLockAvailability}`}
+ */
+declare function DialogGetPickLockDialog(C: Character, Item: Item): `PickLock${PickLockAvailability}`;
+/**
  * Checks whether we can access a lock.
  *
  * This function is used to enable the locked submenu
@@ -321,11 +337,6 @@ declare function DialogRemove(): void;
  * @returns {void} - Nothing
  */
 declare function DialogRemoveGroup(GroupName: string): void;
-/**
- * Clears the timers used for expression changes caused by struggling
- * @returns {void} - Nothing
- */
-declare function DialogEndExpression(): void;
 /**
  * Performs a "Back" action through the menu "stack".
  */
@@ -389,12 +400,6 @@ declare function DialogGetLockIcon(item: Item, isWorn: boolean): InventoryIcon[]
  * @returns {InventoryIcon[]} - A list of icon names
  */
 declare function DialogGetAssetIcons(asset: Asset): InventoryIcon[];
-/**
- * Return icons for each "interesting" effect on the item.
- * @param {Item} item
- * @returns {InventoryIcon[]} - A list of icon names.
- */
-declare function DialogGetEffectIcons(item: Item): InventoryIcon[];
 /**
  * Some special screens can always allow you to put on new restraints. This function determines, if this is possible
  * @returns {boolean} - Returns trues, if it is possible to put on new restraints.
@@ -564,14 +569,14 @@ declare function DialogClick(): void;
 /**
  * Returns whether the clicked co-ordinates are inside the asset zone
  * @param {Character} C - The character the click is on
- * @param {readonly [number, number, number, number]} Zone - The 4 part array of the rectangular asset zone on the character's body: [X, Y, Width, Height]
+ * @param {RectTuple} Zone - The 4 part array of the rectangular asset zone on the character's body: [X, Y, Width, Height]
  * @param {number} Zoom - The amount the character has been zoomed
  * @param {number} X - The X co-ordinate of the click
  * @param {number} Y - The Y co-ordinate of the click
  * @param {number} HeightRatio - The displayed height ratio of the character
  * @returns {boolean} - If TRUE the click is inside the zone
  */
-declare function DialogClickedInZone(C: Character, Zone: readonly [number, number, number, number], Zoom: number, X: number, Y: number, HeightRatio: number): boolean;
+declare function DialogClickedInZone(C: Character, Zone: RectTuple, Zoom: number, X: number, Y: number, HeightRatio: number): boolean;
 /**
  * Return the co-ordinates and dimensions of the asset group zone as it appears on screen
  * @param {Character} C - The character the zone is calculated for
@@ -721,6 +726,16 @@ declare function DialogDrawRepositionButton(): void;
  */
 declare function DialogDrawTopMenu(C: Character): void;
 /**
+ * Draws the left menu for the character
+ * @param {Character} C - The currently focused character
+ */
+declare function DialogSelfMenuDraw(C: Character): void;
+/**
+ * Handles clicks on the left menu
+ * @param {Character} C - The currently focused character
+ */
+declare function DialogSelfMenuClick(C: Character): void;
+/**
  * Draws the initial Dialog screen.
  *
  * This is the main handler for drawing the Dialog UI, which activates
@@ -729,6 +744,14 @@ declare function DialogDrawTopMenu(C: Character): void;
  * @returns {void} - Nothing
  */
 declare function DialogDraw(): void;
+/**
+ * Changes to previous dialog page
+ */
+declare function DialogMenuPrev(): void;
+/**
+ * Changes to next dialog page
+ */
+declare function DialogMenuNext(): void;
 /**
  * Draw a single line of text with an optional item preview icon.
  *
@@ -779,17 +802,10 @@ declare function DialogDrawOwnerRulesMenu(): void;
  * Sets the skill ratio for the player, will be a % of effectiveness applied to the skill when using it.
  * This way a player can use only a part of her bondage or evasion skill.
  * @param {SkillType} SkillType - The name of the skill to influence
- * @param {string} NewRatio - The ration of this skill that should be used
+ * @param {string} NewRatio - The ratio of this skill that should be used
  * @returns {void} - Nothing
  */
 declare function DialogSetSkillRatio(SkillType: SkillType, NewRatio: string): void;
-/**
- * Sends an room administrative command to the server for the chat room from the player dialog
- * @param {string} ActionType - The name of the administrative command to use
- * @param {string} Publish - Determines whether the action should be published to the ChatRoom. As this is a string, use "true" to do so
- * @returns {void} - Nothing
- */
-declare function DialogChatRoomAdminAction(ActionType: string, Publish: string): void;
 /**
  * Leave the dialog and revert back to a safe state, when the player uses her safe word
  * @returns {void} - Nothing
@@ -830,12 +846,8 @@ declare function DialogActualNameForGroup(C: Character, G: AssetGroup): string;
  * @param {Item} NextItem
  */
 declare function DialogStruggleStart(C: Character, Action: DialogStruggleActionType, PrevItem: Item, NextItem: Item): void;
-/**
- * Handle the struggle minigame completing, either as a failure, an interruption, or a success.
- *
- * @type {StruggleCompletionCallback}
- */
-declare function DialogStruggleStop(C: Character, Game: StruggleKnownMinigames, { Progress, PrevItem, NextItem, Skill, Attempts, Interrupted, Auto }: StruggleCompletionData): void;
+declare function DialogStruggleStop(character: Character, game: StruggleKnownMinigames, data: StruggleCompletionData): void;
+declare function DialogKeyDown(event: KeyboardEvent): boolean;
 declare var DialogText: string;
 declare var DialogTextDefault: string;
 declare var DialogTextDefaultTimer: number;
@@ -845,12 +857,12 @@ declare var DialogTextDefaultTimer: number;
 declare var DialogTextDefaultDuration: number;
 /**
  * The default color to use when applying items.
- * @type {string}
+ * @type {null | string}
  */
-declare var DialogColorSelect: string;
+declare var DialogColorSelect: null | string;
 /**
  * The list of available items for the selected group.
- * @type DialogInventoryItem[]
+ * @type {DialogInventoryItem[]}
  */
 declare var DialogInventory: DialogInventoryItem[];
 /**
@@ -889,26 +901,18 @@ declare var DialogMenuButton: DialogMenuButton[];
  * @type {DialogMenuMode}
  */
 declare var DialogMenuMode: DialogMenuMode;
-/** @deprecated Use DialogMenuMode. */
-declare var DialogColor: any;
-/** @deprecated Use DialogMenuMode. */
-declare var DialogItemPermissionMode: any;
-/**
- * @deprecated Use DialogMenuMode.
- * @type {null | Item}
- * */
-declare var DialogItemToLock: null | Item;
-/**
- * @deprecated Use DialogMenuMode.
- */
-declare var DialogActivityMode: boolean;
-/** @deprecated Use DialogMenuMode. */
-declare var DialogLockMenu: boolean;
-/** @deprecated Use DialogMenuMode. */
-declare var DialogCraftingMenu: boolean;
-declare var DialogAllowBlush: boolean;
-declare var DialogAllowEyebrows: boolean;
-declare var DialogAllowFluids: boolean;
+/** @deprecated Use {@link DialogMenuMode}. */
+declare var DialogColor: never;
+/** @deprecated Use {@link DialogMenuMode}. */
+declare var DialogItemPermissionMode: never;
+/** @deprecated Use {@link DialogMenuMode}.*/
+declare var DialogItemToLock: never;
+/** @deprecated Use {@link DialogMenuMode}. */
+declare var DialogActivityMode: never;
+/** @deprecated Use {@link DialogMenuMode}. */
+declare var DialogLockMenu: never;
+/** @deprecated Use {@link DialogMenuMode}. */
+declare var DialogCraftingMenu: never;
 /**
  * The group that was selected before we entered the expression coloring screen
  * @type {{mode: DialogMenuMode, group: AssetItemGroup}}
@@ -938,8 +942,18 @@ declare var DialogExtendedMessage: string;
  * @type {ItemActivity[]}
  */
 declare var DialogActivity: ItemActivity[];
-/** @type {Record<"Enabled" | "Equipped" | "BothFavoriteUsable" | "TargetFavoriteUsable" | "PlayerFavoriteUsable" | "Usable" | "TargetFavoriteUnusable" | "PlayerFavoriteUnusable" | "Unusable" | "Blocked", DialogSortOrder>} */
-declare var DialogSortOrder: Record<"Enabled" | "Equipped" | "BothFavoriteUsable" | "TargetFavoriteUsable" | "PlayerFavoriteUsable" | "Usable" | "TargetFavoriteUnusable" | "PlayerFavoriteUnusable" | "Unusable" | "Blocked", DialogSortOrder>;
+declare namespace DialogSortOrder {
+    let Enabled: 1;
+    let Equipped: 2;
+    let BothFavoriteUsable: 3;
+    let TargetFavoriteUsable: 4;
+    let PlayerFavoriteUsable: 5;
+    let Usable: 6;
+    let TargetFavoriteUnusable: 7;
+    let PlayerFavoriteUnusable: 8;
+    let Unusable: 9;
+    let Blocked: 10;
+}
 /** @type {null | DialogSelfMenuOptionType} */
 declare var DialogSelfMenuSelected: null | DialogSelfMenuOptionType;
 declare var DialogLeaveDueToItem: boolean;
@@ -974,5 +988,14 @@ declare var DialogFavoriteStateDetails: FavoriteState[];
  * @type {readonly DialogSelfMenuOptionType[]}
  */
 declare var DialogSelfMenuOptions: readonly DialogSelfMenuOptionType[];
-/** @type {Partial<Record<InventoryIcon, EffectName[]>>} */
-declare const DialogEffectIconTable: Partial<Record<InventoryIcon, EffectName[]>>;
+declare namespace DialogEffectIcons {
+    let Table: Partial<Record<InventoryIcon, readonly EffectName[]>>;
+    function GetIcons(item: Item): InventoryIcon[];
+    let GetEffectIcons: (effects: EffectName[], prop?: CraftingPropertyType) => InventoryIcon[];
+    function _GetGagIcon(effect: EffectName, prop?: CraftingPropertyType): InventoryIcon;
+    function _GetBlindIcon(effect: EffectName, prop?: CraftingPropertyType): InventoryIcon;
+    function _GetDeafIcon(effect: EffectName): InventoryIcon;
+    let _GagLevelToIcon: (level?: number) => InventoryIcon;
+    let _BlindLevelToIcon: (level?: number) => InventoryIcon;
+}
+declare function DialogMouseWheel(Event: any): boolean;

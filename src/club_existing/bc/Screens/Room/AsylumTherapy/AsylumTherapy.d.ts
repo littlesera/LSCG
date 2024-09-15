@@ -92,7 +92,7 @@ declare function AsylumTherapyPatientTickleIntro(RepChange: number): void;
  * Initiates the orgasm therapy as a nurse
  * @param {number} RepChange - The amount, the player's reputation changes
  * @returns {void} - Nothing
-*/
+ */
 declare function AsylumTherapyPatientOrgasmIntro(RepChange: number): void;
 /**
  * Starts the therapy mini-game as a nurse

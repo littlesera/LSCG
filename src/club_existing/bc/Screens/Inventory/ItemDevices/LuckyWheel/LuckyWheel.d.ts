@@ -4,30 +4,23 @@
  * @returns {string}
  */
 declare function ItemDevicesLuckyWheelLabelForNum(num: number): string;
-/** @type {ExtendedItemScriptHookCallbacks.Draw<ModularItemData>} */
-declare function InventoryItemDevicesLuckyWheelDrawHook(data: ModularItemData, next: () => void): void;
-/** @type {ExtendedItemScriptHookCallbacks.Click<ModularItemData>} */
-declare function InventoryItemDevicesLuckyWheelClickHook(data: ModularItemData, next: () => void): void;
-/** @type {ExtendedItemScriptHookCallbacks.Init<ModularItemData>} */
-declare function InventoryItemDevicesLuckyWheelInitHook(data: ModularItemData, originalFunction: (C: Character, item: Item, refresh: boolean) => boolean, character: Character, item: Item, refresh: boolean): boolean;
-/** @type {ExtendedItemCallbacks.Load} */
-declare function InventoryItemDevicesLuckyWheelGame0Load(): void;
-/** @type {ExtendedItemCallbacks.Draw} */
-declare function InventoryItemDevicesLuckyWheelGame0Draw(): void;
-/** @type {ExtendedItemCallbacks.Click} */
-declare function InventoryItemDevicesLuckyWheelGame0Click(): void;
-/** @type {ExtendedItemCallbacks.Exit} */
-declare function InventoryItemDevicesLuckyWheelGame0Exit(): void;
+declare function InventoryItemDevicesLuckyWheelDrawHook(data: ModularItemData, originalFunction: () => void): void;
+declare function InventoryItemDevicesLuckyWheelClickHook(data: ModularItemData, originalFunction: () => void): void;
+declare function InventoryItemDevicesLuckyWheelInitHook(data: ModularItemData, originalFunction: (C: Character, item: Item, push: boolean, refresh: boolean) => boolean, C: Character, item: Item, push: boolean, refresh: boolean): boolean;
+declare function InventoryItemDevicesLuckyWheelg0LoadHook(data: NoArchItemData, originalFunction: () => void): void;
+declare function InventoryItemDevicesLuckyWheelg0DrawHook(data: NoArchItemData, originalFunction: () => void): void;
+declare function InventoryItemDevicesLuckyWheelg0ClickHook(data: NoArchItemData, originalFunction: () => void): void;
+declare function InventoryItemDevicesLuckyWheelg0ExitHook(data: NoArchItemData, originalFunction: () => void): void;
 declare function InventoryItemDevicesLuckyWheelUpdate(): void;
 declare function InventoryItemDevicesLuckyWheelTrigger(): void;
-declare function InventoryItemDevicesLuckyWheelStoppedTurning(C: any, Item: any, Angle: any): void;
 /**
- * @typedef {{ AnimationAngleState?: number, AnimationSpeed?: number, ChangeTime?: number, LightStep?: number }} LuckyWheelPersistentData
+ * @param {Character} C
+ * @param {Item} Item
+ * @param {number} Angle
  */
-/** @type {ExtendedItemCallbacks.ScriptDraw<LuckyWheelPersistentData>} */
-declare function AssetsItemDevicesLuckyWheelScriptDraw({ C, PersistentData, Item }: DynamicScriptCallbackData<LuckyWheelPersistentData>): void;
-/** @type {ExtendedItemCallbacks.AfterDraw<LuckyWheelPersistentData>} */
-declare function AssetsItemDevicesLuckyWheelAfterDraw({ C, PersistentData, A, X, Y, L, Property, drawCanvas, drawCanvasBlink, AlphaMasks, Color, Opacity }: DynamicDrawingData<LuckyWheelPersistentData>): void;
+declare function InventoryItemDevicesLuckyWheelStoppedTurning(C: Character, Item: Item, Angle: number): void;
+declare function AssetsItemDevicesLuckyWheelScriptDraw(drawData: DynamicScriptCallbackData<LuckyWheelPersistentData>): void;
+declare function AssetsItemDevicesLuckyWheelAfterDraw(drawData: DynamicDrawingData<LuckyWheelPersistentData>): void;
 declare var ItemDevicesLuckyWheelMinTexts: number;
 declare var ItemDevicesLuckyWheelMaxTexts: number;
 declare var ItemDevicesLuckyWheelMaxTextLength: number;

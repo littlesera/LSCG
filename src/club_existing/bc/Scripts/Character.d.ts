@@ -22,16 +22,17 @@ declare function CharacterDialogSubstitution(C: Character): void;
  * Builds the dialog objects from the character CSV file
  * @param {Character} C - Character for which to build the dialog
  * @param {readonly string[][]} CSV - Content of the CSV file
+ * @param {string} functionPrefix - A prefix that will be added to functions that aren't part of the Dialog or ChatRoom "namespace"
  * @returns {void} - Nothing
  */
-declare function CharacterBuildDialog(C: Character, CSV: readonly string[][]): void;
+declare function CharacterBuildDialog(C: Character, CSV: readonly string[][], functionPrefix: string): void;
 /**
  * Loads the content of a CSV file to build the character dialog. Can override the current screen.
  * @param {Character} C - Character for which to build the dialog objects
- * @param {string} [Override] - Optional: Path to the specific CSV to build the character dialog with
+ * @param {DialogInfo} [info]
  * @returns {void} - Nothing
  */
-declare function CharacterLoadCSVDialog(C: Character, Override?: string): void;
+declare function CharacterLoadCSVDialog(C: Character, info?: DialogInfo): void;
 /**
  * Sets the clothes based on a character archetype
  * @param {Character} C - Character to set the clothes for
@@ -55,17 +56,17 @@ declare function CharacterLoadSimple(AccName: string): Character;
 /**
  * Sets up an online character
  * @param {Character} Char - Online character to set up
- * @param {object} data - Character data received
+ * @param {ServerAccountDataSynced} data - Character data received
  * @param {number} SourceMemberNumber - Source number of the refresh
  */
-declare function CharacterOnlineRefresh(Char: Character, data: object, SourceMemberNumber: number): void;
+declare function CharacterOnlineRefresh(Char: Character, data: ServerAccountDataSynced, SourceMemberNumber: number): void;
 /**
  * Loads an online character and flags it for a refresh if any data was changed
- * @param {object} data - Character data received
+ * @param {ServerAccountDataSynced} data - Character data received
  * @param {number} SourceMemberNumber - Source number of the load trigger
  * @returns {Character} - The reloaded character
  */
-declare function CharacterLoadOnline(data: object, SourceMemberNumber: number): Character;
+declare function CharacterLoadOnline(data: ServerAccountDataSynced, SourceMemberNumber: number): Character;
 /**
  * Deletes an NPC from the buffer
  * @param {string} NPCType - Account name of the npc to delete
@@ -77,52 +78,6 @@ declare function CharacterDelete(NPCType: string): void;
  * @returns {void} - Nothing
  */
 declare function CharacterDeleteAllOnline(): void;
-/**
- * Checks whether the given character can change to the named pose unaided
- * @param {Character} C - The character to check
- * @param {AssetPoseName} poseName - The name of the pose to check for
- * @returns {boolean} - Returns true if the character has no conflicting items and is not prevented from changing to
- * the provided pose
- */
-declare function CharacterCanChangeToPose(C: Character, poseName: AssetPoseName): boolean;
-/**
- * Checks if a certain pose is whitelisted and available for the pose menu
- * @param {Character} C - Character to check for the pose
- * @param {AssetPoseCategory|undefined} Type - Pose type to check for within items
- * @param {AssetPoseName} Pose - Pose to check for whitelist
- * @returns {boolean} - TRUE if the character has the pose available
- */
-declare function CharacterItemsHavePoseAvailable(C: Character, Type: AssetPoseCategory | undefined, Pose: AssetPoseName): boolean;
-/**
- * Checks if a character has a pose from items (not active pose unless an item lets it through)
- * @param {Character} C - Character to check for the pose
- * @param {AssetPoseName} Pose - Pose to check for within items
- * @param {boolean} [ExcludeClothes=false] - Ignore clothing items in the check
- * @returns {boolean} - TRUE if the character has the pose
- */
-declare function CharacterItemsHavePose(C: Character, Pose: AssetPoseName, ExcludeClothes?: boolean): boolean;
-/**
- * Checks whether the items on a character set a given pose on the character
- * @param {Character} C - The character to check
- * @param {AssetPoseName} pose - The name of the pose to check for
- * @param {boolean} [excludeClothes=false] - Ignore clothing items in the check
- * @returns {boolean} - Returns true if the character is wearing an item that sets the given pose, false otherwise
- */
-declare function CharacterDoItemsSetPose(C: Character, pose: AssetPoseName, excludeClothes?: boolean): boolean;
-/**
- * Checks if a character has a pose type from items (not active pose unless an item lets it through)
- * @param {Character} C - Character to check for the pose type
- * @param {string} Type - Pose type to check for within items
- * @param {boolean} OnlyItems - Whether or not allowed activeposes should be ignored.
- * @returns {boolean} - TRUE if the character has the pose type active
- */
-declare function CharacterItemsHavePoseType(C: Character, Type: string, OnlyItems: boolean): boolean;
-/**
- * Refreshes the list of poses for a character. Each pose can only be found once in the pose array
- * @param {Character} C - Character for which to refresh the pose list
- * @returns {void} - Nothing
- */
-declare function CharacterLoadPose(C: Character): void;
 /**
  * Refreshes the list of effects for a character. Each effect can only be found once in the effect array
  * @param {Character} C - Character for which to refresh the effect list
@@ -176,7 +131,9 @@ declare function CharacterChangeMoney(C: Character, Value: number): void;
 /**
  * Refreshes the character parameters (Effects, poses, canvas, settings, etc.)
  * @param {Character} C - Character to refresh
- * @param {boolean} [Push=true] - Pushes the data to the server if true or null
+ * @param {boolean} [Push=true] - Pushes the data to the server database if true or null.
+ * Note that this will *not* push appearance changes to the rest of the chatroom,
+ * which requires either {@link ChatRoomCharacterItemUpdate} or {@link ChatRoomCharacterUpdate}.
  * @param {boolean} [RefreshDialog=true] - Refreshes the character dialog
  * @returns {void} - Nothing
  */
@@ -276,14 +233,6 @@ declare function CharacterGetBonus(C: Character, BonusType: string): number;
  */
 declare function CharacterFullRandomRestrain(C: Character, Ratio?: "FEW" | "LOT" | "ALL", Refresh?: boolean): void;
 /**
- * Sets a new pose for the character
- * @param {Character} C - Character for which to set the pose
- * @param {null | AssetPoseName} NewPose - Name of the pose to set as active or `null` to return to the default pose
- * @param {boolean} [ForceChange=false] - TRUE if the set pose(s) should overwrite current active pose(s)
- * @returns {void} - Nothing
- */
-declare function CharacterSetActivePose(C: Character, NewPose: null | AssetPoseName, ForceChange?: boolean): void;
-/**
  * Sets a specific facial expression on the character's specified AssetGroup.
  *
  * If there's a timer, the expression will expire after it. Note that a timed expression cannot override another one.
@@ -291,13 +240,14 @@ declare function CharacterSetActivePose(C: Character, NewPose: null | AssetPoseN
  * Be careful that "Eyes" for this function means both eyes. Use Eyes1/Eyes2 to target the left or right one only.
  *
  * @param {Character} C - Character for which to set the expression of
- * @param {AssetGroupBodyName | "Eyes1"} AssetGroup - Asset group for the expression
+ * @param {ExpressionGroupName | "Eyes1"} AssetGroup - Asset group for the expression
  * @param {null | ExpressionName} Expression - Name of the expression to use
  * @param {number} [Timer] - Optional: time the expression will last
- * @param {string|string[]} [Color] - Optional: color of the expression to set
+ * @param {ItemColor} [Color] - Optional: color of the expression to set
+ * @param {boolean} [fromQueue] - Internal: used to skip queuing the expression change if it comes from the queued expressions
  * @returns {void} - Nothing
  */
-declare function CharacterSetFacialExpression(C: Character, AssetGroup: AssetGroupBodyName | "Eyes1", Expression: null | ExpressionName, Timer?: number, Color?: string | string[]): void;
+declare function CharacterSetFacialExpression(C: Character, AssetGroup: ExpressionGroupName | "Eyes1", Expression: null | ExpressionName, Timer?: number, Color?: ItemColor, fromQueue?: boolean): void;
 /**
  * Resets the character's facial expression to the default
  * @param {Character} C - Character for which to reset the expression of
@@ -318,17 +268,17 @@ declare function CharacterIsExpressionAllowed(C: Character, Item: Item, Expressi
 declare function CharacterGetCurrent(): Character | null;
 /**
  * Compresses a character wardrobe from an array to a LZ string to use less storage space
- * @param {Array.<Array.<*>>} Wardrobe - Uncompressed wardrobe
+ * @param {readonly ItemBundle[][]} Wardrobe - Uncompressed wardrobe
  * @returns {string} - The compressed wardrobe
  */
-declare function CharacterCompressWardrobe(Wardrobe: Array<Array<any>>): string;
+declare function CharacterCompressWardrobe(Wardrobe: readonly ItemBundle[][]): string;
 /**
  * Decompresses a character wardrobe from a LZ String to an array if it was previously compressed (For backward compatibility with old
  * wardrobes)
- * @param {Array.<Array.<*>> | string} Wardrobe - The current wardrobe
- * @returns {Array.<Array.<*>>} - The array of wardrobe items decompressed
+ * @param {ItemBundle[][] | string} Wardrobe - The current wardrobe
+ * @returns {ItemBundle[][]} - The array of wardrobe items decompressed
  */
-declare function CharacterDecompressWardrobe(Wardrobe: Array<Array<any>> | string): Array<Array<any>>;
+declare function CharacterDecompressWardrobe(Wardrobe: ItemBundle[][] | string): ItemBundle[][];
 /**
  * Checks if the character is wearing an item that has a specific attribute
  * @param {Character} C - The character to test for
@@ -475,15 +425,33 @@ declare function CharacterScriptRefresh(C: Character): void;
  * @param {Character} C
  */
 declare function CharacterScriptRemove(C: Character): void;
+/**
+ * Sets a new pose for the character
+ * @param {Character} C - Character for which to set the pose
+ * @param {null | AssetPoseName} poseName - Name of the pose to set as active or `null` to return to the default pose
+ * @param {boolean} [forceChange=false] - TRUE if the set pose(s) should overwrite current active pose(s)
+ * @returns {void} - Nothing
+ * @deprecated - Deprecated alias for {@link PoseSetActive}
+ */
+declare function CharacterSetActivePose(C: Character, poseName: null | AssetPoseName, forceChange?: boolean): void;
+/**
+ * Checks whether the given character can change to the named pose (without aid by default).
+ * @param {Character} C - The character to check
+ * @param {AssetPoseName} poseName - The name of the pose to check for
+ * @returns {boolean} - Returns true if the character has no conflicting items and is not prevented from changing to
+ * the provided pose
+ * @deprecated Superseded by {@link PoseCanChangeUnaided}
+ */
+declare function CharacterCanChangeToPose(C: Character, poseName: AssetPoseName): boolean;
 /** @type Character[] */
 declare var Character: Character[];
 declare var CharacterNextId: number;
-/** @type Map<EffectName, number> */
-declare const CharacterBlindLevels: Map<EffectName, number>;
-/** @type Map<EffectName, number> */
-declare const CharacterDeafLevels: Map<EffectName, number>;
-/** @type Map<EffectName, number> */
-declare const CharacterBlurLevels: Map<EffectName, number>;
+/** @type {Map<BlindEffectName, number>} */
+declare const CharacterBlindLevels: Map<BlindEffectName, number>;
+/** @type {Map<DeafEffectName, number>} */
+declare const CharacterDeafLevels: Map<DeafEffectName, number>;
+/** @type {Map<BlurEffectName, number>} */
+declare const CharacterBlurLevels: Map<BlurEffectName, number>;
 /**
  * An enum representing the various character archetypes
  * ONLINE: The player, or a character representing another online player

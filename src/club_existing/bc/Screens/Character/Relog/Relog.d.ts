@@ -30,7 +30,12 @@ declare function RelogSend(): void;
 declare function RelogExit(): void;
 declare var RelogBackground: string;
 declare var RelogCanvas: HTMLCanvasElement;
-declare var RelogData: any;
+/** @type {null | { Screen: string, Module: ModuleType, Character: Character }} */
+declare var RelogData: null | {
+    Screen: string;
+    Module: ModuleType;
+    Character: Character;
+};
 /** @type {HTMLDivElement | null} */
 declare var RelogChatLog: HTMLDivElement | null;
 declare var RelogInputText: string;

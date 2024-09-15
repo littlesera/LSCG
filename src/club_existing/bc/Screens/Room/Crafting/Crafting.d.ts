@@ -22,21 +22,27 @@ declare function CraftingLoad(): void;
  */
 declare function CraftingUpdatePreview(): void;
 /**
- * Check whether the item can safely be used with the crafting auto-type system.
- * @returns {Boolean}
- */
-declare function CraftingItemSupportsAutoType(): boolean;
-/**
  * Run the club crafting room if all possible modes
  * @returns {void} - Nothing
  */
 declare function CraftingRun(): void;
+/**
+ * Update {@link CraftingSelectedItem.ItemProperties} with a select few properties from the passed item.
+ * @param {Item} item - The item whose properties should be coppied.
+ * @returns {void}
+ */
+declare function CraftingUpdateFromItem(item: Item): void;
 /**
  * Sets the new mode and creates or removes the inputs
  * @param {CraftingMode} NewMode - The new mode to set
  * @returns {void} - Nothing
  */
 declare function CraftingModeSet(NewMode: CraftingMode): void;
+/**
+ * @this {HTMLInputElement}
+ * @returns {void};
+ */
+declare function CraftingPriorityKeyUp(this: HTMLInputElement): void;
 /**
  * When the color or type field is updated manually, we update the preview image
  * @returns {void} - Nothing
@@ -48,22 +54,41 @@ declare function CraftingKeyUp(): void;
  */
 declare function CraftingParsePriorityElement(): number | null;
 /**
+ * Serialize a single crafted item into a string in order to prepare it for server saving
+ * @param {CraftingItem} craft The crafted item
+ * @returns {string} The serialized crafted item
+ * @see {@link CraftingSaveServer}
+ */
+declare function CraftingSerialize(craft: CraftingItem): string;
+/**
  * Prepares a compressed packet of the crafting data and sends it to the server
  * @returns {void} - Nothing
  */
 declare function CraftingSaveServer(): void;
 /**
- * Deserialize and unpack the crafting data from the server.
- * @param {string|array} Data The serialized crafting data
- * @returns {CraftingItem[]}
+ * Deserialize a single crafted item from a string in order to parse data received from the server.
+ * @param {string} craftString The serialized crafted item
+ * @returns {null | CraftingItem} The crafted item or `null` if either its {@link CraftingItem.Item} or {@link CraftingItem.Name} property is invalid
+ * @see {@link CraftingDecompressServerData}
  */
-declare function CraftingDecompressServerData(Data: string | any[]): CraftingItem[];
+declare function CraftingDeserialize(craftString: string): null | CraftingItem;
+/**
+ * Deserialize and unpack the crafting data from the server.
+ * @param {string | (null | CraftingItem)[]} Data The serialized crafting data
+ * @returns {(null | CraftingItem)[]}
+ */
+declare function CraftingDecompressServerData(Data: string | (null | CraftingItem)[]): (null | CraftingItem)[];
 /**
  * Loads the server packet and creates the crafting array for the player
  * @param {string} Packet - The packet
  * @returns {void} - Nothing
  */
 declare function CraftingLoadServer(Packet: string): void;
+/**
+ * Advance to the next crafting reordering mode, or set the mode to the specified value.
+ * @param {CraftingReorderType} newmode - The mode to set.  If null, advance to next mode.
+ */
+declare function CraftingReorderModeSet(newmode?: CraftingReorderType): void;
 /**
  * Handles clicks in the crafting room.
  * @returns {void} - Nothing
@@ -119,9 +144,10 @@ declare var CraftingBackground: string;
  * * `"Lock"`: The {@link CraftingLockList} selection screen.
  * * `"Name"`: The main menu wherein the crafted item is customized, allowing for the specification of names, descriptions, colors, extended item types, _etc._
  * * `"Color"`: A dedicated coloring screen for the crafted item.
- * @type {"Slot" | "Item" | "Property" | "Lock" | "Name" | "Color"}
+ * * `"Extended"`: The extended item menu.
+ * @type {CraftingMode}
  */
-declare let CraftingMode: "Slot" | "Item" | "Property" | "Lock" | "Name" | "Color";
+declare let CraftingMode: CraftingMode;
 /** Whether selecting a crafted item in the crafting screen should destroy it. */
 declare let CraftingDestroy: boolean;
 /** The index of the selected crafted item within the crafting screen. */
@@ -138,8 +164,6 @@ declare let CraftingOffset: number;
  * @type {Asset[]}
  */
 declare let CraftingItemList: Asset[];
-/** The maximum number of crafting slots. */
-declare let CraftingSlotMax: number;
 /**
  * The character used for the crafting preview.
  * @type {Character | null}
@@ -149,6 +173,36 @@ declare let CraftingPreview: Character | null;
 declare let CraftingNakedPreview: boolean;
 /** Whether exiting the crafting menu should return you to the chatroom or, otherwise, the main hall. */
 declare let CraftingReturnToChatroom: boolean;
+/** Pagination offset used for the `Priority` {@link CraftingMode}. */
+declare let CraftingOverridePriorityOffset: number;
+/** List of item indices collected for swapping.
+ * @type {number[]}
+ */
+declare let CraftingReorderList: number[];
+/** @type {CraftingReorderType} */
+declare let CraftingReorderMode: CraftingReorderType;
+/**
+ * @type {null | TextCache}
+ */
+declare let CraftingLayerNames: null | TextCache;
+/**
+ * A record mapping all crafting-valid asset names to a list of matching elligble assets.
+ *
+ * Elligble assets are defined as crafting-valid assets with either a matching {@link Asset.Name} or {@link Asset.CraftGroup}.
+ *
+ * The first asset in each list is guaranteed to satisfy `Asset.Group.Name === Asset.DynamicGroupName` _if_ any of the list members satisfy this condition.
+ * @type {Record<string, Asset[]>}
+ */
+declare let CraftingAssets: Record<string, Asset[]>;
+/** The separator used between different crafted items when serializing them. */
+declare const CraftingSerializeItemSep: "§";
+/** The separator used between fields within a single crafted item when serializing them. */
+declare const CraftingSerializeFieldSep: "¶";
+/**
+ * Regexp pattern for sanitizing to-be serialized crafted item string data by finding all
+ * special separator characters (see {@link CraftingSerializeItemSep} and {@link CraftingSerializeFieldSep}).
+ */
+declare const CraftingSerializeSanitize: RegExp;
 /**
  * Map crafting properties to their respective validation function.
  * @type {Map<CraftingPropertyType, (asset: Asset) => boolean>}
@@ -173,9 +227,14 @@ declare const CraftingStatusType: {
  */
 declare const CraftingLockList: readonly (AssetLockType | "")[];
 /**
+ * A set of item property names that should never be stored in {@link CraftingItem.ItemProperty}.
+ * @type {Set<keyof ItemProperties>}
+ */
+declare const CraftingPropertyExclude: Set<keyof ItemProperties>;
+/**
  * A record with tools for validating {@link CraftingItem} properties.
- * @type {Record<string, CratingValidationStruct>}
+ * @type {Record<keyof CraftingItem, CratingValidationStruct>}
  * @see {@link CratingValidationStruct}
  * @todo Let the Validate/GetDefault functions take the respective attribute rather than the entire {@link CraftingItem}
  */
-declare const CraftingValidationRecord: Record<string, CratingValidationStruct>;
+declare const CraftingValidationRecord: Record<keyof CraftingItem, CratingValidationStruct>;

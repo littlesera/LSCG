@@ -374,6 +374,16 @@ declare function PrivateWillJoinBedGag(): boolean;
  */
 declare function PrivateWillNotJoinBedGag(): boolean;
 /**
+ * Returns TRUE if the both players can play club cards (no restraints or gag)
+ * @returns {boolean} - TRUE if both parties can play
+ */
+declare function PrivateCanPlayClubCard(): boolean;
+/**
+ * Returns TRUE if the club card victory mode is active
+ * @returns {boolean} - TRUE if active
+ */
+declare function PrivateClubCardVictoryModeActive(): boolean;
+/**
  * Loads the private room screen and the vendor NPC.
  * @returns {void} - Nothing.
  */
@@ -683,6 +693,65 @@ declare function PrivateEnterBed(): void;
  * @returns {void} - Nothing.
  */
 declare function PrivateRandomBed(): void;
+/**
+ * Returns the Club Card Deck that will be used by the NPC
+ * @returns {Array} - The Deck to useRule
+ */
+declare function PrivateGetClubCardDeck(C: any): any[];
+/**
+ * When the club card game against a friend NPC starts
+ * @returns {void} - Nothing
+ */
+declare function PrivateClubCardVsFriendStart(): void;
+/**
+ * When the club card game against a friend NPC ends
+ * @returns {void} - Nothing
+ */
+declare function PrivateClubCardVsFriendEnd(): void;
+/**
+ * When the club card game against an owner NPC starts
+ * @returns {void} - Nothing
+ */
+declare function PrivateClubCardVsOwnerStart(): void;
+/**
+ * When the club card game against an owner NPC ends
+ * @returns {void} - Nothing
+ */
+declare function PrivateClubCardVsOwnerEnd(): void;
+/**
+ * When the club card game against a submissive NPC starts
+ * @returns {void} - Nothing
+ */
+declare function PrivateClubCardVsSubStart(): void;
+/**
+ * When the club card game against a submissive NPC ends
+ * @returns {void} - Nothing
+ */
+declare function PrivateClubCardVsSubEnd(): void;
+/**
+ * When the club card game victory mode ends
+ * @returns {void} - Nothing
+ */
+declare function PrivateEndClubCardVictoryMode(): void;
+/**
+ * When the NPC does an activity on the player after winning at club card
+ * @returns {void} - Nothing
+ */
+declare function PrivateClubCardDefeatActivity(): void;
+/**
+ * The consequence activity to do
+ * @param {string} Act - The activity to do
+ * @param {string} LoveFactor - The love to change
+ * @returns {void} - Nothing.
+ */
+declare function PrivateClubCardDoConsequence(Act: string, LoveFactor: string): void;
+/**
+ * Do the spanking club card consequence on the player
+ * @param {ExpressionName} Eyes - The eye experssion to apply
+ * @param {string} Strip - Underwear, Naked or NULL to strip the player or not
+ * @returns {void} - Nothing.
+ */
+declare function PrivateClubCardKinkyConsequence(Eyes: ExpressionName, Strip: string): void;
 declare var PrivateBackground: string;
 /** @type {null | NPCCharacter} */
 declare var PrivateVendor: null | NPCCharacter;
@@ -708,3 +777,5 @@ declare var PrivateLoverActivity: string;
 declare var PrivateLoverActivityList: string[];
 declare var PrivateBeltList: string[];
 declare var PrivateEntryEvent: boolean;
+declare var PrivateClubCardVictoryMode: boolean;
+declare var PrivateClubCardDefeatConsequence: string[];

@@ -1,5 +1,5 @@
-import { SendAction, addCustomEffect, getRandomInt, hookFunction, removeCustomEffect } from "utils";
-import { BaseState, StateRestrictions } from "./BaseState";
+import { SendAction, getRandomInt, hookFunction } from "utils";
+import { BaseState } from "./BaseState";
 import { StateModule } from "Modules/states";
 
 export class FrozenState extends BaseState {
@@ -23,12 +23,6 @@ export class FrozenState extends BaseState {
     }
 
     Init(): void {
-        hookFunction("CharacterCanChangeToPose", 1, (args, next) => {
-            if (this.Active)
-                return false;
-            return next(args);
-        });
-
         hookFunction("Player.IsEnclose", 1, (args, next) => {
             return this.Active || next(args);
         });

@@ -1,6 +1,6 @@
 import { BoopsModule } from "Modules/boops";
 import { InjectorModule } from "Modules/injector";
-import { BaseSettingsModel, GlobalPublicSettingsModel, GlobalSettingsModel, LipstickSettingsModel, MiscSettingsModel } from "./base";
+import { BaseSettingsModel, GlobalPublicSettingsModel, GlobalSettingsModel, LipstickSettingsModel, MiscSettingsModel, OpacityPublicSettingsModel, OpacitySettingsModel } from "./base";
 import { CollarModel, CollarPublicSettingsModel, CollarSettingsModel } from "./collar";
 import { HypnoPublicSettingsModel, HypnoSettingsModel } from "./hypno";
 import { InjectorPublicSettingsModel, InjectorSettingsModel } from "./injector";
@@ -22,6 +22,8 @@ export interface SettingsModel {
     ActivityModule: ActivitySettingsModel;
     StateModule: StateSettingsModel;
     MagicModule: MagicSettingsModel;
+    OpacityModule: OpacitySettingsModel;
+    LeashingModule: BaseSettingsModel;
 }
 
 export interface IPublicSettingsModel extends BaseSettingsModel {
@@ -35,6 +37,8 @@ export interface IPublicSettingsModel extends BaseSettingsModel {
     InjectorModule: InjectorPublicSettingsModel;
     StateModule: StatePublicSettingsModel;
     MagicModule: MagicPublicSettingsModel;
+    OpacityModule: OpacityPublicSettingsModel;
+    LeashingModule: BaseSettingsModel;
 }
 
 export class PublicSettingsModel implements IPublicSettingsModel {
@@ -82,9 +86,15 @@ export class PublicSettingsModel implements IPublicSettingsModel {
         hypnotized: false,
         hypnotizedBy: 0,
         speakTriggers: "",
-        silenceTriggers: ""
+        silenceTriggers: "",
+        allowSuggestions: false,
+        allowSuggestionRemoval: true,
+        blockedInstructions: [],
+        alwaysSubmit: false,
+        alwaysSubmitMemberIds: ""
     };
     BoopsModule: BaseSettingsModel = <BaseSettingsModel>{enabled: false};
+    LeashingModule: BaseSettingsModel = <BaseSettingsModel>{enabled: false};
     LipstickModule: LipstickSettingsModel = <LipstickSettingsModel>{
         enabled: false,
         dry: false
@@ -130,6 +140,10 @@ export class PublicSettingsModel implements IPublicSettingsModel {
         allowOutfitToChangeNeckItems: false,
         allowChangeGenitals: true,
         requireWhitelist: false,
-        blockXRay: false
+        blockXRay: true
+    };
+    OpacityModule: OpacityPublicSettingsModel = <OpacityPublicSettingsModel>{
+        enabled: true,
+        preventExternalMod: false
     }
 }

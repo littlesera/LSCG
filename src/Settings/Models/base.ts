@@ -12,6 +12,9 @@ export interface GlobalSettingsModel extends GlobalPublicSettingsModel {
     blockSettingsWhileRestrained: boolean;
     seeSharedCrafts: boolean;
     hideResizing: boolean;
+    erectionDetection: boolean;
+    tamperproofEnabled: boolean;
+    tamperproofElectricityEnabled: boolean;
 }
 
 export interface GlobalPublicSettingsModel extends BaseSettingsModel {
@@ -30,4 +33,11 @@ export interface MiscSettingsModel extends BaseSettingsModel {
     infiniteChloroformPotency: boolean;
     handChokeEnabled: boolean;
     gagChokeEnabled: boolean;
+}
+
+export interface OpacitySettingsModel extends OpacityPublicSettingsModel {
+}
+
+export interface OpacityPublicSettingsModel extends BaseSettingsModel {
+    preventExternalMod: boolean;
 }
