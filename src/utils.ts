@@ -1,4 +1,3 @@
-//import bcModSDKRef from "bondage-club-mod-sdk";
 import { GetDotedPathType, PatchHook } from "bondage-club-mod-sdk";
 import bcModSDKRef from "bondage-club-mod-sdk";
 import { getModule } from "modules";
@@ -7,13 +6,10 @@ import { ActivityEntryModel } from "Settings/Models/activities";
 import { ModuleCategory } from "Settings/setting_definitions";
 import { clone } from "lodash-es";
 import { SettingsModel } from "Settings/Models/settings";
-import { lt } from "semver";
 
 export const LSCG_CHANGES: string = "https://github.com/littlesera/LSCG/releases/latest";
 export const LSCG_TEAL: string = "#00d5d5";
 
-// Included in bcModSDK now
-//type PatchHook = (args: any[], next: (args: any[]) => any) => any;
 interface IPatchedFunctionData {
 	name: string;
 	hooks: {
@@ -31,6 +27,9 @@ export const bcModSDK = bcModSDKRef.registerMod({
 	fullName: "Little Sera's Club Games",
 	version: LSCG_VERSION.startsWith("v") ? LSCG_VERSION.slice(1) : LSCG_VERSION,
 	repository: "https://github.com/littlesera/LSCG"
+},
+{
+	allowReplace: true
 });
 
 export function patchFunction(target: string, patches: Record<string, string>): void {
@@ -194,7 +193,7 @@ export function hookFunction(target: string, priority: number, hook: PatchHook, 
 	// 	}
 	// }
 
-	const removeCallback = bcModSDK.hookFunction(target, priority, hook);
+	const removeCallback = bcModSDK.hookFunction(target, priority, hook as any);
 
 	data.hooks.push({
 		hook,
@@ -327,15 +326,6 @@ export function settingsSave(publish: boolean = false) {
 
 export function ExportSettings(): string {
 	return LZString.compressToBase64(JSON.stringify(Player.LSCG));
-	// let parsed =  JSON.parse(JSON.stringify(Player.LSCG)); //CleanDefaultsFromSettings(Player.LSCG);
-	// Object.keys(parsed).filter(key => key != "Version").forEach(key => {
-	// 	let module = (<any>parsed)[key];
-	// 	Object.keys(module).forEach(mk => {
-	// 		if (mk == "stats")
-	// 			delete module[mk];
-	// 	});
-	// });
-	// return LZString.compressToBase64(JSON.stringify(parsed));
 }
 
 export function ImportSettings(val: string): boolean {
@@ -344,9 +334,6 @@ export function ImportSettings(val: string): boolean {
 		localStorage.setItem(`LSCG_${Player.MemberNumber}_Backup`, LZString.compressToBase64(JSON.stringify(oldSettings)));
 		let parsed = JSON.parse(LZString.decompressFromBase64(val)) as SettingsModel;
 		if (!!parsed && !!parsed.GlobalModule) {
-			if (lt(parsed.Version, LSCG_VERSION)) {
-				return false;
-			}
 			Player.LSCG = parsed; //Object.assign(Player.LSCG, parsed);
 			Player.LSCG.Version = oldSettings.Version;
 			Player.LSCG.ActivityModule.stats = Object.assign({}, oldSettings.ActivityModule.stats);

@@ -15,11 +15,6 @@ export class MiscModule extends BaseModule {
         return getModule<StateModule>("StateModule")?.SleepState;
     }
 
-    // Disabled as it's managed via General
-    // get settingsScreen(): Subscreen | null {
-    //     return GuiMisc;
-    // }
-
     get defaultSettings() {
         return <MiscSettingsModel>{
             enabled: true,

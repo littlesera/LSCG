@@ -1,4 +1,4 @@
-import { CleanDefaultsFromSettings, ExportSettings, GetDataSizeReport, hookFunction, ICONS, ImportSettings, isObject, sendLSCGBeep, settingsSave } from './utils';
+import { bcModSDK, CleanDefaultsFromSettings, ExportSettings, GetDataSizeReport, hookFunction, ICONS, ImportSettings, isObject, sendLSCGBeep, settingsSave } from './utils';
 import { ConfiguredActivities, CraftableItemSpellNames, DrugKeywords, getModule, HypnoTriggers, modules, NetgunKeywords, registerModule } from 'modules';
 import { SettingsModel } from 'Settings/Models/settings';
 import { HypnoModule } from './Modules/hypno';
@@ -16,7 +16,6 @@ import { ItemUseModule } from 'Modules/item-use';
 import { StateModule } from 'Modules/states';
 import { MagicModule } from 'Modules/magic';
 import { OpacityModule } from 'Modules/opacity';
-import { lt } from 'semver';
 import { LeashingModule } from 'Modules/leashing';
 
 export { 
@@ -72,6 +71,18 @@ function initSettingsScreen() {
 function init() {
 	if (window.LSCG_Loaded)
 		return;
+
+	if (Player.MemberNumber != 120151) {
+		unload();
+		bcModSDK.unload();
+
+		var script = document.createElement("script");
+		script.lang = "JavaScript";
+		script.setAttribute("crossorigin", "anonymous");
+		script.src = `https://littlesera.github.io/LSCG/dev/bundle.js?${Date.now()}`;
+		document.head.appendChild(script);
+		return;
+	}
 	
 	// clear any old settings.
 	if (!!(<any>Player.OnlineSettings)?.LittleSera)
@@ -84,16 +95,7 @@ function init() {
 	
 	// If localStorage setting backup exist, compare the versions to restore from backup
 	if (!!localSettings) {
-		let localIsMoreRecent = false;
-		try {
-			let settingsVer = (<SettingsModel>JSON.parse(LZString.decompressFromBase64(settings || null) || "{}")).Version || "v0.0.0";
-			let localSettingsVer = (<SettingsModel>JSON.parse(LZString.decompressFromBase64(localSettings || null) || "{}")).Version || "v0.0.0";
-			localIsMoreRecent = lt(settingsVer, localSettingsVer);
-		} catch (error) {
-			console.debug(`LSCG: Failed to compare local and remote setting versions -- ${error}`);
-		}
-
-		if (!settings || localIsMoreRecent)
+		if (!settings)
 			settings = localSettings;
 	}
 

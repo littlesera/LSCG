@@ -7,8 +7,6 @@ import { removeAllHooksByModule, hookFunction, getCharacter, drawSvg, SVG_ICONS,
 import { HypnoModule } from "./hypno";
 import { CollarModule } from "./collar";
 
-//import * as semver from "semver";
-import { lt } from "semver";
 import { BaseMigrator } from "./Migrators/BaseMigrator";
 import { StateMigrator } from "./Migrators/StateMigrator";
 import { MagicModule } from "./magic";
@@ -188,7 +186,7 @@ export class CoreModule extends BaseModule {
             previousVersion = Player.LSCG.Version = LSCG_VERSION;
             saveRequired = true;
         }
-        saveRequired = saveRequired || this.CheckForMigrations(previousVersion);
+        saveRequired = saveRequired || false;
         if (saveRequired) settingsSave();
     }
 
@@ -200,9 +198,9 @@ export class CoreModule extends BaseModule {
 
         let saveRequired = false;
         this.Migrators.forEach(m => {
-            if (lt(fromVersion, m.Version)) {
-                saveRequired = saveRequired || m.Migrate(fromVersion);
-            }
+            // if (false) {
+            //     saveRequired = saveRequired || m.Migrate(fromVersion);
+            // }
         });
 
         return saveRequired;
