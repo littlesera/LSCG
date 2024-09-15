@@ -477,7 +477,7 @@ export class MagicModule extends BaseModule {
             `%NAME% changes fabric of reality, as %PRONOUN% pronounces "${spell.Name}", unleashing arcane magics into %OPP_NAME%${pairedDefaultStr}`
         ];
 
-        let castingActionStrings = !this.VerbalMagic ? rangedCastingActionStrings : castingVerbalStrings;
+        let castingActionStrings = this.VerbalMagic ? castingVerbalStrings : rangedCastingActionStrings;
 
         return castingActionStrings[getRandomInt(castingActionStrings.length)];
     }
