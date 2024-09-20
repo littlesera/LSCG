@@ -39,14 +39,9 @@ export class GUI extends BaseModule {
 		PreferenceMessage = "";
 		PreferencePageCurrent = 1;
 
-		let subscreenName = "";
 		if (this._currentSubscreen) {
-			subscreenName = SETTING_NAME_PREFIX + this._currentSubscreen?.name;
 			this._currentSubscreen.Load();
 		}
-
-		// Get BC to render the new screen
-		PreferenceSubscreen = subscreenName;
 	}
 
 	get currentCharacter(): Character {
@@ -103,6 +98,37 @@ export class GUI extends BaseModule {
 		}
 
 		this._mainMenu.subscreens = this._subscreens;
+
+		PreferenceRegisterExtensionSetting({
+      Identifier: 'LSCG',
+      ButtonText: 'LSCG Settings',
+      Image: ICONS.BOUND_GIRL,
+      load: () => {
+        setSubscreen(new MainMenu(this));
+      },
+      run: () => {
+        if (this._currentSubscreen) {
+          MainCanvas.textAlign = 'left';
+          this._currentSubscreen.Run();
+          MainCanvas.textAlign = 'center';
+        }
+      },
+      click: () => {
+        if (this._currentSubscreen) {
+          this._currentSubscreen.Click();
+        }
+      },
+      exit: () => {
+        if (this._currentSubscreen) {
+          this._currentSubscreen.Exit();
+        }
+      },
+			unload: () => {
+        if (this._currentSubscreen) {
+          this._currentSubscreen.Unload();
+        }
+			}
+    });
 	}
 }
 

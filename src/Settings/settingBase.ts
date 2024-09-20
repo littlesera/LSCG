@@ -26,15 +26,6 @@ export abstract class GuiSubscreen {
 
 	constructor(module: BaseModule) {
 		this.module = module;
-
-		// create each handler for a new preference subscreen
-		SETTING_FUNC_NAMES.forEach(name => {
-			const fName = SETTING_FUNC_PREFIX + SETTING_NAME_PREFIX + this.name + name;
-			if (typeof (<any>this)[name] === "function" && typeof (<any>window)[fName] !== "function")
-				(<any>window)[fName] = () => {
-					(<any>this)[name]();
-				};
-		});
 	}
 
 	get name(): string {
