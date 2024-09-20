@@ -2,9 +2,10 @@ import { BaseModule } from "../base";
 import { GuiSubscreen } from "./settingBase";
 import { GuiGlobal } from "./global";
 import { MainMenu } from "./mainmenu";
-import { SETTING_NAME_PREFIX, Subscreen } from "./setting_definitions";
+import { SETTING_NAME_PREFIX, Subscreen, setSubscreen } from "./setting_definitions";
 import { modules } from "modules";
 import { GlobalSettingsModel } from "./Models/base";
+import { ICONS } from "utils";
 
 export class GUI extends BaseModule {
 	static instance: GUI | null = null;
@@ -100,35 +101,35 @@ export class GUI extends BaseModule {
 		this._mainMenu.subscreens = this._subscreens;
 
 		PreferenceRegisterExtensionSetting({
-      Identifier: 'LSCG',
-      ButtonText: 'LSCG Settings',
-      Image: ICONS.BOUND_GIRL,
-      load: () => {
-        setSubscreen(new MainMenu(this));
-      },
-      run: () => {
-        if (this._currentSubscreen) {
-          MainCanvas.textAlign = 'left';
-          this._currentSubscreen.Run();
-          MainCanvas.textAlign = 'center';
-        }
-      },
-      click: () => {
-        if (this._currentSubscreen) {
-          this._currentSubscreen.Click();
-        }
-      },
-      exit: () => {
-        if (this._currentSubscreen) {
-          this._currentSubscreen.Exit();
-        }
-      },
+			Identifier: 'LSCG',
+			ButtonText: 'LSCG Settings',
+			Image: ICONS.BOUND_GIRL,
+			load: () => {
+				setSubscreen(new MainMenu(this));
+			},
+			run: () => {
+				if (this._currentSubscreen) {
+					MainCanvas.textAlign = 'left';
+					this._currentSubscreen.Run();
+					MainCanvas.textAlign = 'center';
+				}
+			},
+			click: () => {
+				if (this._currentSubscreen) {
+					this._currentSubscreen.Click();
+				}
+			},
+			exit: () => {
+				if (this._currentSubscreen) {
+					this._currentSubscreen.Exit();
+				}
+			},
 			unload: () => {
-        if (this._currentSubscreen) {
-          this._currentSubscreen.Unload();
-        }
+				if (this._currentSubscreen) {
+					this._currentSubscreen.Unload();
+				}
 			}
-    });
+    	});
 	}
 }
 
