@@ -276,6 +276,8 @@ export class ItemUseModule extends BaseModule {
 				let item = InventoryGet(C, "ItemHandheld");
 				if (!!item && EdibleItems.indexOf(item.Asset?.Name) > -1) 
 					results.push(item);
+				else if (isPhraseInString(GetItemNameAndDescriptionConcat(item) ?? "", "edible", true))
+					results.push(item);
 			}
 			return results;
 		}, ModuleCategory.ItemUse);
