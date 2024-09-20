@@ -41,6 +41,29 @@ export const EdibleItems: string[] = [
 	"Baguette"
 ]
 
+export const ChewableItems: string[] = [
+	"BallGag",
+	"BoneGag",
+	"PonyGag",
+	"CaneGag",
+	"CropGag",
+	"BitGag",
+	"RopeGag",
+	"RopeBallGag",
+	"ClothGag",
+	"Ball",
+	"XLBoneGag",
+	"HarnessBallGag1",
+	"ClothStuffing",
+	"ClothGag",
+	"PantyStuffing",
+	"PacifierGag",
+	"PaciGag",
+	"ShoeGag",
+	"WiffleGag",
+	"CarrotGag"
+]
+
 export const EnhancedItemActivityNames: string[] = [
 	"LSCG_Quaff",
 	"LSCG_Eat",
@@ -278,6 +301,20 @@ export class ItemUseModule extends BaseModule {
 					results.push(item);
 				else if (isPhraseInString(GetItemNameAndDescriptionConcat(item) ?? "", "edible", true))
 					results.push(item);
+			} else if (itemType == "ChewableItem") {
+				let handItem = InventoryGet(C, "ItemHandheld");
+				let mouthItem = InventoryGet(C, "ItemMouth") || InventoryGet(C, "ItemMouth2") || InventoryGet(C, "ItemMouth3")
+				
+				if (!!mouthItem && ChewableItems.indexOf(mouthItem.Asset?.Name) > -1) 
+					results.push(mouthItem);
+				else if (isPhraseInString(GetItemNameAndDescriptionConcat(mouthItem) ?? "", "chewable", true))
+					results.push(mouthItem);
+				else if (!C.IsMouthBlocked() && C.CanTalk()) {
+					if (!!handItem && ChewableItems.indexOf(handItem.Asset?.Name) > -1) 
+						results.push(handItem);
+					else if (isPhraseInString(GetItemNameAndDescriptionConcat(handItem) ?? "", "chewable", true))
+						results.push(handItem);
+				}
 			}
 			return results;
 		}, ModuleCategory.ItemUse);
