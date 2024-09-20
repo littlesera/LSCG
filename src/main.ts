@@ -57,18 +57,6 @@ function loginInit(C: any) {
 	init();
 }
 
-function initSettingsScreen() {
-	PreferenceSubscreenList.push("LSCGMainMenu");
-	hookFunction("TextGet", 2, (args: string[], next: (arg0: any) => any) => {
-		if (args[0] == "HomepageLSCGMainMenu") return "LSCG Settings";
-		return next(args);
-	});
-	hookFunction("DrawButton", 2, (args: string[], next: (arg0: any) => any) => {
-		if (args[6] == "Icons/LSCGMainMenu.png") args[6] = ICONS.BOUND_GIRL;// "Icons/Asylum.png";
-		return next(args);
-	});
-}
-
 function init() {
 	if (window.LSCG_Loaded)
 		return;
@@ -121,8 +109,6 @@ function init() {
 	}
 	else if (!!settings)
 		Player.LSCG = <SettingsModel>settings || <SettingsModel>{};
-
-	initSettingsScreen();
 
 	if (!init_modules()) {
 		unload();

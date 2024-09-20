@@ -739,6 +739,9 @@ declare var PreferenceOnlineSharedSettingsValidate: {
     ScriptPermissions: (arg: ScriptPermissions, C: Character) => ScriptPermissions;
     WheelFortune: (arg: string, C: Character) => string;
 };
+
+declare function PreferenceRegisterExtensionSetting(Setting: any): void;
+declare function PreferenceSubscreenExtensionsClear(): void;
 /**
  * An object defining which genders a setting is active for
  */

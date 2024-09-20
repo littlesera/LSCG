@@ -708,7 +708,28 @@ export class ActivityModule extends BaseModule {
                     SelfOnly: true,
                     TargetLabel: "Eat",
                     TargetAction: "SourceCharacter takes a big bite out of TargetCharacter's ActivityAsset.",
-                    TargetSelfAction: "SourceCharacter takes a big bite out of PronounPossessive own ActivityAsset."
+                    TargetSelfAction: "SourceCharacter takes a big bite out of PronounPossessive ActivityAsset."
+                }
+            ],
+            CustomImage: "Assets/Female3DCG/Activity/Bite.png"
+        });
+
+        // Chew Item
+        this.AddActivity({
+            Activity: <Activity>{
+                Name: "Chew",
+                MaxProgress: 50,
+                MaxProgressSelf: 50,
+                Prerequisite: ["ZoneAccessible", "Needs-ChewableItem"]
+            },
+            Targets: [
+                {
+                    Name: "ItemMouth",
+                    SelfAllowed: true,
+                    SelfOnly: true,
+                    TargetLabel: "Chew On",
+                    TargetAction: "SourceCharacter chews on TargetCharacter's ActivityAsset.",
+                    TargetSelfAction: "SourceCharacter chews on PronounPossessive ActivityAsset."
                 }
             ],
             CustomImage: "Assets/Female3DCG/Activity/Bite.png"

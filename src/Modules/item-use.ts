@@ -41,6 +41,31 @@ export const EdibleItems: string[] = [
 	"Baguette"
 ]
 
+export const ChewableItems: string[] = [
+	"BallGag",
+	"BoneGag",
+	"PonyGag",
+	"CaneGag",
+	"CropGag",
+	"BitGag",
+	"RopeGag",
+	"RopeBallGag",
+	"ClothGag",
+	"Ball",
+	"XLBoneGag",
+	"HarnessBallGag1",
+	"ClothStuffing",
+	"ClothGag",
+	"PantyStuffing",
+	"PacifierGag",
+	"PaciGag",
+	"ShoeGag",
+	"WiffleGag",
+	"CarrotGag",
+	"SockStuffing",
+	"ScarfGag"
+]
+
 export const EnhancedItemActivityNames: string[] = [
 	"LSCG_Quaff",
 	"LSCG_Eat",
@@ -50,11 +75,16 @@ export const EnhancedItemActivityNames: string[] = [
 	"ThrowItem"
 ];
 
-export const TamperProofKeywords = [
+export const TamperProofKeywords: string[] = [
 	"tamper-proof",
 	"tamperproof",
 	"tamper proof"
 ];
+
+export const ExplicitSqueezableItems: string[] = [
+	"Shark",
+	"Karl"
+]
 
 export function IsActivityEnhanced(data: ServerChatRoomMessage) {
 	let meta = GetMetadata(data);
@@ -244,11 +274,11 @@ export class ItemUseModule extends BaseModule {
 					results.push(item)
 			} else if (itemType == "PlushItem") {
 				let teddy = InventoryGet(C, "ItemMisc");
-				let shark = InventoryGet(C, "ItemHandheld");
+				let itemHand = InventoryGet(C, "ItemHandheld");
 				if (!!teddy && teddy.Asset.Name == "TeddyBear") 
 					results.push(teddy);
-				if (!!shark && shark.Asset.Name == "Shark")
-					results.push(shark);
+				if (!!itemHand && (ExplicitSqueezableItems.indexOf(itemHand.Asset.Name) > -1 || itemHand.Asset.Name.toLocaleLowerCase().indexOf("plush") > -1 || itemHand.Asset.Name.toLocaleLowerCase().indexOf("pet") > -1))
+					results.push(itemHand);
 			} else if (itemType == "CameraItem") {
 				let item = InventoryGet(C, "ItemHandheld");
 				let acc = InventoryGet(C, "ClothAccessory");
@@ -276,6 +306,22 @@ export class ItemUseModule extends BaseModule {
 				let item = InventoryGet(C, "ItemHandheld");
 				if (!!item && EdibleItems.indexOf(item.Asset?.Name) > -1) 
 					results.push(item);
+				else if (isPhraseInString(GetItemNameAndDescriptionConcat(item) ?? "", "edible", true))
+					results.push(item);
+			} else if (itemType == "ChewableItem") {
+				let handItem = InventoryGet(C, "ItemHandheld");
+				let mouthItem = InventoryGet(C, "ItemMouth") || InventoryGet(C, "ItemMouth2") || InventoryGet(C, "ItemMouth3")
+				
+				if (!!mouthItem && ChewableItems.indexOf(mouthItem.Asset?.Name) > -1) 
+					results.push(mouthItem);
+				else if (isPhraseInString(GetItemNameAndDescriptionConcat(mouthItem) ?? "", "chewable", true))
+					results.push(mouthItem);
+				else if (!C.IsMouthBlocked() && C.CanTalk()) {
+					if (!!handItem && ChewableItems.indexOf(handItem.Asset?.Name) > -1) 
+						results.push(handItem);
+					else if (isPhraseInString(GetItemNameAndDescriptionConcat(handItem) ?? "", "chewable", true))
+						results.push(handItem);
+				}
 			}
 			return results;
 		}, ModuleCategory.ItemUse);
