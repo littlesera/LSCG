@@ -49,3 +49,6 @@ interface LSCGMessageModel {
         args: {name: string, value: any}[]
     }
 }
+
+// >= R109
+declare var CraftingDescription: undefined | { Decode: (description: string) => string  };

@@ -743,7 +743,7 @@ export function GetItemNameAndDescriptionConcat(item: Item | null): string | und
 		return;
 	
 	var name = item.Craft.Name;
-	var description = item.Craft.Description;
+	var description = typeof CraftingDescription === "undefined" ? item.Craft.Description : CraftingDescription.Decode(item.Craft.Description); // R109
 	return name + " | " + description;
 }
 
