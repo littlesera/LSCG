@@ -3,6 +3,7 @@ import { HypnoModule } from "Modules/hypno";
 import { ICONS } from "utils";
 import { HypnoSettingsModel, InstructionDescription, LSCGHypnoInstruction } from "./Models/hypno";
 import { GuiSubscreen, Setting } from "./settingBase";
+import { drawTooltip } from "./settingUtils";
 
 export class GuiHypno extends GuiSubscreen {
 
@@ -224,8 +225,10 @@ export class GuiHypno extends GuiSubscreen {
 				this.settings.blockedInstructions = [];
 			let val = this.settings.blockedInstructions.indexOf(this.Instruction) > -1;
 			let blockedStr = val ? "Blocked" : "Allowed";
-			DrawBackNextButton(780, this.getYPos(6)-32, 600, 64, this.Instruction, "White", "", () => blockedStr, () => blockedStr);
+			DrawBackNextButton(780, this.getYPos(6)-32, 600, 64, this.Instruction, "White", "", () => "", () => "");
 			DrawCheckbox(780 + 600 + 64, this.getYPos(6) - 32, 64, 64, "", val);
+			if (MouseIn(780 + 600 + 64, this.getYPos(6) - 32, 64, 64))
+				drawTooltip(MouseX, MouseY, 128, blockedStr, "left");
 
 			MainCanvas.textAlign = "left";
 			DrawTextFit(InstructionDescription(this.Instruction), 780, this.getYPos(7), 1000, "Black");

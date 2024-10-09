@@ -1,7 +1,7 @@
 import { HypnoSuggestion } from "Modules/hypno";
 import { BaseSettingsModel, ModuleStats } from "./base";
 
-export const SUGGESTION_LIMIT: number = 64;
+export const SUGGESTION_LIMIT: number = 100;
 
 export enum LSCGHypnoInstruction {
     none = "None",

@@ -13,6 +13,8 @@ export interface GlobalSettingsModel extends GlobalPublicSettingsModel {
     seeSharedCrafts: boolean;
     hideResizing: boolean;
     erectionDetection: boolean;
+    tamperproofEnabled: boolean;
+    tamperproofElectricityEnabled: boolean;
 }
 
 export interface GlobalPublicSettingsModel extends BaseSettingsModel {

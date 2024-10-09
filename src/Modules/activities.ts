@@ -708,7 +708,28 @@ export class ActivityModule extends BaseModule {
                     SelfOnly: true,
                     TargetLabel: "Eat",
                     TargetAction: "SourceCharacter takes a big bite out of TargetCharacter's ActivityAsset.",
-                    TargetSelfAction: "SourceCharacter takes a big bite out of PronounPossessive own ActivityAsset."
+                    TargetSelfAction: "SourceCharacter takes a big bite out of PronounPossessive ActivityAsset."
+                }
+            ],
+            CustomImage: "Assets/Female3DCG/Activity/Bite.png"
+        });
+
+        // Chew Item
+        this.AddActivity({
+            Activity: <Activity>{
+                Name: "Chew",
+                MaxProgress: 50,
+                MaxProgressSelf: 50,
+                Prerequisite: ["ZoneAccessible", "Needs-ChewableItem"]
+            },
+            Targets: [
+                {
+                    Name: "ItemMouth",
+                    SelfAllowed: true,
+                    SelfOnly: true,
+                    TargetLabel: "Chew On",
+                    TargetAction: "SourceCharacter chews on TargetCharacter's ActivityAsset.",
+                    TargetSelfAction: "SourceCharacter chews on PronounPossessive ActivityAsset."
                 }
             ],
             CustomImage: "Assets/Female3DCG/Activity/Bite.png"
@@ -929,25 +950,12 @@ export class ActivityModule extends BaseModule {
         // Patch Grab Arm
         this.PatchActivity(<ActivityPatch>{
             ActivityName: "Grope",
-            AddedTargets: [{
-                Name: "ItemHood",
-                SelfAllowed: false,
-                TargetLabel: "Grab Horn",
-                TargetAction: "SourceCharacter grabs TargetCharacter's horn."
-            }],
             CustomPrereqs: [
                 {
                     Name: "TargetIsArmAvailable",
                     Func: (acting, acted, group) => {
                         if (group.Name == "ItemArms")
                             return !this.isPlayerGrabbing(acted.MemberNumber ?? 0);
-                        return true;
-                    }
-                }, {
-                    Name: "TargetHornAvailable",
-                    Func: (acting, acted, group) => {
-                        if (group.Name == "ItemHood")
-                            return (InventoryGet(acted, "HairAccessory2")?.Asset.Name ?? "").toLocaleLowerCase().indexOf("horn") > -1 && !this.leashingModule.ContainsLeashing(acted.MemberNumber!, "horn");
                         return true;
                     }
                 }
@@ -957,14 +965,62 @@ export class ActivityModule extends BaseModule {
                     var location = GetMetadata(args[1])?.GroupName;
                     if (!!target && !!location && location == "ItemArms")
                         this.leashingModule.DoGrab(target, "arm");
-                    else if (!!target && !!location && location == "ItemHood")
-                        this.leashingModule.DoGrab(target, "horn");
                     return next(args);
                 }
             },
         });
 
-        // Release Arm
+        // Grab Tail
+        this.AddActivity({
+            Activity: <Activity>{
+                Name: "Grab",
+                MaxProgress: 30,
+                Prerequisite: [""]
+            },
+            Targets: [
+                {
+                    Name: "ItemHood",
+                    SelfAllowed: false,
+                    TargetLabel: "Grab Horn",
+                    TargetAction: "SourceCharacter grabs TargetCharacter's horn."
+                },{
+                    Name: "ItemButt",
+                    SelfAllowed: false,
+                    TargetLabel: "Grab Tail",
+                    TargetAction: "SourceCharacter grabs TargetCharacter's tail."
+                }
+            ],
+            CustomPrereqs: [
+                {
+                    Name: "TargetHornAvailable",
+                    Func: (acting, acted, group) => {
+                        if (group.Name == "ItemHood")
+                            return (InventoryGet(acted, "HairAccessory2")?.Asset.Name ?? "").toLocaleLowerCase().indexOf("horn") > -1 && !this.leashingModule.ContainsLeashing(acted.MemberNumber ?? -1, "horn");
+                        return true;
+                    }
+                },{
+                    Name: "TargetTailAvailable",
+                    Func: (acting, acted, group) => {
+                        if (group.Name == "ItemButt")
+                            return (InventoryGet(acted, "TailStraps")?.Asset.Name ?? "").toLocaleLowerCase().indexOf("tail") > -1 && !this.leashingModule.ContainsLeashing(acted.MemberNumber ?? -1, "tail");
+                        return true;
+                    }
+                }
+            ],
+            CustomAction: <CustomAction>{
+                Func: (target, args, next) => {
+                    var location = GetMetadata(args[1])?.GroupName;
+                    if (!!target && !!location && location == "ItemHood")
+                        this.leashingModule.DoGrab(target, "horn");
+                    else if (!!target && !!location && location == "ItemButt")
+                        this.leashingModule.DoGrab(target, "tail");
+                    return next(args);
+                }
+            },
+            CustomImage: "Assets/Female3DCG/Activity/Grope.png"
+        });
+
+        // Release Arm/Horn/Tail
         this.AddActivity({
             Activity: <Activity>{
                 Name: "Release",
@@ -982,6 +1038,11 @@ export class ActivityModule extends BaseModule {
                     SelfAllowed: false,
                     TargetLabel: "Release Horn",
                     TargetAction: "SourceCharacter releases TargetCharacter's horn."
+                },{
+                    Name: "ItemButt",
+                    SelfAllowed: false,
+                    TargetLabel: "Release Tail",
+                    TargetAction: "SourceCharacter releases TargetCharacter's tail."
                 }
             ],
             CustomPrereqs: [
@@ -992,6 +1053,8 @@ export class ActivityModule extends BaseModule {
                             return this.isPlayerGrabbing(acted.MemberNumber ?? 0);
                         else if (group.Name == "ItemHood")
                             return this.leashingModule.ContainsLeashing(acted.MemberNumber!, "horn");
+                        else if (group.Name == "ItemButt")
+                            return this.leashingModule.ContainsLeashing(acted.MemberNumber!, "tail");
                         return false;
                     }
                 }
@@ -1003,6 +1066,8 @@ export class ActivityModule extends BaseModule {
                         this.leashingModule.DoRelease(target, "arm");
                     else if (!!target && location == "ItemHood")
                         this.leashingModule.DoRelease(target, "horn");
+                    else if (!!target && location == "ItemButt")
+                        this.leashingModule.DoRelease(target, "tail");
                     return next(args);
                 }
             },
@@ -1666,9 +1731,9 @@ export class ActivityModule extends BaseModule {
         isClothed &&
         (WardrobeGetExpression(target)?.Pussy ?? "") == "Hard") {
             if (!isChastity) {
-                LSCG_SendLocal(`You can feel ${CharacterNickname(target)}'s erect penis through their clothes.`, 8000);
+                LSCG_SendLocal(`You can feel ${CharacterNickname(target)}'s erect penis through their clothes.`);
             } else {
-                LSCG_SendLocal(`You can feel something hard under ${CharacterNickname(target)}'s clothes.`, 8000);
+                LSCG_SendLocal(`You can feel something hard under ${CharacterNickname(target)}'s clothes.`);
             }
         }
     }

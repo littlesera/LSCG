@@ -121,6 +121,13 @@ export class GuiGlobal extends GuiSubscreen {
 				setting: () => Player.LSCG.LeashingModule.enabled ?? true,
 				setSetting: (val) => Player.LSCG.LeashingModule.enabled = val,
 				disabled: !this.settings.enabled
+			},<Setting>{
+				type: "checkbox",
+				label: "Enable Tamperproof Items:",
+				description: "Enable tamperproof features on crafted items you wear.",
+				setting: () => this.settings.tamperproofEnabled ?? true,
+				setSetting: (val) => this.settings.tamperproofEnabled = val,
+				disabled: !this.settings.enabled
 			}
 		]
 	}

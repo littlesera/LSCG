@@ -1,11 +1,12 @@
 import { BaseModule } from "base";
 import { getModule } from "modules";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { getDominance, GetMetadata, getRandomInt, hookFunction, IsIncapacitated, removeAllHooksByModule, SendAction, sendLSCGCommand } from "../utils";
+import { getDominance, GetItemNameAndDescriptionConcat, GetMetadata, getRandomInt, GetTargetCharacter, hookFunction, IsIncapacitated, isPhraseInString, OnAction, OnActivity, removeAllHooksByModule, SendAction, sendLSCGCommand } from "../utils";
 import { ActivityBundle, ActivityModule, ActivityTarget } from "./activities";
 import { BoopsModule } from "./boops";
 import { CollarModule } from "./collar";
 import { StateModule } from "./states";
+import { InjectorModule } from "./injector";
 
 export const CameraItems: string[] = [
 	"Phone1",
@@ -40,6 +41,31 @@ export const EdibleItems: string[] = [
 	"Baguette"
 ]
 
+export const ChewableItems: string[] = [
+	"BallGag",
+	"BoneGag",
+	"PonyGag",
+	"CaneGag",
+	"CropGag",
+	"BitGag",
+	"RopeGag",
+	"RopeBallGag",
+	"ClothGag",
+	"Ball",
+	"XLBoneGag",
+	"HarnessBallGag1",
+	"ClothStuffing",
+	"ClothGag",
+	"PantyStuffing",
+	"PacifierGag",
+	"PaciGag",
+	"ShoeGag",
+	"WiffleGag",
+	"CarrotGag",
+	"SockStuffing",
+	"ScarfGag"
+]
+
 export const EnhancedItemActivityNames: string[] = [
 	"LSCG_Quaff",
 	"LSCG_Eat",
@@ -48,6 +74,17 @@ export const EnhancedItemActivityNames: string[] = [
 	"EatItem",
 	"ThrowItem"
 ];
+
+export const TamperProofKeywords: string[] = [
+	"tamper-proof",
+	"tamperproof",
+	"tamper proof"
+];
+
+export const ExplicitSqueezableItems: string[] = [
+	"Shark",
+	"Karl"
+]
 
 export function IsActivityEnhanced(data: ServerChatRoomMessage) {
 	let meta = GetMetadata(data);
@@ -237,11 +274,11 @@ export class ItemUseModule extends BaseModule {
 					results.push(item)
 			} else if (itemType == "PlushItem") {
 				let teddy = InventoryGet(C, "ItemMisc");
-				let shark = InventoryGet(C, "ItemHandheld");
+				let itemHand = InventoryGet(C, "ItemHandheld");
 				if (!!teddy && teddy.Asset.Name == "TeddyBear") 
 					results.push(teddy);
-				if (!!shark && shark.Asset.Name == "Shark")
-					results.push(shark);
+				if (!!itemHand && (ExplicitSqueezableItems.indexOf(itemHand.Asset.Name) > -1 || itemHand.Asset.Name.toLocaleLowerCase().indexOf("plush") > -1 || itemHand.Asset.Name.toLocaleLowerCase().indexOf("pet") > -1))
+					results.push(itemHand);
 			} else if (itemType == "CameraItem") {
 				let item = InventoryGet(C, "ItemHandheld");
 				let acc = InventoryGet(C, "ClothAccessory");
@@ -269,10 +306,57 @@ export class ItemUseModule extends BaseModule {
 				let item = InventoryGet(C, "ItemHandheld");
 				if (!!item && EdibleItems.indexOf(item.Asset?.Name) > -1) 
 					results.push(item);
+				else if (isPhraseInString(GetItemNameAndDescriptionConcat(item) ?? "", "edible", true))
+					results.push(item);
+			} else if (itemType == "ChewableItem") {
+				let handItem = InventoryGet(C, "ItemHandheld");
+				let mouthItem = InventoryGet(C, "ItemMouth") || InventoryGet(C, "ItemMouth2") || InventoryGet(C, "ItemMouth3")
+				
+				if (!!mouthItem && ChewableItems.indexOf(mouthItem.Asset?.Name) > -1) 
+					results.push(mouthItem);
+				else if (isPhraseInString(GetItemNameAndDescriptionConcat(mouthItem) ?? "", "chewable", true))
+					results.push(mouthItem);
+				else if (!C.IsMouthBlocked() && C.CanTalk()) {
+					if (!!handItem && ChewableItems.indexOf(handItem.Asset?.Name) > -1) 
+						results.push(handItem);
+					else if (isPhraseInString(GetItemNameAndDescriptionConcat(handItem) ?? "", "chewable", true))
+						results.push(handItem);
+				}
 			}
 			return results;
 		}, ModuleCategory.ItemUse);
+
+		hookFunction("StruggleMinigameStart", 1, (args, next) => {
+			this.Struggling = true;
+			next(args);
+		})
+
+		hookFunction("StruggleMinigameStop", 1, (args, next) => {
+			if (!!StruggleProgressPrevItem && this.Struggling) {
+				let itemStr = GetItemNameAndDescriptionConcat(StruggleProgressPrevItem) ?? "";
+				if (StruggleProgress < 100 && TamperProofKeywords.some(kw => isPhraseInString(itemStr, kw))) {
+					this.PerformTamperProtection("minigame", StruggleProgressPrevItem);
+				}
+			}
+			this.Struggling = false;
+			next(args);
+		}, ModuleCategory.ItemUse);
+
+		OnActivity(1, ModuleCategory.ItemUse, (data, sender, msg, metadata) => {
+			if (sender?.IsPlayer() && msg == "ChatSelf-ItemArms-StruggleArms") {
+				this.PerformTamperProtection("activity");
+			}
+		});
+
+		OnAction(1, ModuleCategory.ItemUse, (data, sender, msg, metadata) => {
+			let target = GetTargetCharacter(data);
+			if (!sender?.IsPlayer() && target == Player.MemberNumber && msg == "StruggleAssist") {
+				this.PerformTamperProtection("assist", undefined, sender);
+			}
+		});
     }
+
+	Struggling: boolean = false;
 
 	run(): void {
 		this.activities = getModule<ActivityModule>("ActivityModule")
@@ -1115,5 +1199,87 @@ export class ItemUseModule extends BaseModule {
 			handled = true;
 		}
 		return handled;
+	}
+
+	electricKeywords: string[] = [
+		"electric",
+		"electrified",
+		"shocking"
+	];
+
+	selfTighteningKeywords: string[] = [
+		"self-tightening",
+		"selftightening",
+		"self tightening",
+		"auto-tightening",
+		"auto tightening"
+	];
+
+	subduingKeywords: string[] = [
+		"sedating",
+		"numbing",
+		"subduing"
+	];
+
+	PerformTamperProtection(source: "minigame" | "activity" | "assist", item: Item | undefined = undefined, sender: Character | null = null) {
+		if (!Player.LSCG.GlobalModule.tamperproofEnabled)
+			return;
+
+		if (!item) {
+			let tamperProofItems = Player.Appearance.filter(a => {
+				let itemStr = GetItemNameAndDescriptionConcat(a) ?? "";
+				return a.Asset.Group.Name != "ItemHandheld" && TamperProofKeywords.some(k => isPhraseInString(itemStr, k));
+			});
+			if (tamperProofItems.length > 0)
+				item = tamperProofItems[getRandomInt(tamperProofItems.length)];
+		}
+		if (!item)
+			return;
+
+		let itemStr = GetItemNameAndDescriptionConcat(item) ?? "";
+		let itemName = item.Craft?.Name ?? item.Asset.Name;
+		let itemTypes: string[] = [];
+		
+		if (this.electricKeywords.some(k => isPhraseInString(itemStr, k)) && (Player.LSCG.GlobalModule.tamperproofElectricityEnabled ?? true))
+			itemTypes.push("electric");
+		if (this.selfTighteningKeywords.some(k => isPhraseInString(itemStr, k)))
+			itemTypes.push("tightening");
+		if (this.subduingKeywords.some(k => isPhraseInString(itemStr, k)))
+			itemTypes.push("subduing");
+		if (itemTypes.length <= 0)
+			itemTypes = ["generic"];
+
+		let selectedType = itemTypes[getRandomInt(itemTypes.length)];
+		switch (selectedType) {
+			case "electric":
+				let shockLevel = (getRandomInt(50)/50)+0.5;
+				SendAction(`%NAME%'s ${itemName} punishes ${!sender ? "%POSSESSIVE%" : CharacterNickname(sender) + "'s"} meddling with a sharp jolt.`);
+				AudioPlaySoundEffect("Shocks", 3 + (3 * shockLevel));
+				const duration = (Math.random() + shockLevel * 1.5) * 500;
+				DrawFlashScreen("#FFFFFF", duration, 500);
+				break;
+			case "tightening":
+				SendAction(`%NAME%'s ${itemName} tightens around %INTENSIVE%, countering ${!sender ? "%POSSESSIVE%" : CharacterNickname(sender) + "'s"} tampering.`);
+				item.Difficulty = (item.Difficulty ?? 0) + 5;
+				if (item.Asset.Group.Name == "ItemNeck" && getModule<CollarModule>("CollarModule").WearingCorrectCollar(Player)) {
+					getModule<CollarModule>("CollarModule").IncreaseCollarChoke();
+				} else {
+					AudioPlaySoundEffect("ZipTie", 1);
+				}
+				ChatRoomCharacterUpdate(Player);
+				break;
+			case "subduing":
+				SendAction(`%NAME%'s ${itemName} releases a sedating spray, resisting ${!sender ? "%POSSESSIVE%" : CharacterNickname(sender) + "'s"} meddling, and weakening %POSSESSIVE% muscles.`);
+				AudioPlaySoundEffect("Deflation", 1);
+				let injectModule = getModule<InjectorModule>("InjectorModule");
+				if (injectModule.Enabled && injectModule.settings.enableSedative)
+					getModule<InjectorModule>("InjectorModule").AddSedative(1, getRandomInt(3) != 0);
+				break;
+			case "generic":
+			default:
+				SendAction(`%NAME%'s ${itemName} clicks menacingly as it resists ${!sender ? "%POSSESSIVE%" : CharacterNickname(sender) + "'s"} tampering.`);
+				AudioPlaySoundEffect("LockLarge");
+				break;
+		}
 	}
 }
