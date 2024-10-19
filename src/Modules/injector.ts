@@ -547,7 +547,7 @@ export class InjectorModule extends BaseModule {
 
     GetDrugTypes(item: CraftingItem): DrugType[] {
         var name = item.Name;
-        var description = item.Description;
+        var description = typeof CraftingDescription === "undefined" ? item.Description : CraftingDescription.Decode(item.Description); // R109
         var totalString = name + " | " + description;
 
         var types: DrugType[] = [];
