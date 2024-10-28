@@ -1,7 +1,7 @@
 {
   "name": "ls-club-games",
   "description": "Little Sera's Club Games",
-  "version": "0.4.22", 
+  "version": "0.4.23", 
   "main": "dist/bundle.js",
   "scripts": {
     "build": "rollup -c",

@@ -10,7 +10,7 @@ import { CollarModel } from "Settings/Models/collar";
 import { CollarModule } from "./collar";
 import { CommandListener, CoreModule } from "./core";
 
-export type GrabType = "hand"  | "ear" | "tongue" | "arm" | "neck" | "mouth" | "horn" | "mouth-with-foot" | "chomp" | "eyes" | "compulsion" | "tail"
+export type GrabType = "hand"  | "ear" | "tongue" | "arm" | "neck" | "mouth" | "horn" | "mouth-with-foot" | "chomp" | "eyes" | "compulsion" | "tail" | "hair" | "nose" | "nipples"
 
 export interface LeashDefinition {
     Type: GrabType;
@@ -22,12 +22,16 @@ export interface LeashDefinition {
     Icon: string;
     Gags: boolean;
     Blinds: boolean;
+    Action: string;
     OnAdd: (pairing: Leashing) => void;
     OnRemove: (pairing: Leashing) => void;
 }
 
 export const LeashDefinitions: Map<GrabType, LeashDefinition> = new Map<GrabType, LeashDefinition>([
-    ["arm", <LeashDefinition>{Type: "arm", LabelTarget: "Arm grabbed by %OPP_NAME%", LabelSource: "Grabbing %OPP_NAME%'s arm"}],
+    ["arm", <LeashDefinition>{Type: "arm", Action: "roughly pulls", LabelTarget: "Arm grabbed by %OPP_NAME%", LabelSource: "Grabbing %OPP_NAME%'s arm"}],
+    ["hair", <LeashDefinition>{Type: "hair", Action: "drags", LabelTarget: "Hair pulled by %OPP_NAME%", LabelSource: "Pulling %OPP_NAME%'s hair"}],
+    ["nose", <LeashDefinition>{Type: "nose", Action: "pulls", LabelTarget: "Nose pulled by %OPP_NAME%", LabelSource: "Pulling %OPP_NAME%'s nose"}],
+    ["nipples", <LeashDefinition>{Type: "nipples", Action: "yanks", LabelTarget: "Nipples pulled by %OPP_NAME%", LabelSource: "Pulling %OPP_NAME%'s nipples"}],
     ["chomp", <LeashDefinition>{Type: "chomp", LabelTarget: "Chomped on by %OPP_NAME%", LabelSource: "Chomping on %OPP_NAME%", Icon: "Assets/Female3DCG/Mouth/Angry/Icon.png", Reverse: true, Gags: true,
         OnAdd: (pairing) => {
             if (pairing.IsSource) {(<any>pairing)['temp'] = (WardrobeGetExpression(Player)?.Mouth ?? null); CharacterSetFacialExpression(Player, "Mouth", "Angry")};
@@ -227,10 +231,11 @@ export class LeashingModule extends BaseModule {
                         SendAction(`${nameStr} follow %NAME% out of the room obediently.`);
                     }
                 } else if (this.Leashings.length > 0) {
+                    let definition = this.GetDefinition(this.Leashings[0]?.Type);
                     if (this.Leashings.length == 1)
-                        SendAction(`%NAME% leads %OPP_NAME% out of the room by the ${this.Leashings[0].Type}.`, getCharacter(this.Leashings[0].PairedMember));
+                        SendAction(`%NAME% ${definition?.Action ?? "leads"} %OPP_NAME% out of the room by the ${this.Leashings[0].Type}.`, getCharacter(this.Leashings[0].PairedMember));
                     else
-                        SendAction("%NAME% leads " + CharacterNickname(getCharacter(this.Leashings[0].PairedMember)!) + " and " + CharacterNickname(getCharacter(this.Leashings[1].PairedMember)!) + " out of the room.");
+                        SendAction(`%NAME% ${definition?.Action ?? "leads"} ${CharacterNickname(getCharacter(this.Leashings[0].PairedMember)!)} and ${CharacterNickname(getCharacter(this.Leashings[1].PairedMember)!)} out of the room.`);
                 }
             }
 
