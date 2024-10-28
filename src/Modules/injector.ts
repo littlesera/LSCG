@@ -61,7 +61,7 @@ export class InjectorModule extends BaseModule {
 
             sedativeKeywords: ["tranquilizer","sedative"],
             mindControlKeywords: ["mind control", "hypnotizing", "brainwashing"],
-            hornyKeywords: ["horny", "aphrodisiac"],
+            hornyKeywords: ["horny", "aphrodisiac", "arousing"],
             cureKeywords: ["antidote", "healing", "curing", "cure"],
             netgunKeywords: ["net gun", "netgun"],
             hornyTickTime: 5000,
