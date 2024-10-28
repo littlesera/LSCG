@@ -1260,7 +1260,13 @@ export class ItemUseModule extends BaseModule {
 				break;
 			case "tightening":
 				SendAction(`%NAME%'s ${itemName} tightens around %INTENSIVE%, countering ${!sender ? "%POSSESSIVE%" : CharacterNickname(sender) + "'s"} tampering.`);
-				item.Difficulty = (item.Difficulty ?? 0) + 5;
+				let itemUpdate = Player.Appearance.find(i => i.Asset.Name == item?.Asset.Name);
+				if (!!itemUpdate) {
+					itemUpdate.Difficulty = (itemUpdate.Difficulty ?? 0) + 5;
+					if (!!itemUpdate.Property)
+						itemUpdate.Property.Difficulty = (itemUpdate.Property.Difficulty ?? 0) + 5;
+				}
+				
 				if (item.Asset.Group.Name == "ItemNeck" && getModule<CollarModule>("CollarModule").WearingCorrectCollar(Player)) {
 					getModule<CollarModule>("CollarModule").IncreaseCollarChoke();
 				} else {
