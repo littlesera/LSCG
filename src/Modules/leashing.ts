@@ -542,7 +542,7 @@ export class LeashingModule extends BaseModule {
     }
 
     ContainsLeashing(target: number, type: GrabType) {
-        return this.Pairings.some(p => this.PlayerCanDrag(p) && p.Type == type && p.PairedMember == target)
+        return this.Pairings.some(p => this.PlayerCanDrag(p, true) && p.Type == type && p.PairedMember == target)
     }
 
     // *** HELPERS ***
@@ -556,16 +556,18 @@ export class LeashingModule extends BaseModule {
         return !leashing.IsSource;
     }
 
-    CanDragPlayer(leashing: Leashing) {
+    CanDragPlayer(leashing: Leashing, allowEphemeral: boolean = false) {
         let def = LeashDefinitions.get(leashing.Type);
-        return !def?.Ephemeral && 
-        ((!leashing.IsSource && !def?.Reverse) || (leashing.IsSource && def?.Reverse) || def?.Bidirectional)
+        if ((!allowEphemeral && def?.Ephemeral))
+            return false;
+        return (!leashing.IsSource && !def?.Reverse) || (leashing.IsSource && def?.Reverse) || def?.Bidirectional
     }
 
-    PlayerCanDrag(leashing: Leashing) {
+    PlayerCanDrag(leashing: Leashing, allowEphemeral: boolean = false) {
         let def = LeashDefinitions.get(leashing.Type);
-        return !def?.Ephemeral && 
-        ((leashing.IsSource && !def?.Reverse) || (!leashing.IsSource && def?.Reverse) || def?.Bidirectional)
+        if ((!allowEphemeral && def?.Ephemeral))
+            return false;
+        return (leashing.IsSource && !def?.Reverse) || (!leashing.IsSource && def?.Reverse) || def?.Bidirectional
     }
 
     IsGagging(leashing: Leashing) {
