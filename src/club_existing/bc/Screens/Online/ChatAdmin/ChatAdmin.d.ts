@@ -20,10 +20,10 @@ declare function ChatAdminClick(): void;
 declare function ChatAdminExit(): void;
 /**
  * Handles the reception of the server response after attempting to update a chatroom: Leaves the admin screen or shows an error message
- * @param {string} data - Response from the server ("Updated" or error message)
+ * @param {ServerChatRoomUpdateResponse} data - Response from the server ("Updated" or error message)
  * @returns {void} - Nothing
  */
-declare function ChatAdminResponse(data: string): void;
+declare function ChatAdminResponse(data: ServerChatRoomUpdateResponse): void;
 /**
  * Sends the chat room data packet to the server. The response will be handled by ChatAdminResponse once it is received
  * @returns {void} - Nothing

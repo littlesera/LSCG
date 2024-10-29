@@ -86,7 +86,7 @@ declare function NPCLongEventDelay(C: NPCCharacter): number;
  */
 declare function NPCLongLoverEventDelay(C: NPCCharacter): number;
 /**
- * Changes the love factor for a specified NPC, will stay within the -100 to 100 range
+ * Changes the love factor for a specified NPC, will stay within the -100 to 100 range, 60 is max out of a relationship
  * @param {NPCCharacter} C - NPC to change the love factor of
  * @param {number} LoveFactor - Amount to add to the current love factor (can be negative).
  * @returns {void} - Nothing

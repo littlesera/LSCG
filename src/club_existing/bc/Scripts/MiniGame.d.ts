@@ -9,10 +9,15 @@ declare function MiniGameLoad(): void;
 declare function MiniGameStart(GameType: string, Difficulty: number | string, ReturnFunction: string): void;
 declare function MiniGameEnd(): void;
 /**
+ * @returns {boolean} - TRUE if the game has started, but not yet ended.
+ */
+declare function MiniGameRunning(): boolean;
+/**
  * Checks if the C key is being pressed and if cheats are available
+ * @param {KeyboardEvent} event
  * @returns {boolean} - TRUE if C and cheats are allowed
  */
-declare function MiniGameCheatKeyDown(): boolean;
+declare function MiniGameCheatKeyDown(event: KeyboardEvent): boolean;
 declare var MiniGameType: string;
 declare var MiniGameVictory: boolean;
 declare var MiniGamePerfect: boolean;
@@ -25,6 +30,7 @@ declare var MiniGameAdvancedPayment: number;
 declare var MiniGameReturnFunction: string;
 declare var MiniGameProgress: number;
 declare var MiniGameTimer: number;
+declare var MiniGameStarted: boolean;
 declare var MiniGameEnded: boolean;
 declare var MiniGameCheatAvailable: boolean;
 declare let KDPatched: boolean;

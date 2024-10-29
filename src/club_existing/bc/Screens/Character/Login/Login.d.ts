@@ -33,15 +33,11 @@ declare function LoginRun(): void;
  *
  * TODO: only typed items are supported.
  *
- * @param {Record<string, string[]>} Inventory - The server-provided inventory object
- * @param {{Group: AssetGroupName, Name: string, Property?: any}[]} Appearance - The server-provided appearance object
- * @param {CraftingItem[]} Crafting - The server-provided, uncompressed crafting data
+ * @param {Partial<Record<AssetGroupName, string[]>>} Inventory - The server-provided inventory object
+ * @param {ItemBundle[]} Appearance - The server-provided appearance object
+ * @param {readonly CraftingItem[]} Crafting - The server-provided, uncompressed crafting data
  */
-declare function LoginPerformInventoryFixups(Inventory: Record<string, string[]>, Appearance: {
-    Group: AssetGroupName;
-    Name: string;
-    Property?: any;
-}[], Crafting: CraftingItem[]): void;
+declare function LoginPerformInventoryFixups(Inventory: Partial<Record<AssetGroupName, string[]>>, Appearance: ItemBundle[], Crafting: readonly CraftingItem[]): void;
 /**
  * Make sure the slave collar is equipped or unequipped based on the owner
  * @returns {void} Nothing
@@ -92,11 +88,6 @@ declare function LoginCheatItems(): void;
  */
 declare function LoginValideBuyGroups(): void;
 /**
- * Checks if the player arrays contains any item that does not exists and saves them.
- * @returns {void} Nothing
- */
-declare function LoginValidateArrays(): void;
-/**
  * Makes sure the difficulty restrictions are applied to the player
  * @param {boolean} applyDefaults - If changing to the difficulty, set this to True to set LimitedItems to the default settings
  * @returns {void} Nothing
@@ -110,17 +101,28 @@ declare function LoginDifficulty(applyDefaults: boolean): void;
  */
 declare function LoginExtremeItemSettings(applyDefaults: boolean): void;
 /**
+ * Since InventoryData wasn't found (R104 and before), we load the inventory object directly
+ * @param {object} InventoryObject - The inventory object from the server
+ */
+declare function LoginLoadInventoryObject(InventoryObject: object): {};
+/**
  * Handles server response, when login has been queued
- * @param {number} Pos The position in queue
+ * @param {number} Pos - The position in queue
+ * @returns {void} Nothing
  */
 declare function LoginQueue(Pos: number): void;
 /**
+ * Fixes the Owner property on the player object if it's wrongly set
+ * @returns {void} Nothing
+ */
+declare function LoginFixOwner(): void;
+/**
  * Handles player login response data
- * @param {object | string} C - The Login response data - this will either be the player's character data if the
+ * @param {ServerLoginResponse} C - The Login response data - this will either be the player's character data if the
  * login was successful, or a string error message if the login failed.
  * @returns {void} Nothing
  */
-declare function LoginResponse(C: object | string): void;
+declare function LoginResponse(C: ServerLoginResponse): void;
 /** Check if the player's browser has ES2020 support */
 declare function LoginCheckES2020(): void;
 /**
@@ -128,11 +130,7 @@ declare function LoginCheckES2020(): void;
  * @returns {void} Nothing
  */
 declare function LoginClick(): void;
-/**
- * Handles player keyboard events on the character login screen, "enter" will login
- * @returns {void} Nothing
- */
-declare function LoginKeyDown(): void;
+declare function LoginKeyDown(event: KeyboardEvent): boolean;
 /**
  * Attempt to log the user in based on their input username and password
  * @returns {void} Nothing
@@ -176,8 +174,13 @@ declare var LoginThankYouNext: number;
 declare var LoginSubmitted: boolean;
 declare var LoginIsRelog: boolean;
 declare var LoginErrorMessage: string;
-declare var LoginCharacter: any;
+/** @type {NPCCharacter} */
+declare var LoginCharacter: NPCCharacter;
 declare let LoginTextCacheUnsubscribeCallback: any;
+declare namespace LoginEventListeners {
+    let _KeyDownInputName: (this: HTMLInputElement, ev: KeyboardEvent) => void;
+    let _KeyDownInputPassword: (this: HTMLInputElement, ev: KeyboardEvent) => void;
+}
 /**
  * The list of item fixups to apply on login.
  *

@@ -57,7 +57,7 @@ declare function CommonGetRetry(Path: string, Callback: (this: XMLHttpRequest, x
 declare function CommonMouseDown(event: any): void;
 declare function CommonMouseUp(event: any): void;
 declare function CommonMouseMove(event: any): void;
-declare function CommonMouseWheel(event: any): void;
+declare function CommonMouseWheel(event: WheelEvent): void;
 /**
  * Catches the clicks on the main screen and forwards it to the current screen click function if it exists, otherwise it sends it to the dialog click function
  * @param {MouseEvent | TouchEvent} event - The event that triggered this
@@ -150,7 +150,7 @@ declare function CommonEmailIsValid(Email: string): boolean;
  * @param {number} index
  * @returns {undefined|T}
  */
-declare function CommonRemoveItemFromList<T>(list: T[], index: number): T;
+declare function CommonRemoveItemFromList<T>(list: T[], index: number): undefined | T;
 /**
  * Removes random item from list and returns it
  * @template T
@@ -246,19 +246,6 @@ declare function CommonMemoize<T extends (...args: any) => any>(func: T, argConv
  */
 declare function CommonTakePhoto(Left: number, Top: number, Width: number, Height: number): void;
 /**
- * Takes an array of items and converts it to record format
- * @param {readonly ItemPermissions[]} arr The array of items
- * @returns {ItemPermissionsPacked} Output in object foramat
- */
-declare function CommonPackItemArray(arr: readonly ItemPermissions[]): ItemPermissionsPacked;
-/**
- * Takes an record format of items and converts it to array.
- * @note This function *must* be able to handle unsantized data as received from the server
- * @param {ItemPermissionsPacked} rec Object defining items
- * @return {ItemPermissions[]} The array of items
- */
-declare function CommonUnpackItemArray(rec: ItemPermissionsPacked): ItemPermissions[];
-/**
  * Compares two version numbers and returns -1/0/1 if Other number is smaller/same/larger than Current one
  * @param {string} Current Current version number
  * @param {string} Other Other version number
@@ -349,9 +336,11 @@ declare function CommonIsObject(value: unknown): value is Record<string, unknown
  * @todo JSON serialization will break things like functions, Sets and Maps.
  * @template T
  * @param {T} obj
+ * @param {null | ((this: any, key: string, value: any) => any)} replacer
+ * @param {null | ((this: any, key: string, value: any) => any)} reviver
  * @returns {T}
  */
-declare function CommonCloneDeep<T>(obj: T): T;
+declare function CommonCloneDeep<T>(obj: T, reviver?: null | ((this: any, key: string, value: any) => any), replacer?: null | ((this: any, key: string, value: any) => any)): T;
 /**
  * Type guard which checks that a value is a non-negative (i.e. positive or zero) integer
  * @param {unknown} value - The value to test
@@ -375,11 +364,6 @@ declare function CommonIsInteger(value: unknown, min?: number, max?: number): va
  * @returns {value is number}
  */
 declare function CommonIsFinite(value: unknown, min?: number, max?: number): value is number;
-/**
- * Return whether BC is running in a browser environment (as opposed to Node.js as used for the test suite).
- * @returns {boolean}
- */
-declare function IsBrowser(): boolean;
 /**
  * A version of {@link Array.isArray} more friendly towards readonly arrays.
  * @param {unknown} arg - The to-be validated object
@@ -420,7 +404,15 @@ declare function CommonIncludes<T>(array: readonly T[], searchElement: unknown, 
  */
 declare function CommonFromEntries<KT extends string, VT>(iterable: Iterable<[key: KT, value: VT]>): Record<KT, VT>;
 /**
- * Automatically generate a grid based on parameters.
+ * Automatically generate grid coordinates based on parameters.
+ * @param {number} nItems - The upper bound to the number of grid points; fewer can be returned if they do not all fit on the grid
+ * @param {CommonGenerateGridParameters} grid - The grid parameters
+ * @returns {RectTuple[]} - A list of grid coordinates with a length of `<= nItems`
+ * @see {@link CommonGenerateGrid}
+ */
+declare function CommonGenerateGridCoords(nItems: number, grid: CommonGenerateGridParameters): RectTuple[];
+/**
+ * Automatically generate a grid based on parameters and apply a callback to each grid point.
  *
  * This function takes a list of items, grid parameters, and a callback to manage
  * creating a grid of them. It'll find the best value for margins between each cell,
@@ -434,7 +426,7 @@ declare function CommonFromEntries<KT extends string, VT>(iterable: Iterable<[ke
  * @param {number} offset
  * @param {CommonGenerateGridParameters} grid
  * @param {CommonGenerateGridCallback<T>} callback
- * @returns {number}
+ * @returns {number} - The (offsetted) index for which the callback evaluated to `true`, or `-1` if no elements satisfy the testing
  */
 declare function CommonGenerateGrid<T>(items: readonly T[], offset: number, grid: CommonGenerateGridParameters, callback: CommonGenerateGridCallback<T>): number;
 /**
@@ -445,7 +437,7 @@ declare function CommonGenerateGrid<T>(items: readonly T[], offset: number, grid
  * @param {Iterable<KeyType>} keys - The to-be removed keys from the record
  * @returns {Omit<RecordType, KeyType>}
  */
-declare function CommonOmit<KeyType_1 extends keyof RecordType, RecordType extends {}>(object: RecordType, keys: Iterable<KeyType_1>): Omit<RecordType, KeyType_1>;
+declare function CommonOmit<KeyType extends keyof RecordType, RecordType extends {}>(object: RecordType, keys: Iterable<KeyType>): Omit<RecordType, KeyType>;
 /**
  * Create a copy of the passed record with all specified keys removed
  * @template {keyof RecordType} KeyType
@@ -454,7 +446,7 @@ declare function CommonOmit<KeyType_1 extends keyof RecordType, RecordType exten
  * @param {Iterable<KeyType>} keys - The to-be removed keys from the record
  * @returns {Pick<RecordType, KeyType>}
  */
-declare function CommonPick<KeyType_1 extends keyof RecordType, RecordType extends {}>(object: RecordType, keys: Iterable<KeyType_1>): Pick<RecordType, KeyType_1>;
+declare function CommonPick<KeyType extends keyof RecordType, RecordType extends {}>(object: RecordType, keys: Iterable<KeyType>): Pick<RecordType, KeyType>;
 /**
  * Iterate through the passed iterable and yield index/value pairs.
  * @template T
@@ -463,7 +455,7 @@ declare function CommonPick<KeyType_1 extends keyof RecordType, RecordType exten
  * @param {number} step - The step size in which the index is incremented
  * @returns {Generator<[index: number, value: T], void>}
  */
-declare function CommonEnumerate<T>(iterable: Iterable<T>, start?: number, step?: number): Generator<[index: number, value: T], void, any>;
+declare function CommonEnumerate<T>(iterable: Iterable<T>, start?: number, step?: number): Generator<[index: number, value: T], void>;
 /**
  * Return a value clamped to a minimum and maximum
  * @param {number} value
@@ -472,6 +464,15 @@ declare function CommonEnumerate<T>(iterable: Iterable<T>, start?: number, step?
  * @returns {number}
  */
 declare function CommonClamp(value: number, min: number, max: number): number;
+/**
+ * Return value % divisor but properly handling negative values
+ *
+ * Useful if you have a set of keys and want to move an index within its bounds with proper wrap-around.
+ *
+ * @param {number} value
+ * @param {number} divisor
+ */
+declare function CommonModulo(value: number, divisor: number): number;
 /**
  * Returns TRUE if the URL is valid, is from http or https or screens/ or backgrounds/ and has the required extension
  * @param {string} TestURL - The URL to test
@@ -496,6 +497,11 @@ declare function CommonObjectEqual<T>(rec1: T, rec2: unknown): rec2 is T;
  * @returns {subRec is Partial<T>}
  */
 declare function CommonObjectIsSubset<T>(subRec: unknown, superRec: T): subRec is Partial<T>;
+/**
+ * Returns the object with keys and values reversed
+ * @param {object} obj
+ */
+declare function CommonObjectFlip(obj: object): {};
 /**
  * Parse the passed stringified JSON data and catch any exceptions.
  * Exceptions will cause the function to return `undefined`.
@@ -523,9 +529,60 @@ declare function CommonKeyMove(event: KeyboardEvent, allowArrowKeys?: boolean): 
 declare function CommonHas<T>(obj: {
     has: (key: T) => boolean;
 }, key: unknown): key is T;
+/**
+ * Defines a property with the given name and the passed setter and getter
+ * @example
+ * CommonDeprecate(
+ *  "OldFunc",
+ *  function NewFunc (a, b) { return a + b; },
+ * );
+ * @template {any} T
+ * @param {string} propertyName - The name for the new property
+ * @param {()=>T} getter - The getter function for the property
+ * @param {(T)=>void} setter - The setter function for the property
+ */
+declare function CommonProperty<T extends unknown>(propertyName: string, getter?: () => T, setter?: (T: any) => void): void;
+/**
+ * Assign a function to the passed namespace, creating a deprecated and non-deprecated symbol.
+ * Both symbols will are in fact get/set wrappers around the same object, enforcing that `namespace[oldName] === namespace[callback.name]` *always* holds.
+ * @example
+ * CommonDeprecateFunction(
+ *  "OldFunc",
+ *  function NewFunc (a, b) { return a + b; },
+ * );
+ * @template {(...any) => any} T
+ * @param {string} oldName - The old (deprecated) name of the symbol
+ * @param {T} callback - The function with its new name
+ * @param {Record<string, any>} namespace - The namespace wherein the new and old names will be stored
+ */
+declare function CommonDeprecateFunction<T extends (...any: any) => any>(oldName: string, callback: T, namespace?: Record<string, any>): void;
+/**
+ * Capitalize the first character of the passed string.
+ * @template {string} T
+ * @param {T} string
+ * @returns {Capitalize<T>}
+ */
+declare function CommonCapitalize<T extends string>(string: T): Capitalize<T>;
+/**
+ * Construct an object for holding arbitrary (user-specified) values with a mechanism to reset them to a default
+ * @template T1
+ * @template [T2={}]
+ * @param {T1} defaults - Default values that should be restored upon reset
+ * @param {null | T2} extraVars - Extra values that should *not* affected by resets
+ * @param {null | { replacer?: (this: any, key: string, value: any) => any, reviver?: (this: any, key: string, value: any) => any }} resetCallbacks - Extra callbacks for affecting the deep cloning process on reset.
+ * Generally only relevant if one of the fields contains non-JSON-serializible data.
+ * @returns {VariableContainer<T1, T2>} - The newly created object
+ */
+declare function CommonVariableContainer<T1, T2 = {}>(defaults: T1, extraVars?: null | T2, resetCallbacks?: null | {
+    replacer?: (this: any, key: string, value: any) => any;
+    reviver?: (this: any, key: string, value: any) => any;
+}): VariableContainer<T1, T2>;
 /** @type {PlayerCharacter} */
 declare var Player: PlayerCharacter;
-/** @type {number|string} */
+/**
+ * @type {number|string}
+ * @deprecated Use the keyboard handler's `event` parameter instead
+ */
 declare var KeyPress: number | string;
 /** @type {ModuleType} */
 declare var CurrentModule: ModuleType;
@@ -536,7 +593,11 @@ declare var CurrentScreenFunctions: ScreenFunctions;
 /** @type {Character|NPCCharacter|null} */
 declare var CurrentCharacter: Character | NPCCharacter | null;
 declare var CurrentOnlinePlayers: number;
-/** A per-screen ratio of how darkened the background must be */
+/**
+ * A per-screen ratio of how darkened the background must be
+ *
+ * 1 is bright, 0 is pitch black
+ */
 declare var CurrentDarkFactor: number;
 declare var CommonIsMobile: boolean;
 /** @type {Record<string, string[][]>} */

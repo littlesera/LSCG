@@ -1695,7 +1695,7 @@ export class ActivityModule extends BaseModule {
         let activity = bundle.Activity;
         activity.Target = activity.Target ?? [];
         activity.Prerequisite = activity.Prerequisite ?? [];
-        activity.Name = "LSCG_" + activity.Name;
+        activity.Name = "LSCG_" + activity.Name as ActivityName;
 
         this.RegisterCustomFuncs(bundle, bundle.Activity);
 

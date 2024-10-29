@@ -1,4 +1,9 @@
 /**
+ * Returns TRUE if the player is head maid and can receive the latex uniform
+ * @returns {boolean} - TRUE if she can receive it
+ */
+declare function MaidQuartersHeadMaidCanGetLatex(): boolean;
+/**
  * Checks if the player is helpless (maids disabled) or not.
  * @returns {boolean} - Returns true if the player still has time remaining after asking the maids to stop helping
  */
@@ -178,6 +183,11 @@ declare function MaidQuartersMiniGameStart(GameType: string, Difficulty: number)
  * @returns {void} - Nothing
  */
 declare function MaidQuartersMiniGameEnd(): void;
+/**
+ * Rewards the player with the latex maid outfit
+ * @returns {void} - Nothing
+ */
+declare function MaidQuartersGetLatexMaid(): void;
 /**
  * When an ordinary  mini game / maid chore is successful, the player gets paid and the maid reputation increases
  * @returns {void} - Nothing

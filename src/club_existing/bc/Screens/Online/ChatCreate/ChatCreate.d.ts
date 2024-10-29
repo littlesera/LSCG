@@ -13,11 +13,7 @@ declare function ChatCreateRun(): void;
  * @returns {void} - Nothing
  */
 declare function ChatCreateClick(): void;
-/**
- * Handles the key presses while in the creation screen. When the user presses enter, we create the room.
- * @returns {void} - Nothing
- */
-declare function ChatCreateKeyDown(): void;
+declare function ChatCreateKeyDown(event: KeyboardEvent): boolean;
 /**
  * Handles exiting from the chat creation screen, removes the inputs and resets the state of the variable
  * @returns {void} - Nothing
@@ -25,10 +21,10 @@ declare function ChatCreateKeyDown(): void;
 declare function ChatCreateExit(): void;
 /**
  * Handles the reception of the server response after attempting to create a chatroom: shows the error message, if applicable
- * @param {string} data - Response from the server
+ * @param {ServerChatRoomCreateResponse} data - Response from the server
  * @returns {void} - Nothing
  */
-declare function ChatCreateResponse(data: string): void;
+declare function ChatCreateResponse(data: ServerChatRoomCreateResponse): void;
 /**
  * Sends the chat room data packet to the server and prepares the player to join a room. The response will be handled by ChatCreateResponse once it is received
  * @returns {void} - Nothing

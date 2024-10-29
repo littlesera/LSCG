@@ -221,7 +221,7 @@ export class CoreModule extends BaseModule {
     CheckForPublicPacket(data: ServerChatRoomMessage) {
         if (!!data.Sender && data.Sender != Player.MemberNumber && data.Type == "Hidden" && data.Content == "LSCGMsg" && !!data.Dictionary && !!data.Dictionary[0]) {
             var C = getCharacter(data.Sender) as OtherCharacter;
-            var msg = (<LSCGMessageDictionaryEntry>data.Dictionary[0]).message;
+            var msg = (data.Dictionary[0] as LSCGMessageDictionaryEntry).message;
             switch (msg.type) {
                 case "init":
                     this.Init(C, msg);
@@ -324,12 +324,13 @@ export class CoreModule extends BaseModule {
 See below for the latest changes:
 ${LSCG_CHANGES}`;
         ServerAccountBeep({
-            MemberNumber: Player.MemberNumber,
+            MemberNumber: Player.MemberNumber || -1,
             MemberName: "LSCG",
             ChatRoomName: "LSCG Update",
             Private: true,
             Message: message,
             ChatRoomSpace: "",
+            BeepType: ""
         });
         console.info(`LSCG Updated:${LSCG_CHANGES}`);
     }

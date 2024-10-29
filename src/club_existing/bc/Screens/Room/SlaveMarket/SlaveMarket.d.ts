@@ -19,6 +19,11 @@ declare function SlaveMarketCannotStartAuctionRoom(): boolean;
  */
 declare function SlaveMarketCanBeAuctioned(): boolean;
 /**
+ * Checks if the character has a specific title
+ * @returns {boolean} - TRUE if the character has the title in the parameter
+ */
+declare function SlaveMarketSlaveTitleIs(Title: any): boolean;
+/**
  * Loads the Slave Market room, generates the Mistress and slave
  * @returns {void} - Nothing
  */

@@ -113,7 +113,7 @@ export interface ActivityCheck {
 }
 
 export interface RopeTarget {
-	Location: string;
+	Location: AssetGroupName;
 	LocationLabel: string;
 	ItemName: string;
 	Type?: number;
@@ -124,7 +124,7 @@ export interface GagTarget {
 	HandItemName?: string;
 	NeckItemName?: string;
 	//SourceItemName: string;
-	OverrideNeckLocation?: string;
+	OverrideNeckLocation?: AssetGroupName;
 	LeaveHandItem?: boolean;
 	CraftedKeys?: string[];
 	PreferredTypes?: {Location: string, Type: number}[];
@@ -218,7 +218,7 @@ export class ItemUseModule extends BaseModule {
 			} else if (needsItem == "FellatioItem") {
 				let tmpActivity = Object.assign({}, activity);
 				tmpActivity.Reverse = true;
-				if (activity.Name == "LSCG_Suck" || activity.Name == "LSCG_Throat")
+				if ((activity.Name as string) == "LSCG_Suck" || (activity.Name as string) == "LSCG_Throat")
 					needsItem = "PenetrateItem";
 				res = next([args[0], args[1], args[2], needsItem, tmpActivity]);
 			} else {
@@ -364,7 +364,7 @@ export class ItemUseModule extends BaseModule {
 		// Put gag on mouth or neck
 		this.activities.AddActivity(<ActivityBundle>{
 			Activity: <Activity>{
-				Name: "UseGag",
+				Name: "UseGag" as ActivityName,
 				MaxProgress: 50,
 				MaxProgressSelf: 80,
 				Prerequisite: ["ZoneAccessible", "ZoneNaked", "UseHands", "Needs-GagGiveItem"]
@@ -440,11 +440,11 @@ export class ItemUseModule extends BaseModule {
 		// Take Gag
 		this.activities.AddActivity(<ActivityBundle>{
 			Activity: <Activity>{
-				Name: "TakeGag",
+				Name: "TakeGag" as ActivityName,
 				MaxProgress: 50,
 				MaxProgressSelf: 80,
 				Reverse: true,
-				Prerequisite: ["Needs-GagTakeItem"]
+				Prerequisite: ["Needs-GagTakeItem" as ActivityPrerequisite]
 			},
 			Targets: [
 				<ActivityTarget>{
@@ -465,7 +465,7 @@ export class ItemUseModule extends BaseModule {
 				{
 					Name: "TargetIsGagged",
 					Func: (acted, acting, group) => {
-						let location = acted.FocusGroup?.Name!;
+						let location = acted.FocusGroup?.Name! as AssetGroupName;
 						let item: Item | null;
 						let gagTarget: GagTarget | undefined;
 						if (location == "ItemNeck") {
@@ -478,7 +478,7 @@ export class ItemUseModule extends BaseModule {
 								gagTarget = this.GagTargets.find(t => !!item && t.NeckItemName == item?.Asset.Name && !!t.HandItemName);
 							}
 						} else {
-							if (InventoryGroupIsBlocked(acted, location))
+							if (InventoryGroupIsBlocked(acted, location as AssetGroupItemName))
 								return false;
 							item = InventoryGet(acted, location);
 							gagTarget = this.GagTargets.find(t => !!item && t.MouthItemName == item?.Asset.Name && !!t.HandItemName);
@@ -529,7 +529,7 @@ export class ItemUseModule extends BaseModule {
 		// Gag With Necklace
 		this.activities.AddActivity(<ActivityBundle>{
 			Activity: <Activity>{
-				Name: "NecklaceToGag",
+				Name: "NecklaceToGag" as ActivityName,
 				MaxProgress: 50,
 				MaxProgressSelf: 80,
 				Prerequisite: ["UseHands", "Needs-NecklaceToGag"]
@@ -585,10 +585,10 @@ export class ItemUseModule extends BaseModule {
 		// Move Gag to Necklace
 		this.activities.AddActivity(<ActivityBundle>{
 			Activity: <Activity>{
-				Name: "GagToNecklace",
+				Name: "GagToNecklace" as ActivityName,
 				MaxProgress: 50,
 				MaxProgressSelf: 80,
-				Prerequisite: ["UseHands", "Needs-GagToNecklace"]
+				Prerequisite: ["UseHands", "Needs-GagToNecklace" as ActivityPrerequisite]
 			},
 			Targets: [
 				<ActivityTarget>{
@@ -606,7 +606,7 @@ export class ItemUseModule extends BaseModule {
 						var location = acted.FocusGroup?.Name ?? group.Name;
 						var item = InventoryGet(acted, location);
 						
-						if (InventoryGroupIsBlocked(acted, location))
+						if (InventoryGroupIsBlocked(acted, location as AssetGroupItemName))
 							return false;
 
 						if (!!item) {
@@ -644,10 +644,10 @@ export class ItemUseModule extends BaseModule {
 		// Tie Up
 		this.activities.AddActivity(<ActivityBundle>{
 			Activity: <Activity>{
-				Name: "TieUp",
+				Name: "TieUp" as ActivityName,
 				MaxProgress: 50,
 				MaxProgressSelf: 80,
-				Prerequisite: ["UseHands", "ZoneAccessible", "Needs-RopeCoil"]
+				Prerequisite: ["UseHands", "ZoneAccessible", "Needs-RopeCoil" as ActivityPrerequisite]
 			},
 			Targets: this.GetHempRopeLocations().map(loc => <ActivityTarget>{
 						Name: loc.Location,
@@ -690,10 +690,10 @@ export class ItemUseModule extends BaseModule {
 		// Steal
 		this.activities.AddActivity(<ActivityBundle>{
 			Activity: <Activity>{
-				Name: "Steal",
+				Name: "Steal" as ActivityName,
 				MaxProgress: 50,
 				MaxProgressSelf: 50,
-				Prerequisite: ["Needs-AnyItem"],
+				Prerequisite: ["Needs-AnyItem" as ActivityPrerequisite],
 				Reverse: true // acting and acted are flipped!
 			},
 			Targets: [
@@ -733,7 +733,7 @@ export class ItemUseModule extends BaseModule {
 		// Give
 		this.activities.AddActivity(<ActivityBundle>{
 			Activity: <Activity>{
-				Name: "Give",
+				Name: "Give" as ActivityName,
 				MaxProgress: 50,
 				MaxProgressSelf: 50,
 				Prerequisite: ["UseHands", "ZoneAccessible", "TargetZoneAccessible", "Needs-AnyItem"]
@@ -771,7 +771,7 @@ export class ItemUseModule extends BaseModule {
 		// Shark Bite
 		this.activities.AddActivity(<ActivityBundle>{
 			Activity: <Activity>{
-				Name: "SharkBite",
+				Name: "SharkBite" as ActivityName,
 				MaxProgress: 50,
 				MaxProgressSelf: 50,
 				Prerequisite: ["UseHands", "Needs-AnyItem"]
@@ -849,7 +849,7 @@ export class ItemUseModule extends BaseModule {
 		// Item Boop
 		this.activities.AddActivity(<ActivityBundle>{
 			Activity: <Activity>{
-				Name: "ItemBoop",
+				Name: "ItemBoop" as ActivityName,
 				MaxProgress: 50,
 				MaxProgressSelf: 50,
 				Prerequisite: ["UseHands", "Needs-AnyItem"]
@@ -868,7 +868,7 @@ export class ItemUseModule extends BaseModule {
 		// Plush Hug
 		this.activities.AddActivity(<ActivityBundle>{
 			Activity: <Activity>{
-				Name: "PlushHug",
+				Name: "PlushHug" as ActivityName,
 				MaxProgress: 50,
 				MaxProgressSelf: 50,
 				Prerequisite: ["UseHands", "Needs-PlushItem"]
@@ -887,7 +887,7 @@ export class ItemUseModule extends BaseModule {
 
 		this.activities.AddActivity({
             Activity: <Activity>{
-                Name: "TakePhoto",
+                Name: "TakePhoto" as ActivityName,
                 MaxProgress: 50,
                 MaxProgressSelf: 50,
                 Prerequisite: ["UseHands", "Needs-CameraItem"]
@@ -917,9 +917,30 @@ export class ItemUseModule extends BaseModule {
 		}
 		
 		CommonPhotoMode = true;
-		let temp = C.FocusGroup;
+
+		let temp = C.FocusGroup;		
 		C.FocusGroup = null;
-		ChatRoomCharacterViewDrawBackground(ChatRoomData?.Background ?? "", 0, 1, 1, false);
+
+		let tempIcons = ChatRoomHideIconState;
+		ChatRoomHideIconState = 3;
+
+		const bgRect = RectMakeRect(0, 0, ChatRoomCharacterViewWidth, ChatRoomCharacterViewHeight);		
+		let backgroundURL = "";
+		let bgName = ChatRoomData?.Background ?? "";
+		const itemBackground = DrawGetCustomBackground(Player);
+		if (itemBackground) {
+			backgroundURL = `Backgrounds/${itemBackground}.jpg`;
+		} else if (bgName) {
+			backgroundURL = `Backgrounds/${bgName}.jpg`;
+		}
+
+		DrawRect(0, 0, 1000, 1000, "White");
+		DrawRoomBackground(backgroundURL, bgRect, {
+			blur: 4,
+			darken: .8,
+			inverted: false
+		});
+		//ChatRoomCharacterViewDrawBackground(ChatRoomData?.Background ?? "", 0, 1, 1, false);
 		DrawCharacter(C, 0, 0, 1);
 
 		// Capture screen as image URL
@@ -942,6 +963,7 @@ export class ItemUseModule extends BaseModule {
 
 		CommonPhotoMode = false;
 		C.FocusGroup = temp;
+		ChatRoomHideIconState = tempIcons;
 
 		sendLSCGCommand(C, "photo");
 	}
@@ -1051,7 +1073,7 @@ export class ItemUseModule extends BaseModule {
 		return color;
 	}
 
-	ApplyGag(target: Character, source: Character, gagTarget: GagTarget, targetLocation: string, sourceLocation: string = "ItemHandheld") {
+	ApplyGag(target: Character, source: Character, gagTarget: GagTarget, targetLocation: AssetGroupName, sourceLocation: AssetGroupName = "ItemHandheld") {
 		var gagItem = InventoryGet(source, sourceLocation);
 		let sourceItemName = (sourceLocation == "ItemHandheld" ? gagTarget.HandItemName : gagTarget.NeckItemName) ?? "";
 		let targetItemName = (targetLocation?.startsWith("ItemMouth") ? gagTarget.MouthItemName : gagTarget.NeckItemName) ?? "";
@@ -1074,7 +1096,7 @@ export class ItemUseModule extends BaseModule {
 		}
     }
 
-	TakeGag(target: Character, source: Character, gagTarget: GagTarget, sourceLocation: string, targetLocation: string = "ItemHandheld") {
+	TakeGag(target: Character, source: Character, gagTarget: GagTarget, sourceLocation: AssetGroupName, targetLocation: AssetGroupName = "ItemHandheld") {
 		var gag = InventoryGet(target, sourceLocation);
 		var existing = InventoryGet(source, targetLocation);
 		let sourceItemName = (sourceLocation.startsWith("ItemMouth") ? gagTarget.MouthItemName : gagTarget.NeckItemName) ?? "";
@@ -1158,7 +1180,7 @@ export class ItemUseModule extends BaseModule {
 
 	ManualGenerateItemActivitiesForNecklaceActivity(allowed: ItemActivity[], acting: Character, acted: Character, needsItem: string, activity: Activity) {
 		const itemOwner = needsItem == "GagGiveItem" ? acting : acted;
-		const items = CharacterItemsForActivity(itemOwner, needsItem);
+		const items = CharacterItemsForActivity(itemOwner, needsItem as ActivityName);
 		if (items.length === 0) return true;
 	
 		let handled = false;
@@ -1174,7 +1196,7 @@ export class ItemUseModule extends BaseModule {
 			if (focusGroup == "ItemNeck" || needsItem == "GagToNecklace") targetItemName = gagTarget?.NeckItemName;
 			else if (needsItem == "GagTakeItem") targetItemName = gagTarget?.HandItemName;
 			
-			let targetAssetGroup = "ItemMouth";
+			let targetAssetGroup = "ItemMouth" as AssetGroupName;
 			if (focusGroup == "ItemNeck" || needsItem == "GagToNecklace") targetAssetGroup = gagTarget?.OverrideNeckLocation ?? "Necklace";
 			else if (needsItem == "GagTakeItem") targetAssetGroup = "ItemHandheld";
 			
@@ -1185,7 +1207,7 @@ export class ItemUseModule extends BaseModule {
 					blocked = "limited";
 				} else if (types.some((type) => InventoryBlockedOrLimited(targetOwner, targetItem, type))) {
 					blocked = "blocked";
-				} else if (InventoryGroupIsBlocked(targetOwner, /** @type {AssetGroupItemName} */(targetItem.Asset.Group.Name))) {
+				} else if (InventoryGroupIsBlocked(targetOwner, /** @type {AssetGroupItemName} */(targetItem.Asset.Group.Name) as AssetGroupItemName)) {
 					blocked = "unavail";
 				}
 			} else {
@@ -1289,3 +1311,4 @@ export class ItemUseModule extends BaseModule {
 		}
 	}
 }
+

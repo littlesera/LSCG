@@ -214,7 +214,7 @@ type DynamicDrawOptions = {
     fontFamily?: string;
     /**
      * - The text alignment to use. Can be any valid
-     * {@link https://developer.mozilla.org/en-US/docs/Web/CSS/text-align text alignment}. Not applicable to the {@link DynamicDrawTextArc }function. Defaults to "center".
+     * {@link https://developer.mozilla.org/en-US/docs/Web/CSS/text-align text alignment}. Not applicable to the {@link DynamicDrawTextArc}function. Defaults to "center".
      */
     textAlign?: CanvasTextAlign;
     /**
@@ -240,42 +240,42 @@ type DynamicDrawOptions = {
      */
     effect?: DynamicDrawTextEffect;
     /**
-     * - The maximum width of the drawn text. Not applicable to the {@link DynamicDrawTextFromTo } function, as
-     * constraints are defined by the endpoints. When defined for the {@link DynamicDrawTextArc } function, it defines the maximum width of the
+     * - The maximum width of the drawn text. Not applicable to the {@link DynamicDrawTextFromTo} function, as
+     * constraints are defined by the endpoints. When defined for the {@link DynamicDrawTextArc} function, it defines the maximum width of the
      * text perpendicular to the radius line on which the text is centered. Unlimited by default.
      */
     width?: number;
     /**
      * - Whether or not the text should be fully contained in the box defined by the from/to coordinates. Only
-     * applicable to the {@link DynamicDrawTextFromTo } function. Defaults to true.
+     * applicable to the {@link DynamicDrawTextFromTo} function. Defaults to true.
      */
     contain?: boolean;
     /**
      * - The angle at which the text should be drawn, relative to the center of the circle. Angles are measured
      * clockwise in radians starting at the vertical 12 o'clock position. For example 0 corresponds to 12 o'clock, PI/2 corresponds to
-     * 3 o'clock, PI corresponds to 6 o'clock, and 3PI/2 corresponds to 9 o'clock. Only applicable to the {@link DynamicDrawTextArc } function.
+     * 3 o'clock, PI corresponds to 6 o'clock, and 3PI/2 corresponds to 9 o'clock. Only applicable to the {@link DynamicDrawTextArc} function.
      * Defaults to 0.
      */
     angle?: number;
     /**
      * - The radius in pixels of the circle whose arc the text should be drawn along. A smaller radius will result
-     * in a greater text curvature and vice versa. Only applicable to the {@link DynamicDrawTextArc } function. Defaults to 450px.
+     * in a greater text curvature and vice versa. Only applicable to the {@link DynamicDrawTextArc} function. Defaults to 450px.
      */
     radius?: number;
     /**
      * - The maximum angle that the text should be drawn along. This effectively determines the maximum length of
-     * the arc along which the text will be drawn. Only applicable to the {@link DynamicDrawTextArc } function. Defaults to PI (a semicircle).
+     * the arc along which the text will be drawn. Only applicable to the {@link DynamicDrawTextArc} function. Defaults to PI (a semicircle).
      */
     maxAngle?: number;
     /**
      * - The direction the text should be drawn in along the circular arc. Only applicable to
-     * the {@link DynamicDrawTextArc } function. Defaults to {@link DynamicDrawTextDirection.CLOCKWISE };
+     * the {@link DynamicDrawTextArc} function. Defaults to {@link DynamicDrawTextDirection.CLOCKWISE};
      */
     direction?: DynamicDrawTextDirection;
     /**
      * - The direction of the curve of the text. This determines whether the center of the text
-     * curves upwards ({@link DynamicDrawTextCurve.SMILEY }) or downwards ({@link DynamicDrawTextCurve.FROWNY }). Only applicable to the
-     * {@link DynamicDrawTextArc } function. Defaults to {@link DynamicDrawTextCurve.FROWNY }.
+     * curves upwards ({@link DynamicDrawTextCurve.SMILEY}) or downwards ({@link DynamicDrawTextCurve.FROWNY}). Only applicable to the
+     * {@link DynamicDrawTextArc} function. Defaults to {@link DynamicDrawTextCurve.FROWNY}.
      *
      * A drawing callback, used to add drawing effects to dynamic text.
      */

@@ -52,11 +52,7 @@ declare function MagicSpellEffect(C: Character, Spell: number): void;
  * @returns {void} - Nothing
  */
 declare function MagicBattleSpellEnd(): void;
-/**
- * Handles the key press in the game, the C key for cheats
- * @returns {void} - Nothing
- */
-declare function MagicBattleKeyDown(): void;
+declare function MagicBattleKeyDown(event: KeyboardEvent): boolean;
 declare var MagicBattleBackground: string;
 /** @type {null | Character} */
 declare var MagicBattleOpponent: null | Character;

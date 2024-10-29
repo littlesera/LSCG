@@ -106,7 +106,7 @@ export class SuggestionMiniGame extends BaseMiniGame {
     GameFailed: boolean = false;
 
     Run() {
-        ChatRoomRun();
+        ChatRoomRun(CommonTime());
         if (!this.Options) {
             return this.End(true);
         }

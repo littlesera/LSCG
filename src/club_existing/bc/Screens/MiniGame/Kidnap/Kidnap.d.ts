@@ -122,11 +122,7 @@ declare function KidnapClick(): void;
  * @returns
  */
 declare function KidnapSuccessWillpowerProgress(opponent: Character): number;
-/**
- * Handles the key press in the kidnap mini game, the C cheat key can help you recover some lost willpower
- * @returns {void} - Nothing
- */
-declare function KidnapKeyDown(): void;
+declare function KidnapKeyDown(event: KeyboardEvent): boolean;
 declare var KidnapVictory: boolean;
 declare var KidnapDifficulty: number;
 declare var KidnapBackground: string;

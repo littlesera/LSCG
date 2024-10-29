@@ -163,7 +163,7 @@ export class SleepyMiniGame extends BaseMiniGame {
     }
 
     Run() {
-        ChatRoomRun();
+        ChatRoomRun(CommonTime());
 
         if (this.IsStartDelay) {
             DrawText(this.startText, 500, 500, "white", "black");

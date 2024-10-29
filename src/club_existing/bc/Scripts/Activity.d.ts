@@ -36,11 +36,11 @@ declare function ActivityGetGroupOrMirror(family: IAssetFamily, groupname: Asset
 declare function ActivityGetAllMirrorGroups(family: IAssetFamily, groupName: AssetGroupName): AssetGroup[];
 /**
  * Check if any activities are possible for a character's given group.
- * @param {Character} char - The character on which the check is done
- * @param {AssetGroupItemName} groupname - The group to check access on
+ * @param {Character} C - The character on which the check is done
+ * @param {AssetGroupItemName} GroupName - The group to check access on
  * @returns {boolean} Whether any activity is possible
  */
-declare function ActivityPossibleOnGroup(char: Character, groupname: AssetGroupItemName): boolean;
+declare function ActivityPossibleOnGroup(C: Character, GroupName: AssetGroupItemName): boolean;
 /**
  * Check whether a given activity can be performed on a group
  * @param {Character} char - The character being targeted
@@ -51,12 +51,12 @@ declare function ActivityPossibleOnGroup(char: Character, groupname: AssetGroupI
 declare function ActivityHasValidTarget(char: Character, act: Activity, group: AssetGroup): boolean;
 /**
  * Check that an activity is permitted by an actor's settings.
- * @param {Activity} activity - The activity to consider
- * @param {Character|PlayerCharacter} character - The character to check with
- * @param {boolean} onOther - Whether we look at doing to or being done on
+ * @param {Activity} A - The activity to consider
+ * @param {Character|PlayerCharacter} C - The character to check with
+ * @param {boolean} Other - Whether we look at doing to or being done on
  * @returns {boolean} whether the activity is permitted
  */
-declare function ActivityCheckPermissions(activity: Activity, character: Character | PlayerCharacter, onOther: boolean): boolean;
+declare function ActivityCheckPermissions(A: Activity, C: Character | PlayerCharacter, Other: boolean): boolean;
 /**
  * Check that that a given prerequisite is met.
  * @param {ActivityPrerequisite} prereq - The prerequisite to consider
@@ -232,11 +232,11 @@ declare function ActivityBuildChatTag(character: Character, group: AssetGroup, a
  * Launches a sexual activity for a character and sends the chatroom message if applicable.
  * @param {Character} actor - Character which is performing the activity
  * @param {Character} acted - Character on which the activity was triggered
- * @param {AssetGroup} targetGroup - The group targetted by the activity
+ * @param {AssetItemGroup} targetGroup - The group targetted by the activity
  * @param {ItemActivity} ItemActivity - The activity performed, with its optional item used
  * @param {boolean} sendMessage - Whether to send a message to the chat or not
  */
-declare function ActivityRun(actor: Character, acted: Character, targetGroup: AssetGroup, ItemActivity: ItemActivity, sendMessage?: boolean): void;
+declare function ActivityRun(actor: Character, acted: Character, targetGroup: AssetItemGroup, ItemActivity: ItemActivity, sendMessage?: boolean): void;
 /**
  * Checks if a used asset should trigger an activity/arousal progress on the target character
  * @param {Character} Source - The character who used the item

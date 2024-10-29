@@ -77,4 +77,6 @@ type ModularChastityBeltPersistentData = {
     DenyDetected?: boolean;
     OrgasmDetected?: boolean;
     ChatroomCheck?: boolean;
+    SyncNeeded?: boolean;
+    SyncCooldown?: number;
 };

@@ -10,10 +10,10 @@ declare function PasswordResetLoad(): void;
 declare function PasswordResetRun(): void;
 /**
  * Handles a password reset response
- * @param {string} msg - The password reset response message to be displayed to the player
+ * @param {ServerPasswordResetResponse} msg - The password reset response message to be displayed to the player
  * @returns {void} Nothing
  */
-declare function PasswordResetResponse(msg: string): void;
+declare function PasswordResetResponse(msg: ServerPasswordResetResponse): void;
 /**
  * Handles player click events on the password reset screen
  * @returns {void} Nothing

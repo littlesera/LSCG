@@ -28,8 +28,10 @@ declare function CommandCombine(add: ICommand | ICommand[]): void;
 /**
  * Parse the input chat message
  * @param {string} msg - Input string, cannot be empty
+ * @returns {string | boolean} a (de-escaped) string if msg looks like an normal message,
+ * true if a command successfully executed, false otherwise.
  */
-declare function CommandParse(msg: string): void;
+declare function CommandParse(msg: string): string | boolean;
 /**
  * Prints out the help for commands with tags that include `low`
  * @param {string} low - lower case search keyword for tags
@@ -43,13 +45,13 @@ declare function CommandHelp(low: string, timeout?: number): void;
  * @param {number} [Timeout] - total time to display the help message in ms
  * @param {boolean} [DoShowEscapeHint] - if message about message escaping should be shown
  */
-declare function CommandPrintHelpFor(CommandList: Optional<ICommand, 'Action'>[], Timeout?: number, DoShowEscapeHint?: boolean): void;
+declare function CommandPrintHelpFor(CommandList: Optional<ICommand, "Action">[], Timeout?: number, DoShowEscapeHint?: boolean): void;
 /**
  * Finds command and executes it from the message
  * @param {string} msg - User input
- * @returns {void} - Nothing
+ * @returns {boolean} - true if a command was executed, false otherwise
  */
-declare function CommandExecute(msg: string): void;
+declare function CommandExecute(msg: string): boolean;
 /**
  * Tries to complete the message to a command or print help about it
  * @param {string} msg - InputChat content

@@ -4,13 +4,6 @@
  */
 declare function InformationSheetLoad(): void;
 /**
- * Draw the lover for the character
- * @param {Character} C - The character whose information sheet should be displayed
- * @param {number} L - The lover index
- * @returns {void} - Nothing
- */
-declare function InformationSheetDrawLover(C: Character, L: number): void;
-/**
  * Main function of the character info screen. It's called continuously, so be careful
  * to add time consuming functions or loops here
  * @returns {void} - Nothing
@@ -38,8 +31,8 @@ declare function InformationSheetExit(): void;
  */
 declare function InformationSheetLoadCharacter(C: Character): void;
 declare var InformationSheetBackground: string;
-/** @type {null | Character} */
-declare var InformationSheetSelection: null | Character;
+/** @type {null | Character | NPCCharacter} */
+declare var InformationSheetSelection: null | Character | NPCCharacter;
 /** @type {"" | ModuleType} */
 declare var InformationSheetPreviousModule: "" | ModuleType;
 declare var InformationSheetPreviousScreen: string;

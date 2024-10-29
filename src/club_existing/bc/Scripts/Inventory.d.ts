@@ -41,26 +41,37 @@ declare function InventoryDelete(C: Character, DelItemName: string, DelItemGroup
  */
 declare function InventoryDeleteGroup(C: Character, group: AssetGroupName, push?: boolean): InventoryItem[];
 /**
-* Loads the current inventory for a character, can be loaded from an object of Name/Group or a compressed array using
-* LZString
+* Loads the current inventory for a character, can be loaded from an object of Name/Group or a compressed array using LZString
 * @param {Character} C - The character on which we should load the inventory
-* @param {string | readonly ItemBundle[] | Partial<Record<AssetGroupName, readonly AssetGroupName[]>>} Inventory - An array of Name / Group of items to load
+* @param {string | readonly ItemBundle[] | Partial<Record<AssetGroupName, readonly string[]>>} Inventory - An array of Name / Group of items to load
 */
-declare function InventoryLoad(C: Character, Inventory: string | readonly ItemBundle[] | Partial<Record<AssetGroupName, readonly AssetGroupName[]>>): void;
+declare function InventoryLoad(C: Character, Inventory: string | readonly ItemBundle[] | Partial<Record<AssetGroupName, readonly string[]>>): void;
+/**
+* Loads the current inventory for a character, based on compressed data
+* @param {Character} C - The character on which we should load the inventory
+* @param {string} Data - The string of data to load
+*/
+declare function InventoryLoadCompressedData(C: Character, Data: string): void;
+/**
+* Creates the inventory data string from current inventory
+* @param {Character} C - The character on which we should load the inventory data string
+*/
+declare function InventoryDataBuild(C: Character): void;
 /**
 * Checks if the character has the inventory available
 * @param {Character} C - The character on which we should remove the item
 * @param {string|'*'} InventoryName - The name of the item to validate, * means any
 * @param {AssetGroupName} InventoryGroup - The group name of the item to validate
 */
-declare function InventoryAvailable(C: Character, InventoryName: string | '*', InventoryGroup: AssetGroupName): boolean;
+declare function InventoryAvailable(C: Character, InventoryName: string | "*", InventoryGroup: AssetGroupName): boolean;
 /**
-* Returns an error message if a prerequisite clashes with the character's items and clothes
-* @param {Character} C - The character on which we check for prerequisites
-* @param {AssetPrerequisite} Prerequisite - The name of the prerequisite
-* @returns {string} - The error tag, can be converted to an error message
-*/
-declare function InventoryPrerequisiteMessage(C: Character, Prerequisite: AssetPrerequisite): string;
+ * Returns an error message if a prerequisite clashes with the character's items and clothes
+ * @param {Character} C - The character on which we check for prerequisites
+ * @param {AssetPrerequisite} Prerequisite - The name of the prerequisite
+ * @param {null | Asset} asset - The asset (if any) for whom the prerequisite is checked
+ * @returns {string} - The error tag, can be converted to an error message
+ */
+declare function InventoryPrerequisiteMessage(C: Character, Prerequisite: AssetPrerequisite, asset?: null | Asset): string;
 /**
  * Prerequisite utility function that returns TRUE if the given character has an item equipped in the provided group
  * whose name matches one of the names in the provided list.
@@ -110,13 +121,6 @@ declare function InventoryDoItemsExposeGroup(C: Character, TargetGroup: AssetGro
  */
 declare function InventoryHasItemInAnyGroup(C: Character, GroupList: readonly AssetGroupName[]): boolean;
 /**
- * Check if there are any gags with prerequisites that block the new gag from being applied
- * @param {Character} C - The character on which we check for prerequisites
- * @param {readonly AssetPrerequisite[]} BlockingPrereqs - The prerequisites we check for on lower gags
- * @returns {string} - Returns the prerequisite message if the gag is blocked, or an empty string if not
- */
-declare function InventoryPrerequisiteConflictingGags(C: Character, BlockingPrereqs: readonly AssetPrerequisite[]): string;
-/**
  * Returns TRUE if we can add the item, no other items must block that prerequisite
  * @param {Character} C - The character on which we check for prerequisites
  * @param {Asset} asset - The asset for which prerequisites should be checked. Any item equipped in the asset's group
@@ -124,9 +128,10 @@ declare function InventoryPrerequisiteConflictingGags(C: Character, BlockingPrer
  * @param {AssetPrerequisite | readonly AssetPrerequisite[]} [prerequisites=asset.Prerequisite] - An array of prerequisites or a string for a single
  * prerequisite. If nothing is provided, the asset's default prerequisites will be used
  * @param {boolean} [setDialog=true] - If TRUE, set the screen dialog message at the same time
+ * @param {readonly AssetPoseName[]} [allowActivePose=asset.AllowActivePose]
  * @returns {boolean} - TRUE if the item can be added to the character
  */
-declare function InventoryAllow(C: Character, asset: Asset, prerequisites?: AssetPrerequisite | readonly AssetPrerequisite[], setDialog?: boolean): boolean;
+declare function InventoryAllow(C: Character, asset: Asset, prerequisites?: AssetPrerequisite | readonly AssetPrerequisite[], setDialog?: boolean, allowActivePose?: readonly AssetPoseName[]): boolean;
 /**
 * Gets the current item / cloth worn a specific area (AssetGroup)
 * @param {Character} C - The character on which we must check the appearance
@@ -219,7 +224,7 @@ declare function InventoryWearRandom(C: Character, GroupName: AssetGroupName, Di
  * @param {null | Character} [C_Source] - The character setting the new item option. If `null`, assume that it is _not_ the player character.
  * @returns {Item | null} - The equipped item (if any)
  */
-declare function InventoryRandomExtend(C: Character, GroupName: AssetGroupName, C_Source?: null | Character): Item;
+declare function InventoryRandomExtend(C: Character, GroupName: AssetGroupName, C_Source?: null | Character): Item | null;
 /**
  * Select a random asset from a group, narrowed to the most preferable available options (i.e
  * unblocked/visible/unlimited) based on their binary "rank"
@@ -247,6 +252,12 @@ declare function InventoryRemove(C: Character, AssetGroup: AssetGroupName, Refre
 * @returns {boolean} - TRUE if the group is blocked
 */
 declare function InventoryGroupIsBlockedForCharacter(C: Character, GroupName?: AssetGroupItemName, Activity?: boolean): boolean;
+/**
+ * Returns TRUE if no item can be used by the player on the character because of the map distance
+ * @param {Character} C - The character on which we validate the distance
+ * @returns {boolean} - TRUE if distance is too far
+ */
+declare function InventoryIsBlockedByDistance(C: Character): boolean;
 /**
 * Returns TRUE if the body area is blocked by an owner rule
 * @param {Character} C - The character on which we validate the group
@@ -287,7 +298,7 @@ declare function InventoryItemIsPickable(Item: Item): boolean;
  * @returns {(ItemProperties & Asset & AssetGroup)[Name] | undefined} - The value of the requested property for the given item.
  * Returns either undefined, an empty array or object if the property or the item itself does not exist.
  */
-declare function InventoryGetItemProperty<Name extends "Block" | "BlockRemotes" | "OpenPermission" | "OpenPermissionArm" | "OpenPermissionLeg" | "OpenPermissionChastity" | "Hide" | "Name" | "Gender" | "BuyGroup" | "AllowLock" | "IsLock" | "PickDifficulty" | "OwnerOnly" | "LoverOnly" | "FamilyOnly" | "AllowTighten" | "DrawLocks" | "CustomBlindBackground" | "CraftGroup" | "AllowLockType" | "CharacterRestricted" | "AllowRemoveExclusive" | "ArousalZone" | "Difficulty" | "SelfBondage" | "SelfUnlock" | "RemoveTime" | "AlwaysInteract" | "IsRestraint" | "ParentItem" | "Enable" | "Visible" | "NotVisibleOnScreen" | "Wear" | "Activity" | "AllowActivity" | "ActivityAudio" | "ActivityExpression" | "AllowActivityOn" | "PrerequisiteBuyGroups" | "Bonus" | "Expose" | "HideItem" | "HideItemExclude" | "Require" | "AllowActivePose" | "WhitelistActivePose" | "Value" | "ExclusiveUnlock" | "RemoveAtLogin" | "LayerVisibility" | "RemoveTimer" | "MaxTimer" | "Prerequisite" | "Extended" | "AlwaysExtend" | "ExpressionTrigger" | "RemoveItemOnRemove" | "AllowEffect" | "AllowBlock" | "AllowHide" | "AllowHideItem" | "AllowTypes" | "CreateLayerTypes" | "DefaultColor" | "Audio" | "Category" | "Fetish" | "OverrideBlinking" | "DialogSortOverride" | "DynamicDescription" | "DynamicPreviewImage" | "DynamicAllowInventoryAdd" | "DynamicName" | "DynamicGroupName" | "DynamicActivity" | "DynamicAudio" | "DynamicBeforeDraw" | "DynamicAfterDraw" | "DynamicScriptDraw" | "AllowColorizeAll" | "AvailableLocations" | "OverrideHeight" | "FullAlpha" | "MirrorExpression" | "Layer" | "Attribute" | "HideItemAttribute" | "PreviewIcons" | "Tint" | "DefaultTint" | "ExpressionPrerequisite" | "Effect" | "SetPose" | "FreezeActivePose" | "AllowExpression" | "Random" | "BodyCosplay" | "HideForPose" | "Alpha" | "ColorSuffix" | "FixedPosition" | "Opacity" | "MinOpacity" | "MaxOpacity" | "InheritColor" | "AllowPose" | "PoseMapping" | "AllowColorize" | "Group" | "Text" | "Padding" | "TypeRecord" | "Door" | "Type" | "Expression" | "Mode" | "Intensity" | "State" | "Modules" | "HeightModifier" | "OverridePriority" | "ItemMemberNumber" | "LockedBy" | "LockMemberNumber" | "Password" | "LockPickSeed" | "CombinationNumber" | "MemberNumberListKeys" | "Hint" | "LockSet" | "RemoveItem" | "RemoveOnUnlock" | "ShowTimer" | "EnableRandomInput" | "MemberNumberList" | "InflateLevel" | "SuctionLevel" | "Text2" | "Text3" | "LockButt" | "HeartRate" | "AutoPunish" | "AutoPunishUndoTime" | "AutoPunishUndoTimeSetting" | "OriginalSetting" | "BlinkState" | "Option" | "PunishStruggle" | "PunishStruggleOther" | "PunishOrgasm" | "PunishStandup" | "PunishActivity" | "PunishSpeech" | "PunishRequiredSpeech" | "PunishRequiredSpeechWord" | "PunishProhibitedSpeech" | "PunishProhibitedSpeechWords" | "NextShockTime" | "PublicModeCurrent" | "PublicModePermission" | "TriggerValues" | "AccessMode" | "ShockLevel" | "InsertedBeads" | "ShowText" | "TriggerCount" | "OrgasmCount" | "RuinedOrgasmCount" | "TimeWorn" | "TimeSinceLastOrgasm" | "Iterations" | "Revert" | "UnHide" | "Texts" | "TargetAngle" | "PortalLinkCode" | "Underwear" | "Asset" | "Clothing" | "AllowNone" | "AllowCustomize" | "ParentSize" | "ParentColor" | "Zone" | "MirrorGroup" | "PreviewZone" | "MirrorActivitiesFrom" | "HasPreviewImages" | "HasType" | "ParentGroupName" | "DrawingLeft" | "DrawingTop" | "Description" | "WearTime" | "DrawingPriority" | "ZoomModifier" | "ColorableLayerCount" | "Archetype" | "AllowTint" | "Family" | "IsDefault" | "ColorSchema" | "DrawingBlink" | "IsAppearance" | "IsItem" | "IsScript">(Item: Item, PropertyName: Name, CheckGroup?: boolean): (ItemProperties & Asset & AssetGroup)[Name];
+declare function InventoryGetItemProperty<Name extends keyof ItemProperties | keyof Asset | keyof AssetGroup>(Item: Item, PropertyName: Name, CheckGroup?: boolean): (ItemProperties & Asset & AssetGroup)[Name] | undefined;
 /**
  * Apply an item's expression trigger to a character if able
  * @param {Character} C - The character to update
@@ -414,13 +425,24 @@ declare function InventoryConfiscateRemote(): void;
 */
 declare function InventoryIsWorn(C: Character, AssetName: string, AssetGroup: AssetGroupName): boolean;
 /**
- * Toggles an item's permission for the player
- * @param {Item} Item - Appearance item to toggle
- * @param {string} [Type] - Type of the item to toggle
- * @param {boolean} [Worn] - True if the player is changing permissions for an item they're wearing or if it's the first option
+ * Set the item's permission to a specific value for the player.
+ * @param {AssetGroupName} groupName
+ * @param {string} assetName
+ * @param {ItemPermissionMode} permissionType
+ * @param {null | string} type - The relevant extended item option identifier of the item (if any)
+ * @param {boolean} push - Whether to push the permission changes to the server
  * @returns {void} - Nothing
  */
-declare function InventoryTogglePermission(Item: Item, Type?: string, Worn?: boolean): void;
+declare function InventorySetPermission(groupName: AssetGroupName, assetName: string, permissionType: ItemPermissionMode, type?: null | string, push?: boolean): void;
+/**
+ * Toggles an item's permission for the player
+ * @param {Item} Item - Appearance item to toggle
+ * @param {string} [Type] - The relevant extended item option identifier of the item (if any)
+ * @param {boolean} [Worn] - True if the player is changing permissions for an item they're wearing or if it's the first option
+ * @param {boolean} push - Whether to push the permission changes to the server
+ * @returns {void} - Nothing
+ */
+declare function InventoryTogglePermission(Item: Item, Type?: string, Worn?: boolean, push?: boolean): void;
 /**
 * Returns TRUE if a specific item / asset is blocked by the character item permissions
 * @param {Character} C - The character on which we check the permissions
@@ -505,6 +527,21 @@ declare function InventoryShockExpression(C: Character): void;
  * object
  */
 declare function InventoryExtractLockProperties(property: ItemProperties): ItemProperties;
+declare namespace InventoryPrerequisiteConflicts {
+    let GagPriorities: Partial<Record<AssetGroupName, number>>;
+    function _GagCheck<T extends keyof PropertiesArray>(fieldName: T, C: Character, blockingPrereqs: PropertiesArray[T], asset?: Asset, options?: {
+        errMessage?: string;
+        invert?: boolean;
+    }): string;
+    function GagPrerequisite(C: Character, blockingPrereqs: readonly AssetPrerequisite[], asset?: Asset, options?: {
+        errMessage?: string;
+        invert?: boolean;
+    }): string;
+    function GagEffect(C: Character, blockingEffects: readonly EffectName[], asset?: Asset, options?: {
+        errMessage?: string;
+        invert?: boolean;
+    }): string;
+}
 /** @satisfies {Set<keyof PropertiesArray>} */
 declare const PropertiesArrayLike: Set<"Block" | "Hide" | "AllowActivity" | "AllowActivityOn" | "Expose" | "HideItem" | "HideItemExclude" | "Require" | "AllowActivePose" | "Prerequisite" | "ExpressionTrigger" | "AllowEffect" | "AllowBlock" | "AllowHide" | "AllowHideItem" | "DefaultColor" | "Category" | "Fetish" | "AvailableLocations" | "Attribute" | "Tint" | "ExpressionPrerequisite" | "Effect" | "SetPose" | "AllowExpression" | "Alpha" | "MemberNumberList" | "UnHide" | "Texts">;
 /** @satisfies {Set<keyof PropertiesRecord>} */

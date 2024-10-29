@@ -5,6 +5,13 @@
  */
 declare function TextGet(TextTag: string): string;
 /**
+ * Finds the translated string for key in the specified text cache
+ * @param {string} filePath
+ * @param {string} key
+ * @returns {string} — The translated string for the key
+ */
+declare function TextGetInScope(filePath: string, key: string): string;
+/**
  * Loads the CSV text file of the current screen into the buffer. It will get the CSV from the cache if the file was already fetched from
  * the server
  * @param {string} [TextGroup] - Screen for which to load the CSV of
@@ -17,29 +24,52 @@ declare function TextLoad(TextGroup?: string): void;
  * @param {string} TextGroup
  */
 declare function TextPrefetch(Module: string, TextGroup: string): void;
+/**
+ * Trigger the caching of a specific file into the text cache
+ * @param {string} file
+ */
+declare function TextPrefetchFile(file: string): void;
+/**
+ * @param {string} msg
+ * @returns {string}
+ */
+declare function InterfaceTextGet(msg: string): string;
 /** @type {TextCache | null} */
 declare let TextScreenCache: TextCache | null;
 /** @type {Map<string, TextCache>} */
 declare const TextAllScreenCache: Map<string, TextCache>;
+/** Prefix for the Text-generated warning message on a missing key */
+declare const TEXT_NOT_FOUND_PREFIX: "MISSING TEXT IN";
+declare const InterfaceStringsPath: "Screens/Interface.csv";
 /**
  * A class that can be used to cache a simple key/value CSV file for easy text lookups. Text lookups will be automatically translated to
  * the game's current language, if a translation is available.
  */
 declare class TextCache {
     /**
+     * Creates a new TextCache from the provided CSV file path asynchronously,
+     * promising its return after the cache has been build.
+     * @param {string} path - The path to the CSV lookup file for this TextCache instance
+     */
+    static buildAsync(path: string): Promise<TextCache>;
+    /**
      * Creates a new TextCache from the provided CSV file path.
      * @param {string} path - The path to the CSV lookup file for this TextCache instance
-     * @param {string} [warn] - prefix for warning when key is not found
      */
-    constructor(path: string, warn?: string);
+    constructor(path: string, _build_cache?: boolean);
     path: string;
-    warn: string;
     language: string;
     /** @type {Record<string, string>} */
     cache: Record<string, string>;
     /** @type {((cache?: TextCache) => void)[]} */
     rebuildListeners: ((cache?: TextCache) => void)[];
     loaded: boolean;
+    log(msg: any): void;
+    /**
+     * Return the basename of the cached file
+     * @returns {string}
+     */
+    fileName(): string;
     /**
      * Looks up a string from this TextCache. If the cache contains a value for the provided key and a translation is available, the return
      * value will be automatically translated. Otherwise the EN string will be used. If the cache does not contain a value for the requested
@@ -59,9 +89,8 @@ declare class TextCache {
     onRebuild(callback: (cache?: TextCache) => void, immediate?: boolean): Function;
     /**
      * Kicks off a build of the text lookup cache
-     * @returns {void} - Nothing
      */
-    buildCache(): void;
+    buildCache(): Promise<void>;
     /**
      * Fetches and parses the CSV file for this TextCache
      * @returns {Promise<string[][]>} - A promise resolving to an array of string arrays, corresponding to lines of CSV values in the CSV

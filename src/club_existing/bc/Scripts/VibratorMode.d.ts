@@ -113,7 +113,7 @@ declare function VibratorModePublish(data: VibratingItemData, C: Character, item
  * @returns {boolean} Whether properties were initialized or not
  */
 declare function VibratorModeInit(data: VibratingItemData, C: Character, item: Item, push?: boolean, refresh?: boolean): boolean;
-declare function VibratorModeSetOptionByName(C: Character, itemOrGroupName: AssetGroupName | Item, optionName: string, push?: boolean, C_Source?: Character, refresh?: boolean): string;
+declare function VibratorModeSetOptionByName(C: Character, itemOrGroupName: Item | AssetGroupName, optionName: string, push?: boolean, C_Source?: null | Character, refresh?: boolean): string | undefined;
 /**
  * Return the (standard) vibrator mode one would get by incrementing/decrementing the passed mode.
  * @param {VibratorMode} mode - The current vibrator mode
