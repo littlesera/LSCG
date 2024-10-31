@@ -1,3 +1,10 @@
+/** The definition of a fetish */
+interface Fetish {
+	Name: FetishName;
+	FetishID: number;
+	GetFactor(C: Character): number;
+}
+
 /** Types for representing the left/top coordinate of a target draw rect. */
 declare namespace TopLeft {
 	/**
@@ -204,6 +211,9 @@ interface AssetCommonPropertiesGroupAsset {
 	 */
 	IsRestraint?: boolean;
 
+	// Zero or more if this group is an arousal zone that must be saved and synced between players
+	ArousalZoneID?: number;
+
 	/**
 	 * Is the asset considered body cosplay?
 	 *
@@ -244,6 +254,15 @@ interface AssetGroupDefinitionBase extends AssetCommonPropertiesGroupAsset, Asse
 	 * @default false
 	 */
 	Clothing?: boolean;
+
+	// Set to TRUE if all assets in that group should allow editing opacity, set value on asset level to override
+	EditOpacity?: boolean;
+
+	// The default minimum opacity for that group, set value on asset level to override
+	MinOpacity?: number;
+
+	// The default maximum opacity for that group, set value on asset level to override
+	MaxOpacity?: number;
 
 	/** Whether the group is considered underwear
 	 *
@@ -421,12 +440,30 @@ interface AssetCommonPropertiesAssetLayer {
 	Opacity?: number;
 	MinOpacity?: number;
 	MaxOpacity?: number;
+	EditOpacity?: boolean; // True if we can edit the opacity in the color picker
 }
 
 /** Input interface for constructing {@link Asset} objects. */
 interface AssetDefinitionBase extends AssetCommonPropertiesGroupAsset, AssetCommonPropertiesAssetLayer, AssetCommonPropertiesGroupAssetLayer {
+
 	/** The asset's internal name. */
 	Name: string,
+
+	/** The asset's InventoryID to be synced with the server and other players */
+	InventoryID?: number,
+
+	/**
+	 * The group name and asset name of a configuration to copy.
+	 * Useful if multiple items share the same config.
+	 */
+	CopyConfig?: {
+		/** The name of the group */
+		GroupName: AssetGroupName,
+		/** The name of the asset */
+		AssetName: string,
+		/** Whether to automatically assign a {@link AssetDefinition.BuyGroup} to the config and, if required, to set it for all `CopyConfig`-referenced super configs */
+		BuyGroup?: boolean,
+	};
 
 	/**
 	 * Link an asset to another.
@@ -478,9 +515,6 @@ interface AssetDefinitionBase extends AssetCommonPropertiesGroupAsset, AssetComm
 	/** Identifies a set of assets that's part of the same group for shopping purposes. Buying one will give access to all of them. */
 	BuyGroup?: string;
 
-	/** Identifies a BuyGroup that, we bought one item of, will cause that asset to also be owned, without showing it in the shopping list. Only used by the SpankingToys */
-	PrerequisiteBuyGroups?: string[];
-
 	/** Whether wearing the asset gives a bonus in the Kidnap minigame. */
 	Bonus?: AssetBonusName;
 
@@ -523,6 +557,13 @@ interface AssetDefinitionBase extends AssetCommonPropertiesGroupAsset, AssetComm
 	 * A value of -1 makes the asset unavailable, a value of 0 makes it always available.
 	 */
 	Value?: number;
+	
+	/**
+	 * Whether an item should never be able to be sold.
+	 *
+	 * Should be used for items that can be bought *and* can be earned for free.
+	 */
+	NeverSell?: boolean;
 
 	/** A measure of how hard it is to remove the asset. Defaults to 0. */
 	Difficulty?: number;
@@ -573,6 +614,13 @@ interface AssetDefinitionBase extends AssetCommonPropertiesGroupAsset, AssetComm
 	/** @deprecated */
 	AllowTypes?: never;
 	CreateLayerTypes?: string[];
+	/**
+	 * Whether an item can be tightened or not.
+	 *
+	 * Defaults to `false` unless one of the following two conditions are met:
+	 * * The item is considered a restraint (see {@link AssetDefinition.IsRestraint})
+	 * * The items difficulty is larger than zero (see {@link AssetDefinition.Difficulty})
+	 */
 	AllowTighten?: boolean;
 	DefaultColor?: ItemColor;
 	Audio?: string;

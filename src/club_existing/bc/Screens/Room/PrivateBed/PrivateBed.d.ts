@@ -57,7 +57,7 @@ declare function PrivateBedClick(): void | boolean;
  * When the player exits the private bedroom.  The next sex scene will wait from 5 to 20 depending on luck and the frigid/honry trait.
  * @returns {void} - Nothing.
  */
-declare function PrivateBedExit(Type: any): void;
+declare function PrivateBedExit(): void;
 /**
  * When a character gets an orgasm
  * @param {Character} C - The character getting the orgasm.

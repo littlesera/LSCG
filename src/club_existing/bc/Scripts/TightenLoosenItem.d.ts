@@ -29,3 +29,5 @@ declare function TightenLoosenItemClick(): void;
 declare function TightenLoosenItemExit(): void;
 declare var TightenLoosenItemMaximumDifficulty: number;
 declare var TightenLoosenItemMinimumDifficulty: number;
+/** A set of screen names for which one should *not* be able to access the tighten/loosen interface via the extended item menu */
+declare const TightenLoosenScreenBlacklist: Set<string>;

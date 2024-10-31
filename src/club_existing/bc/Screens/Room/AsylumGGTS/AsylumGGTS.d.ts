@@ -102,12 +102,11 @@ declare function AsylumGGTSSetTimer(): void;
 /**
  * Returns TRUE if the query was answered by character number M
  * @param {number} Level - The player GGTS level, at level 4 or more, capital letters and punctuation matters
- * @param {number} M - The member number to evaluate
  * @param {string} TextEasy - The text to evaluate
  * @param {string} TextHard - The text to evaluate
  * @returns {boolean} - TRUE if the is done
  */
-declare function AsylumGGTSQueryDone(Level: number, M: number, TextEasy: string, TextHard: string): boolean;
+declare function AsylumGGTSQueryDone(Level: number, TextEasy: string, TextHard: string): boolean;
 /**
  * Returns TRUE if the task T is currently done by character C
  * @param {Character} C - The character to evaluate
@@ -334,6 +333,7 @@ declare var AsylumGGTSTaskTarget: null | Character;
 declare var AsylumGGTSLastTask: string;
 declare var AsylumGGTSTaskStart: number;
 declare var AsylumGGTSTaskEnd: number;
+declare var AsylumGGTSChatToParse: string;
 /**
  * The list of available tasks, partitioned by level.
  */

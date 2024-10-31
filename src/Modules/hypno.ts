@@ -1014,8 +1014,8 @@ export class HypnoModule extends BaseModule {
                 Speech: "false"
             };
             let hasItemPermission = ServerChatRoomGetAllowItem(Player, target);
-            let isAllowed = hasItemPermission && ActivityAllowedForGroup(target, activityGroup?.Name).filter(a => !a.Blocked).findIndex(a => a.Activity.Name == activity?.Name) > -1;
-            if (isAllowed) ActivityRun(Player, target, activityGroup, <ItemActivity>{Activity: activity}, true);
+            let isAllowed = hasItemPermission && ActivityAllowedForGroup(target, activityGroup?.Name as AssetGroupItemName).filter(a => !a.Blocked).findIndex(a => a.Activity.Name == activity?.Name) > -1;
+            if (isAllowed) ActivityRun(Player, target, activityGroup as AssetItemGroup, <ItemActivity>{Activity: activity}, true);
             else {
                 SendAction("%NAME% struggles to perform some action.");
                 LSCG_SendLocal(`Something beyond your control is preventing you from following your activity instruction... You shake a little bit of ${opts.senderName}'s influence.`);
@@ -1061,7 +1061,7 @@ export class HypnoModule extends BaseModule {
         SendAction(`%NAME% starts to remove clothing from %POSSESSIVE% body.`);
 
         groups.forEach(grp => {
-            InventoryRemove(Player, grp, false);
+            InventoryRemove(Player, grp as AssetGroupName, false);
         });
         
         ChatRoomCharacterUpdate(Player);

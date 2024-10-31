@@ -70,6 +70,11 @@ declare function IsAssetGroupNameDictionaryEntry(entry: ChatMessageDictionaryEnt
  */
 declare function IsActivityNameDictionaryEntry(entry: ChatMessageDictionaryEntry): entry is ActivityNameDictionaryEntry;
 /**
+ * @param {ChatMessageDictionaryEntry} entry
+ * @returns {entry is MessageEffectEntry}
+ */
+declare function IsMessageEffectDictionaryEntry(entry: ChatMessageDictionaryEntry): entry is MessageEffectEntry;
+/**
  * Build class for chat message dictionaries
  */
 declare class DictionaryBuilder {

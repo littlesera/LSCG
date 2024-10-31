@@ -48,6 +48,11 @@ declare function HorseWalkDoMove(): void;
  * @returns {void} - Nothing
  */
 declare function HorseWalkClick(): void;
+/**
+ * Handles mouse down events during the horse walk mini game. On mobile we move the player on click.
+ * @returns {void} - Nothing
+ */
+declare function HorseWalkMouseDown(): void;
 declare var HorseWalkBackground: string;
 /** @type { null | { X: number, Y: number }[] } */
 declare var HorseWalkCarrots: null | {

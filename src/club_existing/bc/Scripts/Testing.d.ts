@@ -30,4 +30,4 @@ declare var TestingVariableHeightItemDataLookup: Record<string, VariableHeightDa
 declare var TestingTextItemDataLookup: Record<string, TextItemData>;
 declare var TestingNoArchItemDataLookup: Record<string, NoArchItemData>;
 /** A record mapping pose categories to pose names */
-declare var TestingPoseMap: Record<keyof AssetPoseMap, Set<AssetPoseName>>;
+declare var TestingPoseMap: Record<AssetPoseCategory, Set<AssetPoseName>>;

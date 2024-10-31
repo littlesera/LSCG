@@ -31,11 +31,7 @@ declare function TennisVerifyEnd(): void;
  * @returns {void} - Nothing
  */
 declare function TennisClick(): void;
-/**
- * Handles the key press in the tennis mini game, the C cheat key gives you one point toward winning
- * @returns {void} - Nothing
- */
-declare function TennisKeyDown(): void;
+declare function TennisKeyDown(event: KeyboardEvent): boolean;
 declare var TennisBackground: string;
 /** @type {null | NPCCharacter} */
 declare var TennisCharacterLeft: null | NPCCharacter;

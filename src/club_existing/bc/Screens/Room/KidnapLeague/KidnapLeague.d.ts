@@ -223,6 +223,21 @@ declare function KidnapLeagueRandomClubCardStart(): void;
  * @returns {void} - Nothing
  */
 declare function KidnapLeagueRandomClubCardEnd(): void;
+/**
+ * Returns TRUE if the player can get the anime girl costume
+ * @returns {boolean} - TRUE if it's possible
+ */
+declare function KidnapLeagueCanGetAnimeGirl(): boolean;
+/**
+ * Gives the anime girl costume to the player and wear it
+ * @returns {void} - Nothing
+ */
+declare function KidnapLeagueWearAnimeGirl(): void;
+/**
+ * Returns TRUE if the player is wearing the anime girl costume
+ * @returns {boolean} - TRUE if wearing
+ */
+declare function KidnapLeaguePlayerIsAnimeGirl(): boolean;
 declare var KidnapLeagueBackground: string;
 /** @type {null | NPCCharacter} */
 declare var KidnapLeagueTrainer: null | NPCCharacter;
@@ -230,8 +245,8 @@ declare var KidnapLeagueTrainer: null | NPCCharacter;
 declare var KidnapLeagueRandomKidnapper: null | NPCCharacter;
 declare var KidnapLeagueRandomKidnapperScenario: string;
 declare var KidnapLeagueRandomKidnapperDifficulty: number;
-/** @type {null | "" | "Maid" | "Mistress"} */
-declare var KidnapLeagueArchetype: null | "" | "Maid" | "Mistress";
+/** @type {null | "" | "Maid" | "Mistress" | "AnimeGirl"} */
+declare var KidnapLeagueArchetype: null | "" | "Maid" | "Mistress" | "AnimeGirl";
 declare var KidnapLeagueWillPayForFreedom: boolean;
 declare var KidnapLeagueRandomActivityList: string[];
 declare var KidnapLeagueRandomActivity: string;

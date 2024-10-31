@@ -66,10 +66,15 @@ declare function MainHallAllow(ID: string): boolean;
  */
 declare function MainHallLoad(): void;
 /**
- * Runs and draws the main hall screen
+ * Runs the main hall screen
  * @returns {void} - Nothing
  */
 declare function MainHallRun(): void;
+/**
+ * Draws the main hall screen
+ * @returns {void} - Nothing
+ */
+declare function MainHallDraw(): void;
 /**
  * Randomly select a new tip to display
  */

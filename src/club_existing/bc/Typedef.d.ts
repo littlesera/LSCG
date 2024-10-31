@@ -141,6 +141,8 @@ type PickLockAvailability = "" | "Disabled" | "PermissionsDisabled" | "Inaccessi
 
 type ItemVulvaFuturisticVibratorAccessMode = "" | "ProhibitSelf" | "LockMember";
 
+type Rect = { x: number, y: number, w: number, h: number };
+
 /** The {@link EffectName} values for all gag-related effects. */
 type GagEffectName = (
 	"GagVeryLight"

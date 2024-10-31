@@ -71,11 +71,7 @@ declare function PokerNextChallenge(): PokerPlayer;
  * @returns {void} - Nothing
  */
 declare function PokerClick(): void;
-/**
- * Handles key presses during the bondage poker game
- * @returns {void} - Nothing
- */
-declare function PokerKeyDown(): void;
+declare function PokerKeyDown(event: KeyboardEvent): boolean;
 /**
  * When the player exits from Bondage Poker
  * @returns {void} - Nothing

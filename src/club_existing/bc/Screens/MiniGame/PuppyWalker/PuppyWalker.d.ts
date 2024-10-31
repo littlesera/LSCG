@@ -10,7 +10,7 @@ declare function PuppyWalkerLoad(): void;
  * @param {number} Fail - Amount of failures for this puppy
  * @returns {void} - Nothing
  */
-declare function PuppyWalkerDraw(Puppy: Character, X: number, Fail: number): void;
+declare function PuppyWalkerDrawPuppy(Puppy: Character, X: number, Fail: number): void;
 /**
  * Runs the puppy walker mini game and draws the relevant information on the screen
  * @returns {void} - Nothing
@@ -32,6 +32,11 @@ declare function PuppyWalkerDoMove(MoveType: number): void;
  * @returns {void} - Nothing
  */
 declare function PuppyWalkerClick(): void;
+/**
+ * Handles mouse downs during the puppy walker minigame
+ * @returns {void} - Nothing
+ */
+declare function PuppyWalkerMouseDown(): void;
 declare var PuppyWalkerBackground: string;
 declare var PuppyWalkerMoves: number[];
 declare var PuppyWalkerMovesTimer: number[];

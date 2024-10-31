@@ -857,7 +857,7 @@ export function getActivities(overrideGroup: AssetGroup | undefined = undefined)
 }
 
 export function getActivityLabelTag(activity: Activity, group: AssetGroup) {
-	let groupName = group.Name;
+	let groupName = group.Name as string;
 	if (Player.HasPenis()) {
 		if (groupName == "ItemVulva") groupName = "ItemPenis";
 		if (groupName == "ItemVulvaPiercings") groupName = "ItemGlans";

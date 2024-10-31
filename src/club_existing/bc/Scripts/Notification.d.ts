@@ -101,10 +101,9 @@ declare class NotificationEventHandler {
     raisePopup(data: NotificationData): void;
     /**
      * Determines whether an audio alert shoud be played
-     * @param {boolean} usingPopup - If TRUE this indicates that the audio will be played by a popup, rather than an in-game alert
      * @returns {boolean} - Whether audio should be played
      */
-    playAudio(usingPopup: boolean): boolean;
+    playAudio(): boolean;
     /**
      * Resets all raised notifications for this event
      * @param {boolean} resetingAll - Indicates if all notifications are being reset, to avoid unnecessarily repeating steps for each event type

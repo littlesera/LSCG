@@ -91,7 +91,7 @@ declare function DialogFullRandomRestrain(C: string | Character): void;
  * @param {T} LogGroup - The name of the log group
  * @returns {boolean} - Returns true, if a specific log is registered
  */
-declare function DialogLogQuery<T extends keyof LogNameType>(LogType: LogNameType[T], LogGroup: T): boolean;
+declare function DialogLogQuery<T extends LogGroupType>(LogType: LogNameType[T], LogGroup: T): boolean;
 /**
  * Sets the AllowItem flag on the current character
  * @param {string} Allow - The flag to set. Either "TRUE" or "FALSE"
@@ -100,14 +100,16 @@ declare function DialogLogQuery<T extends keyof LogNameType>(LogType: LogNameTyp
 declare function DialogAllowItem(Allow: string): boolean;
 /**
  * Returns the value of the AllowItem flag of a given character
+ * @param {string | Character} C - The character whose flag should be returned.
+ * Either the player (value: Player) or the current character (value: CurrentCharacter)
  * @returns {boolean} - The value of the given character's AllowItem flag
  */
-declare function DialogDoAllowItem(): boolean;
+declare function DialogDoAllowItem(C: string | Character): boolean;
 /**
  * Returns TRUE if the AllowItem flag doesn't allow putting an item on the current character
  * @returns {boolean} - The reversed value of the given character's AllowItem flag
  */
-declare function DialogDontAllowItemPermission(): boolean;
+declare function DialogDontAllowItemPermission(C: any): boolean;
 /**
  * Returns TRUE if no item can be used by the player on the current character because of the map distance
  * @returns {boolean} - TRUE if distance is too far (more than 1 tile)
@@ -358,8 +360,9 @@ declare function DialogIsInWardrobe(): boolean;
  */
 declare function DialogLeaveItemMenu(): void;
 /**
- * Leaves the item menu of the focused item. Constructs a function name from the
- * item's asset group name and the item's name and tries to call that.
+ * Leaves the item menu of the focused item (be it the extended item- or tighten/loosen menu) and
+ * perform any screen-specific setup for {@link CurrentScreen}.
+ * @see {@link DialogLeaveFocusItemHandlers} Namespace with helper functions for setting up new screens
  */
 declare function DialogLeaveFocusItem(): void;
 /**
@@ -446,9 +449,10 @@ declare function DialogInventorySort(): void;
  * Returns TRUE if the crafted item can be used on a character, validates for owners and lovers
  * @param {Character} C - The character whose inventory must be built
  * @param {CraftingItem} Craft - The crafting properties of the item
+ * @param {Asset} A - The items asset
  * @returns {Boolean} - TRUE if we can use it
  */
-declare function DialogCanUseCraftedItem(C: Character, Craft: CraftingItem): boolean;
+declare function DialogCanUseCraftedItem(C: Character, Craft: CraftingItem, A: Asset): boolean;
 /**
  * Returns TRUE if the player can use owner locks on the target character
  * @param {Character} target - The target to (potentially) lock
@@ -513,9 +517,10 @@ declare function DialogDrawSavedExpressionsMenu(): void;
 declare function DialogClickSavedExpressionsMenu(): void;
 /**
  * Build the initial state of the pose menu
+ * @param {Character} [C] The character for whom {@link DialogActivePoses} whill be constructed; defaults to {@link CurrentCharacter}
  * @returns {void} - Nothing
  */
-declare function DialogLoadPoseMenu(): void;
+declare function DialogLoadPoseMenu(C?: Character): void;
 /**
  * Handles the Click events in the Dialog Screen
  * @returns {boolean} - Whether a button was clicked
@@ -736,6 +741,15 @@ declare function DialogSelfMenuDraw(C: Character): void;
  */
 declare function DialogSelfMenuClick(C: Character): void;
 /**
+ * Draw the pagination buttons to the side of the inventory grid
+ */
+declare function DialogPaginateDraw(): void;
+/**
+ * Handle clicks of the pagination buttons
+ * @returns {boolean} - Whether a pgination button was clicked
+ */
+declare function DialogPaginateClick(): boolean;
+/**
  * Draws the initial Dialog screen.
  *
  * This is the main handler for drawing the Dialog UI, which activates
@@ -848,6 +862,7 @@ declare function DialogActualNameForGroup(C: Character, G: AssetGroup): string;
 declare function DialogStruggleStart(C: Character, Action: DialogStruggleActionType, PrevItem: Item, NextItem: Item): void;
 declare function DialogStruggleStop(character: Character, game: StruggleKnownMinigames, data: StruggleCompletionData): void;
 declare function DialogKeyDown(event: KeyboardEvent): boolean;
+declare function DialogMouseDown(event: MouseEvent | TouchEvent): void;
 declare var DialogText: string;
 declare var DialogTextDefault: string;
 declare var DialogTextDefaultTimer: number;
@@ -988,14 +1003,18 @@ declare var DialogFavoriteStateDetails: FavoriteState[];
  * @type {readonly DialogSelfMenuOptionType[]}
  */
 declare var DialogSelfMenuOptions: readonly DialogSelfMenuOptionType[];
+declare namespace DialogLeaveFocusItemHandlers {
+    let DialogTightenLoosenItem: Record<string, (item: Item) => void>;
+    let DialogFocusItem: Record<string, (item: Item) => void>;
+}
 declare namespace DialogEffectIcons {
     let Table: Partial<Record<InventoryIcon, readonly EffectName[]>>;
     function GetIcons(item: Item): InventoryIcon[];
-    let GetEffectIcons: (effects: EffectName[], prop?: CraftingPropertyType) => InventoryIcon[];
-    function _GetGagIcon(effect: EffectName, prop?: CraftingPropertyType): InventoryIcon;
-    function _GetBlindIcon(effect: EffectName, prop?: CraftingPropertyType): InventoryIcon;
-    function _GetDeafIcon(effect: EffectName): InventoryIcon;
-    let _GagLevelToIcon: (level?: number) => InventoryIcon;
-    let _BlindLevelToIcon: (level?: number) => InventoryIcon;
+    let GetEffectIcons: (effects: Iterable<EffectName>, prop?: CraftingPropertyType) => null | InventoryIcon[];
+    function _GetGagIcon(effect: EffectName, prop?: CraftingPropertyType): null | InventoryIcon;
+    function _GetBlindIcon(effect: EffectName, prop?: CraftingPropertyType): null | InventoryIcon;
+    function _GetDeafIcon(effect: EffectName): undefined | InventoryIcon;
+    let _GagLevelToIcon: (level?: number) => null | InventoryIcon;
+    let _BlindLevelToIcon: (level?: number) => null | InventoryIcon;
 }
 declare function DialogMouseWheel(Event: any): boolean;

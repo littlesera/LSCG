@@ -16,6 +16,7 @@ declare namespace E {
     let Shackled: "Shackled";
     let Tethered: "Tethered";
     let Enclose: "Enclose";
+    let MapImmobile: "MapImmobile";
     let OneWayEnclose: "OneWayEnclose";
     let OnBed: "OnBed";
     let Lifted: "Lifted";
@@ -24,6 +25,7 @@ declare namespace E {
     let FillVulva: "FillVulva";
     let VulvaShaft: "VulvaShaft";
     let IsPlugged: "IsPlugged";
+    let ForcedErection: "ForcedErection";
     let Egged: "Egged";
     let Vibrating: "Vibrating";
     let Edged: "Edged";
@@ -535,12 +537,10 @@ declare var ActivityFemale3DCG: Activity[];
 declare let ActivityFemale3DCGOrdering: ActivityName[];
 /**
  * 3D Custom Girl based fetishes
- * @type {{Name: FetishName; GetFactor(C: Character): number; }[]}
+ * Modify PreferenceArousalFetishDefaultCompressedString if you add a new fetish
+ * @type {Fetish[]}
  */
-declare var FetishFemale3DCG: {
-    Name: FetishName;
-    GetFactor(C: Character): number;
-}[];
+declare var FetishFemale3DCG: Fetish[];
 /**
  * A set with all available fetish names.
  */

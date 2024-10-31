@@ -36,16 +36,6 @@ declare function AssetParsePosePrerequisite({ SetPose, AllowActivePose, Effect, 
     AllowActivePose?: AssetPoseName[];
 };
 /**
- * Construct the items extended item config, merging via {@link AssetArchetypeConfig.CopyConfig} if required.
- * Potentially updates the passed {@link AssetArchetypeConfig} object inplace.
- * @param {Asset} A - The asset to configure
- * @param {AssetArchetypeConfig} config - The extended item configuration of the base item
- * @param {ExtendedItemMainConfig} extendedConfig - The extended item configuration object for the asset's family
- * @returns {null | AssetArchetypeConfig} - The oiginally passed base item configuration, potentially updated inplace.
- * Returns `null` insstead if an error was encountered.
- */
-declare function AssetBuildConfig(A: Asset, config: AssetArchetypeConfig, extendedConfig: ExtendedItemMainConfig): null | AssetArchetypeConfig;
-/**
  * Constructs extended item functions for an asset, if extended item configuration exists for the asset.
  * Updates the passed config inplace if {@link ExtendedItem.CopyConfig} is present.
  * @param {Asset} A - The asset to configure
@@ -162,19 +152,13 @@ declare function AssetGetActivity(family: IAssetFamily, name: ActivityName): Act
  */
 declare function AssetActivitiesForGroup(family: IAssetFamily, groupname: AssetGroupName, onSelf?: "self" | "other" | "any"): Activity[];
 /**
- * Cleans the given array of assets of any items that no longer exists
- * @param {readonly ItemPermissions[]} AssetArray - The arrays of items to clean
- * @returns {ItemPermissions[]} - The cleaned up array
- */
-declare function AssetCleanArray(AssetArray: readonly ItemPermissions[]): ItemPermissions[];
-/**
  * Gets an asset group by the asset family name and group name
  * @template {AssetGroupName} T
  * @param {IAssetFamily} Family - The asset family that the group belongs to (Ignored until other family is added)
  * @param {T} Group - The name of the asset group to find
  * @returns {AssetGroupMap[T] | null} - The asset group matching the provided family and group name
  */
-declare function AssetGroupGet<T extends AssetGroupName>(Family: IAssetFamily, Group: T): AssetGroupMap[T];
+declare function AssetGroupGet<T extends AssetGroupName>(Family: IAssetFamily, Group: T): AssetGroupMap[T] | null;
 /**
  * Utility function for retrieving the preview image directory path for an asset
  * @param {Asset} A - The asset whose preview path to retrieve
@@ -203,6 +187,60 @@ declare function AssetLayerSort(layers: AssetLayer[]): AssetLayer[];
  * @returns {string[]} See {@link Asset.DefaultColor}
  */
 declare function AssetParseDefaultColor(colorableLayerCount: number, fillValue: string, color?: string | readonly string[]): string[];
+/**
+ * Get the translated string for an asset-specific message
+ * @param {string} msg
+ * @returns {string}
+ */
+declare function AssetTextGet(msg: string): string;
+/**
+ * Shows a console warning for all missing Inventory IDs in the Female3DCG assets
+ * @returns {void} - Nothing
+ */
+declare function AssetInventoryIDMissing(): void;
+/**
+ * Shows a console warning for all Inventory IDs in the Female3DCG assets that are unnecessary assigned
+ * @returns {void} - Nothing
+ */
+declare function AssetInventoryIDUnnecessary(): void;
+/**
+ * Shows a console warning for all Inventory IDs where the BuyGroup is creating a conflict
+ * @param {string} GroupName - The group name to compare
+ * @param {string} AssetName - The asset name to compare
+ * @param {string} BuyGroup - The buying group to compare
+ * @param {number | undefined} InventoryID - The inventory ID to compare
+ * @returns {void} - Nothing
+ */
+declare function AssetInventoryIDBuyGroup(GroupName: string, AssetName: string, BuyGroup: string, InventoryID: number | undefined): void;
+/**
+ * Shows a console warning for all Inventory IDs where the BuyGroup is creating a conflict
+ * @returns {void} - Nothing
+ */
+declare function AssetInventoryIDBuyGroupSearch(): void;
+/**
+ * Shows a console warning for all Inventory IDs where the BuyGroup is creating a conflict
+ * @param {string} GroupName - The group name to compare
+ * @param {string} AssetName - The asset name to compare
+ * @param {number} InventoryID - The inventory ID to compare
+ * @returns {void} - Nothing
+ */
+declare function AssetInventoryIDDuplicated(GroupName: string, AssetName: string, InventoryID: number): void;
+/**
+ * Shows a console warning for all Inventory IDs that are duplicated out of a buy group
+ * @returns {void} - Nothing
+ */
+declare function AssetInventoryIDDuplicatedSearch(): void;
+/**
+ * Shows a console warning for all Inventory IDs that are duplicated out of a buy group
+ * @returns {void} - Nothing
+ */
+declare function AssetInventoryIDScenarioItem(): void;
+/**
+ * Validates that the InventoryID is setup properly in the Female3DCG assets
+ * Launched each time the game is started for assets maker to apply corrections
+ * Outputs all possible errors in the console log, it runs aynscronious
+ */
+declare function AssetInventoryIDValidate(): Promise<void>;
 /** @type {Asset[]} */
 declare var Asset: Asset[];
 /** @type {AssetGroup[]} */
@@ -215,9 +253,42 @@ declare var AssetGroupMap: Map<AssetGroupName, AssetGroup>;
 declare var Pose: Pose[];
 /** A record mapping pose names to their respective {@link Pose}. */
 declare const PoseRecord: Record<AssetPoseName, Pose>;
+declare namespace PoseCategoryPriority {
+    let BodyAddon: number;
+    let BodyLower: number;
+    let BodyFull: number;
+    let BodyHands: number;
+    let BodyUpper: number;
+}
 /** @type {Map<AssetGroupName, AssetGroup[]>} */
 declare var AssetActivityMirrorGroups: Map<AssetGroupName, AssetGroup[]>;
+/**
+ * A record mapping all {@link Asset.IsLock} asset names to their respective assets.
+ * @type {Record<AssetLockType, Asset>}
+ */
+declare const AssetLocks: Record<AssetLockType, Asset>;
 declare namespace PoseType {
     let HIDE: "Hide";
     let DEFAULT: "";
 }
+declare namespace AssetResolveCopyConfig {
+    function _AssignBuyGroup(configList: readonly {
+        BuyGroup?: string;
+        Value?: number;
+        Name?: string;
+    }[]): void;
+    function _Resolve<T extends {
+        CopyConfig?: {
+            GroupName?: AssetGroupName;
+            AssetName: string;
+        };
+        BuyGroup?: string;
+        Value?: number;
+        Name?: string;
+    }>(config: T, assetName: string, groupName: AssetGroupName, configRecord: Partial<Record<AssetGroupName, Record<string, T>>>, configType: string, configValidator?: null | AssetCopyConfigValidator<T>, setBuyGroup?: boolean): null | T;
+    let _ExtendedValidator: AssetCopyConfigValidator<AssetArchetypeConfig>;
+    function AssetDefinition(assetDef: AssetDefinition, groupName: AssetGroupName, assetRecord: Partial<Record<AssetGroupName, Record<string, AssetDefinition>>>): null | AssetDefinition;
+    function ExtendedItemConfig(asset: Asset, config: AssetArchetypeConfig, extendedConfig: ExtendedItemMainConfig): null | AssetArchetypeConfig;
+}
+declare const AssetStringsPath: "Assets/Female3DCG/AssetStrings.csv";
+type AssetCopyConfigValidator<T> = (config: T, superConfig: T, key: string, superKey: string) => boolean;

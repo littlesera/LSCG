@@ -1,9 +1,19 @@
 /**
- * Checks whether the given character can change to the named pose (without aid by default).
+ * Checks to what extent the given character can change to a given pose.
+ *
+ * @see {@link PoseCanChangeUnaided} Check whether one can change to a pose _unaided_
  * @param {Character} C - The character to check
  * @param {AssetPoseName} poseName - The name of the pose to check for
- * @returns {boolean} - Returns true if the character has no conflicting items and is not prevented from changing to
- * the provided pose
+ * @returns {PoseChangeStatus} - A status code denoting if and under what conditions the character can change pose
+ */
+declare function PoseCanChangeUnaidedStatus(C: Character, poseName: AssetPoseName): PoseChangeStatus;
+/**
+ * Checks whether the given character can change to the pose unaided.
+ *
+ * Equivalent to checking whether a pose change has the {@link PoseChangeStatus.ALWAYS} status.
+ * @param {Character} C - The character to check
+ * @param {AssetPoseName} poseName - The name of the pose to check for
+ * @returns {boolean} - Returns true if the character can always change a pose without struggle or external aid
  */
 declare function PoseCanChangeUnaided(C: Character, poseName: AssetPoseName): boolean;
 /**
@@ -55,6 +65,12 @@ declare const PoseAllKneeling: readonly ("Kneel" | "KneelingSpread")[];
  */
 declare const PoseAllStanding: readonly ("BaseLower" | "LegsClosed" | "LegsOpen" | "Spread")[];
 declare namespace PoseToMapping {
-    function Array(poses: readonly AssetPoseName[], warningPrefix?: string): Partial<Record<keyof AssetPoseMap, AssetPoseName[]>>;
-    function Scalar(poses: readonly AssetPoseName[], warningPrefix?: string): Partial<Record<keyof AssetPoseMap, AssetPoseName>>;
+    function Array(poses: readonly AssetPoseName[], warningPrefix?: null | string): Partial<Record<AssetPoseCategory, AssetPoseName[]>>;
+    function Scalar(poses: readonly AssetPoseName[], warningPrefix?: null | string): Partial<Record<AssetPoseCategory, AssetPoseName>>;
+}
+declare namespace PoseChangeStatus {
+    let NEVER: 0;
+    let NEVER_WITHOUT_AID: 1;
+    let ALWAYS_WITH_STRUGGLE: 2;
+    let ALWAYS: 3;
 }

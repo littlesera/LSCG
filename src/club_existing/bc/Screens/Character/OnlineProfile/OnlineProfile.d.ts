@@ -4,6 +4,10 @@
  */
 declare function OnlineProfileLoad(): void;
 /**
+ * Handles unloading the online profile screen
+ */
+declare function OnlineProfileUnload(): void;
+/**
  * Runs and draws the online profile screen
  * @returns {void} - Nothing
  */

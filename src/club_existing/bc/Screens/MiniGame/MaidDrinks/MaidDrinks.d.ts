@@ -51,11 +51,7 @@ declare function MaidDrinksMiss(): void;
  * @returns {void} - Nothing
  */
 declare function MaidDrinksDoMove(MoveType: number): void;
-/**
- * Handles key presses during the maid drinks mini game. (Both keyboard and mobile)
- * @returns {void} - Nothing
- */
-declare function MaidDrinksKeyDown(): void;
+declare function MaidDrinksKeyDown(event: KeyboardEvent): boolean;
 /**
  * Handles clicks during the maid drinks mini game (only on mobile, to replace the keyboard)
  * @returns {void} - Nothing
@@ -71,12 +67,12 @@ declare var MaidDrinksCustomerRightTimer: number;
 declare var MaidDrinksCustomerLeftVisible: boolean;
 declare var MaidDrinksCustomerRightVisible: boolean;
 declare var MaidDrinksMaxSequence: number;
-/** @type {{ Type: number, Time: number }[]} */
+/** @type {{ Type: number, Time: number, FadeAt: number? }[]} */
 declare var MaidDrinksMove: {
     Type: number;
     Time: number;
+    FadeAt: number | null;
 }[];
 declare var MaidDrinksLastMoveType: number;
 declare var MaidDrinksLastMoveTypeTimer: number;
-declare var MaidDrinksKeyUpper: number[];
-declare var MaidDrinksKeyLower: number[];
+declare var MaidDrinksKeys: string[];
