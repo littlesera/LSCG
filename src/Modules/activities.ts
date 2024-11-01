@@ -994,8 +994,14 @@ export class ActivityModule extends BaseModule {
                 {
                     Name: "TargetHornAvailable",
                     Func: (acting, acted, group) => {
-                        if (group.Name == "ItemHood")
-                            return (InventoryGet(acted, "HairAccessory2")?.Asset.Name ?? "").toLocaleLowerCase().indexOf("horn") > -1 && !this.leashingModule.ContainsLeashing(acted.MemberNumber ?? -1, "horn");
+                        if (group.Name == "ItemHood") {
+                            let accSlots = [
+                                InventoryGet(acted, "HairAccessory1"),
+                                InventoryGet(acted, "HairAccessory2"),
+                                InventoryGet(acted, "HairAccessory3")
+                            ];
+                            return accSlots.some(item => (item?.Asset.Name ?? "").toLocaleLowerCase().indexOf("horn") > -1) && !this.leashingModule.ContainsLeashing(acted.MemberNumber ?? -1, "horn");
+                        }
                         return true;
                     }
                 },{
