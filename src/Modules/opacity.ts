@@ -188,7 +188,7 @@ export class OpacityModule extends BaseModule {
                         layerName = layerName.slice(1);
                     let layerIx = CA.Asset.Layer.findIndex(l => l.Name == layerName);
                     let originalLayerOpacity = CA.Asset.Layer[layerIx]?.Opacity ?? CA.Asset.Opacity ?? 1;
-                    let overrideOpacity = Array.isArray(Property?.LSCGOpacity) ? Property?.LSCGOpacity[layerIx] : Property?.LSCGOpacity;
+                    let overrideOpacity = (Array.isArray(Property?.LSCGOpacity) ? Property?.LSCGOpacity[layerIx] : Property?.LSCGOpacity) ?? undefined;
                     if (overrideOpacity !== undefined) {
                         ret.Opacity = Math.min((ret.Opacity ?? Property.Opacity ?? 1), (overrideOpacity ?? originalLayerOpacity ?? 1));
                     }
