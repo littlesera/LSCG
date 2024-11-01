@@ -222,7 +222,7 @@ export class OpacityModule extends BaseModule {
             C.DrawAppearance?.forEach(item => {
                 let opacity = this.getOpacity(item)
                 let hasOpacitySettings = opacity !== undefined && opacity != 1;
-                if (hasOpacitySettings || xrayActive) {
+                if ((hasOpacitySettings || xrayActive) && !item.Property?.LSCGLeadLined) {
                     item.Asset = Object.assign({}, item.Asset);
                     (<any>item.Asset).Layer = item.Asset.Layer.map(l => Object.assign({}, l));
                     item?.Asset?.Layer?.forEach(layer => {
