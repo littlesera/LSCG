@@ -256,10 +256,10 @@ export class HypnoModule extends BaseModule {
             Description: "LSCG Hypnosis Trigger Checks",
             Callback: (data: ServerChatRoomMessage, sender: Character, msg: string, metadata?: IChatRoomMessageMetadata) => {
                 if (data.Type == "Chat" || data.Type == "Whisper") {
+                    let newMsg = this.BlankOutTriggers(msg, sender);
                     if (!this.TopLevelCheckTriggers(msg, sender))
                         return false;
-                    msg = this.BlankOutTriggers(msg, sender);                    
-                    return { msg: msg }
+                    return { msg: newMsg }
                 } 
                 return false;
             }
@@ -508,7 +508,9 @@ export class HypnoModule extends BaseModule {
         if (!this.StateModule.settings.immersive || !this.allowedSpeaker(speaker))
             return msg;
 
-        let triggers = this.triggers.concat(this.awakeners);
+        let triggers = this.triggers;
+        if (this.hypnoActivated)
+            triggers = this.awakeners;
         triggers.forEach(t => {
             let tWords = t.split(" ");
             tWords = tWords.map(tw => {
