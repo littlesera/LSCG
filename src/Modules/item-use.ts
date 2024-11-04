@@ -1,12 +1,14 @@
 import { BaseModule } from "base";
 import { getModule } from "modules";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { getDominance, GetItemNameAndDescriptionConcat, GetMetadata, getRandomInt, GetTargetCharacter, hookFunction, IsIncapacitated, isPhraseInString, OnAction, OnActivity, removeAllHooksByModule, SendAction, sendLSCGCommand } from "../utils";
+import { getCharacter, getDominance, GetItemNameAndDescriptionConcat, GetMetadata, getRandomInt, GetTargetCharacter, hookFunction, IsIncapacitated, isPhraseInString, LSCG_SendLocal, mouseTooltip, OnAction, OnActivity, removeAllHooksByModule, SendAction, sendLSCGCommand, sendLSCGMessage } from "../utils";
 import { ActivityBundle, ActivityModule, ActivityTarget } from "./activities";
 import { BoopsModule } from "./boops";
 import { CollarModule } from "./collar";
 import { StateModule } from "./states";
 import { InjectorModule } from "./injector";
+import { drawTooltip } from "Settings/settingUtils";
+import { CommandListener, CoreModule } from "./core";
 
 export const CameraItems: string[] = [
 	"Phone1",
@@ -341,6 +343,51 @@ export class ItemUseModule extends BaseModule {
 			this.Struggling = false;
 			next(args);
 		}, ModuleCategory.ItemUse);
+
+		hookFunction("CraftingRun", 1, (args, next) => {
+			next(args);
+			if (!Player || !Player.Crafting || CraftingReorderMode != "None" || CraftingMode != "Slot")
+				return;
+
+			for (let S = CraftingOffset; S < CraftingOffset + 20; S++) {
+				let X = ((S - CraftingOffset) % 4) * 500 + 15;
+				let Y = Math.floor((S - CraftingOffset) / 4) * 180 + 130;
+				let Craft = Player.Crafting[S];
+				if (!!Craft) {
+					DrawButton(X + 420, Y + 90, 40, 40, "", "White");
+					DrawImageResize("Icons/Chat.png", X + 420 + 2, Y + 90 + 2, 36, 36);
+					if (MouseIn(X + 420, Y + 90, 40, 40)) {
+						mouseTooltip("Share in chat", MouseX, MouseY, 2000);
+					}
+				}
+			}
+		}, ModuleCategory.ItemUse);
+
+		hookFunction("CraftingClick", 1, (args, next) => {
+			if (!!Player && !!Player.Crafting && CraftingReorderMode == "None" && CraftingMode == "Slot") {
+				for (let S = CraftingOffset; S < CraftingOffset + 20; S++) {
+					let X = ((S - CraftingOffset) % 4) * 500 + 15;
+					let Y = Math.floor((S - CraftingOffset) / 4) * 180 + 130;
+					let Craft = Player.Crafting[S];
+					if (!!Craft && MouseIn(X + 420, Y + 90, 40, 40)) {
+						this.DisplayCraft(Craft);
+						CraftingExit();
+						return;
+					}
+				}
+			}
+			return next(args);
+		}, ModuleCategory.ItemUse);
+
+		getModule<CoreModule>("CoreModule").RegisterCommandListener(<CommandListener>{
+            id: "craft_share_display",
+            command: "craft-share",
+            func: (sender: number, msg: LSCGMessageModel) => {
+				let senderChar = getCharacter(sender);
+				let craft = msg.command?.args.find(a => a.name == "craft")?.value;
+				this.ShowCraftImage(senderChar, craft);
+			}
+        });
 
 		OnActivity(1, ModuleCategory.ItemUse, (data, sender, msg, metadata) => {
 			if (sender?.IsPlayer() && msg == "ChatSelf-ItemArms-StruggleArms") {
@@ -1308,6 +1355,42 @@ export class ItemUseModule extends BaseModule {
 				SendAction(`%NAME%'s ${itemName} clicks menacingly as it resists ${!sender ? "%POSSESSIVE%" : CharacterNickname(sender) + "'s"} tampering.`);
 				AudioPlaySoundEffect("LockLarge");
 				break;
+		}
+	}
+
+	DisplayCraft(craft: CraftingItem) {
+		SendAction(`%NAME% holds up %POSSESSIVE% ${craft.Name} to the room` + (!!craft.Description ? `: ${craft.Description}` : ""));
+		sendLSCGMessage(<LSCGMessageModel>{
+			reply: false,
+			type: "broadcast",
+			command: {
+				name: "craft-share",
+				args: [{
+					name: "craft",
+					value: craft
+				}]
+			}
+		});		
+	}
+
+	ShowCraftImage(C: Character | null, craft: CraftingItem | null) {
+		if (!!C && !!craft) {
+			let itemSrc = "";
+			let lockSrc = "";
+			for (let Item of C.Inventory) {
+				if (Item.Asset.Name == craft.Item) {
+					itemSrc = "Assets/" + Player.AssetFamily + "/" + Item.Asset.DynamicGroupName + "/Preview/" + Item.Asset.Name + ".png";
+					if ((craft.Lock != null) && (craft.Lock != ""))
+						lockSrc = "Assets/" + Player.AssetFamily + "/ItemMisc/Preview/" + craft.Lock + ".png";
+					break;
+				}
+			}
+			if (!!itemSrc){
+				LSCG_SendLocal(`<div style="position:relative;width:100px;height:100px">
+					<img src="${itemSrc}" height="100px" width="100px" style="position:absolute;top:0px;left:0px"/>
+					${!lockSrc ? "" : `<img src="${lockSrc}" height="50px" width="50px" style="position:absolute;top:50px;left:50px"/>`}
+				</div>`, false);
+			}
 		}
 	}
 }

@@ -263,7 +263,8 @@ export class OpacityModule extends BaseModule {
         if (!item.Property)
             item.Property = {};
         item.Property.LSCGOpacity = value;
-        item.Property.Opacity = value;
+        if (!Array.isArray(value))
+            item.Property.Opacity = value;
     }
 
     DrawOpacityLayerSliders() {
