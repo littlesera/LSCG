@@ -219,20 +219,33 @@ export class CoreModule extends BaseModule {
     }
 
     CheckForPublicPacket(data: ServerChatRoomMessage) {
-        if (!!data.Sender && data.Sender != Player.MemberNumber && data.Type == "Hidden" && data.Content == "LSCGMsg" && !!data.Dictionary && !!data.Dictionary[0]) {
+        if (!!data.Sender && data.Type == "Hidden" && data.Content == "LSCGMsg" && !!data.Dictionary && !!data.Dictionary[0]) {
             var C = getCharacter(data.Sender) as OtherCharacter;
             var msg = (data.Dictionary[0] as LSCGMessageDictionaryEntry).message;
-            switch (msg.type) {
-                case "init":
-                    this.Init(C, msg);
-                    break;
-                case "sync":
-                    this.Sync(C, msg);
-                    break;
-                case "command":
-                    this.Command(data.Sender, msg);
-                    break;
+            if (data.Sender != Player.MemberNumber) { // LSCG messages that must come from another user
+                switch (msg.type) {
+                    case "init":
+                        this.Init(C, msg);
+                        break;
+                    case "sync":
+                        this.Sync(C, msg);
+                        break;
+                    case "command":
+                        this.Command(data.Sender, msg);
+                        break;
+                    case "broadcast":
+                        this.Broadcast(data.Sender, msg);
+                        break;
+                }
             }
+            else { // LSCG messages that are self-consumed
+                switch (msg.type) {
+                    case "broadcast":
+                        this.Broadcast(data.Sender, msg);
+                        break;
+                }
+            }
+            
         }
     }
 
@@ -316,6 +329,12 @@ export class CoreModule extends BaseModule {
                 getModule<MagicModule>("MagicModule")?.IncomingGetItemSpellResponse(senderNumber, msg);
                 break;
         }
+        this.CommandListeners.filter(com => com.command == msg.command!.name).forEach(command => command.func(senderNumber, msg));
+    }
+
+    Broadcast(senderNumber: number, msg: LSCGMessageModel) {
+        if (!msg.command)
+            return;
         this.CommandListeners.filter(com => com.command == msg.command!.name).forEach(command => command.func(senderNumber, msg));
     }
 
