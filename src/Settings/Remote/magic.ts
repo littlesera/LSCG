@@ -175,16 +175,27 @@ export class RemoteMagic extends RemoteGuiSubscreen {
 		super.Run();
 
 		var prev = MainCanvas.textAlign;
-		MainCanvas.textAlign = "center";
+		//MainCanvas.textAlign = "center";
 		if (!this.settings.blockedSpellEffects)
 			this.settings.blockedSpellEffects = [];
 		let val = this.settings.blockedSpellEffects.indexOf(this.Effect) > -1;
 		let blockedStr = val ? "Blocked" : "Allowed";
 		DrawBackNextButton(780, this.getYPos(7)-32, 600, 64, this.Effect, "White", "", () => "", () => "");
-		DrawCheckbox(780 + 600 + 64, this.getYPos(7) - 32, 64, 64, "", val);
+		DrawCheckbox(780 + 600 + 64, this.getYPos(7) - 32, 64, 64, "Block", val);
+		
+		if (val) {
+			if (!this.settings.bypassForSelfEffects)
+				this.settings.bypassForSelfEffects = [];
+			let bypassed = this.settings.bypassForSelfEffects.indexOf(this.Effect) > -1;
+			let bypassedStr = bypassed ? "Allowed for Self" : "Blocked for Self";
+			DrawCheckbox(780 + 800 + 64, this.getYPos(7) - 32, 64, 64, "Self Bypass", bypassed);
+			if (MouseIn(780 + 800 + 64, this.getYPos(7) - 32, 64, 64))
+				drawTooltip(MouseX, MouseY, 256, bypassedStr, "left");
+		}
+
 		if (MouseIn(780 + 600 + 64, this.getYPos(7) - 32, 64, 64))
 			drawTooltip(MouseX, MouseY, 128, blockedStr, "left");
-
+			
 		MainCanvas.textAlign = "left";
 		DrawTextFit(GuiMagic.SpellEffectDescription(this.Effect), 780, this.getYPos(8), 1000, "Black");
 		MainCanvas.textAlign = prev;
@@ -195,10 +206,14 @@ export class RemoteMagic extends RemoteGuiSubscreen {
 
 		if (MouseIn(780, this.getYPos(7)-32, 600, 64)) {
 			this.EffectIndex = this.GetNewIndexFromNextPrevClick(1080, this.EffectIndex, this.ActualEffects.length);
-		} else if (MouseIn(550 + 600 + 64, this.getYPos(7) - 32, 64, 64)) {
+		} else if (MouseIn(780 + 600 + 64, this.getYPos(7) - 32, 64, 64)) {
 			if (this.settings.blockedSpellEffects.indexOf(this.Effect) > -1)
 				this.settings.blockedSpellEffects = this.settings.blockedSpellEffects.filter(ef => ef != this.Effect);
 			else this.settings.blockedSpellEffects.push(this.Effect);
+		} else if (MouseIn(780 + 800 + 64, this.getYPos(7) - 32, 64, 64) && this.settings.blockedSpellEffects.indexOf(this.Effect) > -1) {
+			if (this.settings.bypassForSelfEffects.indexOf(this.Effect) > -1)
+				this.settings.bypassForSelfEffects = this.settings.bypassForSelfEffects.filter(ef => ef != this.Effect);
+			else this.settings.bypassForSelfEffects.push(this.Effect);
 		}
 	}
 

@@ -377,7 +377,18 @@ export class GuiMagic extends GuiSubscreen {
 				let val = this.settings.blockedSpellEffects.indexOf(this.Effect) > -1;
 				let blockedStr = val ? "Blocked" : "Allowed";
 				DrawBackNextButton(780, this.getYPos(5)-32, 600, 64, this.Effect, "White", "", () => "", () => "");
-				DrawCheckbox(780 + 600 + 64, this.getYPos(5) - 32, 64, 64, "", val);
+				DrawCheckbox(780 + 600 + 64, this.getYPos(5) - 32, 64, 64, "Block", val);
+
+				if (val) {
+					if (!this.settings.bypassForSelfEffects)
+						this.settings.bypassForSelfEffects = [];
+					let bypassed = this.settings.bypassForSelfEffects.indexOf(this.Effect) > -1;
+					let bypassedStr = bypassed ? "Allowed for Self" : "Blocked for Self";
+					DrawCheckbox(780 + 800 + 64, this.getYPos(5) - 32, 64, 64, "Self Bypass", bypassed);
+					if (MouseIn(780 + 800 + 64, this.getYPos(5) - 32, 64, 64))
+						drawTooltip(MouseX, MouseY, 256, bypassedStr, "left");
+				}
+
 				if (MouseIn(780 + 600 + 64, this.getYPos(5) - 32, 64, 64))
 					drawTooltip(MouseX, MouseY, 128, blockedStr, "left");
 
@@ -499,6 +510,10 @@ export class GuiMagic extends GuiSubscreen {
 					if (this.settings.blockedSpellEffects.indexOf(this.Effect) > -1)
 						this.settings.blockedSpellEffects = this.settings.blockedSpellEffects.filter(ef => ef != this.Effect);
 					else this.settings.blockedSpellEffects.push(this.Effect);
+				} else if (MouseIn(780 + 800 + 64, this.getYPos(5) - 32, 64, 64) && this.settings.blockedSpellEffects.indexOf(this.Effect) > -1) {
+					if (this.settings.bypassForSelfEffects.indexOf(this.Effect) > -1)
+						this.settings.bypassForSelfEffects = this.settings.bypassForSelfEffects.filter(ef => ef != this.Effect);
+					else this.settings.bypassForSelfEffects.push(this.Effect);
 				}
 			} else if (PreferencePageCurrent == 2) {
 				if (MouseIn(550, this.getYPos(0) - 32, 600, 64)) {

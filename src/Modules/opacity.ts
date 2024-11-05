@@ -256,15 +256,17 @@ export class OpacityModule extends BaseModule {
     getOpacity(item?: Item | null): number | number[] | undefined {
         if (!item)
             item = this.OpacityItem;
-        return item?.Property?.LSCGOpacity ?? item?.Property?.Opacity ?? 1;
+        if (!!item && !!item.Property && !!item.Property.LSCGOpacity)
+            this.setOpacity(item, item.Property.LSCGOpacity);
+        return item?.Property?.Opacity ?? 1;
     }
 
     setOpacity(item: Item, value: number | number[]) {
         if (!item.Property)
             item.Property = {};
-        item.Property.LSCGOpacity = value;
-        if (!Array.isArray(value))
-            item.Property.Opacity = value;
+        item.Property.Opacity = value;
+        if (!!item.Property.LSCGOpacity)
+            delete item.Property.LSCGOpacity;
     }
 
     DrawOpacityLayerSliders() {
