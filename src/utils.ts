@@ -266,7 +266,7 @@ export function replace_template(text: string, source: Character | null = null, 
 	let opp_pronounItem = !source ? "They/Them" : CharacterPronounDescription(source);
 	let isOppMale = opp_pronounItem == "He/Him" ?? false;
 
-	let oppName = source == Player ? (isOppMale ? "himself" : "herself") : !!source ? CharacterNickname(source) : fallbackSourceName;
+	let oppName = source?.IsPlayer() ? (isOppMale ? "himself" : "herself") : !!source ? CharacterNickname(source) : fallbackSourceName;
 	let oppPossessive = isOppMale ? "His" : "Her";
 	let oppIntensive = source == Player ? (isOppMale ? "Himself" : "Herself") : (isOppMale ? "Him" : "Her");
 	let oppPronoun = isOppMale ? "He" : "She";
