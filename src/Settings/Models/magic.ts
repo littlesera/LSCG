@@ -70,6 +70,7 @@ export interface MagicSettingsModel extends MagicPublicSettingsModel {
 
 export interface MagicPublicSettingsModel extends BaseSettingsModel{
     blockedSpellEffects: LSCGSpellEffect[];
+    bypassForSelfEffects: LSCGSpellEffect[]; // Awkward second collection to preserve existing blocks...
     enableWildMagic: boolean;
     trueWildMagic: boolean;
     forceWildMagic: boolean;
