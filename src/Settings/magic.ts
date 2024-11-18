@@ -737,6 +737,8 @@ export class GuiMagic extends GuiSubscreen {
 				return "Polymorph the target's body and/or cosplay items";
 			case LSCGSpellEffect.xRay:
 				return "Grants the target X-Ray vision";
+			case LSCGSpellEffect.barrier:
+				return "Create a magic barrier that protect and reflect incoming spell";
 			case LSCGSpellEffect.none:
 			default:
 				return ""			;

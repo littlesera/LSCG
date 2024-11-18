@@ -1025,6 +1025,7 @@ export class ItemUseModule extends BaseModule {
 	
 	getRollMod(C: Character, Opponent?: Character, isAggressor: boolean = false): number {
 		let buffState = (C as OtherCharacter)?.LSCG?.StateModule?.states?.find(s => s.type == "buffed");
+		let protectedState = (C as OtherCharacter)?.LSCG?.StateModule?.states?.find(s => s.type == "protected");
 
 		// Dominant vs Submissive ==> -3 to +3 modifier
 		let dominanceMod = Math.floor(getDominance(C) / 33);
@@ -1040,8 +1041,10 @@ export class ItemUseModule extends BaseModule {
 		let breathMod = (C.IsPlayer() ? getModule<CollarModule>("CollarModule").totalChokeLevel : (C as OtherCharacter).LSCG?.CollarModule.chokeLevel ?? 0) * -2;
 		// +/- 5 for buff state
 		let buffMod = (!buffState || !buffState.active) ? 0 : ((buffState.extensions["negative"] ?? false) ? -5 : 5);
+		// +5 magic barrier
+		let protectedMod = (protectedState) ? +5 : 0;
 
-		let finalMod = dominanceMod + ownershipMod + restrainedMod + edgingMod + incapacitatedMod + breathMod + buffMod;
+		let finalMod = dominanceMod + ownershipMod + restrainedMod + edgingMod + incapacitatedMod + breathMod + buffMod + protectedMod;
 	
 		console.debug(`${CharacterNickname(C)} is ${isAggressor ? 'rolling against' : 'defending against'} ${!Opponent ? "nobody" : CharacterNickname(Opponent)} [${finalMod}] --
 		dominanceMod: ${dominanceMod}

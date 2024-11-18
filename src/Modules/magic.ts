@@ -575,7 +575,8 @@ export class MagicModule extends BaseModule {
         let beneficialEffects: LSCGSpellEffect[] = [
             LSCGSpellEffect.dispell,
             LSCGSpellEffect.bless,
-            LSCGSpellEffect.xRay
+            LSCGSpellEffect.xRay,
+            LSCGSpellEffect.barrier
         ];
         return  spell.Effects.every(e => beneficialEffects.indexOf(e) > -1);
     }
@@ -588,6 +589,7 @@ export class MagicModule extends BaseModule {
         setTimeout(() => {
             if (msg.command?.name == "spell") {
                 let paired = getCharacter((msg.command?.args.find(arg => arg.name == "paired")?.value as number));
+                let magicBarrierActive = Player?.LSCG?.StateModule?.states?.find(s => s.type == "protected"); // is Magic barrier active on Player
                 let spell = msg.command?.args?.find(arg => arg.name == "spell")?.value as SpellDefinition;
                 if (!spell || !sender)
                     return;
@@ -595,8 +597,27 @@ export class MagicModule extends BaseModule {
                 if (!this.SpellIsBeneficial(spell) && this.DefendAgainst(sender.MemberNumber ?? -1)) {
                     if (check.AttackerRoll.Total < check.DefenderRoll.Total) {
                         SendAction(`${CharacterNickname(Player)} ${check.DefenderRoll.TotalStr}successfully saves against ${CharacterNickname(sender)}'s ${check.AttackerRoll.TotalStr}${spell.Name}.`);
+                        if (magicBarrierActive) {
+                            // if saved with a protected barrier, the spell will bounce back to sender
+                            SendAction(`The magical barrier around ${CharacterNickname(Player)} make the spell bounce back to ${CharacterNickname(sender)}!`);
+                            sendLSCGCommand(sender, "spell", [
+                                {
+                                    name: "spell",
+                                    value: spell
+                                }, {
+                                    name: "paired",
+                                    value: undefined
+                                }
+                            ]);
+                            this.stateModule.BarrierState.Recover(false);
+                            SendAction(`The magical barrier around ${CharacterNickname(Player)} disappear, drained of all its magical power.`);
+                        }
                         return;
                     }
+                }
+                if (magicBarrierActive) {
+                    this.stateModule.BarrierState.Recover(false);
+                    SendAction(`The magical barrier around ${CharacterNickname(Player)} shatters, pierced by ${CharacterNickname(sender)}'s spell!`);
                 }
                 this.IncomingSpell(sender, spell, paired, Math.max(1, check.AttackerRoll.Total - check.DefenderRoll.Total));
             }
@@ -696,6 +717,9 @@ export class MagicModule extends BaseModule {
                         break;
                     case LSCGSpellEffect.bane:
                         state = this.stateModule.BuffedState.Bane(sender?.MemberNumber, true, duration);
+                        break;
+                    case LSCGSpellEffect.barrier:
+                        state = this.stateModule.BarrierState.Barrier(sender?.MemberNumber, true, duration);
                         break;
                     case LSCGSpellEffect.outfit:
                         if (!!spell.Outfit?.Code) {
