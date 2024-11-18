@@ -1,7 +1,7 @@
 import { BaseModule } from "base";
 import { getModule } from "modules";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
-import { GetConfiguredItemBundlesFromSavedCode, GetDelimitedList, GetHandheldItemNameAndDescriptionConcat, GetItemNameAndDescriptionConcat, GetMetadata, ICONS, LSCG_SendLocal, LSCG_TEAL, OnActivity, SendAction, forceOrgasm, getCharacter, getRandomInt, hookFunction, isPhraseInString, removeAllHooksByModule, sendLSCGCommand, sendLSCGCommandBeep, settingsSave } from "../utils";
+import { GetConfiguredItemBundlesFromSavedCode, GetDelimitedList, OnChat, GetHandheldItemNameAndDescriptionConcat, GetItemNameAndDescriptionConcat, GetMetadata, ICONS, LSCG_SendLocal, LSCG_TEAL, OnActivity, SendAction, forceOrgasm, getCharacter, getRandomInt, hookFunction, isPhraseInString, removeAllHooksByModule, sendLSCGCommand, sendLSCGCommandBeep, settingsSave, getCharacterByNicknameOrMemberNumber } from "../utils";
 import { ActivityModule, ActivityTarget } from "./activities";
 import { KNOWN_SPELLS_LIMIT, LSCGSpellEffect, MagicSettingsModel, OutfitConfig, OutfitOption, SpellDefinition } from "Settings/Models/magic";
 import { GuiMagic, pairedSpellEffects } from "Settings/magic";
@@ -122,6 +122,12 @@ export class MagicModule extends BaseModule {
 
     load(): void {
         let activities = getModule<ActivityModule>("ActivityModule");
+
+        OnChat(1, ModuleCategory.Magic, (data, sender, msg, metadata) => {
+            if (!this.Enabled || !sender?.IsPlayer())
+                return;
+            this.CheckForSpellVoiceCasting(msg);
+        });
 
         hookFunction("DialogDraw", 10, (args, next) => {
             if (this.Enabled && this.SpellMenuOpen) 
@@ -379,7 +385,7 @@ export class MagicModule extends BaseModule {
             characterOptions.forEach((char, ix, arr) => {
                 if (MouseIn(this.SpellGrid.x + (ix > 4 ? 450 : 0), this.SpellGrid.y + ((ix % 5) * 120), this.PairedCharacterOptions(this.SpellPairOption.Source).length > 5 ? 400 : 800, 100)) {
                     if (!!this.SpellPairOption.Source)
-                        this.CastSpellActual(this.SpellPairOption.Spell, this.SpellPairOption.Source, char);
+                        this.CastSpellActual(this.SpellPairOption.Spell, this.SpellPairOption.Source, false, char);
                 }
             });
         } else {
@@ -427,7 +433,7 @@ export class MagicModule extends BaseModule {
         this.UnpackSpellCodes(spell);
         if (this.SpellNeedsPair(spell))
             paired = this.PairedCharacterOptions(C)[getRandomInt(this.PairedCharacterOptions(C).length)];
-        this.CastSpellActual(spell, C, paired);
+        this.CastSpellActual(spell, C, false, paired);
     }
 
     SpellNeedsPair(spell: SpellDefinition): boolean {
@@ -444,7 +450,7 @@ export class MagicModule extends BaseModule {
                 this.SpellPairOption.Source = C;
                 this.SpellPairOption.SelectOpen = true;
             } else {
-                this.CastSpellActual(spell, C);
+                this.CastSpellActual(spell, C, false);
             }
         }
     }
@@ -460,7 +466,7 @@ export class MagicModule extends BaseModule {
         return teachingActionStrings[getRandomInt(teachingActionStrings.length)];
     }
 
-    getCastingActionString(spell: SpellDefinition, item: Item | null, target: Character, paired?: Character): string {
+    getCastingActionString(spell: SpellDefinition, item: Item | null, voiceCast: boolean, target: Character, paired?: Character): string {
         let itemName = !!item ? (item?.Craft?.Name ?? item?.Asset.Description) : "wand";
         let pairedDefaultStr = `${!!paired ? ", the spell's power also arcing to " + CharacterNickname(paired) + "." : "."}`;
         let rangedCastingActionStrings: string[] = [
@@ -473,13 +479,21 @@ export class MagicModule extends BaseModule {
             `%NAME% chants an indecipherable phrase, tapping %POSSESSIVE% ${itemName} against %OPP_NAME% and casting ${spell.Name}${pairedDefaultStr}`,
             `%NAME% baps %OPP_NAME% with %POSSESSIVE% ${itemName} and, with a grin, casts ${spell.Name}${pairedDefaultStr}`
         ];
+        let voiceCastingActionStrings: string[] = [
+            `%NAME% use the magical power of %POSSESSIVE% voice to casts ${spell.Name} on %OPP_NAME%${pairedDefaultStr}`,
+            `%NAME% chants an indecipherable phrase containing the name of %OPP_NAME% and casting ${spell.Name}${pairedDefaultStr}`
+        ];
 
-        let castingActionStrings = this.IsRangedItem(item) ? rangedCastingActionStrings : meleeCastingActionStrings;
+        let castingActionStrings;
+        if (voiceCast)
+            castingActionStrings = voiceCastingActionStrings;
+        else
+            castingActionStrings = this.IsRangedItem(item) ? rangedCastingActionStrings : meleeCastingActionStrings;
 
         return castingActionStrings[getRandomInt(castingActionStrings.length)];
     }
 
-    CastSpellActual(spell: SpellDefinition | undefined, spellTarget: Character, pairedTarget?: Character) {
+    CastSpellActual(spell: SpellDefinition | undefined, spellTarget: Character, voiceCast: boolean, pairedTarget?: Character) {
         if (!!spell && !!spellTarget) {
             let wand = InventoryGet(Player, "ItemHandheld");
             if (!!wand && !!wand.Craft && wand.Craft.MemberNumber != Player.MemberNumber && getRandomInt(2) == 0) { // 50% chance of backfire when using someone else's wand
@@ -501,7 +515,7 @@ export class MagicModule extends BaseModule {
                 return;
             }
             else {
-                SendAction(this.getCastingActionString(spell, InventoryGet(Player, "ItemHandheld"), spellTarget, pairedTarget), spellTarget);
+                SendAction(this.getCastingActionString(spell, InventoryGet(Player, "ItemHandheld"), voiceCast, spellTarget, pairedTarget), spellTarget);
             }
 
             if (spellTarget.IsPlayer()) {
@@ -793,6 +807,67 @@ export class MagicModule extends BaseModule {
             this.settings.knownSpells.push(spell);
             settingsSave(true);
         }
+    }
+
+    // ***************** Voice Casting *******************
+
+    CheckForSpellVoiceCasting(msg: string): void {
+        let foundSpell: SpellDefinition | undefined = this.searchSpellFromMessageBegining(msg);
+        if (!foundSpell)
+            return;
+
+        // Just to avoid detecting name in spell name
+        let msgWithoutSpellName = msg.substring(msg.indexOf(foundSpell.Name));
+
+        // Now get all player name mentionned in message
+        let targetCharacterList: Character[] = this.getFirstCharactersFromMessage(msgWithoutSpellName);
+        if (targetCharacterList.length <= 0) {
+            return;
+        }
+
+        let spell: SpellDefinition = foundSpell;
+        if (!spell || this.settings.trueWildMagic)
+            spell = this.RandomSpell
+        spell = JSON.parse(JSON.stringify(spell));
+        this.UnpackSpellCodes(spell);
+
+        for(let C of targetCharacterList) {
+            let paired: Character | undefined = undefined;
+            if (this.SpellNeedsPair(spell))
+                paired = this.PairedCharacterOptions(C)[getRandomInt(this.PairedCharacterOptions(C).length)];
+            this.CastSpellActual(spell, C, true, paired);
+        }
+    }
+
+    searchSpellFromMessageBegining(msg: string): SpellDefinition | undefined {
+        for (let s of this.AvailableSpells) {
+            if (msg.length <= s.Name.length)
+                continue;
+            // Work only if msg start with spellName (+ start at position 2 to allow it when aroused)
+            if (msg.startsWith(s.Name) || msg.startsWith(s.Name, 2)) {
+                return s;
+            }
+        }
+        return undefined;
+    }
+
+    getFirstCharactersFromMessage(msg: string): Character[] {
+        let characterList: Character[] = [];
+        for (let character of ChatRoomCharacter) {
+            if (character.Nickname) {
+                if (msg.includes(character.Nickname) && !characterList.includes(character)) {
+                    characterList.push(character);
+                    return characterList;
+                }
+            }
+            if (character.Name) {
+                if (msg.includes(character.Name) && !characterList.includes(character)) {
+                    characterList.push(character);
+                    return characterList;
+                }
+            }
+        }
+        return characterList;
     }
 
     // ***************** Potions *******************
