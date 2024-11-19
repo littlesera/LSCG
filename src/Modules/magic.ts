@@ -589,7 +589,7 @@ export class MagicModule extends BaseModule {
         setTimeout(() => {
             if (msg.command?.name == "spell") {
                 let paired = getCharacter((msg.command?.args.find(arg => arg.name == "paired")?.value as number));
-                let magicBarrierActive = Player?.LSCG?.StateModule?.states?.find(s => s.type == "protected"); // is Magic barrier active on Player
+                let magicBarrier = Player?.LSCG?.StateModule?.states?.find(s => s.type == "protected");
                 let spell = msg.command?.args?.find(arg => arg.name == "spell")?.value as SpellDefinition;
                 if (!spell || !sender)
                     return;
@@ -597,7 +597,7 @@ export class MagicModule extends BaseModule {
                 if (!this.SpellIsBeneficial(spell) && this.DefendAgainst(sender.MemberNumber ?? -1)) {
                     if (check.AttackerRoll.Total < check.DefenderRoll.Total) {
                         SendAction(`${CharacterNickname(Player)} ${check.DefenderRoll.TotalStr}successfully saves against ${CharacterNickname(sender)}'s ${check.AttackerRoll.TotalStr}${spell.Name}.`);
-                        if (magicBarrierActive) {
+                        if (magicBarrier?.active) {
                             // if saved with a protected barrier, the spell will bounce back to sender
                             SendAction(`The magical barrier around ${CharacterNickname(Player)} make the spell bounce back to ${CharacterNickname(sender)}!`);
                             sendLSCGCommand(sender, "spell", [
@@ -615,7 +615,7 @@ export class MagicModule extends BaseModule {
                         return;
                     }
                 }
-                if (magicBarrierActive) {
+                if (magicBarrier?.active) {
                     this.stateModule.BarrierState.Recover(false);
                     SendAction(`The magical barrier around ${CharacterNickname(Player)} shatters, pierced by ${CharacterNickname(sender)}'s spell!`);
                 }

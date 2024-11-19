@@ -1042,7 +1042,7 @@ export class ItemUseModule extends BaseModule {
 		// +/- 5 for buff state
 		let buffMod = (!buffState || !buffState.active) ? 0 : ((buffState.extensions["negative"] ?? false) ? -5 : 5);
 		// +5 magic barrier
-		let protectedMod = (protectedState) ? +5 : 0;
+		let protectedMod = (!protectedState || !protectedState.active) ? 0 : +5;
 
 		let finalMod = dominanceMod + ownershipMod + restrainedMod + edgingMod + incapacitatedMod + breathMod + buffMod + protectedMod;
 	
