@@ -25,10 +25,11 @@ declare function TherapyDoMove(MoveType: number): void;
  */
 declare function TherapyClick(): void;
 /**
- * Handles the key press in the therapy mini game, the C cheat key reduces the patient stress
+ * Handles mouse downs in the therapy mini game
  * @returns {void} - Nothing
  */
-declare function TherapyKeyDown(): void;
+declare function TherapyMouseDown(): void;
+declare function TherapyKeyDown(event: KeyboardEvent): boolean;
 declare var TherapyBackground: string;
 /** @type {null | NPCCharacter} */
 declare var TherapyCharacterLeft: null | NPCCharacter;

@@ -52,7 +52,7 @@ declare function PrisonSubClothBack(): void;
 declare function PrisonBecomeBadGirl(): void;
 declare function PrisonLeaveBadGirl(): void;
 declare function PrisonWearPoliceEquipment(C: any): void;
-declare function PrisonWantedPlayer(): 1 | 4 | 7 | 9;
+declare function PrisonWantedPlayer(): 1 | 3 | 5 | 7;
 declare function PrisonMeetPoliceIntro(RoomBackground: any): void;
 declare function PrisonPutHandsInTheAir(): void;
 declare function PrisonRaiseHandsHigher(): void;

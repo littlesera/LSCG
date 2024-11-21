@@ -149,6 +149,8 @@ declare function AppearanceGroupAllowed(C: Character, GroupName: string): boolea
  * @returns {void} - Nothing
  */
 declare function AppearanceRun(): void;
+declare function AppearanceResize(load: boolean): void;
+declare function AppearanceKeyDown(event: KeyboardEvent): boolean;
 /**
  * Calculates the background color of the preview image for and item
  * @param {Character} C - The character whose appearance we are viewing
@@ -346,6 +348,23 @@ declare function CharacterAppearanceResolveSync(C: Character, currentAppearance:
  * @param {Asset} asset
  */
 declare function CharacterAppearanceGenderAllowed(asset: Asset): boolean;
+/**
+ * If the player is in the chat room, we display a local message for him/her
+ * @param {string} Msg
+ */
+declare function CharacterAppearanceChatRoomMessage(Msg: string): void;
+/**
+ * Creates a compressed string of a character appearance and saves it to the clipboard
+ * @param {Character} C - The character to copy from
+ */
+declare function CharacterAppearanceCopyToClipboard(C: Character): void;
+/**
+ * Uncompress a string containing an appearance, then applies that appearance data to the character
+ * @param {Character} C - The character that loads its new appearance
+ * @param {string} CompApp - The compressed string of appaearance data
+ * @param {boolean} ChatRoomRefresh - TRUE if the character should be refreshed online
+ */
+declare function CharacterAppearancePaste(C: Character, CompApp: string, ChatRoomRefresh: boolean): void;
 declare var AppearanceBackground: string;
 /** Offset for the group view */
 declare var CharacterAppearanceOffset: number;
@@ -409,7 +428,9 @@ declare let AppearanceWardrobeReorderList: any[];
 declare let AppearanceWardrobeReorderMode: WardrobeReorderType;
 declare const CanvasUpperOverflow: 700;
 declare const CanvasLowerOverflow: 150;
+/** The draw width of the character canvas */
 declare const CanvasDrawWidth: 500;
+/** The draw height of the character canvas */
 declare const CanvasDrawHeight: number;
 declare namespace AppearancePermissionColors {
     let red: string[];

@@ -7,7 +7,7 @@
  * @param {boolean} [Push=true] - TRUE if we must push the log to the server
  * @returns {void} - Nothing
  */
-declare function LogAdd<T extends keyof LogNameType>(NewLogName: LogNameType[T], NewLogGroup: T, NewLogValue?: number, Push?: boolean): void;
+declare function LogAdd<T extends LogGroupType>(NewLogName: LogNameType[T], NewLogGroup: T, NewLogValue?: number, Push?: boolean): void;
 /**
  * Deletes a log entry.
  * @template {LogGroupType} T
@@ -16,7 +16,7 @@ declare function LogAdd<T extends keyof LogNameType>(NewLogName: LogNameType[T],
  * @param {boolean} [Push=true] - TRUE if we must push the log to the server
  * @returns {void} - Nothing
  */
-declare function LogDelete<T extends keyof LogNameType>(DelLogName: LogNameType[T], DelLogGroup: T, Push?: boolean): void;
+declare function LogDelete<T extends LogGroupType>(DelLogName: LogNameType[T], DelLogGroup: T, Push?: boolean): void;
 /**
  * Deletes all log entries to starts with the name.
  * @param {string} DelLogName - The name of the log
@@ -39,7 +39,7 @@ declare function LogDeleteGroup(DelLogGroup: LogGroupType, Push?: boolean): void
  * @param {T} QueryLogGroup - The name of the log's group
  * @returns {boolean} - Returns TRUE if there is an existing log matching the Name/Group with no value or a value above the current time in ms.
  */
-declare function LogQuery<T extends keyof LogNameType>(QueryLogName: LogNameType[T], QueryLogGroup: T): boolean;
+declare function LogQuery<T extends LogGroupType>(QueryLogName: LogNameType[T], QueryLogGroup: T): boolean;
 /**
  * Checks if there's a log entry with extra ID characters in the log of the player (Exemple: BlockScreenABC return true for ID: A, B or C)
  * @template {LogGroupType} T
@@ -48,7 +48,7 @@ declare function LogQuery<T extends keyof LogNameType>(QueryLogName: LogNameType
  * @param {string} ID - The ID to validate (letter, number or other chars are fine)
  * @returns {boolean} - Returns true, if the log contains that ID
  */
-declare function LogContain<T extends keyof LogNameType>(LogName: LogNameType[T], LogGroup: T, ID: string): boolean;
+declare function LogContain<T extends LogGroupType>(LogName: LogNameType[T], LogGroup: T, ID: string): boolean;
 /**
  * Returns the value associated to a log.
  * @template {LogGroupType} T
@@ -56,7 +56,7 @@ declare function LogContain<T extends keyof LogNameType>(LogName: LogNameType[T]
  * @param {T} QueryLogGroup - The name of the log's group
  * @returns {number | null} - Returns the value of the log which is a date represented in ms or undefined. Returns null if no matching log is found.
  */
-declare function LogValue<T extends keyof LogNameType>(QueryLogName: LogNameType[T], QueryLogGroup: T): number | null;
+declare function LogValue<T extends LogGroupType>(QueryLogName: LogNameType[T], QueryLogGroup: T): number | null;
 /**
  * Loads the account log.
  * @param {readonly LogRecord[]} NewLog - Existing logs received by the server
@@ -71,7 +71,7 @@ declare function LogLoad(NewLog: readonly LogRecord[]): void;
  * @param {T} QueryLogGroup - The name of the log's group
  * @returns {boolean} - Returns TRUE if there is an existing log matching the Name/Group with no value or a value above the current time in ms.
  */
-declare function LogQueryRemote<T extends keyof LogNameType>(C: Character, QueryLogName: LogNameType[T], QueryLogGroup: T): boolean;
+declare function LogQueryRemote<T extends LogGroupType>(C: Character, QueryLogName: LogNameType[T], QueryLogGroup: T): boolean;
 /**
  * Filters the Player's log and returns the rule entries that the player's owner is allowed to see.
  * @param {boolean} OwnerIsLover - Indicates that the requester is also the player's lover.

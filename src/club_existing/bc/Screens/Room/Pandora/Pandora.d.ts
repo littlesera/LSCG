@@ -56,9 +56,10 @@ declare function PandoraSetMode(NewMode: "" | "Rest" | "Search" | "Paint"): void
 declare function PandoraClick(): void;
 /**
  * Handles the key pressed in Pandora's Box, allow WASD to move around
- * @returns {void} - Nothing
+ * @param {KeyboardEvent} event - Key event
+ * @returns {boolean} - Whether the supplied event was understood/used.
  */
-declare function PandoraKeyDown(): void;
+declare function PandoraKeyDown(event: KeyboardEvent): boolean;
 /**
  * Prepares a text popup for Pandora's Box
  * @param {string} Text

@@ -5,10 +5,10 @@
 declare function GameClubCardGetStatus(): OnlineGameStatus;
 /**
  * Set the current state of online Club Card.
- * @param {OnlineGameStatus} s
+ * @param {OnlineGameStatus} NewStatus
  * @returns {void}
  */
-declare function GameClubCardSetStatus(s: OnlineGameStatus): void;
+declare function GameClubCardSetStatus(NewStatus: OnlineGameStatus): void;
 /**
  * Checks if the character is an admin for the room/game.
  * @param {Character} C - Character to check for
@@ -81,6 +81,12 @@ declare function GameClubCardLoadStatus(): void;
  */
 declare function GameClubCardDoBundle(Cards: ClubCard[], IncludeTime?: boolean): string;
 /**
+ * Creates a bundle of cards in a string to push to the server.
+ * @param {ClubCard[]} Cards - An array of ClubCard objects
+ * @returns {string} - A string with all the cards
+ */
+declare function GameClubCardBoardDoBundle(Cards: ClubCard[]): string;
+/**
  * Processes the club card game data received from the server
  * @param {string} Bundle - An array of c
  * @param {boolean} IncludeTime - If we must include the time property
@@ -88,6 +94,13 @@ declare function GameClubCardDoBundle(Cards: ClubCard[], IncludeTime?: boolean):
  * @returns {ClubCard[]} - A string with all the cards
  */
 declare function GameClubCardUndoBundle(Bundle: string, IncludeTime?: boolean, Location?: string): ClubCard[];
+/**
+ * Parses a string to return an updated array of ClubCard objects.
+ * @param {string} bundle - A string containing all the cards
+ * @param {string} Location - The location of the card
+ * @returns {ClubCard[]} - An array of updated ClubCard objects
+ */
+declare function GameClubCardBoardUndoBundle(bundle: string, Location: string): ClubCard[];
 /**
  * Loads the full server bundle for a player
  * @param {ClubCardPlayer} CCPlayer - The club card player
@@ -117,9 +130,10 @@ declare function GameClubCardProcess(Packet: ServerChatRoomGameResponse): void;
 /**
  * Syncs the online data with all players
  * @param {string} Progress - The progress status to push (default to action)
+ * @param {boolean} LocalPlayerOnly - If true, send only the local player. Otherwise, send both.
  * @returns {void} - Nothing
  */
-declare function GameClubCardSyncOnlineData(Progress?: string): void;
+declare function GameClubCardSyncOnlineData(Progress?: string, LocalPlayerOnly?: boolean): void;
 /**
  * When the game ends, we go back to the online chat room
  * @returns {void} - Nothing

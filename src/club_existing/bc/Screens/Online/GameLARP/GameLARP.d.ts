@@ -5,10 +5,10 @@
 declare function GameLARPGetStatus(): OnlineGameStatus;
 /**
  * Set the current state of LARP.
- * @param {OnlineGameStatus} s
+ * @param {OnlineGameStatus} NewStatus
  * @returns {void}
  */
-declare function GameLARPSetStatus(s: OnlineGameStatus): void;
+declare function GameLARPSetStatus(NewStatus: OnlineGameStatus): void;
 /**
  * Checks if the character is an admin or the LARP admin while the game is going.
  * @param {Character} C - Character to check for

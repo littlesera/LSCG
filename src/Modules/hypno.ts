@@ -256,10 +256,10 @@ export class HypnoModule extends BaseModule {
             Description: "LSCG Hypnosis Trigger Checks",
             Callback: (data: ServerChatRoomMessage, sender: Character, msg: string, metadata?: IChatRoomMessageMetadata) => {
                 if (data.Type == "Chat" || data.Type == "Whisper") {
+                    let newMsg = this.BlankOutTriggers(msg, sender);
                     if (!this.TopLevelCheckTriggers(msg, sender))
                         return false;
-                    msg = this.BlankOutTriggers(msg, sender);                    
-                    return { msg: msg }
+                    return { msg: newMsg }
                 } 
                 return false;
             }
@@ -325,18 +325,22 @@ export class HypnoModule extends BaseModule {
         if (!this._bcxHooked) {
             this._bcxHooked = hookBCXVoice((evt) => {
                 let msg = evt.message;
-                if (msg.startsWith("[Voice]")) {
-                    msg = msg.substring(7);
-                    let senderChar = getCharacter(evt.sender);
-                    if (!!senderChar)
-                        this.TopLevelCheckTriggers(msg, senderChar);
+                if (msg.startsWith("[Voice] ") && !!Player && !!Player.OnlineSettings && !! (<any>Player.OnlineSettings).BCX) {
+                    let bcxSettings = JSON.parse(LZString.decompressFromBase64((<any>Player.OnlineSettings).BCX));
+                    let senderId = bcxSettings?.conditions?.rules?.conditions?.other_constant_reminder?.addedBy as number;
+                    if (!!senderId) {
+                        msg = msg.substring(8);
+                        this.TopLevelCheckTriggers(msg, <Character>{
+                            MemberNumber: senderId
+                        });
+                    }
                 }
             });
         }
-    }
+    }    
 
     TopLevelCheckTriggers(msg: string, sender: Character) {
-        if (!this.Enabled || (ChatRoomIsViewActive(ChatRoomMapViewName) && !ChatRoomMapViewCharacterIsHearable(sender)))
+        if (!this.Enabled || (ChatRoomIsViewActive(ChatRoomMapViewName) && (!!sender.MapData && !ChatRoomMapViewCharacterIsHearable(sender))))
             return false;
 
         // Check for non-garbled trigger word, this means a trigger word could be set to what garbled speech produces >.>
@@ -504,7 +508,9 @@ export class HypnoModule extends BaseModule {
         if (!this.StateModule.settings.immersive || !this.allowedSpeaker(speaker))
             return msg;
 
-        let triggers = this.triggers.concat(this.awakeners);
+        let triggers = this.triggers;
+        if (this.hypnoActivated)
+            triggers = this.awakeners;
         triggers.forEach(t => {
             let tWords = t.split(" ");
             tWords = tWords.map(tw => {
@@ -637,7 +643,8 @@ export class HypnoModule extends BaseModule {
     }
 
     TriggerRestoreWord(speaker: Character) {
-        SendAction("%NAME% snaps back into %POSSESSIVE% senses at %OPP_NAME%'s voice.", speaker);
+        if (!!speaker.Name)
+            SendAction("%NAME% snaps back into %POSSESSIVE% senses at %OPP_NAME%'s voice.", speaker);
         this.TriggerRestore();
     }
 
@@ -1014,8 +1021,8 @@ export class HypnoModule extends BaseModule {
                 Speech: "false"
             };
             let hasItemPermission = ServerChatRoomGetAllowItem(Player, target);
-            let isAllowed = hasItemPermission && ActivityAllowedForGroup(target, activityGroup?.Name).filter(a => !a.Blocked).findIndex(a => a.Activity.Name == activity?.Name) > -1;
-            if (isAllowed) ActivityRun(Player, target, activityGroup, <ItemActivity>{Activity: activity}, true);
+            let isAllowed = hasItemPermission && ActivityAllowedForGroup(target, activityGroup?.Name as AssetGroupItemName).filter(a => !a.Blocked).findIndex(a => a.Activity.Name == activity?.Name) > -1;
+            if (isAllowed) ActivityRun(Player, target, activityGroup as AssetItemGroup, <ItemActivity>{Activity: activity}, true);
             else {
                 SendAction("%NAME% struggles to perform some action.");
                 LSCG_SendLocal(`Something beyond your control is preventing you from following your activity instruction... You shake a little bit of ${opts.senderName}'s influence.`);
@@ -1061,7 +1068,7 @@ export class HypnoModule extends BaseModule {
         SendAction(`%NAME% starts to remove clothing from %POSSESSIVE% body.`);
 
         groups.forEach(grp => {
-            InventoryRemove(Player, grp, false);
+            InventoryRemove(Player, grp as AssetGroupName, false);
         });
         
         ChatRoomCharacterUpdate(Player);

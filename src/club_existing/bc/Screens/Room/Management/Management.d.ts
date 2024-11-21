@@ -210,6 +210,16 @@ declare function ManagementCannotBreakUpLoverNPC(L: number): boolean;
  */
 declare function ManagementIsClubSlave(): boolean;
 /**
+ * Checks if the player can start a regular chat with a club slave.
+ * @returns {boolean} - TRUE if the player can start a regular
+ */
+declare function ManagementCanStartClubSlaveTalk(): boolean;
+/**
+ * Checks if the player can start a chat with a bunny club slave.
+ * @returns {boolean} - TRUE if the player can start a regular
+ */
+declare function ManagementCanStartBunnyTalk(): boolean;
+/**
  * Checks if the player is wearing a slave collar.
  * @returns {boolean} - TRUE if the player is wearing a slave collar.
  */
@@ -279,6 +289,16 @@ declare function ManagementCannotBeClubSlaveLoverLock(): boolean;
  * @returns {boolean} - TRUE if the player is wearing a lover-only restraint.
  */
 declare function ManagementCannotBeClubSlaveFamilyLock(): boolean;
+/**
+ * Checks if the player can complete her contract and is not kneeling
+ * @returns  {boolean} - TRUE if both the Player can complete her contract but is not kneeling
+ */
+declare function ManagementCompleteContract(): boolean;
+/**
+ * Checks if the player can complete her contract and is kneeling
+ * @returns  {boolean} - TRUE if both the Player can complete her contract and is kneeling
+ */
+declare function ManagementKneelingCompleteContract(): boolean;
 /**
  * Checks if the player can kiss the current NPC.
  * @returns {boolean} - TRUE if both the NPC and the player can talk.
@@ -379,6 +399,7 @@ declare function ManagementContactOwner(): void;
 declare function ManagementReleaseFromOwner(RepChange: number): void;
 /**
  * Break ownership by another player
+ * @deprecated
  * @returns {void} - Nothing.
  */
 declare function ManagementBreakOnlineOwnership(): void;

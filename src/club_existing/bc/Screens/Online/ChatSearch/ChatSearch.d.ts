@@ -53,12 +53,7 @@ declare function ChatSearchSaveLanguageAndFilterTerms(): void;
  * @returns {void} - Nothing
  */
 declare function ChatSearchLoadLanguageAndFilterTerms(): void;
-/**
- * Handles the key presses while in the chat search screen.
- * When the user presses enter, we launch the search query or save the temp options.
- * @returns {void} - Nothing
- */
-declare function ChatSearchKeyDown(): void;
+declare function ChatSearchKeyDown(event: KeyboardEvent): boolean;
 /**
  * Handles exiting from the chat search screen, removes the input.
  * @returns {void} - Nothing
@@ -140,21 +135,34 @@ declare function ChatSearchClickPermission(): void;
 declare function ChatSearchClickUnhideRoom(C: number, Confirmed: boolean): void;
 /**
  * Handles the reception of the server response when joining a room or when getting banned/kicked
- * @param {string} data - Response from the server
+ * @param {ServerChatRoomSearchResponse} data - Response from the server
  * @returns {void} - Nothing
  */
-declare function ChatSearchResponse(data: string): void;
+declare function ChatSearchResponse(data: ServerChatRoomSearchResponse): void;
 /**
  * Censors the chat search result name and description based on the player preference
- * @returns {void} - Nothing
+ * @param {ServerChatRoomSearchData} searchData - The (potentially) to-be censored search result
+ * @returns {null | { DisplayName: string, Description: string }} - The censored name and description or, if fully censored, return `null` instead
  */
-declare function ChatSearchCensor(): void;
+declare function ChatSearchCensor(searchData: ServerChatRoomSearchData): null | {
+    DisplayName: string;
+    Description: string;
+};
+/**
+ * Parse the passed server search data, ensuring that all required fields are present.
+ * @param {ServerChatRoomSearchResultResponse} searchResults - The unparsed search data as received from the server
+ * @returns {(ServerChatRoomSearchData & { DisplayName: string, Order: number })[]} - The fully parsed room search data
+ */
+declare function ChatSearchParseResponse(searchResults: ServerChatRoomSearchResultResponse): (ServerChatRoomSearchData & {
+    DisplayName: string;
+    Order: number;
+})[];
 /**
  * Handles the reception of the server data when it responds to the search query
- * @param {readonly any[]} data - Response from the server, contains the room list matching the query
+ * @param {ServerChatRoomSearchResultResponse} data - Response from the server, contains the room list matching the query
  * @returns {void} - Nothing
  */
-declare function ChatSearchResultResponse(data: readonly any[]): void;
+declare function ChatSearchResultResponse(data: ServerChatRoomSearchResultResponse): void;
 /**
  * Automatically join a room, for example due to leashes or reconnect
  * @returns {void} - Nothing
@@ -210,7 +218,14 @@ declare var ChatSearchResult: (ServerChatRoomSearchData & {
 })[];
 /** @type {typeof ChatSearchResult} */
 declare var ChatSearchHiddenResult: typeof ChatSearchResult;
-declare var ChatSearchLastSearchDataJSON: string;
+/** @type {null | { Query: string, Language: "" | ServerChatRoomLanguage, Space: ServerChatRoomSpace, Game: ServerChatRoomGame, FullRooms: boolean }} */
+declare var ChatSearchLastSearchDataJSON: null | {
+    Query: string;
+    Language: "" | ServerChatRoomLanguage;
+    Space: ServerChatRoomSpace;
+    Game: ServerChatRoomGame;
+    FullRooms: boolean;
+};
 declare var ChatSearchLastQuerySearchTime: number;
 declare var ChatSearchLastQueryJoin: string;
 declare var ChatSearchLastQueryJoinTime: number;

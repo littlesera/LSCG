@@ -89,7 +89,7 @@ export class OpacityModule extends BaseModule {
                     });
                 }
 
-                if (Array.isArray(this.OpacityItem?.Property?.LSCGOpacity)) {
+                if (Array.isArray(this.getOpacity())) {
                     this.opacityAllLayer = true;
                     this.DrawOpacityLayerSliders();
                 } else {
@@ -146,18 +146,16 @@ export class OpacityModule extends BaseModule {
     
                     if (!this.OpacityItem.Property)
                         this.OpacityItem.Property = {};
+                    let opacity = this.getOpacity();
 
                     if (this.opacityAllLayer) {
-                        if (!Array.isArray(this.OpacityItem.Property.LSCGOpacity)) {
-                            let opac = this.OpacityItem?.Property?.LSCGOpacity ?? 1;
-                            if (!this.OpacityItem.Property)
-                                this.OpacityItem.Property = {};
-                            this.OpacityItem.Property.LSCGOpacity = new Array(this.OpacityLayerSliders.length).fill(opac);
+                        if (!Array.isArray(opacity)) {
+                            this.setOpacity(this.OpacityItem, new Array(this.OpacityLayerSliders.length).fill(opacity));
                         }
                         this.DrawOpacityLayerSliders();
                     } else {
-                        if (Array.isArray(this.OpacityItem.Property.LSCGOpacity)) {
-                            this.OpacityItem.Property.LSCGOpacity = Math.max(...this.OpacityItem.Property.LSCGOpacity);
+                        if (Array.isArray(opacity)) {
+                            this.setOpacity(this.OpacityItem, Math.max(...opacity))
                         }
                         this.DrawMainOpacitySlider();
                     }
@@ -188,7 +186,7 @@ export class OpacityModule extends BaseModule {
                         layerName = layerName.slice(1);
                     let layerIx = CA.Asset.Layer.findIndex(l => l.Name == layerName);
                     let originalLayerOpacity = CA.Asset.Layer[layerIx]?.Opacity ?? CA.Asset.Opacity ?? 1;
-                    let overrideOpacity = Array.isArray(Property?.LSCGOpacity) ? Property?.LSCGOpacity[layerIx] : Property?.LSCGOpacity;
+                    let overrideOpacity = (Array.isArray(Property?.LSCGOpacity) ? Property?.LSCGOpacity[layerIx] : Property?.LSCGOpacity) ?? undefined;
                     if (overrideOpacity !== undefined) {
                         ret.Opacity = Math.min((ret.Opacity ?? Property.Opacity ?? 1), (overrideOpacity ?? originalLayerOpacity ?? 1));
                     }
@@ -222,8 +220,9 @@ export class OpacityModule extends BaseModule {
             let xray = getModule<StateModule>("StateModule")?.XRayState;
             let xrayActive = xray?.Active && xray?.CanViewXRay(C);
             C.DrawAppearance?.forEach(item => {
-                let hasOpacitySettings = item.Property?.LSCGOpacity !== undefined && item.Property?.LSCGOpacity != 1;
-                if (hasOpacitySettings || xrayActive) {
+                let opacity = this.getOpacity(item)
+                let hasOpacitySettings = opacity !== undefined && opacity != 1;
+                if ((hasOpacitySettings || xrayActive) && !item.Property?.LSCGLeadLined) {
                     item.Asset = Object.assign({}, item.Asset);
                     (<any>item.Asset).Layer = item.Asset.Layer.map(l => Object.assign({}, l));
                     item?.Asset?.Layer?.forEach(layer => {
@@ -241,8 +240,8 @@ export class OpacityModule extends BaseModule {
                 }
 
                 if (item.Asset.Name == "Penis") {
-                    let transpPants = !!InventoryGet(C, "ClothLower")?.Property?.LSCGOpacity;
-                    let transpUnderwear = !!InventoryGet(C, "Panties")?.Property?.LSCGOpacity;
+                    let transpPants = !!this.getOpacity(InventoryGet(C, "ClothLower"));
+                    let transpUnderwear = !!this.getOpacity(InventoryGet(C, "Panties"));
                     if ((xrayActive || transpPants || transpUnderwear) && (!item.Property || !item.Property?.OverridePriority)) {
                         if (!item.Property)
                             item.Property = {};
@@ -254,6 +253,22 @@ export class OpacityModule extends BaseModule {
         }, ModuleCategory.Opacity);
     }
 
+    getOpacity(item?: Item | null): number | number[] | undefined {
+        if (!item)
+            item = this.OpacityItem;
+        if (!!item && !!item.Property && !!item.Property.LSCGOpacity)
+            this.setOpacity(item, item.Property.LSCGOpacity);
+        return item?.Property?.Opacity ?? 1;
+    }
+
+    setOpacity(item: Item, value: number | number[]) {
+        if (!item.Property)
+            item.Property = {};
+        item.Property.Opacity = value;
+        if (!!item.Property.LSCGOpacity)
+            delete item.Property.LSCGOpacity;
+    }
+
     DrawOpacityLayerSliders() {
         ElementPosition(this.OpacityMainSlider.LabelId, -999, -999, 300, 20);
         ElementPosition(this.OpacityMainSlider.ElementId, -999, -999, 300, 20);
@@ -262,10 +277,11 @@ export class OpacityModule extends BaseModule {
         this.OpacityLayerSliders.forEach((layerSlider, ix, arr) => {
             let xMod = Math.floor(ix / 8);
             let yMod = ix % 8;
+            let opacityArr = this.getOpacity();
             ElementPosition(layerSlider.LabelId, 200 + (xMod * 420), 200 + (yMod * 100), 300, 20);
             ElementPosition(layerSlider.ElementId, 200 + (xMod * 420), 260 + (yMod * 100), 300, 20);
             ElementPosition(layerSlider.ElementId + "_Text", 420 + (xMod * 420), 260 + (yMod * 100), 128, 40);
-            let valStr = "" + (((<number[]>this.OpacityItem?.Property?.LSCGOpacity)[ix] ?? 1) * 100);
+            let valStr = "" + (((<number[]>opacityArr)[ix] ?? 1) * 100);
             ElementValue(layerSlider.ElementId, valStr);
             ElementValue(layerSlider.ElementId + "_Text", valStr);
         });
@@ -279,7 +295,8 @@ export class OpacityModule extends BaseModule {
             ElementPosition(layerSlider.ElementId + "_Text", -999, -999, 300, 40);
         });
 
-        let opacityValue = (Array.isArray(this.OpacityItem?.Property?.LSCGOpacity) ? 1 : (this.OpacityItem?.Property?.LSCGOpacity ?? 1)) * 100;
+        let opacityRaw = this.getOpacity();
+        let opacityValue = (Array.isArray(opacityRaw) ? 1 : (opacityRaw ?? 1)) * 100;
 
         ElementPosition(this.OpacityMainSlider.LabelId, 200, 200, 300, 20);
         ElementPosition(this.OpacityMainSlider.ElementId, 200, 260, 300, 20);
@@ -326,13 +343,15 @@ export class OpacityModule extends BaseModule {
             this.OpacityItem.Property = {};
         if (fromElementId == this.OpacityMainSlider.ElementId || fromElementId == this.OpacityMainSlider.ElementId + "_Text") {
             if (value < 1)
-                this.OpacityItem.Property.LSCGOpacity = value;
+                this.setOpacity(this.OpacityItem, value);
             else delete this.OpacityItem.Property.LSCGOpacity;
         } else {
-            if (!Array.isArray(this.OpacityItem.Property.LSCGOpacity))
-                this.OpacityItem.Property.LSCGOpacity = [];
+            let opacityArr = this.getOpacity();
+            if (!Array.isArray(opacityArr))
+                opacityArr = [];
             let ix = this.OpacityLayerSliders.findIndex(s => s.ElementId == fromElementId || s.ElementId + "_Text" == fromElementId);
-            this.OpacityItem.Property.LSCGOpacity[ix] = value;
+            opacityArr[ix] = value;
+            this.setOpacity(this.OpacityItem, opacityArr);
         }
 
         return value;

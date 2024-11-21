@@ -27,6 +27,7 @@ declare function StruggleProgressGetOperation(C: Character, PrevItem: Item, Next
  */
 declare function StruggleAllowLoosen(): boolean;
 declare function StruggleKeyDown(event: KeyboardEvent): boolean;
+declare function StruggleMouseDown(event: MouseEvent | TouchEvent): void;
 /**
  * Handles the minigames' Click event, whether on the selection screen or in the minigame themselves.
  *
@@ -65,8 +66,9 @@ declare function StruggleMinigameHandleExpression(Decrease?: boolean): void;
  * Helper function that handles checking and completing the minigame
  *
  * @param {Character} C - The character to check for progress.
+ * @returns {boolean}
  */
-declare function StruggleProgressCheckEnd(C: Character): void;
+declare function StruggleProgressCheckEnd(C: Character): boolean;
 /**
  * Check if there's a struggling minigame started.
  *
@@ -121,10 +123,10 @@ declare function StruggleStrengthDraw(C: Character): void;
 /**
  * Handle events for the Strength minigame
  *
- * @param {"Click"|"KeyDown"} EventType
+ * @param {"MouseDown"|"Click"|"KeyDown"} EventType
  * @returns {boolean}
  */
-declare function StruggleStrengthHandleEvent(EventType: "Click" | "KeyDown", event: any): boolean;
+declare function StruggleStrengthHandleEvent(EventType: "MouseDown" | "Click" | "KeyDown", event: any): boolean;
 /**
  * Advances the Struggle minigame progress
  *
@@ -163,11 +165,11 @@ declare function StruggleLoosenDraw(C: Character): void;
 declare function StruggleLoosenSetup(): void;
 /**
  * Handle events for the loosen minigame
- * @param {"Click"|"KeyDown"} EventType
+ * @param {"MouseDown"|"Click"|"KeyDown"} EventType
  * @param {KeyboardEvent} event
  * @returns {boolean}
  */
-declare function StruggleLoosenHandleEvent(EventType: "Click" | "KeyDown", event: KeyboardEvent): boolean;
+declare function StruggleLoosenHandleEvent(EventType: "MouseDown" | "Click" | "KeyDown", event: KeyboardEvent): boolean;
 /**
  * Starts the dialog progress bar for struggling out of bondage and keeps the items that needs to be added / swapped / removed.
  * First the challenge level is calculated based on the base item difficulty, the skill of the rigger and the escapee and modified, if
@@ -192,9 +194,9 @@ declare function StruggleFlexibilityCheck(): boolean;
 /**
  * Handle events for the Flexibility minigame
  *
- * @param {"Click"|"KeyDown"} EventType
+ * @param {"MouseDown"|"Click"|"KeyDown"} EventType
  */
-declare function StruggleFlexibilityHandleEvent(EventType: "Click" | "KeyDown", event: any): boolean;
+declare function StruggleFlexibilityHandleEvent(EventType: "MouseDown" | "Click" | "KeyDown", event: any): boolean;
 /**
  * Advances the Flexibility minigame progress
  *
@@ -219,12 +221,12 @@ declare function StruggleDexteritySetup(C: Character, PrevItem: Item, NextItem?:
  */
 declare function StruggleDexterityDraw(C: Character): void;
 /**
- * Handle events for the Flexibility minigame
+ * Handle events for the Dexterity minigame
  *
- * @param {"Click"|"KeyDown"} EventType
+ * @param {"MouseDown"|"Click"|"KeyDown"} EventType
  * @returns {boolean}
  */
-declare function StruggleDexterityHandleEvent(EventType: "Click" | "KeyDown", event: any): boolean;
+declare function StruggleDexterityHandleEvent(EventType: "MouseDown" | "Click" | "KeyDown", event: any): boolean;
 /**
  * Advances the Dexterity minigame progress
  *
@@ -233,10 +235,10 @@ declare function StruggleDexterityHandleEvent(EventType: "Click" | "KeyDown", ev
 declare function StruggleDexterityProcess(): void;
 /**
  * Handles events for the LockPicking minigame
- * @param {"Click"|"KeyDown"} EventType
+ * @param {"MouseDown"|"Click"|"KeyDown"} EventType
  * @returns {boolean} - Nothing
  */
-declare function StruggleLockPickHandleEvent(EventType: "Click" | "KeyDown", event: any): boolean;
+declare function StruggleLockPickHandleEvent(EventType: "MouseDown" | "Click" | "KeyDown", event: any): boolean;
 /**
  * Advances the lock picking dialog
  * @returns {void} - Nothing
@@ -263,6 +265,41 @@ declare function StruggleLockPickProgressGetOperation(C: Character, Item: Item):
  * @returns {void} - Nothing
  */
 declare function StruggleLockPickSetup(C: Character, Item: Item): void;
+/**
+ * Starts the online chat room struggle progress
+ * @returns {void} - Nothing
+ */
+declare function StruggleChatRoomStart(): void;
+/**
+ * Starts the loosen progress bar
+ * @returns {void} - Nothing
+ */
+declare function StruggleChatRoomLoosenStart(): void;
+/**
+ * Ends the loosen progress bar, reducing the difficulty to struggle
+ * @returns {void} - Nothing
+ */
+declare function StruggleChatRoomLoosenComplete(): void;
+/**
+ * Restores the previous expressions and ends the struggling
+ * @returns {void} - Nothing
+ */
+declare function StruggleChatRoomEndAmination(): void;
+/**
+ * Ends the online chat room struggle progress
+ * @returns {void} - Nothing
+ */
+declare function StruggleChatRoomStop(): void;
+/**
+ * Ends the online chat room struggle progress, interrupted by another player
+ * @returns {void} - Nothing
+ */
+declare function StruggleChatRoomInterrupt(): void;
+/**
+ * Ends the online chat room struggle progress
+ * @returns {void} - Nothing
+ */
+declare function StruggleChatRoomSuccess(): void;
 /** @type {null | number[]} */
 declare var StruggleLockPickOrder: null | number[];
 /** @type {null | boolean[]} */

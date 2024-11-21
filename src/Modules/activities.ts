@@ -968,7 +968,7 @@ export class ActivityModule extends BaseModule {
                     return next(args);
                 }
             },
-        });
+        });        
 
         // Grab Tail
         this.AddActivity({
@@ -994,8 +994,14 @@ export class ActivityModule extends BaseModule {
                 {
                     Name: "TargetHornAvailable",
                     Func: (acting, acted, group) => {
-                        if (group.Name == "ItemHood")
-                            return (InventoryGet(acted, "HairAccessory2")?.Asset.Name ?? "").toLocaleLowerCase().indexOf("horn") > -1 && !this.leashingModule.ContainsLeashing(acted.MemberNumber ?? -1, "horn");
+                        if (group.Name == "ItemHood") {
+                            let accSlots = [
+                                InventoryGet(acted, "HairAccessory1"),
+                                InventoryGet(acted, "HairAccessory2"),
+                                InventoryGet(acted, "HairAccessory3")
+                            ];
+                            return accSlots.some(item => (item?.Asset.Name ?? "").toLocaleLowerCase().indexOf("horn") > -1) && !this.leashingModule.ContainsLeashing(acted.MemberNumber ?? -1, "horn");
+                        }
                         return true;
                     }
                 },{
@@ -1018,6 +1024,38 @@ export class ActivityModule extends BaseModule {
                 }
             },
             CustomImage: "Assets/Female3DCG/Activity/Grope.png"
+        });
+
+        this.PatchActivity(<ActivityPatch>{
+            ActivityName: "Pull",
+            CustomPrereqs: [
+                {
+                    Name: "TargetIsBeingPulled",
+                    Func: (acting, acted, group) => {
+                        if (group.Name == "ItemHead")
+                            return !this.leashingModule.ContainsLeashing(acted.MemberNumber!, "hair");
+                        else if (group.Name == "ItemNose")
+                            return !this.leashingModule.ContainsLeashing(acted.MemberNumber!, "nose");
+                        else if (group.Name == "ItemNipples")
+                            return !this.leashingModule.ContainsLeashing(acted.MemberNumber!, "nipples");
+                        return false;
+                    }
+                }
+            ],
+            CustomAction: <CustomAction>{
+                Func: (target, args, next) => {
+                    var location = GetMetadata(args[1])?.GroupName;
+                    if (!target?.IsPlayer()) {
+                        if (!!target && location == "ItemHead")
+                            this.leashingModule.DoGrab(target, "hair");
+                        else if (!!target && location == "ItemNose")
+                            this.leashingModule.DoGrab(target, "nose");
+                        else if (!!target && location == "ItemNipples")
+                            this.leashingModule.DoGrab(target, "nipples");
+                    }
+                    return next(args);
+                }
+            }
         });
 
         // Release Arm/Horn/Tail
@@ -1043,6 +1081,21 @@ export class ActivityModule extends BaseModule {
                     SelfAllowed: false,
                     TargetLabel: "Release Tail",
                     TargetAction: "SourceCharacter releases TargetCharacter's tail."
+                },{
+                    Name: "ItemHead",
+                    SelfAllowed: false,
+                    TargetLabel: "Release Hair",
+                    TargetAction: "SourceCharacter lets go of TargetCharacter's hair."
+                },{
+                    Name: "ItemNose",
+                    SelfAllowed: false,
+                    TargetLabel: "Release Nose",
+                    TargetAction: "SourceCharacter releases TargetCharacter's nose."
+                },{
+                    Name: "ItemNipples",
+                    SelfAllowed: false,
+                    TargetLabel: "Release Nipples",
+                    TargetAction: "SourceCharacter releases TargetCharacter's nipples."
                 }
             ],
             CustomPrereqs: [
@@ -1055,6 +1108,12 @@ export class ActivityModule extends BaseModule {
                             return this.leashingModule.ContainsLeashing(acted.MemberNumber!, "horn");
                         else if (group.Name == "ItemButt")
                             return this.leashingModule.ContainsLeashing(acted.MemberNumber!, "tail");
+                        else if (group.Name == "ItemHead")
+                            return this.leashingModule.ContainsLeashing(acted.MemberNumber!, "hair");
+                        else if (group.Name == "ItemNose")
+                            return this.leashingModule.ContainsLeashing(acted.MemberNumber!, "nose");
+                        else if (group.Name == "ItemNipples")
+                            return this.leashingModule.ContainsLeashing(acted.MemberNumber!, "nipples");
                         return false;
                     }
                 }
@@ -1068,10 +1127,16 @@ export class ActivityModule extends BaseModule {
                         this.leashingModule.DoRelease(target, "horn");
                     else if (!!target && location == "ItemButt")
                         this.leashingModule.DoRelease(target, "tail");
+                    else if (!!target && location == "ItemHead")
+                        this.leashingModule.DoRelease(target, "hair");
+                    else if (!!target && location == "ItemNose")
+                        this.leashingModule.DoRelease(target, "nose");
+                    else if (!!target && location == "ItemNipples")
+                        this.leashingModule.DoRelease(target, "nipples");
                     return next(args);
                 }
             },
-            CustomImage: "Assets/Female3DCG/Activity/Grope.png"
+            CustomImage: "Assets/Female3DCG/Activity/Slap.png"
         });
 
         // PatchChoke Neck
@@ -1636,7 +1701,7 @@ export class ActivityModule extends BaseModule {
         let activity = bundle.Activity;
         activity.Target = activity.Target ?? [];
         activity.Prerequisite = activity.Prerequisite ?? [];
-        activity.Name = "LSCG_" + activity.Name;
+        activity.Name = "LSCG_" + activity.Name as ActivityName;
 
         this.RegisterCustomFuncs(bundle, bundle.Activity);
 

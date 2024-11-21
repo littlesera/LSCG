@@ -11,6 +11,52 @@ declare function CommonDrawCanvasPrepare(C: Character): void;
  */
 declare function CommonDrawAppearanceBuild(C: Character, { clearRect, clearRectBlink, drawCanvas, drawCanvasBlink, drawImage, drawImageBlink, drawImageColorize, drawImageColorizeBlink, }: CommonDrawCallbacks): void;
 /**
+ * Get the layer's resolved & validated current expression.
+ *
+ * Resolution handles mirroring from another group, and validation checks its value against the asset definition.
+ *
+ * @param {Character} C
+ * @param {Item} item
+ * @param {AssetLayer} layer
+ */
+declare function CommonDrawResolveLayerExpression(C: Character, item: Item, layer: AssetLayer): ExpressionName;
+/**
+ * Get the X and Y drawing coordinates for a layer
+ *
+ * @param {Character} C
+ * @param {Asset} asset
+ * @param {AssetLayer} layer
+ * @param {AssetGroupName} groupName
+ */
+declare function CommonDrawComputeDrawingCoordinates(C: Character, asset: Asset, layer: AssetLayer, groupName: AssetGroupName): {
+    X: number;
+    Y: number;
+    fixedYOffset: number;
+};
+/**
+ * Clears out rects based on the layer's alpha masks
+ *
+ * @param {Character} C
+ * @param {AssetLayer} layer
+ * @param {number} fixedYOffset
+ * @param {ClearRectCallback} clearRect
+ * @param {ClearRectCallback} clearRectBlink
+ */
+declare function CommonDrawApplyLayerAlphaMasks(C: Character, layer: AssetLayer, fixedYOffset: number, clearRect: ClearRectCallback, clearRectBlink: ClearRectCallback): void;
+/**
+ * Resolve and validates a layer's color, given a character, an item and a layer.
+ *
+ * This handles grabbing the user-specified color, or the default one, or inherit it from another group, and
+ * checks it for validity.
+ *
+ * @param {Character} C
+ * @param {Item} item
+ * @param {AssetLayer} layer
+ * @param {AssetGroupName} groupName
+ * @param {HexColor} [initialColor] Used as the starting value to check that specific color and fully resolve it
+ */
+declare function CommonDrawResolveLayerColor(C: Character, item: Item, layer: AssetLayer, groupName: AssetGroupName, initialColor?: HexColor): string;
+/**
  * Determines whether the provided color is valid
  * @param {string} Color - The color
  * @param {AssetGroup} AssetGroup - The asset group the color is being used fo

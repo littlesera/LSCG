@@ -5,9 +5,10 @@
  * @param {string} name
  * @param {null | ExtendedItemCallback<T, RT>} originalFunction
  */
-declare function ExtendedItemCreateCallback<T extends any[], RT>(data: ExtendedItemData<any>, name: string, originalFunction: ExtendedItemCallback<T, RT>): void;
+declare function ExtendedItemCreateCallback<T extends any[], RT>(data: ExtendedItemData<any>, name: string, originalFunction: null | ExtendedItemCallback<T, RT>): void;
 /**
  * Construct the extended item's archetypical callbacks and place them in the main namespace.
+ * Also sets {@link Asset.DynamicAfterDraw}, {@link Asset.DynamicScriptDraw} and/or {@link Asset.DynamicAfterDraw} if the appropriate callback is passed.
  * @template {ExtendedItemOption} T
  * @param {ExtendedItemData<T>} data - The extended item data
  * @param {ExtendedItemCallbackStruct<T>} defaults - The default archetypical callbacks
@@ -112,7 +113,7 @@ declare function ExtendedItemSetProperty(C: Character, item: Item, previousPrope
  * @returns {string|null} null if the player meets the option requirements. Otherwise a string message informing them
  * of the requirements they do not meet
  */
-declare function ExtendedItemRequirementCheckMessage<T extends ExtendedItemOption>(data: ExtendedItemData<T>, C: Character, item: Item, Option: T, CurrentOption: T, permitExisting?: boolean): string | null;
+declare function ExtendedItemRequirementCheckMessage<T extends ExtendedItemOption>(data: null | ExtendedItemData<T>, C: Character, item: Item, Option: T, CurrentOption: T, permitExisting?: boolean): string | null;
 /**
  * Checks whether the player is able to select an option based on it's self-selection criteria (whether or not the
  * wearer may select the option)
@@ -148,7 +149,7 @@ declare function ExtendedItemCheckBuyGroups(Option: ExtendedItemOption): string 
  * to be identical. Defaults to false.
  * @returns {string} - Returns a non-empty message string if the item failed validation, or an empty string otherwise
  */
-declare function ExtendedItemValidate<T extends ExtendedItemOption>(data: ExtendedItemData<T>, C: Character, Item: Item, newOption: T, previousOption: T, permitExisting?: boolean): string;
+declare function ExtendedItemValidate<T extends ExtendedItemOption>(data: null | ExtendedItemData<T>, C: Character, Item: Item, newOption: T, previousOption: T, permitExisting?: boolean): string;
 /**
  * Simple getter for the function prefix used for the passed extended item - used for calling standard
  * extended item functions (e.g. if the currently focused it is the hemp rope arm restraint, this will return
@@ -279,7 +280,7 @@ declare function ExtendedItemDrawHeader(X?: number, Y?: number, Item?: Item): vo
  * @param {string} Type - The item's type. Only relevant in the case of {@link VariableHeightData}
  * @returns {null | ExtendedDataLookupStruct[Archetype]} The item's data or `null` if the lookup failed
  */
-declare function ExtendedItemGetData<Archetype extends ExtendedArchetype>(asset: Asset, Archetype: Archetype, Type?: string): ExtendedDataLookupStruct[Archetype];
+declare function ExtendedItemGetData<Archetype extends ExtendedArchetype>(asset: Asset, Archetype: Archetype, Type?: string): null | ExtendedDataLookupStruct[Archetype];
 /**
  * Constructs the chat message dictionary for the extended item based on the items configuration data.
  * @template {ExtendedItemOption} OptionType
@@ -315,7 +316,7 @@ declare function ExtendedItemGatherSubscreenProperty(item: Item, option: Extende
  * @param {boolean} push - Whether to push to changes to the server
  * @param {boolean} refresh - Whether to refresh the character. This should generally be `true`, with custom script hooks being a potential exception.
  */
-declare function ExtendedItemSetOption<OptionType extends TypedItemOption | ModularItemOption | VibratingItemOption>(data: ModularItemData | TypedItemData | VibratingItemData, C: Character, item: Item, newOption: OptionType, previousOption: OptionType, push?: boolean, refresh?: boolean): void;
+declare function ExtendedItemSetOption<OptionType extends ModularItemOption | TypedItemOption | VibratingItemOption>(data: ModularItemData | TypedItemData | VibratingItemData, C: Character, item: Item, newOption: OptionType, previousOption: OptionType, push?: boolean, refresh?: boolean): void;
 /** A temporary hack for registering extra archetypes for a single screen. */
 declare function ExtendedItemManualRegister(): void;
 /**
@@ -325,7 +326,7 @@ declare function ExtendedItemManualRegister(): void;
  * @param {Pick<ExtendedItemDrawData<MetaData>, "elementData" | "itemsPerPage">} defaults - The default draw data
  * @return {ExtendedItemDrawData<MetaData>} - The parsed draw data
  */
-declare function ExtendedItemGetDrawData<MetaData extends ElementMetaData>(drawData: ExtendedItemConfigDrawData<Partial<MetaData>>, defaults: Pick<ExtendedItemDrawData<MetaData>, "elementData" | "itemsPerPage">): ExtendedItemDrawData<MetaData>;
+declare function ExtendedItemGetDrawData<MetaData extends ElementMetaData>(drawData: ExtendedItemConfigDrawData<Partial<MetaData>> | undefined, defaults: Pick<ExtendedItemDrawData<MetaData>, "elementData" | "itemsPerPage">): ExtendedItemDrawData<MetaData>;
 /**
  * Pre-process the passed extended item option and return a shallow copy.
  * @template {Pick<ExtendedItemOption, "Property" | "Prerequisite">} T
@@ -333,7 +334,7 @@ declare function ExtendedItemGetDrawData<MetaData extends ElementMetaData>(drawD
  * @param {Asset} asset
  * @returns {T}
  */
-declare function ExtendedItemParseOptions<T extends Pick<ExtendedItemOption, "Prerequisite" | "Property">>(option: T, asset: Asset): T;
+declare function ExtendedItemParseOptions<T extends Pick<ExtendedItemOption, "Property" | "Prerequisite">>(option: T, asset: Asset): T;
 /**
  * Set an extended items properties based on the passed type record
  * @param {Character} C - The character in question

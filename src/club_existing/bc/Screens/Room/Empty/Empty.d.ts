@@ -50,10 +50,10 @@ declare function EmptyManagementCell(): void;
 declare function EmptyShopRelease(): void;
 /**
  * Releases the player from the item she was trying to sell, and sets the following dialog.
- * @param {string} Sold - Whether or not the item was sold, "true" if sold
+ * @param {string|boolean} Sold - Whether or not the item was sold, "true" if sold
  * @returns {void} - Nothing
  */
-declare function EmptyShopEnd(Sold: string): void;
+declare function EmptyShopEnd(Sold: string | boolean): void;
 /**
  * Starts the slave training
  * @param {number} TrainingType - The type of training to do

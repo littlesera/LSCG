@@ -18,11 +18,12 @@ declare function ChatAdminRoomCustomizationLoad(): void;
 declare function ChatAdminRoomCustomizationPlayMusic(Music: string): void;
 /**
  * Runs the customization on the current screen, can be called from elsewhere
- * @param {object} Custom - The customazation to apply
- * @param {boolean} Draw - If we must draw directly or keep values to be used by online chat rooms
+ * @param {ServerChatRoomCustomData} Custom - The customization to apply
+ * @param {Rect | null} DrawBGToRect - If non-null draw the background to these coordinates. Online chat rooms will use the tracked values elsewhere
+ * @param {boolean} DrawBGEffects - If true and drawing a background then apply blur/dark/tint
  * @returns {void} - Nothing
  */
-declare function ChatAdminRoomCustomizationProcess(Custom: object, Draw: boolean): void;
+declare function ChatAdminRoomCustomizationProcess(Custom: ServerChatRoomCustomData, DrawBGToRect: Rect | null, DrawBGEffects: boolean): void;
 /**
  * When the chat Admin Custom screen runs, draws the screen
  * @returns {void} - Nothing
@@ -39,9 +40,11 @@ declare function ChatAdminRoomCustomizationClick(): void;
  */
 declare function ChatAdminRoomCustomizationExit(): void;
 declare var ChatAdminRoomCustomizationBackground: string;
-declare var ChatAdminRoomCustomizationCurrent: any;
+/** @type {ServerChatRoomCustomData} */
+declare var ChatAdminRoomCustomizationCurrent: ServerChatRoomCustomData;
 declare var ChatAdminRoomCustomizationMusic: any;
 declare var ChatAdminRoomCustomizationMode: any;
+declare var ChatAdminRoomCustomizationSizeMode: any;
 declare var ChatAdminRoomCustomizationMusicLibrary: {
     Name: string;
     URL: string;

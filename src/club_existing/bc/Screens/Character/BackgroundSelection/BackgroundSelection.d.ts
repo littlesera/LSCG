@@ -14,7 +14,7 @@ declare function BackgroundSelectionMake(List: string[], Idx: number, Callback: 
  * @param {string} b.Description - The description of object b. Is used for comparision
  * @returns {number} - Returns -1 if the description of object a is less then that of b, 1 otherwise
  */
-declare function BackGroundSelectionSort(a: {
+declare function BackgroundSelectionSort(a: {
     Description: string;
 }, b: {
     Description: string;
@@ -56,12 +56,7 @@ declare function BackgroundSelectionRun(): void;
  * @returns {void} - Nothing
  */
 declare function BackgroundSelectionClick(): void;
-/**
- * Handles key events in the background selection screen:
- * - When the user presses "enter", we exit
- * @returns {void} - Nothing
- */
-declare function BackgroundSelectionKeyDown(): void;
+declare function BackgroundSelectionKeyDown(event: KeyboardEvent): boolean;
 /**
  * Handles the exit of the selection screen. Sets the new background, if necessary, and
  * calls the previously defined callback function. Then exits the screen to the screen, the player was before
@@ -76,11 +71,10 @@ declare var BackgroundSelectionList: string[];
 declare var BackgroundSelectionTagList: BackgroundTag[];
 declare var BackgroundSelectionIndex: number;
 declare var BackgroundSelectionSelect: string;
-declare var BackgroundSelectionSelectName: string;
 declare var BackgroundSelectionSize: number;
 declare var BackgroundSelectionOffset: number;
 /** @type {null | ((selection: string) => void)} */
-declare var BackgroundSelectionCallback: (selection: string) => void;
+declare var BackgroundSelectionCallback: null | ((selection: string) => void);
 /** @type {"" | ModuleType} */
 declare var BackgroundSelectionPreviousModule: "" | ModuleType;
 declare var BackgroundSelectionPreviousScreen: string;

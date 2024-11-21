@@ -46,9 +46,15 @@ declare function WheelFortuneInventoryWear(Group: AssetGroupName, Minutes: numbe
 declare function WheelFortuneLoad(): void;
 /**
  * Draws the full lucky wheel
+ * @param {string} FullWheel
+ * @param {number} Pos
+ * @param {number} MaxPos
+ * @param {number} X
+ * @param {number} Y
+ * @param {number} Zoom
  * @returns {void} - Nothing
  */
-declare function WheelFortuneDraw(FullWheel: any, Pos: any, MaxPos: any, X: any, Y: any, Zoom: any): void;
+declare function WheelFortuneDrawWheel(FullWheel: string, Pos: number, MaxPos: number, X: number, Y: number, Zoom: number): void;
 /**
  * Runs the lucky wheel mini game
  * @returns {void} - Nothing

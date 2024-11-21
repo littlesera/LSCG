@@ -82,6 +82,11 @@ declare function TranslationGetLanguageName(code: string, english?: boolean): st
  */
 declare function TranslationNextLanguage(): void;
 /**
+ * Changes the language depending on the given language and save the new selected language to local storage
+ * @param {string} language
+ */
+declare function TranslationSwitchLanguage(language: string): void;
+/**
  * Loads the previous translation language from local storage if it exists
  * @returns {void} - Nothing
  */

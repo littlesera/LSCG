@@ -30,11 +30,7 @@ declare function MaidCleaningEnd(Victory: boolean): void;
  * @returns {void} - Nothing
  */
 declare function MaidCleaningDoMove(): void;
-/**
- * The player can use the C key to cheat and add 10 extra seconds to win the game
- * @returns {void} - Nothing
- */
-declare function MaidCleaningKeyDown(): void;
+declare function MaidCleaningKeyDown(event: KeyboardEvent): boolean;
 /**
  * Handles clicks during the maid cleaning minigame. On mobile, we need to move the player on a click.
  */

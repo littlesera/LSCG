@@ -173,7 +173,7 @@ declare function StableGenericDrawProgress(): void;
 declare function StableGenericFinished(): void;
 declare function StableGenericCancel(): void;
 declare function StableGenericProgressEnd(): void;
-declare function StableKeyDown(): void;
+declare function StableKeyDown(event: KeyboardEvent): boolean;
 /**
  * @param {boolean} Reverse
  */
@@ -222,7 +222,7 @@ declare var StableSecondProgress: number;
 declare var StableProgressAuto: number;
 declare var StableSecondProgressAuto: number;
 declare var StableProgressClick: number;
-declare var StableProgressLastKeyPress: number;
+declare var StableProgressLastKeyPress: any;
 declare var StableProgressItem: string;
 declare var StableProgressFinished: boolean;
 declare var StableProgressCharacter: any;

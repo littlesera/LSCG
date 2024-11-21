@@ -217,20 +217,33 @@ export class CoreModule extends BaseModule {
     }
 
     CheckForPublicPacket(data: ServerChatRoomMessage) {
-        if (!!data.Sender && data.Sender != Player.MemberNumber && data.Type == "Hidden" && data.Content == "LSCGMsg" && !!data.Dictionary && !!data.Dictionary[0]) {
+        if (!!data.Sender && data.Type == "Hidden" && data.Content == "LSCGMsg" && !!data.Dictionary && !!data.Dictionary[0]) {
             var C = getCharacter(data.Sender) as OtherCharacter;
-            var msg = (<LSCGMessageDictionaryEntry>data.Dictionary[0]).message;
-            switch (msg.type) {
-                case "init":
-                    this.Init(C, msg);
-                    break;
-                case "sync":
-                    this.Sync(C, msg);
-                    break;
-                case "command":
-                    this.Command(data.Sender, msg);
-                    break;
+            var msg = (data.Dictionary[0] as LSCGMessageDictionaryEntry).message;
+            if (data.Sender != Player.MemberNumber) { // LSCG messages that must come from another user
+                switch (msg.type) {
+                    case "init":
+                        this.Init(C, msg);
+                        break;
+                    case "sync":
+                        this.Sync(C, msg);
+                        break;
+                    case "command":
+                        this.Command(data.Sender, msg);
+                        break;
+                    case "broadcast":
+                        this.Broadcast(data.Sender, msg);
+                        break;
+                }
             }
+            else { // LSCG messages that are self-consumed
+                switch (msg.type) {
+                    case "broadcast":
+                        this.Broadcast(data.Sender, msg);
+                        break;
+                }
+            }
+            
         }
     }
 
@@ -317,17 +330,24 @@ export class CoreModule extends BaseModule {
         this.CommandListeners.filter(com => com.command == msg.command!.name).forEach(command => command.func(senderNumber, msg));
     }
 
+    Broadcast(senderNumber: number, msg: LSCGMessageModel) {
+        if (!msg.command)
+            return;
+        this.CommandListeners.filter(com => com.command == msg.command!.name).forEach(command => command.func(senderNumber, msg));
+    }
+
     ShowChangelog(): void {
         const message = `New LSCG version: ${LSCG_VERSION}
 See below for the latest changes:
 ${LSCG_CHANGES}`;
         ServerAccountBeep({
-            MemberNumber: Player.MemberNumber,
+            MemberNumber: Player.MemberNumber || -1,
             MemberName: "LSCG",
             ChatRoomName: "LSCG Update",
             Private: true,
             Message: message,
             ChatRoomSpace: "",
+            BeepType: ""
         });
         console.info(`LSCG Updated:${LSCG_CHANGES}`);
     }

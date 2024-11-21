@@ -265,7 +265,7 @@ export function replace_template(text: string, source: Character | null = null, 
 	let opp_pronounItem = !source ? "They/Them" : CharacterPronounDescription(source);
 	let isOppMale = opp_pronounItem == "He/Him" ?? false;
 
-	let oppName = source == Player ? (isOppMale ? "himself" : "herself") : !!source ? CharacterNickname(source) : fallbackSourceName;
+	let oppName = source?.IsPlayer() ? (isOppMale ? "himself" : "herself") : !!source ? CharacterNickname(source) : fallbackSourceName;
 	let oppPossessive = isOppMale ? "His" : "Her";
 	let oppIntensive = source == Player ? (isOppMale ? "Himself" : "Herself") : (isOppMale ? "Him" : "Her");
 	let oppPronoun = isOppMale ? "He" : "She";
@@ -488,6 +488,8 @@ export function getPlayerVolume(modifier: number) {
 }
 
 export function sendLSCGMessage(msg: LSCGMessageModel) {
+	msg.IsLSCG = true;
+	msg.version = LSCG_VERSION;
 	const packet = <ServerChatRoomMessage>{
 		Type: "Hidden",
 		Content: "LSCGMsg",
@@ -730,11 +732,11 @@ export function GetItemNameAndDescriptionConcat(item: Item | null): string | und
 		return;
 	
 	var name = item.Craft.Name;
-	var description = item.Craft.Description;
+	var description = typeof CraftingDescription === "undefined" ? item.Craft.Description : CraftingDescription.Decode(item.Craft.Description); // R109
 	return name + " | " + description;
 }
 
-export function mouseTooltip(msg: string, x?: number, y?: number) {
+export function mouseTooltip(msg: string, x?: number, y?: number, maxX?: number, maxY?: number) {
 	var prevAlign = MainCanvas.textAlign;
 	var prevFont = MainCanvas.font;
 	var pad = 5;
@@ -742,8 +744,8 @@ export function mouseTooltip(msg: string, x?: number, y?: number) {
 	MainCanvas.font = '16px Arial, sans-serif'
 	var size = MainCanvas.measureText(msg);
 	let width = size.actualBoundingBoxRight - size.actualBoundingBoxLeft + 2 * pad;
-	var TextX = Math.max(0, Math.min(1000, (x ?? MouseX) + width)) - width;
-	var TextY = Math.max(0, Math.min(1000, y ?? MouseY));
+	var TextX = Math.max(0, Math.min(maxX ??1000, (x ?? MouseX) + width)) - width;
+	var TextY = Math.max(0, Math.min(maxY ?? 1000, y ?? MouseY));
 	DrawRect(TextX - pad + 3, TextY - size.actualBoundingBoxAscent - pad + 3, width, size.actualBoundingBoxDescent + size.actualBoundingBoxAscent + 2 * pad, "rgba(0, 0, 0, .7)");
 	DrawRect(TextX - pad, TextY - size.actualBoundingBoxAscent - pad, width, size.actualBoundingBoxDescent + size.actualBoundingBoxAscent + 2 * pad, "#D7F6E9");
 	DrawTextFit(msg, TextX, TextY, size.width, "Black");
@@ -844,7 +846,7 @@ export function getActivities(overrideGroup: AssetGroup | undefined = undefined)
 }
 
 export function getActivityLabelTag(activity: Activity, group: AssetGroup) {
-	let groupName = group.Name;
+	let groupName = group.Name as string;
 	if (Player.HasPenis()) {
 		if (groupName == "ItemVulva") groupName = "ItemPenis";
 		if (groupName == "ItemVulvaPiercings") groupName = "ItemGlans";

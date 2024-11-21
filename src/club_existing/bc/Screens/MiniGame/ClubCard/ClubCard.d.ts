@@ -53,6 +53,13 @@ declare function ClubCardIsLiability(Card: ClubCard): boolean;
  */
 declare function ClubCardGetOpponent(CCPlayer?: ClubCardPlayer | null): ClubCardPlayer;
 /**
+ * Gets the opponent of the parameter player or the player that's not on it's turn if null
+ * @param {ClubCardPlayer} CCPlayer - The club card player or null
+ * @param {Number} turnCounter
+ * @returns {ClubCard[]} - The opponent
+ */
+declare function ClubCardGetCardsPlayedOnTurn(CCPlayer: ClubCardPlayer, turnCounter: number): ClubCard[];
+/**
  * Adds money to the club card player stats
  * @param {ClubCardPlayer} CCPlayer - The club card player
  * @param {Number} Amount - The amount to add
@@ -68,10 +75,17 @@ declare function ClubCardPlayerAddMoney(CCPlayer: ClubCardPlayer, Amount: number
 declare function ClubCardPlayerAddFame(CCPlayer: ClubCardPlayer, Amount: number): void;
 /**
  * Raises the level of player
- * @param {Object} CCPlayer - The club card player
+ * @param {ClubCardPlayer} CCPlayer - The club card player
  * @returns {void} - Nothing
  */
-declare function ClubCardUpgradeLevel(CCPlayer: any): void;
+declare function ClubCardUpgradeLevel(CCPlayer: ClubCardPlayer): void;
+/**
+ * Returns TRUE if a card (by name) is currently present on a board
+ * @param {ClubCardPlayer} CCPlayer - The club card player
+ * @param {string} CardName - The name of the card
+ * @returns {boolean} - TRUE if at least one card with that name is present
+ */
+declare function ClubCardEventNameIsInEvents(CCPlayer: ClubCardPlayer, CardName: string): boolean;
 /**
  * Returns TRUE if a card (by name) is currently present on a board
  * @param {ClubCardPlayer} CCPlayer - The club card player
@@ -87,6 +101,12 @@ declare function ClubCardNameIsOnBoard(CCPlayer: ClubCardPlayer, CardName: strin
  */
 declare function ClubCardGroupIsOnBoard(CCPlayer: ClubCardPlayer, GroupName: string): boolean;
 /**
+ * @param {ClubCard} card to evaluate group
+ * @param {string} GroupName group name to find
+ * @returns {boolean} - True if the card has the group
+ */
+declare function ClubCardCardHasGroup(card: ClubCard, GroupName: string): boolean;
+/**
  * Returns the number of cards of a specific group found on a board
  * @param {ClubCardPlayer} CCPlayer - The club card player
  * @param {string} GroupName - The name of the card group
@@ -97,9 +117,36 @@ declare function ClubCardGroupOnBoardCount(CCPlayer: ClubCardPlayer, GroupName: 
  * Removes a card from a player board
  * @param {ClubCardPlayer} CCPlayer - The club card player
  * @param {ClubCard} Card - The card object to remove
+ * @param {boolean|null} DontDiscard - If the card dont need to go to the discard pile
  * @returns {void} - Nothing
  */
-declare function ClubCardRemoveFromBoard(CCPlayer: ClubCardPlayer, Card: ClubCard): void;
+declare function ClubCardRemoveFromBoard(CCPlayer: ClubCardPlayer, Card: ClubCard, DontDiscard?: boolean | null): void;
+/**
+ * Gets the updated cost for a player to level up
+ * @param {ClubCardPlayer} CCPlayer - The club card player
+ * @returns {number} The cost to level up
+ */
+declare function ClubCardCalculateLevelCost(CCPlayer: ClubCardPlayer): number;
+/**
+ * Gets the max effect a card should have depending on its "tier"/required level to play
+ * @param {ClubCard} Card
+ * @param {number} fame
+ * @returns {number} max effect card should have
+ */
+declare function ClubCardGetMaxEffectFromCard(Card: ClubCard, fame: number): number;
+/**
+ * Adds a card to a players hand
+ * @param {ClubCardPlayer} CCPlayer - The club card player
+ * @param {ClubCard} Card - The card object to add
+ * @returns {void} - Nothing
+ */
+declare function ClubCardAddToHand(CCPlayer: ClubCardPlayer, Card: ClubCard): void;
+/**
+ * Removes several cards from player time events
+ * @param {ClubCardPlayer} CCPlayer - The club card player
+ * @param {String[]} ListOfCardNames - The names of the cards to remove
+ */
+declare function ClubCardRemoveCardsFromEventByName(CCPlayer: ClubCardPlayer, ListOfCardNames: string[]): void;
 /**
  * Removes a card from a player time events
  * @param {ClubCardPlayer} CCPlayer - The club card player
@@ -134,6 +181,51 @@ declare function ClubCardSetGlow(Card: ClubCard, Color: string): void;
  * @returns {void} - Nothing
  */
 declare function ClubCardPlayerDrawCard(CCPlayer: ClubCardPlayer, Amount?: number | null): void;
+/**
+ * Draw cards from the player deck into it's hand
+ * @param {ClubCardPlayer} CCPlayer - The club card player that draws the cards
+ * @param {string[]} groups - The group to draw from
+ * @param {number | undefined} level - The level
+ * @returns {boolean} - if cards were drawn or not
+ */
+declare function ClubCardPlayerDrawGroupCard(CCPlayer: ClubCardPlayer, groups: string[], level: number | undefined): boolean;
+/**
+ * Summon cards from the player deck into it's board
+ * @param {ClubCardPlayer} CCPlayer - The club card player that summons the cards
+ * @param {string[]} groups - The group to summon from
+ * @param {number} amount - The amount of cards to summon
+ * @param {number | undefined} level - The level of the cards if needed
+ * @returns {boolean} - if cards were summoned or not
+ */
+declare function ClubCardPlayerSummonGroupCardFromDeck(CCPlayer: ClubCardPlayer, groups: string[], amount: number, level: number | undefined): boolean;
+/**
+ * Play a card from an effect
+ * @param {ClubCardPlayer} CCPlayer - The club card player
+ * @param {ClubCard} card - The card to play
+ * @returns {void} - Nothing
+ */
+declare function ClubCardSummonCard(CCPlayer: ClubCardPlayer, card: ClubCard): void;
+/**
+ * Returns TRUE if a specific card can be summoned by the player
+ * @param {ClubCardPlayer} CCPlayer - The club card player
+ * @param {ClubCard} Card - The card to play
+ * @returns {boolean} - TRUE if the card can be summoned
+ */
+declare function ClubCardCanSummonCard(CCPlayer: ClubCardPlayer, Card: ClubCard): boolean;
+/**
+ *
+ * @param {ClubCardPlayer} CCPlayer - The club card player that draws the cards
+ * @returns {void} - Nothing
+ *
+ */
+declare function ClubCardCheckDetectiveDraw(CCPlayer: ClubCardPlayer): void;
+/**
+ * Common place to handle Alvins effect on kidnapping and Restrain
+ * @param {ClubCardPlayer} CCPlayer
+ * @returns {void} - Nothing
+ *
+ */
+declare function ClubCardAlvinCondition(CCPlayer: ClubCardPlayer): void;
 /**
  * Removes cards from a player hand
  * @param {ClubCardPlayer} CCPlayer - The club card player that discards
@@ -172,11 +264,24 @@ declare function ClubCardAddPlayer(Char: Character, Cont: string, Cards: any[]):
  */
 declare function ClubCardGetReward(): void;
 /**
+ * Runs the before/after turn end handlers
+ * @param {ClubCardPlayer} CCPlayer - The player whose turn is ending
+ * @param {ClubCardPlayer} Opponent - The other player
+ * @param {boolean} Before - true to run BeforeTurnEnd handlers, false to run AfterEndTurn handlers
+ * @returns {void}
+  */
+declare function ClubCardRunTurnEndHandlers(CCPlayer: ClubCardPlayer, Opponent: ClubCardPlayer, Before: boolean): void;
+/**
  * When a turn ends, we move to the next player
  * @param {boolean|null} Draw - If the end of turn was triggered by a draw
  * @returns {void} - Nothing
  */
 declare function ClubCardEndTurn(Draw?: boolean | null): void;
+/**
+ * Checks that the focused card is still in the Player's hand
+ * and defocuses it if not.
+ */
+declare function ClubCardDefocusCardIfDiscarded(): void;
 declare function ClubCardCheckVictory(CCPlayer: any): boolean;
 /**
  * Returns the number of cards that can be played in one turn by a player
@@ -223,6 +328,19 @@ declare function ClubCardCanSelectCard(CCPlayer: ClubCardPlayer, Card: ClubCard)
  * @returns {void} - Nothing
  */
 declare function ClubCardPlayCard(CCPlayer: ClubCardPlayer, Card: ClubCard): void;
+/**
+ * When it adds a card to a player's board, check if there is an effect on board that needs to be triggered.
+ * @param {ClubCardPlayer} CCPlayer - The target player
+ * @param {ClubCard} Card - The card that was played
+ * @returns {void} - Nothing
+ */
+declare function ClubCardOnCardPlayedHandler(CCPlayer: ClubCardPlayer, Card: ClubCard): void;
+/**
+ * When it adds a card to a player's board, it updates for all index cards.
+ * @param {ClubCardPlayer} Target - The target player
+ * @returns {void} - Nothing
+ */
+declare function ClubCardUpdateBoardCardsIndex(Target: ClubCardPlayer): void;
 /**
  * When a player selects a card that's a prerequisite for another card
  * @param {ClubCard} Card - The card to play
@@ -288,6 +406,12 @@ declare function ClubCardRenderBubble(Value: number, X: number, Y: number, W: nu
  */
 declare function ClubCardGetGroupText(Group: any[]): string;
 /**
+   * Updated the text by mask, for InnerHTML
+   * @param {String} text -Normal Card Text
+   * @returns {String} -  Updated for InnerHTML Card Text
+   */
+declare function ClubCardGetFormatTextForInnerHTML(text: string): string;
+/**
  * Draw the club card player hand on screen, show only sleeves if not controlled by player
  * @param {ClubCard|Number} Card - The card to draw
  * @param {number} X - The X on screen position
@@ -320,6 +444,16 @@ declare function ClubCardRenderBoard(CCPlayer: any, X: number, Y: number, W: num
  */
 declare function ClubCardRenderHand(CCPlayer: ClubCardPlayer, X: number, Y: number, W: number, H: number): void;
 /**
+ * Draw the discard pile on screen
+ * @param {ClubCardPlayer} CCPlayer - The club card player that draws it's discard pile
+ * @param {number} X - The X on screen position
+ * @param {number} Y - The Y on screen position
+ * @param {number} W - The width of the discard pile window
+ * @param {number} H - The height of the discard pile window
+ * @returns {void} - Nothing
+ */
+declare function ClubCardRenderDiscardPile(CCPlayer: ClubCardPlayer, X: number, Y: number, W: number, H: number): void;
+/**
  * Shows the status text on the bottom right
  * @param {string} Text - The status text to show
  * @returns {void} - Nothing
@@ -345,12 +479,16 @@ declare function ClubCardRun(): void;
  * @returns {void} - Nothing
  */
 declare function ClubCardClick(): void;
-declare function ClubCardKeyDown(event: any): void;
+declare function ClubCardKeyDown(event: KeyboardEvent): boolean;
 declare var ClubCardBackground: string;
 declare var ClubCardLog: any[];
 declare var ClubCardLogText: string;
+declare var ClubCardOldLogText: string;
 declare var ClubCardLogScroll: boolean;
 declare var ClubCardColor: string[];
+declare var ClubCardFameTextColor: string;
+declare var ClubCardMoneyTextColor: string;
+declare var ClubCardIsStartTurnAddedLog: boolean;
 declare var ClubCardOpponent: any;
 declare var ClubCardOpponentDeck: any[];
 declare var ClubCardReward: any;
@@ -362,7 +500,8 @@ declare var ClubCardTurnCardPlayed: number;
 declare var ClubCardTurnEndDraw: boolean;
 declare var ClubCardFameGoal: number;
 declare var ClubCardPopup: any;
-declare var ClubCardSelection: any;
+/** @type {ClubCard} */
+declare var ClubCardSelection: ClubCard;
 declare var ClubCardPending: any;
 declare var ClubCardLevelLimit: number[];
 declare var ClubCardLevelCost: number[];
@@ -370,5 +509,17 @@ declare var ClubCardLevelCost: number[];
 declare var ClubCardPlayer: ClubCardPlayer[];
 declare var ClubCardOnlinePlayerMemberNumber1: number;
 declare var ClubCardOnlinePlayerMemberNumber2: number;
-/** @type {ClubCard[]} */
+/**
+ * The card definitions
+ *
+ * The BeforeTurnEnd hooks are run before regular fame and money are calculated and
+ * are a good place to remove cards so they don't add fame/money that turn. Most
+ * cards should prefer this hook instead of AfterTurnEnd (including ones that just
+ * add extra money / fame).
+ *
+ * The AfterTurnEnd hooks run after this, and can be used to adjust the total amount
+ * of money / fame gained that turn.
+ *
+ * @type {ClubCard[]}
+ */
 declare var ClubCardList: ClubCard[];

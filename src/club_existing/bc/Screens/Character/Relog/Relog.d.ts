@@ -13,11 +13,7 @@ declare function RelogRun(): void;
  * @returns {void} Nothing
  */
 declare function RelogClick(): void;
-/**
- * Handles player keyboard events on the relog screen
- * @returns {void} Nothing
- */
-declare function RelogKeyDown(): void;
+declare function RelogKeyDown(event: KeyboardEvent): boolean;
 /**
  * Attempt to log the user in based on the current player account name and the input password
  * @returns {void} Nothing
@@ -36,6 +32,3 @@ declare var RelogData: null | {
     Module: ModuleType;
     Character: Character;
 };
-/** @type {HTMLDivElement | null} */
-declare var RelogChatLog: HTMLDivElement | null;
-declare var RelogInputText: string;

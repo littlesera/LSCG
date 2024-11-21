@@ -28,17 +28,17 @@ declare function ServerInfo(data: {
 /**
  * Callback used when we are disconnected from the server, try to enter the reconnection mode (relog screen) if the
  * user was logged in
- * @param {*} data - Error to log
+ * @param {ServerForceDisconnectMessage} [data] - Error to log
  * @param {boolean} [close=false] - close the transport
  * @returns {void} - Nothing
  */
-declare function ServerDisconnect(data: any, close?: boolean): void;
+declare function ServerDisconnect(data?: ServerForceDisconnectMessage, close?: boolean): void;
 /**
  * Returns whether the player is currently in a chatroom or viewing a subscreen while in a chatroom
  * @returns {boolean} - True if in a chatroom
  */
 declare function ServerPlayerIsInChatRoom(): boolean;
-declare function ServerSend<Ev extends "AccountCreate" | "AccountLogin" | "PasswordReset" | "PasswordResetProcess" | "AccountUpdate" | "AccountUpdateEmail" | "AccountQuery" | "AccountBeep" | "AccountOwnership" | "AccountLovership" | "AccountDifficulty" | "AccountDisconnect" | "ChatRoomSearch" | "ChatRoomCreate" | "ChatRoomJoin" | "ChatRoomLeave" | "ChatRoomChat" | "ChatRoomCharacterUpdate" | "ChatRoomCharacterExpressionUpdate" | "ChatRoomCharacterPoseUpdate" | "ChatRoomCharacterArousalUpdate" | "ChatRoomCharacterItemUpdate" | "ChatRoomCharacterMapDataUpdate" | "ChatRoomAdmin" | "ChatRoomAllowItem" | "ChatRoomGame">(ev: Ev, ...args: Parameters<ClientToServerEvents[Ev]>): void;
+declare function ServerSend<Ev extends import("@socket.io/component-emitter").EventNames<ClientToServerEvents>>(ev: Ev, ...args: import("@socket.io/component-emitter").EventParams<ClientToServerEvents, Ev>): void;
 /**
  * Process the outgoing server messages queue
  */
@@ -53,6 +53,22 @@ declare function ServerPlayerSync(): void;
  * @returns {void} - Nothing
  */
 declare function ServerPlayerInventorySync(): void;
+/**
+ * Unpack the all item permissions into the quartet of blocked, limited, favorited and hidden item object
+ * @param {Partial<Record<`${AssetGroupName}/${string}`, ItemPermissions>>} permissionItems - The packed item permission data
+ * @returns {Pick<ServerAccountUpdateRequest, "BlockItems" | "LimitedItems" | "FavoriteItems" | "HiddenItems">} - The unpacked item permission data
+ */
+declare function ServerPackItemPermissions(permissionItems: Partial<Record<`${AssetGroupName}/${string}`, ItemPermissions>>): Pick<ServerAccountUpdateRequest, "BlockItems" | "LimitedItems" | "FavoriteItems" | "HiddenItems">;
+/**
+ * Unpack the quartet of blocked, limited, favorited and hidden item permissions into a single object
+ * @param {Pick<Partial<ServerAccountDataSynced>, "BlockItems" | "LimitedItems" | "FavoriteItems" | "HiddenItems">} data - The item permission data as received from the server
+ * @param {boolean} onExtreme - If the expected difficulty is Extreme
+ * @returns {{ permissions: Partial<Record<`${AssetGroupName}/${string}`, ItemPermissions>>; shouldSync: boolean }} - The packed item permission data
+ */
+declare function ServerUnPackItemPermissions(data: Pick<Partial<ServerAccountDataSynced>, "BlockItems" | "LimitedItems" | "FavoriteItems" | "HiddenItems">, onExtreme: boolean): {
+    permissions: Partial<Record<`${AssetGroupName}/${string}`, ItemPermissions>>;
+    shouldSync: boolean;
+};
 /**
  * Syncs player's favorite, blocked, limited and hidden items to the server
  * @returns {void} - Nothing
@@ -167,11 +183,11 @@ declare function ServerPrivateCharacterSync(): void;
 declare function ServerAccountQueryResult(data: ServerAccountQueryResponse): void;
 /**
  * Callback used to parse received information related to a beep from another account
- * @param {object} data - Data object containing the beep object which contain at the very least a name and a member
+ * @param {ServerAccountBeepResponse} data - Data object containing the beep object which contain at the very least a name and a member
  *     number
  * @returns {void} - Nothing
  */
-declare function ServerAccountBeep(data: object): void;
+declare function ServerAccountBeep(data: ServerAccountBeepResponse): void;
 /** Draws the last beep sent by the server if the timer is still valid, used during the drawing process */
 declare function ServerDrawBeep(): void;
 /** Handles a click on the beep rectangle if mail is included */
@@ -217,15 +233,16 @@ declare var ServerAccountPasswordRegex: RegExp;
 declare var ServerAccountResetNumberRegex: RegExp;
 declare var ServerCharacterNameRegex: RegExp;
 declare var ServerCharacterNicknameRegex: RegExp;
+declare var ServerChatMessageMaxLength: number;
 declare const ServerScriptMessage: string;
 declare const ServerScriptWarningStyle: string;
 /** @readonly */
 declare var ServerAccountUpdate: {
     /**
      * @private
-     * @type {Map<string, object>}
+     * @type {Map<keyof ServerAccountUpdateRequest, any>}
      */
-    Queue: Map<string, object>;
+    Queue: Map<keyof ServerAccountUpdateRequest, any>;
     /**
      * @private
      * @type {null | ReturnType<typeof setTimeout>}
@@ -240,11 +257,19 @@ declare var ServerAccountUpdate: {
     SyncToServer(): void;
     /**
      * Queues a data to be synced at a later time
-     * @param {object} Data
-     * @param {true} [Force] - force immediate sync to server
+     * @param {ServerAccountUpdateRequest} Data
+     * @param {boolean} [Force] - force immediate sync to server
      */
-    QueueData(Data: object, Force?: true): void;
+    QueueData(Data: ServerAccountUpdateRequest, Force?: boolean): void;
 };
+declare namespace ServerPlayerChatRoom {
+    let callbacks: ((screen: string) => boolean)[];
+    /**
+     * Register one or more screenname and/or callback for determining whether the player is in a chat room.
+     * @param {ServerChatRoomChecksOptions[]} options
+     */
+    function register(...options: ServerChatRoomChecksOptions[]): void;
+}
 /** Ratelimit: Max number of messages per interval */
 declare var ServerSendRateLimit: number;
 /** Ratelimit: Length of the rate-limit window, in msec */
@@ -260,10 +285,10 @@ declare const ServerSendRateLimitQueue: SendRateLimitQueueItem[];
 /** @type {number[]} */
 declare let ServerSendRateLimitTimes: number[];
 declare namespace ServerAccountDataSyncedValidate {
-    function Title(arg: string, C: Character): TitleName;
+    function Title(arg: Partial<TitleName>, C: Character): Partial<TitleName>;
     function Nickname(arg: string, C: Character): string;
-    function ItemPermission(arg: number, C: Character): 0 | 2 | 1 | 3 | 4 | 5;
-    function ArousalSettings(arg: Partial<any>, C: Character): {
+    function ItemPermission(arg: Partial<0 | 2 | 1 | 3 | 4 | 5>, C: Character): 0 | 2 | 1 | 3 | 4 | 5;
+    function ArousalSettings(arg: Partial<ArousalSettingsType>, C: Character): {
         Active: ArousalActiveName;
         Visible: ArousalVisibleName;
         ShowOtherMeter: boolean;
@@ -274,29 +299,26 @@ declare namespace ServerAccountDataSyncedValidate {
         VFXFilter: SettingsVFXFilterName;
         Progress: number;
         ProgressTimer: number;
-        VibratorLevel: 0 | 2 | 1 | 3 | 4;
+        VibratorLevel: 0 | 1 | 2 | 3 | 4;
         ChangeTime: number;
-        Activity: ActivityEnjoyment[];
-        Zone: ArousalZone[];
-        Fetish: ArousalFetish[];
+        Activity: string;
+        Zone: string;
+        Fetish: string;
         OrgasmTimer: number;
-        OrgasmStage: 0 | 2 | 1;
+        OrgasmStage: 0 | 1 | 2;
         OrgasmCount: number;
         DisableAdvancedVibes: boolean;
     };
-    function OnlineSharedSettings(arg: Partial<any>, C: Character): {
+    function OnlineSharedSettings(arg: Partial<CharacterOnlineSharedSettings>, C: Character): {
         AllowFullWardrobeAccess: boolean;
         BlockBodyCosplay: boolean;
         AllowPlayerLeashing: boolean;
+        AllowRename: boolean;
         DisablePickingLocksOnSelf: boolean;
         GameVersion: string;
         ItemsAffectExpressions: boolean;
         ScriptPermissions: ScriptPermissions;
         WheelFortune: string;
-    };
-    function MapData(arg: Partial<ChatRoomMapData>, C: Character): {
-        X: any;
-        Y: any;
     };
     function Crafting(arg: string, C: Character): CraftingItem[];
     function Game(arg: Partial<CharacterGameParameters>, C: Character): {
@@ -317,12 +339,9 @@ declare namespace ServerAccountDataSyncedValidate {
     };
     function Lovership(arg: ServerLovership[], C: Character): Lovership[];
     function Reputation(arg: {
-        Type: string;
+        Type: ReputationType;
         Value: number;
     }[], C: Character): Reputation[];
-    function BlockItems(arg: any[], C: Character): ItemPermissions[];
-    function LimitedItems(arg: any[], C: Character): ItemPermissions[];
-    function FavoriteItems(arg: any[], C: Character): ItemPermissions[];
     function WhiteList(arg: number[], C: Character): number[];
     function BlackList(arg: number[], C: Character): number[];
 }
@@ -331,6 +350,10 @@ declare namespace ServerAccountDataSyncedValidate {
  * for appearance items.
  */
 type AppearanceDiffMap = Partial<Record<AssetGroupName, Item[]>>;
+type ServerChatRoomChecksOptions = {
+    screen?: string;
+    callback?: () => boolean;
+};
 /**
  * Queued messages waiting to be sent
  */

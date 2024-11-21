@@ -9,14 +9,22 @@ declare function GetUpEnd(Victory: boolean): void;
  * @returns {void} - Nothing
  */
 declare function GetUpLoad(): void;
-declare function GetUpPhysics(delta: any): void;
+/**
+ * @param {number} delta
+ */
+declare function GetUpPhysics(delta: number): void;
 /**
  * Runs the get up mini game and draws the characters and items on screen
  * @returns {void} - Nothing
  */
 declare function GetUpRun(): void;
 /**
- * Validates the clicks during the horse walk mini game for mobile, moves the character and validates touched items
+ * Handles mouse click events for the get up mini game
+ * @returns {void} - Nothing
+ */
+declare function GetUpMouseDown(): void;
+/**
+ * Handles mouse click events for the get up mini game
  * @returns {void} - Nothing
  */
 declare function GetUpClick(): void;

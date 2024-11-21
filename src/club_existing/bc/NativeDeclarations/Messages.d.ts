@@ -7,11 +7,12 @@ interface ServerAccountImmutableData {
 	ID: string;
 	MemberNumber: MemberNumber;
 	Name: string;
+	AccountName: string;
 	Creation: number;
 	Ownership?: ServerOwnership;
 	Lovership?: ServerLovership[];
-	ActivePose?: readonly string[];
-	Pose?: any;
+	ActivePose?: readonly AssetPoseName[];
+	Pose?: readonly AssetPoseName[];
 }
 
 interface ServerAccountData extends ServerAccountImmutableData {
@@ -21,48 +22,138 @@ interface ServerAccountData extends ServerAccountImmutableData {
 	 */
 	Lover?: string;
 	Money: number;
-	Log?: any;
+	Log?: LogRecord[];
 	GhostList?: MemberNumber[];
 	BlackList: MemberNumber[];
 	FriendList: MemberNumber[];
 	WhiteList: MemberNumber[];
-	ItemPermission: number;
-	Skill?: any;
-	Reputation?: { Type: string, Value: number }[];
-	Wardrobe?: any;
-	WardrobeCharacterNames?: any;
-	ChatSettings?: any;
-	VisualSettings?: any;
-	AudioSettings?: any;
-	GameplaySettings?: any;
-	ArousalSettings?: any;
-	OnlineSharedSettings?: any;
+	ItemPermission: 0 | 1 | 2 | 3 | 4 | 5;
+	Skill?: Skill[];
+	Reputation?: { Type: ReputationType, Value: number }[];
+	Wardrobe?: string;
+	WardrobeCharacterNames?: string[];
+	ChatSettings?: ChatSettingsType;
+	VisualSettings?: VisualSettingsType;
+	AudioSettings?: AudioSettingsType;
+	GameplaySettings?: GameplaySettingsType;
+	ArousalSettings?: ArousalSettingsType;
+	OnlineSharedSettings?: CharacterOnlineSharedSettings;
 	Game?: CharacterGameParameters;
 	LabelColor?: string;
 	Appearance?: ServerAppearanceBundle;
 	Description?: string;
-	BlockItems?: any[];
-	LimitedItems?: any[];
-	FavoriteItems?: any[];
-	HiddenItems?: any;
-	Title?: string;
+	BlockItems?: ServerItemPermissionsPacked | ServerItemPermissions[];
+	LimitedItems?: ServerItemPermissionsPacked | ServerItemPermissions[];
+	FavoriteItems?: ServerItemPermissionsPacked | ServerItemPermissions[];
+	HiddenItems?: ServerItemPermissions[];
+	Title?: TitleName;
 	Nickname?: string;
 	Crafting?: string;
-	Inventory?: string;
+	/** String-based values have been deprecated as of BondageProjects/Bondage-College#2138 */
+	Inventory?: string | Partial<Record<AssetGroupName, string[]>>;
+	InventoryData?: string;
 	AssetFamily?: "Female3DCG";
-	Infiltration?: object; /* PlayerCharacter.Infiltration */
-	SavedColors?: object[]; /* HSVColor[] */
+	Infiltration?: InfiltrationType;
+	SavedColors?: HSVColor[];
 	ChatSearchFilterTerms?: string;
 	Difficulty?: { Level: number; LastChange: number };
 	MapData?: ChatRoomMapData;
+	PrivateCharacter?: ServerPrivateCharacterData[];
+	SavedExpressions?: ({ Group: ExpressionGroupName, CurrentExpression?: ExpressionName }[] | null)[];
+	ConfiscatedItems?: { Group: AssetGroupName, Name: string }[];
+	RoomCreateLanguage?: ServerChatRoomLanguage;
+	RoomSearchLanguage?: "" | ServerChatRoomLanguage;
+	LastMapData?: null | ChatRoomMapData;
+	// Unfortunately can't @deprecated individual union members
+	/** String-based values have been deprecated and are superseded by {@link ServerChatRoomSettings} objects */
+	LastChatRoom?: null | ServerChatRoomSettings | string;
+	/** @deprecated superseded by the {@link ServerAccountData.LastChatRoom} object */
+	LastChatRoomDesc?: string;
+	/** @deprecated superseded by the {@link ServerAccountData.LastChatRoom} object */
+	LastChatRoomAdmin?: string;
+	/** @deprecated superseded by the {@link ServerAccountData.LastChatRoom} object */
+	LastChatRoomBan?: string;
+	/** @deprecated superseded by the {@link ServerAccountData.LastChatRoom} object */
+	LastChatRoomBG?: string;
+	/** @deprecated superseded by the {@link ServerAccountData.LastChatRoom} object */
+	LastChatRoomSize?: number;
+	/** @deprecated superseded by the {@link ServerAccountData.LastChatRoom} object */
+	LastChatRoomPrivate?: boolean;
+	/** @deprecated superseded by the {@link ServerAccountData.LastChatRoom} object */
+	LastChatRoomBlockCategory?: ServerChatRoomBlockCategory[];
+	/** @deprecated superseded by the {@link ServerAccountData.LastChatRoom} object */
+	LastChatRoomSpace?: ServerChatRoomSpace;
+	/** @deprecated superseded by the {@link ServerAccountData.LastChatRoom} object */
+	LastChatRoomLanguage?: ServerChatRoomLanguage;
+	/** @deprecated superseded by the {@link ServerAccountData.LastChatRoom} object */
+	LastChatRoomCustom?: ServerChatRoomData["Custom"];
+	/** @deprecated superseded by the {@link ServerAccountData.LastChatRoom} object */
+	LastChatRoomMapData?: ServerChatRoomMapData;
+	ControllerSettings?: ControllerSettingsType;
+	ImmersionSettings?: ImmersionSettingsType;
+	RestrictionSettings?: RestrictionSettingsType;
+	OnlineSettings?: PlayerOnlineSettings;
+	GraphicsSettings?: GraphicsSettingsType;
+	NotificationSettings?: NotificationSettingsType;
+	GenderSettings?: GenderSettingsType;
+	ExtensionSettings?: ExtensionSettings;
+	FriendNames?: string;
+	SubmissivesList?: string;
+	KinkyDungeonExploredLore?: unknown[];
 }
+
+// TODO: Add `Lover` after figuring out why {@link ServerPlayerSync} still passes this field to the server
+/** A union of all deprecated {@link ServerAccountData} fields */
+type ServerAccountDataDeprecations = (
+	"LastChatRoomDesc"
+	| "LastChatRoomAdmin"
+	| "LastChatRoomBan"
+	| "LastChatRoomBG"
+	| "LastChatRoomSize"
+	| "LastChatRoomPrivate"
+	| "LastChatRoomBlockCategory"
+	| "LastChatRoomSpace"
+	| "LastChatRoomLanguage"
+	| "LastChatRoomCustom"
+	| "LastChatRoomMapData"
+);
+
+/**
+ * A {@link ServerAccountData} variant with all deprecated members set to `never`.
+ *
+ * Use of this type over {@link ServerAccountData} is recommended when sending data *to* the server.
+ */
+type ServerAccountDataNoDeprecated = ServerAccountData & { [k in ServerAccountDataDeprecations]?: never } & {
+	// Fields with one or more deprecated union members removed
+	LastChatRoom?: null | ServerChatRoomSettings;
+	Inventory?: Partial<Record<AssetGroupName, string[]>>;
+};
+
+/**
+ * A struct for representing an item with special permissions (limited, favorited, etc) in the server.
+ * @see {@link ServerItemPermissionsPacked}
+ */
+interface ServerItemPermissions {
+	/** The {@link Asset.Name} of the item */
+	Name: string;
+	/** The {@link AssetGroup.Name} of the item */
+	Group: AssetGroupName;
+	/**
+	 * Either the item's {@link ItemProperties.Type} or, in the case of modular items,
+	 * a substring thereof denoting the type of a single module
+	 */
+	Type?: string | null;
+}
+
+/** A packed record-based version of {@link ServerItemPermissions}. */
+type ServerItemPermissionsPacked = Partial<Record<AssetGroupName, Record<string, (undefined | null | string)[]>>>;
 
 interface ServerMapDataResponse {
 	MemberNumber: number;
 	MapData: ChatRoomMapPos;
 }
 
-type ServerAccountDataSynced = Omit<ServerAccountData, "Money" | "FriendList">;
+type ServerAccountDataSynced = Omit<ServerAccountData, "Money" | "FriendList" | "AccountName">;
 
 interface ServerOwnership {
 	MemberNumber?: number;
@@ -93,11 +184,27 @@ interface ServerItemBundle {
 	Craft?: CraftingItem;
 }
 
+interface ServerPrivateCharacterData {
+	Name: string;
+	Love: number;
+	Title: TitleName;
+	Trait: NPCTrait[];
+	Cage: boolean;
+	Owner: string;
+	Lover: string;
+	AssetFamily: "Female3DCG";
+	Appearance: ServerAppearanceBundle;
+	AppearanceFull: ServerAppearanceBundle;
+	ArousalSettings: ArousalSettingsType;
+	Event: NPCTrait[];
+	FromPandora?: boolean;
+}
+
 /** An AppearanceBundle is whole minified appearance of a character */
 type ServerAppearanceBundle = ServerItemBundle[];
 
 type ServerChatRoomSpace = "X" | "" | "M" | "Asylum";
-type ServerChatRoomLanguage = "EN" | "DE" | "FR" | "ES" | "CN" | "RU";
+type ServerChatRoomLanguage = "EN" | "DE" | "FR" | "ES" | "CN" | "RU" | "UA";
 type ServerChatRoomGame = "" | "ClubCard" | "LARP" | "MagicBattle" | "GGTS";
 type ServerChatRoomBlockCategory =
 	/** Those are known as AssetCategory to the client */
@@ -125,18 +232,22 @@ type ServerChatRoomData = {
 	Language: ServerChatRoomLanguage;
 	Space: ServerChatRoomSpace;
 	MapData?: ServerChatRoomMapData;
-	Custom: {
-		ImageURL?: string;
-		ImageFilter?: string;
-		MusicURL?: string;
-	};
+	Custom: ServerChatRoomCustomData;
 	Character: ServerAccountDataSynced[];
 }
 
 interface ServerChatRoomMapData {
 	Type: string;
+	Fog?: boolean;
 	Tiles: string;
 	Objects: string;
+}
+
+interface ServerChatRoomCustomData {
+	ImageURL?: string;
+	ImageFilter?: string;
+	MusicURL?: string;
+	SizeMode?: number
 }
 
 /**
@@ -194,7 +305,7 @@ interface ServerInfoMessage {
 
 type ServerForceDisconnectMessage = "ErrorRateLimited" | "ErrorDuplicatedLogin";
 
-interface ServerAccountUpdateRequest extends Partial<ServerAccountData> {}
+interface ServerAccountUpdateRequest extends Partial<ServerAccountDataNoDeprecated> {}
 
 interface ServerAccountUpdateEmailRequest {
 	EmailOld: string;
@@ -612,6 +723,17 @@ interface ActivityNameDictionaryEntry {
 	ActivityName: ActivityName;
 }
 
+/**
+ * A dictionary entry with metadata about the chat message transmitted.
+ *
+ * Send with Chat and Whisper-type messages to inform the other side about the
+ * garbling and potentially ungarbled string if provided.
+ */
+interface MessageEffectEntry {
+	Effects: SpeechTransformName[];
+	Original: string;
+}
+
 type ChatMessageDictionaryEntry =
 	| CharacterReferenceDictionaryEntry
 	| SourceCharacterDictionaryEntry
@@ -628,6 +750,7 @@ type ChatMessageDictionaryEntry =
 	| ActivityCounterDictionaryEntry
 	| AssetGroupNameDictionaryEntry
 	| ActivityNameDictionaryEntry
+	| MessageEffectEntry
 	| LSCGMessageDictionaryEntry;
 
 type ChatMessageDictionary = ChatMessageDictionaryEntry[];

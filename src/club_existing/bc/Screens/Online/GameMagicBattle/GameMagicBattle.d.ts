@@ -5,10 +5,10 @@
 declare function GameMagicBattleGetStatus(): OnlineGameStatus;
 /**
  * Set the current state of LARP.
- * @param {OnlineGameStatus} s
+ * @param {OnlineGameStatus} NewStatus
  * @returns {void}
  */
-declare function GameMagicBattleSetStatus(s: OnlineGameStatus): void;
+declare function GameMagicBattleSetStatus(NewStatus: OnlineGameStatus): void;
 /**
  * Checks if the character is an admin while the game is going.
  * @param {Character} C - Character to check for

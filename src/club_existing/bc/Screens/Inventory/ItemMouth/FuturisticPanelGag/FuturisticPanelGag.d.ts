@@ -12,6 +12,7 @@ declare function InventoryItemMouthFuturisticPanelGagSetOptionHook(data: Modular
 declare function InventoryItemMouthFuturisticPanelGagPublishActionTrigger(C: Character, Item: Item, OptionName: string, Deflate: boolean): void;
 /**
  * Helper function for handling automatic gag inflation and deflation.
+ * @param {ModularItemData} data
  * @param {Character} C - The selected character
  * @param {Item} Item - The item in question
  * @param {ModularItemOption} previousOption
@@ -19,7 +20,7 @@ declare function InventoryItemMouthFuturisticPanelGagPublishActionTrigger(C: Cha
  * @param {boolean} Deflate - Whether this function is triggered by an automatic deflation or not
  * @returns {ModularItemOption}
  */
-declare function InventoryItemMouthFuturisticPanelGagTriggerGetOptions(C: Character, Item: Item, previousOption: ModularItemOption, module: ModularItemModule, Deflate: boolean): ModularItemOption;
+declare function InventoryItemMouthFuturisticPanelGagTriggerGetOptions(data: ModularItemData, C: Character, Item: Item, previousOption: ModularItemOption, module: ModularItemModule, Deflate: boolean): ModularItemOption;
 /**
  * Helper function for handling automatic gag inflation and deflation.
  * @param {ModularItemData} data

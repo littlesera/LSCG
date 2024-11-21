@@ -44,6 +44,7 @@ export class MagicModule extends BaseModule {
         return <MagicSettingsModel>{
             enabled: false,
             blockedSpellEffects: [],
+            bypassForSelfEffects: [],
             enableWildMagic: false,
             forceWildMagic: false,
             trueWildMagic: false,
@@ -303,7 +304,10 @@ export class MagicModule extends BaseModule {
     DrawSpellMenu() {
         if (!CurrentCharacter)
             return this.CloseSpellMenu();
-        let blockedSpellEffects = (CurrentCharacter as any).LSCG?.MagicModule?.blockedSpellEffects ?? [];
+        let blockedSpellEffects = ((CurrentCharacter as any).LSCG?.MagicModule?.blockedSpellEffects ?? []).filter((effect: LSCGSpellEffect) => {
+            let bypassed = (CurrentCharacter?.IsPlayer() && (CurrentCharacter.LSCG?.MagicModule?.bypassForSelfEffects ?? []).indexOf(effect) > -1);
+            return !bypassed;
+        });
 
         let toolbarY = this.boxDimensions.y + 5;
         let toolbarRight = this.boxDimensions.x + this.boxDimensions.width - 5;
@@ -592,10 +596,20 @@ export class MagicModule extends BaseModule {
         }, 1000); // Slight delay on responding to spell commands, builds anticipation.
     }
 
+    filterAllowedSpellEffects(spell: SpellDefinition, caster: Character | null): LSCGSpellEffect[] {
+        return spell.Effects.filter(effect => this.effectIsAllowed(effect, caster));
+    }
+
+    effectIsAllowed(effect: LSCGSpellEffect, caster: Character | null): boolean {
+        let isBlocked = this.settings.blockedSpellEffects.indexOf(effect) > -1;
+        let isBypassed = (caster?.IsPlayer() ?? false) && this.settings.bypassForSelfEffects.indexOf(effect) > -1;
+        return (!isBlocked || isBypassed);
+    }
+
     IncomingSpell(sender: Character | null, spell: SpellDefinition, paired?: Character | null, saveDiff: number = 1) {
         let senderName = !sender ? "Someone" : CharacterNickname(sender);
         let pairedName = !paired ? "someone else" : CharacterNickname(paired);
-        let allowedSpellEffects = spell.Effects.filter(effect => this.settings.blockedSpellEffects.indexOf(effect) == -1);
+        let allowedSpellEffects = this.filterAllowedSpellEffects(spell, sender);
         if (allowedSpellEffects.length <= 0) {
             SendAction(`${senderName}'s ${spell.Name} fizzles when cast on %NAME%, none of its effects allowed to take hold.`);
             return;
@@ -733,7 +747,7 @@ export class MagicModule extends BaseModule {
     IncomingSpellPair(sender: Character | null, spellEffect: LSCGSpellEffect, originalTarget: Character, pairType: LSCGState) {
         let senderName = !sender ? "Someone" : CharacterNickname(sender);
         let originalTargetName = CharacterNickname(originalTarget);
-        let isAllowed = this.settings.blockedSpellEffects.indexOf(spellEffect) == -1;
+        let isAllowed = this.effectIsAllowed(spellEffect, sender);
 
         if (!isAllowed) {
             SendAction(`${senderName}'s paired spell fizzles as it attempts to pair with %NAME%.`);

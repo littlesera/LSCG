@@ -1,5 +1,3 @@
-declare const LZString: import("lz-string").LZStringStatic;
-
 interface PlayerCharacter extends Character {
     LSCG: import("Settings/Models/settings").SettingsModel;
 }
@@ -29,9 +27,9 @@ interface CommonGenerateGridParameters {
     itemHeight: number
 }
 
-type LSCGMessageModelType = "init" | "sync" | "command";
+type LSCGMessageModelType = "init" | "sync" | "command" | "broadcast";
 
-type LSCGCommandName = "debug" | "grab" | "release" | "remote" | "escape" | "collar-tighten" | "collar-loosen" | "collar-stats" | "photo" | "spell" | "spell-teach" | "pair" | "unpair" | "pairing-update" | "get-spell" | "get-spell-response" | "get-suggestions" | "get-suggestions-response" | "set-suggestions" | "add-leashing" | "remove-leashing";
+type LSCGCommandName = "debug" | "grab" | "release" | "remote" | "escape" | "collar-tighten" | "collar-loosen" | "collar-stats" | "photo" | "spell" | "spell-teach" | "pair" | "unpair" | "pairing-update" | "get-spell" | "get-spell-response" | "get-suggestions" | "get-suggestions-response" | "set-suggestions" | "add-leashing" | "remove-leashing" | "craft-share";
 
 type LSCGState = "none" | "hypnotized" | "asleep" | "horny" | "choking" | "held" | "blind" | "deaf" | "frozen" | "gagged" | "redressed" | "arousal-paired" | "orgasm-siphoned" | "leashed" | "resized" | "buffed" | "polymorphed" | "x-ray-vision" | "denied";
 

@@ -10,15 +10,9 @@ declare function ShopIsVendorRestrained(): boolean;
  */
 declare function ShopIsRescueScenario(ScenarioName: string): boolean;
 /**
- * Activates the mode which allows the player to buy the items that appear in the inventory screen
- * @returns {void} - Nothing
+ * Entry point for accessing the actual shop from the NPC dialog menu
  */
-declare function ShopSetBuyMode(): void;
-/**
- * Activates the mode which allows the player to sell the items that appear in the inventory screen
- * @returns {void} - Nothing
- */
-declare function ShopSetSellMode(): void;
+declare function ShopEnter(): void;
 /**
  * Loads the shop room and its NPC
  * @returns {void} - Nothing
@@ -29,13 +23,6 @@ declare function ShopLoad(): void;
  * @returns {void} - Nothing
  */
 declare function ShopRun(): void;
-/**
- * Checks if an asset is from the focus group and if it can be bought/sold. An asset can be bought/sold if it has a value greater than
- * 0. (0 is a default item, -1 is a non-purchasable item)
- * @param {Asset} Asset - The asset to check for availability
- * @returns {boolean} - Returns TRUE if the item is purchasable and part of the focus group.
- */
-declare function ShopAssetFocusGroup(Asset: Asset): boolean;
 /**
  * Checks if an asset can be bought. An asset is considered missing if it is not owned and has a value greater than 0. (0 is a default
  * item, -1 is a non-purchasable item)
@@ -50,48 +37,10 @@ declare function ShopAssetMissing(Asset: Asset): boolean;
  */
 declare function ShopHideGenderedAsset(Asset: Asset): boolean;
 /**
- * Used to display all the items the player does not own
- * @returns {void} - Nothing
- */
-declare function ShopSelectAssetMissing(): void;
-/**
  * Click handler for the shop screen
  * @returns {void} - Nothing
  */
 declare function ShopClick(): void;
-/**
- * Add the item and any other items linked by the buy-group to the player's inventory if able
- * @param {Asset} asset - The item being bought
- */
-declare function ShopBuyItem(asset: Asset): void;
-/**
- * Remove the item and any other items linked by the buy-group from the player's inventory
- * @param {Asset} asset - The item being sold
- */
-declare function ShopSellItem(asset: Asset): void;
-/**
- * Builds the array of items the player can buy in the current category.
- * @returns {void} - Nothing
- */
-declare function ShopCartBuild(): void;
-/**
- * If selling items, checks whether the player owns any items in the specified groups that can be sold
- * @param {string} groupList - The list of groups to check, with separator "|"
- * @returns {boolean} - If TRUE the player is either buying items or owns at least one item in one of the groups
- */
-declare function ShopCanShow(groupList: string): boolean;
-/**
- * Returns whether the player is able to sell the item back to the shop
- * @param {Asset} asset - The item to check
- * @returns {boolean} - If TRUE the item can be sold
- */
-declare function ShopCanSell(asset: Asset): boolean;
-/**
- * Sets the current asset group the player is shopping for
- * @param {AssetGroupItemName} ItemGroup - Name of the asset group to look for
- * @returns {void} - Nothing
- */
-declare function ShopStart(ItemGroup: AssetGroupItemName): void;
 /**
  * Triggered when the player rescues the shop vendor
  * @returns {void} - Nothing
@@ -136,27 +85,10 @@ declare var ShopVendor: null | NPCCharacter;
 declare var ShopCustomer: null | NPCCharacter;
 declare var ShopVendorAllowItem: boolean;
 declare var ShopBoughtEverything: boolean;
-declare var ShopStarted: boolean;
-declare var ShopText: string;
 declare var ShopRescueScenario: string;
 declare var ShopRescueScenarioList: string[];
-declare var ShopItemOffset: number;
 declare var ShopDemoItemPayment: number;
 /** @type {"" | AssetGroupItemName} */
 declare var ShopDemoItemGroup: "" | AssetGroupItemName;
 /** @type {AssetGroupItemName[]} */
 declare var ShopDemoItemGroupList: AssetGroupItemName[];
-/**
- * Checks if an asset is from the focus group and if it can be bought/sold. An asset can be bought/sold if it has a value greater than
- * 0. (0 is a default item, -1 is a non-purchasable item)
- * @param {Asset} Asset - The asset to check for availability
- * @returns {boolean} - Returns TRUE if the item is purchasable and part of the focus group.
- */
-declare function ShopSelectAsset(Asset: Asset): boolean;
-/** @type {Asset[]} */
-declare var ShopCart: Asset[];
-declare var ShopBuyMode: boolean;
-declare var ShopSellExceptions: {
-    Name: string;
-    Group: string;
-}[];

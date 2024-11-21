@@ -18,11 +18,7 @@ declare function SlaveAuctionRun(): void;
  * @returns {void} - Nothing
  */
 declare function SlaveAuctionClick(): void;
-/**
- * Handles the key press in the slave auction mini game, the C cheat key removes $50 from the current bid in progress
- * @returns {void} - Nothing
- */
-declare function SlaveAuctionKeyDown(): void;
+declare function SlaveAuctionKeyDown(event: KeyboardEvent): boolean;
 declare var SlaveAuctionBackground: string;
 /** @type {null | NPCCharacter} */
 declare var SlaveAuctionVendor: null | NPCCharacter;
