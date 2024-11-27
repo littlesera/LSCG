@@ -22,6 +22,7 @@ export enum LSCGSpellEffect {
     dispell = "Dispell",
     xRay = "X-Ray Vision",
     barrier = "Magic Barrier",
+    disarm = "Disarming",
     denial = "Denying",
     orgasm = "Forced Orgasm"
 }

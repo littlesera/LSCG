@@ -739,6 +739,8 @@ export class GuiMagic extends GuiSubscreen {
 				return "Grants the target X-Ray vision";
 			case LSCGSpellEffect.barrier:
 				return "Create a magic barrier that protect and reflect incoming spell";
+			case LSCGSpellEffect.disarm:
+				return "Disarm the target";
 			case LSCGSpellEffect.none:
 			default:
 				return ""			;

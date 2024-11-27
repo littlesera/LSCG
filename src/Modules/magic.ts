@@ -721,6 +721,23 @@ export class MagicModule extends BaseModule {
                     case LSCGSpellEffect.barrier:
                         state = this.stateModule.BarrierState.Barrier(sender?.MemberNumber, true, duration);
                         break;
+                    case LSCGSpellEffect.disarm:
+                        var handItem = InventoryGet(Player, "ItemHandheld");
+                        if (!handItem) {
+                            SendAction(`The spell has no effect as %NAME%'s hand are already empty.`);
+                            break;
+                        }
+                        var validParams = ValidationCreateDiffParams(Player, sender?.MemberNumber!);
+                        if (ValidationCanRemoveItem(handItem, validParams, false)) {
+                            InventoryRemove(Player, "ItemHandheld", true);
+                            CharacterRefresh(Player, true);
+                            ChatRoomCharacterUpdate(Player);
+                            SendAction(`%NAME% squirms as the item in %POSSESSIVE% hand get ejected away by magic.`);
+                        }
+                        else {
+                            SendAction(`The spell was not strong enough to disarm %NAME%.`);
+                        }
+                        break;
                     case LSCGSpellEffect.outfit:
                         if (!!spell.Outfit?.Code) {
                             this.stateModule.GaggedState.Active ? 
