@@ -196,23 +196,13 @@ export class ActivityModule extends BaseModule {
                 return next(args);
             }, ModuleCategory.Activities);
         } else { // R111
-            hookFunction("DialogMenuMapping.activities.Reload", 0, (args, next) => {
-                return next(args).then((status: boolean) => {
-                    if (!status || !args[2]?.reset) {
-                        return status;
-                    }
-
-                    const grid = document.getElementById(DialogMenuMapping.activities.ids.grid);
-                    (grid?.querySelectorAll("img.button-image[src*='LSCG']") as NodeListOf<HTMLImageElement>).forEach(img => {
-                        let activityName = img.src.substring(img.src.indexOf("LSCG_"));
-                        activityName = activityName.substring(0, activityName.indexOf(".png"));
-                        const src = this.CustomImages.get(activityName);
-                        if (src) {
-                            img.src = src;
-                        }
-                    });
-                    return status;
-                });
+            hookFunction("ElementButton.CreateForActivity", 0, (args, next) => {
+                const activity: ItemActivity = args[1];
+                if (activity.Activity.Name.includes("LSCG")) {
+                    args[4] ??= {}; // null | { image?: string }
+                    args[4].image = this.CustomImages.get(activity.Activity.Name);
+                }
+                return next(args);
             });
         }
 
