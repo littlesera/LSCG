@@ -250,6 +250,11 @@ export class OpacityModule extends BaseModule {
                     if (overrideOpacity !== undefined) {
                         ret.Opacity = Math.max((ret.Opacity ?? Property.Opacity ?? 1), (overrideOpacity ?? originalLayerOpacity ?? 1));
                     }
+
+                    let xOverride = Property?.LayerOverrides?.[layerIx]?.DrawingLeft?.[PoseType.DEFAULT] ?? undefined;
+                    let yOverride = Property?.LayerOverrides?.[layerIx]?.DrawingTop?.[PoseType.DEFAULT] ?? undefined;
+                    if (!!xOverride) ret.X = xOverride;
+                    if (!!yOverride) ret.Y = yOverride + CanvasUpperOverflow;
                 }
                 return ret
             } else
@@ -272,35 +277,35 @@ export class OpacityModule extends BaseModule {
             return next(args);
         }, ModuleCategory.Opacity);
 
-        hookFunction("AppearanceItemParse", 1, (args, next) => {
-            if (!this.Enabled)
-                return next(args);
+        // hookFunction("AppearanceItemParse", 1, (args, next) => {
+        //     if (!this.Enabled)
+        //         return next(args);
                 
-            let stringified = args[0];
-            let tempAppearance = JSON.parse(stringified) as Item[] | Item;
-            let propertiesByAsset = new Map<string, any>();
-            if (Array.isArray(tempAppearance))
-                tempAppearance.forEach(item => propertiesByAsset.set((<any>item.Asset as string), item.Property));
-            else {
-                propertiesByAsset.set((<any>tempAppearance.Asset as string), tempAppearance.Property)
-            }
-            return JSON.parse(stringified, (key: string, value: any) =>                                                                                                  {
-                if (key === "Asset") {
-                    const FGA = value.split("/");
-                    let asset = AssetGet(FGA[0], FGA[1], FGA[2]); // make our own copy of asset obj
-                    let layerOverrides = propertiesByAsset.get(value)?.LayerOverrides ?? undefined;
-                    if (!!asset && !!layerOverrides) {
-                        (<any>asset).BackupLayer = Object.assign({}, asset.Layer);
-                        asset.Layer.forEach((layer, ix, arr) => {
-                            let overrides = layerOverrides[ix];
-                            if (!!overrides) Object.assign(layer, overrides);
-                        });
-                    }
-                    return asset;
-                }
-                return value;
-            });
-        }, ModuleCategory.Opacity);
+        //     let stringified = args[0];
+        //     let tempAppearance = JSON.parse(stringified) as Item[] | Item;
+        //     let propertiesByAsset = new Map<string, any>();
+        //     if (Array.isArray(tempAppearance))
+        //         tempAppearance.forEach(item => propertiesByAsset.set((<any>item.Asset as string), item.Property));
+        //     else {
+        //         propertiesByAsset.set((<any>tempAppearance.Asset as string), tempAppearance.Property)
+        //     }
+        //     return JSON.parse(stringified, (key: string, value: any) =>                                                                                                  {
+        //         if (key === "Asset") {
+        //             const FGA = value.split("/");
+        //             let asset = AssetGet(FGA[0], FGA[1], FGA[2]); // make our own copy of asset obj
+        //             let layerOverrides = propertiesByAsset.get(value)?.LayerOverrides ?? undefined;
+        //             if (!!asset && !!layerOverrides) {
+        //                 (<any>asset).BackupLayer = Object.assign({}, asset.Layer);
+        //                 asset.Layer.forEach((layer, ix, arr) => {
+        //                     let overrides = layerOverrides[ix];
+        //                     if (!!overrides) Object.assign(layer, overrides);
+        //                 });
+        //             }
+        //             return asset;
+        //         }
+        //         return value;
+        //     });
+        // }, ModuleCategory.Opacity);
 
         hookFunction("CharacterAppearanceSortLayers", 1, (args, next) => {
             let C = args[0] as OtherCharacter;
@@ -576,7 +581,7 @@ export class OpacityModule extends BaseModule {
         if (!origAsset)
             origAsset = Object.assign({}, asset);
         let assetLayer = origAsset.Layer[Math.max(this.SelectedTranslationLayer, 0)];
-        let layer: any = (<PropertiesWithLayerOverrides>this.OpacityItem.Property)?.LayerOverrides[Math.max(this.SelectedTranslationLayer, 0)] ?? undefined;
+        let layer: any = (<PropertiesWithLayerOverrides>this.OpacityItem?.Property)?.LayerOverrides?.[Math.max(this.SelectedTranslationLayer, 0)] ?? undefined;
         if (!layer)
             layer = assetLayer;
         let x = (layer["DrawingLeft"] ? layer["DrawingLeft"][PoseType.DEFAULT] : assetLayer["DrawingLeft"][PoseType.DEFAULT]) ?? assetLayer["DrawingLeft"][PoseType.DEFAULT];
