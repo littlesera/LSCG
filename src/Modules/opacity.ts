@@ -135,6 +135,7 @@ export class OpacityModule extends BaseModule {
         }, ModuleCategory.Opacity);
 
         hookFunction("ItemColorDraw", 1, (args, next) => {
+            mouseTooltip(`${MouseX}, ${MouseY}`, MouseX, MouseY, 2000, 1000);
             if (this.OpacityCharacter && this.OpacityItem && isCloth(this.OpacityItem)) {
                 let prev = MainCanvas.textAlign;
                 MainCanvas.textAlign = "left";
@@ -145,25 +146,27 @@ export class OpacityModule extends BaseModule {
                         DrawCheckbox(50, 120 - 32, 64, 64, "", this.opacityAllLayer, this.TranslationMode || this.OpacityItem.Asset?.Layer.length <= 1);
                         DrawTextFit("All Layers", 120, 120, 300, "White", "Gray");
                         if (MouseIn(50, 120 - 32, 64, 64)) 
-                            drawTooltip(50, 150, 800, "Modify opacity levels for each asset layer", "left");
+                            drawTooltip(50, 20, 800, "Modify opacity levels for each asset layer", "left");
                     }
 
                     // Draw "All Layers" checkbox
                     DrawCheckbox(350, 120 - 32, 64, 64, "", this.OpacityItem?.Property?.LSCGLeadLined ?? false, this.TranslationMode);
                     DrawTextFit("Lead-Lined", 420, 120, 300, "White", "Gray");
                     if (MouseIn(350, 120 - 32, 64, 64)) 
-                        drawTooltip(50, 150, 800, "Line this item with x-ray blocking lead.", "left");
+                        drawTooltip(50, 20, 800, "Line this item with x-ray blocking lead.", "left");
                 }
 
                 // Draw "Translate" checkbox
                 DrawCheckbox(650, 120 - 32, 64, 64, "", this.TranslationMode ?? false);
                 DrawTextFit("Translate", 720, 120, 300, "White", "Gray");
                 if (MouseIn(650, 120 - 32, 64, 64)) 
-                    drawTooltip(50, 150, 800, "Switch to x/y translation mode.", "left");
+                    drawTooltip(50, 20, 800, "Switch to x/y translation mode.", "left");
 
                 if (!!this.OpacityItem && this.TranslationMode) {
-                    DrawButton(1020, 180 - 32, 64, 64, "", "White", undefined, "Reset", false);
-                    DrawImageResize("Icons/Reset.png", 1020, 180 - 32, 64, 64);
+                    DrawTextFit("⬅️ X ➡️", 20, 220, 128, "White", "Black");
+                    DrawTextFit("⬇️ Y ⬆️", 200, 220, 128, "White", "Black");
+                    DrawButton(350, 200 - 32, 64, 64, "", "White", undefined, "Reset Position", false);
+                    DrawImageResize("Icons/Reset.png", 350, 200 - 32, 64, 64);
                     MainCanvas.textAlign = "center";
                     DrawButton(20, 260, 300, 64, "All", this.SelectedTranslationLayer < 0 ? LSCG_TEAL : "White", undefined, undefined, false);
                     if (this.OpacityItem.Asset.Layer.length > 1) {
@@ -211,6 +214,22 @@ export class OpacityModule extends BaseModule {
                     if (MouseIn(20, 260, 300, 64)) {
                         this.SelectedTranslationLayer = -1;
                         this.SetTranslationElementValues();
+                    } else if (MouseIn(25, 200, 35, 35)) { // Left arrow
+                        ElementValue(this.TranslateXElementId, Math.round(parseFloat(ElementValue(this.TranslateXElementId))) - 10 + "");
+                        this._updateTranslationValue(this.TranslateXElementId);
+                        this.UpdatePreview();
+                    } else if (MouseIn(110, 200, 35, 35)) { // Right arrow
+                        ElementValue(this.TranslateXElementId, Math.round(parseFloat(ElementValue(this.TranslateXElementId))) + 10 + "");
+                        this._updateTranslationValue(this.TranslateXElementId);
+                        this.UpdatePreview();
+                    } else if (MouseIn(205, 200, 35, 35)) { // Down arrow
+                        ElementValue(this.TranslateYElementId, Math.round(parseFloat(ElementValue(this.TranslateYElementId))) + 10 + "");
+                        this._updateTranslationValue(this.TranslateYElementId);
+                        this.UpdatePreview();
+                    } else if (MouseIn(290, 200, 35, 35)) { // Up arrow
+                        ElementValue(this.TranslateYElementId, Math.round(parseFloat(ElementValue(this.TranslateYElementId))) - 10 + "");
+                        this._updateTranslationValue(this.TranslateYElementId);
+                        this.UpdatePreview();
                     } else if (MouseIn(1020, 180-32, 64, 64)) {
                         this.ResetTranslation();
                     } else if (this.OpacityItem.Asset.Layer.length > 1) {
@@ -419,8 +438,8 @@ export class OpacityModule extends BaseModule {
         let translationXValue = selectedLayer?.xValue;
         let translationYValue = selectedLayer?.yValue;
 
-        ElementPosition(this.TranslateXElementId, 720, 180, 128, 40);
-        ElementPosition(this.TranslateYElementId, 900, 180, 128, 40);
+        ElementPosition(this.TranslateXElementId, 85, 180, 128, 40);
+        ElementPosition(this.TranslateYElementId, 265, 180, 128, 40);
         ElementValue(this.TranslateXElementId, "" + translationXValue);
         ElementValue(this.TranslateYElementId, "" + translationYValue);
     }
