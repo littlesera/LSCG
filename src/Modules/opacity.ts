@@ -135,7 +135,6 @@ export class OpacityModule extends BaseModule {
         }, ModuleCategory.Opacity);
 
         hookFunction("ItemColorDraw", 1, (args, next) => {
-            mouseTooltip(`${MouseX}, ${MouseY}`, MouseX, MouseY, 2000, 1000);
             if (this.OpacityCharacter && this.OpacityItem && isCloth(this.OpacityItem)) {
                 let prev = MainCanvas.textAlign;
                 MainCanvas.textAlign = "left";
@@ -264,11 +263,6 @@ export class OpacityModule extends BaseModule {
                     if (layerName[0] == '_')
                         layerName = layerName.slice(1);
                     let layerIx = CA.Asset.Layer.findIndex(l => l.Name == layerName);
-                    let originalLayerOpacity = CA.Asset.Layer[layerIx]?.Opacity ?? CA.Asset.Opacity ?? 1;
-                    let overrideOpacity = (Array.isArray(Property?.LSCGOpacity) ? Property?.LSCGOpacity[layerIx] : Property?.LSCGOpacity) ?? undefined;
-                    if (overrideOpacity !== undefined) {
-                        ret.Opacity = Math.max((ret.Opacity ?? Property.Opacity ?? 1), (overrideOpacity ?? originalLayerOpacity ?? 1));
-                    }
 
                     let xOverride = Property?.LayerOverrides?.[layerIx]?.DrawingLeft?.[PoseType.DEFAULT] ?? undefined;
                     let yOverride = Property?.LayerOverrides?.[layerIx]?.DrawingTop?.[PoseType.DEFAULT] ?? undefined;
@@ -657,7 +651,10 @@ export class OpacityModule extends BaseModule {
         if (fromElementId == this.OpacityMainSlider.ElementId || fromElementId == this.OpacityMainSlider.ElementId + "_Text") {
             if (value < 1)
                 this.setOpacity(this.OpacityItem, value);
-            else delete this.OpacityItem.Property.LSCGOpacity;
+            else {
+                delete this.OpacityItem.Property.LSCGOpacity;
+                delete this.OpacityItem.Property.Opacity;
+            }
         } else {
             let opacityArr = this.getOpacity();
             if (!Array.isArray(opacityArr))

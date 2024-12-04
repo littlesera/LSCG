@@ -2431,6 +2431,7 @@ interface ItemPropertiesCustom {
 	PortalLinkCode?: string;
 
 	// Custom LSCG property to override opacity
+	// Deprecated, use Property.Opacity now
 	LSCGOpacity?: number | number[];
 
 	// Custom LSCG property to block xray vision
