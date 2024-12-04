@@ -17,6 +17,9 @@ import { drawTooltip } from "Settings/settingUtils";
 import { GrabType, LeashingModule } from "./leashing";
 import { OpacityMigrator } from "./Migrators/OpacityMigrator";
 
+// >= R111
+declare var DialogMenuMapping: { items: ScreenFunctions & { C: null | Character } };
+
 // Core Module that can handle basic functionality like server handshakes etc.
 export class CoreModule extends BaseModule {
 
@@ -24,7 +27,8 @@ export class CoreModule extends BaseModule {
         x: 1898,
         y: 120,
         width: 40,
-        height: 40
+        height: 40,
+        id: "lscg-share-crafts",
     };
 
     get publicSettings(): IPublicSettingsModel {
@@ -135,38 +139,93 @@ export class CoreModule extends BaseModule {
             }
         }, ModuleCategory.Core);
 
-        hookFunction("DialogDrawItemMenu", 1, (args, next) => {
-            this._drawShareToggleButton(this.toggleSharedButton.x, this.toggleSharedButton.y, this.toggleSharedButton.width, this.toggleSharedButton.height);
-            next(args);
-        }, ModuleCategory.Core);
+        if (GameVersion !== "R110") { // >= R111
+            const loadHook = () => {
+                const elem = document.getElementById(this.toggleSharedButton.id);
+                if (elem) {
+                    elem.style.display = "";
+                    return;
+                }
 
-        hookFunction("DrawItemPreview", 1, (args, next) => {
-				const ret = next(args);
-				const [item, , x, y] = args;
-				if (item) {
-					const { Craft } = item;
-					if (MouseIn(x, y, DialogInventoryGrid.itemWidth, DialogInventoryGrid.itemHeight) && Craft && Craft?.MemberNumber) {
-						drawTooltip(1000, y - 140, 975, `Crafted By: ${Craft.MemberName} [${Craft.MemberNumber}]`, "left");
-					}
-				}
-				return ret;
-			}
-		);
+                const coreModule = this;
+                ElementButton.Create(
+                    this.toggleSharedButton.id,
+                    function () {
+                        const C = DialogMenuMapping.items.C;
+                        if (!C)
+                            return;
 
-        hookFunction("DialogClick", 1, (args, next) => {
-            next(args);
-            let C = CharacterGetCurrent();
-            if (!C)
-                return;
-            if (MouseIn(this.toggleSharedButton.x, this.toggleSharedButton.y, this.toggleSharedButton.width, this.toggleSharedButton.height) &&
-                DialogModeShowsInventory() && (DialogMenuMode === "permissions" || (Player.CanInteract() && !InventoryGroupIsBlocked(C, undefined, true)))) {
-                this.settings.seeSharedCrafts = !this.settings.seeSharedCrafts;
-                settingsSave();
-                DialogInventoryBuild(C, true, false);
+                        coreModule.settings.seeSharedCrafts = this.getAttribute("aria-checked") === "true";
+                        settingsSave();
+                        // @ts-expect-error: R111 added a fourth parameter; remove this comment once R111 annotations are available
+                        DialogInventoryBuild(C, true, false, false);
+                    },
+                    { image: "Icons/Online.png", role: "checkbox", tooltip: "Toggle Shared Crafts", tooltipPosition: "left" },
+                    { button: { parent: document.body, attributes: { "aria-checked": this.settings.seeSharedCrafts } } },
+                );
+            };
+
+            hookFunction("DialogMenuMapping.items.Load", 0, (args, next) => {
+                const ret = next(args);
+                loadHook();
+                return ret;
+            });
+
+            hookFunction("DialogMenuMapping.items.Resize", 0, (args, next) => {
+                ElementPositionFixed(this.toggleSharedButton.id, this.toggleSharedButton.x, this.toggleSharedButton.y, this.toggleSharedButton.width, this.toggleSharedButton.height);
+                return next(args);
+            });
+
+            hookFunction("DialogMenuMapping.items.Exit", 0, (args, next) => {
+                ElementRemove(this.toggleSharedButton.id);
+                return next(args);
+            });
+
+            hookFunction("DialogMenuMapping.items.Unload", 0, (args, next) => {
+                const elem = document.getElementById(this.toggleSharedButton.id);
+                if (elem) { elem.style.display = "none"; }
+                return next(args);
+            });
+
+            // Manually fire up the load hook if the dialog-items sub screen is already open upon loading LSCG
+            if (DialogMenuMode === "items") {
+                loadHook();
             }
-        });
+        } else { // R110
+            hookFunction("DialogDrawItemMenu", 1, (args, next) => {
+                this._drawShareToggleButton(this.toggleSharedButton.x, this.toggleSharedButton.y, this.toggleSharedButton.width, this.toggleSharedButton.height);
+                next(args);
+            }, ModuleCategory.Core);
+
+            hookFunction("DrawItemPreview", 1, (args, next) => {
+                    const ret = next(args);
+                    const [item, , x, y] = args;
+                    if (item) {
+                        const { Craft } = item;
+                        if (MouseIn(x, y, DialogInventoryGrid.itemWidth, DialogInventoryGrid.itemHeight) && Craft && Craft?.MemberNumber) {
+                            drawTooltip(1000, y - 140, 975, `Crafted By: ${Craft.MemberName} [${Craft.MemberNumber}]`, "left");
+                        }
+                    }
+                    return ret;
+                }
+            );
+
+            hookFunction("DialogClick", 1, (args, next) => {
+                next(args);
+                let C = CharacterGetCurrent();
+                if (!C)
+                    return;
+                if (MouseIn(this.toggleSharedButton.x, this.toggleSharedButton.y, this.toggleSharedButton.width, this.toggleSharedButton.height) &&
+                    DialogModeShowsInventory() && (DialogMenuMode === "permissions" || (Player.CanInteract() && !InventoryGroupIsBlocked(C, undefined, true)))) {
+                    this.settings.seeSharedCrafts = !this.settings.seeSharedCrafts;
+                    settingsSave();
+                    DialogInventoryBuild(C, true, false);
+                }
+            });
+        }
     }
 
+    // R110
     _drawShareToggleButton(X: number, Y: number, Width: number, Height: number) {
         DrawButton(X, Y, Width, Height, "", this.settings.seeSharedCrafts ? "White" : "Red", "", "Toggle Shared Crafts", false);
         DrawImageResize("Icons/Online.png", X + 2, Y + 2, Width - 4, Height - 4);
@@ -249,7 +308,7 @@ export class CoreModule extends BaseModule {
                         break;
                 }
             }
-            
+
         }
     }
 
