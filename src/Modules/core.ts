@@ -15,6 +15,7 @@ import { MagicModule } from "./magic";
 import { StateModule } from "./states";
 import { drawTooltip } from "Settings/settingUtils";
 import { GrabType, LeashingModule } from "./leashing";
+import { OpacityMigrator } from "./Migrators/OpacityMigrator";
 
 // Core Module that can handle basic functionality like server handshakes etc.
 export class CoreModule extends BaseModule {
@@ -185,14 +186,17 @@ export class CoreModule extends BaseModule {
                 Player.LSCG = <SettingsModel>{};
                 this.registerDefaultSettings();
             }
-            previousVersion = Player.LSCG.Version = LSCG_VERSION;
+            Player.LSCG.Version = LSCG_VERSION;
             saveRequired = true;
         }
-        saveRequired = saveRequired || this.CheckForMigrations(previousVersion);
+        saveRequired = this.CheckForMigrations(previousVersion) || saveRequired;
         if (saveRequired) settingsSave();
     }
 
-    Migrators: BaseMigrator[] = [new StateMigrator()]
+    Migrators: BaseMigrator[] = [
+        new StateMigrator(),
+        new OpacityMigrator()
+    ];
 
     CheckForMigrations(fromVersion: string): boolean {
         if (fromVersion[0] == 'v')
@@ -201,7 +205,7 @@ export class CoreModule extends BaseModule {
         let saveRequired = false;
         this.Migrators.forEach(m => {
             if (lt(fromVersion, m.Version)) {
-                saveRequired = saveRequired || m.Migrate(fromVersion);
+                saveRequired = m.Migrate(fromVersion) || saveRequired;
             }
         });
 

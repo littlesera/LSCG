@@ -1,4 +1,5 @@
 import { ActivityModule } from "Modules/activities";
+import { CoreModule } from "Modules/core";
 import { HypnoModule } from "Modules/hypno";
 import { InjectorModule } from "Modules/injector";
 import { MagicModule } from "Modules/magic";
@@ -41,4 +42,8 @@ export function HypnoTriggers(): string[] {
 
 export function ConfiguredActivities(): ActivityEntryModel[] {
 	return getModule<ActivityModule>("ActivityModule")?.settings.activities;
+}
+
+export function CheckVersionUpdate() {
+	getModule<CoreModule>("CoreModule")?.CheckVersionUpdate();
 }
