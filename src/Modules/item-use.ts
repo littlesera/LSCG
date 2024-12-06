@@ -1332,8 +1332,6 @@ export class ItemUseModule extends BaseModule {
 				let itemUpdate = Player.Appearance.find(i => i.Asset.Name == item?.Asset.Name);
 				if (!!itemUpdate) {
 					itemUpdate.Difficulty = (itemUpdate.Difficulty ?? 0) + 5;
-					if (!!itemUpdate.Property)
-						itemUpdate.Property.Difficulty = (itemUpdate.Property.Difficulty ?? 0) + 5;
 				}
 				
 				if (item.Asset.Group.Name == "ItemNeck" && getModule<CollarModule>("CollarModule").WearingCorrectCollar(Player)) {
