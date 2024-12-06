@@ -18,6 +18,7 @@ import { getModule } from "modules";
 import { ItemUseModule } from "./item-use";
 import { ResizedState } from "./States/ResizedState";
 import { BuffedState } from "./States/BuffedState";
+import { BarrierState } from "./States/BarrierState";
 import { PolymorphedState } from "./States/PolymorphedState";
 import { XRayVisionState } from "./States/XRayVisionState";
 import { DeniedState } from "./States/DeniedState";
@@ -76,6 +77,7 @@ export class StateModule extends BaseModule {
     RedressedState: RedressedState;
     PolymorphedState: PolymorphedState;
     BuffedState: BuffedState;
+    BarrierState: BarrierState;
     ArousalPairedState: ArousalPairedState;
     OrgasmSiphonedState: OrgasmSiphonedState;
     XRayState: XRayVisionState;
@@ -107,6 +109,7 @@ export class StateModule extends BaseModule {
         this.RedressedState = new RedressedState(this);
         this.PolymorphedState = new PolymorphedState(this);
         this.BuffedState = new BuffedState(this);
+        this.BarrierState = new BarrierState(this);
         this.ArousalPairedState = new ArousalPairedState(this);
         this.OrgasmSiphonedState = new OrgasmSiphonedState(this);
         this.XRayState = new XRayVisionState(this);
@@ -126,6 +129,7 @@ export class StateModule extends BaseModule {
             this.ArousalPairedState,
             this.OrgasmSiphonedState,
             this.BuffedState,
+            this.BarrierState,
             this.XRayState
         ];
         
