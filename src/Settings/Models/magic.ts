@@ -58,6 +58,7 @@ export interface PolymorphConfig extends ItemBundleConfig {
 
 export interface SpellDefinition {
     Name: string;
+    CastingPhrase?: string;
     Creator: number;
     Effects: LSCGSpellEffect[];
     AllowPotion: boolean;

@@ -854,11 +854,11 @@ export class MagicModule extends BaseModule {
 
     CheckForSpellVoiceCasting(msg: string): void {
         let foundSpell: SpellDefinition | undefined = this.searchSpellFromMessageBegining(msg);
-        if (!foundSpell)
+        if (!foundSpell || !foundSpell.CastingPhrase)
             return;
 
         // Just to avoid detecting name in spell name
-        let msgWithoutSpellName = msg.substring(msg.indexOf(foundSpell.Name));
+        let msgWithoutSpellName = msg.substring(msg.indexOf(foundSpell.CastingPhrase));
 
         // Now get all player name mentionned in message
         let targetCharacterList: Character[] = this.getFirstCharactersFromMessage(msgWithoutSpellName);
@@ -882,10 +882,10 @@ export class MagicModule extends BaseModule {
 
     searchSpellFromMessageBegining(msg: string): SpellDefinition | undefined {
         for (let s of this.AvailableSpells) {
-            if (msg.length <= s.Name.length)
+            if (!s.CastingPhrase || msg.length <= s.CastingPhrase.length)
                 continue;
-            // Work only if msg start with spellName (+ start at position 2 to allow it when aroused)
-            if (msg.startsWith(s.Name) || msg.startsWith(s.Name, 2)) {
+            // Work only if msg start with spellName (+ start at position 2 to allow it when horny talk)
+            if (msg.startsWith(s.CastingPhrase) || msg.startsWith(s.CastingPhrase, 2)) {
                 return s;
             }
         }

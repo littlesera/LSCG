@@ -98,6 +98,14 @@ export class GuiMagic extends GuiSubscreen {
 						setSetting: (val) => { if (!!this.Spell) this.Spell.Name = val},
 						hidden: !this.Spell
 					},<Setting>{
+						type: "text",
+						label: "Casting phrase:",
+						description: "Phrase/word to cast your spell by typing <Casting phrase> <target Name> in the chat.",
+						id: "spellCastingPhrase",
+						setting: () => this.Spell?.CastingPhrase ?? "",
+						setSetting: (val) => { if (!!this.Spell) this.Spell.CastingPhrase = val},
+						hidden: !this.Spell
+					},<Setting>{
 						type: "checkbox",
 						label: "Allow Potion:",
 						description: "Allows this spell to be brewed into a crafted potion bottles/glasses/mugs using its name.",
