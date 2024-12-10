@@ -159,7 +159,7 @@ export class CoreModule extends BaseModule {
                         // @ts-expect-error: R111 added a fourth parameter; remove this comment once R111 annotations are available
                         DialogInventoryBuild(C, true, false, false);
                     },
-                    { image: "Icons/Online.png", role: "checkbox", tooltip: "Toggle Shared Crafts", tooltipPosition: "left" },
+                    { image: "./Icons/Online.png", role: "checkbox", tooltip: "Toggle Shared Crafts", tooltipPosition: "left" },
                     { button: { parent: document.body, attributes: { "aria-checked": this.settings.seeSharedCrafts } } },
                 );
             };
