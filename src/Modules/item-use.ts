@@ -211,12 +211,20 @@ export class ItemUseModule extends BaseModule {
 			let acted = args[2] as Character;
 			let needsItem = args[3] as string;
 			let activity = args[4] as Activity;
+			let targetGroupName = args[5] as AssetGroup | AssetGroupName;
+
+			// `AssetGroupName` as of R111Beta1 and `AssetGroup` as of later versions
+			const targetGroup = typeof targetGroupName === "string" ? AssetGroupGet(acting.AssetFamily, targetGroupName) : targetGroupName;
+			if (targetGroup == null && GameVersion !== "R110") {
+				return next(args);
+			}
+
 			let ret = false;
 			var focusGroup = acted?.FocusGroup?.Name ?? undefined;
 
 			let res;
 			if (["GagGiveItem", "GagTakeItem","GagToNecklace", "NecklaceToGag"].indexOf(needsItem) > -1) {
-				res = this.ManualGenerateItemActivitiesForNecklaceActivity(allowed, acting, acted, needsItem, activity);
+				res = this.ManualGenerateItemActivitiesForNecklaceActivity(allowed, acting, acted, needsItem, activity, targetGroup as AssetGroup);
 			} else if (needsItem == "FellatioItem") {
 				let tmpActivity = Object.assign({}, activity);
 				tmpActivity.Reverse = true;
@@ -1225,7 +1233,7 @@ export class ItemUseModule extends BaseModule {
 		}
 	}
 
-	ManualGenerateItemActivitiesForNecklaceActivity(allowed: ItemActivity[], acting: Character, acted: Character, needsItem: string, activity: Activity) {
+	ManualGenerateItemActivitiesForNecklaceActivity(allowed: ItemActivity[], acting: Character, acted: Character, needsItem: string, activity: Activity, targetGroup: AssetGroup) {
 		const itemOwner = needsItem == "GagGiveItem" ? acting : acted;
 		const items = CharacterItemsForActivity(itemOwner, needsItem as ActivityName);
 		if (items.length === 0) return true;
@@ -1262,9 +1270,18 @@ export class ItemUseModule extends BaseModule {
 			}
 	
 			if (!!blocked) {
-				allowed.push({ Activity: activity, Item: item, Blocked: blocked });
+				allowed.push({
+					Activity: activity,
+					Item: item,
+					Blocked: blocked,
+					Group: GameVersion === "R110" ? undefined : (targetGroup.MirrorActivitiesFrom ?? targetGroup.Name),
+				} as ItemActivity);
 			} else
-				allowed.push({ Activity: activity, Item: item });
+				allowed.push({
+					Activity: activity,
+					Item: item,
+					Group: GameVersion === "R110" ? undefined : (targetGroup.MirrorActivitiesFrom ?? targetGroup.Name),
+				} as ItemActivity);
 			handled = true;
 		}
 		return handled;
