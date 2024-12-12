@@ -21,6 +21,8 @@ export enum LSCGSpellEffect {
     polymorph = "Polymorph",
     dispell = "Dispell",
     xRay = "X-Ray Vision",
+    barrier = "Magic Barrier",
+    disarm = "Disarming",
     denial = "Denying",
     orgasm = "Forced Orgasm"
 }
@@ -56,9 +58,11 @@ export interface PolymorphConfig extends ItemBundleConfig {
 
 export interface SpellDefinition {
     Name: string;
+    CastingPhrase?: string;
     Creator: number;
     Effects: LSCGSpellEffect[];
     AllowPotion: boolean;
+    AllowVoiceCast: boolean;
     Outfit?: OutfitConfig;
     Polymorph?: PolymorphConfig;
 }
