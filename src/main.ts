@@ -18,6 +18,7 @@ import { MagicModule } from 'Modules/magic';
 import { OpacityModule } from 'Modules/opacity';
 import { lt } from 'semver';
 import { LeashingModule } from 'Modules/leashing';
+import { ChaoticItemModule } from './Modules/chaotic-item';
 
 export { 
 	DrugKeywords, 
@@ -155,6 +156,7 @@ function init_modules(): boolean {
 	registerModule(new RemoteUIModule());
 	registerModule(new CommandModule());
 	registerModule(new LeashingModule());
+	registerModule(new ChaoticItemModule());
 
 	for (const m of modules()) {
 		m.init();
