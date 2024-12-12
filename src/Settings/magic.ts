@@ -98,6 +98,14 @@ export class GuiMagic extends GuiSubscreen {
 						setSetting: (val) => { if (!!this.Spell) this.Spell.Name = val},
 						hidden: !this.Spell
 					},<Setting>{
+						type: "text",
+						label: "Casting phrase:",
+						description: "Phrase/word to cast your spell by typing <Casting phrase> <target Name> in the chat.",
+						id: "spellCastingPhrase",
+						setting: () => this.Spell?.CastingPhrase ?? "",
+						setSetting: (val) => { if (!!this.Spell) this.Spell.CastingPhrase = val},
+						hidden: !this.Spell
+					},<Setting>{
 						type: "checkbox",
 						label: "Allow Potion:",
 						description: "Allows this spell to be brewed into a crafted potion bottles/glasses/mugs using its name.",
@@ -737,6 +745,10 @@ export class GuiMagic extends GuiSubscreen {
 				return "Polymorph the target's body and/or cosplay items";
 			case LSCGSpellEffect.xRay:
 				return "Grants the target X-Ray vision";
+			case LSCGSpellEffect.barrier:
+				return "Create a magic barrier that protect and reflect incoming spell";
+			case LSCGSpellEffect.disarm:
+				return "Disarm the target";
 			case LSCGSpellEffect.none:
 			default:
 				return ""			;
