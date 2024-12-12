@@ -732,7 +732,7 @@ export class MagicModule extends BaseModule {
                             InventoryRemove(Player, "ItemHandheld", true);
                             CharacterRefresh(Player, true);
                             ChatRoomCharacterUpdate(Player);
-                            SendAction(`%NAME% squirms as the item in %POSSESSIVE% hand get ejected away by magic.`);
+                            SendAction(`%NAME% flinches as the item in %POSSESSIVE% hand is flung into the air.`);
                         }
                         else {
                             SendAction(`The spell was not strong enough to disarm %NAME%.`);
