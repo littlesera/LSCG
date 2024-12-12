@@ -62,6 +62,7 @@ export interface SpellDefinition {
     Creator: number;
     Effects: LSCGSpellEffect[];
     AllowPotion: boolean;
+    AllowVoiceCast: boolean;
     Outfit?: OutfitConfig;
     Polymorph?: PolymorphConfig;
 }

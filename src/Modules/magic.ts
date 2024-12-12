@@ -1,7 +1,7 @@
 import { BaseModule } from "base";
 import { getModule } from "modules";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
-import { GetConfiguredItemBundlesFromSavedCode, GetDelimitedList, OnChat, GetHandheldItemNameAndDescriptionConcat, GetItemNameAndDescriptionConcat, GetMetadata, ICONS, LSCG_SendLocal, LSCG_TEAL, OnActivity, SendAction, forceOrgasm, getCharacter, getRandomInt, hookFunction, isPhraseInString, removeAllHooksByModule, sendLSCGCommand, sendLSCGCommandBeep, settingsSave, getCharacterByNicknameOrMemberNumber } from "../utils";
+import { GetConfiguredItemBundlesFromSavedCode, GetDelimitedList, OnChat, GetHandheldItemNameAndDescriptionConcat, GetItemNameAndDescriptionConcat, GetMetadata, ICONS, LSCG_SendLocal, LSCG_TEAL, OnActivity, SendAction, forceOrgasm, getCharacter, getRandomInt, hookFunction, isPhraseInString, removeAllHooksByModule, sendLSCGCommand, sendLSCGCommandBeep, settingsSave, getCharacterByNicknameOrMemberNumber, excludeParentheticalContent, escapeRegExp } from "../utils";
 import { ActivityModule, ActivityTarget } from "./activities";
 import { KNOWN_SPELLS_LIMIT, LSCGSpellEffect, MagicSettingsModel, OutfitConfig, OutfitOption, SpellDefinition } from "Settings/Models/magic";
 import { GuiMagic, pairedSpellEffects } from "Settings/magic";
@@ -480,7 +480,7 @@ export class MagicModule extends BaseModule {
             `%NAME% baps %OPP_NAME% with %POSSESSIVE% ${itemName} and, with a grin, casts ${spell.Name}${pairedDefaultStr}`
         ];
         let voiceCastingActionStrings: string[] = [
-            `%NAME% use the magical power of %POSSESSIVE% voice to casts ${spell.Name} on %OPP_NAME%${pairedDefaultStr}`,
+            `%NAME% intones with magical power, using nothing but %POSSESSIVE% voice to cast ${spell.Name} on %OPP_NAME%${pairedDefaultStr}`,
             `%NAME% chants an indecipherable phrase containing the name of %OPP_NAME% and casting ${spell.Name}${pairedDefaultStr}`
         ];
 
@@ -853,62 +853,35 @@ export class MagicModule extends BaseModule {
     // ***************** Voice Casting *******************
 
     CheckForSpellVoiceCasting(msg: string): void {
-        let foundSpell: SpellDefinition | undefined = this.searchSpellFromMessageBegining(msg);
-        if (!foundSpell || !foundSpell.CastingPhrase)
+        let spellTargetPair: [SpellDefinition | null, Character | null] | undefined = this.getSpellTargetTupleFromMsg(msg);
+        if (!spellTargetPair || !spellTargetPair[0] || !spellTargetPair[1]) // Skip if no or invalid tuple result
             return;
 
-        // Just to avoid detecting name in spell name
-        let msgWithoutSpellName = msg.substring(msg.indexOf(foundSpell.CastingPhrase));
-
-        // Now get all player name mentionned in message
-        let targetCharacterList: Character[] = this.getFirstCharactersFromMessage(msgWithoutSpellName);
-        if (targetCharacterList.length <= 0) {
-            return;
+        let foundSpell = spellTargetPair[0];
+        let target = spellTargetPair[1];
+        let pairTgt: Character | undefined;
+        if (this.SpellNeedsPair(foundSpell)) {
+            pairTgt = this.PairedCharacterOptions(target)[getRandomInt(this.PairedCharacterOptions(target).length)];
         }
-
-        let spell: SpellDefinition = foundSpell;
-        if (!spell || this.settings.trueWildMagic)
-            spell = this.RandomSpell
-        spell = JSON.parse(JSON.stringify(spell));
-        this.UnpackSpellCodes(spell);
-
-        for(let C of targetCharacterList) {
-            let paired: Character | undefined = undefined;
-            if (this.SpellNeedsPair(spell))
-                paired = this.PairedCharacterOptions(C)[getRandomInt(this.PairedCharacterOptions(C).length)];
-            this.CastSpellActual(spell, C, true, paired);
-        }
+        this.CastSpellActual(foundSpell, target, true, pairTgt);
     }
 
-    searchSpellFromMessageBegining(msg: string): SpellDefinition | undefined {
-        for (let s of this.AvailableSpells) {
-            if (!s.CastingPhrase || msg.length <= s.CastingPhrase.length)
+    getSpellTargetTupleFromMsg(msg: string): [SpellDefinition | null, Character | null] | undefined {
+        let oocParsedString = excludeParentheticalContent(msg); // Don't allow voice casting in OOC chat        
+        for (let s of this.AvailableSpells.filter(s => s.AllowVoiceCast)) { // Only look at spells which allow voice cast
+            if (!s.AllowVoiceCast)
                 continue;
-            // Work only if msg start with spellName (+ start at position 2 to allow it when horny talk)
-            if (msg.startsWith(s.CastingPhrase) || msg.startsWith(s.CastingPhrase, 2)) {
-                return s;
-            }
+            let searchPhrase = (!!s.CastingPhrase && s.CastingPhrase.length > 0) ? s.CastingPhrase : s.Name;
+            let re = new RegExp("^" + escapeRegExp(searchPhrase) + " ([\\w\\s]+)(\\b|$|\\s)", "i");
+            let matches = re.exec(oocParsedString);
+            if (!matches)
+                continue;
+            let characterPhrase = matches?.[1] ?? "";
+            let character = getCharacterByNicknameOrMemberNumber(characterPhrase);
+            if (!!character)
+                return [s, character];
         }
         return undefined;
-    }
-
-    getFirstCharactersFromMessage(msg: string): Character[] {
-        let characterList: Character[] = [];
-        for (let character of ChatRoomCharacter) {
-            if (character.Nickname) {
-                if (msg.includes(character.Nickname) && !characterList.includes(character)) {
-                    characterList.push(character);
-                    return characterList;
-                }
-            }
-            if (character.Name) {
-                if (msg.includes(character.Name) && !characterList.includes(character)) {
-                    characterList.push(character);
-                    return characterList;
-                }
-            }
-        }
-        return characterList;
     }
 
     // ***************** Potions *******************

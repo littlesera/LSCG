@@ -99,22 +99,12 @@ export class GuiMagic extends GuiSubscreen {
 						hidden: !this.Spell
 					},<Setting>{
 						type: "text",
-						label: "Casting phrase:",
+						label: "Casting Phrase:",
 						description: "Phrase/word to cast your spell by typing <Casting phrase> <target Name> in the chat.",
 						id: "spellCastingPhrase",
 						setting: () => this.Spell?.CastingPhrase ?? "",
 						setSetting: (val) => { if (!!this.Spell) this.Spell.CastingPhrase = val},
-						hidden: !this.Spell
-					},<Setting>{
-						type: "checkbox",
-						label: "Allow Potion:",
-						description: "Allows this spell to be brewed into a crafted potion bottles/glasses/mugs using its name.",
-						disabled: this.SpellHasPairedEffect,
-						setting: () => this.SpellHasPairedEffect ? false : this.Spell?.AllowPotion ?? false,
-						setSetting: (val) => { 
-							if (this.SpellHasPairedEffect && !!this.Spell) this.Spell.AllowPotion = false;
-							else if (!!this.Spell) this.Spell.AllowPotion = val;
-						},
+						disabled: !this.Spell?.AllowVoiceCast,
 						hidden: !this.Spell
 					},<Setting>{
 						type: "label",
@@ -155,6 +145,29 @@ export class GuiMagic extends GuiSubscreen {
 						type: "label", // Blank Spot
 						label: "",
 						description: ""
+					},<Setting>{
+						type: "label", // Blank Spot, looping around to the top
+						label: "",
+						description: ""
+					},<Setting>{
+						type: "checkbox",
+						label: "Allow Potion:",
+						description: "Allows this spell to be brewed into a crafted potion bottles/glasses/mugs using its name.",
+						disabled: this.SpellHasPairedEffect,
+						setting: () => this.SpellHasPairedEffect ? false : this.Spell?.AllowPotion ?? false,
+						setSetting: (val) => { 
+							if (this.SpellHasPairedEffect && !!this.Spell) this.Spell.AllowPotion = false;
+							else if (!!this.Spell) this.Spell.AllowPotion = val;
+						},
+						hidden: !this.Spell
+					},<Setting>{
+						type: "checkbox",
+						label: "Allow Voice Casting:",
+						description: "Allows this spell to be cast by speaking its name or specified casting phrase.",
+						id: "allowVoiceCast",
+						setting: () => this.Spell?.AllowVoiceCast ?? "",
+						setSetting: (val) => { if (!!this.Spell) this.Spell.AllowVoiceCast = val},
+						hidden: !this.Spell
 					}
 				], [
 					<Setting>{
@@ -542,7 +555,8 @@ export class GuiMagic extends GuiSubscreen {
 						Name: `Spell No. ${this.settings.knownSpells.length+1}`,
 						Creator: Player.MemberNumber,
 						Effects: [],
-						AllowPotion: false
+						AllowPotion: false,
+						AllowVoiceCast: false
 					});
 					this.SpellIndex = this.settings.knownSpells.length - 1;
 					this.loadSpell();
