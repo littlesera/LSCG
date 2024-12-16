@@ -258,6 +258,8 @@ export class CoreModule extends BaseModule {
     ];
 
     CheckForMigrations(fromVersion: string): boolean {
+        if (!fromVersion)
+            return false;
         if (fromVersion[0] == 'v')
             fromVersion = fromVersion.substring(1);
 
