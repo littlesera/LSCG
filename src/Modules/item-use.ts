@@ -230,7 +230,7 @@ export class ItemUseModule extends BaseModule {
 				tmpActivity.Reverse = true;
 				if ((activity.Name as string) == "LSCG_Suck" || (activity.Name as string) == "LSCG_Throat")
 					needsItem = "PenetrateItem";
-				res = next([args[0], args[1], args[2], needsItem, tmpActivity]);
+				res = next([args[0], args[1], args[2], needsItem, tmpActivity, targetGroupName]);
 			} else {
 				res = next(args);
 			}
