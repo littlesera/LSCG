@@ -17,8 +17,28 @@ export const evolvingKeywords: string[] = [
 	"spread",
 ];
 
+// to reduce the default time of Chaotic/Evolving items
+export const quickKeywords: string[] = [
+	"quick",
+	"quickly",
+	"rapidly",
+	"fast",
+];
+
+// to increase the default time of Chaotic/Evolving items
+export const slowKeywords: string[] = [
+	"slow",
+	"slowly",
+];
+
+export const DEFAULT_TRIGGER_TIME_MS = 10 * 60 * 1000; // 10min
+export const QUICK_TRIGGER_TIME_MS = 3 * 60 * 1000; // 3min
+export const SLOW_TRIGGER_TIME_MS = 30 * 60 * 1000; // 30min
+
 export class ChaoticItemModule extends BaseModule {
-    triggerInterval: number = 0;
+    defaultTriggerInterval: number = 0;
+    quickTriggerInterval: number = 0;
+    slowTriggerInterval: number = 0;
 
     get defaultSettings() {
         return <BaseSettingsModel>{
@@ -27,15 +47,19 @@ export class ChaoticItemModule extends BaseModule {
     }
 
     load(): void {
-        this.triggerInterval = setInterval(() => { this.checkForChaoticItem() }, 5 * 60 * 1000); // 5min
+        this.defaultTriggerInterval = setInterval(() => { this.checkForChaoticItem("default") }, DEFAULT_TRIGGER_TIME_MS);
+        this.quickTriggerInterval = setInterval(() => { this.checkForChaoticItem("quick") }, QUICK_TRIGGER_TIME_MS);
+        this.slowTriggerInterval = setInterval(() => { this.checkForChaoticItem("slow") }, SLOW_TRIGGER_TIME_MS);
     }
 
     unload(): void {
         removeAllHooksByModule(ModuleCategory.ChaoticItem);
-        clearInterval(this.triggerInterval);
+        clearInterval(this.defaultTriggerInterval);
+        clearInterval(this.quickTriggerInterval);
+        clearInterval(this.slowTriggerInterval);
     }
 
-    checkForChaoticItem() {
+    checkForChaoticItem(filter: "default" | "quick" | "slow") {
         if (!this.Enabled)
             return;
 
@@ -43,7 +67,31 @@ export class ChaoticItemModule extends BaseModule {
             let itemStr = GetItemNameAndDescriptionConcat(a) ?? "";
             return a.Asset.Group.Name != "ItemHandheld" && (chaoticKeywords.some(k => isPhraseInString(itemStr, k)) || evolvingKeywords.some(k => isPhraseInString(itemStr, k)));
         });
+
+        // Filter the items that correspond to the correct trigger timer
+        let filteredChaoticItems: Item[] = [];
         for (let item of chaoticItems) {
+            let itemStr = GetItemNameAndDescriptionConcat(item) ?? "";
+            if (filter != "slow" && quickKeywords.some(k => isPhraseInString(itemStr, k))) {
+                if (filter == "quick") {
+                    filteredChaoticItems.push(item);
+                }
+                // if filter == "default" we just skip it
+                continue;
+            }
+            else if (filter != "quick" && slowKeywords.some(k => isPhraseInString(itemStr, k))) {
+                if (filter == "slow") {
+                    filteredChaoticItems.push(item);
+                }
+                // if filter == "default" we just skip it
+                continue;
+            }
+            else if (filter == "default") {
+                filteredChaoticItems.push(item);
+            }
+        }
+
+        for (let item of filteredChaoticItems) {
 			this.triggerChaoticItem(item);
         }
     }
