@@ -358,7 +358,7 @@ export class ChaoticItemModule extends BaseModule {
     // Change specific properties that are part of the options of an item
     // This is based on itemData.baselineProperty that provide us all special properties of an item
     changeEditableProperty(item: Item, itemData: TypedItemData | ModularItemData | VibratingItemData, logic: "random" | "evolving"): boolean {
-        let newProperty: ItemProperties | undefined = CommonCloneDeep(item.Property);;
+        let newProperty: ItemProperties | undefined = CommonCloneDeep(item.Property);
         let propertyChanged: boolean = false;
         if (!item.Property || !newProperty) {
             console.warn("changeEditableProperty: item.Property or newProperty is undefined !");
@@ -569,7 +569,7 @@ export class ChaoticItemModule extends BaseModule {
                 return obj.PunishRequiredSpeechWord;
             default:
                 return undefined;
-        };
+        }
     }
 
     // Workaround to bypass TS custom type
@@ -611,7 +611,7 @@ export class ChaoticItemModule extends BaseModule {
             case "PunishRequiredSpeechWord":
                 obj.PunishRequiredSpeechWord = value;
                 break;
-        };
+        }
         return obj;
     }
 
