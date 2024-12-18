@@ -228,7 +228,7 @@ export class ChaoticItemModule extends BaseModule {
         return ret;
     }
 
-    
+
     changeModuleOption(item: Item, modularData: ModularItemData, modularModule: ModularItemModule, moduleIndex: number, logic: "random" | "evolving"): boolean {
         // get previous option
         let itemTypeRecord: TypeRecord | undefined | null = item.Property?.TypeRecord;
@@ -327,7 +327,7 @@ export class ChaoticItemModule extends BaseModule {
             }
 
             if (previousOptionIndex == (vibratorAvailableOptions.length - 1)) {
-                // We already using the last option, Nothing to do.
+                // We're already using the last option, Nothing to do.
                 return true;
             }
         }
@@ -352,11 +352,11 @@ export class ChaoticItemModule extends BaseModule {
 
 
     /*
-    ***** Functions to change item's properties (i.e. other options not indentified in data's options) *****
+    ***** Functions to change item's properties (i.e. other options not identified in data's options) *****
     */
 
     // Change specific properties that are part of the options of an item
-    // This is based on itemData.baselineProperty that provide us all special proerties of an item
+    // This is based on itemData.baselineProperty that provide us all special properties of an item
     changeEditableProperty(item: Item, itemData: TypedItemData | ModularItemData | VibratingItemData, logic: "random" | "evolving"): boolean {
         let newProperty: ItemProperties | undefined = CommonCloneDeep(item.Property);;
         let propertyChanged: boolean = false;
@@ -366,7 +366,7 @@ export class ChaoticItemModule extends BaseModule {
         }
 
         // Get all the item's property that we can modify
-        // EditableProperty is our handcrafted list of specific properties that we can modifiy
+        // EditableProperty is our handcrafted list of specific properties that we can modify
         let existingProperty: string[] = this.geEditablePropertyInBaseline(itemData.baselineProperty);
         if (existingProperty.length <= 0) {
             return false;
@@ -496,8 +496,8 @@ export class ChaoticItemModule extends BaseModule {
             // Update item
             ExtendedItemSetProperty(Player, item, item.Property, newProperty, true, true);
             let itemName = (item?.Craft?.Name ?? item.Asset.Name);
-            // Idk why but this AssetTextGet almost always fail to retreive the correct text.
-            // And because the string to retreive the asset's text don't follow any logics, we probably cannot do better
+            // Idk why but this AssetTextGet almost always fail to retrieve the correct text.
+            // And because the string to retrieve the asset's text don't follow any logics, we probably cannot do better
             let propertyName = AssetTextGet(item.Asset.Name + selectedProperty) ?? selectedProperty;
             if (propertyName.includes("MISSING")) {
                 propertyName = selectedProperty ?? "unknown property";
@@ -513,7 +513,7 @@ export class ChaoticItemModule extends BaseModule {
         if (!baselineProperty) {
             return [];
         }
-        // editableProperty are others options that are not part of an extended item's options such as chechbox / voice command trigger word
+        // editableProperty are others options that are not part of an extended item's options such as checkbox / voice command trigger word
         let editableProperty = [
             "AutoPunish",
             "PunishActivity",
@@ -614,7 +614,7 @@ export class ChaoticItemModule extends BaseModule {
         };
         return obj;
     }
-    
+
     // Randomize the voice trigger values with our custom list of common word
     // baselineTriggerValues is a list of word separated by commas (type string)
     // baselineTriggerValues also provide us with the information of how much word is needed
@@ -641,7 +641,7 @@ export class ChaoticItemModule extends BaseModule {
             "orgasm",
             "shock",
             "punish",
-            "punishement",
+            "punishment",
             "cute",
             "cutie",
             "slut",
@@ -702,7 +702,7 @@ export class ChaoticItemModule extends BaseModule {
     /*
     ***** Helper functions *****
     */
-    
+
     getNextOptionFromOptionsList<T extends TypedItemOption | ModularItemOption>(currentOption: T, availableOptions: T[]): T | undefined {
         let isNextOption = false;
         let newOption: T | undefined = undefined;
@@ -724,7 +724,7 @@ export class ChaoticItemModule extends BaseModule {
                 return undefined;
             }
             else {
-                // If we didn't found our current used option, just use the last one directly then
+                // If we haven't found our current used option, just use the last one directly then
                 newOption = availableOptions[availableOptions.length - 1];
             }
         }
