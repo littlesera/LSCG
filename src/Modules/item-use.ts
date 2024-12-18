@@ -211,18 +211,26 @@ export class ItemUseModule extends BaseModule {
 			let acted = args[2] as Character;
 			let needsItem = args[3] as string;
 			let activity = args[4] as Activity;
+			let targetGroupName = args[5] as AssetGroup | AssetGroupName;
+
+			// `AssetGroupName` as of R111Beta1 and `AssetGroup` as of later versions
+			const targetGroup = typeof targetGroupName === "string" ? AssetGroupGet(acting.AssetFamily, targetGroupName) : targetGroupName;
+			if (targetGroup == null && GameVersion !== "R110") {
+				return next(args);
+			}
+
 			let ret = false;
 			var focusGroup = acted?.FocusGroup?.Name ?? undefined;
 
 			let res;
 			if (["GagGiveItem", "GagTakeItem","GagToNecklace", "NecklaceToGag"].indexOf(needsItem) > -1) {
-				res = this.ManualGenerateItemActivitiesForNecklaceActivity(allowed, acting, acted, needsItem, activity);
+				res = this.ManualGenerateItemActivitiesForNecklaceActivity(allowed, acting, acted, needsItem, activity, targetGroup as AssetGroup);
 			} else if (needsItem == "FellatioItem") {
 				let tmpActivity = Object.assign({}, activity);
 				tmpActivity.Reverse = true;
 				if ((activity.Name as string) == "LSCG_Suck" || (activity.Name as string) == "LSCG_Throat")
 					needsItem = "PenetrateItem";
-				res = next([args[0], args[1], args[2], needsItem, tmpActivity]);
+				res = next([args[0], args[1], args[2], needsItem, tmpActivity, targetGroupName]);
 			} else {
 				res = next(args);
 			}
@@ -1025,6 +1033,7 @@ export class ItemUseModule extends BaseModule {
 	
 	getRollMod(C: Character, Opponent?: Character, isAggressor: boolean = false): number {
 		let buffState = (C as OtherCharacter)?.LSCG?.StateModule?.states?.find(s => s.type == "buffed");
+		let protectedState = (C as OtherCharacter)?.LSCG?.StateModule?.states?.find(s => s.type == "protected");
 
 		// Dominant vs Submissive ==> -3 to +3 modifier
 		let dominanceMod = Math.floor(getDominance(C) / 33);
@@ -1040,8 +1049,10 @@ export class ItemUseModule extends BaseModule {
 		let breathMod = (C.IsPlayer() ? getModule<CollarModule>("CollarModule").totalChokeLevel : (C as OtherCharacter).LSCG?.CollarModule.chokeLevel ?? 0) * -2;
 		// +/- 5 for buff state
 		let buffMod = (!buffState || !buffState.active) ? 0 : ((buffState.extensions["negative"] ?? false) ? -5 : 5);
+		// +5 magic barrier
+		let protectedMod = (!protectedState || !protectedState.active) ? 0 : +5;
 
-		let finalMod = dominanceMod + ownershipMod + restrainedMod + edgingMod + incapacitatedMod + breathMod + buffMod;
+		let finalMod = dominanceMod + ownershipMod + restrainedMod + edgingMod + incapacitatedMod + breathMod + buffMod + protectedMod;
 	
 		console.debug(`${CharacterNickname(C)} is ${isAggressor ? 'rolling against' : 'defending against'} ${!Opponent ? "nobody" : CharacterNickname(Opponent)} [${finalMod}] --
 		dominanceMod: ${dominanceMod}
@@ -1225,7 +1236,7 @@ export class ItemUseModule extends BaseModule {
 		}
 	}
 
-	ManualGenerateItemActivitiesForNecklaceActivity(allowed: ItemActivity[], acting: Character, acted: Character, needsItem: string, activity: Activity) {
+	ManualGenerateItemActivitiesForNecklaceActivity(allowed: ItemActivity[], acting: Character, acted: Character, needsItem: string, activity: Activity, targetGroup: AssetGroup) {
 		const itemOwner = needsItem == "GagGiveItem" ? acting : acted;
 		const items = CharacterItemsForActivity(itemOwner, needsItem as ActivityName);
 		if (items.length === 0) return true;
@@ -1262,9 +1273,18 @@ export class ItemUseModule extends BaseModule {
 			}
 	
 			if (!!blocked) {
-				allowed.push({ Activity: activity, Item: item, Blocked: blocked });
+				allowed.push({
+					Activity: activity,
+					Item: item,
+					Blocked: blocked,
+					Group: GameVersion === "R110" ? undefined : (targetGroup.MirrorActivitiesFrom ?? targetGroup.Name),
+				} as ItemActivity);
 			} else
-				allowed.push({ Activity: activity, Item: item });
+				allowed.push({
+					Activity: activity,
+					Item: item,
+					Group: GameVersion === "R110" ? undefined : (targetGroup.MirrorActivitiesFrom ?? targetGroup.Name),
+				} as ItemActivity);
 			handled = true;
 		}
 		return handled;
@@ -1332,8 +1352,6 @@ export class ItemUseModule extends BaseModule {
 				let itemUpdate = Player.Appearance.find(i => i.Asset.Name == item?.Asset.Name);
 				if (!!itemUpdate) {
 					itemUpdate.Difficulty = (itemUpdate.Difficulty ?? 0) + 5;
-					if (!!itemUpdate.Property)
-						itemUpdate.Property.Difficulty = (itemUpdate.Property.Difficulty ?? 0) + 5;
 				}
 				
 				if (item.Asset.Group.Name == "ItemNeck" && getModule<CollarModule>("CollarModule").WearingCorrectCollar(Player)) {

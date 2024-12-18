@@ -967,6 +967,8 @@ type ItemActivityRestriction = "blocked" | "limited" | "unavail";
 interface ItemActivity {
 	/** The activity performed */
 	Activity: Activity;
+	/** The target group of the activity */
+	Group: AssetGroupName;
 	/** An optional item used for the activity. Null if the player is used their hand, for example. */
 	Item?: Item;
 	/** Whether the item is blocked or limited on the target character, or unavailable because the player is blocked. Undefined means no restriction. */
@@ -2431,6 +2433,7 @@ interface ItemPropertiesCustom {
 	PortalLinkCode?: string;
 
 	// Custom LSCG property to override opacity
+	// Deprecated, use Property.Opacity now
 	LSCGOpacity?: number | number[];
 
 	// Custom LSCG property to block xray vision

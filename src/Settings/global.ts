@@ -7,6 +7,7 @@ import { GlobalSettingsModel } from "./Models/base";
 import { GuiSubscreen, Setting } from "./settingBase";
 import { OpacityModule } from "Modules/opacity";
 import { LeashingModule } from "Modules/leashing";
+import { ChaoticItemModule } from "Modules/chaotic-item";
 
 export class GuiGlobal extends GuiSubscreen {
 
@@ -128,6 +129,13 @@ export class GuiGlobal extends GuiSubscreen {
 				setting: () => this.settings.tamperproofEnabled ?? true,
 				setSetting: (val) => this.settings.tamperproofEnabled = val,
 				disabled: !this.settings.enabled
+			},<Setting>{
+				type: "checkbox",
+				label: "Enable Chaotic/Evolving Items:",
+				description: "Enable chaotic/evolving features on crafted items you wear.",
+				setting: () => Player.LSCG.ChaoticItemModule.enabled ?? true,
+				setSetting: (val) => Player.LSCG.ChaoticItemModule.enabled = val,
+				disabled: !this.settings.enabled
 			}
 		]
 	}
@@ -139,6 +147,7 @@ export class GuiGlobal extends GuiSubscreen {
 		getModule<LeashingModule>("LeashingModule")?.settings;
 		getModule<BoopsModule>("BoopsModule")?.settings;
 		getModule<OpacityModule>("OpacityModule")?.settings;
+		getModule<ChaoticItemModule>("ChaoticItemModule")?.settings;
 		super.Load();
 	}
 }

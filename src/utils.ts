@@ -757,7 +757,7 @@ export function mouseTooltip(msg: string, x?: number, y?: number, maxX?: number,
 	MainCanvas.font = '16px Arial, sans-serif'
 	var size = MainCanvas.measureText(msg);
 	let width = size.actualBoundingBoxRight - size.actualBoundingBoxLeft + 2 * pad;
-	var TextX = Math.max(0, Math.min(maxX ??1000, (x ?? MouseX) + width)) - width;
+	var TextX = Math.max(0, Math.min(maxX ?? 1000, (x ?? MouseX) + width)) - width;
 	var TextY = Math.max(0, Math.min(maxY ?? 1000, y ?? MouseY));
 	DrawRect(TextX - pad + 3, TextY - size.actualBoundingBoxAscent - pad + 3, width, size.actualBoundingBoxDescent + size.actualBoundingBoxAscent + 2 * pad, "rgba(0, 0, 0, .7)");
 	DrawRect(TextX - pad, TextY - size.actualBoundingBoxAscent - pad, width, size.actualBoundingBoxDescent + size.actualBoundingBoxAscent + 2 * pad, "#D7F6E9");

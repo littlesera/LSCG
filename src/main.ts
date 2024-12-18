@@ -1,5 +1,5 @@
 import { CleanDefaultsFromSettings, ExportSettings, GetDataSizeReport, hookFunction, ICONS, ImportSettings, isObject, sendLSCGBeep, settingsSave } from './utils';
-import { ConfiguredActivities, CraftableItemSpellNames, DrugKeywords, getModule, HypnoTriggers, modules, NetgunKeywords, registerModule } from 'modules';
+import { CheckVersionUpdate, ConfiguredActivities, CraftableItemSpellNames, DrugKeywords, getModule, HypnoTriggers, modules, NetgunKeywords, registerModule } from 'modules';
 import { SettingsModel } from 'Settings/Models/settings';
 import { HypnoModule } from './Modules/hypno';
 import { CollarModule } from './Modules/collar';
@@ -18,6 +18,7 @@ import { MagicModule } from 'Modules/magic';
 import { OpacityModule } from 'Modules/opacity';
 import { lt } from 'semver';
 import { LeashingModule } from 'Modules/leashing';
+import { ChaoticItemModule } from './Modules/chaotic-item';
 
 export { 
 	DrugKeywords, 
@@ -30,7 +31,8 @@ export {
 	ExportSettings,
 	ImportSettings,
 	getModule,
-	sendLSCGBeep
+	sendLSCGBeep,
+	CheckVersionUpdate
 };
 
 function initWait() {
@@ -154,6 +156,7 @@ function init_modules(): boolean {
 	registerModule(new RemoteUIModule());
 	registerModule(new CommandModule());
 	registerModule(new LeashingModule());
+	registerModule(new ChaoticItemModule());
 
 	for (const m of modules()) {
 		m.init();
