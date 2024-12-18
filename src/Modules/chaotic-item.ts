@@ -70,23 +70,20 @@ export class ChaoticItemModule extends BaseModule {
 
         // Filter the items that correspond to the correct trigger timer
         let filteredChaoticItems: Item[] = [];
+
+        // Default filter: no slow nor quick keywords
+        let itemCheckPredicate = (itemStr: string) =>
+            !quickKeywords.some(k => isPhraseInString(itemStr, k)) &&
+            !slowKeywords.some(k => isPhraseInString(itemStr, k));
+
+        if (filter === "quick") {
+            itemCheckPredicate = (itemStr: string) => quickKeywords.some(k => isPhraseInString(itemStr, k));
+        } else if (filter === "slow") {
+            itemCheckPredicate = (itemStr: string) => slowKeywords.some(k => isPhraseInString(itemStr, k));
+        }
+
         for (let item of chaoticItems) {
-            let itemStr = GetItemNameAndDescriptionConcat(item) ?? "";
-            if (filter != "slow" && quickKeywords.some(k => isPhraseInString(itemStr, k))) {
-                if (filter == "quick") {
-                    filteredChaoticItems.push(item);
-                }
-                // if filter == "default" we just skip it
-                continue;
-            }
-            else if (filter != "quick" && slowKeywords.some(k => isPhraseInString(itemStr, k))) {
-                if (filter == "slow") {
-                    filteredChaoticItems.push(item);
-                }
-                // if filter == "default" we just skip it
-                continue;
-            }
-            else if (filter == "default") {
+            if (itemCheckPredicate(GetItemNameAndDescriptionConcat(item) ?? "")) {
                 filteredChaoticItems.push(item);
             }
         }
@@ -330,8 +327,7 @@ export class ChaoticItemModule extends BaseModule {
                 // We're already using the last option, Nothing to do.
                 return true;
             }
-        }
-        else {
+        } else {
             // random logic
             let maxRandom = vibratorAvailableOptions.length;
             let vibratorOptionIndex = Math.floor(Math.random() * maxRandom);
@@ -424,13 +420,8 @@ export class ChaoticItemModule extends BaseModule {
                     propertyChanged = true;
                 }
                 else if (selectedProperty == "TriggerValues" &&  itemData.baselineProperty?.TriggerValues) {
-                    let newTriggerValues = this.randomizeTriggerValues(itemData.baselineProperty.TriggerValues);
-                    if (newTriggerValues) {
-                        newProperty = this.setItemPropertyValue(newProperty, "TriggerValues", newTriggerValues);
-                    }
-                    else {
-                        newProperty = this.setItemPropertyValue(newProperty, "TriggerValues", itemData.baselineProperty.TriggerValues);
-                    }
+                    const newTriggerValues = this.randomizeTriggerValues(itemData.baselineProperty.TriggerValues);
+                    newProperty = this.setItemPropertyValue(newProperty, "TriggerValues", newTriggerValues ?? itemData.baselineProperty.TriggerValues);
                     newValuestr = "<hidden>";
                     selectedProperty = "voice trigger words";
                     propertyChanged = true;
@@ -445,12 +436,11 @@ export class ChaoticItemModule extends BaseModule {
                         if (property in item.Property && this.getItemPropertyValueFromObject(item.Property, property)) {
                             continue;
                         }
-                        else {
-                            newProperty = this.setItemPropertyValue(newProperty, property, true);
-                            newValuestr = "true";
-                            propertyChanged = true;
-                            break;
-                        }
+
+                        newProperty = this.setItemPropertyValue(newProperty, property, true);
+                        newValuestr = "true";
+                        propertyChanged = true;
+                        break;
                     }
                     // 0 | 1 | 2 | 3 properties
                     else if (["AutoPunish", "PunishSpeech", "PunishProhibitedSpeech", "PunishRequiredSpeech"].includes(property)) {
@@ -468,18 +458,10 @@ export class ChaoticItemModule extends BaseModule {
                             propertyChanged = true;
                             break;
                         }
-                        else {
-                            continue;
-                        }
                     }
                     else if (property == "TriggerValues" &&  itemData.baselineProperty?.TriggerValues) {
-                        let newTriggerValues = this.randomizeTriggerValues(itemData.baselineProperty.TriggerValues);
-                        if (newTriggerValues) {
-                            newProperty = this.setItemPropertyValue(newProperty, "TriggerValues", newTriggerValues);
-                        }
-                        else {
-                            newProperty = this.setItemPropertyValue(newProperty, "TriggerValues", itemData.baselineProperty.TriggerValues);
-                        }
+                        const newTriggerValues = this.randomizeTriggerValues(itemData.baselineProperty.TriggerValues);
+                        newProperty = this.setItemPropertyValue(newProperty, "TriggerValues", newTriggerValues ?? itemData.baselineProperty.TriggerValues);
                         newValuestr = "<hidden>";
                         selectedProperty = "voice trigger words";
                         propertyChanged = true;
@@ -542,76 +524,15 @@ export class ChaoticItemModule extends BaseModule {
 
     // Workaround to bypass TS custom type
     getItemPropertyValueFromObject(obj: PropertiesNoArray | ItemProperties, property: string) {
-        switch (property) {
-            case "AutoPunish":
-                return obj.AutoPunish;
-            case "PunishActivity":
-                return obj.PunishActivity;
-            case "PunishOrgasm":
-                return obj.PunishOrgasm;
-            case "PunishSpeech":
-                return obj.PunishSpeech;
-            case "PunishStandup":
-                return obj.PunishStandup;
-            case "PunishStruggle":
-                return obj.PunishStruggle;
-            case "PunishStruggleOther":
-                return obj.PunishStruggleOther;
-            case "TriggerValues":
-                return obj.TriggerValues;
-            case "PunishProhibitedSpeech":
-                return obj.PunishProhibitedSpeech;
-            case "PunishRequiredSpeech":
-                return obj.PunishRequiredSpeech;
-            case "PunishProhibitedSpeechWords":
-                return obj.PunishProhibitedSpeechWords;
-            case "PunishRequiredSpeechWord":
-                return obj.PunishRequiredSpeechWord;
-            default:
-                return undefined;
+        if (property in obj) {
+            return obj[property as keyof typeof obj];
         }
+        return undefined;
     }
 
     // Workaround to bypass TS custom type
     setItemPropertyValue(obj: ItemProperties, property: string, value: any) {
-        switch (property) {
-            case "AutoPunish":
-                obj.AutoPunish = value;
-                break;
-            case "PunishActivity":
-                obj.PunishActivity = value;
-                break;
-            case "PunishOrgasm":
-                obj.PunishOrgasm = value;
-                break;
-            case "PunishSpeech":
-                obj.PunishSpeech = value;
-                break;
-            case "PunishStandup":
-                obj.PunishStandup = value;
-                break;
-            case "PunishStruggle":
-                obj.PunishStruggle = value;
-                break;
-            case "PunishStruggleOther":
-                obj.PunishStruggleOther = value;
-                break;
-            case "TriggerValues":
-                obj.TriggerValues = value;
-                break;
-            case "PunishProhibitedSpeech":
-                obj.PunishProhibitedSpeech = value;
-                break;
-            case "PunishRequiredSpeech":
-                obj.PunishRequiredSpeech = value;
-                break;
-            case "PunishProhibitedSpeechWords":
-                obj.PunishProhibitedSpeechWords = value;
-                break;
-            case "PunishRequiredSpeechWord":
-                obj.PunishRequiredSpeechWord = value;
-                break;
-        }
+        obj[property as keyof typeof obj] = value;
         return obj;
     }
 
@@ -704,30 +625,20 @@ export class ChaoticItemModule extends BaseModule {
     */
 
     getNextOptionFromOptionsList<T extends TypedItemOption | ModularItemOption>(currentOption: T, availableOptions: T[]): T | undefined {
-        let isNextOption = false;
-        let newOption: T | undefined = undefined;
-        for (let option of availableOptions) {
-            if (isNextOption) {
-                newOption = option;
-                break;
-            }
+        const lastAvailableOptionIndex = availableOptions.length - 1;
+        const currentOptionIndex = availableOptions.findIndex((option) => option.Name === currentOption.Name);
 
-            if (option.Name == currentOption.Name) {
-                // We found the current option used, we will then select the next one
-                isNextOption = true;
-                continue;
-            }
+        if (currentOptionIndex >= lastAvailableOptionIndex) {
+            // If we are already using the last option we have nothing to do
+            return undefined;
         }
-        if (!newOption) {
-            if (isNextOption) {
-                // If we are already using the last option we have nothing to do
-                return undefined;
-            }
-            else {
-                // If we haven't found our current used option, just use the last one directly then
-                newOption = availableOptions[availableOptions.length - 1];
-            }
+
+        if (currentOptionIndex <= 0) {
+            // If we haven't found our current used option, just use the last one directly then
+            return availableOptions[availableOptions.length - 1];
         }
-        return newOption;
+
+        // We found the current option used, we will then select the next one
+        return availableOptions[currentOptionIndex + 1];
     }
 }
