@@ -131,8 +131,8 @@ export class GuiGlobal extends GuiSubscreen {
 				disabled: !this.settings.enabled
 			},<Setting>{
 				type: "checkbox",
-				label: "Enable Chaotic Items:",
-				description: "Enable chaotic features on crafted items you wear.",
+				label: "Enable Chaotic/Evolving Items:",
+				description: "Enable chaotic/evolving features on crafted items you wear.",
 				setting: () => Player.LSCG.ChaoticItemModule.enabled ?? true,
 				setSetting: (val) => Player.LSCG.ChaoticItemModule.enabled = val,
 				disabled: !this.settings.enabled
