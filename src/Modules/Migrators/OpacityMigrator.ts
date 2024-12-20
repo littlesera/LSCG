@@ -16,10 +16,10 @@ export class OpacityMigrator extends BaseMigrator {
         console.info("Migrating LSCGOpacity to vanilla Opacity.");
         // Migrate wardrobe
         Player.Wardrobe?.forEach(outfit => {
-            outfit.forEach(item => migrateItem(item))
+            outfit?.forEach(item => migrateItem(item))
         });
         // Migrate current appearance
-        Player.Appearance.forEach(item => migrateItem(item));
+        Player.Appearance?.forEach(item => migrateItem(item));
         
         return true;
     }
