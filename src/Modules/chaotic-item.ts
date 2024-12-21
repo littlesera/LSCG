@@ -463,7 +463,7 @@ export class ChaoticItemModule extends BaseModule {
 
         // Change item's option based on the logic provided (random or evolving)
         // evolving logic will select a higher indexed option (or do nothing if nothing higher)
-        let logic: "random" | "evolving" = "random";
+        let logic: ChangeLogic = "random";
         let itemStr = GetItemNameAndDescriptionConcat(item) ?? "";
         if (evolvingKeywords.some(k => isPhraseInString(itemStr, k)))
             logic = "evolving";
@@ -491,7 +491,7 @@ export class ChaoticItemModule extends BaseModule {
         }
     }
 
-    shapeShiftTypedItem(item: Item, logic: "random" | "evolving"): boolean {
+    shapeShiftTypedItem(item: Item, logic: ChangeLogic): boolean {
         // Mostly copied from TypedItemSetRandomOption implementation
         const typedData = TypedItemDataLookup[`${item.Asset.Group.Name}${item.Asset.Name}`];
         //console.log("shapeshiftTypedItem: typedData: ", typedData);
@@ -536,7 +536,7 @@ export class ChaoticItemModule extends BaseModule {
     **** Modular item's functions ****
     */
 
-    shapeShiftModularItem(item: Item, logic: "random" | "evolving"): boolean {
+    shapeShiftModularItem(item: Item, logic: ChangeLogic): boolean {
         let ret = false;
         const modularData = ModularItemDataLookup[`${item.Asset.Group.Name}${item.Asset.Name}`];
         //console.log("shapeShiftModularItem: modularData: ", modularData);
@@ -589,7 +589,7 @@ export class ChaoticItemModule extends BaseModule {
     }
 
 
-    changeModuleOption(item: Item, modularData: ModularItemData, modularModule: ModularItemModule, moduleIndex: number, logic: "random" | "evolving"): boolean {
+    changeModuleOption(item: Item, modularData: ModularItemData, modularModule: ModularItemModule, moduleIndex: number, logic: ChangeLogic): boolean {
         // get previous option
         let itemTypeRecord: TypeRecord | undefined | null = item.Property?.TypeRecord;
         if (!itemTypeRecord)
@@ -650,7 +650,7 @@ export class ChaoticItemModule extends BaseModule {
     **** Vibrator item's functions ****
     */
 
-    shapeShiftVibratorItem(item: Item, logic: "random" | "evolving"): boolean {
+    shapeShiftVibratorItem(item: Item, logic: ChangeLogic): boolean {
         const vibratorData = VibratorModeDataLookup[`${item.Asset.Group.Name}${item.Asset.Name}`];
         //console.log("shapeShiftVibratorItem: VIBRATING: vibratorData: ", vibratorData);
 
