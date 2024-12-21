@@ -671,31 +671,26 @@ export class ChaoticItemModule extends BaseModule {
         let vibratorPrevOptionName = item.Property?.Mode;
         if (logic == "evolving" && vibratorPrevOptionName) {
             // find current/previous option index
-            let previousOptionIndex = undefined;
-            let i = 0;
-            while (i < vibratorAvailableOptions.length) {
-                let option = vibratorAvailableOptions[i];
-                if (option.Name == vibratorPrevOptionName) {
-                    previousOptionIndex = i;
-                    break;
-                }
-                i++;
-            }
-            if (!previousOptionIndex) {
+            const previousOptionIndex = vibratorAvailableOptions.findIndex(option => option.Name === vibratorPrevOptionName);
+
+            if (previousOptionIndex < 0) {
                 console.warn("shapeShiftVibratorItem: Couldn't find previous option with vibratorPrevOptionName=" + vibratorPrevOptionName + " vibratorAvailableOptions: ", vibratorAvailableOptions);
                 return false;
             }
 
-            if (previousOptionIndex == (vibratorAvailableOptions.length - 1)) {
+            if (previousOptionIndex === (vibratorAvailableOptions.length - 1)) {
                 // We're already using the last option, Nothing to do.
                 return true;
             }
+
+            vibratorNewOption = vibratorAvailableOptions[previousOptionIndex + 1].Name;
         } else {
             // random logic
             let maxRandom = vibratorAvailableOptions.length;
             let vibratorOptionIndex = Math.floor(Math.random() * maxRandom);
             vibratorNewOption = vibratorAvailableOptions[vibratorOptionIndex].Name;
         }
+
         if (!vibratorNewOption) {
             return false;
         }
