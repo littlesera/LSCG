@@ -369,7 +369,7 @@ export class ChaoticItemModule extends BaseModule {
         }
 
         let selectedProperty: string | undefined = undefined;
-        let newValuestr: any = undefined;
+        let newValuestr = '<hidden>';
         if (existingProperty.length > 0) {
             //console.log("changeEditableProperty: existingProperty: ", existingProperty);
             if (logic == 'random') {
@@ -393,14 +393,9 @@ export class ChaoticItemModule extends BaseModule {
 
                 // boolean properties
                 if (["PunishActivity", "PunishOrgasm", "PunishStandup", "PunishStruggle", "PunishStruggleOther"].includes(selectedProperty)) {
-                    if (selectedProperty in item.Property && this.getItemPropertyValueFromObject(item.Property, selectedProperty)) {
-                        newProperty = this.setItemPropertyValue(newProperty, selectedProperty, false);
-                        newValuestr = "false";
-                    }
-                    else {
-                        newProperty = this.setItemPropertyValue(newProperty, selectedProperty, true);
-                        newValuestr = "true";
-                    }
+                    const newValue = !(selectedProperty in item.Property && this.getItemPropertyValueFromObject(item.Property, selectedProperty));
+                    newProperty = this.setItemPropertyValue(newProperty, selectedProperty, newValue);
+                    newValuestr = newValue.toString();
                     propertyChanged = true;
                 }
                 // 0 | 1 | 2 | 3 properties
@@ -422,7 +417,6 @@ export class ChaoticItemModule extends BaseModule {
                 else if (selectedProperty == "TriggerValues" &&  itemData.baselineProperty?.TriggerValues) {
                     const newTriggerValues = this.randomizeTriggerValues(itemData.baselineProperty.TriggerValues);
                     newProperty = this.setItemPropertyValue(newProperty, "TriggerValues", newTriggerValues ?? itemData.baselineProperty.TriggerValues);
-                    newValuestr = "<hidden>";
                     selectedProperty = "voice trigger words";
                     propertyChanged = true;
                 }
@@ -446,13 +440,14 @@ export class ChaoticItemModule extends BaseModule {
                     else if (["AutoPunish", "PunishSpeech", "PunishProhibitedSpeech", "PunishRequiredSpeech"].includes(property)) {
                         const currentNumber = this.getNumericPropertyFromObject(item.Property, property);
                         if (currentNumber !== undefined && currentNumber < 3) {
-                            newProperty = this.setItemPropertyValue(newProperty, property, currentNumber + 1);
-                            newValuestr = (currentNumber+1).toString();
+                            const newValue = currentNumber + 1;
+                            newProperty = this.setItemPropertyValue(newProperty, property, newValue);
+                            newValuestr = newValue.toString();
                             // Special case
-                            if (property == "PunishProhibitedSpeech" &&  itemData.baselineProperty?.PunishProhibitedSpeechWords) {
+                            if (property == "PunishProhibitedSpeech" && itemData.baselineProperty?.PunishProhibitedSpeechWords) {
                                 newProperty = this.setItemPropertyValue(newProperty, "PunishProhibitedSpeechWords", itemData.baselineProperty.PunishProhibitedSpeechWords);
                             }
-                            else if (property == "PunishRequiredSpeech" &&  itemData.baselineProperty?.PunishRequiredSpeechWord) {
+                            else if (property == "PunishRequiredSpeech" && itemData.baselineProperty?.PunishRequiredSpeechWord) {
                                 newProperty = this.setItemPropertyValue(newProperty, "PunishRequiredSpeechWord", itemData.baselineProperty.PunishRequiredSpeechWord);
                             }
                             propertyChanged = true;
@@ -462,7 +457,6 @@ export class ChaoticItemModule extends BaseModule {
                     else if (property == "TriggerValues" &&  itemData.baselineProperty?.TriggerValues) {
                         const newTriggerValues = this.randomizeTriggerValues(itemData.baselineProperty.TriggerValues);
                         newProperty = this.setItemPropertyValue(newProperty, "TriggerValues", newTriggerValues ?? itemData.baselineProperty.TriggerValues);
-                        newValuestr = "<hidden>";
                         selectedProperty = "voice trigger words";
                         propertyChanged = true;
                         break;
