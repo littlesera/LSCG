@@ -35,7 +35,370 @@ export const DEFAULT_TRIGGER_TIME_MS = 10 * 60 * 1000; // 10min
 export const QUICK_TRIGGER_TIME_MS = 3 * 60 * 1000; // 3min
 export const SLOW_TRIGGER_TIME_MS = 30 * 60 * 1000; // 30min
 
+class PropertyChangeResult {
+    propertyChanged: boolean
+    newValueStr: string | undefined
+
+    constructor(propertyChanged: boolean, newValueStr: string | undefined) {
+        this.propertyChanged = propertyChanged
+        this.newValueStr = newValueStr
+    }
+
+    // Helper methods
+
+    static changed(newValueStr: string) {
+        return new PropertyChangeResult(true, newValueStr);
+    }
+
+    static changedHidden() {
+        return PropertyChangeResult.changed('<hidden>');
+    }
+
+    static unchanged() {
+        return new PropertyChangeResult(false, undefined);
+    }
+}
+
+type PropertyChangeRequest = {
+    originalProperties: ItemProperties
+    newProperties: ItemProperties
+    itemData: TypedItemData | ModularItemData | VibratingItemData
+    propertyName: string
+}
+
+type ChangeLogic = 'random' | 'evolving';
+
+/*
+***** A class to change item's properties (i.e. other options not identified in data's options) *****
+*/
+class PropertyMutator {
+    // return a list of properties applicable to this item
+    static geEditablePropertyInBaseline(baselineProperty: PropertiesNoArray.Item | null | undefined): string[] {
+        if (!baselineProperty) {
+            return [];
+        }
+        // editableProperty are others options that are not part of an extended item's options such as checkbox / voice command trigger word
+        let editableProperty = [
+            "AutoPunish",
+            "PunishActivity",
+            "PunishOrgasm",
+            "PunishSpeech",
+            "PunishStandup",
+            "PunishStruggle",
+            "PunishStruggleOther",
+            "TriggerValues",
+            "PunishProhibitedSpeech",
+            "PunishRequiredSpeech",
+            "PunishProhibitedSpeechWords",
+            "PunishRequiredSpeechWord"
+        ]
+
+        let existingProperty: string[] = [];
+        if (baselineProperty) {
+            for (let property of editableProperty) {
+                if (property in baselineProperty) {
+                    existingProperty.push(property);
+                }
+            }
+        }
+        return existingProperty;
+    }
+
+    // Change specific properties that are part of the options of an item
+    // This is based on itemData.baselineProperty that provide us all special properties of an item
+    changeEditableProperty(item: Item, itemData: TypedItemData | ModularItemData | VibratingItemData, logic: ChangeLogic): boolean {
+        let newProperty: ItemProperties | undefined = CommonCloneDeep(item.Property);
+        if (!item.Property || !newProperty) {
+            console.warn("changeEditableProperty: item.Property or newProperty is undefined !");
+            return false;
+        }
+
+        // Get all the item's property that we can modify
+        // EditableProperty is our handcrafted list of specific properties that we can modify
+        let existingProperty: string[] = PropertyMutator.geEditablePropertyInBaseline(itemData.baselineProperty);
+        if (existingProperty.length <= 0) {
+            return false;
+        }
+
+        let selectedProperty: string | undefined = undefined;
+        let customPropertyName: string | undefined = undefined;
+        let propertyChangeResult: PropertyChangeResult | undefined = undefined;
+        if (existingProperty.length > 0) {
+            //console.log("changeEditableProperty: existingProperty: ", existingProperty);
+            if (logic === 'random') {
+                let maxRandom = existingProperty.length;
+                let propertyIndex = Math.floor(Math.random() * maxRandom);
+                selectedProperty = existingProperty[propertyIndex];
+
+                // References of the variable types of all editable properties
+                //PunishActivity: [false, true],
+                //PunishOrgasm: [false, true],
+                //PunishStandup: [false, true],
+                //PunishStruggle: [false, true],
+                //PunishStruggleOther: [false, true],
+                //AutoPunish: [0, 1, 2, 3],
+                //PunishSpeech: [0, 1, 2, 3],
+                //PunishProhibitedSpeech: [0, 1, 2, 3],
+                //PunishRequiredSpeech: [0, 1, 2, 3],
+                //TriggerValues: [""],
+                //PunishProhibitedSpeechWords: [""],
+                //PunishRequiredSpeechWord: [""]
+
+                const request: PropertyChangeRequest = {
+                    originalProperties: item.Property,
+                    newProperties: newProperty,
+                    itemData: itemData,
+                    propertyName: selectedProperty,
+                }
+
+                // boolean properties
+                if (PropertyMutator.BOOLEAN_PROPERTIES.has(selectedProperty)) {
+                    propertyChangeResult = this.randomizeBooleanProperty(request);
+                }
+                // 0 | 1 | 2 | 3 properties
+                else if (PropertyMutator.NUMERIC_PROPERTIES.has(selectedProperty)) {
+                    propertyChangeResult = this.randomizeNumericProperty(request);
+                }
+                else if (PropertyMutator.TRIGGER_VALUES_PROPERTIES.has(selectedProperty)) {
+                    propertyChangeResult = this.randomizeTriggerValuesProperty(request);
+                    customPropertyName = "voice trigger words";
+                }
+            } else if (logic === "evolving") {
+                // Find the next property to set
+                for (let property of existingProperty) {
+                    selectedProperty = property;
+                    const request: PropertyChangeRequest = {
+                        originalProperties: item.Property,
+                        newProperties: newProperty,
+                        itemData: itemData,
+                        propertyName: selectedProperty,
+                    }
+
+                    // boolean properties
+                    if (PropertyMutator.BOOLEAN_PROPERTIES.has(selectedProperty)) {
+                        propertyChangeResult = this.evolveBooleanProperty(request);
+                    }  // 0 | 1 | 2 | 3 properties
+                    else if (PropertyMutator.NUMERIC_PROPERTIES.has(selectedProperty)) {
+                        propertyChangeResult = this.evolveNumericProperty(request);
+                    } else if (PropertyMutator.TRIGGER_VALUES_PROPERTIES.has(selectedProperty)) {
+                        propertyChangeResult = this.evolveTriggerValuesProperty(request);
+                        customPropertyName = "voice trigger words";
+                    }
+
+                    if (propertyChangeResult?.propertyChanged) {
+                        break;
+                    }
+                }
+            }
+        }
+        else {
+            console.warn("changeEditableProperty: existingProperty is empty: ", existingProperty);
+        }
+
+        if (propertyChangeResult?.propertyChanged) {
+            // Update item
+            ExtendedItemSetProperty(Player, item, item.Property, newProperty, true, true);
+            let itemName = (item?.Craft?.Name ?? item.Asset.Name);
+            // Idk why but this AssetTextGet almost always fail to retrieve the correct text.
+            // And because the string to retrieve the asset's text don't follow any logics, we probably cannot do better
+            let propertyName = AssetTextGet(item.Asset.Name + selectedProperty) ?? selectedProperty;
+            if (propertyName.includes("MISSING")) {
+                propertyName = customPropertyName ?? selectedProperty ?? "unknown property";
+            }
+            SendAction(`%NAME%'s ${itemName} changed the ${propertyName} settings by itself to ${propertyChangeResult?.newValueStr}`);
+            return true;
+        }
+        return false;
+    }
+
+    // [false, true]
+    private randomizeBooleanProperty(request: PropertyChangeRequest): PropertyChangeResult {
+        const newValue = !(request.propertyName in request.originalProperties
+            && this.getItemPropertyValueFromObject(request.originalProperties, request.propertyName));
+        this.setItemPropertyValue(request.newProperties, request.propertyName, newValue);
+        return PropertyChangeResult.changed(newValue.toString());
+    }
+
+    private evolveBooleanProperty(request: PropertyChangeRequest): PropertyChangeResult {
+        if (request.propertyName in request.originalProperties
+            && this.getItemPropertyValueFromObject(request.originalProperties, request.propertyName)) {
+            return PropertyChangeResult.unchanged();
+        }
+
+        this.setItemPropertyValue(request.newProperties, request.propertyName, true);
+        return PropertyChangeResult.changed("true");
+    }
+
+    // [0, 1, 2, 3]
+    private randomizeNumericProperty(request: PropertyChangeRequest): PropertyChangeResult {
+        const maxRandom = 4;
+        const randNumber = Math.floor(Math.random() * maxRandom);
+        this.setItemPropertyValue(request.newProperties, request.propertyName, randNumber);
+        // Special case when enabling the speech features (only used for the Futuristic Training belt afaik)
+        // In that case we just make sure the default word list is included in the item's properties
+        if (request.propertyName == "PunishProhibitedSpeech" && request.itemData.baselineProperty?.PunishProhibitedSpeechWords) {
+            this.setItemPropertyValue(
+                request.newProperties,
+                "PunishProhibitedSpeechWords",
+                request.itemData.baselineProperty.PunishProhibitedSpeechWords
+            );
+        } else if (request.propertyName == "PunishRequiredSpeech" && request.itemData.baselineProperty?.PunishRequiredSpeechWord) {
+            this.setItemPropertyValue(request.newProperties, "PunishRequiredSpeechWord", request.itemData.baselineProperty.PunishRequiredSpeechWord);
+        }
+        return PropertyChangeResult.changed(randNumber.toString());
+    }
+
+    private evolveNumericProperty(request: PropertyChangeRequest): PropertyChangeResult {
+        const currentNumber = this.getNumericPropertyFromObject(request.originalProperties, request.propertyName);
+        if (currentNumber !== undefined && currentNumber < 3) {
+            const newValue = currentNumber + 1;
+            this.setItemPropertyValue(request.newProperties, request.propertyName, newValue);
+            // Special case
+            if (request.propertyName === "PunishProhibitedSpeech" && request.itemData.baselineProperty?.PunishProhibitedSpeechWords) {
+                this.setItemPropertyValue(request.newProperties, "PunishProhibitedSpeechWords", request.itemData.baselineProperty.PunishProhibitedSpeechWords);
+            }
+            else if (request.propertyName === "PunishRequiredSpeech" && request.itemData.baselineProperty?.PunishRequiredSpeechWord) {
+                this.setItemPropertyValue(request.newProperties, "PunishRequiredSpeechWord", request.itemData.baselineProperty.PunishRequiredSpeechWord);
+            }
+            return PropertyChangeResult.changed(newValue.toString());
+        }
+        return PropertyChangeResult.unchanged();
+    }
+
+    // [""]
+    private randomizeTriggerValuesProperty(request: PropertyChangeRequest): PropertyChangeResult {
+        if (!request.itemData.baselineProperty?.TriggerValues) {
+            return PropertyChangeResult.unchanged();
+        }
+        const newTriggerValues = this.randomizeTriggerValues(request.itemData.baselineProperty.TriggerValues);
+        this.setItemPropertyValue(request.newProperties, "TriggerValues", newTriggerValues ?? request.itemData.baselineProperty.TriggerValues);
+        return PropertyChangeResult.changedHidden();
+    }
+
+    private evolveTriggerValuesProperty(request: PropertyChangeRequest): PropertyChangeResult {
+        if (!request.itemData.baselineProperty?.TriggerValues) {
+            return PropertyChangeResult.unchanged();
+        }
+
+        const newTriggerValues = this.randomizeTriggerValues(request.itemData.baselineProperty.TriggerValues);
+        this.setItemPropertyValue(request.newProperties, "TriggerValues", newTriggerValues ?? request.itemData.baselineProperty.TriggerValues);
+        return PropertyChangeResult.changedHidden();
+    }
+
+    // Workaround to bypass TS custom type
+    private getItemPropertyValueFromObject(obj: PropertiesNoArray | ItemProperties, property: string) {
+        if (property in obj) {
+            return obj[property as keyof typeof obj];
+        }
+        return undefined;
+    }
+
+    private getNumericPropertyFromObject(obj: PropertiesNoArray | ItemProperties, property: string): number | undefined {
+        const value = this.getItemPropertyValueFromObject(obj, property);
+        if (typeof value === "number") {
+            return value;
+        }
+        return undefined;
+    }
+
+    // Workaround to bypass TS custom type
+    private setItemPropertyValue(obj: ItemProperties, property: string, value: any) {
+        obj[property as keyof typeof obj] = value;
+        return obj;
+    }
+
+    // Randomize the voice trigger values with our custom list of common word
+    // baselineTriggerValues is a list of word separated by commas (type string)
+    // baselineTriggerValues also provide us with the information of how much word is needed
+    randomizeTriggerValues(baselineTriggerValues: string) {
+        let nbWordTodo = baselineTriggerValues.split(",").length;
+        let newTriggerValues = "";
+
+        let commonWordList: string[] = [
+            "Hi",
+            "Goodbye",
+            "Bye",
+            "my",
+            "please",
+            "help",
+            "helpless",
+            "locked",
+            "lock",
+            "locked",
+            "tied",
+            "untie",
+            "release",
+            "released",
+            "tease",
+            "orgasm",
+            "shock",
+            "punish",
+            "punishment",
+            "cute",
+            "cutie",
+            "slut",
+            "slave",
+            "sub",
+            "spank",
+            "guess",
+            "devious",
+            "chaotic",
+            "living",
+            "sentient",
+            "spreading",
+            "spread",
+            "restrain",
+            "bondage",
+            "bound",
+            "butt",
+            "ass",
+            "vagina",
+            "clit",
+            "hand",
+            "arm",
+            "leg",
+            "feet",
+            "head",
+            "mouth",
+            "gag",
+            "gagged",
+            "Increase",
+            "Decrease",
+            "Inflate",
+            "Deflate",
+        ];
+        commonWordList.push(Player.Name);
+        if (Player.Nickname)
+            commonWordList.push(Player.Nickname);
+
+        while (nbWordTodo > 0 && commonWordList.length > 0) {
+            let maxRandom = commonWordList.length;
+            let wordIndex = Math.floor(Math.random() * maxRandom);
+
+            if (newTriggerValues.length == 0) {
+                newTriggerValues = commonWordList[wordIndex];
+            }
+            else {
+                newTriggerValues += "," + commonWordList[wordIndex];
+            }
+
+            nbWordTodo--;
+            // removed used word from list to avoid duplicate
+            commonWordList.splice(wordIndex, 1);
+        }
+
+        //console.log("randomizeTriggerValues: newTriggerValues: ", newTriggerValues);
+        return newTriggerValues;
+    }
+
+    private static BOOLEAN_PROPERTIES = new Set(["PunishActivity", "PunishOrgasm", "PunishStandup", "PunishStruggle", "PunishStruggleOther"]);
+    private static NUMERIC_PROPERTIES = new Set(["AutoPunish", "PunishSpeech", "PunishProhibitedSpeech", "PunishRequiredSpeech"]);
+    private static TRIGGER_VALUES_PROPERTIES = new Set(["TriggerValues"]);
+}
+
 export class ChaoticItemModule extends BaseModule {
+    private mutator = new PropertyMutator();
+
     defaultTriggerInterval: number = 0;
     quickTriggerInterval: number = 0;
     slowTriggerInterval: number = 0;
@@ -134,7 +497,7 @@ export class ChaoticItemModule extends BaseModule {
         //console.log("shapeshiftTypedItem: typedData: ", typedData);
 
         // Handle special properties if any
-        this.changeEditableProperty(item, typedData, logic);
+        this.mutator.changeEditableProperty(item, typedData, logic);
 
         // Avoid limited options
         const typedAvailableOptions = typedData.options.filter(o => {
@@ -180,7 +543,7 @@ export class ChaoticItemModule extends BaseModule {
 
         // Handle special properties that can be changed
         let isItemHaveEditableProperty = false;
-        if (this.geEditablePropertyInBaseline(modularData.baselineProperty).length > 0) {
+        if (PropertyMutator.geEditablePropertyInBaseline(modularData.baselineProperty).length > 0) {
             isItemHaveEditableProperty = true;
         }
 
@@ -201,7 +564,7 @@ export class ChaoticItemModule extends BaseModule {
                 moduleIndex = Math.floor(Math.random() * moduleLength);
             }
             if (isItemHaveEditableProperty && moduleIndex >= modularData.modules.length) {
-                if (this.changeEditableProperty(item, modularData, logic)) {
+                if (this.mutator.changeEditableProperty(item, modularData, logic)) {
                     // If returned true we correctly changed this module
                     moduleToChange--;
                     ret = true;
@@ -292,7 +655,7 @@ export class ChaoticItemModule extends BaseModule {
         //console.log("shapeShiftVibratorItem: VIBRATING: vibratorData: ", vibratorData);
 
         // Handle additional properties if any
-        this.changeEditableProperty(item, vibratorData, logic);
+        this.mutator.changeEditableProperty(item, vibratorData, logic);
 
         // Avoid limited options
         const vibratorAvailableOptions = vibratorData.options.filter(o => {
@@ -344,282 +707,6 @@ export class ChaoticItemModule extends BaseModule {
         let optionName = AssetTextGet(vibratorData.dialogPrefix.option + vibratorNewOption) ?? vibratorNewOption;
         SendAction(`%NAME%'s ${itemName} changed settings by itself to ${optionName} mode`);
         return true;
-    }
-
-
-    /*
-    ***** Functions to change item's properties (i.e. other options not identified in data's options) *****
-    */
-
-    // Change specific properties that are part of the options of an item
-    // This is based on itemData.baselineProperty that provide us all special properties of an item
-    changeEditableProperty(item: Item, itemData: TypedItemData | ModularItemData | VibratingItemData, logic: "random" | "evolving"): boolean {
-        let newProperty: ItemProperties | undefined = CommonCloneDeep(item.Property);
-        let propertyChanged: boolean = false;
-        if (!item.Property || !newProperty) {
-            console.warn("changeEditableProperty: item.Property or newProperty is undefined !");
-            return false;
-        }
-
-        // Get all the item's property that we can modify
-        // EditableProperty is our handcrafted list of specific properties that we can modify
-        let existingProperty: string[] = this.geEditablePropertyInBaseline(itemData.baselineProperty);
-        if (existingProperty.length <= 0) {
-            return false;
-        }
-
-        let selectedProperty: string | undefined = undefined;
-        let newValuestr = '<hidden>';
-        if (existingProperty.length > 0) {
-            //console.log("changeEditableProperty: existingProperty: ", existingProperty);
-            if (logic == 'random') {
-                let maxRandom = existingProperty.length;
-                let propertyIndex = Math.floor(Math.random() * maxRandom);
-                selectedProperty = existingProperty[propertyIndex];
-
-                // References of the variable types of all editable properties
-                //PunishActivity: [false, true],
-                //PunishOrgasm: [false, true],
-                //PunishStandup: [false, true],
-                //PunishStruggle: [false, true],
-                //PunishStruggleOther: [false, true],
-                //AutoPunish: [0, 1, 2, 3],
-                //PunishSpeech: [0, 1, 2, 3],
-                //PunishProhibitedSpeech: [0, 1, 2, 3],
-                //PunishRequiredSpeech: [0, 1, 2, 3],
-                //TriggerValues: [""],
-                //PunishProhibitedSpeechWords: [""],
-                //PunishRequiredSpeechWord: [""]
-
-                // boolean properties
-                if (["PunishActivity", "PunishOrgasm", "PunishStandup", "PunishStruggle", "PunishStruggleOther"].includes(selectedProperty)) {
-                    const newValue = !(selectedProperty in item.Property && this.getItemPropertyValueFromObject(item.Property, selectedProperty));
-                    newProperty = this.setItemPropertyValue(newProperty, selectedProperty, newValue);
-                    newValuestr = newValue.toString();
-                    propertyChanged = true;
-                }
-                // 0 | 1 | 2 | 3 properties
-                else if (["AutoPunish", "PunishSpeech", "PunishProhibitedSpeech", "PunishRequiredSpeech"].includes(selectedProperty)) {
-                    let maxRandom = 4;
-                    let randNumber = Math.floor(Math.random() * maxRandom);
-                    newProperty = this.setItemPropertyValue(newProperty, selectedProperty, randNumber);
-                    newValuestr = randNumber.toString();
-                    // Special case when enabling the speech features (only used for the Futuristic Training belt afaik)
-                    // In that case we just make sure the default word list is included in the item's properties
-                    if (selectedProperty == "PunishProhibitedSpeech" &&  itemData.baselineProperty?.PunishProhibitedSpeechWords) {
-                        newProperty = this.setItemPropertyValue(newProperty, "PunishProhibitedSpeechWords", itemData.baselineProperty.PunishProhibitedSpeechWords);
-                    }
-                    else if (selectedProperty == "PunishRequiredSpeech" &&  itemData.baselineProperty?.PunishRequiredSpeechWord) {
-                        newProperty = this.setItemPropertyValue(newProperty, "PunishRequiredSpeechWord", itemData.baselineProperty.PunishRequiredSpeechWord);
-                    }
-                    propertyChanged = true;
-                }
-                else if (selectedProperty == "TriggerValues" &&  itemData.baselineProperty?.TriggerValues) {
-                    const newTriggerValues = this.randomizeTriggerValues(itemData.baselineProperty.TriggerValues);
-                    newProperty = this.setItemPropertyValue(newProperty, "TriggerValues", newTriggerValues ?? itemData.baselineProperty.TriggerValues);
-                    selectedProperty = "voice trigger words";
-                    propertyChanged = true;
-                }
-            }
-            else if (logic == "evolving") {
-                // Find the next property to set
-                for (let property of existingProperty) {
-                    selectedProperty = property;
-                    // boolean properties
-                    if (["PunishActivity", "PunishOrgasm", "PunishStandup", "PunishStruggle", "PunishStruggleOther"].includes(property)) {
-                        if (property in item.Property && this.getItemPropertyValueFromObject(item.Property, property)) {
-                            continue;
-                        }
-
-                        newProperty = this.setItemPropertyValue(newProperty, property, true);
-                        newValuestr = "true";
-                        propertyChanged = true;
-                        break;
-                    }
-                    // 0 | 1 | 2 | 3 properties
-                    else if (["AutoPunish", "PunishSpeech", "PunishProhibitedSpeech", "PunishRequiredSpeech"].includes(property)) {
-                        const currentNumber = this.getNumericPropertyFromObject(item.Property, property);
-                        if (currentNumber !== undefined && currentNumber < 3) {
-                            const newValue = currentNumber + 1;
-                            newProperty = this.setItemPropertyValue(newProperty, property, newValue);
-                            newValuestr = newValue.toString();
-                            // Special case
-                            if (property == "PunishProhibitedSpeech" && itemData.baselineProperty?.PunishProhibitedSpeechWords) {
-                                newProperty = this.setItemPropertyValue(newProperty, "PunishProhibitedSpeechWords", itemData.baselineProperty.PunishProhibitedSpeechWords);
-                            }
-                            else if (property == "PunishRequiredSpeech" && itemData.baselineProperty?.PunishRequiredSpeechWord) {
-                                newProperty = this.setItemPropertyValue(newProperty, "PunishRequiredSpeechWord", itemData.baselineProperty.PunishRequiredSpeechWord);
-                            }
-                            propertyChanged = true;
-                            break;
-                        }
-                    }
-                    else if (property == "TriggerValues" &&  itemData.baselineProperty?.TriggerValues) {
-                        const newTriggerValues = this.randomizeTriggerValues(itemData.baselineProperty.TriggerValues);
-                        newProperty = this.setItemPropertyValue(newProperty, "TriggerValues", newTriggerValues ?? itemData.baselineProperty.TriggerValues);
-                        selectedProperty = "voice trigger words";
-                        propertyChanged = true;
-                        break;
-                    }
-                }
-            }
-        }
-        else {
-            console.warn("changeEditableProperty: existingProperty is empty: ", existingProperty);
-        }
-
-        if (propertyChanged) {
-            // Update item
-            ExtendedItemSetProperty(Player, item, item.Property, newProperty, true, true);
-            let itemName = (item?.Craft?.Name ?? item.Asset.Name);
-            // Idk why but this AssetTextGet almost always fail to retrieve the correct text.
-            // And because the string to retrieve the asset's text don't follow any logics, we probably cannot do better
-            let propertyName = AssetTextGet(item.Asset.Name + selectedProperty) ?? selectedProperty;
-            if (propertyName.includes("MISSING")) {
-                propertyName = selectedProperty ?? "unknown property";
-            }
-            SendAction(`%NAME%'s ${itemName} changed the ${propertyName} settings by itself to ${newValuestr}`);
-            return true;
-        }
-        return false;
-    }
-
-    // return a list of properties applicable to this item
-    geEditablePropertyInBaseline(baselineProperty: PropertiesNoArray.Item | null | undefined): string[] {
-        if (!baselineProperty) {
-            return [];
-        }
-        // editableProperty are others options that are not part of an extended item's options such as checkbox / voice command trigger word
-        let editableProperty = [
-            "AutoPunish",
-            "PunishActivity",
-            "PunishOrgasm",
-            "PunishSpeech",
-            "PunishStandup",
-            "PunishStruggle",
-            "PunishStruggleOther",
-            "TriggerValues",
-            "PunishProhibitedSpeech",
-            "PunishRequiredSpeech",
-            "PunishProhibitedSpeechWords",
-            "PunishRequiredSpeechWord"
-        ]
-
-        let existingProperty: string[] = [];
-        if (baselineProperty) {
-            for (let property of editableProperty) {
-                if (property in baselineProperty) {
-                    existingProperty.push(property);
-                }
-            }
-        }
-        return existingProperty;
-    }
-
-    // Workaround to bypass TS custom type
-    getItemPropertyValueFromObject(obj: PropertiesNoArray | ItemProperties, property: string) {
-        if (property in obj) {
-            return obj[property as keyof typeof obj];
-        }
-        return undefined;
-    }
-
-    getNumericPropertyFromObject(obj: PropertiesNoArray | ItemProperties, property: string): number | undefined {
-        const value = this.getItemPropertyValueFromObject(obj, property);
-        if (typeof value === "number") {
-            return value;
-        }
-        return undefined;
-    }
-
-    // Workaround to bypass TS custom type
-    setItemPropertyValue(obj: ItemProperties, property: string, value: any) {
-        obj[property as keyof typeof obj] = value;
-        return obj;
-    }
-
-    // Randomize the voice trigger values with our custom list of common word
-    // baselineTriggerValues is a list of word separated by commas (type string)
-    // baselineTriggerValues also provide us with the information of how much word is needed
-    randomizeTriggerValues(baselineTriggerValues: string) {
-        let nbWordTodo = baselineTriggerValues.split(",").length;
-        let newTriggerValues = "";
-
-        let commonWordList: string[] = [
-            "Hi",
-            "Goodbye",
-            "Bye",
-            "my",
-            "please",
-            "help",
-            "helpless",
-            "locked",
-            "lock",
-            "locked",
-            "tied",
-            "untie",
-            "release",
-            "released",
-            "tease",
-            "orgasm",
-            "shock",
-            "punish",
-            "punishment",
-            "cute",
-            "cutie",
-            "slut",
-            "slave",
-            "sub",
-            "spank",
-            "guess",
-            "devious",
-            "chaotic",
-            "living",
-            "sentient",
-            "spreading",
-            "spread",
-            "restrain",
-            "bondage",
-            "bound",
-            "butt",
-            "ass",
-            "vagina",
-            "clit",
-            "hand",
-            "arm",
-            "leg",
-            "feet",
-            "head",
-            "mouth",
-            "gag",
-            "gagged",
-            "Increase",
-            "Decrease",
-            "Inflate",
-            "Deflate",
-        ];
-        commonWordList.push(Player.Name);
-        if (Player.Nickname)
-            commonWordList.push(Player.Nickname);
-
-        while (nbWordTodo > 0 && commonWordList.length > 0) {
-            let maxRandom = commonWordList.length;
-            let wordIndex = Math.floor(Math.random() * maxRandom);
-
-            if (newTriggerValues.length == 0) {
-                newTriggerValues = commonWordList[wordIndex];
-            }
-            else {
-                newTriggerValues += "," + commonWordList[wordIndex];
-            }
-
-            nbWordTodo--;
-            // removed used word from list to avoid duplicate
-            commonWordList.splice(wordIndex, 1);
-        }
-
-        //console.log("randomizeTriggerValues: newTriggerValues: ", newTriggerValues);
-        return newTriggerValues;
     }
 
     /*
