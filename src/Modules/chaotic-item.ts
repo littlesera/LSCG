@@ -444,8 +444,8 @@ export class ChaoticItemModule extends BaseModule {
                     }
                     // 0 | 1 | 2 | 3 properties
                     else if (["AutoPunish", "PunishSpeech", "PunishProhibitedSpeech", "PunishRequiredSpeech"].includes(property)) {
-                        let currentNumber = this.getItemPropertyValueFromObject(item.Property, property);
-                        if (currentNumber && typeof currentNumber == "number" && currentNumber < 3) {
+                        const currentNumber = this.getNumericPropertyFromObject(item.Property, property);
+                        if (currentNumber !== undefined && currentNumber < 3) {
                             newProperty = this.setItemPropertyValue(newProperty, property, currentNumber + 1);
                             newValuestr = (currentNumber+1).toString();
                             // Special case
@@ -526,6 +526,14 @@ export class ChaoticItemModule extends BaseModule {
     getItemPropertyValueFromObject(obj: PropertiesNoArray | ItemProperties, property: string) {
         if (property in obj) {
             return obj[property as keyof typeof obj];
+        }
+        return undefined;
+    }
+
+    getNumericPropertyFromObject(obj: PropertiesNoArray | ItemProperties, property: string): number | undefined {
+        const value = this.getItemPropertyValueFromObject(obj, property);
+        if (typeof value === "number") {
+            return value;
         }
         return undefined;
     }
