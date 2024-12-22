@@ -717,7 +717,7 @@ export class ChaoticItemModule extends BaseModule {
             return undefined;
         }
 
-        if (currentOptionIndex <= 0) {
+        if (currentOptionIndex < 0) {
             // If we haven't found our current used option, just use the last one directly then
             return availableOptions[availableOptions.length - 1];
         }
