@@ -103,6 +103,7 @@ export class HypnoModule extends BaseModule {
         this.settings.allowSuggestions = false;
         this.settings.allowSuggestionRemoval = true;
         this.settings.remoteAccess = false;
+        this.settings.locked = false;
     }
 
     get StateModule(): StateModule {
