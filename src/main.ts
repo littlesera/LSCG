@@ -1,11 +1,10 @@
 import { CleanDefaultsFromSettings, ExportSettings, GetDataSizeReport, hookFunction, ImportSettings, isObject, sendLSCGBeep, settingsSave } from './utils';
-import { CheckVersionUpdate, ConfiguredActivities, CraftableItemSpellNames, DrugKeywords, getModule, HypnoTriggers, modules, NetgunKeywords, registerModule } from 'modules';
+import { ConfiguredActivities, CraftableItemSpellNames, DrugKeywords, getModule, HypnoTriggers, modules, NetgunKeywords, registerModule } from 'modules';
 import { ActivityModule } from "Modules/activities";
 import { CommandModule } from 'Modules/commands';
 import { CoreModule } from 'Modules/core';
 import { InjectorModule } from 'Modules/injector';
 import { ItemUseModule } from 'Modules/item-use';
-import { LeashingModule } from 'Modules/leashing';
 import { MagicModule } from 'Modules/magic';
 import { OpacityModule } from 'Modules/opacity';
 import { RemoteUIModule } from 'Modules/remoteUI';
@@ -19,6 +18,7 @@ import { CollarModule } from './Modules/collar';
 import { HypnoModule } from './Modules/hypno';
 import { LipstickModule } from './Modules/lipstick';
 import { MiscModule } from './Modules/misc';
+import { LeashingModule } from 'Modules/leashing';
 
 export {
 	DrugKeywords,
@@ -31,8 +31,7 @@ export {
 	ExportSettings,
 	ImportSettings,
 	getModule,
-	sendLSCGBeep,
-	CheckVersionUpdate
+	sendLSCGBeep
 };
 
 function initWait() {
