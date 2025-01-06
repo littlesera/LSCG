@@ -235,9 +235,9 @@ export class MagicModule extends BaseModule {
         return rangedItemKeywords.some(keyword => isPhraseInString(craftStr, keyword));
     }
 
-    CanUseMagic(target: Character) {
+    CanUseMagic(target: Character, checkMagicItem: boolean = true) {
         let item = InventoryGet(Player, "ItemHandheld");
-        let isWieldingMagicItem = !!item && this.IsMagicItem(item);
+        let isWieldingMagicItem = (checkMagicItem) ? (!!item && this.IsMagicItem(item)) : true;
         let hasItemPermission = ServerChatRoomGetAllowItem(Player, target);
         let targetHasMagicEnabled = (target as OtherCharacter).LSCG?.MagicModule?.enabled;
         let whitelisted = !(target as OtherCharacter).LSCG?.MagicModule?.requireWhitelist || (!!Player.MemberNumber && target.WhiteList.indexOf(Player.MemberNumber) > -1) || target.IsPlayer();
@@ -247,9 +247,9 @@ export class MagicModule extends BaseModule {
                 hasItemPermission &&
                 Player.CanInteract() &&
                 whitelisted &&
-                (this.CanCastSpell(CurrentCharacter as OtherCharacter) || 
-                this.CanWildMagic(CurrentCharacter as OtherCharacter) || 
-                this.CanTeachSpell(CurrentCharacter as OtherCharacter))
+                (this.CanCastSpell(target as OtherCharacter) ||
+                this.CanWildMagic(target as OtherCharacter) ||
+                this.CanTeachSpell(target as OtherCharacter))
     }
 
     CanCastSpell(target: Character): boolean {
@@ -859,6 +859,9 @@ export class MagicModule extends BaseModule {
 
         let foundSpell = spellTargetPair[0];
         let target = spellTargetPair[1];
+        if (!this.CanUseMagic(target, false)) {
+            return;
+        }
         let pairTgt: Character | undefined;
         if (this.SpellNeedsPair(foundSpell)) {
             pairTgt = this.PairedCharacterOptions(target)[getRandomInt(this.PairedCharacterOptions(target).length)];
@@ -872,7 +875,7 @@ export class MagicModule extends BaseModule {
             if (!s.AllowVoiceCast)
                 continue;
             let searchPhrase = (!!s.CastingPhrase && s.CastingPhrase.length > 0) ? s.CastingPhrase : s.Name;
-            let re = new RegExp("^" + escapeRegExp(searchPhrase) + " ([\\w\\s]+)(\\b|$|\\s)", "i");
+            let re = new RegExp("^(?:\\w-)?" + escapeRegExp(searchPhrase) + " (?:\\w-)?([\\w\\s]+)(\\b|$|\\s)", "i");
             let matches = re.exec(oocParsedString);
             if (!matches)
                 continue;
