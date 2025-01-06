@@ -1,4 +1,4 @@
-import { ConfiguredActivities, CraftableItemSpellNames, DrugKeywords, getModule, HypnoTriggers, modules, NetgunKeywords, registerModule } from 'modules';
+import { CheckVersionUpdate, ConfiguredActivities, CraftableItemSpellNames, DrugKeywords, getModule, HypnoTriggers, modules, NetgunKeywords, registerModule } from 'modules';
 import { ActivityModule } from "Modules/activities";
 import { CommandModule } from 'Modules/commands';
 import { CoreModule } from 'Modules/core';
@@ -12,6 +12,7 @@ import { StateModule } from 'Modules/states';
 import { SettingsModel } from 'Settings/Models/settings';
 import { GUI } from "Settings/settingUtils";
 import { BoopsModule } from './Modules/boops';
+import { ChaoticItemModule } from './Modules/chaotic-item';
 import { CollarModule } from './Modules/collar';
 import { HypnoModule } from './Modules/hypno';
 import { LipstickModule } from './Modules/lipstick';
@@ -19,7 +20,7 @@ import { MiscModule } from './Modules/misc';
 import { bcModSDK, CleanDefaultsFromSettings, ExportSettings, GetDataSizeReport, hookFunction, ImportSettings, isObject, sendLSCGBeep, settingsSave } from './utils';
 
 export {
-	CleanDefaultsFromSettings, ConfiguredActivities, CraftableItemSpellNames, DrugKeywords, ExportSettings, GetDataSizeReport, getModule, HypnoTriggers, ImportSettings, NetgunKeywords, sendLSCGBeep
+	CheckVersionUpdate, CleanDefaultsFromSettings, ConfiguredActivities, CraftableItemSpellNames, DrugKeywords, ExportSettings, GetDataSizeReport, getModule, HypnoTriggers, ImportSettings, NetgunKeywords, sendLSCGBeep
 };
 
 function initWait() {
@@ -146,6 +147,7 @@ function init_modules(): boolean {
 	registerModule(new RemoteUIModule());
 	registerModule(new CommandModule());
 	registerModule(new LeashingModule());
+	registerModule(new ChaoticItemModule());
 
 	for (const m of modules()) {
 		m.init();

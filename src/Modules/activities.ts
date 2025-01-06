@@ -59,6 +59,9 @@ export interface ActivityBundle extends ActivityBundleBase {
     Targets?: ActivityTarget[];
 }
 
+// >= R111
+declare var DialogMenuMapping: { activities: ScreenFunctions & { ids: { grid: string } } };
+
 export class ActivityModule extends BaseModule {
     get settings(): ActivitySettingsModel {
 		return super.settings as ActivitySettingsModel;
@@ -177,20 +180,31 @@ export class ActivityModule extends BaseModule {
             }
         })
 
-        hookFunction("DrawImageResize", 1, (args, next) => {
-            try {
-                var path = <string>args[0];
-                if (!!path && (typeof path === "string") && path.indexOf("LSCG_") > -1) {
-                    var activityName = path.substring(path.indexOf("LSCG_"));
-                    activityName = activityName.substring(0, activityName.indexOf(".png"))
-                    if (this.CustomImages.has(activityName))
-                        args[0] = this.CustomImages.get(activityName);
+        if (GameVersion === "R110") {
+            hookFunction("DrawImageResize", 1, (args, next) => {
+                try {
+                    var path = <string>args[0];
+                    if (!!path && (typeof path === "string") && path.indexOf("LSCG_") > -1) {
+                        var activityName = path.substring(path.indexOf("LSCG_"));
+                        activityName = activityName.substring(0, activityName.indexOf(".png"))
+                        if (this.CustomImages.has(activityName))
+                            args[0] = this.CustomImages.get(activityName);
+                    }
+                } catch (error) {
+                    console.debug(error);
                 }
-            } catch (error) {
-                console.debug(error);
-            }
-            return next(args);
-        }, ModuleCategory.Activities)
+                return next(args);
+            }, ModuleCategory.Activities);
+        } else { // R111
+            hookFunction("ElementButton.CreateForActivity", 0, (args, next) => {
+                const activity: ItemActivity = args[1];
+                if (activity.Activity.Name.includes("LSCG")) {
+                    args[4] ??= {}; // null | { image?: string }
+                    args[4].image = this.CustomImages.get(activity.Activity.Name);
+                }
+                return next(args);
+            });
+        }
 
         hookFunction("CharacterItemsForActivity", 1, (args, next) => {
 			let C = args[0];

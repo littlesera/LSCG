@@ -8,6 +8,8 @@ import { ActivitySettingsModel } from "./activities";
 import { StateModule } from "Modules/states";
 import { StatePublicSettingsModel, StateSettingsModel } from "./states";
 import { MagicPublicSettingsModel, MagicSettingsModel } from "./magic";
+import { ChaoticItemModule } from "Modules/chaotic-item";
+
 
 export interface SettingsModel {
     Version: string;
@@ -24,6 +26,7 @@ export interface SettingsModel {
     MagicModule: MagicSettingsModel;
     OpacityModule: OpacitySettingsModel;
     LeashingModule: BaseSettingsModel;
+    ChaoticItemModule: BaseSettingsModel;
 }
 
 export interface IPublicSettingsModel extends BaseSettingsModel {
@@ -39,6 +42,7 @@ export interface IPublicSettingsModel extends BaseSettingsModel {
     MagicModule: MagicPublicSettingsModel;
     OpacityModule: OpacityPublicSettingsModel;
     LeashingModule: BaseSettingsModel;
+    ChaoticItemModule: BaseSettingsModel;
 }
 
 export class PublicSettingsModel implements IPublicSettingsModel {
@@ -146,5 +150,6 @@ export class PublicSettingsModel implements IPublicSettingsModel {
     OpacityModule: OpacityPublicSettingsModel = <OpacityPublicSettingsModel>{
         enabled: true,
         preventExternalMod: false
-    }
+    };
+    ChaoticItemModule: BaseSettingsModel = <BaseSettingsModel>{enabled: false};
 }

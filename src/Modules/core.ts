@@ -3,16 +3,20 @@ import { getModule, modules } from "modules";
 import { BaseSettingsModel, GlobalSettingsModel } from "Settings/Models/base";
 import { IPublicSettingsModel, PublicSettingsModel, SettingsModel } from "Settings/Models/settings";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { removeAllHooksByModule, hookFunction, getCharacter, drawSvg, SVG_ICONS, sendLSCGMessage, settingsSave, LSCG_CHANGES, LSCG_SendLocal, mouseTooltip } from "../utils";
-import { HypnoModule } from "./hypno";
+import { drawSvg, getCharacter, hookFunction, LSCG_CHANGES, LSCG_SendLocal, mouseTooltip, removeAllHooksByModule, sendLSCGMessage, settingsSave, SVG_ICONS } from "../utils";
 import { CollarModule } from "./collar";
+import { HypnoModule } from "./hypno";
 
-import { BaseMigrator } from "./Migrators/BaseMigrator";
-import { StateMigrator } from "./Migrators/StateMigrator";
-import { MagicModule } from "./magic";
-import { StateModule } from "./states";
 import { drawTooltip } from "Settings/settingUtils";
 import { GrabType, LeashingModule } from "./leashing";
+import { MagicModule } from "./magic";
+import { BaseMigrator } from "./Migrators/BaseMigrator";
+import { OpacityMigrator } from "./Migrators/OpacityMigrator";
+import { StateMigrator } from "./Migrators/StateMigrator";
+import { StateModule } from "./states";
+
+// >= R111
+declare var DialogMenuMapping: { items: ScreenFunctions & { C: null | Character } };
 
 // Core Module that can handle basic functionality like server handshakes etc.
 export class CoreModule extends BaseModule {
@@ -21,7 +25,8 @@ export class CoreModule extends BaseModule {
         x: 1898,
         y: 120,
         width: 40,
-        height: 40
+        height: 40,
+        id: "lscg-share-crafts",
     };
 
     get publicSettings(): IPublicSettingsModel {
@@ -132,38 +137,93 @@ export class CoreModule extends BaseModule {
             }
         }, ModuleCategory.Core);
 
-        hookFunction("DialogDrawItemMenu", 1, (args, next) => {
-            this._drawShareToggleButton(this.toggleSharedButton.x, this.toggleSharedButton.y, this.toggleSharedButton.width, this.toggleSharedButton.height);
-            next(args);
-        }, ModuleCategory.Core);
+        if (GameVersion !== "R110") { // >= R111
+            const loadHook = () => {
+                const elem = document.getElementById(this.toggleSharedButton.id);
+                if (elem) {
+                    elem.style.display = "";
+                    return;
+                }
 
-        hookFunction("DrawItemPreview", 1, (args, next) => {
-				const ret = next(args);
-				const [item, , x, y] = args;
-				if (item) {
-					const { Craft } = item;
-					if (MouseIn(x, y, DialogInventoryGrid.itemWidth, DialogInventoryGrid.itemHeight) && Craft && Craft?.MemberNumber) {
-						drawTooltip(1000, y - 140, 975, `Crafted By: ${Craft.MemberName} [${Craft.MemberNumber}]`, "left");
-					}
-				}
-				return ret;
-			}
-		);
+                const coreModule = this;
+                ElementButton.Create(
+                    this.toggleSharedButton.id,
+                    function () {
+                        const C = DialogMenuMapping.items.C;
+                        if (!C)
+                            return;
 
-        hookFunction("DialogClick", 1, (args, next) => {
-            next(args);
-            let C = CharacterGetCurrent();
-            if (!C)
-                return;
-            if (MouseIn(this.toggleSharedButton.x, this.toggleSharedButton.y, this.toggleSharedButton.width, this.toggleSharedButton.height) &&
-                DialogModeShowsInventory() && (DialogMenuMode === "permissions" || (Player.CanInteract() && !InventoryGroupIsBlocked(C, undefined, true)))) {
-                this.settings.seeSharedCrafts = !this.settings.seeSharedCrafts;
-                settingsSave();
-                DialogInventoryBuild(C, true, false);
+                        coreModule.settings.seeSharedCrafts = this.getAttribute("aria-checked") === "true";
+                        settingsSave();
+                        // @ts-expect-error: R111 added a fourth parameter; remove this comment once R111 annotations are available
+                        DialogInventoryBuild(C, true, false, false);
+                    },
+                    { image: "./Icons/Online.png", role: "checkbox", tooltip: "Toggle Shared Crafts", tooltipPosition: "left" },
+                    { button: { parent: document.body, attributes: { "aria-checked": this.settings.seeSharedCrafts } } },
+                );
+            };
+
+            hookFunction("DialogMenuMapping.items.Load", 0, (args, next) => {
+                const ret = next(args);
+                loadHook();
+                return ret;
+            });
+
+            hookFunction("DialogMenuMapping.items.Resize", 0, (args, next) => {
+                ElementPositionFixed(this.toggleSharedButton.id, this.toggleSharedButton.x, this.toggleSharedButton.y, this.toggleSharedButton.width, this.toggleSharedButton.height);
+                return next(args);
+            });
+
+            hookFunction("DialogMenuMapping.items.Exit", 0, (args, next) => {
+                ElementRemove(this.toggleSharedButton.id);
+                return next(args);
+            });
+
+            hookFunction("DialogMenuMapping.items.Unload", 0, (args, next) => {
+                const elem = document.getElementById(this.toggleSharedButton.id);
+                if (elem) { elem.style.display = "none"; }
+                return next(args);
+            });
+
+            // Manually fire up the load hook if the dialog-items sub screen is already open upon loading LSCG
+            if (DialogMenuMode === "items") {
+                loadHook();
             }
-        });
+        } else { // R110
+            hookFunction("DialogDrawItemMenu", 1, (args, next) => {
+                this._drawShareToggleButton(this.toggleSharedButton.x, this.toggleSharedButton.y, this.toggleSharedButton.width, this.toggleSharedButton.height);
+                next(args);
+            }, ModuleCategory.Core);
+
+            hookFunction("DrawItemPreview", 1, (args, next) => {
+                    const ret = next(args);
+                    const [item, , x, y] = args;
+                    if (item) {
+                        const { Craft } = item;
+                        if (MouseIn(x, y, DialogInventoryGrid.itemWidth, DialogInventoryGrid.itemHeight) && Craft && Craft?.MemberNumber) {
+                            drawTooltip(1000, y - 140, 975, `Crafted By: ${Craft.MemberName} [${Craft.MemberNumber}]`, "left");
+                        }
+                    }
+                    return ret;
+                }
+            );
+
+            hookFunction("DialogClick", 1, (args, next) => {
+                next(args);
+                let C = CharacterGetCurrent();
+                if (!C)
+                    return;
+                if (MouseIn(this.toggleSharedButton.x, this.toggleSharedButton.y, this.toggleSharedButton.width, this.toggleSharedButton.height) &&
+                    DialogModeShowsInventory() && (DialogMenuMode === "permissions" || (Player.CanInteract() && !InventoryGroupIsBlocked(C, undefined, true)))) {
+                    this.settings.seeSharedCrafts = !this.settings.seeSharedCrafts;
+                    settingsSave();
+                    DialogInventoryBuild(C, true, false);
+                }
+            });
+        }
     }
 
+    // R110
     _drawShareToggleButton(X: number, Y: number, Width: number, Height: number) {
         DrawButton(X, Y, Width, Height, "", this.settings.seeSharedCrafts ? "White" : "Red", "", "Toggle Shared Crafts", false);
         DrawImageResize("Icons/Online.png", X + 2, Y + 2, Width - 4, Height - 4);
@@ -183,16 +243,21 @@ export class CoreModule extends BaseModule {
                 Player.LSCG = <SettingsModel>{};
                 this.registerDefaultSettings();
             }
-            previousVersion = Player.LSCG.Version = LSCG_VERSION;
+            Player.LSCG.Version = LSCG_VERSION;
             saveRequired = true;
         }
-        saveRequired = saveRequired || false;
+        saveRequired = this.CheckForMigrations(previousVersion) || saveRequired;
         if (saveRequired) settingsSave();
     }
 
-    Migrators: BaseMigrator[] = [new StateMigrator()]
+    Migrators: BaseMigrator[] = [
+        new StateMigrator(),
+        new OpacityMigrator()
+    ];
 
     CheckForMigrations(fromVersion: string): boolean {
+        if (!fromVersion)
+            return false;
         if (fromVersion[0] == 'v')
             fromVersion = fromVersion.substring(1);
 
@@ -208,7 +273,7 @@ export class CoreModule extends BaseModule {
 
     SendPublicPacket(replyRequested: boolean, type: LSCGMessageModelType = "init") {
         sendLSCGMessage(<LSCGMessageModel>{
-            version: LSCG_VERSION,
+            version: 'Goddess',
             type: type,
             settings: this.publicSettings,
             target: null,
@@ -243,7 +308,7 @@ export class CoreModule extends BaseModule {
                         break;
                 }
             }
-            
+
         }
     }
 

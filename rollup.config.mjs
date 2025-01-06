@@ -1,12 +1,10 @@
 // rollup.config.js
 import commonjs from '@rollup/plugin-commonjs';
-import json from '@rollup/plugin-json';
-import typescript from '@rollup/plugin-typescript';
 import resolve from "@rollup/plugin-node-resolve";
 import terser from "@rollup/plugin-terser";
+import typescript from '@rollup/plugin-typescript';
 import progress from 'rollup-plugin-progress';
 import packageJson from "./package.json" assert { type: "json" };
-import simpleGit from "simple-git";
 
 export default {
   input: 'src/main.ts',
@@ -15,7 +13,7 @@ export default {
     file: 'dist/bundle.js',
     format: 'iife',
     sourcemap: true,
-		banner: `// LSCG: Little Sera's Club Games
+    banner: `// LSCG: Little Sera's Club Games
 if (typeof window.ImportBondageCollege !== "function") {
   alert("Club not detected! Please only use this while you have Club open!");
   throw "Dependency not met";
@@ -28,7 +26,7 @@ window.LSCG_Loaded = false;
 console.debug("LSCG: Parse start...");
 `,
     intro: async () => {
-      return `const LSCG_VERSION="Goddess";`;
+      return `const LSCG_VERSION="${packageJson.version}";`;
     },
     plugins: [terser({
       mangle: false
@@ -37,7 +35,7 @@ console.debug("LSCG: Parse start...");
   treeshake: false,
   plugins: [
     progress({ clearLine: true }),
-		resolve({ browser: true }),
+    resolve({ browser: true }),
     typescript({ tsconfig: "./tsconfig.json", inlineSources: true }),
     commonjs()
   ]
