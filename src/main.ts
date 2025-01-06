@@ -1,35 +1,25 @@
-import { bcModSDK, CleanDefaultsFromSettings, ExportSettings, GetDataSizeReport, hookFunction, ICONS, ImportSettings, isObject, sendLSCGBeep, settingsSave } from './utils';
 import { ConfiguredActivities, CraftableItemSpellNames, DrugKeywords, getModule, HypnoTriggers, modules, NetgunKeywords, registerModule } from 'modules';
-import { SettingsModel } from 'Settings/Models/settings';
-import { HypnoModule } from './Modules/hypno';
-import { CollarModule } from './Modules/collar';
-import { BoopsModule } from './Modules/boops';
-import { MiscModule } from './Modules/misc';
-import { LipstickModule } from './Modules/lipstick';
-import { GUI } from "Settings/settingUtils";
 import { ActivityModule } from "Modules/activities";
-import { InjectorModule } from 'Modules/injector';
-import { CoreModule } from 'Modules/core';
-import { RemoteUIModule } from 'Modules/remoteUI';
 import { CommandModule } from 'Modules/commands';
+import { CoreModule } from 'Modules/core';
+import { InjectorModule } from 'Modules/injector';
 import { ItemUseModule } from 'Modules/item-use';
-import { StateModule } from 'Modules/states';
+import { LeashingModule } from 'Modules/leashing';
 import { MagicModule } from 'Modules/magic';
 import { OpacityModule } from 'Modules/opacity';
-import { LeashingModule } from 'Modules/leashing';
+import { RemoteUIModule } from 'Modules/remoteUI';
+import { StateModule } from 'Modules/states';
+import { SettingsModel } from 'Settings/Models/settings';
+import { GUI } from "Settings/settingUtils";
+import { BoopsModule } from './Modules/boops';
+import { CollarModule } from './Modules/collar';
+import { HypnoModule } from './Modules/hypno';
+import { LipstickModule } from './Modules/lipstick';
+import { MiscModule } from './Modules/misc';
+import { bcModSDK, CleanDefaultsFromSettings, ExportSettings, GetDataSizeReport, hookFunction, ImportSettings, isObject, sendLSCGBeep, settingsSave } from './utils';
 
-export { 
-	DrugKeywords, 
-	NetgunKeywords, 
-	CraftableItemSpellNames, 
-	HypnoTriggers, 
-	ConfiguredActivities, 
-	GetDataSizeReport,
-	CleanDefaultsFromSettings,
-	ExportSettings,
-	ImportSettings,
-	getModule,
-	sendLSCGBeep
+export {
+	CleanDefaultsFromSettings, ConfiguredActivities, CraftableItemSpellNames, DrugKeywords, ExportSettings, GetDataSizeReport, getModule, HypnoTriggers, ImportSettings, NetgunKeywords, sendLSCGBeep
 };
 
 function initWait() {
