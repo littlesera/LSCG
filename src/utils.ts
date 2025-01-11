@@ -1,14 +1,14 @@
-import { GetDotedPathType, PatchHook } from "bondage-club-mod-sdk";
-import bcModSDKRef from "bondage-club-mod-sdk";
+import bcModSDKRef, { GetDotedPathType, PatchHook } from "bondage-club-mod-sdk";
+import { clone } from "lodash-es";
 import { getModule } from "modules";
 import { CoreModule } from "Modules/core";
 import { ActivityEntryModel } from "Settings/Models/activities";
-import { ModuleCategory } from "Settings/setting_definitions";
-import { clone } from "lodash-es";
 import { SettingsModel } from "Settings/Models/settings";
+import { ModuleCategory } from "Settings/setting_definitions";
 
 export const LSCG_CHANGES: string = "https://github.com/littlesera/LSCG/releases/latest";
 export const LSCG_TEAL: string = "#00d5d5";
+export const CUSTOM_LSCG_VERSION: string = "Goddess";
 
 interface IPatchedFunctionData {
 	name: string;
@@ -25,7 +25,7 @@ const patchedFunctions: Map<string, IPatchedFunctionData> = new Map();
 export const bcModSDK = bcModSDKRef.registerMod({
 	name: "LSCG",
 	fullName: "Little Sera's Club Games",
-	version: LSCG_VERSION.startsWith("v") ? LSCG_VERSION.slice(1) : LSCG_VERSION,
+	version: CUSTOM_LSCG_VERSION.startsWith("v") ? CUSTOM_LSCG_VERSION.slice(1) : CUSTOM_LSCG_VERSION,
 	repository: "https://github.com/littlesera/LSCG"
 },
 {
@@ -489,7 +489,7 @@ export function getPlayerVolume(modifier: number) {
 
 export function sendLSCGMessage(msg: LSCGMessageModel) {
 	msg.IsLSCG = true;
-	msg.version = LSCG_VERSION;
+	msg.version = CUSTOM_LSCG_VERSION;
 	const packet = <ServerChatRoomMessage>{
 		Type: "Hidden",
 		Content: "LSCGMsg",

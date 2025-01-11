@@ -1,10 +1,10 @@
+import { BaseModule } from "base";
+import { getModule } from "modules";
+import { RemoteUIModule } from "Modules/remoteUI";
+import { GuiSubscreen } from "Settings/settingBase";
 import { sendLSCGMessage } from "utils";
 import { BaseSettingsModel } from "../Models/base";
 import { SETTING_NAME_PREFIX } from "../setting_definitions";
-import { BaseModule } from "base";
-import { GuiSubscreen } from "Settings/settingBase";
-import { getModule } from "modules";
-import { RemoteUIModule } from "Modules/remoteUI";
 import { RemoteMainMenu } from "./mainmenu";
 
 export abstract class RemoteGuiSubscreen extends GuiSubscreen {

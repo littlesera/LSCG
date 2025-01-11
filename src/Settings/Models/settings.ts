@@ -1,14 +1,11 @@
-import { BoopsModule } from "Modules/boops";
-import { InjectorModule } from "Modules/injector";
+import { CUSTOM_LSCG_VERSION } from 'utils';
+import { ActivitySettingsModel } from "./activities";
 import { BaseSettingsModel, GlobalPublicSettingsModel, GlobalSettingsModel, LipstickSettingsModel, MiscSettingsModel, OpacityPublicSettingsModel, OpacitySettingsModel } from "./base";
 import { CollarModel, CollarPublicSettingsModel, CollarSettingsModel } from "./collar";
 import { HypnoPublicSettingsModel, HypnoSettingsModel } from "./hypno";
 import { InjectorPublicSettingsModel, InjectorSettingsModel } from "./injector";
-import { ActivitySettingsModel } from "./activities";
-import { StateModule } from "Modules/states";
-import { StatePublicSettingsModel, StateSettingsModel } from "./states";
 import { MagicPublicSettingsModel, MagicSettingsModel } from "./magic";
-import { ChaoticItemModule } from "Modules/chaotic-item";
+import { StatePublicSettingsModel, StateSettingsModel } from "./states";
 
 
 export interface SettingsModel {
@@ -47,7 +44,7 @@ export interface IPublicSettingsModel extends BaseSettingsModel {
 
 export class PublicSettingsModel implements IPublicSettingsModel {
     enabled: boolean = false;
-    Version: string = LSCG_VERSION;
+    Version: string = CUSTOM_LSCG_VERSION;
     CollarModule: CollarPublicSettingsModel = <CollarPublicSettingsModel>{
         enabled: false,
         chokeLevel: 0,
