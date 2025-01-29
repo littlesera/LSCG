@@ -451,14 +451,20 @@ export class ChaoticItemModule extends BaseModule {
             }
         }
 
+        let changed = false;
         for (let item of filteredChaoticItems) {
-			this.triggerChaoticItem(item);
+			changed = changed || this.triggerChaoticItem(item);
+        }
+
+        if (changed) {
+            CharacterRefresh(Player, true);
+            ChatRoomCharacterUpdate(Player);
         }
     }
 
-    triggerChaoticItem(item: Item | undefined) {
+    triggerChaoticItem(item: Item | undefined): boolean {
         if (!item || !item.Asset.Archetype) {
-            return;
+            return false;
         }
 
         // Change item's option based on the logic provided (random or evolving)
@@ -485,10 +491,7 @@ export class ChaoticItemModule extends BaseModule {
                 break;
         }
 
-        if (changed) {
-            CharacterRefresh(Player, true);
-            ChatRoomCharacterUpdate(Player);
-        }
+        return changed;
     }
 
     shapeShiftTypedItem(item: Item, logic: ChangeLogic): boolean {
