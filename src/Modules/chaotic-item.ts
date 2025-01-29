@@ -4,17 +4,17 @@ import { GetItemNameAndDescriptionConcat, isPhraseInString, removeAllHooksByModu
 import { BaseSettingsModel } from "Settings/Models/base";
 
 export const chaoticKeywords: string[] = [
-	"chaotic",
-	"living",
-	"sentient",
-	"changing",
+	"[chaotic]",
+	"[living]",
+	"[sentient]",
+	"[changing]",
 ];
 
 export const evolvingKeywords: string[] = [
-	"evolving",
-	"evolve",
-	"spreading",
-	"spread",
+	"[evolving]",
+	"[evolve]",
+	"[spreading]",
+	"[spread]",
 ];
 
 // to reduce the default time of Chaotic/Evolving items
