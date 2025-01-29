@@ -1221,7 +1221,7 @@ export class ActivityModule extends BaseModule {
                         if (MoveTargetPos >= 0) {
                             const Pos = ChatRoomCharacter.findIndex(c => c.MemberNumber === Player.MemberNumber);
                             if (Pos < MoveTargetPos) {
-                                for (let i = 0; i < MoveTargetPos - Pos; i++) {
+                                for (let i = 0; i < (MoveTargetPos - Pos) - 1; i++) {
                                     ServerSend("ChatRoomAdmin", {
                                         MemberNumber: target.MemberNumber,
                                         Action: "MoveLeft",
@@ -1229,7 +1229,7 @@ export class ActivityModule extends BaseModule {
                                     });
                                 }
                             } else {
-                                for (let i = 0; i < Pos - MoveTargetPos; i++) {
+                                for (let i = 0; i < (Pos - MoveTargetPos) - 1; i++) {
                                     ServerSend("ChatRoomAdmin", {
                                         MemberNumber: target.MemberNumber,
                                         Action: "MoveRight",
