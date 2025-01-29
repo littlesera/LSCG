@@ -936,7 +936,7 @@ export class ActivityModule extends BaseModule {
             Targets: [
                 {
                     Name: "ItemEars",
-                    SelfAllowed: false,
+                    SelfAllowed: true,
                     TargetLabel: "Release Ear",
                     TargetAction: "SourceCharacter releases TargetCharacter's ear."
                 }
