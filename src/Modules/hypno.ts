@@ -395,15 +395,20 @@ export class HypnoModule extends BaseModule {
 		}));
     }
 
+    _senderCanAlwaysModifySuggestions(sender: number) {
+        return Player.IsOwnedByMemberNumber(sender) ||
+            Player.IsLoverOfMemberNumber(sender);
+    }
+
     SuggestionsRequestHandler(sender: number, msg: LSCGMessageModel){
         if (this.Enabled &&
-            Player.IsOwnedByMemberNumber(sender) ||
+            this._senderCanAlwaysModifySuggestions(sender) ||
                 (this.hypnoActivated &&
                 this.settings.allowSuggestions &&
                 this.allowedSpeaker(getCharacter(sender) ?? undefined))) {
                 sendLSCGCommandBeep(sender, "get-suggestions-response", [{
                     name: "suggestions",
-                    value: this.settings.suggestions?.filter(s => s.installedBy == sender || !s.exclusive || Player.IsOwnedByMemberNumber(sender)) ?? []
+                    value: this.settings.suggestions?.filter(s => s.installedBy == sender || !s.exclusive || this._senderCanAlwaysModifySuggestions(sender)) ?? []
                 }, {
                     name: "total",
                     value: this.settings.suggestions?.length ?? 0
@@ -414,7 +419,7 @@ export class HypnoModule extends BaseModule {
     SuggestionsPushHandler(sender: number, msg: LSCGMessageModel) {
         let senderChar = getCharacter(sender);
         if (this.Enabled &&
-            Player.IsOwnedByMemberNumber(sender) ||
+            this._senderCanAlwaysModifySuggestions(sender) ||
                 (this.hypnoActivated &&
                 this.settings.allowSuggestions &&
                 this.allowedSpeaker(senderChar ?? undefined))) {

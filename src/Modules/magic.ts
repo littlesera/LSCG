@@ -235,7 +235,7 @@ export class MagicModule extends BaseModule {
         return rangedItemKeywords.some(keyword => isPhraseInString(craftStr, keyword));
     }
 
-    CanUseMagic(target: Character, checkMagicItem: boolean = true) {
+    CanUseMagic(target: Character, checkMagicItem: boolean = true, requireHands: boolean = true) {
         let item = InventoryGet(Player, "ItemHandheld");
         let isWieldingMagicItem = (checkMagicItem) ? (!!item && this.IsMagicItem(item)) : true;
         let hasItemPermission = ServerChatRoomGetAllowItem(Player, target);
@@ -245,7 +245,7 @@ export class MagicModule extends BaseModule {
                 targetHasMagicEnabled &&
                 isWieldingMagicItem &&
                 hasItemPermission &&
-                Player.CanInteract() &&
+                (!requireHands || Player.CanInteract()) &&
                 whitelisted &&
                 (this.CanCastSpell(target as OtherCharacter) ||
                 this.CanWildMagic(target as OtherCharacter) ||
@@ -859,7 +859,7 @@ export class MagicModule extends BaseModule {
 
         let foundSpell = spellTargetPair[0];
         let target = spellTargetPair[1];
-        if (!this.CanUseMagic(target, false)) {
+        if (!this.CanUseMagic(target, false, false)) {
             return;
         }
         let pairTgt: Character | undefined;

@@ -4,17 +4,17 @@ import { GetItemNameAndDescriptionConcat, isPhraseInString, removeAllHooksByModu
 import { BaseSettingsModel } from "Settings/Models/base";
 
 export const chaoticKeywords: string[] = [
-	"chaotic",
-	"living",
-	"sentient",
-	"changing",
+	"[chaotic]",
+	"[living]",
+	"[sentient]",
+	"[changing]",
 ];
 
 export const evolvingKeywords: string[] = [
-	"evolving",
-	"evolve",
-	"spreading",
-	"spread",
+	"[evolving]",
+	"[evolve]",
+	"[spreading]",
+	"[spread]",
 ];
 
 // to reduce the default time of Chaotic/Evolving items
@@ -451,14 +451,20 @@ export class ChaoticItemModule extends BaseModule {
             }
         }
 
+        let changed = false;
         for (let item of filteredChaoticItems) {
-			this.triggerChaoticItem(item);
+			changed = changed || this.triggerChaoticItem(item);
+        }
+
+        if (changed) {
+            CharacterRefresh(Player, true);
+            ChatRoomCharacterUpdate(Player);
         }
     }
 
-    triggerChaoticItem(item: Item | undefined) {
+    triggerChaoticItem(item: Item | undefined): boolean {
         if (!item || !item.Asset.Archetype) {
-            return;
+            return false;
         }
 
         // Change item's option based on the logic provided (random or evolving)
@@ -485,10 +491,7 @@ export class ChaoticItemModule extends BaseModule {
                 break;
         }
 
-        if (changed) {
-            CharacterRefresh(Player, true);
-            ChatRoomCharacterUpdate(Player);
-        }
+        return changed;
     }
 
     shapeShiftTypedItem(item: Item, logic: ChangeLogic): boolean {

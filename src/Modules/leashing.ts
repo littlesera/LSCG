@@ -10,7 +10,7 @@ import { CollarModel } from "Settings/Models/collar";
 import { CollarModule } from "./collar";
 import { CommandListener, CoreModule } from "./core";
 
-export type GrabType = "hand"  | "ear" | "tongue" | "arm" | "neck" | "mouth" | "horn" | "mouth-with-foot" | "chomp" | "eyes" | "compulsion" | "tail" | "hair" | "nose" | "nipples"
+export type GrabType = "hand"  | "ear" | "tongue" | "arm" | "neck" | "mouth" | "horn" | "mouth-with-foot" | "chomp" | "eyes" | "compulsion" | "tail" | "hair" | "nose" | "nipples" | "collar"
 
 export interface LeashDefinition {
     Type: GrabType;
@@ -60,6 +60,7 @@ export const LeashDefinitions: Map<GrabType, LeashDefinition> = new Map<GrabType
         OnRemove: (pairing) => {
             if (!pairing.IsSource || pairing.PairedMember == Player.MemberNumber) getModule<CollarModule>("CollarModule")?.ReleaseHandChoke(getCharacter(pairing.PairedMember), true)
         }}],
+    ["collar", <LeashDefinition>{Type: "collar", Action: "drags", LabelTarget: "Collar grabbed by %OPP_NAME%", LabelSource: "Holding %OPP_NAME%'s collar", Icon: ICONS.COLLAR}],
     ["tongue", <LeashDefinition>{Type: "tongue", LabelTarget: "Tongue held by %OPP_NAME%", LabelSource: "Holding %OPP_NAME%'s tongue", Icon: ICONS.TONGUE, Gags: true,
         OnAdd: (pairing) => {
             if (!pairing.IsSource || pairing.PairedMember == Player.MemberNumber) {(<any>pairing)['temp'] = (WardrobeGetExpression(Player)?.Mouth ?? null); CharacterSetFacialExpression(Player, "Mouth", "Ahegao")};
