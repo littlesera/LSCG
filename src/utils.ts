@@ -8,6 +8,7 @@ import { ModuleCategory } from "Settings/setting_definitions";
 import { clone } from "lodash-es";
 import { SettingsModel } from "Settings/Models/settings";
 import { lt } from "semver";
+import { regEscape } from "./regEscape";
 
 export const LSCG_CHANGES: string = "https://github.com/littlesera/LSCG/releases/latest";
 export const LSCG_TEAL: string = "#00d5d5";
@@ -403,7 +404,7 @@ export function isObject(obj: unknown): obj is Record<string, any> {
 }
 
 export function escapeRegExp(string: string) {
-	return string?.toLocaleLowerCase().replace(/[.*+?^${}()|[\]\\]/g, '\\$&') ?? ""; // $& means the whole matched string
+	return regEscape(string ?? "").toLocaleLowerCase();
 }
 
 export function isPhraseInString(string: string, phrase: string, ignoreOOC: boolean = false) {
