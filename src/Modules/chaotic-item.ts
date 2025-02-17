@@ -1,6 +1,6 @@
 import { BaseModule } from "base";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { GetItemNameAndDescriptionConcat, isPhraseInString, removeAllHooksByModule, SendAction } from "../utils";
+import { GetItemNameAndDescriptionConcat, isPhraseInString, removeAllHooksByModule, SendAction, hookFunction, ICONS, escapeRegExp } from "../utils";
 import { BaseSettingsModel } from "Settings/Models/base";
 
 export const chaoticKeywords: string[] = [
@@ -30,6 +30,24 @@ export const slowKeywords: string[] = [
 	"slow",
 	"slowly",
 ];
+
+const bracketedKeywords = [
+    ...chaoticKeywords,
+    ...evolvingKeywords,
+];
+
+const keywordPattern = new RegExp("(" + bracketedKeywords.map(i => escapeRegExp(i)).join("|") + ")", "ig");
+
+/** Split the passed string, converting any {@link bracketedKeywords} sub-strings into `<i>` elements. */
+function italicizeKeywords(string: string): (string | HTMLElement)[] {
+    return string.split(keywordPattern).map(i => {
+        if (bracketedKeywords.includes(i)) {
+            return ElementCreate({ tag: "i", children: [i.slice(1, -1)] });
+        } else {
+            return i;
+        }
+    });
+}
 
 export const DEFAULT_TRIGGER_TIME_MS = 10 * 60 * 1000; // 10min
 export const QUICK_TRIGGER_TIME_MS = 3 * 60 * 1000; // 3min
@@ -413,6 +431,57 @@ export class ChaoticItemModule extends BaseModule {
         this.defaultTriggerInterval = setInterval(() => { this.checkForChaoticItem("default") }, DEFAULT_TRIGGER_TIME_MS);
         this.quickTriggerInterval = setInterval(() => { this.checkForChaoticItem("quick") }, QUICK_TRIGGER_TIME_MS);
         this.slowTriggerInterval = setInterval(() => { this.checkForChaoticItem("slow") }, SLOW_TRIGGER_TIME_MS);
+
+        // Strip the square parenthesis from the description keywords and italicize them
+        hookFunction("CraftingDescription.DecodeToHTML", 1, (args, next) => {
+            return next(args).flatMap((elem: string | HTMLElement) => {
+                return typeof elem !== "string" ? elem : italicizeKeywords(elem);
+            });
+        }, ModuleCategory.ChaoticItem);
+
+        // Strip the square parenthesis from the name keywords and italicize them
+        hookFunction("DialogMenuMapping.crafted.Reload", 1, async (args, next) => {
+            const status = await next(args);
+            if (!status) {
+                return status;
+            }
+
+            // @ts-ignore: requires update BC annotations
+            const nameSpanID: undefined | string = DialogMenuMapping.crafted.ids.name;
+            const nameSpan = nameSpanID ? document.getElementById(nameSpanID) : null;
+            if (nameSpan?.textContent) {
+                nameSpan.replaceChildren(...italicizeKeywords(nameSpan.textContent));
+            }
+            return status;
+        }, ModuleCategory.ChaoticItem);
+
+        // Strip the square parenthesis from the name keywords and italicize them and add a dedicated `Status & Effect` tooltip entry for the keword
+        hookFunction("ElementButton.CreateForAsset", 1, ([idPrefix, asset, C, onClick, options, ...args], next) => {
+            const craft: null | CraftingItem = "Asset" in asset ? asset.Craft : null;
+            if (!craft) {
+                return next([idPrefix, asset, C, onClick, options, ...args]);
+            }
+
+            const keywords = bracketedKeywords.filter(i => craft.Name.includes(i) || craft.Description.includes(i));
+            options ??= {};
+            options.icons = [
+                ...(options.icons ?? []),
+                ...keywords.map(key => {
+                    return {
+                        name: `lscg-${key}`,
+                        iconSrc: ICONS.BOUND_GIRL,   
+                        tooltipText: `LSCG: ${CommonCapitalize(key.slice(1, -1))}`,
+                    };
+                }),
+            ];
+            const button = next([idPrefix, asset, C, onClick, options, ...args]);
+
+            const nameSpan = button.querySelector(".button-label");
+            if (nameSpan?.textContent) {
+                nameSpan.replaceChildren(...italicizeKeywords(nameSpan.textContent));
+            }
+            return button;
+        }, ModuleCategory.ChaoticItem);
     }
 
     unload(): void {
