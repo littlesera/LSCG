@@ -41,7 +41,7 @@ const keywordPattern = new RegExp("(" + bracketedKeywords.map(i => escapeRegExp(
 /** Split the passed string, converting any {@link bracketedKeywords} sub-strings into `<i>` elements. */
 function italicizeKeywords(string: string): (string | HTMLElement)[] {
     return string.split(keywordPattern).map(i => {
-        if (bracketedKeywords.includes(i)) {
+        if (bracketedKeywords.includes(i.toLocaleLowerCase())) {
             return ElementCreate({ tag: "i", children: [i.slice(1, -1)] });
         } else {
             return i;
@@ -462,14 +462,16 @@ export class ChaoticItemModule extends BaseModule {
                 return next([idPrefix, asset, C, onClick, options, ...args]);
             }
 
-            const keywords = bracketedKeywords.filter(i => craft.Name.includes(i) || craft.Description.includes(i));
+            const craftName = craft.Name.toLocaleLowerCase();
+            const craftDescription = craft.Description.toLocaleLowerCase();
+            const keywords = bracketedKeywords.filter(i => craftName.includes(i) || craftDescription.includes(i));
             options ??= {};
             options.icons = [
                 ...(options.icons ?? []),
                 ...keywords.map(key => {
                     return {
                         name: `lscg-${key}`,
-                        iconSrc: ICONS.BOUND_GIRL,   
+                        iconSrc: ICONS.BOUND_GIRL,
                         tooltipText: `LSCG: ${CommonCapitalize(key.slice(1, -1))}`,
                     };
                 }),
