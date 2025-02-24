@@ -276,6 +276,8 @@ export class MagicModule extends BaseModule {
         if (this.Enabled) {
             this.SpellMenuOpen = true;
             this.PrevScreen = CurrentScreen;
+            // @ts-expect-error: Requires updated bc stubs
+            DialogMenuMapping.dialog.Unload();
             CurrentScreen = "LSCG_SPELLS_DIALOG";
         }
     }
@@ -286,6 +288,8 @@ export class MagicModule extends BaseModule {
         this.SpellPairOption.SelectOpen = false;
         if (CurrentScreen == "LSCG_SPELLS_DIALOG")
             CurrentScreen = this.PrevScreen ?? "ChatRoom";
+        // @ts-expect-error: Requires updated bc stubs
+        DialogMenuMapping.dialog.Load();
     }
 
     TeachSpell(target: OtherCharacter) {
