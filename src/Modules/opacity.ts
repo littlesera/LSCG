@@ -146,9 +146,10 @@ export class OpacityModule extends BaseModule {
                         DrawTextFit("All Layers", 120, 120, 300, "White", "Gray");
                         if (MouseIn(50, 120 - 32, 64, 64)) 
                             drawTooltip(50, 20, 800, "Modify opacity levels for each asset layer", "left");
+                        this.ShowOpacitySliders();
                     }
 
-                    // Draw "All Layers" checkbox
+                    // Draw "Lead-Lined" checkbox
                     DrawCheckbox(350, 120 - 32, 64, 64, "", this.OpacityItem?.Property?.LSCGLeadLined ?? false, this.TranslationMode);
                     DrawTextFit("Lead-Lined", 420, 120, 300, "White", "Gray");
                     if (MouseIn(350, 120 - 32, 64, 64)) 
@@ -162,6 +163,7 @@ export class OpacityModule extends BaseModule {
                     drawTooltip(50, 20, 800, "Switch to x/y translation mode.", "left");
 
                 if (!!this.OpacityItem && this.TranslationMode) {
+                    this.DrawTranslationButtons();
                     DrawTextFit("⬅️ X ➡️", 20, 220, 128, "White", "Black");
                     DrawTextFit("⬇️ Y ⬆️", 200, 220, 128, "White", "Black");
                     DrawButton(350, 200 - 32, 64, 64, "", "White", undefined, "Reset Position", false);
@@ -426,16 +428,21 @@ export class OpacityModule extends BaseModule {
     }
 
     DrawTranslationButtons() {
-        this.HideAllOpacitySliders();
+        if (this.TranslationMode) {
+            this.HideAllOpacitySliders();
 
-        let selectedLayer = this.TranslationButtons[Math.max(this.SelectedTranslationLayer, 0)];
-        let translationXValue = selectedLayer?.xValue;
-        let translationYValue = selectedLayer?.yValue;
+            let selectedLayer = this.TranslationButtons[Math.max(this.SelectedTranslationLayer, 0)];
+            let translationXValue = selectedLayer?.xValue;
+            let translationYValue = selectedLayer?.yValue;
 
-        ElementPosition(this.TranslateXElementId, 85, 180, 128, 40);
-        ElementPosition(this.TranslateYElementId, 265, 180, 128, 40);
-        ElementValue(this.TranslateXElementId, "" + translationXValue);
-        ElementValue(this.TranslateYElementId, "" + translationYValue);
+            ElementPosition(this.TranslateXElementId, 85, 180, 128, 40);
+            ElementPosition(this.TranslateYElementId, 265, 180, 128, 40);
+            ElementValue(this.TranslateXElementId, "" + translationXValue);
+            ElementValue(this.TranslateYElementId, "" + translationYValue);
+        }
+        else {
+            this.HideTranslateElements();
+        }
     }
 
     HideAllOpacitySliders() {
@@ -503,7 +510,10 @@ export class OpacityModule extends BaseModule {
             this.OpacityItem.Property = {};
         let opacity = this.getOpacity();
 
-        if (this.opacityAllLayer) {
+        if (this.TranslationMode) {
+            this.HideAllOpacitySliders();
+        }
+        else if (this.opacityAllLayer) {
             if (!Array.isArray(opacity)) {
                 this.setOpacity(this.OpacityItem, new Array(this.OpacityLayerSliders.length).fill(opacity));
             }
