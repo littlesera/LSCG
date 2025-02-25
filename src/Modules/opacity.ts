@@ -109,6 +109,7 @@ export class OpacityModule extends BaseModule {
                     }
                 }
                 else {
+                    this.HideAllOpacitySliders();
                     this.DrawTranslationButtons();
                 }
             }
@@ -163,7 +164,7 @@ export class OpacityModule extends BaseModule {
                     drawTooltip(50, 20, 800, "Switch to x/y translation mode.", "left");
 
                 if (!!this.OpacityItem && this.TranslationMode) {
-                    this.DrawTranslationButtons();
+                    this._positionTranslationFields();
                     DrawTextFit("⬅️ X ➡️", 20, 220, 128, "White", "Black");
                     DrawTextFit("⬇️ Y ⬆️", 200, 220, 128, "White", "Black");
                     DrawButton(350, 200 - 32, 64, 64, "", "White", undefined, "Reset Position", false);
@@ -201,6 +202,7 @@ export class OpacityModule extends BaseModule {
                 if (MouseIn(650, 120 - 32, 64, 64)) {
                     this.TranslationMode = !this.TranslationMode;
                     if (this.TranslationMode) {
+                        this.HideAllOpacitySliders();
                         this.DrawTranslationButtons();
                     }
                     else {
@@ -231,7 +233,7 @@ export class OpacityModule extends BaseModule {
                         ElementValue(this.TranslateYElementId, Math.round(parseFloat(ElementValue(this.TranslateYElementId))) - 10 + "");
                         this._updateTranslationValue(this.TranslateYElementId);
                         this.UpdatePreview();
-                    } else if (MouseIn(1020, 180-32, 64, 64)) {
+                    } else if (MouseIn(350, 180-32, 64, 64)) {
                         this.ResetTranslation();
                     } else if (this.OpacityItem.Asset.Layer.length > 1) {
                         this.OpacityItem.Asset.Layer.forEach((layer, ix, arr) => {
@@ -427,22 +429,25 @@ export class OpacityModule extends BaseModule {
         this.isDragging = false;
     }
 
+    _positionTranslationFields() {
+        if (this.TranslationMode) {
+            ElementPosition(this.TranslateXElementId, 85, 180, 128, 40);
+            ElementPosition(this.TranslateYElementId, 265, 180, 128, 40);
+        } else {
+            this.HideTranslateElements();
+        }
+    }
+
     DrawTranslationButtons() {
         if (this.TranslationMode) {
-            this.HideAllOpacitySliders();
-
             let selectedLayer = this.TranslationButtons[Math.max(this.SelectedTranslationLayer, 0)];
             let translationXValue = selectedLayer?.xValue;
             let translationYValue = selectedLayer?.yValue;
-
-            ElementPosition(this.TranslateXElementId, 85, 180, 128, 40);
-            ElementPosition(this.TranslateYElementId, 265, 180, 128, 40);
             ElementValue(this.TranslateXElementId, "" + translationXValue);
             ElementValue(this.TranslateYElementId, "" + translationYValue);
         }
-        else {
-            this.HideTranslateElements();
-        }
+
+        this._positionTranslationFields();
     }
 
     HideAllOpacitySliders() {
