@@ -109,6 +109,7 @@ export class OpacityModule extends BaseModule {
                     }
                 }
                 else {
+                    this.HideAllOpacitySliders();
                     this.DrawTranslationButtons();
                 }
             }
@@ -146,9 +147,10 @@ export class OpacityModule extends BaseModule {
                         DrawTextFit("All Layers", 120, 120, 300, "White", "Gray");
                         if (MouseIn(50, 120 - 32, 64, 64)) 
                             drawTooltip(50, 20, 800, "Modify opacity levels for each asset layer", "left");
+                        this.ShowOpacitySliders();
                     }
 
-                    // Draw "All Layers" checkbox
+                    // Draw "Lead-Lined" checkbox
                     DrawCheckbox(350, 120 - 32, 64, 64, "", this.OpacityItem?.Property?.LSCGLeadLined ?? false, this.TranslationMode);
                     DrawTextFit("Lead-Lined", 420, 120, 300, "White", "Gray");
                     if (MouseIn(350, 120 - 32, 64, 64)) 
@@ -162,6 +164,7 @@ export class OpacityModule extends BaseModule {
                     drawTooltip(50, 20, 800, "Switch to x/y translation mode.", "left");
 
                 if (!!this.OpacityItem && this.TranslationMode) {
+                    this._positionTranslationFields();
                     DrawTextFit("⬅️ X ➡️", 20, 220, 128, "White", "Black");
                     DrawTextFit("⬇️ Y ⬆️", 200, 220, 128, "White", "Black");
                     DrawButton(350, 200 - 32, 64, 64, "", "White", undefined, "Reset Position", false);
@@ -199,6 +202,7 @@ export class OpacityModule extends BaseModule {
                 if (MouseIn(650, 120 - 32, 64, 64)) {
                     this.TranslationMode = !this.TranslationMode;
                     if (this.TranslationMode) {
+                        this.HideAllOpacitySliders();
                         this.DrawTranslationButtons();
                     }
                     else {
@@ -229,7 +233,7 @@ export class OpacityModule extends BaseModule {
                         ElementValue(this.TranslateYElementId, Math.round(parseFloat(ElementValue(this.TranslateYElementId))) - 10 + "");
                         this._updateTranslationValue(this.TranslateYElementId);
                         this.UpdatePreview();
-                    } else if (MouseIn(1020, 180-32, 64, 64)) {
+                    } else if (MouseIn(350, 180-32, 64, 64)) {
                         this.ResetTranslation();
                     } else if (this.OpacityItem.Asset.Layer.length > 1) {
                         this.OpacityItem.Asset.Layer.forEach((layer, ix, arr) => {
@@ -425,17 +429,25 @@ export class OpacityModule extends BaseModule {
         this.isDragging = false;
     }
 
+    _positionTranslationFields() {
+        if (this.TranslationMode) {
+            ElementPosition(this.TranslateXElementId, 85, 180, 128, 40);
+            ElementPosition(this.TranslateYElementId, 265, 180, 128, 40);
+        } else {
+            this.HideTranslateElements();
+        }
+    }
+
     DrawTranslationButtons() {
-        this.HideAllOpacitySliders();
+        if (this.TranslationMode) {
+            let selectedLayer = this.TranslationButtons[Math.max(this.SelectedTranslationLayer, 0)];
+            let translationXValue = selectedLayer?.xValue;
+            let translationYValue = selectedLayer?.yValue;
+            ElementValue(this.TranslateXElementId, "" + translationXValue);
+            ElementValue(this.TranslateYElementId, "" + translationYValue);
+        }
 
-        let selectedLayer = this.TranslationButtons[Math.max(this.SelectedTranslationLayer, 0)];
-        let translationXValue = selectedLayer?.xValue;
-        let translationYValue = selectedLayer?.yValue;
-
-        ElementPosition(this.TranslateXElementId, 85, 180, 128, 40);
-        ElementPosition(this.TranslateYElementId, 265, 180, 128, 40);
-        ElementValue(this.TranslateXElementId, "" + translationXValue);
-        ElementValue(this.TranslateYElementId, "" + translationYValue);
+        this._positionTranslationFields();
     }
 
     HideAllOpacitySliders() {
@@ -503,7 +515,10 @@ export class OpacityModule extends BaseModule {
             this.OpacityItem.Property = {};
         let opacity = this.getOpacity();
 
-        if (this.opacityAllLayer) {
+        if (this.TranslationMode) {
+            this.HideAllOpacitySliders();
+        }
+        else if (this.opacityAllLayer) {
             if (!Array.isArray(opacity)) {
                 this.setOpacity(this.OpacityItem, new Array(this.OpacityLayerSliders.length).fill(opacity));
             }
