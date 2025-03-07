@@ -1,6 +1,6 @@
 import { CUSTOM_LSCG_VERSION } from 'utils';
 import { ActivitySettingsModel } from "./activities";
-import { BaseSettingsModel, GlobalPublicSettingsModel, GlobalSettingsModel, LipstickSettingsModel, MiscSettingsModel, OpacityPublicSettingsModel, OpacitySettingsModel } from "./base";
+import { BaseSettingsModel, GlobalPublicSettingsModel, GlobalSettingsModel, LipstickSettingsModel, MiscSettingsModel, OpacityPublicSettingsModel, OpacitySettingsModel, SplatterSettingsModel } from "./base";
 import { CollarModel, CollarPublicSettingsModel, CollarSettingsModel } from "./collar";
 import { HypnoPublicSettingsModel, HypnoSettingsModel } from "./hypno";
 import { InjectorPublicSettingsModel, InjectorSettingsModel } from "./injector";
@@ -24,6 +24,7 @@ export interface SettingsModel {
     OpacityModule: OpacitySettingsModel;
     LeashingModule: BaseSettingsModel;
     ChaoticItemModule: BaseSettingsModel;
+    SplatterModule: SplatterSettingsModel;
 }
 
 export interface IPublicSettingsModel extends BaseSettingsModel {
@@ -40,6 +41,7 @@ export interface IPublicSettingsModel extends BaseSettingsModel {
     OpacityModule: OpacityPublicSettingsModel;
     LeashingModule: BaseSettingsModel;
     ChaoticItemModule: BaseSettingsModel;
+    SplatterModule: SplatterSettingsModel;
 }
 
 export class PublicSettingsModel implements IPublicSettingsModel {
@@ -55,7 +57,7 @@ export class PublicSettingsModel implements IPublicSettingsModel {
         locked: false,
         immersive: false,
         limitToCrafted: false,
-        collar: <CollarModel>{creator: -1, name:""},
+        collar: <CollarModel>{ creator: -1, name: "" },
         tightTrigger: "",
         looseTrigger: "",
         allowSelfTightening: false,
@@ -94,8 +96,8 @@ export class PublicSettingsModel implements IPublicSettingsModel {
         alwaysSubmit: false,
         alwaysSubmitMemberIds: ""
     };
-    BoopsModule: BaseSettingsModel = <BaseSettingsModel>{enabled: false};
-    LeashingModule: BaseSettingsModel = <BaseSettingsModel>{enabled: false};
+    BoopsModule: BaseSettingsModel = <BaseSettingsModel>{ enabled: false };
+    LeashingModule: BaseSettingsModel = <BaseSettingsModel>{ enabled: false };
     LipstickModule: LipstickSettingsModel = <LipstickSettingsModel>{
         enabled: false,
         dry: false
@@ -104,9 +106,9 @@ export class PublicSettingsModel implements IPublicSettingsModel {
         enabled: false,
         sharePublicCrafting: false
     };
-    MiscModule: BaseSettingsModel = <BaseSettingsModel>{enabled: false};
+    MiscModule: BaseSettingsModel = <BaseSettingsModel>{ enabled: false };
     InjectorModule: InjectorPublicSettingsModel = <InjectorPublicSettingsModel>{
-        enabled: false, 
+        enabled: false,
         sedativeLevel: 0,
         sedativeMax: 5,
         mindControlLevel: 0,
@@ -148,5 +150,10 @@ export class PublicSettingsModel implements IPublicSettingsModel {
         enabled: true,
         preventExternalMod: false
     };
-    ChaoticItemModule: BaseSettingsModel = <BaseSettingsModel>{enabled: false};
+    ChaoticItemModule: BaseSettingsModel = <BaseSettingsModel>{ enabled: false };
+    SplatterModule: SplatterSettingsModel = <SplatterSettingsModel>{
+        enabled: false,
+        giver: false,
+        taker: false
+    };
 }

@@ -27,6 +27,7 @@ export enum ModuleCategory {
 	Opacity = 10,
 	Leashed = 11,
 	ChaoticItem = 12,
+	Splatter = 13,
 	RemoteUI = 98,
 	Misc = 99,
 	Commands = 100

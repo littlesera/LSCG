@@ -13,6 +13,7 @@ import { SettingsModel } from 'Settings/Models/settings';
 import { GUI } from "Settings/settingUtils";
 import { BoopsModule } from './Modules/boops';
 import { ChaoticItemModule } from './Modules/chaotic-item';
+import { SplatterModule } from 'Modules/splatter';
 import { CollarModule } from './Modules/collar';
 import { HypnoModule } from './Modules/hypno';
 import { LipstickModule } from './Modules/lipstick';
@@ -62,7 +63,7 @@ function init() {
 		document.head.appendChild(script);
 		return;
 	}
-	
+
 	// clear any old settings.
 	if (!!(<any>Player.OnlineSettings)?.LittleSera)
 		delete (<any>Player.OnlineSettings).LittleSera;
@@ -71,7 +72,7 @@ function init() {
 
 	let settings = Player.ExtensionSettings?.LSCG || Player.OnlineSettings?.LSCG;
 	let localSettings = localStorage.getItem(`LSCG_${Player.MemberNumber}_Backup`);
-	
+
 	// If localStorage setting backup exist, compare the versions to restore from backup
 	if (!!localSettings) {
 		if (!settings)
@@ -79,7 +80,7 @@ function init() {
 	}
 
 	if (!!settings && typeof settings == "string") {
-		localStorage.setItem(`LSCG_${Player.MemberNumber}_Backup`, settings)
+		localStorage.setItem(`LSCG_${Player.MemberNumber}_Backup`, settings);
 		let parsed = <SettingsModel>{};
 		try {
 			parsed = JSON.parse(LZString.decompressFromBase64(settings));
@@ -148,6 +149,7 @@ function init_modules(): boolean {
 	registerModule(new CommandModule());
 	registerModule(new LeashingModule());
 	registerModule(new ChaoticItemModule());
+	registerModule(new SplatterModule());
 
 	for (const m of modules()) {
 		m.init();
