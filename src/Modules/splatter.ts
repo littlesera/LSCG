@@ -202,18 +202,21 @@ export class SplatterModule extends BaseModule {
                     DrawRect(0, 0, 1003, 1000, "#FFB0B0B0");
                     DrawRect(1003, 0, 993, 63, "#FFB0B0B0");
                     if (!this.AutoSplatTarget) {
-                        let areas = this.getTargetSelectAreas();
-                        if (areas.length <= 0) this.ResetPrompt();
                         DrawText(`Who do you want to ${Player.HasPenis() ? "cum" : "squirt"} on?`, 500, 400, "White", "Black");
                         DrawButton(this.START_X, 480, 240, 60, "Yourself", "White", undefined, undefined, false);
                         DrawButton(this.START_X + 250, 480, 240, 60, "Nobody", "White", undefined, undefined, false);
                         DrawButton(this.START_X + 500, 480, 240, 60, "Uncontrolled", "White", undefined, undefined, false);
-                        areas.forEach(pair => {
-                            let rect = pair[0];
-                            let char = pair[1];
-                            if (!rect || !char) return;
-                            DrawButton(this.START_X + rect[0], this.START_Y + rect[1], rect[2], rect[3], CharacterNickname(char), "White", undefined, undefined, false);
-                        });
+                        
+                        if (!Player.IsRestrained() || Player.CanWalk()) { // If bound, remove control of where to cum
+                            let areas = this.getTargetSelectAreas();
+                            if (areas.length <= 0) this.ResetPrompt();
+                            areas.forEach(pair => {
+                                let rect = pair[0];
+                                let char = pair[1];
+                                if (!rect || !char) return;
+                                DrawButton(this.START_X + rect[0], this.START_Y + rect[1], rect[2], rect[3], CharacterNickname(char), "White", undefined, undefined, false);
+                            });
+                        }
                         return true;
                     } else {
                         let target = getCharacter(this.AutoSplatTarget);
@@ -242,12 +245,15 @@ export class SplatterModule extends BaseModule {
                     if (MouseIn(this.START_X, 480, 240, 60)) this.AutoSplatTarget = Player.MemberNumber ?? -1;
                     if (MouseIn(this.START_X + 250, 480, 240, 60)) this.ResetPrompt();
                     if (MouseIn(this.START_X + 500, 480, 240, 60)) this.RandomSplat();
-                    this.getTargetSelectAreas().forEach(pair => {
-                        let rect = pair[0];
-                        let char = pair[1];
-                        if (!rect || !char) return;
-                        if (MouseIn(this.START_X + rect[0], this.START_Y + rect[1], rect[2], rect[3])) this.AutoSplatTarget = char.MemberNumber ?? -1;
-                    });
+                    
+                    if (!Player.IsRestrained() || Player.CanWalk()) { // If bound, remove control of where to cum
+                        this.getTargetSelectAreas().forEach(pair => {
+                            let rect = pair[0];
+                            let char = pair[1];
+                            if (!rect || !char) return;
+                            if (MouseIn(this.START_X + rect[0], this.START_Y + rect[1], rect[2], rect[3])) this.AutoSplatTarget = char.MemberNumber ?? -1;
+                        });
+                    }
                 } else {
                     let target = getCharacter(this.AutoSplatTarget);
                     if (!!target) {
