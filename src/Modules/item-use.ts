@@ -748,7 +748,7 @@ export class ItemUseModule extends BaseModule {
 				Name: "Steal" as ActivityName,
 				MaxProgress: 50,
 				MaxProgressSelf: 50,
-				Prerequisite: ["Needs-AnyItem" as ActivityPrerequisite],
+				Prerequisite: ["Needs-AnyItem" as ActivityPrerequisite, "UseHands"],
 				Reverse: true // acting and acted are flipped!
 			},
 			Targets: [
