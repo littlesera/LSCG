@@ -248,7 +248,7 @@ export class ActivityModule extends BaseModule {
             CustomImage: "Assets/Female3DCG/Activity/Slap.png"
         });
 
-        // Bap
+        // Headbutt
         this.AddActivity({
             Activity: <Activity>{
                 Name: "Headbutt",
@@ -558,8 +558,7 @@ export class ActivityModule extends BaseModule {
                     SelfAllowed: false,
                     TargetLabel: "Ride with Pussy",
                     TargetAction: "SourceCharacter fucks TargetCharacter's penis with PronounPossessive pussy, grinding up and down."
-                },
-                {
+                }, {
                     Name: "ItemHead",
                     SelfAllowed: false,
                     TargetLabel: "Sit on Face",
