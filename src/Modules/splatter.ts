@@ -7,7 +7,6 @@ import { CommandListener } from "./core";
 import { ActivityBundle } from "./activities";
 
 export type SplatterLocation = "mouth" | "forehead" | "chest" | "tummy" | "crotch" | "all";
-export type SplatterIntensity = 1 | 2 | 3;
 export interface SplatterPacket {
     location: SplatterLocation;
     itemGroup: AssetItemGroup;
@@ -224,9 +223,8 @@ export class SplatterModule extends BaseModule {
                             this.getLocationSelectAreas().forEach(pair => {
                                 let rect = pair[0];
                                 let location = pair[1];
-                                let intensity = pair[2] ?? 1;
                                 if (!rect || !location) return;
-                                DrawButton(this.START_X + rect[0], this.START_Y + rect[1], rect[2], rect[3], `${this.getLocationLabel(location, target)} - ${this.getIntensityString(intensity)}`, "White", undefined, undefined, false);
+                                DrawButton(this.START_X + rect[0], this.START_Y + rect[1], rect[2], rect[3], `${this.getLocationLabel(location, target)}`, "White", undefined, undefined, false);
                             });
                         }
                         return true;
@@ -256,9 +254,8 @@ export class SplatterModule extends BaseModule {
                         this.getLocationSelectAreas().forEach(pair => {
                             let rect = pair[0];
                             let location = pair[1];
-                            let intensity = pair[2] ?? 1;
                             if (!rect || !location) return;
-                            if (MouseIn(this.START_X + rect[0], this.START_Y + rect[1], rect[2], rect[3])) this.SendSplatter(<OtherCharacter>target, location, intensity);
+                            if (MouseIn(this.START_X + rect[0], this.START_Y + rect[1], rect[2], rect[3])) this.SendSplatter(<OtherCharacter>target, location);
                         });
                     }
                 }
@@ -280,23 +277,13 @@ export class SplatterModule extends BaseModule {
         ]);
     }
 
-    getLocationSelectAreas(): [RectTuple, SplatterLocation, SplatterIntensity][] {
-        let targets: [SplatterLocation, SplatterIntensity][] = [
-            ["mouth", 1],
-            ["mouth", 2],
-            ["mouth", 3],
-            ["forehead", 1],
-            ["forehead", 2],
-            ["forehead", 3],
-            ["chest", 1],
-            ["chest", 2],
-            ["chest", 3],
-            ["tummy", 1],
-            ["tummy", 2],
-            ["tummy", 3],
-            ["crotch", 1],
-            ["crotch", 2],
-            ["crotch", 3],
+    getLocationSelectAreas(): [RectTuple, SplatterLocation][] {
+        let targets: SplatterLocation[] = [
+            "mouth",
+            "forehead",
+            "chest",
+            "tummy",
+            "crotch"
         ];
         let x = 0;
         let y = -40;
@@ -304,18 +291,8 @@ export class SplatterModule extends BaseModule {
         let h = 60;
         return targets.map((l, ix, arr) => [
             <RectTuple>[x + ((ix%3) * 250), y + (Math.floor(ix / 3) * 65), w, h],
-            l[0],
-            l[1]
+            l
         ]);
-    }
-
-    getIntensityString(int: SplatterIntensity) {
-        switch(int) {
-            case 2: return "Medium";
-            case 3: return "Heavy";
-            case 1:
-            default: return "Small";
-        }
     }
 
     getLocationLabel(loc: SplatterLocation, target: Character | null) {
@@ -342,7 +319,7 @@ export class SplatterModule extends BaseModule {
     }
 
     canReceiveSplat(target: OtherCharacter) {
-        return (target.LSCG.GlobalModule.enabled || target.LSCG.enabled) && target.LSCG.SplatterModule.enabled && target.LSCG.SplatterModule.taker;
+        return (target.LSCG?.GlobalModule?.enabled || target.LSCG?.enabled) && target.LSCG?.SplatterModule?.enabled && target.LSCG?.SplatterModule?.taker;
     }
 
     getSplats(C?: Character): Array<Item | null> {
@@ -371,7 +348,7 @@ export class SplatterModule extends BaseModule {
             Player.ArousalSettings.OrgasmStage = 2;
         }
         
-        if (Player.IsRestrained() && Player.IsBlind()) { // If bound, remove control of where to cum
+        if (Player.IsRestrained() && !Player.CanWalk()) { // If bound, remove control of where to cum
             this.RandomSplat();
         }
     }
@@ -392,16 +369,16 @@ export class SplatterModule extends BaseModule {
         let location = locationArr[getRandomInt(locationArr.length)];
         let roll = getRandomInt(100);
         if (roll > 50) {
-            this.SendSplatter(<OtherCharacter><Character>Player, "tummy", 1);
+            this.SendSplatter(<OtherCharacter><Character>Player, "tummy");
         } else if (targets.length > 0 && roll > 20) {
             let target = targets[getRandomInt(targets.length)];
-            this.SendSplatter(<OtherCharacter>target, location, 1);
+            this.SendSplatter(<OtherCharacter>target, location);
         } else {
             this.ResetPrompt();
         }
     }
 
-    SendSplatter(target: OtherCharacter, location: SplatterLocation, intensity: SplatterIntensity) {
+    SendSplatter(target: OtherCharacter, location: SplatterLocation) {
         this.ResetPrompt();
         if (this.canReceiveSplat(target)) {
             let targetGroupName: AssetGroupItemName = "ItemMouth";
