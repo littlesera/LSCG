@@ -565,11 +565,11 @@ export function escapeHtml(html: string){
 	return p.innerHTML;
   }
 
-export function LSCG_SendLocal(msg: string, escapeText: boolean = true) {
+export function LSCG_SendLocal(msg: string, escapeText: boolean = true, timeout?: number | undefined) {
 	var bgColor = (Player.ChatSettings!.ColorTheme!.indexOf("Light") > -1) ? "#D7F6E9" : "#23523E";
 	let escapedMsg = escapeText ? escapeHtml(msg) : msg;
 	let text = `<div style='background-color:${bgColor};'>${escapedMsg}</div>`;
-	ChatRoomSendLocal(text);
+	ChatRoomSendLocal(text, timeout);
 }
 
 export function excludeParentheticalContent(msg: string): string {
