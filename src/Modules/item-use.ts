@@ -409,7 +409,7 @@ export class ItemUseModule extends BaseModule {
 				if (!senderItem || !myItem)
 					return;
 				let str = escapeHtml(`${CharacterNickname(c)} would like to swap their ${this.getItemName(senderItem)} for your ${this.getItemName(myItem)}`);
-				LSCG_SendLocal(`<span>${str}</span><button style="background-color:green;border-radius:5px;margin:5px" id="swap-accept">Accept</button><button style="background-color:red;border-radius:5px;margin:5px" id="swap-deny">Deny</button>`, false);
+				LSCG_SendLocal(`<span>${str}</span><button style="background-color:green;border-radius:5px;margin:5px" id="swap-accept">Accept</button><button style="background-color:red;border-radius:5px;margin:5px" id="swap-deny">Deny</button>`, false, 10000);
 				
 				let timeout = setTimeout(() => {
 					if (!c)
@@ -454,18 +454,12 @@ export class ItemUseModule extends BaseModule {
 				if (!senderItem || !myItem)
 					return;
 				let str = escapeHtml(`${CharacterNickname(c)} refuses to swap with you. Attempt to steal?`);
-				LSCG_SendLocal(`<span>${str}</span><button style="background-color:orange;border-radius:5px;margin:5px" id="swap-theft">Theft!</button><button style="background-color:green;border-radius:5px;margin:5px" id="swap-leave">Leave it</button>`, false);
-
-				let timeout = setTimeout(() => {
-					theftEle?.remove();
-						leaveEle?.remove();
-				}, 10000);
+				LSCG_SendLocal(`<span>${str}</span><button style="background-color:orange;border-radius:5px;margin:5px" id="swap-theft">Theft!</button><button style="background-color:green;border-radius:5px;margin:5px" id="swap-leave">Leave it</button>`, false, 10000);
 
 				var theftEle = document.getElementById("swap-theft");
 				if (!!theftEle) {
 					theftEle.addEventListener("click", (evt) => {
 						this.SwapRoll(c!, senderItem!);
-						clearTimeout(timeout);
 						theftEle?.remove();
 						leaveEle?.remove();
 					});
@@ -475,7 +469,6 @@ export class ItemUseModule extends BaseModule {
 				if (!!leaveEle) {
 					leaveEle.addEventListener("click", (evt) => {
 						this.SwapRoll(c!, senderItem!);
-						clearTimeout(timeout);
 						theftEle?.remove();
 						leaveEle?.remove();
 					});
