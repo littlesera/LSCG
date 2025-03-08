@@ -558,7 +558,7 @@ export function sendLSCGCommandBeep(target: number, commandName: LSCGCommandName
 	});
 }
 
-function escapeHtml(html: string){
+export function escapeHtml(html: string){
 	var text = document.createTextNode(html);
 	var p = document.createElement('p');
 	p.appendChild(text);
