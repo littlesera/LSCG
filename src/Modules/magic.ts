@@ -239,16 +239,21 @@ export class MagicModule extends BaseModule {
         return rangedItemKeywords.some(keyword => isPhraseInString(craftStr, keyword));
     }
 
-    CanUseMagic(target: Character) {
+    CanUseMagic(target: Character, checkMagicItem: boolean = true, requireHands: boolean = true) {
         let item = InventoryGet(Player, "ItemHandheld");
-        let isWieldingMagicItem = !!item && this.IsMagicItem(item);
+        let isWieldingMagicItem = (checkMagicItem) ? (!!item && this.IsMagicItem(item)) : true;
         let hasItemPermission = ServerChatRoomGetAllowItem(Player, target);
         let targetHasMagicEnabled = (target as OtherCharacter).LSCG?.MagicModule?.enabled;
         let whitelisted = !(target as OtherCharacter).LSCG?.MagicModule?.requireWhitelist || (!!Player.MemberNumber && target.WhiteList.indexOf(Player.MemberNumber) > -1) || target.IsPlayer();
         return this.Enabled &&
             targetHasMagicEnabled &&
+            isWieldingMagicItem &&
             hasItemPermission &&
-            whitelisted;
+            Player.CanInteract() &&
+            whitelisted &&
+            (this.CanCastSpell(CurrentCharacter as OtherCharacter) ||
+                this.CanWildMagic(CurrentCharacter as OtherCharacter) ||
+                this.CanTeachSpell(CurrentCharacter as OtherCharacter));
     }
 
     CanCastSpell(target: Character): boolean {
@@ -278,6 +283,8 @@ export class MagicModule extends BaseModule {
         if (this.Enabled) {
             this.SpellMenuOpen = true;
             this.PrevScreen = CurrentScreen;
+            // @ts-expect-error: Requires updated bc stubs
+            DialogMenuMapping.dialog.Unload();
             CurrentScreen = "LSCG_SPELLS_DIALOG";
         }
     }
@@ -288,6 +295,8 @@ export class MagicModule extends BaseModule {
         this.SpellPairOption.SelectOpen = false;
         if (CurrentScreen == "LSCG_SPELLS_DIALOG")
             CurrentScreen = this.PrevScreen ?? "ChatRoom";
+        // @ts-expect-error: Requires updated bc stubs
+        DialogMenuMapping.dialog.Load();
     }
 
     TeachSpell(target: OtherCharacter) {
@@ -854,6 +863,9 @@ export class MagicModule extends BaseModule {
 
         let foundSpell = spellTargetPair[0];
         let target = spellTargetPair[1];
+        if (!this.CanUseMagic(target, false, false)) {
+            return;
+        }
         let pairTgt: Character | undefined;
         if (this.SpellNeedsPair(foundSpell)) {
             pairTgt = this.PairedCharacterOptions(target)[getRandomInt(this.PairedCharacterOptions(target).length)];
@@ -867,7 +879,7 @@ export class MagicModule extends BaseModule {
             if (!s.AllowVoiceCast)
                 continue;
             let searchPhrase = (!!s.CastingPhrase && s.CastingPhrase.length > 0) ? s.CastingPhrase : s.Name;
-            let re = new RegExp("^" + escapeRegExp(searchPhrase) + " ([\\w\\s]+)(\\b|$|\\s)", "i");
+            let re = new RegExp("^(?:\\w-)?" + escapeRegExp(searchPhrase) + " (?:\\w-)?([\\w\\s]+)(\\b|$|\\s)", "i");
             let matches = re.exec(oocParsedString);
             if (!matches)
                 continue;

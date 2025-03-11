@@ -333,8 +333,12 @@ export class InjectorModule extends BaseModule {
                     <CustomPrerequisite>{
                         Name: "CanPourIntoFunnel",
                         Func: (acting, acted, group) => {
-                            let gag = InventoryGet(acted, "ItemMouth");
-                            return !!gag && gag.Asset.Name == "FunnelGag" && (gag.Property?.TypeRecord ?? {})["typed"] == 1;
+                            let funnelGag = [
+                                InventoryGet(acted, "ItemMouth1"),
+                                InventoryGet(acted, "ItemMouth2"),
+                                InventoryGet(acted, "ItemMouth3")
+                            ].find(g => g?.Asset.Name == "FunnelGag");
+                            return !!funnelGag && (funnelGag.Property?.TypeRecord ?? {})["typed"] == 1;
                         }
                     }
                 ]

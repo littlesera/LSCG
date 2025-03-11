@@ -936,7 +936,7 @@ export class ActivityModule extends BaseModule {
             Targets: [
                 {
                     Name: "ItemEars",
-                    SelfAllowed: false,
+                    SelfAllowed: true,
                     TargetLabel: "Release Ear",
                     TargetAction: "SourceCharacter releases TargetCharacter's ear."
                 }
@@ -1200,6 +1200,82 @@ export class ActivityModule extends BaseModule {
                 }
             },
             CustomImage: "Assets/Female3DCG/Activity/Choke.png"
+        });
+
+        // Patch Collar Grab
+        this.PatchActivity(<ActivityPatch>{
+            ActivityName: "CollarGrab",
+            CustomPrereqs: [{
+                Name: "TargetNotAlreadyCollarGrabbed",
+                Func: (acting, acted, group) => {
+                    return !this.leashingModule.ContainsLeashing(acted.MemberNumber!, "collar");
+                }
+            }],
+            CustomAction: <CustomAction>{
+                Func: (target, args, next) => {
+                    var location = GetMetadata(args[1])?.GroupName;
+                    if (!!target && !!target.MemberNumber) {
+                        this.leashingModule.DoGrab(target, "collar");
+                        // Move next to player...?
+                        const MoveTargetPos = ChatRoomCharacter.findIndex(c => c.MemberNumber === target.MemberNumber);
+                        if (MoveTargetPos >= 0) {
+                            const Pos = ChatRoomCharacter.findIndex(c => c.MemberNumber === Player.MemberNumber);
+                            if (Pos < MoveTargetPos) {
+                                for (let i = 0; i < (MoveTargetPos - Pos) - 1; i++) {
+                                    ServerSend("ChatRoomAdmin", {
+                                        MemberNumber: target.MemberNumber,
+                                        Action: "MoveLeft",
+                                        Publish: i === 0
+                                    });
+                                }
+                            } else {
+                                for (let i = 0; i < (Pos - MoveTargetPos) - 1; i++) {
+                                    ServerSend("ChatRoomAdmin", {
+                                        MemberNumber: target.MemberNumber,
+                                        Action: "MoveRight",
+                                        Publish: i === 0
+                                    });
+                                }
+                            }
+                        }
+                    }
+                    return next(args);
+                }
+            },
+        });
+
+        // ReleaseNeck
+        this.AddActivity({
+            Activity: <Activity>{
+                Name: "ReleaseCollar",
+                MaxProgress: 30,
+                Prerequisite: ["ZoneAccessible", "UseHands"]
+            },
+            Targets: [
+                {
+                    Name: "ItemNeck",
+                    SelfAllowed: true,
+                    TargetLabel: "Release Collar",
+                    TargetAction: "SourceCharacter releases TargetCharacter's collar.",
+                    TargetSelfAction: "SourceCharacter releases PronounPossessive own collar."
+                }
+            ],
+            CustomPrereqs: [
+                {
+                    Name: "TargetIsCollarGrabbed",
+                    Func: (acting, acted, group) => {
+                        return this.leashingModule.ContainsLeashing(acted.MemberNumber!, "collar");
+                    }
+                }
+            ],
+            CustomAction: <CustomAction>{
+                Func: (target, args, next) => {
+                    if (!!target)
+                        this.leashingModule.DoRelease(target, "collar");
+                    return next(args);
+                }
+            },
+            CustomImage: "Assets/Female3DCG/Activity/Slap.png"
         });
 
         // Patch HandGag
