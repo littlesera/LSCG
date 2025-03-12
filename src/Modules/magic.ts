@@ -240,14 +240,11 @@ export class MagicModule extends BaseModule {
     }
 
     CanUseMagic(target: Character, checkMagicItem: boolean = true, requireHands: boolean = true) {
-        let item = InventoryGet(Player, "ItemHandheld");
-        let isWieldingMagicItem = (checkMagicItem) ? (!!item && this.IsMagicItem(item)) : true;
         let hasItemPermission = ServerChatRoomGetAllowItem(Player, target);
         let targetHasMagicEnabled = (target as OtherCharacter).LSCG?.MagicModule?.enabled;
         let whitelisted = !(target as OtherCharacter).LSCG?.MagicModule?.requireWhitelist || (!!Player.MemberNumber && target.WhiteList.indexOf(Player.MemberNumber) > -1) || target.IsPlayer();
         return this.Enabled &&
             targetHasMagicEnabled &&
-            isWieldingMagicItem &&
             hasItemPermission &&
             Player.CanInteract() &&
             whitelisted &&
@@ -274,8 +271,7 @@ export class MagicModule extends BaseModule {
         let targetItem = InventoryGet(target, "ItemHandheld");
         return this.Enabled &&
             !target.IsPlayer() &&
-            this.AvailableSpells.length > 0 &&
-            this.IsMagicItem(targetItem);
+            this.AvailableSpells.length > 0;
     }
 
     PrevScreen: string | undefined = undefined;

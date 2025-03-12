@@ -1,10 +1,11 @@
-// rollup.config.js
+
+import { readFileSync } from 'fs';
 import commonjs from '@rollup/plugin-commonjs';
 import resolve from "@rollup/plugin-node-resolve";
 import terser from "@rollup/plugin-terser";
 import typescript from '@rollup/plugin-typescript';
 import progress from 'rollup-plugin-progress';
-import packageJson from "./package.json" assert { type: "json" };
+const packageJson = JSON.parse(readFileSync(new URL('./package.json', import.meta.url)));
 
 export default {
   input: 'src/main.ts',
@@ -12,7 +13,6 @@ export default {
     name: "LSCG",
     file: 'dist/bundle.js',
     format: 'iife',
-    sourcemap: true,
     banner: `// LSCG: Little Sera's Club Games
 if (typeof window.ImportBondageCollege !== "function") {
   alert("Club not detected! Please only use this while you have Club open!");
@@ -37,6 +37,6 @@ console.debug("LSCG: Parse start...");
     progress({ clearLine: true }),
     resolve({ browser: true }),
     typescript({ tsconfig: "./tsconfig.json", inlineSources: true }),
-    commonjs()
+    commonjs(),
   ]
 };
