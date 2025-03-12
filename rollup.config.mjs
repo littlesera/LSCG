@@ -6,6 +6,7 @@ import terser from "@rollup/plugin-terser";
 import typescript from '@rollup/plugin-typescript';
 import progress from 'rollup-plugin-progress';
 const packageJson = JSON.parse(readFileSync(new URL('./package.json', import.meta.url)));
+import simpleGit from "simple-git";
 
 export default {
   input: 'src/main.ts',
