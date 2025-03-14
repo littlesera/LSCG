@@ -175,12 +175,12 @@ export class SplatterModule extends BaseModule {
             if (!this.Enabled)
                 return;
             let target = GetTargetCharacter(data);
-            let colorOverride = (<OtherCharacter>sender)?.LSCG.SplatterModule.colorOverride;
             if (!!target && 
                 !!sender &&
                 !(sender as OtherCharacter).LSCG?.LipstickModule?.dry &&
                 target == Player.MemberNumber &&
                 this.splatAllowed(sender, <OtherCharacter><Character>Player)) {
+                    let colorOverride = (<OtherCharacter>sender)?.LSCG?.SplatterModule?.colorOverride;
                     switch (data.Content) {
                         case "ChatOther-ItemMouth-LSCG_Splat":
                         case "ChatSelf-ItemMouth-LSCG_Splat":
