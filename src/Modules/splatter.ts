@@ -49,7 +49,8 @@ const locations: { [key: string]: string[] } = {
 
 const PossibleSplatterGroups: string[] = [
     "BodyMarkings",
-    "FaceMarkings"
+    "FaceMarkings",
+    "Mask"
 ]
 
 export class SplatterMapping {

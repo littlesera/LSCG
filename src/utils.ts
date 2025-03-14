@@ -268,6 +268,8 @@ export function replace_template(text: string, source: Character | null = null, 
 	let isOppMale = opp_pronounItem == "He/Him" ?? false;
 
 	let oppName = source?.IsPlayer() ? (isOppMale ? "himself" : "herself") : !!source ? CharacterNickname(source) : fallbackSourceName;
+	let oppNamePossessiveDirect = (`${!!source ? CharacterNickname(source) : fallbackSourceName}'s`);
+	let oppNamePossessive = source?.IsPlayer() ? (isOppMale ? "his own" : "her own") : oppNamePossessiveDirect;
 	let oppPossessive = isOppMale ? "His" : "Her";
 	let oppIntensive = source == Player ? (isOppMale ? "Himself" : "Herself") : (isOppMale ? "Him" : "Her");
 	let oppPronoun = isOppMale ? "He" : "She";
@@ -281,8 +283,10 @@ export function replace_template(text: string, source: Character | null = null, 
 		.replaceAll("%CAP_PRONOUN%", pronoun)
 		.replaceAll("%CAP_INTENSIVE%", intensive)
 
-		.replaceAll("%OPP_NAME%", oppName)
+		.replaceAll("%OPP_NAME%", oppName)		
 		.replaceAll("%OPP_PRONOUN%", oppPronoun.toLocaleLowerCase())
+		.replaceAll("%OPP_NAME_POSSESSIVE_DIRECT%", oppNamePossessiveDirect)
+		.replaceAll("%OPP_NAME_POSSESSIVE%", oppNamePossessive)
 		.replaceAll("%OPP_POSSESSIVE%", oppPossessive.toLocaleLowerCase())
 		.replaceAll("%OPP_INTENSIVE%", oppIntensive.toLocaleLowerCase())
 		.replaceAll("%CAP_OPP_PRONOUN%", oppPronoun)
@@ -731,6 +735,10 @@ export function isGenitals(item: Item | Asset | AssetGroup) {
 		"Pussy"
 	]
 	return group.Category === "Appearance" && targetGroups.indexOf(group.Name) > -1;
+}
+
+export function GetItemName(item: Item) {
+	return item.Craft?.Name ?? item.Asset.Description.toLocaleLowerCase();
 }
 
 export function GetHandheldItemNameAndDescriptionConcat(C?: Character | null): string | undefined {

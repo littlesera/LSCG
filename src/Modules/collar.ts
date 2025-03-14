@@ -1,7 +1,7 @@
 import { BaseModule } from 'base';
 import { CollarSettingsModel } from 'Settings/Models/collar';
 import { ModuleCategory, Subscreen } from 'Settings/setting_definitions';
-import { settingsSave, SendAction, OnChat, getRandomInt, hookFunction, removeAllHooksByModule, OnActivity, OnAction, setOrIgnoreBlush, getCharacter, hookBCXCurse, isPhraseInString, GetTargetCharacter, GetMetadata, GetDelimitedList, sendLSCGCommand, ICONS, LSCG_SendLocal } from '../utils';
+import { settingsSave, SendAction, OnChat, getRandomInt, hookFunction, removeAllHooksByModule, OnActivity, OnAction, setOrIgnoreBlush, getCharacter, hookBCXCurse, isPhraseInString, GetTargetCharacter, GetMetadata, GetDelimitedList, sendLSCGCommand, ICONS, LSCG_SendLocal, GetItemNameAndDescriptionConcat, GetItemName } from '../utils';
 import { GuiCollar } from 'Settings/collar';
 import { ActivityBundle, ActivityModule, ActivityTarget, CustomPrerequisite } from './activities';
 import { getModule } from 'modules';
@@ -457,7 +457,14 @@ export class CollarModule extends BaseModule {
         if (!item)
             return false;
         
-        if (item.Asset.Name == "NosePlugs") {
+        let nosePlugItems = [
+            "NosePlugs",
+            "NoseClip",
+            "DuctTape",
+            "GlueNose"
+        ]
+
+        if (nosePlugItems.indexOf(item.Asset.Name) >= 0) {
             if (!item.Craft)
                 return true;
             else {
@@ -768,7 +775,12 @@ export class CollarModule extends BaseModule {
             this.settings.stats.handPassoutCount++;
         }
         else if (reason == PassoutReason.PLUGS) {
-            SendAction("As %NAME% slumps unconscious, %POSSESSIVE% nose plugs fall out.");
+            let noseItem = InventoryGet(Player, "ItemNose");
+            let name = "nose plug";
+            if (!!noseItem) {
+                name = GetItemName(noseItem);
+            }
+            SendAction(`As %NAME% slumps into unconsciousness, %POSSESSIVE% ${name} releases.`);
             this.ForceReleasePlugs();
             this.settings.stats.gagPassoutCount++;
         }
