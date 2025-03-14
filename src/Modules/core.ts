@@ -403,7 +403,6 @@ export class CoreModule extends BaseModule {
 
     ShowChangelog(): void {
         const message = `New LSCG version: ${LSCG_VERSION}
-NOTE: 'Chaotic' and 'Evolving' description tags must use [] brackets now!~
 See below for the latest changes:
 ${LSCG_CHANGES}`;
         ServerAccountBeep({
