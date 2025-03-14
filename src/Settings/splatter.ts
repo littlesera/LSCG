@@ -34,7 +34,7 @@ export class GuiSplatter extends GuiSubscreen {
 				description: "Enable splatter integration.",
 				setting: () => this.settings.enabled ?? false,
 				setSetting: (val) => this.settings.enabled = val,
-				disabled: !this.settings.enabled
+				disabled: !Player.LSCG.GlobalModule.enabled
 			}, <Setting>{
 				type: "checkbox",
 				label: "Give Splatters:",
