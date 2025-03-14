@@ -157,6 +157,12 @@ export class PublicSettingsModel implements IPublicSettingsModel {
     SplatterModule: SplatterSettingsModel = <SplatterSettingsModel>{
         enabled: false,
         giver: false,
-        taker: false
+        taker: false,
+        colorOverride: null,
+        uncontrollableWhenBound: true,
+        autoSplat: true,
+        blacklist: [],
+        whitelist: [],
+        requireLover: false
     };
 }

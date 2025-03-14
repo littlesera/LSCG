@@ -1,17 +1,135 @@
 import { BaseModule } from "base";
-import { ModuleCategory } from "Settings/setting_definitions";
+import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
 import { GetMetadata, GetTargetCharacter, ICONS, OnActivity, SendAction, capitalizeFirstLetter, getCharacter, getCharacterByNicknameOrMemberNumber, getRandomInt, hookFunction, removeAllHooksByModule, sendLSCGCommand } from "../utils";
 import { SplatterSettingsModel } from "Settings/Models/base";
 import { Activities, Core, getModule } from "modules";
 import { CommandListener } from "./core";
 import { ActivityBundle } from "./activities";
+import { GuiSplatter } from "Settings/splatter";
 
-export type SplatterLocation = "mouth" | "forehead" | "chest" | "tummy" | "crotch" | "all";
+export type SplatterLocation = "mouth" | "forehead" | "chest" | "tummy" | "inmouth" | "crotch" | "all";
 export interface SplatterPacket {
     location: SplatterLocation;
     itemGroup: AssetItemGroup;
     currentTier: number;
     maxTier: number;
+}
+
+type RecordObject = { [key: string]: number };
+
+const bcSplats: RecordObject = {
+    a: 0,
+    b: 0,
+    c: 0,
+    d: 0,
+    e: 0,
+    f: 0,
+    g: 0,
+    h: 0,
+    i: 0,
+    j: 0,
+    k: 0,
+    l: 0,
+    m: 0,
+    n: 0,
+    o: 0,
+    p: 0,
+    q: 0,
+    r: 0
+};
+
+const locations: { [key: string]: string[] } = {
+    forehead: ['a', 'b', 'c'],    // 'forehead' covers flags a, b, c
+    mouth: ['d', 'e', 'f'],       // 'mouth' covers flags d, e, f
+    chest: ['g', 'h', 'i', 'j', 'r'],       // 'mouth' covers flags d, e, f
+    tummy: ['k', 'l', 'm', 'n'],       // 'mouth' covers flags d, e, f
+    inmouth: ['o'],
+    crotch: ['p', 'q']    
+};
+
+const PossibleSplatterGroups: string[] = [
+    "BodyMarkings",
+    "FaceMarkings"
+]
+
+export class SplatterMapping {
+    C: Character;
+
+    constructor(character: Character) {
+        this.C = character;
+    }
+
+    getSplatItems(): Array<Item | null> {
+        return PossibleSplatterGroups.map(grp => InventoryGet(this.C, grp)).filter(m => !!m && m.Asset.Name == "Splatters");
+    }
+
+    getOpenSplatSlot(): string | undefined {
+        return PossibleSplatterGroups.find(grp => !InventoryGet(this.C, grp));
+    }
+
+    getMergedProperty(): RecordObject {
+        let items = this.getSplatItems().map(item => item?.Property?.TypeRecord);
+        let blank = Object.assign({}, bcSplats);
+        Object.keys(blank).forEach(key => {
+            blank[key as keyof typeof blank] = items.some(item => item?.[key]) ? 1 : 0;
+        });
+        return blank;
+    }
+
+    getCurrentSplatTier(loc: SplatterLocation): number {
+        let record = this.getMergedProperty();
+        let group = locations[loc];
+        return group.map(key => record[key]).reduce((sum, x) => sum + x, 0);
+    }
+
+    incrementSplat(loc: SplatterLocation, colorOverride: ItemColor | null = "Default"): void {
+        if (!(loc in locations)) {
+            console.warn(`Location '${loc}' not found.`);
+            return;
+        }
+
+        let record = this.getMergedProperty();
+        let group = locations[loc];
+        let flagToFlip: string | undefined = undefined;
+
+        for (let i = 0; i < group.length; i++) {
+            const flag = group[i];
+            if (record[flag] <= 0) {
+                flagToFlip = flag;
+                break;
+            }
+        }
+        if (!!flagToFlip) {
+            let items = this.getSplatItems();
+            let targetItem;
+            if (!items || items.length == 0) {
+                let openSlot = this.getOpenSplatSlot();
+                if (!openSlot)
+                    return;
+                targetItem = InventoryWear(this.C, "Splatters", openSlot, colorOverride ?? "Default", undefined, this.C.MemberNumber, undefined, true);
+            } else {
+                targetItem = items[0];
+            }
+            if (!!targetItem && !!targetItem.Property && !!targetItem.Property.TypeRecord) {
+                targetItem.Property.TypeRecord[flagToFlip] = 1;
+            }
+        }
+    }
+
+    cleanSplatLocation(loc: SplatterLocation) {
+        let flags = locations[loc];
+        if (loc == "all") {
+            flags = Object.keys(bcSplats);
+        }
+        let items = this.getSplatItems();
+        items.forEach(item => {
+            flags.forEach(key => {
+                if (!!item && !!item.Property && !!item.Property.TypeRecord) {
+                    item.Property.TypeRecord[key] = 0;
+                }
+            });
+        })
+    }
 }
 
 export class SplatterModule extends BaseModule {
@@ -20,18 +138,26 @@ export class SplatterModule extends BaseModule {
     START_X = 180;
     START_Y = 564;
 
+    get settingsScreen(): Subscreen | null {
+        return GuiSplatter;
+    }
+
     get defaultSettings() {
         return <SplatterSettingsModel>{
             enabled: false,
-            giver: false,
-            taker: false,
-            autoSplat: true
+            giver: true,
+            taker: true,
+            autoSplat: true,
+            uncontrollableWhenBound: true,
+            whitelist: null,
+            blacklist: null,
+            requireLover: false
         };
     }
 
     get settings(): SplatterSettingsModel {
         return super.settings as SplatterSettingsModel;
-	}
+	}    
 
     recentPartners: number[] = [];
 
@@ -52,7 +178,8 @@ export class SplatterModule extends BaseModule {
             if (!!target && 
                 !!sender &&
                 !(sender as OtherCharacter).LSCG?.LipstickModule?.dry &&
-                target == Player.MemberNumber) {
+                target == Player.MemberNumber &&
+                this.splatAllowed(sender, <OtherCharacter><Character>Player)) {
                     switch (data.Content) {
                         case "ChatOther-ItemMouth-LSCG_Splat":
                         case "ChatSelf-ItemMouth-LSCG_Splat":
@@ -90,7 +217,11 @@ export class SplatterModule extends BaseModule {
                                 this.CleanSplatter("forehead");
                                 break;
                             case "ChatOther-ItemBreast-RubItem":
-                            case "ChatSelf-ItemBreast-RubItem":    
+                            case "ChatSelf-ItemBreast-RubItem":
+                            case "ChatOther-ItemNipples-RubItem":
+                            case "ChatSelf-ItemNipples-RubItem":
+                            case "ChatOther-ItemNipplesPiercings-RubItem":
+                            case "ChatSelf-ItemNipplesPiercings-RubItem":
                                 this.CleanSplatter("chest");
                                 break;
                             case "ChatOther-ItemPelvis-RubItem":
@@ -99,6 +230,8 @@ export class SplatterModule extends BaseModule {
                                 break;
                             case "ChatOther-ItemVulva-RubItem":
                             case "ChatSelf-ItemVulva-RubItem":
+                            case "ChatOther-ItemVulvaItemVulvaPiercings-RubItem":
+                            case "ChatSelf-ItemVulvaPiercings-RubItem":
                                 this.CleanSplatter("crotch");
                                 break;
                             default :
@@ -157,9 +290,11 @@ export class SplatterModule extends BaseModule {
                 {
                     Name: "CanSquirt",
                     Func: (acting, acted, group) => {
-                        let giverAllowed = this.canCumOnOther(acting);
+                        let controllable = !this.settings.uncontrollableWhenBound || !acting.IsRestrained();
+                        let giverAllowed = this.canGiveSplat(acting);
                         let takerAllowed = this.canReceiveSplat(<OtherCharacter>acted);
-                        return giverAllowed && takerAllowed;
+                        let permAllowed = this.splatAllowed(acting, <OtherCharacter>acted);
+                        return controllable && giverAllowed && takerAllowed && permAllowed;
                     }
                 }
             ],
@@ -186,7 +321,7 @@ export class SplatterModule extends BaseModule {
             if (C.IsPlayer() &&
                 CurrentScreen == "ChatRoom" &&
                 this.Enabled && 
-                this.canCumOnOther(Player) && 
+                this.canGiveSplat(Player) && 
                 this.settings.autoSplat &&
                 !ActivityOrgasmRuined) {
                 this.PromptForSplat(() => next(args));
@@ -207,7 +342,7 @@ export class SplatterModule extends BaseModule {
                         DrawButton(this.START_X + 250, 480, 240, 60, "Nobody", "White", undefined, undefined, false);
                         DrawButton(this.START_X + 500, 480, 240, 60, "Uncontrolled", "White", undefined, undefined, false);
                         
-                        if (!Player.IsRestrained() || Player.CanWalk()) { // If bound, remove control of where to cum
+                        if (!this.settings.uncontrollableWhenBound || !Player.IsRestrained()) { // If bound, remove control of where to cum if setting is true
                             let areas = this.getTargetSelectAreas();
                             if (areas.length <= 0) this.ResetPrompt();
                             areas.forEach(pair => {
@@ -317,7 +452,14 @@ export class SplatterModule extends BaseModule {
         removeAllHooksByModule(ModuleCategory.Splatter);
     }
     
-    canCumOnOther(acting: Character) {
+    splatAllowed(acting: Character, acted: OtherCharacter) {
+        let whiteListAllowed = !!acted?.LSCG?.SplatterModule?.whitelist && acted.LSCG.SplatterModule.whitelist.indexOf(acting.MemberNumber ?? -1) >=0;
+        let blackListBlocked = !!acted?.LSCG?.SplatterModule?.blacklist && acted.LSCG.SplatterModule.blacklist.indexOf(acting.MemberNumber ?? -1) >=0;
+        let loverAllowed = !acted?.LSCG?.SplatterModule?.requireLover || acting.IsLoverOfCharacter(acted);
+        return (loverAllowed || whiteListAllowed) && !blackListBlocked;
+    }
+
+    canGiveSplat(acting: Character) {
         let naked = (InventoryPrerequisiteMessage(acting, "AccessCrotch") === "") && !acting.IsVulvaChaste() && !acting.IsEnclose();
         let arousalAllowed = (acting.ArousalSettings?.Progress ?? 0) > 90 && !acting.IsEdged();
         let giverAllowed = (<OtherCharacter>acting).LSCG.SplatterModule.enabled && (<OtherCharacter>acting).LSCG.SplatterModule.giver;
@@ -330,10 +472,10 @@ export class SplatterModule extends BaseModule {
 
     getSplats(C?: Character): Array<Item | null> {
         C = C ?? Player;
-        return [InventoryGet(C, "splatterlocation???")].filter(m => !!m && m.Asset.Name == "splatter???");
+        return [InventoryGet(C, "BodyMarkings"),InventoryGet(C, "FaceMarkings")].filter(m => !!m && m.Asset.Name == "Splatter");
     }    
     
-    splatSlotsOccupied() {
+    splatSlotOccupied() {
         return this.getSplats().length == this.TOTAL_SPLAT_SLOTS;
     }
     
@@ -341,7 +483,7 @@ export class SplatterModule extends BaseModule {
         let partners = this.recentPartners.map(p => getCharacter(p)).filter(c => !!c) as Character[];
         let mySpot = ChatRoomCharacter.findIndex(c => c.MemberNumber == Player.MemberNumber);
         let nearby = [ChatRoomCharacter[mySpot-1], ChatRoomCharacter[mySpot+1]].filter(c => !!c);
-        return partners.concat(nearby).filter(c => !!c && this.canReceiveSplat(<OtherCharacter>c));
+        return partners.concat(nearby).filter(c => !!c && this.canReceiveSplat(<OtherCharacter>c) && this.splatAllowed(Player, <OtherCharacter>c));
     }
 
     PromptForSplat(callback: () => any) {
@@ -386,7 +528,7 @@ export class SplatterModule extends BaseModule {
 
     SendSplatter(target: OtherCharacter, location: SplatterLocation) {
         this.ResetPrompt();
-        if (this.canReceiveSplat(target)) {
+        if (this.canReceiveSplat(target) && this.splatAllowed(Player, target)) {
             let targetGroupName: AssetGroupItemName = "ItemMouth";
             switch (location) {
                 case "mouth": targetGroupName = "ItemMouth"; break;
@@ -409,41 +551,13 @@ export class SplatterModule extends BaseModule {
 
     CleanSplatter(location: SplatterLocation) {
         console.info(`Cleaning splatter from ${location}`);
-        var splats = [InventoryGet(Player, "splatterlocation???")].filter(m => !!m && m.Asset.Name == "splatter???");
-        if (!splats || splats.length <= 0)
-            return;
-
-        splats.forEach(splat => {
-            switch (location) {
-                case "mouth" :
-                case "forehead" :
-                case "chest" :
-                case "tummy" :
-                case "crotch":
-                case "all" :
-                default :
-                    break;
-            }    
-        })        
-
+        new SplatterMapping(Player).cleanSplatLocation(location);
         ChatRoomCharacterUpdate(Player);
     }
 
     AddSplatter(sender: Character, location: SplatterLocation, colorOverride: ItemColor | null) {
         console.info(`Adding splatter to ${location}`);
-        var splats = this.getSplats();
-        // Adjust marks
-        switch (location) {
-            case "mouth" :
-            case "forehead" :
-            case "chest" :
-            case "tummy" :
-            case "crotch" :
-            case "all" :
-            default :
-                break;
-        }
-    
+        new SplatterMapping(Player).incrementSplat(location, colorOverride);
         ChatRoomCharacterUpdate(Player);
     }
 }

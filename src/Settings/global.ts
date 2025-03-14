@@ -140,43 +140,7 @@ export class GuiGlobal extends GuiSubscreen {
 					disabled: !this.settings.enabled
 				}
 			],
-			[<Setting>{
-				type: "checkbox",
-				label: "Enable Splatters:",
-				description: "Enable splatter integration.",
-				setting: () => Player.LSCG.SplatterModule.enabled ?? true,
-				setSetting: (val) => Player.LSCG.SplatterModule.enabled = val,
-				disabled: !this.settings.enabled
-			}, <Setting>{
-				type: "checkbox",
-				label: "Give Splatters:",
-				description: "Allow splattering on others.",
-				setting: () => Player.LSCG.SplatterModule.giver ?? true,
-				setSetting: (val) => Player.LSCG.SplatterModule.giver = val,
-				disabled: !Player.LSCG.SplatterModule.enabled
-			}, <Setting>{
-				type: "checkbox",
-				label: "Receive Splatters:",
-				description: "Allow others to splatter you.",
-				setting: () => Player.LSCG.SplatterModule.taker ?? true,
-				setSetting: (val) => Player.LSCG.SplatterModule.taker = val,
-				disabled: !Player.LSCG.SplatterModule.enabled
-			}, <Setting>{
-				type: "checkbox",
-				label: "Auto Splatter:",
-				description: "If enabled, will prompt for splatter on orgasm.",
-				setting: () => Player.LSCG.SplatterModule.autoSplat ?? true,
-				setSetting: (val) => Player.LSCG.SplatterModule.autoSplat = val,
-				disabled: !Player.LSCG.SplatterModule.enabled
-			}, <Setting>{
-				type: "text",
-				label: "Splatter Color Override:",
-				id: "splatter_color",
-				description: "Override color for splatter application.",
-				setting: () => Player.LSCG.SplatterModule.colorOverride ?? "",
-				setSetting: (val) => Player.LSCG.SplatterModule.colorOverride = val,
-				disabled: !Player.LSCG.SplatterModule.enabled
-			}]
+			[]
 		]
 	}
 
