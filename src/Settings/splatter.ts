@@ -59,7 +59,7 @@ export class GuiSplatter extends GuiSubscreen {
 			}, <Setting>{
 				type: "checkbox",
 				label: "Uncontrollable when Bound:",
-				description: "If enabled, the user will only be able to control where they spray if unrestrained.",
+				description: "If enabled, the user will only be able to control where splatter is applied if unrestrained.",
 				setting: () => this.settings.uncontrollableWhenBound ?? true,
 				setSetting: (val) => this.settings.uncontrollableWhenBound = val,
 				disabled: !this.settings.enabled
