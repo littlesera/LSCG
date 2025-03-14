@@ -55,7 +55,7 @@ export class GuiSplatter extends GuiSubscreen {
 				description: "If enabled, will prompt for splatter on orgasm.",
 				setting: () => this.settings.autoSplat ?? true,
 				setSetting: (val) => this.settings.autoSplat = val,
-				disabled: !this.settings.enabled
+				disabled: !this.settings.enabled || !this.settings.giver
 			}, <Setting>{
 				type: "checkbox",
 				label: "Uncontrollable when Bound:",
