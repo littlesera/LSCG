@@ -107,12 +107,19 @@ export class SplatterMapping {
                 let openSlot = this.getOpenSplatSlot();
                 if (!openSlot)
                     return;
-                targetItem = InventoryWear(this.C, "Splatters", openSlot, colorOverride ?? "Default", undefined, this.C.MemberNumber, undefined, true);
+                targetItem = InventoryWear(this.C, "Splatters", openSlot, undefined, undefined, this.C.MemberNumber, undefined, true);
             } else {
                 targetItem = items[0];
             }
             if (!!targetItem && !!targetItem.Property && !!targetItem.Property.TypeRecord) {
                 targetItem.Property.TypeRecord[flagToFlip] = 1;
+                let recKeys = Object.keys(targetItem.Property.TypeRecord);
+                if (!targetItem.Color) {
+                    targetItem.Color = recKeys.map(k => "Default");
+                }
+                if (Array.isArray(targetItem.Color)) {
+                    targetItem.Color = targetItem.Color.map((col, ix, arr) => (ix == recKeys.indexOf(flagToFlip!)) ? (<string>colorOverride) : col);
+                }
             }
         }
     }
