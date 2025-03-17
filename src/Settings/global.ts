@@ -139,8 +139,7 @@ export class GuiGlobal extends GuiSubscreen {
 					setSetting: (val) => Player.LSCG.ChaoticItemModule.enabled = val,
 					disabled: !this.settings.enabled
 				}
-			],
-			[]
+			]
 		]
 	}
 
