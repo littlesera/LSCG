@@ -26,8 +26,12 @@ export class CommandModule extends BaseModule {
 			Description: ": Opens the help for LSCG commands",
 			Action: (args, msg, parsed) => {
 				let helpLines: string[] = [];
+				let lightMode = (Player.ChatSettings!.ColorTheme!.indexOf("Light") > -1);
+				let lscgColor = lightMode ? "slategrey" : "darkgrey";
+				let commandColor = lightMode ? "midnightblue" : "mintcream";
+				let descColor = lightMode ? "slategrey" : "moccasin";
 				this.orderedCommands.forEach(c => {
-					helpLines.push(`<br><b><span style="color:darkgrey">/lscg</span> <span style="color:mintcream;text-decoration-line: underline;">${c.Tag}</span></b> <span style="color:moccasin">${c.Description}</span>`);
+					helpLines.push(`<br><b><span style="color:${lscgColor}">/lscg</span> <span style="color:${commandColor};text-decoration-line: underline;">${c.Tag}</span></b> <span style="color:${descColor}">${c.Description}</span>`);
 				})
 				let helpText = `<b>- Little Sera's Club Games -</b>${helpLines.join()}`;
 				LSCG_SendLocal(helpText, false);
