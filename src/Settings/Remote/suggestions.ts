@@ -41,15 +41,40 @@ export class RemoteSuggestions extends RemoteHypno {
 	}
 
 	get disabledReason(): string {
-		let reason = super.disabledReason;
-		if (reason == "Section is Unavailable" && !this.settings.allowSuggestions)
+		var memberIdIsAllowed = ServerChatRoomGetAllowItem(Player, this.Character);
+		if (this.overrideMemberIds.length > 0)
+			memberIdIsAllowed = this.overrideMemberIds.indexOf(Player.MemberNumber!) > -1;
+
+		var passTranceReq = this.Character.LSCG.StateModule.states.find(s => s.type == "hypnotized")?.active ?? false;
+		var passHypnotizerReq = (this.settings.suggestionRequireHypnotizer && this.Character.LSCG.StateModule.states.find(s => s.type == "hypnotized")?.activatedBy == Player.MemberNumber)
+
+		let reason;
+		if (!memberIdIsAllowed)
+			return replace_template("You do not have access to %OPP_POSSESSIVE% mind...", this.Character);
+		if (!passTranceReq)
+			return replace_template("%OPP_NAME% has too much willpower to let you in...", this.Character);
+		if (!passHypnotizerReq)
+			return replace_template("%OPP_NAME% seems suggestable, but not to you...", this.Character);
+		if (!this.settings.allowSuggestions)
 			return replace_template("%OPP_NAME% is resisting any hypnotic suggestions...", this.Character)
-		return reason;
+		else
+			return "Section is Unavailable";
 	}
 
 	get enabled(): boolean {
-		var isTrance = this.Character.LSCG.StateModule.states.find(s => s.type == "hypnotized")?.active ?? false;
-		return super.enabled && isTrance && this.settings.allowSuggestions;
+		var memberIdIsAllowed = ServerChatRoomGetAllowItem(Player, this.Character);
+		if (this.overrideMemberIds.length > 0)
+			memberIdIsAllowed = this.overrideMemberIds.indexOf(Player.MemberNumber!) > -1;
+
+		var passTranceReq = this.Character.LSCG.StateModule.states.find(s => s.type == "hypnotized")?.active ?? false;
+		var passHypnotizerReq = (this.settings.suggestionRequireHypnotizer && this.Character.LSCG.StateModule.states.find(s => s.type == "hypnotized")?.activatedBy == Player.MemberNumber);
+
+		return this.settings.enabled && 
+				(this.Character.IsOwnedByPlayer() ||
+					(this.settings.allowSuggestions &&
+					memberIdIsAllowed &&
+					passTranceReq &&
+					passHypnotizerReq))
 	}
 
 	Load(): void {
