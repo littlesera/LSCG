@@ -16,6 +16,7 @@ import { StateModule } from "./states";
 import { drawTooltip } from "Settings/settingUtils";
 import { GrabType, LeashingModule } from "./leashing";
 import { OpacityMigrator } from "./Migrators/OpacityMigrator";
+import { SuggestionSettingMigrator } from "./Migrators/OpacityMigrator copy";
 
 // >= R111
 declare var DialogMenuMapping: { items: ScreenFunctions & { C: null | Character } };
@@ -254,7 +255,8 @@ export class CoreModule extends BaseModule {
 
     Migrators: BaseMigrator[] = [
         new StateMigrator(),
-        new OpacityMigrator()
+        new OpacityMigrator(),
+        new SuggestionSettingMigrator()
     ];
 
     CheckForMigrations(fromVersion: string): boolean {
@@ -405,6 +407,7 @@ export class CoreModule extends BaseModule {
 
     ShowChangelog(): void {
         const message = `New LSCG version: ${LSCG_VERSION}
+NOTE: Hypnosis + Suggestion settings have some slight changes, please double check yours!        
 See below for the latest changes:
 ${LSCG_CHANGES}`;
         ServerAccountBeep({
