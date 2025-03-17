@@ -12,11 +12,12 @@ import { GrabType, LeashingModule } from "./leashing";
 import { MagicModule } from "./magic";
 import { BaseMigrator } from "./Migrators/BaseMigrator";
 import { OpacityMigrator } from "./Migrators/OpacityMigrator";
+import { SuggestionSettingMigrator } from "./Migrators/OpacityMigrator copy";
 import { StateMigrator } from "./Migrators/StateMigrator";
 import { StateModule } from "./states";
 
 // >= R111
-declare var DialogMenuMapping: { items: ScreenFunctions & { C: null | Character } };
+declare var DialogMenuMapping: { items: ScreenFunctions & { C: null | Character; }; };
 
 // Core Module that can handle basic functionality like server handshakes etc.
 export class CoreModule extends BaseModule {
@@ -32,7 +33,7 @@ export class CoreModule extends BaseModule {
     get publicSettings(): IPublicSettingsModel {
         var settings = new PublicSettingsModel();
         for (const m of modules()) {
-            var moduleSettings = m.settings ?? <BaseSettingsModel>{enabled:false};
+            var moduleSettings = m.settings ?? <BaseSettingsModel>{ enabled: false };
             var moduleSettingStorage = m.settingsStorage ?? "";
             if (Object.hasOwn(settings, moduleSettingStorage)) {
                 var publicModuleSetting = (<any>settings)[moduleSettingStorage];
@@ -47,15 +48,15 @@ export class CoreModule extends BaseModule {
     }
 
     get settingsStorage(): string | null {
-		return "GlobalModule";
-	}
+        return "GlobalModule";
+    }
 
     get settings(): GlobalSettingsModel {
         return super.settings as GlobalSettingsModel;
-	}
+    }
 
     get defaultSettings(): GlobalSettingsModel | null {
-		return <GlobalSettingsModel>{
+        return <GlobalSettingsModel>{
             enabled: false,
             blockSettingsWhileRestrained: false,
             edgeBlur: false,
@@ -63,7 +64,7 @@ export class CoreModule extends BaseModule {
             sharePublicCrafting: false,
             showCheckRolls: true
         };
-	}
+    }
 
     load(): void {
         hookFunction("ChatRoomSync", 1, (args, next) => {
@@ -95,7 +96,7 @@ export class CoreModule extends BaseModule {
             const ModUser = !!Char?.LSCG;
             const Friend = C.ID === 0 || (Player.FriendList ?? []).includes(C.MemberNumber!);
             const Ghosted = (Player.GhostList ?? []).includes(C.MemberNumber!);
-            const isAdmin = (Array.isArray(ChatRoomData?.Admin) && ChatRoomData?.Admin.includes(C.MemberNumber!))
+            const isAdmin = (Array.isArray(ChatRoomData?.Admin) && ChatRoomData?.Admin.includes(C.MemberNumber!));
             if (ModUser && ChatRoomHideIconState === 0 && !Ghosted) {
                 var version = C.IsPlayer() ? CUSTOM_LSCG_VERSION : (C as OtherCharacter).LSCG?.Version;
                 var starColor = isAdmin ? "#008080" : "#00AEAE";
@@ -196,16 +197,16 @@ export class CoreModule extends BaseModule {
             }, ModuleCategory.Core);
 
             hookFunction("DrawItemPreview", 1, (args, next) => {
-                    const ret = next(args);
-                    const [item, , x, y] = args;
-                    if (item) {
-                        const { Craft } = item;
-                        if (MouseIn(x, y, DialogInventoryGrid.itemWidth, DialogInventoryGrid.itemHeight) && Craft && Craft?.MemberNumber) {
-                            drawTooltip(1000, y - 140, 975, `Crafted By: ${Craft.MemberName} [${Craft.MemberNumber}]`, "left");
-                        }
+                const ret = next(args);
+                const [item, , x, y] = args;
+                if (item) {
+                    const { Craft } = item;
+                    if (MouseIn(x, y, DialogInventoryGrid.itemWidth, DialogInventoryGrid.itemHeight) && Craft && Craft?.MemberNumber) {
+                        drawTooltip(1000, y - 140, 975, `Crafted By: ${Craft.MemberName} [${Craft.MemberNumber}]`, "left");
                     }
-                    return ret;
                 }
+                return ret;
+            }
             );
 
             hookFunction("DialogClick", 1, (args, next) => {
@@ -252,7 +253,8 @@ export class CoreModule extends BaseModule {
 
     Migrators: BaseMigrator[] = [
         new StateMigrator(),
-        new OpacityMigrator()
+        new OpacityMigrator(),
+        new SuggestionSettingMigrator()
     ];
 
     CheckForMigrations(fromVersion: string): boolean {
@@ -403,6 +405,7 @@ export class CoreModule extends BaseModule {
 
     ShowChangelog(): void {
         const message = `New LSCG version: ${LSCG_VERSION}
+NOTE: Hypnosis + Suggestion settings have some slight changes, please double check yours!        
 See below for the latest changes:
 ${LSCG_CHANGES}`;
         ServerAccountBeep({
