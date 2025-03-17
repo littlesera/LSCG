@@ -46,6 +46,7 @@ export interface HypnoPublicSettingsModel extends BaseSettingsModel {
     enableCycle: boolean;
     cycleTime: number;
     awakeners: string;
+    randomTrigger: boolean;
     overrideWords: string;
     overrideMemberIds: string;
     remoteAccess: boolean;
@@ -59,6 +60,7 @@ export interface HypnoPublicSettingsModel extends BaseSettingsModel {
 
     // Suggestion Settings
     allowSuggestions: boolean;
+    suggestionRequireHypnotizer: boolean;
     allowSuggestionRemoval: boolean;
     blockedInstructions: LSCGHypnoInstruction[];
     alwaysSubmit: boolean;
