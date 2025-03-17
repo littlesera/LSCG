@@ -22,6 +22,7 @@ import { BarrierState } from "./States/BarrierState";
 import { PolymorphedState } from "./States/PolymorphedState";
 import { XRayVisionState } from "./States/XRayVisionState";
 import { DeniedState } from "./States/DeniedState";
+import { parseInt } from "lodash-es";
 
 interface StateIcon {
     Label: string;
@@ -339,6 +340,39 @@ export class StateModule extends BaseModule {
     unload(): void {
         removeAllHooksByModule(ModuleCategory.States);
     }
+
+    get commands(): ICommand[] {
+		return [
+            <ICommand>{
+                Tag: 'wake',
+                Description: ": wake up from slumber",
+                Action: () => {
+                    if (!this.Enabled)
+                        return;
+    
+                    if (this.settings.immersive) {
+                        LSCG_SendLocal("wake disabled while immersive");
+                        return;
+                    }
+
+                    if (this.SleepState.Active)
+                        this.SleepState.Recover(true);
+                }
+            }, <ICommand>{
+                Tag: 'sleep',
+                Description: "[minutes]: fall asleep (default 10 minutes)",
+                Action: (args, msg, parsed) => {
+                    if (!this.Enabled)
+                        return;
+                    
+                    let duration = parseInt(parsed[0] ?? "10") ?? 10;
+
+                    if (!this.SleepState.Active)
+                        this.SleepState.Activate(Player.MemberNumber, duration * (60 * 1000), true);
+                }
+            }
+        ]
+	}
 
     GetIconForState(state: StateConfig, C: OtherCharacter): StateIcon {
         let stateObj = this.States.find(s => s.Type == state.type);
