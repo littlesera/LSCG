@@ -164,7 +164,7 @@ export class RemoteCollar extends RemoteGuiSubscreen {
 			DrawText("Act now and secure your Control Module now for the owner-discounted price of $200!", 1000, 450, "Black", "Gray");
 
 			DrawText("Attach this revolutionary new device to your sub's existing collar and it will", 1000, 550, "Gray", "Black");
-			DrawText("enhance it with the ability to tighten and loosen on command!", 1000, 600, "Gray", "Black");
+			DrawText("enhance it with the ability to 'tighten' and 'loosen' on command!", 1000, 600, "Gray", "Black");
 			DrawText("Quiet down those bratty moments and reward good behavior!", 1000, 650, "Gray", "Black");				
 
 			DrawButton(800, 740, 400, 80, "Purchase - $200", this.CanAffordCollar() ? "White" : "Pink", undefined, this.CanAffordCollar() ? "Unlock Andrew's Collar Module" : "Cannot afford...", !this.CanAffordCollar());
@@ -214,8 +214,8 @@ export class RemoteCollar extends RemoteGuiSubscreen {
 		this.settings.enabled = true;
 		this.settings.remoteAccess = true;
 		this.settings.allowedMembers = `${Player.MemberNumber}`;
-		this.settings.tightTrigger = "tight";
-		this.settings.looseTrigger = "loose";
+		this.settings.tightTrigger = "tighten";
+		this.settings.looseTrigger = "loosen";
 		this.settingsSave();
 		this.Load();
 		ServerPlayerSync();
