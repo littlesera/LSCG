@@ -1060,8 +1060,7 @@ export class ItemUseModule extends BaseModule {
 					SelfAllowed: true,
 					SelfOnly: true
 				}
-			],
-			CustomImage: "Assets/Female3DCG/ItemHandheld/Preview/Shark.png"
+			]
 		});
 
 		this.activities.AddActivity({

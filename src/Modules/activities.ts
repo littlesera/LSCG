@@ -710,32 +710,39 @@ export class ActivityModule extends BaseModule {
         this.AddActivity({
             Activity: <Activity>{
                 Name: "Eat",
+                Reverse: true,
                 MaxProgress: 50,
                 MaxProgressSelf: 50,
                 Prerequisite: ["ZoneAccessible", "UseMouth", "Needs-EdibleItem"]
             },
             Targets: [
                 {
-                    Name: "ItemMouth",
+                    Name: "ItemHands",
                     SelfAllowed: true,
-                    SelfOnly: true,
                     TargetLabel: "Eat",
                     TargetAction: "SourceCharacter takes a big bite out of TargetCharacter's ActivityAsset.",
                     TargetSelfAction: "SourceCharacter takes a big bite out of PronounPossessive ActivityAsset."
                 }
-            ],
-            CustomImage: "Assets/Female3DCG/Activity/Bite.png"
+            ]
         });
 
         // Chew Item
         this.AddActivity({
             Activity: <Activity>{
                 Name: "Chew",
+                Reverse: true,
                 MaxProgress: 50,
                 MaxProgressSelf: 50,
                 Prerequisite: ["ZoneAccessible", "Needs-ChewableItem"]
             },
             Targets: [
+                {
+                    Name: "ItemHands",
+                    SelfAllowed: true,
+                    TargetLabel: "Chew On",
+                    TargetAction: "SourceCharacter chews on TargetCharacter's ActivityAsset.",
+                    TargetSelfAction: "SourceCharacter chews on PronounPossessive ActivityAsset."
+                },
                 {
                     Name: "ItemMouth",
                     SelfAllowed: true,
@@ -744,8 +751,7 @@ export class ActivityModule extends BaseModule {
                     TargetAction: "SourceCharacter chews on TargetCharacter's ActivityAsset.",
                     TargetSelfAction: "SourceCharacter chews on PronounPossessive ActivityAsset."
                 }
-            ],
-            CustomImage: "Assets/Female3DCG/Activity/Bite.png"
+            ]
         });
 
         // GrabTongue
