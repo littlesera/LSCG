@@ -185,33 +185,33 @@ export class SplatterModule extends BaseModule {
             let target = GetTargetCharacter(data);
             if (!!target && 
                 !!sender &&
-                !(sender as OtherCharacter).LSCG?.LipstickModule?.dry &&
-                target == Player.MemberNumber &&
-                this.splatAllowed(sender, <OtherCharacter><Character>Player)) {
-                    let colorOverride = (<OtherCharacter>sender)?.LSCG?.SplatterModule?.colorOverride;
-                    switch (data.Content) {
-                        case "ChatOther-ItemMouth-LSCG_Splat":
-                        case "ChatSelf-ItemMouth-LSCG_Splat":
-                            this.AddSplatter(sender, "mouth", colorOverride);
-                            break;
-                        case "ChatOther-ItemHead-LSCG_Splat":
-                        case "ChatSelf-ItemHead-LSCG_Splat":
-                            this.AddSplatter(sender, "forehead", colorOverride);
-                            break;
-                        case "ChatOther-ItemBreast-LSCG_Splat":
-                        case "ChatSelf-ItemBreast-LSCG_Splat":    
-                            this.AddSplatter(sender, "chest", colorOverride);
-                            break;
-                        case "ChatOther-ItemPelvis-LSCG_Splat":
-                        case "ChatSelf-ItemPelvis-LSCG_Splat":
-                            this.AddSplatter(sender, "tummy", colorOverride);
-                            break;
-                        case "ChatOther-ItemVulva-LSCG_Splat":
-                        case "ChatSelf-ItemVulva-LSCG_Splat":
-                            this.AddSplatter(sender, "crotch", colorOverride);
-                            break;
-                        default:
-                            break;
+                target == Player.MemberNumber) {
+                    if (this.splatAllowed(sender, <OtherCharacter><Character>Player)) {
+                        let colorOverride = (<OtherCharacter>sender)?.LSCG?.SplatterModule?.colorOverride;
+                        switch (data.Content) {
+                            case "ChatOther-ItemMouth-LSCG_Splat":
+                            case "ChatSelf-ItemMouth-LSCG_Splat":
+                                this.AddSplatter(sender, "mouth", colorOverride);
+                                break;
+                            case "ChatOther-ItemHead-LSCG_Splat":
+                            case "ChatSelf-ItemHead-LSCG_Splat":
+                                this.AddSplatter(sender, "forehead", colorOverride);
+                                break;
+                            case "ChatOther-ItemBreast-LSCG_Splat":
+                            case "ChatSelf-ItemBreast-LSCG_Splat":    
+                                this.AddSplatter(sender, "chest", colorOverride);
+                                break;
+                            case "ChatOther-ItemPelvis-LSCG_Splat":
+                            case "ChatSelf-ItemPelvis-LSCG_Splat":
+                                this.AddSplatter(sender, "tummy", colorOverride);
+                                break;
+                            case "ChatOther-ItemVulva-LSCG_Splat":
+                            case "ChatSelf-ItemVulva-LSCG_Splat":
+                                this.AddSplatter(sender, "crotch", colorOverride);
+                                break;
+                            default:
+                                break;
+                        }
                     }
         
                     var item = data.Dictionary?.find((d: any) => d.Tag == "ActivityAsset");

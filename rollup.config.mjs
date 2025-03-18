@@ -43,7 +43,8 @@ console.debug("LSCG: Parse start...");
       return `const LSCG_VERSION="${LSCG_VERSION}";`;
     },
     plugins: [terser({
-      mangle: false
+      mangle: false,
+      compress: false
     })]
   },
   treeshake: false,
