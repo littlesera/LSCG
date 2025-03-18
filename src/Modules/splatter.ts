@@ -470,7 +470,7 @@ export class SplatterModule extends BaseModule {
 
     canGiveSplat(acting: Character) {
         let naked = (InventoryPrerequisiteMessage(acting, "AccessCrotch") === "") && !acting.IsVulvaChaste() && !acting.IsEnclose();
-        let arousalAllowed = (acting.ArousalSettings?.Progress ?? 0) > this.settings.minArousal && !acting.IsEdged();
+        let arousalAllowed = (acting.ArousalSettings?.Progress ?? 0) >= this.settings.minArousal && !acting.IsEdged();
         let giverAllowed = (<OtherCharacter>acting).LSCG.SplatterModule.enabled && (<OtherCharacter>acting).LSCG.SplatterModule.giver;
         return naked && arousalAllowed && giverAllowed;
     }
