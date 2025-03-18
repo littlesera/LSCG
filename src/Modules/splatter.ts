@@ -41,7 +41,7 @@ const bcSplats: RecordObject = {
 const locations: { [key: string]: string[] } = {
     forehead: ['a', 'b', 'c'],    // 'forehead' covers flags a, b, c
     mouth: ['d', 'e', 'f', 'o'],       // 'mouth' covers flags d, e, f
-    chest: ['g', 'h', 'i', 'j', 'r'],       // 'mouth' covers flags d, e, f
+    chest: ['g', 'h', 'i', 'j'],       // 'mouth' covers flags d, e, f
     tummy: ['k', 'l', 'm', 'n'],       // 'mouth' covers flags d, e, f
     crotch: ['p'],
     ass: ['q'],
@@ -455,7 +455,7 @@ export class SplatterModule extends BaseModule {
             "chest",
             "tummy",
             "crotch",
-            "all",
+            "ass",
             "nipples"
         ];
         let x = 0;
