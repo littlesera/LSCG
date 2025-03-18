@@ -1,6 +1,6 @@
 import { BoopsModule } from "Modules/boops";
 import { InjectorModule } from "Modules/injector";
-import { BaseSettingsModel, GlobalPublicSettingsModel, GlobalSettingsModel, LipstickSettingsModel, MiscSettingsModel, OpacityPublicSettingsModel, OpacitySettingsModel } from "./base";
+import { BaseSettingsModel, GlobalPublicSettingsModel, GlobalSettingsModel, LipstickSettingsModel, MiscSettingsModel, OpacityPublicSettingsModel, OpacitySettingsModel, SplatterSettingsModel } from "./base";
 import { CollarModel, CollarPublicSettingsModel, CollarSettingsModel } from "./collar";
 import { HypnoPublicSettingsModel, HypnoSettingsModel } from "./hypno";
 import { InjectorPublicSettingsModel, InjectorSettingsModel } from "./injector";
@@ -27,6 +27,7 @@ export interface SettingsModel {
     OpacityModule: OpacitySettingsModel;
     LeashingModule: BaseSettingsModel;
     ChaoticItemModule: BaseSettingsModel;
+    SplatterModule: SplatterSettingsModel;
 }
 
 export interface IPublicSettingsModel extends BaseSettingsModel {
@@ -43,6 +44,7 @@ export interface IPublicSettingsModel extends BaseSettingsModel {
     OpacityModule: OpacityPublicSettingsModel;
     LeashingModule: BaseSettingsModel;
     ChaoticItemModule: BaseSettingsModel;
+    SplatterModule: SplatterSettingsModel;
 }
 
 export class PublicSettingsModel implements IPublicSettingsModel {
@@ -75,6 +77,7 @@ export class PublicSettingsModel implements IPublicSettingsModel {
         cycleTime: 30,
         enableCycle: true,
         overrideMemberIds: "",
+        randomTrigger: false,
         overrideWords: "",
         awakeners: "",
         allowLocked: false,
@@ -92,6 +95,7 @@ export class PublicSettingsModel implements IPublicSettingsModel {
         speakTriggers: "",
         silenceTriggers: "",
         allowSuggestions: false,
+        suggestionRequireHypnotizer: true,
         allowSuggestionRemoval: true,
         blockedInstructions: [],
         alwaysSubmit: false,
@@ -152,4 +156,16 @@ export class PublicSettingsModel implements IPublicSettingsModel {
         preventExternalMod: false
     };
     ChaoticItemModule: BaseSettingsModel = <BaseSettingsModel>{enabled: false};
+    SplatterModule: SplatterSettingsModel = <SplatterSettingsModel>{
+        enabled: false,
+        giver: false,
+        taker: false,
+        colorOverride: null,
+        uncontrollableWhenBound: true,
+        autoSplat: true,
+        blacklist: [],
+        whitelist: [],
+        requireLover: false,
+        minArousal: 90
+    };
 }

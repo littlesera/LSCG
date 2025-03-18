@@ -37,26 +37,48 @@ export class GuiHypno extends GuiSubscreen {
 						setting: () => this.settings.enabled ?? false,
 						setSetting: (val) => this.settings.enabled = val
 					},<Setting>{
+						type: "checkbox",
+						label: "Random Trigger:",
+						description: "If enabled, your trigger word will be selected from a list of random english words.",
+						setting: () => this.settings.randomTrigger ?? false,
+						setSetting: (val) => this.settings.randomTrigger = val
+					},<Setting>{
 						type: "text",
 						id: "hypno_overrideWords",
-						label: "Override Trigger Words:",
+						label: "Trigger Words:",
 						description: "Custom list of words and/or phrases as hypnisis triggers. Separated by a comma.",
-						disabled: !this.settings.enabled,
+						disabled: !this.settings.enabled || this.settings.randomTrigger,
 						setting: () => this.settings.overrideWords ?? "",
 						setSetting: (val) => this.settings.overrideWords = val
 					},<Setting>{
 						type: "text",
 						id: "hypno_overrideAwakeners",
-						label: "Override Awaken Words:",
+						label: "Awaken Words:",
 						description: "Custom list of words and/or phrases as awakener triggers. Separated by a comma.",
 						disabled: !this.settings.enabled,
 						setting: () => this.settings.awakeners ?? "",
 						setSetting: (val) => this.settings.awakeners = val
 					},<Setting>{
 						type: "text",
+						id: "hypno_silenceWords",
+						label: "Silence Trigger Words:",
+						description: "When spoken while hypnotized, will prevent speech. Separated by a comma.",
+						disabled: !this.settings.enabled,
+						setting: () => this.settings.silenceTriggers ?? "",
+						setSetting: (val) => this.settings.silenceTriggers = val
+					}, <Setting>{
+						type: "text",
+						id: "hypno_speakWords",
+						label: "Allow Speech Trigger Words:",
+						description: "When spoken while hypnotized, will allow speech. Separated by a comma.",
+						disabled: !this.settings.enabled,
+						setting: () => this.settings.speakTriggers ?? "",
+						setSetting: (val) => this.settings.speakTriggers = val
+					}, <Setting>{
+						type: "text",
 						id: "hypno_overrideMembers",
-						label: "Override Allowed Member IDs:",
-						description: "Comma separated list of member IDs. If empty will use standard Item Permissions.",
+						label: "Whitelist Member IDs:",
+						description: "Comma separated list of member IDs exclusive allowed to access your hypno settings and triggers. If empty will use standard Item Permissions.",
 						disabled: !this.settings.enabled,
 						setting: () => this.settings.overrideMemberIds ?? "",
 						setSetting: (val) => this.settings.overrideMemberIds = val
@@ -90,7 +112,8 @@ export class GuiHypno extends GuiSubscreen {
 						description: "Number of minutes after activation to wait before cycling to a new trigger.",
 						disabled: !this.settings.enabled,
 						setting: () => (this.settings.cycleTime ?? 30),
-						setSetting: (val) => this.settings.cycleTime = val
+						setSetting: (val) => this.settings.cycleTime = val,
+						overrideWidth: 150
 					}
 				], [
 					<Setting>{
@@ -158,28 +181,19 @@ export class GuiHypno extends GuiSubscreen {
 					}
 				], [
 					<Setting>{
-						type: "text",
-						id: "hypno_speakWords",
-						label: "Allow Speech Trigger Words:",
-						description: "When spoken while hypnotized, will allow speech. Separated by a comma.",
-						disabled: !this.settings.enabled,
-						setting: () => this.settings.speakTriggers ?? "",
-						setSetting: (val) => this.settings.speakTriggers = val
-					}, <Setting>{
-						type: "text",
-						id: "hypno_silenceWords",
-						label: "Silence Trigger Words:",
-						description: "When spoken while hypnotized, will prevent speech. Separated by a comma.",
-						disabled: !this.settings.enabled,
-						setting: () => this.settings.silenceTriggers ?? "",
-						setSetting: (val) => this.settings.silenceTriggers = val
-					}, <Setting>{
 						type: "checkbox",
 						label: "Enable Suggestion Programming",
-						description: "If checked, your hypnotizer may induce hypnotic suggestions within you.",
+						description: "If checked, hypnotic suggestions may be induced within you while under trance.",
 						disabled: !this.settings.enabled,
 						setting: () => this.settings.allowSuggestions ?? false,
 						setSetting: (val) => this.settings.allowSuggestions = val
+					}, <Setting>{
+						type: "checkbox",
+						label: "Programming Limited to Hypnotizer",
+						description: "If checked, only your hypnotizer may induce hypnotic suggestions within you.",
+						disabled: !this.settings.enabled,
+						setting: () => this.settings.suggestionRequireHypnotizer ?? true,
+						setSetting: (val) => this.settings.suggestionRequireHypnotizer = val
 					}, <Setting>{
 						type: "checkbox",
 						label: "Allow Suggestion Removal",
@@ -201,6 +215,11 @@ export class GuiHypno extends GuiSubscreen {
 						disabled: this.settings.alwaysSubmit,
 						setting: () => this.settings.alwaysSubmitMemberIds ?? "",
 						setSetting: (val) => this.settings.alwaysSubmitMemberIds = val
+					}, <Setting>{
+						type: "label", // Blank Spot
+						label: "",
+						description: "",
+						hidden: this.settings.locked
 					}, <Setting>{
 						type: "label",
 						label: "Blocked Instructions:",

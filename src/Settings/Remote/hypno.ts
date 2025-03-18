@@ -143,6 +143,12 @@ export class RemoteHypno extends RemoteGuiSubscreen {
 				setSetting: (val) => this.settings.limitRemoteAccessToHypnotizer = val
 			},<Setting>{
 				type: "checkbox",
+				label: "Programming Limited to Hypnotizer:",
+				description: "If checked, only your hypnotizer may induce hypnotic suggestions within you.",
+				setting: () => this.settings.suggestionRequireHypnotizer ?? true,
+				setSetting: (val) => this.settings.suggestionRequireHypnotizer = val
+			},<Setting>{
+				type: "checkbox",
 				label: "Allow Suggestion Removal:",
 				description: "If checked, the user will be allowed to remove installed suggestions.",
 				setting: () => this.settings.allowSuggestionRemoval ?? true,

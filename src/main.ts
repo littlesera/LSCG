@@ -19,6 +19,7 @@ import { OpacityModule } from 'Modules/opacity';
 import { lt } from 'semver';
 import { LeashingModule } from 'Modules/leashing';
 import { ChaoticItemModule } from './Modules/chaotic-item';
+import { SplatterModule } from 'Modules/splatter';
 
 export { 
 	DrugKeywords, 
@@ -157,6 +158,7 @@ function init_modules(): boolean {
 	registerModule(new CommandModule());
 	registerModule(new LeashingModule());
 	registerModule(new ChaoticItemModule());
+	registerModule(new SplatterModule());
 
 	for (const m of modules()) {
 		m.init();

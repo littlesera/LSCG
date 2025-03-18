@@ -25,6 +25,18 @@ export interface LipstickSettingsModel extends BaseSettingsModel {
     dry: boolean;
 }
 
+export interface SplatterSettingsModel extends BaseSettingsModel {
+    giver: boolean;
+    taker: boolean;
+    autoSplat: boolean;
+    uncontrollableWhenBound: boolean;
+    colorOverride: ItemColor | null;
+    whitelist: number[] | null;
+    blacklist: number[] | null;
+    requireLover: boolean;
+    minArousal: number;
+}
+
 export interface MiscSettingsModel extends BaseSettingsModel {
     chloroformEnabled: boolean;
     chloroformedAt: number;

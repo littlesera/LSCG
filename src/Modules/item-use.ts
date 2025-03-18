@@ -1,7 +1,7 @@
 import { BaseModule } from "base";
-import { getModule } from "modules";
+import { Core, getModule } from "modules";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { getCharacter, getDominance, GetItemNameAndDescriptionConcat, GetMetadata, getRandomInt, GetTargetCharacter, hookFunction, IsIncapacitated, isPhraseInString, LSCG_SendLocal, mouseTooltip, OnAction, OnActivity, removeAllHooksByModule, SendAction, sendLSCGCommand, sendLSCGMessage } from "../utils";
+import { escapeHtml, getCharacter, getDominance, GetItemNameAndDescriptionConcat, GetMetadata, getRandomInt, GetTargetCharacter, hookFunction, IsIncapacitated, isPhraseInString, LSCG_SendLocal, mouseTooltip, OnAction, OnActivity, removeAllHooksByModule, SendAction, sendLSCGCommand, sendLSCGMessage } from "../utils";
 import { ActivityBundle, ActivityModule, ActivityTarget } from "./activities";
 import { BoopsModule } from "./boops";
 import { CollarModule } from "./collar";
@@ -387,7 +387,7 @@ export class ItemUseModule extends BaseModule {
 			return next(args);
 		}, ModuleCategory.ItemUse);
 
-		getModule<CoreModule>("CoreModule").RegisterCommandListener(<CommandListener>{
+		Core().RegisterCommandListener(<CommandListener>{
             id: "craft_share_display",
             command: "craft-share",
             func: (sender: number, msg: LSCGMessageModel) => {
@@ -396,6 +396,85 @@ export class ItemUseModule extends BaseModule {
 				this.ShowCraftImage(senderChar, craft);
 			}
         });
+
+		Core().RegisterCommandListener(<CommandListener>{
+			id: "item_swap_ask_listener",
+			command: "swap-ask",
+			func: (sender: number, msg: LSCGMessageModel) => {
+				let c = getCharacter(sender);
+				if (!c)
+					return;
+				let senderItem = InventoryGet(c, "ItemHandheld");
+				let myItem = InventoryGet(Player, "ItemHandheld");
+				if (!senderItem || !myItem)
+					return;
+				let str = escapeHtml(`${CharacterNickname(c)} would like to swap their ${this.getItemName(senderItem)} for your ${this.getItemName(myItem)}`);
+				LSCG_SendLocal(`<span>${str}</span><button style="background-color:green;border-radius:5px;margin:5px" id="swap-accept">Accept</button><button style="background-color:red;border-radius:5px;margin:5px" id="swap-deny">Deny</button>`, false, 10000);
+				
+				let timeout = setTimeout(() => {
+					if (!c)
+						return;
+					sendLSCGCommand(c, "swap-respond");
+					acceptEle?.remove();
+					denyEle?.remove();
+				}, 10000);
+				
+				var acceptEle = document.getElementById("swap-accept");
+				if (!!acceptEle) {
+					acceptEle.addEventListener("click", (evt) => {
+						clearTimeout(timeout);
+						SendAction(`${CharacterNickname(Player)} agrees and swaps with ${CharacterNickname(c!)}.`);
+						this.DoSwap(c!, senderItem!, myItem!);
+						acceptEle?.remove();
+						denyEle?.remove();
+					});
+				}
+				var denyEle = document.getElementById("swap-deny");
+				if (!!denyEle) {
+					denyEle.addEventListener("click", (evt) => {
+						clearTimeout(timeout);
+						SendAction(`${CharacterNickname(Player)} refuses to swap with ${CharacterNickname(c!)}.`);
+						sendLSCGCommand(c!, "swap-respond");
+						acceptEle?.remove();
+						denyEle?.remove();
+					});
+				}
+			}
+		});
+
+		Core().RegisterCommandListener(<CommandListener>{
+			id: "item_swap_resp_listener",
+			command: "swap-respond",
+			func: (sender: number, msg: LSCGMessageModel) => {
+				let c = getCharacter(sender);
+				if (!c)
+					return;
+				let senderItem = InventoryGet(c, "ItemHandheld");
+				let myItem = InventoryGet(Player, "ItemHandheld");
+				if (!senderItem || !myItem)
+					return;
+				let str = escapeHtml(`${CharacterNickname(c)} refuses to swap with you. Attempt to steal?`);
+				LSCG_SendLocal(`<span>${str}</span><button style="background-color:orange;border-radius:5px;margin:5px" id="swap-theft">Theft!</button><button style="background-color:green;border-radius:5px;margin:5px" id="swap-leave">Leave it</button>`, false, 10000);
+
+				var theftEle = document.getElementById("swap-theft");
+				if (!!theftEle) {
+					theftEle.addEventListener("click", (evt) => {
+						this.SwapRoll(c!, senderItem!);
+						theftEle?.remove();
+						leaveEle?.remove();
+					});
+				}
+
+				var leaveEle = document.getElementById("swap-leave");
+				if (!!leaveEle) {
+					leaveEle.addEventListener("click", (evt) => {
+						this.SwapRoll(c!, senderItem!);
+						theftEle?.remove();
+						leaveEle?.remove();
+					});
+				}
+			}
+		})
 
 		OnActivity(1, ModuleCategory.ItemUse, (data, sender, msg, metadata) => {
 			if (sender?.IsPlayer() && msg == "ChatSelf-ItemArms-StruggleArms") {
@@ -748,7 +827,7 @@ export class ItemUseModule extends BaseModule {
 				Name: "Steal" as ActivityName,
 				MaxProgress: 50,
 				MaxProgressSelf: 50,
-				Prerequisite: ["Needs-AnyItem" as ActivityPrerequisite],
+				Prerequisite: ["Needs-AnyItem" as ActivityPrerequisite, "UseHands"],
 				Reverse: true // acting and acted are flipped!
 			},
 			Targets: [
@@ -780,6 +859,51 @@ export class ItemUseModule extends BaseModule {
 					if (!target)
 						return;
 					this.TrySteal(target, Player, InventoryGet(target, "ItemHandheld")!);
+				}
+			},
+			CustomImage: "Icons/Dress.png"
+		});
+
+		// Swap
+		this.activities.AddActivity(<ActivityBundle>{
+			Activity: <Activity>{
+				Name: "Swap" as ActivityName,
+				MaxProgress: 50,
+				MaxProgressSelf: 50,
+				Prerequisite: ["Needs-AnyItem" as ActivityPrerequisite, "UseHands"],
+				Reverse: true // acting and acted are flipped!
+			},
+			Targets: [
+				<ActivityTarget>{
+					Name: "ItemHands",
+					TargetLabel: "Swap",
+					TargetAction: "SourceCharacter trades with TargetCharacter, taking TargetPronounPossessive item.",
+					SelfAllowed: false
+				}
+			],
+			CustomPrereqs: [
+				{
+					Name: "CanSwap",
+					Func: (acted, acting, group) => { // Clip acting and acted here due to reverse == true
+						if (acted.FocusGroup?.Name != "ItemHandheld" || InventoryGet(acted, "ItemHands") != null)
+							return false;
+						var tgtItem = InventoryGet(acted, "ItemHandheld");
+						var srcItem = InventoryGet(acting, "ItemHandheld");
+						if (!tgtItem || !srcItem)
+							return false;
+						var OnCooldown = this.failedStealTime > 0 && (this.failedStealTime + 60000) > CommonTime(); // 1 minute cooldown on steal attempts.
+						var tgtValidParams = ValidationCreateDiffParams(acted, acting.MemberNumber!);
+						var srcValidParams = ValidationCreateDiffParams(acting, acting.MemberNumber!);
+						var allowed = ValidationCanRemoveItem(tgtItem!, tgtValidParams, false) && ValidationCanRemoveItem(srcItem!, srcValidParams, false);
+						return !OnCooldown && allowed;
+					}
+				}
+			],
+			CustomAction: {
+				Func: (target, args, next) => {
+					if (!target)
+						return;
+					this.TrySwap(target, InventoryGet(target, "ItemHandheld")!);
 				}
 			},
 			CustomImage: "Icons/Dress.png"
@@ -936,8 +1060,7 @@ export class ItemUseModule extends BaseModule {
 					SelfAllowed: true,
 					SelfOnly: true
 				}
-			],
-			CustomImage: "Assets/Female3DCG/ItemHandheld/Preview/Shark.png"
+			]
 		});
 
 		this.activities.AddActivity({
@@ -1236,6 +1359,47 @@ export class ItemUseModule extends BaseModule {
 		}
 	}
 
+	TrySwap(target: Character, tgtItem: Item) {
+		let srcItem = InventoryGet(Player, "ItemHandheld");
+		if (!srcItem)
+			return;
+		SendAction(`${CharacterNickname(Player)} offers to swap their ${this.getItemName(srcItem)} with ${CharacterNickname(target)}'s ${this.getItemName(tgtItem)}.`);
+		sendLSCGCommand(target, "swap-ask");
+	}
+
+	SwapRoll(target: Character, tgtItem: Item) {
+		let srcItem = InventoryGet(Player, "ItemHandheld");
+		if (!srcItem)
+			return;
+		let check = this.MakeActivityCheck(Player, target);
+		if (check.AttackerRoll.Total >= check.DefenderRoll.Total) {
+			SendAction(`%NAME% ${check.AttackerRoll.TotalStr}manages to wrest %OPP_NAME%'s ${check.DefenderRoll.TotalStr}${this.getItemName(tgtItem)} out of %OPP_POSSESSIVE% grasp, replacing it with %POSSESSIVE% ${this.getItemName(srcItem)}!`, target);
+			this.DoSwap(target, tgtItem, srcItem);
+		}
+		else {
+			SendAction(`%NAME% ${check.AttackerRoll.TotalStr}fails to take %OPP_NAME%'s ${check.DefenderRoll.TotalStr}${this.getItemName(tgtItem)} and is dazed from the attempt, dropping their ${this.getItemName(srcItem)}!`, target);
+			InventoryRemove(Player, "ItemHandheld", false);
+			setTimeout(() => ChatRoomCharacterUpdate(Player));
+			this.failedStealTime = CommonTime();
+		}
+		return;
+	}
+
+	DoSwap(target: Character, tgtItem: Item, srcItem: Item) {
+		InventoryRemove(Player, "ItemHandheld", false);
+		InventoryRemove(target, "ItemHandheld", false);
+
+		let takeItem = InventoryWear(Player, tgtItem.Asset.Name, "ItemHandheld", tgtItem.Color, tgtItem.Difficulty, Player.MemberNumber, tgtItem.Craft, false);
+		if (!!takeItem) takeItem.Property = tgtItem.Property;
+		
+
+		let giveItem = InventoryWear(target, srcItem.Asset.Name, "ItemHandheld", srcItem.Color, srcItem.Difficulty, Player.MemberNumber, srcItem.Craft, false);
+		if (!!giveItem) giveItem.Property = srcItem.Property;			
+
+		setTimeout(() => ChatRoomCharacterUpdate(Player));
+		setTimeout(() => ChatRoomCharacterUpdate(target));
+	}
+
 	ManualGenerateItemActivitiesForNecklaceActivity(allowed: ItemActivity[], acting: Character, acted: Character, needsItem: string, activity: Activity, targetGroup: AssetGroup) {
 		const itemOwner = needsItem == "GagGiveItem" ? acting : acted;
 		const items = CharacterItemsForActivity(itemOwner, needsItem as ActivityName);
@@ -1412,4 +1576,3 @@ export class ItemUseModule extends BaseModule {
 		}
 	}
 }
-

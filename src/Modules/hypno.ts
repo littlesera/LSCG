@@ -88,6 +88,7 @@ export class HypnoModule extends BaseModule {
             locked: false,
             awakeners: "",
             limitRemoteAccessToHypnotizer: false,
+            suggestionRequireHypnotizer: true,
             hypnoEyeColor: "#A2A2A2",
             hypnoEyeType: 9,
             speakTriggers: "",
@@ -451,7 +452,7 @@ export class HypnoModule extends BaseModule {
     }
 
     initializeTriggerWord() {
-        var recycleFromCommon = !this.settings.overrideWords && (!this.settings.trigger || commonWords.indexOf(this.settings.trigger) == -1);
+        var recycleFromCommon = this.settings.randomTrigger && (!this.settings.trigger || commonWords.indexOf(this.settings.trigger) == -1);
         if (recycleFromCommon) {
             this.settings.trigger = this.getNewTriggerWord();
             settingsSave();
@@ -490,10 +491,8 @@ export class HypnoModule extends BaseModule {
 
     getNewTriggerWord(): string {
         var currentTrigger = this.settings.trigger;
-        var words = GetDelimitedList(this.settings.overrideWords)?.filter((word, ix, arr) => !!word && arr.indexOf(word) == ix) ?? [];
-        if (words.length <= 0)
-            words = commonWords;
-
+        var words = this.settings.randomTrigger ? commonWords : GetDelimitedList(this.settings.overrideWords)?.filter((word, ix, arr) => !!word && arr.indexOf(word) == ix) ?? [];
+        
         if (words.length > 1 && words.indexOf(currentTrigger) > -1)
             words = words.filter(val => val != currentTrigger);
 

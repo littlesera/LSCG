@@ -26,10 +26,14 @@ export class CommandModule extends BaseModule {
 			Description: ": Opens the help for LSCG commands",
 			Action: (args, msg, parsed) => {
 				let helpLines: string[] = [];
+				let lightMode = (Player.ChatSettings!.ColorTheme!.indexOf("Light") > -1);
+				let lscgColor = lightMode ? "slategrey" : "darkgrey";
+				let commandColor = lightMode ? "midnightblue" : "mintcream";
+				let descColor = lightMode ? "slategrey" : "moccasin";
 				this.orderedCommands.forEach(c => {
-					helpLines.push(`<br><b>/lscg ${c.Tag}</b> ${c.Description}`);
+					helpLines.push(`<br><b><span style="color:${lscgColor}">/lscg</span> <span style="color:${commandColor};text-decoration-line: underline;">${c.Tag}</span></b> <span style="color:${descColor}">${c.Description}</span>`);
 				})
-				let helpText = `<b>- Little Sera's Club Games -</b>${helpLines.join()}<br>More to come...`;
+				let helpText = `<b>- Little Sera's Club Games -</b>${helpLines.join()}`;
 				LSCG_SendLocal(helpText, false);
 			},
 		}, {
@@ -89,13 +93,13 @@ export class CommandModule extends BaseModule {
 			}
 		}, {
 			Tag: "escape",
-			Description: " : If you are arm-grabbed or ear-pinched, will attempt to escape from their grip.",
+			Description: ": If you are arm-grabbed or ear-pinched, will attempt to escape from their grip.",
 			Action: (args, msg, parsed) => {
 				getModule<LeashingModule>("LeashingModule")?.TryEscape();
 			}
 		}, {
 			Tag: "emergency",
-			Description: " : Use in case of emergency to revert all LSCG settings to their default values.",
+			Description: ": Use in case of emergency to revert all LSCG settings to their default values.",
 			Action: (args, msg, parsed) => {
 				this.EmergencyRelease();	
 			}
@@ -162,7 +166,7 @@ export class CommandModule extends BaseModule {
 			}
 		}, {
 			Tag: "parse-code",
-			Description: " : Reports what items/assets are in a compressed item code stored in the clipboard.",
+			Description: ": Reports what items/assets are in a compressed item code stored in the clipboard.",
 			Action: (args, msg, parsed) => {
 					let code = window.prompt("Compressed item code:")
 					if (!code) {
@@ -184,7 +188,7 @@ export class CommandModule extends BaseModule {
 			}
 		}, {
 			Tag: "export",
-			Description: " : Exports all LSCG settings into the clipboard.",
+			Description: ": Exports all LSCG settings into the clipboard.",
 			Action: (args, msg, parsed) => {
 				let compressed = ExportSettings();
 				navigator.clipboard.writeText(compressed);
@@ -192,7 +196,7 @@ export class CommandModule extends BaseModule {
 			}
 		}, {
 			Tag: "import",
-			Description: " : Imports all LSCG settings from the clipboard, overwriting any current configuration.",
+			Description: ": Imports all LSCG settings from the clipboard, overwriting any current configuration.",
 			Action: (args, msg, parsed) => {
 				if (confirm("Importing settings will overwrite existing settings. \nAre you sure?")) {
 					let compressed = window.prompt("LSCG Export string:");

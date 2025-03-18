@@ -22,6 +22,7 @@ import { BarrierState } from "./States/BarrierState";
 import { PolymorphedState } from "./States/PolymorphedState";
 import { XRayVisionState } from "./States/XRayVisionState";
 import { DeniedState } from "./States/DeniedState";
+import { parseInt } from "lodash-es";
 
 interface StateIcon {
     Label: string;
@@ -339,6 +340,44 @@ export class StateModule extends BaseModule {
     unload(): void {
         removeAllHooksByModule(ModuleCategory.States);
     }
+
+    get commands(): ICommand[] {
+		return [
+            <ICommand>{
+                Tag: 'wake',
+                Description: ": wake up from slumber",
+                Action: () => {
+                    if (!this.Enabled)
+                        return;
+    
+                    if (this.settings.immersive) {
+                        if (!this.SleepState.config.duration) {
+                            LSCG_SendLocal("Cannot immediately wake while immersive, timer set...");
+                            this.SleepState.config.duration = (10 + getRandomInt(50)) * 60 * 1000; // timeout set to between 10 and 60 minutes.
+                        } else {
+                            LSCG_SendLocal("Wake disabled while immersive, a timer is set, you will eventually wake up...");
+                        }
+                        return;
+                    }
+
+                    if (this.SleepState.Active)
+                        this.SleepState.Recover(true);
+                }
+            }, <ICommand>{
+                Tag: 'sleep',
+                Description: "[minutes]: fall asleep (default 10 minutes)",
+                Action: (args, msg, parsed) => {
+                    if (!this.Enabled)
+                        return;
+                    
+                    let duration = parseInt(parsed[0] ?? "10") ?? 10;
+
+                    if (!this.SleepState.Active)
+                        this.SleepState.Activate(Player.MemberNumber, duration * (60 * 1000), true);
+                }
+            }
+        ]
+	}
 
     GetIconForState(state: StateConfig, C: OtherCharacter): StateIcon {
         let stateObj = this.States.find(s => s.Type == state.type);

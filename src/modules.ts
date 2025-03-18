@@ -21,6 +21,14 @@ export function getModule<T extends BaseModule>(moduleType: string): T {
 	return modulesMap.get(moduleType) as T;
 }
 
+export function Core(): CoreModule {
+	return getModule<CoreModule>("CoreModule");
+}
+
+export function Activities(): ActivityModule {
+	return getModule<ActivityModule>("ActivityModule");
+}
+
 export function DrugKeywords(): string[] {
 	let settings = getModule<InjectorModule>("InjectorModule")?.settings;
 	if (!settings)

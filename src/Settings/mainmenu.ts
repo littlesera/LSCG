@@ -77,10 +77,10 @@ export class MainMenu extends GuiSubscreen {
 				// Skip disabled screens for the time being
 				if (screen.name == "MainMenu" || screen.hidden) continue;
 
-				DrawButton(150 + 430 * PX, 190 + 120 * PY, 450, 90, "", isDisabled ? "#ddd" : "White", "", isDisabled ? "Setting is deactivated" : "", isDisabled);
-				DrawImageResize(screen.icon, 150 + 430 * PX + 10, 190 + 120 * PY + 10, 70, 70);
+				DrawButton(150 + 480 * PX, 190 + 120 * PY, 450, 90, "", isDisabled ? "#ddd" : "White", "", isDisabled ? "Setting is deactivated" : "", isDisabled);
+				DrawImageResize(screen.icon, 150 + 480 * PX + 10, 190 + 120 * PY + 10, 70, 70);
 				MainCanvas.textAlign = "left";
-				DrawTextFit(screen.name, 250 + 430 * PX, 235 + 120 * PY, 340, "Black");
+				DrawTextFit(screen.name, 250 + 480 * PX, 235 + 120 * PY, 340, "Black");
 				MainCanvas.textAlign = "center";
 
 				i++;
@@ -125,7 +125,7 @@ export class MainMenu extends GuiSubscreen {
 
 				if (screen.name == "MainMenu" || screen.hidden) continue;
 
-				if (MouseIn(150 + 430 * PX, 190 + 120 * PY, 450, 90) && screen.enabled) {
+				if (MouseIn(150 + 480 * PX, 190 + 120 * PY, 450, 90) && screen.enabled) {
 					this.setSubscreen(screen);
 					return;
 				}
