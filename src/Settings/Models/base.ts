@@ -34,6 +34,7 @@ export interface SplatterSettingsModel extends BaseSettingsModel {
     whitelist: number[] | null;
     blacklist: number[] | null;
     requireLover: boolean;
+    minArousal: number;
 }
 
 export interface MiscSettingsModel extends BaseSettingsModel {

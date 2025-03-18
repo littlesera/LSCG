@@ -162,6 +162,7 @@ export class PublicSettingsModel implements IPublicSettingsModel {
         autoSplat: true,
         blacklist: [],
         whitelist: [],
-        requireLover: false
+        requireLover: false,
+        minArousal: 90
     };
 }

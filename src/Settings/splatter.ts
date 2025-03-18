@@ -94,6 +94,15 @@ export class GuiSplatter extends GuiSubscreen {
 				setting: () => this.settings.colorOverride ?? "",
 				setSetting: (val) => this.settings.colorOverride = val,
 				disabled: !this.settings.enabled
+			}, <Setting>{
+				type: "number",
+				label: "Minimum Required Arousal:",
+				id: "splatter_minArousal",
+				description: "Minimum arousal required to do give splatter.",
+				setting: () => this.settings.minArousal ?? 90,
+				setSetting: (val) => { this.settings.minArousal = Math.min(Math.max(val, 0), 99) },
+				disabled: !this.settings.enabled,
+				overrideWidth: 150
 			}
 		]]
 	}
