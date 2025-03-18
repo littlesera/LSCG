@@ -7,7 +7,7 @@ import { CommandListener } from "./core";
 import { ActivityBundle } from "./activities";
 import { GuiSplatter } from "Settings/splatter";
 
-export type SplatterLocation = "mouth" | "forehead" | "chest" | "tummy" | "inmouth" | "crotch" | "all";
+export type SplatterLocation = "mouth" | "forehead" | "chest" | "tummy" | "crotch" | "ass" | "nipples" | "all";
 export interface SplatterPacket {
     location: SplatterLocation;
     itemGroup: AssetItemGroup;
@@ -40,11 +40,12 @@ const bcSplats: RecordObject = {
 
 const locations: { [key: string]: string[] } = {
     forehead: ['a', 'b', 'c'],    // 'forehead' covers flags a, b, c
-    mouth: ['d', 'e', 'f'],       // 'mouth' covers flags d, e, f
+    mouth: ['d', 'e', 'f', 'o'],       // 'mouth' covers flags d, e, f
     chest: ['g', 'h', 'i', 'j', 'r'],       // 'mouth' covers flags d, e, f
     tummy: ['k', 'l', 'm', 'n'],       // 'mouth' covers flags d, e, f
-    inmouth: ['o'],
-    crotch: ['p', 'q']    
+    crotch: ['p'],
+    ass: ['q'],
+    nipples: ['r']
 };
 
 const PossibleSplatterGroups: string[] = [
@@ -209,6 +210,14 @@ export class SplatterModule extends BaseModule {
                             case "ChatSelf-ItemVulva-LSCG_Splat":
                                 this.AddSplatter(sender, "crotch", colorOverride);
                                 break;
+                            case "ChatOther-ItemButt-LSCG_Splat":
+                            case "ChatSelf-ItemButt-LSCG_Splat":
+                                this.AddSplatter(sender, "ass", colorOverride);
+                                break;
+                            case "ChatOther-ItemNipples-LSCG_Splat":
+                            case "ChatSelf-ItemNipples-LSCG_Splat":
+                                this.AddSplatter(sender, "nipples", colorOverride);
+                                break;
                             default:
                                 break;
                         }
@@ -292,6 +301,18 @@ export class SplatterModule extends BaseModule {
                     SelfAllowed: true,
                     TargetLabel: "Spray",
                     TargetAction: "SourceCharacter sprays all over TargetCharacter's crotch.",
+                    TargetSelfAction: "SourceCharacter sprays all over TargetCharacter."
+                }, {
+                    Name: "ItemButt",
+                    SelfAllowed: true,
+                    TargetLabel: "Spray",
+                    TargetAction: "SourceCharacter sprays all over TargetCharacter's ass.",
+                    TargetSelfAction: "SourceCharacter sprays all over TargetCharacter."
+                }, {
+                    Name: "ItemNipples",
+                    SelfAllowed: true,
+                    TargetLabel: "Spray",
+                    TargetAction: "SourceCharacter sprays all over TargetCharacter's nipples.",
                     TargetSelfAction: "SourceCharacter sprays all over TargetCharacter."
                 }
             ],
@@ -433,7 +454,9 @@ export class SplatterModule extends BaseModule {
             "forehead",
             "chest",
             "tummy",
-            "crotch"
+            "crotch",
+            "all",
+            "nipples"
         ];
         let x = 0;
         let y = -40;
@@ -453,6 +476,8 @@ export class SplatterModule extends BaseModule {
             case "chest": return isMale ? "Chest" : "Breasts";
             case "tummy": return "Stomach";
             case "crotch": return target?.HasPenis() ? "Cock" : "Pussy";
+            case "ass": return "Ass";
+            case "nipples": return "Nipples";
             default: return "Nowhere";
         }
     }
@@ -545,6 +570,8 @@ export class SplatterModule extends BaseModule {
                 case "chest": targetGroupName = "ItemBreast"; break;
                 case "tummy": targetGroupName = "ItemPelvis"; break;
                 case "crotch": targetGroupName = "ItemVulva"; break;
+                case "ass": targetGroupName = "ItemButt"; break;
+                case "nipples": targetGroupName = "ItemNipples"; break;
                 case "all": targetGroupName = ""; break;
             }
             let group = ActivityGetGroupOrMirror(target.AssetFamily, targetGroupName);
