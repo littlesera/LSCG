@@ -101,7 +101,7 @@ export class RedressedState extends ItemBundleBaseState {
                 let isBlocked = this.InventoryBlockedOrLimited(sender, {Asset: asset});
                 let isRoomDisallowed = !InventoryChatRoomAllow(asset?.Category ?? []);
                 if (isRestore || !(isBlocked || isRoomDisallowed)) {
-                    let newItem = InventoryWear(Player, item.Name, item.Group, item.Color, item.Difficulty, -1, item.Craft, false);
+                    let newItem = InventoryWear(Player, item.Name, item.Group, item.Color, item.Difficulty, Player.MemberNumber, item.Craft, false);
                     if (!!newItem) {
                         if (!!item.Property)
                             newItem.Property = item.Property;
