@@ -46,7 +46,7 @@ export class RemoteSuggestions extends RemoteHypno {
 			memberIdIsAllowed = this.overrideMemberIds.indexOf(Player.MemberNumber!) > -1;
 
 		var passTranceReq = this.Character.LSCG.StateModule.states.find(s => s.type == "hypnotized")?.active ?? false;
-		var passHypnotizerReq = (this.settings.suggestionRequireHypnotizer && this.Character.LSCG.StateModule.states.find(s => s.type == "hypnotized")?.activatedBy == Player.MemberNumber)
+		var passHypnotizerReq = !this.settings.suggestionRequireHypnotizer || this.Character.LSCG.StateModule.states.find(s => s.type == "hypnotized")?.activatedBy == Player.MemberNumber;
 
 		let reason;
 		if (!memberIdIsAllowed)
