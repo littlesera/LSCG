@@ -92,7 +92,7 @@ export class RedressedState extends ItemBundleBaseState {
     }
 
     WearMany(items: ItemBundle[], spell: SpellDefinition, isRestore: boolean = false, memberNumber: number | undefined = undefined) {
-        if (!memberNumber)
+        if (!memberNumber || memberNumber == -1)
             memberNumber = Player.MemberNumber ?? 0;
         let sender = !!memberNumber ? getCharacter(memberNumber) : null;
         items.forEach(item => {
@@ -101,7 +101,7 @@ export class RedressedState extends ItemBundleBaseState {
                 let isBlocked = this.InventoryBlockedOrLimited(sender, {Asset: asset});
                 let isRoomDisallowed = !InventoryChatRoomAllow(asset?.Category ?? []);
                 if (isRestore || !(isBlocked || isRoomDisallowed)) {
-                    let newItem = InventoryWear(Player, item.Name, item.Group, item.Color, item.Difficulty, Player.MemberNumber, item.Craft, false);
+                    let newItem = InventoryWear(Player, item.Name, item.Group, item.Color, item.Difficulty, memberNumber, item.Craft, false);
                     if (!!newItem) {
                         if (!!item.Property)
                             newItem.Property = item.Property;
