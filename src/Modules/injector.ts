@@ -744,7 +744,7 @@ export class InjectorModule extends BaseModule {
     cureDrinkStr = [
         "%NAME% gulps thankfully as %OPP_NAME_POSSESSIVE% medicine slowly heals %POSSESSIVE%.",
         "%NAME%'s body glows slightly as %OPP_NAME_POSSESSIVE% cure glides warmly through %POSSESSIVE%.",
-        "%OPP_NAME_POSSESSIVE% antidote slowly washes through %NAME%'s body, curing what ails %POSSESSIVE%." 
+        "%OPP_NAME_POSSESSIVE_DIRECT% antidote slowly washes through %NAME_POSSESSIVE% body, curing what ails %POSSESSIVE%." 
     ];
 
     DrinkCure(sender: Character) {

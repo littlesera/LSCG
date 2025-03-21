@@ -264,6 +264,8 @@ export function replace_template(text: string, source: Character | null = null, 
 	let possessive = isPlayerMale ? "His" : "Her";
 	let intensive = isPlayerMale ? "Him" : "Her";
 	let pronoun = isPlayerMale ? "He" : "She";
+	let namePossessiveDirect = (`${CharacterNickname(Player)}'s`);
+	let namePossessive = source?.IsPlayer() ? (isPlayerMale ? "his own" : "her own") : namePossessiveDirect;
 
 	let opp_pronounItem = !source ? "They/Them" : CharacterPronounDescription(source);
 	let isOppMale = opp_pronounItem == "He/Him" ?? false;
@@ -278,6 +280,8 @@ export function replace_template(text: string, source: Character | null = null, 
 	return result
 		.replaceAll("%NAME%", CharacterNickname(Player))
 		.replaceAll("%POSSESSIVE%", possessive.toLocaleLowerCase())
+		.replaceAll("%NAME_POSSESSIVE_DIRECT%", namePossessiveDirect)
+		.replaceAll("%NAME_POSSESSIVE%", namePossessive)
 		.replaceAll("%PRONOUN%", pronoun.toLocaleLowerCase())
 		.replaceAll("%INTENSIVE%", intensive.toLocaleLowerCase())
 		.replaceAll("%CAP_POSSESSIVE%", possessive)
