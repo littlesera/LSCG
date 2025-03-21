@@ -31,6 +31,7 @@ export interface SplatterSettingsModel extends BaseSettingsModel {
     autoSplat: boolean;
     uncontrollableWhenBound: boolean;
     colorOverride: ItemColor | null;
+    opacityOverride: number | null;
     whitelist: number[] | null;
     blacklist: number[] | null;
     requireLover: boolean;
