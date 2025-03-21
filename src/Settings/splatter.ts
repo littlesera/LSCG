@@ -87,13 +87,27 @@ export class GuiSplatter extends GuiSubscreen {
 				setting: () => this.settings.blacklist?.join(", ") ?? "",
 				setSetting: (val) => this.settings.blacklist = val.split(",").map((x: any) => x.trim())
 			}, <Setting>{
+				type: "label", // Blank Spot
+				label: "",
+				description: ""
+			}, <Setting>{
 				type: "text",
 				label: "Splatter Color Override:",
 				id: "splatter_color",
-				description: "Override color for splatter application.",
+				description: "Override color for splatter application (hex code).",
 				setting: () => this.settings.colorOverride ?? "",
 				setSetting: (val) => this.settings.colorOverride = val,
-				disabled: !this.settings.enabled
+				disabled: !this.settings.enabled,
+				overrideWidth: 200
+			}, <Setting>{
+				type: "number",
+				label: "Splatter Opacity % Override:",
+				id: "splatter_opacity",
+				description: "Override opacity for splatter application (0-100).",
+				setting: () => this.settings.opacityOverride ?? 100,
+				setSetting: (val) => { this.settings.opacityOverride = Math.min(Math.max(val, 0), 100) },
+				disabled: !this.settings.enabled,
+				overrideWidth: 200
 			}, <Setting>{
 				type: "number",
 				label: "Minimum Required Arousal:",
@@ -102,7 +116,7 @@ export class GuiSplatter extends GuiSubscreen {
 				setting: () => this.settings.minArousal ?? 90,
 				setSetting: (val) => { this.settings.minArousal = Math.min(Math.max(val, 0), 99) },
 				disabled: !this.settings.enabled,
-				overrideWidth: 150
+				overrideWidth: 200
 			}
 		]]
 	}

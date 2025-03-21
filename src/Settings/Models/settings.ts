@@ -161,6 +161,7 @@ export class PublicSettingsModel implements IPublicSettingsModel {
         giver: false,
         taker: false,
         colorOverride: null,
+        opacityOverride: null,
         uncontrollableWhenBound: true,
         autoSplat: true,
         blacklist: [],
