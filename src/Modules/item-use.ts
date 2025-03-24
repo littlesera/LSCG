@@ -468,7 +468,6 @@ export class ItemUseModule extends BaseModule {
 				var leaveEle = document.getElementById("swap-leave");
 				if (!!leaveEle) {
 					leaveEle.addEventListener("click", (evt) => {
-						this.SwapRoll(c!, senderItem!);
 						theftEle?.remove();
 						leaveEle?.remove();
 					});
@@ -1389,11 +1388,10 @@ export class ItemUseModule extends BaseModule {
 		InventoryRemove(Player, "ItemHandheld", false);
 		InventoryRemove(target, "ItemHandheld", false);
 
-		let takeItem = InventoryWear(Player, tgtItem.Asset.Name, "ItemHandheld", tgtItem.Color, tgtItem.Difficulty, Player.MemberNumber, tgtItem.Craft, false);
+		let takeItem = InventoryWear(Player, tgtItem.Asset.Name, "ItemHandheld", tgtItem.Color, tgtItem.Difficulty, tgtItem.Craft?.MemberNumber ?? target.MemberNumber, tgtItem.Craft, false);
 		if (!!takeItem) takeItem.Property = tgtItem.Property;
 		
-
-		let giveItem = InventoryWear(target, srcItem.Asset.Name, "ItemHandheld", srcItem.Color, srcItem.Difficulty, Player.MemberNumber, srcItem.Craft, false);
+		let giveItem = InventoryWear(target, srcItem.Asset.Name, "ItemHandheld", srcItem.Color, srcItem.Difficulty, srcItem.Craft?.MemberNumber ?? Player.MemberNumber, srcItem.Craft, false);
 		if (!!giveItem) giveItem.Property = srcItem.Property;			
 
 		setTimeout(() => ChatRoomCharacterUpdate(Player));
