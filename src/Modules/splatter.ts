@@ -84,7 +84,7 @@ export class SplatterMapping {
         return group.map(key => record[key]).reduce((sum, x) => sum + x, 0);
     }
 
-    incrementSplat(loc: SplatterLocation, colorOverride: ItemColor | null = "Default"): void {
+    incrementSplat(loc: SplatterLocation, colorOverride: ItemColor | null = "Default", opacityOverride: number | null = 100): void {
         if (!(loc in locations)) {
             console.warn(`Location '${loc}' not found.`);
             return;
@@ -120,6 +120,14 @@ export class SplatterMapping {
                 }
                 if (Array.isArray(targetItem.Color)) {
                     targetItem.Color = targetItem.Color.map((col, ix, arr) => (ix == recKeys.indexOf(flagToFlip!)) ? (<string>colorOverride) : col);
+                }
+                if (!targetItem.Property.Opacity) {
+                    targetItem.Property.Opacity = recKeys.map(k => 1);
+                }
+                if (Array.isArray(targetItem.Property.Opacity)) {
+                    let calcOpacity = (opacityOverride ?? 100) / 100;
+                    let scopedPpacity = Math.min(Math.max(calcOpacity, 0), 100);
+                    targetItem.Property.Opacity = targetItem.Property.Opacity.map((op, ix, arr) => (ix == recKeys.indexOf(flagToFlip!)) ? scopedPpacity : op);
                 }
             }
         }
@@ -179,6 +187,34 @@ export class SplatterModule extends BaseModule {
         this.CleanSplatter("all");
     }
 
+    getColorOverride(colorOverride: string | null): string {
+        if (!colorOverride)
+            return "Default";
+        let colorOverrideArr = colorOverride?.split(",").map(s => s.trim()).filter(color => /^#(?:[0-9a-fA-F]{3}){1,2}$/.test(color));
+        return (!!colorOverrideArr && colorOverrideArr?.length > 0) ? colorOverrideArr[getRandomInt(colorOverrideArr?.length)] : "Default";
+    }
+
+    getOpacityOverride(opacityOverride: string | null): number {
+        if (!opacityOverride)
+            return 100;
+        try {
+            let opRE = /^(\d+)-?(\d+)?$/;
+            let opacityOptionArr = opacityOverride?.split(",").map(s => s.trim()).filter(op => opRE.test(op));
+            let opSelect = opacityOptionArr[getRandomInt(opacityOptionArr.length)];
+            if (opSelect.indexOf("-") >= 0) {
+                let bounds = [parseInt(opSelect.match(opRE)?.[1] ?? "0"), parseInt(opSelect.match(opRE)?.[2] ?? "100")];
+                let min = Math.max(Math.min(...bounds), 0);
+                let max = Math.min(Math.max(...bounds), 100);
+                return getRandomInt(max - min) + min;
+            } else {
+                return parseInt(opSelect ?? 100);
+            }
+        }
+        catch {
+            return 100;
+        }
+    }
+
     load(): void {
         OnActivity(100, ModuleCategory.Lipstick, (data, sender, msg, metadata) => {
             if (!this.Enabled)
@@ -188,35 +224,37 @@ export class SplatterModule extends BaseModule {
                 !!sender &&
                 target == Player.MemberNumber) {
                     if (this.splatAllowed(sender, <OtherCharacter><Character>Player)) {
-                        let colorOverride = (<OtherCharacter>sender)?.LSCG?.SplatterModule?.colorOverride;
+                        let colorOverride = this.getColorOverride((<OtherCharacter>sender)?.LSCG?.SplatterModule?.colorOverride);
+                        let opacityOverride = this.getOpacityOverride((<OtherCharacter>sender)?.LSCG?.SplatterModule?.opacityOverride);
+
                         switch (data.Content) {
                             case "ChatOther-ItemMouth-LSCG_Splat":
                             case "ChatSelf-ItemMouth-LSCG_Splat":
-                                this.AddSplatter(sender, "mouth", colorOverride);
+                                this.AddSplatter(sender, "mouth", colorOverride, opacityOverride);
                                 break;
                             case "ChatOther-ItemHead-LSCG_Splat":
                             case "ChatSelf-ItemHead-LSCG_Splat":
-                                this.AddSplatter(sender, "forehead", colorOverride);
+                                this.AddSplatter(sender, "forehead", colorOverride, opacityOverride);
                                 break;
                             case "ChatOther-ItemBreast-LSCG_Splat":
                             case "ChatSelf-ItemBreast-LSCG_Splat":    
-                                this.AddSplatter(sender, "chest", colorOverride);
+                                this.AddSplatter(sender, "chest", colorOverride, opacityOverride);
                                 break;
                             case "ChatOther-ItemPelvis-LSCG_Splat":
                             case "ChatSelf-ItemPelvis-LSCG_Splat":
-                                this.AddSplatter(sender, "tummy", colorOverride);
+                                this.AddSplatter(sender, "tummy", colorOverride, opacityOverride);
                                 break;
                             case "ChatOther-ItemVulva-LSCG_Splat":
                             case "ChatSelf-ItemVulva-LSCG_Splat":
-                                this.AddSplatter(sender, "crotch", colorOverride);
+                                this.AddSplatter(sender, "crotch", colorOverride, opacityOverride);
                                 break;
                             case "ChatOther-ItemButt-LSCG_Splat":
                             case "ChatSelf-ItemButt-LSCG_Splat":
-                                this.AddSplatter(sender, "ass", colorOverride);
+                                this.AddSplatter(sender, "ass", colorOverride, opacityOverride);
                                 break;
                             case "ChatOther-ItemNipples-LSCG_Splat":
                             case "ChatSelf-ItemNipples-LSCG_Splat":
-                                this.AddSplatter(sender, "nipples", colorOverride);
+                                this.AddSplatter(sender, "nipples", colorOverride, opacityOverride);
                                 break;
                             default:
                                 break;
@@ -328,21 +366,6 @@ export class SplatterModule extends BaseModule {
                     }
                 }
             ],
-            CustomAction: {
-                Func: (target, args, next) => {
-                    if (!!target) {
-                        let location = GetMetadata(args[1])?.GroupName;
-                        let dict = args[1]?.Dictionary;
-                        if (!!Player.LSCG.SplatterModule.colorOverride) {
-                            dict.push({
-                                Tag: "ColorOverride",
-                                ColorOverride: Player.LSCG.SplatterModule.colorOverride
-                            })
-                        }
-                    }
-                    return next(args);
-                }
-            },
             CustomImage: ICONS.SPLAT
         });
 
@@ -591,9 +614,9 @@ export class SplatterModule extends BaseModule {
         ChatRoomCharacterUpdate(Player);
     }
 
-    AddSplatter(sender: Character, location: SplatterLocation, colorOverride: ItemColor | null) {
+    AddSplatter(sender: Character, location: SplatterLocation, colorOverride: ItemColor | null, opacityOverride: number | null) {
         console.info(`Adding splatter to ${location}`);
-        new SplatterMapping(Player).incrementSplat(location, colorOverride);
+        new SplatterMapping(Player).incrementSplat(location, colorOverride, opacityOverride);
         ChatRoomCharacterUpdate(Player);
     }
 }
