@@ -103,7 +103,7 @@ export class GuiSplatter extends GuiSubscreen {
 				type: "text",
 				label: "Splatter Opacity % Override:",
 				id: "splatter_opacity",
-				description: "Override opacity for splatter application. Can comma separate possible values and provide range (eg: 20, 60-100).",
+				description: "Override opacity for splatter application. Can comma separate possible values and provide range (eg: 20, 60-70).",
 				setting: () => this.settings.opacityOverride,
 				setSetting: (val) => { this.settings.opacityOverride = val },
 				disabled: !this.settings.enabled,
