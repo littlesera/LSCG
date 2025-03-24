@@ -125,7 +125,9 @@ export class SplatterMapping {
                     targetItem.Property.Opacity = recKeys.map(k => 1);
                 }
                 if (Array.isArray(targetItem.Property.Opacity)) {
-                    targetItem.Property.Opacity = targetItem.Property.Opacity.map((op, ix, arr) => (ix == recKeys.indexOf(flagToFlip!)) ? ((opacityOverride ?? 100)/100) : op);
+                    let calcOpacity = (opacityOverride ?? 100) / 100;
+                    let scopedPpacity = Math.min(Math.max(calcOpacity, 0), 100);
+                    targetItem.Property.Opacity = targetItem.Property.Opacity.map((op, ix, arr) => (ix == recKeys.indexOf(flagToFlip!)) ? scopedPpacity : op);
                 }
             }
         }
@@ -185,6 +187,34 @@ export class SplatterModule extends BaseModule {
         this.CleanSplatter("all");
     }
 
+    getColorOverride(colorOverride: string | null): string {
+        if (!colorOverride)
+            return "Default";
+        let colorOverrideArr = colorOverride?.split(",").map(s => s.trim()).filter(color => /^#(?:[0-9a-fA-F]{3}){1,2}$/.test(color));
+        return (!!colorOverrideArr && colorOverrideArr?.length > 0) ? colorOverrideArr[getRandomInt(colorOverrideArr?.length)] : "Default";
+    }
+
+    getOpacityOverride(opacityOverride: string | null): number {
+        if (!opacityOverride)
+            return 100;
+        try {
+            let opRE = /^(\d+)-?(\d+)?$/;
+            let opacityOptionArr = opacityOverride?.split(",").map(s => s.trim()).filter(op => opRE.test(op));
+            let opSelect = opacityOptionArr[getRandomInt(opacityOptionArr.length)];
+            if (opSelect.indexOf("-") >= 0) {
+                let bounds = [parseInt(opSelect.match(opRE)?.[1] ?? "0"), parseInt(opSelect.match(opRE)?.[2] ?? "100")];
+                let min = Math.max(Math.min(...bounds), 0);
+                let max = Math.min(Math.max(...bounds), 100);
+                return getRandomInt(max - min) + min;
+            } else {
+                return parseInt(opSelect ?? 100);
+            }
+        }
+        catch {
+            return 100;
+        }
+    }
+
     load(): void {
         OnActivity(100, ModuleCategory.Lipstick, (data, sender, msg, metadata) => {
             if (!this.Enabled)
@@ -194,8 +224,9 @@ export class SplatterModule extends BaseModule {
                 !!sender &&
                 target == Player.MemberNumber) {
                     if (this.splatAllowed(sender, <OtherCharacter><Character>Player)) {
-                        let colorOverride = (<OtherCharacter>sender)?.LSCG?.SplatterModule?.colorOverride;
-                        let opacityOverride = (<OtherCharacter>sender)?.LSCG?.SplatterModule?.opacityOverride;
+                        let colorOverride = this.getColorOverride((<OtherCharacter>sender)?.LSCG?.SplatterModule?.colorOverride);
+                        let opacityOverride = this.getOpacityOverride((<OtherCharacter>sender)?.LSCG?.SplatterModule?.opacityOverride);
+
                         switch (data.Content) {
                             case "ChatOther-ItemMouth-LSCG_Splat":
                             case "ChatSelf-ItemMouth-LSCG_Splat":

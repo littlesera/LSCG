@@ -94,18 +94,18 @@ export class GuiSplatter extends GuiSubscreen {
 				type: "text",
 				label: "Splatter Color Override:",
 				id: "splatter_color",
-				description: "Override color for splatter application (hex code).",
+				description: "Override color [hex code] for splatter application (comma separated for set).",
 				setting: () => this.settings.colorOverride ?? "",
 				setSetting: (val) => this.settings.colorOverride = val,
 				disabled: !this.settings.enabled,
 				overrideWidth: 200
 			}, <Setting>{
-				type: "number",
+				type: "text",
 				label: "Splatter Opacity % Override:",
 				id: "splatter_opacity",
 				description: "Override opacity for splatter application (0-100).",
-				setting: () => this.settings.opacityOverride ?? 100,
-				setSetting: (val) => { this.settings.opacityOverride = Math.min(Math.max(val, 0), 100) },
+				setting: () => this.settings.opacityOverride,
+				setSetting: (val) => { this.settings.opacityOverride = val },
 				disabled: !this.settings.enabled,
 				overrideWidth: 200
 			}, <Setting>{
