@@ -77,7 +77,7 @@ export class GuiSplatter extends GuiSubscreen {
 				description: "Set member numbers who are explicitly allowed to splatter on you. Comma separated list of member IDs.",
 				disabled: !this.settings.enabled,
 				setting: () => this.settings.whitelist?.join(", ") ?? "",
-				setSetting: (val) => this.settings.whitelist = val.split(",").map((x: any) => x.trim())
+				setSetting: (val) => this.settings.whitelist = val.split(",").map((x: any) => x.trim()).filter((x: any) => !!x && x !== '')
 			}, <Setting>{
 				type: "text",
 				id: "splat_blacklist",
@@ -85,7 +85,7 @@ export class GuiSplatter extends GuiSubscreen {
 				description: "Set member numbers who are explicitly blocked from splattering on you. Comma separated list of member IDs.",
 				disabled: !this.settings.enabled,
 				setting: () => this.settings.blacklist?.join(", ") ?? "",
-				setSetting: (val) => this.settings.blacklist = val.split(",").map((x: any) => x.trim())
+				setSetting: (val) => this.settings.blacklist = val.split(",").map((x: any) => x.trim()).filter((x: any) => !!x && x !== '')
 			}, <Setting>{
 				type: "label", // Blank Spot
 				label: "",
