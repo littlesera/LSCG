@@ -396,9 +396,7 @@ export class SplatterModule extends BaseModule {
                         DrawButton(this.START_X + 500, 480, 240, 60, "Uncontrolled", "White", undefined, undefined, false);
                         
                         if (!this.settings.uncontrollableWhenBound || !Player.IsRestrained()) { // If bound, remove control of where to cum if setting is true
-                            let areas = this.getTargetSelectAreas();
-                            if (areas.length <= 0) this.ResetPrompt();
-                            areas.forEach(pair => {
+                            this.getTargetSelectAreas().forEach(pair => {
                                 let rect = pair[0];
                                 let char = pair[1];
                                 if (!rect || !char) return;
@@ -510,8 +508,12 @@ export class SplatterModule extends BaseModule {
     }
     
     splatAllowed(acting: Character, acted: OtherCharacter) {
-        let whiteListAllowed = !!acted?.LSCG?.SplatterModule?.whitelist && acted.LSCG.SplatterModule.whitelist.indexOf(acting.MemberNumber ?? -1) >=0;
-        let blackListBlocked = !!acted?.LSCG?.SplatterModule?.blacklist && acted.LSCG.SplatterModule.blacklist.indexOf(acting.MemberNumber ?? -1) >=0;
+        if (acted.MemberNumber == acting.MemberNumber)
+            return true;
+        let whitelist = acted?.LSCG?.SplatterModule?.whitelist?.filter((x: any) => !!x && x !== '') ?? [];
+        let blacklist = acted?.LSCG?.SplatterModule?.blacklist?.filter((x: any) => !!x && x !== '') ?? [];
+        let whiteListAllowed = !!whitelist && whitelist.length > 0 && whitelist.indexOf(acting.MemberNumber ?? -1) >=0;
+        let blackListBlocked = !!blacklist && blacklist.length > 0 && blacklist.indexOf(acting.MemberNumber ?? -1) >=0;
         let loverAllowed = !acted?.LSCG?.SplatterModule?.requireLover || acting.IsLoverOfCharacter(acted);
         return (loverAllowed || whiteListAllowed) && !blackListBlocked;
     }
