@@ -279,6 +279,7 @@ export class SplatterModule extends BaseModule {
                             case "ChatOther-ItemNipplesPiercings-RubItem":
                             case "ChatSelf-ItemNipplesPiercings-RubItem":
                                 this.CleanSplatter("chest");
+                                this.CleanSplatter("nipples");
                                 break;
                             case "ChatOther-ItemPelvis-RubItem":
                             case "ChatSelf-ItemPelvis-RubItem":
