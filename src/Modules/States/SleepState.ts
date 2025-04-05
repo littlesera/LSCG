@@ -22,6 +22,10 @@ export class SleepState extends BaseState {
         this.Restrictions.Speech = "true";
         this.Restrictions.Stand = "true";
         this.Restrictions.Emoticon = "true";
+        if (GameVersion !== "R114" && (DialogSelfMenuSelected as unknown) === "Expression" && DialogSelfMenuMapping.Expression.C === Player) {
+            // Refresh the expression pannel upon modifying the `Emoticon`, `Walk` or `Eyes` restrictions
+            DialogSelfMenuMapping.Expression.Reload();
+        }
     }
 
     Init() {

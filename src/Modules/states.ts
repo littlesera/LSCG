@@ -303,27 +303,57 @@ export class StateModule extends BaseModule {
             return next(args);
         }, ModuleCategory.States);
 
-        hookFunction("DialogClickExpressionMenu", 5, (args, next) => {
-            const eyes = DialogFacialExpressions.findIndex(a => a.Appearance.Asset.Group.Name === "Eyes");
-            const emoticon = DialogFacialExpressions.findIndex(a => a.Appearance.Asset.Group.Name === "Emoticon");
-            const allExceptEmoticon = DialogFacialExpressions.filter((exp, ix, arr) => ix !== emoticon).map(exp => DialogFacialExpressions.indexOf(exp));
-            let eyeChangeButton = [20, 185 + 100 * eyes, 90, 90];
-            let emoticonChangeButton = [20, 185 + 100 * emoticon, 90, 90];
-            let clearExpButton = [20, 50, 90, 90];
-            let winkButton = [120, 50, 90, 90];
-            
-            let eyeBlockMousePos = [eyeChangeButton, winkButton, clearExpButton];
-            let expressionButtonsOtherThanEmoticon = allExceptEmoticon.map(ix => [20, 185 + 100 * ix, 90, 90]);
-            let moveBlockMousePos = expressionButtonsOtherThanEmoticon.concat(eyeBlockMousePos).filter((val, ix, arr) => arr.indexOf(val) == ix);
+        if (GameVersion === "R114") {
+            hookFunction("DialogClickExpressionMenu", 5, (args, next) => {
+                const eyes = DialogFacialExpressions.findIndex(a => a.Appearance.Asset.Group.Name === "Eyes");
+                const emoticon = DialogFacialExpressions.findIndex(a => a.Appearance.Asset.Group.Name === "Emoticon");
+                const allExceptEmoticon = DialogFacialExpressions.filter((exp, ix, arr) => ix !== emoticon).map(exp => DialogFacialExpressions.indexOf(exp));
+                let eyeChangeButton = [20, 185 + 100 * eyes, 90, 90];
+                let emoticonChangeButton = [20, 185 + 100 * emoticon, 90, 90];
+                let clearExpButton = [20, 50, 90, 90];
+                let winkButton = [120, 50, 90, 90];
 
-            const eyeBlock = this.AnyRestrictions(r => r.Eyes) && eyeBlockMousePos.some(arr => MouseIn(arr[0], arr[1], arr[2], arr[3]));
-            const moveBlock = this.AnyRestrictions(r => r.Move) && moveBlockMousePos.some(arr => MouseIn(arr[0], arr[1], arr[2], arr[3]));;
-            const emoticonBlock = this.AnyRestrictions(r => r.Emoticon) && MouseIn(emoticonChangeButton[0], emoticonChangeButton[1], emoticonChangeButton[2], emoticonChangeButton[3]);
-            if (this.Enabled && (moveBlock || eyeBlock || emoticonBlock)) {
-                return;
+                let eyeBlockMousePos = [eyeChangeButton, winkButton, clearExpButton];
+                let expressionButtonsOtherThanEmoticon = allExceptEmoticon.map(ix => [20, 185 + 100 * ix, 90, 90]);
+                let moveBlockMousePos = expressionButtonsOtherThanEmoticon.concat(eyeBlockMousePos).filter((val, ix, arr) => arr.indexOf(val) == ix);
+
+                const eyeBlock = this.AnyRestrictions(r => r.Eyes) && eyeBlockMousePos.some(arr => MouseIn(arr[0], arr[1], arr[2], arr[3]));
+                const moveBlock = this.AnyRestrictions(r => r.Move) && moveBlockMousePos.some(arr => MouseIn(arr[0], arr[1], arr[2], arr[3]));;
+                const emoticonBlock = this.AnyRestrictions(r => r.Emoticon) && MouseIn(emoticonChangeButton[0], emoticonChangeButton[1], emoticonChangeButton[2], emoticonChangeButton[3]);
+                if (this.Enabled && (moveBlock || eyeBlock || emoticonBlock)) {
+                    return;
+                }
+                return next(args);
+            }, ModuleCategory.States);
+        } else { // >= R115
+            DialogSelfMenuMapping.Expression.clickStatusCallbacks.lscg = (C, clickedExpression) => {
+                if (clickedExpression.Group !== "Emoticon" && this.AnyRestrictions(r => r.Move)) {
+                    return "Movement restricted by LSCG";
+                }
+
+                switch (clickedExpression.Group) {
+                    case "Eyes":
+                        return this.AnyRestrictions(r => r.Eyes) ? "Eyes restricted by LSCG" : null;
+                    case "Emoticon":
+                        return this.AnyRestrictions(r => r.Emoticon) ? "Emoticon restricted by LSCG" : null;
+                    default:
+                        return null;
+                }
+            };
+
+            const menubarValidator = () => {
+                if (this.AnyRestrictions(r => r.Move)) {
+                    return { state: "disabled", status: "Movement restricted by LSCG" } as const;
+                } else if (this.AnyRestrictions(r => r.Eyes)) {
+                    return { state: "disabled", status: "Eyes restricted by LSCG" } as const;
+                } else {
+                    return null;
+                }
             }
-            return next(args);
-        }, ModuleCategory.States);        
+            (DialogSelfMenuMapping.Expression.menubarEventListeners.blink.validate ??= {}).lscg = menubarValidator;
+            (DialogSelfMenuMapping.Expression.menubarEventListeners.clear.validate ??= {}).lscg = menubarValidator;
+        }
+
 
         hookFunction("DialogFacialExpressionsLoad", 5, (args, next) => {
             const eyeBlock = this.AnyRestrictions(r => r.Eyes);
