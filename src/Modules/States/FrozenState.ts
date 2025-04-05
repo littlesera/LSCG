@@ -20,6 +20,10 @@ export class FrozenState extends BaseState {
         this.Restrictions.Wardrobe = "true";
         this.Restrictions.Walk = "true";
         this.Restrictions.Speech = "true";
+        if (GameVersion !== "R114" && (DialogSelfMenuSelected as unknown) === "Expression" && DialogSelfMenuMapping.Expression.C === Player) {
+            // Refresh the expression pannel upon modifying the `Emoticon`, `Walk` or `Eyes` restrictions
+            DialogSelfMenuMapping.Expression.Reload();
+        }
     }
 
     Init(): void {
