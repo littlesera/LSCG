@@ -22,6 +22,10 @@ export class SleepState extends BaseState {
         this.Restrictions.Speech = "true";
         this.Restrictions.Stand = "true";
         this.Restrictions.Emoticon = "true";
+        if (GameVersion !== "R114" && (DialogSelfMenuSelected as unknown) === "Expression" && DialogSelfMenuMapping.Expression.C.IsPlayer()) {
+            // Refresh the expression pannel upon modifying the `Emoticon`, `Walk` or `Eyes` restrictions
+            DialogSelfMenuMapping.Expression.Reload();
+        }
     }
 
     Init() {
@@ -46,7 +50,7 @@ export class SleepState extends BaseState {
                 SendAction("%NAME%'s eyelids flutter and start to open sleepily...");
             CharacterSetFacialExpression(Player, "Eyes", "Dazed");
             if (WardrobeGetExpression(Player)?.Emoticon == "Sleep")
-                CharacterSetFacialExpression(Player, "Emoticon", null);            
+                CharacterSetFacialExpression(Player, "Emoticon", null);
             removeCustomEffect(Player, "ForceKneel");
             super.Recover(false);
         }
