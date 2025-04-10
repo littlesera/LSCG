@@ -326,8 +326,8 @@ export class HypnoModule extends BaseModule {
     hookBCX() {
         if (!this._bcxHooked) {
             this._bcxHooked = hookBCXVoice((evt) => {
-                let msg = evt.message;
-                if (msg.startsWith("[Voice] ") && !!Player && !!Player.OnlineSettings && !! (<any>Player.OnlineSettings).BCX) {
+                let msg = evt?.message;
+                if (!!msg && typeof msg === 'string' && msg.startsWith("[Voice] ") && !!Player && !!Player.OnlineSettings && !! (<any>Player.OnlineSettings).BCX) {
                     let bcxSettings = JSON.parse(LZString.decompressFromBase64((<any>Player.OnlineSettings).BCX));
                     let senderId = bcxSettings?.conditions?.rules?.conditions?.other_constant_reminder?.addedBy as number;
                     if (!!senderId) {
