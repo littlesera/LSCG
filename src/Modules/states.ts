@@ -23,6 +23,7 @@ import { PolymorphedState } from "./States/PolymorphedState";
 import { XRayVisionState } from "./States/XRayVisionState";
 import { DeniedState } from "./States/DeniedState";
 import { parseInt } from "lodash-es";
+import { SpreadingOutfitState } from "./States/SpreadingOutfitState";
 
 interface StateIcon {
     Label: string;
@@ -82,6 +83,7 @@ export class StateModule extends BaseModule {
     ArousalPairedState: ArousalPairedState;
     OrgasmSiphonedState: OrgasmSiphonedState;
     XRayState: XRayVisionState;
+    SpreadingOutfitState: SpreadingOutfitState;
 
     GetRestriction(state: BaseState, restriction: LSCGImmersiveOption): boolean {
         return state.Active &&
@@ -114,6 +116,7 @@ export class StateModule extends BaseModule {
         this.ArousalPairedState = new ArousalPairedState(this);
         this.OrgasmSiphonedState = new OrgasmSiphonedState(this);
         this.XRayState = new XRayVisionState(this);
+        this.SpreadingOutfitState = new SpreadingOutfitState(this);
 
         this.States = [
             this.SleepState, 
@@ -131,7 +134,8 @@ export class StateModule extends BaseModule {
             this.OrgasmSiphonedState,
             this.BuffedState,
             this.BarrierState,
-            this.XRayState
+            this.XRayState,
+            this.SpreadingOutfitState
         ];
         
         // States module in general is always enabled. Toggling is done on each specific state.
