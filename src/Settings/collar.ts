@@ -35,7 +35,7 @@ export class GuiCollar extends GuiSubscreen {
 				},<Setting>{
 					type: "checkbox",
 					label: "Enable Chain Choking:",
-					description: "Enabled breathplay using chain choker.",
+					description: "Enabled breathplay using choke chain neck restraint.",
 					setting: () => Player.LSCG.MiscModule.chokeChainEnabled ?? false,
 					setSetting: (val) => Player.LSCG.MiscModule.chokeChainEnabled = val
 				},<Setting>{
