@@ -8,6 +8,7 @@ export interface CollarModuleStats extends ModuleStats {
     collarPassoutCount: number;
     handPassoutCount: number;
     gagPassoutCount: number;
+    chainPassoutCount: number;
 }
 
 export interface CollarPublicSettingsModel extends BaseSettingsModel {
