@@ -584,20 +584,20 @@ export class OpacityModule extends BaseModule {
     OpacityChange(slider: OpacitySlider) {
         let value = Math.round(this._updateOpacityValue(slider.ElementId) * 100);
         slider.Value = value;
-        ElementValue(slider.ElementId + "_Text", value + "");
+        document.getElementById(slider.ElementId + "_Text")?.setAttribute("value", value);
         this.UpdatePreview();
     }
 
     OpacityTextChange(slider: OpacitySlider) {
         let value = Math.round(this._updateOpacityValue(slider.ElementId + "_Text") * 100);
         slider.Value = value;
-        ElementValue(slider.ElementId, value + "");
+        document.getElementById(slider.ElementId)?.setAttribute("value", value);
         this.UpdatePreview();
     }
 
     TranslationTextChange(elementId: string) {
         let value = Math.round(this._updateTranslationValue(elementId));
-        ElementValue(elementId, value + "");
+        document.getElementById(elementId)?.setAttribute("value", value);
         this.UpdatePreview();
     }
 
