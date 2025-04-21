@@ -29,7 +29,8 @@ export class MiscModule extends BaseModule {
             chloroformPotencyTime: 60 * 60 * 1000, // 1 hour cooloff
             infiniteChloroformPotency: false,
             handChokeEnabled: false,
-            gagChokeEnabled: false
+            gagChokeEnabled: false,
+            chokeChainEnabled: false
         };
     }
 

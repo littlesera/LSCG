@@ -46,6 +46,7 @@ export interface MiscSettingsModel extends BaseSettingsModel {
     infiniteChloroformPotency: boolean;
     handChokeEnabled: boolean;
     gagChokeEnabled: boolean;
+    chokeChainEnabled: boolean;    
 }
 
 export interface OpacitySettingsModel extends OpacityPublicSettingsModel {

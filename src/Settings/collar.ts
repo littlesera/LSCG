@@ -34,6 +34,12 @@ export class GuiCollar extends GuiSubscreen {
 					setSetting: (val) => Player.LSCG.MiscModule.gagChokeEnabled = val
 				},<Setting>{
 					type: "checkbox",
+					label: "Enable Chain Choking:",
+					description: "Enabled breathplay using choke chain neck restraint.",
+					setting: () => Player.LSCG.MiscModule.chokeChainEnabled ?? false,
+					setSetting: (val) => Player.LSCG.MiscModule.chokeChainEnabled = val
+				},<Setting>{
+					type: "checkbox",
 					label: "Sleep on Passout:",
 					description: "Will force sleep on passout.",
 					setting: () => this.settings.knockout ?? false,

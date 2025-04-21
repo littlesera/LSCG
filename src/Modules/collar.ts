@@ -11,7 +11,8 @@ import { LeashingModule } from './leashing';
 enum PassoutReason {
     COLLAR,
     HAND,
-    PLUGS
+    PLUGS,
+    CHAIN
 }
 
 export class CollarModule extends BaseModule {
@@ -75,7 +76,8 @@ export class CollarModule extends BaseModule {
             stats: {
                 collarPassoutCount: 0,
                 gagPassoutCount: 0,
-                handPassoutCount: 0
+                handPassoutCount: 0,
+                chainPassoutCount: 0
             }
         };
     }
@@ -149,6 +151,28 @@ export class CollarModule extends BaseModule {
             next(args);
         }, ModuleCategory.Collar);
 
+        hookFunction("ChatRoomDoHoldLeash", 1, (args, next) => {
+            if (super.Enabled && Player.LSCG.MiscModule.chokeChainEnabled) {
+                let chainItem = InventoryGet(Player, "ItemNeckRestraints");
+                if (!!chainItem && chainItem.Asset.Name == "ChokeChain") {
+                    let sender = args[0];
+                    this.ChainChoke(sender, 1, GetItemName(chainItem));
+                }
+            }
+            return next(args);
+        }, ModuleCategory.Misc);
+
+        hookFunction("ChatRoomDoStopHoldLeash", 1, (args, next) => {
+            if (super.Enabled && Player.LSCG.MiscModule.chokeChainEnabled) {
+                let chainItem = InventoryGet(Player, "ItemNeckRestraints");
+                if (!!chainItem && chainItem.Asset.Name == "ChokeChain") {
+                    let sender = getCharacter(ChatRoomLeashPlayer ?? 0);
+                    this.ChainChoke(sender, -1, GetItemName(chainItem));
+                }
+            }
+            return next(args);
+        }, ModuleCategory.Misc);
+
         // Detect if choking member is bound
         OnAction(6, ModuleCategory.Misc, (data, sender, msg, metadata) => {
             let meta = GetMetadata(data);
@@ -177,9 +201,56 @@ export class CollarModule extends BaseModule {
             return next(args);
         }, ModuleCategory.Collar)
 
+        // Check for Neck choker tighten/loosen
+        OnAction(1, ModuleCategory.Misc, (data, sender, msg, metadata) => {
+            if (!super.Enabled || !Player.LSCG.MiscModule.chokeChainEnabled)
+                return;
+
+            let messagesToCheck = [
+                "ActionLoosenLot",
+                "ActionLoosenLittle",
+                "ActionTightenLot",
+                "ActionTightenLittle"
+            ];
+            
+            let itemNames = [
+                "ChokeChain"
+            ];
+
+            let target = GetTargetCharacter(data);
+            var targetItem = GetMetadata(data)?.Assets?.PrevAsset;
+
+            if (target == Player.MemberNumber &&
+                (!targetItem || itemNames.indexOf(targetItem.Name) > -1) &&
+                messagesToCheck.some(x => msg.startsWith(x))) {
+                // Do chain choke adjust
+                let modifier = 0;
+                switch (msg) {
+                    case "ActionLoosenLot":
+                        modifier = -3;
+                        break;
+                    case "ActionLoosenLittle":
+                        modifier = -1;
+                        break;
+                    case "ActionTightenLot":
+                        modifier = 3;
+                        break;
+                    case "ActionTightenLittle":
+                        modifier = 1;
+                        break;
+                }
+                let chainItem = InventoryGet(Player, "ItemNeckRestraints");
+                let itemName = targetItem?.Description;
+                if (!!chainItem)
+                    itemName = GetItemName(chainItem);
+                this.ChainChoke(sender, modifier, itemName);
+            }
+            return;
+        });
+
         // Check for heavy gag + nose plugs
         OnAction(100, ModuleCategory.Misc, (data, sender, msg, metadata) => {
-            if (!Player.LSCG.MiscModule.gagChokeEnabled)
+            if (!super.Enabled || !Player.LSCG.MiscModule.gagChokeEnabled)
                 return;
 
             let airwaySlots = ["ItemMouth", "ItemMouth2", "ItemMouth3", "ItemNose"];
@@ -399,7 +470,7 @@ export class CollarModule extends BaseModule {
         if (this.isPluggedUp)
             return 4;
         else
-            return Math.min(this.settings.chokeLevel + this.handChokeModifier, 4);
+            return Math.min(this.settings.chokeLevel + this.handChokeModifier + this.chainChokeModifier, 4);
     }
 
     chokeTimeout: number = 0;
@@ -411,6 +482,7 @@ export class CollarModule extends BaseModule {
     eventInterval: number = 0;
     handChokeModifier: number = 0;
     handChokingMember: number = 0;
+    chainChokeModifier: number = 0;
     isPluggedUp: boolean = false;
 
     gagSpeechlessLines = [
@@ -487,6 +559,81 @@ export class CollarModule extends BaseModule {
             this.chokeTimeout = setTimeout(() => f(), delay);
     }
 
+    ChainChoke(chokingMember: Character | undefined | null, modifier: number, itemName: string = "choke chain") {        
+        if (!Player.LSCG.MiscModule.chokeChainEnabled || !chokingMember || (this.chainChokeModifier <= 0 && modifier <= 0) || (this.chainChokeModifier >= 4 && modifier >= 0))
+            return;
+        let origChokeMod = this.chainChokeModifier;
+        this.chainChokeModifier = Math.max(Math.min(this.chainChokeModifier + modifier, 4), 0);
+
+        CharacterSetFacialExpression(Player, "Eyebrows", "Soft");
+        if (modifier > 0) {
+            let chainItem = InventoryGet(Player, "ItemNeckRestraints");
+            switch (this.totalChokeLevel) {
+                case 1:
+                    clearTimeout(this.chokeTimeout);
+                    SendAction(`%NAME%'s eyes flutter as %OPP_NAME_OR_SELF_PRONOUN% tightens %POSSESSIVE% ${itemName}.`, chokingMember);
+                    setOrIgnoreBlush("Low");
+                    CharacterSetFacialExpression(Player, "Eyes", "Sad");
+                    break;
+                case 2:
+                    clearTimeout(this.chokeTimeout);
+                    SendAction(`%NAME% gasps for air as %OPP_NAME_OR_SELF_PRONOUN% tightens %POSSESSIVE% ${itemName}.`, chokingMember);
+                    setOrIgnoreBlush("Medium");
+                    CharacterSetFacialExpression(Player, "Eyes", "Surprised");
+                    break;
+                case 3:
+                    clearTimeout(this.chokeTimeout);
+                    SendAction(`%NAME%'s face runs flush, choking as %OPP_NAME_OR_SELF_PRONOUN% pulls %POSSESSIVE% ${itemName} tight, barely allowing any air to %POSSESSIVE% lungs.`, chokingMember);
+                    setOrIgnoreBlush("High");
+                    CharacterSetFacialExpression(Player, "Eyes", "Scared");
+                    break;
+                case 4:
+                    this.StartPassout(PassoutReason.CHAIN, chokingMember, 30000);
+                    break;
+                default:
+                    break;
+            }
+            if (!!chainItem?.Property?.Effect && chainItem?.Property?.Effect?.indexOf("IsLeashed") < 0) {
+                chainItem?.Property?.Effect?.push("IsLeashed");
+                ChatRoomCharacterUpdate(Player);
+            }
+        } else if (this.chainChokeModifier < origChokeMod) {
+            switch (this.totalChokeLevel) {
+                case 0:
+                    clearTimeout(this.chokeTimeout);
+                    SendAction(`%NAME%'s takes a deep breath as %OPP_NAME_OR_SELF_PRONOUN% loosens %POSSESSIVE% ${itemName}.`, chokingMember);
+                    setOrIgnoreBlush("Low");
+                    CharacterSetFacialExpression(Player, "Eyes", "Sad");
+                    let chainItem = InventoryGet(Player, "ItemNeckRestraints");
+                    if (!!chainItem?.Property?.Effect && chainItem?.Property?.Effect?.indexOf("IsLeashed") >= 0 && !ChatRoomLeashPlayer) {
+                        chainItem?.Property?.Effect?.splice(chainItem?.Property?.Effect.indexOf("IsLeashed"), 1);
+                        ChatRoomCharacterUpdate(Player);
+                    }
+                    break;
+                case 1:
+                    clearTimeout(this.chokeTimeout);
+                    SendAction(`%NAME%'s gulps in air as %OPP_NAME_OR_SELF_PRONOUN% loosens %POSSESSIVE% ${itemName}.`, chokingMember);
+                    setOrIgnoreBlush("Low");
+                    CharacterSetFacialExpression(Player, "Eyes", "Sad");
+                    break;
+                case 2:
+                    clearTimeout(this.chokeTimeout);
+                    SendAction(`%NAME% struggles for air as %OPP_NAME_OR_SELF_PRONOUN% loosens %POSSESSIVE% ${itemName}.`, chokingMember);
+                    setOrIgnoreBlush("Medium");
+                    CharacterSetFacialExpression(Player, "Eyes", "Surprised");
+                    break;
+                case 3:
+                    clearTimeout(this.chokeTimeout);
+                    SendAction(`%NAME%'s whimpers as %OPP_NAME_OR_SELF_PRONOUN% releases %POSSESSIVE% ${itemName} just enough to allowing a whisper of air into %POSSESSIVE% lungs.`, chokingMember);
+                    setOrIgnoreBlush("High");
+                    CharacterSetFacialExpression(Player, "Eyes", "Scared");
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
+
     HandChoke(chokingMember: Character | undefined | null) {        
         if (this.handChokeModifier >= 4 || !Player.LSCG.MiscModule.handChokeEnabled || !chokingMember)
             return;
@@ -498,18 +645,19 @@ export class CollarModule extends BaseModule {
         switch (this.totalChokeLevel) {
             case 1:
                 clearTimeout(this.chokeTimeout);
-                SendAction("%NAME%'s eyes flutter as %OPP_NAME% wraps %OPP_POSSESSIVE% hand around %POSSESSIVE% neck.", chokingMember);
+                SendAction("%NAME%'s eyes flutter as %OPP_NAME_OR_SELF_PRONOUN% wraps %OPP_POSSESSIVE% hand around %POSSESSIVE% neck.", chokingMember);
                 setOrIgnoreBlush("Low");
                 CharacterSetFacialExpression(Player, "Eyes", "Sad");
                 break;
             case 2:
                 clearTimeout(this.chokeTimeout);
-                SendAction("%NAME% gasps for air as %OPP_NAME% tightens %OPP_POSSESSIVE% grip on %POSSESSIVE% neck.", chokingMember);
+                SendAction("%NAME% gasps for air as %OPP_NAME_OR_SELF_PRONOUN% tightens %OPP_POSSESSIVE% grip on %POSSESSIVE% neck.", chokingMember);
                 setOrIgnoreBlush("Medium");
                 CharacterSetFacialExpression(Player, "Eyes", "Surprised");
                 break;
             case 3:
-                SendAction("%NAME%'s face runs flush, choking as %OPP_NAME% presses firmly against %POSSESSIVE% neck, barely allowing any air to %POSSESSIVE% lungs.", chokingMember);
+                clearTimeout(this.chokeTimeout);
+                SendAction("%NAME%'s face runs flush, choking as %OPP_NAME_OR_SELF_PRONOUN% presses firmly against %POSSESSIVE% neck, barely allowing any air to %POSSESSIVE% lungs.", chokingMember);
                 setOrIgnoreBlush("High");
                 CharacterSetFacialExpression(Player, "Eyes", "Scared");
                 break;
@@ -708,7 +856,7 @@ export class CollarModule extends BaseModule {
             SendAction("%NAME%'s eyes start to roll back, gasping and choking as %POSSESSIVE% collar presses in tightly and completely with a menacing hiss.");
         else if (reason == PassoutReason.HAND)
             SendAction("%NAME%'s eyes start to roll back with a groan as %OPP_NAME% completely closes %POSSESSIVE% airway with %OPP_POSSESSIVE% hand.", chokingMember);
-        else if (reason == PassoutReason.PLUGS)
+        else if (reason == PassoutReason.PLUGS || reason == PassoutReason.CHAIN)
             SendAction("%NAME%'s eyes flutter with a groan, unable to get any air to %POSSESSIVE% lungs.");
     }
 
@@ -727,6 +875,8 @@ export class CollarModule extends BaseModule {
             SendAction("%NAME% chokes and spasms, %OPP_NAME% gripping %POSSESSIVE% throat relentlessly.", chokingMember);
         else if (reason == PassoutReason.PLUGS)
             SendAction("%NAME% chokes and spasms, struggling in %POSSESSIVE% gag.");
+        else
+            SendAction("%NAME% chokes and spasms, struggling to breath.");
     }
 
     Passout2(reason: PassoutReason = PassoutReason.COLLAR, chokingMember: Character | null = null) {
@@ -745,7 +895,7 @@ export class CollarModule extends BaseModule {
         }
         else if (reason == PassoutReason.HAND)
             SendAction("%NAME% convulses weakly with a moan, %POSSESSIVE% eyes rolling back as %OPP_NAME% clenches around %POSSESSIVE% throat even tighter.", chokingMember);
-        else if (reason == PassoutReason.PLUGS)
+        else if (reason == PassoutReason.PLUGS || reason == PassoutReason.CHAIN)
             SendAction("%NAME% convulses weakly with a moan, %POSSESSIVE% eyes rolling back as %POSSESSIVE% lungs scream for air.");
     }
 
@@ -783,6 +933,27 @@ export class CollarModule extends BaseModule {
             SendAction(`As %NAME% slumps into unconsciousness, %POSSESSIVE% ${name} releases.`);
             this.ForceReleasePlugs();
             this.settings.stats.gagPassoutCount++;
+        }
+        else if (reason == PassoutReason.CHAIN)
+        {
+            let chainItem = InventoryGet(Player, "ItemNeckRestraints");
+            let name = "choke chain";
+            if (!!chainItem) {
+                name = GetItemName(chainItem);
+            }
+            SendAction(`As %NAME% slumps into unconsciousness, %POSSESSIVE% ${name} loosens.`);
+            let charRefresh = false;
+            if (!!chainItem) {
+                chainItem.Difficulty = chainItem?.Difficulty ?? 10 - 10;
+                charRefresh = true;
+            }
+            if (!!chainItem?.Property?.Effect && chainItem?.Property?.Effect?.indexOf("IsLeashed") >= 0 && !ChatRoomLeashPlayer) {
+                chainItem?.Property?.Effect?.splice(chainItem?.Property?.Effect.indexOf("IsLeashed"), 1);
+                charRefresh = true;
+            }
+            if (charRefresh) ChatRoomCharacterUpdate(Player);
+            this.chainChokeModifier = 0;
+            this.settings.stats.chainPassoutCount++;
         }
         
         if (this.settings.knockout)
