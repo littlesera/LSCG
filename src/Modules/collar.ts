@@ -194,6 +194,7 @@ export class CollarModule extends BaseModule {
             if (lastCheckedForGags + 10000 < now) {
                 lastCheckedForGags = now;
                 this.CheckGagSuffocate("TimerProcess", null);
+                this.CheckChainSuffocate("TimerProcess", null);
                 if (!this.wearingCorrectCollar && this.settings.chokeLevel > 0) {
                     this.ReleaseCollar();
                 }
@@ -492,6 +493,15 @@ export class CollarModule extends BaseModule {
         "%NAME% groans and convulses.",
         "%NAME% shudders as %POSSESSIVE% lungs burn."
     ]
+
+    CheckChainSuffocate(msg: string, sender: Character | null) {
+        if (this.chainChokeModifier > 0) {
+            let chainItem = InventoryGet(Player, "ItemNeckRestraint");
+            if (!!chainItem && chainItem.Asset.Name == "ChokeChain") {
+                this.chainChokeModifier = 0;
+            }
+        }
+    }
 
     CheckGagSuffocate(msg: string, sender: Character | null) {
         if (!Player.LSCG.MiscModule.gagChokeEnabled)
