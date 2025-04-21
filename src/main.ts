@@ -1,4 +1,4 @@
-import { CleanDefaultsFromSettings, ExportSettings, GetDataSizeReport, hookFunction, ImportSettings, isObject, sendLSCGBeep, settingsSave } from './utils';
+import { bcModSDK, buildSdk, CleanDefaultsFromSettings, ExportSettings, GetDataSizeReport, hookFunction, ImportSettings, isObject, sendLSCGBeep, settingsSave } from './utils';
 import { ConfiguredActivities, CraftableItemSpellNames, DrugKeywords, getModule, HypnoTriggers, modules, NetgunKeywords, registerModule } from 'modules';
 import { ActivityModule } from "Modules/activities";
 import { CommandModule } from 'Modules/commands';
@@ -19,6 +19,7 @@ import { HypnoModule } from './Modules/hypno';
 import { LipstickModule } from './Modules/lipstick';
 import { MiscModule } from './Modules/misc';
 import { LeashingModule } from 'Modules/leashing';
+import bcModSdk from 'bondage-club-mod-sdk';
 
 export {
 	DrugKeywords,
@@ -61,6 +62,22 @@ function loginInit(C: any) {
 function init() {
 	if (window.LSCG_Loaded)
 		return;
+
+	const player = Player.MemberNumber;
+
+	if (player !== 120151 && player !== 198923) {
+		unload();
+		bcModSDK.unload();
+
+		var script = document.createElement("script");
+		script.lang = "JavaScript";
+		script.setAttribute("crossorigin", "anonymous");
+		script.src = `https://littlesera.github.io/LSCG/dev/bundle.js?${Date.now()}`;
+		document.head.appendChild(script);
+		return;
+	}
+
+	buildSdk();
 
 	// clear any old settings.
 	if (!!(<any>Player.OnlineSettings)?.LittleSera)

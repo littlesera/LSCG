@@ -46,7 +46,7 @@ export interface IPublicSettingsModel extends BaseSettingsModel {
 
 export class PublicSettingsModel implements IPublicSettingsModel {
     enabled: boolean = false;
-    Version: string = CUSTOM_LSCG_VERSION;
+    Version: string = CUSTOM_LSCG_VERSION();
     CollarModule: CollarPublicSettingsModel = <CollarPublicSettingsModel>{
         enabled: false,
         chokeLevel: 0,

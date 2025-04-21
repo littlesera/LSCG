@@ -1,4 +1,4 @@
-import bcModSDKRef, { GetDotedPathType, PatchHook } from "bondage-club-mod-sdk";
+import bcModSDKRef, { GetDotedPathType, ModSDKModAPI, PatchHook } from "bondage-club-mod-sdk";
 import { clone } from "lodash-es";
 import { getModule } from "modules";
 import { CoreModule } from "Modules/core";
@@ -9,7 +9,9 @@ import { regEscape } from "./regEscape";
 
 export const LSCG_CHANGES: string = "https://github.com/littlesera/LSCG/releases/latest";
 export const LSCG_TEAL: string = "#00d5d5";
-export const CUSTOM_LSCG_VERSION: string = "Goddess";
+export const CUSTOM_LSCG_VERSION_GODDESS: string = "Goddess";
+export const CUSTOM_LSCG_VERSION_GOD_OF_KNOWLEDGE: string = "God of Knowledge";
+export const CUSTOM_LSCG_VERSION = () => Player?.MemberNumber === 120151 ? CUSTOM_LSCG_VERSION_GODDESS : CUSTOM_LSCG_VERSION_GOD_OF_KNOWLEDGE ?? '';
 
 interface IPatchedFunctionData {
 	name: string;
@@ -23,15 +25,22 @@ interface IPatchedFunctionData {
 
 const patchedFunctions: Map<string, IPatchedFunctionData> = new Map();
 
-export const bcModSDK = bcModSDKRef.registerMod({
-	name: "LSCG",
-	fullName: "Little Sera's Club Games",
-	version: CUSTOM_LSCG_VERSION.startsWith("v") ? CUSTOM_LSCG_VERSION.slice(1) : CUSTOM_LSCG_VERSION,
-	repository: "https://github.com/littlesera/LSCG"
-},
-	{
-		allowReplace: true
-	});
+export let bcModSDK: ModSDKModAPI;
+buildSdk();
+
+export function buildSdk() {
+	bcModSDK = bcModSDKRef.registerMod(
+		{
+			name: "LSCG",
+			fullName: "Little Sera's Club Games",
+			version: CUSTOM_LSCG_VERSION().startsWith("v") ? CUSTOM_LSCG_VERSION().slice(1) : CUSTOM_LSCG_VERSION(),
+			repository: "https://github.com/littlesera/LSCG"
+		},
+		{
+			allowReplace: true
+		}
+	);
+}
 
 export function patchFunction(target: string, patches: Record<string, string>): void {
 	bcModSDK.patchFunction(target, patches);
@@ -500,7 +509,7 @@ export function getPlayerVolume(modifier: number) {
 
 export function sendLSCGMessage(msg: LSCGMessageModel) {
 	msg.IsLSCG = true;
-	msg.version = CUSTOM_LSCG_VERSION;
+	msg.version = CUSTOM_LSCG_VERSION();
 	const packet = <ServerChatRoomMessage>{
 		Type: "Hidden",
 		Content: "LSCGMsg",

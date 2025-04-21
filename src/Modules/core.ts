@@ -99,7 +99,7 @@ export class CoreModule extends BaseModule {
             const Ghosted = (Player.GhostList ?? []).includes(C.MemberNumber!);
             const isAdmin = (Array.isArray(ChatRoomData?.Admin) && ChatRoomData?.Admin.includes(C.MemberNumber!));
             if (ModUser && ChatRoomHideIconState === 0 && !Ghosted) {
-                var version = C.IsPlayer() ? CUSTOM_LSCG_VERSION : (C as OtherCharacter).LSCG?.Version;
+                var version = C.IsPlayer() ? CUSTOM_LSCG_VERSION() : (C as OtherCharacter).LSCG?.Version;
                 var starColor = isAdmin ? "#008080" : "#00AEAE";
                 if (version != LSCG_VERSION)
                     starColor = "#ff4545";

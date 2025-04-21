@@ -536,46 +536,57 @@ export class MagicModule extends BaseModule {
         const castingSelf = target.IsPlayer();
 
         if (voiceCast)
-            castingActionStrings = voiceCastingActionStrings;
+            castingActionStrings = castingSelf ? voiceCastingSelfActionStrings : voiceCastingActionStrings;
         else if (this.VerbalMagic)
-            castingActionStrings = castingVerbalStrings;
+            castingActionStrings = castingSelf ? castingVerbalSelfStrings : castingVerbalStrings;
         else
-            castingActionStrings = rangedCastingActionStrings;
+            castingActionStrings = castingSelf ? rangedCastingSelfActionStrings : rangedCastingActionStrings;
 
         return castingActionStrings[getRandomInt(castingActionStrings.length)];
     }
 
     CastSpellActual(spell: SpellDefinition | undefined, spellTarget: Character, voiceCast: boolean, pairedTarget?: Character) {
         if (!!spell && !!spellTarget) {
-            if (!(spellTarget as any).LSCG?.MagicModule || !(spellTarget as any).LSCG?.MagicModule.enabled) {
-                if (!(spellTarget as any).LSCG?.MagicModule || !(spellTarget as any).LSCG?.MagicModule.enabled) {
-                    SendAction(`%NAME% casts ${spell.Name} at %OPP_NAME% but it seems to fizzle.`, spellTarget);
-                    this.CloseSpellMenu();
+            let wand = InventoryGet(Player, "ItemHandheld");
+            if (!!wand && !!wand.Craft && wand.Craft.MemberNumber != Player.MemberNumber && getRandomInt(2) == 0) { // 50% chance of backfire when using someone else's wand
+                let crafter = getCharacter(wand.Craft.MemberNumber ?? -1);
+                let crafterName = !crafter ? "someone" : CharacterNickname(crafter);
+                if (!spellTarget.IsPlayer()) {
+                    SendAction(`%NAME% struggles to wield ${crafterName}'s ${wand.Craft.Name}, %POSSESSIVE% spell backfiring.`);
+                    spellTarget = Player;
+                } else {
+                    SendAction(`%NAME% struggles to wield ${crafterName}'s ${wand.Craft.Name}, %POSSESSIVE% spell fizzling with no effect.`);
                     DialogLeave();
                     return;
                 }
-                else {
-                    SendAction(this.getCastingActionString(spell, InventoryGet(Player, "ItemHandheld"), voiceCast, spellTarget, pairedTarget), spellTarget);
-                }
-
-                if (spellTarget.IsPlayer()) {
-                    let check = getModule<ItemUseModule>("ItemUseModule").UnopposedActivityRoll(spellTarget);
-                    setTimeout(() => this.IncomingSpell(Player, spell, pairedTarget, Math.max(1, check.Total / 2)), 1000);
-                }
-                else
-                    sendLSCGCommand(spellTarget, "spell", [
-                        {
-                            name: "spell",
-                            value: spell
-                        }, {
-                            name: "paired",
-                            value: pairedTarget?.MemberNumber
-                        }
-                    ]);
             }
-            this.CloseSpellMenu();
-            DialogLeave();
+            else if (!(spellTarget as any).LSCG?.MagicModule || !(spellTarget as any).LSCG?.MagicModule.enabled) {
+                SendAction(`%NAME% casts ${spell.Name} at %OPP_NAME% but it seems to fizzle.`, spellTarget);
+                this.CloseSpellMenu();
+                DialogLeave();
+                return;
+            }
+            else {
+                SendAction(this.getCastingActionString(spell, InventoryGet(Player, "ItemHandheld"), voiceCast, spellTarget, pairedTarget), spellTarget);
+            }
+
+            if (spellTarget.IsPlayer()) {
+                let check = getModule<ItemUseModule>("ItemUseModule").UnopposedActivityRoll(spellTarget);
+                setTimeout(() => this.IncomingSpell(Player, spell, pairedTarget, Math.max(1, check.Total / 2)), 1000);
+            }
+            else
+                sendLSCGCommand(spellTarget, "spell", [
+                    {
+                        name: "spell",
+                        value: spell
+                    }, {
+                        name: "paired",
+                        value: pairedTarget?.MemberNumber
+                    }
+                ]);
         }
+        this.CloseSpellMenu();
+        DialogLeave();
     }
 
     TeachSpellActual(spell: SpellDefinition, target: OtherCharacter) {
