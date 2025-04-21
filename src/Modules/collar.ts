@@ -255,6 +255,7 @@ export class CollarModule extends BaseModule {
                 return;
 
             let airwaySlots = ["ItemMouth", "ItemMouth2", "ItemMouth3", "ItemNose"];
+            let neckSlots = ["ItemNeckRestraints"];
             let messagesToCheck = [
                 "ActionUse",
                 "ActionSwap",
@@ -272,9 +273,12 @@ export class CollarModule extends BaseModule {
             var targetGroup = GetMetadata(data)?.GroupName;
 
             if (target == Player.MemberNumber &&
-                (!targetGroup || airwaySlots.indexOf(targetGroup) > -1) &&
                 messagesToCheck.some(x => msg.startsWith(x))) {
-                this.CheckGagSuffocate(msg, sender);
+                if (!targetGroup || airwaySlots.indexOf(targetGroup) > -1) {
+                    this.CheckGagSuffocate(msg, sender);
+                } else if (!targetGroup || neckSlots.indexOf(targetGroup) > -1) {
+                    this.CheckChainSuffocate(msg, sender);
+                }
             }
             return;
         });
@@ -498,7 +502,7 @@ export class CollarModule extends BaseModule {
         if (this.chainChokeModifier > 0) {
             let chainItem = InventoryGet(Player, "ItemNeckRestraint");
             if (!!chainItem && chainItem.Asset.Name == "ChokeChain") {
-                this.chainChokeModifier = 0;
+                this.ChainChoke(sender, -4, GetItemName(chainItem));
             }
         }
     }
