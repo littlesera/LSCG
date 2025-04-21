@@ -1273,6 +1273,7 @@ export class ItemUseModule extends BaseModule {
 						gag!.Property!.TypeRecord["typed"] = prefType.Type;
 				}
 			}
+			ChatRoomCharacterUpdate(source);
 			ChatRoomCharacterUpdate(target);
 		}
     }
