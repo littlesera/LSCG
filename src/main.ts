@@ -14,13 +14,11 @@ import { GUI } from "Settings/settingUtils";
 import { BoopsModule } from './Modules/boops';
 import { ChaoticItemModule } from './Modules/chaotic-item';
 import { SplatterModule } from 'Modules/splatter';
-import { SplatterModule } from 'Modules/splatter';
 import { CollarModule } from './Modules/collar';
 import { HypnoModule } from './Modules/hypno';
 import { LipstickModule } from './Modules/lipstick';
 import { MiscModule } from './Modules/misc';
 import { LeashingModule } from 'Modules/leashing';
-import bcModSdk from 'bondage-club-mod-sdk';
 
 export {
 	DrugKeywords,
