@@ -1273,6 +1273,7 @@ export class ItemUseModule extends BaseModule {
 						gag!.Property!.TypeRecord["typed"] = prefType.Type;
 				}
 			}
+			ChatRoomCharacterUpdate(source);
 			ChatRoomCharacterUpdate(target);
 		}
     }
@@ -1541,7 +1542,7 @@ export class ItemUseModule extends BaseModule {
 	}
 
 	DisplayCraft(craft: CraftingItem) {
-		SendAction(`%NAME% holds up %POSSESSIVE% ${craft.Name} to the room` + (!!craft.Description ? `: ${craft.Description}` : ""));
+		SendAction(`%NAME% holds up %POSSESSIVE% ${craft.Name} to the room` + (!!craft.Description ? `: ${CraftingDescription.Decode(craft.Description)}` : ""));
 		sendLSCGMessage(<LSCGMessageModel>{
 			reply: false,
 			type: "broadcast",

@@ -14,7 +14,7 @@ import { StateModule } from "./states";
 import { drawTooltip } from "Settings/settingUtils";
 import { GrabType, LeashingModule } from "./leashing";
 import { OpacityMigrator } from "./Migrators/OpacityMigrator";
-import { SuggestionSettingMigrator } from "./Migrators/OpacityMigrator copy";
+import { SuggestionSettingMigrator } from "./Migrators/SuggestionSettingMigrator";
 import { HypnoModule } from './hypno';
 
 // >= R111

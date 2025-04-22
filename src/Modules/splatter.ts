@@ -1,9 +1,8 @@
 import { BaseModule } from "base";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
-import { GetMetadata, GetTargetCharacter, ICONS, OnActivity, SendAction, capitalizeFirstLetter, getCharacter, getCharacterByNicknameOrMemberNumber, getRandomInt, hookFunction, removeAllHooksByModule, sendLSCGCommand } from "../utils";
+import { GetTargetCharacter, ICONS, OnActivity, getCharacter, getRandomInt, hookFunction, removeAllHooksByModule } from "../utils";
 import { SplatterSettingsModel } from "Settings/Models/base";
-import { Activities, Core, getModule } from "modules";
-import { CommandListener } from "./core";
+import { Activities } from "modules";
 import { ActivityBundle } from "./activities";
 import { GuiSplatter } from "Settings/splatter";
 
