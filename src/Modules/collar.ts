@@ -138,8 +138,12 @@ export class CollarModule extends BaseModule {
             if (target != Player.MemberNumber)
                 return;
 
-            if ((msg == "ActionSwap" || msg == "ActionRemove") && GetMetadata(data)?.GroupName == "ItemNeck") {
-                this.ReleaseCollar();
+            if (msg == "ActionSwap" || msg == "ActionRemove") {
+                if (GetMetadata(data)?.GroupName == "ItemNeck") {
+                    this.ReleaseCollar();
+                } else if (GetMetadata(data)?.GroupName == "ItemNeckRestraints") {
+                    this.CheckChainSuffocate(msg, sender);
+                }
             }
         })
 
@@ -194,6 +198,7 @@ export class CollarModule extends BaseModule {
             if (lastCheckedForGags + 10000 < now) {
                 lastCheckedForGags = now;
                 this.CheckGagSuffocate("TimerProcess", null);
+                this.CheckChainSuffocate("TimerProcess", null);
                 if (!this.wearingCorrectCollar && this.settings.chokeLevel > 0) {
                     this.ReleaseCollar();
                 }
@@ -254,6 +259,7 @@ export class CollarModule extends BaseModule {
                 return;
 
             let airwaySlots = ["ItemMouth", "ItemMouth2", "ItemMouth3", "ItemNose"];
+            let neckSlots = ["ItemNeckRestraints"];
             let messagesToCheck = [
                 "ActionUse",
                 "ActionSwap",
@@ -271,9 +277,10 @@ export class CollarModule extends BaseModule {
             var targetGroup = GetMetadata(data)?.GroupName;
 
             if (target == Player.MemberNumber &&
-                (!targetGroup || airwaySlots.indexOf(targetGroup) > -1) &&
                 messagesToCheck.some(x => msg.startsWith(x))) {
-                this.CheckGagSuffocate(msg, sender);
+                if (!targetGroup || airwaySlots.indexOf(targetGroup) > -1) {
+                    this.CheckGagSuffocate(msg, sender);
+                }
             }
             return;
         });
@@ -492,6 +499,15 @@ export class CollarModule extends BaseModule {
         "%NAME% groans and convulses.",
         "%NAME% shudders as %POSSESSIVE% lungs burn."
     ]
+
+    CheckChainSuffocate(msg: string, sender: Character | null) {
+        if (this.chainChokeModifier > 0) {
+            let chainItem = InventoryGet(Player, "ItemNeckRestraint");
+            if (!chainItem || chainItem.Asset.Name != "ChokeChain") {
+                this.ChainChoke(sender, -4, !!chainItem ? GetItemName(chainItem) : "choke chain");
+            }
+        }
+    }
 
     CheckGagSuffocate(msg: string, sender: Character | null) {
         if (!Player.LSCG.MiscModule.gagChokeEnabled)

@@ -258,6 +258,7 @@ export class OpacityModule extends BaseModule {
             }
             let C = params['C'] as OtherCharacter;
             let CA = params['CA'] as Item;
+            let groupName = params['GroupName'];
             let Property = params['Property'];
             let regex = /Assets(.+)BeforeDraw/i;
             if (regex.test(funcName)) {
@@ -270,6 +271,21 @@ export class OpacityModule extends BaseModule {
 
                     let xOverride = Property?.LayerOverrides?.[layerIx]?.DrawingLeft?.[PoseType.DEFAULT] ?? undefined;
                     let yOverride = Property?.LayerOverrides?.[layerIx]?.DrawingTop?.[PoseType.DEFAULT] ?? undefined;
+
+                    // Adjust for pose. BIGGER change would be to actually save the lscg translate as offsets instead of overrides... which... should be done but will suck >.<
+                    if (!!xOverride || !!yOverride) {
+                        for (const drawPose of C.DrawPose) {
+                            const PoseDef = PoseRecord[drawPose];
+                            if (PoseDef && PoseDef.MovePosition) {
+                                const MovePosition = PoseDef.MovePosition.find(MP => MP.Group === groupName);
+                                if (MovePosition) {
+                                    if (!!xOverride) xOverride += MovePosition.X;
+                                    if (!!yOverride) yOverride += MovePosition.Y;
+                                }
+                            }
+                        }
+                    }
+
                     if (!!xOverride) ret.X = xOverride;
                     if (!!yOverride) ret.Y = yOverride + CanvasUpperOverflow;
                 }
