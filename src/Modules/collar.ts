@@ -138,8 +138,12 @@ export class CollarModule extends BaseModule {
             if (target != Player.MemberNumber)
                 return;
 
-            if ((msg == "ActionSwap" || msg == "ActionRemove") && GetMetadata(data)?.GroupName == "ItemNeck") {
-                this.ReleaseCollar();
+            if (msg == "ActionSwap" || msg == "ActionRemove") {
+                if (GetMetadata(data)?.GroupName == "ItemNeck") {
+                    this.ReleaseCollar();
+                } else if (GetMetadata(data)?.GroupName == "ItemNeckRestraints") {
+                    this.CheckChainSuffocate(msg, sender);
+                }
             }
         })
 
@@ -276,8 +280,6 @@ export class CollarModule extends BaseModule {
                 messagesToCheck.some(x => msg.startsWith(x))) {
                 if (!targetGroup || airwaySlots.indexOf(targetGroup) > -1) {
                     this.CheckGagSuffocate(msg, sender);
-                } else if (!targetGroup || neckSlots.indexOf(targetGroup) > -1) {
-                    this.CheckChainSuffocate(msg, sender);
                 }
             }
             return;
@@ -501,8 +503,8 @@ export class CollarModule extends BaseModule {
     CheckChainSuffocate(msg: string, sender: Character | null) {
         if (this.chainChokeModifier > 0) {
             let chainItem = InventoryGet(Player, "ItemNeckRestraint");
-            if (!!chainItem && chainItem.Asset.Name == "ChokeChain") {
-                this.ChainChoke(sender, -4, GetItemName(chainItem));
+            if (!chainItem || chainItem.Asset.Name != "ChokeChain") {
+                this.ChainChoke(sender, -4, !!chainItem ? GetItemName(chainItem) : "choke chain");
             }
         }
     }
