@@ -6,6 +6,7 @@ import { ModuleCategory } from "Settings/setting_definitions";
 import { removeAllHooksByModule, hookFunction, getCharacter, drawSvg, SVG_ICONS, sendLSCGMessage, settingsSave, LSCG_CHANGES, LSCG_SendLocal, mouseTooltip } from "../utils";
 import { HypnoModule } from "./hypno";
 import { CollarModule } from "./collar";
+import { SpreadingOutfitModule } from "./spreading-outfit";
 
 //import * as semver from "semver";
 import { lt } from "semver";
@@ -357,12 +358,16 @@ export class CoreModule extends BaseModule {
                     Object.assign(Player.LSCG.CollarModule, msg.settings?.CollarModule);
                 if (Player.LSCG.MagicModule.enabled && Player.LSCG.MagicModule.remoteAccess)
                     Object.assign(Player.LSCG.MagicModule, msg.settings?.MagicModule);
+                if (Player.LSCG.SpreadingOutfitModule.enabled)
+                    Object.assign(Player.LSCG.SpreadingOutfitModule, msg.settings?.SpreadingOutfitModule);
                 settingsSave(true);
                 let currentCollarPurchase = Player.LSCG?.CollarModule?.collarPurchased;
                 if (!prevCollarPurchase && currentCollarPurchase)
                     LSCG_SendLocal(`${!Sender ? "Someone" : CharacterNickname(Sender)} has purchased the Collar Module for you!`);
                 else
                     LSCG_SendLocal(`${!Sender ? "Someone" : CharacterNickname(Sender)} has accessed your remote settings!`);
+
+                getModule<SpreadingOutfitModule>("SpreadingOutfitModule")?.checkStartStopNeeded();
                 break;
             case "collar-tighten":
                 if (!!Sender) getModule<CollarModule>("CollarModule")?.TightenButtonPress(Sender);
