@@ -47,6 +47,13 @@ export class SpreadingOutfitModule extends BaseModule {
         return getModule<StateModule>("StateModule");
     }
 
+    safeword(): void {
+        this.settings.Active = false;
+        this.settings.Locked = false;
+        this.settings.Lockable = false;
+        this.settings.enabled = false;
+    }
+
     load(): void {
         if (this.settings.Active && !this.stateModule.SpreadingOutfitState.Active) {
             this.setupNextActivationTimeout();

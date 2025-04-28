@@ -130,7 +130,7 @@ export class SpreadingOutfitState extends BaseState {
                 this.SetStoredOutfit(outfitList);
                 this._spreadingCheck = 0;
                 this.Restrictions.Wardrobe = "true";
-                this.StripCharacter(outfitList);
+                //this.StripCharacter(outfitList);
 
                 return super.Activate(memberNumber, duration, emote);
             }
@@ -194,8 +194,8 @@ export class SpreadingOutfitState extends BaseState {
             let isLimited = asset && InventoryIsPermissionLimited(Player, asset.DynamicName(Player), asset.Group.Name);
             let isRoomDisallowed = !InventoryChatRoomAllow(asset?.Category ?? []);
             //let itemAlreadyWorn = InventoryIsItemInList(Player, item.Group, [item.Name]);
-            let slotAlreadyBusy = asset && InventoryGet(Player, asset.Group.Name);
-            if (slotAlreadyBusy || shouldSkipBind || itemIsAllowed == false || isBlocked || isLimited || isRoomDisallowed) {
+            let slotAlreadyFilled = asset && InventoryGet(Player, asset.Group.Name)?.Asset == asset;
+            if (slotAlreadyFilled || shouldSkipBind || itemIsAllowed == false || isBlocked || isLimited || isRoomDisallowed) {
                 i++;
                 // Do all bind after clothes are done (disabled)
                 if (i == items.length && priority == "cloth") {
