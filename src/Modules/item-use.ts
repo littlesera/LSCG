@@ -603,6 +603,10 @@ export class ItemUseModule extends BaseModule {
 						let location = acted.FocusGroup?.Name! as AssetGroupName;
 						let item: Item | null;
 						let gagTarget: GagTarget | undefined;
+
+						if (acting.IsRestrained())
+							return false;
+
 						if (location == "ItemNeck") {
 							location = "Necklace";
 							item = InventoryGet(acted, location);
