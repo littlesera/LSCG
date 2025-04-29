@@ -72,15 +72,15 @@ export function getCharacter(memberNumber: number) {
 export function getCharacterByNicknameOrMemberNumber(tgt: string): Character | undefined {
 	if (!tgt)
 		return undefined;
-	tgt = tgt.toLocaleLowerCase();
+	tgt = tgt.normalize('NFKC').toLocaleLowerCase();
 	let tgtC: Character | undefined | null;
 	if (CommonIsNumeric(tgt))
 		tgtC = getCharacter(+tgt);
 	if (!tgtC) {
-		tgtC = ChatRoomCharacter.find(c => CharacterNickname(c).toLocaleLowerCase() == tgt);
+		tgtC = ChatRoomCharacter.find(c => CharacterNickname(c).normalize('NFKC').toLocaleLowerCase() == tgt);
 	}
 	if (!tgtC) {
-		tgtC = ChatRoomCharacter.find(c => c.Name.toLocaleLowerCase() == tgt);
+		tgtC = ChatRoomCharacter.find(c => c.Name.normalize('NFKC').toLocaleLowerCase() == tgt);
 	}
 	return tgtC;
 }

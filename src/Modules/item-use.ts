@@ -342,13 +342,15 @@ export class ItemUseModule extends BaseModule {
 		})
 
 		hookFunction("StruggleMinigameStop", 1, (args, next) => {
-			if (!!StruggleProgressPrevItem && this.Struggling) {
-				let itemStr = GetItemNameAndDescriptionConcat(StruggleProgressPrevItem) ?? "";
-				if (StruggleProgress < 100 && TamperProofKeywords.some(kw => isPhraseInString(itemStr, kw))) {
-					this.PerformTamperProtection("minigame", StruggleProgressPrevItem);
+			if (this.Struggling) {
+				this.Struggling = false;
+				if (!!StruggleProgressPrevItem) {
+					let itemStr = GetItemNameAndDescriptionConcat(StruggleProgressPrevItem) ?? "";
+					if (StruggleProgress < 100 && TamperProofKeywords.some(kw => isPhraseInString(itemStr, kw))) {
+						this.PerformTamperProtection("minigame", StruggleProgressPrevItem);
+					}
 				}
 			}
-			this.Struggling = false;
 			next(args);
 		}, ModuleCategory.ItemUse);
 
@@ -601,6 +603,10 @@ export class ItemUseModule extends BaseModule {
 						let location = acted.FocusGroup?.Name! as AssetGroupName;
 						let item: Item | null;
 						let gagTarget: GagTarget | undefined;
+
+						if (acting.IsRestrained())
+							return false;
+
 						if (location == "ItemNeck") {
 							location = "Necklace";
 							item = InventoryGet(acted, location);
@@ -1478,7 +1484,14 @@ export class ItemUseModule extends BaseModule {
 		"subduing"
 	];
 
+	lastTamperProtectionFired: number = 0;
+
 	PerformTamperProtection(source: "minigame" | "activity" | "assist", item: Item | undefined = undefined, sender: Character | null = null) {
+		if (this.lastTamperProtectionFired + 5000 > CurrentTime) { // Skip tamper protection if within 5s of last trigger
+			return;
+		}
+		this.lastTamperProtectionFired = CurrentTime;
+
 		if (!Player.LSCG.GlobalModule.tamperproofEnabled)
 			return;
 
