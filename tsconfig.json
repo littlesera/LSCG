@@ -18,7 +18,7 @@
 		"resolveJsonModule": true
 	},
 	"include": [
-		//"node_modules/bc-stubs/bc/**/*.d.ts",
+		"node_modules/bc-stubs/bc/**/*.d.ts",
 		"./src/**/*"
 	],
 	// "exclude": [

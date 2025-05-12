@@ -10,7 +10,7 @@ interface PlayerOnlineSettings {
 	LSCG: import("Settings/Models/settings").SettingsModel | string;
 }
 
-interface PlayerExtensionSettings {
+interface ExtensionSettings {
     LSCG: string;
 }
 

@@ -1,2 +1,0 @@
-declare function InventoryItemVulvaClitAndDildoVibratorbeltDrawHook(data: ModularItemData, originalFunction: () => void): void;
-declare function InventoryItemVulvaClitAndDildoVibratorbeltSetOptionHook(data: ModularItemData, originalFunction: (C: Character, item: Item, newOption: ModularItemOption, previousOption: ModularItemOption, push: boolean, refresh: boolean) => void, C: Character, item: Item, newOption: ModularItemOption, previousOption: ModularItemOption, push: boolean, refresh: boolean): void;
