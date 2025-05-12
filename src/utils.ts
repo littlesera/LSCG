@@ -257,8 +257,7 @@ export function SendChat(msg: string) {
 export function replace_template(text: string, source: Character | null = null, fallbackSourceName: string = "") {
     let result = text;
 
-	let pronounItem = CharacterPronounDescription(Player);
-	let isPlayerMale = pronounItem == "He/Him" ?? false;
+	let isPlayerMale = Player.GetPronouns() === "HeHim"
 
 	let possessive = isPlayerMale ? "His" : "Her";
 	let intensive = isPlayerMale ? "Him" : "Her";
@@ -266,8 +265,8 @@ export function replace_template(text: string, source: Character | null = null, 
 	let namePossessiveDirect = (`${CharacterNickname(Player)}'s`);
 	let namePossessive = source?.IsPlayer() ? (isPlayerMale ? "his own" : "her own") : namePossessiveDirect;
 
-	let opp_pronounItem = !source ? "They/Them" : CharacterPronounDescription(source);
-	let isOppMale = opp_pronounItem == "He/Him" ?? false;
+	let opp_pronounItem = source?.GetPronouns() ?? "TheyThem";
+	let isOppMale = opp_pronounItem == "HeHim";
 
 	let oppName = source?.IsPlayer() ? (isOppMale ? "himself" : "herself") : !!source ? CharacterNickname(source) : fallbackSourceName;
 	let oppNameOrPronoun = source?.IsPlayer() ? (isOppMale ? "he" : "she") : !!source ? CharacterNickname(source) : fallbackSourceName;
