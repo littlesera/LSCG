@@ -496,7 +496,7 @@ export class HypnoModule extends BaseModule {
         if (words.length > 1 && words.indexOf(currentTrigger) > -1)
             words = words.filter(val => val != currentTrigger);
 
-        return words[getRandomInt(words.length)]?.toLocaleLowerCase();
+        return words[getRandomInt(words.length - 1)]?.toLocaleLowerCase() ?? "";
     }
 
     allowedSpeaker(speaker: Character | undefined): boolean {
