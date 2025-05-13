@@ -308,7 +308,7 @@ let savingPublishFlag = false;
 
 export function settingsSave(publish: boolean = false) {
 	if (!Player.ExtensionSettings)
-		Player.ExtensionSettings = <PlayerExtensionSettings>{};
+		Player.ExtensionSettings = <ExtensionSettings>{};
 	Player.ExtensionSettings.LSCG = LZString.compressToBase64(JSON.stringify(Player.LSCG));
 	localStorage.setItem(`LSCG_${Player.MemberNumber}_Backup`, Player.ExtensionSettings.LSCG);
 	
@@ -446,7 +446,7 @@ export function isPhraseInString(string: string, phrase: string, ignoreOOC: bool
 	return praseMatch.test(oocParsed);
 }
 
-export function addCustomEffect(C: Character | null, effect: EffectName): boolean {
+export function addCustomEffect(C: Character | null, effect: LSCGEffectName): boolean {
 	if (!C)
 		C = Player;
 	let updated = false;
@@ -455,19 +455,20 @@ export function addCustomEffect(C: Character | null, effect: EffectName): boolea
 		return updated;
 	}
 
-	if (Array.isArray(emoticon.Asset.AllowEffect))
-		emoticon.Asset.AllowEffect.push(effect);
-	else
-		(<any>emoticon.Asset).AllowEffect = [effect];
+	const allowEffect = (emoticon.Asset.AllowEffect as LSCGEffectName[]) ??= [];
+	allowEffect.push(effect);
 
 	if (!emoticon.Property) {
-		emoticon.Property = { Effect: [effect] };
+		emoticon.Property = {};
 		updated = true;
-	} else if (!emoticon.Property.Effect) {
-		emoticon.Property.Effect = [effect];
+	}
+	if (!emoticon.Property.Effect) {
+		emoticon.Property.Effect = [];
 		updated = true;
-	} else if (!emoticon.Property.Effect.includes(effect)) {
-		emoticon.Property.Effect.push(effect);
+	}
+	const propEffect = (emoticon.Property.Effect as LSCGEffectName[]);
+	if (!propEffect.includes(effect)) {
+		propEffect.push(effect);
 		updated = true;
 	}
 
@@ -478,16 +479,16 @@ export function addCustomEffect(C: Character | null, effect: EffectName): boolea
 	return updated;
 }
 
-export function removeCustomEffect(C: Character | null, effect: EffectName): boolean  {
+export function removeCustomEffect(C: Character | null, effect: LSCGEffectName): boolean  {
 	if (!C)
 		C = Player;
 	const emoticon = C.Appearance.find((a) => a.Asset.Name === "Emoticon");
 	let updated = false;
 	
-	if (emoticon?.Property?.Effect?.includes(effect)) {
-		emoticon.Property.Effect = emoticon.Property.Effect.filter(
-			(e) => e !== effect
-		);
+	const propEffect = (emoticon?.Property?.Effect ?? []) as LSCGEffectName[];
+	const effIndex = propEffect.indexOf(effect);
+	if (effIndex !== -1) {
+		propEffect.splice(effIndex, 1);
 		updated = true;
 	}
 	if (updated && ServerPlayerIsInChatRoom() && C == Player) {
@@ -535,18 +536,18 @@ export function getPlayerVolume(modifier: number) {
 export function sendLSCGMessage(msg: LSCGMessageModel) {
 	msg.IsLSCG = true;
 	msg.version = LSCG_VERSION;
-	const packet = <ServerChatRoomMessage>{
+	const packet = {
 		Type: "Hidden",
 		Content: "LSCGMsg",
 		Sender: Player.MemberNumber,
 		Dictionary: [
-			<LSCGMessageDictionaryEntry>{
+			{
 				message: msg
-			},
+			} as LSCGMessageDictionaryEntry,
 		],
 	};
 	
-	ServerSend("ChatRoomChat", packet);
+	ServerSend("ChatRoomChat", packet as unknown as ServerChatRoomMessage);
 }
 
 export function sendLSCGBeep(target: number, msg: LSCGMessageModel) {
@@ -556,7 +557,7 @@ export function sendLSCGBeep(target: number, msg: LSCGMessageModel) {
 		BeepType: "Leash", // Hijack "Leash" BeepType to bypass friends-only server restriction
 		IsSecret: true,
 		Message: msg
-	});
+	} as unknown as ServerAccountBeepRequest);
 }
 
 export function sendLSCGCommand(target: Character, commandName: LSCGCommandName, commandArgs: {name: string, value: any}[] = []) {
@@ -636,7 +637,7 @@ export function IsIncapacitated(C?: OtherCharacter | PlayerCharacter): boolean {
 	// || getModule<MiscModule>("MiscModule")?.isChloroformed; -- Need to push chloroform status to public for this to work.
 }
 
-export function GetMetadata(data: ServerChatRoomMessage): IChatRoomMessageMetadata | undefined {
+export function GetMetadata(data: ServerChatRoomMessage): LSCGChatRoomMessageMetadata | undefined {
 	let sender = getCharacter(data.Sender ?? -1);
 	if (!sender)
 		sender = Player; // No sender usually means we're actively sending it..

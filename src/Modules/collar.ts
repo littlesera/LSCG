@@ -369,14 +369,14 @@ export class CollarModule extends BaseModule {
         this.activities = getModule<ActivityModule>("ActivityModule");
 
         this.activities.AddActivity({
-            Activity: <Activity>{
+            Activity: {
                 Name: "CollarTighten",
                 MaxProgress: 90,
                 MaxProgressSelf: 90,
                 Prerequisite: ["UseHands", "ZoneAccessible"]
             },
             Targets: [
-                <ActivityTarget>{
+                {
                     Name: "ItemNeck",
                     SelfAllowed: true,
                     TargetLabel: "Tighten Collar",
@@ -385,7 +385,7 @@ export class CollarModule extends BaseModule {
                 }
             ],
             CustomPrereqs: [
-                <CustomPrerequisite>{
+                {
                     Name: "IsWearingChokeCollar",
                     Func: (acting, acted, group) => {
                         if (!((<any>acted).LSCG?.CollarModule.allowButtons ?? false))
@@ -406,14 +406,14 @@ export class CollarModule extends BaseModule {
         });
 
         this.activities.AddActivity({
-            Activity: <Activity>{
+            Activity: {
                 Name: "CollarLoosen",
                 MaxProgress: 90,
                 MaxProgressSelf: 90,
                 Prerequisite: ["UseHands", "ZoneAccessible", "IsWearingChokeCollar"]
             },
             Targets: [
-                <ActivityTarget>{
+                {
                     Name: "ItemNeck",
                     SelfAllowed: true,
                     TargetLabel: "Loosen Collar",
@@ -433,14 +433,14 @@ export class CollarModule extends BaseModule {
         });
 
         this.activities.AddActivity({
-            Activity: <Activity>{
+            Activity: {
                 Name: "CollarStats",
                 MaxProgress: 10,
                 MaxProgressSelf: 10,
                 Prerequisite: ["UseHands", "ZoneAccessible", "IsWearingChokeCollar"]
             },
             Targets: [
-                <ActivityTarget>{
+                {
                     Name: "ItemNeck",
                     SelfAllowed: true,
                     TargetLabel: "Collar Stats",

@@ -100,7 +100,7 @@ export class MagicModule extends BaseModule {
             if (!outfit || !!wardrobeOutfit && getRandomInt(2) == 0)
                 outfit = wardrobeOutfit;
 
-            spell.Outfit = <OutfitConfig>{
+            spell.Outfit = {
                 Option: OutfitOption.both,
                 Code: LZString.compressToBase64(JSON.stringify(outfit))
             }
@@ -183,14 +183,14 @@ export class MagicModule extends BaseModule {
         });
 
         activities?.AddActivity({
-            Activity: <Activity>{
+            Activity: {
                 Name: "Quaff",
                 MaxProgress: 90,
                 MaxProgressSelf: 90,
                 Prerequisite: ["UseHands", "Needs-QuaffableItem"]
             },
             Targets: [
-                <ActivityTarget>{
+                {
                     Name: "ItemMouth",
 					TargetLabel: "Quaff",
                     SelfAllowed: true,
