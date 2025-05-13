@@ -1166,7 +1166,7 @@ export class ItemUseModule extends BaseModule {
 		// Dominant vs Submissive ==> -3 to +3 modifier
 		let dominanceMod = Math.floor(getDominance(C) / 33);
 		// +5 if we own our opponent
-		let ownershipMod = Opponent?.IsOwnedByMemberNumber(C.MemberNumber!) ? 5 : 0 ?? 0;
+		let ownershipMod = Opponent?.IsOwnedByMemberNumber(C.MemberNumber!) ? 5 : 0;
 		// -4 if we're restrained
 		let restrainedMod = C.IsRestrained() ? -4 : 0;
 		// If edged, -0 to -4 based on arousal

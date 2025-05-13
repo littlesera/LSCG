@@ -56,7 +56,7 @@ export class CollarModule extends BaseModule {
     get defaultSettings() {
 		return <CollarSettingsModel>{
             enabled: false,
-            allowedMembers: Player.Ownership?.MemberNumber + "" ?? "",
+            allowedMembers: Player.Ownership?.MemberNumber.toString() ?? "",
             chokeLevel: 0,
             tightTrigger: "tighten",
             looseTrigger: "loosen",
@@ -502,7 +502,7 @@ export class CollarModule extends BaseModule {
 
     CheckChainSuffocate(msg: string, sender: Character | null) {
         if (this.chainChokeModifier > 0) {
-            let chainItem = InventoryGet(Player, "ItemNeckRestraint");
+            let chainItem = InventoryGet(Player, "ItemNeckRestraints");
             if (!chainItem || chainItem.Asset.Name != "ChokeChain") {
                 this.ChainChoke(sender, -4, !!chainItem ? GetItemName(chainItem) : "choke chain");
             }

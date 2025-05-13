@@ -14,8 +14,8 @@ export interface PoseSelection {
 }
 
 export interface ActivitySelection {
-	name: string;
-	group : string;
+	name: ActivityName | "";
+	group: string;
 }
 
 export interface ClothingSelection {
@@ -478,7 +478,7 @@ export class RemoteSuggestions extends RemoteHypno {
 						Player.FocusGroup = Group;
 						currentValue.group = Group.Name;
 						let activities = getActivities();
-						this._activityIndex = activities.map(a => a.Name).indexOf(currentValue.name);
+						this._activityIndex = currentValue.name !== "" ? activities.map(a => a.Name).indexOf(currentValue.name) : -1;
 						if (this._activityIndex == -1 || this._activityIndex >= activities.length)
 							this._activityIndex = 0;
 					}
