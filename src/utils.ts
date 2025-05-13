@@ -348,11 +348,33 @@ export function ExportSettings(): string {
 	// return LZString.compressToBase64(JSON.stringify(parsed));
 }
 
+export function parseFromBase64<T extends unknown>(data: string): T | undefined {
+	try {
+		const parsed = LZString.decompressFromBase64(data);
+		if (!parsed) return undefined;
+		return JSON.parse(parsed);
+	} catch (e) {
+		console.error(`failed to parse ${data}!`)
+		return undefined;
+	}
+}
+
+export function parseFromUTF16<T extends unknown>(data: string): T | undefined {
+	try {
+		const parsed = LZString.decompressFromUTF16(data);
+		if (!parsed) return undefined;
+		return JSON.parse(parsed);
+	} catch (e) {
+		console.error(`failed to parse ${data}!`)
+		return undefined;
+	}
+}
+
 export function ImportSettings(val: string): boolean {
 	try {
 		let oldSettings = JSON.parse(JSON.stringify(Player.LSCG));
 		localStorage.setItem(`LSCG_${Player.MemberNumber}_Backup`, LZString.compressToBase64(JSON.stringify(oldSettings)));
-		let parsed = JSON.parse(LZString.decompressFromBase64(val)) as SettingsModel;
+		let parsed = parseFromBase64<SettingsModel>(val);
 		if (!!parsed && !!parsed.GlobalModule) {
 			if (lt(parsed.Version, LSCG_VERSION)) {
 				return false;
@@ -834,7 +856,7 @@ export function GetDataSizeReport(data: any, log: boolean = true): number {
 
 export function stringIsCompressedItemBundleArray(str: string): boolean {
 	try {
-		return Array.isArray(JSON.parse(LZString.decompressFromBase64(str)))
+		return Array.isArray(parseFromBase64(str))
 	}
 	catch {
 		return false;
@@ -844,7 +866,7 @@ export function stringIsCompressedItemBundleArray(str: string): boolean {
 export function GetConfiguredItemBundlesFromSavedCode(code: string, filter: (item: ItemBundle) => boolean): ItemBundle[] {
 	let items: ItemBundle[] = [];
 	if (stringIsCompressedItemBundleArray(code)) {
-		items = JSON.parse(LZString.decompressFromBase64(code)) as ItemBundle[];
+		items = parseFromBase64<ItemBundle[]>(code) ?? [];
 	} else if (CommonIsNumeric(code) && !!Player.Wardrobe) {
 	    let ix = parseInt(code);
 	    if (ix >= 0 && ix < Player.Wardrobe.length)

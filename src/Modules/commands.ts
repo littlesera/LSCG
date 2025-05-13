@@ -1,7 +1,7 @@
 import { BaseModule } from "base";
 import { getModule, modules } from "modules";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { ExportSettings, getCharacter, getCharacterByNicknameOrMemberNumber, GetDelimitedList, ImportSettings, LSCG_SendLocal, removeAllHooksByModule, SendAction, sendLSCGCommandBeep, settingsSave, toItemBundle } from "../utils";
+import { ExportSettings, getCharacter, getCharacterByNicknameOrMemberNumber, GetDelimitedList, ImportSettings, LSCG_SendLocal, parseFromBase64, removeAllHooksByModule, SendAction, sendLSCGCommandBeep, settingsSave, toItemBundle } from "../utils";
 import { HypnoModule } from "./hypno";
 import { ItemUseModule } from "./item-use";
 import { ActivityModule } from "./activities";
@@ -176,8 +176,8 @@ export class CommandModule extends BaseModule {
 				
 					let items: ItemBundle[] = [];
 					try {
-						items = JSON.parse(LZString.decompressFromBase64(code)) as ItemBundle[];
-						if (!items)
+						items = parseFromBase64<ItemBundle[]>(code) ?? [];
+						if (!items.length)
 							LSCG_SendLocal("Invalid code.");
 					} catch {
 						LSCG_SendLocal("Invalid code.");
