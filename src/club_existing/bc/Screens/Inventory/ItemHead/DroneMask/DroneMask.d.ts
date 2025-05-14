@@ -1,2 +1,0 @@
-declare function ItemHeadDroneMaskValidateHook(data: ModularItemData, originalFunction: (C: Character, item: Item, newOption: ModularItemOption, previousOption: ModularItemOption, permitExisting?: boolean) => string, C: Character, item: Item, newOption: ModularItemOption, previousOption: ModularItemOption, permitExisting?: boolean): string;
-declare function AssetsItemHeadDroneMaskAfterDrawHook(data: TextItemData, originalFunction: (drawData: DynamicDrawingData<Record<string, unknown>>) => void, drawData: DynamicDrawingData<Record<string, unknown>>): void;

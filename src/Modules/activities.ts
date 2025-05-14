@@ -12,7 +12,7 @@ import { StateMigrator } from "./Migrators/StateMigrator";
 import { StateModule } from "./states";
 
 export interface ActivityTarget {
-    Name: AssetGroupItemName;
+    Name: LSCGAssetGroupItemName;
     SelfAllowed?: boolean | false;
     SelfOnly?: boolean | false;
     TargetLabel?: string | undefined;
@@ -22,7 +22,7 @@ export interface ActivityTarget {
 }
 
 export interface CustomPrerequisite {
-    Name: string;
+    Name: LSCGActivityPrerequisite;
     Func(acting: Character, acted: Character, group: AssetGroup): boolean;
 }
 
@@ -55,7 +55,7 @@ export interface ActivityPatch extends ActivityBundleBase {
 }
 
 export interface ActivityBundle extends ActivityBundleBase {
-    Activity: Activity;
+    Activity: LSCGActivity;
     Targets?: ActivityTarget[];
 }
 
@@ -232,7 +232,7 @@ export class ActivityModule extends BaseModule {
     RegisterActivities(): void{
         // Bap
         this.AddActivity({
-            Activity: <Activity>{
+            Activity: {
                 Name: "Bap",
                 MaxProgress: 70,
                 MaxProgressSelf: 70,
@@ -250,7 +250,7 @@ export class ActivityModule extends BaseModule {
 
         // Headbutt
         this.AddActivity({
-            Activity: <Activity>{
+            Activity: {
                 Name: "Headbutt",
                 MaxProgress: 70,
                 MaxProgressSelf: 70,
@@ -272,7 +272,7 @@ export class ActivityModule extends BaseModule {
 
         // Nuzzle
         this.AddActivity({
-            Activity: <Activity>{
+            Activity: {
                 Name: "Nuzzle",
                 MaxProgress: 70,
                 MaxProgressSelf: 70,
@@ -326,7 +326,7 @@ export class ActivityModule extends BaseModule {
 
         // Hug
         this.AddActivity({
-            Activity: <Activity>{
+            Activity: {
                 Name: "Hug",
                 MaxProgress: 70,
                 MaxProgressSelf: 70,
@@ -345,7 +345,7 @@ export class ActivityModule extends BaseModule {
 
         // Tackle
         this.AddActivity({
-            Activity: <Activity>{
+            Activity: {
                 Name: "Tackle",
                 MaxProgress: 50,
                 MaxProgressSelf: 50,
@@ -363,7 +363,7 @@ export class ActivityModule extends BaseModule {
 
         // Flop
         this.AddActivity({
-            Activity: <Activity>{
+            Activity: {
                 Name: "Flop",
                 MaxProgress: 50,
                 MaxProgressSelf: 50,
@@ -381,7 +381,7 @@ export class ActivityModule extends BaseModule {
 
         // KissEyes
         this.AddActivity({
-            Activity: <Activity>{
+            Activity: {
                 Name: "KissEyes",
                 MaxProgress: 75,
                 MaxProgressSelf: 50,
@@ -400,7 +400,7 @@ export class ActivityModule extends BaseModule {
 
         // RubPussy
         this.AddActivity({
-            Activity: <Activity>{
+            Activity: {
                 Name: "RubPussy",
                 MaxProgress: 100,
                 MaxProgressSelf: 100,
@@ -419,7 +419,7 @@ export class ActivityModule extends BaseModule {
 
         // SlapPenis
         this.AddActivity({
-            Activity: <Activity> {
+            Activity:  {
                 Name: "SlapPenis",
                 MaxProgress: 100,
                 MaxProgressSelf: 100,
@@ -541,7 +541,7 @@ export class ActivityModule extends BaseModule {
 
         // FuckWithPussy
         this.AddActivity({
-            Activity: <Activity>{
+            Activity: {
                 Name: "FuckWithPussy",
                 MaxProgress: 100,
                 MaxProgressSelf: 100,
@@ -588,7 +588,7 @@ export class ActivityModule extends BaseModule {
 
         // FuckWithAss
         this.AddActivity({
-            Activity: <Activity>{
+            Activity: {
                 Name: "FuckWithAss",
                 MaxProgress: 100,
                 MaxProgressSelf: 100,
@@ -620,7 +620,7 @@ export class ActivityModule extends BaseModule {
 
         // Suck
         this.AddActivity({
-            Activity: <Activity>{
+            Activity: {
                 Name: "Suck",
                 MaxProgress: 100,
                 MaxProgressSelf: 100,
@@ -644,7 +644,7 @@ export class ActivityModule extends BaseModule {
 
         // Throat
         this.AddActivity({
-            Activity: <Activity>{
+            Activity: {
                 Name: "Throat",
                 MaxProgress: 100,
                 MaxProgressSelf: 100,
@@ -668,7 +668,7 @@ export class ActivityModule extends BaseModule {
 
         // Suck-Handheld
         this.AddActivity({
-            Activity: <Activity>{
+            Activity: {
                 Name: "SuckHandheld",
                 MaxProgress: 100,
                 MaxProgressSelf: 100,
@@ -688,7 +688,7 @@ export class ActivityModule extends BaseModule {
 
         // Throat-Handheld
         this.AddActivity({
-            Activity: <Activity>{
+            Activity: {
                 Name: "ThroatHandheld",
                 MaxProgress: 100,
                 MaxProgressSelf: 100,
@@ -708,7 +708,7 @@ export class ActivityModule extends BaseModule {
 
         // Eat
         this.AddActivity({
-            Activity: <Activity>{
+            Activity: {
                 Name: "Eat",
                 Reverse: true,
                 MaxProgress: 50,
@@ -728,7 +728,7 @@ export class ActivityModule extends BaseModule {
 
         // Chew Item
         this.AddActivity({
-            Activity: <Activity>{
+            Activity: {
                 Name: "Chew",
                 Reverse: true,
                 MaxProgress: 50,
@@ -756,7 +756,7 @@ export class ActivityModule extends BaseModule {
 
         // GrabTongue
         this.AddActivity({
-            Activity: <Activity>{
+            Activity: {
                 Name: "GrabTongue",
                 MaxProgress: 75,
                 MaxProgressSelf: 30,
@@ -790,7 +790,7 @@ export class ActivityModule extends BaseModule {
 
         // ReleaseTongue
         this.AddActivity({
-            Activity: <Activity>{
+            Activity: {
                 Name: "ReleaseTongue",
                 MaxProgress: 20,
                 MaxProgressSelf: 20,
@@ -824,7 +824,7 @@ export class ActivityModule extends BaseModule {
 
         // HoldHand
         this.AddActivity({
-            Activity: <Activity>{
+            Activity: {
                 Name: "HoldHand",
                 MaxProgress: 75,
                 Prerequisite: ["ZoneAccessible", "TargetZoneAccessible", "UseHands"]
@@ -857,7 +857,7 @@ export class ActivityModule extends BaseModule {
 
         // ReleaseHand
         this.AddActivity({
-            Activity: <Activity>{
+            Activity: {
                 Name: "ReleaseHand",
                 MaxProgress: 20,
                 Prerequisite: ["ZoneAccessible", "UseHands"]
@@ -933,7 +933,7 @@ export class ActivityModule extends BaseModule {
 
         // ReleaseEar
         this.AddActivity({
-            Activity: <Activity>{
+            Activity: {
                 Name: "ReleaseEar",
                 MaxProgress: 30,
                 Prerequisite: ["ZoneAccessible", "UseHands"]
@@ -991,10 +991,10 @@ export class ActivityModule extends BaseModule {
 
         // Grab Tail
         this.AddActivity({
-            Activity: <Activity>{
+            Activity: {
                 Name: "Grab",
                 MaxProgress: 30,
-                Prerequisite: [""]
+                Prerequisite: []
             },
             Targets: [
                 {
@@ -1079,10 +1079,10 @@ export class ActivityModule extends BaseModule {
 
         // Release Arm/Horn/Tail
         this.AddActivity({
-            Activity: <Activity>{
+            Activity: {
                 Name: "Release",
                 MaxProgress: 30,
-                Prerequisite: [""]
+                Prerequisite: []
             },
             Targets: [
                 {
@@ -1173,7 +1173,7 @@ export class ActivityModule extends BaseModule {
 
         // ReleaseNeck
         this.AddActivity({
-            Activity: <Activity>{
+            Activity: {
                 Name: "ReleaseNeck",
                 MaxProgress: 30,
                 Prerequisite: ["ZoneAccessible", "UseHands"]
@@ -1251,7 +1251,7 @@ export class ActivityModule extends BaseModule {
 
         // ReleaseNeck
         this.AddActivity({
-            Activity: <Activity>{
+            Activity: {
                 Name: "ReleaseCollar",
                 MaxProgress: 30,
                 Prerequisite: ["ZoneAccessible", "UseHands"]
@@ -1321,7 +1321,7 @@ export class ActivityModule extends BaseModule {
 
         // ReleaseMouth
         this.AddActivity({
-            Activity: <Activity>{
+            Activity: {
                 Name: "ReleaseMouth",
                 MaxProgress: 30,
                 Prerequisite: ["ZoneAccessible", "UseHands"]
@@ -1368,7 +1368,7 @@ export class ActivityModule extends BaseModule {
 
         // GrabTongueWithFoot
         this.AddActivity({
-            Activity: <Activity>{
+            Activity: {
                 Name: "GrabTongueWithFoot",
                 MaxProgress: 75,
                 MaxProgressSelf: 30,
@@ -1402,7 +1402,7 @@ export class ActivityModule extends BaseModule {
 
         // ReleaseFootGrabbedTongue
         this.AddActivity({
-            Activity: <Activity>{
+            Activity: {
                 Name: "ReleaseFootGrabbedTongue",
                 MaxProgress: 20,
                 MaxProgressSelf: 20,
@@ -1436,7 +1436,7 @@ export class ActivityModule extends BaseModule {
 
         // Tug Crotch Rope
         this.AddActivity({
-            Activity: <Activity>{
+            Activity: {
                 Name: "Tug",
                 MaxProgress: 99,
                 MaxProgressSelf: 99,
@@ -1463,7 +1463,7 @@ export class ActivityModule extends BaseModule {
 
         // Flick
         this.AddActivity({
-            Activity: <Activity>{
+            Activity: {
                 Name: "Flick",
                 MaxProgress: 50,
                 MaxProgressSelf: 50,
@@ -1568,7 +1568,7 @@ export class ActivityModule extends BaseModule {
 
         // Chomp
         this.AddActivity({
-            Activity: <Activity>{
+            Activity: {
                 Name: "Chomp",
                 MaxProgress: 60,
                 MaxProgressSelf: 60,
@@ -1618,10 +1618,11 @@ export class ActivityModule extends BaseModule {
 
         // ReleaseChomp
         this.AddActivity({
-            Activity: <Activity>{
+            Activity: {
                 Name: "ReleaseChomp",
                 MaxProgress: 20,
-                MaxProgressSelf: 20
+                MaxProgressSelf: 20,
+                Prerequisite: [],
             },
             Targets: [
                 {
@@ -1694,7 +1695,7 @@ export class ActivityModule extends BaseModule {
             this.CustomPrerequisiteFuncs.set(prereq.Name, prereq.Func)
     }
 
-    RegisterCustomFuncs(bundle: ActivityBundleBase, activity: Activity) {
+    RegisterCustomFuncs(bundle: ActivityBundleBase, activity: LSCGActivity) {
         bundle.CustomPrereqs?.forEach(prereq => {
             if (activity!.Prerequisite.indexOf(prereq.Name) == -1)
                 activity!.Prerequisite.push(prereq.Name);
@@ -1719,27 +1720,28 @@ export class ActivityModule extends BaseModule {
     }
 
     PatchActivity(patch: ActivityPatch) {
-        var activity = ActivityFemale3DCG.find(a => a.Name == patch.ActivityName);
+        const activity = ActivityFemale3DCG.find(a => a.Name == patch.ActivityName) as LSCGActivity;
         if (!activity)
             return;
 
         if (!!patch.AddedTargets) {
             patch.AddedTargets.forEach(tgt => {
-                this.AddTargetToActivity(activity!, tgt);
+                this.AddTargetToActivity(activity, tgt);
             });
         }
 
         if (!!patch.RemovedTargets) {
             patch.RemovedTargets.forEach(tgt => {
-                activity!.Target = activity!.Target.filter(t => t != tgt);
-                if (!!activity!.TargetSelf && Array.isArray(activity!.TargetSelf))
-                    activity!.TargetSelf = activity!.TargetSelf!.filter(t => t != tgt);
+                if (Array.isArray(activity.Target))
+                    activity.Target = activity.Target.filter(t => t != tgt);
+                if (Array.isArray(activity.TargetSelf))
+                    activity.TargetSelf = activity.TargetSelf.filter(t => t != tgt);
             })
         }
 
         if (!!patch.RemovedPrerequisites) {
             patch.RemovedPrerequisites.forEach(prereq => {
-                activity!.Prerequisite = activity!.Prerequisite.filter(p => p != prereq);
+                activity.Prerequisite = activity!.Prerequisite.filter(p => p != prereq);
             });
         }
 
@@ -1748,14 +1750,14 @@ export class ActivityModule extends BaseModule {
         this.PatchedActivities.push(patch.ActivityName);
     }
 
-    AddTargetToActivity(activity: Activity, tgt: ActivityTarget) {
+    AddTargetToActivity(activity: LSCGActivity, tgt: ActivityTarget) {
         tgt.TargetLabel = tgt.TargetLabel ?? activity.Name.substring(5);
 
         if (tgt.SelfAllowed) {
             if (!activity.TargetSelf)
                 activity.TargetSelf = [];
-            if (typeof activity.TargetSelf != "boolean" && (<AssetGroupItemName[]>activity.TargetSelf).indexOf(tgt.Name) == -1) {
-                (<AssetGroupItemName[]>activity.TargetSelf).push(tgt.Name);
+            if (typeof activity.TargetSelf != "boolean" && (activity.TargetSelf).indexOf(tgt.Name) == -1) {
+                activity.TargetSelf.push(tgt.Name);
             }
         }
 
@@ -1809,7 +1811,7 @@ export class ActivityModule extends BaseModule {
             this.AddTargetToActivity(activity, tgt);
         });
 
-        ActivityFemale3DCG.push(activity);
+        ActivityFemale3DCG.push(activity as Activity);
         ActivityFemale3DCGOrdering.push(activity.Name);
     }
 

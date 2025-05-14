@@ -1,4 +1,4 @@
-import { CleanDefaultsFromSettings, ExportSettings, GetDataSizeReport, hookFunction, ICONS, ImportSettings, isObject, sendLSCGBeep, settingsSave } from './utils';
+import { CleanDefaultsFromSettings, ExportSettings, GetDataSizeReport, hookFunction, ICONS, ImportSettings, isObject, parseFromBase64, parseFromUTF16, sendLSCGBeep, settingsSave } from './utils';
 import { CheckVersionUpdate, ConfiguredActivities, CraftableItemSpellNames, DrugKeywords, getModule, HypnoTriggers, modules, NetgunKeywords, registerModule } from 'modules';
 import { SettingsModel } from 'Settings/Models/settings';
 import { HypnoModule } from './Modules/hypno';
@@ -70,15 +70,15 @@ function init() {
 	if (!!(<any>Player.OnlineSettings)?.ClubGames)
 		delete (<any>Player.OnlineSettings).ClubGames;
 
-	let settings = Player.ExtensionSettings?.LSCG || Player.OnlineSettings?.LSCG;
-	let localSettings = localStorage.getItem(`LSCG_${Player.MemberNumber}_Backup`);
+	let settings = Player.ExtensionSettings?.LSCG ?? Player.OnlineSettings?.LSCG ?? "";
+	let localSettings = localStorage.getItem(`LSCG_${Player.MemberNumber}_Backup`) ?? "";
 	
 	// If localStorage setting backup exist, compare the versions to restore from backup
 	if (!!localSettings) {
 		let localIsMoreRecent = false;
 		try {
-			let settingsVer = (<SettingsModel>JSON.parse(LZString.decompressFromBase64(settings || null) || "{}")).Version || "v0.0.0";
-			let localSettingsVer = (<SettingsModel>JSON.parse(LZString.decompressFromBase64(localSettings || null) || "{}")).Version || "v0.0.0";
+			let settingsVer = parseFromBase64<SettingsModel>(settings)?.Version || "v0.0.0";
+			let localSettingsVer = parseFromBase64<SettingsModel>(localSettings)?.Version || "v0.0.0";
 			localIsMoreRecent = lt(settingsVer, localSettingsVer);
 		} catch (error) {
 			console.debug(`LSCG: Failed to compare local and remote setting versions -- ${error}`);
@@ -89,20 +89,14 @@ function init() {
 	}
 
 	if (!!settings && typeof settings == "string") {
-		localStorage.setItem(`LSCG_${Player.MemberNumber}_Backup`, settings)
-		let parsed = <SettingsModel>{};
-		try {
-			parsed = JSON.parse(LZString.decompressFromBase64(settings));
-			if (!parsed)
-				parsed = JSON.parse(LZString.decompressFromUTF16(settings));
-		} catch (error) {
-			try {
-				parsed = JSON.parse(LZString.decompressFromUTF16(settings)); // Fallback to old compression
-			} catch (secondError) {
-				console.warn("LSCG: Failed to load corrupted server data.", error);
-				throw error; // Throw error here to prevent LSCG from later trying to save corrupted data back and blowing away existing settings.	
-			}
+		let parsed = parseFromBase64<SettingsModel>(settings);
+		if (!parsed) {
+			parsed = parseFromUTF16<SettingsModel>(settings);
 		}
+		if (!parsed) {
+			throw new Error(`LSCG: Failed to load corrupted server data.`)
+		}
+		localStorage.setItem(`LSCG_${Player.MemberNumber}_Backup`, settings)
 		Player.LSCG = parsed || <SettingsModel>{};
 		// Clean old settings
 		if (!!Player.OnlineSettings?.LSCG) {
@@ -111,7 +105,7 @@ function init() {
 		}
 	}
 	else if (!!settings)
-		Player.LSCG = <SettingsModel>settings || <SettingsModel>{};
+		Player.LSCG = settings as unknown as SettingsModel;
 
 	if (!init_modules()) {
 		unload();

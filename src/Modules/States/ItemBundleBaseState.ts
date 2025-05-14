@@ -1,4 +1,4 @@
-import { BC_ItemsToItemBundles, settingsSave, stringIsCompressedItemBundleArray } from "utils";
+import { BC_ItemsToItemBundles, parseFromBase64, settingsSave, stringIsCompressedItemBundleArray } from "utils";
 import { BaseState } from "./BaseState";
 import { SpellDefinition } from "Settings/Models/magic";
 
@@ -7,12 +7,7 @@ export abstract class ItemBundleBaseState extends BaseState {
     get StoredOutfit(): ItemBundle[] | undefined {
         let ext = this.config.extensions[this.storedOutfitKey];
         if (!ext) return undefined;
-        try {
-            return JSON.parse(LZString.decompressFromBase64(ext));
-        }
-        catch {
-            return undefined;
-        }
+        return parseFromBase64<ItemBundle[]>(ext);
     }
 
     SetStoredOutfit() {
@@ -46,7 +41,7 @@ export abstract class ItemBundleBaseState extends BaseState {
     GetConfiguredItemBundles(code: string, filter: (item: ItemBundle) => boolean): ItemBundle[] {
         let items: ItemBundle[] = [];
         if (stringIsCompressedItemBundleArray(code)) {
-            items = JSON.parse(LZString.decompressFromBase64(code)) as ItemBundle[];
+            items = parseFromBase64<ItemBundle[]>(code) ?? [];
         } 
         // Code needs to actually be full info here, build it on the source side..
         // else if (CommonIsNumeric(code) && !!Player.Wardrobe) {
