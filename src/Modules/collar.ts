@@ -502,7 +502,7 @@ export class CollarModule extends BaseModule {
 
     CheckChainSuffocate(msg: string, sender: Character | null) {
         if (this.chainChokeModifier > 0) {
-            let chainItem = InventoryGet(Player, "ItemNeckRestraint");
+            let chainItem = InventoryGet(Player, "ItemNeckRestraints");
             if (!chainItem || chainItem.Asset.Name != "ChokeChain") {
                 this.ChainChoke(sender, -4, !!chainItem ? GetItemName(chainItem) : "choke chain");
             }

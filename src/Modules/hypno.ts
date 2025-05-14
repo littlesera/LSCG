@@ -513,11 +513,11 @@ export class HypnoModule extends BaseModule {
         if (!this.StateModule.settings.immersive || !this.allowedSpeaker(speaker))
             return msg;
 
-        let triggers = this.triggers;
+        let triggers = this.triggers ?? [];
         if (this.hypnoActivated)
-            triggers = this.awakeners;
-        triggers.forEach(t => {
-            let tWords = t.split(" ");
+            triggers = this.awakeners ?? [];
+        triggers?.filter(t => !!t).forEach(t => {
+            let tWords = t?.split(" ");
             tWords = tWords.map(tw => {
                 let hashLength = Math.max(3, tw.length) + (getRandomInt(4) - 2);
                 return new Array(hashLength + 1).join('-');
