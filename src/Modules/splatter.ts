@@ -599,7 +599,7 @@ export class SplatterModule extends BaseModule {
                 case "crotch": targetGroupName = "ItemVulva"; break;
                 case "ass": targetGroupName = "ItemButt"; break;
                 case "nipples": targetGroupName = "ItemNipples"; break;
-                case "all": targetGroupName = ""; break;
+                case "all": (<string>targetGroupName) = ""; break;
             }
             let group = ActivityGetGroupOrMirror(target.AssetFamily, targetGroupName);
             let tmp = target.FocusGroup; // haaack
