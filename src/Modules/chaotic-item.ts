@@ -321,7 +321,7 @@ class PropertyMutator {
 
     // Workaround to bypass TS custom type
     private setItemPropertyValue(obj: ItemProperties, property: string, value: any) {
-        obj[property as keyof typeof obj] = value;
+        (<any>obj)[property] = value;
         return obj;
     }
 

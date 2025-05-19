@@ -1,4 +1,4 @@
-import { getCharacter, isBind, isCloth } from "utils";
+import { getCharacter, isBind, isCloth, parseFromBase64 } from "utils";
 import { BaseState } from "./BaseState";
 import { StateModule } from "Modules/states";
 import { OutfitOption, SpellDefinition } from "Settings/Models/magic";
@@ -6,7 +6,7 @@ import { ItemBundleBaseState } from "./ItemBundleBaseState";
 
 export class RedressedState extends ItemBundleBaseState {
     static CleanItemCode(code: string): string {
-        let items = JSON.parse(LZString.decompressFromBase64(code)) as ItemBundle[];
+        let items = parseFromBase64<ItemBundle[]>(code);
         if (!items || !Array.isArray(items))
             return code;
         items = items.filter(item => RedressedState.ItemIsAllowed(item));
@@ -45,7 +45,7 @@ export class RedressedState extends ItemBundleBaseState {
         if (!spell)
             return RedressedState.AssetIsAllowed(asset);
 
-        let neckExclusions = Player.LSCG.MagicModule.allowOutfitToChangeNeckItems ? [] : ["ItemNeck", "ItemNeckAccessories", "ItemNeckRestraints"];
+        let neckExclusions: AssetGroupItemName[] = Player.LSCG.MagicModule.allowOutfitToChangeNeckItems ? [] : ["ItemNeck", "ItemNeckAccessories", "ItemNeckRestraints"];
         switch(spell.Outfit?.Option) {
             case OutfitOption.clothes_only:
                 return isCloth(asset);

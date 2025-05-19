@@ -169,7 +169,7 @@ export class InjectorModule extends BaseModule {
                 let glass = InventoryGet(Player, "ItemHandheld");
                 if (glass?.Asset.Name == "GlassFilled"){
                     if (!glass.Property) glass.Property = {};
-                    if (!(<any>glass.Property).SipLimit) (<any>glass.Property).SipLimit = this.settings.sipLimit;
+                    if (!glass.Property.SipLimit) glass.Property.SipLimit = this.settings.sipLimit;
                 }
             }
         });
@@ -184,11 +184,11 @@ export class InjectorModule extends BaseModule {
                     if (glass?.Asset.Name == "GlassFilled") {
                         if (!fullPour) {
                             if (!glass.Property) glass.Property = {};
-                            if (!(<any>glass.Property).SipLimit) (<any>glass.Property).SipLimit = this.settings.sipLimit;
-                            if (!(<any>glass.Property).SipCount) (<any>glass.Property).SipCount = 1;
-                            else (<any>glass.Property).SipCount++;
+                            if (!glass.Property.SipLimit) glass.Property.SipLimit = this.settings.sipLimit;
+                            if (!glass.Property.SipCount) glass.Property.SipCount = 1;
+                            else glass.Property.SipCount++;
                         }
-                        if (fullPour || (<any>glass.Property).SipLimit > 0 && (<any>glass.Property).SipCount >= (<any>glass.Property).SipLimit) {
+                        if (fullPour || glass.Property!.SipLimit! > 0 && glass.Property!.SipCount! >= glass.Property!.SipLimit!) {
                             SendAction("%NAME%'s uses up the last drop of %POSSESSIVE% drink.");
                             var craft = glass.Craft;
                             InventoryRemove(Player, "ItemHandheld", false);
@@ -216,19 +216,19 @@ export class InjectorModule extends BaseModule {
             if (charSettings.sedativeLevel + charSettings.mindControlLevel + charSettings.hornyLevel > 0) {
                 let bars: DrugLevel[] = [];
                 if (charSettings.sedativeLevel > 0)
-                    bars.push(<DrugLevel>{
+                    bars.push({
                         type: "sedative",
                         level: charSettings.sedativeLevel,
                         max: charSettings.sedativeMax * charSettings.drugLevelMultiplier
                     });
                 if (charSettings.mindControlLevel > 0)
-                    bars.push(<DrugLevel>{
+                    bars.push({
                         type: "mindcontrol",
                         level: charSettings.mindControlLevel,
                         max: charSettings.mindControlMax * charSettings.drugLevelMultiplier
                     });
                 if (charSettings.hornyLevel > 0)
-                    bars.push(<DrugLevel>{
+                    bars.push({
                         type: "horny",
                         level: charSettings.hornyLevel,
                         max: charSettings.hornyLevelMax * charSettings.drugLevelMultiplier
@@ -265,7 +265,7 @@ export class InjectorModule extends BaseModule {
         if (!!this.activityModule) {
             // Netgun
             this.activityModule.AddActivity({
-                Activity: <Activity>{
+                Activity: {
                     Name: "NetGun",
                     MaxProgress: 50,
                     MaxProgressSelf: 50,
@@ -293,7 +293,7 @@ export class InjectorModule extends BaseModule {
                         }
                     }
                 ],
-                CustomAction: <CustomAction>{
+                CustomAction: {
                     Func: (target, args, next) => {
                         if (!!target) {
                             // if (target.MemberName != Player.MemberNumber) {
@@ -313,15 +313,15 @@ export class InjectorModule extends BaseModule {
             });
 
             // Pour drink into funnel
-            this.activityModule?.AddActivity(<ActivityBundle>{
-                Activity: <Activity>{
+            this.activityModule?.AddActivity({
+                Activity: {
                     Name: "FunnelPour",
                     MaxProgress: 90,
                     MaxProgressSelf: 90,
                     Prerequisite: ["UseHands", "Needs-PourableItem"]
                 },
                 Targets: [
-                    <ActivityTarget>{
+                    {
                         Name: "ItemMouth",
                         TargetLabel: "Pour into Funnel",
                         SelfAllowed: true,
@@ -330,11 +330,11 @@ export class InjectorModule extends BaseModule {
                     }
                 ],
                 CustomPrereqs: [
-                    <CustomPrerequisite>{
+                    {
                         Name: "CanPourIntoFunnel",
                         Func: (acting, acted, group) => {
                             let funnelGag = [
-                                InventoryGet(acted, "ItemMouth1"),
+                                InventoryGet(acted, "ItemMouth"),
                                 InventoryGet(acted, "ItemMouth2"),
                                 InventoryGet(acted, "ItemMouth3")
                             ].find(g => g?.Asset.Name == "FunnelGag");
@@ -345,11 +345,11 @@ export class InjectorModule extends BaseModule {
             });
         }        
 
-        this.activityModule.AddCustomPrereq(<CustomPrerequisite>{
+        this.activityModule.AddCustomPrereq({
             Name: "InjectorIsNotNetgun", 
             Func: (acting, acted, group) => !this.HasNetgun(acting)
         });
-        var injectActivity = ActivityFemale3DCG.find(act => act.Name == "Inject");
+        const injectActivity = ActivityFemale3DCG.find(act => act.Name == "Inject") as LSCGActivity;
         injectActivity?.Prerequisite.push("InjectorIsNotNetgun");
     }
 

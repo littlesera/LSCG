@@ -48,7 +48,7 @@ const locations: { [key: string]: string[] } = {
     nipples: ['r']
 };
 
-const PossibleSplatterGroups: string[] = [
+const PossibleSplatterGroups: LSCGAssetGroupBodyName[] = [
     "BodyMarkings",
     "FaceMarkings",
     "Mask"
@@ -62,11 +62,11 @@ export class SplatterMapping {
     }
 
     getSplatItems(): Array<Item | null> {
-        return PossibleSplatterGroups.map(grp => InventoryGet(this.C, grp)).filter(m => !!m && m.Asset.Name == "Splatters");
+        return PossibleSplatterGroups.map(grp => InventoryGet(this.C, grp as AssetGroupBodyName)).filter(m => !!m && m.Asset.Name == "Splatters");
     }
 
-    getOpenSplatSlot(): string | undefined {
-        return PossibleSplatterGroups.find(grp => !InventoryGet(this.C, grp));
+    getOpenSplatSlot(): AssetGroupBodyName | undefined {
+        return PossibleSplatterGroups.find(grp => !InventoryGet(this.C, grp as AssetGroupBodyName)) as AssetGroupBodyName;
     }
 
     getMergedProperty(): RecordObject {
@@ -298,11 +298,12 @@ export class SplatterModule extends BaseModule {
             }
         });
 
-        Activities().AddActivity(<ActivityBundle>{
-            Activity: <Activity>{
+        Activities().AddActivity({
+            Activity: {
                 Name: "Splat",
                 MaxProgress: 90,
-                MaxProgressSelf: 90
+                MaxProgressSelf: 90,
+                Prerequisite: [],
             },
             Targets: [
                 {
@@ -532,7 +533,7 @@ export class SplatterModule extends BaseModule {
 
     getSplats(C?: Character): Array<Item | null> {
         C = C ?? Player;
-        return [InventoryGet(C, "BodyMarkings"),InventoryGet(C, "FaceMarkings")].filter(m => !!m && m.Asset.Name == "Splatter");
+        return [InventoryGet(C, "BodyMarkings"),InventoryGet(C, "FaceMarkings" as AssetGroupBodyName)].filter(m => !!m && m.Asset.Name == "Splatter");
     }    
     
     splatSlotOccupied() {
@@ -598,12 +599,12 @@ export class SplatterModule extends BaseModule {
                 case "crotch": targetGroupName = "ItemVulva"; break;
                 case "ass": targetGroupName = "ItemButt"; break;
                 case "nipples": targetGroupName = "ItemNipples"; break;
-                case "all": targetGroupName = ""; break;
+                case "all": (<string>targetGroupName) = ""; break;
             }
             let group = ActivityGetGroupOrMirror(target.AssetFamily, targetGroupName);
             let tmp = target.FocusGroup; // haaack
             target.FocusGroup = group;
-            let activity = ActivityAllowedForGroup(target, targetGroupName).find(a => a.Activity.Name == "LSCG_Splat");
+            let activity = ActivityAllowedForGroup(target, targetGroupName).find(a => (a.Activity as LSCGActivity).Name == "LSCG_Splat");
             target.FocusGroup = tmp;
             if (group != null && activity != null) {
                 ActivityRun(Player, target, group, activity, true);

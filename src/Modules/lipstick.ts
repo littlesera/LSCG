@@ -107,7 +107,7 @@ export class LipstickModule extends BaseModule {
     }
     
     addLipstickMarks() {
-        let slot = "Mask";
+        let slot: AssetGroupName = "Mask";
         var mask = InventoryGet(Player, "Mask");
         if (!!mask){
             slot = "ClothAccessory";

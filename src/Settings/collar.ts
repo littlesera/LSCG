@@ -98,7 +98,7 @@ export class GuiCollar extends GuiSubscreen {
 					id: "collar_allowedMembers",
 					label: "Allowed Members IDs:",
 					description: "Comma separated list of member IDs who can activate the collar. Leave empty for item permissions.",
-					setting: () => this.settings.allowedMembers ?? (Player.Ownership?.MemberNumber+"" ?? ""),
+					setting: () => this.settings.allowedMembers ?? Player.Ownership?.MemberNumber.toString() ?? "",
 					setSetting: (val) => this.settings.allowedMembers = val
 				},<Setting>{
 					type: "checkbox",

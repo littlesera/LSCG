@@ -150,11 +150,11 @@ export class HypnoState extends BaseState {
 
     SetHypnoEyes() {
         let hypnoSettings = getModule<HypnoModule>("HypnoModule")?.settings;
-        var eyeAsset1 = AssetGet("Female3DCG", "Eyes", "Eyes" + hypnoSettings.hypnoEyeType ?? 9);
+        var eyeAsset1 = AssetGet("Female3DCG", "Eyes", "Eyes" + (hypnoSettings.hypnoEyeType ?? 9));
         if (!eyeAsset1)
             eyeAsset1 = AssetGet("Female3DCG", "Eyes", "Eyes9");
 
-            var eyeAsset2 = AssetGet("Female3DCG", "Eyes2", "Eyes" + hypnoSettings.hypnoEyeType ?? 9);
+            var eyeAsset2 = AssetGet("Female3DCG", "Eyes2", "Eyes" + (hypnoSettings.hypnoEyeType ?? 9));
         if (!eyeAsset2)
             eyeAsset2 = AssetGet("Female3DCG", "Eyes", "Eyes9");
 
