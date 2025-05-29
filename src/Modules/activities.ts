@@ -1681,7 +1681,7 @@ export class ActivityModule extends BaseModule {
                     SelfAllowed: true,
                     SelfOnly: true,
                     TargetLabel: "Swallow",
-                    TargetAction: "SourceCharacter gulps and swallows the mess in PronounPossessive mouth."
+                    TargetAction: "SourceCharacter gulps and swallows."
                 }
             ],
             CustomPrereqs: [
