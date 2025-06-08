@@ -247,7 +247,6 @@ export class MagicModule extends BaseModule {
         return this.Enabled &&
             targetHasMagicEnabled &&
             hasItemPermission &&
-            (!requireHands || Player.CanInteract()) &&
             whitelisted &&
             (this.CanCastSpell(target as OtherCharacter) ||
                 this.CanWildMagic(target as OtherCharacter) ||
