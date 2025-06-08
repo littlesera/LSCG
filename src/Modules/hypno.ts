@@ -1,7 +1,7 @@
 import { BaseModule } from 'base';
 import { HypnoInfluence, HypnoSettingsModel, LSCGHypnoInstruction } from 'Settings/Models/hypno';
 import { ModuleCategory, Subscreen } from 'Settings/setting_definitions';
-import { settingsSave, parseMsgWords, OnAction, OnActivity, SendAction, getRandomInt, hookFunction, removeAllHooksByModule, callOriginal, setOrIgnoreBlush, isAllowedMember, isPhraseInString, GetTargetCharacter, GetDelimitedList, GetActivityEntryFromContent, escapeRegExp, IsActivityAllowed, LSCG_SendLocal, getCharacter, sendLSCGCommandBeep, htmlToElement, OnChat, getDominance, getCharacterByNicknameOrMemberNumber, getActivities, isCloth, replace_template, hookBCXVoice } from '../utils';
+import { settingsSave, parseMsgWords, OnAction, OnActivity, SendAction, getRandomInt, hookFunction, removeAllHooksByModule, callOriginal, setOrIgnoreBlush, isAllowedMember, isPhraseInString, GetTargetCharacter, GetDelimitedList, GetActivityEntryFromContent, escapeRegExp, IsActivityAllowed, LSCG_SendLocal, getCharacter, sendLSCGCommandBeep, htmlToElement, OnChat, getDominance, getCharacterByNicknameOrMemberNumber, getActivities, isCloth, replace_template, hookBCXVoice, parseFromBase64 } from '../utils';
 import { GuiHypno } from 'Settings/hypno';
 import { getModule } from 'modules';
 import { ActivityEntryModel } from 'Settings/Models/activities';
@@ -327,8 +327,8 @@ export class HypnoModule extends BaseModule {
         if (!this._bcxHooked) {
             this._bcxHooked = hookBCXVoice((evt) => {
                 let msg = evt?.message;
-                if (!!msg && typeof msg === 'string' && msg.startsWith("[Voice] ") && !!Player && !!Player.OnlineSettings && !! (<any>Player.OnlineSettings).BCX) {
-                    let bcxSettings = JSON.parse(LZString.decompressFromBase64((<any>Player.OnlineSettings).BCX));
+                if (!!msg && typeof msg === 'string' && msg.startsWith("[Voice] ") && ((<any>Player.ExtensionSettings).BCX || (<any>Player.OnlineSettings).BCX)) {
+                    let bcxSettings = parseFromBase64<any>((<any>Player.ExtensionSettings).BCX) ?? parseFromBase64<any>((<any>Player.OnlineSettings).BCX);
                     let senderId = bcxSettings?.conditions?.rules?.conditions?.other_constant_reminder?.addedBy as number;
                     if (!!senderId) {
                         msg = msg.substring(8);
@@ -496,7 +496,7 @@ export class HypnoModule extends BaseModule {
         if (words.length > 1 && words.indexOf(currentTrigger) > -1)
             words = words.filter(val => val != currentTrigger);
 
-        return words[getRandomInt(words.length)]?.toLocaleLowerCase();
+        return words[getRandomInt(words.length - 1)]?.toLocaleLowerCase() ?? "";
     }
 
     allowedSpeaker(speaker: Character | undefined): boolean {
@@ -513,11 +513,11 @@ export class HypnoModule extends BaseModule {
         if (!this.StateModule.settings.immersive || !this.allowedSpeaker(speaker))
             return msg;
 
-        let triggers = this.triggers;
+        let triggers = this.triggers ?? [];
         if (this.hypnoActivated)
-            triggers = this.awakeners;
-        triggers.forEach(t => {
-            let tWords = t.split(" ");
+            triggers = this.awakeners ?? [];
+        triggers?.filter(t => !!t).forEach(t => {
+            let tWords = t?.split(" ");
             tWords = tWords.map(tw => {
                 let hashLength = Math.max(3, tw.length) + (getRandomInt(4) - 2);
                 return new Array(hashLength + 1).join('-');

@@ -38,7 +38,7 @@ export class XRayVisionState extends BaseState {
     get WearingGlasses(): boolean {
         let newWearingState = false;
         let eyewear = InventoryGet(Player, "ItemHead");
-        if (!!eyewear && this.PossibleXRayEyewear.some(name => name == eyewear?.Asset?.Name ?? "")) {
+        if (eyewear && this.PossibleXRayEyewear.some(name => name === eyewear!.Asset.Name)) {
             let itemStr = GetItemNameAndDescriptionConcat(eyewear) ?? "";
             newWearingState = this.XRayKeywords.some(key => isPhraseInString(itemStr ?? "", key));
         }

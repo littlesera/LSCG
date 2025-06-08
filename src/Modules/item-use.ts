@@ -342,13 +342,15 @@ export class ItemUseModule extends BaseModule {
 		})
 
 		hookFunction("StruggleMinigameStop", 1, (args, next) => {
-			if (!!StruggleProgressPrevItem && this.Struggling) {
-				let itemStr = GetItemNameAndDescriptionConcat(StruggleProgressPrevItem) ?? "";
-				if (StruggleProgress < 100 && TamperProofKeywords.some(kw => isPhraseInString(itemStr, kw))) {
-					this.PerformTamperProtection("minigame", StruggleProgressPrevItem);
+			if (this.Struggling) {
+				this.Struggling = false;
+				if (!!StruggleProgressPrevItem) {
+					let itemStr = GetItemNameAndDescriptionConcat(StruggleProgressPrevItem) ?? "";
+					if (StruggleProgress < 100 && TamperProofKeywords.some(kw => isPhraseInString(itemStr, kw))) {
+						this.PerformTamperProtection("minigame", StruggleProgressPrevItem);
+					}
 				}
 			}
-			this.Struggling = false;
 			next(args);
 		}, ModuleCategory.ItemUse);
 
@@ -601,6 +603,10 @@ export class ItemUseModule extends BaseModule {
 						let location = acted.FocusGroup?.Name! as AssetGroupName;
 						let item: Item | null;
 						let gagTarget: GagTarget | undefined;
+
+						if (acting.IsRestrained())
+							return false;
+
 						if (location == "ItemNeck") {
 							location = "Necklace";
 							item = InventoryGet(acted, location);
@@ -1160,7 +1166,7 @@ export class ItemUseModule extends BaseModule {
 		// Dominant vs Submissive ==> -3 to +3 modifier
 		let dominanceMod = Math.floor(getDominance(C) / 33);
 		// +5 if we own our opponent
-		let ownershipMod = Opponent?.IsOwnedByMemberNumber(C.MemberNumber!) ? 5 : 0 ?? 0;
+		let ownershipMod = Opponent?.IsOwnedByMemberNumber(C.MemberNumber!) ? 5 : 0;
 		// -4 if we're restrained
 		let restrainedMod = C.IsRestrained() ? -4 : 0;
 		// If edged, -0 to -4 based on arousal
@@ -1241,6 +1247,9 @@ export class ItemUseModule extends BaseModule {
 		var color = itemToMove?.Color;
 		// BallGag necklace + mouth gag alternate order...
 		if (!!color && gagTarget.MouthItemName == "BallGag") {
+			if (!Array.isArray(color))
+				color = [color];
+
 			if ((sourceLocation?.startsWith("ItemMouth") && targetLocation == "Necklace") ||
 				(sourceLocation == "Necklace" && targetLocation?.startsWith("ItemMouth")))
 				color = (<string[]>(<ItemColor>color)).reverse();
@@ -1262,7 +1271,7 @@ export class ItemUseModule extends BaseModule {
 			var color = this._handleWeirdColorStuff(gagItem, gagTarget, sourceLocation, targetLocation);
 			InventoryWear(target, targetItemName, targetLocation, color, undefined, source.MemberNumber, gagItem?.Craft, false);
 			let gag = InventoryGet(target, targetLocation);
-			if (!!gag) gag.Color = color;
+			//if (!!gag) gag.Color = color;
 			if (!!gagTarget.PreferredTypes && gagTarget.PreferredTypes.length > 0) {
 				var prefType = gagTarget.PreferredTypes.find(tgt => tgt.Location == targetLocation) ?? gagTarget.PreferredTypes.find(tgt => targetLocation.startsWith(tgt.Location));
 				if (!!gag && !!prefType) {
@@ -1297,7 +1306,7 @@ export class ItemUseModule extends BaseModule {
 			}
 			var color = this._handleWeirdColorStuff(gag, gagTarget, sourceLocation, targetLocation);
 			let item = InventoryWear(source, targetItemName, targetLocation, color, undefined, source.MemberNumber, craft, false);
-			if (!!item) item.Color = color;
+			//if (!!item) item.Color = color;
 			if (!!gagTarget.PreferredTypes && gagTarget.PreferredTypes.length > 0) {
 				var prefType = gagTarget.PreferredTypes.find(tgt => tgt.Location == targetLocation) ?? gagTarget.PreferredTypes.find(tgt => targetLocation.startsWith(tgt.Location));
 				if (!!item && !!prefType) {
@@ -1475,7 +1484,14 @@ export class ItemUseModule extends BaseModule {
 		"subduing"
 	];
 
+	lastTamperProtectionFired: number = 0;
+
 	PerformTamperProtection(source: "minigame" | "activity" | "assist", item: Item | undefined = undefined, sender: Character | null = null) {
+		if (this.lastTamperProtectionFired + 5000 > CurrentTime) { // Skip tamper protection if within 5s of last trigger
+			return;
+		}
+		this.lastTamperProtectionFired = CurrentTime;
+
 		if (!Player.LSCG.GlobalModule.tamperproofEnabled)
 			return;
 

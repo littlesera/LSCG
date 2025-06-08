@@ -10,21 +10,16 @@ interface PlayerOnlineSettings {
 	LSCG: import("Settings/Models/settings").SettingsModel | string;
 }
 
-interface PlayerExtensionSettings {
+interface ExtensionSettings {
     LSCG: string;
+}
+
+interface LSCGChatRoomMessageMetadata extends Omit<IChatRoomMessageMetadata, "ActivityName"> {
+    ActivityName?: LSCGActivityName;
 }
 
 interface LSCGMessageDictionaryEntry {
     message: LSCGMessageModel;
-}
-
-interface CommonGenerateGridParameters {
-    x: number,
-    y: number,
-    width: number,
-    height: number,
-    itemWidth: number,
-    itemHeight: number
 }
 
 type LSCGMessageModelType = "init" | "sync" | "command" | "broadcast";
@@ -46,4 +41,137 @@ interface LSCGMessageModel {
         name: LSCGCommandName,
         args: {name: string, value: any}[]
     }
+}
+
+interface ItemProperties {
+    LSCGOpacity?: number;
+    LSCGLeadLined?: boolean;
+    SipCount?: number;
+    SipLimit?: number;
+}
+
+type LSCGEffectName = EffectName
+    | "ForceKneel"
+;
+
+type LSCGAssetGroupBodyName = AssetGroupBodyName
+    | "FaceMarkings"
+;
+
+type LSCGAssetGroupItemName = AssetGroupItemName
+    | "ItemGlans"
+    | "ItemPenis"
+;
+
+type LSCGAssetGroupName = LSCGAssetGroupBodyName | LSCGAssetGroupItemName;
+
+type LSCGActivityName = ActivityName
+    | "Bap"
+    | "Chew"
+    | "Chomp"
+    | "CollarTighten"
+    | "CollarLoosen"
+    | "CollarStats"
+    | "Eat"
+    | "Flop"
+    | "FuckWithAss"
+    | "FuckWithPussy"
+    | "FunnelPour"
+    | "Flick"
+    | "Grab"
+    | "GrabTongue"
+    | "GrabTongueWithFoot"
+    | "Headbutt"
+    | "HoldHand"
+    | "Hug"
+    | "KissEyes"
+    | "NetGun"
+    | "Nuzzle"
+    | "Quaff"
+    | "Release"
+    | "ReleaseChomp"
+    | "ReleaseCollar"
+    | "ReleaseEar"
+    | "ReleaseFootGrabbedTongue"
+    | "ReleaseHand"
+    | "ReleaseMouth"
+    | "ReleaseNeck"
+    | "ReleaseTongue"
+    | "RubPussy"
+    | "SlapPenis"
+    | "Splat"
+    | "SuckHandheld"
+    | "Tackle"
+    | "Throat"
+    | "ThroatHandheld"
+    | "Tug"
+    | "LSCG_FunnelPour"
+    | "LSCG_Splat"
+;
+
+type LSCGSpecialItems =
+    | "ChewableItem"
+    | "EdibleItem"
+    | "FellatioItem"
+    | "PourableItem"
+    | "QuaffableItem"
+;
+
+type LSCGActivityPrerequisite = ActivityPrerequisite
+    | "CanChomp"
+    | "CanCustomFlick"
+    | "CanCustomNibble"
+    | "CanGrindWithPussy"
+    | "CanGive"
+    | "CanHeadbutt"
+    | "CanPourIntoFunnel"
+    | "CanSquirt"
+    | "CanSteal"
+    | "CanSwap"
+    | "CustomNibbleAccessible"
+    | "CheckTongueGrabbing"
+    | "DevicesSlotIsFree"
+    | "HasCoiledRope"
+    | "HasCrotchRope"
+    | "HasHalo"
+    | "HasNetgun"
+    | "HasPenis"
+    | "HasShark"
+    | "HasWings"
+    | "HoldingGag"
+    | "IsChomping"
+    | "IsWearingChokeCollar"
+    | "InjectorIsNotNetgun"
+    | `Needs-${LSCGSpecialItems}`
+    | "SourceAssEmpty"
+    | "TargetCanBePinched"
+    | "TargetCanToeTongueGrab"
+    | "TargetIsArmAvailable"
+    | "TargetIsBeingPulled"
+    | "TargetIsCollarGrabbed"
+    | "TargetIsEarPinched"
+    | "TargetIsGagged"
+    | "TargetIsGaggedWithNecklace"
+    | "TargetIsGrabbed"
+    | "TargetIsHandGagged"
+    | "TargetIsHandLeashed"
+    | "TargetIsHandUnleashed"
+    | "TargetIsNeckChoked"
+    | "TargetIsWearingGagNecklace"
+    | "TargetHasPenis"
+    | "TargetHornAvailable"
+    | "TargetNotAlreadyCollarGrabbed"
+    | "TargetNotAlreadyHandGagged"
+    | "TargetTailAvailable"
+    | "TargetTongueIsNotGrabbed"
+    | "TargetTongueIsGrabbed"
+    | "TargetTongueIsToeGrabbed"
+    | "UseLegs"
+;
+
+interface LSCGActivity extends Omit<Activity, "ActivityID" | "Name" | "Prerequisite" | "Target" | "TargetSelf"> {
+    Name: LSCGActivityName;
+    Prerequisite: LSCGActivityPrerequisite[];
+    Target?: LSCGAssetGroupItemName[];
+    TargetSelf?: LSCGAssetGroupItemName[] | true;
 }

@@ -80,15 +80,15 @@ export function getCharacter(memberNumber: number) {
 export function getCharacterByNicknameOrMemberNumber(tgt: string): Character | undefined {
 	if (!tgt)
 		return undefined;
-	tgt = tgt.toLocaleLowerCase();
+	tgt = tgt.normalize('NFKC').toLocaleLowerCase();
 	let tgtC: Character | undefined | null;
 	if (CommonIsNumeric(tgt))
 		tgtC = getCharacter(+tgt);
 	if (!tgtC) {
-		tgtC = ChatRoomCharacter.find(c => CharacterNickname(c).toLocaleLowerCase() == tgt);
+		tgtC = ChatRoomCharacter.find(c => CharacterNickname(c).normalize('NFKC').toLocaleLowerCase() == tgt);
 	}
 	if (!tgtC) {
-		tgtC = ChatRoomCharacter.find(c => c.Name.toLocaleLowerCase() == tgt);
+		tgtC = ChatRoomCharacter.find(c => c.Name.normalize('NFKC').toLocaleLowerCase() == tgt);
 	}
 	return tgtC;
 }
@@ -267,8 +267,7 @@ export function SendChat(msg: string) {
 export function replace_template(text: string, source: Character | null = null, fallbackSourceName: string = "") {
 	let result = text;
 
-	let pronounItem = CharacterPronounDescription(Player);
-	let isPlayerMale = pronounItem == "He/Him" ?? false;
+	let isPlayerMale = Player.GetPronouns() === "HeHim"
 
 	let possessive = isPlayerMale ? "His" : "Her";
 	let intensive = isPlayerMale ? "Him" : "Her";
@@ -276,8 +275,8 @@ export function replace_template(text: string, source: Character | null = null, 
 	let namePossessiveDirect = (`${CharacterNickname(Player)}'s`);
 	let namePossessive = source?.IsPlayer() ? (isPlayerMale ? "his own" : "her own") : namePossessiveDirect;
 
-	let opp_pronounItem = !source ? "They/Them" : CharacterPronounDescription(source);
-	let isOppMale = opp_pronounItem == "He/Him" ?? false;
+	let opp_pronounItem = source?.GetPronouns() ?? "TheyThem";
+	let isOppMale = opp_pronounItem == "HeHim";
 
 	let oppName = source?.IsPlayer() ? (isOppMale ? "himself" : "herself") : !!source ? CharacterNickname(source) : fallbackSourceName;
 	let oppPossessive = isOppMale ? "His" : "Her";
@@ -313,7 +312,7 @@ let savingPublishFlag = false;
 
 export function settingsSave(publish: boolean = false) {
 	if (!Player.ExtensionSettings)
-		Player.ExtensionSettings = <PlayerExtensionSettings>{};
+		Player.ExtensionSettings = <ExtensionSettings>{};
 	Player.ExtensionSettings.LSCG = LZString.compressToBase64(JSON.stringify(Player.LSCG));
 	localStorage.setItem(`LSCG_${Player.MemberNumber}_Backup`, Player.ExtensionSettings.LSCG);
 
@@ -342,13 +341,44 @@ export function settingsSave(publish: boolean = false) {
 
 export function ExportSettings(): string {
 	return LZString.compressToBase64(JSON.stringify(Player.LSCG));
+	// let parsed =  JSON.parse(JSON.stringify(Player.LSCG)); //CleanDefaultsFromSettings(Player.LSCG);
+	// Object.keys(parsed).filter(key => key != "Version").forEach(key => {
+	// 	let module = (<any>parsed)[key];
+	// 	Object.keys(module).forEach(mk => {
+	// 		if (mk == "stats")
+	// 			delete module[mk];
+	// 	});
+	// });
+	// return LZString.compressToBase64(JSON.stringify(parsed));
+}
+
+export function parseFromBase64<T extends unknown>(data: string): T | undefined {
+	try {
+		const parsed = LZString.decompressFromBase64(data);
+		if (!parsed) return undefined;
+		return JSON.parse(parsed);
+	} catch (e) {
+		console.error(`failed to parse ${data}!`)
+		return undefined;
+	}
+}
+
+export function parseFromUTF16<T extends unknown>(data: string): T | undefined {
+	try {
+		const parsed = LZString.decompressFromUTF16(data);
+		if (!parsed) return undefined;
+		return JSON.parse(parsed);
+	} catch (e) {
+		console.error(`failed to parse ${data}!`)
+		return undefined;
+	}
 }
 
 export function ImportSettings(val: string): boolean {
 	try {
 		let oldSettings = JSON.parse(JSON.stringify(Player.LSCG));
 		localStorage.setItem(`LSCG_${Player.MemberNumber}_Backup`, LZString.compressToBase64(JSON.stringify(oldSettings)));
-		let parsed = JSON.parse(LZString.decompressFromBase64(val)) as SettingsModel;
+		let parsed = parseFromBase64<SettingsModel>(val);
 		if (!!parsed && !!parsed.GlobalModule) {
 			Player.LSCG = parsed; //Object.assign(Player.LSCG, parsed);
 			Player.LSCG.Version = oldSettings.Version;
@@ -417,7 +447,7 @@ export function isPhraseInString(string: string, phrase: string, ignoreOOC: bool
 	return praseMatch.test(oocParsed);
 }
 
-export function addCustomEffect(C: Character | null, effect: EffectName): boolean {
+export function addCustomEffect(C: Character | null, effect: LSCGEffectName): boolean {
 	if (!C)
 		C = Player;
 	let updated = false;
@@ -426,19 +456,20 @@ export function addCustomEffect(C: Character | null, effect: EffectName): boolea
 		return updated;
 	}
 
-	if (Array.isArray(emoticon.Asset.AllowEffect))
-		emoticon.Asset.AllowEffect.push(effect);
-	else
-		(<any>emoticon.Asset).AllowEffect = [effect];
+	const allowEffect = (emoticon.Asset.AllowEffect as LSCGEffectName[]) ??= [];
+	allowEffect.push(effect);
 
 	if (!emoticon.Property) {
-		emoticon.Property = { Effect: [effect] };
+		emoticon.Property = {};
 		updated = true;
-	} else if (!emoticon.Property.Effect) {
-		emoticon.Property.Effect = [effect];
+	}
+	if (!emoticon.Property.Effect) {
+		emoticon.Property.Effect = [];
 		updated = true;
-	} else if (!emoticon.Property.Effect.includes(effect)) {
-		emoticon.Property.Effect.push(effect);
+	}
+	const propEffect = (emoticon.Property.Effect as LSCGEffectName[]);
+	if (!propEffect.includes(effect)) {
+		propEffect.push(effect);
 		updated = true;
 	}
 
@@ -449,16 +480,16 @@ export function addCustomEffect(C: Character | null, effect: EffectName): boolea
 	return updated;
 }
 
-export function removeCustomEffect(C: Character | null, effect: EffectName): boolean {
+export function removeCustomEffect(C: Character | null, effect: LSCGEffectName): boolean  {
 	if (!C)
 		C = Player;
 	const emoticon = C.Appearance.find((a) => a.Asset.Name === "Emoticon");
 	let updated = false;
-
-	if (emoticon?.Property?.Effect?.includes(effect)) {
-		emoticon.Property.Effect = emoticon.Property.Effect.filter(
-			(e) => e !== effect
-		);
+	
+	const propEffect = (emoticon?.Property?.Effect ?? []) as LSCGEffectName[];
+	const effIndex = propEffect.indexOf(effect);
+	if (effIndex !== -1) {
+		propEffect.splice(effIndex, 1);
 		updated = true;
 	}
 	if (updated && ServerPlayerIsInChatRoom() && C == Player) {
@@ -506,18 +537,18 @@ export function getPlayerVolume(modifier: number) {
 export function sendLSCGMessage(msg: LSCGMessageModel) {
 	msg.IsLSCG = true;
 	msg.version = CUSTOM_LSCG_VERSION();
-	const packet = <ServerChatRoomMessage>{
+	const packet = {
 		Type: "Hidden",
 		Content: "LSCGMsg",
 		Sender: Player.MemberNumber,
 		Dictionary: [
-			<LSCGMessageDictionaryEntry>{
+			{
 				message: msg
-			},
+			} as LSCGMessageDictionaryEntry,
 		],
 	};
-
-	ServerSend("ChatRoomChat", packet);
+	
+	ServerSend("ChatRoomChat", packet as unknown as ServerChatRoomMessage);
 }
 
 export function sendLSCGBeep(target: number, msg: LSCGMessageModel) {
@@ -527,7 +558,7 @@ export function sendLSCGBeep(target: number, msg: LSCGMessageModel) {
 		BeepType: "Leash", // Hijack "Leash" BeepType to bypass friends-only server restriction
 		IsSecret: true,
 		Message: msg
-	});
+	} as unknown as ServerAccountBeepRequest);
 }
 
 export function sendLSCGCommand(target: Character, commandName: LSCGCommandName, commandArgs: { name: string, value: any; }[] = []) {
@@ -607,7 +638,7 @@ export function IsIncapacitated(C?: OtherCharacter | PlayerCharacter): boolean {
 	// || getModule<MiscModule>("MiscModule")?.isChloroformed; -- Need to push chloroform status to public for this to work.
 }
 
-export function GetMetadata(data: ServerChatRoomMessage): IChatRoomMessageMetadata | undefined {
+export function GetMetadata(data: ServerChatRoomMessage): LSCGChatRoomMessageMetadata | undefined {
 	let sender = getCharacter(data.Sender ?? -1);
 	if (!sender)
 		sender = Player; // No sender usually means we're actively sending it..
@@ -827,7 +858,7 @@ export function GetDataSizeReport(data: any, log: boolean = true): number {
 
 export function stringIsCompressedItemBundleArray(str: string): boolean {
 	try {
-		return Array.isArray(JSON.parse(LZString.decompressFromBase64(str)));
+		return Array.isArray(parseFromBase64(str))
 	}
 	catch {
 		return false;
@@ -837,7 +868,7 @@ export function stringIsCompressedItemBundleArray(str: string): boolean {
 export function GetConfiguredItemBundlesFromSavedCode(code: string, filter: (item: ItemBundle) => boolean): ItemBundle[] {
 	let items: ItemBundle[] = [];
 	if (stringIsCompressedItemBundleArray(code)) {
-		items = JSON.parse(LZString.decompressFromBase64(code)) as ItemBundle[];
+		items = parseFromBase64<ItemBundle[]>(code) ?? [];
 	} else if (CommonIsNumeric(code) && !!Player.Wardrobe) {
 		let ix = parseInt(code);
 		if (ix >= 0 && ix < Player.Wardrobe.length)

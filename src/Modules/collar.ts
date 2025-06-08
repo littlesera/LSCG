@@ -56,7 +56,7 @@ export class CollarModule extends BaseModule {
     get defaultSettings() {
 		return <CollarSettingsModel>{
             enabled: false,
-            allowedMembers: Player.Ownership?.MemberNumber + "" ?? "",
+            allowedMembers: Player.Ownership?.MemberNumber.toString() ?? "",
             chokeLevel: 0,
             tightTrigger: "tighten",
             looseTrigger: "loosen",
@@ -138,8 +138,12 @@ export class CollarModule extends BaseModule {
             if (target != Player.MemberNumber)
                 return;
 
-            if ((msg == "ActionSwap" || msg == "ActionRemove") && GetMetadata(data)?.GroupName == "ItemNeck") {
-                this.ReleaseCollar();
+            if (msg == "ActionSwap" || msg == "ActionRemove") {
+                if (GetMetadata(data)?.GroupName == "ItemNeck") {
+                    this.ReleaseCollar();
+                } else if (GetMetadata(data)?.GroupName == "ItemNeckRestraints") {
+                    this.CheckChainSuffocate(msg, sender);
+                }
             }
         })
 
@@ -194,6 +198,7 @@ export class CollarModule extends BaseModule {
             if (lastCheckedForGags + 10000 < now) {
                 lastCheckedForGags = now;
                 this.CheckGagSuffocate("TimerProcess", null);
+                this.CheckChainSuffocate("TimerProcess", null);
                 if (!this.wearingCorrectCollar && this.settings.chokeLevel > 0) {
                     this.ReleaseCollar();
                 }
@@ -254,6 +259,7 @@ export class CollarModule extends BaseModule {
                 return;
 
             let airwaySlots = ["ItemMouth", "ItemMouth2", "ItemMouth3", "ItemNose"];
+            let neckSlots = ["ItemNeckRestraints"];
             let messagesToCheck = [
                 "ActionUse",
                 "ActionSwap",
@@ -271,9 +277,10 @@ export class CollarModule extends BaseModule {
             var targetGroup = GetMetadata(data)?.GroupName;
 
             if (target == Player.MemberNumber &&
-                (!targetGroup || airwaySlots.indexOf(targetGroup) > -1) &&
                 messagesToCheck.some(x => msg.startsWith(x))) {
-                this.CheckGagSuffocate(msg, sender);
+                if (!targetGroup || airwaySlots.indexOf(targetGroup) > -1) {
+                    this.CheckGagSuffocate(msg, sender);
+                }
             }
             return;
         });
@@ -362,14 +369,14 @@ export class CollarModule extends BaseModule {
         this.activities = getModule<ActivityModule>("ActivityModule");
 
         this.activities.AddActivity({
-            Activity: <Activity>{
+            Activity: {
                 Name: "CollarTighten",
                 MaxProgress: 90,
                 MaxProgressSelf: 90,
                 Prerequisite: ["UseHands", "ZoneAccessible"]
             },
             Targets: [
-                <ActivityTarget>{
+                {
                     Name: "ItemNeck",
                     SelfAllowed: true,
                     TargetLabel: "Tighten Collar",
@@ -378,7 +385,7 @@ export class CollarModule extends BaseModule {
                 }
             ],
             CustomPrereqs: [
-                <CustomPrerequisite>{
+                {
                     Name: "IsWearingChokeCollar",
                     Func: (acting, acted, group) => {
                         if (!((<any>acted).LSCG?.CollarModule.allowButtons ?? false))
@@ -399,14 +406,14 @@ export class CollarModule extends BaseModule {
         });
 
         this.activities.AddActivity({
-            Activity: <Activity>{
+            Activity: {
                 Name: "CollarLoosen",
                 MaxProgress: 90,
                 MaxProgressSelf: 90,
                 Prerequisite: ["UseHands", "ZoneAccessible", "IsWearingChokeCollar"]
             },
             Targets: [
-                <ActivityTarget>{
+                {
                     Name: "ItemNeck",
                     SelfAllowed: true,
                     TargetLabel: "Loosen Collar",
@@ -426,14 +433,14 @@ export class CollarModule extends BaseModule {
         });
 
         this.activities.AddActivity({
-            Activity: <Activity>{
+            Activity: {
                 Name: "CollarStats",
                 MaxProgress: 10,
                 MaxProgressSelf: 10,
                 Prerequisite: ["UseHands", "ZoneAccessible", "IsWearingChokeCollar"]
             },
             Targets: [
-                <ActivityTarget>{
+                {
                     Name: "ItemNeck",
                     SelfAllowed: true,
                     TargetLabel: "Collar Stats",
@@ -492,6 +499,15 @@ export class CollarModule extends BaseModule {
         "%NAME% groans and convulses.",
         "%NAME% shudders as %POSSESSIVE% lungs burn."
     ]
+
+    CheckChainSuffocate(msg: string, sender: Character | null) {
+        if (this.chainChokeModifier > 0) {
+            let chainItem = InventoryGet(Player, "ItemNeckRestraints");
+            if (!chainItem || chainItem.Asset.Name != "ChokeChain") {
+                this.ChainChoke(sender, -4, !!chainItem ? GetItemName(chainItem) : "choke chain");
+            }
+        }
+    }
 
     CheckGagSuffocate(msg: string, sender: Character | null) {
         if (!Player.LSCG.MiscModule.gagChokeEnabled)

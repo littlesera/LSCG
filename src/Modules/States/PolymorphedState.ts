@@ -1,4 +1,4 @@
-import { getCharacter, isBody, isCosplay, isGenitals, isHair, isPronouns, isSkin } from "utils";
+import { getCharacter, isBody, isCosplay, isGenitals, isHair, isPronouns, isSkin, parseFromBase64 } from "utils";
 import { BaseState } from "./BaseState";
 import { StateModule } from "Modules/states";
 import { SpellDefinition } from "Settings/Models/magic";
@@ -6,7 +6,7 @@ import { ItemBundleBaseState } from "./ItemBundleBaseState";
 
 export class PolymorphedState extends ItemBundleBaseState {
     static CleanItemCode(code: string): string {
-        let items = JSON.parse(LZString.decompressFromBase64(code)) as ItemBundle[];
+        let items = parseFromBase64<ItemBundle[]>(code);
         if (!items || !Array.isArray(items))
             return code;
         items = items.filter(item => PolymorphedState.ItemIsAllowed(item));

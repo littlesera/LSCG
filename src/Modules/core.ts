@@ -290,7 +290,7 @@ export class CoreModule extends BaseModule {
     CheckForPublicPacket(data: ServerChatRoomMessage) {
         if (!!data.Sender && data.Type == "Hidden" && data.Content == "LSCGMsg" && !!data.Dictionary && !!data.Dictionary[0]) {
             var C = getCharacter(data.Sender) as OtherCharacter;
-            var msg = (data.Dictionary[0] as LSCGMessageDictionaryEntry).message;
+            var msg = (data.Dictionary[0] as unknown as LSCGMessageDictionaryEntry).message;
             if (data.Sender != Player.MemberNumber) { // LSCG messages that must come from another user
                 switch (msg.type) {
                     case "init":
