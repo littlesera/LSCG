@@ -375,7 +375,7 @@ export class HypnoModule extends BaseModule {
 
     _suggestionHooks: any[] = []
     RegisterSuggestionHooks() {
-        this._suggestionHooks.push(hookFunction("CommandParse", 6, (args, next) => {
+        this._suggestionHooks.push(hookFunction("CommandParse", 100, (args, next) => {
 			const msg = args[0].trim() as string;
             const isChat = !/^[*!/.]/.test((msg ?? "")[0]);
 			if (this.forceSay_sayText && msg && (ChatRoomTargetMemberNumber ?? -1) == -1 && !msg.includes("(") && isChat) {
