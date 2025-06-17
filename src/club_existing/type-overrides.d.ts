@@ -101,6 +101,7 @@ type LSCGActivityName = ActivityName
     | "SlapPenis"
     | "Splat"
     | "SuckHandheld"
+    | "SwallowLoad"
     | "Tackle"
     | "Throat"
     | "ThroatHandheld"
@@ -144,6 +145,8 @@ type LSCGActivityPrerequisite = ActivityPrerequisite
     | "InjectorIsNotNetgun"
     | `Needs-${LSCGSpecialItems}`
     | "SourceAssEmpty"
+    | "SourceCanSwallowSplatter"
+    | "SourceCanLickSplatter"
     | "TargetCanBePinched"
     | "TargetCanToeTongueGrab"
     | "TargetIsArmAvailable"
