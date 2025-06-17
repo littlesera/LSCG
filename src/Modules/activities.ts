@@ -1673,7 +1673,7 @@ export class ActivityModule extends BaseModule {
                 Name: "SwallowLoad",
                 MaxProgress: 75,
                 MaxProgressSelf: 30,
-                Prerequisite: ["ZoneAccessible", "UseHands", "TargetCanUseTongue"]
+                Prerequisite: ["ZoneAccessible", "TargetCanUseTongue"]
             },
             Targets: [
                 {
