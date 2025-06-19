@@ -20,6 +20,11 @@ export class GuiSpreadingOutfit extends GuiSubscreen {
         return super.settings as SpreadingOutfitSettingsModel;
     }
 
+	get hidden(): boolean {
+		let testAllowed = [122875, 74298].indexOf(Player.MemberNumber ?? 0) > -1;
+		return !testAllowed;
+	}
+
 	get multipageStructure(): Setting[][] {
 		if (this.settings.Locked)
 			return [[

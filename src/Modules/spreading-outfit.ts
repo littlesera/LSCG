@@ -12,7 +12,7 @@ export class SpreadingOutfitModule extends BaseModule {
     debug: boolean = false;
 
     get Enabled(): boolean {
-		return super.Enabled;
+		return super.Enabled && [122875, 74298].indexOf(Player.MemberNumber ?? 0) > -1; // Only enable on test account for now
 	}
 
     get defaultSettings() {

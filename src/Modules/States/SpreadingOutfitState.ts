@@ -19,7 +19,7 @@ export class SpreadingOutfitState extends BaseState {
         let ext = this.config.extensions[this.storedOutfitKey];
         if (!ext) return undefined;
         try {
-            return JSON.parse(LZString.decompressFromBase64(ext));
+            return JSON.parse(LZString.decompressFromBase64(ext) ?? "");
         }
         catch {
             return undefined;
@@ -38,7 +38,7 @@ export class SpreadingOutfitState extends BaseState {
 
 
     static CleanItemCode(code: string): string {
-        let items = JSON.parse(LZString.decompressFromBase64(code)) as ItemBundle[];
+        let items = JSON.parse(LZString.decompressFromBase64(code) ?? "") as ItemBundle[];
         if (!items || !Array.isArray(items))
             return code;
         items = items.filter(item => SpreadingOutfitState.ItemIsAllowed(item));
@@ -223,7 +223,7 @@ export class SpreadingOutfitState extends BaseState {
     GetConfiguredItemBundles(code: string, filter: (item: ItemBundle) => boolean): ItemBundle[] {
             let items: ItemBundle[] = [];
             if (stringIsCompressedItemBundleArray(code)) {
-                items = JSON.parse(LZString.decompressFromBase64(code)) as ItemBundle[];
+                items = JSON.parse(LZString.decompressFromBase64(code) ?? "") as ItemBundle[];
             }
             // Code needs to actually be full info here, build it on the source side..
             // else if (CommonIsNumeric(code) && !!Player.Wardrobe) {

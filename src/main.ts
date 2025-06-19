@@ -149,12 +149,12 @@ function init_modules(): boolean {
 	registerModule(new ActivityModule());
 	registerModule(new ItemUseModule());
 	registerModule(new MagicModule());
-	registerModule(new SpreadingOutfitModule());
 	registerModule(new RemoteUIModule());
 	registerModule(new CommandModule());
 	registerModule(new LeashingModule());
 	registerModule(new ChaoticItemModule());
 	registerModule(new SplatterModule());
+	registerModule(new SpreadingOutfitModule());
 
 	for (const m of modules()) {
 		m.init();
