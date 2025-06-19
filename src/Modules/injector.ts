@@ -1179,15 +1179,22 @@ export class InjectorModule extends BaseModule {
         "%NAME% whimpers as %POSSESSIVE% headset erases %POSSESSIVE% own mind relentlessly."
     ];
 
+    hypnoItems: {name: string, active: (item: Item) => boolean }[] = [
+        {name: "InteractiveVRHeadset", active: item => !!item?.Property?.TypeRecord && item?.Property?.TypeRecord["b"] == 5 },
+        {name: "TechnoHelmet1", active: item => !!item?.Property?.TypeRecord && item?.Property?.TypeRecord["v"] == 5 },
+        {name: "HypnoticVisor", active: item => !!item?.Property?.TypeRecord && item?.Property?.TypeRecord["p"] != 0 }
+    ]
+
     CheckForHypnoHelmet() {
         if (!this.settings.enableMindControl)
             return;
-        var headItem = InventoryGet(Player, "ItemHead");
-        var hoodItem = InventoryGet(Player, "ItemHood");
-        let isWearingActiveHeadset = 
-            (headItem?.Asset?.Name == "InteractiveVRHeadset" && !!headItem?.Property?.TypeRecord && headItem?.Property?.TypeRecord["b"] == 5) ||
-            (hoodItem?.Asset?.Name == "TechnoHelmet1" && !!hoodItem?.Property?.TypeRecord && hoodItem?.Property?.TypeRecord["v"] == 5);
-        if (isWearingActiveHeadset) {
+        let isWearingHypnoItem = Player.Appearance.some(item => this.hypnoItems.some(hypnoItem => hypnoItem.name == item.Asset.Name && hypnoItem.active(item)))
+        // var headItem = InventoryGet(Player, "ItemHead");
+        // var hoodItem = InventoryGet(Player, "ItemHood");
+        // let isWearingActiveHeadset = 
+        //     (headItem?.Asset?.Name == "InteractiveVRHeadset" && !!headItem?.Property?.TypeRecord && headItem?.Property?.TypeRecord["b"] == 5) ||
+        //     (hoodItem?.Asset?.Name == "TechnoHelmet1" && !!hoodItem?.Property?.TypeRecord && hoodItem?.Property?.TypeRecord["v"] == 5);
+        if (isWearingHypnoItem) {
             let randomLevelIncrease = (getRandomInt(4) + 2) / 10; // .2 to .5
             if (getRandomInt(50) == 0) { // Odds are big jump once every 10 seconds
                 if (!this.brainwashed) SendAction(this.headsetMindControlEventStr[getRandomInt(this.headsetMindControlEventStr.length)]);
