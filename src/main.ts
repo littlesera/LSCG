@@ -15,6 +15,7 @@ import { CommandModule } from 'Modules/commands';
 import { ItemUseModule } from 'Modules/item-use';
 import { StateModule } from 'Modules/states';
 import { MagicModule } from 'Modules/magic';
+import { SpreadingOutfitModule } from 'Modules/spreading-outfit';
 import { OpacityModule } from 'Modules/opacity';
 import { lt } from 'semver';
 import { LeashingModule } from 'Modules/leashing';
@@ -148,6 +149,7 @@ function init_modules(): boolean {
 	registerModule(new ActivityModule());
 	registerModule(new ItemUseModule());
 	registerModule(new MagicModule());
+	registerModule(new SpreadingOutfitModule());
 	registerModule(new RemoteUIModule());
 	registerModule(new CommandModule());
 	registerModule(new LeashingModule());

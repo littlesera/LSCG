@@ -28,6 +28,7 @@ export enum ModuleCategory {
 	Leashed = 11,
 	ChaoticItem = 12,
 	Splatter = 13,
+	SpreadingOutfit = 14,
 	RemoteUI = 98,
 	Misc = 99,
 	Commands = 100
