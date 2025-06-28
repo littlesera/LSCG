@@ -41,7 +41,8 @@ export enum PolymorphOption {
 }
 
 export interface ItemBundleConfig {
-    Code: string;
+    Code: string; // Expanded to full outfit code on status apply...
+    Key: string;
 }
 
 export interface OutfitConfig extends ItemBundleConfig {

@@ -1045,8 +1045,7 @@ export class ItemUseModule extends BaseModule {
 					TargetAction: "SourceCharacter boops TargetCharacter's nose with PronounPossessive ActivityAsset.",
 					SelfAllowed: false
 				}
-			],
-			CustomImage: "Assets/Female3DCG/Activity/Caress.png"
+			]
 		});
 
 		// Plush Hug

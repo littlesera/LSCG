@@ -5,6 +5,8 @@ import { stringIsCompressedItemBundleArray } from "utils";
 import { PolymorphedState } from "Modules/States/PolymorphedState";
 import { RedressedState } from "Modules/States/RedressedState";
 import { drawTooltip } from "./settingUtils";
+import { getModule } from "modules";
+import { OutfitCollectionModule } from "Modules/outfitCollection";
 
 export const pairedSpellEffects = [
 	LSCGSpellEffect.orgasm_siphon,
@@ -292,11 +294,11 @@ export class GuiMagic extends GuiSubscreen {
 			DrawEmptyRect(coords.x, coords.y, coords.w, coords.h, "Black", 5);
 			DrawEmptyRect(coords.x+5, coords.y+5, coords.w-10, coords.h-10, "Grey", 2);
 			MainCanvas.textAlign = "left";
-			DrawTextFit("Paste Outfit Code:", coords.x + 50, (coords.y + coords.h/2) - 50, coords.w - 100 - buttonWidth, "Black", "Grey");
+			DrawTextFit("Outfit Name:", coords.x + 50, (coords.y + coords.h/2) - 50, coords.w - 100 - buttonWidth, "Black", "Grey");
 			MainCanvas.textAlign = "center";
 			ElementPosition(this.outfitFieldId, coords.x + (coords.w/2) - (buttonWidth/2), (coords.y + coords.h/2) + 20, coords.w - 100 - buttonWidth);
-			ElementPositionFix(this.outfitDropId, 28, coords.x + 450, (coords.y + coords.h / 2) - 50 - 19, 340, 64);
-			DrawEmptyRect(coords.x + 445, (coords.y + coords.h / 2) - 48 - 32, 350, 68, "Black", 3);
+			ElementPositionFix(this.outfitDropId, 28, coords.x + 450, (coords.y + coords.h / 2) - 60 - 19, 340, 64);
+			//DrawEmptyRect(coords.x + 445, (coords.y + coords.h / 2) - 48 - 32, 350, 68, "Black", 3);
 			DrawButton(1350, 500 - 32, 100, 64, "Confirm", "White");
 			return;
 		} else if (!this.settings.locked && this._ConfigurePolymorph) {
@@ -317,7 +319,7 @@ export class GuiMagic extends GuiSubscreen {
 
 			// Paste text field
 			MainCanvas.textAlign = "left";
-			DrawTextFit("Paste Outfit Code:", coords.x + 50, coords.y + 50, coords.w - 100 - buttonWidth, "Black", "Grey");
+			DrawTextFit("Outfit Name:", coords.x + 50, coords.y + 50, coords.w - 100 - buttonWidth, "Black", "Grey");
 			ElementPosition(this.outfitFieldId, coords.x + (coords.w/2) - (buttonWidth/2), coords.y + 120, coords.w - 100 - buttonWidth);
 			
 			// Checkboxes
@@ -428,6 +430,8 @@ export class GuiMagic extends GuiSubscreen {
 						DrawButton(1410 - 4, this.getYPos(3) - 32 - 4, 72, 72, "", "White", "", `Delete ${this.Spell.Name}`); // Delete Effect
 						DrawImageResize("Icons/Trash.png", 1410, this.getYPos(3) - 32, 64, 64);
 					}
+					
+					MainCanvas.textAlign = "center";
 					if (this.outfitEffects.indexOf(this.Spell.Effects[0]) > -1) DrawButton(1500, this.getYPos(3) - 32, 200, 64, "Configure", "White");
 					MainCanvas.textAlign = "left";
 					DrawTextFit(GuiMagic.SpellEffectDescription(this.Spell.Effects[0]), 780, this.getYPos(4), 1000, "Black");
@@ -438,6 +442,8 @@ export class GuiMagic extends GuiSubscreen {
 							DrawButton(1410 - 4, this.getYPos(5) - 32 - 4, 72, 72, "", "White", "", `Delete ${this.Spell.Name}`); // Delete Effect
 							DrawImageResize("Icons/Trash.png", 1410, this.getYPos(5) - 32, 64, 64);
 						}
+						
+						MainCanvas.textAlign = "center";
 						if (this.outfitEffects.indexOf(this.Spell.Effects[1]) > -1) DrawButton(1500, this.getYPos(5) - 32, 200, 64, "Configure", "White");
 						MainCanvas.textAlign = "left";
 						DrawTextFit(GuiMagic.SpellEffectDescription(this.Spell.Effects[1]), 780, this.getYPos(6), 1000, "Black");
@@ -449,6 +455,8 @@ export class GuiMagic extends GuiSubscreen {
 							DrawButton(1410 - 4, this.getYPos(7) - 32 - 4, 72, 72, "", "White", "", `Delete ${this.Spell.Name}`); // Delete Effect
 							DrawImageResize("Icons/Trash.png", 1410, this.getYPos(7) - 32, 64, 64);
 						}
+						
+						MainCanvas.textAlign = "center";
 						if (this.outfitEffects.indexOf(this.Spell.Effects[2]) > -1) DrawButton(1500, this.getYPos(7) - 32, 200, 64, "Configure", "White");
 						MainCanvas.textAlign = "left";
 						DrawTextFit(GuiMagic.SpellEffectDescription(this.Spell.Effects[2]), 780, this.getYPos(8), 1000, "Black");
@@ -683,15 +691,14 @@ export class GuiMagic extends GuiSubscreen {
 
 	_ConfigureOutfit: boolean = false;
 	ConfigureOutfitEffect() {
-		this.ElementSetValue(this.outfitFieldId, this.Spell.Outfit?.Code ?? "");
+		this.ElementSetValue(this.outfitFieldId, this.Spell.Outfit?.Key ?? "");
 		this.ElementSetValue(this.outfitDropId, this.Spell.Outfit?.Option ?? OutfitOption.clothes_only);
 		this._ConfigureOutfit = true;
 	}
 	ConfirmOutfit() {
 		this._ConfigureOutfit = false;
-		if (!this.Spell.Outfit) this.Spell.Outfit = {Code: "", Option: OutfitOption.both};
-		let outfitCode = this.ParseCode(ElementValue(this.outfitFieldId), code => RedressedState.CleanItemCode(code));
-		this.Spell.Outfit.Code = outfitCode;
+		if (!this.Spell.Outfit) this.Spell.Outfit = {Code: "", Key: "", Option: OutfitOption.both};
+		this.Spell.Outfit.Key = ElementValue(this.outfitFieldId);
 		this.ElementSetValue(this.outfitFieldId, "");
 	}
 	OutfitConfigDropChanged(evt: any) {
@@ -699,6 +706,7 @@ export class GuiMagic extends GuiSubscreen {
 			if (!this.Spell.Outfit)
 				this.Spell.Outfit = <OutfitConfig>{
 					Code: "",
+					Key: "",
 					Option: OutfitOption.both
 				}
 			this.Spell.Outfit.Option = evt.target.value as OutfitOption;
@@ -708,14 +716,13 @@ export class GuiMagic extends GuiSubscreen {
 	// Duplicate for polymorph.... annoying.
 	_ConfigurePolymorph: boolean = false;
 	ConfigurePolymorphEffect() {
-		this.ElementSetValue(this.outfitFieldId, this.Spell.Polymorph?.Code ?? "");
+		this.ElementSetValue(this.outfitFieldId, this.Spell.Polymorph?.Key ?? "");
 		this._ConfigurePolymorph = true;
 	}
 	ConfirmPolymorph() {
 		this._ConfigurePolymorph = false;
 		if (!this.Spell.Polymorph) this.Spell.Polymorph = <PolymorphConfig>{};
-		let polymorphCode = this.ParseCode(ElementValue(this.outfitFieldId), code => PolymorphedState.CleanItemCode(code));
-		this.Spell.Polymorph.Code = polymorphCode;
+		this.Spell.Polymorph.Key = ElementValue(this.outfitFieldId);
 		this.ElementSetValue(this.outfitFieldId, "");
 	}
 
@@ -770,11 +777,14 @@ export class GuiMagic extends GuiSubscreen {
 	}
 
 	ParseCode(code: string, trimFunc: (str: string) => string): string {
-		if (stringIsCompressedItemBundleArray(code))
-			return trimFunc(code);
-		else if (CommonIsNumeric(code) || code.length <= 70)
+		if (stringIsCompressedItemBundleArray(code)) {
+			let outfits = getModule<OutfitCollectionModule>("OutfitCollectionModule")?.data;
+			let result = trimFunc(code);
+			outfits.SetOutfitCode(this.Spell.Name, result);
+			return result;
+		}
+		else {
 			return code;
-		else
-			return "";
+		}
 	}
 }

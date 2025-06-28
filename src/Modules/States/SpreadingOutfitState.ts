@@ -1,9 +1,11 @@
-import { isBind, isCloth, SendAction, settingsSave, stringIsCompressedItemBundleArray } from "utils";
+import { ApplyItem, CanApplyLock, fromItemBundle, getRandomInt, isBind, isCloth, parseFromBase64, SendAction, settingsSave, stringIsCompressedItemBundleArray } from "utils";
 import { getModule } from "modules";
 import { BaseState } from "./BaseState";
 import { StateModule } from "Modules/states";
 import { SpreadingOutfitModule } from "Modules/spreading-outfit";
-import { SpreadingOutfitSettingsModel, SpreadingOutfitCodeConfig } from "Settings/Models/spreading-outfit";
+import { SpreadingOutfitSettingsModel, CursedItemModel, CursedItemWorn } from "Settings/Models/spreading-outfit";
+
+// TODO: Design base 'spreading' state more agnostic of 'cursed items'...
 
 export class SpreadingOutfitState extends BaseState {
     _settings : SpreadingOutfitSettingsModel | undefined;
@@ -14,31 +16,79 @@ export class SpreadingOutfitState extends BaseState {
     }
 
     // Core Stored variable
-    storedOutfitKey: string = "stored-outfit";
-    get StoredOutfit(): ItemBundle[] | undefined {
-        let ext = this.config.extensions[this.storedOutfitKey];
-        if (!ext) return undefined;
-        try {
-            return JSON.parse(LZString.decompressFromBase64(ext) ?? "");
+    activeOutfitsKey: string = "outfits";
+    _activeOutfitsCache: CursedItemWorn[] | undefined = undefined;
+
+    get ActiveOutfits(): CursedItemWorn[] | undefined {
+        if (!this._activeOutfitsCache) {
+            try {
+                this._activeOutfitsCache = parseFromBase64(this.config.extensions[this.activeOutfitsKey]) ?? [];
+            }
+            catch (e) {
+                this._activeOutfitsCache = [];
+                this.config.extensions[this.activeOutfitsKey] = LZString.compressToBase64(JSON.stringify([]));
+            }
         }
-        catch {
-            return undefined;
-        }
+        this._activeOutfitsCache.forEach(item => {
+            if (!item.lastTick)
+                item.lastTick = 1;
+        })
+        return this._activeOutfitsCache
     }
 
-    SetStoredOutfit(outfitListbundle: ServerItemBundle[]) {
-        this.config.extensions[this.storedOutfitKey] = LZString.compressToBase64(JSON.stringify(outfitListbundle));
-        settingsSave();
+    set ActiveOutfits(val: CursedItemWorn[] | undefined) {
+        this._activeOutfitsCache = val;
+        this.config.extensions[this.activeOutfitsKey] = LZString.compressToBase64(JSON.stringify(val));
     }
 
-    ClearStoredOutfit() {
-        delete this.config.extensions[this.storedOutfitKey];
-        settingsSave();
+    private AddActiveOutfit(newItem: CursedItemWorn) {
+        let temp = this.ActiveOutfits;
+        newItem.lastTick = 0;
+        temp?.push(newItem);
+        this.ActiveOutfits = temp;
+    }
+
+    allEndEmotes: string[] = [
+        `%NAME% lets out a sign of relief as %POSSESSIVE% cursed items fall off %INTENSIVE%.`
+    ];
+    curseEndEmotes: ((itemName: string) => string)[] = [
+        (itemName) => `%NAME_POSSESSIVE_DIRECT% ${itemName} dims as it exhausts its energy and falls off %POSSESSIVE% body.`,
+        (itemName) => `%NAME_POSSESSIVE_DIRECT% ${itemName} releases its curse and falls off %POSSESSIVE% body, depleted.`
+    ];
+
+    ClearActiveOutfit(curseName: string | undefined = undefined, sync: boolean = false) {
+        // Remove item from our list, and perhaps even remove from player? (destroy cursed items when complete/safeword is neat..)
+        if (!curseName) {
+            this.ActiveOutfits?.forEach(item => {
+                let keyItem = this.findWornItem(item);
+                if (!!keyItem) {
+                    InventoryRemove(Player, keyItem.Asset.Group.Name, false);
+                }
+            });
+            SendAction(this.allEndEmotes[getRandomInt(this.allEndEmotes.length)]);
+            delete this.config.extensions[this.activeOutfitsKey];
+            delete this._activeOutfitsCache;
+        }
+        else {
+            let tempList = this.ActiveOutfits;
+            let targetCurse = tempList?.find(c => c.CurseName == curseName);
+            if (!!targetCurse) {
+                let keyItem = this.findWornItem(targetCurse);
+                if (!!keyItem) {
+                    SendAction(this.curseEndEmotes[getRandomInt(this.curseEndEmotes.length)](keyItem.Craft?.Name ?? keyItem.Asset.Description ?? "Cursed Item"));
+                    InventoryRemove(Player, keyItem.Asset.Group.Name, false);
+                }
+                tempList?.splice(tempList.findIndex(o => o.CurseName == curseName));
+                this.ActiveOutfits = tempList;
+            }
+        }
+        if (sync)
+            ChatRoomCharacterUpdate(Player);
     }
 
 
     static CleanItemCode(code: string): string {
-        let items = JSON.parse(LZString.decompressFromBase64(code) ?? "") as ItemBundle[];
+        let items = parseFromBase64(code) as ItemBundle[];
         if (!items || !Array.isArray(items))
             return code;
         items = items.filter(item => SpreadingOutfitState.ItemIsAllowed(item));
@@ -57,7 +107,7 @@ export class SpreadingOutfitState extends BaseState {
                 isBind(asset, []);
     }
 
-    Type: LSCGState = "spreading-outfit";
+    Type: LSCGState = "cursed-item";
 
     Icon(C: OtherCharacter): string {
         return "Icons/Dress.png";
@@ -70,145 +120,165 @@ export class SpreadingOutfitState extends BaseState {
         super(state);
     }
 
-    DoChange(asset: Asset | null): boolean {
-        if (!asset)
-            return false;
-        return SpreadingOutfitState.AssetIsAllowed(asset);
+    ItemInterval(item: CursedItemWorn): number {
+        switch (item.Speed) {
+            case "slow":
+                return 15 * 60000; // 15 minutes
+            case "medium":
+                return 1 * 60000; // 1 minute
+            case "fast":
+                return 10 * 1000; // 10 second
+            case "instant":
+                return 0; // Instant
+            default:
+                return 60000; // 1 minute default
+        }
     }
 
-    StripCharacter(newList: ItemBundle[] = []) {
-        const cosplayBlocked = Player.OnlineSharedSettings?.BlockBodyCosplay ?? true;
-        let appearance = Player.Appearance;
-        for (let i = appearance.length - 1; i >= 0; i--) {
-            const item = appearance[i];
-            const asset = appearance[i].Asset;
-            if (this.DoChange(asset) && !item.Property?.LockedBy) {
-                if (isCloth(asset) || newList.length == 0 || newList.some(x => x.Group == asset.Group.Name))
-                    appearance.splice(i, 1);
-            }
-        }
+    // StripCharacter(newList: ItemBundle[] = []) {
+    //     const cosplayBlocked = Player.OnlineSharedSettings?.BlockBodyCosplay ?? true;
+    //     let appearance = Player.Appearance;
+    //     for (let i = appearance.length - 1; i >= 0; i--) {
+    //         const item = appearance[i];
+    //         const asset = appearance[i].Asset;
+    //         if (this.DoChange(asset) && !item.Property?.LockedBy) {
+    //             if (isCloth(asset) || newList.length == 0 || newList.some(x => x.Group == asset.Group.Name))
+    //                 appearance.splice(i, 1);
+    //         }
+    //     }
+    // }
+
+    findWornItem(cursedItem: CursedItemWorn) {
+        return Player.Appearance.find(item => item.Craft?.Name == cursedItem.ItemName && item.Craft?.MemberNumber == cursedItem.Crafter)
     }
 
     _spreadingCheck: number = 0; // define when the next item should trigger
     Tick(now: number): void {
-        if (!this.Active) {
-            super.Tick(now);
-            return;
-        }
+        if (!this.Active) return;
+        let refreshNeeded = false;
 
-        // Trigger next item
-        if (this._spreadingCheck == 0 || this._spreadingCheck < now) {
-            this._spreadingCheck = now + this.Settings.ItemInterval * 1000;
-
-            if (this.StoredOutfit && this.StoredOutfit.length > 0) {
-                let itemList = this.StoredOutfit;
-                itemList = this.shuffleArray(itemList);
-                this.WearOneMoreItem(itemList);
-            }
+        //TODO -- On each tick (1s interval) check each active outfitfor their spread speed and if they are due (need to save last tick time)
+        let cursesToCheck = this.ActiveOutfits?.filter(cursedItem => cursedItem.lastTick + this.ItemInterval(cursedItem) < now);
+        if (cursesToCheck?.length ?? 0 <= 0) this.Recover();
+        else {
+            // When due: 
+            cursesToCheck?.forEach(cursedItem => {
+                refreshNeeded ||= this.TickCursedItem(now, cursedItem);
+            });
         }
+        if (refreshNeeded)
+            ChatRoomCharacterUpdate(Player);
+
         super.Tick(now);
     }
 
-    Recover(emote?: boolean | undefined, sender?: Character | null): BaseState {
+    growEmotes: ((itemName: string) => string)[] = [
+        (itemName) => `%NAME% squeaks as %POSSESSIVE% ${itemName} spreads further across %POSSESSIVE% body.`,
+        (itemName) => `%NAME_POSSESSIVE_DIRECT% ${itemName} slowly grows and spreads.`,
+        (itemName) => `%NAME% squirms as %POSSESSIVE% ${itemName} glows and expands.`
+    ];
+
+    instantEmotes: ((itemName: string) => string)[] = [
+        (itemName) => `In a flash, %NAME_POSSESSIVE_DIRECT% ${itemName} grows and engulfs %INTENSIVE%.`,
+        (itemName) => `%NAME_POSSESSIVE_DIRECT% ${itemName} rapidly expands and covers %INTENSIVE%.`,
+        (itemName) => `With a squeak, %NAME% is instantly covered by %POSSESSIVE% ${itemName} and its curse.`
+    ];
+
+    TickCursedItem(now: number, cursedItem: CursedItemWorn): boolean {
+        let refreshNeeded = false;
+        let wornItems = Player.Appearance;
+        let keyItem = this.findWornItem(cursedItem);
+        console.info(`${cursedItem.CurseName} grows...`);
+        //   1) Look for key item and remove active outfit if it is missing
+        if (!keyItem) {
+            this.ClearActiveOutfit(cursedItem.CurseName);
+            refreshNeeded = true;
+        } else {
+            //   2) Compare active outfit code against Player.Appearance, identify any items missing from current wear
+            let items = parseFromBase64(cursedItem.OutfitCode) as ItemBundle[];
+            let itemsToApply = items.filter(item => this.itemIsAllowed(item) && !wornItems.some(x => x.Craft?.Name == item.Craft?.Name && x.Asset.Name == item.Name && x.Asset.Group.Name == item.Group));
+            // 3) If no items remain unworn and cursed item is not inexhaustable, remove the key item otherwise pick what to wear
+            if ((!itemsToApply || itemsToApply.length <= 0) && !cursedItem.Inexhaustable) {
+                this.ClearActiveOutfit(cursedItem.CurseName);
+                refreshNeeded = true;
+            } else {
+                if (cursedItem.Speed == "instant") {
+                    // If instant wear all
+                    if (itemsToApply.length > 0) {
+                        itemsToApply.forEach(item => {
+                            ApplyItem(item, cursedItem.Crafter, true, true);
+                        });
+                        refreshNeeded = true;
+                    } else if (!cursedItem.Inexhaustable) {
+                        this.ClearActiveOutfit(cursedItem.CurseName);
+                        refreshNeeded = true;
+                    }
+                } else {
+                    itemsToApply = this.shuffleArray(itemsToApply);
+                    // Sort bindings to end, followed by key item last, pick an item and wear
+                    let itemToWear = itemsToApply.sort((a, b) => isBind(a.Group) ? 1 : -1).sort((a, b) => (a.Name == keyItem.Asset.Name && a.Group == keyItem.Asset.Group.Name) ? 1 : -1)[0];
+                    if (!!InventoryGet(Player, itemToWear.Group))
+                        InventoryRemove(Player, itemToWear.Group);
+                    ApplyItem(itemToWear, cursedItem.Crafter, true, true);
+                    
+                    //   4) If only one item to wear and cursed item is not inexhaustable, clear the active outfit with an emote. (also remove/destroy key item??)
+                    if (itemsToApply.length <= 1 && !cursedItem.Inexhaustable)
+                        this.ClearActiveOutfit(cursedItem.CurseName);
+                    refreshNeeded = true;
+                }
+            }
+        }
+        cursedItem.lastTick = now;
+        return refreshNeeded;
+    }
+
+    Recover(emote?: boolean | undefined, sender?: Character | null): BaseState | undefined {
+        // Recover clears all active outfits
         if (!this.Active) {
             return this;
         }
 
-        this.Restrictions.Wardrobe = "false";
-        this.ClearStoredOutfit();
-        super.Recover();
-        getModule<SpreadingOutfitModule>("SpreadingOutfitModule").finishingSpreadingState();
-        return this;
+        this.ClearActiveOutfit();
+        return super.Recover();
     }
 
-    Activate(memberNumber?: number, duration?: number, emote?: boolean): BaseState | undefined {
-        try {
-            if (!this.checkSettingsValid()) return undefined;
-
-            let outfitList = this.GetConfiguredItemBundles(this.getCurrentOutfitFromSettings().Code, item => SpreadingOutfitState.ItemIsAllowed(item));
-            if (!!outfitList && typeof outfitList == "object" && outfitList.length > 0) {
-                this.SetStoredOutfit(outfitList);
-                this._spreadingCheck = 0;
-                this.Restrictions.Wardrobe = "true";
-                //this.StripCharacter(outfitList);
-
-                return super.Activate(memberNumber, duration, emote);
-            }
-        }
-        catch {
-            console.warn("error parsing outfitcode in SpreadingOutfitState: " + this.getCurrentOutfitFromSettings().Code);
-        }
-        return undefined;
+    AddCursedItem(item: CursedItemWorn, memberNumber?: number, duration?: number, emote?: boolean): BaseState | undefined {
+        if (!this.checkItemIsValid(item)) return undefined;
+        this.AddActiveOutfit(item);
+        return this.Activate(memberNumber, duration, emote);
     }
 
-    checkSettingsValid() {
-        if (!this.Settings || !this.Settings.Active) return false;
-        if (this.Settings.Internal.CurrentOutfitIndex < 1 || this.Settings.Internal.CurrentOutfitIndex > 3) return false;
-        let cur_outfit = this.getCurrentOutfitFromSettings();
-        if (!cur_outfit || !cur_outfit.Enabled) return false;
-
-        return true;
+    checkItemIsValid(item: CursedItemWorn) {
+        if (!this.Settings || !this.Settings.enabled || !this.Settings.Vulnerable) return false;        
+        
+        let allowedMember = false;
+        switch (this.Settings.Allowed) {
+            case "Public": // Public (excluding blacklist)
+                allowedMember = Player.BlackList.indexOf(item.Crafter) == -1;
+                break;
+            case "Friend":
+                allowedMember ||= (Player.FriendList?.indexOf(item.Crafter) ?? -1) > -1;
+            case "Lover":
+                allowedMember ||= Player.IsLoverOfMemberNumber(item.Crafter);
+            case "Whitelist":
+                allowedMember ||= Player.WhiteList.indexOf(item.Crafter) > -1;
+            case "Owner":
+                allowedMember ||= Player.IsOwnedByMemberNumber(item.Crafter);
+            case "Self":
+                allowedMember ||= item.Crafter == Player.MemberNumber;
+                break;
+        }
+        
+        return allowedMember;
     }
 
-    getCurrentOutfitFromSettings(): SpreadingOutfitCodeConfig {
-        switch (this.Settings.Internal.CurrentOutfitIndex) {
-            case 1:
-                return this.Settings.Outfit1;
-            case 2:
-                return this.Settings.Outfit2;
-            case 3:
-                return this.Settings.Outfit3;
-        }
-        return this.Settings.Outfit1;
-    }
-
-    WearOneMoreItem(outfitListbundle: ServerItemBundle[]) {
-        let index = this.selectNextItem(outfitListbundle);
-        if (index >= 0) {
-            let item = outfitListbundle[index];
-
-            let newItem = InventoryWear(Player, item.Name, item.Group, item.Color, item.Difficulty, Player.MemberNumber ?? 0, item.Craft, false);
-            if (!!newItem) {
-                if (!!item.Property)
-                    newItem.Property = item.Property;
-                let itemName = (newItem?.Craft?.Name ?? item.Name);
-                SendAction(`%NAME%'s cursed outfit is spreading, adding ${itemName}.`);
-                ChatRoomCharacterUpdate(Player);
-            }
-        }
-        else {
-            this.Recover();
-        }
-    }
-
-    selectNextItem(items: ItemBundle[]) {
-        let i = 0;
-        // Do all clothes 1st
-        let priority: "cloth" | "bind" = "cloth";
-        while (i < items.length) {
-            let item = items[i];
-            let asset = AssetGet(Player.AssetFamily, item.Group, item.Name);
-            let shouldSkipBind = (priority == "cloth" && asset && isBind(asset));
-            let itemIsAllowed = this.DoChange(asset);
-            let isBlocked = asset && InventoryIsPermissionBlocked(Player, asset.DynamicName(Player), asset.Group.Name);
-            let isLimited = asset && InventoryIsPermissionLimited(Player, asset.DynamicName(Player), asset.Group.Name);
-            let isRoomDisallowed = !InventoryChatRoomAllow(asset?.Category ?? []);
-            //let itemAlreadyWorn = InventoryIsItemInList(Player, item.Group, [item.Name]);
-            let slotAlreadyFilled = asset && InventoryGet(Player, asset.Group.Name)?.Asset == asset;
-            if (slotAlreadyFilled || shouldSkipBind || itemIsAllowed == false || isBlocked || isLimited || isRoomDisallowed) {
-                i++;
-                // Do all bind after clothes are done (disabled)
-                if (i == items.length && priority == "cloth") {
-                    i = 0;
-                    priority = "bind";
-                }
-                continue;
-            }
-
-            // If we get here then this the next item to use!
-            return i;
-        }
-        return -1;
+    itemIsAllowed(item: ItemBundle) {        
+        let asset = AssetGet(Player.AssetFamily, item.Group, item.Name);
+        let isBlocked = asset && InventoryIsPermissionBlocked(Player, asset.DynamicName(Player), asset.Group.Name);
+        let isLimited = asset && InventoryIsPermissionLimited(Player, asset.DynamicName(Player), asset.Group.Name);
+        let isRoomDisallowed = !InventoryChatRoomAllow(asset?.Category ?? []);
+        let slotAlreadyFilled = asset && isBind(asset) && InventoryGet(Player, asset.Group.Name)?.Asset == asset;
+        return !isBlocked && !isLimited && !isRoomDisallowed && !slotAlreadyFilled;
     }
 
     shuffleArray(array: any): any {
@@ -217,24 +287,6 @@ export class SpreadingOutfitState extends BaseState {
             [array[i], array[j]] = [array[j], array[i]];
           }
           return array;
-    }
-
-    // Copied from ItemBundleBaseState
-    GetConfiguredItemBundles(code: string, filter: (item: ItemBundle) => boolean): ItemBundle[] {
-            let items: ItemBundle[] = [];
-            if (stringIsCompressedItemBundleArray(code)) {
-                items = JSON.parse(LZString.decompressFromBase64(code) ?? "") as ItemBundle[];
-            }
-            // Code needs to actually be full info here, build it on the source side..
-            // else if (CommonIsNumeric(code) && !!Player.Wardrobe) {
-            //     let ix = parseInt(code);
-            //     if (ix >= 0 && ix < Player.Wardrobe.length)
-            //         items = Player.Wardrobe[ix];
-            // } else if (code.length <= 70 && typeof mbs !== "undefined") {
-            //     items = mbs.wheelOutfits.getByName(code)?.items ?? [];
-            // }
-
-            return items.filter(item => filter(item));
     }
 
     Init(): void {}

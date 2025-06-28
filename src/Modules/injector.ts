@@ -192,11 +192,8 @@ export class InjectorModule extends BaseModule {
                             SendAction("%NAME%'s uses up the last drop of %POSSESSIVE% drink.");
                             var craft = glass.Craft;
                             InventoryRemove(Player, "ItemHandheld", false);
-                            let empty = InventoryWear(Player, "GlassEmpty", "ItemHandheld", glass.Color, glass.Difficulty, Player.MemberNumber, craft, false);
-                            if (!!empty && !!craft) {
-                                InventoryWearCraft(empty, Player, craft);
-                            }
-                            CharacterRefresh(Player);
+                            InventoryWear(Player, "GlassEmpty", "ItemHandheld", glass.Color, glass.Difficulty, Player.MemberNumber, craft, false);
+                            ChatRoomCharacterUpdate(Player);
                         }
                     }
                 }
@@ -360,59 +357,6 @@ export class InjectorModule extends BaseModule {
     _bcxHooked: boolean = false;
 
     InitializeRestrictiveHooks() {
-        // hookFunction('ServerSend', 5, (args, next) => {
-        //     if (!this.Enabled)
-        //         return next(args);
-            
-        //     var type = args[0];
-        //     // Prevent speech while asleep
-        //     if ((type == "ChatRoomChat" && args[1].Type == "Chat" && args[1]?.Content[0] != "(")) {
-        //         if (this.asleep) {
-        //             this.ActivateSleepEvent();
-        //             return null;
-        //         }
-        //     }
-        //     return next(args);
-        // }, ModuleCategory.Injector);
-
-        // hookFunction('Player.CanChangeOwnClothes', 1, (args, next) => {
-        //     if (this.Enabled && this.asleep)
-        //         return false;
-        //     return next(args);
-        // }, ModuleCategory.Injector);
-
-        // hookFunction('Player.IsDeaf', 1, (args, next) => {
-        //     if (this.Enabled && this.asleep)
-        //         return true;
-        //     return next(args);
-        // }, ModuleCategory.Injector);
-
-        // hookFunction('Player.IsBlind', 1, (args, next) => {
-        //     if (this.Enabled && this.asleep)
-        //         return true;
-        //     return next(args);
-        // }, ModuleCategory.Injector);
-
-        // hookFunction('Player.CanWalk', 1, (args, next) => {
-        //     if (this.Enabled && (this.asleep || this.brainwashed))
-        //         return false;
-        //     return next(args);
-        // }, ModuleCategory.Injector);
-
-        // hookFunction('ChatRoomCanAttemptStand', 1, (args, next) => {
-        //     if (this.Enabled && this.asleep)
-        //         return false;
-        //     return next(args);
-        // }, ModuleCategory.Injector);
-
-        // hookFunction('ChatRoomFocusCharacter', 6, (args, next) => {
-        //     if (this.Enabled && this.asleep) {
-        //         LSCG_SendLocal("Character access blocked while asleep.", 5000);
-        //         return;
-        //     }
-        //     return next(args);
-        // }, ModuleCategory.Injector);
-
         hookFunction("Player.HasTints", 4, (args, next) => {
             if (!this.Enabled || !Player.ImmersionSettings?.AllowTints)
                 return next(args);
@@ -942,7 +886,7 @@ export class InjectorModule extends BaseModule {
                 Color: "Default"            
             };
         }
-        var net = InventoryWear(target, "Net", "ItemDevices", craftedNet.Color, isDefaultNet ? 8 : undefined, Player.MemberNumber, craftedNet, false);
+        var net = InventoryWear(target, "Net", "ItemDevices", craftedNet.Color, isDefaultNet ? 0 : craftedNet.DifficultyFactor, Player.MemberNumber, craftedNet, false);
         InventoryCraft(Player, target, "ItemDevices", craftedNet, true);
         if (!!net && !!net.Property && isDefaultNet) {
             net.Difficulty = 8;
@@ -1189,11 +1133,7 @@ export class InjectorModule extends BaseModule {
         if (!this.settings.enableMindControl)
             return;
         let isWearingHypnoItem = Player.Appearance.some(item => this.hypnoItems.some(hypnoItem => hypnoItem.name == item.Asset.Name && hypnoItem.active(item)))
-        // var headItem = InventoryGet(Player, "ItemHead");
-        // var hoodItem = InventoryGet(Player, "ItemHood");
-        // let isWearingActiveHeadset = 
-        //     (headItem?.Asset?.Name == "InteractiveVRHeadset" && !!headItem?.Property?.TypeRecord && headItem?.Property?.TypeRecord["b"] == 5) ||
-        //     (hoodItem?.Asset?.Name == "TechnoHelmet1" && !!hoodItem?.Property?.TypeRecord && hoodItem?.Property?.TypeRecord["v"] == 5);
+
         if (isWearingHypnoItem) {
             let randomLevelIncrease = (getRandomInt(4) + 2) / 10; // .2 to .5
             if (getRandomInt(50) == 0) { // Odds are big jump once every 10 seconds

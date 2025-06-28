@@ -19,6 +19,10 @@ export class SleepyMiniGame extends BaseMiniGame {
     successText: string = "You shake out of it!";
     tintColor = [{r: 0, g: 0, b: 0, a: 0}];
 
+    get name(): LSCGMiniGames {
+        return "LSCG_SleepyMiniGame";
+    }
+
     constructor(module: InjectorModule) {
         super();
         this.Module = module;

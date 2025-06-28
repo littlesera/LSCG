@@ -8,6 +8,10 @@ export class SuggestionMiniGame extends BaseMiniGame {
     Module: HypnoModule;
     get Options(): SuggestionMiniGameOptions | undefined { return this.Module.MiniGameOptions; }
 
+    get name(): LSCGMiniGames {
+        return "LSCG_SuggestionMiniGame";
+    }
+
     constructor(module: HypnoModule) {
         super();
         this.Module = module;

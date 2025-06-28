@@ -18,6 +18,7 @@ import { drawTooltip } from "Settings/settingUtils";
 import { GrabType, LeashingModule } from "./leashing";
 import { OpacityMigrator } from "./Migrators/OpacityMigrator";
 import { SuggestionSettingMigrator } from "./Migrators/SuggestionSettingMigrator";
+import { OutfitMigrator } from "./Migrators/OutfitMigrator";
 
 // >= R111
 declare var DialogMenuMapping: { items: ScreenFunctions & { C: null | Character } };
@@ -159,7 +160,6 @@ export class CoreModule extends BaseModule {
 
                         coreModule.settings.seeSharedCrafts = this.getAttribute("aria-checked") === "true";
                         settingsSave();
-                        // @ts-expect-error: R111 added a fourth parameter; remove this comment once R111 annotations are available
                         DialogInventoryBuild(C, true, false, false);
                     },
                     { image: "./Icons/Online.png", role: "checkbox", tooltip: "Toggle Shared Crafts", tooltipPosition: "left" },
@@ -257,7 +257,8 @@ export class CoreModule extends BaseModule {
     Migrators: BaseMigrator[] = [
         new StateMigrator(),
         new OpacityMigrator(),
-        new SuggestionSettingMigrator()
+        new SuggestionSettingMigrator(),
+        new OutfitMigrator()
     ];
 
     CheckForMigrations(fromVersion: string): boolean {
@@ -358,16 +359,12 @@ export class CoreModule extends BaseModule {
                     Object.assign(Player.LSCG.CollarModule, msg.settings?.CollarModule);
                 if (Player.LSCG.MagicModule.enabled && Player.LSCG.MagicModule.remoteAccess)
                     Object.assign(Player.LSCG.MagicModule, msg.settings?.MagicModule);
-                if (Player.LSCG.SpreadingOutfitModule.enabled)
-                    Object.assign(Player.LSCG.SpreadingOutfitModule, msg.settings?.SpreadingOutfitModule);
                 settingsSave(true);
                 let currentCollarPurchase = Player.LSCG?.CollarModule?.collarPurchased;
                 if (!prevCollarPurchase && currentCollarPurchase)
                     LSCG_SendLocal(`${!Sender ? "Someone" : CharacterNickname(Sender)} has purchased the Collar Module for you!`);
                 else
                     LSCG_SendLocal(`${!Sender ? "Someone" : CharacterNickname(Sender)} has accessed your remote settings!`);
-
-                getModule<SpreadingOutfitModule>("SpreadingOutfitModule")?.checkStartStopNeeded();
                 break;
             case "collar-tighten":
                 if (!!Sender) getModule<CollarModule>("CollarModule")?.TightenButtonPress(Sender);

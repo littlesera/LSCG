@@ -1,4 +1,4 @@
-import { getCharacter, isBody, isCosplay, isGenitals, isHair, isPronouns, isSkin, parseFromBase64 } from "utils";
+import { ApplyItem, getCharacter, isBody, isCosplay, isGenitals, isHair, isPronouns, isSkin, parseFromBase64 } from "utils";
 import { BaseState } from "./BaseState";
 import { StateModule } from "Modules/states";
 import { SpellDefinition } from "Settings/Models/magic";
@@ -109,15 +109,14 @@ export class PolymorphedState extends ItemBundleBaseState {
             }
         }
         catch {
-            console.warn("error parsing outfitcode in PolymorphedState: " + spell.Polymorph?.Code);
+            console.warn("error parsing outfitcode in PolymorphedState: " + spell.Polymorph?.Key);
         }
         return this;
     }
 
     WearMany(items: ItemBundle[], spell: SpellDefinition, isRestore: boolean = false, memberNumber: number | undefined = undefined) {
         if (!memberNumber || memberNumber == -1)
-            memberNumber = Player.MemberNumber ?? 0;
-        let sender = !!memberNumber ? getCharacter(memberNumber) : null;
+            memberNumber = Player.MemberNumber ?? 0;        
         items.forEach(item => {
             let asset = AssetGet(Player.AssetFamily, item.Group, item.Name);
             if (!!asset && this.DoChange(asset, spell)) {
@@ -126,9 +125,7 @@ export class PolymorphedState extends ItemBundleBaseState {
 
                 let isSkinColorChangeOnly = (!spell || (!spell.Polymorph?.IncludeAllBody && spell.Polymorph?.IncludeSkin)) && this.skinColorChangeOnly.indexOf(asset.Group.Name) > -1;
                 if (isRestore || !(isBlocked || isRoomDisallowed || isSkinColorChangeOnly)) {
-                    let newItem = InventoryWear(Player, item.Name, item.Group, item.Color, item.Difficulty, memberNumber, item.Craft, false);
-                    if (!!newItem && !!item.Property)
-                        newItem.Property = item.Property;
+                    ApplyItem(item, memberNumber, true, !isRestore);
                 }
             }
         });

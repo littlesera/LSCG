@@ -1,4 +1,4 @@
-import { getCharacter, isBind, isCloth, parseFromBase64 } from "utils";
+import { ApplyItem, getCharacter, isBind, isCloth, parseFromBase64 } from "utils";
 import { BaseState } from "./BaseState";
 import { StateModule } from "Modules/states";
 import { OutfitOption, SpellDefinition } from "Settings/Models/magic";
@@ -86,7 +86,7 @@ export class RedressedState extends ItemBundleBaseState {
             }
         }
         catch {
-            console.warn("error parsing outfitcode in RedressedState: " + spell.Outfit?.Code);
+            console.warn("error parsing outfitcode in RedressedState: " + spell.Outfit?.Key);
         }
         return this;
     }
@@ -101,11 +101,7 @@ export class RedressedState extends ItemBundleBaseState {
                 let isBlocked = this.InventoryBlockedOrLimited(sender, {Asset: asset});
                 let isRoomDisallowed = !InventoryChatRoomAllow(asset?.Category ?? []);
                 if (isRestore || !(isBlocked || isRoomDisallowed)) {
-                    let newItem = InventoryWear(Player, item.Name, item.Group, item.Color, item.Difficulty, memberNumber, item.Craft, false);
-                    if (!!newItem) {
-                        if (!!item.Property)
-                            newItem.Property = item.Property;
-                    }
+                    ApplyItem(item, memberNumber, true, !isRestore);
                 }
             }
         });

@@ -1,34 +1,29 @@
 import { BaseSettingsModel, ModuleStats } from "./base";
 
+export type SpreadSpeed = "slow" | "medium" | "fast" | "instant";
+export type ItemType = "cloth" | "bind" | "cosplay" | "body" | "gender";
 
-export interface SpreadingOutfitModuleStats extends ModuleStats {
-    CurrentOutfitIndex: number;
-    CurrentRepeatNumber: number;
-    NextActivationTime: number; // in ms
-    LastUsedOutfitIndex: number;
-}
-
-export interface SpreadingOutfitSettingsModel extends SpreadingOutfitPublicSettingsModel {
-    AllowSelfStop: boolean;
-}
-
-export interface SpreadingOutfitPublicSettingsModel extends BaseSettingsModel {
-    Active: boolean;
-    AllowedRemote: "Public" | "Friend" | "Whitelist" | "Lover" | "Owner" | "Self";
-    Locked: boolean;
-    Lockable: boolean;
-    Outfit1: SpreadingOutfitCodeConfig;
-    Outfit2: SpreadingOutfitCodeConfig;
-    Outfit3: SpreadingOutfitCodeConfig;
-    RepeatInterval: number; // in min
-    ItemInterval: number; // in sec
-    RepeatNumber: number;
-    StartSpreadingTriggerWords: string;
-    ActivateCurseTriggerWords: string;
-    Internal: SpreadingOutfitModuleStats;
-}
-
-export interface SpreadingOutfitCodeConfig {
-    Code: string;
+export interface CursedItemModel {
+    Name: string;
     Enabled: boolean;
+    OutfitKey: string;
+    Speed: SpreadSpeed;
+    Inexhaustable: boolean;
+    Filter: ItemType[];
+}
+
+export interface CursedItemWorn {
+    ItemName: string;
+    CurseName: string;
+    Crafter: number;
+    OutfitCode: string;
+    Speed: SpreadSpeed;
+    Inexhaustable: boolean;
+    lastTick: number;
+}
+
+export interface SpreadingOutfitSettingsModel extends BaseSettingsModel {
+    Allowed: "Public" | "Friend" | "Whitelist" | "Lover" | "Owner" | "Self";
+    Vulnerable: boolean;
+    CursedItems: CursedItemModel[];
 }

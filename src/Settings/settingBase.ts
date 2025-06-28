@@ -1,4 +1,4 @@
-import { ICONS, settingsSave } from "utils";
+import { ICONS, mouseTooltip, settingsSave } from "utils";
 import { BaseSettingsModel } from "./Models/base";
 import { SETTING_FUNC_NAMES, SETTING_FUNC_PREFIX, SETTING_NAME_PREFIX, setSubscreen } from "./setting_definitions";
 import { BaseModule } from "base";
@@ -134,7 +134,8 @@ export abstract class GuiSubscreen {
 		MainCanvas.textAlign = "left";
 
 		DrawText("- LSCG " + this.name + " -", GuiSubscreen.START_X, GuiSubscreen.START_Y - GuiSubscreen.Y_MOD, "Black", "#D7F6E9");
-		DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png", "LSCG main menu");
+		DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png", "Main Menu");
+		
 		if (this.multipageStructure.length > 1) {
 			MainCanvas.textAlign = "center";
 			PreferencePageChangeDraw(1595, 75, this.multipageStructure.length);

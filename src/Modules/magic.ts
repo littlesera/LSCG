@@ -1,7 +1,7 @@
 import { BaseModule } from "base";
 import { getModule } from "modules";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
-import { GetConfiguredItemBundlesFromSavedCode, GetDelimitedList, OnChat, GetHandheldItemNameAndDescriptionConcat, GetItemNameAndDescriptionConcat, GetMetadata, ICONS, LSCG_SendLocal, LSCG_TEAL, OnActivity, SendAction, forceOrgasm, getCharacter, getRandomInt, hookFunction, isPhraseInString, removeAllHooksByModule, sendLSCGCommand, sendLSCGCommandBeep, settingsSave, getCharacterByNicknameOrMemberNumber, excludeParentheticalContent, escapeRegExp } from "../utils";
+import { GetConfiguredItemBundlesFromOutfitKey, GetDelimitedList, OnChat, GetHandheldItemNameAndDescriptionConcat, GetItemNameAndDescriptionConcat, GetMetadata, ICONS, LSCG_SendLocal, LSCG_TEAL, OnActivity, SendAction, forceOrgasm, getCharacter, getRandomInt, hookFunction, isPhraseInString, removeAllHooksByModule, sendLSCGCommand, sendLSCGCommandBeep, settingsSave, getCharacterByNicknameOrMemberNumber, excludeParentheticalContent, escapeRegExp } from "../utils";
 import { ActivityModule, ActivityTarget } from "./activities";
 import { KNOWN_SPELLS_LIMIT, LSCGSpellEffect, MagicSettingsModel, OutfitConfig, OutfitOption, SpellDefinition } from "Settings/Models/magic";
 import { GuiMagic, pairedSpellEffects } from "Settings/magic";
@@ -11,6 +11,8 @@ import { InjectorModule } from "./injector";
 import { BaseState } from "./States/BaseState";
 import { RedressedState } from "./States/RedressedState";
 import { PolymorphedState } from "./States/PolymorphedState";
+import { OutfitCollection } from "Settings/OutfitCollection/outfitCollection";
+import { OutfitCollectionModule } from "./outfitCollection";
 
 const dialogButtonInfo = [980, 10, 100, 40, 5];
 const dialogButtonCoords: [number,number,number,number] = [dialogButtonInfo[0], dialogButtonInfo[1], 40, 40];
@@ -93,18 +95,20 @@ export class MagicModule extends BaseModule {
             Effects: Array(getRandomInt(3) + 1).fill(0).map((t, ix, arr) => Object.values(LSCGSpellEffect).filter(v => arr.indexOf(v) == -1)[getRandomInt(Object.keys(LSCGSpellEffect).length)])
         }
         if (spell.Effects.indexOf(LSCGSpellEffect.outfit)) {
+            let outfitCollection = getModule<OutfitCollectionModule>("OutfitCollectionModule")?.data;
+            let outfitKeys = outfitCollection.GetOutfitKeys();
+            let lscgChoice = outfitCollection.GetOutfitBundle(outfitKeys[getRandomInt(outfitKeys.length)]);
             let mbsOutfits = (<any>Player).MBSSettings?.FortuneWheelItemSets.filter((s: any) => !!s).map((s: { itemList: any; }) => s.itemList as ItemBundle[]) as ItemBundle[][];
-            let outfitIx = getRandomInt(mbsOutfits?.length);
-            let outfit = !mbsOutfits ? undefined : mbsOutfits[outfitIx];
-            let wardrobeOutfit = !Player.Wardrobe ? undefined : Player.Wardrobe[getRandomInt(Player.Wardrobe?.length)];
-            if (!outfit || !!wardrobeOutfit && getRandomInt(2) == 0)
-                outfit = wardrobeOutfit;
-
+            let mbsChoice = mbsOutfits[getRandomInt(mbsOutfits.length)];
+            let wardrobeChoice = !Player.Wardrobe ? undefined : Player.Wardrobe[getRandomInt(Player.Wardrobe?.length)];
+            let choices = [lscgChoice, mbsChoice, wardrobeChoice].filter(x => !!x);
+            let outfit = choices[getRandomInt(choices.length)];
             spell.Outfit = {
                 Option: OutfitOption.both,
+                Key: "",
                 Code: LZString.compressToBase64(JSON.stringify(outfit))
             }
-        }        
+        }
         return spell;
     }
 
@@ -160,7 +164,7 @@ export class MagicModule extends BaseModule {
         }, ModuleCategory.Magic);
 
         hookFunction("ServerPlayerIsInChatRoom", 10, (args, next) => {
-            return next(args) || CurrentScreen == "LSCG_SPELLS_DIALOG";
+            return next(args) || (CurrentScreen as string) == "LSCG_SPELLS_DIALOG";
         }, ModuleCategory.Magic);
 
         hookFunction("DialogLeave", 1, (args, next) => {
@@ -276,9 +280,8 @@ export class MagicModule extends BaseModule {
         if (this.Enabled) {
             this.SpellMenuOpen = true;
             this.PrevScreen = CurrentScreen;
-            // @ts-expect-error: Requires updated bc stubs
             DialogMenuMapping.dialog.Unload();
-            CurrentScreen = "LSCG_SPELLS_DIALOG";
+            (CurrentScreen as string) = "LSCG_SPELLS_DIALOG";
         }
     }
 
@@ -286,9 +289,8 @@ export class MagicModule extends BaseModule {
         this.SpellMenuOpen = false;
         this.TeachingSpell = false;
         this.SpellPairOption.SelectOpen = false;
-        if (CurrentScreen == "LSCG_SPELLS_DIALOG")
-            CurrentScreen = this.PrevScreen ?? "ChatRoom";
-        // @ts-expect-error: Requires updated bc stubs
+        if ((CurrentScreen as string) == "LSCG_SPELLS_DIALOG")
+            (CurrentScreen as string) = this.PrevScreen ?? "ChatRoom";
         DialogMenuMapping.dialog.Load();
     }
 
@@ -1019,11 +1021,11 @@ export class MagicModule extends BaseModule {
         if (!spell)
             return;
         // Unpack specified outfit codes for sending.
-        if (!!spell.Outfit && !!spell.Outfit.Code) {
-            spell.Outfit.Code = LZString.compressToBase64(JSON.stringify(GetConfiguredItemBundlesFromSavedCode(spell.Outfit.Code, item => RedressedState.ItemIsAllowed(item))));
+        if (!!spell.Outfit && !!spell.Outfit.Key) {
+            spell.Outfit.Code = LZString.compressToBase64(JSON.stringify(GetConfiguredItemBundlesFromOutfitKey(spell.Outfit.Key, item => RedressedState.ItemIsAllowed(item))));
         } 
-        if (!!spell.Polymorph && spell.Polymorph.Code) {
-            spell.Polymorph.Code = LZString.compressToBase64(JSON.stringify(GetConfiguredItemBundlesFromSavedCode(spell.Polymorph.Code, item => PolymorphedState.ItemIsAllowed(item))));
+        if (!!spell.Polymorph && spell.Polymorph.Key) {
+            spell.Polymorph.Code = LZString.compressToBase64(JSON.stringify(GetConfiguredItemBundlesFromOutfitKey(spell.Polymorph.Key, item => PolymorphedState.ItemIsAllowed(item))));
         }
     }
 }

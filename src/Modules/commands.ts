@@ -184,7 +184,7 @@ export class CommandModule extends BaseModule {
 					}
 
 					let itemList = items.map(item => `<li>${item.Group} - ${item.Name}</li>`).join("");
-					LSCG_SendLocal(`<div><b>Encoded Items:</b><ul>${itemList}</ul></div>`);
+					LSCG_SendLocal(`<div><b>Encoded Items:</b><ul>${itemList}</ul></div>`, false);
 			}
 		}, {
 			Tag: "export",
@@ -215,7 +215,7 @@ export class CommandModule extends BaseModule {
 	}
 
 	get moduleCommands(): ICommand[] {
-		return modules().map(m => m.commands).reduce((a, b) => a.concat(b));
+		return modules().map(m => m.commands).reduce((a, b) => a.concat(b), []);
 	}
 
 	get allCommands(): ICommand[] {

@@ -1,0 +1,154 @@
+#lscg-outfit-edit {
+	--gap: min(2dvh, 1dvw);
+	--height: min(7dvh, 3.5dvw);
+
+	background: unset;
+	grid-template:
+		"menubar menubar menubar menubar menubar menubar menubar menubar" var(--height)
+		"name-input name-input name-input . . . . ." var(--height)
+		"outfit-input outfit-input outfit-input options-button options-button outfit-button outfit-button ." var(--height)
+		"combination-label combination-label combination-label outfit-checks outfit-checks outfit-checks outfit-checks ." min(2dvh, 2.5dvw)
+		"combination combination combination outfit-checks outfit-checks outfit-checks outfit-checks ." 1fr;
+	
+	.button-tooltip {
+		--tooltip-gap: var(--gap);
+	}
+}
+
+#lscg-outfit-edit-checkboxes {
+	grid-area: outfit-checks;
+	height: 0px;
+	overflow: hidden;
+	transition: height .1s linear;
+
+	&.show {
+		height: 100%;
+	}
+
+	fieldset {
+		display: flex;
+		flex-direction: column;
+		gap: .4rem;
+		border-radius: 5%;
+
+		legend {
+			margin-right: auto;
+		}
+
+		label {
+			display: flex;
+			align-items: center;
+			input {
+				margin-right: 1rem;
+			}
+		}
+	}
+
+	input[type="checkbox"] {
+		height: min(3dvh, 1.5dvw);
+		width: min(3dvh, 1.5dvw);
+	}
+}
+
+#lscg-outfit-edit-combinations {
+	grid-area: combination;
+	scroll-behavior: smooth;
+	background-color: var(--lscg-button-color);
+	border: min(0.3dvh, 0.15dvw) solid var(--lscg-border-color);
+	box-sizing: border-box;
+	color: var(--lscg-text-color);
+	cursor: pointer;
+	font: inherit;
+	font-family: var(--lscg-font-family);
+	font-size: var(--lscg-font-small);
+	text-overflow: ellipsis;
+	text-align: start;
+    overflow-y: auto;
+
+	&:disabled {
+		background-color: color-mix(in srgb, var(--lscg-background-color) 60%, black 40%);
+		cursor: auto;
+	}
+
+	option:nth-child(even) {
+		background-color: #eef;
+	}
+
+	option[selected] {
+		background-color: var(--lscg-hover-color);
+		color: #fff;
+		text-shadow: darkgray;
+	}
+}
+
+#lscg-outfit-edit-combination-label {
+	grid-area: combination-label;
+}
+
+#lscg-outfit-edit-menubar {
+	display: grid;
+	gap: var(--gap);
+	grid-area: menubar;
+	grid-template-columns: subgrid;
+	grid-template-rows: subgrid;
+	padding: 3px;
+
+	#lscg-outfit-edit-header {
+		grid-column: 1 / 4;
+		justify-self: center;
+	}
+
+	#lscg-outfit-edit-delete {
+		grid-column: 5;
+	}
+
+	#lscg-outfit-edit-cancel {
+		grid-column: 6;
+	}
+
+	#lscg-outfit-edit-accept {
+		grid-column: 7;
+	}
+
+	.button {
+		height: min(9dvh, 4.5dvw);
+		width: min(9dvh, 4.5dvw);
+	}
+}
+
+#lscg-outfit-edit-form {
+	background-color: unset;
+	display: grid;
+	grid-column: 1 / 8;
+	grid-row: 1 / 6;
+	grid-template-columns: subgrid;
+	grid-template-rows: subgrid;
+	height: calc(8.5 * (var(--height) + var(--gap)));
+	padding: 3px;
+	overflow: visible;
+
+	& > label,
+	& > span {
+		place-self: anchor-center start;
+	}
+}
+
+#lscg-outfit-edit-outfit-name {
+	grid-area: name-input;
+}
+
+#lscg-outfit-edit-outfit-input {
+	grid-area: outfit-input;
+}
+
+#lscg-outfit-edit-outfit-button {
+	grid-area: outfit-button;
+	grid-template-columns: auto;
+	grid-template-rows: var(--height) auto;
+}
+
+#lscg-outfit-edit-options-button {
+	grid-area: options-button;
+	grid-template-columns: auto;
+	grid-template-rows: var(--height) auto;
+}

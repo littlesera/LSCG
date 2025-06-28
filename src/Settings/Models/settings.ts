@@ -1,6 +1,6 @@
 import { BoopsModule } from "Modules/boops";
 import { InjectorModule } from "Modules/injector";
-import { BaseSettingsModel, GlobalPublicSettingsModel, GlobalSettingsModel, LipstickSettingsModel, MiscSettingsModel, OpacityPublicSettingsModel, OpacitySettingsModel, SplatterSettingsModel } from "./base";
+import { BaseSettingsModel, GlobalPublicSettingsModel, GlobalSettingsModel, LipstickSettingsModel, MiscSettingsModel, OpacityPublicSettingsModel, OpacitySettingsModel, OutfitSettings, SplatterSettingsModel } from "./base";
 import { CollarModel, CollarPublicSettingsModel, CollarSettingsModel } from "./collar";
 import { HypnoPublicSettingsModel, HypnoSettingsModel } from "./hypno";
 import { InjectorPublicSettingsModel, InjectorSettingsModel } from "./injector";
@@ -9,12 +9,12 @@ import { StateModule } from "Modules/states";
 import { StatePublicSettingsModel, StateSettingsModel } from "./states";
 import { MagicPublicSettingsModel, MagicSettingsModel } from "./magic";
 import { ChaoticItemModule } from "Modules/chaotic-item";
-import { SpreadingOutfitPublicSettingsModel, SpreadingOutfitSettingsModel } from "./spreading-outfit";
-
+import { SpreadingOutfitSettingsModel } from "./spreading-outfit";
 
 export interface SettingsModel {
     Version: string;
     RethrowExceptions: boolean;
+    OutfitCollectionModule: OutfitSettings;
     CollarModule: CollarSettingsModel;
     HypnoModule: HypnoSettingsModel;
     BoopsModule: BaseSettingsModel;
@@ -43,7 +43,7 @@ export interface IPublicSettingsModel extends BaseSettingsModel {
     InjectorModule: InjectorPublicSettingsModel;
     StateModule: StatePublicSettingsModel;
     MagicModule: MagicPublicSettingsModel;
-    SpreadingOutfitModule: SpreadingOutfitPublicSettingsModel;
+    SpreadingOutfitModule: SpreadingOutfitSettingsModel;
     OpacityModule: OpacityPublicSettingsModel;
     LeashingModule: BaseSettingsModel;
     ChaoticItemModule: BaseSettingsModel;
@@ -158,21 +158,11 @@ export class PublicSettingsModel implements IPublicSettingsModel {
         enabled: true,
         preventExternalMod: false
     };
-    SpreadingOutfitModule: SpreadingOutfitPublicSettingsModel = <SpreadingOutfitPublicSettingsModel>{
+    SpreadingOutfitModule: SpreadingOutfitSettingsModel = <SpreadingOutfitSettingsModel>{
         enabled: false,
-        Active: false,
-        Locked: false,
-        Lockable: false,
-        AllowedRemote: "Self",
-        Outfit1: {Code: "", Enabled: false},
-        Outfit2: {Code: "", Enabled: false},
-        Outfit3: {Code: "", Enabled: false},
-        RepeatInterval: 10,
-        RepeatNumber: 5,
-        ItemInterval: 30,
-        Internal: {CurrentOutfitIndex: 0, CurrentRepeatNumber: 0, NextActivationTime: 0, LastUsedOutfitIndex: -1},
-        StartSpreadingTriggerWords: "",
-        ActivateCurseTriggerWords: ""
+        Allowed: "Public",
+        Vulnerable: false,
+        CursedItems: []
     };
     ChaoticItemModule: BaseSettingsModel = <BaseSettingsModel>{enabled: false};
     SplatterModule: SplatterSettingsModel = <SplatterSettingsModel>{

@@ -1,3 +1,5 @@
+import { OutfitStorageStrategy } from "Settings/OutfitCollection/IOutfitCollection";
+
 export interface BaseSettingsModel {
     enabled: boolean;
 }
@@ -54,4 +56,8 @@ export interface OpacitySettingsModel extends OpacityPublicSettingsModel {
 
 export interface OpacityPublicSettingsModel extends BaseSettingsModel {
     preventExternalMod: boolean;
+}
+
+export interface OutfitSettings extends BaseSettingsModel {
+    strategy: OutfitStorageStrategy;
 }

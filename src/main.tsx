@@ -1,5 +1,6 @@
+import { h } from "tsx-dom";
 import { CleanDefaultsFromSettings, ExportSettings, GetDataSizeReport, hookFunction, ICONS, ImportSettings, isObject, parseFromBase64, parseFromUTF16, sendLSCGBeep, settingsSave } from './utils';
-import { CheckVersionUpdate, ConfiguredActivities, CraftableItemSpellNames, DrugKeywords, getModule, HypnoTriggers, modules, NetgunKeywords, registerModule } from 'modules';
+import { CheckVersionUpdate, ConfiguredActivities, CraftableItemSpellNames, DrugKeywords, getModule, HypnoTriggers, modules, NetgunKeywords, Outfits, registerModule, TestOutfitMigration } from 'modules';
 import { SettingsModel } from 'Settings/Models/settings';
 import { HypnoModule } from './Modules/hypno';
 import { CollarModule } from './Modules/collar';
@@ -21,6 +22,9 @@ import { lt } from 'semver';
 import { LeashingModule } from 'Modules/leashing';
 import { ChaoticItemModule } from './Modules/chaotic-item';
 import { SplatterModule } from 'Modules/splatter';
+import { OutfitCollectionModule } from 'Modules/outfitCollection';
+
+import styles from "./main.scss";
 
 export { 
 	DrugKeywords, 
@@ -34,7 +38,9 @@ export {
 	ImportSettings,
 	getModule,
 	sendLSCGBeep,
-	CheckVersionUpdate
+	CheckVersionUpdate,
+	TestOutfitMigration,
+	Outfits
 };
 
 function initWait() {
@@ -66,10 +72,10 @@ function init() {
 		return;
 	
 	// clear any old settings.
-	if (!!(<any>Player.OnlineSettings)?.LittleSera)
-		delete (<any>Player.OnlineSettings).LittleSera;
-	if (!!(<any>Player.OnlineSettings)?.ClubGames)
-		delete (<any>Player.OnlineSettings).ClubGames;
+	if (!!(Player.OnlineSettings as any)?.LittleSera)
+		delete (Player.OnlineSettings as any).LittleSera;
+	if (!!(Player.OnlineSettings as any)?.ClubGames)
+		delete (Player.OnlineSettings as any).ClubGames;
 
 	let settings = Player.ExtensionSettings?.LSCG ?? Player.OnlineSettings?.LSCG ?? "";
 	let localSettings = localStorage.getItem(`LSCG_${Player.MemberNumber}_Backup`) ?? "";
@@ -98,10 +104,10 @@ function init() {
 			throw new Error(`LSCG: Failed to load corrupted server data.`)
 		}
 		localStorage.setItem(`LSCG_${Player.MemberNumber}_Backup`, settings)
-		Player.LSCG = parsed || <SettingsModel>{};
+		Player.LSCG = parsed || {} as SettingsModel;
 		// Clean old settings
 		if (!!Player.OnlineSettings?.LSCG) {
-			delete (<any>Player.OnlineSettings).LSCG;
+			delete (Player.OnlineSettings as any).LSCG;
 			settingsSave();
 		}
 	}
@@ -132,6 +138,7 @@ function init() {
 	});
 
 	window.LSCG_Loaded = true;
+	document.body.appendChild(<style id="lscg-style">{styles.toString()}</style>);
 	console.log(`LSCG loaded! Version: ${LSCG_VERSION}`);
 }
 
@@ -139,6 +146,7 @@ function init_modules(): boolean {
 	registerModule(new CoreModule());
 	registerModule(new OpacityModule());
 	registerModule(new GUI());
+	registerModule(new OutfitCollectionModule());
 	registerModule(new StateModule());
 	registerModule(new HypnoModule());
 	registerModule(new CollarModule());

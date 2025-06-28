@@ -1,37 +1,41 @@
 import { BaseModule } from "base";
 import { getModule } from "modules";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
-import { SendAction, getRandomInt, OnChat, settingsSave, removeAllHooksByModule, isPhraseInString, GetDelimitedList } from "../utils";
-import { SpreadingOutfitSettingsModel, SpreadingOutfitCodeConfig } from "Settings/Models/spreading-outfit";
+import { SendAction, getRandomInt, OnChat, settingsSave, removeAllHooksByModule, isPhraseInString, GetDelimitedList, OnAction, GetMetadata, GetTargetCharacter, hookFunction, GetItemNameAndDescriptionConcat, sendLSCGCommandBeep, isObject, isBind, isCloth, isCosplay, isBody, isGenitals, isPronouns, toItemBundle, parseFromBase64 } from "../utils";
+import { CursedItemModel, CursedItemWorn, ItemType, SpreadingOutfitSettingsModel } from "Settings/Models/spreading-outfit";
 import { GuiSpreadingOutfit } from "Settings/spreading-outfit";
 import { StateModule } from "./states";
 import { BaseState } from "./States/BaseState";
+import { SpreadingOutfitState } from "./States/SpreadingOutfitState";
+import { CommandListener, CoreModule } from "./core";
+import { OutfitCollectionModule } from "./outfitCollection";
+import { isArray } from "lodash-es";
 
+// Featurization/Rework ideas:
+// - Refactor outfit storage to separate model to reduce traffic to server and provide local storage option for unlimited codes
+//   - If not using local storage figure out how much to limit it by. Straight number? Calculated model size limit?
+//   - Make robust migrator to copy outfit codes from outfit/polymorph spells and suggestions
+//   - Make sure outfit code getting for spell effects etc is done via lscg beep request/resp
+// - Allow keying outfit as to custom 'spreading' crafted keyword
+// - Upon wearing that item, user will beep its owner for outfit code, store locally and begin spreading state
+// - Spread will continue until outfit + key item is entirely applied, and periodically check if it needs to restart (Spread will _not_ remove keyed item if there's a collision)
+// - Spread can only be stopped by removing key crafted item
+// Also allow voice activated outfit spread
 export class SpreadingOutfitModule extends BaseModule {
     nextActivationTriggerTimeout: number | undefined = undefined;
     debug: boolean = false;
 
-    get Enabled(): boolean {
-		return super.Enabled && [122875, 74298].indexOf(Player.MemberNumber ?? 0) > -1; // Only enable on test account for now
-	}
+    cursedKeywords = [
+        "cursed",
+        "enchanted"
+    ]
 
     get defaultSettings() {
         return <SpreadingOutfitSettingsModel>{
             enabled: false,
-            Active: false,
-            Locked: false,
-            Lockable: false,
-            Internal: {CurrentOutfitIndex: 0, CurrentRepeatNumber: 0, NextActivationTime: 0, LastUsedOutfitIndex: -1},
-            AllowedRemote: "Self",
-            AllowSelfStop: true,
-            Outfit1: {Code: "", Enabled: false},
-            Outfit2: {Code: "", Enabled: false},
-            Outfit3: {Code: "", Enabled: false},
-            RepeatNumber: 5,
-            RepeatInterval: 10,
-            ItemInterval: 30,
-            StartSpreadingTriggerWords: "",
-            ActivateCurseTriggerWords: ""
+            Allowed: "Public",
+            Vulnerable: false,
+            CursedItems: []
         };
     }
 
@@ -43,35 +47,38 @@ export class SpreadingOutfitModule extends BaseModule {
         return GuiSpreadingOutfit;
     }
 
-    get stateModule(): StateModule {
-        return getModule<StateModule>("StateModule");
+    get spreadingState(): SpreadingOutfitState {
+        return getModule<StateModule>("StateModule").SpreadingOutfitState;
     }
 
     safeword(): void {
-        this.settings.Active = false;
-        this.settings.Locked = false;
-        this.settings.Lockable = false;
         this.settings.enabled = false;
+        this.settings.Vulnerable = false;
     }
 
     load(): void {
-        if (this.settings.Active && !this.stateModule.SpreadingOutfitState.Active) {
-            this.setupNextActivationTimeout();
-        }
-
-        OnChat(1, ModuleCategory.SpreadingOutfit, (data, sender, msg, metadata) => {
-            if (!this.Enabled || !this.settings.enabled)
-                return;
-
-            if (this.settings.Active && this.isMsgHaveTrigger(msg, this.settings.StartSpreadingTriggerWords)) {
-                if (this.debug) console.log("StartSpreadingTriggerWords [", this.settings.StartSpreadingTriggerWords, "] found in msg=", msg);
-                this.startSpreadingState();
+        let lastCheckedForItems = 0;
+        hookFunction("TimerProcess", 1, (args, next) => {
+            let now = CommonTime();
+            // Check gags every 5 seconds for any new cursed items..
+            if (this.Enabled && this.settings.Vulnerable && lastCheckedForItems + 5000 < now) {
+                lastCheckedForItems = now;
+                this.CheckForCursedItems();
             }
-            else if (this.isMsgHaveTrigger(msg, this.settings.ActivateCurseTriggerWords)) {
-                if (this.debug) console.log("ActivateCurseTriggerWords [", this.settings.ActivateCurseTriggerWords, "] found in msg=", msg);
-                this.startSpreadingOutfitTriggered();
-            }
+            return next(args);
+        }, ModuleCategory.SpreadingOutfit);
+
+        getModule<CoreModule>("CoreModule").RegisterCommandListener(<CommandListener>{
+            id: "cursed_item_request",
+            command: "cursed-item-request",
+            func: (sender: number, msg: LSCGMessageModel) => this.HandleCursedItemRequest(sender, msg)
         });
+
+        getModule<CoreModule>("CoreModule").RegisterCommandListener(<CommandListener>{
+            id: "cursed_item_response",
+            command: "cursed-item-response",
+            func: (sender: number, msg: LSCGMessageModel) => this.HandleCursedItemResponse(sender, msg)
+        })
     }
 
     run(): void {
@@ -79,178 +86,90 @@ export class SpreadingOutfitModule extends BaseModule {
     }
 
     unload(): void {
-        if (this.nextActivationTriggerTimeout) {
-            clearTimeout(this.nextActivationTriggerTimeout);
-            this.nextActivationTriggerTimeout = undefined;
-        }
         removeAllHooksByModule(ModuleCategory.SpreadingOutfit);
     }
 
-    isMsgHaveTrigger(msg: string, triggers: string) {
-        // Skip on OOC
-        if (msg.startsWith("(") || !triggers)
-            return false;
-
-        var triggerWords = GetDelimitedList(triggers);
-
-        let matched = triggerWords.some(trigger => {
-            return isPhraseInString(msg.toLowerCase(), trigger);
-        })
-        return matched;
-    }
-
-    setupNextActivationTimeout() {
-        var timeToNextActivation = this.settings.Internal.NextActivationTime - CommonTime();
-        this.nextActivationTriggerTimeout = setTimeout(() => { this.startSpreadingState() }, timeToNextActivation);
-
-        // Log
-        var hours = Math.floor(timeToNextActivation / 3600000);
-        var minutes = Math.floor((timeToNextActivation % 3600000) / 60000);
-        var seconds = Math.floor(((timeToNextActivation % 360000) % 60000) / 1000);
-        if (this.debug) console.log("setupNextActivationTimeout: set trigger next activation in ", hours, "h ", minutes, "m ", seconds, "s");
-    }
-
-    // Called when settings might have changed
-    checkStartStopNeeded() {
-        if (this.debug) console.log("checkStartStopNeeded");
-        if (this.settings.Active) {
-            this.startSpreadingOutfitTriggered();
-        }
-        else {
-            this.stopSpreadingOutfitTriggered();
+    CheckForCursedItems() {
+        if (!this.Enabled) return;
+        // Iterate through Player.Appearance, look for crafted items that contain "cursed" keywords, then compare against our current active outfits.
+        // If new items are found, ping the crafting owner for the full outfit code and add as active
+        let allItems = Player.Appearance.filter(item => this.cursedKeywords.some(str => isPhraseInString(GetItemNameAndDescriptionConcat(item) ?? "", str)));
+        if (allItems.length > 0) {
+            let activeItems = this.spreadingState.ActiveOutfits ?? [];
+            let newItems = allItems.filter(item => !activeItems.some(active => active.Crafter == item.Craft?.MemberNumber && isPhraseInString(GetItemNameAndDescriptionConcat(item) ?? "", active.ItemName)));
+            newItems.forEach(item => this.SendCursedItemRequest(item))
         }
     }
 
-    startSpreadingOutfitTriggered() {
-        if (this.debug) console.log("startSpreadingOutfitTriggered");
+    SendCursedItemRequest(item: Item) {
+        let target = item.Craft?.MemberNumber ?? 0;
+        if (target <= 0) return;
+        let bundle = toItemBundle(item, Player);
+        if (!bundle) return;
 
-        this.settings.Active = true;
-        if (!this.nextActivationTriggerTimeout) {
-            this.startSpreadingState();
-        }
+        sendLSCGCommandBeep(target, "cursed-item-request", [{
+            name: "item",
+            value: bundle
+        }]);
     }
 
-    stopSpreadingOutfitTriggered() {
-        if (this.debug) console.log("stopSpreadingOutfitTriggered");
-        // Clean all Internal var
-        let wasActive = false;
-
-        if (this.settings.Active) {
-            this.settings.Active = false;
-            wasActive = true;
-        }
-        this.settings.Internal.CurrentRepeatNumber = 0;
-        this.settings.Internal.CurrentOutfitIndex = 0;
-        this.settings.Internal.NextActivationTime = 0;
-
-        if (this.stateModule.SpreadingOutfitState.Active) {
-            this.stateModule.SpreadingOutfitState.Recover(false);
-            wasActive = true;
-        }
-
-        if (this.nextActivationTriggerTimeout) {
-            clearTimeout(this.nextActivationTriggerTimeout);
-            this.nextActivationTriggerTimeout = undefined;
-            wasActive = true;
-        }
-
-        if (wasActive) {
-            SendAction(`%NAME%'s cursed outfit finished spreading and it's now drained of all its energy.`);
-            settingsSave(true);
-        }
-    }
-
-    startSpreadingState() {
-        if (!this.settings.Active) return;
-        if (this.stateModule.SpreadingOutfitState.Active) return;
-        if (this.debug) console.log("startSpreadingState: settings=", this.settings);
-        if (!this.checkSettingsValidForStart()) {
-            console.error("startSpreadingState: settings are not valid settings=", this.settings);
-            this.settings.Active = false;
-            settingsSave(true);
-            return;
-        }
-
-        if (this.nextActivationTriggerTimeout) {
-            clearTimeout(this.nextActivationTriggerTimeout);
-            this.nextActivationTriggerTimeout = undefined;
-            this.settings.Internal.NextActivationTime = 0;
-        }
-
-        this.settings.Internal.CurrentRepeatNumber += 1;
-        if (this.debug) console.log("startSpreadingState: increasing CurrentRepeatNumber=", this.settings.Internal.CurrentRepeatNumber, " / ", this.settings.RepeatNumber);
-
-        SendAction("%NAME% squeaks as a cursed clothes start to spread slowly around %INTENSIVE%.");
-
-        // Select CurrentOutfitIndex
-        this.settings.Internal.CurrentOutfitIndex = this.selectRandomCurrentOutfit();
-        this.settings.Internal.LastUsedOutfitIndex = this.settings.Internal.CurrentOutfitIndex;
-        if (this.debug) console.log("startSpreadingState: Selected CurrentOutfitIndex=", this.settings.Internal.CurrentOutfitIndex);
-
-        var state: BaseState | undefined = this.stateModule.SpreadingOutfitState.Activate();
-        if (!state) {
-            console.error("startSpreadingState: outfit", this.settings.Internal.CurrentOutfitIndex," is not valid! settings=", this.settings);
-            this.settings.Active = false;
-            settingsSave(true);
-            return;
-        }
-
-        settingsSave(true);
-    }
-
-    finishingSpreadingState() {
-        if (!this.settings.Active) return;
-        if (this.debug) console.log("finishingSpreadingState");
-        if (this.settings.Internal.CurrentRepeatNumber > this.settings.RepeatNumber) {
-            this.stopSpreadingOutfitTriggered();
-            return;
-        }
-
-        // Set next activation time for the next repeat
-        this.settings.Internal.NextActivationTime = CommonTime() + (this.settings.RepeatInterval * 60 * 1000);
-        settingsSave(true);
-
-        this.setupNextActivationTimeout();
-        SendAction(`%NAME%'s cursed outfit finished spreading but some of its energy remains and will activate again soon enough...`);
-    }
-
-    checkSettingsValidForStart(): boolean {
-        if (!this.settings) return false;
-        if (!this.settings.Active) return false;
-        if (this.settings.ItemInterval < 5 || this.settings.ItemInterval > 5 * 60) return false;
-        if (this.settings.RepeatInterval < 5 || this.settings.RepeatInterval > 60 * 24) return false;
-        if (this.settings.RepeatNumber < 0 || this.settings.RepeatNumber > 20) return false;
-
-        let at_least_one_valid_outfit = false;
-        if (this.settings.Outfit1.Enabled && this.settings.Outfit1.Code && this.settings.Outfit1.Code != "") at_least_one_valid_outfit = true;
-        if (this.settings.Outfit2.Enabled && this.settings.Outfit2.Code && this.settings.Outfit2.Code != "") at_least_one_valid_outfit = true;
-        if (this.settings.Outfit3.Enabled && this.settings.Outfit3.Code && this.settings.Outfit3.Code != "") at_least_one_valid_outfit = true;
-        if (!at_least_one_valid_outfit) return false;
-
-        return true;
-    }
-
-    selectRandomCurrentOutfit(): number {
-        let index_available = [];
-        if (this.settings.Outfit1.Enabled) index_available.push(1);
-        if (this.settings.Outfit2.Enabled) index_available.push(2);
-        if (this.settings.Outfit3.Enabled) index_available.push(3);
-        if (index_available.length <= 0) return 0; // Should not be possible as it should be detected before in this.checkSettings()
-
-        // Avoid using the same outfit twice in a row if possible
-        if (index_available.length > 1 && this.settings.Internal.LastUsedOutfitIndex >= 0) {
-            let idx = index_available.indexOf(this.settings.Internal.LastUsedOutfitIndex);
-            if (idx != -1) {
-                index_available.splice(idx, 1);
+    private filterItem(item: ServerItemBundle, filter: ItemType[] = []): boolean {
+        if (!filter || filter.length <= 0) return true;
+        let group = AssetGroup.find(g => g.Name == item.Group);
+        if (!group) return false;
+        return filter.some(f => {
+            switch (f) {
+                case "bind":
+                    return isBind(group!);
+                case "cloth":
+                    return isCloth(group!);
+                case "cosplay":
+                    return isCosplay(group!);
+                case "body":
+                    return isBody(group!);
+                case "gender":
+                    return isGenitals(group!) || isPronouns(group!);
             }
+        })
+    }
+
+    SendCursedItemResponse(target: number, keyItem: ItemBundle, item: CursedItemModel) {
+        let outfitCode = getModule<OutfitCollectionModule>("OutfitCollectionModule")?.data.GetOutfitCode(item.OutfitKey);
+        if (!outfitCode) return;
+
+        let outfitBundle = parseFromBase64(outfitCode) as ItemBundle[];
+        if (!outfitBundle || !isArray(outfitBundle) || outfitBundle.some(x => !isObject(x))) return;
+        let filtered = outfitBundle.filter(bundleItem => this.filterItem(bundleItem, item.Filter));
+        outfitCode = LZString.compressToBase64(JSON.stringify(filtered));
+
+        let itemModel = <CursedItemWorn>{
+            Crafter: Player.MemberNumber,
+            ItemName: keyItem.Craft?.Name ?? keyItem.Name,
+            CurseName: item.Name,
+            Inexhaustable: item.Inexhaustable,
+            Speed: item.Speed,
+            OutfitCode: outfitCode
         }
 
-        if (index_available.length == 1) {
-            // Only one choice is valid
-            return index_available[0];
-        }
+        sendLSCGCommandBeep(target, "cursed-item-response", [{
+            name: "item",
+            value: itemModel
+        }]);
+    }
 
-        let random_index = getRandomInt(index_available.length);
-        return index_available[random_index];
+    HandleCursedItemRequest(sender: number, msg: LSCGMessageModel) {
+        if (!this.Enabled) return;
+        let bundle = msg.command?.args.find(a => a.name == "item")?.value as ItemBundle;
+        if (!bundle) return;
+        let itemStr = GetItemNameAndDescriptionConcat(bundle) ?? "";
+        let foundItem = this.settings.CursedItems.find(item => item.Enabled && isPhraseInString(itemStr, item.Name))
+        if (!!foundItem)
+            this.SendCursedItemResponse(sender, bundle, foundItem);
+    }
+
+    HandleCursedItemResponse(sender: number, msg: LSCGMessageModel) {
+        let item = msg.command?.args.find(a => a.name == "item")?.value as CursedItemWorn;
+        if (!this.Enabled || !item || !this.spreadingState.checkItemIsValid(item)) return;
+        this.spreadingState.AddCursedItem(item, sender);
     }
 }

@@ -794,7 +794,7 @@ export class SplatterModule extends BaseModule {
 
         let opacity = new SplatterMapping(source).getOpacityAtLocation(sourceLocation);
         if (Array.isArray(opacity)) // Extract just the in mouth opacity
-            return ((opacity[14] ?? 1) * 100) ?? undefined;
+            return ((opacity[14] ?? 1) * 100);
 
         return (opacity ?? 1) * 100;
     }
