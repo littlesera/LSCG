@@ -1,11 +1,11 @@
 import { h } from "tsx-dom";
-import { ApplyItem, GetDataSizeReport, hookFunction, ICONS, isBind, isBody, isCloth, isCosplay, isGenitals, isHair, isPronouns, isSkin, smartGetAssetGroup } from "utils";
+import { ApplyItem, GetDataSizeReport, hookFunction, ICONS, isBind, isBody, isCloth, isCosplay, isGenitals, isHair, isPronouns, isSkin, parseFromBase64, smartGetAssetGroup } from "utils";
 import { GuiSubscreen } from "./settingBase";
 import { OutfitSettings } from "./Models/base";
 import { OutfitCollectionModule } from "Modules/outfitCollection";
 import styles from "./outfits.scss";
 import editorStyles from "./outfitEditor.scss";
-import { clamp, entries, toArray } from "lodash-es";
+import { clamp, entries, toArray, remove } from "lodash-es";
 import { Outfit, OutfitCollection } from "./OutfitCollection/outfitCollection";
 import { drawTooltip } from "./settingUtils";
 
@@ -61,6 +61,7 @@ const EDITOR_ID = Object.freeze({
     delete: `${editorRoot}-delete`,
     accept: `${editorRoot}-accept`,
     cancel: `${editorRoot}-cancel`,
+    clone: `${editorRoot}-clone`,
     exit: `${editorRoot}-exit`,
     header: `${editorRoot}-header`,
     midDiv: `${editorRoot}-mid-grid`,
@@ -104,6 +105,26 @@ export class GuiOutfits extends GuiSubscreen {
     SelectedKey: string | undefined = undefined;
     SelectedOutfit: Outfit | undefined = undefined;
     IncomingCode: string = "";
+    
+    private _excludedItems: {zone: string, item: string}[] = [];
+    
+    get ExcludeZones(): string[] {
+        return this._excludedItems.map(item => item.zone);
+    }
+
+    removeExclusion(zone: string) {
+        remove(this._excludedItems, item => item.zone == zone);
+    }
+
+    addExclusion(item: string, zone: string) {
+        if (!this._excludedItems.find(item => item.zone == zone))
+            this._excludedItems.push({item: item, zone: zone});
+    }
+
+    getExclusion(zone: string): {zone: string, item: string} | undefined {
+        return this._excludedItems.find(item => item.zone == zone);
+    }
+    
     preview: Character | undefined = undefined;
 
 	get name(): string {
@@ -187,13 +208,19 @@ export class GuiOutfits extends GuiSubscreen {
                             ElementButton.Create(
                                 EDITOR_ID.delete,
                                 () => this.DeleteOutfit(),
-                                { image: "./Icons/Trash.png", tooltip: "Delete item set", tooltipPosition: "right" },
+                                { image: "./Icons/Trash.png", tooltip: "Delete Outfit", tooltipPosition: "right" },
+                                { button: { attributes: { "screen-generated": undefined } } },
+                            ),
+                            ElementButton.Create(
+                                EDITOR_ID.clone,
+                                () => this.CloneOutfit(),
+                                { image: "./Icons/Layering.png", tooltip: "Clone Outfit", tooltipPosition: "right" },
                                 { button: { attributes: { "screen-generated": undefined } } },
                             ),
                             ElementButton.Create(
                                 EDITOR_ID.accept,
                                 () => this.SaveOutfit(),
-                                { image: "./Icons/Accept.png", tooltip: "Save item set:\nMissing outfit", tooltipPosition: "left" },
+                                { image: "./Icons/Accept.png", tooltip: "Save Outfit:\nMissing outfit", tooltipPosition: "left" },
                                 { button: { attributes: { form: "lscg-outfit-edit-form", type: "submit", "screen-generated": undefined } } },
                             ),
                             ElementButton.Create(
@@ -236,8 +263,8 @@ export class GuiOutfits extends GuiSubscreen {
                         EDITOR_ID.optionsButton,
                         () => this.#showParseOptions(),
                         {
-                            tooltip: "Parse Options",
-                            label: "Options",
+                            tooltip: "Filter Options",
+                            label: "⚙️",
                             labelPosition: "center",
                             tooltipPosition: "bottom",
                             tooltipRole: "label",
@@ -251,7 +278,7 @@ export class GuiOutfits extends GuiSubscreen {
                         () => this.#updateButton(EDITOR_ID.accept, true),
                         {
                             tooltip: "Parse the outfit code",
-                            label: "Parse",
+                            label: "Parse ✅",
                             labelPosition: "center",
                             disabled: true,
                             tooltipPosition: "bottom",
@@ -263,7 +290,7 @@ export class GuiOutfits extends GuiSubscreen {
                     )}
                     <div id={EDITOR_ID.combinationSelect}>
                     </div>
-                    <label for={EDITOR_ID.combinationSelect} id={EDITOR_ID.combinationLabel}>Inherited Outfits:</label>
+                    <label id={EDITOR_ID.combinationLabel}>Inherited Outfits:</label>
                     <div id={EDITOR_ID.checkboxes}>
                         {this.createCheckboxes()}
                     </div>
@@ -312,6 +339,7 @@ export class GuiOutfits extends GuiSubscreen {
     charHook: (() => void) | undefined;
 
     Load(): void {
+        CommonPhotoMode = true;
         this.charHook = hookFunction("CharacterGetCurrent", 1, (args, next) => {
             return this.preview ?? next(args);
         });
@@ -373,6 +401,7 @@ export class GuiOutfits extends GuiSubscreen {
         }
         DialogMenuMapping.items.Unload();
         if (!!this.charHook) this.charHook();
+        CommonPhotoMode = false;
         super.Exit();
     }
 
@@ -408,7 +437,6 @@ export class GuiOutfits extends GuiSubscreen {
     }
 
     clickOutfit(key: string) {
-        console.info(`Clicked outfit: ${key}`);
         if (!key) return;
         this.SelectedKey = key.toLocaleLowerCase();
         this.SelectedOutfit = Object.assign({}, this.outfitModule.data.GetOutfit(key));
@@ -445,24 +473,28 @@ export class GuiOutfits extends GuiSubscreen {
             for (let Group of AssetGroup.sort((a, b) => b.Name == selectedGroupName ? -1 : 1)) {
                 let occupied = InventoryGet(this.preview, Group.Name);
                 let selected = false;// selectedGroupName == Group.Name;
-                if (Group.IsItem() && occupied) {
-                    DrawAssetGroupZone(Player, Group.Zone, this.coords.zoom, this.coords.x, this.coords.y, 1, selected ? "#00d5d5" : "#808080", 3, occupied ? "#00FF0022" : "#80808011");
+                let excluded = this.ExcludeZones.includes(Group.Name);
+                if (Group.IsItem() && (occupied || excluded)) {
+                    DrawAssetGroupZone(Player, Group.Zone, this.coords.zoom, this.coords.x, this.coords.y, 1, selected ? "#00d5d5" : "#808080", 3, excluded ? "#FF000022" : "#00FF0022");
                     const Zone = Group.Zone?.find(z => DialogClickedInZone(Player, z, this.coords.zoom, this.coords.x, this.coords.y, 1));
                     if (Zone) {
                         let tmp = this.preview.HeightModifier;
                         this.preview.HeightModifier = 0;
                         let CZ = DialogGetCharacterZone(this.preview, Zone, this.coords.x, this.coords.y, this.coords.zoom, 1);
                         this.preview.HeightModifier = tmp;
+                        let itemName = excluded ? (this.getExclusion(Group.Name)?.item ?? Group.Name) : (occupied?.Craft?.Name ?? occupied?.Asset.Description ?? Group.Name)
                         tooltipToDraw = {
-                            x: CZ[0] - 100,
+                            x: CZ[0] - 150,
                             y: CZ[1] + CZ[3] - 20,
-                            text: occupied?.Craft?.Name ?? occupied?.Asset.Description ?? ""
+                            text: `${excluded ? "✅" : "🚫"} - ${itemName}`
                         }
                     }
                 }
             }
-            if (!!tooltipToDraw)
-                drawTooltip(tooltipToDraw.x, tooltipToDraw.y, 300, tooltipToDraw.text, "center");
+            if (!!tooltipToDraw) {
+                drawTooltip(150, 900, 550, tooltipToDraw.text, "left");
+                //drawTooltip(tooltipToDraw.x, tooltipToDraw.y, 300, tooltipToDraw.text, "center");
+            }
 
             // if (!!this.preview?.FocusGroup) {
             //     DrawRect(1000, 0, 1000, 1000, "Black");
@@ -470,20 +502,27 @@ export class GuiOutfits extends GuiSubscreen {
         }
     }
 
-    // Click(): void {
-    //     if (!!this.preview) {
-    //         for (const Group of AssetGroup) {
-    //             if (Group.IsItem()) {
-    //                 const Zone = Group.Zone.find(z => DialogClickedInZone(Player, z, this.coords.zoom, this.coords.x, this.coords.y, 1));
-    //                 if (Zone) {
-    //                     this.#openItemList(Group);
-    //                 }
-    //             }
-    //         }
-    //     } else {
-    //         super.Click();
-    //     }
-    // }
+    Click(): void {
+        if (!!this.preview) {
+            for (const Group of AssetGroup) {
+                let occupied = InventoryGet(this.preview, Group.Name);
+                let excluded = this.ExcludeZones.includes(Group.Name);
+                if (Group.IsItem() && (occupied || excluded)) {
+                    
+                    const Zone = Group.Zone.find(z => DialogClickedInZone(Player, z, this.coords.zoom, this.coords.x, this.coords.y, 1));
+                    if (Zone) {
+                        if (!this.ExcludeZones.includes(Group.Name))
+                            this.addExclusion(occupied?.Craft?.Name ?? occupied?.Asset.Description ?? Group.Name, Group.Name)
+                        else
+                            this.removeExclusion(Group.Name)
+                        this.setFilteredIncoming();
+                        //this.removeItem(Group);
+                    }
+                }
+            }
+        }
+        super.Click();
+    }
 
     setFilteredIncoming() {
         if (!this.IncomingCode || !this.SelectedOutfit) return;
@@ -502,19 +541,32 @@ export class GuiOutfits extends GuiSubscreen {
 
             if (!assetGroup) return false;
 
+            let notExcludedCheck = !this.ExcludeZones.includes(assetGroup.Name)
+
+            let defaultCheck = (assetGroup.IsAppearance() || assetGroup.IsItem());
+
             let bodyFilter = this._outfitFilter.body ||
                 (
                     (this._outfitFilter.hair || !isHair(assetGroup)) &&
                     (this._outfitFilter.skin || !isSkin(assetGroup)) &&
                     (this._outfitFilter.gender || (!isGenitals(assetGroup) && !isPronouns(assetGroup)))
                 )
+            
+            let itemClothesFilter = !isBody(assetGroup) &&
+                (this._outfitFilter.clothes || !isCloth(assetGroup)) &&
+                (this._outfitFilter.items || !isBind(assetGroup, [])) &&
+                (this._outfitFilter.cosplay || !isCosplay(assetGroup));
 
-            return (assetGroup.IsAppearance() || assetGroup.IsItem()) &&
-                    (this._outfitFilter.clothes || !isCloth(assetGroup)) &&
-                    (this._outfitFilter.items || !isBind(assetGroup, [])) &&
-                    (this._outfitFilter.cosplay || !isCosplay(assetGroup)) &&
+            return defaultCheck &&
+                    notExcludedCheck &&
+                    itemClothesFilter &&
                     bodyFilter
         })
+    }
+
+    removeItem(group: AssetItemGroup) {
+        this.IncomingCode = this.outfitModule.data.EncodeBundle(this.outfitModule.data.ConvertToBundle(this.IncomingCode).filter(item => item.Group != group.Name));
+        this.setFilteredIncoming();
     }
 
     #openItemList(group: AssetItemGroup) {
@@ -689,6 +741,8 @@ export class GuiOutfits extends GuiSubscreen {
 
     #openEditor() {
         if (!!this.SelectedOutfit) {
+            this.IncomingCode = this.SelectedOutfit.code;
+            this._excludedItems = [];
             this.#showScreen(editorRoot);
 
             let comboEle = document.getElementById(EDITOR_ID.combinationSelect);
@@ -724,6 +778,24 @@ export class GuiOutfits extends GuiSubscreen {
         this.#refreshListing();
         this.#updateElements();
         this.#showScreen(root);
+    }
+
+    CloneOutfit() {
+        if (!this.SelectedOutfit) return;
+        let newName = prompt(`Enter a name for the new outfit:`);
+        if (!newName || this.OrderedKeys().map(key => key.toLocaleLowerCase()).includes(newName.toLocaleLowerCase())) {
+            if (confirm("Invalid name: Already exists! \nTry Again?"))
+                this.CloneOutfit();
+        } else {
+            this.SelectedKey = newName;
+            this.SelectedOutfit.key = newName;
+            if (this.#canSave()) {
+                this.SaveOutfit();
+                this.clickOutfit(newName);
+            } else {
+                alert(`Not enough space to clone ${newName}`);
+            }
+        }
     }
 
     DeleteOutfit() {

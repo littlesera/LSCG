@@ -142,6 +142,7 @@
 		font-family: var(--lscg-font-family);
 		font-size: var(--lscg-font-small);
 		padding: unset;
+		text-overflow: ellipsis;
 
 		&:invalid {
 			background-color: #fbb;

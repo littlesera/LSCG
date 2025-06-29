@@ -5,10 +5,10 @@
 	background: unset;
 	grid-template:
 		"menubar menubar menubar menubar menubar menubar menubar menubar" var(--height)
-		"name-input name-input name-input . . . . ." var(--height)
-		"outfit-input outfit-input outfit-input options-button options-button outfit-button outfit-button ." var(--height)
-		"combination-label combination-label combination-label outfit-checks outfit-checks outfit-checks outfit-checks ." min(2dvh, 2.5dvw)
-		"combination combination combination outfit-checks outfit-checks outfit-checks outfit-checks ." 1fr;
+		"name-input name-input name-input name-input . . . ." var(--height)
+		"outfit-input outfit-input outfit-input outfit-input outfit-input outfit-input outfit-button options-button" var(--height)
+		"combination-label combination-label combination-label combination-label combination-label outfit-checks outfit-checks outfit-checks" min(2dvh, 2.5dvw)
+		"combination combination combination combination combination outfit-checks outfit-checks outfit-checks" 1fr;
 	
 	.button-tooltip {
 		--tooltip-gap: var(--gap);
@@ -86,28 +86,36 @@
 }
 
 #lscg-outfit-edit-menubar {
-	display: grid;
+	display: flex;
 	gap: var(--gap);
 	grid-area: menubar;
 	grid-template-columns: subgrid;
 	grid-template-rows: subgrid;
 	padding: 3px;
 
+	h1 {
+		margin-right: auto;
+	}
+
 	#lscg-outfit-edit-header {
 		grid-column: 1 / 4;
 		justify-self: center;
 	}
 
-	#lscg-outfit-edit-delete {
+	#lscg-outfit-edit-clone {
 		grid-column: 5;
 	}
 
-	#lscg-outfit-edit-cancel {
+	#lscg-outfit-edit-delete {
 		grid-column: 6;
 	}
 
-	#lscg-outfit-edit-accept {
+	#lscg-outfit-edit-cancel {
 		grid-column: 7;
+	}
+
+	#lscg-outfit-edit-accept {
+		grid-column: 8;
 	}
 
 	.button {
@@ -119,7 +127,7 @@
 #lscg-outfit-edit-form {
 	background-color: unset;
 	display: grid;
-	grid-column: 1 / 8;
+	grid-column: 1 / 9;
 	grid-row: 1 / 6;
 	grid-template-columns: subgrid;
 	grid-template-rows: subgrid;
@@ -130,6 +138,10 @@
 	& > label,
 	& > span {
 		place-self: anchor-center start;
+	}
+
+	button {
+		width: min(20dvh, 9dvw);
 	}
 }
 
