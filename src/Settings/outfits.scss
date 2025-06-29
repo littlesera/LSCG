@@ -1,7 +1,7 @@
 #lscg-outfits {
 	grid-template:
 		"storage outfitsMain ." auto
-		"storageFooter . new" min(14dvh, 7dvw) / min(30dvh, 15dvw) auto min(20dvh, 10dvw);
+		"storageFooter outfitsMain new" min(14dvh, 7dvw) / min(30dvh, 15dvw) auto min(20dvh, 10dvw);
 }
 
 #lscg-outfits-exit {

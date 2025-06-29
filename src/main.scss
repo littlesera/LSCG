@@ -70,11 +70,11 @@
 	.lscg-button {
 		height: inherit;
 		width: inherit;
-
-		&:hover + .lscg-button-tooltip {
-			visibility: visible;
-		}
 	}
+}
+
+.lscg-button:hover + .lscg-button-tooltip {
+	visibility: visible;
 }
 
 .lscg-timer {

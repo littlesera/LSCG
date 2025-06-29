@@ -167,7 +167,7 @@ export class GuiOutfits extends GuiSubscreen {
 
     screens = {
         [root]: Object.freeze({
-            shape: [GuiSubscreen.START_X, GuiSubscreen.START_Y, 1900 - GuiSubscreen.START_X, 800] as RectTuple,
+            shape: [GuiSubscreen.START_X, GuiSubscreen.START_Y - 40, 1900 - GuiSubscreen.START_X, 750] as RectTuple,
             visibility: "visible",
             dom: <div id={ID.root} class="lscg-screen">
                 <style id={ID.styles}>{styles.toString()}</style>
@@ -189,7 +189,7 @@ export class GuiOutfits extends GuiSubscreen {
                         onClick={this.NewOutfit.bind(this)}
                         style={{ backgroundImage: "url('./Icons/Plus.png')" }}
                     />
-                    <span class="lscg-button-tooltip" id={ID.newOutfitTooltip} style={{ justifySelf: "right" }}>
+                    <span class="lscg-button-tooltip" id={ID.newOutfitTooltip} style={{ right: "100%" }}>
                         New Outfit
                     </span>
                 </div>
