@@ -1,9 +1,10 @@
-import { ApplyItem, CanApplyLock, fromItemBundle, getRandomInt, isBind, isCloth, parseFromBase64, SendAction, settingsSave, stringIsCompressedItemBundleArray } from "utils";
+import { ApplyItem, CanApplyLock, fromItemBundle, getRandomEntry, getRandomInt, isBind, isCloth, parseFromBase64, SendAction, settingsSave, stringIsCompressedItemBundleArray } from "utils";
 import { getModule } from "modules";
 import { BaseState } from "./BaseState";
 import { StateModule } from "Modules/states";
 import { SpreadingOutfitModule } from "Modules/spreading-outfit";
 import { SpreadingOutfitSettingsModel, CursedItemModel, CursedItemWorn } from "Settings/Models/spreading-outfit";
+import { sortBy } from "lodash-es";
 
 // TODO: Design base 'spreading' state more agnostic of 'cursed items'...
 
@@ -49,7 +50,7 @@ export class SpreadingOutfitState extends BaseState {
     }
 
     allEndEmotes: string[] = [
-        `%NAME% lets out a sign of relief as %POSSESSIVE% cursed items fall off %INTENSIVE%.`
+        `%NAME% lets out a sigh of relief as %POSSESSIVE% curses cease.`
     ];
     curseEndEmotes: ((itemName: string) => string)[] = [
         (itemName) => `%NAME_POSSESSIVE_DIRECT% ${itemName} dims as it exhausts its energy and falls off %POSSESSIVE% body.`,
@@ -157,25 +158,24 @@ export class SpreadingOutfitState extends BaseState {
         if (!this.Active) return;
         let refreshNeeded = false;
 
+        if ((this.ActiveOutfits?.length ?? 0) <= 0) this.Recover();
+
         //TODO -- On each tick (1s interval) check each active outfitfor their spread speed and if they are due (need to save last tick time)
         let cursesToCheck = this.ActiveOutfits?.filter(cursedItem => cursedItem.lastTick + this.ItemInterval(cursedItem) < now);
-        if (cursesToCheck?.length ?? 0 <= 0) this.Recover();
-        else {
-            // When due: 
-            cursesToCheck?.forEach(cursedItem => {
-                refreshNeeded ||= this.TickCursedItem(now, cursedItem);
-            });
-        }
+        // When due: 
+        cursesToCheck?.forEach(cursedItem => {
+            refreshNeeded ||= this.TickCursedItem(now, cursedItem);
+        });
         if (refreshNeeded)
             ChatRoomCharacterUpdate(Player);
 
         super.Tick(now);
     }
 
-    growEmotes: ((itemName: string) => string)[] = [
-        (itemName) => `%NAME% squeaks as %POSSESSIVE% ${itemName} spreads further across %POSSESSIVE% body.`,
-        (itemName) => `%NAME_POSSESSIVE_DIRECT% ${itemName} slowly grows and spreads.`,
-        (itemName) => `%NAME% squirms as %POSSESSIVE% ${itemName} glows and expands.`
+    growEmotes: ((key: string, item: string) => string)[] = [
+        (key, item) => `%NAME% squeaks as %POSSESSIVE% ${key} spreads further across %POSSESSIVE% body, adding ${item}.`,
+        (key, item) => `%NAME_POSSESSIVE_DIRECT% ${key} slowly grows and spreads, adding ${item}.`,
+        (key, item) => `%NAME% squirms as %POSSESSIVE% ${key} glows and expands, adding ${item}.`
     ];
 
     instantEmotes: ((itemName: string) => string)[] = [
@@ -184,11 +184,15 @@ export class SpreadingOutfitState extends BaseState {
         (itemName) => `With a squeak, %NAME% is instantly covered by %POSSESSIVE% ${itemName} and its curse.`
     ];
 
+    replaceKeyEmotes: ((key: string, item: string) => string)[] = [
+        (key, item) => `%NAME_POSSESSIVE_DIRECT% ${key} dims as it exhausts its energy and falls off %POSSESSIVE% body as it is replaced with ${item}.`,
+        (key, item) => `%NAME_POSSESSIVE_DIRECT% ${key} releases its curse and falls off %POSSESSIVE% body, replaced by ${item}.`
+    ];
+
     TickCursedItem(now: number, cursedItem: CursedItemWorn): boolean {
         let refreshNeeded = false;
         let wornItems = Player.Appearance;
         let keyItem = this.findWornItem(cursedItem);
-        console.info(`${cursedItem.CurseName} grows...`);
         //   1) Look for key item and remove active outfit if it is missing
         if (!keyItem) {
             this.ClearActiveOutfit(cursedItem.CurseName);
@@ -201,10 +205,11 @@ export class SpreadingOutfitState extends BaseState {
             if ((!itemsToApply || itemsToApply.length <= 0) && !cursedItem.Inexhaustable) {
                 this.ClearActiveOutfit(cursedItem.CurseName);
                 refreshNeeded = true;
-            } else {
+            } else if (!!itemsToApply && itemsToApply.length > 0) {
                 if (cursedItem.Speed == "instant") {
                     // If instant wear all
                     if (itemsToApply.length > 0) {
+                        SendAction(getRandomEntry(this.instantEmotes)(cursedItem.ItemName));
                         itemsToApply.forEach(item => {
                             ApplyItem(item, cursedItem.Crafter, true, true);
                         });
@@ -214,16 +219,20 @@ export class SpreadingOutfitState extends BaseState {
                         refreshNeeded = true;
                     }
                 } else {
-                    itemsToApply = this.shuffleArray(itemsToApply);
                     // Sort bindings to end, followed by key item last, pick an item and wear
-                    let itemToWear = itemsToApply.sort((a, b) => isBind(a.Group) ? 1 : -1).sort((a, b) => (a.Name == keyItem.Asset.Name && a.Group == keyItem.Asset.Group.Name) ? 1 : -1)[0];
+                    let itemToWear = this.shuffleSortAndSelect(itemsToApply, keyItem);
+                    let replacingKey = keyItem.Craft?.Name == itemToWear.Craft?.Name && keyItem.Asset.Name == itemToWear.Name && keyItem.Asset.Group.Name == itemToWear.Group;
                     if (!!InventoryGet(Player, itemToWear.Group))
                         InventoryRemove(Player, itemToWear.Group);
-                    ApplyItem(itemToWear, cursedItem.Crafter, true, true);
-                    
-                    //   4) If only one item to wear and cursed item is not inexhaustable, clear the active outfit with an emote. (also remove/destroy key item??)
-                    if (itemsToApply.length <= 1 && !cursedItem.Inexhaustable)
-                        this.ClearActiveOutfit(cursedItem.CurseName);
+                    let newItem = ApplyItem(itemToWear, cursedItem.Crafter, true, true);
+                    let itemName = newItem?.Craft?.Name ?? newItem?.Asset.Description ?? itemToWear.Craft?.Name ?? itemToWear.Name;
+                    SendAction(replacingKey ?
+                        getRandomEntry(this.replaceKeyEmotes)(cursedItem.ItemName, itemName) :
+                        getRandomEntry(this.growEmotes)(cursedItem.ItemName, itemName)
+                    );
+                    // //   4) If only one item to wear and cursed item is not inexhaustable, clear the active outfit with an emote. (also remove/destroy key item??)
+                    // if (itemsToApply.length <= 1 && !cursedItem.Inexhaustable)
+                    //     this.ClearActiveOutfit(cursedItem.CurseName);
                     refreshNeeded = true;
                 }
             }
@@ -277,16 +286,22 @@ export class SpreadingOutfitState extends BaseState {
         let isBlocked = asset && InventoryIsPermissionBlocked(Player, asset.DynamicName(Player), asset.Group.Name);
         let isLimited = asset && InventoryIsPermissionLimited(Player, asset.DynamicName(Player), asset.Group.Name);
         let isRoomDisallowed = !InventoryChatRoomAllow(asset?.Category ?? []);
-        let slotAlreadyFilled = asset && isBind(asset) && InventoryGet(Player, asset.Group.Name)?.Asset == asset;
-        return !isBlocked && !isLimited && !isRoomDisallowed && !slotAlreadyFilled;
+        //let slotAlreadyFilled = asset && isBind(asset) && InventoryGet(Player, asset.Group.Name)?.Asset == asset;
+        return !isBlocked && !isLimited && !isRoomDisallowed; //&& !slotAlreadyFilled;
     }
 
-    shuffleArray(array: any): any {
+    shuffleSortAndSelect(array: ItemBundle[], keyItem: Item): ItemBundle {
         for (let i = array.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [array[i], array[j]] = [array[j], array[i]];
-          }
-          return array;
+        }
+
+        let res = sortBy(array, 
+            item => isBind(item.Group, []), 
+            item => AssetGet(Player.AssetFamily ?? "Female3DCG", item.Group, item.Name)?.IsRestraint,
+            item => item.Group == keyItem.Asset.Group.Name)
+        console.info(res);
+        return res[0];
     }
 
     Init(): void {}

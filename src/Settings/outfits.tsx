@@ -557,22 +557,20 @@ export class GuiOutfits extends GuiSubscreen {
 
             let defaultCheck = (assetGroup.IsAppearance() || assetGroup.IsItem());
 
-            let bodyFilter = this._outfitFilter.body ||
-                (
-                    (this._outfitFilter.hair || !isHair(assetGroup)) &&
-                    (this._outfitFilter.skin || !isSkin(assetGroup)) &&
-                    (this._outfitFilter.gender || (!isGenitals(assetGroup) && !isPronouns(assetGroup)))
-                )
+            let bodyFilter = 
+                (this._outfitFilter.body && isBody(assetGroup)) ||
+                (this._outfitFilter.hair && isHair(assetGroup)) ||
+                (this._outfitFilter.skin && isSkin(assetGroup)) ||
+                (this._outfitFilter.gender && (isGenitals(assetGroup) || isPronouns(assetGroup)))
             
-            let itemClothesFilter = !isBody(assetGroup) &&
-                (this._outfitFilter.clothes || !isCloth(assetGroup)) &&
-                (this._outfitFilter.items || !isBind(assetGroup, [])) &&
-                (this._outfitFilter.cosplay || !isCosplay(assetGroup));
+            let itemClothesFilter = 
+                (this._outfitFilter.clothes && isCloth(assetGroup)) ||
+                (this._outfitFilter.items && isBind(assetGroup, [])) ||
+                (this._outfitFilter.cosplay && isCosplay(assetGroup));
 
             return defaultCheck &&
                     notExcludedCheck &&
-                    itemClothesFilter &&
-                    bodyFilter
+                    (itemClothesFilter || bodyFilter)
         })
     }
 

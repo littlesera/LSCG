@@ -287,6 +287,10 @@ export function getRandomInt(max: number) {
     return Math.floor(Math.random() * max);
 }
 
+export function getRandomEntry<T>(arr: T[]) {
+	return arr[getRandomInt(arr.length)];
+}
+
 let savingFlag = 0;
 let savingPublishFlag = false;
 
