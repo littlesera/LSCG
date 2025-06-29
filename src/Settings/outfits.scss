@@ -1,7 +1,8 @@
 #lscg-outfits {
 	grid-template:
-		"storage outfitsMain ." auto
-		"storageFooter outfitsMain new" min(14dvh, 7dvw) / min(30dvh, 15dvw) auto min(20dvh, 10dvw);
+		"storage outfitsMain ." 7fr
+		"storageFooter outfitsMain new" 1fr
+		"storageSelector storageSelector ." 1fr / min(30dvh, 15dvw) auto min(20dvh, 10dvw);
 }
 
 #lscg-outfits-exit {
@@ -49,11 +50,19 @@
 	padding-top: min(1dvh, 0.5dvw);
 }
 
+#lscg-outfits-storage-type {
+	grid-area: storageSelector;
+	text-align: left;
+	select {
+		margin-left: 1rem;
+	}
+}
+
 #lscg-outfits-button-grid-outer {	
 	display: grid;
 	grid-area: outfitsMain;
-	grid-template-rows: min(9dvh, 4.5dvw) auto min(9dvh, 4.5dvw) auto;
-	height: 94%;
+	grid-template-rows: min(9dvh, 4.5dvw) auto;
+	height: 100%;
 	overflow-y: scroll;
 	padding-left: min(2dvh, 1dvw);
 	padding-right: min(2dvh, 1dvw);

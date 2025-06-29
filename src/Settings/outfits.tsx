@@ -8,6 +8,7 @@ import editorStyles from "./outfitEditor.scss";
 import { clamp, entries, toArray, remove } from "lodash-es";
 import { Outfit, OutfitCollection } from "./OutfitCollection/outfitCollection";
 import { drawTooltip } from "./settingUtils";
+import { OutfitStorageStrategy } from "./OutfitCollection/IOutfitCollection";
 
 function createButton(screen: GuiOutfits, key: string, i: number, onClick: (key: string) => void) {
     return (
@@ -37,6 +38,8 @@ const ID = Object.freeze({
     storageInner: `${root}-storage-cover`,
     storageTooltip: `${root}-storage-tooltip`,
     storageFooter: `${root}-storage-footer`,
+    storageType: `${root}-storage-type`,
+    storageTypeSelect: `${root}-storage-type-select`,
 
     newOutfit: `${root}-new-outfit`,
     newOutfitButton: `${root}-new-outfit-button`,
@@ -167,7 +170,7 @@ export class GuiOutfits extends GuiSubscreen {
 
     screens = {
         [root]: Object.freeze({
-            shape: [GuiSubscreen.START_X, GuiSubscreen.START_Y - 40, 1900 - GuiSubscreen.START_X, 750] as RectTuple,
+            shape: [GuiSubscreen.START_X, GuiSubscreen.START_Y - 30, 1900 - GuiSubscreen.START_X, 740] as RectTuple,
             visibility: "visible",
             dom: <div id={ID.root} class="lscg-screen">
                 <style id={ID.styles}>{styles.toString()}</style>
@@ -192,6 +195,18 @@ export class GuiOutfits extends GuiSubscreen {
                     <span class="lscg-button-tooltip" id={ID.newOutfitTooltip} style={{ right: "100%" }}>
                         New Outfit
                     </span>
+                </div>
+                <div id={ID.storageType}>
+                    <label>
+                        Storage: 
+                        <select id={ID.storageTypeSelect} value={OutfitStorageStrategy[this.outfitModule.data.strategy]} onChange={(evt) => this.SelectStorageStrategy(evt.currentTarget)}>
+                            <option value={OutfitStorageStrategy[OutfitStorageStrategy.SERVER]}>BC Server</option>
+                            <option value={OutfitStorageStrategy[OutfitStorageStrategy.LOCALSTORE]}>Local Storage</option>
+                        </select>
+                        <span class="lscg-button-tooltip" id={ID.newOutfitTooltip}>
+                            Change Storage Location
+                        </span>
+                    </label>
                 </div>
             </div>
         }),
@@ -417,23 +432,20 @@ export class GuiOutfits extends GuiSubscreen {
         const storageInner = document.getElementById(ID.storageInner) as HTMLElement;
 
         const storageFooter = document.getElementById(ID.storageFooter) as HTMLElement;
-        if (isPlayer) {
-            const nKBTotal = clamp(byteToKB(GetDataSizeReport(Player.ExtensionSettings[OutfitCollection.STORAGE_KEY])), 0, 9999);
-            const percentage = 100 * nKBTotal / (MAX_DATA / 1000);
-            storageFooter.innerText = `${nKBTotal} / ${MAX_DATA / 1000} KB`;
-            storageInner.style.height = `${100 - percentage}%`;
-            storageInner.style.backgroundColor = "var(--lscg-background-color)";
-            storageInner.style.borderBottom = "min(0.3dvh, 0.15dvw) solid var(--lscg-border-color)";
-            if (percentage >= 90) {
-                storageOuter.style.boxShadow = "0 0 min(2dvh, 1dvw) red";
-            }
-        } else {
-            const storageTooltip = document.getElementById(ID.storageTooltip) as HTMLElement;
-            storageFooter.innerText = `- / ${MAX_DATA / 1000} KB`;
-            storageInner.style.height = "100%";
-            storageInner.style.backgroundColor = "gray";
-            storageTooltip.style.display = "none";
+        const storageSelect = document.getElementById(ID.storageTypeSelect) as HTMLSelectElement;
+        const strategy = this.outfitModule.data.strategy;
+
+        const nKBTotal = clamp(byteToKB(this.outfitModule.data.GetOutfitCollectionBytes()), 0, 9999);
+        const percentage = 100 * nKBTotal / (MAX_DATA / 1000);
+        storageFooter.innerText = `${nKBTotal} / ${strategy == OutfitStorageStrategy.SERVER ? (MAX_DATA / 1000) : "♾️"} KB`;
+        storageInner.style.height = `${100 - percentage}%`;
+        storageInner.style.backgroundColor = "var(--lscg-background-color)";
+        storageInner.style.borderBottom = "min(0.3dvh, 0.15dvw) solid var(--lscg-border-color)";
+        if (percentage >= 90) {
+            storageOuter.style.boxShadow = "0 0 min(2dvh, 1dvw) red";
         }
+
+        storageSelect.value = OutfitStorageStrategy[strategy];
     }
 
     clickOutfit(key: string) {
@@ -591,7 +603,7 @@ export class GuiOutfits extends GuiSubscreen {
         return (
             !!this.SelectedOutfit &&
             !!this.SelectedOutfit.key &&
-            this.outfitModule.data.GetOutfitCollectionBytes() < (MAX_DATA * .9)
+            (this.outfitModule.data.strategy == OutfitStorageStrategy.LOCALSTORE || this.outfitModule.data.GetOutfitCollectionBytes() < (MAX_DATA * .9))
         );
     }
 
@@ -933,6 +945,26 @@ export class GuiOutfits extends GuiSubscreen {
                 
                 Object.assign(menuEle.style, style);
             }
+        }
+    }
+
+    SelectStorageStrategy(ele: HTMLSelectElement) {
+        if (!ele) return;
+        let newStrategy = ele.value as keyof typeof OutfitStorageStrategy;
+        let newStratEnum = OutfitStorageStrategy[newStrategy];
+
+        if (newStratEnum == this.outfitModule.data.strategy) return;
+
+        if (newStratEnum == OutfitStorageStrategy.SERVER && (this.outfitModule.data.GetOutfitCollectionBytes() >= (MAX_DATA * .9))) {
+            alert("Unable to change Storage Location: Not enough space.");
+            ele.value = OutfitStorageStrategy[OutfitStorageStrategy.LOCALSTORE];
+            return;
+        }
+
+        if (newStratEnum !== undefined && confirm("Are you sure you want to change storage locations?\nNOTE: While Local Storage is unlimited, it will be lost in incognito browsers")) {
+            ToastManager.info(`Converting Outfit Storage to: ${newStrategy}`);
+            this.outfitModule.data.SetStrategy(newStratEnum);
+            this.#updateElements();
         }
     }
 }

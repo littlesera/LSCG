@@ -35,8 +35,32 @@ export class OutfitCollection implements IOutfitCollection {
         return Player.LSCG.OutfitCollectionModule.strategy;
     }
 
-    set strategy(val: OutfitStorageStrategy) {
+    SetStrategy(val: OutfitStorageStrategy) {
+        let prev = this.strategy;
+        if (prev == val) return;
+
+        // Switch and save
         Player.LSCG.OutfitCollectionModule.strategy = val;
+        this.SaveOutfits();
+
+        // Then clear old data
+        switch (prev) {
+            case OutfitStorageStrategy.LOCALSTORE:
+                localStorage.removeItem(this.localStorageKey);
+                break;
+            case OutfitStorageStrategy.SERVER:
+                Player.ExtensionSettings[OutfitCollection.STORAGE_KEY] = "";
+                ServerPlayerExtensionSettingsSync(OutfitCollection.STORAGE_KEY)
+                break;
+        }
+    }
+
+    get localStorageKey(): string {
+        return `${OutfitCollection.STORAGE_KEY}_${Player.MemberNumber}`;
+    }
+
+    get MaxBytes(): number {
+        return this.strategy == OutfitStorageStrategy.SERVER ? OutfitCollection.MAX_BYTES : Number.MAX_SAFE_INTEGER;
     }
 
     SaveOutfits(): boolean {
@@ -45,7 +69,7 @@ export class OutfitCollection implements IOutfitCollection {
         try {
             switch (this.strategy){
                 case OutfitStorageStrategy.LOCALSTORE:
-                    localStorage.setItem(OutfitCollection.STORAGE_KEY, compressedSave);
+                    localStorage.setItem(this.localStorageKey, compressedSave);
                     break;
                 case OutfitStorageStrategy.SERVER:
                 default:
@@ -66,17 +90,25 @@ export class OutfitCollection implements IOutfitCollection {
     }
 
     LoadOutfits(): void {
-        let data = "{}";
+        let data: string | null;
         switch (this.strategy){
             case OutfitStorageStrategy.LOCALSTORE:
-                data = localStorage.getItem(OutfitCollection.STORAGE_KEY) ?? "{}";
+                data = localStorage.getItem(this.localStorageKey);
+                if (!data && !!Player.ExtensionSettings[OutfitCollection.STORAGE_KEY]) {
+                    Player.LSCG.OutfitCollectionModule.strategy = OutfitStorageStrategy.SERVER;
+                    data = Player.ExtensionSettings[OutfitCollection.STORAGE_KEY];
+                }
                 break;
             case OutfitStorageStrategy.SERVER:
             default:
                 data = Player.ExtensionSettings[OutfitCollection.STORAGE_KEY] ?? "{}";
+                if (!data && !!localStorage.getItem(this.localStorageKey)) {
+                    Player.LSCG.OutfitCollectionModule.strategy = OutfitStorageStrategy.LOCALSTORE;
+                    data = localStorage.getItem(this.localStorageKey);
+                }
                 break;
         }
-        Object.assign(this, parseFromBase64(data));
+        Object.assign(this, parseFromBase64(data ?? "{}"));
     }
 
     ExpandOutfit(outfit: Outfit, seenKeys: string[] = []) {
@@ -121,7 +153,7 @@ export class OutfitCollection implements IOutfitCollection {
     SetOutfitCode(name: string, code: string | undefined, inherits: string[] | undefined = undefined, save: boolean = true): OutfitSaveResult {
         let key = name.toLocaleLowerCase();
 
-        if (this.GetOutfitCollectionBytes() > OutfitCollection.MAX_BYTES) {
+        if (this.GetOutfitCollectionBytes() > this.MaxBytes) {
             return OutfitSaveResult.SPACE_LOW;
         }
 

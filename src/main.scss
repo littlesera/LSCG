@@ -186,6 +186,12 @@
 			background-color: color-mix(in srgb, var(--lscg-background-color) 60%, black 40%);
 			cursor: auto;
 		}
+
+		&:hover + .lscg-button-tooltip {
+			visibility: visible;
+			bottom: -120%;
+    		left: -25%;
+		}
 	}
 
 	label {
