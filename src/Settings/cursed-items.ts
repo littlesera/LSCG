@@ -8,7 +8,7 @@ import { stringIsCompressedItemBundleArray } from "utils";
 
 export const CURSED_ITEM_LIMIT: number = 100;
 
-export class GuiSpreadingOutfit extends GuiSubscreen {
+export class GuiCursedItems extends GuiSubscreen {
 
 	get name(): string {
 		return "Cursed Items";
@@ -75,17 +75,31 @@ export class GuiSpreadingOutfit extends GuiSubscreen {
 					setSetting: (val) => !!this.CursedItem ? this.CursedItem.OutfitKey = val : false,
 					overrideWidth: 600
 				},<Setting>{
-					type: "label",
-					label: "Speed:",
-					description: "Determines how fast the cursed item applies its outfit.",
-					hidden: !this.CursedItem
-				},<Setting>{
 					type: "checkbox",
 					label: "Inexhaustable:",
 					description: "If checked, this cursed item will continue to enforce its outfit until removed.",
 					setting: () => this.CursedItem?.Inexhaustable ?? false,
 					setSetting: (val) => !!this.CursedItem ? this.CursedItem.Inexhaustable = val : false,
 					hidden: !this.CursedItem
+				},<Setting>{
+					type: "label",
+					label: "Speed:",
+					description: "Determines how fast the cursed item applies its outfit.",
+					hidden: !this.CursedItem
+				},<Setting>{
+					type: "range",
+					id: "cursedItem_customSpeed",
+					label: "Custom Speed (seconds):",
+					description: "Determines the speed (in seconds). Must be between 1 and 3600 (1 hour)",
+					hidden: !this.CursedItem || this.CursedItem.Speed != 'custom',
+					range: {
+						init: this.CursedItem?.CustomSpeed,
+						min: 1,
+						max: 3600
+					},
+					overrideWidth: 800,
+					setting: () => this.CursedItem?.CustomSpeed,
+					setSetting: (val) => !!this.CursedItem ? this.CursedItem.CustomSpeed = val : false
 				}
 			]
 		]
@@ -116,9 +130,9 @@ export class GuiSpreadingOutfit extends GuiSubscreen {
 			case "Lover":
 				return "Lovers and above";
 			case "Owner":
-				return "Owners only";
+				return "Owners or Self";
 			default:
-				return "Self";
+				return "Self Only";
 		}
 	}
 
@@ -146,6 +160,7 @@ export class GuiSpreadingOutfit extends GuiSubscreen {
 	}
 
 	getSpeedString(): string {
+		if (!!this.CursedItem && !this.CursedItem.Speed) this.CursedItem.Speed = "medium";
 		switch (this.CursedItem?.Speed) {
 			case "slow":
 				return "Slow";
@@ -155,9 +170,30 @@ export class GuiSpreadingOutfit extends GuiSubscreen {
 				return "Fast";
 			case "instant":
 				return "Instant";
+			case "custom":
 			default:
-				if (!!this.CursedItem) this.CursedItem.Speed = "medium";
-				return "Medium";
+				return "Custom (seconds)";
+		}
+	}
+
+	#padNumber(input: number): string {
+		return `${(input < 10) ? " " : ""}${input}`;
+	}
+
+	getSpeedLabel(): string {
+		if (!this.CursedItem) return "";
+
+		switch (this.CursedItem.Speed) {
+			case "slow": return "0h 15m  0s";
+			case "medium": return "0h  1m  0s";
+			case "fast": return "0h  0m 10s";
+			case "instant": return "";
+			case "custom": 
+				if (!this.CursedItem.CustomSpeed) return "";
+				let seconds = this.CursedItem.CustomSpeed % 60;
+				let minutes = Math.floor((this.CursedItem.CustomSpeed % (60 * 60)) / 60);
+				let hours = Math.floor(this.CursedItem.CustomSpeed / (60 * 60));
+				return `${hours}h ${this.#padNumber(minutes)}m ${this.#padNumber(seconds)}s`;
 		}
 	}
 
@@ -174,6 +210,9 @@ export class GuiSpreadingOutfit extends GuiSubscreen {
 				this.CursedItem.Speed = "instant";
 				break;
 			case "instant":
+				this.CursedItem.Speed = "custom";
+				break;
+			case "custom":
 				this.CursedItem.Speed = "slow";
 				break;
 			default:
@@ -212,9 +251,11 @@ export class GuiSpreadingOutfit extends GuiSubscreen {
 				DrawButton(1340 - 4, this.getYPos(0) - 32 - 4, 72, 72, "", "White", "", `Create New Cursed Item`); // Add New Suggestion
 				DrawImageResize("Icons/Plus.png", 1340, this.getYPos(0) - 32, 64, 64);
 
-			let speedLabel = this.getSpeedString();
 			if (!!this.CursedItem) {
-				DrawButton(780, this.getYPos(4) - 32, 400, 64, speedLabel, "White");
+				DrawButton(780, this.getYPos(5) - 32, 400, 64, this.getSpeedString(), "White");
+				MainCanvas.textAlign = "left";
+				DrawTextFit(this.getSpeedLabel(), 1200, this.getYPos(5), 400, "Black", "White");
+				MainCanvas.textAlign = "center";
 			}
 		}
 	}
@@ -250,7 +291,7 @@ export class GuiSpreadingOutfit extends GuiSubscreen {
 				this.loadItem();
 			}
 
-			if (MouseIn(780, this.getYPos(4)-32, 400, 64)){
+			if (MouseIn(780, this.getYPos(5)-32, 400, 64)){
 				this.clickSpeed();
 			}
 		}

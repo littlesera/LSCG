@@ -3,9 +3,10 @@ import { BaseSettingsModel } from "./Models/base";
 import { SETTING_FUNC_NAMES, SETTING_FUNC_PREFIX, SETTING_NAME_PREFIX, setSubscreen } from "./setting_definitions";
 import { BaseModule } from "base";
 import { drawTooltip, GUI } from "./settingUtils";
+import { clamp } from "lodash-es";
 
 export interface Setting {
-	type: "checkbox" | "text" | "number" | "label" | "dropdown";
+	type: "checkbox" | "text" | "number" | "label" | "dropdown" | "range";
 	id: string;
 	disabled: boolean;
 	hidden: boolean;
@@ -15,6 +16,14 @@ export interface Setting {
 	overrideWidth: number;
 	setting(): any;
 	setSetting(val: any): void;
+	range?: {
+		init?: number;
+		min?: number;
+		max?: number;
+		step?: number;
+		thumb?: ThumbIcon;
+		vertical?: boolean;
+	}
 }
 
 export abstract class GuiSubscreen {
@@ -105,8 +114,11 @@ export abstract class GuiSubscreen {
 		this.multipageStructure.forEach((s, ix, arr) => {
 			if (ix != (PreferencePageCurrent-1)) {
 				s.forEach(setting => {
-					if (setting.type == "text" || setting.type == "number" || setting.type == "dropdown")
+					if (["text", "number", "range", "dropdown"].includes(setting.type)) {
 						this.ElementHide(setting.id);
+						if (setting.type == "range")
+							this.ElementHide(setting.id + "_numeric");
+					}
 				})
 			}
 		})
@@ -120,6 +132,21 @@ export abstract class GuiSubscreen {
 					break;
 				case "number":
 					ElementCreateInput(item.id, "number", item.setting(), "255");
+					break;	
+				case "range":
+					let min = item.range?.min ?? 0;
+					let max = item.range?.max ?? 100;
+					let init = clamp(item.setting() ?? 0, min, max);
+					let slider = ElementCreateRangeInput(item.id, init, min, max, Math.max(item.range?.step ?? 1, 1), item.range?.thumb, item.range?.vertical);
+					let text = ElementCreateInput(item.id + "_numeric", "number", item.setting());
+					slider.addEventListener("input", () => { 
+						this.ElementSetValue(text.id, ElementValue(slider.id)); 
+						item.setSetting(ElementValue(slider.id));
+					});
+					text.addEventListener("input", () => {
+						this.ElementSetValue(slider.id, ElementValue(text.id)); 
+						item.setSetting(ElementValue(slider.id));
+					});
 					break;	
 				case "dropdown":
 					ElementCreateDropdown(item.id, item.options, () => item.setSetting(ElementValue(item.id)));
@@ -149,10 +176,11 @@ export abstract class GuiSubscreen {
 				case "checkbox":
 					this.DrawCheckbox(item.label, item.description, item.setting(), ix, item.disabled, item.hidden);
 					break;
+				case "range":
 				case "text":
 				case "number":
 				case "dropdown":
-					this.ElementPosition(item.id, item.label, item.description, ix, item.disabled, item.hidden, item.overrideWidth);
+					this.ItemPosition(item, ix);
 					break;
 				case "label":
 					if (!item.hidden) this.DrawLabel(item.label, item.description, ix, item.hidden, item.overrideWidth);
@@ -182,6 +210,8 @@ export abstract class GuiSubscreen {
 	Exit() {
 		this.multipageStructure.forEach(s => s.forEach(item => {
 			switch (item.type) {
+				case "range" :
+					ElementRemove(item.id + "_numeric");
 				case "number":
 					if (!CommonIsNumeric(ElementValue(item.id))) {
 						ElementRemove(item.id);
@@ -256,14 +286,24 @@ export abstract class GuiSubscreen {
 		ElementPosition(elementId, -999, -999, 1, 1);
 	}
 
-	ElementPosition(elementId: string, label: string, description: string, order: number, disabled: boolean = false, hidden: boolean = false, overrideWidth: number | undefined = undefined) {
+	ItemPosition(item: Setting, ix: number) {
+		let yOffset = 0;
+		if (item.type == "range") {
+			yOffset = 15;
+			let hide = item.disabled || item.hidden;
+			ElementPosition(item.id + "_numeric", this.getXPos(ix) + 750 + (item.overrideWidth ?? 300) + 20, hide ? 9999 : this.getYPos(ix), 200);
+		}
+		this.ElementPosition(item.id, item.label, item.description, ix, item.disabled, item.hidden, item.overrideWidth, yOffset);
+	}
+
+	ElementPosition(elementId: string, label: string, description: string, order: number, disabled: boolean = false, hidden: boolean = false, overrideWidth: number | undefined = undefined, yOffset: number = 0) {
 		var isHovering = MouseIn(this.getXPos(order), this.getYPos(order) - 32, 600, 64) && !hidden;
 		if (!hidden)
 			DrawTextFit(label, this.getXPos(order), this.getYPos(order), 600, isHovering ? "Red" : "Black", "Gray");
 		let xPos = this.getXPos(order) + 750;
 		if (!!overrideWidth)
 			xPos += (overrideWidth - 300) / 2;
-		ElementPosition(elementId, xPos, hidden ? 9999 : this.getYPos(order), overrideWidth ?? 300);
+		ElementPosition(elementId, xPos, hidden ? 9999 : this.getYPos(order) + yOffset, overrideWidth ?? 300);
 		if (disabled)
 			ElementSetAttribute(elementId, "disabled", "true");
 		else{

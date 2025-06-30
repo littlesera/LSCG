@@ -4,7 +4,7 @@ import { BaseState } from "./BaseState";
 import { StateModule } from "Modules/states";
 import { SpreadingOutfitModule } from "Modules/spreading-outfit";
 import { SpreadingOutfitSettingsModel, CursedItemModel, CursedItemWorn } from "Settings/Models/spreading-outfit";
-import { sortBy } from "lodash-es";
+import { clamp, sortBy } from "lodash-es";
 
 // TODO: Design base 'spreading' state more agnostic of 'cursed items'...
 
@@ -66,7 +66,7 @@ export class SpreadingOutfitState extends BaseState {
                     InventoryRemove(Player, keyItem.Asset.Group.Name, false);
                 }
             });
-            SendAction(this.allEndEmotes[getRandomInt(this.allEndEmotes.length)]);
+            if (sync) SendAction(this.allEndEmotes[getRandomInt(this.allEndEmotes.length)]);
             delete this.config.extensions[this.activeOutfitsKey];
             delete this._activeOutfitsCache;
         }
@@ -114,7 +114,7 @@ export class SpreadingOutfitState extends BaseState {
         return "Icons/Dress.png";
     }
     Label(C: OtherCharacter): string {
-        return "Outfit Spreading";
+        return "Cursed";
     }
 
     constructor(state: StateModule) {
@@ -131,6 +131,8 @@ export class SpreadingOutfitState extends BaseState {
                 return 10 * 1000; // 10 second
             case "instant":
                 return 0; // Instant
+            case "custom":
+                return clamp(item.CustomSpeed, 1, 3600) * 1000; // custom value must be between 1s and 1h
             default:
                 return 60000; // 1 minute default
         }
@@ -161,9 +163,9 @@ export class SpreadingOutfitState extends BaseState {
         if ((this.ActiveOutfits?.length ?? 0) <= 0) this.Recover();
 
         //TODO -- On each tick (1s interval) check each active outfitfor their spread speed and if they are due (need to save last tick time)
-        let cursesToCheck = this.ActiveOutfits?.filter(cursedItem => cursedItem.lastTick + this.ItemInterval(cursedItem) < now);
+        //let cursesToCheck = this.ActiveOutfits?.filter(cursedItem => cursedItem.lastTick + this.ItemInterval(cursedItem) < now);
         // When due: 
-        cursesToCheck?.forEach(cursedItem => {
+        this.ActiveOutfits?.forEach(cursedItem => {
             refreshNeeded ||= this.TickCursedItem(now, cursedItem);
         });
         if (refreshNeeded)
@@ -197,10 +199,17 @@ export class SpreadingOutfitState extends BaseState {
         if (!keyItem) {
             this.ClearActiveOutfit(cursedItem.CurseName);
             refreshNeeded = true;
-        } else {
+        } else if (cursedItem.lastTick + this.ItemInterval(cursedItem) < now) {
             //   2) Compare active outfit code against Player.Appearance, identify any items missing from current wear
             let items = parseFromBase64(cursedItem.OutfitCode) as ItemBundle[];
-            let itemsToApply = items.filter(item => this.itemIsAllowed(item) && !wornItems.some(x => x.Craft?.Name == item.Craft?.Name && x.Asset.Name == item.Name && x.Asset.Group.Name == item.Group));
+            let itemsToApply = items.filter(item => 
+                this.itemIsAllowed(item) &&                                                 // Item allowed to apply
+                (!cursedItem.Inexhaustable || item.Group != keyItem.Asset.Group.Name) &&    // Item not key item if inexhaustable (leave key item behind if overlap)
+                !wornItems.some(x => x.Craft?.Name == item.Craft?.Name &&                   // Item not already worn
+                    x.Asset.Name == item.Name && 
+                    x.Asset.Group.Name == item.Group &&
+                    JSON.stringify(x.Color) == JSON.stringify(item.Color))
+            );
             // 3) If no items remain unworn and cursed item is not inexhaustable, remove the key item otherwise pick what to wear
             if ((!itemsToApply || itemsToApply.length <= 0) && !cursedItem.Inexhaustable) {
                 this.ClearActiveOutfit(cursedItem.CurseName);
@@ -221,7 +230,7 @@ export class SpreadingOutfitState extends BaseState {
                 } else {
                     // Sort bindings to end, followed by key item last, pick an item and wear
                     let itemToWear = this.shuffleSortAndSelect(itemsToApply, keyItem);
-                    let replacingKey = keyItem.Craft?.Name == itemToWear.Craft?.Name && keyItem.Asset.Name == itemToWear.Name && keyItem.Asset.Group.Name == itemToWear.Group;
+                    let replacingKey = keyItem.Asset.Group.Name == itemToWear.Group;
                     if (!!InventoryGet(Player, itemToWear.Group))
                         InventoryRemove(Player, itemToWear.Group);
                     let newItem = ApplyItem(itemToWear, cursedItem.Crafter, true, true);
@@ -236,8 +245,8 @@ export class SpreadingOutfitState extends BaseState {
                     refreshNeeded = true;
                 }
             }
+            cursedItem.lastTick = now;
         }
-        cursedItem.lastTick = now;
         return refreshNeeded;
     }
 
@@ -247,7 +256,7 @@ export class SpreadingOutfitState extends BaseState {
             return this;
         }
 
-        this.ClearActiveOutfit();
+        this.ClearActiveOutfit(undefined, true);
         return super.Recover();
     }
 
@@ -262,9 +271,8 @@ export class SpreadingOutfitState extends BaseState {
         
         let allowedMember = false;
         switch (this.Settings.Allowed) {
-            case "Public": // Public (excluding blacklist)
+            case "Public": 
                 allowedMember = Player.BlackList.indexOf(item.Crafter) == -1;
-                break;
             case "Friend":
                 allowedMember ||= (Player.FriendList?.indexOf(item.Crafter) ?? -1) > -1;
             case "Lover":

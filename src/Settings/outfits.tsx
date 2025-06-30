@@ -268,8 +268,7 @@ export class GuiOutfits extends GuiSubscreen {
                         placeholder="Outfit code"
                         aria-label="Outfit code"
                         onInput={(e) => {
-                            this.IncomingCode = (e.target as HTMLInputElement).value
-                            this.setFilteredIncoming();
+                            this.IncomingCode = (e.target as HTMLInputElement).value;
                             this.#updateButton(EDITOR_ID.outfitButton);
                         }}
                         onFocus={(e) => (e.target as HTMLInputElement).select()}
@@ -290,7 +289,10 @@ export class GuiOutfits extends GuiSubscreen {
                     )}
                     {ElementButton.Create(
                         EDITOR_ID.outfitButton,
-                        () => this.#updateButton(EDITOR_ID.accept, true),
+                        () => {
+                            this.setFilteredIncoming();
+                            this.#updateButton(EDITOR_ID.accept, true)
+                        },
                         {
                             tooltip: "Parse the outfit code",
                             label: "Parse ✅",
@@ -627,7 +629,7 @@ export class GuiOutfits extends GuiSubscreen {
                 break;
             }
             case EDITOR_ID.outfitButton: {
-                button.disabled = !this.SelectedOutfit?.code;
+                button.disabled = !this.IncomingCode;
                 break;
             }
             default:
@@ -665,7 +667,7 @@ export class GuiOutfits extends GuiSubscreen {
 
             case EDITOR_ID.outfitButton: {
                 const prefix = "Parse outfit code";
-                if (this.SelectedOutfit?.code) {
+                if (this.IncomingCode) {
                     tooltip.innerText = prefix;
                 } else {
                     tooltip.innerText = `${prefix}:\nMissing code`;

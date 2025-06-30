@@ -1,6 +1,6 @@
 import { BaseSettingsModel, ModuleStats } from "./base";
 
-export type SpreadSpeed = "slow" | "medium" | "fast" | "instant";
+export type SpreadSpeed = "slow" | "medium" | "fast" | "instant" | "custom";
 export type ItemType = "cloth" | "bind" | "cosplay" | "body" | "gender";
 
 export interface CursedItemModel {
@@ -8,6 +8,7 @@ export interface CursedItemModel {
     Enabled: boolean;
     OutfitKey: string;
     Speed: SpreadSpeed;
+    CustomSpeed: number;
     Inexhaustable: boolean;
     Filter: ItemType[];
 }
@@ -18,6 +19,7 @@ export interface CursedItemWorn {
     Crafter: number;
     OutfitCode: string;
     Speed: SpreadSpeed;
+    CustomSpeed: number;
     Inexhaustable: boolean;
     lastTick: number;
 }

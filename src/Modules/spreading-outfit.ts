@@ -3,7 +3,7 @@ import { getModule } from "modules";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
 import { SendAction, getRandomInt, OnChat, settingsSave, removeAllHooksByModule, isPhraseInString, GetDelimitedList, OnAction, GetMetadata, GetTargetCharacter, hookFunction, GetItemNameAndDescriptionConcat, sendLSCGCommandBeep, isObject, isBind, isCloth, isCosplay, isBody, isGenitals, isPronouns, toItemBundle, parseFromBase64 } from "../utils";
 import { CursedItemModel, CursedItemWorn, ItemType, SpreadingOutfitSettingsModel } from "Settings/Models/spreading-outfit";
-import { GuiSpreadingOutfit } from "Settings/spreading-outfit";
+import { GuiCursedItems } from "Settings/cursed-items";
 import { StateModule } from "./states";
 import { BaseState } from "./States/BaseState";
 import { SpreadingOutfitState } from "./States/SpreadingOutfitState";
@@ -44,7 +44,7 @@ export class SpreadingOutfitModule extends BaseModule {
 	}
 
     get settingsScreen(): Subscreen | null {
-        return GuiSpreadingOutfit;
+        return GuiCursedItems;
     }
 
     get spreadingState(): SpreadingOutfitState {
@@ -148,6 +148,7 @@ export class SpreadingOutfitModule extends BaseModule {
             CurseName: item.Name,
             Inexhaustable: item.Inexhaustable,
             Speed: item.Speed,
+            CustomSpeed: item.CustomSpeed,
             OutfitCode: outfitCode
         }
 
