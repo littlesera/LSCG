@@ -2,7 +2,7 @@ import { StateConfig } from "Settings/Models/states";
 import { BaseMigrator } from "./BaseMigrator";
 import { getModule } from "modules";
 import { OutfitCollectionModule } from "Modules/outfitCollection";
-import { parseFromBase64 } from "utils";
+import { parseFromBase64, settingsSave } from "utils";
 
 export class OutfitMigrator extends BaseMigrator {
     get Version(): string {
@@ -10,6 +10,8 @@ export class OutfitMigrator extends BaseMigrator {
     }
     
     Migrate(fromVersion: string): boolean {
+        localStorage.setItem(`LSCG_${Player.MemberNumber}_Pre7Backup`, LZString.compressToBase64(JSON.stringify(Player.LSCG)));
+
         // Migrate Outfits from spells into OutfitCollection
         console.info("Migrating Outfits from spells into new OutfitCollection.");
         let outfitCollection = getModule<OutfitCollectionModule>("OutfitCollectionModule").data
