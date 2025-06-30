@@ -35,7 +35,8 @@ export class SpreadingOutfitModule extends BaseModule {
             enabled: false,
             Allowed: "Public",
             Vulnerable: false,
-            CursedItems: []
+            CursedItems: [],
+            SuppressEmote: false
         };
     }
 
@@ -147,6 +148,7 @@ export class SpreadingOutfitModule extends BaseModule {
             ItemName: keyItem.Craft?.Name ?? keyItem.Name,
             CurseName: item.Name,
             Inexhaustable: item.Inexhaustable,
+            SuppressEmote: item.SuppressEmote,
             Speed: item.Speed,
             CustomSpeed: item.CustomSpeed,
             OutfitCode: outfitCode

@@ -1,10 +1,10 @@
-import { ApplyItem, CanApplyLock, fromItemBundle, getRandomEntry, getRandomInt, isBind, isCloth, parseFromBase64, SendAction, settingsSave, stringIsCompressedItemBundleArray } from "utils";
+import { ApplyItem, CanApplyLock, fromItemBundle, getRandomEntry, getRandomInt, isBind, isCloth, LSCG_SendLocal, parseFromBase64, SendAction, settingsSave, stringIsCompressedItemBundleArray } from "utils";
 import { getModule } from "modules";
 import { BaseState } from "./BaseState";
 import { StateModule } from "Modules/states";
 import { SpreadingOutfitModule } from "Modules/spreading-outfit";
 import { SpreadingOutfitSettingsModel, CursedItemModel, CursedItemWorn } from "Settings/Models/spreading-outfit";
-import { clamp, sortBy } from "lodash-es";
+import { clamp, isArray, sortBy } from "lodash-es";
 
 // TODO: Design base 'spreading' state more agnostic of 'cursed items'...
 
@@ -42,9 +42,14 @@ export class SpreadingOutfitState extends BaseState {
         this.config.extensions[this.activeOutfitsKey] = LZString.compressToBase64(JSON.stringify(val));
     }
 
+    addCurseEmotes: ((item: string) => string)[] = [
+        (item) => `%NAME% shivers as a curse washes over %INTENSIVE% from %POSSESSIVE% ${item}`
+    ];
+
     private AddActiveOutfit(newItem: CursedItemWorn) {
         let temp = this.ActiveOutfits;
-        newItem.lastTick = 0;
+        newItem.lastTick = CommonTime();
+        SendAction(getRandomEntry(this.addCurseEmotes)(newItem.ItemName));
         temp?.push(newItem);
         this.ActiveOutfits = temp;
     }
@@ -180,6 +185,12 @@ export class SpreadingOutfitState extends BaseState {
         (key, item) => `%NAME% squirms as %POSSESSIVE% ${key} glows and expands, adding ${item}.`
     ];
 
+    growSelfEmotes: ((key: string, item: string) => string)[] = [
+        (key, item) => `Your ${key} spreads further across your body, adding ${item}.`,
+        (key, item) => `Your ${key} slowly grows and spreads, adding ${item}.`,
+        (key, item) => `Your ${key} glows and expands, adding ${item}.`
+    ];
+
     instantEmotes: ((itemName: string) => string)[] = [
         (itemName) => `In a flash, %NAME_POSSESSIVE_DIRECT% ${itemName} grows and engulfs %INTENSIVE%.`,
         (itemName) => `%NAME_POSSESSIVE_DIRECT% ${itemName} rapidly expands and covers %INTENSIVE%.`,
@@ -190,6 +201,12 @@ export class SpreadingOutfitState extends BaseState {
         (key, item) => `%NAME_POSSESSIVE_DIRECT% ${key} dims as it exhausts its energy and falls off %POSSESSIVE% body as it is replaced with ${item}.`,
         (key, item) => `%NAME_POSSESSIVE_DIRECT% ${key} releases its curse and falls off %POSSESSIVE% body, replaced by ${item}.`
     ];
+
+    #equateColor(item: ItemBundle, worn: Item): boolean {
+        let itemColor = (isArray(item.Color) && item.Color[0] != "Default") ? JSON.stringify(item.Color) : item.Color;
+        let wornColor = (isArray(worn.Color) && worn.Color[0] != "Default") ? JSON.stringify(worn.Color) : worn.Color;
+        return itemColor == wornColor;
+    }
 
     TickCursedItem(now: number, cursedItem: CursedItemWorn): boolean {
         let refreshNeeded = false;
@@ -208,7 +225,7 @@ export class SpreadingOutfitState extends BaseState {
                 !wornItems.some(x => x.Craft?.Name == item.Craft?.Name &&                   // Item not already worn
                     x.Asset.Name == item.Name && 
                     x.Asset.Group.Name == item.Group &&
-                    JSON.stringify(x.Color) == JSON.stringify(item.Color))
+                    this.#equateColor(item, x))
             );
             // 3) If no items remain unworn and cursed item is not inexhaustable, remove the key item otherwise pick what to wear
             if ((!itemsToApply || itemsToApply.length <= 0) && !cursedItem.Inexhaustable) {
@@ -235,10 +252,13 @@ export class SpreadingOutfitState extends BaseState {
                         InventoryRemove(Player, itemToWear.Group);
                     let newItem = ApplyItem(itemToWear, cursedItem.Crafter, true, true);
                     let itemName = newItem?.Craft?.Name ?? newItem?.Asset.Description ?? itemToWear.Craft?.Name ?? itemToWear.Name;
-                    SendAction(replacingKey ?
-                        getRandomEntry(this.replaceKeyEmotes)(cursedItem.ItemName, itemName) :
-                        getRandomEntry(this.growEmotes)(cursedItem.ItemName, itemName)
-                    );
+                    if (replacingKey) {
+                        SendAction(getRandomEntry(this.replaceKeyEmotes)(cursedItem.ItemName, itemName));
+                    } else if (!this.Settings.SuppressEmote && !cursedItem.SuppressEmote) {
+                        SendAction(getRandomEntry(this.growEmotes)(cursedItem.ItemName, itemName));
+                    } else {
+                        LSCG_SendLocal(`<span style="font-size:1.1rem">${getRandomEntry(this.growSelfEmotes)(cursedItem.ItemName, itemName)}</span>`, false);
+                    }
                     // //   4) If only one item to wear and cursed item is not inexhaustable, clear the active outfit with an emote. (also remove/destroy key item??)
                     // if (itemsToApply.length <= 1 && !cursedItem.Inexhaustable)
                     //     this.ClearActiveOutfit(cursedItem.CurseName);
@@ -305,9 +325,10 @@ export class SpreadingOutfitState extends BaseState {
         }
 
         let res = sortBy(array, 
+            item => item.Group == keyItem.Asset.Group.Name,
             item => isBind(item.Group, []), 
-            item => AssetGet(Player.AssetFamily ?? "Female3DCG", item.Group, item.Name)?.IsRestraint,
-            item => item.Group == keyItem.Asset.Group.Name)
+            item => AssetGet(Player.AssetFamily ?? "Female3DCG", item.Group, item.Name)?.IsRestraint
+        )
         console.info(res);
         return res[0];
     }

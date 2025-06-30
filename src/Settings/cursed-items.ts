@@ -41,7 +41,14 @@ export class GuiCursedItems extends GuiSubscreen {
 				},<Setting>{
 					type: "label",
 					label: "Allowed Crafter:",
-					description: "Who's cursed items can can activate on you. (based on: Public < Friend < Whitelist < Lover < Owner)",
+					description: "Who's cursed items can can activate on you. (based on: Public < Friend < Whitelist < Lover < Owner < Self)",
+					disabled: !this.settings.enabled
+				},<Setting>{
+					type: "checkbox",
+					label: "Suppress Emotes:",
+					description: "If true, no cursed items on you will publically emote as they grow item by item. They will still inform locally.",
+					setting: () => this.settings.SuppressEmote ?? false,
+					setSetting: (val) => this.settings.SuppressEmote = val,
 					disabled: !this.settings.enabled
 				}
 			], [
@@ -80,6 +87,13 @@ export class GuiCursedItems extends GuiSubscreen {
 					description: "If checked, this cursed item will continue to enforce its outfit until removed.",
 					setting: () => this.CursedItem?.Inexhaustable ?? false,
 					setSetting: (val) => !!this.CursedItem ? this.CursedItem.Inexhaustable = val : false,
+					hidden: !this.CursedItem
+				},<Setting>{
+					type: "checkbox",
+					label: "Suppress Emote:",
+					description: "If checked, this item will not publically emote as it grows item by item. They will still inform locally.",
+					setting: () => this.CursedItem?.SuppressEmote ?? false,
+					setSetting: (val) => !!this.CursedItem ? this.CursedItem.SuppressEmote = val : false,
 					hidden: !this.CursedItem
 				},<Setting>{
 					type: "label",
@@ -257,9 +271,9 @@ export class GuiCursedItems extends GuiSubscreen {
 				DrawImageResize("Icons/Plus.png", 1340, this.getYPos(0) - 32, 64, 64);
 
 			if (!!this.CursedItem) {
-				DrawButton(780, this.getYPos(5) - 32, 400, 64, this.getSpeedString(), "White");
+				DrawButton(780, this.getYPos(6) - 32, 400, 64, this.getSpeedString(), "White");
 				MainCanvas.textAlign = "left";
-				DrawTextFit(this.getSpeedLabel(), 1200, this.getYPos(5), 400, "Black", "White");
+				DrawTextFit(this.getSpeedLabel(), 1200, this.getYPos(6), 400, "Black", "White");
 				MainCanvas.textAlign = "center";
 			}
 		}
@@ -296,7 +310,7 @@ export class GuiCursedItems extends GuiSubscreen {
 				this.loadItem();
 			}
 
-			if (MouseIn(780, this.getYPos(5)-32, 400, 64)){
+			if (MouseIn(780, this.getYPos(6)-32, 400, 64)){
 				this.clickSpeed();
 			}
 		}

@@ -10,6 +10,7 @@ export interface CursedItemModel {
     Speed: SpreadSpeed;
     CustomSpeed: number;
     Inexhaustable: boolean;
+    SuppressEmote: boolean;
     Filter: ItemType[];
 }
 
@@ -21,6 +22,7 @@ export interface CursedItemWorn {
     Speed: SpreadSpeed;
     CustomSpeed: number;
     Inexhaustable: boolean;
+    SuppressEmote: boolean;
     lastTick: number;
 }
 
@@ -28,4 +30,5 @@ export interface SpreadingOutfitSettingsModel extends BaseSettingsModel {
     Allowed: "Public" | "Friend" | "Whitelist" | "Lover" | "Owner" | "Self";
     Vulnerable: boolean;
     CursedItems: CursedItemModel[];
+    SuppressEmote: boolean;
 }
