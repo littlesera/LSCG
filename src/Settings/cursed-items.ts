@@ -98,7 +98,12 @@ export class GuiCursedItems extends GuiSubscreen {
 						max: 3600
 					},
 					overrideWidth: 800,
-					setting: () => this.CursedItem?.CustomSpeed,
+					setting: () => {
+						if (!!this.CursedItem && !this.CursedItem.CustomSpeed){
+							this.CursedItem.CustomSpeed = 300;
+						} 
+						return this.CursedItem?.CustomSpeed;
+					},
 					setSetting: (val) => !!this.CursedItem ? this.CursedItem.CustomSpeed = val : false
 				}
 			]
