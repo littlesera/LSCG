@@ -202,17 +202,19 @@ export class CursedItemState extends BaseState {
         (key, item) => `%NAME_POSSESSIVE_DIRECT% ${key} releases its curse and falls off %POSSESSIVE% body, replaced by ${item}.`
     ];
 
-    #getItemColorString(item: ItemBundle | Item) {
+    getItemColorString(item: ItemBundle | Item) {
         let itemColor = isString(item.Color) ? item.Color : "";
-        if (isArray(item.Color) && item.Color.length == 1 && item.Color[0] == "Default")
+        if (isArray(item.Color) && item.Color.length == 1 && item.Color[0] == "Default") {
             itemColor = "Default";
-        else (isArray(item.Color))
+        }
+        else if (isArray(item.Color)) {
             itemColor = JSON.stringify(item.Color);
+        }
         return itemColor;
     }
 
-    #equateColor(item: ItemBundle, worn: Item): boolean {
-        return this.#getItemColorString(item) == this.#getItemColorString(worn);
+    equateColor(item: ItemBundle, worn: Item): boolean {
+        return this.getItemColorString(item) == this.getItemColorString(worn);
     }
 
     TickCursedItem(now: number, cursedItem: CursedItemWorn): boolean {
@@ -227,12 +229,12 @@ export class CursedItemState extends BaseState {
             //   2) Compare active outfit code against Player.Appearance, identify any items missing from current wear
             let items = parseFromBase64(cursedItem.OutfitCode) as ItemBundle[];
             let itemsToApply = items.filter(item => 
-                this.itemIsAllowed(item) &&                                                 // Item allowed to apply
-                (!cursedItem.Inexhaustable || item.Group != keyItem.Asset.Group.Name) &&    // Item not key item if inexhaustable (leave key item behind if overlap)
-                !wornItems.some(x => x.Craft?.Name == item.Craft?.Name &&                   // Item not already worn
-                    x.Asset.Name == item.Name && 
-                    x.Asset.Group.Name == item.Group &&
-                    this.#equateColor(item, x))
+                    this.itemIsAllowed(item) &&                                                 // Item allowed to apply
+                    (!cursedItem.Inexhaustable || item.Group != keyItem.Asset.Group.Name) &&    // Item not key item if inexhaustable (leave key item behind if overlap)
+                    !wornItems.some(x => x.Craft?.Name == item.Craft?.Name &&                   // Item not already worn
+                                x.Asset.Name == item.Name && 
+                                x.Asset.Group.Name == item.Group &&
+                                this.equateColor(item, x))
             );
             // 3) If no items remain unworn and cursed item is not inexhaustable, remove the key item otherwise pick what to wear
             if ((!itemsToApply || itemsToApply.length <= 0) && !cursedItem.Inexhaustable) {
@@ -336,7 +338,7 @@ export class CursedItemState extends BaseState {
             item => isBind(item.Group, []), 
             item => AssetGet(Player.AssetFamily ?? "Female3DCG", item.Group, item.Name)?.IsRestraint
         )
-        console.info(res);
+
         return res[0];
     }
 
