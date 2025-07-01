@@ -5,6 +5,7 @@ import { CursedItemModule } from "Modules/cursed-outfit";
 import { RedressedState } from "Modules/States/RedressedState";
 import { CursedItemModel, CursedItemSettingsModel } from "./Models/cursed-item";
 import { stringIsCompressedItemBundleArray } from "utils";
+import { OutfitCollectionModule } from "Modules/outfitCollection";
 
 export const CURSED_ITEM_LIMIT: number = 100;
 
@@ -80,14 +81,15 @@ export class GuiCursedItems extends GuiSubscreen {
 					setSetting: (val) => !!this.CursedItem ? this.CursedItem.Enabled = val : false,
 					hidden: !this.CursedItem
 				},<Setting>{
-					type: "text",
+					type: "dropdown",
 					id: "outfitKey",
 					label: "Applied Outfit:",
 					description: "Outfit name that will be applied by the cursed item.",
 					hidden: !this.CursedItem,
 					setting: () => this.CursedItem?.OutfitKey ?? "",
 					setSetting: (val) => !!this.CursedItem ? this.CursedItem.OutfitKey = val : false,
-					overrideWidth: 600
+					overrideWidth: 600,
+					options: getModule<OutfitCollectionModule>("OutfitCollectionModule")?.data.GetOutfitNames()?.sort() ?? []
 				},<Setting>{
 					type: "checkbox",
 					label: "Inexhaustable:",
