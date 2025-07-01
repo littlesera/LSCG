@@ -1,9 +1,9 @@
 import { getModule } from "modules";
 import { ICONS } from "utils";
 import { GuiSubscreen, Setting } from "./settingBase";
-import { SpreadingOutfitModule } from "Modules/spreading-outfit";
+import { CursedItemModule } from "Modules/cursed-outfit";
 import { RedressedState } from "Modules/States/RedressedState";
-import { CursedItemModel, SpreadingOutfitSettingsModel } from "./Models/spreading-outfit";
+import { CursedItemModel, CursedItemSettingsModel } from "./Models/cursed-item";
 import { stringIsCompressedItemBundleArray } from "utils";
 
 export const CURSED_ITEM_LIMIT: number = 100;
@@ -18,8 +18,8 @@ export class GuiCursedItems extends GuiSubscreen {
 		return ICONS.LEASH;
 	}
 
-	get settings(): SpreadingOutfitSettingsModel {
-        return super.settings as SpreadingOutfitSettingsModel;
+	get settings(): CursedItemSettingsModel {
+        return super.settings as CursedItemSettingsModel;
     }
 
 	get multipageStructure(): Setting[][] {
@@ -116,9 +116,9 @@ export class GuiCursedItems extends GuiSubscreen {
 						if (!!this.CursedItem && !this.CursedItem.CustomSpeed){
 							this.CursedItem.CustomSpeed = 300;
 						} 
-						return this.CursedItem?.CustomSpeed;
+						return parseInt(this.CursedItem?.CustomSpeed ?? 300);
 					},
-					setSetting: (val) => !!this.CursedItem ? this.CursedItem.CustomSpeed = val : false
+					setSetting: (val) => {if (!!this.CursedItem) this.CursedItem.CustomSpeed = parseInt(val)}
 				}
 			]
 		]

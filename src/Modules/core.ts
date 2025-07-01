@@ -6,7 +6,7 @@ import { ModuleCategory } from "Settings/setting_definitions";
 import { removeAllHooksByModule, hookFunction, getCharacter, drawSvg, SVG_ICONS, sendLSCGMessage, settingsSave, LSCG_CHANGES, LSCG_SendLocal, mouseTooltip } from "../utils";
 import { HypnoModule } from "./hypno";
 import { CollarModule } from "./collar";
-import { SpreadingOutfitModule } from "./spreading-outfit";
+import { CursedItemModule } from "./cursed-outfit";
 
 //import * as semver from "semver";
 import { lt } from "semver";
@@ -19,6 +19,7 @@ import { GrabType, LeashingModule } from "./leashing";
 import { OpacityMigrator } from "./Migrators/OpacityMigrator";
 import { SuggestionSettingMigrator } from "./Migrators/SuggestionSettingMigrator";
 import { OutfitMigrator } from "./Migrators/OutfitMigrator";
+import { CursedItemMigrator } from "./Migrators/CursedItemMigrator";
 
 // >= R111
 declare var DialogMenuMapping: { items: ScreenFunctions & { C: null | Character } };
@@ -258,7 +259,8 @@ export class CoreModule extends BaseModule {
         new StateMigrator(),
         new OpacityMigrator(),
         new SuggestionSettingMigrator(),
-        new OutfitMigrator()
+        new OutfitMigrator(),
+        new CursedItemMigrator()
     ];
 
     CheckForMigrations(fromVersion: string): boolean {

@@ -16,7 +16,7 @@ import { CommandModule } from 'Modules/commands';
 import { ItemUseModule } from 'Modules/item-use';
 import { StateModule } from 'Modules/states';
 import { MagicModule } from 'Modules/magic';
-import { SpreadingOutfitModule } from 'Modules/spreading-outfit';
+import { CursedItemModule } from 'Modules/cursed-outfit';
 import { OpacityModule } from 'Modules/opacity';
 import { lt } from 'semver';
 import { LeashingModule } from 'Modules/leashing';
@@ -162,7 +162,7 @@ function init_modules(): boolean {
 	registerModule(new LeashingModule());
 	registerModule(new ChaoticItemModule());
 	registerModule(new SplatterModule());
-	registerModule(new SpreadingOutfitModule());
+	registerModule(new CursedItemModule());
 
 	for (const m of modules()) {
 		m.init();

@@ -9,7 +9,7 @@ import { StateModule } from "Modules/states";
 import { StatePublicSettingsModel, StateSettingsModel } from "./states";
 import { MagicPublicSettingsModel, MagicSettingsModel } from "./magic";
 import { ChaoticItemModule } from "Modules/chaotic-item";
-import { SpreadingOutfitSettingsModel } from "./spreading-outfit";
+import { CursedItemSettingsModel } from "./cursed-item";
 
 export interface SettingsModel {
     Version: string;
@@ -25,7 +25,7 @@ export interface SettingsModel {
     ActivityModule: ActivitySettingsModel;
     StateModule: StateSettingsModel;
     MagicModule: MagicSettingsModel;
-    SpreadingOutfitModule: SpreadingOutfitSettingsModel;
+    CursedItemModule: CursedItemSettingsModel;
     OpacityModule: OpacitySettingsModel;
     LeashingModule: BaseSettingsModel;
     ChaoticItemModule: BaseSettingsModel;
@@ -43,7 +43,7 @@ export interface IPublicSettingsModel extends BaseSettingsModel {
     InjectorModule: InjectorPublicSettingsModel;
     StateModule: StatePublicSettingsModel;
     MagicModule: MagicPublicSettingsModel;
-    SpreadingOutfitModule: SpreadingOutfitSettingsModel;
+    CursedItemModule: CursedItemSettingsModel;
     OpacityModule: OpacityPublicSettingsModel;
     LeashingModule: BaseSettingsModel;
     ChaoticItemModule: BaseSettingsModel;
@@ -158,7 +158,7 @@ export class PublicSettingsModel implements IPublicSettingsModel {
         enabled: true,
         preventExternalMod: false
     };
-    SpreadingOutfitModule: SpreadingOutfitSettingsModel = <SpreadingOutfitSettingsModel>{
+    CursedItemModule: CursedItemSettingsModel = <CursedItemSettingsModel>{
         enabled: false,
         Allowed: "Public",
         Vulnerable: false,

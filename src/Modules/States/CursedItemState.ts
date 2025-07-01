@@ -2,17 +2,17 @@ import { ApplyItem, CanApplyLock, fromItemBundle, getRandomEntry, getRandomInt, 
 import { getModule } from "modules";
 import { BaseState } from "./BaseState";
 import { StateModule } from "Modules/states";
-import { SpreadingOutfitModule } from "Modules/spreading-outfit";
-import { SpreadingOutfitSettingsModel, CursedItemModel, CursedItemWorn } from "Settings/Models/spreading-outfit";
+import { CursedItemModule } from "Modules/cursed-outfit";
+import { CursedItemSettingsModel, CursedItemModel, CursedItemWorn } from "Settings/Models/cursed-item";
 import { clamp, isArray, isString, sortBy } from "lodash-es";
 
 // TODO: Design base 'spreading' state more agnostic of 'cursed items'...
 
-export class SpreadingOutfitState extends BaseState {
-    _settings : SpreadingOutfitSettingsModel | undefined;
+export class CursedItemState extends BaseState {
+    _settings : CursedItemSettingsModel | undefined;
     get Settings() {
         if (!this._settings)
-            this._settings = getModule<SpreadingOutfitModule>("SpreadingOutfitModule").settings;
+            this._settings = getModule<CursedItemModule>("CursedItemModule").settings;
         return this._settings;
     }
 
@@ -97,7 +97,7 @@ export class SpreadingOutfitState extends BaseState {
         let items = parseFromBase64(code) as ItemBundle[];
         if (!items || !Array.isArray(items))
             return code;
-        items = items.filter(item => SpreadingOutfitState.ItemIsAllowed(item));
+        items = items.filter(item => CursedItemState.ItemIsAllowed(item));
         return LZString.compressToBase64(JSON.stringify(items));
     }
 
@@ -105,7 +105,7 @@ export class SpreadingOutfitState extends BaseState {
         let asset = AssetGet(Player.AssetFamily, item.Group, item.Name);
         if (!asset)
             return false;
-        return SpreadingOutfitState.AssetIsAllowed(asset);
+        return CursedItemState.AssetIsAllowed(asset);
     }
 
     static AssetIsAllowed(asset: Asset): boolean {

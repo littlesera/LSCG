@@ -2,11 +2,11 @@ import { BaseModule } from "base";
 import { getModule } from "modules";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
 import { SendAction, getRandomInt, OnChat, settingsSave, removeAllHooksByModule, isPhraseInString, GetDelimitedList, OnAction, GetMetadata, GetTargetCharacter, hookFunction, GetItemNameAndDescriptionConcat, sendLSCGCommandBeep, isObject, isBind, isCloth, isCosplay, isBody, isGenitals, isPronouns, toItemBundle, parseFromBase64 } from "../utils";
-import { CursedItemModel, CursedItemWorn, ItemType, SpreadingOutfitSettingsModel } from "Settings/Models/spreading-outfit";
+import { CursedItemModel, CursedItemWorn, ItemType, CursedItemSettingsModel } from "Settings/Models/cursed-item";
 import { GuiCursedItems } from "Settings/cursed-items";
 import { StateModule } from "./states";
 import { BaseState } from "./States/BaseState";
-import { SpreadingOutfitState } from "./States/SpreadingOutfitState";
+import { CursedItemState } from "./States/CursedItemState";
 import { CommandListener, CoreModule } from "./core";
 import { OutfitCollectionModule } from "./outfitCollection";
 import { isArray } from "lodash-es";
@@ -21,7 +21,7 @@ import { isArray } from "lodash-es";
 // - Spread will continue until outfit + key item is entirely applied, and periodically check if it needs to restart (Spread will _not_ remove keyed item if there's a collision)
 // - Spread can only be stopped by removing key crafted item
 // Also allow voice activated outfit spread
-export class SpreadingOutfitModule extends BaseModule {
+export class CursedItemModule extends BaseModule {
     nextActivationTriggerTimeout: number | undefined = undefined;
     debug: boolean = false;
 
@@ -31,7 +31,7 @@ export class SpreadingOutfitModule extends BaseModule {
     ]
 
     get defaultSettings() {
-        return <SpreadingOutfitSettingsModel>{
+        return <CursedItemSettingsModel>{
             enabled: false,
             Allowed: "Public",
             Vulnerable: false,
@@ -40,16 +40,16 @@ export class SpreadingOutfitModule extends BaseModule {
         };
     }
 
-    get settings(): SpreadingOutfitSettingsModel {
-        return super.settings as SpreadingOutfitSettingsModel;
+    get settings(): CursedItemSettingsModel {
+        return super.settings as CursedItemSettingsModel;
 	}
 
     get settingsScreen(): Subscreen | null {
         return GuiCursedItems;
     }
 
-    get spreadingState(): SpreadingOutfitState {
-        return getModule<StateModule>("StateModule").SpreadingOutfitState;
+    get spreadingState(): CursedItemState {
+        return getModule<StateModule>("StateModule").CursedItemState;
     }
 
     safeword(): void {
@@ -67,7 +67,7 @@ export class SpreadingOutfitModule extends BaseModule {
                 this.CheckForCursedItems();
             }
             return next(args);
-        }, ModuleCategory.SpreadingOutfit);
+        }, ModuleCategory.CursedItem);
 
         getModule<CoreModule>("CoreModule").RegisterCommandListener(<CommandListener>{
             id: "cursed_item_request",
@@ -87,7 +87,7 @@ export class SpreadingOutfitModule extends BaseModule {
     }
 
     unload(): void {
-        removeAllHooksByModule(ModuleCategory.SpreadingOutfit);
+        removeAllHooksByModule(ModuleCategory.CursedItem);
     }
 
     CheckForCursedItems() {

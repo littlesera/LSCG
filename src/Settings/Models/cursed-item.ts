@@ -26,7 +26,7 @@ export interface CursedItemWorn {
     lastTick: number;
 }
 
-export interface SpreadingOutfitSettingsModel extends BaseSettingsModel {
+export interface CursedItemSettingsModel extends BaseSettingsModel {
     Allowed: "Public" | "Friend" | "Whitelist" | "Lover" | "Owner" | "Self";
     Vulnerable: boolean;
     CursedItems: CursedItemModel[];
