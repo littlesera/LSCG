@@ -4,7 +4,7 @@ import { BaseState } from "./BaseState";
 import { StateModule } from "Modules/states";
 import { SpreadingOutfitModule } from "Modules/spreading-outfit";
 import { SpreadingOutfitSettingsModel, CursedItemModel, CursedItemWorn } from "Settings/Models/spreading-outfit";
-import { clamp, isArray, sortBy } from "lodash-es";
+import { clamp, isArray, isString, sortBy } from "lodash-es";
 
 // TODO: Design base 'spreading' state more agnostic of 'cursed items'...
 
@@ -186,9 +186,9 @@ export class SpreadingOutfitState extends BaseState {
     ];
 
     growSelfEmotes: ((key: string, item: string) => string)[] = [
-        (key, item) => `Your ${key} spreads further across your body, adding ${item}.`,
-        (key, item) => `Your ${key} slowly grows and spreads, adding ${item}.`,
-        (key, item) => `Your ${key} glows and expands, adding ${item}.`
+        (key, item) => `Your [${key}] spreads further across your body, adding [${item}].`,
+        (key, item) => `Your [${key}] slowly grows and spreads, adding [${item}].`,
+        (key, item) => `Your [${key}] glows and expands, adding [${item}].`
     ];
 
     instantEmotes: ((itemName: string) => string)[] = [
@@ -202,10 +202,17 @@ export class SpreadingOutfitState extends BaseState {
         (key, item) => `%NAME_POSSESSIVE_DIRECT% ${key} releases its curse and falls off %POSSESSIVE% body, replaced by ${item}.`
     ];
 
+    #getItemColorString(item: ItemBundle) {
+        let itemColor = isString(item.Color) ? item.Color : "";
+        if (isArray(item.Color) && item.Color.length == 1 && item.Color[0] == "Default")
+            itemColor = "Default";
+        else (isArray(item.Color))
+            itemColor = JSON.stringify(item.Color);
+        return itemColor;
+    }
+
     #equateColor(item: ItemBundle, worn: Item): boolean {
-        let itemColor = (isArray(item.Color) && item.Color[0] != "Default") ? JSON.stringify(item.Color) : item.Color;
-        let wornColor = (isArray(worn.Color) && worn.Color[0] != "Default") ? JSON.stringify(worn.Color) : worn.Color;
-        return itemColor == wornColor;
+        return this.#getItemColorString(item) == this.#getItemColorString(worn);
     }
 
     TickCursedItem(now: number, cursedItem: CursedItemWorn): boolean {
