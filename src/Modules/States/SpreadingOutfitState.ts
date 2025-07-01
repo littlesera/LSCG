@@ -202,7 +202,7 @@ export class SpreadingOutfitState extends BaseState {
         (key, item) => `%NAME_POSSESSIVE_DIRECT% ${key} releases its curse and falls off %POSSESSIVE% body, replaced by ${item}.`
     ];
 
-    #getItemColorString(item: ItemBundle) {
+    #getItemColorString(item: ItemBundle | Item) {
         let itemColor = isString(item.Color) ? item.Color : "";
         if (isArray(item.Color) && item.Color.length == 1 && item.Color[0] == "Default")
             itemColor = "Default";
