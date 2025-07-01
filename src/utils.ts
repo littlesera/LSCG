@@ -687,33 +687,34 @@ export function BC_ItemsToItemBundles(items: Item[]): ItemBundle[] {
 
 // Stolen Utils from BCX >.>
 
-export function smartGetAssetGroup(item: Item | Asset | AssetGroup | AssetGroupName): AssetGroup {
+export function smartGetAssetGroup(item: Item | Asset | AssetGroup | AssetGroupName): AssetGroup | null {
 	const group = AssetGroup.includes(item as AssetGroup) ? item as AssetGroup : Asset.includes(item as Asset) ? (item as Asset).Group : isObject(item) ? (item as Item).Asset.Group : AssetGroup.find(a => a.Name == item);
 	if (!group || !AssetGroup.includes(group)) {
-		throw new Error("Failed to convert item to group");
+		console.warn(`Failed to convert item to group: ${group}`);
+		return null;
 	}
 	return group;
 }
 
 export function isCloth(item: Item | Asset | AssetGroup | AssetGroupName, allowCosplay: boolean = false): boolean {
 	const group = smartGetAssetGroup(item);
-	return group.Category === "Appearance" && group.AllowNone && group.Clothing && (allowCosplay || !group.BodyCosplay);
+	return group?.Category === "Appearance" && group?.AllowNone && group?.Clothing && (allowCosplay || !group?.BodyCosplay);
 }
 
 export function isCosplay(item: Item | Asset | AssetGroup | AssetGroupName): boolean {
 	const group = smartGetAssetGroup(item);
-	return group.Category === "Appearance" && group.AllowNone && group.Clothing && group.BodyCosplay;
+	return group?.Category === "Appearance" && group?.AllowNone && group?.Clothing && group?.BodyCosplay;
 }
 
 export function isBody(item: Item | Asset | AssetGroup | AssetGroupName): boolean {
 	const group = smartGetAssetGroup(item);
-	return group.Category === "Appearance" && (!group.Clothing || group.Name == "EyeShadow") && group.Name != "Pronouns";
+	return group?.Category === "Appearance" && (!group?.Clothing || group?.Name == "EyeShadow") && group?.Name != "Pronouns";
 }
 
 export function isBind(item: Item | Asset | AssetGroup | AssetGroupName, excludeSlots: AssetGroupName[] = ["ItemNeck", "ItemNeckAccessories", "ItemNeckRestraints"]): boolean {
 	const group = smartGetAssetGroup(item);
-	if (group.Category !== "Item" || group.BodyCosplay) return false;
-	return !excludeSlots.includes(group.Name);
+	if (group?.Category !== "Item" || group?.BodyCosplay) return false;
+	return !excludeSlots.includes(group?.Name);
 }
 
 export function isHair(item: Item | Asset | AssetGroup | AssetGroupName) {
@@ -723,7 +724,7 @@ export function isHair(item: Item | Asset | AssetGroup | AssetGroupName) {
 		"HairFront",
 		"Eyebrows"
 	]
-	return group.Category === "Appearance" && targetGroups.indexOf(group.Name) > -1;
+	return group?.Category === "Appearance" && targetGroups.indexOf(group?.Name) > -1;
 }
 
 export function isSkin(item: Item | Asset | AssetGroup | AssetGroupName) {
@@ -735,7 +736,7 @@ export function isSkin(item: Item | Asset | AssetGroup | AssetGroupName) {
 		"BodyLower",
 		"Mouth"
 	]
-	return group.Category === "Appearance" && targetGroups.indexOf(group.Name) > -1;
+	return group?.Category === "Appearance" && targetGroups.indexOf(group?.Name) > -1;
 }
 
 export function isPronouns(item: Item | Asset | AssetGroup | AssetGroupName) {
@@ -743,7 +744,7 @@ export function isPronouns(item: Item | Asset | AssetGroup | AssetGroupName) {
 	let targetGroups = [
 		"Pronouns"
 	]
-	return group.Category === "Appearance" && targetGroups.indexOf(group.Name) > -1;
+	return group?.Category === "Appearance" && targetGroups.indexOf(group?.Name) > -1;
 }
 
 export function isGenitals(item: Item | Asset | AssetGroup | AssetGroupName) {
@@ -751,7 +752,7 @@ export function isGenitals(item: Item | Asset | AssetGroup | AssetGroupName) {
 	let targetGroups = [
 		"Pussy"
 	]
-	return group.Category === "Appearance" && targetGroups.indexOf(group.Name) > -1;
+	return group?.Category === "Appearance" && targetGroups.indexOf(group?.Name) > -1;
 }
 
 export function GetItemName(item: Item) {

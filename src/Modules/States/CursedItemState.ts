@@ -229,7 +229,7 @@ export class CursedItemState extends BaseState {
             //   2) Compare active outfit code against Player.Appearance, identify any items missing from current wear
             let items = parseFromBase64(cursedItem.OutfitCode) as ItemBundle[];
             let itemsToApply = items.filter(item => {
-                    this.itemIsAllowed(item, cursedItem.Crafter) &&                                                 // Item allowed to apply
+                    return this.itemIsAllowed(item, cursedItem.Crafter) &&                                                 // Item allowed to apply
                     (!cursedItem.Inexhaustable || item.Group != keyItem.Asset.Group.Name) &&    // Item not key item if inexhaustable (leave key item behind if overlap)
                     !wornItems.some(x => x.Craft?.Name == item.Craft?.Name &&                   // Item not already worn
                                 x.Asset.Name == item.Name && 
