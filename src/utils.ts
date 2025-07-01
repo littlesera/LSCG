@@ -1012,7 +1012,7 @@ export function ApplyItem(item: ItemBundle, acting: number, replace: boolean = t
  */
 export function CanUnlock(acting: number, acted: Character, Item: Item | undefined) {
 	if (!Item) return false;
-	if (acted.IsPlayer()) return true;
+	if ((!acted.IsPlayer()) && !acted.CanInteract()) return false;
 	if ((Item != null) && (Item.Property != null) && (Item.Property.LockedBy === "ExclusivePadlock")) return (!acted.IsPlayer());
 	if (LogQuery("KeyDeposit", "Cell")) return false;
 	if ((Item != null) && (Item.Asset != null) && (Item.Asset.OwnerOnly == true)) return Item.Asset.Enable && acted.IsOwnedByPlayer();
