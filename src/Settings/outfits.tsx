@@ -759,7 +759,7 @@ export class GuiOutfits extends GuiSubscreen {
 
             let comboEle = document.getElementById(EDITOR_ID.combinationSelect);
             if (!!comboEle)
-                comboEle.replaceChildren(...this.OrderedKeys().filter(key => key.toLocaleLowerCase() != this.SelectedKey?.toLocaleLowerCase()).map(key => this.createOption(key)))
+                comboEle.replaceChildren(...this.OrderedKeys().filter(key =>!!key && key.toLocaleLowerCase() != this.SelectedKey?.toLocaleLowerCase()).map(key => this.createOption(key)))
 
             let header = document.getElementById(EDITOR_ID.header);
             if (!!header) header.innerText = !!this.SelectedOutfit?.key ? `Edit Outfit` : "New Outfit";

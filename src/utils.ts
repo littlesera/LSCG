@@ -991,13 +991,13 @@ export function ApplyItem(item: ItemBundle, acting: number, replace: boolean = t
 	if (!C) C = Player;
 	let existing = InventoryGet(C, item.Group);
 	if (!!existing) {
-		if (replace) InventoryRemove(C, item.Group, false);
+		if (replace && CanUnlock(acting, C, existing)) InventoryRemove(C, item.Group, false);
 		else return;
 	}
 	let newItem = InventoryWear(C, item.Name, item.Group, item.Color, item.Difficulty, acting, item.Craft, false);
 	if (!!newItem) {
 		newItem.Property = item.Property;
-		if (locksafe && !CanApplyLock(acting, C, newItem)) {
+		if (locksafe && !CanUnlock(acting, C, newItem)) {
 			InventoryUnlock(C, newItem, false);
 		}
 	}
@@ -1010,7 +1010,7 @@ export function ApplyItem(item: ItemBundle, acting: number, replace: boolean = t
  * @param {Item} Item - The item that should be unlocked
  * @returns {boolean} - Returns true, if the player can unlock the given item, false otherwise
  */
-export function CanApplyLock(acting: number, acted: Character, Item: Item | undefined) {
+export function CanUnlock(acting: number, acted: Character, Item: Item | undefined) {
 	if (!Item) return false;
 	if (acted.IsPlayer()) return true;
 	if ((Item != null) && (Item.Property != null) && (Item.Property.LockedBy === "ExclusivePadlock")) return (!acted.IsPlayer());

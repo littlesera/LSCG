@@ -192,7 +192,7 @@ export class OutfitCollection implements IOutfitCollection {
     }
 
     GetOutfitNames(): string [] {
-        return Object.values(this.outfits)?.map(o => o.key);
+        return Object.values(this.outfits)?.map(o => o.key) ?? [];
     }
 
     Clear(save: boolean = true) {

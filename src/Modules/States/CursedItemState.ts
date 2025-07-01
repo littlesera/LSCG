@@ -1,9 +1,9 @@
-import { ApplyItem, CanApplyLock, fromItemBundle, getRandomEntry, getRandomInt, isBind, isCloth, LSCG_SendLocal, parseFromBase64, SendAction, settingsSave, stringIsCompressedItemBundleArray } from "utils";
+import { ApplyItem, CanUnlock, getRandomEntry, getRandomInt, isBind, isCloth, LSCG_SendLocal, parseFromBase64, SendAction } from "utils";
 import { getModule } from "modules";
 import { BaseState } from "./BaseState";
 import { StateModule } from "Modules/states";
 import { CursedItemModule } from "Modules/cursed-outfit";
-import { CursedItemSettingsModel, CursedItemModel, CursedItemWorn } from "Settings/Models/cursed-item";
+import { CursedItemSettingsModel, CursedItemWorn } from "Settings/Models/cursed-item";
 import { clamp, isArray, isString, sortBy } from "lodash-es";
 
 // TODO: Design base 'spreading' state more agnostic of 'cursed items'...
@@ -228,13 +228,14 @@ export class CursedItemState extends BaseState {
         } else if (cursedItem.lastTick + this.ItemInterval(cursedItem) < now) {
             //   2) Compare active outfit code against Player.Appearance, identify any items missing from current wear
             let items = parseFromBase64(cursedItem.OutfitCode) as ItemBundle[];
-            let itemsToApply = items.filter(item => 
-                    this.itemIsAllowed(item) &&                                                 // Item allowed to apply
+            let itemsToApply = items.filter(item => {
+                    this.itemIsAllowed(item, cursedItem.Crafter) &&                                                 // Item allowed to apply
                     (!cursedItem.Inexhaustable || item.Group != keyItem.Asset.Group.Name) &&    // Item not key item if inexhaustable (leave key item behind if overlap)
                     !wornItems.some(x => x.Craft?.Name == item.Craft?.Name &&                   // Item not already worn
                                 x.Asset.Name == item.Name && 
                                 x.Asset.Group.Name == item.Group &&
                                 this.equateColor(item, x))
+                }
             );
             // 3) If no items remain unworn and cursed item is not inexhaustable, remove the key item otherwise pick what to wear
             if ((!itemsToApply || itemsToApply.length <= 0) && !cursedItem.Inexhaustable) {
@@ -318,13 +319,14 @@ export class CursedItemState extends BaseState {
         return allowedMember;
     }
 
-    itemIsAllowed(item: ItemBundle) {        
+    itemIsAllowed(item: ItemBundle, acting: number) {        
         let asset = AssetGet(Player.AssetFamily, item.Group, item.Name);
+        let worn = InventoryGet(Player, item.Group);
         let isBlocked = asset && InventoryIsPermissionBlocked(Player, asset.DynamicName(Player), asset.Group.Name);
         let isLimited = asset && InventoryIsPermissionLimited(Player, asset.DynamicName(Player), asset.Group.Name);
         let isRoomDisallowed = !InventoryChatRoomAllow(asset?.Category ?? []);
-        //let slotAlreadyFilled = asset && isBind(asset) && InventoryGet(Player, asset.Group.Name)?.Asset == asset;
-        return !isBlocked && !isLimited && !isRoomDisallowed; //&& !slotAlreadyFilled;
+        let slotBlocked = !!worn && !CanUnlock(acting, Player, worn);
+        return !isBlocked && !isLimited && !isRoomDisallowed && !slotBlocked;
     }
 
     shuffleSortAndSelect(array: ItemBundle[], keyItem: Item): ItemBundle {
@@ -336,7 +338,8 @@ export class CursedItemState extends BaseState {
         let res = sortBy(array, 
             item => item.Group == keyItem.Asset.Group.Name,
             item => isBind(item.Group, []), 
-            item => AssetGet(Player.AssetFamily ?? "Female3DCG", item.Group, item.Name)?.IsRestraint
+            item => AssetGet(Player.AssetFamily ?? "Female3DCG", item.Group, item.Name)?.IsRestraint,
+            item => CommonIsNumeric(item.Property?.OverridePriority ?? 0) ? (item.Property?.OverridePriority ?? 0) : Math.max(...Object.values(item.Property?.OverridePriority ?? {}), 0)
         )
 
         return res[0];
