@@ -215,7 +215,7 @@ export class ItemUseModule extends BaseModule {
 
 			// `AssetGroupName` as of R111Beta1 and `AssetGroup` as of later versions
 			const targetGroup = typeof targetGroupName === "string" ? AssetGroupGet(acting.AssetFamily, targetGroupName) : targetGroupName;
-			if (targetGroup == null && GameVersion !== "R110") {
+			if (targetGroup == null) {
 				return next(args);
 			}
 

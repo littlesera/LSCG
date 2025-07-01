@@ -1,6 +1,6 @@
 import { getModule } from "modules";
 import { ICONS } from "utils";
-import { GuiSubscreen, Setting } from "./settingBase";
+import { GuiSubscreen, HelpInfo, Setting } from "./settingBase";
 import { CursedItemModule } from "Modules/cursed-outfit";
 import { RedressedState } from "Modules/States/RedressedState";
 import { CursedItemModel, CursedItemSettingsModel } from "./Models/cursed-item";
@@ -21,6 +21,13 @@ export class GuiCursedItems extends GuiSubscreen {
 	get settings(): CursedItemSettingsModel {
         return super.settings as CursedItemSettingsModel;
     }
+
+	get help(): HelpInfo {
+		return {
+			label: 'Open Cursed Items Wiki on GitHub',
+			link: 'https://github.com/littlesera/LSCG/wiki/Cursed-Items'
+		}
+	}
 
 	get multipageStructure(): Setting[][] {
 		return [
@@ -280,8 +287,6 @@ export class GuiCursedItems extends GuiSubscreen {
 	}
 
 	Click(): void {
-		super.Click();
-
 		if (PreferencePageCurrent == 1) {
 			// Allowed remote button
 			if (MouseIn(780, this.getYPos(2)-32, 400, 64)){
@@ -314,6 +319,8 @@ export class GuiCursedItems extends GuiSubscreen {
 				this.clickSpeed();
 			}
 		}
+
+		super.Click();
 	}
 
 	saveItem() {

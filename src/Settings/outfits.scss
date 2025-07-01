@@ -1,7 +1,7 @@
 #lscg-outfits {
 	grid-template:
-		"storage outfitsMain ." 7fr
-		"storageFooter outfitsMain new" 1fr
+		"storage outfitsMain new" 7fr
+		"storageFooter outfitsMain ." 1fr
 		"storageSelector storageSelector ." 1fr / min(30dvh, 15dvw) auto min(20dvh, 10dvw);
 }
 

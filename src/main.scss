@@ -115,6 +115,11 @@
 	color: var(--lscg-text-color);
 	font-family: var(--lscg-font-family);
 	font-size: var(--lscg-font-small);
+	pointer-events: none;
+
+	* {
+		pointer-events: auto;
+	}
 
 	h1, h2, h3, h4, h5, h6, [role="heading"], p, ul {
 		align-items: center;

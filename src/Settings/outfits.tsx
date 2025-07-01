@@ -170,7 +170,7 @@ export class GuiOutfits extends GuiSubscreen {
 
     screens = {
         [root]: Object.freeze({
-            shape: [GuiSubscreen.START_X, GuiSubscreen.START_Y - 30, 1900 - GuiSubscreen.START_X, 740] as RectTuple,
+            shape: [GuiSubscreen.START_X, GuiSubscreen.START_Y - 25, 1900 - GuiSubscreen.START_X + 4, 740] as RectTuple,
             visibility: "visible",
             dom: <div id={ID.root} class="lscg-screen">
                 <style id={ID.styles}>{styles.toString()}</style>

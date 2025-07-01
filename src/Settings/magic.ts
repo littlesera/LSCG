@@ -1,4 +1,4 @@
-import { GuiSubscreen, Setting } from "./settingBase";
+import { GuiSubscreen, HelpInfo, Setting } from "./settingBase";
 import { KNOWN_SPELLS_LIMIT, LSCGSpellEffect, MagicSettingsModel, OutfitConfig, OutfitOption, PolymorphConfig, PolymorphOption, SpellDefinition } from "./Models/magic";
 import { PairedBaseState } from "Modules/States/PairedBaseState";
 import { stringIsCompressedItemBundleArray } from "utils";
@@ -25,6 +25,13 @@ export class GuiMagic extends GuiSubscreen {
 
 	get settings(): MagicSettingsModel {
 		return super.settings as MagicSettingsModel;
+	}
+
+	get help(): HelpInfo {
+		return {
+			label: 'Open Magic Wiki on GitHub',
+			link: 'https://github.com/littlesera/LSCG/wiki/Magic'
+		}
 	}
 
 	get multipageStructure(): Setting[][] {

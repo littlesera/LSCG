@@ -26,6 +26,11 @@ export interface Setting {
 	}
 }
 
+export interface HelpInfo { 
+	label: string, 
+	link: string 
+}
+
 export abstract class GuiSubscreen {
     static START_X: number = 180;
     static START_Y: number = 205;
@@ -72,6 +77,13 @@ export abstract class GuiSubscreen {
     get SubscreenName(): string {
         return SETTING_NAME_PREFIX + this.constructor.name;  
     }
+
+	get help(): HelpInfo {
+		return {
+			label: 'Open LSCG Wiki on GitHub',
+			link: 'https://github.com/littlesera/LSCG/wiki'
+		}
+	}
 
 	setSubscreen(screen: GuiSubscreen | string | null) {
 		return setSubscreen(screen);
@@ -188,6 +200,8 @@ export abstract class GuiSubscreen {
 			}
 		});
 		
+		DrawButton(1815, 820, 90, 90, "", "White", "Icons/Introduction.png", this.help.label);
+
 		MainCanvas.textAlign = prev;
 	}
 
@@ -205,6 +219,9 @@ export abstract class GuiSubscreen {
 					break;
 			}
 		});
+
+		if (MouseIn(1500, 820, 400, 80))
+            window.open(this.help.link, '_blank');
 	}
 
 	Exit() {

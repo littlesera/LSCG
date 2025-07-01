@@ -1,5 +1,5 @@
 import { RemoteGuiSubscreen } from "./remoteBase";
-import { Setting } from "Settings/settingBase";
+import { HelpInfo, Setting } from "Settings/settingBase";
 import { HypnoPublicSettingsModel } from "Settings/Models/hypno";
 import { GetDelimitedList, ICONS, replace_template } from "utils";
 import { CollarModel, CollarPublicSettingsModel } from "Settings/Models/collar";
@@ -9,6 +9,13 @@ export class RemoteCollar extends RemoteGuiSubscreen {
 
 	get name(): string {
 		return "Control Collar";
+	}
+
+	get help(): HelpInfo {
+		return {
+			label: 'Open Breathplay Wiki on GitHub',
+			link: 'https://github.com/littlesera/LSCG/wiki/Breathplay'
+		}
 	}
 
 	get allowedMemberIds(): number[] {

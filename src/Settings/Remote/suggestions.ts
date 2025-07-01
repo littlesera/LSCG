@@ -1,5 +1,5 @@
 import { RemoteGuiSubscreen } from "./remoteBase";
-import { Setting } from "Settings/settingBase";
+import { HelpInfo, Setting } from "Settings/settingBase";
 import { InstructionDescription, LSCGHypnoInstruction, SUGGESTION_LIMIT } from "Settings/Models/hypno";
 import { getActivities, ICONS, getActivityLabel, getZoneColor, replace_template, sendLSCGCommandBeep, isCloth } from "utils";
 import { RemoteHypno } from "./hypno";
@@ -38,6 +38,13 @@ export class RemoteSuggestions extends RemoteHypno {
 
 	get icon(): string {
 		return ICONS.PENDANT;
+	}
+
+	get help(): HelpInfo {
+		return {
+			label: 'Open Hypnotic Suggestion Wiki on GitHub',
+			link: 'https://github.com/littlesera/LSCG/wiki/Hypnotic-Suggestions'
+		}
 	}
 
 	get disabledReason(): string {
