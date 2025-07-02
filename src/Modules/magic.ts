@@ -3,7 +3,7 @@ import { getModule } from "modules";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
 import { GetConfiguredItemBundlesFromOutfitKey, GetDelimitedList, OnChat, GetHandheldItemNameAndDescriptionConcat, GetItemNameAndDescriptionConcat, GetMetadata, ICONS, LSCG_SendLocal, LSCG_TEAL, OnActivity, SendAction, forceOrgasm, getCharacter, getRandomInt, hookFunction, isPhraseInString, removeAllHooksByModule, sendLSCGCommand, sendLSCGCommandBeep, settingsSave, getCharacterByNicknameOrMemberNumber, excludeParentheticalContent, escapeRegExp } from "../utils";
 import { ActivityModule, ActivityTarget } from "./activities";
-import { KNOWN_SPELLS_LIMIT, LSCGSpellEffect, MagicSettingsModel, OutfitConfig, OutfitOption, SpellDefinition } from "Settings/Models/magic";
+import { cleanEffect, KNOWN_SPELLS_LIMIT, LSCGSpellEffect, MagicSettingsModel, OutfitConfig, OutfitOption, SpellDefinition } from "Settings/Models/magic";
 import { GuiMagic, pairedSpellEffects } from "Settings/magic";
 import { StateModule } from "./states";
 import { EnhancedItemActivityNames, IsActivityEnhanced, ItemUseModule, MagicWandItems } from "./item-use";
@@ -579,12 +579,14 @@ export class MagicModule extends BaseModule {
 
     SpellIsBeneficial(spell: SpellDefinition) {
         let beneficialEffects: LSCGSpellEffect[] = [
-            LSCGSpellEffect.dispell,
+            LSCGSpellEffect.dispel,
             LSCGSpellEffect.bless,
             LSCGSpellEffect.xRay,
             LSCGSpellEffect.barrier
         ];
-        return  spell.Effects.every(e => beneficialEffects.indexOf(e) > -1);
+        return  spell.Effects.every(e => {
+            return beneficialEffects.indexOf(cleanEffect(e)) > -1;
+        });
     }
 
     IncomingSpellCommand(sender: Character | null, msg: LSCGMessageModel) {
@@ -673,7 +675,7 @@ export class MagicModule extends BaseModule {
         allowedSpellEffects.forEach((effect, ix, arr) => {
             setTimeout(() => {
                 let state: BaseState | undefined;
-                switch (effect) {
+                switch (cleanEffect(effect)) {
                     case LSCGSpellEffect.blindness:
                         SendAction("%NAME%'s eyes dart around, %POSSESSIVE% world suddenly plunged into darkness.");
                         state = this.stateModule.BlindState.Activate(sender?.MemberNumber, duration);
@@ -714,7 +716,7 @@ export class MagicModule extends BaseModule {
                     case LSCGSpellEffect.enlarge:
                         state = this.stateModule.ResizedState.Enlarge(sender?.MemberNumber, duration, true);
                         break;
-                    case LSCGSpellEffect.dispell:
+                    case LSCGSpellEffect.dispel:
                         SendAction("%NAME% gasps, blinking as any magic affecting %INTENSIVE% is removed.");
                         this.stateModule.Clear(false, true);
                         break;

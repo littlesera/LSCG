@@ -1,5 +1,5 @@
 import { GuiSubscreen, HelpInfo, Setting } from "./settingBase";
-import { KNOWN_SPELLS_LIMIT, LSCGSpellEffect, MagicSettingsModel, OutfitConfig, OutfitOption, PolymorphConfig, SpellDefinition } from "./Models/magic";
+import { cleanEffect, KNOWN_SPELLS_LIMIT, LSCGSpellEffect, MagicSettingsModel, OutfitConfig, OutfitOption, PolymorphConfig, SpellDefinition } from "./Models/magic";
 import { stringIsCompressedItemBundleArray } from "utils";
 import { drawTooltip } from "./settingUtils";
 import { getModule } from "modules";
@@ -429,7 +429,7 @@ export class GuiMagic extends GuiSubscreen {
 					DrawImageResize("Icons/Trash.png", 1180, this.getYPos(0) - 32, 64, 64);
 
 					// Draw Effect Pickers
-					DrawBackNextButton(780, this.getYPos(3) - 32, 600, 64, this.Spell.Effects.length > 0 ? this.Spell.Effects[0] : LSCGSpellEffect.none, "White", "", () => "", () => "");
+					DrawBackNextButton(780, this.getYPos(3) - 32, 600, 64, this.Spell.Effects.length > 0 ? cleanEffect(this.Spell.Effects[0]) : LSCGSpellEffect.none, "White", "", () => "", () => "");
 					if (this.Spell.Effects.length == 1) {
 						DrawButton(1410 - 4, this.getYPos(3) - 32 - 4, 72, 72, "", "White", "", `Delete ${this.Spell.Name}`); // Delete Effect
 						DrawImageResize("Icons/Trash.png", 1410, this.getYPos(3) - 32, 64, 64);
@@ -441,7 +441,7 @@ export class GuiMagic extends GuiSubscreen {
 					DrawTextFit(GuiMagic.SpellEffectDescription(this.Spell.Effects[0]), 780, this.getYPos(4), 1000, "Black");
 					MainCanvas.textAlign = "center";
 					if (this.Spell.Effects.length > 0) {
-						DrawBackNextButton(780, this.getYPos(5) - 32, 600, 64, this.Spell.Effects[1] ?? LSCGSpellEffect.none, "White", "", () => "", () => "");
+						DrawBackNextButton(780, this.getYPos(5) - 32, 600, 64, cleanEffect(this.Spell.Effects[1]) ?? LSCGSpellEffect.none, "White", "", () => "", () => "");
 						if (this.Spell.Effects.length == 2) {
 							DrawButton(1410 - 4, this.getYPos(5) - 32 - 4, 72, 72, "", "White", "", `Delete ${this.Spell.Name}`); // Delete Effect
 							DrawImageResize("Icons/Trash.png", 1410, this.getYPos(5) - 32, 64, 64);
@@ -454,7 +454,7 @@ export class GuiMagic extends GuiSubscreen {
 						MainCanvas.textAlign = "center";
 					}
 					if (this.Spell.Effects.length > 1) {
-						DrawBackNextButton(780, this.getYPos(7) - 32, 600, 64, this.Spell.Effects[2] ?? LSCGSpellEffect.none, "White", "", () => "", () => "");
+						DrawBackNextButton(780, this.getYPos(7) - 32, 600, 64, cleanEffect(this.Spell.Effects[2]) ?? LSCGSpellEffect.none, "White", "", () => "", () => "");
 						if (this.Spell.Effects.length > 2) {
 							DrawButton(1410 - 4, this.getYPos(7) - 32 - 4, 72, 72, "", "White", "", `Delete ${this.Spell.Name}`); // Delete Effect
 							DrawImageResize("Icons/Trash.png", 1410, this.getYPos(7) - 32, 64, 64);
@@ -731,7 +731,7 @@ export class GuiMagic extends GuiSubscreen {
 	}
 
 	static SpellEffectDescription(effect: LSCGSpellEffect): string {
-		switch (effect) {
+		switch (cleanEffect(effect)) {
 			case LSCGSpellEffect.blindness:
 				return "Prevents the target from seeing.";
 			case LSCGSpellEffect.deafened:
@@ -760,7 +760,7 @@ export class GuiMagic extends GuiSubscreen {
 				return "Pair two targets, such that when one feels arousal the other also does.";
 			case LSCGSpellEffect.orgasm_siphon:
 				return "Redirect all of the target's orgasmic pleasure to another.";
-			case LSCGSpellEffect.dispell:
+			case LSCGSpellEffect.dispel:
 				return "Dispels any existing effects on the target (including anything drug induced).";
 			case LSCGSpellEffect.bless:
 				return "Applies a +5 buff to all the target's skills for 15 minutes";

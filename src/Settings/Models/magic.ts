@@ -2,6 +2,12 @@ import { BaseSettingsModel } from "./base";
 
 export const KNOWN_SPELLS_LIMIT: number = 48;
 
+export function cleanEffect(effect: LSCGSpellEffect) : LSCGSpellEffect {
+		if (effect?.toLocaleLowerCase() == "dispell")
+			effect = LSCGSpellEffect.dispel;
+		return effect;
+	}
+
 export enum LSCGSpellEffect {
     none = "None",
     hypnotizing = "Hypnotizing", 
@@ -19,7 +25,7 @@ export enum LSCGSpellEffect {
     orgasm_siphon = "Siphoning", 
     outfit = "Outfit",
     polymorph = "Polymorph",
-    dispell = "Dispel",
+    dispel = "Dispel",
     xRay = "X-Ray Vision",
     barrier = "Magic Barrier",
     disarm = "Disarming",
