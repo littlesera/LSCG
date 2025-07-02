@@ -1324,7 +1324,7 @@ export class ItemUseModule extends BaseModule {
 	TieUp(target: Character, source: Character, rope: RopeTarget) {
 		var handRope = InventoryGet(source, "ItemHandheld");
 		if (handRope?.Asset.Name.startsWith("RopeCoil")) {
-			var ropeTie = InventoryWear(target, rope.ItemName, rope.Location, handRope?.Color, undefined, source.MemberNumber, handRope?.Craft);
+			var ropeTie = InventoryWear(target, rope.ItemName, rope.Location, handRope?.Color, SkillGetWithRatio(Player, "Bondage"), source.MemberNumber, handRope?.Craft);
 			if (!!rope.Type && !!ropeTie)
 				(<any>ropeTie!.Property!.TypeRecord) = {"typed": rope.Type};
 			ChatRoomCharacterUpdate(target);

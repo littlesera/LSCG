@@ -687,11 +687,11 @@ export function BC_ItemsToItemBundles(items: Item[]): ItemBundle[] {
 
 // Stolen Utils from BCX >.>
 
-export function smartGetAssetGroup(item: Item | Asset | AssetGroup | AssetGroupName): AssetGroup | null {
+export function smartGetAssetGroup(item: Item | Asset | AssetGroup | AssetGroupName): AssetGroup | undefined {
 	const group = AssetGroup.includes(item as AssetGroup) ? item as AssetGroup : Asset.includes(item as Asset) ? (item as Asset).Group : isObject(item) ? (item as Item).Asset.Group : AssetGroup.find(a => a.Name == item);
 	if (!group || !AssetGroup.includes(group)) {
 		console.warn(`Failed to convert item to group: ${group}`);
-		return null;
+		return undefined;
 	}
 	return group;
 }
@@ -945,11 +945,6 @@ export function htmlToElement(html: string): HTMLElement | ChildNode | null {
 export function getDominance(C: Character) {
 	return C.Reputation.find(r => r.Type == "Dominant")?.Value ?? 0;
 };
-
-export function getSkill(C: Character, skillName: string): number {
-	let skill = C.Skill.find(r => r.Type == skillName);
-	return ((skill?.Level ?? 0) * (skill?.Ratio ?? 1));
-}
 
 export function capitalizeFirstLetter(val: string) {
     return String(val).charAt(0).toUpperCase() + String(val).slice(1);
