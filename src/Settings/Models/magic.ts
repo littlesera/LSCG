@@ -19,7 +19,7 @@ export enum LSCGSpellEffect {
     orgasm_siphon = "Siphoning", 
     outfit = "Outfit",
     polymorph = "Polymorph",
-    dispell = "Dispell",
+    dispell = "Dispel",
     xRay = "X-Ray Vision",
     barrier = "Magic Barrier",
     disarm = "Disarming",

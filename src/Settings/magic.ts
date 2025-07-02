@@ -1,9 +1,6 @@
 import { GuiSubscreen, HelpInfo, Setting } from "./settingBase";
-import { KNOWN_SPELLS_LIMIT, LSCGSpellEffect, MagicSettingsModel, OutfitConfig, OutfitOption, PolymorphConfig, PolymorphOption, SpellDefinition } from "./Models/magic";
-import { PairedBaseState } from "Modules/States/PairedBaseState";
+import { KNOWN_SPELLS_LIMIT, LSCGSpellEffect, MagicSettingsModel, OutfitConfig, OutfitOption, PolymorphConfig, SpellDefinition } from "./Models/magic";
 import { stringIsCompressedItemBundleArray } from "utils";
-import { PolymorphedState } from "Modules/States/PolymorphedState";
-import { RedressedState } from "Modules/States/RedressedState";
 import { drawTooltip } from "./settingUtils";
 import { getModule } from "modules";
 import { OutfitCollectionModule } from "Modules/outfitCollection";
@@ -764,7 +761,7 @@ export class GuiMagic extends GuiSubscreen {
 			case LSCGSpellEffect.orgasm_siphon:
 				return "Redirect all of the target's orgasmic pleasure to another.";
 			case LSCGSpellEffect.dispell:
-				return "Dispells any existing effects on the target (including anything drug induced).";
+				return "Dispels any existing effects on the target (including anything drug induced).";
 			case LSCGSpellEffect.bless:
 				return "Applies a +5 buff to all the target's skills for 15 minutes";
 			case LSCGSpellEffect.bane:
