@@ -143,10 +143,10 @@ export class OutfitCollection implements IOutfitCollection {
     
     RenameOutfit(oldKey: string, newKey: string, save: boolean = true) {
         oldKey = oldKey.toLocaleLowerCase();
-        newKey = newKey.toLocaleLowerCase();
         let outfit = this.outfits[oldKey];
         if (!outfit) return;
-        this.outfits[newKey] = outfit;
+        outfit.key = newKey;
+        this.outfits[newKey.toLocaleLowerCase()] = outfit;
         delete this.outfits[oldKey];
     }
 
