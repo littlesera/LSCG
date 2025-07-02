@@ -58,6 +58,13 @@ export class GuiCursedItems extends GuiSubscreen {
 					setting: () => this.settings.SuppressEmote ?? false,
 					setSetting: (val) => this.settings.SuppressEmote = val,
 					disabled: !this.settings.enabled
+				},<Setting>{
+					type: "checkbox",
+					label: "Always Exhaustable:",
+					description: "If true, All cursed items on you will exhaust after applying their outfit regardless of item settings.",
+					setting: () => this.settings.AlwaysExhaust ?? false,
+					setSetting: (val) => this.settings.AlwaysExhaust = val,
+					disabled: !this.settings.enabled
 				}
 			], [
 				<Setting>{

@@ -217,6 +217,10 @@ export class CursedItemState extends BaseState {
         return this.getItemColorString(item) == this.getItemColorString(worn);
     }
 
+    Inexhaustable(item: CursedItemWorn) {
+        return item.Inexhaustable && !this.Settings.AlwaysExhaust;
+    }
+
     TickCursedItem(now: number, cursedItem: CursedItemWorn): boolean {
         let refreshNeeded = false;
         let wornItems = Player.Appearance;
@@ -230,7 +234,7 @@ export class CursedItemState extends BaseState {
             let items = parseFromBase64(cursedItem.OutfitCode) as ItemBundle[];
             let itemsToApply = items.filter(item => {
                     return this.itemIsAllowed(item, cursedItem.Crafter) &&                                                 // Item allowed to apply
-                    (!cursedItem.Inexhaustable || item.Group != keyItem.Asset.Group.Name) &&    // Item not key item if inexhaustable (leave key item behind if overlap)
+                    (!this.Inexhaustable(cursedItem) || item.Group != keyItem.Asset.Group.Name) &&    // Item not key item if inexhaustable (leave key item behind if overlap)
                     !wornItems.some(x => x.Craft?.Name == item.Craft?.Name &&                   // Item not already worn
                                 x.Asset.Name == item.Name && 
                                 x.Asset.Group.Name == item.Group &&
@@ -238,7 +242,7 @@ export class CursedItemState extends BaseState {
                 }
             );
             // 3) If no items remain unworn and cursed item is not inexhaustable, remove the key item otherwise pick what to wear
-            if ((!itemsToApply || itemsToApply.length <= 0) && !cursedItem.Inexhaustable) {
+            if ((!itemsToApply || itemsToApply.length <= 0) && !this.Inexhaustable(cursedItem)) {
                 this.ClearActiveOutfit(cursedItem.CurseName);
                 refreshNeeded = true;
             } else if (!!itemsToApply && itemsToApply.length > 0) {
@@ -250,7 +254,7 @@ export class CursedItemState extends BaseState {
                             ApplyItem(item, cursedItem.Crafter, true, true);
                         });
                         refreshNeeded = true;
-                    } else if (!cursedItem.Inexhaustable) {
+                    } else if (!this.Inexhaustable(cursedItem)) {
                         this.ClearActiveOutfit(cursedItem.CurseName);
                         refreshNeeded = true;
                     }
@@ -270,7 +274,7 @@ export class CursedItemState extends BaseState {
                         LSCG_SendLocal(`<span style="font-size:1.1rem">${getRandomEntry(this.growSelfEmotes)(cursedItem.ItemName, itemName)}</span>`, false);
                     }
                     // //   4) If only one item to wear and cursed item is not inexhaustable, clear the active outfit with an emote. (also remove/destroy key item??)
-                    // if (itemsToApply.length <= 1 && !cursedItem.Inexhaustable)
+                    // if (itemsToApply.length <= 1 && !this.Inexhaustable(cursedItem))
                     //     this.ClearActiveOutfit(cursedItem.CurseName);
                     refreshNeeded = true;
                 }

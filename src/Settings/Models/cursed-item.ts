@@ -31,4 +31,5 @@ export interface CursedItemSettingsModel extends BaseSettingsModel {
     Vulnerable: boolean;
     CursedItems: CursedItemModel[];
     SuppressEmote: boolean;
+    AlwaysExhaust: boolean;
 }
