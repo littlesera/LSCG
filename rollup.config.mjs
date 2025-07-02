@@ -34,11 +34,7 @@ console.debug("LSCG: Parse start...");
       let LSCG_VERSION = packageJson.version;
       LSCG_VERSION = (LSCG_VERSION.length > 0 && LSCG_VERSION[0] == 'v') ? LSCG_VERSION : "v" + LSCG_VERSION;
       return `const LSCG_VERSION="${LSCG_VERSION}";`;
-    },
-    plugins: [terser({
-      mangle: false,
-      compress: true
-    })]
+    }
   },
   treeshake: true,
   plugins: [
@@ -60,19 +56,26 @@ console.debug("LSCG: Parse start...");
 };
 
 if (process.env.ROLLUP_WATCH) {
-    config.plugins.push(
-        serve({
-          contentBase: 'dist',
-          port: 10001,
-          host: "localhost",
-          headers: {
-            'Access-Control-Allow-Origin': '*', // Allows requests from any origin
-            'Access-Control-Allow-Methods': 'GET', // Allowed HTTP methods
-            'Access-Control-Allow-Headers': 'Content-Type, Authorization', // Allowed request headers
-          },
-          compress: true
-        })
-    );
+  config.plugins.push(
+      serve({
+        contentBase: 'dist',
+        port: 10001,
+        host: "localhost",
+        headers: {
+          'Access-Control-Allow-Origin': '*', // Allows requests from any origin
+          'Access-Control-Allow-Methods': 'GET', // Allowed HTTP methods
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization', // Allowed request headers
+        },
+        compress: true
+      })
+  );
+} else {
+  config.plugins.push(
+    terser({
+      mangle: false,
+      compress: true
+    })
+  );
 }
 
 export default config;
