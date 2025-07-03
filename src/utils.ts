@@ -983,6 +983,26 @@ export function HasLockKey(acting: number, acted: Character, Item: Item | undefi
 	return false;
 }
 
+export function CanApplyLock(C: Character, acting: MemberNumber, lock: Item): boolean {
+	let asset = lock.Asset;
+	if (!asset.Enable) return false;
+	if (asset.OwnerOnly && !C.IsOwnedByMemberNumber(acting))
+		if (!C.IsPlayer() || !C.IsOwned() || (C.IsPlayer() && LogQuery("BlockOwnerLockSelf", "OwnerRule")))
+			return false;
+	if (asset.LoverOnly && !C.IsLoverOfMemberNumber(acting)) {
+		if (!asset.IsLock || C.GetLoversNumbers(true).length == 0) return false;
+		if (C.IsPlayer()) {
+			if (LogQuery("BlockLoverLockSelf", "LoverRule")) return false;
+		}
+		else if (!C.IsOwnedByMemberNumber(acting) || LogQueryRemote(C, "BlockLoverLockOwner", "LoverRule")) return false;
+	}
+	if (asset.FamilyOnly && asset.IsLock && (C.IsPlayer()) && LogQuery("BlockOwnerLockSelf", "OwnerRule")) return false;
+	if (asset.FamilyOnly && (!C.IsPlayer()) && !C.IsInFamilyOfMemberNumber(acting)) return false;
+	if (asset.FamilyOnly && asset.IsLock && !C.IsPlayer() && C.IsOwner()) return false;
+	if (asset.FamilyOnly && asset.IsLock && C.IsPlayer() && (C.IsOwned() === false)) return false;
+	return true;
+}
+
 export function ApplyItem(item: ItemBundle, acting: number, replace: boolean = true, locksafe: boolean = true, C?: Character): Item | undefined {
 	if (!C) C = Player;
 	let existing = InventoryGet(C, item.Group);
@@ -993,7 +1013,8 @@ export function ApplyItem(item: ItemBundle, acting: number, replace: boolean = t
 	let newItem = InventoryWear(C, item.Name, item.Group, item.Color, item.Difficulty, acting, item.Craft, false);
 	if (!!newItem) {
 		newItem.Property = item.Property;
-		if (locksafe && !CanUnlock(acting, C, newItem)) {
+		let lock = InventoryGetLock(newItem);
+		if (!!lock && locksafe && (!InventoryDoesItemAllowLock(newItem) || !CanApplyLock(C, acting, lock))) {
 			InventoryUnlock(C, newItem, false);
 		}
 	}
