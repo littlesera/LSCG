@@ -1,7 +1,7 @@
 import { BaseModule } from "base";
 import { getModule } from "modules";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
-import { SendAction, getRandomInt, OnChat, settingsSave, removeAllHooksByModule, isPhraseInString, GetDelimitedList, OnAction, GetMetadata, GetTargetCharacter, hookFunction, GetItemNameAndDescriptionConcat, sendLSCGCommandBeep, isObject, isBind, isCloth, isCosplay, isBody, isGenitals, isPronouns, toItemBundle, parseFromBase64 } from "../utils";
+import { SendAction, getRandomInt, OnChat, settingsSave, removeAllHooksByModule, isPhraseInString, GetDelimitedList, OnAction, GetMetadata, GetTargetCharacter, hookFunction, GetItemNameAndDescriptionConcat, sendLSCGCommandBeep, isObject, isBind, isCloth, isCosplay, isBody, isGenitals, isPronouns, toItemBundle, parseFromBase64, ICONS } from "../utils";
 import { CursedItemModel, CursedItemWorn, ItemType, CursedItemSettingsModel } from "Settings/Models/cursed-item";
 import { GuiCursedItems } from "Settings/cursed-items";
 import { StateModule } from "./states";
@@ -68,6 +68,28 @@ export class CursedItemModule extends BaseModule {
                 this.CheckForCursedItems();
             }
             return next(args);
+        }, ModuleCategory.CursedItem);
+
+        hookFunction("ElementButton.CreateForAsset", 1, ([idPrefix, asset, C, onClick, options, ...args], next) => {
+            const craft: null | CraftingItem = "Asset" in asset ? asset.Craft : null;
+            if (!craft) {
+                return next([idPrefix, asset, C, onClick, options, ...args]);
+            }
+            let isCursed = this.cursedKeywords.some(str => isPhraseInString(GetItemNameAndDescriptionConcat(asset) ?? "", str));
+            let myCursedItemNames = this.settings.CursedItems.map(item => item.Name);
+            isCursed ||= myCursedItemNames.some(str => isPhraseInString(GetItemNameAndDescriptionConcat(asset) ?? "", str));
+
+            options ??= {};
+            options.icons = [
+                ...(options.icons ?? []),
+                ...(isCursed ? [{
+                    name: `lscg-cursed-item`,
+                    iconSrc: ICONS.BOUND_GIRL,
+                    tooltipText: `LSCG: Cursed Item`,
+                }] : [])
+            ];
+            
+            return next([idPrefix, asset, C, onClick, options, ...args]);
         }, ModuleCategory.CursedItem);
 
         getModule<CoreModule>("CoreModule").RegisterCommandListener(<CommandListener>{
