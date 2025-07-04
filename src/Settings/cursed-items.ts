@@ -3,12 +3,13 @@ import { ICONS } from "utils";
 import { GuiSubscreen, HelpInfo, Setting } from "./settingBase";
 import { CursedItemModule } from "Modules/cursed-outfit";
 import { RedressedState } from "Modules/States/RedressedState";
-import { CursedItemModel, CursedItemSettingsModel } from "./Models/cursed-item";
+import { CursedItemModel, CursedItemSettingsModel, StripLevel } from "./Models/cursed-item";
 import { stringIsCompressedItemBundleArray } from "utils";
 import { OutfitCollectionModule } from "Modules/outfitCollection";
 
 export const CURSED_ITEM_LIMIT: number = 100;
 
+type StripLevelValue = "None" | "Clothing" | "Underwear" | "Cosplay" | "Clothes + Underwear" | "Clothes + Cosplay" | "Underwear + Cosplay" | "Clothes + Underwear + Cosplay";
 export class GuiCursedItems extends GuiSubscreen {
 
 	get name(): string {
@@ -112,8 +113,25 @@ export class GuiCursedItems extends GuiSubscreen {
 					setSetting: (val) => !!this.CursedItem ? this.CursedItem.SuppressEmote = val : false,
 					hidden: !this.CursedItem
 				},<Setting>{
+					type: "dropdown",
+					id: "stripSelect",
+					label: "Strip Level:",
+					description: "Determines what type of non-outfit appearance items will also be removed.",
+					hidden: !this.CursedItem,
+					setting: () => this.getStripValue(),
+					setSetting: (val) => this.setStripValue(val),
+					overrideWidth: 600,
+					options: ["None", "Clothing", "Underwear", "Cosplay", "Clothes + Underwear", "Clothes + Cosplay", "Underwear + Cosplay", "Clothes + Underwear + Cosplay"]
+				},<Setting>{
+					type: "checkbox",
+					label: "Insta-Strip:",
+					description: "If true, the victim will be stripped instantly regardless of apply speed.",
+					hidden: !this.CursedItem,
+					setting: () => this.CursedItem?.InstaStrip ?? false,
+					setSetting: (val) => !!this.CursedItem ? this.CursedItem.InstaStrip = val : false
+				},<Setting>{
 					type: "label",
-					label: "Speed:",
+					label: "Apply Speed:",
 					description: "Determines how fast the cursed item applies its outfit.",
 					hidden: !this.CursedItem
 				},<Setting>{
@@ -127,7 +145,7 @@ export class GuiCursedItems extends GuiSubscreen {
 						min: 1,
 						max: 3600
 					},
-					overrideWidth: 800,
+					overrideWidth: 600,
 					setting: () => {
 						if (!!this.CursedItem && !this.CursedItem.CustomSpeed){
 							this.CursedItem.CustomSpeed = 300;
@@ -287,9 +305,9 @@ export class GuiCursedItems extends GuiSubscreen {
 				DrawImageResize("Icons/Plus.png", 1340, this.getYPos(0) - 32, 64, 64);
 
 			if (!!this.CursedItem) {
-				DrawButton(780, this.getYPos(6) - 32, 400, 64, this.getSpeedString(), "White");
+				DrawButton(780, this.getYPos(8) - 32, 400, 64, this.getSpeedString(), "White");
 				MainCanvas.textAlign = "left";
-				DrawTextFit(this.getSpeedLabel(), 1200, this.getYPos(6), 400, "Black", "White");
+				DrawTextFit(this.getSpeedLabel(), 1200, this.getYPos(8), 400, "Black", "White");
 				MainCanvas.textAlign = "center";
 			}
 		}
@@ -324,7 +342,7 @@ export class GuiCursedItems extends GuiSubscreen {
 				this.loadItem();
 			}
 
-			if (MouseIn(780, this.getYPos(6)-32, 400, 64)){
+			if (MouseIn(780, this.getYPos(8)-32, 400, 64)){
 				this.clickSpeed();
 			}
 		}
@@ -357,5 +375,50 @@ export class GuiCursedItems extends GuiSubscreen {
 					break;
 			}
 		});
+	}
+
+	getStripValue(): StripLevelValue {
+		if (!this.CursedItem) return "None";
+		switch (this.CursedItem.Strip || StripLevel.NONE) {
+			case StripLevel.NONE: return "None";
+			case StripLevel.CLOTHES: return "Clothing";
+			case StripLevel.UNDERWEAR: return "Underwear";
+			case StripLevel.COSPLAY: return "Cosplay";
+			case (StripLevel.CLOTHES | StripLevel.UNDERWEAR): return "Clothes + Underwear";
+			case (StripLevel.CLOTHES | StripLevel.COSPLAY): return "Clothes + Cosplay";
+			case (StripLevel.UNDERWEAR | StripLevel.COSPLAY): return "Underwear + Cosplay";
+			case (StripLevel.CLOTHES | StripLevel.UNDERWEAR | StripLevel.COSPLAY): return "Clothes + Underwear + Cosplay";
+			default: return "None";
+		}
+	}
+
+	setStripValue(val: StripLevelValue) {
+		if (!this.CursedItem) return;
+		switch (val || "none") {
+			case "None": 
+				this.CursedItem.Strip = StripLevel.NONE;
+				break;
+			case "Clothing":
+				this.CursedItem.Strip = StripLevel.CLOTHES;
+				break;
+			case "Underwear":
+				this.CursedItem.Strip = StripLevel.UNDERWEAR;
+				break;
+			case "Cosplay":
+				this.CursedItem.Strip = StripLevel.COSPLAY;
+				break;
+			case "Clothes + Underwear":
+				this.CursedItem.Strip = StripLevel.CLOTHES | StripLevel.UNDERWEAR;
+				break;
+			case "Clothes + Cosplay":
+				this.CursedItem.Strip = StripLevel.CLOTHES | StripLevel.COSPLAY;
+				break;
+			case "Underwear + Cosplay":
+				this.CursedItem.Strip = StripLevel.UNDERWEAR | StripLevel.COSPLAY;
+				break;
+			case "Clothes + Underwear + Cosplay":
+				this.CursedItem.Strip = StripLevel.CLOTHES | StripLevel.UNDERWEAR | StripLevel.COSPLAY;
+				break;
+		}
 	}
 }

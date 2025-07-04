@@ -172,6 +172,8 @@ export class CursedItemModule extends BaseModule {
             CurseName: item.Name,
             Inexhaustable: item.Inexhaustable,
             SuppressEmote: item.SuppressEmote,
+            Strip: item.Strip,
+            InstaStrip: item.InstaStrip,
             Speed: item.Speed,
             CustomSpeed: item.CustomSpeed,
             OutfitCode: outfitCode

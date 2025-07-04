@@ -1,9 +1,9 @@
-import { ApplyItem, CanUnlock, getRandomEntry, getRandomInt, isBind, isCloth, LSCG_SendLocal, parseFromBase64, SendAction } from "utils";
+import { ApplyItem, CanUnlock, getRandomEntry, getRandomInt, isBind, isCloth, isCosplay, isUnderwear, LSCG_SendLocal, parseFromBase64, RemoveItem, SendAction } from "utils";
 import { getModule } from "modules";
 import { BaseState } from "./BaseState";
 import { StateModule } from "Modules/states";
 import { CursedItemModule } from "Modules/cursed-outfit";
-import { CursedItemSettingsModel, CursedItemWorn } from "Settings/Models/cursed-item";
+import { CursedItemSettingsModel, CursedItemWorn, StripLevel } from "Settings/Models/cursed-item";
 import { clamp, isArray, isString, sortBy } from "lodash-es";
 
 // TODO: Design base 'spreading' state more agnostic of 'cursed items'...
@@ -191,10 +191,22 @@ export class CursedItemState extends BaseState {
         (key, item) => `Your [${key}] glows and expands, adding [${item}].`
     ];
 
+    stripSelfEmotes: ((key: string, item: string) => string)[] = [
+        (key, item) => `Your [${key}] removes your [${item}].`,
+        (key, item) => `Your [${key}] sizzles as your [${item}] is destroyed.`,
+        (key, item) => `Your [${key}] hums slightly, vaporizing your [${item}].`
+    ];
+
     instantEmotes: ((itemName: string) => string)[] = [
         (itemName) => `In a flash, %NAME_POSSESSIVE_DIRECT% ${itemName} grows and engulfs %INTENSIVE%.`,
         (itemName) => `%NAME_POSSESSIVE_DIRECT% ${itemName} rapidly expands and covers %INTENSIVE%.`,
         (itemName) => `With a squeak, %NAME% is instantly covered by %POSSESSIVE% ${itemName} and its curse.`
+    ];
+
+    instantRemoveEmotes: ((itemName: string) => string)[] = [
+        (itemName) => `With a sizzle, %NAME_POSSESSIVE_DIRECT% ${itemName} destroys %POSSESSIVE% clothes.`,
+        (itemName) => `%NAME_POSSESSIVE_DIRECT% ${itemName} hums and vaporizes %POSSESSIVE% clothes.`,
+        (itemName) => `%NAME_POSSESSIVE_DIRECT% ${itemName} shreds %POSSESSIVE% clothes.`
     ];
 
     replaceKeyEmotes: ((key: string, item: string) => string)[] = [
@@ -221,6 +233,19 @@ export class CursedItemState extends BaseState {
         return item.Inexhaustable && !this.Settings.AlwaysExhaust;
     }
 
+    itemBundleMatch(bundle: ItemBundle, item: Item) {
+        return item.Craft?.Name == bundle.Craft?.Name &&
+                item.Asset.Name == bundle.Name && 
+                item.Asset.Group.Name == bundle.Group &&
+                this.equateColor(bundle, item);
+    }
+
+    shouldStripItem(item: Item, level: StripLevel): boolean {
+        return (isCloth(item, false, false) && !!(level & StripLevel.CLOTHES)) ||
+                (isCosplay(item) && !!(level & StripLevel.UNDERWEAR)) ||
+                (isUnderwear(item) && !!(level & StripLevel.COSPLAY));
+    }
+
     TickCursedItem(now: number, cursedItem: CursedItemWorn): boolean {
         let refreshNeeded = false;
         let wornItems = Player.Appearance;
@@ -230,19 +255,40 @@ export class CursedItemState extends BaseState {
             this.ClearActiveOutfit(cursedItem.CurseName);
             refreshNeeded = true;
         } else if (cursedItem.lastTick + this.ItemInterval(cursedItem) < now) {
-            //   2) Compare active outfit code against Player.Appearance, identify any items missing from current wear
-            let items = parseFromBase64(cursedItem.OutfitCode) as ItemBundle[];
-            let itemsToApply = items.filter(item => {
-                    return this.itemIsAllowed(item, cursedItem.Crafter) &&                                                 // Item allowed to apply
-                    (!this.Inexhaustable(cursedItem) || item.Group != keyItem.Asset.Group.Name) &&    // Item not key item if inexhaustable (leave key item behind if overlap)
-                    !wornItems.some(x => x.Craft?.Name == item.Craft?.Name &&                   // Item not already worn
-                                x.Asset.Name == item.Name && 
-                                x.Asset.Group.Name == item.Group &&
-                                this.equateColor(item, x))
+            let outfitItems = parseFromBase64(cursedItem.OutfitCode) as ItemBundle[];
+            //  2a) Check for strippable items
+            let itemsToStrip = wornItems.filter(item => 
+                this.shouldStripItem(item, cursedItem.Strip) &&
+                !outfitItems.some(bundle => this.itemBundleMatch(bundle, item)));
+            
+            if (!!itemsToStrip && itemsToStrip.length > 0) {
+                if (cursedItem.Speed == "instant" || cursedItem.InstaStrip) {
+                    // If instant strip all
+                    SendAction(getRandomEntry(this.instantRemoveEmotes)(cursedItem.ItemName));
+                    itemsToStrip.forEach(item => {
+                        RemoveItem(item, cursedItem.Crafter);
+                    });
+                    itemsToStrip = [];
+                } else {
+                    let itemToRemove = this.sortStrippableAndSelect(itemsToStrip);
+                    let itemName = itemToRemove?.Craft?.Name ?? itemToRemove?.Asset.Description;
+                    RemoveItem(itemToRemove, cursedItem.Crafter);
+                    LSCG_SendLocal(`<span style="font-size:1.1rem">${getRandomEntry(this.stripSelfEmotes)(cursedItem.ItemName, itemName)}</span>`, false);
+                }
+                refreshNeeded = true;
+            }
+
+            //  2b) Compare active outfit code against Player.Appearance, identify any items missing from current wear
+            let itemsToApply = outfitItems.filter(bundle => {
+                    return this.itemIsAllowed(bundle, cursedItem.Crafter) &&                                                 // Item allowed to apply
+                    (!this.Inexhaustable(cursedItem) || bundle.Group != keyItem.Asset.Group.Name) &&    // Item not key item if inexhaustable (leave key item behind if overlap)
+                    !wornItems.some(item => this.itemBundleMatch(bundle, item))
                 }
             );
             // 3) If no items remain unworn and cursed item is not inexhaustable, remove the key item otherwise pick what to wear
-            if ((!itemsToApply || itemsToApply.length <= 0) && !this.Inexhaustable(cursedItem)) {
+            if ((itemsToStrip?.length <= 0) &&
+                (itemsToApply?.length <= 0) && 
+                !this.Inexhaustable(cursedItem)) {
                 this.ClearActiveOutfit(cursedItem.CurseName);
                 refreshNeeded = true;
             } else if (!!itemsToApply && itemsToApply.length > 0) {
@@ -347,6 +393,19 @@ export class CursedItemState extends BaseState {
         )
 
         return res[0];
+    }
+
+    sortStrippableAndSelect(array: Item[]): Item {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+
+        return sortBy(array,
+            item => isCloth(item, false, false),
+            item => isUnderwear(item),
+            item => isCosplay(item),
+        )[0];
     }
 
     Init(): void {}

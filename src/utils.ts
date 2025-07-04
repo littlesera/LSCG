@@ -696,19 +696,26 @@ export function smartGetAssetGroup(item: Item | Asset | AssetGroup | AssetGroupN
 	return group;
 }
 
-export function isCloth(item: Item | Asset | AssetGroup | AssetGroupName, allowCosplay: boolean = false): boolean {
+export function isCloth(item: Item | Asset | AssetGroup | AssetGroupName, allowCosplay: boolean = false, includeUnderwear: boolean = true): boolean {
 	const group = smartGetAssetGroup(item);
-	return group?.Category === "Appearance" && group?.AllowNone && group?.Clothing && (allowCosplay || !group?.BodyCosplay);
+	if (!includeUnderwear && group?.Underwear) return false;
+	if (!allowCosplay && group?.BodyCosplay) return false;
+	return !!group?.IsAppearance() && group?.AllowNone && group?.Clothing;
+}
+
+export function isUnderwear(item: Item | Asset | AssetGroup | AssetGroupName): boolean {
+	const group = smartGetAssetGroup(item);
+	return !!group?.IsAppearance() && group?.AllowNone && group?.Clothing && group?.Underwear;
 }
 
 export function isCosplay(item: Item | Asset | AssetGroup | AssetGroupName): boolean {
 	const group = smartGetAssetGroup(item);
-	return group?.Category === "Appearance" && group?.AllowNone && group?.Clothing && group?.BodyCosplay;
+	return !!group?.IsAppearance() && group?.AllowNone && group?.Clothing && group?.BodyCosplay;
 }
 
 export function isBody(item: Item | Asset | AssetGroup | AssetGroupName): boolean {
 	const group = smartGetAssetGroup(item);
-	return group?.Category === "Appearance" && (!group?.Clothing || group?.Name == "EyeShadow") && group?.Name != "Pronouns";
+	return !!group?.IsAppearance() && (!group?.Clothing || group?.Name == "EyeShadow") && group?.Name != "Pronouns";
 }
 
 export function isBind(item: Item | Asset | AssetGroup | AssetGroupName, excludeSlots: AssetGroupName[] = ["ItemNeck", "ItemNeckAccessories", "ItemNeckRestraints"]): boolean {
@@ -724,7 +731,7 @@ export function isHair(item: Item | Asset | AssetGroup | AssetGroupName) {
 		"HairFront",
 		"Eyebrows"
 	]
-	return group?.Category === "Appearance" && targetGroups.indexOf(group?.Name) > -1;
+	return !!group?.IsAppearance() && targetGroups.indexOf(group?.Name) > -1;
 }
 
 export function isSkin(item: Item | Asset | AssetGroup | AssetGroupName) {
@@ -736,7 +743,7 @@ export function isSkin(item: Item | Asset | AssetGroup | AssetGroupName) {
 		"BodyLower",
 		"Mouth"
 	]
-	return group?.Category === "Appearance" && targetGroups.indexOf(group?.Name) > -1;
+	return !!group?.IsAppearance() && targetGroups.indexOf(group?.Name) > -1;
 }
 
 export function isPronouns(item: Item | Asset | AssetGroup | AssetGroupName) {
@@ -744,7 +751,7 @@ export function isPronouns(item: Item | Asset | AssetGroup | AssetGroupName) {
 	let targetGroups = [
 		"Pronouns"
 	]
-	return group?.Category === "Appearance" && targetGroups.indexOf(group?.Name) > -1;
+	return !!group?.IsAppearance() && targetGroups.indexOf(group?.Name) > -1;
 }
 
 export function isGenitals(item: Item | Asset | AssetGroup | AssetGroupName) {
@@ -752,7 +759,7 @@ export function isGenitals(item: Item | Asset | AssetGroup | AssetGroupName) {
 	let targetGroups = [
 		"Pussy"
 	]
-	return group?.Category === "Appearance" && targetGroups.indexOf(group?.Name) > -1;
+	return !!group?.IsAppearance() && targetGroups.indexOf(group?.Name) > -1;
 }
 
 export function GetItemName(item: Item) {
@@ -1003,11 +1010,17 @@ export function CanApplyLock(C: Character, acting: MemberNumber, lock: Item): bo
 	return true;
 }
 
+export function RemoveItem(item: Item, acting: number, C?: Character) {
+	if (!C) C = Player;
+	if (isCosplay(item) && !canChangeCosplay(acting, C)) return;
+	if (CanUnlock(acting, C, item) || item.Asset.Group.IsAppearance()) InventoryRemove(C, item.Asset.Group.Name, false);
+}
+
 export function ApplyItem(item: ItemBundle, acting: number, replace: boolean = true, locksafe: boolean = true, C?: Character): Item | undefined {
 	if (!C) C = Player;
 	let existing = InventoryGet(C, item.Group);
 	if (!!existing) {
-		if (replace && CanUnlock(acting, C, existing)) InventoryRemove(C, item.Group, false);
+		if (replace) RemoveItem(existing, acting, C);
 		else return;
 	}
 	let newItem = InventoryWear(C, item.Name, item.Group, item.Color, item.Difficulty, acting, item.Craft, false);
@@ -1019,6 +1032,10 @@ export function ApplyItem(item: ItemBundle, acting: number, replace: boolean = t
 		}
 	}
 	return newItem ?? undefined;
+}
+
+export function canChangeCosplay(acting: number, C: Character): boolean {
+	return C.OnlineSharedSettings?.BlockBodyCosplay !== true || acting == Player.MemberNumber;
 }
 
 /**
