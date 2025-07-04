@@ -82,13 +82,6 @@ export class GuiCursedItems extends GuiSubscreen {
 					hidden: !this.CursedItem,
 					overrideWidth: 600
 				},<Setting>{
-					type: "checkbox",
-					label: "Enabled:",
-					description: "If checked, this cursed item is active and can spread.",
-					setting: () => this.CursedItem?.Enabled ?? false,
-					setSetting: (val) => !!this.CursedItem ? this.CursedItem.Enabled = val : false,
-					hidden: !this.CursedItem
-				},<Setting>{
 					type: "dropdown",
 					id: "outfitKey",
 					label: "Applied Outfit:",
@@ -153,6 +146,25 @@ export class GuiCursedItems extends GuiSubscreen {
 						return parseInt(this.CursedItem?.CustomSpeed ?? 300);
 					},
 					setSetting: (val) => {if (!!this.CursedItem) this.CursedItem.CustomSpeed = parseInt(val)}
+				},<Setting>{
+					type: "label",
+					label: "",
+					description: ""	
+				},<Setting>{
+					type: "label",
+					label: "",
+					description: ""	
+				},<Setting>{
+					type: "label",
+					label: "",
+					description: ""	
+				},<Setting>{
+					type: "checkbox",
+					label: "Enabled:",
+					description: "If checked, this cursed item is active and can spread.",
+					setting: () => this.CursedItem?.Enabled ?? false,
+					setSetting: (val) => !!this.CursedItem ? this.CursedItem.Enabled = val : false,
+					hidden: !this.CursedItem
 				}
 			]
 		]
@@ -171,6 +183,14 @@ export class GuiCursedItems extends GuiSubscreen {
 			this.CursedItemIndex = this.CursedItems.length - 1;
 		return this.CursedItems[this.CursedItemIndex]
 	}
+
+	// getYPos(ix: number) {
+    //     return GuiSubscreen.START_Y + (GuiSubscreen.Y_MOD * (ix % 10));
+    // }
+
+	// getXPos(ix: number) {
+	// 	return GuiSubscreen.START_X + (GuiSubscreen.X_MOD * Math.floor(ix / 10));
+	// }
 
 	getAllowedToString(): string {
 		switch (this.settings.Allowed) {
@@ -305,9 +325,9 @@ export class GuiCursedItems extends GuiSubscreen {
 				DrawImageResize("Icons/Plus.png", 1340, this.getYPos(0) - 32, 64, 64);
 
 			if (!!this.CursedItem) {
-				DrawButton(780, this.getYPos(8) - 32, 400, 64, this.getSpeedString(), "White");
+				DrawButton(780, this.getYPos(7) - 32, 400, 64, this.getSpeedString(), "White");
 				MainCanvas.textAlign = "left";
-				DrawTextFit(this.getSpeedLabel(), 1200, this.getYPos(8), 400, "Black", "White");
+				DrawTextFit(this.getSpeedLabel(), 1200, this.getYPos(7), 400, "Black", "White");
 				MainCanvas.textAlign = "center";
 			}
 		}
@@ -342,7 +362,7 @@ export class GuiCursedItems extends GuiSubscreen {
 				this.loadItem();
 			}
 
-			if (MouseIn(780, this.getYPos(8)-32, 400, 64)){
+			if (MouseIn(780, this.getYPos(7)-32, 400, 64)){
 				this.clickSpeed();
 			}
 		}
