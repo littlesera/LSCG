@@ -90,6 +90,7 @@ export class GuiCursedItems extends GuiSubscreen {
 					setting: () => this.CursedItem?.OutfitKey ?? "",
 					setSetting: (val) => !!this.CursedItem ? this.CursedItem.OutfitKey = val : false,
 					overrideWidth: 600,
+					disabled: !this.CursedItem?.Enabled,
 					options: getModule<OutfitCollectionModule>("OutfitCollectionModule")?.data.GetOutfitNames()?.sort() ?? []
 				},<Setting>{
 					type: "checkbox",
@@ -97,6 +98,7 @@ export class GuiCursedItems extends GuiSubscreen {
 					description: "If checked, this cursed item will continue to enforce its outfit until removed.",
 					setting: () => this.CursedItem?.Inexhaustable ?? false,
 					setSetting: (val) => !!this.CursedItem ? this.CursedItem.Inexhaustable = val : false,
+					disabled: !this.CursedItem?.Enabled,
 					hidden: !this.CursedItem
 				},<Setting>{
 					type: "checkbox",
@@ -104,6 +106,7 @@ export class GuiCursedItems extends GuiSubscreen {
 					description: "If checked, this item will not publically emote as it grows item by item. They will still inform locally.",
 					setting: () => this.CursedItem?.SuppressEmote ?? false,
 					setSetting: (val) => !!this.CursedItem ? this.CursedItem.SuppressEmote = val : false,
+					disabled: !this.CursedItem?.Enabled,
 					hidden: !this.CursedItem
 				},<Setting>{
 					type: "dropdown",
@@ -114,6 +117,7 @@ export class GuiCursedItems extends GuiSubscreen {
 					setting: () => this.getStripValue(),
 					setSetting: (val) => this.setStripValue(val),
 					overrideWidth: 600,
+					disabled: !this.CursedItem?.Enabled,
 					options: ["None", "Clothing", "Underwear", "Cosplay", "Clothes + Underwear", "Clothes + Cosplay", "Underwear + Cosplay", "Clothes + Underwear + Cosplay"]
 				},<Setting>{
 					type: "checkbox",
@@ -121,6 +125,7 @@ export class GuiCursedItems extends GuiSubscreen {
 					description: "If true, the victim will be stripped instantly regardless of apply speed.",
 					hidden: !this.CursedItem,
 					setting: () => this.CursedItem?.InstaStrip ?? false,
+					disabled: !this.CursedItem?.Enabled,
 					setSetting: (val) => !!this.CursedItem ? this.CursedItem.InstaStrip = val : false
 				},<Setting>{
 					type: "label",
@@ -133,6 +138,7 @@ export class GuiCursedItems extends GuiSubscreen {
 					label: "Custom Speed (seconds):",
 					description: "Determines the speed (in seconds). Must be between 1 and 3600 (1 hour)",
 					hidden: !this.CursedItem || this.CursedItem.Speed != 'custom',
+					disabled: !this.CursedItem?.Enabled,
 					range: {
 						init: this.CursedItem?.CustomSpeed,
 						min: 1,
@@ -325,7 +331,7 @@ export class GuiCursedItems extends GuiSubscreen {
 				DrawImageResize("Icons/Plus.png", 1340, this.getYPos(0) - 32, 64, 64);
 
 			if (!!this.CursedItem) {
-				DrawButton(780, this.getYPos(7) - 32, 400, 64, this.getSpeedString(), "White");
+				DrawButton(780, this.getYPos(7) - 32, 400, 64, this.getSpeedString(), "White", undefined, undefined, !this.CursedItem?.Enabled);
 				MainCanvas.textAlign = "left";
 				DrawTextFit(this.getSpeedLabel(), 1200, this.getYPos(7), 400, "Black", "White");
 				MainCanvas.textAlign = "center";
@@ -362,7 +368,7 @@ export class GuiCursedItems extends GuiSubscreen {
 				this.loadItem();
 			}
 
-			if (MouseIn(780, this.getYPos(7)-32, 400, 64)){
+			if (MouseIn(780, this.getYPos(7)-32, 400, 64) && this.CursedItem?.Enabled){
 				this.clickSpeed();
 			}
 		}
