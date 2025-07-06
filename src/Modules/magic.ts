@@ -416,7 +416,6 @@ export class MagicModule extends BaseModule {
                 if (!MouseIn(x, y, width, height)) return false;
                 let blocked = spell.Effects.some(effect => blockedSpellTypes.indexOf(effect) > -1);
                 spell = JSON.parse(JSON.stringify(spell));
-                this.UnpackSpellCodes(spell);
                 
                 if (!blocked) {
                     this.CastSpellInitial(spell, CurrentCharacter);
@@ -436,7 +435,6 @@ export class MagicModule extends BaseModule {
             spell = this.RandomSpell
         let paired: Character | undefined = undefined;
         spell = JSON.parse(JSON.stringify(spell));
-        this.UnpackSpellCodes(spell);
         if (this.SpellNeedsPair(spell))
             paired = this.PairedCharacterOptions(C)[getRandomInt(this.PairedCharacterOptions(C).length)];
         this.CastSpellActual(spell, C, false, paired);
@@ -523,6 +521,8 @@ export class MagicModule extends BaseModule {
             else {
                 SendAction(this.getCastingActionString(spell, InventoryGet(Player, "ItemHandheld"), voiceCast, spellTarget, pairedTarget), spellTarget);
             }
+
+            this.UnpackSpellCodes(spell);
 
             if (spellTarget.IsPlayer()) {
                 let check = getModule<ItemUseModule>("ItemUseModule").UnopposedActivityRoll(spellTarget);
