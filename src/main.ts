@@ -1,44 +1,27 @@
-import { CleanDefaultsFromSettings, ExportSettings, GetDataSizeReport, hookFunction, ICONS, ImportSettings, isObject, parseFromBase64, parseFromUTF16, sendLSCGBeep, settingsSave } from './utils';
-import { CheckVersionUpdate, ConfiguredActivities, CraftableItemSpellNames, DrugKeywords, getModule, HypnoTriggers, modules, NetgunKeywords, registerModule } from 'modules';
-import { SettingsModel } from 'Settings/Models/settings';
-import { HypnoModule } from './Modules/hypno';
-import { CollarModule } from './Modules/collar';
-import { BoopsModule } from './Modules/boops';
-import { MiscModule } from './Modules/misc';
-import { LipstickModule } from './Modules/lipstick';
-import { GUI } from "Settings/settingUtils";
+import { ConfiguredActivities, CraftableItemSpellNames, DrugKeywords, getModule, HypnoTriggers, modules, NetgunKeywords, registerModule } from 'modules';
 import { ActivityModule } from "Modules/activities";
 import { CommandModule } from 'Modules/commands';
 import { CoreModule } from 'Modules/core';
 import { InjectorModule } from 'Modules/injector';
 import { ItemUseModule } from 'Modules/item-use';
+import { LeashingModule } from 'Modules/leashing';
 import { MagicModule } from 'Modules/magic';
 import { OpacityModule } from 'Modules/opacity';
 import { RemoteUIModule } from 'Modules/remoteUI';
+import { SplatterModule } from 'Modules/splatter';
 import { StateModule } from 'Modules/states';
 import { SettingsModel } from 'Settings/Models/settings';
 import { GUI } from "Settings/settingUtils";
 import { BoopsModule } from './Modules/boops';
 import { ChaoticItemModule } from './Modules/chaotic-item';
-import { SplatterModule } from 'Modules/splatter';
 import { CollarModule } from './Modules/collar';
 import { HypnoModule } from './Modules/hypno';
 import { LipstickModule } from './Modules/lipstick';
 import { MiscModule } from './Modules/misc';
-import { LeashingModule } from 'Modules/leashing';
+import { bcModSDK, buildSdk, CleanDefaultsFromSettings, ExportSettings, GetDataSizeReport, hookFunction, ImportSettings, isObject, parseFromBase64, parseFromUTF16, sendLSCGBeep, settingsSave } from './utils';
 
 export {
-	DrugKeywords,
-	NetgunKeywords,
-	CraftableItemSpellNames,
-	HypnoTriggers,
-	ConfiguredActivities,
-	GetDataSizeReport,
-	CleanDefaultsFromSettings,
-	ExportSettings,
-	ImportSettings,
-	getModule,
-	sendLSCGBeep
+  CleanDefaultsFromSettings, ConfiguredActivities, CraftableItemSpellNames, DrugKeywords, ExportSettings, GetDataSizeReport, getModule, HypnoTriggers, ImportSettings, NetgunKeywords, sendLSCGBeep
 };
 
 function initWait() {

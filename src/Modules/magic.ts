@@ -14,7 +14,7 @@ import { IsActivityEnhanced, ItemUseModule, MagicWandItems } from "./item-use";
 import { StateModule } from "./states";
 
 const dialogButtonInfo = [980, 10, 100, 40, 5];
-const dialogButtonCoords: [number, number, number, number] = [dialogButtonInfo[0], dialogButtonInfo[1], 40, 40];
+const dialogButtonCoords: [number, number, number, number] = [dialogButtonInfo[0], dialogButtonInfo[1], dialogButtonInfo[3], dialogButtonInfo[3]];
 const dialogCastButtonCoords: [number, number, number, number] = [dialogButtonInfo[0] - (dialogButtonInfo[2] + dialogButtonInfo[4]), dialogButtonInfo[1], dialogButtonInfo[2], dialogButtonInfo[3]];
 const dialogWildButtonCoords: [number, number, number, number] = [dialogButtonInfo[0] - (dialogButtonInfo[2] + dialogButtonInfo[4]), dialogButtonInfo[1] + (dialogButtonInfo[3] + dialogButtonInfo[4]), dialogButtonInfo[2], dialogButtonInfo[3]];
 const dialogTeachButtonCoords: [number, number, number, number] = [dialogButtonInfo[0] - (dialogButtonInfo[2] + dialogButtonInfo[4]), dialogButtonInfo[1] + (dialogButtonInfo[3] + dialogButtonInfo[4]) * 2, dialogButtonInfo[2], dialogButtonInfo[3]];
@@ -137,7 +137,7 @@ export class MagicModule extends BaseModule {
                 return this.DrawSpellMenu();
 
             next(args);
-            if (this.Enabled && !!CurrentCharacter && this.CanUseMagic(CurrentCharacter) && DialogMenuMode === "dialog") {
+            if (this.Enabled && !!CurrentCharacter && DialogMenuMode === "dialog") {
                 DrawButton(...dialogButtonCoords, "Magic", this.DialogMenuOpen ? LSCG_TEAL : "White", "Magic™");
                 if (this.DialogMenuOpen) {
                     DrawButton(...dialogCastButtonCoords, "Cast Spell", this.CanCastSpell(CurrentCharacter) ? "White" : "Grey", undefined, undefined, !this.CanCastSpell(CurrentCharacter));
@@ -155,7 +155,7 @@ export class MagicModule extends BaseModule {
                 this.DialogMenuOpen = !this.DialogMenuOpen;
                 return;
             }
-            if (this.DialogMenuOpen && this.Enabled && !!CurrentCharacter && this.CanUseMagic(CurrentCharacter) && DialogMenuMode === "dialog") {
+            if (this.DialogMenuOpen && this.Enabled && !!CurrentCharacter && DialogMenuMode === "dialog") {
                 if (MouseIn(...dialogCastButtonCoords)) { if (this.CanCastSpell(CurrentCharacter)) this.OpenSpellMenu(CurrentCharacter as OtherCharacter); return; }
                 else if (MouseIn(...dialogWildButtonCoords)) { if (this.CanWildMagic(CurrentCharacter)) this.CastWildMagic(CurrentCharacter as OtherCharacter); return; }
                 else if (MouseIn(...dialogTeachButtonCoords)) { if (this.CanTeachSpell(CurrentCharacter)) this.TeachSpell(CurrentCharacter as OtherCharacter); return; }

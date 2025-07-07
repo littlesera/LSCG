@@ -101,7 +101,7 @@ export class CoreModule extends BaseModule {
             if (ModUser && ChatRoomHideIconState === 0 && !Ghosted) {
                 var version = C.IsPlayer() ? CUSTOM_LSCG_VERSION() : (C as OtherCharacter).LSCG?.Version;
                 var starColor = isAdmin ? "#008080" : "#00AEAE";
-                if (version != LSCG_VERSION)
+                if (!C.IsPlayer() && version != LSCG_VERSION)
                     starColor = "#ff4545";
                 drawSvg(MainCanvas, SVG_ICONS.STAR, CharX + 400 * Zoom, CharY + 8 * Zoom, 40 * Zoom, 40 * Zoom, 50, 0.8, 1, starColor);
                 if (MouseIn(CharX + 385 * Zoom, CharY + 3 * Zoom, 50 * Zoom, 50 * Zoom)) {

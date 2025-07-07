@@ -9,8 +9,8 @@ import { regEscape } from "./regEscape";
 
 export const LSCG_CHANGES: string = "https://github.com/littlesera/LSCG/releases/latest";
 export const LSCG_TEAL: string = "#00d5d5";
-export const CUSTOM_LSCG_VERSION_GODDESS: string = "Goddess";
-export const CUSTOM_LSCG_VERSION_GOD_OF_KNOWLEDGE: string = "God of Knowledge";
+const CUSTOM_LSCG_VERSION_GODDESS: string = "Goddess";
+const CUSTOM_LSCG_VERSION_GOD_OF_KNOWLEDGE: string = "God of Knowledge";
 export const CUSTOM_LSCG_VERSION = () => Player?.MemberNumber === 120151 ? CUSTOM_LSCG_VERSION_GODDESS : CUSTOM_LSCG_VERSION_GOD_OF_KNOWLEDGE ?? '';
 
 interface IPatchedFunctionData {

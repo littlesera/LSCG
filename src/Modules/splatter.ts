@@ -315,80 +315,50 @@ export class SplatterModule extends BaseModule {
                     Name: "ItemMouth",
                     SelfAllowed: true,
                     TargetLabel: "Spray",
-                    TargetAction: `SourceCharacter ${action} all over TargetCharacter's mouth.`,
-                    TargetSelfAction: `SourceCharacter ${action} all over TargetCharacter.`
+                    TargetAction: `SourceCharacter splats all over TargetCharacter's mouth.`,
+                    TargetSelfAction: `SourceCharacter splats all over TargetCharacter.`
                 }, {
                     Name: "ItemHead",
                     SelfAllowed: true,
                     TargetLabel: "Spray",
-                    TargetAction: `SourceCharacter ${action} all over TargetCharacter's face.`,
-                    TargetSelfAction: `SourceCharacter ${action} all over TargetCharacter.`
+                    TargetAction: `SourceCharacter splats all over TargetCharacter's face.`,
+                    TargetSelfAction: `SourceCharacter splats all over TargetCharacter.`
                 }, {
                     Name: "ItemBreast",
                     SelfAllowed: true,
                     TargetLabel: "Spray",
-                    TargetAction: `SourceCharacter ${action} all over TargetCharacter's chest.`,
-                    TargetSelfAction: `SourceCharacter ${action} all over TargetCharacter.`
+                    TargetAction: `SourceCharacter splats all over TargetCharacter's chest.`,
+                    TargetSelfAction: `SourceCharacter splats all over TargetCharacter.`
                 }, {
                     Name: "ItemPelvis",
                     SelfAllowed: true,
                     TargetLabel: "Spray",
-                    TargetAction: `SourceCharacter ${action} all over TargetCharacter's tummy.`,
-                    TargetSelfAction: `SourceCharacter ${action} all over TargetCharacter.`
+                    TargetAction: `SourceCharacter splats all over TargetCharacter's tummy.`,
+                    TargetSelfAction: `SourceCharacter splats all over TargetCharacter.`
                 }, {
                     Name: "ItemVulva",
                     SelfAllowed: true,
                     TargetLabel: "Spray",
-                    TargetAction: `SourceCharacter ${action} inside TargetCharacter's pussy.`,
-                    TargetSelfAction: `SourceCharacter ${action} all over TargetCharacter.`
+                    TargetAction: `SourceCharacter splats inside TargetCharacter's pussy.`,
+                    TargetSelfAction: `SourceCharacter splats all over TargetCharacter.`
                 }, {
                     Name: "ItemPenis",
                     SelfAllowed: true,
                     TargetLabel: "Spray",
-                    TargetAction: `SourceCharacter ${action} all over TargetCharacter's crotch.`,
-                    TargetSelfAction: `SourceCharacter ${action} all over TargetCharacter.`
+                    TargetAction: `SourceCharacter splats all over TargetCharacter's crotch.`,
+                    TargetSelfAction: `SourceCharacter splats all over TargetCharacter.`
                 }, {
                     Name: "ItemButt",
                     SelfAllowed: true,
                     TargetLabel: "Spray",
-                    TargetAction: `SourceCharacter ${action} inside TargetCharacter's ass.`,
-                    TargetSelfAction: `SourceCharacter ${action} all over TargetCharacter.`
+                    TargetAction: `SourceCharacter splats inside TargetCharacter's ass.`,
+                    TargetSelfAction: `SourceCharacter splats all over TargetCharacter.`
                 }, {
                     Name: "ItemNipples",
                     SelfAllowed: true,
                     TargetLabel: "Spray",
-                    TargetAction: `SourceCharacter ${action} all over TargetCharacter's nipples.`,
-                    TargetSelfAction: `SourceCharacter ${action} all over TargetCharacter.`
-                }
-            ],
-            CustomPrereqs: [
-                {
-                    Name: "CanSquirt",
-                    Func: (acting, acted, group) => {
-                        let controllable = !this.settings.uncontrollableWhenBound || !acting.IsRestrained();
-                        let giverAllowed = this.canGiveSplat(acting);
-                        let takerAllowed = this.canReceiveSplat(<OtherCharacter>acted);
-                        let permAllowed = this.splatAllowed(acting, <OtherCharacter>acted);
-                        return controllable && giverAllowed && takerAllowed && permAllowed;
-                    }
-                }
-            ],
-            CustomImage: ICONS.SPLAT
-        });
-
-        Player.HasPenis() && Activities().AddActivity(<ActivityBundle>{
-            Activity: <Activity>{
-                Name: "SplatInsideMouth",
-                MaxProgress: 90,
-                MaxProgressSelf: 90
-            },
-            Targets: [
-                {
-                    Name: "ItemMouth",
-                    SelfAllowed: true,
-                    TargetLabel: "Cum in mouth",
-                    TargetAction: `SourceCharacter ${action} inside TargetCharacter's mouth.`,
-                    TargetSelfAction: `SourceCharacter ${action} inside TargetCharacter mouth.`
+                    TargetAction: `SourceCharacter splats all over TargetCharacter's nipples.`,
+                    TargetSelfAction: `SourceCharacter splats all over TargetCharacter.`
                 }
             ],
             CustomPrereqs: [
