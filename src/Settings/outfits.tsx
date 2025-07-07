@@ -795,7 +795,8 @@ export class GuiOutfits extends GuiSubscreen {
     CloneOutfit() {
         if (!this.SelectedOutfit) return;
         let newName = prompt(`Enter a name for the new outfit:`);
-        if (!newName || this.OrderedKeys().map(key => key.toLocaleLowerCase()).includes(newName.toLocaleLowerCase())) {
+        if (!newName) return;
+        else if (this.OrderedKeys().map(key => key.toLocaleLowerCase()).includes(newName.toLocaleLowerCase())) {
             if (confirm("Invalid name: Already exists! \nTry Again?"))
                 this.CloneOutfit();
         } else {

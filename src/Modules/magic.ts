@@ -552,7 +552,7 @@ export class MagicModule extends BaseModule {
             }
             else {
                 SendAction(this.getTeachingActionString(spell, InventoryGet(Player, "ItemHandheld"), InventoryGet(target, "ItemHandheld")), target);
-                this.UnpackSpellCodes(spell);
+                this.UnpackSpellCodes(spell, true);
                 setTimeout(() => {
                     sendLSCGCommand(target, "spell-teach", [
                         {
@@ -856,11 +856,11 @@ export class MagicModule extends BaseModule {
             SendAction(`%NAME% grins as they finally understand the details of ${spell.Name} and memorizes it for later.`);
             let outfitModule = getModule<OutfitCollectionModule>("OutfitCollectionModule");
             let outfitSave = false;
-            if (!!spell.Outfit?.Code && !!spell.Outfit?.Key && !!outfitModule.data.GetOutfit(spell.Outfit.Key)) {
+            if (!!spell.Outfit?.Code && !!spell.Outfit?.Key && !outfitModule.data.GetOutfit(spell.Outfit.Key)) {
                 outfitModule?.data.SetOutfitCode(spell.Outfit.Key, spell.Outfit.Code);
                 outfitSave = true;
             }
-            if (!!spell.Polymorph?.Code && !!spell.Polymorph?.Key && !!outfitModule.data.GetOutfit(spell.Polymorph.Key)) {
+            if (!!spell.Polymorph?.Code && !!spell.Polymorph?.Key && !outfitModule.data.GetOutfit(spell.Polymorph.Key)) {
                 outfitModule?.data.SetOutfitCode(spell.Polymorph.Key, spell.Polymorph.Code);
                 outfitSave = true;
             }
@@ -1033,15 +1033,15 @@ export class MagicModule extends BaseModule {
         }
     }
 
-    UnpackSpellCodes(spell: SpellDefinition | undefined) {
+    UnpackSpellCodes(spell: SpellDefinition | undefined, skipFilter: boolean = false) {
         if (!spell)
             return;
         // Unpack specified outfit codes for sending.
         if (!!spell.Outfit && !!spell.Outfit.Key) {
-            spell.Outfit.Code = LZString.compressToBase64(JSON.stringify(GetConfiguredItemBundlesFromOutfitKey(spell.Outfit.Key, item => RedressedState.ItemIsAllowed(item))));
+            spell.Outfit.Code = LZString.compressToBase64(JSON.stringify(GetConfiguredItemBundlesFromOutfitKey(spell.Outfit.Key, item => skipFilter || RedressedState.ItemIsAllowed(item))));
         } 
         if (!!spell.Polymorph && spell.Polymorph.Key) {
-            spell.Polymorph.Code = LZString.compressToBase64(JSON.stringify(GetConfiguredItemBundlesFromOutfitKey(spell.Polymorph.Key, item => PolymorphedState.ItemIsAllowed(item))));
+            spell.Polymorph.Code = LZString.compressToBase64(JSON.stringify(GetConfiguredItemBundlesFromOutfitKey(spell.Polymorph.Key, item => skipFilter || PolymorphedState.ItemIsAllowed(item))));
         }
     }
 }
