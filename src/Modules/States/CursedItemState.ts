@@ -1,4 +1,4 @@
-import { ApplyItem, CanUnlock, getRandomEntry, getRandomInt, isBind, isCloth, isCosplay, isUnderwear, LSCG_SendLocal, parseFromBase64, RemoveItem, SendAction } from "utils";
+import { ApplyItem, CanUnlock, getRandomEntry, getRandomInt, hookBCXCurse, isBind, isCloth, isCosplay, isUnderwear, LSCG_SendLocal, parseFromBase64, RemoveItem, SendAction } from "utils";
 import { getModule } from "modules";
 import { BaseState } from "./BaseState";
 import { StateModule } from "Modules/states";
@@ -256,9 +256,12 @@ export class CursedItemState extends BaseState {
             refreshNeeded = true;
         } else if (cursedItem.lastTick + this.ItemInterval(cursedItem) < now) {
             let outfitItems = parseFromBase64(cursedItem.OutfitCode) as ItemBundle[];
+            let otherWornCursedOutfitItemGroups = this.getAllOtherCursedBundles(cursedItem).map(b => InventoryGet(Player, b.Group)?.Asset.Group.Name).filter(i => !!i);
+
             //  2a) Check for strippable items
             let itemsToStrip = wornItems.filter(item => 
                 this.shouldStripItem(item, cursedItem.Strip) &&
+                !otherWornCursedOutfitItemGroups.includes(item.Asset.Group.Name) &&
                 !outfitItems.some(bundle => this.itemBundleMatch(bundle, item)));
             
             if (!!itemsToStrip && itemsToStrip.length > 0) {
@@ -282,6 +285,7 @@ export class CursedItemState extends BaseState {
             let itemsToApply = outfitItems.filter(bundle => {
                     return this.itemIsAllowed(bundle, cursedItem.Crafter) &&                                                 // Item allowed to apply
                     (!this.Inexhaustable(cursedItem) || bundle.Group != keyItem.Asset.Group.Name) &&    // Item not key item if inexhaustable (leave key item behind if overlap)
+                    !otherWornCursedOutfitItemGroups.includes(bundle.Group) &&
                     !wornItems.some(item => this.itemBundleMatch(bundle, item))
                 }
             );
@@ -367,6 +371,13 @@ export class CursedItemState extends BaseState {
         }
         
         return allowedMember;
+    }
+
+    getAllOtherCursedBundles(item: CursedItemWorn): ItemBundle[] {
+        return this.ActiveOutfits?.filter(o => o.CurseName != item.CurseName)
+            .map(o => parseFromBase64<ItemBundle[]>(o.OutfitCode) ?? [])
+            .reduce((a, b) => a.concat(b), [])
+            .filter((val, ix, arr) => arr.indexOf(val) == ix) ?? [];
     }
 
     itemIsAllowed(item: ItemBundle, acting: number) {        

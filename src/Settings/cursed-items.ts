@@ -363,7 +363,7 @@ export class GuiCursedItems extends GuiSubscreen {
 				// New Suggestion
 				if (!!this.CursedItem)
 					this.saveItem();
-				this.CursedItems.push(<CursedItemModel>{Name: `Cursed Item No. ${this.CursedItems.length+1}`});
+				this.CursedItems.push(<CursedItemModel>{Name: `Cursed Item No. ${this.CursedItems.length+1}`, Enabled: true});
 				this.CursedItemIndex = this.CursedItems.length - 1;
 				this.loadItem();
 			}
