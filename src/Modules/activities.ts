@@ -10,6 +10,7 @@ import { LeashingModule } from "./leashing";
 import { HypnoModule } from "./hypno";
 import { StateMigrator } from "./Migrators/StateMigrator";
 import { StateModule } from "./states";
+import { SplatterMapping, SplatterModule } from "./splatter";
 
 export interface ActivityTarget {
     Name: LSCGAssetGroupItemName;
@@ -1291,8 +1292,8 @@ export class ActivityModule extends BaseModule {
                     Name: "ItemHead",
                     SelfAllowed: true,
                     TargetLabel: "Clamp Hand over Eyes",
-                    TargetAction: "SourceCharacter clamps her hand over TargetCharacter's eyes.",
-                    TargetSelfAction: "SourceCharacter clamps her hand over PronounPossessive own eyes."
+                    TargetAction: "SourceCharacter clamps PronounPossessive hand over TargetCharacter's eyes.",
+                    TargetSelfAction: "SourceCharacter clamps PronounPossessive hand over PronounPossessive own eyes."
                 }
             ],
             CustomPrereqs: [
@@ -1664,6 +1665,92 @@ export class ActivityModule extends BaseModule {
                 }
             },
             CustomImage: "Assets/Female3DCG/Activity/Kiss.png"
+        });
+
+        // SwallowLoad
+        this.AddActivity({
+            Activity: {
+                Name: "SwallowLoad",
+                MaxProgress: 75,
+                MaxProgressSelf: 30,
+                Prerequisite: ["ZoneAccessible", "TargetCanUseTongue"]
+            },
+            Targets: [
+                {
+                    Name: "ItemMouth",
+                    SelfAllowed: true,
+                    SelfOnly: true,
+                    TargetLabel: "Swallow",
+                    TargetAction: "SourceCharacter gulps and swallows."
+                }
+            ],
+            CustomPrereqs: [
+                {
+                    Name: "SourceCanSwallowSplatter",
+                    Func: (acting, acted, group): boolean => {
+                        if (acting.MemberNumber != acted.MemberNumber)
+                            return false;
+                        
+                        return getModule<SplatterModule>("SplatterModule")?.IsSplatInMouth(acting);
+                    }
+                }
+            ],
+            CustomAction: {
+                Func: (target, args, next) => {
+                    if (!!target)
+                        getModule<SplatterModule>("SplatterModule")?.ClearSplatInMouth(Player);
+                    return next(args);
+                }
+            },
+            CustomImage: "Assets/Female3DCG/Activity/Kiss.png"
+        });
+
+        this.PatchActivity(<ActivityPatch>{
+            ActivityName: "Lick",
+            AddedTargets: [
+                <ActivityTarget>{
+                    Name: "ItemHead",
+                    SelfAllowed: false,
+                    TargetLabel: "Lick Forehead",
+                    TargetAction: "SourceCharacter licks TargetCharacter's forehead."
+                }
+            ],
+            CustomAction: <CustomAction>{
+                Func: (target, args, next) => {
+                    var location = GetMetadata(args[1])?.GroupName;
+                    var splatter = getModule<SplatterModule>("SplatterModule");
+                    if (!!splatter) {
+                        switch (location) {
+                            case "ItemMouth":
+                                splatter.AddSplatInMouth(Player, target, "mouth");
+                                break;
+                            case "ItemHead":
+                                splatter.AddSplatInMouth(Player, target, "forehead");
+                                break;
+                            case "ItemBreast":
+                                splatter.AddSplatInMouth(Player, target, "chest");
+                                break;
+                            case "ItemNipples":
+                            case "ItemNipplesPiercings":
+                                splatter.AddSplatInMouth(Player, target, "nipples");
+                                break;
+                            case "ItemPelvis":
+                                splatter.AddSplatInMouth(Player, target, "tummy");
+                                break;
+                            case "ItemVulva":
+                            case "ItemVulvaPiercings":
+                                splatter.AddSplatInMouth(Player, target, "crotch");
+                                break;
+                            case "ItemButt":
+                                splatter.AddSplatInMouth(Player, target, "ass");
+                                break;
+                            default:
+                                break;
+                        }
+                    }
+                    return next(args);
+                }
+            },
         });
 
         // Erect Penis Detection...

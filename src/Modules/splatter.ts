@@ -39,8 +39,7 @@ const bcSplats: RecordObject = {
 
 const locations: { [key: string]: string[]; } = {
     forehead: ['a', 'b', 'c'],    // 'forehead' covers flags a, b, c
-    mouth: ['d', 'e', 'f'],       // 'mouth' covers flags d, e, f
-    inMouth: ['o'],       // 'mouth' covers flags d, e, f
+    mouth: ['d', 'e', 'f', 'o'],       // 'mouth' covers flags d, e, f ['o' is in]
     chest: ['g', 'h', 'i', 'j'],       // 'mouth' covers flags d, e, f
     tummy: ['k', 'l', 'm', 'n'],       // 'mouth' covers flags d, e, f
     crotch: ['p'],
@@ -101,6 +100,49 @@ export class SplatterMapping {
                 break;
             }
         }
+
+        this.splatAtFlag(flagToFlip, colorOverride, opacityOverride);
+    }
+
+    decrementSplat(loc: SplatterLocation) {
+        if (this.getCurrentSplatTier(loc) <= 0)
+            return;
+
+        let record = this.getMergedProperty();
+        let group = locations[loc];
+        let flagToFlip: string | undefined = undefined;
+
+        for (let i = group.length - 1; i >= 0; i--) {
+            const flag = group[i];
+            if (record[flag] > 0) {
+                flagToFlip = flag;
+                break;
+            }
+        }
+
+        this.getSplatItems().forEach(targetItem => {
+            if (!!flagToFlip && !!targetItem && !!targetItem.Property && !!targetItem.Property.TypeRecord) {
+                targetItem.Property.TypeRecord[flagToFlip] = 0;
+            }
+        });
+    }
+
+    cleanSplatLocation(loc: SplatterLocation) {
+        let flags = locations[loc];
+        if (loc == "all") {
+            flags = Object.keys(bcSplats);
+        }
+        let items = this.getSplatItems();
+        items.forEach(item => {
+            flags.forEach(key => {
+                if (!!item && !!item.Property && !!item.Property.TypeRecord) {
+                    item.Property.TypeRecord[key] = 0;
+                }
+            });
+        })
+    }
+
+    splatAtFlag(flagToFlip: string | undefined, colorOverride: ItemColor | null = "Default", opacityOverride: number | null = 70) {
         if (!!flagToFlip) {
             let items = this.getSplatItems();
             let targetItem;
@@ -133,18 +175,71 @@ export class SplatterMapping {
         }
     }
 
-    cleanSplatLocation(loc: SplatterLocation) {
-        let flags = locations[loc];
-        if (loc == "all") {
-            flags = Object.keys(bcSplats);
+    findHighestFlagFromLocation(location: SplatterLocation): string | null | undefined {
+        let record = this.getMergedProperty();
+        let group = locations[location];
+        let foundFlag: string | undefined;
+        for (let i = group.length - 1; i >= 0; i--) {
+            const flag = group[i];
+            if (record[flag] > 0) {
+                foundFlag = flag;
+                break;
+            }
         }
+        return foundFlag;
+    }
+
+    findItemFromLocation(location: SplatterLocation): Item | null | undefined {
+        let foundFlag = this.findHighestFlagFromLocation(location);
+        if (!!foundFlag) {
+            return this.getSplatItems().find(item => item?.Property?.TypeRecord?.[foundFlag!] == 1);
+        }
+        
+        return;
+    }
+
+    getColorAtLocation(location: SplatterLocation): ItemColor | undefined {
+        let foundFlag = this.findHighestFlagFromLocation(location);
+        let item = this.findItemFromLocation(location);
+        let allFlags = Object.keys(bcSplats);
+        if (!!item) {
+            if (Array.isArray(item.Color))
+                return item.Color[allFlags.indexOf(foundFlag!)];
+            else
+                return item.Color
+        }
+
+        return;
+    }
+
+    getOpacityAtLocation(location: SplatterLocation): number | number[] | undefined {
+        let foundFlag = this.findHighestFlagFromLocation(location);
+        let item = this.findItemFromLocation(location);
+        let allFlags = Object.keys(bcSplats);
+        if (!!item) {
+            if (Array.isArray(item.Property?.Opacity))
+                return item.Property?.Opacity[allFlags.indexOf(foundFlag!)];
+            else
+                return item.Property?.Opacity;
+        }
+        
+        return;
+    }
+
+    splatInMouth(colorOverride: ItemColor | null = "Default", opacityOverride: number | null = 70) {
+        this.splatAtFlag('o', colorOverride, opacityOverride);
+    }
+
+    hasInMouth(): boolean {
+        return (this.getMergedProperty()?.['o'] || 0) > 0;
+    }
+
+    cleanInMouth() {
         let items = this.getSplatItems();
         items.forEach(item => {
-            flags.forEach(key => {
-                if (!!item && !!item.Property && !!item.Property.TypeRecord) {
-                    item.Property.TypeRecord[key] = 0;
-                }
-            });
+            if (!!item && !!item.Property && !!item.Property.TypeRecord) {
+                item.Property.TypeRecord['o'] = 0;
+            }
         });
     }
 }
@@ -227,79 +322,106 @@ export class SplatterModule extends BaseModule {
                     let colorOverride = this.getColorOverride((<OtherCharacter>sender)?.LSCG?.SplatterModule?.colorOverride);
                     let opacityOverride = this.getOpacityOverride((<OtherCharacter>sender)?.LSCG?.SplatterModule?.opacityOverride);
 
-                    switch (data.Content) {
-                        case "ChatOther-ItemMouth-LSCG_Splat":
-                        case "ChatSelf-ItemMouth-LSCG_Splat":
-                            this.AddSplatter(sender, "mouth", colorOverride, opacityOverride);
-                            break;
-                        case "ChatOther-ItemMouth-LSCG_SplatInsideMouth":
-                        case "ChatSelf-ItemMouth-LSCG_SplatInsideMouth":
-                            this.AddSplatter(sender, "inMouth", colorOverride, opacityOverride);
-                            break;
-                        case "ChatOther-ItemHead-LSCG_Splat":
-                        case "ChatSelf-ItemHead-LSCG_Splat":
-                            this.AddSplatter(sender, "forehead", colorOverride, opacityOverride);
-                            break;
-                        case "ChatOther-ItemBreast-LSCG_Splat":
-                        case "ChatSelf-ItemBreast-LSCG_Splat":
-                            this.AddSplatter(sender, "chest", colorOverride, opacityOverride);
-                            break;
-                        case "ChatOther-ItemPelvis-LSCG_Splat":
-                        case "ChatSelf-ItemPelvis-LSCG_Splat":
-                            this.AddSplatter(sender, "tummy", colorOverride, opacityOverride);
-                            break;
-                        case "ChatOther-ItemVulva-LSCG_Splat":
-                        case "ChatSelf-ItemVulva-LSCG_Splat":
-                            this.AddSplatter(sender, "crotch", colorOverride, opacityOverride);
-                            break;
-                        case "ChatOther-ItemButt-LSCG_Splat":
-                        case "ChatSelf-ItemButt-LSCG_Splat":
-                            this.AddSplatter(sender, "ass", colorOverride, opacityOverride);
-                            break;
-                        case "ChatOther-ItemNipples-LSCG_Splat":
-                        case "ChatSelf-ItemNipples-LSCG_Splat":
-                            this.AddSplatter(sender, "nipples", colorOverride, opacityOverride);
-                            break;
-                        default:
-                            break;
+                        switch (data.Content) {
+                            case "ChatOther-ItemMouth-LSCG_Splat":
+                            case "ChatSelf-ItemMouth-LSCG_Splat":
+                                this.AddSplatter(sender, "mouth", colorOverride, opacityOverride);
+                                break;
+                            case "ChatOther-ItemHead-LSCG_Splat":
+                            case "ChatSelf-ItemHead-LSCG_Splat":
+                                this.AddSplatter(sender, "forehead", colorOverride, opacityOverride);
+                                break;
+                            case "ChatOther-ItemBreast-LSCG_Splat":
+                            case "ChatSelf-ItemBreast-LSCG_Splat":    
+                                this.AddSplatter(sender, "chest", colorOverride, opacityOverride);
+                                break;
+                            case "ChatOther-ItemPelvis-LSCG_Splat":
+                            case "ChatSelf-ItemPelvis-LSCG_Splat":
+                                this.AddSplatter(sender, "tummy", colorOverride, opacityOverride);
+                                break;
+                            case "ChatOther-ItemVulva-LSCG_Splat":
+                            case "ChatSelf-ItemVulva-LSCG_Splat":
+                                this.AddSplatter(sender, "crotch", colorOverride, opacityOverride);
+                                break;
+                            case "ChatOther-ItemButt-LSCG_Splat":
+                            case "ChatSelf-ItemButt-LSCG_Splat":
+                                this.AddSplatter(sender, "ass", colorOverride, opacityOverride);
+                                break;
+                            case "ChatOther-ItemNipples-LSCG_Splat":
+                            case "ChatSelf-ItemNipples-LSCG_Splat":
+                                this.AddSplatter(sender, "nipples", colorOverride, opacityOverride);
+                                break;
+                            // Lick Activities
+                            case "ChatOther-ItemMouth-Lick":
+                            case "ChatSelf-ItemMouth-Lick":
+                                this.CleanSingleSplatter("mouth");
+                            case "ChatOther-ItemHead-Lick":
+                            case "ChatSelf-ItemHead-Lick":
+                                this.CleanSingleSplatter("forehead");
+                                break;
+                            case "ChatOther-ItemBreast-Lick":
+                            case "ChatSelf-ItemBreast-Lick":
+                                this.CleanSingleSplatter("chest");
+                                break;
+                            case "ChatOther-ItemNipples-Lick":
+                            case "ChatSelf-ItemNipples-Lick":
+                            case "ChatOther-ItemNipplesPiercings-Lick":
+                            case "ChatSelf-ItemNipplesPiercings-Lick":
+                                this.CleanSingleSplatter("nipples");
+                                break;
+                            case "ChatOther-ItemPelvis-Lick":
+                            case "ChatSelf-ItemPelvis-Lick":
+                                this.CleanSingleSplatter("tummy");
+                                break;
+                            case "ChatOther-ItemVulva-Lick":
+                            case "ChatSelf-ItemVulva-Lick":
+                            case "ChatOther-ItemVulvaPiercings-Lick":
+                            case "ChatSelf-ItemVulvaPiercings-Lick":
+                                this.CleanSingleSplatter("crotch");
+                                break;
+                            case "ChatOther-ItemButt-Lick":
+                            case "ChatSelf-ItemButt-Lick":
+                                this.CleanSingleSplatter("ass");
+                                break;
+                            default:
+                                break;
+                        }
                     }
-                }
-
-                var item = data.Dictionary?.find((d: any) => d.Tag == "ActivityAsset");
-                if (!!item && item.AssetName == "Towel") {
-                    switch (data.Content) {
-                        case "ChatOther-ItemMouth-RubItem":
-                        case "ChatSelf-ItemMouth-RubItem":
-                            this.CleanSplatter("mouth");
-                            this.CleanSplatter("inMouth");
-                            break;
-                        case "ChatOther-ItemHood-RubItem":
-                        case "ChatSelf-ItemHood-RubItem":
-                            this.CleanSplatter("forehead");
-                            break;
-                        case "ChatOther-ItemBreast-RubItem":
-                        case "ChatSelf-ItemBreast-RubItem":
-                        case "ChatOther-ItemNipples-RubItem":
-                        case "ChatSelf-ItemNipples-RubItem":
-                        case "ChatOther-ItemNipplesPiercings-RubItem":
-                        case "ChatSelf-ItemNipplesPiercings-RubItem":
-                            this.CleanSplatter("chest");
-                            this.CleanSplatter("nipples");
-                            break;
-                        case "ChatOther-ItemPelvis-RubItem":
-                        case "ChatSelf-ItemPelvis-RubItem":
-                            this.CleanSplatter("tummy");
-                            break;
-                        case "ChatOther-ItemVulva-RubItem":
-                        case "ChatSelf-ItemVulva-RubItem":
-                        case "ChatOther-ItemVulvaItemVulvaPiercings-RubItem":
-                        case "ChatSelf-ItemVulvaPiercings-RubItem":
-                            this.CleanSplatter("crotch");
-                            break;
-                        default:
-                            break;
+        
+                    var item = data.Dictionary?.find((d: any) => d.Tag == "ActivityAsset");
+                    if (!!item && item.AssetName == "Towel") {
+                        switch (data.Content) {
+                            case "ChatOther-ItemMouth-RubItem":
+                            case "ChatSelf-ItemMouth-RubItem":
+                                this.CleanSplatter("mouth");
+                                break;
+                            case "ChatOther-ItemHood-RubItem":
+                            case "ChatSelf-ItemHood-RubItem":
+                                this.CleanSplatter("forehead");
+                                break;
+                            case "ChatOther-ItemBreast-RubItem":
+                            case "ChatSelf-ItemBreast-RubItem":
+                            case "ChatOther-ItemNipples-RubItem":
+                            case "ChatSelf-ItemNipples-RubItem":
+                            case "ChatOther-ItemNipplesPiercings-RubItem":
+                            case "ChatSelf-ItemNipplesPiercings-RubItem":
+                                this.CleanSplatter("chest");
+                                this.CleanSplatter("nipples");
+                                break;
+                            case "ChatOther-ItemPelvis-RubItem":
+                            case "ChatSelf-ItemPelvis-RubItem":
+                                this.CleanSplatter("tummy");
+                                break;
+                            case "ChatOther-ItemVulva-RubItem":
+                            case "ChatSelf-ItemVulva-RubItem":
+                            case "ChatOther-ItemVulvaPiercings-RubItem":
+                            case "ChatSelf-ItemVulvaPiercings-RubItem":
+                                this.CleanSplatter("crotch");
+                                break;
+                            default :
+                                break;
+                        }
                     }
-                }
             }
         });
 
@@ -618,12 +740,6 @@ export class SplatterModule extends BaseModule {
                 ActivityRun(Player, target, group, activity, true);
             }
         }
-
-        if (location === 'inMouth') {
-            let colorOverride = this.getColorOverride((Player)?.LSCG?.SplatterModule?.colorOverride);
-            let opacityOverride = this.getOpacityOverride((Player)?.LSCG?.SplatterModule?.opacityOverride);
-            this.AddSplatterToSomeone(Player, target, location, colorOverride, opacityOverride);
-        }
     }
 
     CleanSplatter(location: SplatterLocation) {
@@ -632,10 +748,9 @@ export class SplatterModule extends BaseModule {
         ChatRoomCharacterUpdate(Player);
     }
 
-    CleanSplatterFromSomeone(target: Character, location: SplatterLocation) {
-        console.info(`Cleaning splatter from ${location}`);
-        new SplatterMapping(target).cleanSplatLocation(location);
-        ChatRoomCharacterUpdate(target);
+    CleanSingleSplatter(location: SplatterLocation) {
+        new SplatterMapping(Player).decrementSplat(location);
+        ChatRoomCharacterUpdate(Player);
     }
 
     AddSplatter(sender: Character, location: SplatterLocation, colorOverride: ItemColor | null, opacityOverride: number | null) {
@@ -644,9 +759,45 @@ export class SplatterModule extends BaseModule {
         ChatRoomCharacterUpdate(Player);
     }
 
-    AddSplatterToSomeone(sender: Character, target: Character, location: SplatterLocation, colorOverride: ItemColor | null, opacityOverride: number | null) {
-        console.info(`Adding splatter to ${location}`);
-        new SplatterMapping(target).incrementSplat(location, colorOverride, opacityOverride);
-        ChatRoomCharacterUpdate(target);
+    IsSplatInMouth(C: Character) {
+        return new SplatterMapping(C).hasInMouth();
+    }
+
+    ClearSplatInMouth(C: Character) {
+        new SplatterMapping(C).cleanInMouth();
+        ChatRoomCharacterUpdate(C);
+    }
+
+    AddSplatInMouth(C: Character, source: Character | undefined | null, sourceLocation: SplatterLocation | undefined | null) {
+        if (this.HasSplatAt(source, sourceLocation)) {
+            let colorOverride = this.getColorSource(source, sourceLocation) ?? this.getColorOverride((<OtherCharacter>source)?.LSCG?.SplatterModule?.colorOverride ?? null);
+            let opacityOverride = this.getOpacitySource(source, sourceLocation) ?? this.getOpacityOverride((<OtherCharacter>source)?.LSCG?.SplatterModule?.opacityOverride ?? null);
+            new SplatterMapping(C).splatInMouth(colorOverride, opacityOverride);
+            ChatRoomCharacterUpdate(C);
+        }
+    }
+
+    HasSplatAt(C: Character | undefined | null, location: SplatterLocation | undefined | null) {
+        if (!C || !location)
+            return false;
+        return new SplatterMapping(C).getCurrentSplatTier(location) > 0;
+    }
+
+    private getColorSource(source: Character | undefined | null, sourceLocation: SplatterLocation | undefined | null): ItemColor | undefined {
+        if (!source || !sourceLocation)
+            return;
+
+        return new SplatterMapping(source).getColorAtLocation(sourceLocation);
+    }
+
+    private getOpacitySource(source: Character | undefined | null, sourceLocation: SplatterLocation | undefined | null): number | undefined {
+        if (!source || !sourceLocation)
+            return;
+
+        let opacity = new SplatterMapping(source).getOpacityAtLocation(sourceLocation);
+        if (Array.isArray(opacity)) // Extract just the in mouth opacity
+            return ((opacity[14] ?? 1) * 100) ?? undefined;
+
+        return (opacity ?? 1) * 100;
     }
 }
