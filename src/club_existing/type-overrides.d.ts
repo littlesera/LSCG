@@ -12,6 +12,7 @@ interface PlayerOnlineSettings {
 
 interface ExtensionSettings {
     LSCG: string;
+    LSCG_Outfits: string;
 }
 
 interface LSCGChatRoomMessageMetadata extends Omit<IChatRoomMessageMetadata, "ActivityName"> {
@@ -24,9 +25,9 @@ interface LSCGMessageDictionaryEntry {
 
 type LSCGMessageModelType = "init" | "sync" | "command" | "broadcast";
 
-type LSCGCommandName = "debug" | "grab" | "release" | "remote" | "escape" | "collar-tighten" | "collar-loosen" | "collar-stats" | "photo" | "spell" | "spell-teach" | "pair" | "unpair" | "pairing-update" | "get-spell" | "get-spell-response" | "get-suggestions" | "get-suggestions-response" | "set-suggestions" | "add-leashing" | "remove-leashing" | "craft-share" | "splat" | "swap-ask" | "swap-respond";
+type LSCGCommandName = "debug" | "grab" | "release" | "remote" | "escape" | "collar-tighten" | "collar-loosen" | "collar-stats" | "photo" | "spell" | "spell-teach" | "pair" | "unpair" | "pairing-update" | "get-spell" | "get-spell-response" | "get-suggestions" | "get-suggestions-response" | "set-suggestions" | "add-leashing" | "remove-leashing" | "craft-share" | "splat" | "swap-ask" | "swap-respond" | "cursed-item-request" | "cursed-item-response";
 
-type LSCGState = "none" | "hypnotized" | "asleep" | "horny" | "choking" | "held" | "blind" | "deaf" | "frozen" | "gagged" | "redressed" | "arousal-paired" | "orgasm-siphoned" | "leashed" | "resized" | "buffed" | "polymorphed" | "x-ray-vision" | "denied" | "protected";
+type LSCGState = "none" | "hypnotized" | "asleep" | "horny" | "choking" | "held" | "blind" | "deaf" | "frozen" | "gagged" | "redressed" | "arousal-paired" | "orgasm-siphoned" | "leashed" | "resized" | "buffed" | "polymorphed" | "x-ray-vision" | "denied" | "protected" | "cursed-item";
 
 type LSCGImmersiveOption = "true" | "false" | "whenImmersive";
 
@@ -178,3 +179,7 @@ interface LSCGActivity extends Omit<Activity, "ActivityID" | "Name" | "Prerequis
     Target?: LSCGAssetGroupItemName[];
     TargetSelf?: LSCGAssetGroupItemName[] | true;
 }
+
+type LSCGMiniGames = ModuleScreens["MiniGame"] | "LSCG_SleepyMiniGame" | "LSCG_SuggestionMiniGame" | "LSCG_MiniGame"
+
+declare function MiniGameStart(GameType: LSCGMiniGames, Difficulty: number | string, ReturnFunction: string): void;

@@ -1,9 +1,12 @@
+import { OutfitMigrator } from "Modules/Migrators/OutfitMigrator";
 import { ActivityModule } from "Modules/activities";
 import { CoreModule } from "Modules/core";
 import { HypnoModule } from "Modules/hypno";
 import { InjectorModule } from "Modules/injector";
 import { MagicModule } from "Modules/magic";
+import { OutfitCollectionModule } from "Modules/outfitCollection";
 import { ActivityEntryModel } from "Settings/Models/activities";
+import { OutfitCollection } from "Settings/OutfitCollection/outfitCollection";
 import { BaseModule } from "base";
 
 export const modulesMap: Map<string, BaseModule> = new Map<string, BaseModule>();
@@ -54,4 +57,12 @@ export function ConfiguredActivities(): ActivityEntryModel[] {
 
 export function CheckVersionUpdate() {
 	getModule<CoreModule>("CoreModule")?.CheckVersionUpdate();
+}
+
+export function Outfits(): OutfitCollection {
+	return getModule<OutfitCollectionModule>("OutfitCollectionModule").data;
+}
+
+export function TestOutfitMigration() {
+	new OutfitMigrator().Migrate("");
 }

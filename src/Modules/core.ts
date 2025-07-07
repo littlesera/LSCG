@@ -5,6 +5,7 @@ import { IPublicSettingsModel, PublicSettingsModel, SettingsModel } from "Settin
 import { ModuleCategory } from "Settings/setting_definitions";
 import { CUSTOM_LSCG_VERSION, drawSvg, getCharacter, hookFunction, LSCG_CHANGES, LSCG_SendLocal, mouseTooltip, removeAllHooksByModule, sendLSCGMessage, settingsSave, SVG_ICONS } from "../utils";
 import { CollarModule } from "./collar";
+import { CursedItemModule } from "./cursed-outfit";
 
 import { lt } from "semver";
 import { BaseMigrator } from "./Migrators/BaseMigrator";
@@ -15,7 +16,9 @@ import { drawTooltip } from "Settings/settingUtils";
 import { GrabType, LeashingModule } from "./leashing";
 import { OpacityMigrator } from "./Migrators/OpacityMigrator";
 import { SuggestionSettingMigrator } from "./Migrators/SuggestionSettingMigrator";
-import { HypnoModule } from './hypno';
+import { OutfitMigrator } from "./Migrators/OutfitMigrator";
+import { CursedItemMigrator } from "./Migrators/CursedItemMigrator";
+import { HypnoModule } from "./hypno";
 
 // >= R111
 declare var DialogMenuMapping: { items: ScreenFunctions & { C: null | Character; }; };
@@ -157,7 +160,6 @@ export class CoreModule extends BaseModule {
 
                         coreModule.settings.seeSharedCrafts = this.getAttribute("aria-checked") === "true";
                         settingsSave();
-                        // @ts-expect-error: R111 added a fourth parameter; remove this comment once R111 annotations are available
                         DialogInventoryBuild(C, true, false, false);
                     },
                     { image: "./Icons/Online.png", role: "checkbox", tooltip: "Toggle Shared Crafts", tooltipPosition: "left" },
@@ -255,7 +257,9 @@ export class CoreModule extends BaseModule {
     Migrators: BaseMigrator[] = [
         new StateMigrator(),
         new OpacityMigrator(),
-        new SuggestionSettingMigrator()
+        new SuggestionSettingMigrator(),
+        new OutfitMigrator(),
+        new CursedItemMigrator()
     ];
 
     CheckForMigrations(fromVersion: string): boolean {

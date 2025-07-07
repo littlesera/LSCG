@@ -1,16 +1,20 @@
-import { CUSTOM_LSCG_VERSION } from 'utils';
-import { ActivitySettingsModel } from "./activities";
-import { BaseSettingsModel, GlobalPublicSettingsModel, GlobalSettingsModel, LipstickSettingsModel, MiscSettingsModel, OpacityPublicSettingsModel, OpacitySettingsModel, SplatterSettingsModel } from "./base";
+import { BoopsModule } from "Modules/boops";
+import { InjectorModule } from "Modules/injector";
+import { BaseSettingsModel, GlobalPublicSettingsModel, GlobalSettingsModel, LipstickSettingsModel, MiscSettingsModel, OpacityPublicSettingsModel, OpacitySettingsModel, OutfitSettings, SplatterSettingsModel } from "./base";
 import { CollarModel, CollarPublicSettingsModel, CollarSettingsModel } from "./collar";
 import { HypnoPublicSettingsModel, HypnoSettingsModel } from "./hypno";
 import { InjectorPublicSettingsModel, InjectorSettingsModel } from "./injector";
 import { MagicPublicSettingsModel, MagicSettingsModel } from "./magic";
 import { StatePublicSettingsModel, StateSettingsModel } from "./states";
-
+import { ChaoticItemModule } from "Modules/chaotic-item";
+import { CursedItemSettingsModel } from "./cursed-item";
+import { ActivitySettingsModel } from "./activities";
+import { CUSTOM_LSCG_VERSION } from "utils";
 
 export interface SettingsModel {
     Version: string;
     RethrowExceptions: boolean;
+    OutfitCollectionModule: OutfitSettings;
     CollarModule: CollarSettingsModel;
     HypnoModule: HypnoSettingsModel;
     BoopsModule: BaseSettingsModel;
@@ -21,6 +25,7 @@ export interface SettingsModel {
     ActivityModule: ActivitySettingsModel;
     StateModule: StateSettingsModel;
     MagicModule: MagicSettingsModel;
+    CursedItemModule: CursedItemSettingsModel;
     OpacityModule: OpacitySettingsModel;
     LeashingModule: BaseSettingsModel;
     ChaoticItemModule: BaseSettingsModel;
@@ -38,6 +43,7 @@ export interface IPublicSettingsModel extends BaseSettingsModel {
     InjectorModule: InjectorPublicSettingsModel;
     StateModule: StatePublicSettingsModel;
     MagicModule: MagicPublicSettingsModel;
+    CursedItemModule: CursedItemSettingsModel;
     OpacityModule: OpacityPublicSettingsModel;
     LeashingModule: BaseSettingsModel;
     ChaoticItemModule: BaseSettingsModel;
@@ -152,7 +158,15 @@ export class PublicSettingsModel implements IPublicSettingsModel {
         enabled: true,
         preventExternalMod: false
     };
-    ChaoticItemModule: BaseSettingsModel = <BaseSettingsModel>{ enabled: false };
+    CursedItemModule: CursedItemSettingsModel = <CursedItemSettingsModel>{
+        enabled: false,
+        Allowed: "Public",
+        Vulnerable: false,
+        CursedItems: [],
+        SuppressEmote: false,
+        AlwaysExhaust: false
+    };
+    ChaoticItemModule: BaseSettingsModel = <BaseSettingsModel>{enabled: false};
     SplatterModule: SplatterSettingsModel = <SplatterSettingsModel>{
         enabled: false,
         giver: false,

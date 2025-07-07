@@ -1,16 +1,17 @@
-import { KNOWN_SPELLS_LIMIT, LSCGSpellEffect, MagicSettingsModel, OutfitConfig, OutfitOption, SpellDefinition } from "Settings/Models/magic";
-import { GuiMagic, pairedSpellEffects } from "Settings/magic";
-import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
 import { BaseModule } from "base";
 import { getModule } from "modules";
-import { forceOrgasm, getCharacter, GetConfiguredItemBundlesFromSavedCode, GetDelimitedList, GetItemNameAndDescriptionConcat, GetMetadata, getRandomInt, hookFunction, isPhraseInString, LSCG_SendLocal, LSCG_TEAL, OnActivity, removeAllHooksByModule, SendAction, sendLSCGCommand, sendLSCGCommandBeep, settingsSave } from 'utils';
-import { escapeRegExp, excludeParentheticalContent, getCharacterByNicknameOrMemberNumber, OnChat } from "../utils";
+import { GetConfiguredItemBundlesFromOutfitKey, GetDelimitedList, OnChat, GetHandheldItemNameAndDescriptionConcat, GetItemNameAndDescriptionConcat, GetMetadata, ICONS, LSCG_SendLocal, LSCG_TEAL, OnActivity, SendAction, forceOrgasm, getCharacter, getRandomInt, hookFunction, isPhraseInString, removeAllHooksByModule, sendLSCGCommand, sendLSCGCommandBeep, settingsSave, getCharacterByNicknameOrMemberNumber, excludeParentheticalContent, escapeRegExp } from "../utils";
+import { ActivityModule, ActivityTarget } from "./activities";
+import { cleanEffect, KNOWN_SPELLS_LIMIT, LSCGSpellEffect, MagicSettingsModel, OutfitConfig, OutfitOption, SpellDefinition } from "Settings/Models/magic";
+import { GuiMagic, pairedSpellEffects } from "Settings/magic";
+import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
 import { BaseState } from "./States/BaseState";
 import { PolymorphedState } from "./States/PolymorphedState";
+import { OutfitCollection } from "Settings/OutfitCollection/outfitCollection";
+import { OutfitCollectionModule } from "./outfitCollection";
 import { RedressedState } from "./States/RedressedState";
-import { ActivityModule, ActivityTarget } from "./activities";
 import { InjectorModule } from "./injector";
-import { IsActivityEnhanced, ItemUseModule, MagicWandItems } from "./item-use";
+import { IsActivityEnhanced, MagicWandItems, ItemUseModule } from "./item-use";
 import { StateModule } from "./states";
 
 const dialogButtonInfo = [980, 10, 100, 40, 5];
@@ -96,17 +97,19 @@ export class MagicModule extends BaseModule {
             Effects: Array(getRandomInt(3) + 1).fill(0).map((t, ix, arr) => Object.values(LSCGSpellEffect).filter(v => arr.indexOf(v) == -1)[getRandomInt(Object.keys(LSCGSpellEffect).length)])
         };
         if (spell.Effects.indexOf(LSCGSpellEffect.outfit)) {
+            let outfitCollection = getModule<OutfitCollectionModule>("OutfitCollectionModule")?.data;
+            let outfitKeys = outfitCollection.GetOutfitKeys();
+            let lscgChoice = outfitCollection.GetOutfitBundle(outfitKeys[getRandomInt(outfitKeys.length)]);
             let mbsOutfits = (<any>Player).MBSSettings?.FortuneWheelItemSets.filter((s: any) => !!s).map((s: { itemList: any; }) => s.itemList as ItemBundle[]) as ItemBundle[][];
-            let outfitIx = getRandomInt(mbsOutfits?.length);
-            let outfit = !mbsOutfits ? undefined : mbsOutfits[outfitIx];
-            let wardrobeOutfit = !Player.Wardrobe ? undefined : Player.Wardrobe[getRandomInt(Player.Wardrobe?.length)];
-            if (!outfit || !!wardrobeOutfit && getRandomInt(2) == 0)
-                outfit = wardrobeOutfit;
-
+            let mbsChoice = mbsOutfits[getRandomInt(mbsOutfits.length)];
+            let wardrobeChoice = !Player.Wardrobe ? undefined : Player.Wardrobe[getRandomInt(Player.Wardrobe?.length)];
+            let choices = [lscgChoice, mbsChoice, wardrobeChoice].filter(x => !!x);
+            let outfit = choices[getRandomInt(choices.length)];
             spell.Outfit = {
                 Option: OutfitOption.both,
+                Key: "",
                 Code: LZString.compressToBase64(JSON.stringify(outfit))
-            };
+            }
         }
         return spell;
     }
@@ -165,7 +168,7 @@ export class MagicModule extends BaseModule {
         }, ModuleCategory.Magic);
 
         hookFunction("ServerPlayerIsInChatRoom", 10, (args, next) => {
-            return next(args) || CurrentScreen == "LSCG_SPELLS_DIALOG";
+            return next(args) || (CurrentScreen as string) == "LSCG_SPELLS_DIALOG";
         }, ModuleCategory.Magic);
 
         hookFunction("DialogLeave", 1, (args, next) => {
@@ -279,9 +282,8 @@ export class MagicModule extends BaseModule {
         if (this.Enabled) {
             this.SpellMenuOpen = true;
             this.PrevScreen = CurrentScreen;
-            // @ts-expect-error: Requires updated bc stubs
             DialogMenuMapping.dialog.Unload();
-            CurrentScreen = "LSCG_SPELLS_DIALOG";
+            (CurrentScreen as string) = "LSCG_SPELLS_DIALOG";
         }
     }
 
@@ -289,9 +291,8 @@ export class MagicModule extends BaseModule {
         this.SpellMenuOpen = false;
         this.TeachingSpell = false;
         this.SpellPairOption.SelectOpen = false;
-        if (CurrentScreen == "LSCG_SPELLS_DIALOG")
-            CurrentScreen = this.PrevScreen ?? "ChatRoom";
-        // @ts-expect-error: Requires updated bc stubs
+        if ((CurrentScreen as string) == "LSCG_SPELLS_DIALOG")
+            (CurrentScreen as string) = this.PrevScreen ?? "ChatRoom";
         DialogMenuMapping.dialog.Load();
     }
 
@@ -417,8 +418,7 @@ export class MagicModule extends BaseModule {
                 if (!MouseIn(x, y, width, height)) return false;
                 let blocked = spell.Effects.some(effect => blockedSpellTypes.indexOf(effect) > -1);
                 spell = JSON.parse(JSON.stringify(spell));
-                this.UnpackSpellCodes(spell);
-
+                
                 if (!blocked) {
                     this.CastSpellInitial(spell, CurrentCharacter);
                     return true;
@@ -437,7 +437,6 @@ export class MagicModule extends BaseModule {
             spell = this.RandomSpell;
         let paired: Character | undefined = undefined;
         spell = JSON.parse(JSON.stringify(spell));
-        this.UnpackSpellCodes(spell);
         if (this.SpellNeedsPair(spell))
             paired = this.PairedCharacterOptions(C)[getRandomInt(this.PairedCharacterOptions(C).length)];
         this.CastSpellActual(spell, C, false, paired);
@@ -569,6 +568,8 @@ export class MagicModule extends BaseModule {
                 SendAction(this.getCastingActionString(spell, InventoryGet(Player, "ItemHandheld"), voiceCast, spellTarget, pairedTarget), spellTarget);
             }
 
+            this.UnpackSpellCodes(spell);
+
             if (spellTarget.IsPlayer()) {
                 let check = getModule<ItemUseModule>("ItemUseModule").UnopposedActivityRoll(spellTarget);
                 setTimeout(() => this.IncomingSpell(Player, spell, pairedTarget, Math.max(1, check.Total / 2)), 1000);
@@ -597,6 +598,7 @@ export class MagicModule extends BaseModule {
             }
             else {
                 SendAction(this.getTeachingActionString(spell, InventoryGet(Player, "ItemHandheld"), InventoryGet(target, "ItemHandheld")), target);
+                this.UnpackSpellCodes(spell, true);
                 setTimeout(() => {
                     sendLSCGCommand(target, "spell-teach", [
                         {
@@ -624,12 +626,14 @@ export class MagicModule extends BaseModule {
 
     SpellIsBeneficial(spell: SpellDefinition) {
         let beneficialEffects: LSCGSpellEffect[] = [
-            LSCGSpellEffect.dispell,
+            LSCGSpellEffect.dispel,
             LSCGSpellEffect.bless,
             LSCGSpellEffect.xRay,
             LSCGSpellEffect.barrier
         ];
-        return spell.Effects.every(e => beneficialEffects.indexOf(e) > -1);
+        return  spell.Effects.every(e => {
+            return beneficialEffects.indexOf(cleanEffect(e)) > -1;
+        });
     }
 
     IncomingSpellCommand(sender: Character | null, msg: LSCGMessageModel) {
@@ -721,7 +725,7 @@ export class MagicModule extends BaseModule {
         allowedSpellEffects.forEach((effect, ix, arr) => {
             setTimeout(() => {
                 let state: BaseState | undefined;
-                switch (effect) {
+                switch (cleanEffect(effect)) {
                     case LSCGSpellEffect.blindness:
                         SendAction("%NAME%'s eyes dart around, %POSSESSIVE% world suddenly plunged into darkness.");
                         state = this.stateModule.BlindState.Activate(sender?.MemberNumber, duration);
@@ -762,7 +766,7 @@ export class MagicModule extends BaseModule {
                     case LSCGSpellEffect.enlarge:
                         state = this.stateModule.ResizedState.Enlarge(sender?.MemberNumber, duration, true);
                         break;
-                    case LSCGSpellEffect.dispell:
+                    case LSCGSpellEffect.dispel:
                         SendAction("%NAME% sighs as any magic affecting %INTENSIVE% is removed.");
                         this.stateModule.Clear(false, true);
                         break;
@@ -899,8 +903,21 @@ export class MagicModule extends BaseModule {
             SendAction(`%NAME% already knows a spell called ${spell.Name} and ignores %POSSESSIVE% new instructions.`);
         } else {
             SendAction(`%NAME% expresses indifference as %PRONOUN% finally understand the details of ${spell.Name} and memorizes it.`);
+            let outfitModule = getModule<OutfitCollectionModule>("OutfitCollectionModule");
+            let outfitSave = false;
+            if (!!spell.Outfit?.Code && !!spell.Outfit?.Key && !outfitModule.data.GetOutfit(spell.Outfit.Key)) {
+                outfitModule?.data.SetOutfitCode(spell.Outfit.Key, spell.Outfit.Code);
+                outfitSave = true;
+            }
+            if (!!spell.Polymorph?.Code && !!spell.Polymorph?.Key && !outfitModule.data.GetOutfit(spell.Polymorph.Key)) {
+                outfitModule?.data.SetOutfitCode(spell.Polymorph.Key, spell.Polymorph.Code);
+                outfitSave = true;
+            }
+            if (!!spell.Outfit) spell.Outfit.Code = "";
+            if (!!spell.Polymorph) spell.Polymorph.Code = "";
             this.settings.knownSpells.push(spell);
             settingsSave(true);
+            if (outfitSave) outfitModule.data.SaveOutfits();
         }
     }
 
@@ -1065,15 +1082,15 @@ export class MagicModule extends BaseModule {
         }
     }
 
-    UnpackSpellCodes(spell: SpellDefinition | undefined) {
+    UnpackSpellCodes(spell: SpellDefinition | undefined, skipFilter: boolean = false) {
         if (!spell)
             return;
         // Unpack specified outfit codes for sending.
-        if (!!spell.Outfit && !!spell.Outfit.Code) {
-            spell.Outfit.Code = LZString.compressToBase64(JSON.stringify(GetConfiguredItemBundlesFromSavedCode(spell.Outfit.Code, item => RedressedState.ItemIsAllowed(item))));
-        }
-        if (!!spell.Polymorph && spell.Polymorph.Code) {
-            spell.Polymorph.Code = LZString.compressToBase64(JSON.stringify(GetConfiguredItemBundlesFromSavedCode(spell.Polymorph.Code, item => PolymorphedState.ItemIsAllowed(item))));
+        if (!!spell.Outfit && !!spell.Outfit.Key) {
+            spell.Outfit.Code = LZString.compressToBase64(JSON.stringify(GetConfiguredItemBundlesFromOutfitKey(spell.Outfit.Key, item => skipFilter || RedressedState.ItemIsAllowed(item))));
+        } 
+        if (!!spell.Polymorph && spell.Polymorph.Key) {
+            spell.Polymorph.Code = LZString.compressToBase64(JSON.stringify(GetConfiguredItemBundlesFromOutfitKey(spell.Polymorph.Key, item => skipFilter || PolymorphedState.ItemIsAllowed(item))));
         }
     }
 }

@@ -35,3 +35,5 @@ declare const DialogSelfMenuMapping: {
 		C: PlayerCharacter,
 	},
 };
+
+declare const ToastManager: any;

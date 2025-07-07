@@ -107,7 +107,7 @@ export class MainMenu extends GuiSubscreen {
 		DrawImageResize("Icons/Changelog.png", 1510, 730, 60, 60);
         DrawTextFit("Latest Changes", 1580, 760, 320, "Black");
 
-		DrawButton(1500, 820, 400, 80, "", "White", "", "Open LSCG Wiki on GitHub.", false);
+		DrawButton(1500, 820, 400, 80, "", "White", "", this.help.label, false);
 		DrawImageResize("Icons/Introduction.png", 1510, 830, 60, 60);
         DrawTextFit("Open Help", 1580, 860, 320, "Black");
 

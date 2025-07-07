@@ -4,7 +4,7 @@ import { LipstickModule } from "Modules/lipstick";
 import { MiscModule } from "Modules/misc";
 import { GetDelimitedList, ICONS, getActivities, getActivityLabel, getZoneColor } from "utils";
 import { GlobalSettingsModel } from "./Models/base";
-import { GuiSubscreen, Setting } from "./settingBase";
+import { GuiSubscreen, HelpInfo, Setting } from "./settingBase";
 import { ActivityEntryModel, ActivitySettingsModel } from "./Models/activities";
 
 export class GuiActivities extends GuiSubscreen {
@@ -20,6 +20,13 @@ export class GuiActivities extends GuiSubscreen {
 	get settings(): ActivitySettingsModel {
         return super.settings as ActivitySettingsModel;
     }
+
+	get help(): HelpInfo {
+		return {
+			label: 'Open Activity Wiki on GitHub',
+			link: 'https://github.com/littlesera/LSCG/wiki/Custom-Activities'
+		}
+	}
 
 	get structure(): Setting[] {
 		return []

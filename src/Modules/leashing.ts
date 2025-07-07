@@ -330,7 +330,7 @@ export class LeashingModule extends BaseModule {
             let data = args[0];
             if (this.Enabled && data.BeepType == "Leash" && this.LeashedByPairings.map(p => p.PairedMember).indexOf(data.MemberNumber) > -1 && data.ChatRoomName) {
                 if (Player.OnlineSharedSettings && Player.OnlineSharedSettings.AllowPlayerLeashing != false && (CurrentScreen != "ChatRoom" || !ChatRoomData || (CurrentScreen == "ChatRoom" && ChatRoomData.Name != data.ChatRoomName))) {
-                    if (ChatRoomCanBeLeashedBy(data.MemberNumber, Player) && ChatSelectGendersAllowed(data.ChatRoomSpace, Player.GetGenders())) {
+                    if (ChatRoomCanBeLeashedBy(data.MemberNumber, Player) && ChatSelectGendersAllowed(data.ChatRoomSpace, Player.GetGenders()) && data.ChatRoomName != ChatRoomData?.Name) {
                         ChatRoomJoinLeash = data.ChatRoomName;
     
                         DialogLeave();
@@ -445,7 +445,7 @@ export class LeashingModule extends BaseModule {
     JoinRoom(roomName: string) {
         ChatSearchLastQueryJoinTime = CommonTime();
         ChatSearchLastQueryJoin = roomName;
-        ChatRoomPlayerCanJoin = true;
+        //ChatRoomPlayerCanJoin = true;
         ServerSend("ChatRoomJoin", { Name: roomName });
     }
 

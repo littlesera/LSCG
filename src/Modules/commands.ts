@@ -119,38 +119,6 @@ export class CommandModule extends BaseModule {
 			}
 		}, {
 			Tag: "get-outfit-code",
-			Description: " [target?] : Prints the current base64 encoded outfit string for yourself or [target].",
-			Action: (args, msg, parsed) => {
-				let target = getCharacterByNicknameOrMemberNumber(args);
-				if (!target)
-					target = Player;
-				if (!target)
-					return;
-				let targetName = CharacterNickname(target);
-				let items = target.Appearance.map(item => toItemBundle(item, target));
-				let str = LZString.compressToBase64(JSON.stringify(items));
-				str = RedressedState.CleanItemCode(str);
-				navigator.clipboard.writeText(str);
-				LSCG_SendLocal(`<div><b>Outfit Code for ${targetName} copied to clipboard.`);
-			}
-		}, {
-			Tag: "get-polymorph-code",
-			Description: " [target?] : Prints the current base64 encoded polymorph string for yourself or [target].",
-			Action: (args, msg, parsed) => {
-				let target = getCharacterByNicknameOrMemberNumber(args);
-				if (!target)
-					target = Player;
-				if (!target)
-					return;
-				let targetName = CharacterNickname(target);
-				let items = target.Appearance.map(item => toItemBundle(item, target));
-				let str = LZString.compressToBase64(JSON.stringify(items));
-				str = PolymorphedState.CleanItemCode(str);
-				navigator.clipboard.writeText(str);
-				LSCG_SendLocal(`<div><b>Polymorph Code for ${targetName} copied to clipboard.`);
-			}
-		}, {
-			Tag: "get-items-code",
 			Description: " [target?] : Prints the current base64 encoded item bundle array for yourself or [target].",
 			Action: (args, msg, parsed) => {
 				let target = getCharacterByNicknameOrMemberNumber(args);
@@ -162,7 +130,7 @@ export class CommandModule extends BaseModule {
 				let items = target.Appearance.map(item => toItemBundle(item, target));
 				let str = LZString.compressToBase64(JSON.stringify(items));
 				navigator.clipboard.writeText(str);
-				LSCG_SendLocal(`<div><b>Encoded Item Bundle Code for ${targetName} copied to clipboard.`);
+				LSCG_SendLocal(`<b>Encoded Item Bundle Code for ${targetName} copied to clipboard.`, false);
 			}
 		}, {
 			Tag: "parse-code",
@@ -184,7 +152,7 @@ export class CommandModule extends BaseModule {
 					}
 
 					let itemList = items.map(item => `<li>${item.Group} - ${item.Name}</li>`).join("");
-					LSCG_SendLocal(`<div><b>Encoded Items:</b><ul>${itemList}</ul></div>`);
+					LSCG_SendLocal(`<div><b>Encoded Items:</b><ul>${itemList}</ul></div>`, false);
 			}
 		}, {
 			Tag: "export",
@@ -192,7 +160,7 @@ export class CommandModule extends BaseModule {
 			Action: (args, msg, parsed) => {
 				let compressed = ExportSettings();
 				navigator.clipboard.writeText(compressed);
-				LSCG_SendLocal(`<div><b>LSCG</b> settings copied to clipboard.`);
+				LSCG_SendLocal(`<b>LSCG</b> settings copied to clipboard.`, false);
 			}
 		}, {
 			Tag: "import",
@@ -206,7 +174,7 @@ export class CommandModule extends BaseModule {
 					}
 					localStorage.setItem(`LSCG_${Player.MemberNumber}_Backup`, ExportSettings());
 					if (ImportSettings(compressed))
-						LSCG_SendLocal(`<div><b>LSCG</b> settings Imported from clipboard. If this was in error, try using /lscg restore</div>`);
+						LSCG_SendLocal(`<div><b>LSCG</b> settings Imported from clipboard. If this was in error, try using /lscg restore</div>`, false);
 					else
 						LSCG_SendLocal(`Failed to import LSCG settings from clipboard.`);
 				}
@@ -215,7 +183,7 @@ export class CommandModule extends BaseModule {
 	}
 
 	get moduleCommands(): ICommand[] {
-		return modules().map(m => m.commands).reduce((a, b) => a.concat(b));
+		return modules().map(m => m.commands).reduce((a, b) => a.concat(b), []);
 	}
 
 	get allCommands(): ICommand[] {
