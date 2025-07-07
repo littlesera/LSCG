@@ -552,6 +552,7 @@ export class MagicModule extends BaseModule {
             }
             else {
                 SendAction(this.getTeachingActionString(spell, InventoryGet(Player, "ItemHandheld"), InventoryGet(target, "ItemHandheld")), target);
+                this.UnpackSpellCodes(spell);
                 setTimeout(() => {
                     sendLSCGCommand(target, "spell-teach", [
                         {
@@ -853,8 +854,21 @@ export class MagicModule extends BaseModule {
             SendAction(`%NAME% already knows a spell called ${spell.Name} and ignores %POSSESSIVE% new instructions.`);
         } else {
             SendAction(`%NAME% grins as they finally understand the details of ${spell.Name} and memorizes it for later.`);
+            let outfitModule = getModule<OutfitCollectionModule>("OutfitCollectionModule");
+            let outfitSave = false;
+            if (!!spell.Outfit?.Code && !!spell.Outfit?.Key && !!outfitModule.data.GetOutfit(spell.Outfit.Key)) {
+                outfitModule?.data.SetOutfitCode(spell.Outfit.Key, spell.Outfit.Code);
+                outfitSave = true;
+            }
+            if (!!spell.Polymorph?.Code && !!spell.Polymorph?.Key && !!outfitModule.data.GetOutfit(spell.Polymorph.Key)) {
+                outfitModule?.data.SetOutfitCode(spell.Polymorph.Key, spell.Polymorph.Code);
+                outfitSave = true;
+            }
+            if (!!spell.Outfit) spell.Outfit.Code = "";
+            if (!!spell.Polymorph) spell.Polymorph.Code = "";
             this.settings.knownSpells.push(spell);
             settingsSave(true);
+            if (outfitSave) outfitModule.data.SaveOutfits();
         }
     }
 
