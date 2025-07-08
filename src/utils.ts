@@ -1046,6 +1046,7 @@ export function canChangeCosplay(acting: number, C: Character): boolean {
  */
 export function CanUnlock(acting: number, acted: Character, Item: Item | undefined) {
 	if (!Item) return false;
+	if (!InventoryGetLock(Item)) return true; // Always return true if item is not actually locked
 	if ((!acted.IsPlayer()) && !acted.CanInteract()) return false;
 	if ((Item != null) && (Item.Property != null) && (Item.Property.LockedBy === "ExclusivePadlock")) return (!acted.IsPlayer());
 	if (LogQuery("KeyDeposit", "Cell")) return false;
