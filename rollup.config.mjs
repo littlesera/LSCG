@@ -1,14 +1,10 @@
-
-import { readFileSync } from 'fs';
 import commonjs from '@rollup/plugin-commonjs';
 import resolve from "@rollup/plugin-node-resolve";
 import terser from "@rollup/plugin-terser";
 import typescript from '@rollup/plugin-typescript';
 import progress from 'rollup-plugin-progress';
-const packageJson = JSON.parse(readFileSync(new URL('./package.json', import.meta.url)));
 import scss from "rollup-plugin-scss";
 import serve from 'rollup-plugin-serve'
-import simpleGit from "simple-git";
 
 import packageJson from "./package.json" with { type: "json" };
 
