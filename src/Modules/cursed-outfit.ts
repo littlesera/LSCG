@@ -77,7 +77,7 @@ export class CursedItemModule extends BaseModule {
             }
             let isCursed = this.cursedKeywords.some(str => isPhraseInString(GetItemNameAndDescriptionConcat(asset) ?? "", str));
             let myCursedItemNames = this.settings.CursedItems.map(item => item.Name);
-            isCursed ||= myCursedItemNames.some(str => isPhraseInString(GetItemNameAndDescriptionConcat(asset) ?? "", str));
+            isCursed &&= myCursedItemNames.some(str => isPhraseInString(GetItemNameAndDescriptionConcat(asset) ?? "", str));
 
             options ??= {};
             options.icons = [
