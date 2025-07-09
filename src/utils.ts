@@ -1038,6 +1038,19 @@ export function canChangeCosplay(acting: number, C: Character): boolean {
 	return C.OnlineSharedSettings?.BlockBodyCosplay !== true || acting == Player.MemberNumber;
 }
 
+export function getBCXData(): any {
+	try {
+		return parseFromBase64(Player.ExtensionSettings.BCX.split(":")[1]);
+	}
+	catch (e) { return undefined; }
+}
+
+export function getBCXActiveCurseSlots(): AssetGroupName[] {
+	let bcxCurses = getBCXData()?.conditions?.curses?.conditions;
+	if (!bcxCurses) return [];
+	return (Object.keys(bcxCurses).filter(key => bcxCurses[key]?.active ?? false)) as AssetGroupName[];
+}
+
 /**
  * Checks whether the player is able to unlock the provided item on the provided character
  * @param {Character} C - The character on whom the item is equipped

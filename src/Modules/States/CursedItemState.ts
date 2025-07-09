@@ -1,4 +1,4 @@
-import { ApplyItem, CanUnlock, getRandomEntry, getRandomInt, hookBCXCurse, isBind, isCloth, isCosplay, isUnderwear, LSCG_SendLocal, parseFromBase64, RemoveItem, SendAction } from "utils";
+import { ApplyItem, CanUnlock, getBCXActiveCurseSlots, getRandomEntry, getRandomInt, hookBCXCurse, isBind, isCloth, isCosplay, isUnderwear, LSCG_SendLocal, parseFromBase64, RemoveItem, SendAction } from "utils";
 import { getModule } from "modules";
 import { BaseState } from "./BaseState";
 import { StateModule } from "Modules/states";
@@ -256,7 +256,7 @@ export class CursedItemState extends BaseState {
             refreshNeeded = true;
         } else if (cursedItem.lastTick + this.ItemInterval(cursedItem) < now) {
             let outfitItems = parseFromBase64(cursedItem.OutfitCode) as ItemBundle[];
-            let otherWornCursedOutfitItemGroups = this.getAllOtherCursedBundles(cursedItem).map(b => InventoryGet(Player, b.Group)?.Asset.Group.Name).filter(i => !!i);
+            let otherWornCursedOutfitItemGroups = this.getAllOtherCursedBundles(cursedItem).map(b => InventoryGet(Player, b.Group)?.Asset.Group.Name).filter(i => !!i).concat(getBCXActiveCurseSlots());
 
             //  2a) Check for strippable items
             let itemsToStrip = wornItems.filter(item => 
