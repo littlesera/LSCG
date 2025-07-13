@@ -283,7 +283,8 @@ export class CursedItemState extends BaseState {
 
             //  2b) Compare active outfit code against Player.Appearance, identify any items missing from current wear
             let itemsToApply = outfitItems.filter(bundle => {
-                    return this.itemIsAllowed(bundle, cursedItem.Crafter) &&                                                 // Item allowed to apply
+                    return AssetGet(Player.AssetFamily, bundle.Group, bundle.Name) != null &&   // Filter out bad/invalid item
+                    this.itemIsAllowed(bundle, cursedItem.Crafter) &&   // Item allowed to apply
                     (!this.Inexhaustable(cursedItem) || bundle.Group != keyItem.Asset.Group.Name) &&    // Item not key item if inexhaustable (leave key item behind if overlap)
                     !otherWornCursedOutfitItemGroups.includes(bundle.Group) &&
                     !wornItems.some(item => this.itemBundleMatch(bundle, item))
