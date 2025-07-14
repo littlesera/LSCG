@@ -215,13 +215,15 @@ export class CursedItemState extends BaseState {
     ];
 
     getItemColorString(item: ItemBundle | Item) {
-        let itemColor = isString(item.Color) ? item.Color : "";
+        let itemColor = isString(item.Color) ? item.Color : "Default";
         if (isArray(item.Color) && item.Color.length == 1 && item.Color[0] == "Default") {
             itemColor = "Default";
         }
         else if (isArray(item.Color)) {
             itemColor = JSON.stringify(item.Color);
         }
+        if (!itemColor || itemColor == "")
+            itemColor = "Default";
         return itemColor;
     }
 
