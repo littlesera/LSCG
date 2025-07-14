@@ -11,6 +11,7 @@ export type Styles = {
   'lscg-outfits-storage-cover': string;
   'lscg-outfits-storage-footer': string;
   'lscg-outfits-storage-tooltip': string;
+  'lscg-outfits-storage-type': string;
 };
 
 export type ClassNames = keyof Styles;

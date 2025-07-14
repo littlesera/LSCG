@@ -3,6 +3,7 @@ export type Styles = {
   'button-tooltip': string;
   'lscg-button': string;
   'lscg-button-div': string;
+  'lscg-button-menu': string;
   'lscg-button-tooltip': string;
   'lscg-dropdown': string;
   'lscg-dropdown-button': string;
