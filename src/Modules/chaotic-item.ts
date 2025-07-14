@@ -524,7 +524,7 @@ export class ChaoticItemModule extends BaseModule {
 
         let changed = false;
         for (let item of filteredChaoticItems) {
-			changed = changed || this.triggerChaoticItem(item);
+			changed = this.triggerChaoticItem(item) || changed;
         }
 
         if (changed) {
