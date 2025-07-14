@@ -387,7 +387,7 @@ export class CursedItemState extends BaseState {
         let isLimited = asset && InventoryIsPermissionLimited(Player, asset.DynamicName(Player), asset.Group.Name);
         let isRoomDisallowed = !InventoryChatRoomAllow(asset?.Category ?? []);
         let slotBlocked = !!worn && !CanUnlock(acting, Player, worn);
-        return !isBlocked && !isLimited && !isRoomDisallowed && !slotBlocked;
+        return !!asset && !isBlocked && !isLimited && !isRoomDisallowed && !slotBlocked;
     }
 
     shuffleSortAndSelect(array: ItemBundle[], keyItem: Item): ItemBundle {
