@@ -291,13 +291,14 @@ export class CursedItemState extends BaseState {
                     !wornItems.some(item => this.itemBundleMatch(bundle, item))
                 }
             );
+            let replacingKeyItemWhileItemsStillToRemove = itemsToStrip.length > 0 && itemsToApply.length == 1 && itemsToApply[0]?.Group == keyItem.Asset.Group.Name;
             // 3) If no items remain unworn and cursed item is not inexhaustable, remove the key item otherwise pick what to wear
             if ((itemsToStrip?.length <= 0) &&
                 (itemsToApply?.length <= 0) && 
                 !this.Inexhaustable(cursedItem)) {
                 this.ClearActiveOutfit(cursedItem.CurseName);
                 refreshNeeded = true;
-            } else if (!!itemsToApply && itemsToApply.length > 0) {
+            } else if (!!itemsToApply && itemsToApply.length > 0 && !replacingKeyItemWhileItemsStillToRemove) {
                 if (cursedItem.Speed == "instant") {
                     // If instant wear all
                     if (itemsToApply.length > 0) {
