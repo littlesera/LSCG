@@ -21,6 +21,7 @@ export interface GlobalSettingsModel extends GlobalPublicSettingsModel {
 
 export interface GlobalPublicSettingsModel extends BaseSettingsModel {
     sharePublicCrafting: boolean;
+    blockDOGS: boolean;
 }
 
 export interface LipstickSettingsModel extends BaseSettingsModel {

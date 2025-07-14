@@ -1026,7 +1026,7 @@ export function ApplyItem(item: ItemBundle, acting: number, replace: boolean = t
 	let newItem = InventoryWear(C, item.Name, item.Group, item.Color, item.Difficulty, acting, item.Craft, false);
 	if (!!newItem) {
 		newItem.Property = item.Property;
-		if ((<any>newItem.Property)["Name"] == "DeviousPadlock") // REMOVE DOGS LOCKS ON APPLY
+		if ((<any>C).LSCG?.GlobalModule?.blockDOGS && (<any>newItem.Property)["Name"] == "DeviousPadlock") // REMOVE DOGS LOCKS ON APPLY
 			delete (<any>newItem.Property)["Name"];
 		let lock = InventoryGetLock(newItem);
 		if (!!lock && locksafe && (!InventoryDoesItemAllowLock(newItem) || !CanApplyLock(C, acting, lock))) {

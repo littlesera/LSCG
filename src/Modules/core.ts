@@ -67,7 +67,8 @@ export class CoreModule extends BaseModule {
             edgeBlur: false,
             seeSharedCrafts: true,
             sharePublicCrafting: false,
-            showCheckRolls: true
+            showCheckRolls: true,
+            blockDOGS: false
         };
 	}
 
