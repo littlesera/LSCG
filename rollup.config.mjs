@@ -5,11 +5,14 @@ import typescript from '@rollup/plugin-typescript';
 import resolve from "@rollup/plugin-node-resolve";
 import terser from "@rollup/plugin-terser";
 import progress from 'rollup-plugin-progress';
-import packageJson from "./package.json" assert { type: "json" };
+import scss from "rollup-plugin-scss";
+import serve from 'rollup-plugin-serve'
 import simpleGit from "simple-git";
 
-export default {
-  input: 'src/main.ts',
+import packageJson from "./package.json" with { type: "json" };
+
+const config = {
+  input: 'src/main.tsx',
   output: {
     name: "LSCG",
     file: 'dist/bundle.js',
@@ -28,30 +31,51 @@ window.LSCG_Loaded = false;
 console.debug("LSCG: Parse start...");
 `,
     intro: async () => {
-      // const git = simpleGit();
-      // console.log(await git.status());
       let LSCG_VERSION = packageJson.version;
-      // await git.tags((err, tags) => {
-      //   if (!!tags.latest) {
-      //     console.log('\nUsing tag version: %s\n', tags.latest);
-      //     LSCG_VERSION = tags.latest;
-      //   } else {
-      //     console.log('\nUnable to determine latest tag: %s\n', tags.latest);
-      //   }
-      // });
       LSCG_VERSION = (LSCG_VERSION.length > 0 && LSCG_VERSION[0] == 'v') ? LSCG_VERSION : "v" + LSCG_VERSION;
       return `const LSCG_VERSION="${LSCG_VERSION}";`;
-    },
-    plugins: [terser({
-      mangle: false,
-      compress: false
-    })]
+    }
   },
-  treeshake: false,
+  treeshake: true,
   plugins: [
     progress({ clearLine: true }),
 		resolve({ browser: true }),
     typescript({ tsconfig: "./tsconfig.json", inlineSources: true }),
-    commonjs()
-  ]
+    commonjs(),
+    scss({ output: false })
+  ],
+  onwarn(warning, warn) {
+        switch (warning.code) {
+            case "EVAL":
+            case "CIRCULAR_DEPENDENCY":
+                return;
+            default:
+                warn(warning);
+        }
+    },
 };
+
+if (process.env.ROLLUP_WATCH) {
+  config.plugins.push(
+      serve({
+        contentBase: 'dist',
+        port: 10001,
+        host: "localhost",
+        headers: {
+          'Access-Control-Allow-Origin': '*', // Allows requests from any origin
+          'Access-Control-Allow-Methods': 'GET', // Allowed HTTP methods
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization', // Allowed request headers
+        },
+        compress: true
+      })
+  );
+} else {
+  config.plugins.push(
+    terser({
+      mangle: false,
+      compress: true
+    })
+  );
+}
+
+export default config;

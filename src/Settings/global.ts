@@ -138,6 +138,13 @@ export class GuiGlobal extends GuiSubscreen {
 					setting: () => Player.LSCG.ChaoticItemModule.enabled ?? true,
 					setSetting: (val) => Player.LSCG.ChaoticItemModule.enabled = val,
 					disabled: !this.settings.enabled
+				},<Setting>{
+					type: "checkbox",
+					label: "Block DOGS Devious Padlocks:",
+					description: "If checked, LSCG item applier (magic, cursed item, etc) will turn Devious Padlocks into regular Exclusive Padlocks on apply.",
+					setting: () => this.settings.blockDOGS ?? false,
+					setSetting: (val) => this.settings.blockDOGS = val,
+					disabled: !this.settings.enabled
 				}
 			]
 		]

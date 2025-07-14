@@ -1,0 +1,212 @@
+:root {
+	--lscg-background-color: white;
+	--lscg-button-color: white;
+	--lscg-hover-color: #00d5d5;
+	--lscg-tooltip-color: #aaf7f7;
+	--lscg-border-color: black;
+	--lscg-text-color: black;
+	--lscg-font-small: min(3.5dvh, 1.75dvw);
+	--lscg-font-large: min(5dvh, 2.5dvw);
+	--lscg-font-family: arial, sans-serif;
+}
+
+.lscg-button {
+	background-color: var(--lscg-button-color);
+	background-origin: content-box;
+	background-position: center;
+	background-repeat: no-repeat;
+	background-size: cover;
+	border: min(0.3dvh, 0.15dvw) solid var(--lscg-border-color);
+	font: inherit;
+	height: 100%;
+	overflow: clip;
+	padding-left: min(2dvh, 1dvw);
+	padding-right: min(2dvh, 1dvw);
+	text-align: center;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	width: 100%;
+
+	&:hover {
+		background-color: var(--lscg-hover-color);
+	}
+
+	&:disabled {
+		background-color: color-mix(in srgb, var(--lscg-button-color) 60%, black 40%);
+	}
+}
+
+#lscg-button-menu {
+	display: flex;
+	align-items: flex-end;
+	flex-direction: row-reverse;
+	position: absolute;
+}
+
+.lscg-button-tooltip {
+	background-color: var(--lscg-tooltip-color) !important;
+	border: min(0.3dvh, 0.15dvw) solid var(--lscg-border-color);
+	bottom: -10%;
+	box-shadow: min(0.4dvh, 0.2dvw) min(0.4dvh, 0.2dvw) min(2dvh, 1dvw) 0 rgb(0 0 0 / 50%);
+	line-height: 1.4;
+	padding: min(1dvh, 0.5dvw) min(2dvh, 1dvw);
+	position: relative;
+	text-align: center;
+	visibility: hidden;
+	white-space: nowrap;
+	width: fit-content;
+	z-index: 1;
+}
+
+.lscg-button-div {
+	display: grid;
+	grid-template-columns: min(9dvh, 4.5dvw);
+	grid-template-rows: min(9dvh, 4.5dvw) auto;
+
+	.lscg-button-tooltip {
+		justify-self: center;
+	}
+
+	.lscg-button {
+		height: inherit;
+		width: inherit;
+	}
+}
+
+.lscg-button:hover + .lscg-button-tooltip {
+	visibility: visible;
+}
+
+.lscg-timer {
+	height: min(6dvh, 3dvw);
+	text-align: center;
+	width: min(21dvh, 10.5dvw);
+}
+
+.lscg-dropdown-button {
+	border: unset !important;
+	padding-bottom: min(1dvh, 0.5dvw);
+	padding-top: min(1dvh, 0.5dvw);
+
+	&:nth-child(even) {
+		background-color: color-mix(in srgb, var(--lscg-button-color) 85%, black 15%);
+	}
+}
+
+.lscg-dropdown-content {
+	border: min(0.3dvh, 0.15dvw) solid var(--lscg-border-color);
+	overflow-y: scroll;
+	position: absolute;
+	visibility: hidden;
+	z-index: 1;
+}
+
+.lscg-dropdown:hover .lscg-dropdown-content {
+	visibility: visible;
+}
+
+.lscg-screen {
+	display: grid;
+	position: fixed;
+	text-align: center;
+	user-select: none;
+	visibility: hidden;
+	grid-gap: min(2dvh, 1dvw);
+	color: var(--lscg-text-color);
+	font-family: var(--lscg-font-family);
+	font-size: var(--lscg-font-small);
+	pointer-events: none;
+
+	* {
+		pointer-events: auto;
+	}
+
+	h1, h2, h3, h4, h5, h6, [role="heading"], p, ul {
+		align-items: center;
+		align-self: center;
+	}
+
+	h1 {
+		font-size: var(--lscg-font-large);
+	}
+
+	h2 {
+		margin: min(1dvh, 0.5dvw);
+	}
+
+	ul {
+		margin: 0;
+		text-align: left;
+	}
+
+	input {
+		background-color: var(--lscg-background-color);
+		box-sizing: border-box;
+		color: var(--lscg-text-color);
+		font: inherit;
+		font-family: var(--lscg-font-family);
+		font-size: var(--lscg-font-small);
+		padding: unset;
+		text-overflow: ellipsis;
+
+		&:invalid {
+			background-color: #fbb;
+			box-shadow: 0 0 3px 2px #c22;
+		}
+
+		&[type="checkbox"] {
+			border: min(0.3dvh, 0.15dvw) solid var(--lscg-border-color);
+			cursor: pointer;
+			height: min(7dvh, 3.5dvw);
+			width: min(7dvh, 3.5dvw);
+
+			&:hover {
+				background-color: var(--lscg-hover-color);
+			}
+
+			&:disabled {
+				background-color: color-mix(in srgb, var(--lscg-background-color) 60%, black 40%);
+				cursor: auto;
+			}
+
+			&::before {
+				height: min(4.6dvh, 2.3dvw);
+				width: min(4.6dvh, 2.3dvw);
+			}
+		}
+	}
+
+	select {
+		background-color: var(--lscg-button-color);
+		border: min(0.3dvh, 0.15dvw) solid var(--lscg-border-color);
+		box-sizing: border-box;
+		color: var(--lscg-text-color);
+		cursor: pointer;
+		font: inherit;
+		font-family: var(--lscg-font-family);
+		font-size: var(--lscg-font-small);
+		text-overflow: ellipsis;
+
+		&:disabled {
+			background-color: color-mix(in srgb, var(--lscg-background-color) 60%, black 40%);
+			cursor: auto;
+		}
+
+		&:hover + .lscg-button-tooltip {
+			visibility: visible;
+			bottom: -120%;
+    		left: -25%;
+		}
+	}
+
+	label {
+		&:not(:has(:disabled)) > span {
+			cursor: pointer;
+		}
+	}
+
+	.button,
+	.button-tooltip {
+		border-width: min(0.3dvh, 0.15dvw);
+	}
+}

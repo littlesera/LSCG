@@ -1,5 +1,5 @@
 import { RemoteGuiSubscreen } from "./remoteBase";
-import { Setting } from "Settings/settingBase";
+import { HelpInfo, Setting } from "Settings/settingBase";
 import { HypnoPublicSettingsModel } from "Settings/Models/hypno";
 import { GetDelimitedList, ICONS, replace_template } from "utils";
 import { StateConfig } from "Settings/Models/states";
@@ -16,6 +16,13 @@ export class RemoteMagic extends RemoteGuiSubscreen {
 
 	get overrideMemberIds(): number[] {
 		return GetDelimitedList(this.settings.remoteMemberIds).map(id => +id).filter(id => id > 0) ?? [];
+	}
+
+	get help(): HelpInfo {
+		return {
+			label: 'Open Magic Wiki on GitHub',
+			link: 'https://github.com/littlesera/LSCG/wiki/Magic'
+		}
 	}
 
 	get disabledReason(): string {

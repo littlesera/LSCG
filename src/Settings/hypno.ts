@@ -2,7 +2,7 @@ import { getModule } from "modules";
 import { HypnoModule } from "Modules/hypno";
 import { ICONS } from "utils";
 import { HypnoSettingsModel, InstructionDescription, LSCGHypnoInstruction } from "./Models/hypno";
-import { GuiSubscreen, Setting } from "./settingBase";
+import { GuiSubscreen, HelpInfo, Setting } from "./settingBase";
 import { drawTooltip } from "./settingUtils";
 
 export class GuiHypno extends GuiSubscreen {
@@ -17,6 +17,13 @@ export class GuiHypno extends GuiSubscreen {
 
 	get settings(): HypnoSettingsModel {
 		return super.settings as HypnoSettingsModel;
+	}
+
+	get help(): HelpInfo {
+		return {
+			label: 'Open Hypnosis Wiki on GitHub',
+			link: 'https://github.com/littlesera/LSCG/wiki/Hypnosis'
+		}
 	}
 
 	get multipageStructure(): Setting[][] {

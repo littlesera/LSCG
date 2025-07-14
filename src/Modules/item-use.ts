@@ -215,7 +215,7 @@ export class ItemUseModule extends BaseModule {
 
 			// `AssetGroupName` as of R111Beta1 and `AssetGroup` as of later versions
 			const targetGroup = typeof targetGroupName === "string" ? AssetGroupGet(acting.AssetFamily, targetGroupName) : targetGroupName;
-			if (targetGroup == null && GameVersion !== "R110") {
+			if (targetGroup == null) {
 				return next(args);
 			}
 
@@ -1045,8 +1045,7 @@ export class ItemUseModule extends BaseModule {
 					TargetAction: "SourceCharacter boops TargetCharacter's nose with PronounPossessive ActivityAsset.",
 					SelfAllowed: false
 				}
-			],
-			CustomImage: "Assets/Female3DCG/Activity/Caress.png"
+			]
 		});
 
 		// Plush Hug
@@ -1325,7 +1324,7 @@ export class ItemUseModule extends BaseModule {
 	TieUp(target: Character, source: Character, rope: RopeTarget) {
 		var handRope = InventoryGet(source, "ItemHandheld");
 		if (handRope?.Asset.Name.startsWith("RopeCoil")) {
-			var ropeTie = InventoryWear(target, rope.ItemName, rope.Location, handRope?.Color, undefined, source.MemberNumber, handRope?.Craft);
+			var ropeTie = InventoryWear(target, rope.ItemName, rope.Location, handRope?.Color, SkillGetWithRatio(Player, "Bondage"), source.MemberNumber, handRope?.Craft);
 			if (!!rope.Type && !!ropeTie)
 				(<any>ropeTie!.Property!.TypeRecord) = {"typed": rope.Type};
 			ChatRoomCharacterUpdate(target);

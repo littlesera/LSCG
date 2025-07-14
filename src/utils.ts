@@ -9,6 +9,7 @@ import { clone } from "lodash-es";
 import { SettingsModel } from "Settings/Models/settings";
 import { lt } from "semver";
 import { regEscape } from "./regEscape";
+import { OutfitCollectionModule } from "Modules/outfitCollection";
 
 export const LSCG_CHANGES: string = "https://github.com/littlesera/LSCG/releases/latest";
 export const LSCG_TEAL: string = "#00d5d5";
@@ -178,23 +179,6 @@ export function hookFunction(target: string, priority: number, hook: PatchHook, 
 		return () => null;
 	}
 
-	// let wrappedHook: PatchHook = (args, next) => {
-	// 	try {
-	// 		return hook(args, next);
-	// 	} catch (error: any) {
-	// 		let msg = `LSCG Error -- ${error.message}`;
-	// 		console.error(`${msg} \n${error.stack}`);
-	// 		if (target != "ChatRoomMessage" && target != "ChatRoomSendLocal") {
-	// 			try {
-	// 				LSCG_SendLocal(msg);
-	// 			} catch (inner) {}
-	// 		}
-	// 		if (!!Player.LSCG.RethrowExceptions)
-	// 			throw error;
-	// 		return next(args);
-	// 	}
-	// }
-
 	const removeCallback = bcModSDK.hookFunction(target, priority, hook);
 
 	data.hooks.push({
@@ -303,6 +287,10 @@ export function getRandomInt(max: number) {
     return Math.floor(Math.random() * max);
 }
 
+export function getRandomEntry<T>(arr: T[]) {
+	return arr[getRandomInt(arr.length)];
+}
+
 let savingFlag = 0;
 let savingPublishFlag = false;
 
@@ -323,7 +311,7 @@ export function settingsSave(publish: boolean = false) {
 	}
 
 	savingPublishFlag = savingPublishFlag || publish;
-	if (!savingFlag)
+	if (!savingFlag) {
 		savingFlag = setTimeout(() => {
 			ServerPlayerExtensionSettingsSync("LSCG");
 			if (savingPublishFlag) {
@@ -332,7 +320,8 @@ export function settingsSave(publish: boolean = false) {
 			clearTimeout(savingFlag);
 			savingPublishFlag = false;
 			savingFlag = 0;
-		}, 500);
+		}, 1000);
+	}
 }
 
 export function ExportSettings(): string {
@@ -698,46 +687,54 @@ export function BC_ItemsToItemBundles(items: Item[]): ItemBundle[] {
 
 // Stolen Utils from BCX >.>
 
-export function smartGetAssetGroup(item: Item | Asset | AssetGroup): AssetGroup {
-	const group = AssetGroup.includes(item as AssetGroup) ? item as AssetGroup : Asset.includes(item as Asset) ? (item as Asset).Group : (item as Item).Asset.Group;
-	if (!AssetGroup.includes(group)) {
-		throw new Error("Failed to convert item to group");
+export function smartGetAssetGroup(item: Item | Asset | AssetGroup | AssetGroupName): AssetGroup | undefined {
+	const group = AssetGroup.includes(item as AssetGroup) ? item as AssetGroup : Asset.includes(item as Asset) ? (item as Asset).Group : isObject(item) ? (item as Item).Asset.Group : AssetGroup.find(a => a.Name == item);
+	if (!group || !AssetGroup.includes(group)) {
+		console.warn(`Failed to convert item to group: ${group}`);
+		return undefined;
 	}
 	return group;
 }
 
-export function isCloth(item: Item | Asset | AssetGroup, allowCosplay: boolean = false): boolean {
+export function isCloth(item: Item | Asset | AssetGroup | AssetGroupName, allowCosplay: boolean = false, includeUnderwear: boolean = true): boolean {
 	const group = smartGetAssetGroup(item);
-	return group.Category === "Appearance" && group.AllowNone && group.Clothing && (allowCosplay || !group.BodyCosplay);
+	if (!includeUnderwear && group?.Underwear) return false;
+	if (!allowCosplay && group?.BodyCosplay) return false;
+	return !!group?.IsAppearance() && group?.AllowNone && group?.Clothing;
 }
 
-export function isCosplay(item: Item | Asset | AssetGroup): boolean {
+export function isUnderwear(item: Item | Asset | AssetGroup | AssetGroupName): boolean {
 	const group = smartGetAssetGroup(item);
-	return group.Category === "Appearance" && group.AllowNone && group.Clothing && group.BodyCosplay;
+	return !!group?.IsAppearance() && group?.AllowNone && group?.Clothing && group?.Underwear;
 }
 
-export function isBody(item: Item | Asset | AssetGroup): boolean {
+export function isCosplay(item: Item | Asset | AssetGroup | AssetGroupName): boolean {
 	const group = smartGetAssetGroup(item);
-	return group.Category === "Appearance" && (!group.Clothing || group.Name == "EyeShadow") && group.Name != "Pronouns";
+	return !!group?.IsAppearance() && group?.AllowNone && group?.Clothing && group?.BodyCosplay;
 }
 
-export function isBind(item: Item | Asset | AssetGroup, excludeSlots: AssetGroupName[] = ["ItemNeck", "ItemNeckAccessories", "ItemNeckRestraints"]): boolean {
+export function isBody(item: Item | Asset | AssetGroup | AssetGroupName): boolean {
 	const group = smartGetAssetGroup(item);
-	if (group.Category !== "Item" || group.BodyCosplay) return false;
-	return !excludeSlots.includes(group.Name);
+	return !!group?.IsAppearance() && (!group?.Clothing || group?.Name == "EyeShadow") && group?.Name != "Pronouns";
 }
 
-export function isHair(item: Item | Asset | AssetGroup) {
+export function isBind(item: Item | Asset | AssetGroup | AssetGroupName, excludeSlots: AssetGroupName[] = ["ItemNeck", "ItemNeckAccessories", "ItemNeckRestraints"]): boolean {
+	const group = smartGetAssetGroup(item);
+	if (group?.Category !== "Item" || group?.BodyCosplay) return false;
+	return !excludeSlots.includes(group?.Name);
+}
+
+export function isHair(item: Item | Asset | AssetGroup | AssetGroupName) {
 	const group = smartGetAssetGroup(item);
 	let targetGroups = [
 		"HairBack",
 		"HairFront",
 		"Eyebrows"
 	]
-	return group.Category === "Appearance" && targetGroups.indexOf(group.Name) > -1;
+	return !!group?.IsAppearance() && targetGroups.indexOf(group?.Name) > -1;
 }
 
-export function isSkin(item: Item | Asset | AssetGroup) {
+export function isSkin(item: Item | Asset | AssetGroup | AssetGroupName) {
 	const group = smartGetAssetGroup(item);
 	let targetGroups = [
 		"EyeShadow",
@@ -746,23 +743,23 @@ export function isSkin(item: Item | Asset | AssetGroup) {
 		"BodyLower",
 		"Mouth"
 	]
-	return group.Category === "Appearance" && targetGroups.indexOf(group.Name) > -1;
+	return !!group?.IsAppearance() && targetGroups.indexOf(group?.Name) > -1;
 }
 
-export function isPronouns(item: Item | Asset | AssetGroup) {
+export function isPronouns(item: Item | Asset | AssetGroup | AssetGroupName) {
 	const group = smartGetAssetGroup(item);
 	let targetGroups = [
 		"Pronouns"
 	]
-	return group.Category === "Appearance" && targetGroups.indexOf(group.Name) > -1;
+	return !!group?.IsAppearance() && targetGroups.indexOf(group?.Name) > -1;
 }
 
-export function isGenitals(item: Item | Asset | AssetGroup) {
+export function isGenitals(item: Item | Asset | AssetGroup | AssetGroupName) {
 	const group = smartGetAssetGroup(item);
 	let targetGroups = [
 		"Pussy"
 	]
-	return group.Category === "Appearance" && targetGroups.indexOf(group.Name) > -1;
+	return !!group?.IsAppearance() && targetGroups.indexOf(group?.Name) > -1;
 }
 
 export function GetItemName(item: Item) {
@@ -777,7 +774,7 @@ export function GetHandheldItemNameAndDescriptionConcat(C?: Character | null): s
 	return GetItemNameAndDescriptionConcat(asset);
 }	
 
-export function GetItemNameAndDescriptionConcat(item: Item | null): string | undefined {
+export function GetItemNameAndDescriptionConcat(item: Item | ItemBundle | null): string | undefined {
 	if (!item || !item.Craft)
 		return;
 	
@@ -815,6 +812,18 @@ export function toItemBundle(item: Item, character: Character | undefined): Item
         Craft: clone(item.Craft),
         Property: clone(item.Property)
     };
+}
+
+export function fromItemBundle(bundle: ItemBundle): Item | undefined {
+	let asset = AssetGet(Player.AssetFamily ?? "Female3DCG", bundle.Group, bundle.Name);
+	if (!asset) return undefined;
+	return {
+		Asset: asset,
+		Color: bundle.Color,
+		Craft: bundle.Craft,
+		Difficulty: bundle.Difficulty,
+		Property: bundle.Difficulty
+	} as Item
 }
 
 function measureDataSize(data: any) {
@@ -864,16 +873,19 @@ export function stringIsCompressedItemBundleArray(str: string): boolean {
 	}
 }
 
-export function GetConfiguredItemBundlesFromSavedCode(code: string, filter: (item: ItemBundle) => boolean): ItemBundle[] {
-	let items: ItemBundle[] = [];
-	if (stringIsCompressedItemBundleArray(code)) {
-		items = parseFromBase64<ItemBundle[]>(code) ?? [];
-	} else if (CommonIsNumeric(code) && !!Player.Wardrobe) {
-	    let ix = parseInt(code);
-	    if (ix >= 0 && ix < Player.Wardrobe.length)
-	        items = Player.Wardrobe[ix];
-	} else if (code.length <= 70 && typeof mbs !== "undefined") {
-	    items = mbs.wheelOutfits.getByName(code)?.items ?? [];
+export function GetConfiguredItemBundlesFromOutfitKey(key: string, filter: (item: ItemBundle) => boolean): ItemBundle[] {
+	let outfits = getModule<OutfitCollectionModule>("OutfitCollectionModule")?.data;
+	let items = outfits.GetOutfitBundle(key);
+	if (!items || items.length <= 0) {
+		if (stringIsCompressedItemBundleArray(key)) {
+			items = parseFromBase64<ItemBundle[]>(key) ?? [];
+		} else if (CommonIsNumeric(key) && !!Player.Wardrobe) {
+			let ix = parseInt(key);
+			if (ix >= 0 && ix < Player.Wardrobe.length)
+				items = Player.Wardrobe[ix];
+		} else if (key.length <= 70 && typeof mbs !== "undefined") {
+			items = mbs.wheelOutfits.getByName(key)?.items ?? [];
+		}
 	}
 	
 	return items.filter(item => filter(item));
@@ -941,13 +953,122 @@ export function getDominance(C: Character) {
 	return C.Reputation.find(r => r.Type == "Dominant")?.Value ?? 0;
 };
 
-export function getSkill(C: Character, skillName: string): number {
-	let skill = C.Skill.find(r => r.Type == skillName);
-	return ((skill?.Level ?? 0) * (skill?.Ratio ?? 1));
-}
-
 export function capitalizeFirstLetter(val: string) {
     return String(val).charAt(0).toUpperCase() + String(val).slice(1);
+}
+
+export function HasLockKey(acting: number, acted: Character, Item: Item | undefined) {
+	if (!Item) return false;
+	if (InventoryGetItemProperty(Item, "SelfUnlock") == false && acted.IsPlayer()) return false;
+	if (acted.IsOwnedByMemberNumber(acting) && Item.Asset.Enable) return true;
+	const lock = InventoryGetLock(Item);
+	if (lock && lock.Asset.FamilyOnly && Item.Asset.Enable && LogQuery("BlockFamilyKey", "OwnerRule")) return false;
+	if (acted.IsLoverOfPlayer() && InventoryAvailable(Player, "LoversPadlockKey", "ItemMisc") && Item.Asset.Enable && Item.Property && Item.Property.LockedBy && !Item.Property.LockedBy.startsWith("Owner")) return true;
+	if (lock && lock.Asset.ExclusiveUnlock) {
+		// Locks with exclusive access (intricate, high-sec)
+		const allowedMembers = CommonConvertStringToArray(Item.Property?.MemberNumberListKeys ?? "");
+		// High-sec, check if we're in the keyholder list
+		if (Item.Property?.MemberNumberListKeys != null) return allowedMembers.includes(acting ?? 0);
+		// Intricate, check that we added that lock
+		if (Item.Property?.LockMemberNumber == acting) return true;
+	}
+	let UnlockName = /** @type {EffectName} */("Unlock" + Item.Asset.Name);
+	if ((Item.Property != null) && (Item.Property.LockedBy != null))
+		UnlockName = /** @type {EffectName} */("Unlock" + Item.Property.LockedBy);
+
+	const key = Asset.find(a => InventoryItemHasEffect({ Asset: a }, UnlockName as EffectName));
+	if (key) {
+		if (lock != null) {
+			if (lock.Asset.LoverOnly && !acted.IsLoverOfMemberNumber(acting)) return false;
+			if (lock.Asset.OwnerOnly && !acted.IsOwnedByMemberNumber(acting)) return false;
+			if (lock.Asset.FamilyOnly && !acted.IsInFamilyOfMemberNumber(acting)) return false;
+			return true;
+		} else {
+			return true;
+		}
+	}
+	return false;
+}
+
+export function CanApplyLock(C: Character, acting: MemberNumber, lock: Item): boolean {
+	let asset = lock.Asset;
+	if (!asset.Enable) return false;
+	if (asset.OwnerOnly && !C.IsOwnedByMemberNumber(acting))
+		if (!C.IsPlayer() || !C.IsOwned() || (C.IsPlayer() && LogQuery("BlockOwnerLockSelf", "OwnerRule")))
+			return false;
+	if (asset.LoverOnly && !C.IsLoverOfMemberNumber(acting)) {
+		if (!asset.IsLock || C.GetLoversNumbers(true).length == 0) return false;
+		if (C.IsPlayer()) {
+			if (LogQuery("BlockLoverLockSelf", "LoverRule")) return false;
+		}
+		else if (!C.IsOwnedByMemberNumber(acting) || LogQueryRemote(C, "BlockLoverLockOwner", "LoverRule")) return false;
+	}
+	if (asset.FamilyOnly && asset.IsLock && (C.IsPlayer()) && LogQuery("BlockOwnerLockSelf", "OwnerRule")) return false;
+	if (asset.FamilyOnly && (!C.IsPlayer()) && !C.IsInFamilyOfMemberNumber(acting)) return false;
+	if (asset.FamilyOnly && asset.IsLock && !C.IsPlayer() && C.IsOwner()) return false;
+	if (asset.FamilyOnly && asset.IsLock && C.IsPlayer() && (C.IsOwned() === false)) return false;
+	return true;
+}
+
+export function RemoveItem(item: Item, acting: number, C?: Character) {
+	if (!C) C = Player;
+	if (isCosplay(item) && !canChangeCosplay(acting, C)) return;
+	if (CanUnlock(acting, C, item) || item.Asset.Group.IsAppearance()) InventoryRemove(C, item.Asset.Group.Name, false);
+}
+
+export function ApplyItem(item: ItemBundle, acting: number, replace: boolean = true, locksafe: boolean = true, C?: Character): Item | undefined {
+	if (!C) C = Player;
+	let existing = InventoryGet(C, item.Group);
+	if (!!existing) {
+		if (replace) RemoveItem(existing, acting, C);
+		else return;
+	}
+	let newItem = InventoryWear(C, item.Name, item.Group, item.Color, item.Difficulty, acting, item.Craft, false);
+	if (!!newItem) {
+		newItem.Property = item.Property;
+		if ((<any>C).LSCG?.GlobalModule?.blockDOGS && (<any>newItem.Property)?.["Name"] == "DeviousPadlock") // REMOVE DOGS LOCKS ON APPLY
+			delete (<any>newItem.Property)["Name"];
+		let lock = InventoryGetLock(newItem);
+		if (!!lock && locksafe && (!InventoryDoesItemAllowLock(newItem) || !CanApplyLock(C, acting, lock))) {
+			InventoryUnlock(C, newItem, false);
+		}
+	}
+	return newItem ?? undefined;
+}
+
+export function canChangeCosplay(acting: number, C: Character): boolean {
+	return C.OnlineSharedSettings?.BlockBodyCosplay !== true || acting == Player.MemberNumber;
+}
+
+export function getBCXData(): any {
+	try {
+		return parseFromBase64(Player.ExtensionSettings.BCX.split(":")[1]);
+	}
+	catch (e) { return undefined; }
+}
+
+export function getBCXActiveCurseSlots(): AssetGroupName[] {
+	let bcxCurses = getBCXData()?.conditions?.curses?.conditions;
+	if (!bcxCurses) return [];
+	return (Object.keys(bcxCurses).filter(key => bcxCurses[key]?.active ?? false)) as AssetGroupName[];
+}
+
+/**
+ * Checks whether the player is able to unlock the provided item on the provided character
+ * @param {Character} C - The character on whom the item is equipped
+ * @param {Item} Item - The item that should be unlocked
+ * @returns {boolean} - Returns true, if the player can unlock the given item, false otherwise
+ */
+export function CanUnlock(acting: number, acted: Character, Item: Item | undefined) {
+	if (!Item) return false;
+	if (!InventoryGetLock(Item)) return true; // Always return true if item is not actually locked
+	if ((!acted.IsPlayer()) && !acted.CanInteract()) return false;
+	if ((Item != null) && (Item.Property != null) && (Item.Property.LockedBy === "ExclusivePadlock")) return (!acted.IsPlayer());
+	if (LogQuery("KeyDeposit", "Cell")) return false;
+	if ((Item != null) && (Item.Asset != null) && (Item.Asset.OwnerOnly == true)) return Item.Asset.Enable && acted.IsOwnedByPlayer();
+	if ((Item != null) && (Item.Asset != null) && (Item.Asset.LoverOnly == true)) return Item.Asset.Enable && acted.IsLoverOfPlayer();
+	if ((Item != null) && (Item.Asset != null) && (Item.Asset.FamilyOnly == true)) return Item.Asset.Enable && acted.IsFamilyOfPlayer();
+	return HasLockKey(acting, acted, Item);
 }
 
 // ICONS

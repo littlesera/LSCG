@@ -1,3 +1,5 @@
+import { OutfitStorageStrategy } from "Settings/OutfitCollection/IOutfitCollection";
+
 export interface BaseSettingsModel {
     enabled: boolean;
 }
@@ -19,6 +21,7 @@ export interface GlobalSettingsModel extends GlobalPublicSettingsModel {
 
 export interface GlobalPublicSettingsModel extends BaseSettingsModel {
     sharePublicCrafting: boolean;
+    blockDOGS: boolean;
 }
 
 export interface LipstickSettingsModel extends BaseSettingsModel {
@@ -54,4 +57,8 @@ export interface OpacitySettingsModel extends OpacityPublicSettingsModel {
 
 export interface OpacityPublicSettingsModel extends BaseSettingsModel {
     preventExternalMod: boolean;
+}
+
+export interface OutfitSettings extends BaseSettingsModel {
+    strategy: OutfitStorageStrategy;
 }

@@ -1,6 +1,6 @@
 import { ICONS, settingsSave } from "utils";
 import { CollarModel, CollarSettingsModel } from "./Models/collar";
-import { GuiSubscreen, Setting } from "./settingBase";
+import { GuiSubscreen, HelpInfo, Setting } from "./settingBase";
 import { getModule } from "modules";
 import { MiscModule } from "Modules/misc";
 
@@ -15,6 +15,13 @@ export class GuiCollar extends GuiSubscreen {
 
 	get settings(): CollarSettingsModel {
 		return super.settings as CollarSettingsModel;
+	}
+
+	get help(): HelpInfo {
+		return {
+			label: 'Open Breathplay Wiki on GitHub',
+			link: 'https://github.com/littlesera/LSCG/wiki/Breathplay'
+		}
 	}
 
 	get multipageStructure(): Setting[][] {

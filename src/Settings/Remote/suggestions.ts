@@ -1,5 +1,5 @@
 import { RemoteGuiSubscreen } from "./remoteBase";
-import { Setting } from "Settings/settingBase";
+import { HelpInfo, Setting } from "Settings/settingBase";
 import { InstructionDescription, LSCGHypnoInstruction, SUGGESTION_LIMIT } from "Settings/Models/hypno";
 import { getActivities, ICONS, getActivityLabel, getZoneColor, replace_template, sendLSCGCommandBeep, isCloth } from "utils";
 import { RemoteHypno } from "./hypno";
@@ -38,6 +38,13 @@ export class RemoteSuggestions extends RemoteHypno {
 
 	get icon(): string {
 		return ICONS.PENDANT;
+	}
+
+	get help(): HelpInfo {
+		return {
+			label: 'Open Hypnotic Suggestion Wiki on GitHub',
+			link: 'https://github.com/littlesera/LSCG/wiki/Hypnotic-Suggestions'
+		}
 	}
 
 	get disabledReason(): string {
@@ -682,7 +689,7 @@ export class RemoteSuggestions extends RemoteHypno {
 				description: "A suggested instruction.",
 				options: this.Instructions,
 				hidden: !this.Suggestion,
-				setting: () => this.Suggestion?.instructions.length ?? 0 > 0 ? (this.Suggestion?.instructions[0] ?? "None") : "None",
+				setting: () => (this.Suggestion?.instructions.length ?? 0) > 0 ? (this.Suggestion?.instructions[0] ?? "None") : "None",
 				setSetting: (val) => { if (!!this.Suggestion) this.Suggestion.instructions = this.Suggestion.instructions.concat(val).filter((eff, ix, arr) => arr.indexOf(eff) == ix) },
 			},<Setting>{
 				type: "label", // Blank Spot
@@ -695,7 +702,7 @@ export class RemoteSuggestions extends RemoteHypno {
 				description: "A suggested instruction.",
 				options: this.Instructions,
 				hidden: !this.Suggestion || this.PreviousInstructionIsTerminating(1),
-				setting: () => this.Suggestion?.instructions.length ?? 0 > 1 ? (this.Suggestion?.instructions[1] ?? "None") : "None",
+				setting: () => (this.Suggestion?.instructions.length ?? 0) > 1 ? (this.Suggestion?.instructions[1] ?? "None") : "None",
 				setSetting: (val) => { if (!!this.Suggestion) this.Suggestion.instructions = this.Suggestion.instructions.concat(val).filter((eff, ix, arr) => arr.indexOf(eff) == ix) },
 			},<Setting>{
 				type: "label", // Blank Spot
@@ -708,7 +715,7 @@ export class RemoteSuggestions extends RemoteHypno {
 				description: "A suggested instruction.",
 				options: this.Instructions,
 				hidden: !this.Suggestion || this.PreviousInstructionIsTerminating(2),
-				setting: () => this.Suggestion?.instructions.length ?? 0 > 2 ? (this.Suggestion?.instructions[2] ?? "None") : "None",
+				setting: () => (this.Suggestion?.instructions.length ?? 0) > 2 ? (this.Suggestion?.instructions[2] ?? "None") : "None",
 				setSetting: (val) => { if (!!this.Suggestion) this.Suggestion.instructions = this.Suggestion.instructions.concat(val).filter((eff, ix, arr) => arr.indexOf(eff) == ix) },
 			},<Setting>{
 				type: "label", // Blank Spot

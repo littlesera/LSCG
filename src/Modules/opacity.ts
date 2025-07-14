@@ -487,11 +487,11 @@ export class OpacityModule extends BaseModule {
         };
         layerSlider.Element = ElementCreateRangeInput(layerSlider.ElementId, 100, 0, 100, 1);
         layerSlider.Element.addEventListener("input", (e) => this.OpacityChange(layerSlider));
-        layerSlider.Element = ElementCreateInput(layerSlider.ElementId + "_Text", "number", layerSlider.Value + "");
+        layerSlider.TextElement = ElementCreateInput(layerSlider.ElementId + "_Text", "number", layerSlider.Value + "");
         ElementSetAttribute(layerSlider.ElementId + "_Text", "min", "0");
         ElementSetAttribute(layerSlider.ElementId + "_Text", "max", "100");
         ElementSetAttribute(layerSlider.ElementId + "_Text", "step", "1");
-        layerSlider.Element.addEventListener("input", (e) => this.OpacityTextChange(layerSlider));
+        layerSlider.TextElement.addEventListener("input", (e) => this.OpacityTextChange(layerSlider));
         layerSlider.Label = this.CreateOpacityLabel(layerSlider.LabelId, layerSlider.ElementId, l.Name);
         ElementPosition(layerSlider.ElementId, -999, -999, 300, 20);
         ElementPosition(layerSlider.ElementId + "_Text", -999, -999, 300, 20);

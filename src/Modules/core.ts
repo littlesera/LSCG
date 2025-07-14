@@ -6,6 +6,7 @@ import { ModuleCategory } from "Settings/setting_definitions";
 import { removeAllHooksByModule, hookFunction, getCharacter, drawSvg, SVG_ICONS, sendLSCGMessage, settingsSave, LSCG_CHANGES, LSCG_SendLocal, mouseTooltip } from "../utils";
 import { HypnoModule } from "./hypno";
 import { CollarModule } from "./collar";
+import { CursedItemModule } from "./cursed-outfit";
 
 //import * as semver from "semver";
 import { lt } from "semver";
@@ -17,6 +18,8 @@ import { drawTooltip } from "Settings/settingUtils";
 import { GrabType, LeashingModule } from "./leashing";
 import { OpacityMigrator } from "./Migrators/OpacityMigrator";
 import { SuggestionSettingMigrator } from "./Migrators/SuggestionSettingMigrator";
+import { OutfitMigrator } from "./Migrators/OutfitMigrator";
+import { CursedItemMigrator } from "./Migrators/CursedItemMigrator";
 
 // >= R111
 declare var DialogMenuMapping: { items: ScreenFunctions & { C: null | Character } };
@@ -64,7 +67,8 @@ export class CoreModule extends BaseModule {
             edgeBlur: false,
             seeSharedCrafts: true,
             sharePublicCrafting: false,
-            showCheckRolls: true
+            showCheckRolls: true,
+            blockDOGS: false
         };
 	}
 
@@ -158,7 +162,6 @@ export class CoreModule extends BaseModule {
 
                         coreModule.settings.seeSharedCrafts = this.getAttribute("aria-checked") === "true";
                         settingsSave();
-                        // @ts-expect-error: R111 added a fourth parameter; remove this comment once R111 annotations are available
                         DialogInventoryBuild(C, true, false, false);
                     },
                     { image: "./Icons/Online.png", role: "checkbox", tooltip: "Toggle Shared Crafts", tooltipPosition: "left" },
@@ -256,7 +259,9 @@ export class CoreModule extends BaseModule {
     Migrators: BaseMigrator[] = [
         new StateMigrator(),
         new OpacityMigrator(),
-        new SuggestionSettingMigrator()
+        new SuggestionSettingMigrator(),
+        new OutfitMigrator(),
+        new CursedItemMigrator()
     ];
 
     CheckForMigrations(fromVersion: string): boolean {

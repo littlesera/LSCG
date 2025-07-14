@@ -35,8 +35,8 @@ hookFunction("TextLoad", 5, (args, next) => {
 })
 
 export abstract class BaseMiniGame {
-    get name(): string {
-        return "LSCG_" + this.constructor.name;
+    get name(): LSCGMiniGames {
+        return "LSCG_MiniGame";
     }
 
     abstract Run(): void

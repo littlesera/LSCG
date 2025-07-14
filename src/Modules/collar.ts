@@ -855,11 +855,9 @@ export class CollarModule extends BaseModule {
     blushAtTimeOfPassout: ExpressionName | null = null;
 
     StartPassout(reason: PassoutReason = PassoutReason.COLLAR, chokingMember: Character | null = null, totalTime: number = 60000) {
-        //console.info("Start Passout, " + totalTime + "ms total time. Date.now() = " + Date.now());
         this.passout1Timer = totalTime * .5; // -- 1/4 of the total tiem in stage 1
         this.passout2Timer = totalTime * .3; // -- 3/10 of the total tiem in stage 1
         this.passout3Timer = totalTime * .2; // -- 1/5 of the total tiem in stage 1
-        //console.info("Timer1 = " + this.passout1Timer + " Timer2 = " + this.passout2Timer + " Timer3 = " + this.passout3Timer);
         this.isPassingOut = true;
         setOrIgnoreBlush("VeryHigh");
         this.eyesAtTimeOfPassout = WardrobeGetExpression(Player)?.Eyes ?? null;
@@ -877,7 +875,6 @@ export class CollarModule extends BaseModule {
     }
 
     Passout1(reason: PassoutReason = PassoutReason.COLLAR, chokingMember: Character | null = null) {
-        //console.info("Stage 2, timeout = " + this.passout1Timer + " Date.now() = " + Date.now());
         this.IncreaseArousal();
         setOrIgnoreBlush("Extreme");
         CharacterSetFacialExpression(Player, "Eyebrows", "Soft");
@@ -896,7 +893,6 @@ export class CollarModule extends BaseModule {
     }
 
     Passout2(reason: PassoutReason = PassoutReason.COLLAR, chokingMember: Character | null = null) {
-        //console.info("Stage 3, timeout = " + this.passout2Timer + " Date.now() = " + Date.now());
         this.IncreaseArousal();
         setOrIgnoreBlush("ShortBreath");
         CharacterSetFacialExpression(Player, "Eyebrows", "Soft");
@@ -916,7 +912,6 @@ export class CollarModule extends BaseModule {
     }
 
     Passout3(reason: PassoutReason = PassoutReason.COLLAR, chokingMember: Character | null = null) {
-        //console.info("Stage 4, timeout = " + this.passout3Timer + " Date.now() = " + Date.now());
         this.IncreaseArousal();
         this.isPassingOut = false;
         CharacterSetFacialExpression(Player, "Blush", "Medium");

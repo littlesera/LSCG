@@ -2,7 +2,7 @@ import { getModule } from "modules";
 import { HypnoModule } from "Modules/hypno";
 import { ICONS } from "utils";
 import { HypnoSettingsModel } from "./Models/hypno";
-import { GuiSubscreen, Setting } from "./settingBase";
+import { GuiSubscreen, HelpInfo, Setting } from "./settingBase";
 import { StateConfig, StateSettingsModel } from "./Models/states";
 import { StateModule } from "Modules/states";
 import { SplatterSettingsModel } from "./Models/base";
@@ -24,6 +24,13 @@ export class GuiSplatter extends GuiSubscreen {
 
 	get splatterModule(): SplatterModule {
 		return this.module as SplatterModule;
+	}
+
+	get help(): HelpInfo {
+		return {
+			label: 'Open Splatter Wiki on GitHub',
+			link: 'https://github.com/littlesera/LSCG/wiki/Splatters'
+		}
 	}
 
 	get multipageStructure(): Setting[][] {

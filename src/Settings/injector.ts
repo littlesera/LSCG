@@ -1,6 +1,6 @@
 import { ICONS } from "utils";
 import { InjectorSettingsModel } from "./Models/injector";
-import { GuiSubscreen, Setting } from "./settingBase";
+import { GuiSubscreen, HelpInfo, Setting } from "./settingBase";
 import { getModule } from "modules";
 import { MiscModule } from "Modules/misc";
 
@@ -16,6 +16,13 @@ export class GuiInjector extends GuiSubscreen {
 
 	get settings(): InjectorSettingsModel {
 		return super.settings as InjectorSettingsModel;
+	}
+
+	get help(): HelpInfo {
+		return {
+			label: 'Open Drug Enhancements Wiki on GitHub',
+			link: 'https://github.com/littlesera/LSCG/wiki/Drug-Enhancements-and-Net-Gun'
+		}
 	}
 
 	get multipageStructure(): Setting[][] {

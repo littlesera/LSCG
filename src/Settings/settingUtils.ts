@@ -86,7 +86,8 @@ export class GUI extends BaseModule {
 			hideResizing: false,
 			erectionDetection: true,
 			tamperproofEnabled: true,
-			tamperproofElectricityEnabled: true
+			tamperproofElectricityEnabled: true,
+			blockDOGS: false
 		};
     }
 
