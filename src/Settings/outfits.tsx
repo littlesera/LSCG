@@ -1,6 +1,6 @@
 import { h } from "tsx-dom";
 import { ApplyItem, GetDataSizeReport, hookFunction, ICONS, isBind, isBody, isCloth, isCosplay, isGenitals, isHair, isPronouns, isSkin, parseFromBase64, smartGetAssetGroup } from "utils";
-import { GuiSubscreen } from "./settingBase";
+import { GuiSubscreen, HelpInfo } from "./settingBase";
 import { OutfitSettings } from "./Models/base";
 import { OutfitCollectionModule } from "Modules/outfitCollection";
 import styles from "./outfits.scss";
@@ -145,6 +145,13 @@ export class GuiOutfits extends GuiSubscreen {
 	get outfitModule(): OutfitCollectionModule {
 		return this.module as OutfitCollectionModule;
 	}
+
+    get help(): HelpInfo {
+        return {
+            label: 'Open Outfit Collection Wiki on GitHub',
+            link: 'https://github.com/littlesera/LSCG/wiki/Outfit-Collection'
+        }
+    }
 
     OrderedKeys(): string[] {
         return this.outfitModule.data.GetOutfitNames().sort((a,b) => a.toLocaleLowerCase().localeCompare(b.toLocaleLowerCase()));
