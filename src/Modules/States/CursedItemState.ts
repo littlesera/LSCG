@@ -399,8 +399,11 @@ export class CursedItemState extends BaseState {
             [array[i], array[j]] = [array[j], array[i]];
         }
 
+        let keyItemIsCollarAcc = keyItem.Asset.Group.Name == "ItemNeckAccessories" || keyItem.Asset.Group.Name == "ItemNeckRestraints";
+
         let res = sortBy(array, 
             item => item.Group == keyItem.Asset.Group.Name,
+            item => (keyItemIsCollarAcc && item.Group == "ItemNeck"),
             item => isBind(item.Group, []), 
             item => AssetGet(Player.AssetFamily ?? "Female3DCG", item.Group, item.Name)?.IsRestraint,
             item => CommonIsNumeric(item.Property?.OverridePriority ?? 0) ? (item.Property?.OverridePriority ?? 0) : Math.max(...Object.values(item.Property?.OverridePriority ?? {}), 0)
