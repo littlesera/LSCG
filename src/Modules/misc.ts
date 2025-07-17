@@ -188,7 +188,7 @@ export class MiscModule extends BaseModule {
     }
 
     get HandCloroMemberNumber(): number | undefined {
-        let grab = getModule<LeashingModule>("LeashingModule").Pairings.find(l => l.Type == "mouth" && !l.IsSource);
+        let grab = getModule<LeashingModule>("LeashingModule").Pairings.find(l => l.Type == "mouth" && (!l.IsSource || l.PairedMember == Player.MemberNumber));
         if (!!grab) {
             let grabbedBy = getCharacter(grab.PairedMember);
             if (!!grabbedBy) {
