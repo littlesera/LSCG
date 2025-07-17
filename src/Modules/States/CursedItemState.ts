@@ -84,7 +84,7 @@ export class CursedItemState extends BaseState {
                     SendAction(this.curseEndEmotes[getRandomInt(this.curseEndEmotes.length)](keyItem.Craft?.Name ?? keyItem.Asset.Description ?? "Cursed Item"));
                     InventoryRemove(Player, keyItem.Asset.Group.Name, false);
                 }
-                tempList?.splice(tempList.findIndex(o => o.CurseName == curseName));
+                tempList?.splice(tempList.findIndex(o => o.CurseName == curseName), 1);
                 this.ActiveOutfits = tempList;
             }
         }
