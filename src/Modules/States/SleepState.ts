@@ -1,6 +1,8 @@
 import { SendAction, addCustomEffect, getRandomInt, removeCustomEffect } from "utils";
 import { BaseState } from "./BaseState";
 import { StateModule } from "Modules/states";
+import { getModule } from "modules";
+import { LeashingModule } from "Modules/leashing";
 
 export class SleepState extends BaseState {
     Type: LSCGState = "asleep";
@@ -38,6 +40,7 @@ export class SleepState extends BaseState {
                 SendAction("%NAME% slumps weakly as %PRONOUN% slips into unconciousness.");
             this.SetSleepExpression();
             this.FallDownIfPossible();
+            this.ReleaseAllGrabs()
             addCustomEffect(Player, "ForceKneel");
             return super.Activate(memberNumber, duration, emote);
         }
@@ -85,5 +88,9 @@ export class SleepState extends BaseState {
         if (Player.CanKneel()) {
             PoseSetActive(Player, "Kneel", true);
         }
+    }
+
+    ReleaseAllGrabs() {
+        getModule<LeashingModule>("LeashingModule").ReleaseAllLeashingsAsSource();
     }
 }

@@ -28,10 +28,10 @@ export interface LeashDefinition {
 }
 
 export const LeashDefinitions: Map<GrabType, LeashDefinition> = new Map<GrabType, LeashDefinition>([
-    ["arm", <LeashDefinition>{Type: "arm", Action: "roughly pulls", LabelTarget: "Arm grabbed by %OPP_NAME%", LabelSource: "Grabbing %OPP_NAME%'s arm"}],
-    ["hair", <LeashDefinition>{Type: "hair", Action: "drags", LabelTarget: "Hair pulled by %OPP_NAME%", LabelSource: "Pulling %OPP_NAME%'s hair"}],
-    ["nose", <LeashDefinition>{Type: "nose", Action: "pulls", LabelTarget: "Nose pulled by %OPP_NAME%", LabelSource: "Pulling %OPP_NAME%'s nose"}],
-    ["nipples", <LeashDefinition>{Type: "nipples", Action: "yanks", LabelTarget: "Nipples pulled by %OPP_NAME%", LabelSource: "Pulling %OPP_NAME%'s nipples"}],
+    ["arm", <LeashDefinition>{Type: "arm", Action: "roughly pulls", LabelTarget: "Arm grabbed by %OPP_NAME%", LabelSource: "Grabbing %OPP_NAME_POSSESSIVE% arm"}],
+    ["hair", <LeashDefinition>{Type: "hair", Action: "drags", LabelTarget: "Hair pulled by %OPP_NAME%", LabelSource: "Pulling %OPP_NAME_POSSESSIVE% hair"}],
+    ["nose", <LeashDefinition>{Type: "nose", Action: "pulls", LabelTarget: "Nose pulled by %OPP_NAME%", LabelSource: "Pulling %OPP_NAME_POSSESSIVE% nose"}],
+    ["nipples", <LeashDefinition>{Type: "nipples", Action: "yanks", LabelTarget: "Nipples pulled by %OPP_NAME%", LabelSource: "Pulling %OPP_NAME_POSSESSIVE% nipples"}],
     ["chomp", <LeashDefinition>{Type: "chomp", LabelTarget: "Chomped on by %OPP_NAME%", LabelSource: "Chomping on %OPP_NAME%", Icon: "Assets/Female3DCG/Mouth/Angry/Icon.png", Reverse: true, Gags: true,
         OnAdd: (pairing) => {
             if (pairing.IsSource) {(<any>pairing)['temp'] = (WardrobeGetExpression(Player)?.Mouth ?? null); CharacterSetFacialExpression(Player, "Mouth", "Angry")};
@@ -40,19 +40,19 @@ export const LeashDefinitions: Map<GrabType, LeashDefinition> = new Map<GrabType
             if (pairing.IsSource) CharacterSetFacialExpression(Player, "Mouth", (<any>pairing)['temp'] ?? null);
         }
     }],
-    ["ear", <LeashDefinition>{Type: "ear", LabelTarget: "Ear pinched by %OPP_NAME%", LabelSource: "Pinching %OPP_NAME%'s ear", Icon: ICONS.EAR}],
-    ["hand", <LeashDefinition>{Type: "hand", LabelTarget: "Holding %OPP_NAME%'s hand", Icon: ICONS.HOLD_HANDS, Bidirectional: true}],
-    ["horn", <LeashDefinition>{Type: "horn", LabelTarget: "Horn grabbed by %OPP_NAME%", LabelSource: "Grabbing %OPP_NAME%'s horn"}],
-    ["tail", <LeashDefinition>{Type: "tail", LabelTarget: "Tail held by %OPP_NAME%", LabelSource: "Holding %OPP_NAME%'s tail"}],
-    ["mouth", <LeashDefinition>{Type: "mouth", LabelTarget: "Mouth clamped by %OPP_NAME%", LabelSource: "Clamping over %OPP_NAME%'s mouth", Icon: ICONS.MUTE, Gags: true}],
-    ["eyes", <LeashDefinition>{Type: "eyes", LabelTarget: "Eyes covered by %OPP_NAME%", LabelSource: "Covering %OPP_NAME%'s eyes", Icon: "Icons/Private.png", Blinds: true,
+    ["ear", <LeashDefinition>{Type: "ear", LabelTarget: "Ear pinched by %OPP_NAME%", LabelSource: "Pinching %OPP_NAME_POSSESSIVE% ear", Icon: ICONS.EAR}],
+    ["hand", <LeashDefinition>{Type: "hand", LabelTarget: "Holding %OPP_NAME_POSSESSIVE% hand", Icon: ICONS.HOLD_HANDS, Bidirectional: true}],
+    ["horn", <LeashDefinition>{Type: "horn", LabelTarget: "Horn grabbed by %OPP_NAME%", LabelSource: "Grabbing %OPP_NAME_POSSESSIVE% horn"}],
+    ["tail", <LeashDefinition>{Type: "tail", LabelTarget: "Tail held by %OPP_NAME%", LabelSource: "Holding %OPP_NAME_POSSESSIVE% tail"}],
+    ["mouth", <LeashDefinition>{Type: "mouth", LabelTarget: "Mouth clamped by %OPP_NAME%", LabelSource: "Clamping over %OPP_NAME_POSSESSIVE% mouth", Icon: ICONS.MUTE, Gags: true}],
+    ["eyes", <LeashDefinition>{Type: "eyes", LabelTarget: "Eyes covered by %OPP_NAME%", LabelSource: "Covering %OPP_NAME_POSSESSIVE% eyes", Icon: "Icons/Private.png", Blinds: true,
         OnAdd: (pairing) => {
             if (!pairing.IsSource || pairing.PairedMember == Player.MemberNumber) {(<any>pairing)['temp'] = (WardrobeGetExpression(Player)?.Eyes ?? null); CharacterSetFacialExpression(Player, "Eyes", "Closed")};
         },
         OnRemove: (pairing) => {
             if (!pairing.IsSource || pairing.PairedMember == Player.MemberNumber) CharacterSetFacialExpression(Player, "Eyes", (<any>pairing)['temp'] ?? null);
         }}],
-    ["mouth-with-foot", <LeashDefinition>{Type: "mouth-with-foot", LabelTarget: "Mouth filled with %OPP_NAME%'s foot", LabelSource: "Filling %OPP_NAME%'s mouth with foot", Icon: "Icons/Management.png", Ephemeral: true, Gags: true}],
+    ["mouth-with-foot", <LeashDefinition>{Type: "mouth-with-foot", LabelTarget: "Mouth filled with %OPP_NAME_POSSESSIVE% foot", LabelSource: "Filling %OPP_NAME_POSSESSIVE% mouth with foot", Icon: "Icons/Management.png", Ephemeral: true, Gags: true}],
     ["neck", <LeashDefinition>{Type: "neck", LabelTarget: "Choked by %OPP_NAME%", LabelSource: "Choking %OPP_NAME%", Icon: ICONS.NECK,
         OnAdd: (pairing) => {
             if (!pairing.IsSource || pairing.PairedMember == Player.MemberNumber) getModule<CollarModule>("CollarModule")?.HandChoke(getCharacter(pairing.PairedMember))
@@ -60,8 +60,8 @@ export const LeashDefinitions: Map<GrabType, LeashDefinition> = new Map<GrabType
         OnRemove: (pairing) => {
             if (!pairing.IsSource || pairing.PairedMember == Player.MemberNumber) getModule<CollarModule>("CollarModule")?.ReleaseHandChoke(getCharacter(pairing.PairedMember), true)
         }}],
-    ["collar", <LeashDefinition>{Type: "collar", Action: "drags", LabelTarget: "Collar grabbed by %OPP_NAME%", LabelSource: "Holding %OPP_NAME%'s collar", Icon: ICONS.COLLAR}],
-    ["tongue", <LeashDefinition>{Type: "tongue", LabelTarget: "Tongue held by %OPP_NAME%", LabelSource: "Holding %OPP_NAME%'s tongue", Icon: ICONS.TONGUE, Gags: true,
+    ["collar", <LeashDefinition>{Type: "collar", Action: "drags", LabelTarget: "Collar grabbed by %OPP_NAME%", LabelSource: "Holding %OPP_NAME_POSSESSIVE% collar", Icon: ICONS.COLLAR}],
+    ["tongue", <LeashDefinition>{Type: "tongue", LabelTarget: "Tongue held by %OPP_NAME%", LabelSource: "Holding %OPP_NAME_POSSESSIVE% tongue", Icon: ICONS.TONGUE, Gags: true,
         OnAdd: (pairing) => {
             if (!pairing.IsSource || pairing.PairedMember == Player.MemberNumber) {(<any>pairing)['temp'] = (WardrobeGetExpression(Player)?.Mouth ?? null); CharacterSetFacialExpression(Player, "Mouth", "Ahegao")};
         },
@@ -223,7 +223,7 @@ export class LeashingModule extends BaseModule {
                 } else if (compellingList.length > 0) {
                     var chars = compellingList.map(id => getCharacter(id)).filter(c => !!c);
                     if (chars.length == 1)
-                        SendAction(`%OPP_NAME%'s eyes lock on to %NAME% and %PRONOUN% follows %INTENSIVE% out of the room obediently.`, chars[0]);
+                        SendAction(`%OPP_NAME_POSSESSIVE% eyes lock on to %NAME% and %PRONOUN% follows %INTENSIVE% out of the room obediently.`, chars[0]);
                     else {
                         let nameStr = "";
                         try {
@@ -488,6 +488,13 @@ export class LeashingModule extends BaseModule {
             definition.OnAdd(pairing);
     }
 
+    ReleaseAllLeashingsAsSource() {
+        this.Pairings = this.Pairings.filter(p => {
+            if (p.IsSource) return this.RemoveCallback(p);
+            else return true;
+        });
+    }
+
     RemoveAllLeashingsWithMember(pairedMember: number) {
         this.Pairings = this.Pairings.filter(p => {
             if (p.PairedMember == pairedMember) return this.RemoveCallback(p);
@@ -722,7 +729,7 @@ export class LeashingModule extends BaseModule {
         }
         var grabber = grabbers[0];
 
-        SendAction(`${CharacterNickname(Player)} tries %POSSESSIVE% best to escape from %OPP_NAME%'s grip...`, grabber);
+        SendAction(`${CharacterNickname(Player)} tries %POSSESSIVE% best to escape from %OPP_NAME_POSSESSIVE% grip...`, grabber);
         setTimeout(() => {
             if (!grabber || !grabber?.MemberNumber)
                 return;
