@@ -622,8 +622,7 @@ export function IsIncapacitated(C?: OtherCharacter | PlayerCharacter): boolean {
 		hypnotized = ((C.LSCG.HypnoModule as any).hypnotized ?? false) || ((C.LSCG.InjectorModule as any).brainwashed ?? false);
 		asleep = (C.LSCG.InjectorModule as any).asleep ?? false;
 	}
-	return hypnotized || asleep || paralyzed;
-	// || getModule<MiscModule>("MiscModule")?.isChloroformed; -- Need to push chloroform status to public for this to work.
+	return hypnotized || asleep || paralyzed;	
 }
 
 export function GetMetadata(data: ServerChatRoomMessage): LSCGChatRoomMessageMetadata | undefined {

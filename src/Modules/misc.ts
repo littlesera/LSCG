@@ -1,10 +1,11 @@
 import { BaseModule } from "base";
 import { MiscSettingsModel } from "Settings/Models/base";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { GetMetadata, getRandomInt, GetTargetCharacter, hookFunction, LSCG_SendLocal, OnAction, OnActivity, removeAllHooksByModule, SendAction, settingsSave } from "../utils";
+import { getCharacter, GetItemNameAndDescriptionConcat, GetMetadata, getRandomInt, GetTargetCharacter, hookFunction, isPhraseInString, LSCG_SendLocal, OnAction, OnActivity, removeAllHooksByModule, SendAction, settingsSave } from "../utils";
 import { getModule } from "modules";
 import { StateModule } from "./states";
 import { SleepState } from "./States/SleepState";
+import { LeashingModule } from "./leashing";
 
 export class MiscModule extends BaseModule {
     get settings(): MiscSettingsModel {
@@ -48,6 +49,25 @@ export class MiscModule extends BaseModule {
                 PoseCanChangeUnaided(Player, "Kneel")) {
                 PoseSetActive(Player, "Kneel", true);
                 ServerSend("ChatRoomCharacterPoseUpdate", { Pose: Player.ActivePose });
+            }
+
+            if (target == Player.MemberNumber && !!sender) {
+                switch (data.Content) {
+                    case "ChatOther-ItemMouth-HandGag":
+                    case "ChatSelf-ItemMouth-HandGag":
+                        let senderItem = InventoryGet(sender, "ItemHandheld");
+                        if (isPhraseInString(GetItemNameAndDescriptionConcat(senderItem) ?? "", "chloroform")) {
+                            this.AddChloroform();
+                        }
+                        break;
+                    case "ChatOther-ItemMouth-ReleaseMouth":
+                    case "ChatSelf-ItemMouth-ReleaseMouth":
+                        if (this.HandCloroMemberNumber == sender.MemberNumber)
+                            this.RemoveChloroform();
+                        break;
+                    default:
+                        break;
+                }
             }
         });
 
@@ -98,13 +118,13 @@ export class MiscModule extends BaseModule {
         })
 
         let lastChloroEvent = 0;
-        let chloroInterval = 2000; // breath event every 4s
+        let chloroInterval = 2000; // chloro check every 2s
         hookFunction('TimerProcess', 1, (args, next) => {
             let now = CommonTime();
             if (!ActivityAllowed() || !this.Enabled)
                 return next(args);
 
-            // Check every minute for breath drug event
+            // Check every minute for chloro check
             if (this.settings.chloroformEnabled && lastChloroEvent + chloroInterval < now) {
                 lastChloroEvent = now;
                 this.CheckForChloro();
@@ -167,15 +187,32 @@ export class MiscModule extends BaseModule {
         return this._isChloroformed;
     }
 
+    get HandCloroMemberNumber(): number | undefined {
+        let grab = getModule<LeashingModule>("LeashingModule").Pairings.find(l => l.Type == "mouth" && !l.IsSource);
+        if (!!grab) {
+            let grabbedBy = getCharacter(grab.PairedMember);
+            if (!!grabbedBy) {
+                let grabberItem = InventoryGet(grabbedBy, "ItemHandheld");
+                if (grabberItem?.Asset.Name == "Towel" && isPhraseInString(GetItemNameAndDescriptionConcat(grabberItem) ?? "", "chloroform")) {
+                    return grabbedBy.MemberNumber;
+                }
+            }
+        }
+        return;
+    }
+
     CheckForChloro() {
         if (!this.settings.chloroformEnabled)
             return;
-        var mouthItems = [InventoryGet(Player, "ItemMouth"),
+        let mouthItems = [InventoryGet(Player, "ItemMouth"),
                             InventoryGet(Player, "ItemMouth2"),
                             InventoryGet(Player, "ItemMouth3")];
+
+        let isHandChloroed = !!this.HandCloroMemberNumber;
+
         if (mouthItems.some(item => item?.Asset.Name == "ChloroformCloth") && (!this.isChloroformed && !this.passoutTimer)) {
             this.AddChloroform();
-        } else if (!mouthItems.some(item => item?.Asset.Name == "ChloroformCloth") && (this.isChloroformed || !!this.passoutTimer) && !this.awakenTimeout) {
+        } else if (!mouthItems.some(item => item?.Asset.Name == "ChloroformCloth") && (this.isChloroformed || !!this.passoutTimer) && !this.awakenTimeout && !isHandChloroed) {
             this.RemoveChloroform();
         }
     }
@@ -296,15 +333,4 @@ export class MiscModule extends BaseModule {
         clearInterval(this.eyesInterval);
         this.sleepState.Recover();
     }
-
-    // SetSleepExpression() {
-    //     CharacterSetFacialExpression(Player, "Eyes", "Closed");
-    //     CharacterSetFacialExpression(Player, "Emoticon", "Sleep");
-    // }
-
-    // FallDownIfPossible() {
-    //     if (Player.CanKneel()) {
-    //         CharacterSetActivePose(Player, "Kneel", true);
-    //     }
-    // }
 }
