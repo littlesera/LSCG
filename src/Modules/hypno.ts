@@ -1131,15 +1131,18 @@ export class HypnoModule extends BaseModule {
 
     DowngradeInfluences() {
         // Downgrade influences over time logarithmically...
-        console.debug("Downgrading influences...");
         if (!this.settings.influence || !this.settings.influence.forEach) {
             this.settings.influence = [];
         }
         this.settings.influence?.forEach(entry => {
-            let newVal = entry.influence - Math.ceil(Math.log10(entry.influence));
-            console.debug(`${entry.memberName} [${entry.memberId}] pre: ${entry.influence}, post: ${newVal}`);
-            entry.influence = newVal;
+            if (!entry.influence || entry.influence <= 1) {
+                entry.influence = 0;
+            } else {
+                let newVal = entry.influence - Math.ceil(Math.log10(entry.influence));
+                entry.influence = newVal;
+            }
         });
+        this.settings.influence = this.settings.influence.filter(entry => entry.influence > 0);
         settingsSave();
     }
 
