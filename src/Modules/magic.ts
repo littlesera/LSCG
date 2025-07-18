@@ -969,7 +969,9 @@ export class MagicModule extends BaseModule {
             let craftingChar = getCharacter(craftingMember) as OtherCharacter;
             if (!!craftingChar && craftingChar.IsPlayer()) {
                 spells = Player.LSCG.MagicModule.knownSpells.filter(s => s.AllowPotion && !s.Effects.some(e => pairedSpellEffects.indexOf(e) > -1));
-                return spells?.filter(x => !!x)?.find(x => !!x && !!x.Name && isPhraseInString(itemStr, x.Name));
+                let foundSpell = spells?.filter(x => !!x)?.find(x => !!x && !!x.Name && isPhraseInString(itemStr, x.Name));
+                this.UnpackSpellCodes(foundSpell);
+                return foundSpell;
             } else {
                 let reqId = Date.now();
                 this.itemSpellRequests.push(reqId);
