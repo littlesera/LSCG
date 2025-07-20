@@ -21,14 +21,15 @@ import { isArray } from "lodash-es";
 // - Spread will continue until outfit + key item is entirely applied, and periodically check if it needs to restart (Spread will _not_ remove keyed item if there's a collision)
 // - Spread can only be stopped by removing key crafted item
 // Also allow voice activated outfit spread
+
+export const CursedKeywords = [
+    "cursed",
+    "enchanted"
+];
+
 export class CursedItemModule extends BaseModule {
     nextActivationTriggerTimeout: number | undefined = undefined;
     debug: boolean = false;
-
-    cursedKeywords = [
-        "cursed",
-        "enchanted"
-    ]
 
     get defaultSettings() {
         return <CursedItemSettingsModel>{
@@ -75,7 +76,7 @@ export class CursedItemModule extends BaseModule {
             if (!craft) {
                 return next([idPrefix, asset, C, onClick, options, ...args]);
             }
-            let isCursed = this.cursedKeywords.some(str => isPhraseInString(GetItemNameAndDescriptionConcat(asset) ?? "", str, true));
+            let isCursed = CursedKeywords.some(str => isPhraseInString(GetItemNameAndDescriptionConcat(asset) ?? "", str, true));
             let myCursedItemNames = this.settings.CursedItems.map(item => item.Name);
             isCursed &&= myCursedItemNames.some(str => isPhraseInString(GetItemNameAndDescriptionConcat(asset) ?? "", str, true));
 
@@ -117,7 +118,7 @@ export class CursedItemModule extends BaseModule {
         if (!this.Enabled) return;
         // Iterate through Player.Appearance, look for crafted items that contain "cursed" keywords, then compare against our current active outfits.
         // If new items are found, ping the crafting owner for the full outfit code and add as active
-        let allItems = Player.Appearance.filter(item => this.cursedKeywords.some(str => isPhraseInString(GetItemNameAndDescriptionConcat(item) ?? "", str, true)));
+        let allItems = Player.Appearance.filter(item => CursedKeywords.some(str => isPhraseInString(GetItemNameAndDescriptionConcat(item) ?? "", str, true)));
         if (allItems.length > 0) {
             let activeItems = this.spreadingState.ActiveOutfits ?? [];
             let newItems = allItems.filter(item => !activeItems.some(active => active.Crafter == item.Craft?.MemberNumber && isPhraseInString(GetItemNameAndDescriptionConcat(item) ?? "", active.ItemName, true)));
