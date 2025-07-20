@@ -31,6 +31,12 @@ const locationObj = {
     "ItemFeet": .8
 };
 
+export const AllowedNetGuns = [
+    "MedicalInjector",
+    "RainbowWand",
+    "Baguette"
+]
+
 type GagDrinkAccess = "nothing" | "blocked" | "open";
 
 export class InjectorModule extends BaseModule {
@@ -794,13 +800,8 @@ export class InjectorModule extends BaseModule {
         if (!C)
             return false;
 
-        let allowedNetGuns = [
-            "MedicalInjector",
-            "RainbowWand",
-            "Baguette"
-        ]
         var item = InventoryGet(Player, "ItemHandheld");
-        if (!item || !item.Asset || allowedNetGuns.indexOf(item.Asset.Name) == -1)
+        if (!item || !item.Asset || AllowedNetGuns.indexOf(item.Asset.Name) == -1)
             return false;
 
         var totalString = GetHandheldItemNameAndDescriptionConcat();

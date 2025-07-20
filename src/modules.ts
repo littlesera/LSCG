@@ -43,6 +43,22 @@ export function NetgunKeywords(): string[] {
 	return getModule<InjectorModule>("InjectorModule")?.settings.netgunKeywords;
 }
 
+export function SedativeKeywords(): string[] {
+	return getModule<InjectorModule>("InjectorModule")?.settings.sedativeKeywords;
+}
+
+export function HornyKeywords(): string[] {
+	return getModule<InjectorModule>("InjectorModule")?.settings.hornyKeywords;
+}
+
+export function MindControlKeywords(): string[] {
+	return getModule<InjectorModule>("InjectorModule")?.settings.mindControlKeywords;
+}
+
+export function CureKeywords(): string[] {
+	return getModule<InjectorModule>("InjectorModule")?.settings.cureKeywords;
+}
+
 export function CraftableItemSpellNames(): string[] {
 	return getModule<MagicModule>("MagicModule")?.settings.knownSpells.filter(s => s.AllowPotion).map(s => s.Name) ?? [];
 }
