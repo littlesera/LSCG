@@ -1,4 +1,4 @@
-import { ApplyItem, CanUnlock, getBCXActiveCurseSlots, getRandomEntry, getRandomInt, hookBCXCurse, isBind, isCloth, isCosplay, isUnderwear, LSCG_SendLocal, parseFromBase64, RemoveItem, SendAction } from "utils";
+import { ApplyItem, CanUnlock, getBCXActiveCurseSlots, getRandomEntry, getRandomInt, hookBCXCurse, isBind, isCloth, isCosplay, isProtectedFromRemoval, isUnderwear, LSCG_SendLocal, parseFromBase64, RemoveItem, SendAction } from "utils";
 import { getModule } from "modules";
 import { BaseState } from "./BaseState";
 import { StateModule } from "Modules/states";
@@ -243,9 +243,10 @@ export class CursedItemState extends BaseState {
     }
 
     shouldStripItem(item: Item, level: StripLevel): boolean {
-        return (isCloth(item, false, false) && !!(level & StripLevel.CLOTHES)) ||
+        return  !isProtectedFromRemoval(item) &&
+                ((isCloth(item, false, false) && !!(level & StripLevel.CLOTHES)) ||
                 (isCosplay(item) && !!(level & StripLevel.UNDERWEAR)) ||
-                (isUnderwear(item) && !!(level & StripLevel.COSPLAY));
+                (isUnderwear(item) && !!(level & StripLevel.COSPLAY)));
     }
 
     TickCursedItem(now: number, cursedItem: CursedItemWorn): boolean {
