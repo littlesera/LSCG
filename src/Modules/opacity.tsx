@@ -275,6 +275,14 @@ export class OpacityModule extends BaseModule {
             let targetEle = document.getElementById(targetId) as HTMLInputElement;
             if (!!targetEle) targetEle.value = value;
         }
+        if (!layer) {
+            this.OpacityLayerSliders.forEach(s => {
+                let rangeSlider = document.getElementById(s.ElementId + "_Range") as HTMLInputElement;
+                let numericSlider = document.getElementById(s.ElementId + "_Number") as HTMLInputElement;
+                if (!!rangeSlider) rangeSlider.value = value;
+                if (!!numericSlider) numericSlider.value = value;
+            });
+        }
         this.UpdatePreview();
     }
 
