@@ -429,6 +429,10 @@ export class OpacityModule extends BaseModule {
                     }
                 });
             }
+            // Hack fix in case the body style was actually removed
+            if (InventoryGet(C, "BodyStyle") == null) {
+                InventoryWear(C, "Original", "BodyStyle");
+            }
             return next(args);
         }, ModuleCategory.Opacity);
 
