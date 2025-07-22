@@ -1,4 +1,4 @@
-import { ApplyItem, CanUnlock, getBCXActiveCurseSlots, getRandomEntry, getRandomInt, hookBCXCurse, isBind, isCloth, isCosplay, isUnderwear, LSCG_SendLocal, parseFromBase64, RemoveItem, SendAction } from "utils";
+import { ApplyItem, CanUnlock, getBCXActiveCurseSlots, getRandomEntry, getRandomInt, hookBCXCurse, isBind, isCloth, isCosplay, isProtectedFromRemoval, isUnderwear, LSCG_SendLocal, parseFromBase64, RemoveItem, SendAction } from "utils";
 import { getModule } from "modules";
 import { BaseState } from "./BaseState";
 import { StateModule } from "Modules/states";
@@ -84,7 +84,7 @@ export class CursedItemState extends BaseState {
                     SendAction(this.curseEndEmotes[getRandomInt(this.curseEndEmotes.length)](keyItem.Craft?.Name ?? keyItem.Asset.Description ?? "Cursed Item"));
                     InventoryRemove(Player, keyItem.Asset.Group.Name, false);
                 }
-                tempList?.splice(tempList.findIndex(o => o.CurseName == curseName));
+                tempList?.splice(tempList.findIndex(o => o.CurseName == curseName), 1);
                 this.ActiveOutfits = tempList;
             }
         }
@@ -216,7 +216,7 @@ export class CursedItemState extends BaseState {
 
     getItemColorString(item: ItemBundle | Item) {
         let itemColor = isString(item.Color) ? item.Color : "Default";
-        if (isArray(item.Color) && item.Color.length == 1 && item.Color[0] == "Default") {
+        if (isArray(item.Color) && ((item.Color.length == 1 && item.Color[0] == "Default") || item.Color.length == 0)) {
             itemColor = "Default";
         }
         else if (isArray(item.Color)) {
@@ -243,9 +243,10 @@ export class CursedItemState extends BaseState {
     }
 
     shouldStripItem(item: Item, level: StripLevel): boolean {
-        return (isCloth(item, false, false) && !!(level & StripLevel.CLOTHES)) ||
+        return  !isProtectedFromRemoval(item) &&
+                ((isCloth(item, false, false) && !!(level & StripLevel.CLOTHES)) ||
                 (isCosplay(item) && !!(level & StripLevel.UNDERWEAR)) ||
-                (isUnderwear(item) && !!(level & StripLevel.COSPLAY));
+                (isUnderwear(item) && !!(level & StripLevel.COSPLAY)));
     }
 
     TickCursedItem(now: number, cursedItem: CursedItemWorn): boolean {

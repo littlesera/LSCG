@@ -362,6 +362,7 @@ export class GuiOutfits extends GuiSubscreen {
 
     charHook: (() => void) | undefined;
 
+    _prevResize: any;
     Load(): void {
         CommonPhotoMode = true;
         this.charHook = hookFunction("CharacterGetCurrent", 1, (args, next) => {
@@ -383,6 +384,7 @@ export class GuiOutfits extends GuiSubscreen {
         }
         
         this.#updateElements();
+        this._prevResize = CurrentScreenFunctions.Resize;
         CurrentScreenFunctions.Resize = (load) => this.Resize(load);
         CurrentScreenFunctions.Resize(true);
     }
@@ -426,6 +428,7 @@ export class GuiOutfits extends GuiSubscreen {
         DialogMenuMapping.items.Unload();
         if (!!this.charHook) this.charHook();
         CommonPhotoMode = false;
+        CurrentScreenFunctions.Resize = this._prevResize;
         super.Exit();
     }
 

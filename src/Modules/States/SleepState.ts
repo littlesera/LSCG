@@ -1,6 +1,8 @@
 import { SendAction, addCustomEffect, getRandomInt, removeCustomEffect } from "utils";
 import { BaseState } from "./BaseState";
 import { StateModule } from "Modules/states";
+import { getModule } from "modules";
+import { LeashingModule } from "Modules/leashing";
 
 export class SleepState extends BaseState {
     Type: LSCGState = "asleep";
@@ -36,8 +38,9 @@ export class SleepState extends BaseState {
         if (!this.Active) {
             if (emote)
                 SendAction("%NAME% slumps weakly as %PRONOUN% slips into unconciousness.");
-            this.SetSleepExpression();
+            this.SetSleepExpression(duration);
             this.FallDownIfPossible();
+            this.ReleaseAllGrabs()
             addCustomEffect(Player, "ForceKneel");
             return super.Activate(memberNumber, duration, emote);
         }
@@ -48,7 +51,7 @@ export class SleepState extends BaseState {
         if (this.Active) {
             if (emote)
                 SendAction("%NAME%'s eyelids flutter and start to open sleepily...");
-            CharacterSetFacialExpression(Player, "Eyes", "Dazed");
+            CharacterSetFacialExpression(Player, "Eyes", "Dazed", 15);
             if (WardrobeGetExpression(Player)?.Emoticon == "Sleep")
                 CharacterSetFacialExpression(Player, "Emoticon", null);
             removeCustomEffect(Player, "ForceKneel");
@@ -76,14 +79,23 @@ export class SleepState extends BaseState {
         "%NAME% moans softly and relaxes..."
     ];
 
-    SetSleepExpression() {
-        CharacterSetFacialExpression(Player, "Eyes", "Closed");
-        CharacterSetFacialExpression(Player, "Emoticon", "Sleep");
+    SetSleepExpression(duration?: number) {
+        if (!!duration) {
+            CharacterSetFacialExpression(Player, "Eyes", "Closed", duration / 1000);
+            CharacterSetFacialExpression(Player, "Emoticon", "Sleep", duration / 1000);
+        } else {
+            CharacterSetFacialExpression(Player, "Eyes", "Closed");
+            CharacterSetFacialExpression(Player, "Emoticon", "Sleep");
+        }
     }
 
     FallDownIfPossible() {
         if (Player.CanKneel()) {
             PoseSetActive(Player, "Kneel", true);
         }
+    }
+
+    ReleaseAllGrabs() {
+        getModule<LeashingModule>("LeashingModule").ReleaseAllLeashingsAsSource();
     }
 }

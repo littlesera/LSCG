@@ -121,7 +121,7 @@ export class CursedItemModule extends BaseModule {
         if (allItems.length > 0) {
             let activeItems = this.spreadingState.ActiveOutfits ?? [];
             let newItems = allItems.filter(item => !activeItems.some(active => active.Crafter == item.Craft?.MemberNumber && isPhraseInString(GetItemNameAndDescriptionConcat(item) ?? "", active.ItemName)));
-            newItems.forEach(item => this.SendCursedItemRequest(item))
+            newItems.forEach(item => this.SendCursedItemRequest(item));
         }
     }
 
@@ -130,6 +130,8 @@ export class CursedItemModule extends BaseModule {
         if (target <= 0) return;
         let bundle = toItemBundle(item, Player);
         if (!bundle) return;
+
+        console.debug(`Sending cursed item request: ${target} -- ${JSON.stringify(bundle)}`);
 
         sendLSCGCommandBeep(target, "cursed-item-request", [{
             name: "item",
@@ -196,6 +198,7 @@ export class CursedItemModule extends BaseModule {
     }
 
     HandleCursedItemResponse(sender: number, msg: LSCGMessageModel) {
+        console.debug(`Receiving cursed item response: ${sender} -- ${JSON.stringify(msg.command)}`);
         let item = msg.command?.args.find(a => a.name == "item")?.value as CursedItemWorn;
         if (!this.Enabled || !item || !this.spreadingState.checkItemIsValid(item)) return;
         this.spreadingState.AddCursedItem(item, sender);

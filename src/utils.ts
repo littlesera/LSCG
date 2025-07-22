@@ -622,8 +622,7 @@ export function IsIncapacitated(C?: OtherCharacter | PlayerCharacter): boolean {
 		hypnotized = ((C.LSCG.HypnoModule as any).hypnotized ?? false) || ((C.LSCG.InjectorModule as any).brainwashed ?? false);
 		asleep = (C.LSCG.InjectorModule as any).asleep ?? false;
 	}
-	return hypnotized || asleep || paralyzed;
-	// || getModule<MiscModule>("MiscModule")?.isChloroformed; -- Need to push chloroform status to public for this to work.
+	return hypnotized || asleep || paralyzed;	
 }
 
 export function GetMetadata(data: ServerChatRoomMessage): LSCGChatRoomMessageMetadata | undefined {
@@ -694,6 +693,11 @@ export function smartGetAssetGroup(item: Item | Asset | AssetGroup | AssetGroupN
 		return undefined;
 	}
 	return group;
+}
+
+export function isProtectedFromRemoval(item: Item | Asset | AssetGroup | AssetGroupName) {
+	const group = smartGetAssetGroup(item);
+	return group?.Name === "BodyStyle";
 }
 
 export function isCloth(item: Item | Asset | AssetGroup | AssetGroupName, allowCosplay: boolean = false, includeUnderwear: boolean = true): boolean {
@@ -1013,6 +1017,7 @@ export function CanApplyLock(C: Character, acting: MemberNumber, lock: Item): bo
 export function RemoveItem(item: Item, acting: number, C?: Character) {
 	if (!C) C = Player;
 	if (isCosplay(item) && !canChangeCosplay(acting, C)) return;
+	if (isProtectedFromRemoval(item)) return;
 	if (CanUnlock(acting, C, item) || item.Asset.Group.IsAppearance()) InventoryRemove(C, item.Asset.Group.Name, false);
 }
 
