@@ -6,7 +6,7 @@ import { ModuleCategory } from "Settings/setting_definitions";
 import { removeAllHooksByModule, hookFunction, getCharacter, drawSvg, SVG_ICONS, sendLSCGMessage, settingsSave, LSCG_CHANGES, LSCG_SendLocal, mouseTooltip } from "../utils";
 import { HypnoModule } from "./hypno";
 import { CollarModule } from "./collar";
-import { CursedItemModule } from "./cursed-outfit";
+import { CursedItemModule } from "./cursed-item";
 
 //import * as semver from "semver";
 import { lt } from "semver";

@@ -16,7 +16,7 @@ import { CommandModule } from 'Modules/commands';
 import { ItemUseModule } from 'Modules/item-use';
 import { StateModule } from 'Modules/states';
 import { MagicModule } from 'Modules/magic';
-import { CursedItemModule } from 'Modules/cursed-outfit';
+import { CursedItemModule } from 'Modules/cursed-item';
 import { OpacityModule } from 'Modules/opacity';
 import { lt } from 'semver';
 import { LeashingModule } from 'Modules/leashing';

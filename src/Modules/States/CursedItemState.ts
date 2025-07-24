@@ -2,7 +2,7 @@ import { ApplyItem, CanUnlock, getBCXActiveCurseSlots, getRandomEntry, getRandom
 import { getModule } from "modules";
 import { BaseState } from "./BaseState";
 import { StateModule } from "Modules/states";
-import { CursedItemModule } from "Modules/cursed-outfit";
+import { CursedItemModule } from "Modules/cursed-item";
 import { CursedItemSettingsModel, CursedItemWorn, StripLevel } from "Settings/Models/cursed-item";
 import { clamp, isArray, isString, sortBy } from "lodash-es";
 
