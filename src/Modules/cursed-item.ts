@@ -54,7 +54,6 @@ export class CursedItemModule extends BaseModule {
     }
 
     safeword(): void {
-        this.settings.enabled = false;
         this.settings.Vulnerable = false;
     }
 
