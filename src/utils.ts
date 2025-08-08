@@ -5,7 +5,7 @@ import { getModule } from "modules";
 import { CoreModule } from "Modules/core";
 import { ActivityEntryModel } from "Settings/Models/activities";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { clone } from "lodash-es";
+import { clone, trim } from "lodash-es";
 import { SettingsModel } from "Settings/Models/settings";
 import { lt } from "semver";
 import { regEscape } from "./regEscape";
@@ -641,7 +641,16 @@ export function GetActivityName(data: ServerChatRoomMessage): string | undefined
 }
 
 export function GetDelimitedList(source: string, delimiter: string = ","): string[] {
-	return source?.split(delimiter)?.filter(entry => !!entry).map(entry => entry.toLocaleLowerCase().trim()) ?? [];
+	let phraseRegex = new RegExp(`(?:^|${delimiter})\\s*(?:"([^"]*)"|([^${delimiter}]*))`, "g");
+	let match: RegExpExecArray | null;
+	const result: string[] = [];
+	while(!!source && (match = phraseRegex.exec(source)) !== null) {
+		const [, quoted, unquoted] = match;
+		const value = (quoted !== undefined ? trim(quoted.trim(), "\"") : unquoted.trim());
+		if (!!value)
+			result.push(value.toLocaleLowerCase());
+	}
+	return result;
 }
 
 export function GetActivityEntry(actName: string, grpName: string): ActivityEntryModel | undefined {
