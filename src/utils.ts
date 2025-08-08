@@ -1041,7 +1041,7 @@ export function ApplyItem(item: ItemBundle, acting: number, replace: boolean = t
 	if (!C) C = Player;
 	let existing = InventoryGet(C, item.Group);
 	if (!!existing) {
-		if (replace) RemoveItem(existing, acting, C);
+		if (replace && existing.Asset.Name != "ClubSlaveCollar") RemoveItem(existing, acting, C);
 		else return;
 	}
 	let newItem = InventoryWear(C, item.Name, item.Group, item.Color, item.Difficulty, acting, item.Craft, false);
