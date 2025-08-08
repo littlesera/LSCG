@@ -1,7 +1,7 @@
 import { getModule } from "modules";
 import { ICONS } from "utils";
 import { GuiSubscreen, HelpInfo, Setting } from "./settingBase";
-import { CursedItemModule } from "Modules/cursed-outfit";
+import { CursedItemModule } from "Modules/cursed-item";
 import { RedressedState } from "Modules/States/RedressedState";
 import { CursedItemModel, CursedItemSettingsModel, StripLevel } from "./Models/cursed-item";
 import { stringIsCompressedItemBundleArray } from "utils";

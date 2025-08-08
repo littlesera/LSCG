@@ -55,6 +55,7 @@ export class GuiHypno extends GuiSubscreen {
 						label: "Trigger Words:",
 						description: "Custom list of words and/or phrases as hypnisis triggers. Separated by a comma.",
 						disabled: !this.settings.enabled || this.settings.randomTrigger,
+						overrideWidth: 800,
 						setting: () => this.settings.overrideWords ?? "",
 						setSetting: (val) => this.settings.overrideWords = val
 					},<Setting>{
@@ -63,6 +64,7 @@ export class GuiHypno extends GuiSubscreen {
 						label: "Awaken Words:",
 						description: "Custom list of words and/or phrases as awakener triggers. Separated by a comma.",
 						disabled: !this.settings.enabled,
+						overrideWidth: 800,
 						setting: () => this.settings.awakeners ?? "",
 						setSetting: (val) => this.settings.awakeners = val
 					},<Setting>{
@@ -71,6 +73,7 @@ export class GuiHypno extends GuiSubscreen {
 						label: "Silence Trigger Words:",
 						description: "When spoken while hypnotized, will prevent speech. Separated by a comma.",
 						disabled: !this.settings.enabled,
+						overrideWidth: 800,
 						setting: () => this.settings.silenceTriggers ?? "",
 						setSetting: (val) => this.settings.silenceTriggers = val
 					}, <Setting>{
@@ -79,6 +82,7 @@ export class GuiHypno extends GuiSubscreen {
 						label: "Allow Speech Trigger Words:",
 						description: "When spoken while hypnotized, will allow speech. Separated by a comma.",
 						disabled: !this.settings.enabled,
+						overrideWidth: 800,
 						setting: () => this.settings.speakTriggers ?? "",
 						setSetting: (val) => this.settings.speakTriggers = val
 					}, <Setting>{

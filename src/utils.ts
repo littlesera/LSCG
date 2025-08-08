@@ -5,7 +5,7 @@ import { getModule } from "modules";
 import { CoreModule } from "Modules/core";
 import { ActivityEntryModel } from "Settings/Models/activities";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { clone } from "lodash-es";
+import { clone, includes, trim } from "lodash-es";
 import { SettingsModel } from "Settings/Models/settings";
 import { lt } from "semver";
 import { regEscape } from "./regEscape";
@@ -641,7 +641,16 @@ export function GetActivityName(data: ServerChatRoomMessage): string | undefined
 }
 
 export function GetDelimitedList(source: string, delimiter: string = ","): string[] {
-	return source?.split(delimiter)?.filter(entry => !!entry).map(entry => entry.toLocaleLowerCase().trim()) ?? [];
+	let phraseRegex = new RegExp(`(?:^|${delimiter})\\s*(?:"([^"]*)"|([^${delimiter}]*))`, "g");
+	let match: RegExpExecArray | null;
+	const result: string[] = [];
+	while(!!source && (match = phraseRegex.exec(source)) !== null) {
+		const [, quoted, unquoted] = match;
+		const value = (quoted !== undefined ? trim(quoted.trim(), "\"") : unquoted.trim());
+		if (!!value)
+			result.push(value.toLocaleLowerCase());
+	}
+	return result;
 }
 
 export function GetActivityEntry(actName: string, grpName: string): ActivityEntryModel | undefined {
@@ -698,6 +707,12 @@ export function smartGetAssetGroup(item: Item | Asset | AssetGroup | AssetGroupN
 export function isProtectedFromRemoval(item: Item | Asset | AssetGroup | AssetGroupName) {
 	const group = smartGetAssetGroup(item);
 	return group?.Name === "BodyStyle";
+}
+
+export function isDrawingOverridable(item: Item | Asset | AssetGroup | AssetGroupName): boolean {
+	const group = smartGetAssetGroup(item);
+	return isCloth(item, true, true) || 
+		includes(group?.Name?.toLocaleLowerCase(), "markings"); 
 }
 
 export function isCloth(item: Item | Asset | AssetGroup | AssetGroupName, allowCosplay: boolean = false, includeUnderwear: boolean = true): boolean {
@@ -996,21 +1011,22 @@ export function HasLockKey(acting: number, acted: Character, Item: Item | undefi
 
 export function CanApplyLock(C: Character, acting: MemberNumber, lock: Item): boolean {
 	let asset = lock.Asset;
+	let selfBondage = C.IsPlayer() && Player.MemberNumber == acting;
 	if (!asset.Enable) return false;
 	if (asset.OwnerOnly && !C.IsOwnedByMemberNumber(acting))
-		if (!C.IsPlayer() || !C.IsOwned() || (C.IsPlayer() && LogQuery("BlockOwnerLockSelf", "OwnerRule")))
+		if (!selfBondage || !C.IsOwned() || (selfBondage && LogQuery("BlockOwnerLockSelf", "OwnerRule")))
 			return false;
 	if (asset.LoverOnly && !C.IsLoverOfMemberNumber(acting)) {
 		if (!asset.IsLock || C.GetLoversNumbers(true).length == 0) return false;
-		if (C.IsPlayer()) {
+		if (selfBondage) {
 			if (LogQuery("BlockLoverLockSelf", "LoverRule")) return false;
 		}
 		else if (!C.IsOwnedByMemberNumber(acting) || LogQueryRemote(C, "BlockLoverLockOwner", "LoverRule")) return false;
 	}
-	if (asset.FamilyOnly && asset.IsLock && (C.IsPlayer()) && LogQuery("BlockOwnerLockSelf", "OwnerRule")) return false;
-	if (asset.FamilyOnly && (!C.IsPlayer()) && !C.IsInFamilyOfMemberNumber(acting)) return false;
-	if (asset.FamilyOnly && asset.IsLock && !C.IsPlayer() && C.IsOwner()) return false;
-	if (asset.FamilyOnly && asset.IsLock && C.IsPlayer() && (C.IsOwned() === false)) return false;
+	if (asset.FamilyOnly && asset.IsLock && (selfBondage) && LogQuery("BlockOwnerLockSelf", "OwnerRule")) return false;
+	if (asset.FamilyOnly && (!selfBondage) && !C.IsInFamilyOfMemberNumber(acting)) return false;
+	if (asset.FamilyOnly && asset.IsLock && !selfBondage && C.IsOwner()) return false;
+	if (asset.FamilyOnly && asset.IsLock && selfBondage && (C.IsOwned() === false)) return false;
 	return true;
 }
 
@@ -1024,8 +1040,12 @@ export function RemoveItem(item: Item, acting: number, C?: Character) {
 export function ApplyItem(item: ItemBundle, acting: number, replace: boolean = true, locksafe: boolean = true, C?: Character): Item | undefined {
 	if (!C) C = Player;
 	let existing = InventoryGet(C, item.Group);
+	let blockedRemovals = [
+		"ClubSlaveCollar",
+		"SlaveCollar"
+	]
 	if (!!existing) {
-		if (replace) RemoveItem(existing, acting, C);
+		if (replace && !includes(blockedRemovals, existing.Asset.Name)) RemoveItem(existing, acting, C);
 		else return;
 	}
 	let newItem = InventoryWear(C, item.Name, item.Group, item.Color, item.Difficulty, acting, item.Craft, false);

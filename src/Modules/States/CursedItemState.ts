@@ -1,8 +1,8 @@
-import { ApplyItem, CanUnlock, getBCXActiveCurseSlots, getRandomEntry, getRandomInt, hookBCXCurse, isBind, isCloth, isCosplay, isProtectedFromRemoval, isUnderwear, LSCG_SendLocal, parseFromBase64, RemoveItem, SendAction } from "utils";
+import { ApplyItem, CanUnlock, getBCXActiveCurseSlots, getRandomEntry, getRandomInt, isBind, isCloth, isCosplay, isProtectedFromRemoval, isUnderwear, LSCG_SendLocal, parseFromBase64, RemoveItem, SendAction } from "utils";
 import { getModule } from "modules";
 import { BaseState } from "./BaseState";
 import { StateModule } from "Modules/states";
-import { CursedItemModule } from "Modules/cursed-outfit";
+import { CursedItemModule } from "Modules/cursed-item";
 import { CursedItemSettingsModel, CursedItemWorn, StripLevel } from "Settings/Models/cursed-item";
 import { clamp, isArray, isString, sortBy } from "lodash-es";
 
@@ -388,11 +388,17 @@ export class CursedItemState extends BaseState {
         let asset = AssetGet(Player.AssetFamily, item.Group, item.Name);
         if (!asset) return false;
         let worn = InventoryGet(Player, item.Group);
+        
+        let ownerBlocked = asset.OwnerOnly && !Player.IsOwnedByMemberNumber(acting);
+        let loverBlocked = asset.LoverOnly && !Player.IsLoverOfMemberNumber(acting);
+        let familyBlocked = asset.FamilyOnly && !Player.IsInFamilyOfMemberNumber(acting);
+
         let isBlocked = asset && InventoryIsPermissionBlocked(Player, asset.DynamicName(Player), asset.Group.Name);
         let isLimited = asset && InventoryIsPermissionLimited(Player, asset.DynamicName(Player), asset.Group.Name);
         let isRoomDisallowed = !InventoryChatRoomAllow(asset?.Category ?? []);
         let slotBlocked = !!worn && !CanUnlock(acting, Player, worn);
-        return !isBlocked && !isLimited && !isRoomDisallowed && !slotBlocked;
+
+        return !ownerBlocked && !loverBlocked && !familyBlocked && !isBlocked && !isLimited && !isRoomDisallowed && !slotBlocked;
     }
 
     shuffleSortAndSelect(array: ItemBundle[], keyItem: Item): ItemBundle {

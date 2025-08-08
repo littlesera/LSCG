@@ -177,7 +177,7 @@ export abstract class GuiSubscreen {
 		
 		if (this.multipageStructure.length > 1) {
 			MainCanvas.textAlign = "center";
-			PreferencePageChangeDraw(1595, 75, this.multipageStructure.length);
+			DrawBackNextButton(1595, 75, 200, 90,"Page " + PreferencePageCurrent.toString() + "/" + this.multipageStructure.length.toString(), "White", "", () => "", () => "");
 			MainCanvas.textAlign = "left";
 		}
 

@@ -68,6 +68,7 @@ export class RemoteHypno extends RemoteGuiSubscreen {
 				id: "hypno_overrideWords",
 				label: "Override Trigger Words:",
 				description: "Custom list of words and/or phrases as hypnisis triggers. Separated by a comma.",
+				overrideWidth: 800,
 				setting: () => this.settings.overrideWords ?? "",
 				setSetting: (val) => this.settings.overrideWords = val
 			},<Setting>{
@@ -76,6 +77,7 @@ export class RemoteHypno extends RemoteGuiSubscreen {
 				label: "Override Awaken Words:",
 				description: "Custom list of words and/or phrases as awakener triggers. Separated by a comma.",
 				disabled: !this.settings.enabled,
+				overrideWidth: 800,
 				setting: () => this.settings.awakeners ?? "",
 				setSetting: (val) => this.settings.awakeners = val
 			},<Setting>{
@@ -119,6 +121,7 @@ export class RemoteHypno extends RemoteGuiSubscreen {
 				label: "Allow Speech Trigger Words:",
 				description: "When spoken while hypnotized, will allow speech. Separated by a comma.",
 				disabled: !this.settings.enabled,
+				overrideWidth: 800,
 				setting: () => this.settings.speakTriggers ?? "",
 				setSetting: (val) => this.settings.speakTriggers = val
 			}, <Setting>{
@@ -127,9 +130,12 @@ export class RemoteHypno extends RemoteGuiSubscreen {
 				label: "Silence Trigger Words:",
 				description: "When spoken while hypnotized, will prevent speech. Separated by a comma.",
 				disabled: !this.settings.enabled,
+				overrideWidth: 800,
 				setting: () => this.settings.silenceTriggers ?? "",
 				setSetting: (val) => this.settings.silenceTriggers = val
-			},<Setting>{
+			}
+		], [	
+			<Setting>{
 				type: "checkbox",
 				label: "Remote Access Requires Trance:",
 				description: "If checked, remote access is only possible while actively hypnotized.",

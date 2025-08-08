@@ -3,7 +3,7 @@ import { BaseModule } from "base";
 import { getModule } from "modules";
 import { OpacitySettingsModel } from "Settings/Models/base";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { LSCG_TEAL, hookFunction, isCloth, mouseTooltip } from "../utils";
+import { LSCG_TEAL, hookFunction, isDrawingOverridable, mouseTooltip } from "../utils";
 import { StateModule } from "./states";
 import { drawTooltip } from "Settings/settingUtils";
 import { endsWith, kebabCase, replace } from "lodash-es";
@@ -275,6 +275,14 @@ export class OpacityModule extends BaseModule {
             let targetEle = document.getElementById(targetId) as HTMLInputElement;
             if (!!targetEle) targetEle.value = value;
         }
+        if (!layer) {
+            this.OpacityLayerSliders.forEach(s => {
+                let rangeSlider = document.getElementById(s.ElementId + "_Range") as HTMLInputElement;
+                let numericSlider = document.getElementById(s.ElementId + "_Number") as HTMLInputElement;
+                if (!!rangeSlider) rangeSlider.value = value;
+                if (!!numericSlider) numericSlider.value = value;
+            });
+        }
         this.UpdatePreview();
     }
 
@@ -343,7 +351,7 @@ export class OpacityModule extends BaseModule {
             next(args);
             let C = args[0] as OtherCharacter;
             let Item = args[1] as Item;
-            if (this.CanChangeOpacityOnCharacter(C) && isCloth(Item)) {
+            if (this.CanChangeOpacityOnCharacter(C) && isDrawingOverridable(Item)) {
                 this.OpacityCharacter = C;
                 this.OpacityItem = Item;
 
@@ -385,11 +393,11 @@ export class OpacityModule extends BaseModule {
             let regex = /Assets(.+)BeforeDraw/i;
             if (regex.test(funcName)) {
                 let ret = CommonCallFunctionByName(args[0], args[1]) ?? {};
-                if (this.Enabled && !!CA && isCloth(CA) && !!Property) {
+                if (this.Enabled && !!CA && isDrawingOverridable(CA) && !!Property) {
                     let layerName = (params['L'] as string ?? "").trim();
                     if (layerName[0] == '_')
                         layerName = layerName.slice(1);
-                    let layerIx = CA.Asset.Layer.findIndex(l => l.Name == layerName);
+                    let layerIx = CA.Asset.Layer.findIndex(l => (l.Name ?? "") == layerName);
 
                     let xOverride = Property?.LayerOverrides?.[layerIx]?.DrawingLeft?.[PoseType.DEFAULT] ?? undefined;
                     let yOverride = Property?.LayerOverrides?.[layerIx]?.DrawingTop?.[PoseType.DEFAULT] ?? undefined;
@@ -424,7 +432,7 @@ export class OpacityModule extends BaseModule {
             if (this.Enabled) {
                 C.AppearanceLayers?.forEach((Layer) => {
                     const A = Layer.Asset;
-                    if (isCloth(A)) {
+                    if (isDrawingOverridable(A)) {
                         (A as any).DynamicBeforeDraw = true;
                     }
                 });
@@ -651,6 +659,7 @@ export class OpacityModule extends BaseModule {
             return 1;
 
         let value = Math.round(parseFloat(ElementValue(fromElementId))) / 100;
+        let mainValue = Math.round(parseFloat(ElementValue(this.OpacityMainSlider.ElementId + "_Number"))) / 100;
         let C = Player;
         if (!this.OpacityItem.Property)
             this.OpacityItem.Property = {};
@@ -664,7 +673,7 @@ export class OpacityModule extends BaseModule {
         } else {
             let opacityArr = this.getOpacity();
             if (!Array.isArray(opacityArr))
-                opacityArr = [];
+                opacityArr = new Array(this.OpacityLayerSliders.length).fill(mainValue);
             let ix = this.OpacityLayerSliders.findIndex(s => s.ElementId + "_Range" == fromElementId || s.ElementId + "_Number" == fromElementId);
             opacityArr[ix] = value;
             this.setOpacity(this.OpacityItem, opacityArr);
