@@ -1473,8 +1473,14 @@ export class ItemUseModule extends BaseModule {
 		"self-tightening",
 		"selftightening",
 		"self tightening",
+		"self tighten",
+		"self-tighten",
+		"selftighten",
 		"auto-tightening",
-		"auto tightening"
+		"auto tightening",
+		"auto-tighten",
+		"auto tighten",
+		"autotighten"
 	];
 
 	subduingKeywords: string[] = [
