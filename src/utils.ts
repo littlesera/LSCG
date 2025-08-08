@@ -5,7 +5,7 @@ import { getModule } from "modules";
 import { CoreModule } from "Modules/core";
 import { ActivityEntryModel } from "Settings/Models/activities";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { clone, trim } from "lodash-es";
+import { clone, includes, trim } from "lodash-es";
 import { SettingsModel } from "Settings/Models/settings";
 import { lt } from "semver";
 import { regEscape } from "./regEscape";
@@ -707,6 +707,12 @@ export function smartGetAssetGroup(item: Item | Asset | AssetGroup | AssetGroupN
 export function isProtectedFromRemoval(item: Item | Asset | AssetGroup | AssetGroupName) {
 	const group = smartGetAssetGroup(item);
 	return group?.Name === "BodyStyle";
+}
+
+export function isDrawingOverridable(item: Item | Asset | AssetGroup | AssetGroupName): boolean {
+	const group = smartGetAssetGroup(item);
+	return isCloth(item, true, true) || 
+		includes(group?.Name?.toLocaleLowerCase(), "markings"); 
 }
 
 export function isCloth(item: Item | Asset | AssetGroup | AssetGroupName, allowCosplay: boolean = false, includeUnderwear: boolean = true): boolean {

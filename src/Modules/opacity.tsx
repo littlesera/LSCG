@@ -3,7 +3,7 @@ import { BaseModule } from "base";
 import { getModule } from "modules";
 import { OpacitySettingsModel } from "Settings/Models/base";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { LSCG_TEAL, hookFunction, isCloth, mouseTooltip } from "../utils";
+import { LSCG_TEAL, hookFunction, isDrawingOverridable, mouseTooltip } from "../utils";
 import { StateModule } from "./states";
 import { drawTooltip } from "Settings/settingUtils";
 import { endsWith, kebabCase, replace } from "lodash-es";
@@ -351,7 +351,7 @@ export class OpacityModule extends BaseModule {
             next(args);
             let C = args[0] as OtherCharacter;
             let Item = args[1] as Item;
-            if (this.CanChangeOpacityOnCharacter(C) && isCloth(Item)) {
+            if (this.CanChangeOpacityOnCharacter(C) && isDrawingOverridable(Item)) {
                 this.OpacityCharacter = C;
                 this.OpacityItem = Item;
 
@@ -393,11 +393,11 @@ export class OpacityModule extends BaseModule {
             let regex = /Assets(.+)BeforeDraw/i;
             if (regex.test(funcName)) {
                 let ret = CommonCallFunctionByName(args[0], args[1]) ?? {};
-                if (this.Enabled && !!CA && isCloth(CA) && !!Property) {
+                if (this.Enabled && !!CA && isDrawingOverridable(CA) && !!Property) {
                     let layerName = (params['L'] as string ?? "").trim();
                     if (layerName[0] == '_')
                         layerName = layerName.slice(1);
-                    let layerIx = CA.Asset.Layer.findIndex(l => l.Name == layerName);
+                    let layerIx = CA.Asset.Layer.findIndex(l => (l.Name ?? "") == layerName);
 
                     let xOverride = Property?.LayerOverrides?.[layerIx]?.DrawingLeft?.[PoseType.DEFAULT] ?? undefined;
                     let yOverride = Property?.LayerOverrides?.[layerIx]?.DrawingTop?.[PoseType.DEFAULT] ?? undefined;
@@ -432,7 +432,7 @@ export class OpacityModule extends BaseModule {
             if (this.Enabled) {
                 C.AppearanceLayers?.forEach((Layer) => {
                     const A = Layer.Asset;
-                    if (isCloth(A)) {
+                    if (isDrawingOverridable(A)) {
                         (A as any).DynamicBeforeDraw = true;
                     }
                 });
