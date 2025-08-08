@@ -1040,8 +1040,12 @@ export function RemoveItem(item: Item, acting: number, C?: Character) {
 export function ApplyItem(item: ItemBundle, acting: number, replace: boolean = true, locksafe: boolean = true, C?: Character): Item | undefined {
 	if (!C) C = Player;
 	let existing = InventoryGet(C, item.Group);
+	let blockedRemovals = [
+		"ClubSlaveCollar",
+		"SlaveCollar"
+	]
 	if (!!existing) {
-		if (replace && existing.Asset.Name != "ClubSlaveCollar") RemoveItem(existing, acting, C);
+		if (replace && !includes(blockedRemovals, existing.Asset.Name)) RemoveItem(existing, acting, C);
 		else return;
 	}
 	let newItem = InventoryWear(C, item.Name, item.Group, item.Color, item.Difficulty, acting, item.Craft, false);
