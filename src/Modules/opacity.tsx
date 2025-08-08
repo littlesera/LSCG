@@ -659,6 +659,7 @@ export class OpacityModule extends BaseModule {
             return 1;
 
         let value = Math.round(parseFloat(ElementValue(fromElementId))) / 100;
+        let mainValue = Math.round(parseFloat(ElementValue(this.OpacityMainSlider.ElementId + "_Number"))) / 100;
         let C = Player;
         if (!this.OpacityItem.Property)
             this.OpacityItem.Property = {};
@@ -672,7 +673,7 @@ export class OpacityModule extends BaseModule {
         } else {
             let opacityArr = this.getOpacity();
             if (!Array.isArray(opacityArr))
-                opacityArr = [];
+                opacityArr = new Array(this.OpacityLayerSliders.length).fill(mainValue);
             let ix = this.OpacityLayerSliders.findIndex(s => s.ElementId + "_Range" == fromElementId || s.ElementId + "_Number" == fromElementId);
             opacityArr[ix] = value;
             this.setOpacity(this.OpacityItem, opacityArr);
