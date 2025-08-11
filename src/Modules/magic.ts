@@ -893,7 +893,7 @@ export class MagicModule extends BaseModule {
 
     getSpellTargetTupleFromMsg(msg: string): [SpellDefinition | null, Character | null] | undefined {
         let oocParsedString = excludeParentheticalContent(msg); // Don't allow voice casting in OOC chat   
-        let characterNames = ChatRoomCharacter.map(c => [c.Name, c.Nickname, c.MemberNumber + ""]).reduce((a, b) => a.concat(b)).filter(c => !!c);
+        let characterNames = ChatRoomCharacter.map(c => [c.Name, c.Nickname, c.Nickname?.normalize('NFKC'), c.MemberNumber + ""]).reduce((a, b) => a.concat(b)).filter(c => !!c);
         for (let s of this.AvailableSpells.filter(s => s.AllowVoiceCast)) { // Only look at spells which allow voice cast
             if (!s.AllowVoiceCast)
                 continue;
