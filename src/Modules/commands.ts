@@ -101,7 +101,9 @@ export class CommandModule extends BaseModule {
 			Tag: "emergency",
 			Description: ": Use in case of emergency to revert all LSCG settings to their default values.",
 			Action: (args, msg, parsed) => {
-				this.EmergencyRelease();	
+				if (confirm("Are you sure you want to reset all LSCG settings to their default values? If you have existing settings it's highly recommended you make a backup export first, if possible.")) {
+					this.EmergencyRelease();
+				}
 			}
 		}, {
 			Tag: "conditions",
