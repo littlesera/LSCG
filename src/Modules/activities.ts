@@ -995,7 +995,7 @@ export class ActivityModule extends BaseModule {
             Activity: {
                 Name: "Grab",
                 MaxProgress: 30,
-                Prerequisite: []
+                Prerequisite: ["UseHands"],
             },
             Targets: [
                 {
