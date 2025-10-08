@@ -6,7 +6,7 @@ import { getModule } from "modules";
 import { GuiInjector } from "Settings/injector";
 import { InjectorSettingsModel } from "Settings/Models/injector";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
-import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, isPhraseInString, settingsSave, hookFunction, getCharacter, AUDIO, getPlayerVolume, OnAction, hookBCXCurse, GetTargetCharacter, GetActivityName, GetMetadata, GetActivityEntryFromContent, IsActivityAllowed, GetHandheldItemNameAndDescriptionConcat } from "../utils";
+import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, isPhraseInString, settingsSave, hookFunction, getCharacter, AUDIO, getPlayerVolume, OnAction, hookBCXCurse, GetTargetCharacter, GetActivityName, GetMetadata, GetActivityEntryFromContent, IsActivityAllowed, GetHandheldItemNameAndDescriptionConcat, GetItemName } from "../utils";
 import { ActivityBundle, ActivityModule, ActivityTarget, CustomAction, CustomPrerequisite } from "./activities";
 import { HypnoModule } from "./hypno";
 import { MiscModule } from "./misc";
@@ -32,6 +32,19 @@ const locationObj = {
 };
 
 type GagDrinkAccess = "nothing" | "blocked" | "open";
+
+interface ContinuousDevice {
+    AssetName: string;
+    AllowedGroups: AssetGroupName[],
+    IsValid: (item: Item) => boolean;
+    IsActive: (item: Item) => boolean;
+    ExhaustItem: (item: Item) => void;
+}
+
+interface WornContinuousDevice {
+    Definition: ContinuousDevice;
+    Item: Item;
+}
 
 export class InjectorModule extends BaseModule {
     
@@ -395,6 +408,8 @@ export class InjectorModule extends BaseModule {
                 let _ = this.IsWearingRespirator;
             } else if (target == Player.MemberNumber && msg.indexOf("LatexRespiratorSetGlow") > -1 && !!sender) {
                 this.CheckForContinuousToggle(sender);
+            } else if (target == Player.MemberNumber && msg.indexOf("CryoCapsuleSet") > -1 && !!sender) {
+                this.CheckForContinuousToggle_CryoPod(sender); // TODO -- Eventually move these toggles into generic types too
             }
         });
 
@@ -1049,49 +1064,117 @@ export class InjectorModule extends BaseModule {
         }
     }
 
+    CheckForContinuousToggle_CryoPod(sender: Character) {
+        if (this.IsWearingRespirator) {
+            if (this.IsRespiratorOn) {
+                if (!this._respiratorHasGas) {
+                    SendAction("%OPP_NAME% reloads %NAME%'s device and turns it back on, filling quickly with gas.", sender);
+                    this.settings.continuousDeliveryActivatedAt = CommonTime();
+                    settingsSave()
+                } else if (sender.IsPlayer())
+                    SendAction("%NAME% closes %POSSESSIVE% device, filling with gas.", sender);
+                else
+                    SendAction("%OPP_NAME% closes %NAME%'s device, filling with gas.", sender);
+            } else {
+                if (sender.IsPlayer())
+                    SendAction("%NAME% opens %POSSESSIVE% device, its enclosed gas escaping swiftly.", sender);
+                else
+                    SendAction("%OPP_NAME% opens %NAME%'s device, its enclosed gas escaping swiftly.", sender);
+            }
+        }
+    }
+
     _wasWearingRespirator: boolean = false;
+
+    continuousGasDevices: ContinuousDevice[] = [
+        {
+            AssetName: "LatexRespirator",
+            AllowedGroups: ["ItemMouth", "ItemMouth2", "ItemMouth3"],
+            IsValid: (item: Item) => {
+                if (!item.Property || !item.Property.TypeRecord || !item.Craft) return false;
+                let hasHose = item.Property.TypeRecord["f"] == 2 || item.Property.TypeRecord["f"] == 3;
+                let isDrugged = this.GetDrugTypes(item.Craft).length > 0;
+                return hasHose && isDrugged;
+            },
+            IsActive: (item: Item) => {
+                return item?.Property?.TypeRecord?.["g"] == 1;
+            },
+            ExhaustItem: (item: Item) => {
+                if (item?.Property?.TypeRecord)
+                    item.Property.TypeRecord["g"] = 0;
+            }
+        }, {
+            AssetName: "CryoCapsule",
+            AllowedGroups: ["ItemDevices"],
+            IsValid: (item: Item) => {
+                if (!item.Property || !item.Property.TypeRecord || !item.Craft) return false;
+                return this.GetDrugTypes(item.Craft).length > 0;
+            },
+            IsActive: (item: Item) => {
+                return item?.Property?.TypeRecord?.["typed"] == 1;
+            },
+            ExhaustItem: (item: Item) => {
+                if (item?.Property?.TypeRecord)
+                    item.Property.TypeRecord["typed"] = 0;
+            }
+        }
+    ]
+
+    // IsInContinuousDelivery
     get IsWearingRespirator(): boolean {
-        let isWearing = this.WornRespirator != null;
+        let item = this.WornRespirator;
+        let isWearing = item != null;
         if (!this._wasWearingRespirator && isWearing) {
             if (!this.asleep && !this.brainwashed && this.IsRespiratorOn) {
-                SendAction("%NAME%'s eyes widen as %POSSESSIVE% mask activates, slowly filling %POSSESSIVE% lungs with its drug.");
+                SendAction(`%NAME%'s eyes widen as %POSSESSIVE% ${GetItemName(item!.Item)} activates, slowly filling %POSSESSIVE% lungs with its drug.`);
                 CharacterSetFacialExpression(Player, "Eyes", "Surprised", 4);
             }
             this.settings.continuousDeliveryActivatedAt = CommonTime();
             settingsSave();
         } else if (this._wasWearingRespirator && !isWearing) {
-            SendAction("%NAME% takes a deep breath of cool, clean air as %POSSESSIVE% mask is removed.");
+            SendAction("%NAME% takes a deep breath of cool, clean air as %POSSESSIVE% device is removed.");
         }
         this._wasWearingRespirator = isWearing;
         return isWearing;
     }
 
+    // _continuousDeviceHasGas
     get _respiratorHasGas(): boolean {
         return this.settings.continuousDeliveryForever || 
             this.settings.continuousDeliveryActivatedAt + this.settings.continuousDeliveryTimeout > CommonTime();
     }
 
+    // ContinuousDeviceHasGas
     get RespiratorHasGas(): boolean {
         let hasGas = this._respiratorHasGas;
         if (!hasGas && this.IsWearingRespirator && this.IsRespiratorOn) {
-            SendAction("%NAME%'s mask hisses quietly as it runs out of its supply of gas.");
             let item = this.WornRespirator;
-            if (!!item && !!item.Property && item.Property.TypeRecord) {
-                item.Property.TypeRecord["g"] = 0;
+            if (!!item && !!item.Item) {
+                SendAction(`%NAME%'s ${GetItemName(item.Item)} hisses quietly as it runs out of its supply of gas.`);
+                item.Definition.ExhaustItem(item.Item);
                 CharacterRefresh(Player, true);
             }
         }
         return hasGas;
     }
 
-    get WornRespirator(): Item | null {
-        return [InventoryGet(Player, "ItemMouth"), InventoryGet(Player, "ItemMouth2"), InventoryGet(Player, "ItemMouth3")].filter(item => this.IsValidRespirator(item))[0] ?? null;
+    // ActiveContinuousDevice
+    get WornRespirator(): WornContinuousDevice | null {
+        return this.continuousGasDevices.map(device => {
+            let item = device.AllowedGroups.map(grp => InventoryGet(Player, grp)).filter(item => !!item && device.IsValid(item))[0] ?? null
+            return !item ? null : {
+                Definition: device,
+                Item: item
+            }
+        }).filter(device => !!device && !!device.Item)[0] ?? null;
+
+        //return [InventoryGet(Player, "ItemMouth"), InventoryGet(Player, "ItemMouth2"), InventoryGet(Player, "ItemMouth3")].filter(item => this.IsValidRespirator(item))[0] ?? null;
     }
 
     get IsRespiratorOn(): boolean {
         let item = this.WornRespirator;
-        if (!!item && !!item.Property && !!item.Property.TypeRecord)
-            return item.Property.TypeRecord["g"] == 1;
+        if (!!item)
+            return item.Definition.IsActive(item.Item);
         else
             return false;
     }
@@ -1100,22 +1183,22 @@ export class InjectorModule extends BaseModule {
         return this.Enabled && this.IsWearingRespirator && this.RespiratorHasGas && this.IsRespiratorOn;
     }
 
-    IsValidRespirator(item: Item | null): boolean {
-        // False if not a crafted respirator
-        if (!this.settings.enableContinuousDelivery ||
-            !item || 
-            !item.Craft || 
-            item.Asset.Name != "LatexRespirator" || 
-            !item.Property || 
-            !item.Property.TypeRecord)
-            return false;
+    // IsValidRespirator(item: Item | null): boolean {
+    //     // False if not a crafted respirator
+    //     if (!this.settings.enableContinuousDelivery ||
+    //         !item || 
+    //         !item.Craft || 
+    //         item.Asset.Name != "LatexRespirator" || 
+    //         !item.Property || 
+    //         !item.Property.TypeRecord)
+    //         return false;
 
-        //Type: "f2g1s0m0l0"
-        let hasHose = item.Property.TypeRecord["f"] == 2 || item.Property.TypeRecord["f"] == 3;
-        let isDrugged = this.GetDrugTypes(item.Craft).length > 0
+    //     //Type: "f2g1s0m0l0"
+    //     let hasHose = item.Property.TypeRecord["f"] == 2 || item.Property.TypeRecord["f"] == 3;
+    //     let isDrugged = this.GetDrugTypes(item.Craft).length > 0
         
-        return hasHose && isDrugged;
-    }
+    //     return hasHose && isDrugged;
+    // }
 
     headsetMindControlEventStr: string[] = [
         "%NAME% groans helplessly as %POSSESSIVE% headset manipulates %POSSESSIVE% mind.",
@@ -1144,27 +1227,27 @@ export class InjectorModule extends BaseModule {
     }
 
     breathSedativeEventStr: string[] = [
-        "%NAME%'s muscles relax limply as %PRONOUN% takes a deep breath through %POSSESSIVE% mask.",
+        "%NAME%'s muscles relax limply as %PRONOUN% takes a deep breath of.",
         "%NAME%'s eyes flutter weakly as %PRONOUN% inhales.",
-        "%NAME% struggles to keep %POSSESSIVE% drooping eyes open as %POSSESSIVE% mask continues to emit its sedative gas."
+        "%NAME% struggles to keep %POSSESSIVE% drooping eyes open as %POSSESSIVE% device continues to emit its sedative gas."
     ];
 
     breathMindControlEventStr: string[] = [
-        "%NAME% groans helplessly as %POSSESSIVE% mask sends another dose into %POSSESSIVE% lungs.",
-        "%NAME% struggles to keep %POSSESSIVE% focus through the suggestible haze caused by %POSSESSIVE% mask.",
-        "%NAME% whimpers as %POSSESSIVE% mask's drug pushes %POSSESSIVE% further out of %POSSESSIVE% own mind."
+        "%NAME% groans helplessly as %POSSESSIVE% device sends another dose into %POSSESSIVE% lungs.",
+        "%NAME% struggles to keep %POSSESSIVE% focus through the suggestible haze caused by %POSSESSIVE% device.",
+        "%NAME% whimpers as %POSSESSIVE% device's drug pushes %POSSESSIVE% further out of %POSSESSIVE% own mind."
     ];
 
     breathAphrodesiacEventStr: string[] = [
-        "%NAME%'s spine tingles as %PRONOUN% takes a deep breath through %POSSESSIVE% mask.",
+        "%NAME%'s spine tingles as %PRONOUN% takes a deep breath of drug.",
         "%NAME% lets out a muffled moan as %PRONOUN% inhales.",
-        "%NAME%'s sensitive areas burn hot as %PRONOUN% breathes through %POSSESSIVE% mask."
+        "%NAME%'s sensitive areas burn hot as %PRONOUN% breathes of drug."
     ];
 
     breathAntidoteEventStr: string[] = [
         "%NAME% sighs with relief as %PRONOUN% takes a deep gulp of healing mist.",
-        "%NAME% feels a tingle across %POSSESSIVE% skin as %POSSESSIVE% mask heals %INTENSIVE%.",
-        "%NAME% lets out a quiet moan as %POSSESSIVE% mask releases a healing mist into %INTENSIVE% lungs."
+        "%NAME% feels a tingle across %POSSESSIVE% skin as %POSSESSIVE% device heals %INTENSIVE%.",
+        "%NAME% lets out a quiet moan as %POSSESSIVE% device releases a healing mist into %INTENSIVE% lungs."
     ];
 
     BreathInDrugEvent() {
@@ -1172,7 +1255,7 @@ export class InjectorModule extends BaseModule {
             let mask = this.WornRespirator;
             if (!mask)
                 return;
-            let types = this.GetDrugTypes(mask.Craft!);
+            let types = this.GetDrugTypes(mask.Item.Craft!);
             let randomLevelIncrease = (getRandomInt(4) + 2) / 10; // .2 to .5
 
             if (types.indexOf("sedative") > -1 && this.settings.enableSedative) {
