@@ -228,7 +228,12 @@ export class CursedItemState extends BaseState {
     }
 
     equateColor(item: ItemBundle, worn: Item): boolean {
-        return this.getItemColorString(item) == this.getItemColorString(worn);
+        let incomingColor = this.getItemColorString(item);
+        let wornColor = this.getItemColorString(worn);
+        if (item.Name == "Kissmark") {
+            if (incomingColor == "Default" && wornColor == '["#B42340"]') return true;
+        }
+        return incomingColor == wornColor;
     }
 
     Inexhaustable(item: CursedItemWorn) {
