@@ -168,7 +168,7 @@ export class CursedItemState extends BaseState {
 
     _spreadingCheck: number = 0; // define when the next item should trigger
     Tick(now: number): void {
-        if (!this.Active) return;
+        if (!this.Active || !this.Settings.enabled) return;
         let refreshNeeded = false;
         let activeOutfits = this.ActiveOutfits;
 
