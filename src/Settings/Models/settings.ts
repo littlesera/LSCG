@@ -164,7 +164,8 @@ export class PublicSettingsModel implements IPublicSettingsModel {
         Vulnerable: false,
         CursedItems: [],
         SuppressEmote: false,
-        AlwaysExhaust: false
+        AlwaysExhaust: false,
+        BlockExistingGroups: false
     };
     ChaoticItemModule: BaseSettingsModel = <BaseSettingsModel>{enabled: false};
     SplatterModule: SplatterSettingsModel = <SplatterSettingsModel>{

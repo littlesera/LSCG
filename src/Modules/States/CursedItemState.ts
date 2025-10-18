@@ -4,7 +4,7 @@ import { BaseState } from "./BaseState";
 import { StateModule } from "Modules/states";
 import { CursedItemModule } from "Modules/cursed-item";
 import { CursedItemSettingsModel, CursedItemWorn, StripLevel } from "Settings/Models/cursed-item";
-import { clamp, isArray, isString, sortBy } from "lodash-es";
+import { clamp, includes, isArray, isString, remove, sortBy } from "lodash-es";
 
 // TODO: Design base 'spreading' state more agnostic of 'cursed items'...
 
@@ -50,6 +50,8 @@ export class CursedItemState extends BaseState {
         let temp = this.ActiveOutfits;
         newItem.lastTick = CommonTime();
         SendAction(getRandomEntry(this.addCurseEmotes)(newItem.ItemName));
+        if (this.Settings.BlockExistingGroups)
+            newItem.BlockedGroups = AssetGroup.filter(grp => grp.IsItem() && InventoryGroupIsBlocked(Player, grp.Name)).map(grp => grp.Name);
         temp?.push(newItem);
         this.ActiveOutfits = temp;
     }
@@ -66,12 +68,14 @@ export class CursedItemState extends BaseState {
         // Remove item from our list, and perhaps even remove from player? (destroy cursed items when complete/safeword is neat..)
         if (!curseName) {
             this.ActiveOutfits?.forEach(item => {
-                let keyItem = this.findWornItem(item);
-                if (!!keyItem) {
-                    InventoryRemove(Player, keyItem.Asset.Group.Name, false);
-                }
+                let keyItems = this.findWornItems(item);
+                keyItems.forEach(keyItem => {
+                    if (!!keyItem) {
+                        InventoryRemove(Player, keyItem.Asset.Group.Name, false);
+                    }
+                });
             });
-            if (sync) SendAction(this.allEndEmotes[getRandomInt(this.allEndEmotes.length)]);
+            if (sync) LSCG_SendLocal("You let out a sigh of relief as your curses cease.");// SendAction(this.allEndEmotes[getRandomInt(this.allEndEmotes.length)]);
             delete this.config.extensions[this.activeOutfitsKey];
             delete this._activeOutfitsCache;
         }
@@ -79,11 +83,13 @@ export class CursedItemState extends BaseState {
             let tempList = this.ActiveOutfits;
             let targetCurse = tempList?.find(c => c.CurseName == curseName);
             if (!!targetCurse) {
-                let keyItem = this.findWornItem(targetCurse);
-                if (!!keyItem) {
-                    SendAction(this.curseEndEmotes[getRandomInt(this.curseEndEmotes.length)](keyItem.Craft?.Name ?? keyItem.Asset.Description ?? "Cursed Item"));
-                    InventoryRemove(Player, keyItem.Asset.Group.Name, false);
-                }
+                let keyItems = this.findWornItems(targetCurse);
+                keyItems.forEach(keyItem => {
+                    if (!!keyItem) {
+                        SendAction(this.curseEndEmotes[getRandomInt(this.curseEndEmotes.length)](keyItem.Craft?.Name ?? keyItem.Asset.Description ?? "Cursed Item"));
+                        InventoryRemove(Player, keyItem.Asset.Group.Name, false);
+                    }
+                });
                 tempList?.splice(tempList.findIndex(o => o.CurseName == curseName), 1);
                 this.ActiveOutfits = tempList;
             }
@@ -156,21 +162,22 @@ export class CursedItemState extends BaseState {
     //     }
     // }
 
-    findWornItem(cursedItem: CursedItemWorn) {
-        return Player.Appearance.find(item => item.Craft?.Name == cursedItem.ItemName && item.Craft?.MemberNumber == cursedItem.Crafter)
+    findWornItems(cursedItem: CursedItemWorn): Item[] {
+        return Player.Appearance.filter(item => item.Craft?.Name == cursedItem.ItemName && item.Craft?.MemberNumber == cursedItem.Crafter)
     }
 
     _spreadingCheck: number = 0; // define when the next item should trigger
     Tick(now: number): void {
-        if (!this.Active) return;
+        if (!this.Active || !this.Settings.enabled) return;
         let refreshNeeded = false;
+        let activeOutfits = this.ActiveOutfits;
 
-        if ((this.ActiveOutfits?.length ?? 0) <= 0) this.Recover();
+        if ((activeOutfits?.length ?? 0) <= 0) this.Recover();
 
         //TODO -- On each tick (1s interval) check each active outfitfor their spread speed and if they are due (need to save last tick time)
         //let cursesToCheck = this.ActiveOutfits?.filter(cursedItem => cursedItem.lastTick + this.ItemInterval(cursedItem) < now);
         // When due: 
-        this.ActiveOutfits?.forEach(cursedItem => {
+        activeOutfits?.forEach(cursedItem => {
             refreshNeeded ||= this.TickCursedItem(now, cursedItem);
         });
         if (refreshNeeded)
@@ -203,6 +210,12 @@ export class CursedItemState extends BaseState {
         (itemName) => `With a squeak, %NAME% is instantly covered by %POSSESSIVE% ${itemName} and its curse.`
     ];
 
+    instantSelfEmotes: ((itemName: string) => string)[] = [
+        (itemName) => `In a flash, your ${itemName} grows and engulfs you.`,
+        (itemName) => `Your ${itemName} rapidly expands and covers you.`,
+        (itemName) => `With a squeak, you are instantly covered by your ${itemName} and its curse.`
+    ];
+
     instantRemoveEmotes: ((itemName: string) => string)[] = [
         (itemName) => `With a sizzle, %NAME_POSSESSIVE_DIRECT% ${itemName} destroys %POSSESSIVE% clothes.`,
         (itemName) => `%NAME_POSSESSIVE_DIRECT% ${itemName} hums and vaporizes %POSSESSIVE% clothes.`,
@@ -228,7 +241,12 @@ export class CursedItemState extends BaseState {
     }
 
     equateColor(item: ItemBundle, worn: Item): boolean {
-        return this.getItemColorString(item) == this.getItemColorString(worn);
+        let incomingColor = this.getItemColorString(item);
+        let wornColor = this.getItemColorString(worn);
+        if (item.Name == "Kissmark") {
+            if (incomingColor == "Default" && wornColor == '["#B42340"]') return true;
+        }
+        return incomingColor == wornColor;
     }
 
     Inexhaustable(item: CursedItemWorn) {
@@ -252,7 +270,7 @@ export class CursedItemState extends BaseState {
     TickCursedItem(now: number, cursedItem: CursedItemWorn): boolean {
         let refreshNeeded = false;
         let wornItems = Player.Appearance;
-        let keyItem = this.findWornItem(cursedItem);
+        let keyItem = this.findWornItems(cursedItem)?.[0];
         //   1) Look for key item and remove active outfit if it is missing
         if (!keyItem) {
             this.ClearActiveOutfit(cursedItem.CurseName);
@@ -286,12 +304,14 @@ export class CursedItemState extends BaseState {
 
             //  2b) Compare active outfit code against Player.Appearance, identify any items missing from current wear
             let itemsToApply = outfitItems.filter(bundle => {
-                    return this.itemIsAllowed(bundle, cursedItem.Crafter) &&                                                 // Item allowed to apply
+                    return !includes(cursedItem.BlockedGroups, bundle.Group) &&
+                    this.itemIsAllowed(bundle, cursedItem.Crafter) &&                                                 // Item allowed to apply
                     (!this.Inexhaustable(cursedItem) || bundle.Group != keyItem.Asset.Group.Name) &&    // Item not key item if inexhaustable (leave key item behind if overlap)
                     !otherWornCursedOutfitItemGroups.includes(bundle.Group) &&
                     !wornItems.some(item => this.itemBundleMatch(bundle, item))
                 }
             );
+            let publicEmote = !this.Settings.SuppressEmote && !cursedItem.SuppressEmote
             let replacingKeyItemWhileItemsStillToRemove = itemsToStrip.length > 0 && itemsToApply.length == 1 && itemsToApply[0]?.Group == keyItem.Asset.Group.Name;
             // 3) If no items remain unworn and cursed item is not inexhaustable, remove the key item otherwise pick what to wear
             if ((itemsToStrip?.length <= 0) &&
@@ -303,7 +323,12 @@ export class CursedItemState extends BaseState {
                 if (cursedItem.Speed == "instant") {
                     // If instant wear all
                     if (itemsToApply.length > 0) {
-                        SendAction(getRandomEntry(this.instantEmotes)(cursedItem.ItemName));
+                        if (publicEmote) {
+                            SendAction(getRandomEntry(this.instantEmotes)(cursedItem.ItemName));
+                        }
+                        else {
+                            LSCG_SendLocal(`<span style="font-size:1.1rem">${getRandomEntry(this.instantSelfEmotes)(cursedItem.ItemName)}</span>`, false);
+                        }
                         itemsToApply.forEach(item => {
                             ApplyItem(item, cursedItem.Crafter, true, true);
                         });
@@ -322,7 +347,7 @@ export class CursedItemState extends BaseState {
                     let itemName = newItem?.Craft?.Name ?? newItem?.Asset.Description ?? itemToWear.Craft?.Name ?? itemToWear.Name;
                     if (replacingKey) {
                         SendAction(getRandomEntry(this.replaceKeyEmotes)(cursedItem.ItemName, itemName));
-                    } else if (!this.Settings.SuppressEmote && !cursedItem.SuppressEmote) {
+                    } else if (publicEmote) {
                         SendAction(getRandomEntry(this.growEmotes)(cursedItem.ItemName, itemName));
                     } else {
                         LSCG_SendLocal(`<span style="font-size:1.1rem">${getRandomEntry(this.growSelfEmotes)(cursedItem.ItemName, itemName)}</span>`, false);
@@ -354,9 +379,21 @@ export class CursedItemState extends BaseState {
         return this.Activate(memberNumber, duration, emote);
     }
 
+    _cursesAppliedRecently: string[] = [];
+
     checkItemIsValid(item: CursedItemWorn) {
         if (!this.Settings || !this.Settings.enabled || !this.Settings.Vulnerable) return false;        
         
+        let curseKey = item.CurseName + "|" + item.Crafter;
+        if (includes(this._cursesAppliedRecently, curseKey)) {
+            return false;
+        } else {
+            this._cursesAppliedRecently.push(curseKey);
+            setTimeout(() => {
+                remove(this._cursesAppliedRecently, key => key == curseKey);
+            }, 1000 * 60 * 1); // Store applied curses for 1 minute...
+        }
+
         let allowedMember = false;
         switch (this.Settings.Allowed) {
             case "Public": 
@@ -396,10 +433,11 @@ export class CursedItemState extends BaseState {
         let isBlocked = asset && InventoryIsPermissionBlocked(Player, asset.DynamicName(Player), asset.Group.Name);
         let isLimited = asset && InventoryIsPermissionLimited(Player, asset.DynamicName(Player), asset.Group.Name);
         let isRoomDisallowed = !InventoryChatRoomAllow(asset?.Category ?? []);
-        let slotBlocked = !!worn && !CanUnlock(acting, Player, worn);
+        
+        let isLocked = !!worn && !CanUnlock(acting, Player, worn);
         let cosplayBlocked = isCosplay(asset) && !canChangeCosplay(acting, Player);
 
-        return !ownerBlocked && !loverBlocked && !familyBlocked && !isBlocked && !isLimited && !isRoomDisallowed && !slotBlocked && !cosplayBlocked;
+        return !ownerBlocked && !loverBlocked && !familyBlocked && !isBlocked && !isLimited && !isRoomDisallowed && !isLocked && !cosplayBlocked;
     }
 
     shuffleSortAndSelect(array: ItemBundle[], keyItem: Item): ItemBundle {

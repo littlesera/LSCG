@@ -35,6 +35,7 @@ export interface CursedItemWorn {
     Strip: StripLevel;
     InstaStrip: boolean;
     lastTick: number;
+    BlockedGroups: string[];
 }
 
 export interface CursedItemSettingsModel extends BaseSettingsModel {
@@ -43,4 +44,5 @@ export interface CursedItemSettingsModel extends BaseSettingsModel {
     CursedItems: CursedItemModel[];
     SuppressEmote: boolean;
     AlwaysExhaust: boolean;
+    BlockExistingGroups: boolean;
 }

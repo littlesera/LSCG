@@ -82,6 +82,7 @@ export class HypnoModule extends BaseModule {
             allowRemoteModificationOfMemberOverride: false,
             cooldownTime: 0,
             enableArousal: false,
+            enableSpirals: true,
             trigger: "",
             triggerRevealed: false,
             triggerTime: 5,
