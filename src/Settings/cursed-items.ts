@@ -66,6 +66,13 @@ export class GuiCursedItems extends GuiSubscreen {
 					setting: () => this.settings.AlwaysExhaust ?? false,
 					setSetting: (val) => this.settings.AlwaysExhaust = val,
 					disabled: !this.settings.enabled
+				},<Setting>{
+					type: "checkbox",
+					label: "Prevent Impossible Curse Items:",
+					description: "If true, a cursed set will not add items to groups that are blocked at the time of curse application (ie: a curse will not add a vibrator under locked chastity).",
+					setting: () => this.settings.BlockExistingGroups ?? false,
+					setSetting: (val) => this.settings.BlockExistingGroups = val,
+					disabled: !this.settings.enabled
 				}
 			], [
 				<Setting>{

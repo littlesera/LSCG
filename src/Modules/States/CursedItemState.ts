@@ -50,6 +50,8 @@ export class CursedItemState extends BaseState {
         let temp = this.ActiveOutfits;
         newItem.lastTick = CommonTime();
         SendAction(getRandomEntry(this.addCurseEmotes)(newItem.ItemName));
+        if (this.Settings.BlockExistingGroups)
+            newItem.BlockedGroups = AssetGroup.filter(grp => grp.IsItem() && InventoryGroupIsBlocked(Player, grp.Name)).map(grp => grp.Name);
         temp?.push(newItem);
         this.ActiveOutfits = temp;
     }
@@ -168,13 +170,14 @@ export class CursedItemState extends BaseState {
     Tick(now: number): void {
         if (!this.Active) return;
         let refreshNeeded = false;
+        let activeOutfits = this.ActiveOutfits;
 
-        if ((this.ActiveOutfits?.length ?? 0) <= 0) this.Recover();
+        if ((activeOutfits?.length ?? 0) <= 0) this.Recover();
 
         //TODO -- On each tick (1s interval) check each active outfitfor their spread speed and if they are due (need to save last tick time)
         //let cursesToCheck = this.ActiveOutfits?.filter(cursedItem => cursedItem.lastTick + this.ItemInterval(cursedItem) < now);
         // When due: 
-        this.ActiveOutfits?.forEach(cursedItem => {
+        activeOutfits?.forEach(cursedItem => {
             refreshNeeded ||= this.TickCursedItem(now, cursedItem);
         });
         if (refreshNeeded)
@@ -301,7 +304,8 @@ export class CursedItemState extends BaseState {
 
             //  2b) Compare active outfit code against Player.Appearance, identify any items missing from current wear
             let itemsToApply = outfitItems.filter(bundle => {
-                    return this.itemIsAllowed(bundle, cursedItem.Crafter) &&                                                 // Item allowed to apply
+                    return !includes(cursedItem.BlockedGroups, bundle.Group) &&
+                    this.itemIsAllowed(bundle, cursedItem.Crafter) &&                                                 // Item allowed to apply
                     (!this.Inexhaustable(cursedItem) || bundle.Group != keyItem.Asset.Group.Name) &&    // Item not key item if inexhaustable (leave key item behind if overlap)
                     !otherWornCursedOutfitItemGroups.includes(bundle.Group) &&
                     !wornItems.some(item => this.itemBundleMatch(bundle, item))
@@ -429,10 +433,11 @@ export class CursedItemState extends BaseState {
         let isBlocked = asset && InventoryIsPermissionBlocked(Player, asset.DynamicName(Player), asset.Group.Name);
         let isLimited = asset && InventoryIsPermissionLimited(Player, asset.DynamicName(Player), asset.Group.Name);
         let isRoomDisallowed = !InventoryChatRoomAllow(asset?.Category ?? []);
-        let slotBlocked = !!worn && !CanUnlock(acting, Player, worn);
+        
+        let isLocked = !!worn && !CanUnlock(acting, Player, worn);
         let cosplayBlocked = isCosplay(asset) && !canChangeCosplay(acting, Player);
 
-        return !ownerBlocked && !loverBlocked && !familyBlocked && !isBlocked && !isLimited && !isRoomDisallowed && !slotBlocked && !cosplayBlocked;
+        return !ownerBlocked && !loverBlocked && !familyBlocked && !isBlocked && !isLimited && !isRoomDisallowed && !isLocked && !cosplayBlocked;
     }
 
     shuffleSortAndSelect(array: ItemBundle[], keyItem: Item): ItemBundle {

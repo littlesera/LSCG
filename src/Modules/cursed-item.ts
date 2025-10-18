@@ -37,7 +37,8 @@ export class CursedItemModule extends BaseModule {
             Vulnerable: false,
             CursedItems: [],
             SuppressEmote: false,
-            AlwaysExhaust: false
+            AlwaysExhaust: false,
+            BlockExistingGroups: false
         };
     }
 
