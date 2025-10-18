@@ -4,7 +4,7 @@ import { BaseState } from "./BaseState";
 import { StateModule } from "Modules/states";
 import { CursedItemModule } from "Modules/cursed-item";
 import { CursedItemSettingsModel, CursedItemWorn, StripLevel } from "Settings/Models/cursed-item";
-import { clamp, isArray, isString, sortBy } from "lodash-es";
+import { clamp, includes, isArray, isString, remove, sortBy } from "lodash-es";
 
 // TODO: Design base 'spreading' state more agnostic of 'cursed items'...
 
@@ -73,7 +73,7 @@ export class CursedItemState extends BaseState {
                     }
                 });
             });
-            if (sync) SendAction(this.allEndEmotes[getRandomInt(this.allEndEmotes.length)]);
+            if (sync) LSCG_SendLocal("You let out a sigh of relief as your curses cease.");// SendAction(this.allEndEmotes[getRandomInt(this.allEndEmotes.length)]);
             delete this.config.extensions[this.activeOutfitsKey];
             delete this._activeOutfitsCache;
         }
@@ -207,6 +207,12 @@ export class CursedItemState extends BaseState {
         (itemName) => `With a squeak, %NAME% is instantly covered by %POSSESSIVE% ${itemName} and its curse.`
     ];
 
+    instantSelfEmotes: ((itemName: string) => string)[] = [
+        (itemName) => `In a flash, your ${itemName} grows and engulfs you.`,
+        (itemName) => `Your ${itemName} rapidly expands and covers you.`,
+        (itemName) => `With a squeak, you are instantly covered by your ${itemName} and its curse.`
+    ];
+
     instantRemoveEmotes: ((itemName: string) => string)[] = [
         (itemName) => `With a sizzle, %NAME_POSSESSIVE_DIRECT% ${itemName} destroys %POSSESSIVE% clothes.`,
         (itemName) => `%NAME_POSSESSIVE_DIRECT% ${itemName} hums and vaporizes %POSSESSIVE% clothes.`,
@@ -301,6 +307,7 @@ export class CursedItemState extends BaseState {
                     !wornItems.some(item => this.itemBundleMatch(bundle, item))
                 }
             );
+            let publicEmote = !this.Settings.SuppressEmote && !cursedItem.SuppressEmote
             let replacingKeyItemWhileItemsStillToRemove = itemsToStrip.length > 0 && itemsToApply.length == 1 && itemsToApply[0]?.Group == keyItem.Asset.Group.Name;
             // 3) If no items remain unworn and cursed item is not inexhaustable, remove the key item otherwise pick what to wear
             if ((itemsToStrip?.length <= 0) &&
@@ -312,7 +319,12 @@ export class CursedItemState extends BaseState {
                 if (cursedItem.Speed == "instant") {
                     // If instant wear all
                     if (itemsToApply.length > 0) {
-                        SendAction(getRandomEntry(this.instantEmotes)(cursedItem.ItemName));
+                        if (publicEmote) {
+                            SendAction(getRandomEntry(this.instantEmotes)(cursedItem.ItemName));
+                        }
+                        else {
+                            LSCG_SendLocal(`<span style="font-size:1.1rem">${getRandomEntry(this.instantSelfEmotes)(cursedItem.ItemName)}</span>`, false);
+                        }
                         itemsToApply.forEach(item => {
                             ApplyItem(item, cursedItem.Crafter, true, true);
                         });
@@ -331,7 +343,7 @@ export class CursedItemState extends BaseState {
                     let itemName = newItem?.Craft?.Name ?? newItem?.Asset.Description ?? itemToWear.Craft?.Name ?? itemToWear.Name;
                     if (replacingKey) {
                         SendAction(getRandomEntry(this.replaceKeyEmotes)(cursedItem.ItemName, itemName));
-                    } else if (!this.Settings.SuppressEmote && !cursedItem.SuppressEmote) {
+                    } else if (publicEmote) {
                         SendAction(getRandomEntry(this.growEmotes)(cursedItem.ItemName, itemName));
                     } else {
                         LSCG_SendLocal(`<span style="font-size:1.1rem">${getRandomEntry(this.growSelfEmotes)(cursedItem.ItemName, itemName)}</span>`, false);
@@ -363,9 +375,21 @@ export class CursedItemState extends BaseState {
         return this.Activate(memberNumber, duration, emote);
     }
 
+    _cursesAppliedRecently: string[] = [];
+
     checkItemIsValid(item: CursedItemWorn) {
         if (!this.Settings || !this.Settings.enabled || !this.Settings.Vulnerable) return false;        
         
+        let curseKey = item.CurseName + "|" + item.Crafter;
+        if (includes(this._cursesAppliedRecently, curseKey)) {
+            return false;
+        } else {
+            this._cursesAppliedRecently.push(curseKey);
+            setTimeout(() => {
+                remove(this._cursesAppliedRecently, key => key == curseKey);
+            }, 1000 * 60 * 1); // Store applied curses for 1 minute...
+        }
+
         let allowedMember = false;
         switch (this.Settings.Allowed) {
             case "Public": 

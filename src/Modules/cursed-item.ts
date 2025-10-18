@@ -199,7 +199,7 @@ export class CursedItemModule extends BaseModule {
     HandleCursedItemResponse(sender: number, msg: LSCGMessageModel) {
         console.debug(`Receiving cursed item response: ${sender} -- ${JSON.stringify(msg.command)}`);
         let item = msg.command?.args.find(a => a.name == "item")?.value as CursedItemWorn;
-        if (!this.Enabled || !item || !this.spreadingState.checkItemIsValid(item)) return;
+        if (!this.Enabled || !item) return;
         this.spreadingState.AddCursedItem(item, sender);
     }
 }
