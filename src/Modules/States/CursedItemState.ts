@@ -66,10 +66,12 @@ export class CursedItemState extends BaseState {
         // Remove item from our list, and perhaps even remove from player? (destroy cursed items when complete/safeword is neat..)
         if (!curseName) {
             this.ActiveOutfits?.forEach(item => {
-                let keyItem = this.findWornItem(item);
-                if (!!keyItem) {
-                    InventoryRemove(Player, keyItem.Asset.Group.Name, false);
-                }
+                let keyItems = this.findWornItems(item);
+                keyItems.forEach(keyItem => {
+                    if (!!keyItem) {
+                        InventoryRemove(Player, keyItem.Asset.Group.Name, false);
+                    }
+                });
             });
             if (sync) SendAction(this.allEndEmotes[getRandomInt(this.allEndEmotes.length)]);
             delete this.config.extensions[this.activeOutfitsKey];
@@ -79,11 +81,13 @@ export class CursedItemState extends BaseState {
             let tempList = this.ActiveOutfits;
             let targetCurse = tempList?.find(c => c.CurseName == curseName);
             if (!!targetCurse) {
-                let keyItem = this.findWornItem(targetCurse);
-                if (!!keyItem) {
-                    SendAction(this.curseEndEmotes[getRandomInt(this.curseEndEmotes.length)](keyItem.Craft?.Name ?? keyItem.Asset.Description ?? "Cursed Item"));
-                    InventoryRemove(Player, keyItem.Asset.Group.Name, false);
-                }
+                let keyItems = this.findWornItems(targetCurse);
+                keyItems.forEach(keyItem => {
+                    if (!!keyItem) {
+                        SendAction(this.curseEndEmotes[getRandomInt(this.curseEndEmotes.length)](keyItem.Craft?.Name ?? keyItem.Asset.Description ?? "Cursed Item"));
+                        InventoryRemove(Player, keyItem.Asset.Group.Name, false);
+                    }
+                });
                 tempList?.splice(tempList.findIndex(o => o.CurseName == curseName), 1);
                 this.ActiveOutfits = tempList;
             }
@@ -156,8 +160,8 @@ export class CursedItemState extends BaseState {
     //     }
     // }
 
-    findWornItem(cursedItem: CursedItemWorn) {
-        return Player.Appearance.find(item => item.Craft?.Name == cursedItem.ItemName && item.Craft?.MemberNumber == cursedItem.Crafter)
+    findWornItems(cursedItem: CursedItemWorn): Item[] {
+        return Player.Appearance.filter(item => item.Craft?.Name == cursedItem.ItemName && item.Craft?.MemberNumber == cursedItem.Crafter)
     }
 
     _spreadingCheck: number = 0; // define when the next item should trigger
@@ -257,7 +261,7 @@ export class CursedItemState extends BaseState {
     TickCursedItem(now: number, cursedItem: CursedItemWorn): boolean {
         let refreshNeeded = false;
         let wornItems = Player.Appearance;
-        let keyItem = this.findWornItem(cursedItem);
+        let keyItem = this.findWornItems(cursedItem)?.[0];
         //   1) Look for key item and remove active outfit if it is missing
         if (!keyItem) {
             this.ClearActiveOutfit(cursedItem.CurseName);
