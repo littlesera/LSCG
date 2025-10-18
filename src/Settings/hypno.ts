@@ -170,6 +170,13 @@ export class GuiHypno extends GuiSubscreen {
 						setting: () => this.settings.enableArousal ?? false,
 						setSetting: (val) => this.settings.enableArousal = val
 					},<Setting>{
+						type: "checkbox",
+						label: "Enable Spirals:",
+						description: "If checked headsets and other spirals can cause trance.",
+						disabled: !this.settings.enabled,
+						setting: () => this.settings.enableSpirals ?? true,
+						setSetting: (val) => this.settings.enableSpirals = val
+					},<Setting>{
 						type: "text",
 						id: "hypno_eyeColor",
 						label: "Hypnotized Eye Color:",

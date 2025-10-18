@@ -33,6 +33,7 @@ export interface HypnoSettingsModel extends HypnoPublicSettingsModel {
     hypnoEyeColor: string | undefined;
     hypnoEyeType: number | undefined;
     enableArousal: boolean;
+    enableSpirals: boolean;
     stats: HypnoModuleStats;
     triggerCycled: boolean;
     triggerRevealed: boolean;

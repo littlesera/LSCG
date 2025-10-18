@@ -1213,7 +1213,8 @@ export class InjectorModule extends BaseModule {
     ]
 
     CheckForHypnoHelmet() {
-        if (!this.settings.enableMindControl)
+        // Use new spirals setting for hypno headsets
+        if (!Player.LSCG.HypnoModule.enableSpirals)
             return;
         let isWearingHypnoItem = Player.Appearance.some(item => this.hypnoItems.some(hypnoItem => hypnoItem.name == item.Asset.Name && hypnoItem.active(item)))
 
