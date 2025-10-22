@@ -25,7 +25,7 @@ interface LSCGMessageDictionaryEntry {
 
 type LSCGMessageModelType = "init" | "sync" | "command" | "broadcast";
 
-type LSCGCommandName = "debug" | "grab" | "release" | "remote" | "escape" | "collar-tighten" | "collar-loosen" | "collar-stats" | "photo" | "spell" | "spell-teach" | "pair" | "unpair" | "pairing-update" | "get-spell" | "get-spell-response" | "get-suggestions" | "get-suggestions-response" | "set-suggestions" | "add-leashing" | "remove-leashing" | "craft-share" | "splat" | "swap-ask" | "swap-respond" | "cursed-item-request" | "cursed-item-response";
+type LSCGCommandName = "debug" | "grab" | "release" | "remote" | "escape" | "collar-tighten" | "collar-loosen" | "collar-stats" | "photo" | "spell" | "spell-teach" | "pair" | "unpair" | "pairing-update" | "get-spell" | "get-spell-response" | "get-suggestions" | "get-suggestions-response" | "set-suggestions" | "add-leashing" | "remove-leashing" | "craft-share" | "splat" | "swap-ask" | "swap-respond" | "cursed-item-request" | "cursed-item-response" | "h5-respond" | "h5-ask" | "h5-execute";
 
 type LSCGState = "none" | "hypnotized" | "asleep" | "horny" | "choking" | "held" | "blind" | "deaf" | "frozen" | "gagged" | "redressed" | "arousal-paired" | "orgasm-siphoned" | "leashed" | "resized" | "buffed" | "polymorphed" | "x-ray-vision" | "denied" | "protected" | "cursed-item";
 
