@@ -1,7 +1,7 @@
 import { BaseModule } from "base";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
-import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, hookFunction, ICONS, getCharacter, OnAction, callOriginal, LSCG_SendLocal, GetTargetCharacter, GetActivityName, GetMetadata, GetActivityEntryFromContent, IsActivityAllowed, sendLSCGCommand, replace_template } from "../utils";
-import { getModule } from "modules";
+import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, hookFunction, ICONS, getCharacter, OnAction, callOriginal, LSCG_SendLocal, GetTargetCharacter, GetActivityName, GetMetadata, GetActivityEntryFromContent, IsActivityAllowed, sendLSCGCommand, replace_template, escapeHtml } from "../utils";
+import { Core, getModule } from "modules";
 import { ItemUseModule } from "./item-use";
 import { CollarModule } from "./collar";
 import { ActivitySettingsModel } from "Settings/Models/activities";
@@ -11,6 +11,7 @@ import { HypnoModule } from "./hypno";
 import { StateMigrator } from "./Migrators/StateMigrator";
 import { StateModule } from "./states";
 import { SplatterMapping, SplatterModule } from "./splatter";
+import { CommandListener } from "./core";
 
 export interface ActivityTarget {
     Name: LSCGAssetGroupItemName;
@@ -222,12 +223,101 @@ export class ActivityModule extends BaseModule {
 			return results;
 		}, ModuleCategory.Activities);
 
+        this.AddCommandListeners();
         this.InitTongueGrabHooks();
         this.RegisterActivities();
     }
 
     run(): void {
         this.collarModule = getModule<CollarModule>("CollarModule");
+    }
+
+    AddCommandListeners() {
+        Core().RegisterCommandListener(<CommandListener>{
+            id: "h5_ask_listener",
+            command: "h5-ask",
+            func: (sender: number, msg: LSCGMessageModel) => {
+                let c = getCharacter(sender);
+                if (!c)
+                    return;
+                
+                let str = escapeHtml(`${CharacterNickname(c)} would like to high give you.`);
+                LSCG_SendLocal(`<span>${str}</span><button style="background-color:green;border-radius:5px;margin:5px" id="h5-accept">Slap it!</button><button style="background-color:red;border-radius:5px;margin:5px" id="h5-deny">Ignore</button>`, false, 10000);
+                
+                let timeout = setTimeout(() => {
+                    if (!c)
+                        return;
+                    sendLSCGCommand(c, "h5-respond");
+                    acceptEle?.remove();
+                    denyEle?.remove();
+                }, 10000);
+                
+                var acceptEle = document.getElementById("h5-accept");
+                if (!!acceptEle) {
+                    acceptEle.addEventListener("click", (evt) => {
+                        clearTimeout(timeout);
+                        SendAction(`%NAME% raises %POSSESSIVE% hand and executes a perfect high five with %OPP_NAME%!`, c);
+                        this.ExecuteHighFive(c);
+                        acceptEle?.remove();
+                        denyEle?.remove();
+                    });
+                }
+                var denyEle = document.getElementById("h5-deny");
+                if (!!denyEle) {
+                    denyEle.addEventListener("click", (evt) => {
+                        clearTimeout(timeout);
+                        SendAction(`${CharacterNickname(Player)} ignores ${CharacterNickname(c!)}.`);
+                        sendLSCGCommand(c!, "h5-respond");
+                        acceptEle?.remove();
+                        denyEle?.remove();
+                    });
+                }
+            }
+        });
+
+        Core().RegisterCommandListener(<CommandListener>{
+            id: "h5_resp_listener",
+            command: "h5-respond",
+            func: (sender: number, msg: LSCGMessageModel) => {
+                let c = getCharacter(sender);
+                if (!c)
+                    return;
+                
+                let str = escapeHtml(`${CharacterNickname(c)} refuses to high five you. Grab them?`);
+                LSCG_SendLocal(`<span>${str}</span><button style="background-color:orange;border-radius:5px;margin:5px" id="h5-grab">Grab!</button><button style="background-color:green;border-radius:5px;margin:5px" id="h5-nah">Nah</button>`, false, 10000);
+
+                var grabEle = document.getElementById("h5-grab");
+                if (!!grabEle) {
+                    grabEle.addEventListener("click", (evt) => {
+                        SendAction(`%NAME% grabs %OPP_NAME% by the wrist.`, c);
+                        this.leashingModule.DoGrab(c, "arm");
+                        grabEle?.remove();
+                        leaveEle?.remove();
+                    });
+                }
+
+                var leaveEle = document.getElementById("h5-nah");
+                if (!!leaveEle) {
+                    leaveEle.addEventListener("click", (evt) => {
+                        grabEle?.remove();
+                        leaveEle?.remove();
+                    });
+                }
+            }
+        });
+        
+        Core().RegisterCommandListener(<CommandListener>{
+            id: "h5_exec_listener",
+            command: "h5-execute",
+            func: (sender: number, msg: LSCGMessageModel) => {
+                let c = getCharacter(sender);
+                if (!c)
+                    return;
+                
+                if (!AudioShouldSilenceSound(true))
+                    AudioPlaySoundEffect("SpankSkin");
+            }
+        });
     }
 
     RegisterActivities(): void{
@@ -1753,6 +1843,43 @@ export class ActivityModule extends BaseModule {
             },
         });
 
+        // High Five!
+		this.AddActivity(<ActivityBundle>{
+			Activity: <Activity>{
+				Name: "HighFive" as ActivityName,
+				MaxProgress: 50,
+				MaxProgressSelf: 50,
+				Prerequisite: ["UseHands"]
+			},
+			Targets: [
+				<ActivityTarget>{
+					Name: "ItemHands",
+					TargetLabel: "High Five!",
+					TargetAction: "SourceCharacter holds PronounPossessive hand up towards TargetCharacter expectantly...",
+                    TargetSelfAction: "SourceCharacter holds PronounPossessive hand in the air, slapping it with the other.",
+					SelfAllowed: true
+				}
+			],
+			CustomAction: {
+				Func: (target, args, next) => {
+					if (!target)
+						return;
+                    if (target.IsPlayer()) {
+                        this.ExecuteHighFive(null);
+                        next(args);
+                    }
+                    else if (this.isPlayerGrabbing(target.MemberNumber ?? -1)) {
+                        SendAction(`%NAME% holds %OPP_NAME_POSSESSIVE_DIRECT% arm up and slaps it in a forced high five!`, target);
+                        this.ExecuteHighFive(target);
+                    } else {
+                        this.TryHighFive(target);
+                        next(args);
+                    }
+				}
+			},
+			CustomImage: "Assets/Female3DCG/Activity/Spank.png"
+		});
+
         // Erect Penis Detection...
         this.PatchActivitiesForErectionCheck();
     }
@@ -1985,5 +2112,16 @@ export class ActivityModule extends BaseModule {
                 LSCG_SendLocal(`You can feel something hard under ${CharacterNickname(target)}'s clothes.`);
             }
         }
+    }
+
+    TryHighFive(target: Character) {
+		sendLSCGCommand(target, "h5-ask");
+	}
+
+    ExecuteHighFive(target: Character | null) {
+        if (!AudioShouldSilenceSound(true))
+            AudioPlaySoundEffect("SpankSkin");
+        if (!!target)
+            sendLSCGCommand(target, "h5-execute");
     }
 }

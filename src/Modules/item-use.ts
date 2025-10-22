@@ -475,7 +475,7 @@ export class ItemUseModule extends BaseModule {
 					});
 				}
 			}
-		})
+		});
 
 		OnActivity(1, ModuleCategory.ItemUse, (data, sender, msg, metadata) => {
 			if (sender?.IsPlayer() && msg == "ChatSelf-ItemArms-StruggleArms") {
