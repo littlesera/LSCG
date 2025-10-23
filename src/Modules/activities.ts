@@ -1,6 +1,6 @@
 import { BaseModule } from "base";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
-import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, hookFunction, ICONS, getCharacter, OnAction, callOriginal, LSCG_SendLocal, GetTargetCharacter, GetActivityName, GetMetadata, GetActivityEntryFromContent, IsActivityAllowed, sendLSCGCommand, replace_template, escapeHtml } from "../utils";
+import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, hookFunction, ICONS, getCharacter, OnAction, callOriginal, LSCG_SendLocal, GetTargetCharacter, GetActivityName, GetMetadata, GetActivityEntryFromContent, IsActivityAllowed, sendLSCGCommand, replace_template, escapeHtml, sendLSCGMessage } from "../utils";
 import { Core, getModule } from "modules";
 import { ItemUseModule } from "./item-use";
 import { CollarModule } from "./collar";
@@ -242,7 +242,11 @@ export class ActivityModule extends BaseModule {
                     return;
                 
                 let str = escapeHtml(`${CharacterNickname(c)} would like to high give you.`);
-                LSCG_SendLocal(`<span>${str}</span><button style="background-color:green;border-radius:5px;margin:5px" id="h5-accept">Slap it!</button><button style="background-color:red;border-radius:5px;margin:5px" id="h5-deny">Ignore</button>`, false, 10000);
+                let promptHtml = `<span>${str}</span><button style="background-color:green;border-radius:5px;margin:5px" id="h5-accept">Slap it!</button><button style="background-color:red;border-radius:5px;margin:5px" id="h5-deny">Ignore</button>`;
+                if (!(Player.CanInteract() && !Player.Effect.includes("MergedFingers"))) {
+                    promptHtml = `<span>${str}</span><button style="background-color:green;border-radius:5px;margin:5px" id="h5-apologize">Can't...</button><button style="background-color:red;border-radius:5px;margin:5px" id="h5-deny">Ignore</button>`;
+                }
+                LSCG_SendLocal(promptHtml, false, 10000);
                 
                 let timeout = setTimeout(() => {
                     if (!c)
@@ -253,6 +257,9 @@ export class ActivityModule extends BaseModule {
                 }, 10000);
                 
                 var acceptEle = document.getElementById("h5-accept");
+                var denyEle = document.getElementById("h5-deny");
+                var apologizeEle = document.getElementById("h5-apologize");
+
                 if (!!acceptEle) {
                     acceptEle.addEventListener("click", (evt) => {
                         clearTimeout(timeout);
@@ -260,9 +267,20 @@ export class ActivityModule extends BaseModule {
                         this.ExecuteHighFive(c);
                         acceptEle?.remove();
                         denyEle?.remove();
+                        apologizeEle?.remove();
                     });
                 }
-                var denyEle = document.getElementById("h5-deny");
+                
+                if (!!apologizeEle) {  
+                    apologizeEle.addEventListener("click", (evt) => {
+                        clearTimeout(timeout);
+                        SendAction(`%NAME% shrugs towards %OPP_NAME% apologetically, unable to high five.`, c);
+                        acceptEle?.remove();
+                        denyEle?.remove();
+                        apologizeEle?.remove();
+                    });
+                }
+
                 if (!!denyEle) {
                     denyEle.addEventListener("click", (evt) => {
                         clearTimeout(timeout);
@@ -270,6 +288,7 @@ export class ActivityModule extends BaseModule {
                         sendLSCGCommand(c!, "h5-respond");
                         acceptEle?.remove();
                         denyEle?.remove();
+                        apologizeEle?.remove();
                     });
                 }
             }
@@ -1860,6 +1879,14 @@ export class ActivityModule extends BaseModule {
 					SelfAllowed: true
 				}
 			],
+            CustomPrereqs: [
+                {
+                    Name: "CanHighFive",
+                    Func: (acting, acted, group): boolean => {
+                        return (acted.CanInteract() && !acted.Effect.includes("MergedFingers"))
+                    }
+                }
+            ],
 			CustomAction: {
 				Func: (target, args, next) => {
 					if (!target)
@@ -2119,9 +2146,13 @@ export class ActivityModule extends BaseModule {
 	}
 
     ExecuteHighFive(target: Character | null) {
-        if (!AudioShouldSilenceSound(true))
-            AudioPlaySoundEffect("SpankSkin");
         if (!!target)
-            sendLSCGCommand(target, "h5-execute");
+            sendLSCGMessage(<LSCGMessageModel>{
+                reply: false,
+                type: "broadcast",
+                command: {
+                    name: "h5-execute"
+                }
+            });
     }
 }
