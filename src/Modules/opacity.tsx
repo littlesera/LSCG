@@ -46,6 +46,90 @@ const ID = Object.freeze({
     translateY: `${root}-translate-y`
 });
 
+/**
+ * R122 type backport.
+ * An item properties subtype with a guaranteed opacity field.
+ */
+interface ItemColorProperties extends ItemProperties {
+	Opacity: number[];
+}
+
+/**
+ * R122 type backport.
+ * An item subtype with a guaranteed color and opacity field.
+ */
+interface ItemColorItem extends Item {
+	Color: string[];
+	Property: ItemColorProperties;
+}
+
+// Yoinked from R122
+namespace itemToColorItem {
+    /**
+     * Sanitize the color of the passed item, returning an array of valid color strings and of length {@link Asset.ColorableLayerCount}.
+     * @param item The item whose colors are to be validated
+     * @returns The validated colors returned as array
+     */
+    export function sanitizeColor(item: Item): string[] {
+        if (GameVersion !== "R121") {
+            // @ts-expect-error: Requires R122 types
+            return ItemColorSanitizeColor(item);
+        }
+
+        const color = [...item.Asset.DefaultColor];
+        if (Array.isArray(item.Color)) {
+            for (const [i, colorValue] of item.Color.entries()) {
+                if (i >= color.length) {
+                    break;
+                } else if (!CommonDrawColorValid(colorValue, item.Asset.Group)) {
+                    continue;
+                } else {
+                    color[i] = colorValue;
+                }
+            }
+        } else if (typeof item.Color === "string" && CommonDrawColorValid(item.Color, item.Asset.Group)) {
+            color.fill(item.Color);
+        }
+        return color;
+    }
+
+    /**
+     * Sanitize the properties of the passed item in relation to any and all color & opacity related fields.
+     * @param item The item whose properties are to be validated
+     * @returns The validated item properties
+     */
+    export function sanitizeProperty(item: Item): ItemColorProperties {
+        if (GameVersion !== "R121") {
+            // @ts-expect-error: Requires R122 types
+            return ItemColorSanitizeProperty(item);
+        }
+
+        let opacity = item.Asset.Layer.map(l => l.Opacity);
+        if (Array.isArray(item.Property?.Opacity)) {
+            for (const [i, opacityValue] of item.Property.Opacity.entries()) {
+                if (i >= opacity.length) {
+                    break;
+                } if (!CommonIsFinite(opacityValue)) {
+                    continue;
+                } else {
+                    opacity[i] = CommonClamp(opacityValue, item.Asset.Layer[i].MinOpacity, item.Asset.Layer[i].MaxOpacity);
+                }
+            }
+        } else if (CommonIsFinite(item.Property?.Opacity)) {
+            opacity.fill(CommonClamp(item.Property.Opacity, item.Asset.MinOpacity, item.Asset.MaxOpacity));
+        }
+        return Object.assign(item.Property ?? {}, { Opacity: opacity });
+    }
+
+    /**
+     * Convert a plain {@link Item} into an one with guaranteed array-based colors and opacities.
+     * Performs an inplace update of the passed item.
+     */
+    export function convert(item: Item): ItemColorItem {
+        return Object.assign(item, { Color: sanitizeColor(item), Property: sanitizeProperty(item) });
+    }
+}
+
 export class OpacityModule extends BaseModule {
     OpacityMainSlider: OpacitySlider = {
         ElementId: ID.opacityMain,
@@ -53,7 +137,7 @@ export class OpacityModule extends BaseModule {
     };
     OpacityLayerSliders: OpacitySlider[] = [];
 
-    OpacityItem: Item | null = null;
+    OpacityItem: ItemColorItem | null = null;
     OpacityCharacter: OtherCharacter | null = null;
     get ShowAllOpacityLayers(): boolean {
         return (document.getElementById(ID.allLayersCheck) as HTMLInputElement)?.checked;
@@ -333,8 +417,6 @@ export class OpacityModule extends BaseModule {
     onToggleLeadLined(evt?: Event) {
         if (!this.OpacityItem)
             return;
-        if (!this.OpacityItem.Property)
-            this.OpacityItem.Property = {};
         this.OpacityItem.Property.LSCGLeadLined = (evt?.target as HTMLInputElement)?.checked ?? false;
     }
 
@@ -362,7 +444,7 @@ export class OpacityModule extends BaseModule {
             const ret = next(args);
             await ret;
             let C = args[0] as OtherCharacter;
-            let Item = args[1] as Item;
+            let Item = GameVersion === "R121" ? itemToColorItem.convert(ItemColorItem) : ItemColorItem as ItemColorItem;
             if (this.CanChangeOpacityOnCharacter(C) && isDrawingOverridable(Item)) {
                 this.OpacityCharacter = C;
                 this.OpacityItem = Item;
@@ -525,23 +607,27 @@ export class OpacityModule extends BaseModule {
     getOpacity(item?: Item | null): number | number[] | undefined {
         if (!item)
             item = this.OpacityItem;
-        return this.getOpacityFromProperties(item?.Property);
+        return this.getOpacityFromProperties(item);
     }
 
-    getOpacityFromProperties(props?: ItemProperties | null): number | number[] | undefined {
-        if (!!props && !!props.LSCGOpacity)
-            this.setOpacityInProperty(props, props.LSCGOpacity);
-        return props?.Opacity ?? 1;
+    getOpacityFromProperties(item?: null | Item): number | number[] | undefined {
+        if (item?.Property?.LSCGOpacity != null) {
+            const sanitizedProps = Object.assign(item.Property, itemToColorItem.sanitizeProperty(item))
+            this.setOpacityInProperty(sanitizedProps, item.Property.LSCGOpacity);
+        }
+        return item?.Property?.Opacity ?? 1;
     }
 
-    setOpacity(item: Item, value: number | number[]) {
-        if (!item.Property)
-            item.Property = {};
+    setOpacity(item: ItemColorItem, value: number | number[]) {
         this.setOpacityInProperty(item.Property, value);
     }
 
-    setOpacityInProperty(props: ItemProperties, value: number | number[]) {
-        props.Opacity = value;
+    setOpacityInProperty(props: ItemColorProperties, value: number | number[]) {
+        if (typeof value === "number") {
+            props.Opacity.fill(value);
+        } else {
+            props.Opacity = value;
+        }
         if (!!props.LSCGOpacity)
             delete props.LSCGOpacity;
     }
@@ -638,8 +724,6 @@ export class OpacityModule extends BaseModule {
         if (!this.OpacityItem)
             return 0;
         let value = Math.round(parseFloat(ElementValue(fromElementId)));
-        if (!this.OpacityItem.Property)
-            this.OpacityItem.Property = {};
         let properties = (this.OpacityItem.Property as PropertiesWithLayerOverrides);
         let layerCount = this.OpacityItem.Asset.Layer.length;
         if (!properties.LayerOverrides || properties.LayerOverrides.length != layerCount) {
@@ -678,8 +762,6 @@ export class OpacityModule extends BaseModule {
         let value = Math.round(parseFloat(ElementValue(fromElementId))) / 100;
         let mainValue = Math.round(parseFloat(ElementValue(this.OpacityMainSlider.ElementId + "_Number"))) / 100;
         let C = Player;
-        if (!this.OpacityItem.Property)
-            this.OpacityItem.Property = {};
         if (fromElementId == this.OpacityMainSlider.ElementId + "_Range" || fromElementId == this.OpacityMainSlider.ElementId + "_Number") {
             if (value < 1)
                 this.setOpacity(this.OpacityItem, value);
@@ -722,7 +804,6 @@ export class OpacityModule extends BaseModule {
             // @ts-expect-error: requires R122 types
             const rootID: string = ColorPicker.ids.root;
             const opacityModule = this;
-            console.error(document.querySelector(`#${rootID} input[name="opacity"]`));
             document.querySelector(`#${rootID} input[name="opacity"]`)?.addEventListener(
                 "input",
                 function (this: HTMLInputElement, ev: Event) {
