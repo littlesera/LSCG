@@ -333,7 +333,7 @@ export class ActivityModule extends BaseModule {
                 if (!c)
                     return;
                 
-                let targetNum = msg.command?.args?.find(a => a.name == "target")?.value;
+                let targetNum = msg?.command?.args?.find(a => a.name == "target")?.value ?? -1;
 
                 if (!AudioShouldSilenceSound(c.IsPlayer() || targetNum == Player.MemberNumber))
                     AudioPlaySoundEffect("SpankSkin");
