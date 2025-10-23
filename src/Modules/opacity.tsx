@@ -38,7 +38,7 @@ const ID = Object.freeze({
     opacity: `${root}-opacity`,
     opacityMain: `${root}-opacity-main`,
     opacityLayers: `${root}-opacity-layers`,
-    
+
     translate: `${root}-translate`,
     translateToolbar: `${root}-translate-toolbar`,
     translateButtons: `${root}-translate-buttons`,
@@ -150,7 +150,7 @@ export class OpacityModule extends BaseModule {
         // Different positions based on the width/height ratio
         const heightRatio = MainCanvas.canvas.clientHeight / 1000;
         const widthRatio = MainCanvas.canvas.clientWidth / 2000;
-        
+
         const left = MainCanvas.canvas.offsetLeft + this.domUI.shape[0] * widthRatio;
         const top = MainCanvas.canvas.offsetTop + this.domUI.shape[1] * heightRatio;
         const width = this.domUI.shape[2] * widthRatio;
@@ -195,13 +195,13 @@ export class OpacityModule extends BaseModule {
         this.OpacityLayerSliders = [];
         this.TranslationButtons = [];
         let opacityArr = new Array(this.OpacityItem.Asset.Layer.length);
-        if (!Array.isArray(opacityRaw)) 
+        if (!Array.isArray(opacityRaw))
             opacityArr = opacityArr.fill((opacityRaw ?? 1));
         else if (opacityRaw.length == 1 && opacityRaw.length != layerCount)
             opacityArr = opacityArr.fill((opacityRaw[0] ?? 1));
         else
             opacityArr = opacityRaw;
-            
+
 
         let translateAllButton = this.createTranslateButton("All Layers", (evt) => this.onClickTranslate(evt));
         translateAllButton.classList.add("selected");
@@ -224,7 +224,7 @@ export class OpacityModule extends BaseModule {
                 let opacityId = ID.opacityLayers + "_" + kebabCase(layerName);
                 let opacitySlider = this.createOpacitySlider(layerName, opacityId, opacityVal, (evt) => this.onOpacityChange(evt, layer));
                 let translateButton = this.createTranslateButton(layerName, (evt) => this.onClickTranslate(evt, layer));
-                
+
                 document.getElementById(ID.opacityLayers)?.appendChild(opacitySlider);
                 document.getElementById(ID.translateButtons)?.appendChild(translateButton);
                 this.OpacityLayerSliders.push({
@@ -283,6 +283,17 @@ export class OpacityModule extends BaseModule {
                 if (!!numericSlider) numericSlider.value = value;
             });
         }
+
+        // Mirror the opacity value changes to the builtin BC opacity slider in R122
+        if (GameVersion !== "R121") {
+            // @ts-expect-error: requires R122 types
+            const rootID: string = ColorPicker.ids.root;
+            const opacityRange: null | HTMLInputElement = document.querySelector(`#${rootID} input[name="opacity"]`);
+            if (opacityRange) {
+                opacityRange.valueAsNumber = Math.round(input.valueAsNumber * (255 / 100)); // switch from a [0, 100] interval to [0, 255]
+            }
+        }
+
         this.UpdatePreview();
     }
 
@@ -347,8 +358,9 @@ export class OpacityModule extends BaseModule {
 
     _prevResize: any;
     load(): void {
-        hookFunction("ItemColorLoad", 1, (args, next) => {
-            next(args);
+        hookFunction("ItemColorLoad", 1, async (args, next) => {
+            const ret = next(args);
+            await ret;
             let C = args[0] as OtherCharacter;
             let Item = args[1] as Item;
             if (this.CanChangeOpacityOnCharacter(C) && isDrawingOverridable(Item)) {
@@ -359,7 +371,7 @@ export class OpacityModule extends BaseModule {
                 if (!CurrentScreenFunctions) {
                     CurrentScreenFunctions = {} as ScreenFunctions;
                 }
-                
+
                 this._prevResize = CurrentScreenFunctions.Resize;
                 CurrentScreenFunctions.Resize = (load) => this.ResizeDomUI(load);
                 CurrentScreenFunctions.Resize(true);
@@ -367,6 +379,7 @@ export class OpacityModule extends BaseModule {
                 this.TranslateRemoveEventListener();
                 this.TranslateAttachEventListener();
             }
+            return ret;
         }, ModuleCategory.Opacity);
 
         hookFunction("ItemColorFireExit", 1, (args, next) => {
@@ -374,11 +387,11 @@ export class OpacityModule extends BaseModule {
             this.OpacityCharacter = null;
             this.OpacityItem = null;
             this.HideDomUI();
-            
+
             this.TranslateRemoveEventListener();
             CurrentScreenFunctions.Resize = this._prevResize;
         }, ModuleCategory.Opacity);
-        
+
         // *** Hack in actual updating of the translation overrides ***
         hookFunction("CommonCallFunctionByNameWarn", 2, (args, next) => {
             let funcName = args[0];
@@ -512,7 +525,7 @@ export class OpacityModule extends BaseModule {
     getOpacity(item?: Item | null): number | number[] | undefined {
         if (!item)
             item = this.OpacityItem;
-        return this.getOpacityFromProperties(item?.Property);        
+        return this.getOpacityFromProperties(item?.Property);
     }
 
     getOpacityFromProperties(props?: ItemProperties | null): number | number[] | undefined {
@@ -533,12 +546,15 @@ export class OpacityModule extends BaseModule {
             delete props.LSCGOpacity;
     }
 
+    // TODO: Remove once R122 is live
     isDragging: boolean = false;
+
+    // TODO: Remove once R122 is live
     TranslateStart(evt: TouchEvent | MouseEvent) {
         if (isTouchEvent(evt) && evt.changedTouches) {
             if (evt.changedTouches.length > 1) return;
         }
-        ColorPickerGetCoordinates(evt);      
+        ColorPickerGetCoordinates(evt);
         if (this.TranslationMode && MouseIn(700, 0, 500, 1000)) {
             this.isDragging = true;
             this.lastX = MouseX;
@@ -550,12 +566,13 @@ export class OpacityModule extends BaseModule {
         }
     }
 
+    // TODO: Remove once R122 is live
     TranslateMove(evt: TouchEvent | MouseEvent) {
         if (!this.isDragging || !this.TranslationMode) return;
         if (isTouchEvent(evt) && evt.changedTouches) {
             if (evt.changedTouches.length > 1) return;
         }
-        
+
         ColorPickerGetCoordinates(evt);
         let mX = Math.min(Math.max(MouseX, 700), 1200);
         let mY = Math.min(Math.max(MouseY, 0), 1000);
@@ -668,7 +685,6 @@ export class OpacityModule extends BaseModule {
                 this.setOpacity(this.OpacityItem, value);
             else {
                 delete this.OpacityItem.Property.LSCGOpacity;
-                delete this.OpacityItem.Property.Opacity;
             }
         } else {
             let opacityArr = this.getOpacity();
@@ -688,31 +704,63 @@ export class OpacityModule extends BaseModule {
     }, 10, 99);
 
     TranslateAttachEventListener() {
-        let CanvasElement = document.getElementById("MainCanvas");
-        if (!CanvasElement)
-            return;
-        if (!CommonIsMobile) {
-            CanvasElement.addEventListener("mousedown", evt => this.TranslateStart(evt));
-            CanvasElement.addEventListener("mouseup", evt => this.TranslateEnd(evt));
-            CanvasElement.addEventListener("mousemove", evt => this.TranslateMove(evt));
+        // TODO: Remove once R122 is live
+        if (GameVersion === "R121") {
+            let CanvasElement = document.getElementById("MainCanvas");
+            if (!CanvasElement)
+                return;
+            if (!CommonIsMobile) {
+                CanvasElement.addEventListener("mousedown", evt => this.TranslateStart(evt));
+                CanvasElement.addEventListener("mouseup", evt => this.TranslateEnd(evt));
+                CanvasElement.addEventListener("mousemove", evt => this.TranslateMove(evt));
+            }
+            CanvasElement.addEventListener("touchstart", evt => this.TranslateStart(evt));
+            CanvasElement.addEventListener("touchend", evt => this.TranslateEnd(evt));
+            CanvasElement.addEventListener("touchmove", evt => this.TranslateMove(evt));
+        } else {
+            // Propagate the vanilla BC opacity slider changes to LSCG
+            // @ts-expect-error: requires R122 types
+            const rootID: string = ColorPicker.ids.root;
+            const opacityModule = this;
+            console.error(document.querySelector(`#${rootID} input[name="opacity"]`));
+            document.querySelector(`#${rootID} input[name="opacity"]`)?.addEventListener(
+                "input",
+                function (this: HTMLInputElement, ev: Event) {
+                    if (!opacityModule.OpacityItem) {
+                        return;
+                    }
+
+                    const allLayers = ItemColorGetColorableLayers(opacityModule.OpacityItem);
+                    const selectors = ItemColorPickerIndices.flatMap(i => {
+                        const layer = allLayers[i];
+                        const name = `${ID.opacityLayers}_${kebabCase(layer.Name ?? layer.Asset.Name)}`;
+                        return [`#${name}_Range`,`#${name}_Number`];
+                    });
+                    if (allLayers.length === ItemColorPickerIndices.length) { // If we're changing the entire item/all layers
+                        selectors.push(`input[id*="${opacityModule.OpacityMainSlider.ElementId}"]`);
+                    }
+                    const inputs: NodeListOf<HTMLInputElement> = document.querySelectorAll(selectors.join(", "));
+                    inputs.forEach(lscgInput => lscgInput.valueAsNumber = Math.round(this.valueAsNumber * (100 / 255)));
+                }
+            );
         }
-        CanvasElement.addEventListener("touchstart", evt => this.TranslateStart(evt));
-        CanvasElement.addEventListener("touchend", evt => this.TranslateEnd(evt));
-        CanvasElement.addEventListener("touchmove", evt => this.TranslateMove(evt));
     }
-    
+
+    // TODO: Remove once R122 is live
     TranslateRemoveEventListener() {
-        let CanvasElement = document.getElementById("MainCanvas");
-        if (!CanvasElement)
-            return;
-        CanvasElement.removeEventListener("mousedown", evt => this.TranslateStart(evt));
-        CanvasElement.removeEventListener("touchstart", evt => this.TranslateStart(evt));
-        CanvasElement.removeEventListener("mousemove", evt => this.TranslateMove(evt));
-        CanvasElement.removeEventListener("touchmove", evt => this.TranslateMove(evt));
-        CanvasElement.removeEventListener("mouseup", evt => this.TranslateEnd(evt));
-        CanvasElement.removeEventListener("touchend", evt => this.TranslateEnd(evt));
+        if (GameVersion === "R121") {
+            let CanvasElement = document.getElementById("MainCanvas");
+            if (!CanvasElement)
+                return;
+            CanvasElement.removeEventListener("mousedown", evt => this.TranslateStart(evt));
+            CanvasElement.removeEventListener("touchstart", evt => this.TranslateStart(evt));
+            CanvasElement.removeEventListener("mousemove", evt => this.TranslateMove(evt));
+            CanvasElement.removeEventListener("touchmove", evt => this.TranslateMove(evt));
+            CanvasElement.removeEventListener("mouseup", evt => this.TranslateEnd(evt));
+            CanvasElement.removeEventListener("touchend", evt => this.TranslateEnd(evt));
+        }
     }
-    
+
     ResetTranslation() {
         if (!this.OpacityItem || !this.OpacityItem.Property || !(this.OpacityItem.Property as PropertiesWithLayerOverrides).LayerOverrides)
             return;
