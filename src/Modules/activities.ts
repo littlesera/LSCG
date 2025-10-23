@@ -241,7 +241,7 @@ export class ActivityModule extends BaseModule {
                 if (!c)
                     return;
                 
-                let str = escapeHtml(`${CharacterNickname(c)} would like to high give you.`);
+                let str = escapeHtml(`${CharacterNickname(c)} would like to high five you.`);
                 let promptHtml = `<span>${str}</span><button style="background-color:green;border-radius:5px;margin:5px" id="h5-accept">Slap it!</button><button style="background-color:red;border-radius:5px;margin:5px" id="h5-deny">Ignore</button>`;
                 if (!(Player.CanInteract() && !Player.Effect.includes("MergedFingers"))) {
                     promptHtml = `<span>${str}</span><button style="background-color:green;border-radius:5px;margin:5px" id="h5-apologize">Can't...</button><button style="background-color:red;border-radius:5px;margin:5px" id="h5-deny">Ignore</button>`;
@@ -254,7 +254,7 @@ export class ActivityModule extends BaseModule {
                     sendLSCGCommand(c, "h5-respond");
                     acceptEle?.remove();
                     denyEle?.remove();
-                }, 10000);
+                }, 12000);
                 
                 var acceptEle = document.getElementById("h5-accept");
                 var denyEle = document.getElementById("h5-deny");
@@ -333,7 +333,9 @@ export class ActivityModule extends BaseModule {
                 if (!c)
                     return;
                 
-                if (!AudioShouldSilenceSound(true))
+                let targetNum = msg.command?.args?.find(a => a.name == "target")?.value;
+
+                if (!AudioShouldSilenceSound(c.IsPlayer() || targetNum == Player.MemberNumber))
                     AudioPlaySoundEffect("SpankSkin");
             }
         });
@@ -2151,7 +2153,13 @@ export class ActivityModule extends BaseModule {
                 reply: false,
                 type: "broadcast",
                 command: {
-                    name: "h5-execute"
+                    name: "h5-execute",
+                    args: [
+                        {
+                            name: "target",
+                            value: target.MemberNumber
+                        }
+                    ]
                 }
             });
     }
