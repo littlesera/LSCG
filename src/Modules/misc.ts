@@ -8,7 +8,7 @@ import { SleepState } from "./States/SleepState";
 import { LeashingModule } from "./leashing";
 import { chaoticKeywords, evolvingKeywords, quickKeywords, slowKeywords } from "./chaotic-item";
 import { ElectricKeywords, SelfTighteningKeywords, SubduingKeywords, TamperProofKeywords } from "./item-use";
-import { CursedItemModule, CursedKeywords } from "./cursed-outfit";
+import { CursedItemModule, CursedKeywords } from "./cursed-item";
 import { AllowedNetGuns } from "./injector";
 
 // interface used to define all Elements used in LSCG Effect menu in the Crafting screen.
