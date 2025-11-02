@@ -177,6 +177,13 @@ export class GuiHypno extends GuiSubscreen {
 						setting: () => this.settings.enableSpirals ?? true,
 						setSetting: (val) => this.settings.enableSpirals = val
 					},<Setting>{
+						type: "checkbox",
+						label: "Enable wake-up on snaps:",
+						description: "If checked you exit the trance when you hear someone snapping.",
+						disabled: !this.settings.enabled,
+						setting: () => this.settings.enableSnapWakeup ?? true,
+						setSetting: (val) => this.settings.enableSnapWakeup = val
+					},<Setting>{
 						type: "text",
 						id: "hypno_eyeColor",
 						label: "Hypnotized Eye Color:",
