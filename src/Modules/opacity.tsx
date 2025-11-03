@@ -464,6 +464,33 @@ export class OpacityModule extends BaseModule {
             return ret;
         }, ModuleCategory.Opacity);
 
+        if (GameVersion !== "R121") {
+            // Reset the LSCG inputs back to their initial opacity upon exiting the color picker without saving
+            hookFunction("ItemColorRevert", 0, ([type, ...args], next) => {
+                // @ts-expect-error: Requires R122 types
+                const layersEntries = (ItemColorPickerLayers as Map<number, AssetLayer>).entries();
+                const opacityField = `${type as "initial" | "default"}Opacity` as const;
+
+                // @ts-expect-error: Requires R122 types
+                const colorState: ItemColorStateType & { initialOpacity: readonly number[], defaultOpacity: readonly number[] } = ItemColorState;
+                if (this.OpacityItem && ItemColorState) {
+                    for (const [i, layer] of layersEntries) {
+                        const name = `${ID.opacityLayers}_${kebabCase(layer.Name ?? layer.Asset.Name)}`;
+                        const inputs: NodeListOf<HTMLInputElement> = document.querySelectorAll(`#${name}_Range, #${name}_Number`);
+                        inputs.forEach(lscgInput => lscgInput.valueAsNumber = Math.round(colorState[opacityField][i] * 100));
+                    }
+
+                    // If we're changing the entire item/all layers
+                    const allLayers = ItemColorGetColorableLayers(this.OpacityItem);
+                    if (allLayers.length === ItemColorPickerIndices.length) {
+                        const inputs: NodeListOf<HTMLInputElement> = document.querySelectorAll(`input[id*="${this.OpacityMainSlider.ElementId}"]`);
+                        inputs.forEach(lscgInput => lscgInput.valueAsNumber = Math.round(colorState[opacityField][0] * 100));
+                    }
+                }
+                return next([type, ...args]);
+            });
+        }
+
         hookFunction("ItemColorFireExit", 1, (args, next) => {
             next(args);
             this.OpacityCharacter = null;
