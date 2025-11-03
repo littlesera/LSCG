@@ -38,13 +38,97 @@ const ID = Object.freeze({
     opacity: `${root}-opacity`,
     opacityMain: `${root}-opacity-main`,
     opacityLayers: `${root}-opacity-layers`,
-    
+
     translate: `${root}-translate`,
     translateToolbar: `${root}-translate-toolbar`,
     translateButtons: `${root}-translate-buttons`,
     translateX: `${root}-translate-x`,
     translateY: `${root}-translate-y`
 });
+
+/**
+ * R122 type backport.
+ * An item properties subtype with a guaranteed opacity field.
+ */
+interface ItemColorProperties extends ItemProperties {
+	Opacity: number[];
+}
+
+/**
+ * R122 type backport.
+ * An item subtype with a guaranteed color and opacity field.
+ */
+interface ItemColorItem extends Item {
+	Color: string[];
+	Property: ItemColorProperties;
+}
+
+// Yoinked from R122
+namespace itemToColorItem {
+    /**
+     * Sanitize the color of the passed item, returning an array of valid color strings and of length {@link Asset.ColorableLayerCount}.
+     * @param item The item whose colors are to be validated
+     * @returns The validated colors returned as array
+     */
+    export function sanitizeColor(item: Item): string[] {
+        if (GameVersion !== "R121") {
+            // @ts-expect-error: Requires R122 types
+            return ItemColorSanitizeColor(item);
+        }
+
+        const color = [...item.Asset.DefaultColor];
+        if (Array.isArray(item.Color)) {
+            for (const [i, colorValue] of item.Color.entries()) {
+                if (i >= color.length) {
+                    break;
+                } else if (!CommonDrawColorValid(colorValue, item.Asset.Group)) {
+                    continue;
+                } else {
+                    color[i] = colorValue;
+                }
+            }
+        } else if (typeof item.Color === "string" && CommonDrawColorValid(item.Color, item.Asset.Group)) {
+            color.fill(item.Color);
+        }
+        return color;
+    }
+
+    /**
+     * Sanitize the properties of the passed item in relation to any and all color & opacity related fields.
+     * @param item The item whose properties are to be validated
+     * @returns The validated item properties
+     */
+    export function sanitizeProperty(item: Item): ItemColorProperties {
+        if (GameVersion !== "R121") {
+            // @ts-expect-error: Requires R122 types
+            return ItemColorSanitizeProperty(item);
+        }
+
+        let opacity = item.Asset.Layer.map(l => l.Opacity);
+        if (Array.isArray(item.Property?.Opacity)) {
+            for (const [i, opacityValue] of item.Property.Opacity.entries()) {
+                if (i >= opacity.length) {
+                    break;
+                } if (!CommonIsFinite(opacityValue)) {
+                    continue;
+                } else {
+                    opacity[i] = CommonClamp(opacityValue, item.Asset.Layer[i].MinOpacity, item.Asset.Layer[i].MaxOpacity);
+                }
+            }
+        } else if (CommonIsFinite(item.Property?.Opacity)) {
+            opacity.fill(CommonClamp(item.Property.Opacity, item.Asset.MinOpacity, item.Asset.MaxOpacity));
+        }
+        return Object.assign(item.Property ?? {}, { Opacity: opacity });
+    }
+
+    /**
+     * Convert a plain {@link Item} into an one with guaranteed array-based colors and opacities.
+     * Performs an inplace update of the passed item.
+     */
+    export function convert(item: Item): ItemColorItem {
+        return Object.assign(item, { Color: sanitizeColor(item), Property: sanitizeProperty(item) });
+    }
+}
 
 export class OpacityModule extends BaseModule {
     OpacityMainSlider: OpacitySlider = {
@@ -53,7 +137,7 @@ export class OpacityModule extends BaseModule {
     };
     OpacityLayerSliders: OpacitySlider[] = [];
 
-    OpacityItem: Item | null = null;
+    OpacityItem: ItemColorItem | null = null;
     OpacityCharacter: OtherCharacter | null = null;
     get ShowAllOpacityLayers(): boolean {
         return (document.getElementById(ID.allLayersCheck) as HTMLInputElement)?.checked;
@@ -150,7 +234,7 @@ export class OpacityModule extends BaseModule {
         // Different positions based on the width/height ratio
         const heightRatio = MainCanvas.canvas.clientHeight / 1000;
         const widthRatio = MainCanvas.canvas.clientWidth / 2000;
-        
+
         const left = MainCanvas.canvas.offsetLeft + this.domUI.shape[0] * widthRatio;
         const top = MainCanvas.canvas.offsetTop + this.domUI.shape[1] * heightRatio;
         const width = this.domUI.shape[2] * widthRatio;
@@ -195,13 +279,13 @@ export class OpacityModule extends BaseModule {
         this.OpacityLayerSliders = [];
         this.TranslationButtons = [];
         let opacityArr = new Array(this.OpacityItem.Asset.Layer.length);
-        if (!Array.isArray(opacityRaw)) 
+        if (!Array.isArray(opacityRaw))
             opacityArr = opacityArr.fill((opacityRaw ?? 1));
         else if (opacityRaw.length == 1 && opacityRaw.length != layerCount)
             opacityArr = opacityArr.fill((opacityRaw[0] ?? 1));
         else
             opacityArr = opacityRaw;
-            
+
 
         let translateAllButton = this.createTranslateButton("All Layers", (evt) => this.onClickTranslate(evt));
         translateAllButton.classList.add("selected");
@@ -224,7 +308,7 @@ export class OpacityModule extends BaseModule {
                 let opacityId = ID.opacityLayers + "_" + kebabCase(layerName);
                 let opacitySlider = this.createOpacitySlider(layerName, opacityId, opacityVal, (evt) => this.onOpacityChange(evt, layer));
                 let translateButton = this.createTranslateButton(layerName, (evt) => this.onClickTranslate(evt, layer));
-                
+
                 document.getElementById(ID.opacityLayers)?.appendChild(opacitySlider);
                 document.getElementById(ID.translateButtons)?.appendChild(translateButton);
                 this.OpacityLayerSliders.push({
@@ -283,6 +367,17 @@ export class OpacityModule extends BaseModule {
                 if (!!numericSlider) numericSlider.value = value;
             });
         }
+
+        // Mirror the opacity value changes to the builtin BC opacity slider in R122
+        if (GameVersion !== "R121") {
+            // @ts-expect-error: requires R122 types
+            const rootID: string = ColorPicker.ids.root;
+            const opacityRange: null | HTMLInputElement = document.querySelector(`#${rootID} input[name="opacity"]`);
+            if (opacityRange) {
+                opacityRange.valueAsNumber = Math.round(input.valueAsNumber * (255 / 100)); // switch from a [0, 100] interval to [0, 255]
+            }
+        }
+
         this.UpdatePreview();
     }
 
@@ -322,8 +417,6 @@ export class OpacityModule extends BaseModule {
     onToggleLeadLined(evt?: Event) {
         if (!this.OpacityItem)
             return;
-        if (!this.OpacityItem.Property)
-            this.OpacityItem.Property = {};
         this.OpacityItem.Property.LSCGLeadLined = (evt?.target as HTMLInputElement)?.checked ?? false;
     }
 
@@ -347,10 +440,11 @@ export class OpacityModule extends BaseModule {
 
     _prevResize: any;
     load(): void {
-        hookFunction("ItemColorLoad", 1, (args, next) => {
-            next(args);
+        hookFunction("ItemColorLoad", 1, async (args, next) => {
+            const ret = next(args);
+            await ret;
             let C = args[0] as OtherCharacter;
-            let Item = args[1] as Item;
+            let Item = GameVersion === "R121" ? itemToColorItem.convert(ItemColorItem) : ItemColorItem as ItemColorItem;
             if (this.CanChangeOpacityOnCharacter(C) && isDrawingOverridable(Item)) {
                 this.OpacityCharacter = C;
                 this.OpacityItem = Item;
@@ -359,7 +453,7 @@ export class OpacityModule extends BaseModule {
                 if (!CurrentScreenFunctions) {
                     CurrentScreenFunctions = {} as ScreenFunctions;
                 }
-                
+
                 this._prevResize = CurrentScreenFunctions.Resize;
                 CurrentScreenFunctions.Resize = (load) => this.ResizeDomUI(load);
                 CurrentScreenFunctions.Resize(true);
@@ -367,18 +461,46 @@ export class OpacityModule extends BaseModule {
                 this.TranslateRemoveEventListener();
                 this.TranslateAttachEventListener();
             }
+            return ret;
         }, ModuleCategory.Opacity);
+
+        if (GameVersion !== "R121") {
+            // Reset the LSCG inputs back to their initial opacity upon exiting the color picker without saving
+            hookFunction("ItemColorRevert", 0, ([type, ...args], next) => {
+                // @ts-expect-error: Requires R122 types
+                const layersEntries = (ItemColorPickerLayers as Map<number, AssetLayer>).entries();
+                const opacityField = `${type as "initial" | "default"}Opacity` as const;
+
+                // @ts-expect-error: Requires R122 types
+                const colorState: ItemColorStateType & { initialOpacity: readonly number[], defaultOpacity: readonly number[] } = ItemColorState;
+                if (this.OpacityItem && ItemColorState) {
+                    for (const [i, layer] of layersEntries) {
+                        const name = `${ID.opacityLayers}_${kebabCase(layer.Name ?? layer.Asset.Name)}`;
+                        const inputs: NodeListOf<HTMLInputElement> = document.querySelectorAll(`#${name}_Range, #${name}_Number`);
+                        inputs.forEach(lscgInput => lscgInput.valueAsNumber = Math.round(colorState[opacityField][i] * 100));
+                    }
+
+                    // If we're changing the entire item/all layers
+                    const allLayers = ItemColorGetColorableLayers(this.OpacityItem);
+                    if (allLayers.length === ItemColorPickerIndices.length) {
+                        const inputs: NodeListOf<HTMLInputElement> = document.querySelectorAll(`input[id*="${this.OpacityMainSlider.ElementId}"]`);
+                        inputs.forEach(lscgInput => lscgInput.valueAsNumber = Math.round(colorState[opacityField][0] * 100));
+                    }
+                }
+                return next([type, ...args]);
+            });
+        }
 
         hookFunction("ItemColorFireExit", 1, (args, next) => {
             next(args);
             this.OpacityCharacter = null;
             this.OpacityItem = null;
             this.HideDomUI();
-            
+
             this.TranslateRemoveEventListener();
             CurrentScreenFunctions.Resize = this._prevResize;
         }, ModuleCategory.Opacity);
-        
+
         // *** Hack in actual updating of the translation overrides ***
         hookFunction("CommonCallFunctionByNameWarn", 2, (args, next) => {
             let funcName = args[0];
@@ -512,33 +634,40 @@ export class OpacityModule extends BaseModule {
     getOpacity(item?: Item | null): number | number[] | undefined {
         if (!item)
             item = this.OpacityItem;
-        return this.getOpacityFromProperties(item?.Property);        
+        return this.getOpacityFromProperties(item);
     }
 
-    getOpacityFromProperties(props?: ItemProperties | null): number | number[] | undefined {
-        if (!!props && !!props.LSCGOpacity)
-            this.setOpacityInProperty(props, props.LSCGOpacity);
-        return props?.Opacity ?? 1;
+    getOpacityFromProperties(item?: null | Item): number | number[] | undefined {
+        if (item?.Property?.LSCGOpacity != null) {
+            const sanitizedProps = Object.assign(item.Property, itemToColorItem.sanitizeProperty(item))
+            this.setOpacityInProperty(sanitizedProps, item.Property.LSCGOpacity);
+        }
+        return item?.Property?.Opacity ?? 1;
     }
 
-    setOpacity(item: Item, value: number | number[]) {
-        if (!item.Property)
-            item.Property = {};
+    setOpacity(item: ItemColorItem, value: number | number[]) {
         this.setOpacityInProperty(item.Property, value);
     }
 
-    setOpacityInProperty(props: ItemProperties, value: number | number[]) {
-        props.Opacity = value;
+    setOpacityInProperty(props: ItemColorProperties, value: number | number[]) {
+        if (typeof value === "number") {
+            props.Opacity.fill(value);
+        } else {
+            props.Opacity = value;
+        }
         if (!!props.LSCGOpacity)
             delete props.LSCGOpacity;
     }
 
+    // TODO: Remove once R122 is live
     isDragging: boolean = false;
+
+    // TODO: Remove once R122 is live
     TranslateStart(evt: TouchEvent | MouseEvent) {
         if (isTouchEvent(evt) && evt.changedTouches) {
             if (evt.changedTouches.length > 1) return;
         }
-        ColorPickerGetCoordinates(evt);      
+        ColorPickerGetCoordinates(evt);
         if (this.TranslationMode && MouseIn(700, 0, 500, 1000)) {
             this.isDragging = true;
             this.lastX = MouseX;
@@ -550,12 +679,13 @@ export class OpacityModule extends BaseModule {
         }
     }
 
+    // TODO: Remove once R122 is live
     TranslateMove(evt: TouchEvent | MouseEvent) {
         if (!this.isDragging || !this.TranslationMode) return;
         if (isTouchEvent(evt) && evt.changedTouches) {
             if (evt.changedTouches.length > 1) return;
         }
-        
+
         ColorPickerGetCoordinates(evt);
         let mX = Math.min(Math.max(MouseX, 700), 1200);
         let mY = Math.min(Math.max(MouseY, 0), 1000);
@@ -621,8 +751,6 @@ export class OpacityModule extends BaseModule {
         if (!this.OpacityItem)
             return 0;
         let value = Math.round(parseFloat(ElementValue(fromElementId)));
-        if (!this.OpacityItem.Property)
-            this.OpacityItem.Property = {};
         let properties = (this.OpacityItem.Property as PropertiesWithLayerOverrides);
         let layerCount = this.OpacityItem.Asset.Layer.length;
         if (!properties.LayerOverrides || properties.LayerOverrides.length != layerCount) {
@@ -661,14 +789,11 @@ export class OpacityModule extends BaseModule {
         let value = Math.round(parseFloat(ElementValue(fromElementId))) / 100;
         let mainValue = Math.round(parseFloat(ElementValue(this.OpacityMainSlider.ElementId + "_Number"))) / 100;
         let C = Player;
-        if (!this.OpacityItem.Property)
-            this.OpacityItem.Property = {};
         if (fromElementId == this.OpacityMainSlider.ElementId + "_Range" || fromElementId == this.OpacityMainSlider.ElementId + "_Number") {
             if (value < 1)
                 this.setOpacity(this.OpacityItem, value);
             else {
                 delete this.OpacityItem.Property.LSCGOpacity;
-                delete this.OpacityItem.Property.Opacity;
             }
         } else {
             let opacityArr = this.getOpacity();
@@ -688,31 +813,62 @@ export class OpacityModule extends BaseModule {
     }, 10, 99);
 
     TranslateAttachEventListener() {
-        let CanvasElement = document.getElementById("MainCanvas");
-        if (!CanvasElement)
-            return;
-        if (!CommonIsMobile) {
-            CanvasElement.addEventListener("mousedown", evt => this.TranslateStart(evt));
-            CanvasElement.addEventListener("mouseup", evt => this.TranslateEnd(evt));
-            CanvasElement.addEventListener("mousemove", evt => this.TranslateMove(evt));
+        // TODO: Remove once R122 is live
+        if (GameVersion === "R121") {
+            let CanvasElement = document.getElementById("MainCanvas");
+            if (!CanvasElement)
+                return;
+            if (!CommonIsMobile) {
+                CanvasElement.addEventListener("mousedown", evt => this.TranslateStart(evt));
+                CanvasElement.addEventListener("mouseup", evt => this.TranslateEnd(evt));
+                CanvasElement.addEventListener("mousemove", evt => this.TranslateMove(evt));
+            }
+            CanvasElement.addEventListener("touchstart", evt => this.TranslateStart(evt));
+            CanvasElement.addEventListener("touchend", evt => this.TranslateEnd(evt));
+            CanvasElement.addEventListener("touchmove", evt => this.TranslateMove(evt));
+        } else {
+            // Propagate the vanilla BC opacity slider changes to LSCG
+            // @ts-expect-error: requires R122 types
+            const rootID: string = ColorPicker.ids.root;
+            const opacityModule = this;
+            document.querySelector(`#${rootID} input[name="opacity"]`)?.addEventListener(
+                "input",
+                function (this: HTMLInputElement, ev: Event) {
+                    if (!opacityModule.OpacityItem) {
+                        return;
+                    }
+
+                    const allLayers = ItemColorGetColorableLayers(opacityModule.OpacityItem);
+                    const selectors = ItemColorPickerIndices.flatMap(i => {
+                        const layer = allLayers[i];
+                        const name = `${ID.opacityLayers}_${kebabCase(layer.Name ?? layer.Asset.Name)}`;
+                        return [`#${name}_Range`,`#${name}_Number`];
+                    });
+                    if (allLayers.length === ItemColorPickerIndices.length) { // If we're changing the entire item/all layers
+                        selectors.push(`input[id*="${opacityModule.OpacityMainSlider.ElementId}"]`);
+                    }
+                    const inputs: NodeListOf<HTMLInputElement> = document.querySelectorAll(selectors.join(", "));
+                    inputs.forEach(lscgInput => lscgInput.valueAsNumber = Math.round(this.valueAsNumber * (100 / 255)));
+                }
+            );
         }
-        CanvasElement.addEventListener("touchstart", evt => this.TranslateStart(evt));
-        CanvasElement.addEventListener("touchend", evt => this.TranslateEnd(evt));
-        CanvasElement.addEventListener("touchmove", evt => this.TranslateMove(evt));
     }
-    
+
+    // TODO: Remove once R122 is live
     TranslateRemoveEventListener() {
-        let CanvasElement = document.getElementById("MainCanvas");
-        if (!CanvasElement)
-            return;
-        CanvasElement.removeEventListener("mousedown", evt => this.TranslateStart(evt));
-        CanvasElement.removeEventListener("touchstart", evt => this.TranslateStart(evt));
-        CanvasElement.removeEventListener("mousemove", evt => this.TranslateMove(evt));
-        CanvasElement.removeEventListener("touchmove", evt => this.TranslateMove(evt));
-        CanvasElement.removeEventListener("mouseup", evt => this.TranslateEnd(evt));
-        CanvasElement.removeEventListener("touchend", evt => this.TranslateEnd(evt));
+        if (GameVersion === "R121") {
+            let CanvasElement = document.getElementById("MainCanvas");
+            if (!CanvasElement)
+                return;
+            CanvasElement.removeEventListener("mousedown", evt => this.TranslateStart(evt));
+            CanvasElement.removeEventListener("touchstart", evt => this.TranslateStart(evt));
+            CanvasElement.removeEventListener("mousemove", evt => this.TranslateMove(evt));
+            CanvasElement.removeEventListener("touchmove", evt => this.TranslateMove(evt));
+            CanvasElement.removeEventListener("mouseup", evt => this.TranslateEnd(evt));
+            CanvasElement.removeEventListener("touchend", evt => this.TranslateEnd(evt));
+        }
     }
-    
+
     ResetTranslation() {
         if (!this.OpacityItem || !this.OpacityItem.Property || !(this.OpacityItem.Property as PropertiesWithLayerOverrides).LayerOverrides)
             return;
