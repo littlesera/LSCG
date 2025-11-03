@@ -83,6 +83,32 @@ export const TamperProofKeywords: string[] = [
 	"tamper proof"
 ];
 
+export const ElectricKeywords: string[] = [
+	"electric",
+	"electrified",
+	"shocking"
+];
+
+export const SelfTighteningKeywords: string[] = [
+	"self-tightening",
+	"selftightening",
+	"self tightening",
+	"self tighten",
+	"self-tighten",
+	"selftighten",
+	"auto-tightening",
+	"auto tightening",
+	"auto-tighten",
+	"auto tighten",
+	"autotighten"
+];
+
+export const SubduingKeywords: string[] = [
+	"sedating",
+	"numbing",
+	"subduing"
+];
+
 export const ExplicitSqueezableItems: string[] = [
 	"Shark",
 	"Karl"
@@ -1463,32 +1489,6 @@ export class ItemUseModule extends BaseModule {
 		return handled;
 	}
 
-	electricKeywords: string[] = [
-		"electric",
-		"electrified",
-		"shocking"
-	];
-
-	selfTighteningKeywords: string[] = [
-		"self-tightening",
-		"selftightening",
-		"self tightening",
-		"self tighten",
-		"self-tighten",
-		"selftighten",
-		"auto-tightening",
-		"auto tightening",
-		"auto-tighten",
-		"auto tighten",
-		"autotighten"
-	];
-
-	subduingKeywords: string[] = [
-		"sedating",
-		"numbing",
-		"subduing"
-	];
-
 	lastTamperProtectionFired: number = 0;
 
 	PerformTamperProtection(source: "minigame" | "activity" | "assist", item: Item | undefined = undefined, sender: Character | null = null) {
@@ -1515,11 +1515,11 @@ export class ItemUseModule extends BaseModule {
 		let itemName = item.Craft?.Name ?? item.Asset.Name;
 		let itemTypes: string[] = [];
 		
-		if (this.electricKeywords.some(k => isPhraseInString(itemStr, k)) && (Player.LSCG.GlobalModule.tamperproofElectricityEnabled ?? true))
+		if (ElectricKeywords.some(k => isPhraseInString(itemStr, k)) && (Player.LSCG.GlobalModule.tamperproofElectricityEnabled ?? true))
 			itemTypes.push("electric");
-		if (this.selfTighteningKeywords.some(k => isPhraseInString(itemStr, k)))
+		if (SelfTighteningKeywords.some(k => isPhraseInString(itemStr, k)))
 			itemTypes.push("tightening");
-		if (this.subduingKeywords.some(k => isPhraseInString(itemStr, k)))
+		if (SubduingKeywords.some(k => isPhraseInString(itemStr, k)))
 			itemTypes.push("subduing");
 		if (itemTypes.length <= 0)
 			itemTypes = ["generic"];
