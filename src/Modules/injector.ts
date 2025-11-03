@@ -1167,8 +1167,6 @@ export class InjectorModule extends BaseModule {
                 Item: item
             }
         }).filter(device => !!device && !!device.Item)[0] ?? null;
-
-        //return [InventoryGet(Player, "ItemMouth"), InventoryGet(Player, "ItemMouth2"), InventoryGet(Player, "ItemMouth3")].filter(item => this.IsValidRespirator(item))[0] ?? null;
     }
 
     get IsRespiratorOn(): boolean {
@@ -1182,23 +1180,6 @@ export class InjectorModule extends BaseModule {
     get IsContinuousDeliveryActive(): boolean {
         return this.Enabled && this.IsWearingRespirator && this.RespiratorHasGas && this.IsRespiratorOn;
     }
-
-    // IsValidRespirator(item: Item | null): boolean {
-    //     // False if not a crafted respirator
-    //     if (!this.settings.enableContinuousDelivery ||
-    //         !item || 
-    //         !item.Craft || 
-    //         item.Asset.Name != "LatexRespirator" || 
-    //         !item.Property || 
-    //         !item.Property.TypeRecord)
-    //         return false;
-
-    //     //Type: "f2g1s0m0l0"
-    //     let hasHose = item.Property.TypeRecord["f"] == 2 || item.Property.TypeRecord["f"] == 3;
-    //     let isDrugged = this.GetDrugTypes(item.Craft).length > 0
-        
-    //     return hasHose && isDrugged;
-    // }
 
     headsetMindControlEventStr: string[] = [
         "%NAME% groans helplessly as %POSSESSIVE% headset manipulates %POSSESSIVE% mind.",
@@ -1283,5 +1264,17 @@ export class InjectorModule extends BaseModule {
             }
         }
     }
+
+    // New Inhaled Drug Mechanism...
+    // - On init, scan appearance for valid and active items, construct existing ledger from this list
+    // - Every second/tick, check appearance for worn items that match an inhalation item definition
+    // - For each possible item, check its configuration against the definition to see if it's active
+    // - For each valid and active item, compare against ledger.
+    //   - If active item is not in ledger, fire 'add' emote and include in ledger.
+    //   - If ledger item is not in active list, fire 'remove' emote and delete from ledger.
+    // - Additionally every tick, iterate through ledger and... 
+    //   - Apply drug ticks based on their configured drug types
+    //   - Construct 'breath' emote base on one or more of the active items 
+
 }
 
