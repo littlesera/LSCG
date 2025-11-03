@@ -570,17 +570,6 @@ export class MiscModule extends BaseModule {
     // others that can't really be grouped together
     miscsOptionsList: ScreenElem[] = [
         {
-            type: "select",
-            id_label: this.LscgEffectCraftingId.cursedSelect,
-            id_button: "",
-            label: "",
-            description: "Selection for the curse to apply",
-            keywords: [],
-            condition: (): boolean => {
-                return true;
-            }
-        },
-        {
             type: "checkbox",
             id_label: this.LscgEffectCraftingId.cursedLabel,
             id_button: this.LscgEffectCraftingId.cursedButton,
@@ -589,6 +578,17 @@ export class MiscModule extends BaseModule {
             keywords: CursedKeywords,
             condition: (): boolean => {
                 return true;
+            }
+        },
+        {
+            type: "select",
+            id_label: this.LscgEffectCraftingId.cursedSelect,
+            id_button: "",
+            label: "",
+            description: "Selection for the curse to apply",
+            keywords: [],
+            condition: (): boolean => {
+                return (document.getElementById(this.LscgEffectCraftingId.cursedButton) as HTMLInputElement)?.checked;
             }
         },
         {
@@ -625,7 +625,7 @@ export class MiscModule extends BaseModule {
         {
             type: "checkbox",
             id_label: this.LscgEffectCraftingId.sedativeLabel,
-            id_button: this.LscgEffectCraftingId.sedativeLabel,
+            id_button: this.LscgEffectCraftingId.sedativeButton,
             label: "Sedative",
             description: "Add Sedative effect to the item (Only for: Medical Injector, Latex Respirator, Filled Glass or Mug)",
             keywords: SedativeKeywords() ?? ["tranquilizer","sedative"],
@@ -783,6 +783,8 @@ export class MiscModule extends BaseModule {
                 / 3fr 3fr`);
             parent.style.setProperty('gap', 'calc(var(--button-size) / 15)');
             parent.style.setProperty('border', 'min(0.2vh, 0.1vw) solid black');
+            parent.style.setProperty('box-shadow', '0 6px 10px black');
+            parent.style.setProperty('padding', '0.5rem');
 
             // Create top bar with Title and exit button
             let exitButton = ElementButton.Create(this.LscgEffectCraftingId.mainExit, MiscModule.LscgEffectMenuButtonListener, { tooltip: TextGet("Exit") });
@@ -882,7 +884,8 @@ export class MiscModule extends BaseModule {
             style: {
                 "grid-area": grid_id,
                 "padding-right": "calc(var(--button-size) / 12)",
-                "border": "1px dotted var(--lscg-border-color)"
+                "border": "1px dotted var(--lscg-border-color)",
+                "padding": "0.5rem"
             },
             children: children
         });
@@ -1025,7 +1028,8 @@ export class MiscModule extends BaseModule {
             curseNameList = [];
         }
         // Special value to be able to select nothing
-        curseNameList.push(this.cursedSelectEmptyWord);
+        curseNameList.reverse().push(this.cursedSelectEmptyWord);
+        curseNameList = curseNameList.reverse();
 
         // Put the already applied curse first
         const nameInput = document.getElementById(CraftingID.nameInput) as HTMLInputElement;
@@ -1146,11 +1150,23 @@ export class MiscModule extends BaseModule {
 
         for (let elem of allElemList) {
             const elem_label = document.getElementById(elem.id_label) as HTMLInputElement;
+            const elem_button = document.getElementById(elem.id_button) as HTMLButtonElement
             if (elem.condition()) {
-                elem_label.style.setProperty('color', 'var(--lscg-text-color)');
+                if (!!elem_label) {
+                    elem_label.style.setProperty('color', 'var(--lscg-text-color)');
+                    elem_label.setAttribute("disabled", "true");
+                    elem_label.disabled = false;
+                }
+                if (!!elem_button)
+                    elem_button.disabled = false;
             }
             else {
-                elem_label.style.setProperty('color', 'red');
+                if (!!elem_label) {
+                    elem_label.style.setProperty('color', 'red');
+                    elem_label.disabled = true;
+                }
+                if (!!elem_button)
+                    elem_button.disabled = true;
             }
         }
     }
