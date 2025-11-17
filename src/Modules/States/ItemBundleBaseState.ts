@@ -66,7 +66,7 @@ export abstract class ItemBundleBaseState extends BaseState {
     InventoryCheckLimitedPermission(Sender: Character | null, Item: Item, ItemType?: string) {
         if (!InventoryIsPermissionLimited(Player, Item.Asset.DynamicName(Player), Item.Asset.Group.Name, ItemType)) return true;
         if (!Sender || (Sender.IsPlayer()) || Sender.IsLoverOfPlayer() || Player.IsOwnedByMemberNumber(Sender.MemberNumber!)) return true;
-        if ((Player.ItemPermission! < 3) && !(Player.WhiteList.indexOf(Sender.MemberNumber!) < 0)) return true;
+        if ((Player.AllowedInteractions < AllowedInteractions.OwnerLoversWhitelistOnly) && !(Player.WhiteList.indexOf(Sender.MemberNumber!) < 0)) return true;
         return false;
     }
 }

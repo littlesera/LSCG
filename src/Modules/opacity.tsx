@@ -72,7 +72,6 @@ namespace itemToColorItem {
      */
     export function sanitizeColor(item: Item): string[] {
         if (GameVersion !== "R121") {
-            // @ts-expect-error: Requires R122 types
             return ItemColorSanitizeColor(item);
         }
 
@@ -100,7 +99,6 @@ namespace itemToColorItem {
      */
     export function sanitizeProperty(item: Item): ItemColorProperties {
         if (GameVersion !== "R121") {
-            // @ts-expect-error: Requires R122 types
             return ItemColorSanitizeProperty(item);
         }
 
@@ -370,7 +368,6 @@ export class OpacityModule extends BaseModule {
 
         // Mirror the opacity value changes to the builtin BC opacity slider in R122
         if (GameVersion !== "R121") {
-            // @ts-expect-error: requires R122 types
             const rootID: string = ColorPicker.ids.root;
             const opacityRange: null | HTMLInputElement = document.querySelector(`#${rootID} input[name="opacity"]`);
             if (opacityRange) {
@@ -444,8 +441,8 @@ export class OpacityModule extends BaseModule {
             const ret = next(args);
             await ret;
             let C = args[0] as OtherCharacter;
-            let Item = GameVersion === "R121" ? itemToColorItem.convert(ItemColorItem) : ItemColorItem as ItemColorItem;
-            if (this.CanChangeOpacityOnCharacter(C) && isDrawingOverridable(Item)) {
+            let Item = GameVersion === "R121" && ItemColorItem ? itemToColorItem.convert(ItemColorItem) : ItemColorItem;
+            if (Item && this.CanChangeOpacityOnCharacter(C) && isDrawingOverridable(Item)) {
                 this.OpacityCharacter = C;
                 this.OpacityItem = Item;
 
@@ -467,13 +464,11 @@ export class OpacityModule extends BaseModule {
         if (GameVersion !== "R121") {
             // Reset the LSCG inputs back to their initial opacity upon exiting the color picker without saving
             hookFunction("ItemColorRevert", 0, ([type, ...args], next) => {
-                // @ts-expect-error: Requires R122 types
                 const layersEntries = (ItemColorPickerLayers as Map<number, AssetLayer>).entries();
                 const opacityField = `${type as "initial" | "default"}Opacity` as const;
 
-                // @ts-expect-error: Requires R122 types
-                const colorState: ItemColorStateType & { initialOpacity: readonly number[], defaultOpacity: readonly number[] } = ItemColorState;
-                if (this.OpacityItem && ItemColorState) {
+                const colorState: ItemColorStateType & { initialOpacity: readonly number[], defaultOpacity: readonly number[] } | null = ItemColorState;
+                if (this.OpacityItem && colorState) {
                     for (const [i, layer] of layersEntries) {
                         const name = `${ID.opacityLayers}_${kebabCase(layer.Name ?? layer.Asset.Name)}`;
                         const inputs: NodeListOf<HTMLInputElement> = document.querySelectorAll(`#${name}_Range, #${name}_Number`);
@@ -828,7 +823,6 @@ export class OpacityModule extends BaseModule {
             CanvasElement.addEventListener("touchmove", evt => this.TranslateMove(evt));
         } else {
             // Propagate the vanilla BC opacity slider changes to LSCG
-            // @ts-expect-error: requires R122 types
             const rootID: string = ColorPicker.ids.root;
             const opacityModule = this;
             document.querySelector(`#${rootID} input[name="opacity"]`)?.addEventListener(
