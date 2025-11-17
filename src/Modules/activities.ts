@@ -210,6 +210,15 @@ export class ActivityModule extends BaseModule {
 			return results;
 		}, ModuleCategory.Activities);
 
+        hookFunction("PreferenceGetActivityFactor", 0, (args, next) => {
+            const [C, Type, Self] = args as [Character, ActivityName, boolean];
+            const activity = AssetGetActivity(C.AssetFamily, Type);
+            if (activity?.Name.startsWith("LSCG_")) {
+                return 2;
+            }
+            return next(args);
+        }, ModuleCategory.Activities);
+
         this.AddCommandListeners();
         this.InitTongueGrabHooks();
         this.RegisterActivities();
