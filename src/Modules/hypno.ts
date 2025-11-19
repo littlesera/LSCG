@@ -83,6 +83,7 @@ export class HypnoModule extends BaseModule {
             cooldownTime: 0,
             enableArousal: false,
             enableSpirals: true,
+            enableSnapWakeup: true,
             trigger: "",
             triggerRevealed: false,
             triggerTime: 5,
@@ -233,7 +234,11 @@ export class HypnoModule extends BaseModule {
             if ((lowerMsgWords?.indexOf("snaps") ?? -1) >= 0 && 
                 sender?.MemberNumber != Player.MemberNumber &&
                 this.hypnoActivated) {
-                this.TriggerRestoreSnap();
+                if (this.settings.enableSnapWakeup) {
+                    this.TriggerRestoreSnap();
+                } else {
+                    SendAction("%NAME% sways faintly, the snap failing to wake %POSSESSIVE% up.");
+                }
             }
         });
         

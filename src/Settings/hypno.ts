@@ -196,6 +196,13 @@ export class GuiHypno extends GuiSubscreen {
 							let test = AssetGet("Female3DCG", "Eyes", "Eyes" + val);
 							if (!test) this.settings.hypnoEyeType = 9; // default to style 9 if somehow we can't find a valid eye type here.
 						}
+					},<Setting>{
+						type: "checkbox",
+						label: "Enable wake-up on snaps:",
+						description: "If checked you exit the trance when you hear someone snapping.",
+						disabled: !this.settings.enabled,
+						setting: () => this.settings.enableSnapWakeup ?? true,
+						setSetting: (val) => this.settings.enableSnapWakeup = val
 					}
 				], [
 					<Setting>{
