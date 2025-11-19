@@ -279,6 +279,7 @@ export class LeashingModule extends BaseModule {
 
         hookFunction("ChatRoomCharacterViewClickCharacter", 1, (args, next) => {
             const [C, CharX, CharY, Zoom, ClickX, ClickY] = args;
+            let iconClicked = false;
             if (
                 typeof CharX === "number" &&
                 typeof CharY === "number" &&
@@ -293,14 +294,15 @@ export class LeashingModule extends BaseModule {
                         let yOffset = ix * 40 * Zoom;
                         
                         if (targetIsGrabbed && MouseIn(CharX + 400 * Zoom, CharY + 40 * Zoom + yOffset, 40 * Zoom, 40 * Zoom)) {
+                            iconClicked = true;
                             if (confirm("Would you like to try and escape?")) {
                                 this.TryEscape();
                             }
                         }
                     });
-            } else {
+            } 
+            if (!iconClicked)
                 return next(args);
-            }
         })
 
         hookFunction("ChatRoomCanBeLeashedBy", 1, (args, next) => {
