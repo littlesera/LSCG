@@ -661,15 +661,13 @@ export class OpacityModule extends BaseModule {
             delete props.LSCGOpacity;
     }
 
-    // TODO: Remove once R122 is live
     isDragging: boolean = false;
 
-    // TODO: Remove once R122 is live
     TranslateStart(evt: TouchEvent | MouseEvent) {
         if (isTouchEvent(evt) && evt.changedTouches) {
             if (evt.changedTouches.length > 1) return;
         }
-        ColorPickerGetCoordinates(evt);
+        
         if (this.TranslationMode && MouseIn(700, 0, 500, 1000)) {
             this.isDragging = true;
             this.lastX = MouseX;
@@ -681,14 +679,12 @@ export class OpacityModule extends BaseModule {
         }
     }
 
-    // TODO: Remove once R122 is live
     TranslateMove(evt: TouchEvent | MouseEvent) {
         if (!this.isDragging || !this.TranslationMode) return;
         if (isTouchEvent(evt) && evt.changedTouches) {
             if (evt.changedTouches.length > 1) return;
         }
 
-        ColorPickerGetCoordinates(evt);
         let mX = Math.min(Math.max(MouseX, 700), 1200);
         let mY = Math.min(Math.max(MouseY, 0), 1000);
         let dX = mX - this.lastX;
@@ -814,48 +810,44 @@ export class OpacityModule extends BaseModule {
             CharacterLoadCanvas(this.OpacityCharacter);
     }, 10, 99);
 
-    TranslateAttachEventListener() {
-        // TODO: Remove once R122 is live
-        if (GameVersion === "R121") {
-            let CanvasElement = document.getElementById("MainCanvas");
-            if (!CanvasElement)
-                return;
-            if (!CommonIsMobile) {
-                CanvasElement.addEventListener("mousedown", evt => this.TranslateStart(evt));
-                CanvasElement.addEventListener("mouseup", evt => this.TranslateEnd(evt));
-                CanvasElement.addEventListener("mousemove", evt => this.TranslateMove(evt));
-            }
-            CanvasElement.addEventListener("touchstart", evt => this.TranslateStart(evt));
-            CanvasElement.addEventListener("touchend", evt => this.TranslateEnd(evt));
-            CanvasElement.addEventListener("touchmove", evt => this.TranslateMove(evt));
-        } else {
-            // Propagate the vanilla BC opacity slider changes to LSCG
-            const rootID: string = ColorPicker.ids.root;
-            const opacityModule = this;
-            document.querySelector(`#${rootID} input[name="opacity"]`)?.addEventListener(
-                "input",
-                function (this: HTMLInputElement, ev: Event) {
-                    if (!opacityModule.OpacityItem) {
-                        return;
-                    }
-
-                    const allLayers = ItemColorGetColorableLayers(opacityModule.OpacityItem);
-                    const selectors = ItemColorPickerIndices.flatMap(i => {
-                        const layer = allLayers[i];
-                        const name = `${ID.opacityLayers}_${kebabCase(layer.Name ?? layer.Asset.Name)}`;
-                        return [`#${name}_Range`,`#${name}_Number`];
-                    });
-                    if (allLayers.length === ItemColorPickerIndices.length) { // If we're changing the entire item/all layers
-                        selectors.push(`input[id*="${opacityModule.OpacityMainSlider.ElementId}"]`);
-                    }
-                    const inputs: NodeListOf<HTMLInputElement> = document.querySelectorAll(selectors.join(", "));
-                    inputs.forEach(lscgInput => lscgInput.valueAsNumber = Math.round(this.valueAsNumber * (100 / 255)));
-                }
-            );
+    TranslateAttachEventListener() {        
+        let CanvasElement = document.getElementById("MainCanvas");
+        if (!CanvasElement)
+            return;
+        if (!CommonIsMobile) {
+            CanvasElement.addEventListener("mousedown", evt => this.TranslateStart(evt));
+            CanvasElement.addEventListener("mouseup", evt => this.TranslateEnd(evt));
+            CanvasElement.addEventListener("mousemove", evt => this.TranslateMove(evt));
         }
+        CanvasElement.addEventListener("touchstart", evt => this.TranslateStart(evt));
+        CanvasElement.addEventListener("touchend", evt => this.TranslateEnd(evt));
+        CanvasElement.addEventListener("touchmove", evt => this.TranslateMove(evt));
+        
+        // Propagate the vanilla BC opacity slider changes to LSCG
+        const rootID: string = ColorPicker.ids.root;
+        const opacityModule = this;
+        document.querySelector(`#${rootID} input[name="opacity"]`)?.addEventListener(
+            "input",
+            function (this: HTMLInputElement, ev: Event) {
+                if (!opacityModule.OpacityItem) {
+                    return;
+                }
+
+                const allLayers = ItemColorGetColorableLayers(opacityModule.OpacityItem);
+                const selectors = ItemColorPickerIndices.flatMap(i => {
+                    const layer = allLayers[i];
+                    const name = `${ID.opacityLayers}_${kebabCase(layer.Name ?? layer.Asset.Name)}`;
+                    return [`#${name}_Range`,`#${name}_Number`];
+                });
+                if (allLayers.length === ItemColorPickerIndices.length) { // If we're changing the entire item/all layers
+                    selectors.push(`input[id*="${opacityModule.OpacityMainSlider.ElementId}"]`);
+                }
+                const inputs: NodeListOf<HTMLInputElement> = document.querySelectorAll(selectors.join(", "));
+                inputs.forEach(lscgInput => lscgInput.valueAsNumber = Math.round(this.valueAsNumber * (100 / 255)));
+            }
+        );
     }
 
-    // TODO: Remove once R122 is live
     TranslateRemoveEventListener() {
         if (GameVersion === "R121") {
             let CanvasElement = document.getElementById("MainCanvas");
