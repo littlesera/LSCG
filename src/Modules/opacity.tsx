@@ -574,8 +574,15 @@ export class OpacityModule extends BaseModule {
             let xray = getModule<StateModule>("StateModule")?.XRayState;
             let xrayActive = xray?.Active && xray?.CanViewXRay(C);
             C.DrawAppearance?.forEach(item => {
-                let opacity = this.getOpacity(item)
-                let hasOpacitySettings = opacity !== undefined && opacity != 1;
+                let opacity = this.getOpacity(item);
+                let hasOpacitySettings = false;
+                if (opacity == null) {
+                    hasOpacitySettings = false;
+                } else if (typeof opacity === "number") {
+                    hasOpacitySettings = item.Asset.Opacity !== opacity;
+                } else if (Array.isArray(opacity)) {
+                    hasOpacitySettings = !opacity.every((opac, i) => opac === item.Asset.Layer[i].Opacity);
+                }
                 if ((hasOpacitySettings || xrayActive) && !item.Property?.LSCGLeadLined) {
                     item.Asset = Object.assign({}, item.Asset);
                     (item.Asset as any).Layer = item.Asset.Layer.map(l => Object.assign({}, l));
