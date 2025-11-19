@@ -277,6 +277,32 @@ export class LeashingModule extends BaseModule {
             return ret;
         }, ModuleCategory.Leashed);
 
+        hookFunction("ChatRoomCharacterViewClickCharacter", 1, (args, next) => {
+            const [C, CharX, CharY, Zoom, ClickX, ClickY] = args;
+            if (
+                typeof CharX === "number" &&
+                typeof CharY === "number" &&
+                typeof Zoom === "number" &&
+                ChatRoomHideIconState === 0 &&
+                C.IsPlayer()
+            ) {
+                let tooltip = undefined;
+                this.Pairings
+                    .forEach((p, ix, arr) => {                    
+                        let targetIsGrabbed = !p.IsSource;
+                        let yOffset = ix * 40 * Zoom;
+                        
+                        if (targetIsGrabbed && MouseIn(CharX + 400 * Zoom, CharY + 40 * Zoom + yOffset, 40 * Zoom, 40 * Zoom)) {
+                            if (confirm("Would you like to try and escape?")) {
+                                this.TryEscape();
+                            }
+                        }
+                    });
+            } else {
+                return next(args);
+            }
+        })
+
         hookFunction("ChatRoomCanBeLeashedBy", 1, (args, next) => {
             let sourceMemberNumber = args[0];
             let C = args[1];
