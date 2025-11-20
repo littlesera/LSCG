@@ -576,7 +576,7 @@ export class OpacityModule extends BaseModule {
                 } else if (typeof opacity === "number") {
                     hasOpacitySettings = item.Asset.Opacity !== opacity;
                 } else if (Array.isArray(opacity)) {
-                    hasOpacitySettings = !opacity.every((opac, i) => opac === item.Asset.Layer[i].Opacity);
+                    hasOpacitySettings = !opacity.every((opac, i) => opac === item.Asset.Layer[i]?.Opacity);
                 }
                 if ((hasOpacitySettings || xrayActive) && !item.Property?.LSCGLeadLined) {
                     item.Asset = Object.assign({}, item.Asset);

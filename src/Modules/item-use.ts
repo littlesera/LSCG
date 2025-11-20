@@ -625,7 +625,7 @@ export class ItemUseModule extends BaseModule {
 			CustomPrereqs: [
 				{
 					Name: "TargetIsGagged",
-					Func: (acted, acting, group) => {
+					Func: (acting, acted, group) => {
 						let location = acted.FocusGroup?.Name! as AssetGroupName;
 						let item: Item | null;
 						let gagTarget: GagTarget | undefined;
@@ -858,7 +858,7 @@ export class ItemUseModule extends BaseModule {
 				Name: "Steal" as ActivityName,
 				MaxProgress: 50,
 				MaxProgressSelf: 50,
-				Prerequisite: ["Needs-AnyItem" as ActivityPrerequisite, "UseHands"],
+				Prerequisite: ["UseHands"],
 				Reverse: true // acting and acted are flipped!
 			},
 			Targets: [
@@ -872,7 +872,7 @@ export class ItemUseModule extends BaseModule {
 			CustomPrereqs: [
 				{
 					Name: "CanSteal",
-					Func: (acted, acting, group) => { // Clip acting and acted here due to reverse == true
+					Func: (acting, acted, group) => { // Clip acting and acted here due to reverse == true
 						if (acted.FocusGroup?.Name != "ItemHandheld" || InventoryGet(acted, "ItemHands") != null)
 							return false;
 						var item = InventoryGet(acted, "ItemHandheld");
@@ -915,7 +915,7 @@ export class ItemUseModule extends BaseModule {
 			CustomPrereqs: [
 				{
 					Name: "CanSwap",
-					Func: (acted, acting, group) => { // Clip acting and acted here due to reverse == true
+					Func: (acting, acted, group) => { // Clip acting and acted here due to reverse == true
 						if (acted.FocusGroup?.Name != "ItemHandheld" || InventoryGet(acted, "ItemHands") != null)
 							return false;
 						var tgtItem = InventoryGet(acted, "ItemHandheld");
