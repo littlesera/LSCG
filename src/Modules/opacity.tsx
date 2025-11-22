@@ -266,8 +266,11 @@ export class OpacityModule extends BaseModule {
         if (!!leadLined)
             leadLined.checked = this.OpacityItem.Property?.LSCGLeadLined ?? false;
 
-        let opacityRaw = this.getOpacity();
-        let opacityValue = (Array.isArray(opacityRaw) ? (opacityRaw.length == 1 && opacityRaw.length != layerCount ? (opacityRaw[0] ?? 1) : 1) : (opacityRaw ?? 1)) * 100;
+        const opacityArr = this.getOpacity();
+        let opacityValue = 100;
+        if (opacityArr.length >= 1) {
+            opacityValue = Math.round(100 * Math.max(...opacityArr));
+        }
         let mainOpacitySlider = this.createOpacitySlider("Opacity %", ID.opacityMain + "-main", opacityValue, (evt) => this.onOpacityChange(evt));
         document.getElementById(ID.opacityMain)?.replaceChildren(mainOpacitySlider);
         this.OpacityMainSlider = {
@@ -276,14 +279,6 @@ export class OpacityModule extends BaseModule {
         }
         this.OpacityLayerSliders = [];
         this.TranslationButtons = [];
-        let opacityArr = new Array(this.OpacityItem.Asset.Layer.length);
-        if (!Array.isArray(opacityRaw))
-            opacityArr = opacityArr.fill((opacityRaw ?? 1));
-        else if (opacityRaw.length == 1 && opacityRaw.length != layerCount)
-            opacityArr = opacityArr.fill((opacityRaw[0] ?? 1));
-        else
-            opacityArr = opacityRaw;
-
 
         let translateAllButton = this.createTranslateButton("All Layers", (evt) => this.onClickTranslate(evt));
         translateAllButton.classList.add("selected");
