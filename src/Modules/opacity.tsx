@@ -639,20 +639,24 @@ export class OpacityModule extends BaseModule {
     getOpacityFromProperties(item?: null | Item): number | number[] | undefined {
         if (item?.Property?.LSCGOpacity != null) {
             const sanitizedProps = Object.assign(item.Property, itemToColorItem.sanitizeProperty(item))
-            this.setOpacityInProperty(sanitizedProps, item.Property.LSCGOpacity);
+            this.setOpacityInProperty(item.Asset, sanitizedProps, item.Property.LSCGOpacity);
         }
         return item?.Property?.Opacity ?? 1;
     }
 
     setOpacity(item: ItemColorItem, value: number | number[]) {
-        this.setOpacityInProperty(item.Property, value);
+        this.setOpacityInProperty(item.Asset, item.Property, value);
     }
 
-    setOpacityInProperty(props: ItemColorProperties, value: number | number[]) {
+    setOpacityInProperty(asset: Asset, props: ItemColorProperties, value: number | number[]) {
         if (typeof value === "number") {
-            props.Opacity.fill(value);
-        } else {
-            props.Opacity = value;
+            value = Array(asset.Layer.length).fill(value);
+        }
+        for (const [i, layer] of asset.Layer.entries()) {
+            if (i >= value.length || i >= props.Opacity.length) {
+                break;
+            }
+            props.Opacity[i] = CommonClamp(value[i], layer.MinOpacity, layer.MaxOpacity);
         }
         if (!!props.LSCGOpacity)
             delete props.LSCGOpacity;
