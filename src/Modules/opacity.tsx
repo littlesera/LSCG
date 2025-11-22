@@ -633,6 +633,8 @@ export class OpacityModule extends BaseModule {
         this.UpdatePreview();
     }
 
+    getOpacity(item?: null): number[];
+    getOpacity(item?: Item | null): number | number[] | undefined;
     getOpacity(item?: Item | null): number | number[] | undefined {
         if (!item)
             item = this.OpacityItem;
@@ -667,7 +669,7 @@ export class OpacityModule extends BaseModule {
         if (isTouchEvent(evt) && evt.changedTouches) {
             if (evt.changedTouches.length > 1) return;
         }
-        
+
         if (this.TranslationMode && MouseIn(700, 0, 500, 1000)) {
             this.isDragging = true;
             this.lastX = MouseX;
@@ -810,7 +812,7 @@ export class OpacityModule extends BaseModule {
             CharacterLoadCanvas(this.OpacityCharacter);
     }, 10, 99);
 
-    TranslateAttachEventListener() {        
+    TranslateAttachEventListener() {
         let CanvasElement = document.getElementById("MainCanvas");
         if (!CanvasElement)
             return;
@@ -822,7 +824,7 @@ export class OpacityModule extends BaseModule {
         CanvasElement.addEventListener("touchstart", evt => this.TranslateStart(evt));
         CanvasElement.addEventListener("touchend", evt => this.TranslateEnd(evt));
         CanvasElement.addEventListener("touchmove", evt => this.TranslateMove(evt));
-        
+
         // Propagate the vanilla BC opacity slider changes to LSCG
         const rootID: string = ColorPicker.ids.root;
         const opacityModule = this;
