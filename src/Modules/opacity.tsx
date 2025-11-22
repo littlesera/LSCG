@@ -271,7 +271,7 @@ export class OpacityModule extends BaseModule {
         if (opacityArr.length >= 1) {
             opacityValue = Math.round(100 * Math.max(...opacityArr));
         }
-        let mainOpacitySlider = this.createOpacitySlider("Opacity %", ID.opacityMain + "-main", opacityValue, (evt) => this.onOpacityChange(evt));
+        let mainOpacitySlider = this.createOpacitySlider("Opacity %", ID.opacityMain + "-main", opacityValue, (evt) => this.onOpacityChange(evt), 0, 100);
         document.getElementById(ID.opacityMain)?.replaceChildren(mainOpacitySlider);
         this.OpacityMainSlider = {
             ElementId: ID.opacityMain + "-main",
@@ -296,10 +296,17 @@ export class OpacityModule extends BaseModule {
             let layerName = layer.Name;
             if (!!layerName) {
                 // Create and add layer dom elements
-                let opacityVal = opacityArr[ix] * 100;
+                let opacityVal = Math.round(opacityArr[ix] * 100);
 
                 let opacityId = ID.opacityLayers + "_" + kebabCase(layerName);
-                let opacitySlider = this.createOpacitySlider(layerName, opacityId, opacityVal, (evt) => this.onOpacityChange(evt, layer));
+                let opacitySlider = this.createOpacitySlider(
+                    layerName,
+                    opacityId,
+                    opacityVal,
+                    (evt) => this.onOpacityChange(evt, layer),
+                    Math.round(layer.MinOpacity * 100),
+                    Math.round(layer.MaxOpacity * 100),
+                );
                 let translateButton = this.createTranslateButton(layerName, (evt) => this.onClickTranslate(evt, layer));
 
                 document.getElementById(ID.opacityLayers)?.appendChild(opacitySlider);
@@ -320,12 +327,12 @@ export class OpacityModule extends BaseModule {
         this.SetTranslationElementValues()
     }
 
-    createOpacitySlider(label: string | null, id: string, val: number, onChange: (evt: Event) => void) {
+    createOpacitySlider(label: string | null, id: string, val: number, onChange: (evt: Event) => void, min: number, max: number) {
         return  <fieldset id={id} class="lscg-opacity-slider">
                     <legend>{label}</legend>
                     <div class="lscg-opacity-slider-inputs">
-                        <input id={id + "_Range"} type="range" min="0" max="100" step="1" onInput={onChange} class="range-input" value={val}></input>
-                        <input id={id + "_Number"} type="number" min="0" max="100" step="1" onInput={onChange} value={val}></input>
+                        <input id={id + "_Range"} type="range" min={min} max={max} step="1" onInput={onChange} class="range-input" value={val}></input>
+                        <input id={id + "_Number"} type="number" min={min} max={max} step="1" onInput={onChange} value={val}></input>
                     </div>
                 </fieldset>
     }
