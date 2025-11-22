@@ -332,7 +332,7 @@ export class OpacityModule extends BaseModule {
                     <legend>{label}</legend>
                     <div class="lscg-opacity-slider-inputs">
                         <input id={id + "_Range"} type="range" min={min} max={max} step="1" onInput={onChange} class="range-input" value={val}></input>
-                        <input id={id + "_Number"} type="number" min={min} max={max} step="1" onInput={onChange} value={val}></input>
+                        <input id={id + "_Number"} type="number" min={min} max={max} step="1" onInput={onChange} value={val} inputMode="numeric"></input>
                     </div>
                 </fieldset>
     }
