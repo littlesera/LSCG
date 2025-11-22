@@ -785,9 +785,10 @@ export class OpacityModule extends BaseModule {
         let mainValue = Math.round(parseFloat(ElementValue(this.OpacityMainSlider.ElementId + "_Number"))) / 100;
         let C = Player;
         if (fromElementId == this.OpacityMainSlider.ElementId + "_Range" || fromElementId == this.OpacityMainSlider.ElementId + "_Number") {
-            if (value < 1)
-                this.setOpacity(this.OpacityItem, value);
-            else {
+            // Closing the color picker will automatically shrink the array to a number/undefined if appropriate (see `ItemColorFireExit()`)
+            this.setOpacity(this.OpacityItem, value);
+            if (value > 1) {
+                // TODO: Is this property still used or relevant in this context?
                 delete this.OpacityItem.Property.LSCGOpacity;
             }
         } else {
