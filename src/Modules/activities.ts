@@ -726,102 +726,13 @@ export class ActivityModule extends BaseModule {
             CustomImage: ICONS.ASS
         });
 
-        // Suck
-        this.AddActivity({
-            Activity: {
-                Name: "Suck",
-                MaxProgress: 100,
-                MaxProgressSelf: 100,
-                Prerequisite: ["ZoneAccessible", "ZoneNaked", "UseTongue", "Needs-FellatioItem"]
-            },
-            Targets: [
-                {
-                    Name: "ItemVulva",
-                    SelfAllowed: false,
-                    TargetLabel: "Suck",
-                    TargetAction: "SourceCharacter wraps PronounPossessive lips around TargetCharacter's ActivityAsset and sucks."
-                }, {
-                    Name: "ItemPenis",
-                    SelfAllowed: false,
-                    TargetLabel: "Suck",
-                    TargetAction: "SourceCharacter wraps PronounPossessive lips around TargetCharacter's ActivityAsset and sucks."
-                }
-            ],
-            CustomImage: "Assets/Female3DCG/Activity/Kiss.png"
-        });
-
-        // Throat
-        this.AddActivity({
-            Activity: {
-                Name: "Throat",
-                MaxProgress: 100,
-                MaxProgressSelf: 100,
-                Prerequisite: ["ZoneAccessible", "ZoneNaked", "UseTongue", "Needs-FellatioItem"]
-            },
-            Targets: [
-                {
-                    Name: "ItemVulva",
-                    SelfAllowed: false,
-                    TargetLabel: "Deepthroat",
-                    TargetAction: "SourceCharacter takes TargetCharacter's ActivityAsset deep down PronounPossessive throat."
-                }, {
-                    Name: "ItemPenis",
-                    SelfAllowed: false,
-                    TargetLabel: "Deepthroat",
-                    TargetAction: "SourceCharacter takes TargetCharacter's ActivityAsset deep down PronounPossessive throat."
-                }
-            ],
-            CustomImage: "Assets/Female3DCG/Activity/Kiss.png"
-        });
-
-        // Suck-Handheld
-        this.AddActivity({
-            Activity: {
-                Name: "SuckHandheld",
-                MaxProgress: 100,
-                MaxProgressSelf: 100,
-                Prerequisite: ["ZoneAccessible", "UseTongue", "Needs-FellatioItem"]
-            },
-            Targets: [
-                {
-                    Name: "ItemHands",
-                    SelfAllowed: true,
-                    TargetLabel: "Suck",
-                    TargetAction: "SourceCharacter wraps PronounPossessive lips around TargetCharacter's ActivityAsset and sucks.",
-                    TargetSelfAction: "SourceCharacter wraps PronounPossessive lips around PronounPossessive own ActivityAsset and sucks."
-                }
-            ],
-            CustomImage: "Assets/Female3DCG/Activity/Kiss.png"
-        });
-
-        // Throat-Handheld
-        this.AddActivity({
-            Activity: {
-                Name: "ThroatHandheld",
-                MaxProgress: 100,
-                MaxProgressSelf: 100,
-                Prerequisite: ["ZoneAccessible", "UseTongue", "Needs-FellatioItem"]
-            },
-            Targets: [
-                {
-                    Name: "ItemHands",
-                    SelfAllowed: true,
-                    TargetLabel: "Deepthroat",
-                    TargetAction: "SourceCharacter takes TargetCharacter's ActivityAsset deep down PronounPossessive throat.",
-                    TargetSelfAction: "SourceCharacter takes PronounPossessive own ActivityAsset deep down PronounPossessive throat."
-                }
-            ],
-            CustomImage: "Assets/Female3DCG/Activity/Kiss.png"
-        });
-
         // Eat
         this.AddActivity({
             Activity: {
                 Name: "Eat",
-                Reverse: true,
                 MaxProgress: 50,
                 MaxProgressSelf: 50,
-                Prerequisite: ["ZoneAccessible", "UseMouth", "Needs-EdibleItem"]
+                Prerequisite: ["ZoneAccessible", "UseMouth", "TargetNeeds-EdibleItem"]
             },
             Targets: [
                 {
@@ -838,10 +749,9 @@ export class ActivityModule extends BaseModule {
         this.AddActivity({
             Activity: {
                 Name: "Chew",
-                Reverse: true,
                 MaxProgress: 50,
                 MaxProgressSelf: 50,
-                Prerequisite: ["ZoneAccessible", "Needs-ChewableItem"]
+                Prerequisite: ["ZoneAccessible", "TargetNeeds-ChewableItem"]
             },
             Targets: [
                 {

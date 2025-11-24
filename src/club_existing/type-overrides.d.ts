@@ -146,6 +146,7 @@ type LSCGSpecialItems =
     | "FellatioItem"
     | "PourableItem"
     | "QuaffableItem"
+    | "AnyItem"
 ;
 
 type LSCGActivityPrerequisite = ActivityPrerequisite
@@ -174,6 +175,7 @@ type LSCGActivityPrerequisite = ActivityPrerequisite
     | "IsWearingChokeCollar"
     | "InjectorIsNotNetgun"
     | `Needs-${LSCGSpecialItems}`
+    | `TargetNeeds-${LSCGSpecialItems}`
     | "SourceAssEmpty"
     | "SourceCanSwallowSplatter"
     | "SourceCanLickSplatter"
