@@ -232,12 +232,13 @@ export class ItemUseModule extends BaseModule {
 
     load(): void {
 		hookFunction("ActivityGenerateItemActivitiesFromNeed", 1, (args, next) => {
-			let allowed = args[0] as ItemActivity[];
-			let acting = args[1] as Character;
-			let acted = args[2] as Character;
-			let needsItem = args[3] as string;
-			let activity = args[4] as Activity;
-			let targetGroupName = args[5] as AssetGroup | AssetGroupName;
+			let activity = args[3] as Activity;			
+
+			//(Player, character, needsItemActivity, activity, group)
+			let acting = args[0] as Character;
+			let acted = args[1] as Character;
+			let needsItem = args[2] as string;
+			let targetGroupName = args[4] as AssetGroup | AssetGroupName;
 
 			// `AssetGroupName` as of R111Beta1 and `AssetGroup` as of later versions
 			const targetGroup = typeof targetGroupName === "string" ? AssetGroupGet(acting.AssetFamily, targetGroupName) : targetGroupName;
@@ -250,13 +251,7 @@ export class ItemUseModule extends BaseModule {
 
 			let res;
 			if (["GagGiveItem", "GagTakeItem","GagToNecklace", "NecklaceToGag"].indexOf(needsItem) > -1) {
-				res = this.ManualGenerateItemActivitiesForNecklaceActivity(allowed, acting, acted, needsItem, activity, targetGroup as AssetGroup);
-			} else if (needsItem == "FellatioItem") {
-				let tmpActivity = Object.assign({}, activity);
-				tmpActivity.Reverse = true;
-				if ((activity.Name as string) == "LSCG_Suck" || (activity.Name as string) == "LSCG_Throat")
-					needsItem = "PenetrateItem";
-				res = next([args[0], args[1], args[2], needsItem, tmpActivity, targetGroupName]);
+				res = this.ManualGenerateItemActivitiesForNecklaceActivity(acting, acted, needsItem, activity, targetGroup as AssetGroup);
 			} else {
 				res = next(args);
 			}
@@ -335,7 +330,7 @@ export class ItemUseModule extends BaseModule {
 				if (!!item && PourableItems.indexOf(item.Asset?.Name) > -1) 
 					results.push(item);
 			} else if (itemType == "FellatioItem") {
-				let item = InventoryGet(C, "ItemHandheld");
+				let item = InventoryGet(C, focusGroup);
 				if (!!item && (AdditionalPenetrateItems.indexOf(item.Asset?.Name) > -1 || InventoryGetItemProperty(item, "AllowActivity")?.includes("PenetrateItem")))
 					results.push(item);
 			} else if (itemType == "EdibleItem") {
@@ -604,8 +599,7 @@ export class ItemUseModule extends BaseModule {
 				Name: "TakeGag" as ActivityName,
 				MaxProgress: 50,
 				MaxProgressSelf: 80,
-				Reverse: true,
-				Prerequisite: ["Needs-GagTakeItem" as ActivityPrerequisite]
+				Prerequisite: ["TargetNeeds-GagTakeItem" as ActivityPrerequisite]
 			},
 			Targets: [
 				<ActivityTarget>{
@@ -697,7 +691,7 @@ export class ItemUseModule extends BaseModule {
 				Name: "NecklaceToGag" as ActivityName,
 				MaxProgress: 50,
 				MaxProgressSelf: 80,
-				Prerequisite: ["UseHands", "Needs-NecklaceToGag"]
+				Prerequisite: ["UseHands", "TargetNeeds-NecklaceToGag"]
 			},
 			Targets: [
 				<ActivityTarget>{
@@ -753,7 +747,7 @@ export class ItemUseModule extends BaseModule {
 				Name: "GagToNecklace" as ActivityName,
 				MaxProgress: 50,
 				MaxProgressSelf: 80,
-				Prerequisite: ["UseHands", "Needs-GagToNecklace" as ActivityPrerequisite]
+				Prerequisite: ["UseHands", "TargetNeeds-GagToNecklace" as ActivityPrerequisite]
 			},
 			Targets: [
 				<ActivityTarget>{
@@ -858,8 +852,7 @@ export class ItemUseModule extends BaseModule {
 				Name: "Steal" as ActivityName,
 				MaxProgress: 50,
 				MaxProgressSelf: 50,
-				Prerequisite: ["UseHands"],
-				Reverse: true // acting and acted are flipped!
+				Prerequisite: ["UseHands", "TargetNeeds-AnyItem"],
 			},
 			Targets: [
 				<ActivityTarget>{
@@ -901,8 +894,7 @@ export class ItemUseModule extends BaseModule {
 				Name: "Swap" as ActivityName,
 				MaxProgress: 50,
 				MaxProgressSelf: 50,
-				Prerequisite: ["Needs-AnyItem" as ActivityPrerequisite, "UseHands"],
-				Reverse: true // acting and acted are flipped!
+				Prerequisite: ["Needs-AnyItem", "TargetNeeds-AnyItem", "UseHands"],
 			},
 			Targets: [
 				<ActivityTarget>{
@@ -1435,12 +1427,13 @@ export class ItemUseModule extends BaseModule {
 		setTimeout(() => ChatRoomCharacterUpdate(target));
 	}
 
-	ManualGenerateItemActivitiesForNecklaceActivity(allowed: ItemActivity[], acting: Character, acted: Character, needsItem: string, activity: Activity, targetGroup: AssetGroup) {
+	ManualGenerateItemActivitiesForNecklaceActivity(acting: Character, acted: Character, needsItem: string, activity: Activity, targetGroup: AssetGroup) {
 		const itemOwner = needsItem == "GagGiveItem" ? acting : acted;
 		const items = CharacterItemsForActivity(itemOwner, needsItem as ActivityName);
-		if (items.length === 0) return true;
+		if (items.length === 0) return [] as ItemActivity[];
 	
-		let handled = false;
+		let allowed = [] as ItemActivity[];
+
 		for (const item of items) {
 			const types = (!!item.Property && CommonIsObject(item.Property?.TypeRecord)) ? PropertyTypeRecordToStrings(item.Property?.TypeRecord ?? <TypeRecord>{}) : [null];
 	
@@ -1484,9 +1477,8 @@ export class ItemUseModule extends BaseModule {
 					Item: item,
 					Group: GameVersion === "R110" ? undefined : (targetGroup.MirrorActivitiesFrom ?? targetGroup.Name),
 				} as ItemActivity);
-			handled = true;
 		}
-		return handled;
+		return allowed;
 	}
 
 	lastTamperProtectionFired: number = 0;
