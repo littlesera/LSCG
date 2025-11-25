@@ -355,7 +355,7 @@ export class OpacityModule extends BaseModule {
             let targetEle = document.getElementById(targetId) as HTMLInputElement;
             if (!!targetEle) targetEle.value = value;
         } else {
-            let targetId = replace(input.id, "_Range", "_Number");
+            let targetId = replace(input.id, "_Number", "_Range");
             let targetEle = document.getElementById(targetId) as HTMLInputElement;
             if (!!targetEle) targetEle.value = value;
         }
