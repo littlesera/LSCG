@@ -327,7 +327,7 @@ export class OpacityModule extends BaseModule {
         this.SetTranslationElementValues()
     }
 
-    createOpacitySlider(label: string | null, id: string, val: number, onChange: (evt: Event) => void, min: number, max: number) {
+    createOpacitySlider(label: string, id: string, val: number, onChange: (evt: Event) => void, min: number, max: number) {
         return  <fieldset id={id} class="lscg-opacity-slider">
                     <legend>{label}</legend>
                     <div class="lscg-opacity-slider-inputs">
@@ -368,8 +368,26 @@ export class OpacityModule extends BaseModule {
             });
         }
 
-        // Mirror the opacity value changes to the builtin BC opacity slider in R122
-        if (GameVersion !== "R121") {
+        // Mirror the opacity value changes to the builtin BC opacity slider
+        const C = ItemColorCharacter;
+        const item = ItemColorItem;
+        if (!C || !item) {
+            return;
+        }
+
+        let layerColorIndex = -1;
+        if (layer) {
+            const sharedLayers = item.Asset.Layer.filter(l => l !== layer && l.ColorIndex === layer.ColorIndex);
+            if (CharacterAppearanceIsLayerVisible(C, layer, item.Asset, item.Property?.TypeRecord)) {
+                // The layer is visible, propagate the changes to the BC slider
+                layerColorIndex = layer.ColorIndex;
+            } else if (!sharedLayers.some(layer => CharacterAppearanceIsLayerVisible(C, layer, item.Asset, item.Property?.TypeRecord))) {
+                // The layer is invisible but so are all other `ColorIndex`-shared layers
+                // As a fallback: propagate the changes to the BC slider lest you end up with _none_ of the LSCG sliders affecting the BC one
+                layerColorIndex = layer.ColorIndex;
+            }
+        }
+        if (!layer || ItemColorPickerIndices.includes(layerColorIndex)) {
             const rootID: string = ColorPicker.ids.root;
             const opacityRange: null | HTMLInputElement = document.querySelector(`#${rootID} input[name="opacity"]`);
             if (opacityRange) {
