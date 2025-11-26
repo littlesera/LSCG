@@ -844,9 +844,12 @@ export class OpacityModule extends BaseModule {
 
                 const allLayers = ItemColorGetColorableLayers(opacityModule.OpacityItem);
                 const selectors = ItemColorPickerIndices.flatMap(i => {
-                    const layer = allLayers[i];
-                    const name = `${ID.opacityLayers}_${kebabCase(layer.Name ?? layer.Asset.Name)}`;
-                    return [`#${name}_Range`,`#${name}_Number`];
+                    // Grab all layers that map to the same `Item.Color` array index (see the layer's `CopyLayerColor` property)
+                    const copyColorLayers = allLayers[i].Asset.Layer.filter(l => l.ColorIndex === i);
+                    return copyColorLayers.flatMap(layer => {
+                        const name = `${ID.opacityLayers}_${kebabCase(layer.Name ?? layer.Asset.Name)}`;
+                        return [`#${name}_Range`,`#${name}_Number`];
+                    });
                 });
                 if (allLayers.length === ItemColorPickerIndices.length) { // If we're changing the entire item/all layers
                     selectors.push(`input[id*="${opacityModule.OpacityMainSlider.ElementId}"]`);
