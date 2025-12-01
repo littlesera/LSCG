@@ -266,9 +266,12 @@ export class OpacityModule extends BaseModule {
         if (!!leadLined)
             leadLined.checked = this.OpacityItem.Property?.LSCGLeadLined ?? false;
 
-        let opacityRaw = this.getOpacity();
-        let opacityValue = (Array.isArray(opacityRaw) ? (opacityRaw.length == 1 && opacityRaw.length != layerCount ? (opacityRaw[0] ?? 1) : 1) : (opacityRaw ?? 1)) * 100;
-        let mainOpacitySlider = this.createOpacitySlider("Opacity %", ID.opacityMain + "-main", opacityValue, (evt) => this.onOpacityChange(evt));
+        const opacityArr = this.getOpacity();
+        let opacityValue = 100;
+        if (opacityArr.length >= 1) {
+            opacityValue = Math.round(100 * Math.max(...opacityArr));
+        }
+        let mainOpacitySlider = this.createOpacitySlider("Opacity %", ID.opacityMain + "-main", opacityValue, (evt) => this.onOpacityChange(evt), 0, 100);
         document.getElementById(ID.opacityMain)?.replaceChildren(mainOpacitySlider);
         this.OpacityMainSlider = {
             ElementId: ID.opacityMain + "-main",
@@ -276,14 +279,6 @@ export class OpacityModule extends BaseModule {
         }
         this.OpacityLayerSliders = [];
         this.TranslationButtons = [];
-        let opacityArr = new Array(this.OpacityItem.Asset.Layer.length);
-        if (!Array.isArray(opacityRaw))
-            opacityArr = opacityArr.fill((opacityRaw ?? 1));
-        else if (opacityRaw.length == 1 && opacityRaw.length != layerCount)
-            opacityArr = opacityArr.fill((opacityRaw[0] ?? 1));
-        else
-            opacityArr = opacityRaw;
-
 
         let translateAllButton = this.createTranslateButton("All Layers", (evt) => this.onClickTranslate(evt));
         translateAllButton.classList.add("selected");
@@ -301,10 +296,17 @@ export class OpacityModule extends BaseModule {
             let layerName = layer.Name;
             if (!!layerName) {
                 // Create and add layer dom elements
-                let opacityVal = opacityArr[ix] * 100;
+                let opacityVal = Math.round(opacityArr[ix] * 100);
 
                 let opacityId = ID.opacityLayers + "_" + kebabCase(layerName);
-                let opacitySlider = this.createOpacitySlider(layerName, opacityId, opacityVal, (evt) => this.onOpacityChange(evt, layer));
+                let opacitySlider = this.createOpacitySlider(
+                    layerName,
+                    opacityId,
+                    opacityVal,
+                    (evt) => this.onOpacityChange(evt, layer),
+                    Math.round(layer.MinOpacity * 100),
+                    Math.round(layer.MaxOpacity * 100),
+                );
                 let translateButton = this.createTranslateButton(layerName, (evt) => this.onClickTranslate(evt, layer));
 
                 document.getElementById(ID.opacityLayers)?.appendChild(opacitySlider);
@@ -325,12 +327,12 @@ export class OpacityModule extends BaseModule {
         this.SetTranslationElementValues()
     }
 
-    createOpacitySlider(label: string | null, id: string, val: number, onChange: (evt: Event) => void) {
+    createOpacitySlider(label: string, id: string, val: number, onChange: (evt: Event) => void, min: number, max: number) {
         return  <fieldset id={id} class="lscg-opacity-slider">
                     <legend>{label}</legend>
                     <div class="lscg-opacity-slider-inputs">
-                        <input id={id + "_Range"} type="range" min="0" max="100" step="1" onInput={onChange} class="range-input" value={val}></input>
-                        <input id={id + "_Number"} type="number" min="0" max="100" step="1" onInput={onChange} value={val}></input>
+                        <input id={id + "_Range"} type="range" min={min} max={max} step="1" onInput={onChange} class="range-input" value={val}></input>
+                        <input id={id + "_Number"} type="number" min={min} max={max} step="1" onInput={onChange} value={val} inputMode="numeric"></input>
                     </div>
                 </fieldset>
     }
@@ -353,7 +355,7 @@ export class OpacityModule extends BaseModule {
             let targetEle = document.getElementById(targetId) as HTMLInputElement;
             if (!!targetEle) targetEle.value = value;
         } else {
-            let targetId = replace(input.id, "_Range", "_Number");
+            let targetId = replace(input.id, "_Number", "_Range");
             let targetEle = document.getElementById(targetId) as HTMLInputElement;
             if (!!targetEle) targetEle.value = value;
         }
@@ -366,8 +368,26 @@ export class OpacityModule extends BaseModule {
             });
         }
 
-        // Mirror the opacity value changes to the builtin BC opacity slider in R122
-        if (GameVersion !== "R121") {
+        // Mirror the opacity value changes to the builtin BC opacity slider
+        const C = ItemColorCharacter;
+        const item = ItemColorItem;
+        if (!C || !item) {
+            return;
+        }
+
+        let layerColorIndex = -1;
+        if (layer) {
+            const sharedLayers = item.Asset.Layer.filter(l => l !== layer && l.ColorIndex === layer.ColorIndex);
+            if (CharacterAppearanceIsLayerVisible(C, layer, item.Asset, item.Property?.TypeRecord)) {
+                // The layer is visible, propagate the changes to the BC slider
+                layerColorIndex = layer.ColorIndex;
+            } else if (!sharedLayers.some(layer => CharacterAppearanceIsLayerVisible(C, layer, item.Asset, item.Property?.TypeRecord))) {
+                // The layer is invisible but so are all other `ColorIndex`-shared layers
+                // As a fallback: propagate the changes to the BC slider lest you end up with _none_ of the LSCG sliders affecting the BC one
+                layerColorIndex = layer.ColorIndex;
+            }
+        }
+        if (!layer || ItemColorPickerIndices.includes(layerColorIndex)) {
             const rootID: string = ColorPicker.ids.root;
             const opacityRange: null | HTMLInputElement = document.querySelector(`#${rootID} input[name="opacity"]`);
             if (opacityRange) {
@@ -633,6 +653,8 @@ export class OpacityModule extends BaseModule {
         this.UpdatePreview();
     }
 
+    getOpacity(item?: null): number[];
+    getOpacity(item?: Item | null): number | number[] | undefined;
     getOpacity(item?: Item | null): number | number[] | undefined {
         if (!item)
             item = this.OpacityItem;
@@ -642,20 +664,24 @@ export class OpacityModule extends BaseModule {
     getOpacityFromProperties(item?: null | Item): number | number[] | undefined {
         if (item?.Property?.LSCGOpacity != null) {
             const sanitizedProps = Object.assign(item.Property, itemToColorItem.sanitizeProperty(item))
-            this.setOpacityInProperty(sanitizedProps, item.Property.LSCGOpacity);
+            this.setOpacityInProperty(item.Asset, sanitizedProps, item.Property.LSCGOpacity);
         }
         return item?.Property?.Opacity ?? 1;
     }
 
     setOpacity(item: ItemColorItem, value: number | number[]) {
-        this.setOpacityInProperty(item.Property, value);
+        this.setOpacityInProperty(item.Asset, item.Property, value);
     }
 
-    setOpacityInProperty(props: ItemColorProperties, value: number | number[]) {
+    setOpacityInProperty(asset: Asset, props: ItemColorProperties, value: number | number[]) {
         if (typeof value === "number") {
-            props.Opacity.fill(value);
-        } else {
-            props.Opacity = value;
+            value = Array(asset.Layer.length).fill(value);
+        }
+        for (const [i, layer] of asset.Layer.entries()) {
+            if (i >= value.length || i >= props.Opacity.length) {
+                break;
+            }
+            props.Opacity[i] = CommonClamp(value[i], layer.MinOpacity, layer.MaxOpacity);
         }
         if (!!props.LSCGOpacity)
             delete props.LSCGOpacity;
@@ -667,7 +693,7 @@ export class OpacityModule extends BaseModule {
         if (isTouchEvent(evt) && evt.changedTouches) {
             if (evt.changedTouches.length > 1) return;
         }
-        
+
         if (this.TranslationMode && MouseIn(700, 0, 500, 1000)) {
             this.isDragging = true;
             this.lastX = MouseX;
@@ -788,9 +814,10 @@ export class OpacityModule extends BaseModule {
         let mainValue = Math.round(parseFloat(ElementValue(this.OpacityMainSlider.ElementId + "_Number"))) / 100;
         let C = Player;
         if (fromElementId == this.OpacityMainSlider.ElementId + "_Range" || fromElementId == this.OpacityMainSlider.ElementId + "_Number") {
-            if (value < 1)
-                this.setOpacity(this.OpacityItem, value);
-            else {
+            // Closing the color picker will automatically shrink the array to a number/undefined if appropriate (see `ItemColorFireExit()`)
+            this.setOpacity(this.OpacityItem, value);
+            if (value > 1) {
+                // TODO: Is this property still used or relevant in this context?
                 delete this.OpacityItem.Property.LSCGOpacity;
             }
         } else {
@@ -810,7 +837,7 @@ export class OpacityModule extends BaseModule {
             CharacterLoadCanvas(this.OpacityCharacter);
     }, 10, 99);
 
-    TranslateAttachEventListener() {        
+    TranslateAttachEventListener() {
         let CanvasElement = document.getElementById("MainCanvas");
         if (!CanvasElement)
             return;
@@ -822,7 +849,7 @@ export class OpacityModule extends BaseModule {
         CanvasElement.addEventListener("touchstart", evt => this.TranslateStart(evt));
         CanvasElement.addEventListener("touchend", evt => this.TranslateEnd(evt));
         CanvasElement.addEventListener("touchmove", evt => this.TranslateMove(evt));
-        
+
         // Propagate the vanilla BC opacity slider changes to LSCG
         const rootID: string = ColorPicker.ids.root;
         const opacityModule = this;
@@ -835,9 +862,12 @@ export class OpacityModule extends BaseModule {
 
                 const allLayers = ItemColorGetColorableLayers(opacityModule.OpacityItem);
                 const selectors = ItemColorPickerIndices.flatMap(i => {
-                    const layer = allLayers[i];
-                    const name = `${ID.opacityLayers}_${kebabCase(layer.Name ?? layer.Asset.Name)}`;
-                    return [`#${name}_Range`,`#${name}_Number`];
+                    // Grab all layers that map to the same `Item.Color` array index (see the layer's `CopyLayerColor` property)
+                    const copyColorLayers = allLayers[i].Asset.Layer.filter(l => l.ColorIndex === i);
+                    return copyColorLayers.flatMap(layer => {
+                        const name = `${ID.opacityLayers}_${kebabCase(layer.Name ?? layer.Asset.Name)}`;
+                        return [`#${name}_Range`,`#${name}_Number`];
+                    });
                 });
                 if (allLayers.length === ItemColorPickerIndices.length) { // If we're changing the entire item/all layers
                     selectors.push(`input[id*="${opacityModule.OpacityMainSlider.ElementId}"]`);
