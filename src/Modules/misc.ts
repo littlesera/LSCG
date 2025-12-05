@@ -724,8 +724,8 @@ export class MiscModule extends BaseModule {
 		label.style.cssText = `grid-template-columns: min-content auto`;
 
 		let button = ElementButton.Create(button_id, MiscModule.LscgEffectMenuButtonListener);
-		button.style.setProperty('height', 'calc(0.75 * var(--button-size))');
-		button.style.setProperty('width', 'calc(0.75 * var(--button-size))');
+		button.style.setProperty('height', 'calc(0.75 * var(--menu-button-size))');
+		button.style.setProperty('width', 'calc(0.75 * var(--menu-button-size))');
 		button.style.setProperty('background-image', 'url("' + ICONS.BOUND_GIRL + '")');
 		label.appendChild(button);
 
@@ -776,12 +776,12 @@ export class MiscModule extends BaseModule {
             parent.style.setProperty('background-color', 'var(--lscg-background-color)');
             parent.style.setProperty('display', 'grid');
             parent.style.setProperty('grid-template', `
-                "${this.LscgEffectCraftingId.topBar} ${this.LscgEffectCraftingId.topBar}" var(--button-size)
+                "${this.LscgEffectCraftingId.topBar} ${this.LscgEffectCraftingId.topBar}" var(--menu-button-size)
                 "${this.LscgEffectCraftingId.chaoticEvolvingGrid} ${this.LscgEffectCraftingId.miscGrid}" auto
                 "${this.LscgEffectCraftingId.tamperproofGrid} ${this.LscgEffectCraftingId.drugGrid}" auto
-                "${this.LscgEffectCraftingId.toolTip} ${this.LscgEffectCraftingId.toolTip}" var(--button-size)
+                "${this.LscgEffectCraftingId.toolTip} ${this.LscgEffectCraftingId.toolTip}" var(--menu-button-size)
                 / 3fr 3fr`);
-            parent.style.setProperty('gap', 'calc(var(--button-size) / 15)');
+            parent.style.setProperty('gap', 'calc(var(--menu-button-size) / 15)');
             parent.style.setProperty('border', 'min(0.2vh, 0.1vw) solid black');
             parent.style.setProperty('box-shadow', '0 6px 10px black');
             parent.style.setProperty('padding', '0.5rem');
@@ -789,8 +789,8 @@ export class MiscModule extends BaseModule {
             // Create top bar with Title and exit button
             let exitButton = ElementButton.Create(this.LscgEffectCraftingId.mainExit, MiscModule.LscgEffectMenuButtonListener, { tooltip: TextGet("Exit") });
             exitButton.style.cssText = `
-                width: var(--button-size);
-	            height: var(--button-size);
+                width: var(--menu-button-size);
+	            height: var(--menu-button-size);
                 background-image: url("Icons/Exit.png");
             `;
             let menuBar = ElementMenu.Create("lscg-effect-menu-bar", [exitButton], { direction: "rtl" });
@@ -798,7 +798,7 @@ export class MiscModule extends BaseModule {
                 display: grid;
                 direction: rtl;
                 grid-auto-flow: column;
-                gap: calc(var(--button-size) / 6);
+                gap: calc(var(--menu-button-size) / 6);
             `;
 
             ElementCreate({
@@ -808,7 +808,7 @@ export class MiscModule extends BaseModule {
                 style: {
                     display: "grid",
                     "grid-template-columns": "auto min-content",
-                    gap: "calc(var(--button-size) / 6)",
+                    gap: "calc(var(--menu-button-size) / 6)",
                     "grid-area": this.LscgEffectCraftingId.topBar
                 },
                 children: [
@@ -820,7 +820,7 @@ export class MiscModule extends BaseModule {
                         "color": "var(--lscg-text-color)",
                         "justify-self": "center",
                         "align-self": "center",
-                        //"padding-left": "calc((5 + (4 / 6)) * var(--button-size))"
+                        //"padding-left": "calc((5 + (4 / 6)) * var(--menu-button-size))"
                       }
                     },
                     menuBar
@@ -847,7 +847,7 @@ export class MiscModule extends BaseModule {
                 classList: ["button-tooltip"],
                 style: {
                     "grid-area": this.LscgEffectCraftingId.toolTip,
-                    "padding-right": "calc(var(--button-size) / 12)",
+                    "padding-right": "calc(var(--menu-button-size) / 12)",
                     //"position": "fixed",
                     "overflow-wrap": "word-break",
                     "text-wrap": "unset",
@@ -883,7 +883,7 @@ export class MiscModule extends BaseModule {
             //classList: ["scroll-box"],
             style: {
                 "grid-area": grid_id,
-                "padding-right": "calc(var(--button-size) / 12)",
+                "padding-right": "calc(var(--menu-button-size) / 12)",
                 "border": "1px dotted var(--lscg-border-color)",
                 "padding": "0.5rem"
             },
@@ -922,12 +922,12 @@ export class MiscModule extends BaseModule {
                             "grid-template-columns": "min-content auto",
                             "width": "calc(100% - 6px)",
                             "display": "grid",
-                            "row-gap": "calc(var(--button-size) / 12)",
-                            "column-gap": "calc(var(--button-size) / 6)",
+                            "row-gap": "calc(var(--menu-button-size) / 12)",
+                            "column-gap": "calc(var(--menu-button-size) / 6)",
                             "padding-left": "3px",
                             "padding-right": "3px",
-                            "padding-top": "calc(var(--button-size) / 12)",
-                            "padding-bottom": "calc(var(--button-size) / 12)",
+                            "padding-top": "calc(var(--menu-button-size) / 12)",
+                            "padding-bottom": "calc(var(--menu-button-size) / 12)",
                             "cursor": "pointer",
                             "color": "var(--lscg-text-color)",
                             "font": "inherit",
