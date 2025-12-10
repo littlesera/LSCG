@@ -480,7 +480,7 @@ export class MiscModule extends BaseModule {
             id_label: this.LscgEffectCraftingId.slowLabel,
             id_button: this.LscgEffectCraftingId.slowButton,
             label: "Slow",
-            description: "Increase the trigger time for Chaotic and Evoling to 30min (Only for Chaotic or Evolving, Incompatible with Quick)",
+            description: "Increase the trigger time for Chaotic and Evolving to 30min (Only for Chaotic or Evolving, Incompatible with Quick)",
             keywords: slowKeywords,
             condition: (): boolean => {
                 const chaotic = document.getElementById(this.LscgEffectCraftingId.chaoticButton) as HTMLInputElement;
@@ -497,7 +497,7 @@ export class MiscModule extends BaseModule {
             id_label: this.LscgEffectCraftingId.quickLabel,
             id_button: this.LscgEffectCraftingId.quickButton,
             label: "Quick",
-            description: "Reduce the trigger time for Chaotic and Evoling to 3min  (Only for Chaotic or Evolving, Incompatible with Quick)",
+            description: "Reduce the trigger time for Chaotic and Evolving to 3min  (Only for Chaotic or Evolving, Incompatible with Quick)",
             keywords: quickKeywords,
             condition: (): boolean => {
                 const chaotic = document.getElementById(this.LscgEffectCraftingId.chaoticButton) as HTMLInputElement;
@@ -574,7 +574,7 @@ export class MiscModule extends BaseModule {
             id_label: this.LscgEffectCraftingId.cursedLabel,
             id_button: this.LscgEffectCraftingId.cursedButton,
             label: "Cursed",
-            description: "Curse the item (Need a selected curse in the dropdown above)",
+            description: "Curse the item (Need a selected curse in the dropdown below)",
             keywords: CursedKeywords,
             condition: (): boolean => {
                 return true;
