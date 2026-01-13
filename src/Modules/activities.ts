@@ -949,6 +949,30 @@ export class ActivityModule extends BaseModule {
             },
         });
 
+        // Patch PenetrateFast
+        this.PatchActivity(<ActivityPatch>{
+            ActivityName: "PenetrateFast",
+            AddedTargets: [{
+                    Name: "ItemMouth",
+                    SelfAllowed: true,
+                    TargetSelfLabel: "Fast Penetration",
+                    TargetSelfAction: "SourceCharacter roughly penetrates PronounPossessive own mouth with PronounPossessive ActivityAsset."
+                }
+            ]
+        });
+
+        // Patch PenetrateFast
+        this.PatchActivity(<ActivityPatch>{
+            ActivityName: "PenetrateSlow",
+            AddedTargets: [{
+                    Name: "ItemMouth",
+                    SelfAllowed: true,
+                    TargetSelfLabel: "Slow Penetration",
+                    TargetSelfAction: "SourceCharacter penetrates PronounPossessive own mouth with PronounPossessive ActivityAsset."
+                }
+            ]
+        });
+
         // ReleaseEar
         this.AddActivity({
             Activity: {
@@ -1919,20 +1943,26 @@ export class ActivityModule extends BaseModule {
             }            
         }
 
-        ActivityDictionary?.push([
-            "Label-ChatOther-" + tgt.Name + "-" + activity.Name,
-            tgt.TargetLabel
-        ]);
-        ActivityDictionary?.push([
-            "ChatOther-" + tgt.Name + "-" + activity.Name,
-            tgt.TargetAction
-        ]);
+        if (!!tgt.TargetLabel) {
+            ActivityDictionary?.push([
+                "Label-ChatOther-" + tgt.Name + "-" + activity.Name,
+                tgt.TargetLabel
+            ]);
+        }
+
+        if (!!tgt.TargetAction) {
+            ActivityDictionary?.push([
+                "ChatOther-" + tgt.Name + "-" + activity.Name,
+                tgt.TargetAction
+            ]);
+        }
 
         if (tgt.SelfAllowed) {
             ActivityDictionary?.push([
                 "Label-ChatSelf-" + tgt.Name + "-" + activity.Name,
                 tgt.TargetSelfLabel ?? tgt.TargetLabel
             ]);
+
             ActivityDictionary?.push([
                 "ChatSelf-" + tgt.Name + "-" + activity.Name,
                 tgt.TargetSelfAction ?? tgt.TargetAction

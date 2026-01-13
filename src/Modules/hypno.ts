@@ -1033,7 +1033,11 @@ export class HypnoModule extends BaseModule {
             };
             let hasItemPermission = ServerChatRoomGetAllowItem(Player, target);
             let isAllowed = hasItemPermission && ActivityAllowedForGroup(target, activityGroup?.Name as AssetGroupItemName).filter(a => !a.Blocked).findIndex(a => a.Activity.Name == activity?.Name) > -1;
-            if (isAllowed) ActivityRun(Player, target, activityGroup as AssetItemGroup, <ItemActivity>{Activity: activity}, true);
+            if (isAllowed) ActivityRun(Player, target, activityGroup as AssetItemGroup, <ItemActivity>{
+                Activity: activity,
+                Group: activityGroup.Name,
+                Item: InventoryGet(Player, "ItemHandheld")
+            }, true);
             else {
                 SendAction("%NAME% struggles to perform some action.");
                 LSCG_SendLocal(`Something beyond your control is preventing you from following your activity instruction... You shake a little bit of ${opts.senderName}'s influence.`);
