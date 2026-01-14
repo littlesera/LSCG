@@ -62,6 +62,7 @@ export interface HypnoPublicSettingsModel extends BaseSettingsModel {
 
     // Suggestion Settings
     allowSuggestions: boolean;
+    limitSuggestionMod: boolean;
     suggestionRequireHypnotizer: boolean;
     allowSuggestionRemoval: boolean;
     blockedInstructions: LSCGHypnoInstruction[];

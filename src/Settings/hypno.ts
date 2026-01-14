@@ -221,6 +221,13 @@ export class GuiHypno extends GuiSubscreen {
 						setSetting: (val) => this.settings.suggestionRequireHypnotizer = val
 					}, <Setting>{
 						type: "checkbox",
+						label: "Limit Suggestion Removal",
+						description: "If checked, only your owner or whoever added the suggestion can change/remove it.",
+						disabled: !this.settings.enabled,
+						setting: () => this.settings.limitSuggestionMod ?? true,
+						setSetting: (val) => this.settings.limitSuggestionMod = val
+					}, <Setting>{
+						type: "checkbox",
 						label: "Allow Suggestion Removal",
 						description: "If checked, you can remove suggestions installed in you with '/lscg remove-suggestion' if you are not immersive and not on extreme difficulty.",
 						disabled: !this.settings.enabled || (Player.LSCG?.StateModule?.immersive ?? false) || Player.GetDifficulty() >= 3,
@@ -240,11 +247,6 @@ export class GuiHypno extends GuiSubscreen {
 						disabled: this.settings.alwaysSubmit,
 						setting: () => this.settings.alwaysSubmitMemberIds ?? "",
 						setSetting: (val) => this.settings.alwaysSubmitMemberIds = val
-					}, <Setting>{
-						type: "label", // Blank Spot
-						label: "",
-						description: "",
-						hidden: this.settings.locked
 					}, <Setting>{
 						type: "label",
 						label: "Blocked Instructions:",

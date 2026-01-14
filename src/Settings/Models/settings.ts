@@ -98,6 +98,7 @@ export class PublicSettingsModel implements IPublicSettingsModel {
         speakTriggers: "",
         silenceTriggers: "",
         allowSuggestions: false,
+        limitSuggestionMod: false,
         suggestionRequireHypnotizer: true,
         allowSuggestionRemoval: true,
         blockedInstructions: [],
