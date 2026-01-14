@@ -927,24 +927,29 @@ export class HypnoModule extends BaseModule {
 
     ForcePose(opts: SuggestionMiniGameOptions, instruction: HypnoInstruction) {
         let poseSelection = instruction.arguments["selection"] as PoseSelection;
-        console.debug(`Pose -- ${poseSelection?.upper ?? "none"} :: ${poseSelection?.lower ?? "none"} :: ${poseSelection.full ?? "none"}`);
+        if (!poseSelection) {
+            LSCG_SendLocal(`You recieve vague and incomplete instructions and you shake a little bit of influence.`);
+            this.ReduceSpeakerInfluence(opts.senderNum);
+            return;
+        }
+        console.debug(`Pose -- ${poseSelection?.upper ?? "none"} :: ${poseSelection?.lower ?? "none"} :: ${poseSelection?.full ?? "none"}`);
         SendAction(`%NAME% moves their body into a pose obediently.`);
         let blocked = false;
         CharacterRefresh(Player, false);
-        if (!!poseSelection.full) {
+        if (!!poseSelection?.full) {
             if (PoseCategoryAvailable(Player, "BodyFull"))
                 PoseSetActive(Player, poseSelection.full);
             else 
                 blocked = true;
         }
         else {
-            if (!!poseSelection.lower) {
+            if (!!poseSelection?.lower) {
                 if (PoseCategoryAvailable(Player, "BodyLower"))
                     PoseSetActive(Player, poseSelection.lower);
                 else 
                     blocked = true;
             }
-            if (!!poseSelection.upper) {
+            if (!!poseSelection?.upper) {
                 if (PoseCategoryAvailable(Player, "BodyUpper"))
                     PoseSetActive(Player, poseSelection.upper);
                 else 
@@ -954,6 +959,7 @@ export class HypnoModule extends BaseModule {
         if (blocked) {
             LSCG_SendLocal(`Your current state prevents you from fully following your instruction and you shake a little bit of ${opts.senderName}'s influence.`);
             this.ReduceSpeakerInfluence(opts.senderNum);
+            return;
         }
         if (CurrentScreen == "ChatRoom") {
             ServerSend("ChatRoomCharacterPoseUpdate", { Pose: Player.ActivePose });
