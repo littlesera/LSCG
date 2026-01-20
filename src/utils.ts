@@ -1078,6 +1078,16 @@ export function getBCXActiveCurseSlots(): AssetGroupName[] {
 	return (Object.keys(bcxCurses).filter(key => bcxCurses[key]?.active ?? false)) as AssetGroupName[];
 }
 
+export function CopyCharacter(C: Character, id: string, strip: boolean = true, removeItems: boolean = true): Character {
+        let newCharacter = CharacterLoadSimple(`LSCG-${id || C.ID}`);
+        
+        newCharacter.Appearance = AppearanceItemParse(CharacterAppearanceStringify(C));
+        if (strip) CharacterNaked(newCharacter, false);
+        if (removeItems) CharacterReleaseTotal(newCharacter, false);
+
+        return newCharacter;
+    }
+
 /**
  * Checks whether the player is able to unlock the provided item on the provided character
  * @param {Character} C - The character on whom the item is equipped

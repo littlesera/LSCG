@@ -30,7 +30,8 @@ export enum LSCGSpellEffect {
     barrier = "Magic Barrier",
     disarm = "Disarming",
     denial = "Denying",
-    orgasm = "Forced Orgasm"
+    orgasm = "Forced Orgasm",
+    project = "Astral Projection"
 }
 
 export enum OutfitOption {
@@ -77,6 +78,7 @@ export interface SpellDefinition {
 export interface MagicSettingsModel extends MagicPublicSettingsModel {
     knownSpells: SpellDefinition[];
     allowChangePronouns: boolean;
+    projectionTintColor: string;
 }
 
 export interface MagicPublicSettingsModel extends BaseSettingsModel{

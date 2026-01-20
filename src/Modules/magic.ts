@@ -62,6 +62,7 @@ export class MagicModule extends BaseModule {
             allowOutfitToChangeNeckItems: false,
             allowChangeGenitals: true,
             allowChangePronouns: false,
+            projectionTintColor: "#00CED1",
             requireWhitelist: false,
             blockXRay: true
         };
@@ -286,12 +287,14 @@ export class MagicModule extends BaseModule {
     }
 
     CloseSpellMenu() {
-        this.SpellMenuOpen = false;
-        this.TeachingSpell = false;
-        this.SpellPairOption.SelectOpen = false;
-        if ((CurrentScreen as string) == "LSCG_SPELLS_DIALOG")
-            (CurrentScreen as string) = this.PrevScreen ?? "ChatRoom";
-        DialogMenuMapping.dialog.Load();
+        if (this.SpellMenuOpen || (CurrentScreen as string) == "LSCG_SPELLS_DIALOG") {
+            this.SpellMenuOpen = false;
+            this.TeachingSpell = false;
+            this.SpellPairOption.SelectOpen = false;
+            if ((CurrentScreen as string) == "LSCG_SPELLS_DIALOG")
+                (CurrentScreen as string) = this.PrevScreen ?? "ChatRoom";
+            DialogMenuMapping.dialog.Load();
+        }
     }
 
     TeachSpell(target: OtherCharacter) {
@@ -782,6 +785,10 @@ export class MagicModule extends BaseModule {
                     case LSCGSpellEffect.xRay:
                         SendAction(`%NAME% blinks with a grin.`);
                         state = this.stateModule.XRayState.Activate(sender?.MemberNumber, duration);
+                        break;
+                    case LSCGSpellEffect.project:
+                        SendAction(`%NAME_POSSESSIVE_DIRECT% body slumps weakly as a shimmering projection of %POSSESSIVE% form appears nearby.`);
+                        state = this.stateModule.AstralProjectionState.Activate(sender?.MemberNumber, duration);
                         break;
                 }
                 if (ix == arr.length - 1)

@@ -56,7 +56,7 @@ type LSCGCommandName = "debug"
     | "h5-ask" 
     | "h5-execute";
 
-type LSCGState = "none" | "hypnotized" | "asleep" | "horny" | "choking" | "held" | "blind" | "deaf" | "frozen" | "gagged" | "redressed" | "arousal-paired" | "orgasm-siphoned" | "leashed" | "resized" | "buffed" | "polymorphed" | "x-ray-vision" | "denied" | "protected" | "cursed-item";
+type LSCGState = "none" | "hypnotized" | "asleep" | "horny" | "choking" | "held" | "blind" | "deaf" | "frozen" | "gagged" | "redressed" | "arousal-paired" | "orgasm-siphoned" | "leashed" | "resized" | "buffed" | "polymorphed" | "x-ray-vision" | "denied" | "protected" | "cursed-item" | "astral-projection";
 
 type LSCGImmersiveOption = "true" | "false" | "whenImmersive";
 

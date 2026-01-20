@@ -774,6 +774,8 @@ export class GuiMagic extends GuiSubscreen {
 				return "Create a magic barrier that protect and reflect incoming spell";
 			case LSCGSpellEffect.disarm:
 				return "Disarm the target";
+			case LSCGSpellEffect.project:
+				return "Project the target's soul into the Astral Plane";
 			case LSCGSpellEffect.none:
 			default:
 				return ""			;
