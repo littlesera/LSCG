@@ -24,6 +24,10 @@ export class AstralProjectionState extends BaseState {
         return this.config.active;
     }
 
+    GetProjectionTintColor(C: OtherCharacter | PlayerCharacter): string {
+        return C.LSCG.MagicModule.projectionTintColor ?? '#00ced1'; // Darker Teal
+    }
+
     GetGhostCharacter(C: OtherCharacter | PlayerCharacter): Character {
         let activeStateConfig = C.LSCG?.StateModule.states.find(state => state.type === "astral-projection")
         if (!activeStateConfig || !activeStateConfig.active) {
@@ -50,7 +54,7 @@ export class AstralProjectionState extends BaseState {
     Init(): void {
         hookFunction("CharacterLoadCanvas", 1, (args, next) => {
             const C = args[0] as OtherCharacter;
-            
+
             let activeStateConfig = C.LSCG?.StateModule.states.find(state => state.type === "astral-projection")
             if (!activeStateConfig || !activeStateConfig.active) {
                 return next(args);
@@ -96,7 +100,7 @@ export class AstralProjectionState extends BaseState {
                             ctx!.globalAlpha = 0.5;
                             // Apply ghostly tint
                             ctx.globalCompositeOperation = 'source-atop';
-                            ctx.fillStyle = Player.LSCG.MagicModule.projectionTintColor ?? '#00ced1'; // Darker Teal
+                            ctx.fillStyle = this.GetProjectionTintColor(C);
                             ctx.fillRect(0, 0, canvas?.width || CanvasDrawWidth, canvas?.height || CanvasDrawHeight);
                             // Fade out bottom half
                             ctx.globalCompositeOperation = 'destination-in';
@@ -232,6 +236,13 @@ export class AstralProjectionState extends BaseState {
             } else {
                 return next(args);
             }
+        }, ModuleCategory.States);
+
+        hookFunction("CommonSetScreen", 1, (args, next) => {
+            if (this.Active) {
+                CharacterLoadCanvas(Player);
+            }
+            return next(args);
         }, ModuleCategory.States);
     }
 

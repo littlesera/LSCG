@@ -264,6 +264,14 @@ export class GuiMagic extends GuiSubscreen {
 						description: "If checked, only people on your whitelist can cast spells on you or teach you spells.",
 						setting: () => this.settings.requireWhitelist ?? false,
 						setSetting: (val) => this.settings.requireWhitelist = val
+					}, <Setting>{
+						type: "text",
+						id: "magic_spiritColor",
+						label: "Spirit Color:",
+						overrideWidth: 200,
+						description: "Overrides the default tint color of your astral projection (default is #00ced1).",
+						setting: () => this.settings.projectionTintColor ?? "#00ced1",
+						setSetting: (val) => this.settings.projectionTintColor = val
 					}
 				]];
 	}

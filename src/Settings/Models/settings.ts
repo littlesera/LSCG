@@ -153,7 +153,8 @@ export class PublicSettingsModel implements IPublicSettingsModel {
         allowOutfitToChangeNeckItems: false,
         allowChangeGenitals: true,
         requireWhitelist: false,
-        blockXRay: true
+        blockXRay: true,
+        projectionTintColor: "#00CED1"
     };
     OpacityModule: OpacityPublicSettingsModel = <OpacityPublicSettingsModel>{
         enabled: true,

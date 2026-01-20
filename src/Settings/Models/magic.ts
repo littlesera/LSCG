@@ -78,7 +78,6 @@ export interface SpellDefinition {
 export interface MagicSettingsModel extends MagicPublicSettingsModel {
     knownSpells: SpellDefinition[];
     allowChangePronouns: boolean;
-    projectionTintColor: string;
 }
 
 export interface MagicPublicSettingsModel extends BaseSettingsModel{
@@ -107,4 +106,7 @@ export interface MagicPublicSettingsModel extends BaseSettingsModel{
 
     // XRay Block
     blockXRay: boolean;
+
+    // Colors
+    projectionTintColor: string;
 }
