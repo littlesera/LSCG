@@ -50,17 +50,12 @@ export class AstralProjectionState extends BaseState {
     Init(): void {
         hookFunction("CharacterLoadCanvas", 1, (args, next) => {
             const C = args[0] as OtherCharacter;
-            // const X = args[1] as number;
-            // const Y = args[2] as number;
-            // const Zoom = args[3] as number;
-            // const IsHeightResizeAllowed = args[4] as boolean;
-            // const DrawCanvas = args[5] as CanvasRenderingContext2D | null;
-
+            
             let activeStateConfig = C.LSCG?.StateModule.states.find(state => state.type === "astral-projection")
             if (!activeStateConfig || !activeStateConfig.active) {
                 return next(args);
             } else {
-                var inDialog = !!CurrentCharacter;
+                var inDialog = !!CurrentCharacter || CurrentScreen != "ChatRoom";
                 var isPlayerDialog = CurrentCharacter?.IsPlayer();
 
                 CommonDrawCanvasPrepare(C);
@@ -165,31 +160,6 @@ export class AstralProjectionState extends BaseState {
             return next(args);
         }, ModuleCategory.States);
 
-        hookFunction("CharacterOnlineRefresh", 1, (args, next) => {
-            const currentChar = args[0] as OtherCharacter;
-            const incomingCharData = args[1] as ServerAccountDataSynced;
-            const sourceMemberNumber = args[2] as number;
-
-            // Updating some other character, continue as normal
-            if (!currentChar.IsPlayer()) return next(args);
-            else {
-                let activeStateConfig = currentChar?.LSCG?.StateModule.states.find(state => state.type === "astral-projection");
-                // Refreshing something on ourselves, do update, then revert base + corporeal poses and only update ghost pose...
-                if (sourceMemberNumber == Player.MemberNumber && activeStateConfig?.active) {
-                    let prevPose = JSON.stringify(currentChar.PoseMapping);
-                    next(args);
-                    activeStateConfig.extensions["ghost"] = currentChar.PoseMapping;
-                    currentChar.PoseMapping = JSON.parse(prevPose);
-                    CharacterRefresh(currentChar);
-                    settingsSave(true);
-                }
-                // Someone else is updating us or we arn't projected, do normal refresh
-                else {
-                    next(args);
-                }
-            }
-        }, ModuleCategory.States);
-
         hookFunction("PoseSetActive", 1, (args, next) => {
             const C = args[0] as OtherCharacter;
 
@@ -206,7 +176,6 @@ export class AstralProjectionState extends BaseState {
             } else {
                 next(args);
             }
-
         }, ModuleCategory.States);
 
         hookFunction("Player.IsKneeling", 1, (args, next) => {
@@ -252,19 +221,6 @@ export class AstralProjectionState extends BaseState {
                 return PoseChangeStatus.ALWAYS;
             } else return next(args);
         }, ModuleCategory.States);
-
-        // hookFunction("Player.HasTints", 1, (args, next) => {
-        //     if (this.Active && Player.ImmersionSettings?.AllowTints) return true;
-        //     return next(args);
-        // }, ModuleCategory.States);
-
-        // hookFunction("Player.GetTints", 1, (args, next) => {
-        //     if (this.Active && Player.ImmersionSettings?.AllowTints) {                
-		//         return [{r: 0, g: 0, b: 0, a: 0.4}];
-        //     } else {
-        //         return next(args);
-        //     }
-        // }, ModuleCategory.States);
 
         hookFunction("ActivityAllowedForGroup", 1, (args, next) => {
             if (this.Active) {
