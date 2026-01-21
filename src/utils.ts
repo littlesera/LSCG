@@ -324,8 +324,12 @@ export function settingsSave(publish: boolean = false) {
 	}
 }
 
-export function ExportSettings(): string {
+export function CompressLSCGSettings(): string {
 	return LZString.compressToBase64(JSON.stringify(Player.LSCG));
+}
+
+export function ExportSettings(): string {
+	return downloadText(CompressLSCGSettings());
 	// let parsed =  JSON.parse(JSON.stringify(Player.LSCG)); //CleanDefaultsFromSettings(Player.LSCG);
 	// Object.keys(parsed).filter(key => key != "Version").forEach(key => {
 	// 	let module = (<any>parsed)[key];
@@ -335,6 +339,25 @@ export function ExportSettings(): string {
 	// 	});
 	// });
 	// return LZString.compressToBase64(JSON.stringify(parsed));
+}
+
+export function downloadText(text: string, filename?: string | undefined): string {
+	if (!filename) {
+		filename = `Export-${Player.MemberNumber}-${Date.now()}.lscg`;
+	}
+	
+	const blob = new Blob([text], { type: 'text/plain' });
+	const url = window.URL.createObjectURL(blob);
+	const link = document.createElement('a');
+	link.href = url;
+	link.download = filename;
+
+	document.body.appendChild(link);
+	link.click();
+	document.body.removeChild(link);
+
+	window.URL.revokeObjectURL(url);
+	return filename;
 }
 
 export function parseFromBase64<T extends unknown>(data: string): T | undefined {
@@ -359,7 +382,45 @@ export function parseFromUTF16<T extends unknown>(data: string): T | undefined {
 	}
 }
 
-export function ImportSettings(val: string): boolean {
+export function requestFileDrop(): Promise<string | undefined> {
+	return new Promise<string | undefined>((resolve) => {
+		// Create the input element
+		const input = document.createElement('input');
+		input.type = 'file';
+
+		// Optional: Filter for specific files (e.g., .json or images)
+		// input.accept = ".json, .txt";
+
+		// Listen for the selection
+		input.onchange = async (e) => {
+			if (!e || !e.target || !(e.target as any).files)
+				return;
+			const file = (e.target as any).files[0];
+			if (file) {
+				const text = await file.text();
+				resolve(text);
+			}
+		};
+
+		// Trigger the OS file dialog
+		input.click();
+	});
+}
+
+export async function ImportSettings() {
+	console.log("Waiting for user to drop a file...");
+	const fileContent = await requestFileDrop();
+
+	if (fileContent) {
+		console.log("File received:", fileContent);
+		handleImportString(fileContent);
+	} else {
+		console.log("Import cancelled by user.");
+	}
+}
+
+export function handleImportString(val: string): boolean {
+	if (!val) return false;
 	try {
 		let oldSettings = JSON.parse(JSON.stringify(Player.LSCG));
 		localStorage.setItem(`LSCG_${Player.MemberNumber}_Backup`, LZString.compressToBase64(JSON.stringify(oldSettings)));

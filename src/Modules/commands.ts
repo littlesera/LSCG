@@ -1,7 +1,7 @@
 import { BaseModule } from "base";
 import { getModule, modules } from "modules";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { ExportSettings, getCharacter, getCharacterByNicknameOrMemberNumber, GetDelimitedList, ImportSettings, LSCG_SendLocal, parseFromBase64, removeAllHooksByModule, SendAction, sendLSCGCommandBeep, settingsSave, toItemBundle } from "../utils";
+import { CompressLSCGSettings, ExportSettings, getCharacter, getCharacterByNicknameOrMemberNumber, GetDelimitedList, ImportSettings, LSCG_SendLocal, parseFromBase64, removeAllHooksByModule, SendAction, sendLSCGCommandBeep, settingsSave, toItemBundle } from "../utils";
 import { HypnoModule } from "./hypno";
 import { ItemUseModule } from "./item-use";
 import { ActivityModule } from "./activities";
@@ -160,25 +160,27 @@ export class CommandModule extends BaseModule {
 			Tag: "export",
 			Description: ": Exports all LSCG settings into the clipboard.",
 			Action: (args, msg, parsed) => {
-				let compressed = ExportSettings();
-				navigator.clipboard.writeText(compressed);
-				LSCG_SendLocal(`<b>LSCG</b> settings copied to clipboard.`, false);
+				ExportSettings();
 			}
 		}, {
 			Tag: "import",
 			Description: ": Imports all LSCG settings from the clipboard, overwriting any current configuration.",
 			Action: (args, msg, parsed) => {
 				if (confirm("Importing settings will overwrite existing settings. \nAre you sure?")) {
-					let compressed = window.prompt("LSCG Export string:");
-					if (!compressed) {
-						LSCG_SendLocal("No content entered.");
-						return;
-					}
-					localStorage.setItem(`LSCG_${Player.MemberNumber}_Backup`, ExportSettings());
-					if (ImportSettings(compressed))
-						LSCG_SendLocal(`<div><b>LSCG</b> settings Imported from clipboard. If this was in error, try using /lscg restore</div>`, false);
-					else
-						LSCG_SendLocal(`Failed to import LSCG settings from clipboard.`);
+					ImportSettings().then(() => {
+						alert(`LSCG settings imported`);
+					});
+
+					// let compressed = window.prompt("LSCG Export string:");
+					// if (!compressed) {
+					// 	LSCG_SendLocal("No content entered.");
+					// 	return;
+					// }
+					// localStorage.setItem(`LSCG_${Player.MemberNumber}_Backup`, CompressLSCGSettings());
+					// if (ImportSettings(compressed))
+					// 	LSCG_SendLocal(`<div><b>LSCG</b> settings Imported from clipboard. If this was in error, try using /lscg restore</div>`, false);
+					// else
+					// 	LSCG_SendLocal(`Failed to import LSCG settings from clipboard.`);
 				}
 			}
 		}];
