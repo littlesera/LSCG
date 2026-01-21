@@ -3,7 +3,21 @@ import { BaseState } from "./BaseState";
 import { StateModule } from "Modules/states";
 import { ModuleCategory } from "Settings/setting_definitions";
 
+// TODO:
+// - Allow 'soulbind' bindings to be added to ghost and carry over from corporeal form if applied there.
+//     - Save 'astral' items in extensions, use without displaying to influence restrictions
+
+export interface GhostConfig {
+    a: AppearanceBundle;
+    p: Partial<Record<AssetPoseCategory, AssetPoseName>>;
+}
+
+export interface SoulBindings extends AppearanceBundle {}
+
 export class AstralProjectionState extends BaseState {
+    hideGhost: boolean = false;
+    hideCorporeal: boolean = false;
+    
     Type: LSCGState = "astral-projection";
 
     Icon(C: OtherCharacter): string {
@@ -24,6 +38,17 @@ export class AstralProjectionState extends BaseState {
         return this.config.active;
     }
 
+    GetGhostConfig(C: OtherCharacter | PlayerCharacter): GhostConfig {
+        return C.LSCG?.StateModule.states.find(state => state.type === "astral-projection")?.extensions["ghost"] as GhostConfig;
+    }
+
+    SetGhostConfig(C: OtherCharacter | PlayerCharacter, ghostChar: GhostConfig) {
+        if (!C.LSCG) return;
+        let stateConfig = C.LSCG.StateModule?.states?.find(state => state.type === "astral-projection");
+        if (!stateConfig) return;
+        stateConfig.extensions["ghost"] = ghostChar;
+    }
+
     GetProjectionTintColor(C: OtherCharacter | PlayerCharacter): string {
         return C.LSCG.MagicModule.projectionTintColor ?? '#00ced1'; // Darker Teal
     }
@@ -33,8 +58,11 @@ export class AstralProjectionState extends BaseState {
         if (!activeStateConfig || !activeStateConfig.active) {
             return C;
         } else {
-            let ghostChar = CopyCharacter(C, `LSCGAstralProjection-${C.ID}`, false, true);
-            ghostChar.PoseMapping = activeStateConfig.extensions["ghost"] ?? C.PoseMapping;
+            let ghostChar = CopyCharacter(C, `LSCGAstralProjection-${C.ID}`, true, true);
+            let ghostConfig = this.GetGhostConfig(C);
+            ghostChar.PoseMapping = ghostConfig?.p ?? C.PoseMapping;
+            ServerAppearanceLoadFromBundle(ghostChar, "Female3DCG", ghostConfig?.a ?? {}, C.MemberNumber);
+            ghostChar.ArousalSettings = C.ArousalSettings;
             return ghostChar;
         }
     }
@@ -47,6 +75,7 @@ export class AstralProjectionState extends BaseState {
             let corporealChar = CopyCharacter(C, `LSCGAstralProjectionCorporeal-${C.ID}`, false, false);
             CharacterSetFacialExpression(corporealChar, "Eyes", "Closed");
             corporealChar.PoseMapping = C.PoseMapping;
+            corporealChar.ArousalSettings = C.ArousalSettings;
             return corporealChar;
         }
     }
@@ -59,8 +88,8 @@ export class AstralProjectionState extends BaseState {
             if (!activeStateConfig || !activeStateConfig.active) {
                 return next(args);
             } else {
-                var inDialog = !!CurrentCharacter || CurrentScreen != "ChatRoom";
-                var isPlayerDialog = CurrentCharacter?.IsPlayer();
+                //var inDialog = !!CurrentCharacter || CurrentScreen != "ChatRoom";
+                //var isPlayerDialog = CurrentCharacter?.IsPlayer();
 
                 CommonDrawCanvasPrepare(C);
                 const origYOffset = CharacterAppearanceYOffset(C, C.HeightRatio)
@@ -69,10 +98,14 @@ export class AstralProjectionState extends BaseState {
                 let ghostCanvases = [document.createElement("canvas"), document.createElement("canvas")];
                 ghostCanvases.forEach((ghostCanvas, index) => {
                     var oldCanvas = origCanvases[index];
-                    const ctx = ghostCanvas.getContext("2d");
+                    const ctx = ghostCanvas.getContext("2d")!;
                     ghostCanvas.width = oldCanvas?.width || CanvasDrawWidth;
                     ghostCanvas.height = oldCanvas?.height || CanvasDrawHeight;
-                    ctx!.globalAlpha = isPlayerDialog ? 1 : 0.5;
+                    ctx!.globalAlpha = 0.5;
+                    ctx.shadowColor = this.GetProjectionTintColor(C);
+                    ctx.shadowBlur = 50;
+                    ctx.shadowOffsetX = 0;
+                    ctx.shadowOffsetY = 0;
                 });
 
                 let corporealCanvases = [document.createElement("canvas"), document.createElement("canvas")];
@@ -91,13 +124,14 @@ export class AstralProjectionState extends BaseState {
                 corporealChar.Canvas = corporealCanvases[0];
                 corporealChar.CanvasBlink = corporealCanvases[1];
 
-                if (!inDialog || isPlayerDialog) {
+                if (!this.hideGhost) {
                     next([ghostChar]);
 
                     ghostCanvases.forEach((canvas, index) => {
                         const ctx = canvas.getContext("2d");
                         if (ctx) {
-                            ctx!.globalAlpha = 0.5;
+                            ctx.shadowBlur = 0;
+                            ctx.globalAlpha = 0.3;
                             // Apply ghostly tint
                             ctx.globalCompositeOperation = 'source-atop';
                             ctx.fillStyle = this.GetProjectionTintColor(C);
@@ -119,12 +153,12 @@ export class AstralProjectionState extends BaseState {
                     origCanvases.forEach((origCanvas, index) => {
                         let ctx = origCanvas?.getContext("2d");
                         if (!!ctx) {
-                            ctx.drawImage(ghostCanvases[index], inDialog ? 0 : 80, (inDialog ? 0 : -80) + ghostYOffset);
+                            ctx.drawImage(ghostCanvases[index], 80, -80 + ghostYOffset);
                         }
                     });
                 }
 
-                if (!inDialog || !isPlayerDialog) {
+                if (!this.hideCorporeal) {
                     next([corporealChar]);
 
                     CharacterAppearanceSetHeightModifiers(corporealChar);
@@ -173,7 +207,7 @@ export class AstralProjectionState extends BaseState {
                 let ghostChar = this.GetGhostCharacter(C);
                 args[0] = ghostChar;
                 next(args);
-                activeStateConfig.extensions["ghost"] = ghostChar.PoseMapping;
+                activeStateConfig.extensions["ghost"].p = ghostChar.PoseMapping;
                 CharacterDelete(ghostChar);
                 CharacterRefresh(C, false);
                 settingsSave(true);
@@ -185,7 +219,7 @@ export class AstralProjectionState extends BaseState {
         hookFunction("Player.IsKneeling", 1, (args, next) => {
             let activeStateConfig = Player?.LSCG?.StateModule.states.find(state => state.type === "astral-projection");
             if (activeStateConfig?.active) {
-                let pose = activeStateConfig.extensions["ghost"] ?? Player.PoseMapping;
+                let pose = this.GetGhostConfig(Player)?.p ?? Player.PoseMapping;
                 return CommonIncludes(PoseAllKneeling, pose.BodyLower);
             } else return next(args);
         }, ModuleCategory.States);
@@ -193,7 +227,7 @@ export class AstralProjectionState extends BaseState {
         hookFunction("Player.IsStanding", 1, (args, next) => {
             let activeStateConfig = Player?.LSCG?.StateModule.states.find(state => state.type === "astral-projection");
             if (activeStateConfig?.active) {
-                let pose = activeStateConfig.extensions["ghost"] ?? Player.PoseMapping;
+                let pose = this.GetGhostConfig(Player)?.p ?? Player.PoseMapping;
                 return CommonIncludes(PoseAllStanding, pose.BodyLower);
             } else return next(args);
         }, ModuleCategory.States);
@@ -228,10 +262,21 @@ export class AstralProjectionState extends BaseState {
 
         hookFunction("ActivityAllowedForGroup", 1, (args, next) => {
             if (this.Active) {
-                var temp = Player
-                Player = this.GetGhostCharacter(Player) as PlayerCharacter;
+                let C = args[0];
+                var temp = Player;
+                let ghostChar = this.GetGhostCharacter(Player) as PlayerCharacter;
+                let corpChar = this.GetCorporealCharacter(C) as PlayerCharacter;
+                Player = ghostChar
+                if (C.IsPlayer()) {
+                    args[0] = corpChar;
+                }
+
                 const ret = next(args);
+                
+                CharacterDelete(ghostChar);
+                CharacterDelete(corpChar);
                 Player = temp;
+                args[0] = C;
                 return ret;
             } else {
                 return next(args);
@@ -244,16 +289,48 @@ export class AstralProjectionState extends BaseState {
             }
             return next(args);
         }, ModuleCategory.States);
+
+        hookFunction("ActivityBuildChatTag", 1, (args, next) => {
+            let C = args[0] as OtherCharacter;
+            if (this.Active && C.IsPlayer()) {
+                args[0] = this.GetCorporealCharacter(C) as PlayerCharacter;
+                const result = next(args);
+                args[0] = C;
+                return result;
+            } else return next(args);
+        }, ModuleCategory.States);
+
+        hookFunction("SpeechTransformProcess", 1, (args, next) => {
+            let C = args[0];
+            if (this.Active && C.IsPlayer()) {
+                args[2] = [];
+                return next(args);
+            } else return next(args);
+        }, ModuleCategory.States);
+
+        hookFunction('Player.GetDeafLevel', 1, (args, next) => {
+            if (this.Active)
+                return 0;
+            return next(args);
+        }, ModuleCategory.States);
+
+        hookFunction('Player.GetBlindLevel', 1, (args, next) => {
+            if (this.Active)
+                return 0;
+            return next(args);
+        }, ModuleCategory.States);
     }
 
     Activate(memberNumber?: number | undefined, duration?: number | undefined, emote?: boolean | undefined): BaseState | undefined {
         const dummyChar = CopyCharacter(Player, `LSCGAstralProjectionDummy-${Player.ID}`, false, true);
         const baseUpperAllowed = PoseCanChangeUnaidedStatus(dummyChar, "BaseUpper") != PoseChangeStatus.NEVER 
         const baseLowerAllowed = PoseCanChangeUnaidedStatus(dummyChar, "BaseLower") != PoseChangeStatus.NEVER;
-        this.config.extensions["ghost"] = {
+        let ghostPose = {
             BodyUpper: baseUpperAllowed ? "BaseUpper" : dummyChar.PoseMapping.BodyUpper,
             BodyLower: baseLowerAllowed ? "BaseLower" : dummyChar.PoseMapping.BodyLower,
         };
+        let ghostBundle = ServerAppearanceBundle(dummyChar.Appearance);
+        this.SetGhostConfig(Player, { a: ghostBundle, p: ghostPose });
         CharacterDelete(dummyChar);
         
         PoseSetActive(Player, "Kneel");
