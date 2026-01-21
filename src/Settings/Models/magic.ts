@@ -1,3 +1,4 @@
+import { SpiritTextType } from "Settings/magic";
 import { BaseSettingsModel } from "./base";
 
 export const KNOWN_SPELLS_LIMIT: number = 48;
@@ -78,6 +79,7 @@ export interface SpellDefinition {
 export interface MagicSettingsModel extends MagicPublicSettingsModel {
     knownSpells: SpellDefinition[];
     allowChangePronouns: boolean;
+    spiritTextFormat: SpiritTextType;
 }
 
 export interface MagicPublicSettingsModel extends BaseSettingsModel{

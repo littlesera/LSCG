@@ -10,6 +10,50 @@
 	--lscg-font-family: arial, sans-serif;
 }
 
+.lscg-ghost-text {
+	span:not(.ooc-text) {
+		display: inline-block;	
+		/* Applying the animation */
+		animation: spectral-float 6s ease-in-out infinite alternate;
+		filter: blur(0.4px);
+		transition: opacity 0.3s ease;
+	}
+	.ooc-text {
+		text-shadow: none;
+	}
+}
+
+@keyframes spectral-float {
+  0% {
+    transform: translate(0, 0) rotate(0deg);
+    filter: blur(0.4px);
+    opacity: 0.5;
+  }
+  25% {
+    /* Slight drift and tilt */
+    transform: translate(-1px, -4px) rotate(-3deg);
+    opacity: 0.8;
+  }
+  50% {
+    /* Drift the other way and "soften" */
+    transform: translate(2px, -2px) rotate(4deg);
+    filter: blur(1.0px);
+    opacity: 0.4;
+  }
+  75% {
+    /* Highest point */
+    transform: translate(0, -6px) rotate(-1deg);
+    filter: blur(0.2px);
+    opacity: 0.7;
+  }
+  100% {
+	/* return to origin */
+	transform: translate(0, 0) rotate(0deg);
+    filter: blur(0.4px);
+    opacity: 0.5;
+  }
+}
+
 .lscg-button {
 	background-color: var(--lscg-button-color);
 	background-origin: content-box;

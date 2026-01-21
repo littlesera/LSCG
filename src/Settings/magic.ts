@@ -10,6 +10,8 @@ export const pairedSpellEffects = [
 	LSCGSpellEffect.paired_arousal
 ];
 
+export type SpiritTextType = "None" | "Glow" | "Float";
+
 export class GuiMagic extends GuiSubscreen {
 
 	get name(): string {
@@ -272,6 +274,15 @@ export class GuiMagic extends GuiSubscreen {
 						description: "Overrides the default tint color of your astral projection (default is #00ced1).",
 						setting: () => this.settings.projectionTintColor ?? "#00ced1",
 						setSetting: (val) => this.settings.projectionTintColor = val
+					},<Setting>{
+						type: "dropdown",
+						id: "ghostTextSelect",
+						label: "Spirit Speech effects:",
+						description: "Select what level of effect to apply to spirit speech.",
+						setting: () => this.settings.spiritTextFormat ?? "Float",
+						setSetting: (val) => this.settings.spiritTextFormat = (val ?? "Float"),
+						overrideWidth: 200,
+						options: ["None", "Glow", "Float"]
 					}
 				]];
 	}

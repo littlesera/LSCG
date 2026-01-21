@@ -319,6 +319,99 @@ export class AstralProjectionState extends BaseState {
                 return 0;
             return next(args);
         }, ModuleCategory.States);
+
+        hookFunction('ChatRoomMessageDisplay', 1, (args, next) => {
+            let data = args[0];
+            let msg = args[1];
+            let C = args[2] as OtherCharacter;
+            let activeStateConfig = C?.LSCG?.StateModule.states.find(state => state.type === "astral-projection");
+            if (!!activeStateConfig && activeStateConfig.active && (data.Type == "Chat" || data.Type == "Whisper")) {
+                let div = next(args) as HTMLDivElement;
+                let msg = div?.getElementsByClassName("chat-room-message-content")[0] as HTMLSpanElement;
+                let fxType = Player.LSCG?.MagicModule.spiritTextFormat ?? "Float";
+                if (!!msg && fxType != "None") {
+                    let tint = this.GetProjectionTintColor(C);
+                    msg.classList.add("lscg-ghost-text");
+                    msg.style.textShadow = `0 0 10px ${tint}`;
+                    if (Player.LSCG?.MagicModule.spiritTextFormat == "Float") {
+                        this._splitSpanCharacters(msg);
+                    }
+                    else {
+                        this._wrapOOCContent(msg);
+                    }
+                }
+                return div;
+            } else {
+                return next(args);
+            }
+        }, ModuleCategory.States);
+    }
+
+    _splitSpanCharacters(ele: HTMLElement) {    
+        if (!ele.textContent) return;    
+        
+        const text = ele.textContent;
+        ele.textContent = "";
+
+        // Regex explanation:
+        // (\([^)]+\))  -> Match anything starting with ( and ending with )
+        // |            -> OR
+        // (.)          -> Match any single character
+        const regex = /(\([^)]+\))|(.)/g;
+        const matches = text.matchAll(regex);
+
+        for (const match of matches) {
+            const [fullMatch, parenthesized, singleChar] = match;
+
+            if (parenthesized) {
+                // Handle (Out of Character) text
+                const oocSpan = document.createElement("span");
+                oocSpan.classList.add("ooc-text");
+                oocSpan.textContent = parenthesized;
+                // No animation or special styles applied here
+                ele.appendChild(oocSpan);
+            } else if (singleChar) {
+                // Handle individual spectral characters
+                const span = document.createElement("span");
+                span.textContent = singleChar === " " ? "\u00A0" : singleChar;
+                
+                const duration = 4 + Math.random() * 4;
+                const alt = Math.round(Math.random());
+
+                span.style.animationDuration = `${duration}s`;
+                if (alt) span.style.animationDirection = "alternate-reverse";
+
+                ele.appendChild(span);
+            }
+        }
+    }
+
+    _wrapOOCContent(ele: HTMLElement) {
+        if (!ele.textContent) return;
+
+        const text = ele.textContent;
+        ele.textContent = "";
+
+        // Regex: Finds everything inside (parentheses)
+        // Matches the parens and the text inside them
+        const regex = /(\([^)]+\))/g;
+        
+        // Split the text by the regex to get an array of OOC parts and normal parts
+        const parts = text.split(regex);
+
+        parts.forEach(part => {
+            if (part.startsWith('(') && part.endsWith(')')) {
+                // This is OOC text
+                const oocSpan = document.createElement("span");
+                oocSpan.className = "ooc-text";
+                oocSpan.textContent = part;
+                ele.appendChild(oocSpan);
+            } else if (part.length > 0) {
+                // This is normal text (we wrap it in a plain text node or span)
+                const textNode = document.createTextNode(part);
+                ele.appendChild(textNode);
+            }
+        });
     }
 
     Activate(memberNumber?: number | undefined, duration?: number | undefined, emote?: boolean | undefined): BaseState | undefined {

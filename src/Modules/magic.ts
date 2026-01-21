@@ -64,7 +64,8 @@ export class MagicModule extends BaseModule {
             allowChangePronouns: false,
             projectionTintColor: "#00CED1",
             requireWhitelist: false,
-            blockXRay: true
+            blockXRay: true,
+            spiritTextFormat: "Float"
         };
     }
 
