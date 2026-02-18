@@ -1,4 +1,4 @@
-import { CopyCharacter, GetItemNameAndDescriptionConcat, hookFunction, isCloth, isPhraseInString, settingsSave } from "utils";
+import { CopyCharacter, GetConfiguredItemBundlesFromOutfitKey, GetItemNameAndDescriptionConcat, hookFunction, isAppearance, isCloth, isPhraseInString, settingsSave } from "utils";
 import { BaseState } from "./BaseState";
 import { StateModule } from "Modules/states";
 import { ModuleCategory } from "Settings/setting_definitions";
@@ -60,8 +60,9 @@ export class AstralProjectionState extends BaseState {
         } else {
             let ghostChar = CopyCharacter(C, `LSCGAstralProjection-${C.ID}`, true, true);
             let ghostConfig = this.GetGhostConfig(C);
+
             ghostChar.PoseMapping = ghostConfig?.p ?? C.PoseMapping;
-            ServerAppearanceLoadFromBundle(ghostChar, "Female3DCG", ghostConfig?.a ?? {}, C.MemberNumber);
+            ServerAppearanceLoadFromBundle(ghostChar, "Female3DCG", ghostConfig?.a ?? {}, undefined);
             ghostChar.ArousalSettings = C.ArousalSettings;
             return ghostChar;
         }
@@ -422,8 +423,17 @@ export class AstralProjectionState extends BaseState {
             BodyUpper: baseUpperAllowed ? "BaseUpper" : dummyChar.PoseMapping.BodyUpper,
             BodyLower: baseLowerAllowed ? "BaseLower" : dummyChar.PoseMapping.BodyLower,
         };
+
+        let spiritFormKey = Player.LSCG.MagicModule.spiritFormOutfitKey;
+        let spiritForm = !!spiritFormKey ? GetConfiguredItemBundlesFromOutfitKey(Player.LSCG.MagicModule.spiritFormOutfitKey, item => true) : null;
+        if (!!spiritForm) {
+            CharacterNaked(dummyChar);
+            ServerAppearanceLoadFromBundle(dummyChar, "Female3DCG", spiritForm, undefined);
+        }
+        
         let ghostBundle = ServerAppearanceBundle(dummyChar.Appearance);
-        this.SetGhostConfig(Player, { a: ghostBundle, p: ghostPose });
+
+        this.SetGhostConfig(Player, { a: spiritForm || ghostBundle, p: ghostPose });
         CharacterDelete(dummyChar);
         
         PoseSetActive(Player, "Kneel");

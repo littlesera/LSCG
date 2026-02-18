@@ -80,6 +80,8 @@ export interface MagicSettingsModel extends MagicPublicSettingsModel {
     knownSpells: SpellDefinition[];
     allowChangePronouns: boolean;
     spiritTextFormat: SpiritTextType;
+    spiritFormOutfitKey: string;
+    disableSoulBindings: boolean;
 }
 
 export interface MagicPublicSettingsModel extends BaseSettingsModel{

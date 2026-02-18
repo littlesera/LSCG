@@ -777,6 +777,11 @@ export function isDrawingOverridable(item: Item | Asset | AssetGroup | AssetGrou
 		includes(group?.Name?.toLocaleLowerCase(), "markings"); 
 }
 
+export function isAppearance(item: Item | Asset | AssetGroup | AssetGroupName): boolean {
+	const group = smartGetAssetGroup(item);
+	return !!group?.IsAppearance();
+}
+
 export function isCloth(item: Item | Asset | AssetGroup | AssetGroupName, allowCosplay: boolean = false, includeUnderwear: boolean = true): boolean {
 	const group = smartGetAssetGroup(item);
 	if (!includeUnderwear && group?.Underwear) return false;
@@ -1141,14 +1146,14 @@ export function getBCXActiveCurseSlots(): AssetGroupName[] {
 }
 
 export function CopyCharacter(C: Character, id: string, strip: boolean = true, removeItems: boolean = true): Character {
-        let newCharacter = CharacterLoadSimple(`LSCG-${id || C.ID}`);
-        
-        newCharacter.Appearance = AppearanceItemParse(CharacterAppearanceStringify(C));
-        if (strip) CharacterNaked(newCharacter, false);
-        if (removeItems) CharacterReleaseTotal(newCharacter, false);
+	let newCharacter = CharacterLoadSimple(`LSCG-${id || C.ID}`);
+	
+	newCharacter.Appearance = AppearanceItemParse(CharacterAppearanceStringify(C));
+	if (strip) CharacterNaked(newCharacter, false);
+	if (removeItems) CharacterReleaseTotal(newCharacter, false);
 
-        return newCharacter;
-    }
+	return newCharacter;
+}
 
 /**
  * Checks whether the player is able to unlock the provided item on the provided character

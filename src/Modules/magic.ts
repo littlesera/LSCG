@@ -66,7 +66,9 @@ export class MagicModule extends BaseModule {
             projectionTintColor: "#00CED1",
             requireWhitelist: false,
             blockXRay: true,
-            spiritTextFormat: "Float"
+            spiritTextFormat: "Float",
+            disableSoulBindings: false,
+            spiritFormOutfitKey: ""
         };
     }
 
