@@ -151,7 +151,7 @@ export class StateModule extends BaseModule {
 
     load(): void {
         hookFunction("DrawStatus", 11, (args, next) => { // Pri 11 to bump above BCX hook
-            const ret = next(args) as any;
+            const ret = next(args);
             let C = args[0] as OtherCharacter;
             let CharX = args[1] as number;
             let CharY = args[2] as number;
@@ -311,8 +311,7 @@ export class StateModule extends BaseModule {
             return next(args);
         }, ModuleCategory.States);
 
-        
-        (DialogSelfMenuMapping.Expression.clickStatusCallbacks as any).lscg = (C: any, clickedExpression: { Group: string; }) => {
+        (DialogSelfMenuMapping.Expression.clickStatusCallbacks as Record<string, unknown>).lscg = (C: Character, clickedExpression: { Group: string; }) => {
             if (clickedExpression.Group !== "Emoticon" && this.AnyRestrictions(r => r.Move)) {
                 return "Movement restricted by LSCG";
             }

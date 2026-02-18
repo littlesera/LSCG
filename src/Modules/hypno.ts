@@ -13,6 +13,11 @@ import { SuggestionMiniGame } from 'MiniGames/Suggestion';
 import { registerMiniGame } from 'MiniGames/minigames';
 import { StateRestrictions } from './States/BaseState';
 import { Leashing, LeashingModule } from './leashing';
+import {
+    CHECK_INTERVALS,
+    EFFECT_DURATIONS,
+    TRIGGER_TIMES
+} from "../constants";
 
 export class SuggestionMiniGameOptions {
     constructor(suggestion: HypnoSuggestion, sender: Character, command: string) {
@@ -71,7 +76,7 @@ export class HypnoModule extends BaseModule {
     get defaultSettings(){
         return <HypnoSettingsModel>{
             enabled: false,
-            cycleTime: 30,
+            cycleTime: TRIGGER_TIMES.HYPNO_CYCLE_TIME_MINUTES,
             enableCycle: true,
             triggerCycled: true,
             overrideMemberIds: "",
@@ -86,7 +91,7 @@ export class HypnoModule extends BaseModule {
             enableSnapWakeup: true,
             trigger: "",
             triggerRevealed: false,
-            triggerTime: 5,
+            triggerTime: TRIGGER_TIMES.DEFAULT_TRIGGER_TIME_MINUTES,
             locked: false,
             awakeners: "",
             limitRemoteAccessToHypnotizer: false,
@@ -274,22 +279,22 @@ export class HypnoModule extends BaseModule {
         });
 
         let lastCycleCheck = 0;
-        let downgradeInterval = (10 * 60 * 1000); // 10 min downgrade ticks
+        let downgradeInterval = CHECK_INTERVALS.INFLUENCE_DOWNGRADE;
         let lastInfluenceCheck = CommonTime();
 
-        let bcxCheckInterval = (2000); // 2 s bcx check ticks
+        let bcxCheckInterval = CHECK_INTERVALS.BCX_CHECK;
         let lastbcxCheck = CommonTime();
         hookFunction('TimerProcess', 1, (args, next) => {
             if (ActivityAllowed()) {
                 var now = CommonTime();
-                let triggerTimer = (this.settings.triggerTime ?? 5) * 60000;
+                let triggerTimer = (this.settings.triggerTime ?? TRIGGER_TIMES.DEFAULT_TRIGGER_TIME_MINUTES) * 60000;
                 let hypnoEnd = this.StateModule.HypnoState.config.activatedAt + triggerTimer;
                 
                 if (this.hypnoActivated && this.settings.triggerTime > 0 && hypnoEnd < now) {
                     // Hypno Trigger Timeout --
                     this.TriggerRestoreTimeout();
                 }
-                if (!this.hypnoActivated && (lastCycleCheck + 5000) < now) {
+                if (!this.hypnoActivated && (lastCycleCheck + CHECK_INTERVALS.HYPNO_TRIGGER_CHECK) < now) {
                     lastCycleCheck = now;
                     this.CheckNewTrigger();
                 }
@@ -560,18 +565,18 @@ export class HypnoModule extends BaseModule {
                 activation = Math.max(0, activation - 1);
                 this.delayedActivations.set(entryName, activation);
             }
-        }, 5 * 60 * 1000);
+        }, TRIGGER_TIMES.DELAYED_ACTIVATION);
         
         let count = this.delayedActivations.get(entryName) ?? 0;
         count++;
         if (count >= activityEntry.hypnoRequiredRepeats) {
             if (isSleep) {
                 SendAction("%NAME% quivers with one last attempt to stay awake...");
-                setTimeout(() => getModule<InjectorModule>("InjectorModule")?.Sleep(true), 4000);
+                setTimeout(() => getModule<InjectorModule>("InjectorModule")?.Sleep(true), EFFECT_DURATIONS.HYPNO_TRIGGER_DELAY);
             }
             else {
                 SendAction("%NAME% trembles weakly with one last attempt to maintain %POSSESSIVE% senses...");
-                setTimeout(() => this.StartTriggerWord(false, memberNumber), 4000);
+                setTimeout(() => this.StartTriggerWord(false, memberNumber), EFFECT_DURATIONS.HYPNO_TRIGGER_DELAY);
             }
             count = 0; // reset repeats
         }
@@ -868,7 +873,7 @@ export class HypnoModule extends BaseModule {
                         break;
                 }
                 settingsSave();
-            }, ix * 1000);
+            }, ix * EFFECT_DURATIONS.SUGGESTION_INSTRUCTION_DELAY);
         })
     }
 

@@ -23,6 +23,7 @@ import { LeashingModule } from 'Modules/leashing';
 import { ChaoticItemModule } from './Modules/chaotic-item';
 import { SplatterModule } from 'Modules/splatter';
 import { OutfitCollectionModule } from 'Modules/outfitCollection';
+import { hasExtendedOnlineSettings, type ExtendedOnlineSettings } from "./types/guards";
 
 import styles from "./main.scss";
 
@@ -72,10 +73,15 @@ function init() {
 		return;
 	
 	// clear any old settings.
-	if (!!(Player.OnlineSettings as any)?.LittleSera)
-		delete (Player.OnlineSettings as any).LittleSera;
-	if (!!(Player.OnlineSettings as any)?.ClubGames)
-		delete (Player.OnlineSettings as any).ClubGames;
+	if (hasExtendedOnlineSettings(Player)) {
+		const settings = Player.OnlineSettings as ExtendedOnlineSettings;
+		if (settings.LittleSera) {
+			delete settings.LittleSera;
+		}
+		if (settings.ClubGames) {
+			delete settings.ClubGames;
+		}
+	}
 
 	let settings = Player.ExtensionSettings?.LSCG ?? Player.OnlineSettings?.LSCG ?? "";
 	let localSettings = localStorage.getItem(`LSCG_${Player.MemberNumber}_Backup`) ?? "";
@@ -106,8 +112,9 @@ function init() {
 		localStorage.setItem(`LSCG_${Player.MemberNumber}_Backup`, settings)
 		Player.LSCG = parsed || {} as SettingsModel;
 		// Clean old settings
-		if (!!Player.OnlineSettings?.LSCG) {
-			delete (Player.OnlineSettings as any).LSCG;
+		if (hasExtendedOnlineSettings(Player) && Player.OnlineSettings.LSCG) {
+			const settings = Player.OnlineSettings as ExtendedOnlineSettings;
+			delete settings.LSCG;
 			settingsSave();
 		}
 	}

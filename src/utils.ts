@@ -10,6 +10,7 @@ import { SettingsModel } from "Settings/Models/settings";
 import { lt } from "semver";
 import { regEscape } from "./regEscape";
 import { OutfitCollectionModule } from "Modules/outfitCollection";
+import { isFileInputEvent, hasLegacyHypnoProps, hasLegacyInjectorProps } from "./types/guards";
 
 export const LSCG_CHANGES: string = "https://github.com/littlesera/LSCG/releases/latest";
 export const LSCG_TEAL: string = "#00d5d5";
@@ -393,9 +394,9 @@ export function requestFileDrop(): Promise<string | undefined> {
 
 		// Listen for the selection
 		input.onchange = async (e) => {
-			if (!e || !e.target || !(e.target as any).files)
+			if (!e || !isFileInputEvent(e))
 				return;
-			const file = (e.target as any).files[0];
+			const file = e.target.files[0];
 			if (file) {
 				const text = await file.text();
 				resolve(text);
@@ -450,9 +451,9 @@ export function CleanDefaultsFromSettings(settings: SettingsModel) : SettingsMod
 	let newObj = JSON.parse(JSON.stringify(settings));
 	Object.keys(newObj).forEach(key => {
 		let defaultModule = getModule(key);
-		let settingModule = (<any>newObj)[key];
-		if (!!defaultModule) {
-			let defaults = defaultModule.defaultSettings as any;
+		let settingModule = (newObj as Record<string, unknown>)[key];
+		if (!!defaultModule && !!defaultModule.defaultSettings) {
+			let defaults = defaultModule.defaultSettings as unknown as Record<string, unknown>;
 			_compareAndTrimObjects(defaults, settingModule);
 		}
 	})

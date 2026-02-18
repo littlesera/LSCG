@@ -13,6 +13,7 @@ import { RedressedState } from "./States/RedressedState";
 import { PolymorphedState } from "./States/PolymorphedState";
 import { OutfitCollection } from "Settings/OutfitCollection/outfitCollection";
 import { OutfitCollectionModule } from "./outfitCollection";
+import { hasMagicModule, hasMBSSettings, hasLSCGData, safeGetLSCGProp } from "../types/guards";
 
 const dialogButtonInfo = [965, 10, 100, 40, 5];
 const dialogButtonCoords: [number,number,number,number] = [dialogButtonInfo[0], dialogButtonInfo[1], 40, 40];
@@ -97,11 +98,16 @@ export class MagicModule extends BaseModule {
             Effects: Array(getRandomInt(3) + 1).fill(0).map((t, ix, arr) => Object.values(LSCGSpellEffect).filter(v => arr.indexOf(v) == -1)[getRandomInt(Object.keys(LSCGSpellEffect).length)])
         }
         if (spell.Effects.indexOf(LSCGSpellEffect.outfit)) {
-            let outfitCollection = getModule<OutfitCollectionModule>("OutfitCollectionModule")?.data;
-            let outfitKeys = outfitCollection.GetOutfitKeys();
-            let lscgChoice = outfitCollection.GetOutfitBundle(outfitKeys[getRandomInt(outfitKeys.length)]);
-            let mbsOutfits = (<any>Player).MBSSettings?.FortuneWheelItemSets.filter((s: any) => !!s).map((s: { itemList: any; }) => s.itemList as ItemBundle[]) as ItemBundle[][];
-            let mbsChoice = mbsOutfits[getRandomInt(mbsOutfits.length)];
+        	let outfitCollection = getModule<OutfitCollectionModule>("OutfitCollectionModule")?.data;
+        	let outfitKeys = outfitCollection.GetOutfitKeys();
+        	let lscgChoice = outfitCollection.GetOutfitBundle(outfitKeys[getRandomInt(outfitKeys.length)]);
+        	let mbsOutfits: ItemBundle[][] = [];
+        	if (hasMBSSettings(Player) && Player.MBSSettings?.FortuneWheelItemSets) {
+        		mbsOutfits = Player.MBSSettings.FortuneWheelItemSets
+        			.filter((s): s is { itemList?: ItemBundle[] } => !!s)
+        			.map(s => s.itemList ?? []);
+        	}
+        	let mbsChoice = mbsOutfits.length > 0 ? mbsOutfits[getRandomInt(mbsOutfits.length)] : undefined;
             let wardrobeChoice = !Player.Wardrobe ? undefined : Player.Wardrobe[getRandomInt(Player.Wardrobe?.length)];
             let choices = [lscgChoice, mbsChoice, wardrobeChoice].filter(x => !!x);
             let outfit = choices[getRandomInt(choices.length)];
@@ -123,7 +129,11 @@ export class MagicModule extends BaseModule {
 	}
 
     PairedCharacterOptions(spellTarget: Character | undefined): Character[] {
-        return ChatRoomCharacter.filter(c => !!c && !!(c as any).LSCG && !!(c as any).LSCG.MagicModule && (c as any).LSCG.MagicModule.enabled && c.MemberNumber != spellTarget?.MemberNumber);
+        return ChatRoomCharacter.filter(c =>
+            !!c &&
+            hasMagicModule(c) &&
+            c.MemberNumber != spellTarget?.MemberNumber
+        );
     }
 
     load(): void {
@@ -260,12 +270,12 @@ export class MagicModule extends BaseModule {
 
     CanCastSpell(target: Character): boolean {
         // Must have available spells and can only cast on LSCG users
-        return this.Enabled && this.AvailableSpells.length > 0 && !!(<any>target).LSCG && !this.settings.forceWildMagic;
+        return this.Enabled && this.AvailableSpells.length > 0 && hasLSCGData(target) && !this.settings.forceWildMagic;
     }
 
     CanWildMagic(target: Character): boolean {
         // Must have available spells and can only cast on LSCG users
-        return this.Enabled && !!(<any>target).LSCG && this.settings.enableWildMagic;    
+        return this.Enabled && hasLSCGData(target) && this.settings.enableWildMagic;
     }
 
     CanTeachSpell(target: Character): boolean {
@@ -318,8 +328,10 @@ export class MagicModule extends BaseModule {
     DrawSpellMenu() {
         if (!CurrentCharacter)
             return this.CloseSpellMenu();
-        let blockedSpellEffects = ((CurrentCharacter as any).LSCG?.MagicModule?.blockedSpellEffects ?? []).filter((effect: LSCGSpellEffect) => {
-            let bypassed = (CurrentCharacter?.IsPlayer() && (CurrentCharacter.LSCG?.MagicModule?.bypassForSelfEffects ?? []).indexOf(effect) > -1);
+        const blockedSpellEffects = safeGetLSCGProp(CurrentCharacter, 'MagicModule', 'blockedSpellEffects') ?? [];
+        const bypassForSelfEffects = safeGetLSCGProp(CurrentCharacter, 'MagicModule', 'bypassForSelfEffects') ?? [];
+        const filteredBlockedEffects = blockedSpellEffects.filter((effect: LSCGSpellEffect) => {
+            let bypassed = (CurrentCharacter?.IsPlayer() && bypassForSelfEffects.indexOf(effect) > -1);
             return !bypassed;
         });
 
@@ -356,7 +368,7 @@ export class MagicModule extends BaseModule {
                 let background = "white";
                 if (spell.Effects.some(effect => pairedSpellEffects.indexOf(effect) > -1))
                     icons.push("Handheld");
-                if (spell.Effects.some(effect => blockedSpellEffects.indexOf(effect) > -1)) {
+                if (spell.Effects.some(effect => filteredBlockedEffects.indexOf(effect) > -1)) {
                     icons.push("AllowedLimited");
                     background = "orange";
                 }
@@ -377,7 +389,7 @@ export class MagicModule extends BaseModule {
     ClickSpellMenu() {
         if (!CurrentCharacter)
             return this.CloseSpellMenu();
-        let blockedSpellTypes = (CurrentCharacter as any).LSCG?.MagicModule?.blockedSpellTypes ?? [];
+        let blockedSpellTypes = safeGetLSCGProp(CurrentCharacter, 'MagicModule', 'blockedSpellEffects') ?? [];
 
         // Handle toolbar clicks
         let toolbarY = this.boxDimensions.y + 5;
@@ -418,7 +430,7 @@ export class MagicModule extends BaseModule {
             CommonGenerateGrid(this.AvailableSpells, this.SpellMenuOffset, this.SpellGrid, (spell: SpellDefinition, x: number, y: number, width: number, height: number) => {
                 // If this specific activity is clicked, we run it
                 if (!MouseIn(x, y, width, height)) return false;
-                let blocked = spell.Effects.some(effect => blockedSpellTypes.indexOf(effect) > -1);
+                let blocked = Array.isArray(blockedSpellTypes) && spell.Effects.some(effect => blockedSpellTypes.indexOf(effect) > -1);
                 spell = JSON.parse(JSON.stringify(spell));
                 
                 if (!blocked) {
@@ -516,7 +528,7 @@ export class MagicModule extends BaseModule {
                     return;
                 }
             }
-            else if (!(spellTarget as any).LSCG?.MagicModule || !(spellTarget as any).LSCG?.MagicModule.enabled) {
+            else if (!hasMagicModule(spellTarget)) {
                 SendAction(`%NAME% casts ${spell.Name} at %OPP_NAME% but it seems to fizzle.`, spellTarget);
                 this.CloseSpellMenu();
                 DialogLeave();

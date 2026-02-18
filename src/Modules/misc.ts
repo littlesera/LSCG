@@ -10,6 +10,12 @@ import { chaoticKeywords, evolvingKeywords, quickKeywords, slowKeywords } from "
 import { ElectricKeywords, SelfTighteningKeywords, SubduingKeywords, TamperProofKeywords } from "./item-use";
 import { CursedItemModule, CursedKeywords } from "./cursed-item";
 import { AllowedNetGuns } from "./injector";
+import {
+    CHLOROFORM_TIMING,
+    CHECK_INTERVALS,
+    RANDOM_EVENT_ODDS,
+    LSCG_EFFECTS_MENU
+} from "../constants";
 
 // interface used to define all Elements used in LSCG Effect menu in the Crafting screen.
 interface ScreenElem {
@@ -42,7 +48,7 @@ export class MiscModule extends BaseModule {
             chloroformEnabled: false,
             //immersiveChloroform: false,
             chloroformedAt: 0,
-            chloroformPotencyTime: 60 * 60 * 1000, // 1 hour cooloff
+            chloroformPotencyTime: CHLOROFORM_TIMING.POTENCY_TIME,
             infiniteChloroformPotency: false,
             handChokeEnabled: false,
             gagChokeEnabled: false,
@@ -133,7 +139,7 @@ export class MiscModule extends BaseModule {
         })
 
         let lastChloroEvent = 0;
-        let chloroInterval = 2000; // chloro check every 2s
+        let chloroInterval = CHECK_INTERVALS.CHLOROFORM_CHECK;
         hookFunction('TimerProcess', 1, (args, next) => {
             let now = CommonTime();
             if (!ActivityAllowed() || !this.Enabled)
@@ -165,7 +171,7 @@ export class MiscModule extends BaseModule {
 
         hookFunction("TimerProcess", 1, (args, next) => {
             let now = CommonTime();
-            if (!this.settings.infiniteChloroformPotency && this.lastChecked + 10000 < now) {
+            if (!this.settings.infiniteChloroformPotency && this.lastChecked + CHECK_INTERVALS.CHLOROFORM_DOWNGRADE < now) {
                 this.lastChecked = now;
                 if (this.isChloroformed && this.settings.chloroformedAt + this.settings.chloroformPotencyTime < now && !this.chloroformWearingOff)
                     this.ChloroformWearOff();
@@ -224,7 +230,7 @@ export class MiscModule extends BaseModule {
         if (value) {
             this.chloroEventInterval = setInterval(() => {
                 this.ChloroEvent();
-            }, 60010)
+            }, CHLOROFORM_TIMING.EVENT_INTERVAL)
         }
         this._isChloroformed = value;
     }
@@ -267,7 +273,7 @@ export class MiscModule extends BaseModule {
         if (!this.isChloroformed)
             return;
         // only activate on average once every 10 minutes
-        else if (getRandomInt(10) == 0)
+        else if (getRandomInt(RANDOM_EVENT_ODDS.CHLORO_EVENT_CHANCE) == 0)
             this.ActivateChloroEvent();
     }
 
@@ -310,7 +316,7 @@ export class MiscModule extends BaseModule {
                 SendAction("%NAME% slumps back in %POSSESSIVE% sleep as another dose of ether assails %POSSESSIVE% senses.");
             LSCG_SendLocal("Chloroform has been forced over your mouth, you will pass out if it is not removed soon!");
             clearTimeout(this.awakenTimeout);
-            this.passoutTimer = setTimeout(() => this.StartPassout_1(), 20000);
+            this.passoutTimer = setTimeout(() => this.StartPassout_1(), CHLOROFORM_TIMING.PASSOUT_STAGE_1);
             CharacterSetFacialExpression(Player, "Eyes", "Scared");
         }
     }
@@ -319,14 +325,14 @@ export class MiscModule extends BaseModule {
         SendAction("%NAME%, unable to continue holding %POSSESSIVE% breath, takes a desparate gasp through the chemical-soaked cloth.");
         CharacterSetFacialExpression(Player, "Eyes", "Lewd");
         clearTimeout(this.passoutTimer);
-        this.passoutTimer = setTimeout(() => this.StartPassout_2(), 10000);
+        this.passoutTimer = setTimeout(() => this.StartPassout_2(), CHLOROFORM_TIMING.PASSOUT_STAGE_2);
     }
 
     StartPassout_2() {
         SendAction("%NAME%'s body trembles as the chloroform sinks deep into %POSSESSIVE% mind.");
         CharacterSetFacialExpression(Player, "Eyes", "VeryLewd");
         clearTimeout(this.passoutTimer);
-        this.passoutTimer = setTimeout(() => this.Passout(), 5000);
+        this.passoutTimer = setTimeout(() => this.Passout(), CHLOROFORM_TIMING.PASSOUT_FINAL);
     }
 
     Passout() {
@@ -341,7 +347,7 @@ export class MiscModule extends BaseModule {
     ChloroformWearOff() {
         SendAction("%NAME% takes a deep, calm breath as %POSSESSIVE% chloroform starts to lose its potency...");
         clearTimeout(this.awakenTimeout);
-        this.awakenTimeout = setTimeout(() => this.RemoveChloroform_1(), 45000);
+        this.awakenTimeout = setTimeout(() => this.RemoveChloroform_1(), CHLOROFORM_TIMING.REMOVAL_STAGE_1_WEARING_OFF);
         this.chloroformWearingOff = true;
     }
 
@@ -349,7 +355,7 @@ export class MiscModule extends BaseModule {
         if (this.isChloroformed) {
             SendAction("%NAME% continues to sleep peacefully as the cloth is removed...");
             clearTimeout(this.awakenTimeout);
-            this.awakenTimeout = setTimeout(() => this.RemoveChloroform_1(), 20000);
+            this.awakenTimeout = setTimeout(() => this.RemoveChloroform_1(), CHLOROFORM_TIMING.REMOVAL_STAGE_1_REMOVED);
             this.chloroformWearingOff = true;
         }
         else {
@@ -365,7 +371,7 @@ export class MiscModule extends BaseModule {
     RemoveChloroform_1() {
         SendAction("%NAME% starts to stir with a gentle moan...");
         clearTimeout(this.awakenTimeout);
-        this.awakenTimeout = setTimeout(() => this.RemoveChloroform_2(), 10000);
+        this.awakenTimeout = setTimeout(() => this.RemoveChloroform_2(), CHLOROFORM_TIMING.REMOVAL_STAGE_2);
     }
 
     RemoveChloroform_2() {
@@ -868,7 +874,7 @@ export class MiscModule extends BaseModule {
     // Set/re-Set the main menu position (needed if a resize happen)
     setMenuPositionFixed() {
         //ElementPositionFixed(this.LscgEffectCraftingId.main, 120, 100, 1050, 800);
-        ElementPositionFixed(this.LscgEffectCraftingId.main, 150, 100, 1000, 800);
+        ElementPositionFixed(this.LscgEffectCraftingId.main, LSCG_EFFECTS_MENU.X_POSITION, LSCG_EFFECTS_MENU.Y_POSITION, LSCG_EFFECTS_MENU.WIDTH, LSCG_EFFECTS_MENU.HEIGHT);
     }
 
     /*

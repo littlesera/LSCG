@@ -246,7 +246,7 @@ export class LeashingModule extends BaseModule {
         }, ModuleCategory.Leashed);
 
         hookFunction("ChatRoomCharacterViewDrawOverlay", 1, (args, next) => {
-            const ret = next(args) as any;
+            const ret = next(args);
             const [C, CharX, CharY, Zoom] = args;
             if (
                 typeof CharX === "number" &&
@@ -378,8 +378,8 @@ export class LeashingModule extends BaseModule {
         }, ModuleCategory.Leashed);
 
         hookFunction("ChatRoomSync", 1, (args, next) => {
-            var ret = next(args) as any;
-            var currentRoomIds = ChatRoomCharacter.map(c => c.MemberNumber!);
+            const ret = next(args);
+            const currentRoomIds = ChatRoomCharacter.map(c => c.MemberNumber!);
             this.LeashingsMemberNumbers.filter(id => currentRoomIds.indexOf(id) == -1).forEach(memberNumber => {
                 ServerSend("AccountBeep", { MemberNumber: memberNumber, BeepType: "Leash"});
             });
