@@ -26,7 +26,7 @@ export abstract class BaseModule {
 	get Enabled(): boolean {
 		if (!Player.LSCG || !Player.LSCG.GlobalModule)
 			return false;
-		return Player.LSCG.GlobalModule.enabled && this.settings.enabled && 
+		return Player.LSCG.GlobalModule.enabled && (!this.settings ? true : this.settings.enabled) && 
 			(ServerPlayerIsInChatRoom() || 
 			(CurrentModule == "Room" && CurrentScreen == "Crafting") ||
 			(CurrentModule == "Room" && CurrentScreen == "MainHall") ||

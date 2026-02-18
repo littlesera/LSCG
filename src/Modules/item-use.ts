@@ -3,12 +3,9 @@ import { Core, getModule } from "modules";
 import { ModuleCategory } from "Settings/setting_definitions";
 import { escapeHtml, getCharacter, getDominance, GetItemNameAndDescriptionConcat, GetMetadata, getRandomInt, GetTargetCharacter, hookFunction, IsIncapacitated, isPhraseInString, LSCG_SendLocal, mouseTooltip, OnAction, OnActivity, removeAllHooksByModule, SendAction, sendLSCGCommand, sendLSCGMessage } from "../utils";
 import { ActivityBundle, ActivityModule, ActivityTarget } from "./activities";
-import { BoopsModule } from "./boops";
 import { CollarModule } from "./collar";
-import { StateModule } from "./states";
 import { InjectorModule } from "./injector";
-import { drawTooltip } from "Settings/settingUtils";
-import { CommandListener, CoreModule } from "./core";
+import { CommandListener } from "./core";
 
 export const CameraItems: string[] = [
 	"Phone1",
@@ -230,7 +227,127 @@ export class ItemUseModule extends BaseModule {
 		}
 	]
 
+	IsWearingPulldownPanties(C: Character | null): boolean {
+		return !!C && C.Appearance.findIndex(a => a.Asset.Name == "PullDownPanties") != -1;
+	}
+
+	pantiesButtonInfo = [965, 80, 100, 40, 5];
+	pantiesButtonCoords: [number,number,number,number] = [this.pantiesButtonInfo[0], this.pantiesButtonInfo[1], this.pantiesButtonInfo[3], this.pantiesButtonInfo[3]];
+
     load(): void {
+		// Manually handle pull down panties adjustments... This should be either made more generic or moved to vanilla BC
+		hookFunction("DialogDraw", 10, (args, next) => {
+			const C = CharacterGetCurrent();
+			if (this.Enabled && this.IsWearingPulldownPanties(C)) {
+				let panties = C?.Appearance.find(a => a.Asset.Name == "PullDownPanties");
+				if (!!panties) {
+					let pantiesState = panties?.Property?.TypeRecord?.typed;
+					let buttons = [];
+					switch (pantiesState) {
+						case undefined:
+						case 0: // On
+							buttons.push("Aside");
+							buttons.push("Down");
+							break;
+						case 1: // Aside
+							buttons.push("Restore");
+							buttons.push("Down");
+							break;
+						case 2: // Exposed
+							buttons.push("Up");
+							buttons.push("Down");
+							break;
+						case 3: // Thighs
+							buttons.push("Up");
+							buttons.push("Down");
+							break;
+						case 4: // Knees
+							buttons.push("Up");
+							buttons.push("Down");
+							break;
+						case 5: // Ankles
+							buttons.push("Up");
+							break;
+					}
+					
+					if (buttons.length > 0) {
+						buttons.forEach((b, ix, arr) => {
+							DrawButton(this.pantiesButtonCoords[0], this.pantiesButtonCoords[1] + ix * (this.pantiesButtonCoords[3] + 5), this.pantiesButtonCoords[2], this.pantiesButtonCoords[3], b, "White");
+						});
+					}
+				}
+			}
+				
+			next(args);
+		}, ModuleCategory.Magic);
+
+		hookFunction("DialogClick", 10, (args, next) => {
+			const C = CharacterGetCurrent();
+			if (this.Enabled && this.IsWearingPulldownPanties(C)) {
+				let panties = C?.Appearance.find(a => a.Asset.Name == "PullDownPanties");
+				let pantiesState = panties?.Property?.TypeRecord?.typed ?? 0;
+				let buttons = [];
+				switch (pantiesState) {
+					case 0: // On
+						buttons.push("Aside");
+						buttons.push("Down");
+						break;
+					case 1: // Aside
+						buttons.push("Restore");
+						buttons.push("Down");
+						break;
+					case 2: // Exposed
+						buttons.push("Up");
+						buttons.push("Down");
+						break;
+					case 3: // Thighs
+						buttons.push("Up");
+						buttons.push("Down");
+						break;
+					case 4: // Knees
+						buttons.push("Up");
+						buttons.push("Down");
+						break;
+					case 5: // Ankles
+						buttons.push("Up");
+						break;
+				}
+				let targetOpt: TypedItemOption | undefined;
+				if (buttons.length > 0) {
+					buttons.forEach((b, ix, arr) => {
+						if (MouseIn(this.pantiesButtonCoords[0], this.pantiesButtonCoords[1] + ix * (this.pantiesButtonCoords[3] + 5), this.pantiesButtonCoords[2], this.pantiesButtonCoords[3])) {
+							let pantyOptions = TypedItemDataLookup[`PantiesPullDownPanties`];
+							switch (b) {
+								case "Aside":
+									targetOpt = pantyOptions.options?.find(o => o?.Property?.TypeRecord?.typed == 1);
+									SendAction(`%NAME% moves %OPP_NAME_POSSESSIVE% panties aside, exposing %OPP_INTENSIVE%.`, C);
+									break;
+								case "Down": 
+									targetOpt = pantyOptions.options?.find(o => o?.Property?.TypeRecord?.typed == (pantiesState <= 1 ? 2 : pantiesState + 1));
+									SendAction(`%NAME% pulls %OPP_NAME_POSSESSIVE% panties down.`, C);
+									break;
+								case "Restore":
+									targetOpt = pantyOptions.options?.find(o => o?.Property?.TypeRecord?.typed == 0);
+									SendAction(`%NAME% restores %OPP_NAME_POSSESSIVE% panties to the normal position.`, C);
+									break;
+								case "Up":
+									targetOpt = pantyOptions.options?.find(o => o?.Property?.TypeRecord?.typed == (pantiesState == 2 ? 0 : pantiesState - 1));
+									SendAction(`%NAME% pulls %OPP_NAME_POSSESSIVE% panties up.`, C);
+									break;
+							}
+							if (!!targetOpt) {
+								let tmp = DialogFocusItem;
+								DialogFocusItem = panties ?? null;
+								TypedItemSetType(pantyOptions, C!, targetOpt!);
+								DialogFocusItem = tmp;
+							}
+						}
+					});
+				}
+			}
+			next(args);
+		}, ModuleCategory.Magic);
+
 		hookFunction("ActivityGenerateItemActivitiesFromNeed", 1, (args, next) => {
 			let activity = args[3] as Activity;			
 

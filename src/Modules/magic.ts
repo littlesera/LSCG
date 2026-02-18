@@ -14,7 +14,7 @@ import { PolymorphedState } from "./States/PolymorphedState";
 import { OutfitCollection } from "Settings/OutfitCollection/outfitCollection";
 import { OutfitCollectionModule } from "./outfitCollection";
 
-const dialogButtonInfo = [980, 10, 100, 40, 5];
+const dialogButtonInfo = [965, 10, 100, 40, 5];
 const dialogButtonCoords: [number,number,number,number] = [dialogButtonInfo[0], dialogButtonInfo[1], 40, 40];
 const dialogCastButtonCoords: [number,number,number,number] = [dialogButtonInfo[0] - (dialogButtonInfo[2] + dialogButtonInfo[4]), dialogButtonInfo[1], dialogButtonInfo[2], dialogButtonInfo[3]];
 const dialogWildButtonCoords: [number,number,number,number] = [dialogButtonInfo[0] - (dialogButtonInfo[2] + dialogButtonInfo[4]), dialogButtonInfo[1]  + (dialogButtonInfo[3] + dialogButtonInfo[4]), dialogButtonInfo[2], dialogButtonInfo[3]];

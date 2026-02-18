@@ -229,6 +229,17 @@ export class ActivityModule extends BaseModule {
     }
 
     AddCommandListeners() {
+        // Core().RegisterCommandListener(<CommandListener>{
+        //     id: "force_ask_listener",
+        //     command: "force-ask",
+        //     func: (sender: number, msg: LSCGMessageModel) => {
+        //         let c = getCharacter(sender);
+        //         if (!c)
+        //             return;
+        //     }
+        // })
+
+
         Core().RegisterCommandListener(<CommandListener>{
             id: "h5_ask_listener",
             command: "h5-ask",
