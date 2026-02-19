@@ -11,13 +11,14 @@
 		"baseUrl": "./src",
 		"strict": true,
 		"noEmit": true,
+		"allowJs": true,
 		"experimentalDecorators": true,
 		"noImplicitReturns": true,
 		"noUnusedLocals": false,
 		"esModuleInterop": true,
 		"resolveJsonModule": true,
 		"jsx": "react",
-    	"jsxFactory": "h"
+	   	"jsxFactory": "h"
 	},
 	"include": [
 		"node_modules/bc-stubs/bc/**/*.d.ts",

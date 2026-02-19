@@ -1,4 +1,5 @@
 import { h } from "tsx-dom";
+import './club_existing/illuminated.js'; // Ensure the illuminated library is included and executed
 import { CleanDefaultsFromSettings, ExportSettings, GetDataSizeReport, hookFunction, ICONS, ImportSettings, isObject, parseFromBase64, parseFromUTF16, sendLSCGBeep, settingsSave } from './utils';
 import { CheckVersionUpdate, ConfiguredActivities, CraftableItemSpellNames, DrugKeywords, getModule, HypnoTriggers, modules, NetgunKeywords, Outfits, registerModule, TestOutfitMigration } from 'modules';
 import { SettingsModel } from 'Settings/Models/settings';
@@ -26,6 +27,7 @@ import { OutfitCollectionModule } from 'Modules/outfitCollection';
 import { hasExtendedOnlineSettings, type ExtendedOnlineSettings } from "./types/guards";
 
 import styles from "./main.scss";
+import { MapModule } from "Modules/map";
 
 export { 
 	DrugKeywords, 
@@ -170,6 +172,7 @@ function init_modules(): boolean {
 	registerModule(new ChaoticItemModule());
 	registerModule(new SplatterModule());
 	registerModule(new CursedItemModule());
+	registerModule(new MapModule());
 
 	for (const m of modules()) {
 		m.init();
