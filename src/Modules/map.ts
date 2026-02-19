@@ -1,18 +1,23 @@
 import { BaseModule } from "base";
+import { getModule } from "modules";
 import { MapSettingsModel } from "Settings/Models/base";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { Light, LightingEngine, OpaqueObstacle, Viewpoint } from "Utilities/LightingEngine";
+import { Color, Light, LightingEngine, LineObstacle, OpaqueObstacle, Viewpoint } from "Utilities/LightingEngine";
 import { GetItemNameAndDescriptionConcat, hookFunction, isPhraseInString } from "utils";
+import { StateModule } from "./states";
 
 interface lightingSource {
     objId: number;
 }
 
 interface WallSides {
+    isolated: boolean;
     left: boolean;
     right: boolean;
     top: boolean;
+    doorBelow: boolean;
 }
+
 export class MapModule extends BaseModule {
     get defaultSettings() {
         return <MapSettingsModel>{
@@ -46,6 +51,24 @@ export class MapModule extends BaseModule {
             next(args);
 
             if (this.settings.enhancedLighting) {
+                if (this.lightingEngine.debug && Player && Player.MapData && Player.MapData.Pos) {
+                    for (let Pos = 0; Pos < ChatRoomMapViewWidth * ChatRoomMapViewHeight; Pos++) {
+                        let X = Pos % ChatRoomMapViewWidth;
+                        let Y = Math.floor(Pos / ChatRoomMapViewWidth);
+                        let MaxRange = Math.max(Math.abs(X - Player.MapData?.Pos.X), Math.abs(Y - Player?.MapData?.Pos.Y));
+                        if (MaxRange > ChatRoomMapViewGetSightRange()) continue;
+
+                        let ScreenX = (X - Player.MapData.Pos.X) * this.TileUnit + ChatRoomMapViewPerceptionRange * this.TileUnit;
+                        let ScreenY = (Y - Player.MapData.Pos.Y) * this.TileUnit + ChatRoomMapViewPerceptionRange * this.TileUnit;
+                        MainCanvas.save();
+                        MainCanvas.textAlign = "left";
+                        MainCanvas.textBaseline = "top";
+                        DrawEmptyRect(ScreenX, ScreenY, this.TileUnit, this.TileUnit, "grey");
+                        DrawTextFit(`${X},${Y}`, ScreenX, ScreenY, this.TileUnit/4, "white");
+                        MainCanvas.restore();
+                    }
+                }
+
                 this.lightingEngine.render({
                     mainCtx: MainCanvas, 
                     width: MainCanvas.canvas.width, 
@@ -65,9 +88,10 @@ export class MapModule extends BaseModule {
             }
         }, ModuleCategory.Map);
 
-        hookFunction("ChatRoomMapViewCalculatePerceptionMasks", 1, (args, next) => {
-            next(args);
+        hookFunction("ChatRoomMapViewUpdatePlayerFlag", 1, (args, next) => {
+            let ret = next(args);
             this.ParseMapForObjects();
+            return ret;
         }, ModuleCategory.Map);
 
         hookFunction("ChatRoomMapViewMouseWheel", 1, (args, next) => {
@@ -107,6 +131,20 @@ export class MapModule extends BaseModule {
                 color: [200, 200, 200, 0.8],
                 animType: C.IsPlayer() ? "flashlight" : "none"
             });
+        }
+
+        if (!!(C as OtherCharacter)) {
+            let ghostState = (C as OtherCharacter).LSCG?.StateModule.states.find(state => state.type === "astral-projection");
+            if (!!ghostState && ghostState.active) {
+                let hexColor = getModule<StateModule>("StateModule").AstralProjectionState.GetProjectionTintColor(C as OtherCharacter);
+                charLights.push({
+                    x: CX,
+                    y: CY,
+                    radius: this.TileUnit * 2,
+                    color: this.hexToColor(hexColor, 0.6),
+                    animType: "pulse"
+                });
+            }
         }
 
         return charLights;
@@ -178,51 +216,42 @@ export class MapModule extends BaseModule {
 
             // Parse Obstacles
             if (!!TileData && TileData.Type == "Wall") {
-                if (ChatRoomMapViewGetCharacterAtPos(X, Y)?.IsPlayer() || (Object?.Type == "WallPath" && Object?.Style == "WoodOpen")) {
-                    // No obstacle for wall that has an open door
-                    continue;
-                }
+                let effectbottom = ScreenY + (this.TileUnit * 0.4);
 
-                let effectTop = ScreenY - (TileHeight * 0.6);
-                let effectbottom = ScreenY + (TileHeight * 0.2);
-                if (Object?.Type == "WallPath") { // Special Door Cutout
-                    objects.push({
-                        type: "line",
-                        points: [
-                            {x: ScreenX, y: ScreenY},
-                            {x: ScreenX, y: effectTop},
-                            {x: ScreenX + TileWidth, y: effectTop},
-                            {x: ScreenX + TileWidth, y: ScreenY}
-                        ]
-                    });
+                if (this.PositionContainsDoor(X, Y)) { // Special Door Cutout
+                    objects.push(...this.GetDoorObstacles(X, Y, ScreenX, ScreenY));
                 } else {
                     let sides = this.GetWallSides(X, Y);
-                    if (sides.top) {
-                        objects.push({
-                            type: "line",
-                            points: [
-                                {x: ScreenX, y: ScreenY},
-                                {x: ScreenX + TileWidth, y: ScreenY}
-                            ]
-                        });
-                    }
-                    if (sides.left) {
-                        objects.push({
-                            type: "line",
-                            points: [
-                                {x: ScreenX, y: ScreenY},
-                                {x: ScreenX, y: ScreenY + TileHeight}
-                            ]
-                        });
-                    }
-                    if (sides.right) {
-                        objects.push({
-                            type: "line",
-                            points: [
-                                {x: ScreenX + TileWidth, y: ScreenY},
-                                {x: ScreenX + TileWidth, y: ScreenY + TileHeight}
-                            ]
-                        });
+                    if (sides.isolated) {
+                        objects.push(...this.GetSingleColumnWallLines(X, Y, ScreenX, ScreenY));
+                    } else {
+                        if (sides.top) {
+                            objects.push({
+                                type: "line",
+                                points: [
+                                    {x: ScreenX, y: ScreenY},
+                                    {x: ScreenX + TileWidth, y: ScreenY}
+                                ]
+                            });
+                        }
+                        if (sides.left) {
+                            objects.push({
+                                type: "line",
+                                points: [
+                                    {x: ScreenX, y: ScreenY},
+                                    {x: ScreenX, y: sides.doorBelow ? effectbottom : ScreenY + TileHeight}
+                                ]
+                            });
+                        }
+                        if (sides.right) {
+                            objects.push({
+                                type: "line",
+                                points: [
+                                    {x: ScreenX + TileWidth, y: ScreenY},
+                                    {x: ScreenX + TileWidth, y: sides.doorBelow ? effectbottom : ScreenY + TileHeight}
+                                ]
+                            });
+                        }
                     }
                 }
             }
@@ -234,19 +263,117 @@ export class MapModule extends BaseModule {
         this.lightingEngine.setObstacles(objects);
     }
 
+    private PositionContainsDoor(X: number, Y: number): boolean {
+        let Object = ChatRoomMapViewGetObjectAtPos(X, Y);
+        return Object?.Type == "WallPath";
+    }
+        
+    private DootAtPositionIsOpen(X: number, Y: number): boolean {
+        let alwaysOpenDoorStyles = ["WoodOpen"];
+
+        let Object = ChatRoomMapViewGetObjectAtPos(X, Y);
+        return(this.PositionContainsDoor(X, Y) && 
+            (ChatRoomMapViewGetCharacterAtPos(X, Y)?.IsPlayer() || alwaysOpenDoorStyles.includes(Object?.Style ?? "")))
+    }
+
     private GetWallSides(X: number, Y: number): WallSides {
         // Find all other walls around the current tile
-        let CW = ChatRoomMapViewIsWall(X - 1, Y) || ChatRoomMapViewTileIsHidden(X - 1, Y);
-        let CE = ChatRoomMapViewIsWall(X + 1, Y) || ChatRoomMapViewTileIsHidden(X + 1, Y);
-        let SW = ChatRoomMapViewIsWall(X - 1, Y + 1) || ChatRoomMapViewTileIsHidden(X - 1, Y + 1);
-        let SC = ChatRoomMapViewIsWall(X, Y + 1) || ChatRoomMapViewTileIsHidden(X, Y + 1);
-        let SE = ChatRoomMapViewIsWall(X + 1, Y + 1) || ChatRoomMapViewTileIsHidden(X + 1, Y + 1);
-        let NC = ChatRoomMapViewIsWall(X, Y - 1) || ChatRoomMapViewTileIsHidden(X, Y - 1);
+        let CW = ChatRoomMapViewIsWall(X - 1, Y);
+        let CE = ChatRoomMapViewIsWall(X + 1, Y);
+        let SW = ChatRoomMapViewIsWall(X - 1, Y + 1);
+        let SC = ChatRoomMapViewIsWall(X, Y + 1);
+        let SE = ChatRoomMapViewIsWall(X + 1, Y + 1);
+        let NC = ChatRoomMapViewIsWall(X, Y - 1);
+        let NW = ChatRoomMapViewIsWall(X - 1, Y - 1);
+        let NE = ChatRoomMapViewIsWall(X + 1, Y - 1);
 
         return {
-            left: SC && !CW,
-            right: SC && !CE,
-            top: (!NC || !SC)
+            isolated: !CW && !CE && !SW && !SC && !SE && !NC && !NW && !NE,
+            left: SC && (!CW || !SW),
+            right: SC && (!CE || !SE),
+            top: (!NC || !SC),
+            doorBelow: this.PositionContainsDoor(X, Y + 1)
         }
+    }
+
+    private GetDoorObstacles(X: number, Y: number, ScreenX: number, ScreenY: number): OpaqueObstacle[] {
+        if (!this.PositionContainsDoor(X, Y)) return [];
+
+        let effectTop = ScreenY - (this.TileUnit * 0.6);
+
+        let isHorizontalDoor = !ChatRoomMapViewIsWall(X - 1, Y) && !ChatRoomMapViewIsWall(X + 1, Y);
+
+        let lines: LineObstacle[] = []
+        
+        if (!this.DootAtPositionIsOpen(X, Y) || ChatRoomMapViewIsWall(X, Y - 1)) {
+            // always block top of door when closed or if wall north
+            lines.push({
+                type: "line",
+                points: [
+                    {x: ScreenX, y: effectTop},
+                    {x: ScreenX + this.TileUnit, y: effectTop}
+                ]
+            });
+        } 
+
+        if (!this.DootAtPositionIsOpen(X, Y)) {
+            if (X >= (Player?.MapData?.Pos?.X ?? X)) { // Door is right of Player, block right side
+                lines.push({
+                    type: "line",
+                    points: [
+                        {x: ScreenX + this.TileUnit, y: isHorizontalDoor ? ScreenY + this.TileUnit : ScreenY},
+                        {x: ScreenX + this.TileUnit, y: effectTop}
+                    ]
+                });
+            } 
+            if (X <= (Player?.MapData?.Pos?.X ?? X)) { // Door is left of Player, block left side
+                lines.push({
+                    type: "line",
+                    points: [
+                        {x: ScreenX, y: isHorizontalDoor ? ScreenY + this.TileUnit : ScreenY},
+                        {x: ScreenX, y: effectTop}
+                    ]
+                });
+            }
+        }
+
+        return lines;
+    }
+
+    private GetSingleColumnWallLines(X: number, Y: number, ScreenX: number, ScreenY: number): OpaqueObstacle[] {
+        let fxUnit = (this.TileUnit * 0.8);
+        return [
+            {
+                type: "oval",
+                center: {x: ScreenX + (this.TileUnit/2), y: ScreenY - (fxUnit/2) + (this.TileUnit * 0.2)},
+                radiusX: fxUnit / 2,
+                radiusY: fxUnit / 2,
+                resolution: 5
+            }
+        ];
+    }
+
+    private hexToColor(hex: string, defaultAlpha: number = 1.0): Color {
+        // 1. Strip the hash if it exists
+        let cleanHex = hex.replace(/^#/, '');
+
+        // 2. Expand shorthand hexes (e.g., "0cf" becomes "00ccff")
+        if (cleanHex.length === 3 || cleanHex.length === 4) {
+            cleanHex = cleanHex.split('').map(char => char + char).join('');
+        }
+
+        // 3. Parse the red, green, and blue channels
+        const r = parseInt(cleanHex.slice(0, 2), 16);
+        const g = parseInt(cleanHex.slice(2, 4), 16);
+        const b = parseInt(cleanHex.slice(4, 6), 16);
+
+        // 4. Parse the alpha channel if it exists (8-character hex), otherwise use default
+        let a = defaultAlpha;
+        if (cleanHex.length === 8) {
+            // Hex alpha is 0-255, so we divide by 255 to get the 0.0-1.0 float the engine expects
+            a = parseInt(cleanHex.slice(6, 8), 16) / 255; 
+        }
+
+        return [r, g, b, a];
     }
 }

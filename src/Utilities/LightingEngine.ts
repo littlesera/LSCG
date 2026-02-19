@@ -71,6 +71,7 @@ interface Segment {
 
 export class LightingEngine {
     public debug: boolean = false;
+    public suppressOptimization: boolean = false;
     private segments: Segment[] = [];
 
     // Offscreen canvases for layering
@@ -145,8 +146,11 @@ export class LightingEngine {
         }
 
         // Run the optimization sweep before saving to the engine
-        this.segments = this.optimizeSegments(rawSegments);
-        console.info(`Optimized segments -- pre: ${rawSegments.length}, post: ${this.segments.length}`);
+        if (!this.suppressOptimization) {
+            this.segments = this.optimizeSegments(rawSegments);
+            if (this.debug) console.info(`Optimized segments -- pre: ${rawSegments.length}, post: ${this.segments.length}`);
+        } else
+            this.segments = rawSegments;
     }
 
     private syncCanvasSizes(width: number, height: number) {
@@ -491,8 +495,8 @@ export class LightingEngine {
     }
 
     /**
-     * Collapses connected, parallel line segments into single long segments.
-     * Dramatically reduces raycasting math for tile-based maps.
+     * Collapses connected or overlapping collinear line segments into single long segments.
+     * Uses 1D scalar projection to perfectly union partial overlaps and eliminate gaps.
      */
     private optimizeSegments(segments: Segment[]): Segment[] {
         let merged = true;
@@ -505,41 +509,64 @@ export class LightingEngine {
                     const s1 = result[i];
                     const s2 = result[j];
 
-                    // Helper to check if two points overlap (with a tiny float tolerance)
-                    const match = (pA: Point, pB: Point) => Math.abs(pA.x - pB.x) < 0.01 && Math.abs(pA.y - pB.y) < 0.01;
+                    // 1. Calculate the vector and length of segment 1
+                    const v1x = s1.p2.x - s1.p1.x;
+                    const v1y = s1.p2.y - s1.p1.y;
+                    const len1 = Math.hypot(v1x, v1y);
+                    
+                    if (len1 < 0.01) continue; // Ignore microscopic segments
 
-                    let shared: Point | null = null;
-                    let end1: Point | null = null;
-                    let end2: Point | null = null;
+                    // 2. Calculate the normal vector of segment 1
+                    const nx = v1y / len1; 
+                    const ny = -v1x / len1;
 
-                    // Identify if and how the two segments connect
-                    if (match(s1.p2, s2.p1)) { shared = s1.p2; end1 = s1.p1; end2 = s2.p2; }
-                    else if (match(s1.p1, s2.p2)) { shared = s1.p1; end1 = s1.p2; end2 = s2.p1; }
-                    else if (match(s1.p2, s2.p2)) { shared = s1.p2; end1 = s1.p1; end2 = s2.p1; }
-                    else if (match(s1.p1, s2.p1)) { shared = s1.p1; end1 = s1.p2; end2 = s2.p2; }
+                    // 3. Check distance from s2 endpoints to the infinite line of s1
+                    const dist1 = Math.abs((s2.p1.x - s1.p1.x) * nx + (s2.p1.y - s1.p1.y) * ny);
+                    const dist2 = Math.abs((s2.p2.x - s1.p1.x) * nx + (s2.p2.y - s1.p1.y) * ny);
 
-                    if (shared && end1 && end2) {
-                        // Calculate the vectors of the two segments
-                        const v1x = shared.x - end1.x;
-                        const v1y = shared.y - end1.y;
-                        const v2x = end2.x - shared.x;
-                        const v2y = end2.y - shared.y;
+                    // If both points of s2 are on the s1 line, they are collinear
+                    if (dist1 < 0.01 && dist2 < 0.01) {
                         
-                        // Cross product determines if they are parallel/collinear
-                        const crossProduct = Math.abs(v1x * v2y - v1y * v2x);
+                        // 4. Project all 4 points onto the 1D line of s1
+                        const dx = v1x / len1;
+                        const dy = v1y / len1;
                         
-                        if (crossProduct < 0.01) {
-                            // They form a straight line! Merge them into one segment.
-                            result[i] = { p1: end1, p2: end2 };
+                        const p1_proj = 0; // s1.p1 is our 0-point origin
+                        const p2_proj = len1; 
+                        const p3_proj = (s2.p1.x - s1.p1.x) * dx + (s2.p1.y - s1.p1.y) * dy;
+                        const p4_proj = (s2.p2.x - s1.p1.x) * dx + (s2.p2.y - s1.p1.y) * dy;
+                        
+                        const min1 = Math.min(p1_proj, p2_proj);
+                        const max1 = Math.max(p1_proj, p2_proj);
+                        const min2 = Math.min(p3_proj, p4_proj);
+                        const max2 = Math.max(p3_proj, p4_proj);
+                        
+                        // 5. Check if the 1D intervals overlap or touch
+                        if (max1 >= min2 - 0.01 && max2 >= min1 - 0.01) {
+                            
+                            const points = [s1.p1, s1.p2, s2.p1, s2.p2];
+                            const projs = [p1_proj, p2_proj, p3_proj, p4_proj];
+                            
+                            // 6. Find the absolute extreme points to form the new union segment
+                            let minIdx = 0;
+                            let maxIdx = 0;
+                            for (let k = 1; k < 4; k++) {
+                                if (projs[k] < projs[minIdx]) minIdx = k;
+                                if (projs[k] > projs[maxIdx]) maxIdx = k;
+                            }
+                            
+                            result[i] = { p1: points[minIdx], p2: points[maxIdx] };
                             result.splice(j, 1);
                             merged = true;
-                            break; // Break inner loop to restart with new geometry
+                            break; // Break inner loop to restart with the newly merged geometry
                         }
                     }
                 }
-                if (merged) break; // Break outer loop to restart while sweep
+                if (merged) break; // Break outer loop to restart the sweep
             }
         }
-        return result;
+        
+        // Final cleanup: filter out any zero-length segments that might have been created
+        return result.filter(s => Math.hypot(s.p1.x - s.p2.x, s.p1.y - s.p2.y) > 0.01);
     }
 }
