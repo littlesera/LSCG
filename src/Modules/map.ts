@@ -1,5 +1,8 @@
 import { BaseModule } from "base";
 import { MapSettingsModel } from "Settings/Models/base";
+import { ModuleCategory } from "Settings/setting_definitions";
+import { Light, LightingEngine, Polygon, Viewpoint } from "Utilities/LightingEngine";
+import { hookFunction } from "utils";
 
 interface lightingSource {
     objId: number;
@@ -19,113 +22,101 @@ export class MapModule extends BaseModule {
         }
     ];
 
-    // lights: Lamp[] = [];
-    // walls: OpaqueObject[] = [];
-    // lightings: Lighting[] = [];
-    // darkMask: DarkMask | null = null;
-    // vision: Lighting | null = null;
+    lightingEngine: LightingEngine = new LightingEngine();
+    lights: Light[] = [];
+    viewpoint: Viewpoint = {
+        x: 500, 
+        y: 450,
+        radius: 800
+    };
     
     load(): void {
-        // hookFunction("ChatRoomMapViewDrawGrid", 1, (args, next) => {
-        //     next(args);
+        hookFunction("ChatRoomMapViewDrawGrid", 1, (args, next) => {
+            next(args);
 
-        //     this.lightings.forEach(l => {
-        //         l.render(MainCanvas);
-        //     });
+            this.lightingEngine.render(MainCanvas, MainCanvas.canvas.width, MainCanvas.canvas.height, this.lights, (ChatRoomMapFogIsActive() ? this.viewpoint : undefined));
+        }, ModuleCategory.Map);
 
-        //     this.darkMask?.render(MainCanvas);
+        hookFunction("ChatRoomMapViewCalculatePerceptionMasks", 1, (args, next) => {
+            next(args);
+            this.ParseMapForObjects();
+        }, ModuleCategory.Map);
 
-        //     this.vision?.cast(MainCanvas);
-        // }, ModuleCategory.Map);
-
-        // hookFunction("ChatRoomMapViewCalculatePerceptionMasks", 1, (args, next) => {
-        //     next(args);
-        //     this.ParseMapForObjects();
-        // }, ModuleCategory.Map);
-
-        // hookFunction("ChatRoomMapViewMouseWheel", 1, (args, next) => {
-        //     next(args);
-        //     this.ParseMapForObjects();
-        // }, ModuleCategory.Map);
+        hookFunction("ChatRoomMapViewMouseWheel", 1, (args, next) => {
+            next(args);
+            this.ParseMapForObjects();
+        }, ModuleCategory.Map);
     }
 
-    // ParseMapForObjects() {
-    //     if (!Player) return;
-    //     if (!Player.MapData) return;
+    ParseMapForObjects() {
+        if (!Player) return;
+        if (!Player.MapData) return;
 
-    //     let [Left, Top, Width, Height] = [0, 0, 1000, 1000];
-    //     let MaxVisibleRange = ChatRoomMapViewGetSightRange();
-	//     if (MaxVisibleRange < 1) MaxVisibleRange = 1;
+        let playerIsLight = InventoryGet(Player, "ItemHandheld")?.Asset?.Name == "CandleWax";
 
-    //     let TileWidth = Width / ((ChatRoomMapViewPerceptionRange * 2) + 1);
-    //     let TileHeight = Height / ((ChatRoomMapViewPerceptionRange * 2) + 1);
+        let [Left, Top, Width, Height] = [0, 0, 1000, 1000];
+        let MaxVisibleRange = ChatRoomMapViewGetSightRange();
+	    if (MaxVisibleRange < 1) MaxVisibleRange = 1;
 
-    //     this.lights = [];
-    //     this.walls = [];
-    //     this.lightings = [];
+        let TileWidth = Width / ((ChatRoomMapViewPerceptionRange * 2) + 1);
+        let TileHeight = Height / ((ChatRoomMapViewPerceptionRange * 2) + 1);
 
-    //     let FogActive = ChatRoomMapFogIsActive();
-    //     for (let Pos = 0; Pos < ChatRoomMapViewWidth * ChatRoomMapViewHeight; Pos++) {
-    //         let X = Pos % ChatRoomMapViewWidth;
-    //         let Y = Math.floor(Pos / ChatRoomMapViewWidth);
+        let objects: Polygon[] = [];
+        this.lights = [];
 
-    //         Defines the screen X and Y positions
-    //         let ScreenX = (X - Player.MapData.Pos.X) * TileWidth + ChatRoomMapViewPerceptionRange * TileWidth;
-    //         let ScreenY = (Y - Player.MapData.Pos.Y) * TileHeight + ChatRoomMapViewPerceptionRange * TileWidth;
+        for (let Pos = 0; Pos < ChatRoomMapViewWidth * ChatRoomMapViewHeight; Pos++) {
+            let X = Pos % ChatRoomMapViewWidth;
+            let Y = Math.floor(Pos / ChatRoomMapViewWidth);
 
-    //         let TileID = ChatRoomData?.MapData?.Tiles?.charCodeAt(Pos);
-    //         let TileData = ChatRoomMapViewTileList.find(t => t.ID == TileID);
-    //         if (!!TileData && TileData.Type == "Wall") {
-    //             this.walls.push(new RectangleObject({
-    //                 topleft: new Vec2(ScreenX - 2, ScreenY - (TileHeight/2) - 10),
-    //                 bottomright: new Vec2(ScreenX + TileWidth + 2, ScreenY + 20),
-    //                 diffuse: 0.0
-    //             }));
-    //         }
+            let MaxRange = Math.max(Math.abs(X - Player.MapData.Pos.X), Math.abs(Y - Player.MapData.Pos.Y));
+		    if (MaxRange > MaxVisibleRange) continue;
 
-    //         let ObjectID = ChatRoomData?.MapData?.Objects?.charCodeAt(Pos);
-    //         if (!!ObjectID && ObjectID > ChatRoomMapViewObjectStartID) {
-    //             let source = this.lightSources.find(ls => ls.objId == ObjectID)
-    //             if (!source || Player.MapData.Pos.Y < Y) {
-    //             if (!source) {
-    //                 continue;
-    //             }
+            let ScreenX = (X - Player.MapData.Pos.X) * TileWidth + ChatRoomMapViewPerceptionRange * TileWidth;
+            let ScreenY = (Y - Player.MapData.Pos.Y) * TileHeight + ChatRoomMapViewPerceptionRange * TileWidth;
+
+            let TileID = ChatRoomData?.MapData?.Tiles?.charCodeAt(Pos);
+            let TileData = ChatRoomMapViewTileList.find(t => t.ID == TileID);
+            if (!!TileData && TileData.Type == "Wall") {
+                let startY = ScreenY - (TileHeight * 0.6);
+                objects.push([
+                    {x: ScreenX, y: ScreenY},
+                    {x: ScreenX + TileWidth, y: ScreenY},
+                    // {x: ScreenX + TileWidth, y: startY + (TileHeight*0.8)},
+                    // {x: ScreenX, y: startY + (TileHeight*0.8)}
+                ]);
+            }
+
+            let ObjectID = ChatRoomData?.MapData?.Objects?.charCodeAt(Pos);
+            if (!!ObjectID && ObjectID > ChatRoomMapViewObjectStartID) {
+                let source = this.lightSources.find(ls => ls.objId == ObjectID)
+                if (!source) {
+                    continue;
+                }
                 
-    //             let newLamp = new Lamp({
-    //                 position: new Vec2(ScreenX + (TileWidth/2), ScreenY + (TileHeight/2)),
-    //                 distance: TileWidth * 4,
-    //                 diffuse: 0.0,
-    //                 color: 'rgba(250,220,150,0.2)',
-    //                 radius: 1,
-    //                 samples: 1,
-    //             });
-    //             this.lights.push(newLamp);
-    //         }
-    //     }
+                this.lights.push({
+                    x: ScreenX + (TileWidth/2),
+                    y: ScreenY + (TileHeight/2),
+                    radius: TileWidth * 4,
+                    r: 250,
+                    g: 220,
+                    b: 150,
+                    intensity: 0.8
+                });
+            }
+        }
 
-    //     let sightLight = new Lamp({
-    //             position: new Vec2(500, 450),
-    //             distance: 500,
-    //             diffuse: 0.0,
-    //             color: 'rgba(250,250,250,0)',
-    //             radius: 5,
-    //             samples: 1
-    //         });
-    //     this.vision = new Lighting({light: sightLight, objects: this.walls});
+        if (playerIsLight) {
+            this.lights.push({
+                x: 500,
+                y: 450,
+                radius: TileWidth * 2,
+                r: 250,
+                g: 220,
+                b: 150,
+                intensity: 0.6
+            });
+        }
 
-    //     this.lightings = this.lights.map(l => new Lighting({light: l, objects: this.walls}));
-
-    //     this.darkMask = new DarkMask({
-    //         lights: this.lights,
-    //         color: 'rgba(0,0,0,0.8)',
-    //     });
-        
-    //     this.vision.compute(MainCanvas.canvas.width, MainCanvas.canvas.height);
-
-    //     this.lightings.forEach(l => {
-    //         l.compute(MainCanvas.canvas.width, MainCanvas.canvas.height);
-    //     });
-                
-    //     this.darkMask?.compute(MainCanvas.canvas.width, MainCanvas.canvas.height);
-    // }
+        this.lightingEngine.setObstacles(objects);
+    }
 }

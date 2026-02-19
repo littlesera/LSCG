@@ -1,5 +1,4 @@
 import { h } from "tsx-dom";
-import './club_existing/illuminated.js'; // Ensure the illuminated library is included and executed
 import { CleanDefaultsFromSettings, ExportSettings, GetDataSizeReport, hookFunction, ICONS, ImportSettings, isObject, parseFromBase64, parseFromUTF16, sendLSCGBeep, settingsSave } from './utils';
 import { CheckVersionUpdate, ConfiguredActivities, CraftableItemSpellNames, DrugKeywords, getModule, HypnoTriggers, modules, NetgunKeywords, Outfits, registerModule, TestOutfitMigration } from 'modules';
 import { SettingsModel } from 'Settings/Models/settings';
