@@ -41,9 +41,9 @@ export class MapModule extends BaseModule {
     lightSources: lightingSource[] = [
         {
             objId: 3030, // Candelabra
+            radius: 5,
             animType: "flicker",
-            color: [250, 220, 150, 0.8],
-            radius: 4
+            color: [250, 220, 150, 0.8]
         },
         {
             objId: 2090, // Lamppost
@@ -227,7 +227,7 @@ export class MapModule extends BaseModule {
         if (!Player.MapData) return;
         if (!this.settings.enhancedLighting) return;
 
-        let MaxVisibleRange = ChatRoomMapViewGetSightRange();
+        let MaxVisibleRange = ChatRoomMapViewPerceptionRangeMax;
 	    if (MaxVisibleRange < 1) MaxVisibleRange = 1;
         this.charLights = [];
         for (let C of ChatRoomCharacter) {
@@ -248,7 +248,7 @@ export class MapModule extends BaseModule {
         if (!this.settings.enhancedLighting) return;
 
         let [Left, Top, Width, Height] = [0, 0, 1000, 1000];
-        let MaxVisibleRange = ChatRoomMapViewGetSightRange();
+        let MaxVisibleRange = ChatRoomMapViewPerceptionRangeMax;
 	    if (MaxVisibleRange < 1) MaxVisibleRange = 1;
 
         let TileWidth = Width / ((ChatRoomMapViewPerceptionRange * 2) + 1);
