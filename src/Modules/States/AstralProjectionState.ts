@@ -364,86 +364,48 @@ export class AstralProjectionState extends BaseState {
 
         // 1. Instantly hide the container to prevent the "pop"
         const originalText = ele.textContent;
-        ele.style.visibility = "hidden"; 
+        //ele.style.visibility = "hidden"; 
         ele.textContent = "";
 
         const regex = /(\([^)]+\))|(.)/g;
         const matches = [...originalText.matchAll(regex)];
         const animationPromises: Promise<void>[] = [];
 
+        let spans: HTMLSpanElement[] = [];
         matches.forEach((match, index) => {
             const [fullMatch, parenthesized, singleChar] = match;
             const span = document.createElement("span");
             
-            // 2. Set base state to invisible so they don't flash before animating
-            span.style.opacity = "0";
-            span.style.display = "inline-block"; // Helps with transforms/blur
-
             if (parenthesized) {
                 span.classList.add("ooc-text");
                 span.textContent = parenthesized;
             } else {
+                span.style.display = "inline-block"; // Helps with transforms/blur
+                span.style.opacity = "0";
                 span.textContent = singleChar === " " ? "\u00A0" : singleChar;
                 const delay = index * 0.05;
                 // 'forwards' ensures it stays visible at 100% opacity
                 span.style.animation = `ghostlyFadeIn 0.8s ease forwards ${delay}s`;
             }
 
-            ele.appendChild(span);
-
+            spans.push(span);
+            
             const promise = new Promise<void>((resolve) => {
                 span.addEventListener("animationend", () => resolve(), { once: true });
             });
             animationPromises.push(promise);
         });
 
+        ele.append(...spans);
         // 3. Reveal the container now that it's full of invisible spans
-        ele.style.visibility = "visible";
+        //ele.style.visibility = "visible";
 
         await Promise.all(animationPromises);
 
         // 4. Clean up
         ele.textContent = originalText;
+        this._wrapOOCContent(ele);
     }
-
-    // _splitSpanCharacters(ele: HTMLElement) {    
-    //     if (!ele.textContent) return;    
-        
-    //     const text = ele.textContent;
-    //     ele.textContent = "";
-
-    //     // Regex explanation:
-    //     // (\([^)]+\))  -> Match anything starting with ( and ending with )
-    //     // |            -> OR
-    //     // (.)          -> Match any single character
-    //     const regex = /(\([^)]+\))|(.)/g;
-    //     const matches = text.matchAll(regex);
-
-    //     for (const match of matches) {
-    //         const [fullMatch, parenthesized, singleChar] = match;
-
-    //         if (parenthesized) {
-    //             // Handle (Out of Character) text
-    //             const oocSpan = document.createElement("span");
-    //             oocSpan.classList.add("ooc-text");
-    //             oocSpan.textContent = parenthesized;
-    //             // No animation or special styles applied here
-    //             ele.appendChild(oocSpan);
-    //         } else if (singleChar) {
-    //             // Handle individual spectral characters
-    //             const span = document.createElement("span");
-    //             span.textContent = singleChar === " " ? "\u00A0" : singleChar;
-                
-    //             const duration = 4 + Math.random() * 4;
-    //             const alt = Math.round(Math.random());
-
-    //             span.style.animationDuration = `${duration}s`;
-    //             if (alt) span.style.animationDirection = "alternate-reverse";
-
-    //             ele.appendChild(span);
-    //         }
-    //     }
-    // }
 
     _wrapOOCContent(ele: HTMLElement) {
         if (!ele.textContent) return;
