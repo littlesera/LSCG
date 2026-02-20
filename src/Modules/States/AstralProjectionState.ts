@@ -214,7 +214,7 @@ export class AstralProjectionState extends BaseState {
                     origCanvases.forEach((origCanvas, index) => {
                         let ctx = origCanvas?.getContext("2d");
                         if (!!ctx) {
-                            ctx.drawImage(ghostCanvases[index], hideCorpChar ? 0 : 80, hideCorpChar ? 0 : (-80 + ghostYOffset));
+                            ctx.drawImage(ghostCanvases[index], hideCorpChar ? 0 : 80, (hideCorpChar ? 0 : -80) + ghostYOffset);
                         }
                     });
                 }
@@ -520,8 +520,10 @@ export class AstralProjectionState extends BaseState {
         this.SetGhostConfig(Player, { a: spiritForm || ghostBundle, p: ghostPose });
         CharacterDelete(dummyChar);
         
-        PoseSetActive(Player, "Kneel", undefined, false);
-        ServerSend("ChatRoomCharacterPoseUpdate", { Pose: Player.ActivePose });
+        PoseSetActive(Player, "Kneel");
+        if (CurrentScreen === "ChatRoom") {
+			ServerSend("ChatRoomCharacterPoseUpdate", { Pose: Player.ActivePose });
+		}
 
         let ret = super.Activate(memberNumber, duration, emote);
 
@@ -542,7 +544,17 @@ export class AstralProjectionState extends BaseState {
         return ret;
     }
 
-    RoomSync(): void {}
+    RoomSync(): void {
+        if (Player.CanKneel) {
+            if (Player.CanKneel()) {
+                Player.PoseMapping.BodyLower = "Kneel";
+                Player.ActivePoseMapping.BodyLower = "Kneel";
+                if (CurrentScreen === "ChatRoom") {
+                    ServerSend("ChatRoomCharacterPoseUpdate", { Pose: Player.ActivePose });
+                }
+            }
+        }
+    }
 
     SpeechBlock(): void {}
 
