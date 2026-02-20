@@ -171,7 +171,7 @@ export class LightingEngine {
             height,
             lights,
             viewpoint,
-            ambientColor = "rgb(40, 40, 40)",
+            ambientColor = "rgb(60, 60, 60)",
             focus
         } = options;
 
@@ -282,14 +282,15 @@ export class LightingEngine {
         ctx.clip();
 
         // 2. Clip to a directional cone (Flashlight)
-        if (light.animType === "flashlight") {
-            const angle = light.angle ?? 0;
+        if (!!light.fov) {
+            const angleDegrees = light.angle ?? 0;
+            const angleRadians = angleDegrees * (Math.PI / 180); // Convert degrees to radians for canvas
             const fovDegrees = light.fov ?? 60; 
             const fovRadians = fovDegrees * (Math.PI / 180); // Convert degrees to radians for canvas
             
             ctx.beginPath();
             ctx.moveTo(light.x, light.y);
-            ctx.arc(light.x, light.y, light.radius, angle - fovRadians / 2, angle + fovRadians / 2);
+            ctx.arc(light.x, light.y, light.radius, angleRadians - fovRadians / 2, angleRadians + fovRadians / 2);
             ctx.closePath();
             ctx.clip();
         }

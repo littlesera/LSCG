@@ -7,13 +7,16 @@ import { CollarModule } from "./collar";
 import { InjectorModule } from "./injector";
 import { CommandListener } from "./core";
 
-export const CameraItems: string[] = [
+export const ScreenItems: string[] = [
 	"Phone1",
 	"Phone2",
 	"PortalTablet",
-	"Camera1",
 	"Smartphone"
 ];
+
+export const CameraItems: string[] = [
+	"Camera1"
+].concat(ScreenItems);
 
 export const MagicWandItems: string[] = [
 	"RainbowWand",

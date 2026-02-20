@@ -5,6 +5,7 @@ import { ModuleCategory } from "Settings/setting_definitions";
 import { Color, Light, LightingEngine, LineObstacle, OpaqueObstacle, Viewpoint } from "Utilities/LightingEngine";
 import { GetItemNameAndDescriptionConcat, hookFunction, isPhraseInString } from "utils";
 import { StateModule } from "./states";
+import { ScreenItems } from "./item-use";
 
 // REMOVE WHEN BC-STUBS UPDATES
 declare const ChatRoomMapManager: any;
@@ -147,6 +148,18 @@ export class MapModule extends BaseModule {
             });
         }
 
+        if (ScreenItems.includes(InventoryGet(C, "ItemHandheld")?.Asset?.Name ?? "")) {
+            charLights.push({
+                x: CX,
+                y: CY,
+                radius: this.TileUnit * 0.8,
+                color: [64, 183, 255, 0.4],
+                animType: "glitch",
+                fov: 45,
+                angle: 270
+            });
+        }
+
         if (C.Appearance.some(i => isPhraseInString(GetItemNameAndDescriptionConcat(i) || "", "glowing", true))) {
             charLights.push({
                 x: CX,
@@ -198,14 +211,14 @@ export class MapModule extends BaseModule {
 	    if (MaxVisibleRange < 1) MaxVisibleRange = 1;
         this.charLights = [];
         for (let C of ChatRoomCharacter) {
-            if (C.IsPlayer()) continue;
+            //if (C.IsPlayer()) continue;
             let X = C.MapData?.Pos.X ?? 0;
             let Y = C.MapData?.Pos.Y ?? 0;
             let ScreenX = (X - Player.MapData.Pos.X) * this.TileUnit + ChatRoomMapViewPerceptionRange * this.TileUnit;
             let ScreenY = (Y - Player.MapData.Pos.Y) * this.TileUnit + ChatRoomMapViewPerceptionRange * this.TileUnit;
             let MaxRange = Math.max(Math.abs(X - Player.MapData.Pos.X), Math.abs(Y - Player.MapData.Pos.Y));
             if (MaxRange > MaxVisibleRange) continue;
-            this.charLights.push(...this.GetCharacterLights(C, ScreenX + (this.TileUnit/2), ScreenY));
+            this.charLights.push(...this.GetCharacterLights(C, ScreenX + (this.TileUnit/2), C.IsKneeling() ? ScreenY + (this.TileUnit/2) : ScreenY));
         }
     }
 
@@ -296,7 +309,7 @@ export class MapModule extends BaseModule {
             }
         }
         
-        this.lights.push(...this.GetCharacterLights(Player));
+        //this.lights.push(...this.GetCharacterLights(Player));
         this.ParseOtherCharactersForLight();
 
         this.lightingEngine.setObstacles(objects);
