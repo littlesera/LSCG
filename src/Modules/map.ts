@@ -284,7 +284,8 @@ export class MapModule extends BaseModule {
             }
 
             // Parse Effect
-            this.lights.push(...this.ParseMapEffectsForLighting(X, Y, ScreenX, ScreenY));
+            if (GameVersion !== "R124") // Don't do this for R124 yet.
+                this.lights.push(...this.ParseMapEffectsForLighting(X, Y, ScreenX, ScreenY));
 
             // Parse Obstacles
             if (!!TileData && TileData.Type == "Wall") {
