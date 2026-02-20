@@ -550,9 +550,9 @@ export class AstralProjectionState extends BaseState {
         if (!mouthItem) return false;
 
         let gags = [
-            InventoryGet(Player, "ItemMouth"),
-            InventoryGet(Player, "ItemMouth2"),
-            InventoryGet(Player, "ItemMouth3")
+            InventoryGet(C, "ItemMouth"),
+            InventoryGet(C, "ItemMouth2"),
+            InventoryGet(C, "ItemMouth3")
         ];
         return (!!gags && gags.length > 0 && gags.some(gag => !!gag && IsSoulBind(gag)));
     }
