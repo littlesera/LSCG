@@ -113,4 +113,5 @@ export interface MagicPublicSettingsModel extends BaseSettingsModel{
 
     // Colors
     projectionTintColor: string;
+    hideCorporeal: boolean;
 }

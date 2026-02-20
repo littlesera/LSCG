@@ -3,11 +3,12 @@ import { BaseModule } from "base";
 import { getModule } from "modules";
 import { OpacitySettingsModel } from "Settings/Models/base";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { LSCG_TEAL, hookFunction, isDrawingOverridable, mouseTooltip } from "../utils";
+import { GetItemNameAndDescriptionConcat, LSCG_TEAL, hookFunction, isDrawingOverridable, isPhraseInString, mouseTooltip } from "../utils";
 import { StateModule } from "./states";
 import { drawTooltip } from "Settings/settingUtils";
 import { endsWith, kebabCase, replace } from "lodash-es";
 import styles from "./opacity.scss";
+import { IsSoulBind, SoulbindKeywords } from "./States/AstralProjectionState";
 
 interface OpacitySlider {
     ElementId: string;
@@ -567,12 +568,12 @@ export class OpacityModule extends BaseModule {
             let C = args[0] as OtherCharacter;
             let callbacks = args[1];
             if (this.Enabled) {
-                C.AppearanceLayers?.forEach((Layer) => {
-                    const A = Layer.Asset;
-                    if (isDrawingOverridable(A)) {
+                C.Appearance?.forEach(item => {
+                    const A = item.Asset;
+                    if (isDrawingOverridable(A) || IsSoulBind(item)) {
                         (A as any).DynamicBeforeDraw = true;
                     }
-                });
+                })                
             }
             // Hack fix in case the body style was actually removed
             if (InventoryGet(C, "BodyStyle") == null) {
@@ -598,7 +599,7 @@ export class OpacityModule extends BaseModule {
                 } else if (Array.isArray(opacity)) {
                     hasOpacitySettings = !opacity.every((opac, i) => opac === item.Asset.Layer[i]?.Opacity);
                 }
-                if ((hasOpacitySettings || xrayActive) && !item.Property?.LSCGLeadLined) {
+                if ((hasOpacitySettings || xrayActive || IsSoulBind(item)) && !item.Property?.LSCGLeadLined) {
                     item.Asset = Object.assign({}, item.Asset);
                     (item.Asset as any).Layer = item.Asset.Layer.map(l => Object.assign({}, l));
                     item?.Asset?.Layer?.forEach(layer => {

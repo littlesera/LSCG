@@ -2,6 +2,8 @@ import { ApplyItem, BC_ItemToItemBundle, CopyCharacter, GetConfiguredItemBundles
 import { BaseState } from "./BaseState";
 import { StateModule } from "Modules/states";
 import { ModuleCategory } from "Settings/setting_definitions";
+import { getModule } from "modules";
+import { MagicModule } from "Modules/magic";
 
 // TODO:
 // - Allow 'soulbind' bindings to be added to ghost and carry over from corporeal form if applied there.
@@ -13,6 +15,10 @@ export const SoulbindKeywords: string[] = [
     "soul-bindings",
     "astral"
 ];
+
+export function IsSoulBind(item: Item): boolean {
+    return SoulbindKeywords.some(key => isPhraseInString(GetItemNameAndDescriptionConcat(item) ?? "", key));
+}
 
 export interface GhostConfig {
     a: AppearanceBundle;
@@ -69,11 +75,13 @@ export class AstralProjectionState extends BaseState {
             let ghostConfig = this.GetGhostConfig(C);
             let soulBindings = C.Appearance.filter(i => isBind(i) && SoulbindKeywords.some(key => isPhraseInString(GetItemNameAndDescriptionConcat(i) ?? "", key)));
 
-            ghostChar.PoseMapping = ghostConfig?.p ?? C.PoseMapping;
             ServerAppearanceLoadFromBundle(ghostChar, "Female3DCG", ghostConfig?.a ?? {}, undefined);
             for (const binding of soulBindings) {
                 ApplyItem(BC_ItemToItemBundle(binding), undefined, true, true, ghostChar);
             }
+            ghostChar.PoseMapping = ghostConfig?.p ?? C.PoseMapping;
+            ghostChar.ActivePoseMapping = ghostChar.PoseMapping;
+
             ghostChar.ArousalSettings = C.ArousalSettings;
             return ghostChar;
         }
@@ -87,17 +95,55 @@ export class AstralProjectionState extends BaseState {
             let corporealChar = CopyCharacter(C, `LSCGAstralProjectionCorporeal-${C.ID}`, false, false);
             CharacterSetFacialExpression(corporealChar, "Eyes", "Closed");
             corporealChar.PoseMapping = C.PoseMapping;
+            corporealChar.ActivePoseMapping = C.ActivePoseMapping;
             corporealChar.ArousalSettings = C.ArousalSettings;
             return corporealChar;
         }
     }
 
     Init(): void {
+        hookFunction("CommonDrawResolveLayerExpression", 1, (args, next) => {
+            if (getModule<MagicModule>("MagicModule").Enabled) {
+                let C = args[0] as Character;
+                let item = args[1] as Item;
+                if (!!C && item.Asset.Group.Name == "Mouth") {
+                    if (this.IsSoulBindGag(C, item))
+                        return "Moan";
+                }
+            }
+            return next(args);
+        }, ModuleCategory.States);
+
+        hookFunction("CommonCallFunctionByName", 1, (args, next) => {
+            let funcName = args[0];
+            let params = args[1];
+            if (!params) {
+                return next(args);
+            }
+
+            let C = params['C'] as OtherCharacter;
+            let CA = params['CA'] as Item;
+            let regex = /Assets(.+)BeforeDraw/i;
+            if (regex.test(funcName)) {
+                let ret = next(args) ?? {};
+                if (IsSoulBind(CA)) {
+                    let layerName = (params['L'] as string ?? "")?.trim() ?? "";
+                    let layerIx = CA.Asset.Layer.findIndex(l => l.Name == layerName);
+                    let originalLayerOpacity = (Array.isArray(CA?.Property?.Opacity) ? CA?.Property?.Opacity[layerIx] : CA.Property?.Opacity) ?? CA.Asset.Opacity;
+                    let curOpacity = ret.Opacity ?? originalLayerOpacity ?? 1;
+                    ret.Opacity = curOpacity * .4;
+                    ret.AlphaMasks = [];
+                }
+                return ret;
+            } else
+                return next(args);
+        }, ModuleCategory.States)
+
         hookFunction("CharacterLoadCanvas", 1, (args, next) => {
             const C = args[0] as OtherCharacter;
 
             let activeStateConfig = C.LSCG?.StateModule.states.find(state => state.type === "astral-projection")
-            if (!activeStateConfig || !activeStateConfig.active) {
+            if (!activeStateConfig || !activeStateConfig.active) {                
                 return next(args);
             } else {
                 //var inDialog = !!CurrentCharacter || CurrentScreen != "ChatRoom";
@@ -136,7 +182,10 @@ export class AstralProjectionState extends BaseState {
                 corporealChar.Canvas = corporealCanvases[0];
                 corporealChar.CanvasBlink = corporealCanvases[1];
 
-                if (!this.hideGhost) {
+                let hideGhostChar = this.hideGhost;
+                let hideCorpChar = !CurrentCharacter && (CurrentScreen == "ChatRoom") && (this.hideCorporeal || C.LSCG.MagicModule.hideCorporeal);
+
+                if (!hideGhostChar) {
                     next([ghostChar]);
 
                     ghostCanvases.forEach((canvas, index) => {
@@ -165,12 +214,12 @@ export class AstralProjectionState extends BaseState {
                     origCanvases.forEach((origCanvas, index) => {
                         let ctx = origCanvas?.getContext("2d");
                         if (!!ctx) {
-                            ctx.drawImage(ghostCanvases[index], 80, -80 + ghostYOffset);
+                            ctx.drawImage(ghostCanvases[index], hideCorpChar ? 0 : 80, hideCorpChar ? 0 : (-80 + ghostYOffset));
                         }
                     });
                 }
 
-                if (!this.hideCorporeal) {
+                if (!hideCorpChar) {
                     next([corporealChar]);
 
                     CharacterAppearanceSetHeightModifiers(corporealChar);
@@ -241,6 +290,21 @@ export class AstralProjectionState extends BaseState {
             if (activeStateConfig?.active) {
                 let pose = this.GetGhostConfig(Player)?.p ?? Player.PoseMapping;
                 return CommonIncludes(PoseAllStanding, pose.BodyLower);
+            } else return next(args);
+        }, ModuleCategory.States);
+
+        hookFunction("DialogSelfMenuMapping.Pose._ClickButton", 1, (args, next) => {
+            let [button, C, pose] = args;
+            let activeStateConfig = Player?.LSCG?.StateModule.states.find(state => state.type === "astral-projection");
+            if (activeStateConfig?.active && C?.IsPlayer()) {
+                let ghostChar = this.GetGhostCharacter(C);
+                if (ghostChar.PoseMapping[(<Pose>pose).Category] === pose.Name) {
+                    return;
+                }
+                PoseSetActive(C, pose.Name, undefined, false);
+                if (CurrentScreen === "ChatRoom") {
+                    ServerSend("ChatRoomCharacterPoseUpdate", { Pose: C.ActivePose });
+                }
             } else return next(args);
         }, ModuleCategory.States);
 
@@ -456,10 +520,8 @@ export class AstralProjectionState extends BaseState {
         this.SetGhostConfig(Player, { a: spiritForm || ghostBundle, p: ghostPose });
         CharacterDelete(dummyChar);
         
-        PoseSetActive(Player, "Kneel");
-        if (CurrentScreen === "ChatRoom") {
-			ServerSend("ChatRoomCharacterPoseUpdate", { Pose: Player.ActivePose });
-		}
+        PoseSetActive(Player, "Kneel", undefined, false);
+        ServerSend("ChatRoomCharacterPoseUpdate", { Pose: Player.ActivePose });
 
         let ret = super.Activate(memberNumber, duration, emote);
 
@@ -483,4 +545,15 @@ export class AstralProjectionState extends BaseState {
     RoomSync(): void {}
 
     SpeechBlock(): void {}
+
+    IsSoulBindGag(C: Character, mouthItem: Item | undefined) {
+        if (!mouthItem) return false;
+
+        let gags = [
+            InventoryGet(Player, "ItemMouth"),
+            InventoryGet(Player, "ItemMouth2"),
+            InventoryGet(Player, "ItemMouth3")
+        ];
+        return (!!gags && gags.length > 0 && gags.some(gag => !!gag && IsSoulBind(gag)));
+    }
 }

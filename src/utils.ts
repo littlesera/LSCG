@@ -11,6 +11,7 @@ import { lt } from "semver";
 import { regEscape } from "./regEscape";
 import { OutfitCollectionModule } from "Modules/outfitCollection";
 import { isFileInputEvent, hasLegacyHypnoProps, hasLegacyInjectorProps } from "./types/guards";
+import { IsSoulBind } from "Modules/States/AstralProjectionState";
 
 export const LSCG_CHANGES: string = "https://github.com/littlesera/LSCG/releases/latest";
 export const LSCG_TEAL: string = "#00d5d5";
@@ -773,7 +774,7 @@ export function isProtectedFromRemoval(item: Item | Asset | AssetGroup | AssetGr
 
 export function isDrawingOverridable(item: Item | Asset | AssetGroup | AssetGroupName): boolean {
 	const group = smartGetAssetGroup(item);
-	return isCloth(item, true, true) || 
+	return isBind(item) || isCloth(item, true, true) || 
 		includes(group?.Name?.toLocaleLowerCase(), "markings"); 
 }
 

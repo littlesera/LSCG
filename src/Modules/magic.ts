@@ -68,7 +68,8 @@ export class MagicModule extends BaseModule {
             blockXRay: true,
             spiritTextFormat: "Float",
             disableSoulBindings: false,
-            spiritFormOutfitKey: ""
+            spiritFormOutfitKey: "",
+            hideCorporeal: false
         };
     }
 

@@ -155,7 +155,8 @@ export class PublicSettingsModel implements IPublicSettingsModel {
         allowChangeGenitals: true,
         requireWhitelist: false,
         blockXRay: true,
-        projectionTintColor: "#00CED1"
+        projectionTintColor: "#00CED1",
+        hideCorporeal: false
     };
     OpacityModule: OpacityPublicSettingsModel = <OpacityPublicSettingsModel>{
         enabled: true,

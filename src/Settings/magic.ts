@@ -304,6 +304,12 @@ export class GuiMagic extends GuiSubscreen {
 						setSetting: (val) => this.settings.spiritFormOutfitKey = val,
 						overrideWidth: 600,
 						options: getModule<OutfitCollectionModule>("OutfitCollectionModule")?.data.GetOutfitNames()?.sort() ?? []
+					}, <Setting>{
+						type: "checkbox",
+						label: "Hide Corporeal Form:",
+						description: "If true, your corporeal form will vanish while projected into spirit realm",
+						setting: () => this.settings.hideCorporeal ?? false,
+						setSetting: (val) => this.settings.hideCorporeal = val
 					}
 				]];
 	}

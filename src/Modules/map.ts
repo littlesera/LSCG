@@ -165,12 +165,14 @@ export class MapModule extends BaseModule {
     load(): void {
         (window as any).lighting = this.lightingEngine; // Expose the lighting engine for debugging/testing
 
-        hookFunction("RgbaArrayToHTMLColor", 1, (args, next) => { // Hack for effect overlay rectangles, since we're overriding them as lighting 'indicators'
-            if (this.settings.enhancedLighting && this.drawingMapFlag && (ChatRoomMapViewEditMode as any) !== "Effect") {
-                return "rgba(0,0,0,0)";
-            }
-            return next(args);
-        }, ModuleCategory.Map);
+        if (GameVersion !== "R124") {
+            hookFunction("RgbaArrayToHTMLColor", 1, (args, next) => { // Hack for effect overlay rectangles, since we're overriding them as lighting 'indicators'
+                if (this.settings.enhancedLighting && this.drawingMapFlag && (ChatRoomMapViewEditMode as any) !== "Effect") {
+                    return "rgba(0,0,0,0)";
+                }
+                return next(args);
+            }, ModuleCategory.Map);
+        }
 
         hookFunction("DrawImageResize", 1, (args, next) => {
             if (this.settings.enhancedLighting && this.drawingMapFlag && this.settings.hideVanillaFog && args[0] === "Screens/Online/ChatRoom/MapTile/Fog/Half.png") {
