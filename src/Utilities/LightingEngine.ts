@@ -250,6 +250,14 @@ export class LightingEngine {
                 mainCtx.arc(seg.p2.x, seg.p2.y, 3, 0, Math.PI * 2);
                 mainCtx.fill();
             }
+
+            for (const light of lights) {
+                mainCtx.fillStyle = `rgba(${light.color[0]}, ${light.color[1]}, ${light.color[2]}, 1)`;
+                mainCtx.strokeStyle = "black";
+                mainCtx.beginPath();
+                mainCtx.arc(light.x, light.y, 5, 0, Math.PI * 2);
+                mainCtx.fill();
+            }
             
             mainCtx.restore();
         }

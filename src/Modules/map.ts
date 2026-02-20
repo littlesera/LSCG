@@ -8,6 +8,10 @@ import { StateModule } from "./states";
 
 interface lightingSource {
     objId: number;
+    heightOffset?: number;
+    color?: Color;
+    radius?: number; // in tile counts
+    animType?: "flicker" | "pulse" | "glitch" | "none";
 }
 
 interface WallSides {
@@ -32,7 +36,30 @@ export class MapModule extends BaseModule {
 
     lightSources: lightingSource[] = [
         {
-            objId: 3030 // Candelabra
+            objId: 3030, // Candelabra
+            animType: "flicker",
+            color: [250, 220, 150, 0.8],
+            radius: 4
+        },
+        {
+            objId: 2090, // Lamppost
+            heightOffset: 1.4,
+            radius: 6,
+            color: [200, 200, 200, 0.8]
+        },
+        {
+            objId: 610, // Log Fire
+            radius: 4,
+            color: [250, 220, 150, 1],
+            animType: "flicker",
+            heightOffset: 0.2
+        },
+        {
+            objId: 611, // Log Fire (anim)
+            radius: 4,
+            color: [255, 194, 90, 0.9],
+            animType: "flicker",
+            heightOffset: 0.2
         }
     ];
 
@@ -204,13 +231,14 @@ export class MapModule extends BaseModule {
 
             // Parse Light Sources
             let ObjectID = Object?.ID;
-            if (!!ObjectID && this.lightSources.some(ls => ls.objId == ObjectID)) {                
+            let lightSource = this.lightSources.find(ls => ls.objId == ObjectID);
+            if (!!ObjectID && !!lightSource) {                
                 this.lights.push({
                     x: ScreenX + (TileWidth/2),
-                    y: ScreenY + (TileHeight/2),
-                    radius: TileWidth * 4,
-                    color: [250, 220, 150, 0.8],
-                    animType: "flicker"
+                    y: ScreenY + ((TileHeight/2) - ((lightSource.heightOffset ?? 0) * TileHeight)),
+                    radius: TileWidth * (lightSource.radius ?? 4),
+                    color: lightSource.color ?? [250, 220, 150, 0.8],
+                    animType: lightSource.animType ?? "none"
                 });
             }
 
