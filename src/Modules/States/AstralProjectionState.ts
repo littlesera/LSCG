@@ -103,13 +103,11 @@ export class AstralProjectionState extends BaseState {
 
     Init(): void {
         hookFunction("CommonDrawResolveLayerExpression", 1, (args, next) => {
-            if (getModule<MagicModule>("MagicModule").Enabled) {
-                let C = args[0] as Character;
-                let item = args[1] as Item;
-                if (!!C && item.Asset.Group.Name == "Mouth") {
-                    if (this.IsSoulBindGag(C, item))
-                        return "Moan";
-                }
+            let C = args[0] as Character;
+            let item = args[1] as Item;
+            if (!!C && item.Asset.Group.Name == "Mouth") {
+                if (this.IsSoulBindGag(C, item))
+                    return "Moan";
             }
             return next(args);
         }, ModuleCategory.States);
