@@ -98,10 +98,22 @@ export class MapModule extends BaseModule {
         radius: this.TileUnit * 8
     };
     
+    drawingMapFlag: boolean = false;
+
     load(): void {
         (window as any).lighting = this.lightingEngine; // Expose the lighting engine for debugging/testing
+
+        hookFunction("RgbaArrayToHTMLColor", 1, (args, next) => { // Hack for effect overlay rectangles, since we're overriding them as lighting 'indicators'
+            if (this.settings.enhancedLighting && this.drawingMapFlag && (ChatRoomMapViewEditMode as any) !== "Effect") {
+                return "rgba(0,0,0,0)";
+            }
+            return next(args);
+        }, ModuleCategory.Map);
+
         hookFunction("ChatRoomMapViewDrawGrid", 1, (args, next) => {
+            this.drawingMapFlag = true;
             next(args);
+            this.drawingMapFlag = false;
 
             if (this.settings.enhancedLighting) {
                 if (this.lightingEngine.debug && Player && Player.MapData && Player.MapData.Pos) {
@@ -148,16 +160,14 @@ export class MapModule extends BaseModule {
 
         hookFunction("ChatRoomMapViewSyncMapData", 1, (args, next) => {
             next(args);
-
             if (this.settings.enhancedLighting) {
                 this.ParseOtherCharactersForLight();
             }
         }, ModuleCategory.Map);
 
         hookFunction("ChatRoomMapViewUpdatePlayerFlag", 1, (args, next) => {
-            let ret = next(args);
+            next(args);
             this.ParseMapForObjects();
-            return ret;
         }, ModuleCategory.Map);
 
         hookFunction("ChatRoomMapViewMouseWheel", 1, (args, next) => {
