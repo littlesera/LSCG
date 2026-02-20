@@ -275,7 +275,11 @@ export class ItemUseModule extends BaseModule {
 					
 					if (buttons.length > 0) {
 						buttons.forEach((b, ix, arr) => {
-							DrawButton(this.pantiesButtonCoords[0], this.pantiesButtonCoords[1] + ix * (this.pantiesButtonCoords[3] + 5), this.pantiesButtonCoords[2], this.pantiesButtonCoords[3], b, "White");
+							let coords = [this.pantiesButtonCoords[0], this.pantiesButtonCoords[1] + ix * (this.pantiesButtonCoords[3] + 5), this.pantiesButtonCoords[2], this.pantiesButtonCoords[3]]
+							DrawButton(coords[0], coords[1], coords[2], coords[3], b, "White");
+							if (MouseIn(coords[0], coords[1], coords[2], coords[3])) {
+								mouseTooltip("Pulldown Panties");
+							}
 						});
 					}
 				}
