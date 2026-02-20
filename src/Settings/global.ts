@@ -148,7 +148,7 @@ export class GuiGlobal extends GuiSubscreen {
 					disabled: !this.settings.enabled
 				},<Setting>{
 					type: "checkbox",
-					label: "Enhance Map Lighting:",
+					label: "Enhance Map Lighting [EXPERIMENTAL]:",
 					description: "If checked, map lighting will become more dynamic based on light sources.",
 					setting: () => Player.LSCG.MapModule.enhancedLighting ?? true,
 					setSetting: (val) => Player.LSCG.MapModule.enhancedLighting = val,
