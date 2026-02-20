@@ -128,12 +128,20 @@ export class MapModule extends BaseModule {
                 if (this.lightingVisionMax < 20) {
                     this.lightingEngine.updateAnimations(this.allLights, {x: MouseX, y: MouseY})
                 }
+
+                let ambientColor = "rgb(60, 60, 60)";
+                if (!!ChatRoomData?.Custom?.ImageFilter) {
+                    let color = this.hexToColor(ChatRoomData?.Custom?.ImageFilter, 1);
+                    ambientColor = `rgba(${color[0]}, ${color[1]}, ${color[2]}, ${color[3]})`;
+                }
+
                 this.lightingEngine.render({
                     mainCtx: MainCanvas, 
                     width: MainCanvas.canvas.width, 
                     height: MainCanvas.canvas.height, 
                     lights: this.allLights, 
-                    viewpoint: (ChatRoomMapFogIsActive() ? this.viewpoint : undefined)
+                    viewpoint: (ChatRoomMapFogIsActive() ? this.viewpoint : undefined),
+                    ambientColor: ambientColor
                 });
             }
         }, ModuleCategory.Map);
