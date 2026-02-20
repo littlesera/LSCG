@@ -87,7 +87,10 @@ export class MapModule extends BaseModule {
     ];
 
     lightingEngine: LightingEngine = new LightingEngine();
-    lights: Light[] = [];
+    get allLights(): Light[] {
+        return [...this.mapLights, ...this.charLights];
+    }
+    mapLights: Light[] = [];
     charLights: Light[] = [];
     viewpoint: Viewpoint = {
         x: 500, 
@@ -123,13 +126,13 @@ export class MapModule extends BaseModule {
                     this.lightingEngine.disableSpatialAnimations = true;
                 }
                 if (this.lightingVisionMax < 20) {
-                    this.lightingEngine.updateAnimations(this.lights, {x: MouseX, y: MouseY})
+                    this.lightingEngine.updateAnimations(this.allLights, {x: MouseX, y: MouseY})
                 }
                 this.lightingEngine.render({
                     mainCtx: MainCanvas, 
                     width: MainCanvas.canvas.width, 
                     height: MainCanvas.canvas.height, 
-                    lights: [...this.lights, ...this.charLights], 
+                    lights: this.allLights, 
                     viewpoint: (ChatRoomMapFogIsActive() ? this.viewpoint : undefined)
                 });
             }
@@ -283,7 +286,7 @@ export class MapModule extends BaseModule {
         if (!this.settings.enhancedLighting) return;
 
         let objects: OpaqueObstacle[] = [];
-        this.lights = [];
+        this.mapLights = [];
 
         let [Left, Top, Width, Height] = [0, 0, 1000, 1000];
         let MaxVisibleRange = this.lightingVisionMax;
@@ -309,7 +312,7 @@ export class MapModule extends BaseModule {
             let ObjectID = Object?.ID;
             let lightSource = this.lightSources.find(ls => ls.objId == ObjectID);
             if (!!ObjectID && !!lightSource) {                
-                this.lights.push({
+                this.mapLights.push({
                     x: ScreenX + (TileWidth/2),
                     y: ScreenY + ((TileHeight/2) - ((lightSource.heightOffset ?? 0) * TileHeight)),
                     radius: TileWidth * (lightSource.radius ?? 4),
@@ -320,7 +323,7 @@ export class MapModule extends BaseModule {
 
             // Parse Effect
             if (GameVersion !== "R124") // Don't do this for R124 yet.
-                this.lights.push(...this.ParseMapEffectsForLighting(X, Y, ScreenX, ScreenY));
+                this.mapLights.push(...this.ParseMapEffectsForLighting(X, Y, ScreenX, ScreenY));
 
             // Parse Obstacles
             if (!!TileData && TileData.Type == "Wall") {
@@ -368,7 +371,13 @@ export class MapModule extends BaseModule {
         //this.lights.push(...this.GetCharacterLights(Player));
         this.ParseOtherCharactersForLight();
 
-        this.lightingEngine.compute(this.lights, objects, this.viewpoint);
+        // Trim out any "off" lights.
+        this.mapLights = this.mapLights.filter(l => {
+            const [r, g, b, a] = l.color;
+            return a > 0.01 && (r > 0 || g > 0 || b > 0);
+        });
+
+        this.lightingEngine.compute(this.allLights, objects, this.viewpoint);
     }
 
     ParseMapEffectsForLighting(X: number, Y: number, ScreenX: number, ScreenY: number): Light[] {

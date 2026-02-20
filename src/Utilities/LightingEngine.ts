@@ -78,6 +78,10 @@ export class LightingEngine {
     private lastRenderTime: number = 0;
     private currentFps: number = 0;
     private timings = { anim: 0, compute: 0, render: 0 };
+    
+    private lastHzTime: number = 0;
+    private counters = { anim: 0, compute: 0, render: 0 };
+    private hz = { anim: 0, compute: 0, render: 0 };
 
     private segments: Segment[] = [];
 
@@ -264,14 +268,20 @@ export class LightingEngine {
 
         const duration = performance.now() - time;
         this.timings.anim = (this.timings.anim * 0.9) + (duration * 0.1);
+        this.counters.anim++;
     }
 
     /**
      * STEP 2: The Heavy Lifting
-     * Run this only when geometry changes, player moves, or spatial animations fire.
+     * Added camera bounds so we NEVER compute raycasting for off-screen lights.
      */
-    public compute(lights: Light[], obstacles?: OpaqueObstacle[], viewpoint?: Viewpoint) {
+    public compute(
+        lights: Light[], 
+        obstacles: OpaqueObstacle[],
+        viewpoint?: Viewpoint
+    ) {
         const start = performance.now();
+
         if (!!obstacles)
             this.setObstacles(obstacles);
 
@@ -292,6 +302,7 @@ export class LightingEngine {
 
         const duration = performance.now() - start;
         this.timings.compute = (this.timings.compute * 0.9) + (duration * 0.1);
+        this.counters.compute++;
     }
 
     /**
@@ -413,6 +424,7 @@ export class LightingEngine {
             // Calculate Render Time (stop the clock before drawing the HUD)
             const renderDuration = performance.now() - renderStart;
             this.timings.render = (this.timings.render * 0.9) + (renderDuration * 0.1);
+            this.counters.render++;
 
             // Calculate FPS
             const now = performance.now();
@@ -422,32 +434,40 @@ export class LightingEngine {
             }
             this.lastRenderTime = now;
 
-            // --- Draw Centered HUD ---
-            const boxWidth = 180; // Widened slightly to fit the ms text
-            const boxHeight = 130; // Made taller
-            const boxX = (width / 2) - (boxWidth / 2); 
-            const textX = boxX + 10;
+            // Lock in the calls-per-second (Hz) every 1000ms
+        if (now - this.lastHzTime >= 1000) {
+            this.hz.anim = this.counters.anim;
+            this.hz.compute = this.counters.compute;
+            this.hz.render = this.counters.render;
+            this.counters = { anim: 0, compute: 0, render: 0 };
+            this.lastHzTime = now;
+        }
 
-            mainCtx.fillStyle = "rgba(0, 0, 0, 0.7)";
-            mainCtx.fillRect(boxX, 10, boxWidth, boxHeight);
-            
-            mainCtx.fillStyle = "#00ff00"; 
-            mainCtx.font = "bold 14px monospace";
-            mainCtx.textBaseline = "top";
-            
-            mainCtx.fillText(`FPS:     ${Math.round(this.currentFps)}`, textX, 20);
-            mainCtx.fillText(`Segs:    ${this.segments.length}`, textX, 40);
-            mainCtx.fillText(`Lights:  ${lights.length}`, textX, 60);
-            
-            // Color code the timings so bottlenecks turn red!
-            mainCtx.fillStyle = this.timings.anim > 2 ? "#ff4444" : "#00ff00";
-            mainCtx.fillText(`Anim:    ${this.timings.anim.toFixed(2)}ms`, textX, 85);
-            
-            mainCtx.fillStyle = this.timings.compute > 8 ? "#ff4444" : "#00ff00";
-            mainCtx.fillText(`Compute: ${this.timings.compute.toFixed(2)}ms`, textX, 105);
-            
-            mainCtx.fillStyle = this.timings.render > 8 ? "#ff4444" : "#00ff00";
-            mainCtx.fillText(`Render:  ${this.timings.render.toFixed(2)}ms`, textX, 125);
+        // --- Draw Centered HUD ---
+        const boxWidth = 240; // Widened for the new Hz text
+        const boxHeight = 130; 
+        const boxX = (width / 2) - (boxWidth / 2); 
+        const textX = boxX + 10;
+
+        mainCtx.fillStyle = "rgba(0, 0, 0, 0.7)";
+        mainCtx.fillRect(boxX, 10, boxWidth, boxHeight);
+        
+        mainCtx.fillStyle = "#00ff00"; 
+        mainCtx.font = "bold 14px monospace";
+        mainCtx.textBaseline = "top";
+        
+        mainCtx.fillText(`FPS:     ${Math.round(this.currentFps)}`, textX, 20);
+        mainCtx.fillText(`Segs:    ${this.segments.length}`, textX, 40);
+        mainCtx.fillText(`Lights:  ${lights.length}`, textX, 60);
+        
+        mainCtx.fillStyle = this.timings.anim > 2 ? "#ff4444" : "#00ff00";
+        mainCtx.fillText(`Anim:    ${this.timings.anim.toFixed(2)}ms (${this.hz.anim}Hz)`, textX, 85);
+        
+        mainCtx.fillStyle = this.timings.compute > 8 ? "#ff4444" : "#00ff00";
+        mainCtx.fillText(`Compute: ${this.timings.compute.toFixed(2)}ms (${this.hz.compute}Hz)`, textX, 105);
+        
+        mainCtx.fillStyle = this.timings.render > 8 ? "#ff4444" : "#00ff00";
+        mainCtx.fillText(`Render:  ${this.timings.render.toFixed(2)}ms (${this.hz.render}Hz)`, textX, 125);
         }
     }
 
@@ -575,14 +595,34 @@ export class LightingEngine {
         const angles: Set<number> = new Set();
         const r = origin.radius;
 
+        // 1. Define the Light's Bounding Box
+        const minX = origin.x - r;
+        const maxX = origin.x + r;
+        const minY = origin.y - r;
+        const maxY = origin.y + r;
+
+        // 2. BROAD-PHASE CULLING (The CPU Saver)
+        // Filter out any segments that are completely outside the light's reach
+        const localSegments = this.segments.filter(seg => {
+            // Fast AABB rejection: if both endpoints are strictly to one side of the box, reject it.
+            if (seg.p1.x < minX && seg.p2.x < minX) return false; // Entirely to the left
+            if (seg.p1.x > maxX && seg.p2.x > maxX) return false; // Entirely to the right
+            if (seg.p1.y < minY && seg.p2.y < minY) return false; // Entirely above
+            if (seg.p1.y > maxY && seg.p2.y > maxY) return false; // Entirely below
+            
+            return true; // The segment is close enough to matter!
+        });
+
+        // 3. Define the physical bounds of the light's radius
         const bounds: Segment[] = [
-            { p1: { x: origin.x - r, y: origin.y - r }, p2: { x: origin.x + r, y: origin.y - r } },
-            { p1: { x: origin.x + r, y: origin.y - r }, p2: { x: origin.x + r, y: origin.y + r } },
-            { p1: { x: origin.x + r, y: origin.y + r }, p2: { x: origin.x - r, y: origin.y + r } },
-            { p1: { x: origin.x - r, y: origin.y + r }, p2: { x: origin.x - r, y: origin.y - r } }
+            { p1: { x: minX, y: minY }, p2: { x: maxX, y: minY } },
+            { p1: { x: maxX, y: minY }, p2: { x: maxX, y: maxY } },
+            { p1: { x: maxX, y: maxY }, p2: { x: minX, y: maxY } },
+            { p1: { x: minX, y: maxY }, p2: { x: minX, y: minY } }
         ];
 
-        const allSegments = [...this.segments, ...bounds];
+        // 4. Feed ONLY the local segments into the heavy math
+        const allSegments = [...localSegments, ...bounds];
 
         for (const seg of allSegments) {
             for (const p of [seg.p1, seg.p2]) {
