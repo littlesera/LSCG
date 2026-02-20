@@ -56,7 +56,8 @@ export class MapModule extends BaseModule {
             enhancedLighting: false,
             disableLightAnimation: false,
             useEnhancedBlinding: true,
-            useRoomCustomization: true
+            useRoomCustomization: true,
+            hideVanillaFog: false
         };
     }
 
@@ -167,6 +168,13 @@ export class MapModule extends BaseModule {
         hookFunction("RgbaArrayToHTMLColor", 1, (args, next) => { // Hack for effect overlay rectangles, since we're overriding them as lighting 'indicators'
             if (this.settings.enhancedLighting && this.drawingMapFlag && (ChatRoomMapViewEditMode as any) !== "Effect") {
                 return "rgba(0,0,0,0)";
+            }
+            return next(args);
+        }, ModuleCategory.Map);
+
+        hookFunction("DrawImageResize", 1, (args, next) => {
+            if (this.settings.enhancedLighting && this.drawingMapFlag && this.settings.hideVanillaFog && args[0] === "Screens/Online/ChatRoom/MapTile/Fog/Half.png") {
+                return true; // Hack to prevent half fog squares
             }
             return next(args);
         }, ModuleCategory.Map);

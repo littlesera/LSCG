@@ -61,6 +61,12 @@ export class GuiMaps extends GuiSubscreen {
 					description: "If checked, you will use an alternate blinding effect while in maps.",
 					setting: () => this.settings.useEnhancedBlinding ?? true,
 					setSetting: (val) => this.settings.useEnhancedBlinding = val
+				}, <Setting>{
+					type: "checkbox",
+					label: "Hide Vanilla Fog Squares:",
+					description: "If checked, the vanilla fog squares will be hidden leaving just the enhanced vision lines.",
+					setting: () => this.settings.hideVanillaFog ?? false,
+					setSetting: (val) => this.settings.hideVanillaFog = val
 				}
 			]
 		]
