@@ -1043,10 +1043,10 @@ export function capitalizeFirstLetter(val: string) {
     return String(val).charAt(0).toUpperCase() + String(val).slice(1);
 }
 
-export function HasLockKey(acting: number, acted: Character, Item: Item | undefined) {
+export function HasLockKey(acting: number | undefined, acted: Character, Item: Item | undefined) {
 	if (!Item) return false;
 	if (InventoryGetItemProperty(Item, "SelfUnlock") == false && acted.IsPlayer()) return false;
-	if (acted.IsOwnedByMemberNumber(acting) && Item.Asset.Enable) return true;
+	if (acted.IsOwnedByMemberNumber(acting ?? acted.MemberNumber ?? 0) && Item.Asset.Enable) return true;
 	const lock = InventoryGetLock(Item);
 	if (lock && lock.Asset.FamilyOnly && Item.Asset.Enable && LogQuery("BlockFamilyKey", "OwnerRule")) return false;
 	if (acted.IsLoverOfPlayer() && InventoryAvailable(Player, "LoversPadlockKey", "ItemMisc") && Item.Asset.Enable && Item.Property && Item.Property.LockedBy && !Item.Property.LockedBy.startsWith("Owner")) return true;
@@ -1065,9 +1065,9 @@ export function HasLockKey(acting: number, acted: Character, Item: Item | undefi
 	const key = Asset.find(a => InventoryItemHasEffect({ Asset: a }, UnlockName as EffectName));
 	if (key) {
 		if (lock != null) {
-			if (lock.Asset.LoverOnly && !acted.IsLoverOfMemberNumber(acting)) return false;
-			if (lock.Asset.OwnerOnly && !acted.IsOwnedByMemberNumber(acting)) return false;
-			if (lock.Asset.FamilyOnly && !acted.IsInFamilyOfMemberNumber(acting)) return false;
+			if (lock.Asset.LoverOnly && !acted.IsLoverOfMemberNumber(acting ?? 0)) return false;
+			if (lock.Asset.OwnerOnly && !acted.IsOwnedByMemberNumber(acting ?? 0)) return false;
+			if (lock.Asset.FamilyOnly && !acted.IsInFamilyOfMemberNumber(acting ?? 0)) return false;
 			return true;
 		} else {
 			return true;
@@ -1076,35 +1076,35 @@ export function HasLockKey(acting: number, acted: Character, Item: Item | undefi
 	return false;
 }
 
-export function CanApplyLock(C: Character, acting: MemberNumber, lock: Item): boolean {
+export function CanApplyLock(C: Character, acting: MemberNumber | undefined, lock: Item): boolean {
 	let asset = lock.Asset;
 	let selfBondage = C.IsPlayer() && Player.MemberNumber == acting;
 	if (!asset.Enable) return false;
-	if (asset.OwnerOnly && !C.IsOwnedByMemberNumber(acting))
+	if (asset.OwnerOnly && !C.IsOwnedByMemberNumber(acting ?? 0))
 		if (!selfBondage || !C.IsOwned() || (selfBondage && LogQuery("BlockOwnerLockSelf", "OwnerRule")))
 			return false;
-	if (asset.LoverOnly && !C.IsLoverOfMemberNumber(acting)) {
+	if (asset.LoverOnly && !C.IsLoverOfMemberNumber(acting ?? 0)) {
 		if (!asset.IsLock || C.GetLoversNumbers(true).length == 0) return false;
 		if (selfBondage) {
 			if (LogQuery("BlockLoverLockSelf", "LoverRule")) return false;
 		}
-		else if (!C.IsOwnedByMemberNumber(acting) || LogQueryRemote(C, "BlockLoverLockOwner", "LoverRule")) return false;
+		else if (!C.IsOwnedByMemberNumber(acting ?? 0) || LogQueryRemote(C, "BlockLoverLockOwner", "LoverRule")) return false;
 	}
 	if (asset.FamilyOnly && asset.IsLock && (selfBondage) && LogQuery("BlockOwnerLockSelf", "OwnerRule")) return false;
-	if (asset.FamilyOnly && (!selfBondage) && !C.IsInFamilyOfMemberNumber(acting)) return false;
+	if (asset.FamilyOnly && (!selfBondage) && !C.IsInFamilyOfMemberNumber(acting ?? 0)) return false;
 	if (asset.FamilyOnly && asset.IsLock && !selfBondage && C.IsOwner()) return false;
 	if (asset.FamilyOnly && asset.IsLock && selfBondage && (C.IsOwned() === false)) return false;
 	return true;
 }
 
-export function RemoveItem(item: Item, acting: number, C?: Character) {
+export function RemoveItem(item: Item, acting: number | undefined, C?: Character) {
 	if (!C) C = Player;
 	if (isCosplay(item) && !canChangeCosplay(acting, C)) return;
 	if (isProtectedFromRemoval(item)) return;
 	if (CanUnlock(acting, C, item) || item.Asset.Group.IsAppearance()) InventoryRemove(C, item.Asset.Group.Name, false);
 }
 
-export function ApplyItem(item: ItemBundle, acting: number, replace: boolean = true, locksafe: boolean = true, C?: Character): Item | undefined {
+export function ApplyItem(item: ItemBundle, acting: number | undefined, replace: boolean = true, locksafe: boolean = true, C?: Character): Item | undefined {
 	if (!C) C = Player;
 	let existing = InventoryGet(C, item.Group);
 	let blockedRemovals = [
@@ -1128,8 +1128,8 @@ export function ApplyItem(item: ItemBundle, acting: number, replace: boolean = t
 	return newItem ?? undefined;
 }
 
-export function canChangeCosplay(acting: number, C: Character): boolean {
-	return C.OnlineSharedSettings?.BlockBodyCosplay !== true || acting == Player.MemberNumber;
+export function canChangeCosplay(acting: number | undefined, C: Character): boolean {
+	return C.OnlineSharedSettings?.BlockBodyCosplay !== true || acting == C.MemberNumber;
 }
 
 export function getBCXData(): any {
@@ -1161,7 +1161,7 @@ export function CopyCharacter(C: Character, id: string, strip: boolean = true, r
  * @param {Item} Item - The item that should be unlocked
  * @returns {boolean} - Returns true, if the player can unlock the given item, false otherwise
  */
-export function CanUnlock(acting: number, acted: Character, Item: Item | undefined) {
+export function CanUnlock(acting: number | undefined, acted: Character, Item: Item | undefined) {
 	if (!Item) return false;
 	if (!InventoryGetLock(Item)) return true; // Always return true if item is not actually locked
 	if ((!acted.IsPlayer()) && !acted.CanInteract()) return false;

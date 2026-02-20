@@ -1,4 +1,4 @@
-import { CopyCharacter, GetConfiguredItemBundlesFromOutfitKey, GetItemNameAndDescriptionConcat, hookFunction, isAppearance, isCloth, isPhraseInString, settingsSave } from "utils";
+import { ApplyItem, BC_ItemToItemBundle, CopyCharacter, GetConfiguredItemBundlesFromOutfitKey, GetHandheldItemNameAndDescriptionConcat, GetItemNameAndDescriptionConcat, hookFunction, isAppearance, isBind, isCloth, isPhraseInString, settingsSave } from "utils";
 import { BaseState } from "./BaseState";
 import { StateModule } from "Modules/states";
 import { ModuleCategory } from "Settings/setting_definitions";
@@ -6,6 +6,13 @@ import { ModuleCategory } from "Settings/setting_definitions";
 // TODO:
 // - Allow 'soulbind' bindings to be added to ghost and carry over from corporeal form if applied there.
 //     - Save 'astral' items in extensions, use without displaying to influence restrictions
+
+export const SoulbindKeywords: string[] = [
+	"soulbind",
+    "soul-binding",
+    "soul-bindings",
+    "astral"
+];
 
 export interface GhostConfig {
     a: AppearanceBundle;
@@ -60,9 +67,13 @@ export class AstralProjectionState extends BaseState {
         } else {
             let ghostChar = CopyCharacter(C, `LSCGAstralProjection-${C.ID}`, true, true);
             let ghostConfig = this.GetGhostConfig(C);
+            let soulBindings = C.Appearance.filter(i => isBind(i) && SoulbindKeywords.some(key => isPhraseInString(GetItemNameAndDescriptionConcat(i) ?? "", key)));
 
             ghostChar.PoseMapping = ghostConfig?.p ?? C.PoseMapping;
             ServerAppearanceLoadFromBundle(ghostChar, "Female3DCG", ghostConfig?.a ?? {}, undefined);
+            for (const binding of soulBindings) {
+                ApplyItem(BC_ItemToItemBundle(binding), undefined, true, true, ghostChar);
+            }
             ghostChar.ArousalSettings = C.ArousalSettings;
             return ghostChar;
         }
