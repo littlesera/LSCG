@@ -15,9 +15,12 @@ declare const ChatRoomMapManager: any;
 interface lightingSource {
     objId: number;
     heightOffset?: number;
+    xOffset?: number;
     color?: Color;
     radius?: number; // in tile counts
-    animType?: "flicker" | "pulse" | "glitch" | "none";
+    angle?: number;
+    fov?: number;
+    animType?: "flicker" | "pulse" | "glitch" | "hover" | "none";
 }
 
 interface WallSides {
@@ -91,6 +94,56 @@ export class MapModule extends BaseModule {
             color: [255, 194, 90, 0.9],
             animType: "flicker",
             heightOffset: 0.2
+        },
+        {
+            objId: 3050, // Fireplace left
+            radius: 4,
+            angle: 95,
+            fov: 120,
+            color: [209, 137, 69, 0.8],
+            animType: "flicker",
+            xOffset: -0.2,
+            heightOffset: -0.25
+        },
+        {
+            objId: 3050, // Fireplace right
+            radius: 4,
+            angle: 85,
+            fov: 120,
+            color: [232, 174, 107, 0.8],
+            animType: "flicker",
+            xOffset: 0.2,
+            heightOffset: -0.25
+        },
+        {
+            objId: 3050, // Fireplace center
+            radius: 4,
+            angle: 90,
+            fov: 120,
+            color: [250, 220, 150, 1],
+            animType: "flicker",
+            heightOffset: -0.1
+        },
+        {
+            objId: 2060, // xmas tree White
+            radius: 0.3,
+            animType: "flicker",
+            color: [255, 217, 125, 1],
+            heightOffset: 1.15
+        },
+        {
+            objId: 2060, // xmas tree Red
+            radius: 1,
+            animType: "flicker",
+            color: [182, 0, 0, 0.8],
+            heightOffset: 0.3
+        },
+        {
+            objId: 2060, // xmas tree Green
+            radius: 1,
+            animType: "flicker",
+            color: [7, 86, 0, 0.8],
+            heightOffset: -0.2
         }
     ];
 
@@ -264,9 +317,9 @@ export class MapModule extends BaseModule {
             charLights.push({
                 x: CX,
                 y: CY,
-                radius: this.TileUnit * 6,
+                radius: C.IsPlayer() ? (this.TileUnit * 6) : (this.TileUnit * 3),
                 fov: 35,
-                color: [200, 200, 200, 0.8],
+                color: [200, 200, 200, C.IsPlayer() ? 0.8 : 0.2],
                 animType: C.IsPlayer() ? "flashlight" : "none"
             });
         }
@@ -343,15 +396,19 @@ export class MapModule extends BaseModule {
 
             // Parse Light Sources
             let ObjectID = Object?.ID;
-            let lightSource = this.lightSources.find(ls => ls.objId == ObjectID);
-            if (!!ObjectID && !!lightSource) {                
-                this.mapLights.push({
-                    x: ScreenX + (TileWidth/2),
-                    y: ScreenY + ((TileHeight/2) - ((lightSource.heightOffset ?? 0) * TileHeight)),
-                    radius: TileWidth * (lightSource.radius ?? 4),
-                    color: lightSource.color ?? [250, 220, 150, 0.8],
-                    animType: lightSource.animType ?? "none"
-                });
+            let lightingSources = this.lightSources.filter(ls => ls.objId == ObjectID);
+            if (!!ObjectID && !!lightingSources && lightingSources.length > 0) {
+                for (let lightSource of lightingSources) {
+                    this.mapLights.push({
+                        x: ScreenX + (TileWidth/2) + ((lightSource.xOffset ?? 0) * TileWidth),
+                        y: ScreenY + ((TileHeight/2) - ((lightSource.heightOffset ?? 0) * TileHeight)),
+                        radius: TileWidth * (lightSource.radius ?? 4),
+                        color: lightSource.color ?? [250, 220, 150, 0.8],
+                        animType: lightSource.animType ?? "none",
+                        angle: lightSource.angle,
+                        fov: lightSource.fov
+                    });
+                }
             }
 
             // Parse Effect

@@ -435,39 +435,39 @@ export class LightingEngine {
             this.lastRenderTime = now;
 
             // Lock in the calls-per-second (Hz) every 1000ms
-        if (now - this.lastHzTime >= 1000) {
-            this.hz.anim = this.counters.anim;
-            this.hz.compute = this.counters.compute;
-            this.hz.render = this.counters.render;
-            this.counters = { anim: 0, compute: 0, render: 0 };
-            this.lastHzTime = now;
-        }
+            if (now - this.lastHzTime >= 1000) {
+                this.hz.anim = this.counters.anim;
+                this.hz.compute = this.counters.compute;
+                this.hz.render = this.counters.render;
+                this.counters = { anim: 0, compute: 0, render: 0 };
+                this.lastHzTime = now;
+            }
 
-        // --- Draw Centered HUD ---
-        const boxWidth = 240; // Widened for the new Hz text
-        const boxHeight = 130; 
-        const boxX = (width / 2) - (boxWidth / 2); 
-        const textX = boxX + 10;
+            // --- Draw Centered HUD ---
+            const boxWidth = 240; // Widened for the new Hz text
+            const boxHeight = 130; 
+            const boxX = (width) - (boxWidth / 2); 
+            const textX = boxX + 10;
 
-        mainCtx.fillStyle = "rgba(0, 0, 0, 0.7)";
-        mainCtx.fillRect(boxX, 10, boxWidth, boxHeight);
-        
-        mainCtx.fillStyle = "#00ff00"; 
-        mainCtx.font = "bold 14px monospace";
-        mainCtx.textBaseline = "top";
-        
-        mainCtx.fillText(`FPS:     ${Math.round(this.currentFps)}`, textX, 20);
-        mainCtx.fillText(`Segs:    ${this.segments.length}`, textX, 40);
-        mainCtx.fillText(`Lights:  ${lights.length}`, textX, 60);
-        
-        mainCtx.fillStyle = this.timings.anim > 2 ? "#ff4444" : "#00ff00";
-        mainCtx.fillText(`Anim:    ${this.timings.anim.toFixed(2)}ms (${this.hz.anim}Hz)`, textX, 85);
-        
-        mainCtx.fillStyle = this.timings.compute > 8 ? "#ff4444" : "#00ff00";
-        mainCtx.fillText(`Compute: ${this.timings.compute.toFixed(2)}ms (${this.hz.compute}Hz)`, textX, 105);
-        
-        mainCtx.fillStyle = this.timings.render > 8 ? "#ff4444" : "#00ff00";
-        mainCtx.fillText(`Render:  ${this.timings.render.toFixed(2)}ms (${this.hz.render}Hz)`, textX, 125);
+            mainCtx.fillStyle = "rgba(0, 0, 0, 0.7)";
+            mainCtx.fillRect(boxX, 10, boxWidth, boxHeight);
+            
+            mainCtx.fillStyle = "#00ff00"; 
+            mainCtx.font = "bold 14px monospace";
+            mainCtx.textBaseline = "top";
+            
+            mainCtx.fillText(`FPS:     ${Math.round(this.currentFps)}`, textX, 20);
+            mainCtx.fillText(`Segs:    ${this.segments.length}`, textX, 40);
+            mainCtx.fillText(`Lights:  ${lights.length}`, textX, 60);
+            
+            mainCtx.fillStyle = this.timings.anim > 2 ? "#ff4444" : "#00ff00";
+            mainCtx.fillText(`Anim:    ${this.timings.anim.toFixed(2)}ms (${this.hz.anim}Hz)`, textX, 85);
+            
+            mainCtx.fillStyle = this.timings.compute > 8 ? "#ff4444" : "#00ff00";
+            mainCtx.fillText(`Compute: ${this.timings.compute.toFixed(2)}ms (${this.hz.compute}Hz)`, textX, 105);
+            
+            mainCtx.fillStyle = this.timings.render > 8 ? "#ff4444" : "#00ff00";
+            mainCtx.fillText(`Render:  ${this.timings.render.toFixed(2)}ms (${this.hz.render}Hz)`, textX, 125);
         }
     }
 

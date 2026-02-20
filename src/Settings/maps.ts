@@ -4,7 +4,7 @@ import { LipstickModule } from "Modules/lipstick";
 import { MiscModule } from "Modules/misc";
 import { ICONS } from "utils";
 import { GlobalSettingsModel, MapSettingsModel } from "./Models/base";
-import { GuiSubscreen, Setting } from "./settingBase";
+import { GuiSubscreen, HelpInfo, Setting } from "./settingBase";
 import { OpacityModule } from "Modules/opacity";
 import { LeashingModule } from "Modules/leashing";
 import { ChaoticItemModule } from "Modules/chaotic-item";
@@ -24,6 +24,13 @@ export class GuiMaps extends GuiSubscreen {
 	get settings(): MapSettingsModel {
         return super.settings as MapSettingsModel;
     }
+
+	get help(): HelpInfo {
+		return {
+			label: 'Open Enhanced Lighting Wiki on GitHub',
+			link: 'https://github.com/littlesera/LSCG/wiki/Enhanced-Lighting'
+		}
+	}
 
 	get multipageStructure(): Setting[][] {
 		return [
