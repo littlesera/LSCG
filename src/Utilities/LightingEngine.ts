@@ -449,6 +449,7 @@ export class LightingEngine {
             const boxX = (width) - (boxWidth / 2); 
             const textX = boxX + 10;
 
+            mainCtx.save();
             mainCtx.fillStyle = "rgba(0, 0, 0, 0.7)";
             mainCtx.fillRect(boxX, 10, boxWidth, boxHeight);
             
@@ -468,6 +469,7 @@ export class LightingEngine {
             
             mainCtx.fillStyle = this.timings.render > 8 ? "#ff4444" : "#00ff00";
             mainCtx.fillText(`Render:  ${this.timings.render.toFixed(2)}ms (${this.hz.render}Hz)`, textX, 125);
+            mainCtx.restore();
         }
     }
 
