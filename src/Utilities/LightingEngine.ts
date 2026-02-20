@@ -324,7 +324,7 @@ export class LightingEngine {
         this.syncCanvasSizes(width, height);
 
         // --- 1. RENDER LIGHTING LAYER ---
-        this.lightCtx.globalCompositeOperation = "source-over";
+        this.lightCtx.globalCompositeOperation = "copy";
         this.lightCtx.fillStyle = ambientColor;
         this.lightCtx.fillRect(0, 0, width, height);
 
