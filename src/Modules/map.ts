@@ -208,12 +208,13 @@ export class MapModule extends BaseModule {
                     ambientColor = `rgba(${color[0]}, ${color[1]}, ${color[2]}, ${color[3]})`;
                 }
 
+                let useViewpoint = ChatRoomMapFogIsActive() && !ChatRoomMapViewHasSuperPowers();
                 this.lightingEngine.render({
                     mainCtx: MainCanvas, 
                     width: MainCanvas.canvas.width / 2, 
                     height: MainCanvas.canvas.height, 
                     lights: this.allLights, 
-                    viewpoint: (ChatRoomMapFogIsActive() ? this.viewpoint : undefined),
+                    viewpoint: (useViewpoint ? this.viewpoint : undefined),
                     ambientColor: ambientColor
                 });
 
