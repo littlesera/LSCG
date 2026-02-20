@@ -6,6 +6,7 @@ import { Color, Light, LightingEngine, LineObstacle, OpaqueObstacle, Viewpoint }
 import { GetItemNameAndDescriptionConcat, hookFunction, isPhraseInString } from "utils";
 import { StateModule } from "./states";
 import { ScreenItems } from "./item-use";
+import { debounce } from 'lodash-es';
 
 // REMOVE WHEN BC-STUBS UPDATES
 declare const ChatRoomMapManager: any;
@@ -27,9 +28,22 @@ interface WallSides {
 }
 
 export class MapModule extends BaseModule {
+    debouncedParseMap = debounce(() => {
+        this.ParseMapForObjects();
+    }, 500, {
+        // Lodash gives you some awesome optional settings:
+        leading: false,  // Run on the very first event? (default: false)
+        trailing: true,  // Run after the wait time ends? (default: true)
+        maxWait: 1000    // Force it to run every 1000ms even if events keep firing
+    });
+
+    get zoomLevel(): number {
+        return ChatRoomMapViewPerceptionRange;
+    }
+
     get lightingVisionMax(): number {
         // Hardcoded for now, since people maxing 'ChatRoomMapViewPerceptionRangeMax' can cause it to calculate a ton
-        return 7;
+        return ChatRoomMapViewPerceptionRangeMax;
     }
 
     get defaultSettings() {
@@ -105,13 +119,18 @@ export class MapModule extends BaseModule {
                     }
                 }
 
+                if (this.lightingVisionMax > 10) {
+                    this.lightingEngine.disableSpatialAnimations = true;
+                }
+                if (this.lightingVisionMax < 20) {
+                    this.lightingEngine.updateAnimations(this.lights, {x: MouseX, y: MouseY})
+                }
                 this.lightingEngine.render({
                     mainCtx: MainCanvas, 
                     width: MainCanvas.canvas.width, 
                     height: MainCanvas.canvas.height, 
                     lights: [...this.lights, ...this.charLights], 
-                    viewpoint: (ChatRoomMapFogIsActive() ? this.viewpoint : undefined),
-                    focus: {x: MouseX, y: MouseY}
+                    viewpoint: (ChatRoomMapFogIsActive() ? this.viewpoint : undefined)
                 });
             }
         }, ModuleCategory.Map);
@@ -144,6 +163,16 @@ export class MapModule extends BaseModule {
             let ret = next(args);
             this.ParseMapForObjects();
             return ret;
+        }, ModuleCategory.Map);
+
+        hookFunction("ChatRoomMapViewClick", 1, (args, next) => {
+            next(args);
+
+            if (ChatRoomMapViewEditMode == "") {
+                if (MouseIn(10, 10, 60, 60) || MouseIn(10, 80, 60, 60)) {
+                    this.ParseMapForObjects();
+                }
+            }
         }, ModuleCategory.Map);
     }
 
@@ -339,7 +368,7 @@ export class MapModule extends BaseModule {
         //this.lights.push(...this.GetCharacterLights(Player));
         this.ParseOtherCharactersForLight();
 
-        this.lightingEngine.setObstacles(objects);
+        this.lightingEngine.compute(this.lights, objects, this.viewpoint);
     }
 
     ParseMapEffectsForLighting(X: number, Y: number, ScreenX: number, ScreenY: number): Light[] {
@@ -439,15 +468,27 @@ export class MapModule extends BaseModule {
 
     private GetSingleColumnWallLines(X: number, Y: number, ScreenX: number, ScreenY: number): OpaqueObstacle[] {
         let fxUnit = (this.TileUnit * 0.8);
-        return [
-            {
-                type: "oval",
-                center: {x: ScreenX + (this.TileUnit/2), y: ScreenY - (fxUnit/2) + (this.TileUnit * 0.2)},
-                radiusX: fxUnit / 2,
-                radiusY: fxUnit / 2,
-                resolution: 5
-            }
-        ];
+        if (this.zoomLevel < 10) {
+            return [
+                {
+                    type: "oval",
+                    center: {x: ScreenX + (this.TileUnit/2), y: ScreenY - (fxUnit/2) + (this.TileUnit * 0.2)},
+                    radiusX: fxUnit / 2,
+                    radiusY: fxUnit / 2,
+                    resolution: 5
+                }
+            ];
+        } else {
+            return [
+                {
+                    type: "line",
+                    points: [
+                        {x: ScreenX , y: ScreenY},
+                        {x: ScreenX + this.TileUnit, y: ScreenY}
+                    ]
+                }
+            ]
+        }
     }
 
     private hexToColor(hex: string, defaultAlpha: number = 1.0): Color {
