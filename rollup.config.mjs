@@ -1,13 +1,11 @@
 // rollup.config.js
 import commonjs from '@rollup/plugin-commonjs';
-import json from '@rollup/plugin-json';
 import typescript from '@rollup/plugin-typescript';
 import resolve from "@rollup/plugin-node-resolve";
 import terser from "@rollup/plugin-terser";
 import progress from 'rollup-plugin-progress';
 import scss from "rollup-plugin-scss";
 import serve from 'rollup-plugin-serve'
-import simpleGit from "simple-git";
 
 import packageJson from "./package.json" with { type: "json" };
 
@@ -39,9 +37,15 @@ console.debug("LSCG: Parse start...");
   treeshake: true,
   plugins: [
     progress({ clearLine: true }),
-		resolve({ browser: true }),
+    resolve({
+      browser: true,
+      extensions: ['.ts', '.tsx', '.js', '.jsx', '.json']
+    }),
+    commonjs({
+      include: ['node_modules/**', 'src/**/*.js'],
+      sourceMap: true
+    }),
     typescript({ tsconfig: "./tsconfig.json", inlineSources: true }),
-    commonjs(),
     scss({ output: false })
   ],
   onwarn(warning, warn) {

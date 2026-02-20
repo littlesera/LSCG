@@ -26,6 +26,7 @@ import { OutfitCollectionModule } from 'Modules/outfitCollection';
 import { hasExtendedOnlineSettings, type ExtendedOnlineSettings } from "./types/guards";
 
 import styles from "./main.scss";
+import { MapModule } from "Modules/map";
 
 export { 
 	DrugKeywords, 
@@ -170,6 +171,7 @@ function init_modules(): boolean {
 	registerModule(new ChaoticItemModule());
 	registerModule(new SplatterModule());
 	registerModule(new CursedItemModule());
+	registerModule(new MapModule());
 
 	for (const m of modules()) {
 		m.init();
