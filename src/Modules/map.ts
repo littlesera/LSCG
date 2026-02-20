@@ -27,6 +27,11 @@ interface WallSides {
 }
 
 export class MapModule extends BaseModule {
+    get lightingVisionMax(): number {
+        // Hardcoded for now, since people maxing 'ChatRoomMapViewPerceptionRangeMax' can cause it to calculate a ton
+        return 7;
+    }
+
     get defaultSettings() {
         return <MapSettingsModel>{
             enabled: true,
@@ -227,7 +232,7 @@ export class MapModule extends BaseModule {
         if (!Player.MapData) return;
         if (!this.settings.enhancedLighting) return;
 
-        let MaxVisibleRange = ChatRoomMapViewPerceptionRangeMax;
+        let MaxVisibleRange = this.lightingVisionMax;
 	    if (MaxVisibleRange < 1) MaxVisibleRange = 1;
         this.charLights = [];
         for (let C of ChatRoomCharacter) {
@@ -251,7 +256,7 @@ export class MapModule extends BaseModule {
         this.lights = [];
 
         let [Left, Top, Width, Height] = [0, 0, 1000, 1000];
-        let MaxVisibleRange = ChatRoomMapViewPerceptionRangeMax;
+        let MaxVisibleRange = this.lightingVisionMax;
 	    if (MaxVisibleRange < 1) MaxVisibleRange = 1;
 
         let TileWidth = Width / ((ChatRoomMapViewPerceptionRange * 2) + 1);
