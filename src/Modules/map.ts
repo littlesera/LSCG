@@ -247,15 +247,15 @@ export class MapModule extends BaseModule {
         if (!Player.MapData) return;
         if (!this.settings.enhancedLighting) return;
 
+        let objects: OpaqueObstacle[] = [];
+        this.lights = [];
+
         let [Left, Top, Width, Height] = [0, 0, 1000, 1000];
         let MaxVisibleRange = ChatRoomMapViewPerceptionRangeMax;
 	    if (MaxVisibleRange < 1) MaxVisibleRange = 1;
 
         let TileWidth = Width / ((ChatRoomMapViewPerceptionRange * 2) + 1);
         let TileHeight = Height / ((ChatRoomMapViewPerceptionRange * 2) + 1);
-
-        let objects: OpaqueObstacle[] = [];
-        this.lights = [];
 
         for (let Pos = 0; Pos < ChatRoomMapViewWidth * ChatRoomMapViewHeight; Pos++) {
             let X = Pos % ChatRoomMapViewWidth;

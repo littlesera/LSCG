@@ -421,10 +421,7 @@ export class LightingEngine {
             light.x = state.baseX;
             light.y = state.baseY;
             light.radius = state.baseRadius;
-            light.color[0] = state.baseR;
-            light.color[1] = state.baseG;
-            light.color[2] = state.baseB;
-            light.color[3] = state.baseIntensity;
+            light.color = [state.baseR, state.baseG, state.baseB, state.baseIntensity];
 
             // 3. Apply the specific animation math
             switch (light.animType) {
