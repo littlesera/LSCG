@@ -545,12 +545,14 @@ export class AstralProjectionState extends BaseState {
     }
 
     RoomSync(): void {
-        if (Player.CanKneel) {
-            if (Player.CanKneel()) {
-                Player.PoseMapping.BodyLower = "Kneel";
-                Player.ActivePoseMapping.BodyLower = "Kneel";
-                if (CurrentScreen === "ChatRoom") {
-                    ServerSend("ChatRoomCharacterPoseUpdate", { Pose: Player.ActivePose });
+        if (this.Active) {
+            if (Player.CanKneel) {
+                if (Player.CanKneel()) {
+                    Player.PoseMapping.BodyLower = "Kneel";
+                    Player.ActivePoseMapping.BodyLower = "Kneel";
+                    if (CurrentScreen === "ChatRoom") {
+                        ServerSend("ChatRoomCharacterPoseUpdate", { Pose: Player.ActivePose });
+                    }
                 }
             }
         }
