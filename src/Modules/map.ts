@@ -134,11 +134,18 @@ export class MapModule extends BaseModule {
             next(args);
             this.ParseMapForObjects();
         }, ModuleCategory.Map);
+
+        hookFunction("CharacterLoadCanvas", 1, (args, next) => {
+            let ret = next(args);
+            this.ParseMapForObjects();
+            return ret;
+        }, ModuleCategory.Map);
     }
 
     GetCharacterLights(C: Character, CX: number = 500, CY: number = 450): Light[] {
         let charLights: Light[] = [];
-        if (InventoryGet(C, "ItemHandheld")?.Asset?.Name == "CandleWax") {
+        var handheldItem = InventoryGet(C, "ItemHandheld");
+        if (handheldItem?.Asset?.Name == "CandleWax") {
             charLights.push({
                 x: CX,
                 y: CY,
@@ -148,7 +155,20 @@ export class MapModule extends BaseModule {
             });
         }
 
-        if (ScreenItems.includes(InventoryGet(C, "ItemHandheld")?.Asset?.Name ?? "")) {
+        if (handheldItem?.Asset?.Name == "Cigarette") {
+            let inMouth = handheldItem.Property?.TypeRecord?.typed == 0;
+            let xOffset = inMouth ? (this.TileUnit * 0.06) : (this.TileUnit * 0.09);
+            let yOffset = inMouth ? (this.TileUnit * 0.4) : (this.TileUnit * 0.02);
+            charLights.push({
+                x: CX + xOffset,
+                y: CY - yOffset,
+                radius: this.TileUnit/4,
+                color: [250, 220, 150, 0.5],
+                animType: "flicker"
+            });
+        }
+
+        if (ScreenItems.includes(handheldItem?.Asset?.Name ?? "")) {
             charLights.push({
                 x: CX,
                 y: CY,
@@ -218,7 +238,7 @@ export class MapModule extends BaseModule {
             let ScreenY = (Y - Player.MapData.Pos.Y) * this.TileUnit + ChatRoomMapViewPerceptionRange * this.TileUnit;
             let MaxRange = Math.max(Math.abs(X - Player.MapData.Pos.X), Math.abs(Y - Player.MapData.Pos.Y));
             if (MaxRange > MaxVisibleRange) continue;
-            this.charLights.push(...this.GetCharacterLights(C, ScreenX + (this.TileUnit/2), C.IsKneeling() ? ScreenY + (this.TileUnit/2) : ScreenY));
+            this.charLights.push(...this.GetCharacterLights(C, ScreenX + (this.TileUnit/2), C.IsKneeling() ? ScreenY + (this.TileUnit*0.45) : ScreenY));
         }
     }
 
