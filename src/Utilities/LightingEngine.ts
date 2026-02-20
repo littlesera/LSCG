@@ -484,8 +484,9 @@ export class LightingEngine {
         ctx.clip();
 
         // 2. Clip to a directional cone (Flashlight)
-        if (light.animType === "flashlight") {
-            const angleRadians = light.angle ?? 0;
+        if (!!light.fov) {
+            const angleDegrees = light.angle ?? 0
+            const angleRadians = angleDegrees * (Math.PI / 180);
             const fovDegrees = light.fov ?? 60; 
             const fovRadians = fovDegrees * (Math.PI / 180); 
             
