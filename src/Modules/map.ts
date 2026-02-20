@@ -250,6 +250,7 @@ export class MapModule extends BaseModule {
     ParseMapForObjects() {
         if (!Player) return;
         if (!Player.MapData) return;
+        if (!ChatRoomData || !ChatRoomData.MapData) return;
         if (!this.settings.enhancedLighting) return;
 
         let objects: OpaqueObstacle[] = [];
