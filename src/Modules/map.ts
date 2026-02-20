@@ -6,6 +6,9 @@ import { Color, Light, LightingEngine, LineObstacle, OpaqueObstacle, Viewpoint }
 import { GetItemNameAndDescriptionConcat, hookFunction, isPhraseInString } from "utils";
 import { StateModule } from "./states";
 
+// REMOVE WHEN BC-STUBS UPDATES
+declare const ChatRoomMapManager: any;
+
 interface lightingSource {
     objId: number;
     heightOffset?: number;
@@ -122,6 +125,11 @@ export class MapModule extends BaseModule {
         }, ModuleCategory.Map);
 
         hookFunction("ChatRoomMapViewMouseWheel", 1, (args, next) => {
+            next(args);
+            this.ParseMapForObjects();
+        }, ModuleCategory.Map);
+
+        hookFunction("ChatRoomMapViewUpdateFlag", 1, (args, next) => {
             next(args);
             this.ParseMapForObjects();
         }, ModuleCategory.Map);
@@ -242,6 +250,9 @@ export class MapModule extends BaseModule {
                 });
             }
 
+            // Parse Effect
+            this.lights.push(...this.ParseMapEffectsForLighting(X, Y, ScreenX, ScreenY));
+
             // Parse Obstacles
             if (!!TileData && TileData.Type == "Wall") {
                 let effectbottom = ScreenY + (this.TileUnit * 0.4);
@@ -289,6 +300,24 @@ export class MapModule extends BaseModule {
         this.ParseOtherCharactersForLight();
 
         this.lightingEngine.setObstacles(objects);
+    }
+
+    ParseMapEffectsForLighting(X: number, Y: number, ScreenX: number, ScreenY: number): Light[] {
+        if (!ChatRoomMapManager || !ChatRoomMapManager.Map) return [];
+        let effects = ChatRoomMapManager.Map.getEffectsByXY(X, Y);
+        let lights: Light[] = [];
+        for (let effect of effects) {
+            if (effect.Type == "StaticLighting") {
+                lights.push({
+                    x: ScreenX + (this.TileUnit/2),
+                    y: ScreenY + (this.TileUnit/2),
+                    radius: this.TileUnit * 5,
+                    color: effect.Color ?? [250, 220, 150, 0.4],
+                    animType: "none"
+                });
+            }
+        }
+        return lights;
     }
 
     private PositionContainsDoor(X: number, Y: number): boolean {
