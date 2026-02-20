@@ -1,12 +1,13 @@
 import { BaseModule } from "base";
 import { getModule } from "modules";
 import { MapSettingsModel } from "Settings/Models/base";
-import { ModuleCategory } from "Settings/setting_definitions";
+import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
 import { Color, Light, LightingEngine, LineObstacle, OpaqueObstacle, Viewpoint } from "Utilities/LightingEngine";
-import { GetItemNameAndDescriptionConcat, hookFunction, isPhraseInString } from "utils";
+import { drawBlindfold, GetItemNameAndDescriptionConcat, hookFunction, isPhraseInString } from "utils";
 import { StateModule } from "./states";
 import { ScreenItems } from "./item-use";
 import { debounce } from 'lodash-es';
+import { GuiMaps } from "Settings/maps";
 
 // REMOVE WHEN BC-STUBS UPDATES
 declare const ChatRoomMapManager: any;
@@ -49,12 +50,19 @@ export class MapModule extends BaseModule {
     get defaultSettings() {
         return <MapSettingsModel>{
             enabled: true,
-            enhancedLighting: false
+            enhancedLighting: false,
+            disableLightAnimation: false,
+            useEnhancedBlinding: true,
+            useRoomCustomization: true
         };
     }
 
     get settings(): MapSettingsModel {
         return super.settings as MapSettingsModel;
+    }
+
+    get settingsScreen(): Subscreen | null {
+        return GuiMaps;
     }
 
     lightSources: lightingSource[] = [
@@ -137,24 +145,31 @@ export class MapModule extends BaseModule {
                 if (this.lightingVisionMax > 10) {
                     this.lightingEngine.disableSpatialAnimations = true;
                 }
-                if (this.lightingVisionMax < 20) {
+                if (!this.settings.disableLightAnimation && this.lightingVisionMax < 20) {
                     this.lightingEngine.updateAnimations(this.allLights, {x: MouseX, y: MouseY})
                 }
 
                 let ambientColor = "rgb(60, 60, 60)";
-                if (!!ChatRoomData?.Custom?.ImageFilter) {
+                if (this.settings.useRoomCustomization && !!ChatRoomData?.Custom?.ImageFilter) {
                     let color = this.hexToColor(ChatRoomData?.Custom?.ImageFilter, 1);
                     ambientColor = `rgba(${color[0]}, ${color[1]}, ${color[2]}, ${color[3]})`;
                 }
 
                 this.lightingEngine.render({
                     mainCtx: MainCanvas, 
-                    width: MainCanvas.canvas.width, 
+                    width: MainCanvas.canvas.width / 2, 
                     height: MainCanvas.canvas.height, 
                     lights: this.allLights, 
                     viewpoint: (ChatRoomMapFogIsActive() ? this.viewpoint : undefined),
                     ambientColor: ambientColor
                 });
+
+                if (this.settings.useEnhancedBlinding) {
+                    let blindLevel = Player.GetBlindLevel();
+                    if (blindLevel > 0) {
+                        drawBlindfold(blindLevel, MainCanvas);
+                    }
+                }
             }
         }, ModuleCategory.Map);
 

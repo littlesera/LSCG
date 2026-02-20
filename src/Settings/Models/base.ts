@@ -43,6 +43,9 @@ export interface SplatterSettingsModel extends BaseSettingsModel {
 
 export interface MapSettingsModel extends BaseSettingsModel {
     enhancedLighting: boolean;
+    useRoomCustomization: boolean;
+    useEnhancedBlinding: boolean;
+    disableLightAnimation: boolean;
 }
 
 export interface MiscSettingsModel extends BaseSettingsModel {
