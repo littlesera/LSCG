@@ -14,7 +14,7 @@ import { MapModule } from "Modules/map";
 export class GuiMaps extends GuiSubscreen {
 
 	get name(): string {
-		return "Enhanced Lighting [EXPERIMENTAL]";
+		return "Enhanced Map Lighting";
 	}
 
 	get icon(): string {
