@@ -1441,9 +1441,8 @@ export class ItemUseModule extends BaseModule {
 			var craft = gag.Craft;
 			if (!!craft) {
 				craft.Lock = "";
-				if (craft.Property == "Large" || craft.Property == "Small") {
-					craft.Property = "Normal";
-				}
+				delete craft.Effects.Large;
+				delete craft.Effects.Small;
 			}
 			var color = this._handleWeirdColorStuff(gag, gagTarget, sourceLocation, targetLocation);
 			let item = InventoryWear(source, targetItemName, targetLocation, color, undefined, source.MemberNumber, craft, false);
