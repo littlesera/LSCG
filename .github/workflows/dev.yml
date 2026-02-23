@@ -20,7 +20,7 @@ jobs:
       IS_DEV: true
     steps:
     - uses: actions/checkout@v3
-    - name: Use Node.js 18.x
+    - name: Use Node.js 24.x
       uses: actions/setup-node@v3
       with:
         node-version: ${{ matrix.node-version }}

@@ -881,7 +881,7 @@ export class MiscModule extends BaseModule {
      * *** Generic functions to create a grid and each element ***
      */
 
-    createGenericGridArea(grid_id: string, parent: Node, children: HTMLOptions<keyof HTMLElementTagNameMap>[]) {
+    createGenericGridArea(grid_id: string, parent: Node, children: HTMLOptionsUnion[]) {
         ElementCreate({
             tag: "div",
             parent,
@@ -898,11 +898,11 @@ export class MiscModule extends BaseModule {
     }
 
     // Create element from the lists ScreenElem (the results are used as the children of createGenericGridArea())
-    createHtmlElemList(elemList: ScreenElem[]): HTMLOptions<keyof HTMLElementTagNameMap>[] {
-        let htmlList: HTMLOptions<keyof HTMLElementTagNameMap>[] = [];
+    createHtmlElemList(elemList: ScreenElem[]): HTMLOptionsUnion[] {
+        let htmlList: HTMLOptionsUnion[] = [];
         for (let elem of elemList) {
             let tag: keyof HTMLElementTagNameMap = "label";
-            let child: (string | Node | HTMLOptions<keyof HTMLElementTagNameMap>)[] = [];
+            let child: (string | Node | HTMLOptionsUnion)[] = [];
 
             // setup depending of type
             if (elem.type == "checkbox") {
@@ -920,7 +920,7 @@ export class MiscModule extends BaseModule {
                 child = (this.getSelectOptionsForId(elem.id_label));
             }
 
-            let htmlElem: HTMLOptions<keyof HTMLElementTagNameMap> = {
+            let htmlElem: HTMLOptionsUnion = {
                         tag: tag,
                         attributes: { id: elem.id_label },
                         //classList: ["crafting-label"],
@@ -1026,8 +1026,8 @@ export class MiscModule extends BaseModule {
     }
 
     // Populate the curse Select
-    getSelectCurseOptions(): HTMLOptions<keyof HTMLElementTagNameMap>[] {
-        let optionList: HTMLOptions<keyof HTMLElementTagNameMap>[] = [];
+    getSelectCurseOptions(): HTMLOptionsUnion[] {
+        let optionList: HTMLOptionsUnion[] = [];
         let curseNameList = getModule<CursedItemModule>("CursedItemModule")?.settings.CursedItems.map(item => item.Name);
         if (!curseNameList || curseNameList.length <= 0) {
             //console.log("getSelectCurseOptions: no curse found.");
@@ -1054,7 +1054,7 @@ export class MiscModule extends BaseModule {
         }
 
         for (let curse of curseNameList) {
-            let elem: HTMLOptions<keyof HTMLElementTagNameMap> = {
+            let elem: HTMLOptionsUnion = {
                 tag: "option", children: [curse]
             }
             optionList.push(elem);
@@ -1192,7 +1192,7 @@ export class MiscModule extends BaseModule {
         return undefined;
     }
 
-    getSelectOptionsForId(id: string): HTMLOptions<keyof HTMLElementTagNameMap>[] {
+    getSelectOptionsForId(id: string): HTMLOptionsUnion[] {
         if (id == this.LscgEffectCraftingId.cursedSelect) {
             return this.getSelectCurseOptions();
         }

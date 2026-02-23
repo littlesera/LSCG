@@ -45,7 +45,15 @@ console.debug("LSCG: Parse start...");
       include: ['node_modules/**', 'src/**/*.js'],
       sourceMap: true
     }),
-    typescript({ tsconfig: "./tsconfig.json", inlineSources: true }),
+    typescript({ 
+      tsconfig: "./tsconfig.json", 
+      inlineSources: true,
+      include: [
+        'src/**/*.ts',
+        'src/**/*.tsx',
+        "node_modules/bc-stubs/**/*.d.ts"
+      ] 
+    }),
     scss({ output: false })
   ],
   onwarn(warning, warn) {

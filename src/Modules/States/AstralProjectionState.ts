@@ -123,8 +123,9 @@ export class AstralProjectionState extends BaseState {
             let CA = params['CA'] as Item;
             let regex = /Assets(.+)BeforeDraw/i;
             if (regex.test(funcName)) {
+                let opacityEnabled = Player.IsPlayer() && (Player.LSCG?.OpacityModule?.enabled ?? true);
                 let ret = next(args) ?? {};
-                if (IsSoulBind(CA)) {
+                if (IsSoulBind(CA) && opacityEnabled) {
                     let layerName = (params['L'] as string ?? "")?.trim() ?? "";
                     let layerIx = CA.Asset.Layer.findIndex(l => l.Name == layerName);
                     let originalLayerOpacity = (Array.isArray(CA?.Property?.Opacity) ? CA?.Property?.Opacity[layerIx] : CA.Property?.Opacity) ?? CA.Asset.Opacity;

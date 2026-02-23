@@ -9,9 +9,6 @@ import { ScreenItems } from "./item-use";
 import { debounce } from 'lodash-es';
 import { GuiMaps } from "Settings/maps";
 
-// REMOVE WHEN BC-STUBS UPDATES
-declare const ChatRoomMapManager: any;
-
 interface lightingSource {
     objId: number;
     heightOffset?: number;
@@ -165,7 +162,7 @@ export class MapModule extends BaseModule {
     load(): void {
         (window as any).lighting = this.lightingEngine; // Expose the lighting engine for debugging/testing
 
-        if (GameVersion !== "R124") {
+        if (GameVersion !== "R124") { // >= R125
             hookFunction("RgbaArrayToHTMLColor", 1, (args, next) => { // Hack for effect overlay rectangles, since we're overriding them as lighting 'indicators'
                 if (this.settings.enhancedLighting && this.drawingMapFlag && (ChatRoomMapViewEditMode as any) !== "Effect") {
                     return "rgba(0,0,0,0)";
@@ -423,7 +420,7 @@ export class MapModule extends BaseModule {
             }
 
             // Parse Effect
-            if (GameVersion !== "R124") // Don't do this for R124 yet.
+            if (GameVersion !== "R124") // >= R125
                 this.mapLights.push(...this.ParseMapEffectsForLighting(X, Y, ScreenX, ScreenY));
 
             // Parse Obstacles

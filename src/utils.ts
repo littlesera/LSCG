@@ -969,7 +969,7 @@ export function GetConfiguredItemBundlesFromOutfitKey(key: string, filter: (item
 		} else if (CommonIsNumeric(key) && !!Player.Wardrobe) {
 			let ix = parseInt(key);
 			if (ix >= 0 && ix < Player.Wardrobe.length)
-				items = Player.Wardrobe[ix];
+				items = Player.Wardrobe[ix] ?? [];
 		} else if (key.length <= 70 && typeof mbs !== "undefined") {
 			items = mbs.wheelOutfits.getByName(key)?.items ?? [];
 		}

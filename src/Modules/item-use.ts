@@ -347,6 +347,7 @@ export class ItemUseModule extends BaseModule {
 								DialogFocusItem = panties ?? null;
 								TypedItemSetType(pantyOptions, C!, targetOpt!);
 								DialogFocusItem = tmp;
+								ChatRoomCharacterUpdate(C!);
 							}
 						}
 					});
@@ -1578,7 +1579,7 @@ export class ItemUseModule extends BaseModule {
 			if (targetItem.Asset != null) {
 				if (types.some((type) => InventoryIsAllowedLimited(targetOwner, targetItem, type ?? ""))) {
 					blocked = "limited";
-				} else if (types.some((type) => InventoryBlockedOrLimited(targetOwner, targetItem, type))) {
+				} else if (types.some((type) => InventoryBlockedOrLimited(targetOwner, targetItem, type ?? ""))) {
 					blocked = "blocked";
 				} else if (InventoryGroupIsBlocked(targetOwner, /** @type {AssetGroupItemName} */(targetItem.Asset.Group.Name) as AssetGroupItemName)) {
 					blocked = "unavail";
@@ -1592,13 +1593,13 @@ export class ItemUseModule extends BaseModule {
 					Activity: activity,
 					Item: item,
 					Blocked: blocked,
-					Group: GameVersion === "R110" ? undefined : (targetGroup.MirrorActivitiesFrom ?? targetGroup.Name),
+					Group: targetGroup.MirrorActivitiesFrom ?? targetGroup.Name,
 				} as ItemActivity);
 			} else
 				allowed.push({
 					Activity: activity,
 					Item: item,
-					Group: GameVersion === "R110" ? undefined : (targetGroup.MirrorActivitiesFrom ?? targetGroup.Name),
+					Group: targetGroup.MirrorActivitiesFrom ?? targetGroup.Name,
 				} as ItemActivity);
 		}
 		return allowed;
