@@ -211,7 +211,8 @@ export class LightingEngine {
                     break;
 
                 case "flicker":
-                    const noise = (Math.sin(t * 11) + Math.sin(t * 17) + Math.cos(t * 23)) / 3; 
+                    const noise = (Math.sin(t * 4) + Math.sin(t * 5) + Math.cos(t * 7)) / 3; 
+                    
                     if (!this.disableSpatialAnimations) {
                         light.radius = state.baseRadius * (1 + noise * 0.04);
                     }
@@ -232,21 +233,11 @@ export class LightingEngine {
                     const steppedT = Math.floor(t * 10); 
                     const prng = (offset: number) => Math.abs((Math.sin(steppedT * offset + state.seed) * 43758.5453) % 1);
                     
-                    const randPhysChance = prng(12.9898);
                     const randColChance  = prng(37.719);
                     const randVal1       = prng(78.233);
                     const randVal2       = prng(93.411);
 
-                    const physicalGlitchChance = isUnstable ? 0.1 : 0.0005; 
                     const colorGlitchChance = isUnstable ? 0.2 : 0.001;
-
-                    if (randPhysChance < physicalGlitchChance) {
-                        light.color[3] = state.baseIntensity * (0.4 + randVal1 * 0.4);
-                        if (!this.disableSpatialAnimations) {
-                            light.x = state.baseX + (randVal1 * 4 - 2);
-                            light.y = state.baseY + (randVal2 * 4 - 2);
-                        }
-                    }
 
                     if (randColChance < colorGlitchChance) {
                         if (randVal1 < 0.33) {

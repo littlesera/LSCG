@@ -307,7 +307,6 @@ export class MapModule extends BaseModule {
                 y: CY,
                 radius: this.TileUnit * 0.8,
                 color: [64, 183, 255, 0.4],
-                animType: "glitch",
                 fov: 45,
                 angle: 270
             });
