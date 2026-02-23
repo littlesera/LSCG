@@ -546,7 +546,7 @@ export class OpacityModule extends BaseModule {
 
         hookFunction("CharacterAppearanceSortLayers", 1, (args, next) => {
             let C = args[0] as OtherCharacter;
-            if (!C.MemberNumber || !this.Enabled)
+            if (!C || !this.Enabled)
                 return next(args);
 
             let xray = getModule<StateModule>("StateModule")?.XRayState;
