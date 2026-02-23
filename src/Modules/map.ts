@@ -43,8 +43,8 @@ export class MapModule extends BaseModule {
     }
 
     get lightingVisionMax(): number {
-        // Hardcoded for now, since people maxing 'ChatRoomMapViewPerceptionRangeMax' can cause it to calculate a ton
-        return ChatRoomMapViewPerceptionRangeMax;
+        // Set max 10 (default max) for now, since people maxing 'ChatRoomMapViewPerceptionRangeMax' can cause it to calculate a ton
+        return Math.min(ChatRoomMapViewPerceptionRangeMax + 3, 10); // push an extra 3 tiles for lights to still see some effects while blinded
     }
 
     get defaultSettings() {
@@ -574,18 +574,19 @@ export class MapModule extends BaseModule {
     }
 
     private GetSingleColumnWallLines(X: number, Y: number, ScreenX: number, ScreenY: number): OpaqueObstacle[] {
-        let fxUnit = (this.TileUnit * 0.8);
-        if (this.zoomLevel < 10) {
-            return [
-                {
-                    type: "oval",
-                    center: {x: ScreenX + (this.TileUnit/2), y: ScreenY - (fxUnit/2) + (this.TileUnit * 0.2)},
-                    radiusX: fxUnit / 2,
-                    radiusY: fxUnit / 2,
-                    resolution: 4
-                }
-            ];
-        } else {
+        // Just return simple lines
+        // let fxUnit = (this.TileUnit * 0.8);
+        // if (this.zoomLevel <= 10) {
+        //     return [
+        //         {
+        //             type: "oval",
+        //             center: {x: ScreenX + (this.TileUnit/2), y: ScreenY - (fxUnit/2) + (this.TileUnit * 0.2)},
+        //             radiusX: fxUnit / 2,
+        //             radiusY: fxUnit / 2,
+        //             resolution: 4
+        //         }
+        //     ];
+        // } else {
             return [
                 {
                     type: "line",
@@ -595,7 +596,7 @@ export class MapModule extends BaseModule {
                     ]
                 }
             ]
-        }
+        //}
     }
 
     private hexToColor(hex: string, defaultAlpha: number = 1.0): Color {
