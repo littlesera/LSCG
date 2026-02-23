@@ -66,6 +66,10 @@ export class MapModule extends BaseModule {
         return GuiMaps;
     }
 
+    get EnhancedLightingEnabled(): boolean {
+		return super.Enabled && this.settings.enhancedLighting && !ChatRoomMapViewEditMode;
+	}
+
     lightSources: lightingSource[] = [
         {
             objId: 3030, // Candelabra
@@ -162,17 +166,15 @@ export class MapModule extends BaseModule {
     load(): void {
         (window as any).lighting = this.lightingEngine; // Expose the lighting engine for debugging/testing
 
-        if (GameVersion !== "R124") { // >= R125
-            hookFunction("RgbaArrayToHTMLColor", 1, (args, next) => { // Hack for effect overlay rectangles, since we're overriding them as lighting 'indicators'
-                if (this.settings.enhancedLighting && this.drawingMapFlag && (ChatRoomMapViewEditMode as any) !== "Effect") {
-                    return "rgba(0,0,0,0)";
-                }
-                return next(args);
-            }, ModuleCategory.Map);
-        }
+        hookFunction("RgbaArrayToHTMLColor", 1, (args, next) => { // Hack for effect overlay rectangles, since we're overriding them as lighting 'indicators'
+            if (this.EnhancedLightingEnabled && this.drawingMapFlag && ChatRoomMapViewEditMode !== "Effect") {
+                return "rgba(0,0,0,0)";
+            }
+            return next(args);
+        }, ModuleCategory.Map);
 
         hookFunction("DrawImageResize", 1, (args, next) => {
-            if (this.settings.enhancedLighting && this.drawingMapFlag && this.settings.hideVanillaFog && args[0] === "Screens/Online/ChatRoom/MapTile/Fog/Half.png") {
+            if (this.EnhancedLightingEnabled && this.drawingMapFlag && this.settings.hideVanillaFog && args[0] === "Screens/Online/ChatRoom/MapTile/Fog/Half.png") {
                 return true; // Hack to prevent half fog squares
             }
             return next(args);
@@ -183,7 +185,7 @@ export class MapModule extends BaseModule {
             next(args);
             this.drawingMapFlag = false;
 
-            if (this.settings.enhancedLighting) {
+            if (this.EnhancedLightingEnabled) {
                 if (this.lightingEngine.debug && Player && Player.MapData && Player.MapData.Pos) {
                     for (let Pos = 0; Pos < ChatRoomMapViewWidth * ChatRoomMapViewHeight; Pos++) {
                         let X = Pos % ChatRoomMapViewWidth;
@@ -236,7 +238,7 @@ export class MapModule extends BaseModule {
 
         hookFunction("ChatRoomMapViewSyncMapData", 1, (args, next) => {
             next(args);
-            if (this.settings.enhancedLighting) {
+            if (this.EnhancedLightingEnabled) {
                 this.ParseOtherCharactersForLight();
             }
         }, ModuleCategory.Map);
@@ -356,7 +358,7 @@ export class MapModule extends BaseModule {
     ParseOtherCharactersForLight() {
         if (!Player) return;
         if (!Player.MapData) return;
-        if (!this.settings.enhancedLighting) return;
+        if (!this.EnhancedLightingEnabled) return;
 
         let MaxVisibleRange = this.lightingVisionMax;
 	    if (MaxVisibleRange < 1) MaxVisibleRange = 1;
@@ -377,7 +379,7 @@ export class MapModule extends BaseModule {
         if (!Player) return;
         if (!Player.MapData) return;
         if (!ChatRoomData || !ChatRoomData.MapData) return;
-        if (!this.settings.enhancedLighting) return;
+        if (!this.EnhancedLightingEnabled) return;
 
         let objects: OpaqueObstacle[] = [];
         this.mapLights = [];
@@ -420,8 +422,7 @@ export class MapModule extends BaseModule {
             }
 
             // Parse Effect
-            if (GameVersion !== "R124") // >= R125
-                this.mapLights.push(...this.ParseMapEffectsForLighting(X, Y, ScreenX, ScreenY));
+            this.mapLights.push(...this.ParseMapEffectsForLighting(X, Y, ScreenX, ScreenY));
 
             // Parse Obstacles
             if (!!TileData && TileData.Type == "Wall") {
@@ -479,7 +480,7 @@ export class MapModule extends BaseModule {
     }
 
     ParseMapEffectsForLighting(X: number, Y: number, ScreenX: number, ScreenY: number): Light[] {
-        if (!ChatRoomMapManager || !ChatRoomMapManager.Map) return [];
+        if (!ChatRoomMapManager || !ChatRoomMapManager.Map || ChatRoomMapViewEditMode == "Effect") return [];
         let effects = ChatRoomMapManager.Map.getEffectsByXY(X, Y);
         let lights: Light[] = [];
         for (let effect of effects) {
@@ -582,7 +583,7 @@ export class MapModule extends BaseModule {
                     center: {x: ScreenX + (this.TileUnit/2), y: ScreenY - (fxUnit/2) + (this.TileUnit * 0.2)},
                     radiusX: fxUnit / 2,
                     radiusY: fxUnit / 2,
-                    resolution: 5
+                    resolution: 4
                 }
             ];
         } else {
