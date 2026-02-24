@@ -47,6 +47,7 @@ export interface MapSettingsModel extends BaseSettingsModel {
     useEnhancedBlinding: boolean;
     disableLightAnimation: boolean;
     hideVanillaFog: boolean;
+    hideDarkLights: boolean;
 }
 
 export interface MiscSettingsModel extends BaseSettingsModel {

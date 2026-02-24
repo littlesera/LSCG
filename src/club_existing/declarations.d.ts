@@ -10,3 +10,8 @@ interface CraftingItem {
 	/** The crafted item effects mapped to their effect strength. */
 	Effects: Partial<Record<CraftingPropertyType, number>>;
 }
+
+declare module 'web-worker:*' {
+    const WorkerFactory: new () => Worker;
+    export default WorkerFactory;
+}

@@ -6,6 +6,7 @@ import terser from "@rollup/plugin-terser";
 import progress from 'rollup-plugin-progress';
 import scss from "rollup-plugin-scss";
 import serve from 'rollup-plugin-serve'
+import webWorkerLoader from 'rollup-plugin-web-worker-loader';
 
 import packageJson from "./package.json" with { type: "json" };
 
@@ -36,6 +37,11 @@ console.debug("LSCG: Parse start...");
   },
   treeshake: true,
   plugins: [
+    webWorkerLoader({
+        targetPlatform: 'browser',
+        inline: true,
+        preserveSource: false 
+    }),
     progress({ clearLine: true }),
     resolve({
       browser: true,

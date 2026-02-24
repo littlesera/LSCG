@@ -1,7 +1,7 @@
 {
   "name": "ls-club-games",
   "description": "Little Sera's Club Games",
-  "version": "0.8.2",
+  "version": "0.8.3",
   "main": "dist/bundle.js",
   "scripts": {
     "build": "typed-scss-modules src --exportType=default --nameFormat=none && rollup -c",
@@ -39,6 +39,7 @@
     "rollup-plugin-progress": "^1.1.2",
     "rollup-plugin-scss": "^4.0.1",
     "rollup-plugin-serve": "^3.0.0",
+    "rollup-plugin-web-worker-loader": "^1.7.0",
     "rollup-watch": "^4.3.1",
     "sass": "^1.97.3",
     "semver": "^7.7.4",

@@ -14,7 +14,7 @@ import { MapModule } from "Modules/map";
 export class GuiMaps extends GuiSubscreen {
 
 	get name(): string {
-		return "Enhanced Map Lighting";
+		return "Map Enhancements";
 	}
 
 	get icon(): string {
@@ -67,6 +67,12 @@ export class GuiMaps extends GuiSubscreen {
 					description: "If checked, the vanilla fog squares will be hidden leaving just the enhanced vision lines.",
 					setting: () => this.settings.hideVanillaFog ?? false,
 					setSetting: (val) => this.settings.hideVanillaFog = val
+				}, <Setting>{
+					type: "checkbox",
+					label: "Hide Dark Lights:",
+					description: "If checked, lights that emit 'darkness' will not be used.",
+					setting: () => this.settings.hideDarkLights ?? false,
+					setSetting: (val) => this.settings.hideDarkLights = val
 				}
 			]
 		]
