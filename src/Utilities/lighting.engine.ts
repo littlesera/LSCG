@@ -1,6 +1,6 @@
 import { JobType, Light, OpaqueObstacle, PendingJob, Point, RenderOptions, Segment, Viewpoint } from "./lighting.types";
 import { generateSegments, getVisibilityPolygon, optimizeSegments } from "./lighting.math";
-import WorkerFactory from 'web-worker:./lighting.worker.ts';
+import WorkerFactory from './lighting.worker?worker&inline';
 
 export class LightingEngine {
     public debug: boolean = false;

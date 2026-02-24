@@ -3,8 +3,8 @@ import { ApplyItem, CopyCharacter, GetDataSizeReport, hookFunction, ICONS, isBin
 import { GuiSubscreen, HelpInfo } from "./settingBase";
 import { OutfitSettings } from "./Models/base";
 import { OutfitCollectionModule } from "Modules/outfitCollection";
-import styles from "./outfits.scss";
-import editorStyles from "./outfitEditor.scss";
+import styles from "./outfits.module.scss";
+import editorStyles from "./outfitEditor.module.scss";
 import { clamp, entries, toArray, remove } from "lodash-es";
 import { Outfit, OutfitCollection } from "./OutfitCollection/outfitCollection";
 import { drawTooltip } from "./settingUtils";

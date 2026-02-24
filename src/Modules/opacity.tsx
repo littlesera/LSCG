@@ -7,7 +7,7 @@ import { GetItemNameAndDescriptionConcat, LSCG_TEAL, hookFunction, isDrawingOver
 import { StateModule } from "./states";
 import { drawTooltip } from "Settings/settingUtils";
 import { endsWith, kebabCase, replace } from "lodash-es";
-import styles from "./opacity.scss";
+import styles from "./opacity.module.scss";
 import { IsSoulBind, SoulbindKeywords } from "./States/AstralProjectionState";
 
 interface OpacitySlider {

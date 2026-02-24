@@ -25,7 +25,7 @@ import { SplatterModule } from 'Modules/splatter';
 import { OutfitCollectionModule } from 'Modules/outfitCollection';
 import { hasExtendedOnlineSettings, type ExtendedOnlineSettings } from "./types/guards";
 
-import styles from "./main.scss";
+import styles from "./main.module.scss";
 import { MapModule } from "Modules/map";
 
 export { 

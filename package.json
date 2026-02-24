@@ -4,10 +4,10 @@
   "version": "0.8.3",
   "main": "dist/bundle.js",
   "scripts": {
-    "build": "typed-scss-modules src --exportType=default --nameFormat=none && rollup -c",
-    "dev": "rollup -c -w",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "postinstall": "typed-scss-modules src --exportType=default --nameFormat=none"
+    "build": "typed-scss-modules src --exportType=default --nameFormat=none && vite build",
+    "watch": "vite build --watch --mode development",
+    "serve": "serve dist -p 10001 --cors",
+    "dev": "typed-scss-modules src --exportType=default --nameFormat=none && concurrently \"npm run watch\" \"npm run serve\""
   },
   "keywords": [],
   "author": "Little Sera",
@@ -25,30 +25,24 @@
     "typed-scss-modules": "^8.1.1"
   },
   "devDependencies": {
-    "@rollup/plugin-commonjs": "^29.0.0",
-    "@rollup/plugin-json": "^6.1.0",
-    "@rollup/plugin-node-resolve": "^16.0.3",
-    "@rollup/plugin-terser": "^0.4.4",
-    "@rollup/plugin-typescript": "^12.3.0",
     "@types/node": "^25.3.0",
     "@types/semver": "^7.7.1",
     "bc-stubs": "^125.0.1",
+    "concurrently": "^9.2.1",
     "eslint": "^10.0.1",
     "lodash-es": "^4.17.23",
-    "rollup": "^4.58.0",
-    "rollup-plugin-progress": "^1.1.2",
-    "rollup-plugin-scss": "^4.0.1",
-    "rollup-plugin-serve": "^3.0.0",
-    "rollup-plugin-web-worker-loader": "^1.7.0",
-    "rollup-watch": "^4.3.1",
     "sass": "^1.97.3",
     "semver": "^7.7.4",
+    "serve": "^14.2.5",
     "simple-git": "^3.32.1",
     "stylelint": "17.3.0",
     "stylelint-config-standard-scss": "^17.0.0",
     "stylelint-scss": "^7.0.0",
     "tslib": "^2.8.1",
     "tsx-dom": "^3.1.0",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "vite": "^7.3.1",
+    "vite-plugin-css-injected-by-js": "^3.5.2",
+    "vite-tsconfig-paths": "^6.1.1"
   }
 }
