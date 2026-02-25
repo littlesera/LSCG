@@ -11,11 +11,8 @@
 }
 
 .lscg-ghost-text {
-	animation: spectral-fade 6s ease-in-out infinite alternate;
-	
-	.ooc-text {
-		text-shadow: none;
-		animation: none;
+	.ghost-text {
+		animation: spectral-fade 6s ease-in-out infinite alternate;
 	}
 }
 
@@ -34,10 +31,10 @@
 
 @keyframes spectral-fade {
   0% {
-    filter: blur(0.4px);
-    opacity: 0.5;
+    opacity: 1;
   }
   25% {
+	filter: blur(0.4px);
     opacity: 0.8;
   }
   50% {

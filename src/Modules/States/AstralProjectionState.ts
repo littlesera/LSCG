@@ -1,4 +1,4 @@
-import { ApplyItem, BC_ItemToItemBundle, CopyCharacter, GetConfiguredItemBundlesFromOutfitKey, GetHandheldItemNameAndDescriptionConcat, GetItemNameAndDescriptionConcat, hookFunction, isAppearance, isBind, isCloth, isPhraseInString, settingsSave } from "utils";
+import { ApplyBundleToCharacter, ApplyItem, BC_ItemToItemBundle, CopyCharacter, GetConfiguredItemBundlesFromOutfitKey, GetHandheldItemNameAndDescriptionConcat, GetItemNameAndDescriptionConcat, hookFunction, isAppearance, isBind, isCloth, isPhraseInString, settingsSave } from "utils";
 import { BaseState } from "./BaseState";
 import { StateModule } from "Modules/states";
 import { ModuleCategory } from "Settings/setting_definitions";
@@ -75,7 +75,7 @@ export class AstralProjectionState extends BaseState {
             let ghostConfig = this.GetGhostConfig(C);
             let soulBindings = C.Appearance.filter(i => isBind(i) && SoulbindKeywords.some(key => isPhraseInString(GetItemNameAndDescriptionConcat(i) ?? "", key)));
 
-            ServerAppearanceLoadFromBundle(ghostChar, "Female3DCG", ghostConfig?.a ?? {}, undefined);
+            ApplyBundleToCharacter(ghostChar, ghostConfig?.a ?? []);
             for (const binding of soulBindings) {
                 ApplyItem(BC_ItemToItemBundle(binding), undefined, true, true, ghostChar);
             }
@@ -405,15 +405,14 @@ export class AstralProjectionState extends BaseState {
                 let chatSpan = div?.getElementsByClassName("chat-room-message-content")[0] as HTMLSpanElement;
                 let fxType = Player.LSCG?.MagicModule.spiritTextFormat ?? "Float";
                 if (!!chatSpan && fxType != "None") {
-                    let tint = this.GetProjectionTintColor(C);
                     chatSpan.classList.add("lscg-ghost-text");
-                    chatSpan.style.textShadow = `0 0 10px ${tint}`;
+                    let tint = this.GetProjectionTintColor(C);
                     if (Player.LSCG?.MagicModule.spiritTextFormat == "Float") {
-                        this._splitSpanCharacters(chatSpan);
+                        this._splitSpanCharacters(chatSpan, tint);
                     }
                     else {
-                        this._wrapOOCContent(chatSpan);
-                    }
+                        this._wrapOOCContent(chatSpan, tint);
+                    }                    
                 }
                 return div;
             } else {
@@ -422,7 +421,7 @@ export class AstralProjectionState extends BaseState {
         }, ModuleCategory.States);
     }
 
-    async _splitSpanCharacters(ele: HTMLElement) {
+    async _splitSpanCharacters(ele: HTMLElement, tint: string) {
         if (!ele.textContent) return;
 
         // 1. Instantly hide the container to prevent the "pop"
@@ -440,23 +439,25 @@ export class AstralProjectionState extends BaseState {
             const span = document.createElement("span");
             
             if (parenthesized) {
-                span.classList.add("ooc-text");
                 span.textContent = parenthesized;
             } else {
                 span.style.display = "inline-block"; // Helps with transforms/blur
                 span.style.opacity = "0";
+                span.style.textShadow = `0 0 10px ${tint}`;
                 span.textContent = singleChar === " " ? "\u00A0" : singleChar;
                 const delay = index * 0.05;
                 // 'forwards' ensures it stays visible at 100% opacity
                 span.style.animation = `ghostlyFadeIn 0.8s ease forwards ${delay}s`;
+
+                const promise = new Promise<void>((resolve) => {
+                    span.addEventListener("animationend", () => {
+                        resolve();
+                    }, { once: true });
+                });
+                animationPromises.push(promise);
             }
 
             spans.push(span);
-            
-            const promise = new Promise<void>((resolve) => {
-                span.addEventListener("animationend", () => resolve(), { once: true });
-            });
-            animationPromises.push(promise);
         });
 
         ele.append(...spans);
@@ -467,10 +468,10 @@ export class AstralProjectionState extends BaseState {
 
         // 4. Clean up
         ele.textContent = originalText;
-        this._wrapOOCContent(ele);
+        this._wrapOOCContent(ele, tint);
     }
 
-    _wrapOOCContent(ele: HTMLElement) {
+    _wrapOOCContent(ele: HTMLElement, tint: string) {
         if (!ele.textContent) return;
 
         const text = ele.textContent;
@@ -485,15 +486,16 @@ export class AstralProjectionState extends BaseState {
 
         parts.forEach(part => {
             if (part.startsWith('(') && part.endsWith(')')) {
-                // This is OOC text
-                const oocSpan = document.createElement("span");
-                oocSpan.className = "ooc-text";
-                oocSpan.textContent = part;
-                ele.appendChild(oocSpan);
+                // This is OOC text, we leave it unaffected
+                const oocText = document.createTextNode(part);
+                ele.appendChild(oocText);
             } else if (part.length > 0) {
-                // This is normal text (we wrap it in a plain text node or span)
-                const textNode = document.createTextNode(part);
-                ele.appendChild(textNode);
+                // This is normal text (we wrap it in an fx span)
+                const ghostSpan = document.createElement("span");
+                ghostSpan.className = "ghost-text";
+                ghostSpan.textContent = part;
+                ghostSpan.style.textShadow = `0 0 10px ${tint}`;
+                ele.appendChild(ghostSpan);
             }
         });
     }
@@ -511,7 +513,7 @@ export class AstralProjectionState extends BaseState {
         let spiritForm = !!spiritFormKey ? GetConfiguredItemBundlesFromOutfitKey(Player.LSCG.MagicModule.spiritFormOutfitKey, item => true) : null;
         if (!!spiritForm) {
             CharacterNaked(dummyChar);
-            ServerAppearanceLoadFromBundle(dummyChar, "Female3DCG", spiritForm, undefined);
+            ApplyBundleToCharacter(dummyChar, spiritForm);
         }
         
         let ghostBundle = ServerAppearanceBundle(dummyChar.Appearance);
