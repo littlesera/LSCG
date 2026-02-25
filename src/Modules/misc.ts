@@ -1,7 +1,7 @@
 import { BaseModule } from "base";
 import { MiscSettingsModel } from "Settings/Models/base";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { getCharacter, GetItemNameAndDescriptionConcat, GetMetadata, getRandomInt, GetTargetCharacter, hookFunction, isPhraseInString, LSCG_SendLocal, OnAction, OnActivity, removeAllHooksByModule, SendAction, settingsSave, ICONS } from "../utils";
+import { getCharacter, GetItemNameAndDescriptionConcat, GetMetadata, getRandomInt, GetTargetCharacter, hookFunction, isPhraseInString, LSCG_SendLocal, OnAction, OnActivity, removeAllHooksByModule, SendAction, settingsSave, ICONS, GetCraftingNameAndDescriptionConcat } from "../utils";
 import { CureKeywords, getModule, HornyKeywords, MindControlKeywords, NetgunKeywords, SedativeKeywords } from "modules";
 import { StateModule } from "./states";
 import { SleepState } from "./States/SleepState";
@@ -16,6 +16,7 @@ import {
     RANDOM_EVENT_ODDS,
     LSCG_EFFECTS_MENU
 } from "../constants";
+import { SoulbindKeywords } from "./States/AstralProjectionState";
 
 // interface used to define all Elements used in LSCG Effect menu in the Crafting screen.
 interface ScreenElem {
@@ -437,6 +438,8 @@ export class MiscModule extends BaseModule {
         magicButton: "crafting-lscg-effects-magic-checkbox",
         netgunLabel: "crafting-lscg-effects-netgun-label",
         netgunButton: "crafting-lscg-effects-netgun-checkbox",
+        soulbindLabel: "crafting-lscg-effects-soulbind-label",
+        soulbindButton: "crafting-lscg-effects-soulbind-checkbox",
 
         // drug group
         drugGrid: "lscg-effect-drug-grid",
@@ -623,6 +626,17 @@ export class MiscModule extends BaseModule {
                     return true; // Need hand item
                 }
                 return false;
+            }
+        },
+        {
+            type: "checkbox",
+            id_label: this.LscgEffectCraftingId.soulbindLabel,
+            id_button: this.LscgEffectCraftingId.soulbindButton,
+            label: "Soulbinding",
+            description: "Restraints with this will persist on the wearer's 'Astral Projection.'",
+            keywords: SoulbindKeywords,
+            condition: (): boolean => {
+                return true;
             }
         }
     ]
@@ -1126,18 +1140,15 @@ export class MiscModule extends BaseModule {
         for (let elem of allElemList) {
             let changed = false;
             const elem_checkbox = document.getElementById(elem.id_button) as HTMLInputElement;
-            for (let word of elem.keywords) {
-                if (CraftingSelectedItem?.Description.includes(word)) {
-                    // activate checkbox
-                    if (elem_checkbox) {
-                        elem_checkbox.checked = true;
-                        changed = true;
-                    } else {
-                        console.warn("nameOrDescChanged: couldn't find ", elem.id_button);
-                    }
-                    break;
+            if (elem.keywords.some(key => isPhraseInString(GetCraftingNameAndDescriptionConcat(CraftingSelectedItem) ?? "", key))) {
+                if (elem_checkbox) {
+                    elem_checkbox.checked = true;
+                    changed = true;
+                } else {
+                    console.warn("nameOrDescChanged: couldn't find ", elem.id_button);
                 }
             }
+            
             if (changed) continue;
 
             // If we are here, we have no match

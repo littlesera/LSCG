@@ -10,8 +10,7 @@ import { SettingsModel } from "Settings/Models/settings";
 import { lt } from "semver";
 import { regEscape } from "./regEscape";
 import { OutfitCollectionModule } from "Modules/outfitCollection";
-import { isFileInputEvent, hasLegacyHypnoProps, hasLegacyInjectorProps } from "./types/guards";
-import { IsSoulBind } from "Modules/States/AstralProjectionState";
+import { isFileInputEvent } from "./types/guards";
 
 export const LSCG_CHANGES: string = "https://github.com/littlesera/LSCG/releases/latest";
 export const LSCG_TEAL: string = "#00d5d5";
@@ -860,6 +859,13 @@ export function GetHandheldItemNameAndDescriptionConcat(C?: Character | null): s
 	var asset = InventoryGet(C, "ItemHandheld");
 	return GetItemNameAndDescriptionConcat(asset);
 }	
+
+export function GetCraftingNameAndDescriptionConcat(item: CraftingItemSelected | null): string | undefined {
+	if (!item) return;
+	var name = item.Name;
+	var description = typeof CraftingDescription === "undefined" ? item.Description : CraftingDescription.Decode(item.Description);
+	return name + " | " + description;
+}
 
 export function GetItemNameAndDescriptionConcat(item: Item | ItemBundle | null): string | undefined {
 	if (!item || !item.Craft)

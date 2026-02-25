@@ -3,12 +3,11 @@ import { BaseModule } from "base";
 import { getModule } from "modules";
 import { OpacitySettingsModel } from "Settings/Models/base";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { GetItemNameAndDescriptionConcat, LSCG_TEAL, hookFunction, isDrawingOverridable, isPhraseInString, mouseTooltip } from "../utils";
+import { hookFunction, isDrawingOverridable } from "../utils";
 import { StateModule } from "./states";
-import { drawTooltip } from "Settings/settingUtils";
 import { endsWith, kebabCase, replace } from "lodash-es";
 import styles from "./opacity.scss?inline";
-import { IsSoulBind, SoulbindKeywords } from "./States/AstralProjectionState";
+import { IsSoulBind } from "./States/AstralProjectionState";
 
 interface OpacitySlider {
     ElementId: string;
