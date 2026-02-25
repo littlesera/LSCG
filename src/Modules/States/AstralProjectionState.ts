@@ -106,7 +106,7 @@ export class AstralProjectionState extends BaseState {
             let C = args[0] as Character;
             let item = args[1] as Item;
             if (!!C && item.Asset.Group.Name == "Mouth") {
-                if (this.IsSoulBindGag(C, item))
+                if (this.IsSoulBindGag(C, item) && C.CharacterID.indexOf("LSCGAstralProjection-") == -1)
                     return "Moan";
             }
             return next(args);
@@ -123,9 +123,9 @@ export class AstralProjectionState extends BaseState {
             let CA = params['CA'] as Item;
             let regex = /Assets(.+)BeforeDraw/i;
             if (regex.test(funcName)) {
-                let opacityEnabled = Player.IsPlayer() && (Player.LSCG?.OpacityModule?.enabled ?? true);
+                let opacityEnabled = (Player.LSCG?.OpacityModule?.enabled ?? true);
                 let ret = next(args) ?? {};
-                if (IsSoulBind(CA) && opacityEnabled) {
+                if (IsSoulBind(CA) && opacityEnabled && C.CharacterID.indexOf("LSCGAstralProjectionCorporeal") > -1) {
                     let layerName = (params['L'] as string ?? "")?.trim() ?? "";
                     let layerIx = CA.Asset.Layer.findIndex(l => l.Name == layerName);
                     let originalLayerOpacity = (Array.isArray(CA?.Property?.Opacity) ? CA?.Property?.Opacity[layerIx] : CA.Property?.Opacity) ?? CA.Asset.Opacity;
@@ -145,9 +145,6 @@ export class AstralProjectionState extends BaseState {
             if (!activeStateConfig || !activeStateConfig.active) {                
                 return next(args);
             } else {
-                //var inDialog = !!CurrentCharacter || CurrentScreen != "ChatRoom";
-                //var isPlayerDialog = CurrentCharacter?.IsPlayer();
-
                 CommonDrawCanvasPrepare(C);
                 const origYOffset = CharacterAppearanceYOffset(C, C.HeightRatio)
                 const origCanvases = [C.Canvas, C.CanvasBlink];
