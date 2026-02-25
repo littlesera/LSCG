@@ -6,8 +6,10 @@
   "scripts": {
     "build": "typed-scss-modules src --exportType=default --nameFormat=none && vite build",
     "watch": "vite build --watch --mode development",
+    "watch-prod": "vite build --watch",
     "serve": "serve dist -p 10001 --cors",
-    "dev": "typed-scss-modules src --exportType=default --nameFormat=none && concurrently \"npm run watch\" \"npm run serve\""
+    "dev": "typed-scss-modules src --exportType=default --nameFormat=none && concurrently \"npm run watch\" \"npm run serve\"",
+    "prod-watch": "typed-scss-modules src --exportType=default --nameFormat=none && concurrently \"npm run watch-prod\" \"npm run serve\""
   },
   "keywords": [],
   "author": "Little Sera",

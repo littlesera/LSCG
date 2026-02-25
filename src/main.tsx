@@ -25,7 +25,7 @@ import { SplatterModule } from 'Modules/splatter';
 import { OutfitCollectionModule } from 'Modules/outfitCollection';
 import { hasExtendedOnlineSettings, type ExtendedOnlineSettings } from "./types/guards";
 
-import styles from "./main.module.scss";
+import styles from "./main.scss?inline";
 import { MapModule } from "Modules/map";
 
 export { 
@@ -146,7 +146,7 @@ function init() {
 	});
 
 	window.LSCG_Loaded = true;
-	document.body.appendChild(<style id="lscg-style">{styles.toString()}</style>);
+	document.body.appendChild(<style id="lscg-style">{styles}</style>);
 	console.log(`LSCG loaded! Version: ${LSCG_VERSION}`);
 }
 
@@ -219,5 +219,17 @@ function unload_modules() {
 		m.unload();
 	}
 }
+
+// LSCG: Little Sera's Club Games
+if (typeof window.ImportBondageCollege !== "function") {
+  alert("Club not detected! Please only use this while you have Club open!");
+  throw "Dependency not met";
+}
+if (window.LSCG_Loaded !== undefined) {
+  alert("LSCG is already detected in current window. To reload, please refresh the window.");
+  throw "Already loaded";
+}
+window.LSCG_Loaded = false;
+console.debug("LSCG: Parse start...");
 
 initWait();

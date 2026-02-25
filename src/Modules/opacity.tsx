@@ -7,7 +7,7 @@ import { GetItemNameAndDescriptionConcat, LSCG_TEAL, hookFunction, isDrawingOver
 import { StateModule } from "./states";
 import { drawTooltip } from "Settings/settingUtils";
 import { endsWith, kebabCase, replace } from "lodash-es";
-import styles from "./opacity.module.scss";
+import styles from "./opacity.scss?inline";
 import { IsSoulBind, SoulbindKeywords } from "./States/AstralProjectionState";
 
 interface OpacitySlider {
@@ -122,7 +122,7 @@ export class OpacityModule extends BaseModule {
         shape: [40, 80, 650, 740] as RectTuple,
         visibility: "visible",
         dom: <div id={ID.root} class="lscg-layers-root HideOnPopup">
-            <style id={ID.styles}>{styles.toString()}</style>
+            <style id={ID.styles}>{styles}</style>
             <div id={ID.mainToolbar}>
                     <label class="lscg-checkbox">
                         <input id={ID.allLayersCheck} type="checkbox" onChange={(evt) => this.onToggleAllLayers(evt)}/>

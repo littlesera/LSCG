@@ -37,7 +37,7 @@ export default defineConfig(({ mode }) => {
         build: {
             target: 'esnext',
             emptyOutDir: false, 
-            minify: 'esbuild', 
+            minify: isDev ? false : 'esbuild', 
             
             // Toggle sourcemap based on the mode!
             sourcemap: isDev ? 'inline' : false, 
@@ -50,8 +50,9 @@ export default defineConfig(({ mode }) => {
             },
             rollupOptions: {
                 output: {
-                    banner: bannerCode,
-                    intro: `const LSCG_VERSION="${LSCG_VERSION}";`
+                    //banner: bannerCode,
+                    intro: `const LSCG_VERSION="${LSCG_VERSION}";`,
+                    sourcemapExcludeSources: false,
                 },
                 onwarn(warning, warn) {
                     if (warning.code === 'EVAL' || warning.code === 'CIRCULAR_DEPENDENCY') return;
