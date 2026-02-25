@@ -1,6 +1,6 @@
 import { BoopsModule } from "Modules/boops";
 import { InjectorModule } from "Modules/injector";
-import { BaseSettingsModel, GlobalPublicSettingsModel, GlobalSettingsModel, LipstickSettingsModel, MiscSettingsModel, OpacityPublicSettingsModel, OpacitySettingsModel, OutfitSettings, SplatterSettingsModel } from "./base";
+import { BaseSettingsModel, GlobalPublicSettingsModel, GlobalSettingsModel, LipstickSettingsModel, MapSettingsModel, MiscSettingsModel, OpacityPublicSettingsModel, OpacitySettingsModel, OutfitSettings, SplatterSettingsModel } from "./base";
 import { CollarModel, CollarPublicSettingsModel, CollarSettingsModel } from "./collar";
 import { HypnoPublicSettingsModel, HypnoSettingsModel } from "./hypno";
 import { InjectorPublicSettingsModel, InjectorSettingsModel } from "./injector";
@@ -30,6 +30,7 @@ export interface SettingsModel {
     LeashingModule: BaseSettingsModel;
     ChaoticItemModule: BaseSettingsModel;
     SplatterModule: SplatterSettingsModel;
+    MapModule: MapSettingsModel;
 }
 
 export interface IPublicSettingsModel extends BaseSettingsModel {
@@ -98,6 +99,7 @@ export class PublicSettingsModel implements IPublicSettingsModel {
         speakTriggers: "",
         silenceTriggers: "",
         allowSuggestions: false,
+        limitSuggestionMod: false,
         suggestionRequireHypnotizer: true,
         allowSuggestionRemoval: true,
         blockedInstructions: [],
@@ -152,7 +154,9 @@ export class PublicSettingsModel implements IPublicSettingsModel {
         allowOutfitToChangeNeckItems: false,
         allowChangeGenitals: true,
         requireWhitelist: false,
-        blockXRay: true
+        blockXRay: true,
+        projectionTintColor: "#00CED1",
+        hideCorporeal: false
     };
     OpacityModule: OpacityPublicSettingsModel = <OpacityPublicSettingsModel>{
         enabled: true,

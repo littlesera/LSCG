@@ -8,7 +8,8 @@ import { GuiSubscreen, Setting } from "./settingBase";
 import { OpacityModule } from "Modules/opacity";
 import { LeashingModule } from "Modules/leashing";
 import { ChaoticItemModule } from "Modules/chaotic-item";
-import { SplatterLocation, SplatterModule } from "Modules/splatter";
+import { SplatterModule } from "Modules/splatter";
+import { MapModule } from "Modules/map";
 
 export class GuiGlobal extends GuiSubscreen {
 
@@ -145,6 +146,13 @@ export class GuiGlobal extends GuiSubscreen {
 					setting: () => this.settings.blockDOGS ?? false,
 					setSetting: (val) => this.settings.blockDOGS = val,
 					disabled: !this.settings.enabled
+				},<Setting>{
+					type: "checkbox",
+					label: "Enhance Map Lighting [EXPERIMENTAL]:",
+					description: "If checked, map lighting will become more dynamic based on light sources.",
+					setting: () => Player.LSCG.MapModule.enhancedLighting ?? true,
+					setSetting: (val) => Player.LSCG.MapModule.enhancedLighting = val,
+					disabled: !this.settings.enabled
 				}
 			]
 		]
@@ -159,6 +167,7 @@ export class GuiGlobal extends GuiSubscreen {
 		getModule<OpacityModule>("OpacityModule")?.settings;
 		getModule<ChaoticItemModule>("ChaoticItemModule")?.settings;
 		getModule<SplatterModule>("SplatterModule")?.settings;
+		getModule<MapModule>("MapModule")?.settings;
 		super.Load();
 	}
 }

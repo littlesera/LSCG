@@ -23,8 +23,10 @@ import { LeashingModule } from 'Modules/leashing';
 import { ChaoticItemModule } from './Modules/chaotic-item';
 import { SplatterModule } from 'Modules/splatter';
 import { OutfitCollectionModule } from 'Modules/outfitCollection';
+import { hasExtendedOnlineSettings, type ExtendedOnlineSettings } from "./types/guards";
 
-import styles from "./main.scss";
+import styles from "./main.scss?inline";
+import { MapModule } from "Modules/map";
 
 export { 
 	DrugKeywords, 
@@ -72,10 +74,15 @@ function init() {
 		return;
 	
 	// clear any old settings.
-	if (!!(Player.OnlineSettings as any)?.LittleSera)
-		delete (Player.OnlineSettings as any).LittleSera;
-	if (!!(Player.OnlineSettings as any)?.ClubGames)
-		delete (Player.OnlineSettings as any).ClubGames;
+	if (hasExtendedOnlineSettings(Player)) {
+		const settings = Player.OnlineSettings as ExtendedOnlineSettings;
+		if (settings.LittleSera) {
+			delete settings.LittleSera;
+		}
+		if (settings.ClubGames) {
+			delete settings.ClubGames;
+		}
+	}
 
 	let settings = Player.ExtensionSettings?.LSCG ?? Player.OnlineSettings?.LSCG ?? "";
 	let localSettings = localStorage.getItem(`LSCG_${Player.MemberNumber}_Backup`) ?? "";
@@ -106,8 +113,9 @@ function init() {
 		localStorage.setItem(`LSCG_${Player.MemberNumber}_Backup`, settings)
 		Player.LSCG = parsed || {} as SettingsModel;
 		// Clean old settings
-		if (!!Player.OnlineSettings?.LSCG) {
-			delete (Player.OnlineSettings as any).LSCG;
+		if (hasExtendedOnlineSettings(Player) && Player.OnlineSettings.LSCG) {
+			const settings = Player.OnlineSettings as ExtendedOnlineSettings;
+			delete settings.LSCG;
 			settingsSave();
 		}
 	}
@@ -138,7 +146,7 @@ function init() {
 	});
 
 	window.LSCG_Loaded = true;
-	document.body.appendChild(<style id="lscg-style">{styles.toString()}</style>);
+	document.body.appendChild(<style id="lscg-style">{styles}</style>);
 	console.log(`LSCG loaded! Version: ${LSCG_VERSION}`);
 }
 
@@ -163,6 +171,7 @@ function init_modules(): boolean {
 	registerModule(new ChaoticItemModule());
 	registerModule(new SplatterModule());
 	registerModule(new CursedItemModule());
+	registerModule(new MapModule());
 
 	for (const m of modules()) {
 		m.init();
@@ -210,5 +219,17 @@ function unload_modules() {
 		m.unload();
 	}
 }
+
+// LSCG: Little Sera's Club Games
+if (typeof window.ImportBondageCollege !== "function") {
+  alert("Club not detected! Please only use this while you have Club open!");
+  throw "Dependency not met";
+}
+if (window.LSCG_Loaded !== undefined) {
+  alert("LSCG is already detected in current window. To reload, please refresh the window.");
+  throw "Already loaded";
+}
+window.LSCG_Loaded = false;
+console.debug("LSCG: Parse start...");
 
 initWait();

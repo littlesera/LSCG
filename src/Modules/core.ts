@@ -95,7 +95,7 @@ export class CoreModule extends BaseModule {
                 return next(args);
         }, ModuleCategory.Core);
 
-        hookFunction("ChatRoomCharacterViewDrawOverlay", 1, (args, next) => {
+        hookFunction("ChatRoomDrawCharacterStatusIcons", 1, (args, next) => {
             next(args);
             const [C, CharX, CharY, Zoom] = args as [Character, number, number, number];
             const Char = getCharacter(C.MemberNumber!) as OtherCharacter | PlayerCharacter;
@@ -144,88 +144,55 @@ export class CoreModule extends BaseModule {
             }
         }, ModuleCategory.Core);
 
-        if (GameVersion !== "R110") { // >= R111
-            const loadHook = () => {
-                const elem = document.getElementById(this.toggleSharedButton.id);
-                if (elem) {
-                    elem.style.display = "";
-                    return;
-                }
-
-                const coreModule = this;
-                ElementButton.Create(
-                    this.toggleSharedButton.id,
-                    function () {
-                        const C = DialogMenuMapping.items.C;
-                        if (!C)
-                            return;
-
-                        coreModule.settings.seeSharedCrafts = this.getAttribute("aria-checked") === "true";
-                        settingsSave();
-                        DialogInventoryBuild(C, true, false, false);
-                    },
-                    { image: "./Icons/Online.png", role: "checkbox", tooltip: "Toggle Shared Crafts", tooltipPosition: "left" },
-                    { button: { parent: document.body, attributes: { "aria-checked": this.settings.seeSharedCrafts } } },
-                );
-            };
-
-            hookFunction("DialogMenuMapping.items.Load", 0, (args, next) => {
-                const ret = next(args);
-                loadHook();
-                return ret;
-            });
-
-            hookFunction("DialogMenuMapping.items.Resize", 0, (args, next) => {
-                ElementPositionFixed(this.toggleSharedButton.id, this.toggleSharedButton.x, this.toggleSharedButton.y, this.toggleSharedButton.width, this.toggleSharedButton.height);
-                return next(args);
-            });
-
-            hookFunction("DialogMenuMapping.items.Exit", 0, (args, next) => {
-                ElementRemove(this.toggleSharedButton.id);
-                return next(args);
-            });
-
-            hookFunction("DialogMenuMapping.items.Unload", 0, (args, next) => {
-                const elem = document.getElementById(this.toggleSharedButton.id);
-                if (elem) { elem.style.display = "none"; }
-                return next(args);
-            });
-
-            // Manually fire up the load hook if the dialog-items sub screen is already open upon loading LSCG
-            if (DialogMenuMode === "items") {
-                loadHook();
+        const loadHook = () => {
+            const elem = document.getElementById(this.toggleSharedButton.id);
+            if (elem) {
+                elem.style.display = "";
+                return;
             }
-        } else { // R110
-            hookFunction("DialogDrawItemMenu", 1, (args, next) => {
-                this._drawShareToggleButton(this.toggleSharedButton.x, this.toggleSharedButton.y, this.toggleSharedButton.width, this.toggleSharedButton.height);
-                next(args);
-            }, ModuleCategory.Core);
 
-            hookFunction("DrawItemPreview", 1, (args, next) => {
-                    const ret = next(args);
-                    const [item, , x, y] = args;
-                    if (item) {
-                        const { Craft } = item;
-                        if (MouseIn(x, y, DialogInventoryGrid.itemWidth, DialogInventoryGrid.itemHeight) && Craft && Craft?.MemberNumber) {
-                            drawTooltip(1000, y - 140, 975, `Crafted By: ${Craft.MemberName} [${Craft.MemberNumber}]`, "left");
-                        }
-                    }
-                    return ret;
-                }
-            );
+            const coreModule = this;
+            ElementButton.Create(
+                this.toggleSharedButton.id,
+                function () {
+                    const C = DialogMenuMapping.items.C;
+                    if (!C)
+                        return;
 
-            hookFunction("DialogClick", 1, (args, next) => {
-                next(args);
-                let C = CharacterGetCurrent();
-                if (!C)
-                    return;
-                if (MouseIn(this.toggleSharedButton.x, this.toggleSharedButton.y, this.toggleSharedButton.width, this.toggleSharedButton.height) &&
-                    DialogModeShowsInventory() && (DialogMenuMode === "permissions" || (Player.CanInteract() && !InventoryGroupIsBlocked(C, undefined, true)))) {
-                    this.settings.seeSharedCrafts = !this.settings.seeSharedCrafts;
+                    coreModule.settings.seeSharedCrafts = this.getAttribute("aria-checked") === "true";
                     settingsSave();
-                    DialogInventoryBuild(C, true, false);
-                }
-            });
+                    DialogInventoryBuild(C, true, false, false);
+                },
+                { image: "./Icons/Online.png", role: "checkbox", tooltip: "Toggle Shared Crafts", tooltipPosition: "left" },
+                { button: { parent: document.body, attributes: { "aria-checked": this.settings.seeSharedCrafts } } },
+            );
+        };
+
+        hookFunction("DialogMenuMapping.items.Load", 0, (args, next) => {
+            const ret = next(args);
+            loadHook();
+            return ret;
+        });
+
+        hookFunction("DialogMenuMapping.items.Resize", 0, (args, next) => {
+            ElementPositionFixed(this.toggleSharedButton.id, this.toggleSharedButton.x, this.toggleSharedButton.y, this.toggleSharedButton.width, this.toggleSharedButton.height);
+            return next(args);
+        });
+
+        hookFunction("DialogMenuMapping.items.Exit", 0, (args, next) => {
+            ElementRemove(this.toggleSharedButton.id);
+            return next(args);
+        });
+
+        hookFunction("DialogMenuMapping.items.Unload", 0, (args, next) => {
+            const elem = document.getElementById(this.toggleSharedButton.id);
+            if (elem) { elem.style.display = "none"; }
+            return next(args);
+        });
+
+        // Manually fire up the load hook if the dialog-items sub screen is already open upon loading LSCG
+        if (DialogMenuMode === "items") {
+            loadHook();
         }
     }
 

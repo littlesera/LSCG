@@ -2,6 +2,7 @@ import { GetItemNameAndDescriptionConcat, hookFunction, isCloth, isPhraseInStrin
 import { BaseState } from "./BaseState";
 import { StateModule } from "Modules/states";
 import { ModuleCategory } from "Settings/setting_definitions";
+import { getModule } from "modules";
 
 export class XRayVisionState extends BaseState {
     XRayKeywords: string[] = [

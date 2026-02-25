@@ -41,6 +41,15 @@ export interface SplatterSettingsModel extends BaseSettingsModel {
     minArousal: number;
 }
 
+export interface MapSettingsModel extends BaseSettingsModel {
+    enhancedLighting: boolean;
+    useRoomCustomization: boolean;
+    useEnhancedBlinding: boolean;
+    disableLightAnimation: boolean;
+    hideVanillaFog: boolean;
+    hideDarkLights: boolean;
+}
+
 export interface MiscSettingsModel extends BaseSettingsModel {
     chloroformEnabled: boolean;
     chloroformedAt: number;

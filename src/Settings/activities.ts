@@ -1,9 +1,4 @@
-import { getModule } from "modules";
-import { BoopsModule } from "Modules/boops";
-import { LipstickModule } from "Modules/lipstick";
-import { MiscModule } from "Modules/misc";
 import { GetDelimitedList, ICONS, getActivities, getActivityLabel, getZoneColor } from "utils";
-import { GlobalSettingsModel } from "./Models/base";
 import { GuiSubscreen, HelpInfo, Setting } from "./settingBase";
 import { ActivityEntryModel, ActivitySettingsModel } from "./Models/activities";
 

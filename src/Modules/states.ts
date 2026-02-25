@@ -24,6 +24,7 @@ import { XRayVisionState } from "./States/XRayVisionState";
 import { DeniedState } from "./States/DeniedState";
 import { parseInt } from "lodash-es";
 import { CursedItemState } from "./States/CursedItemState";
+import { AstralProjectionState } from "./States/AstralProjectionState";
 
 interface StateIcon {
     Label: string;
@@ -84,6 +85,7 @@ export class StateModule extends BaseModule {
     OrgasmSiphonedState: OrgasmSiphonedState;
     XRayState: XRayVisionState;
     CursedItemState: CursedItemState;
+    AstralProjectionState: AstralProjectionState;
 
     GetRestriction(state: BaseState, restriction: LSCGImmersiveOption): boolean {
         return state.Active &&
@@ -117,6 +119,7 @@ export class StateModule extends BaseModule {
         this.OrgasmSiphonedState = new OrgasmSiphonedState(this);
         this.XRayState = new XRayVisionState(this);
         this.CursedItemState = new CursedItemState(this);
+        this.AstralProjectionState = new AstralProjectionState(this);
 
         this.States = [
             this.SleepState, 
@@ -135,7 +138,8 @@ export class StateModule extends BaseModule {
             this.BuffedState,
             this.BarrierState,
             this.XRayState,
-            this.CursedItemState
+            this.CursedItemState,
+            this.AstralProjectionState
         ];
         
         // States module in general is always enabled. Toggling is done on each specific state.
@@ -147,7 +151,7 @@ export class StateModule extends BaseModule {
 
     load(): void {
         hookFunction("DrawStatus", 11, (args, next) => { // Pri 11 to bump above BCX hook
-            const ret = next(args) as any;
+            const ret = next(args);
             let C = args[0] as OtherCharacter;
             let CharX = args[1] as number;
             let CharY = args[2] as number;
@@ -271,7 +275,7 @@ export class StateModule extends BaseModule {
         }, ModuleCategory.States);
 
         hookFunction('Player.CanInteract', 1, (args, next) => {
-            if (this.Enabled && this.AnyRestrictions(r => r.Move))
+            if (this.Enabled && (this.AnyRestrictions(r => r.Move) || this.AnyRestrictions(r => r.Touch)))
                 return false;
             return next(args);
         }, ModuleCategory.States);
@@ -307,8 +311,7 @@ export class StateModule extends BaseModule {
             return next(args);
         }, ModuleCategory.States);
 
-        
-        (DialogSelfMenuMapping.Expression.clickStatusCallbacks as any).lscg = (C: any, clickedExpression: { Group: string; }) => {
+        (DialogSelfMenuMapping.Expression.clickStatusCallbacks as Record<string, unknown>).lscg = (C: Character, clickedExpression: { Group: string; }) => {
             if (clickedExpression.Group !== "Emoticon" && this.AnyRestrictions(r => r.Move)) {
                 return "Movement restricted by LSCG";
             }

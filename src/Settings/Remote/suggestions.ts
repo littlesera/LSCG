@@ -782,8 +782,8 @@ export class RemoteSuggestions extends RemoteHypno {
 		return this.Suggestions[this.SuggestionIndex]
 	}
 
-	get IsSuggestionOwner(): boolean {
-		return this.Suggestion?.installedBy == Player.MemberNumber || this.Character.IsOwnedByPlayer();
+	get IsSuggestionOwner(): boolean {		
+		return this.settings.limitSuggestionMod || this.Suggestion?.installedBy == Player.MemberNumber || this.Character.IsOwnedByPlayer();
 	}
 
 	AvailableInstructions(ix: number) {

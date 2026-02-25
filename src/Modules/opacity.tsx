@@ -3,11 +3,11 @@ import { BaseModule } from "base";
 import { getModule } from "modules";
 import { OpacitySettingsModel } from "Settings/Models/base";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { LSCG_TEAL, hookFunction, isDrawingOverridable, mouseTooltip } from "../utils";
+import { hookFunction, isDrawingOverridable } from "../utils";
 import { StateModule } from "./states";
-import { drawTooltip } from "Settings/settingUtils";
 import { endsWith, kebabCase, replace } from "lodash-es";
-import styles from "./opacity.scss";
+import styles from "./opacity.scss?inline";
+import { IsSoulBind } from "./States/AstralProjectionState";
 
 interface OpacitySlider {
     ElementId: string;
@@ -71,25 +71,7 @@ namespace itemToColorItem {
      * @returns The validated colors returned as array
      */
     export function sanitizeColor(item: Item): string[] {
-        if (GameVersion !== "R121") {
-            return ItemColorSanitizeColor(item);
-        }
-
-        const color = [...item.Asset.DefaultColor];
-        if (Array.isArray(item.Color)) {
-            for (const [i, colorValue] of item.Color.entries()) {
-                if (i >= color.length) {
-                    break;
-                } else if (!CommonDrawColorValid(colorValue, item.Asset.Group)) {
-                    continue;
-                } else {
-                    color[i] = colorValue;
-                }
-            }
-        } else if (typeof item.Color === "string" && CommonDrawColorValid(item.Color, item.Asset.Group)) {
-            color.fill(item.Color);
-        }
-        return color;
+        return ItemColorSanitizeColor(item);
     }
 
     /**
@@ -98,25 +80,7 @@ namespace itemToColorItem {
      * @returns The validated item properties
      */
     export function sanitizeProperty(item: Item): ItemColorProperties {
-        if (GameVersion !== "R121") {
-            return ItemColorSanitizeProperty(item);
-        }
-
-        let opacity = item.Asset.Layer.map(l => l.Opacity);
-        if (Array.isArray(item.Property?.Opacity)) {
-            for (const [i, opacityValue] of item.Property.Opacity.entries()) {
-                if (i >= opacity.length) {
-                    break;
-                } if (!CommonIsFinite(opacityValue)) {
-                    continue;
-                } else {
-                    opacity[i] = CommonClamp(opacityValue, item.Asset.Layer[i].MinOpacity, item.Asset.Layer[i].MaxOpacity);
-                }
-            }
-        } else if (CommonIsFinite(item.Property?.Opacity)) {
-            opacity.fill(CommonClamp(item.Property.Opacity, item.Asset.MinOpacity, item.Asset.MaxOpacity));
-        }
-        return Object.assign(item.Property ?? {}, { Opacity: opacity });
+        return ItemColorSanitizeProperty(item);
     }
 
     /**
@@ -157,7 +121,7 @@ export class OpacityModule extends BaseModule {
         shape: [40, 80, 650, 740] as RectTuple,
         visibility: "visible",
         dom: <div id={ID.root} class="lscg-layers-root HideOnPopup">
-            <style id={ID.styles}>{styles.toString()}</style>
+            <style id={ID.styles}>{styles}</style>
             <div id={ID.mainToolbar}>
                     <label class="lscg-checkbox">
                         <input id={ID.allLayersCheck} type="checkbox" onChange={(evt) => this.onToggleAllLayers(evt)}/>
@@ -461,7 +425,7 @@ export class OpacityModule extends BaseModule {
             const ret = next(args);
             await ret;
             let C = args[0] as OtherCharacter;
-            let Item = GameVersion === "R121" && ItemColorItem ? itemToColorItem.convert(ItemColorItem) : ItemColorItem;
+            let Item = ItemColorItem;
             if (Item && this.CanChangeOpacityOnCharacter(C) && isDrawingOverridable(Item)) {
                 this.OpacityCharacter = C;
                 this.OpacityItem = Item;
@@ -481,30 +445,28 @@ export class OpacityModule extends BaseModule {
             return ret;
         }, ModuleCategory.Opacity);
 
-        if (GameVersion !== "R121") {
-            // Reset the LSCG inputs back to their initial opacity upon exiting the color picker without saving
-            hookFunction("ItemColorRevert", 0, ([type, ...args], next) => {
-                const layersEntries = (ItemColorPickerLayers as Map<number, AssetLayer>).entries();
-                const opacityField = `${type as "initial" | "default"}Opacity` as const;
+        // Reset the LSCG inputs back to their initial opacity upon exiting the color picker without saving
+        hookFunction("ItemColorRevert", 0, ([type, ...args], next) => {
+            const layersEntries = (ItemColorPickerLayers as Map<number, AssetLayer>).entries();
+            const opacityField = `${type as "initial" | "default"}Opacity` as const;
 
-                const colorState: ItemColorStateType & { initialOpacity: readonly number[], defaultOpacity: readonly number[] } | null = ItemColorState;
-                if (this.OpacityItem && colorState) {
-                    for (const [i, layer] of layersEntries) {
-                        const name = `${ID.opacityLayers}_${kebabCase(layer.Name ?? layer.Asset.Name)}`;
-                        const inputs: NodeListOf<HTMLInputElement> = document.querySelectorAll(`#${name}_Range, #${name}_Number`);
-                        inputs.forEach(lscgInput => lscgInput.valueAsNumber = Math.round(colorState[opacityField][i] * 100));
-                    }
-
-                    // If we're changing the entire item/all layers
-                    const allLayers = ItemColorGetColorableLayers(this.OpacityItem);
-                    if (allLayers.length === ItemColorPickerIndices.length) {
-                        const inputs: NodeListOf<HTMLInputElement> = document.querySelectorAll(`input[id*="${this.OpacityMainSlider.ElementId}"]`);
-                        inputs.forEach(lscgInput => lscgInput.valueAsNumber = Math.round(colorState[opacityField][0] * 100));
-                    }
+            const colorState: ItemColorStateType & { initialOpacity: readonly number[], defaultOpacity: readonly number[] } | null = ItemColorState;
+            if (this.OpacityItem && colorState) {
+                for (const [i, layer] of layersEntries) {
+                    const name = `${ID.opacityLayers}_${kebabCase(layer.Name ?? layer.Asset.Name)}`;
+                    const inputs: NodeListOf<HTMLInputElement> = document.querySelectorAll(`#${name}_Range, #${name}_Number`);
+                    inputs.forEach(lscgInput => lscgInput.valueAsNumber = Math.round(colorState[opacityField][i] * 100));
                 }
-                return next([type, ...args]);
-            });
-        }
+
+                // If we're changing the entire item/all layers
+                const allLayers = ItemColorGetColorableLayers(this.OpacityItem);
+                if (allLayers.length === ItemColorPickerIndices.length) {
+                    const inputs: NodeListOf<HTMLInputElement> = document.querySelectorAll(`input[id*="${this.OpacityMainSlider.ElementId}"]`);
+                    inputs.forEach(lscgInput => lscgInput.valueAsNumber = Math.round(colorState[opacityField][0] * 100));
+                }
+            }
+            return next([type, ...args]);
+        });
 
         hookFunction("ItemColorFireExit", 1, (args, next) => {
             next(args);
@@ -567,12 +529,12 @@ export class OpacityModule extends BaseModule {
             let C = args[0] as OtherCharacter;
             let callbacks = args[1];
             if (this.Enabled) {
-                C.AppearanceLayers?.forEach((Layer) => {
-                    const A = Layer.Asset;
-                    if (isDrawingOverridable(A)) {
+                C.Appearance?.forEach(item => {
+                    const A = item.Asset;
+                    if (isDrawingOverridable(A) || IsSoulBind(item)) {
                         (A as any).DynamicBeforeDraw = true;
                     }
-                });
+                })                
             }
             // Hack fix in case the body style was actually removed
             if (InventoryGet(C, "BodyStyle") == null) {
@@ -583,7 +545,7 @@ export class OpacityModule extends BaseModule {
 
         hookFunction("CharacterAppearanceSortLayers", 1, (args, next) => {
             let C = args[0] as OtherCharacter;
-            if (!C.MemberNumber || !this.Enabled)
+            if (!C || !this.Enabled)
                 return next(args);
 
             let xray = getModule<StateModule>("StateModule")?.XRayState;
@@ -598,7 +560,7 @@ export class OpacityModule extends BaseModule {
                 } else if (Array.isArray(opacity)) {
                     hasOpacitySettings = !opacity.every((opac, i) => opac === item.Asset.Layer[i]?.Opacity);
                 }
-                if ((hasOpacitySettings || xrayActive) && !item.Property?.LSCGLeadLined) {
+                if ((hasOpacitySettings || xrayActive || IsSoulBind(item)) && !item.Property?.LSCGLeadLined) {
                     item.Asset = Object.assign({}, item.Asset);
                     (item.Asset as any).Layer = item.Asset.Layer.map(l => Object.assign({}, l));
                     item?.Asset?.Layer?.forEach(layer => {
@@ -879,17 +841,15 @@ export class OpacityModule extends BaseModule {
     }
 
     TranslateRemoveEventListener() {
-        if (GameVersion === "R121") {
-            let CanvasElement = document.getElementById("MainCanvas");
-            if (!CanvasElement)
-                return;
-            CanvasElement.removeEventListener("mousedown", evt => this.TranslateStart(evt));
-            CanvasElement.removeEventListener("touchstart", evt => this.TranslateStart(evt));
-            CanvasElement.removeEventListener("mousemove", evt => this.TranslateMove(evt));
-            CanvasElement.removeEventListener("touchmove", evt => this.TranslateMove(evt));
-            CanvasElement.removeEventListener("mouseup", evt => this.TranslateEnd(evt));
-            CanvasElement.removeEventListener("touchend", evt => this.TranslateEnd(evt));
-        }
+        let CanvasElement = document.getElementById("MainCanvas");
+        if (!CanvasElement)
+            return;
+        CanvasElement.removeEventListener("mousedown", evt => this.TranslateStart(evt));
+        CanvasElement.removeEventListener("touchstart", evt => this.TranslateStart(evt));
+        CanvasElement.removeEventListener("mousemove", evt => this.TranslateMove(evt));
+        CanvasElement.removeEventListener("touchmove", evt => this.TranslateMove(evt));
+        CanvasElement.removeEventListener("mouseup", evt => this.TranslateEnd(evt));
+        CanvasElement.removeEventListener("touchend", evt => this.TranslateEnd(evt));
     }
 
     ResetTranslation() {

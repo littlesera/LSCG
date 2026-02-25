@@ -17,6 +17,7 @@ export interface StateRestrictions {
     Restrained: LSCGImmersiveOption;
     Eyes: LSCGImmersiveOption;
     Emoticon: LSCGImmersiveOption;
+    Touch: LSCGImmersiveOption;
 }
 
 export abstract class BaseState {

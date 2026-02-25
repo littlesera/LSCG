@@ -1,10 +1,10 @@
 import { h } from "tsx-dom";
-import { ApplyItem, GetDataSizeReport, hookFunction, ICONS, isBind, isBody, isCloth, isCosplay, isGenitals, isHair, isPronouns, isSkin, parseFromBase64, smartGetAssetGroup } from "utils";
+import { ApplyItem, CopyCharacter, GetDataSizeReport, hookFunction, ICONS, isBind, isBody, isCloth, isCosplay, isGenitals, isHair, isPronouns, isSkin, parseFromBase64, smartGetAssetGroup } from "utils";
 import { GuiSubscreen, HelpInfo } from "./settingBase";
 import { OutfitSettings } from "./Models/base";
 import { OutfitCollectionModule } from "Modules/outfitCollection";
-import styles from "./outfits.scss";
-import editorStyles from "./outfitEditor.scss";
+import styles from "./outfits.scss?inline";
+import editorStyles from "./outfitEditor.scss?inline";
 import { clamp, entries, toArray, remove } from "lodash-es";
 import { Outfit, OutfitCollection } from "./OutfitCollection/outfitCollection";
 import { drawTooltip } from "./settingUtils";
@@ -180,7 +180,7 @@ export class GuiOutfits extends GuiSubscreen {
             shape: [GuiSubscreen.START_X, GuiSubscreen.START_Y - 25, 1900 - GuiSubscreen.START_X + 4, 740] as RectTuple,
             visibility: "visible",
             dom: <div id={ID.root} class="lscg-screen">
-                <style id={ID.styles}>{styles.toString()}</style>
+                <style id={ID.styles}>{styles}</style>
                 <div id={ID.buttonOuterGrid}>
                     <h1 id={ID.itemSets} z-index={1}>Outfits</h1>
                     <div id={ID.buttonInnerGrid0}>
@@ -221,7 +221,7 @@ export class GuiOutfits extends GuiSubscreen {
             shape: [GuiSubscreen.START_X + 500, GuiSubscreen.START_Y - 130, 1300 - GuiSubscreen.START_X, 850] as RectTuple,
             visibility: "hidden",
             dom: <div id={EDITOR_ID.root} class="lscg-screen">
-                <style id={EDITOR_ID.styles}>{editorStyles.toString()}</style>
+                <style id={EDITOR_ID.styles}>{editorStyles}</style>
                 {
                     ElementMenu.Create(
                         "lscg-outfit-edit-menubar",
@@ -843,10 +843,7 @@ export class GuiOutfits extends GuiSubscreen {
     }
 
     InitializePreview(): Character {
-        let newCharacter = CharacterLoadSimple(`LSCGOutfitsCollection-${Player.MemberNumber}`);
-        
-        newCharacter.Appearance = Player.Appearance.slice();
-        CharacterNaked(newCharacter, false);
+        let newCharacter = CopyCharacter(Player, `LSCGOutfitsCollection-${Player.MemberNumber}`);
 	    
         newCharacter.Owner = Player.Name;
         newCharacter.Ownership = { MemberNumber: Player.MemberNumber, Name: Player.Name, Start: CommonTime(), Stage: 1 };
@@ -858,7 +855,6 @@ export class GuiOutfits extends GuiSubscreen {
             ItemsAffectExpressions: false,
         };
 
-        CharacterReleaseTotal(newCharacter, false);
         return newCharacter;
     }
 

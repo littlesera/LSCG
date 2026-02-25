@@ -10,6 +10,47 @@
 	--lscg-font-family: arial, sans-serif;
 }
 
+.lscg-ghost-text {
+	.ghost-text {
+		animation: spectral-fade 6s ease-in-out infinite alternate;
+	}
+}
+
+@keyframes ghostlyFadeIn {
+    0% {
+        opacity: 0;
+        filter: blur(10px) brightness(2);
+        transform: translateY(10px) scale(1.1);
+    }
+    100% {
+        opacity: 1;
+        filter: blur(0px) brightness(1);
+        transform: translateY(0) scale(1);
+    }
+}
+
+@keyframes spectral-fade {
+  0% {
+    opacity: 1;
+  }
+  25% {
+	filter: blur(0.4px);
+    opacity: 0.8;
+  }
+  50% {
+    filter: blur(1.0px);
+    opacity: 0.4;
+  }
+  75% {
+    filter: blur(0.2px);
+    opacity: 0.7;
+  }
+  100% {
+    filter: blur(0.4px);
+    opacity: 0.5;
+  }
+}
+
 .lscg-button {
 	background-color: var(--lscg-button-color);
 	background-origin: content-box;

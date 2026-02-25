@@ -1,3 +1,4 @@
+import { SpiritTextType } from "Settings/magic";
 import { BaseSettingsModel } from "./base";
 
 export const KNOWN_SPELLS_LIMIT: number = 48;
@@ -30,7 +31,8 @@ export enum LSCGSpellEffect {
     barrier = "Magic Barrier",
     disarm = "Disarming",
     denial = "Denying",
-    orgasm = "Forced Orgasm"
+    orgasm = "Forced Orgasm",
+    project = "Astral Projection"
 }
 
 export enum OutfitOption {
@@ -77,6 +79,9 @@ export interface SpellDefinition {
 export interface MagicSettingsModel extends MagicPublicSettingsModel {
     knownSpells: SpellDefinition[];
     allowChangePronouns: boolean;
+    spiritTextFormat: SpiritTextType;
+    spiritFormOutfitKey: string;
+    disableSoulBindings: boolean;
 }
 
 export interface MagicPublicSettingsModel extends BaseSettingsModel{
@@ -105,4 +110,8 @@ export interface MagicPublicSettingsModel extends BaseSettingsModel{
 
     // XRay Block
     blockXRay: boolean;
+
+    // Colors
+    projectionTintColor: string;
+    hideCorporeal: boolean;
 }

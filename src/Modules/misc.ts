@@ -1,7 +1,7 @@
 import { BaseModule } from "base";
 import { MiscSettingsModel } from "Settings/Models/base";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { getCharacter, GetItemNameAndDescriptionConcat, GetMetadata, getRandomInt, GetTargetCharacter, hookFunction, isPhraseInString, LSCG_SendLocal, OnAction, OnActivity, removeAllHooksByModule, SendAction, settingsSave, ICONS } from "../utils";
+import { getCharacter, GetItemNameAndDescriptionConcat, GetMetadata, getRandomInt, GetTargetCharacter, hookFunction, isPhraseInString, LSCG_SendLocal, OnAction, OnActivity, removeAllHooksByModule, SendAction, settingsSave, ICONS, GetCraftingNameAndDescriptionConcat } from "../utils";
 import { CureKeywords, getModule, HornyKeywords, MindControlKeywords, NetgunKeywords, SedativeKeywords } from "modules";
 import { StateModule } from "./states";
 import { SleepState } from "./States/SleepState";
@@ -10,6 +10,13 @@ import { chaoticKeywords, evolvingKeywords, quickKeywords, slowKeywords } from "
 import { ElectricKeywords, SelfTighteningKeywords, SubduingKeywords, TamperProofKeywords } from "./item-use";
 import { CursedItemModule, CursedKeywords } from "./cursed-item";
 import { AllowedNetGuns } from "./injector";
+import {
+    CHLOROFORM_TIMING,
+    CHECK_INTERVALS,
+    RANDOM_EVENT_ODDS,
+    LSCG_EFFECTS_MENU
+} from "../constants";
+import { SoulbindKeywords } from "./States/AstralProjectionState";
 
 // interface used to define all Elements used in LSCG Effect menu in the Crafting screen.
 interface ScreenElem {
@@ -42,7 +49,7 @@ export class MiscModule extends BaseModule {
             chloroformEnabled: false,
             //immersiveChloroform: false,
             chloroformedAt: 0,
-            chloroformPotencyTime: 60 * 60 * 1000, // 1 hour cooloff
+            chloroformPotencyTime: CHLOROFORM_TIMING.POTENCY_TIME,
             infiniteChloroformPotency: false,
             handChokeEnabled: false,
             gagChokeEnabled: false,
@@ -133,7 +140,7 @@ export class MiscModule extends BaseModule {
         })
 
         let lastChloroEvent = 0;
-        let chloroInterval = 2000; // chloro check every 2s
+        let chloroInterval = CHECK_INTERVALS.CHLOROFORM_CHECK;
         hookFunction('TimerProcess', 1, (args, next) => {
             let now = CommonTime();
             if (!ActivityAllowed() || !this.Enabled)
@@ -165,7 +172,7 @@ export class MiscModule extends BaseModule {
 
         hookFunction("TimerProcess", 1, (args, next) => {
             let now = CommonTime();
-            if (!this.settings.infiniteChloroformPotency && this.lastChecked + 10000 < now) {
+            if (!this.settings.infiniteChloroformPotency && this.lastChecked + CHECK_INTERVALS.CHLOROFORM_DOWNGRADE < now) {
                 this.lastChecked = now;
                 if (this.isChloroformed && this.settings.chloroformedAt + this.settings.chloroformPotencyTime < now && !this.chloroformWearingOff)
                     this.ChloroformWearOff();
@@ -224,7 +231,7 @@ export class MiscModule extends BaseModule {
         if (value) {
             this.chloroEventInterval = setInterval(() => {
                 this.ChloroEvent();
-            }, 60010)
+            }, CHLOROFORM_TIMING.EVENT_INTERVAL)
         }
         this._isChloroformed = value;
     }
@@ -267,7 +274,7 @@ export class MiscModule extends BaseModule {
         if (!this.isChloroformed)
             return;
         // only activate on average once every 10 minutes
-        else if (getRandomInt(10) == 0)
+        else if (getRandomInt(RANDOM_EVENT_ODDS.CHLORO_EVENT_CHANCE) == 0)
             this.ActivateChloroEvent();
     }
 
@@ -310,7 +317,7 @@ export class MiscModule extends BaseModule {
                 SendAction("%NAME% slumps back in %POSSESSIVE% sleep as another dose of ether assails %POSSESSIVE% senses.");
             LSCG_SendLocal("Chloroform has been forced over your mouth, you will pass out if it is not removed soon!");
             clearTimeout(this.awakenTimeout);
-            this.passoutTimer = setTimeout(() => this.StartPassout_1(), 20000);
+            this.passoutTimer = setTimeout(() => this.StartPassout_1(), CHLOROFORM_TIMING.PASSOUT_STAGE_1);
             CharacterSetFacialExpression(Player, "Eyes", "Scared");
         }
     }
@@ -319,14 +326,14 @@ export class MiscModule extends BaseModule {
         SendAction("%NAME%, unable to continue holding %POSSESSIVE% breath, takes a desparate gasp through the chemical-soaked cloth.");
         CharacterSetFacialExpression(Player, "Eyes", "Lewd");
         clearTimeout(this.passoutTimer);
-        this.passoutTimer = setTimeout(() => this.StartPassout_2(), 10000);
+        this.passoutTimer = setTimeout(() => this.StartPassout_2(), CHLOROFORM_TIMING.PASSOUT_STAGE_2);
     }
 
     StartPassout_2() {
         SendAction("%NAME%'s body trembles as the chloroform sinks deep into %POSSESSIVE% mind.");
         CharacterSetFacialExpression(Player, "Eyes", "VeryLewd");
         clearTimeout(this.passoutTimer);
-        this.passoutTimer = setTimeout(() => this.Passout(), 5000);
+        this.passoutTimer = setTimeout(() => this.Passout(), CHLOROFORM_TIMING.PASSOUT_FINAL);
     }
 
     Passout() {
@@ -341,7 +348,7 @@ export class MiscModule extends BaseModule {
     ChloroformWearOff() {
         SendAction("%NAME% takes a deep, calm breath as %POSSESSIVE% chloroform starts to lose its potency...");
         clearTimeout(this.awakenTimeout);
-        this.awakenTimeout = setTimeout(() => this.RemoveChloroform_1(), 45000);
+        this.awakenTimeout = setTimeout(() => this.RemoveChloroform_1(), CHLOROFORM_TIMING.REMOVAL_STAGE_1_WEARING_OFF);
         this.chloroformWearingOff = true;
     }
 
@@ -349,7 +356,7 @@ export class MiscModule extends BaseModule {
         if (this.isChloroformed) {
             SendAction("%NAME% continues to sleep peacefully as the cloth is removed...");
             clearTimeout(this.awakenTimeout);
-            this.awakenTimeout = setTimeout(() => this.RemoveChloroform_1(), 20000);
+            this.awakenTimeout = setTimeout(() => this.RemoveChloroform_1(), CHLOROFORM_TIMING.REMOVAL_STAGE_1_REMOVED);
             this.chloroformWearingOff = true;
         }
         else {
@@ -365,7 +372,7 @@ export class MiscModule extends BaseModule {
     RemoveChloroform_1() {
         SendAction("%NAME% starts to stir with a gentle moan...");
         clearTimeout(this.awakenTimeout);
-        this.awakenTimeout = setTimeout(() => this.RemoveChloroform_2(), 10000);
+        this.awakenTimeout = setTimeout(() => this.RemoveChloroform_2(), CHLOROFORM_TIMING.REMOVAL_STAGE_2);
     }
 
     RemoveChloroform_2() {
@@ -431,6 +438,8 @@ export class MiscModule extends BaseModule {
         magicButton: "crafting-lscg-effects-magic-checkbox",
         netgunLabel: "crafting-lscg-effects-netgun-label",
         netgunButton: "crafting-lscg-effects-netgun-checkbox",
+        soulbindLabel: "crafting-lscg-effects-soulbind-label",
+        soulbindButton: "crafting-lscg-effects-soulbind-checkbox",
 
         // drug group
         drugGrid: "lscg-effect-drug-grid",
@@ -617,6 +626,17 @@ export class MiscModule extends BaseModule {
                     return true; // Need hand item
                 }
                 return false;
+            }
+        },
+        {
+            type: "checkbox",
+            id_label: this.LscgEffectCraftingId.soulbindLabel,
+            id_button: this.LscgEffectCraftingId.soulbindButton,
+            label: "Soulbinding",
+            description: "Restraints with this will persist on the wearer's 'Astral Projection.'",
+            keywords: SoulbindKeywords,
+            condition: (): boolean => {
+                return true;
             }
         }
     ]
@@ -868,14 +888,14 @@ export class MiscModule extends BaseModule {
     // Set/re-Set the main menu position (needed if a resize happen)
     setMenuPositionFixed() {
         //ElementPositionFixed(this.LscgEffectCraftingId.main, 120, 100, 1050, 800);
-        ElementPositionFixed(this.LscgEffectCraftingId.main, 150, 100, 1000, 800);
+        ElementPositionFixed(this.LscgEffectCraftingId.main, LSCG_EFFECTS_MENU.X_POSITION, LSCG_EFFECTS_MENU.Y_POSITION, LSCG_EFFECTS_MENU.WIDTH, LSCG_EFFECTS_MENU.HEIGHT);
     }
 
     /*
      * *** Generic functions to create a grid and each element ***
      */
 
-    createGenericGridArea(grid_id: string, parent: Node, children: HTMLOptions<keyof HTMLElementTagNameMap>[]) {
+    createGenericGridArea(grid_id: string, parent: Node, children: HTMLOptionsUnion[]) {
         ElementCreate({
             tag: "div",
             parent,
@@ -892,11 +912,11 @@ export class MiscModule extends BaseModule {
     }
 
     // Create element from the lists ScreenElem (the results are used as the children of createGenericGridArea())
-    createHtmlElemList(elemList: ScreenElem[]): HTMLOptions<keyof HTMLElementTagNameMap>[] {
-        let htmlList: HTMLOptions<keyof HTMLElementTagNameMap>[] = [];
+    createHtmlElemList(elemList: ScreenElem[]): HTMLOptionsUnion[] {
+        let htmlList: HTMLOptionsUnion[] = [];
         for (let elem of elemList) {
             let tag: keyof HTMLElementTagNameMap = "label";
-            let child: (string | Node | HTMLOptions<keyof HTMLElementTagNameMap>)[] = [];
+            let child: (string | Node | HTMLOptionsUnion)[] = [];
 
             // setup depending of type
             if (elem.type == "checkbox") {
@@ -914,7 +934,7 @@ export class MiscModule extends BaseModule {
                 child = (this.getSelectOptionsForId(elem.id_label));
             }
 
-            let htmlElem: HTMLOptions<keyof HTMLElementTagNameMap> = {
+            let htmlElem: HTMLOptionsUnion = {
                         tag: tag,
                         attributes: { id: elem.id_label },
                         //classList: ["crafting-label"],
@@ -1020,8 +1040,8 @@ export class MiscModule extends BaseModule {
     }
 
     // Populate the curse Select
-    getSelectCurseOptions(): HTMLOptions<keyof HTMLElementTagNameMap>[] {
-        let optionList: HTMLOptions<keyof HTMLElementTagNameMap>[] = [];
+    getSelectCurseOptions(): HTMLOptionsUnion[] {
+        let optionList: HTMLOptionsUnion[] = [];
         let curseNameList = getModule<CursedItemModule>("CursedItemModule")?.settings.CursedItems.map(item => item.Name);
         if (!curseNameList || curseNameList.length <= 0) {
             //console.log("getSelectCurseOptions: no curse found.");
@@ -1048,7 +1068,7 @@ export class MiscModule extends BaseModule {
         }
 
         for (let curse of curseNameList) {
-            let elem: HTMLOptions<keyof HTMLElementTagNameMap> = {
+            let elem: HTMLOptionsUnion = {
                 tag: "option", children: [curse]
             }
             optionList.push(elem);
@@ -1120,18 +1140,15 @@ export class MiscModule extends BaseModule {
         for (let elem of allElemList) {
             let changed = false;
             const elem_checkbox = document.getElementById(elem.id_button) as HTMLInputElement;
-            for (let word of elem.keywords) {
-                if (CraftingSelectedItem?.Description.includes(word)) {
-                    // activate checkbox
-                    if (elem_checkbox) {
-                        elem_checkbox.checked = true;
-                        changed = true;
-                    } else {
-                        console.warn("nameOrDescChanged: couldn't find ", elem.id_button);
-                    }
-                    break;
+            if (elem.keywords.some(key => isPhraseInString(GetCraftingNameAndDescriptionConcat(CraftingSelectedItem) ?? "", key))) {
+                if (elem_checkbox) {
+                    elem_checkbox.checked = true;
+                    changed = true;
+                } else {
+                    console.warn("nameOrDescChanged: couldn't find ", elem.id_button);
                 }
             }
+            
             if (changed) continue;
 
             // If we are here, we have no match
@@ -1186,7 +1203,7 @@ export class MiscModule extends BaseModule {
         return undefined;
     }
 
-    getSelectOptionsForId(id: string): HTMLOptions<keyof HTMLElementTagNameMap>[] {
+    getSelectOptionsForId(id: string): HTMLOptionsUnion[] {
         if (id == this.LscgEffectCraftingId.cursedSelect) {
             return this.getSelectCurseOptions();
         }

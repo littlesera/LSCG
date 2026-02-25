@@ -10,6 +10,8 @@ export const pairedSpellEffects = [
 	LSCGSpellEffect.paired_arousal
 ];
 
+export type SpiritTextType = "None" | "Glow" | "Float";
+
 export class GuiMagic extends GuiSubscreen {
 
 	get name(): string {
@@ -265,6 +267,50 @@ export class GuiMagic extends GuiSubscreen {
 						setting: () => this.settings.requireWhitelist ?? false,
 						setSetting: (val) => this.settings.requireWhitelist = val
 					}
+				], [
+					<Setting>{
+						type: "label", // Blank Spot, looping around to the top
+						label: "-- Astral Projection Settings --",
+						description: "Extra configuration for your spirit form."
+					}, <Setting>{
+						type: "dropdown",
+						id: "ghostTextSelect",
+						label: "Spirit Speech effects:",
+						description: "Select what level of effect to apply to spirit speech.",
+						setting: () => this.settings.spiritTextFormat ?? "Float",
+						setSetting: (val) => this.settings.spiritTextFormat = (val ?? "Float"),
+						overrideWidth: 200,
+						options: ["None", "Glow", "Float"]
+					}, <Setting>{
+						type: "checkbox",
+						label: "Disable Soul Bindings:",
+						description: "If checked, prevent any soul-bound restraints from binding your spirit form.",
+						setting: () => this.settings.disableSoulBindings ?? false,
+						setSetting: (val) => this.settings.disableSoulBindings = val
+					}, <Setting>{
+						type: "text",
+						id: "magic_spiritColor",
+						label: "Spirit Color:",
+						overrideWidth: 200,
+						description: "Overrides the default tint color of your astral projection (default is #00ced1).",
+						setting: () => this.settings.projectionTintColor ?? "#00ced1",
+						setSetting: (val) => this.settings.projectionTintColor = (!!val ? val : "#00ced1")
+					}, <Setting>{
+						type: "dropdown",
+						id: "outfitKey",
+						label: "Spirit Form Outfit:",
+						description: "Outfit name that will be used for your spirit form. Highly recommended that this outfit includes all desired body/cosplay/clothing.",
+						setting: () => this.settings.spiritFormOutfitKey ?? "",
+						setSetting: (val) => this.settings.spiritFormOutfitKey = val,
+						overrideWidth: 600,
+						options: getModule<OutfitCollectionModule>("OutfitCollectionModule")?.data.GetOutfitNames()?.sort() ?? []
+					}, <Setting>{
+						type: "checkbox",
+						label: "Hide Corporeal Form:",
+						description: "If true, your corporeal form will vanish while projected into spirit realm",
+						setting: () => this.settings.hideCorporeal ?? false,
+						setSetting: (val) => this.settings.hideCorporeal = val
+					}
 				]];
 	}
 
@@ -472,6 +518,13 @@ export class GuiMagic extends GuiSubscreen {
 				}
 				DrawButton(1260 - 4, this.getYPos(0) - 32 - 4, 72, 72, "", "White", "", `Create new Spell`); // Add New Spell
 				DrawImageResize("Icons/Plus.png", 1260, this.getYPos(0) - 32, 64, 64);
+			} else if (PreferencePageCurrent == 4) {
+				if (!!this.settings.spiritFormOutfitKey) {
+					DrawButton(780 + 600 + 64, this.getYPos(4) - 32, 64, 64, "", "White", "", "", false);
+					DrawImageResize("Icons/Cancel.png", 780 + 600 + 64, this.getYPos(4) - 32, 64, 64);
+					if (MouseIn(780 + 600 + 64, this.getYPos(4) - 32, 64, 64))
+						drawTooltip(MouseX, MouseY, 128, "Clear Spirit Form", "left");
+				}
 			}
 		}
 		MainCanvas.textAlign = prev;
@@ -617,6 +670,11 @@ export class GuiMagic extends GuiSubscreen {
 					} else if (this.outfitEffects.indexOf(this.Spell.Effects[2]) > -1 && MouseIn(1500, this.getYPos(7)-32, 200, 64)){
 						this.Spell.Effects[2] == LSCGSpellEffect.outfit ? this.ConfigureOutfitEffect() : this.ConfigurePolymorphEffect();
 					}
+				}
+			} else if (PreferencePageCurrent == 4) {
+				if (!!this.settings.spiritFormOutfitKey && MouseIn(780 + 600 + 64, this.getYPos(4) - 32, 64, 64)) {
+					this.settings.spiritFormOutfitKey = "";
+					this.ElementSetValue("outfitKey", this.settings.spiritFormOutfitKey);
 				}
 			}
 		}
@@ -774,6 +832,8 @@ export class GuiMagic extends GuiSubscreen {
 				return "Create a magic barrier that protect and reflect incoming spell";
 			case LSCGSpellEffect.disarm:
 				return "Disarm the target";
+			case LSCGSpellEffect.project:
+				return "Project the target's soul into the Astral Plane";
 			case LSCGSpellEffect.none:
 			default:
 				return ""			;

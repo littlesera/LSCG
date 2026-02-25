@@ -52,7 +52,7 @@ export class BuffedState extends BaseState {
             this.Recover(true);
         else {
             this.negative = true;
-            if (emote) SendAction("%NAME% feels as though %POSSESSIVE% abilities are deminished.");
+            if (emote) SendAction("%NAME% feels as though %POSSESSIVE% abilities are diminished.");
             this.Activate(MemberNumber, duration ?? BuffedState.BUFF_DURATION, emote);
         }
         return this;
