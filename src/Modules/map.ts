@@ -349,12 +349,17 @@ export class MapModule extends BaseModule {
             }, C.MemberNumber));
         }
 
-        if (C.Appearance.some(i => isPhraseInString(GetItemNameAndDescriptionConcat(i) || "", "flashlight", true))) {
+        let flashlight = C.Appearance.find(i => isPhraseInString(GetItemNameAndDescriptionConcat(i) || "", "flashlight", true))
+        if (!!flashlight) {
+            let searchStr = GetItemNameAndDescriptionConcat(flashlight) ?? ""; 
+            let fov = 40;
+            if (isPhraseInString(searchStr, "narrow")) fov = 20;
+            if (isPhraseInString(searchStr, "wide")) fov = 60;
             charLights.push(this.NewLight(X, Y, {
                 x: CX,
                 y: CY,
                 radius: C.IsPlayer() ? (this.TileUnit * 6) : (this.TileUnit * 3),
-                fov: 35,
+                fov: fov,
                 color: [200, 200, 200, C.IsPlayer() ? 0.8 : 0.2],
                 animType: C.IsPlayer() ? "flashlight" : "none"
             }, C.MemberNumber));

@@ -331,15 +331,6 @@ export function CompressLSCGSettings(): string {
 
 export function ExportSettings(): string {
 	return downloadText(CompressLSCGSettings());
-	// let parsed =  JSON.parse(JSON.stringify(Player.LSCG)); //CleanDefaultsFromSettings(Player.LSCG);
-	// Object.keys(parsed).filter(key => key != "Version").forEach(key => {
-	// 	let module = (<any>parsed)[key];
-	// 	Object.keys(module).forEach(mk => {
-	// 		if (mk == "stats")
-	// 			delete module[mk];
-	// 	});
-	// });
-	// return LZString.compressToBase64(JSON.stringify(parsed));
 }
 
 export function downloadText(text: string, filename?: string | undefined): string {
@@ -1152,11 +1143,23 @@ export function getBCXActiveCurseSlots(): AssetGroupName[] {
 	return (Object.keys(bcxCurses).filter(key => bcxCurses[key]?.active ?? false)) as AssetGroupName[];
 }
 
+export function StripCharacterNoRedraw(C: Character) {
+	C.Appearance = C.Appearance.filter(({ Asset: { Group } }) => {
+		// Appearance or mandatory groups stay
+		if (!Group.IsAppearance() || !Group.AllowNone)
+			return true;
+
+		return false;
+	});
+}
+
 export function CopyCharacter(C: Character, id: string, strip: boolean = true, removeItems: boolean = true): Character {
 	let newCharacter = CharacterLoadSimple(`LSCG-${id || C.ID}`);
-	
+	newCharacter.Name = C.Name;
+	newCharacter.Nickname = C.Nickname;
+
 	newCharacter.Appearance = AppearanceItemParse(CharacterAppearanceStringify(C));
-	if (strip) CharacterNaked(newCharacter, false);
+	if (strip) StripCharacterNoRedraw(newCharacter);
 	if (removeItems) CharacterReleaseTotal(newCharacter, false);
 
 	return newCharacter;

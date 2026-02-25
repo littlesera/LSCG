@@ -296,7 +296,7 @@ export class CoreModule extends BaseModule {
         if (!Sender)
             return;
         Sender.LSCG = Object.assign(Sender.LSCG ?? {}, msg.settings ?? {});
-        CharacterLoadCanvas(Sender);
+        CharacterRefresh(Sender, false);
         if (msg.reply) {
             this.SendPublicPacket(false, msg.type);
         }

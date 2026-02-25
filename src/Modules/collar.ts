@@ -859,9 +859,9 @@ export class CollarModule extends BaseModule {
         this.passout2Timer = totalTime * .3; // -- 3/10 of the total tiem in stage 1
         this.passout3Timer = totalTime * .2; // -- 1/5 of the total tiem in stage 1
         this.isPassingOut = true;
-        setOrIgnoreBlush("VeryHigh");
         this.eyesAtTimeOfPassout = WardrobeGetExpression(Player)?.Eyes ?? null;
         this.blushAtTimeOfPassout = WardrobeGetExpression(Player)?.Blush ?? null;
+        setOrIgnoreBlush("VeryHigh");
         CharacterSetFacialExpression(Player, "Eyebrows", "Soft", this.passout1Timer / 1000);
         CharacterSetFacialExpression(Player, "Eyes", "Lewd", this.passout1Timer / 1000);
         this.setChokeTimeout(() => this.Passout1(reason, chokingMember), this.passout1Timer);
@@ -914,10 +914,7 @@ export class CollarModule extends BaseModule {
     Passout3(reason: PassoutReason = PassoutReason.COLLAR, chokingMember: Character | null = null) {
         this.IncreaseArousal();
         this.isPassingOut = false;
-        // CharacterSetFacialExpression(Player, "Blush", "Medium");
-        // CharacterSetFacialExpression(Player, "Eyebrows", "Soft");
-        // CharacterSetFacialExpression(Player, "Eyes", "Closed");
-        // CharacterSetFacialExpression(Player, "Mouth", null);
+        CharacterSetFacialExpression(Player, "Blush", this.blushAtTimeOfPassout);
         clearTimeout(this.chokeTimeout);
 
         if (reason == PassoutReason.COLLAR) {
