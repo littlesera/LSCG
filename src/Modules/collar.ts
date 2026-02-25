@@ -914,10 +914,7 @@ export class CollarModule extends BaseModule {
     Passout3(reason: PassoutReason = PassoutReason.COLLAR, chokingMember: Character | null = null) {
         this.IncreaseArousal();
         this.isPassingOut = false;
-        // CharacterSetFacialExpression(Player, "Blush", "Medium");
-        // CharacterSetFacialExpression(Player, "Eyebrows", "Soft");
-        // CharacterSetFacialExpression(Player, "Eyes", "Closed");
-        // CharacterSetFacialExpression(Player, "Mouth", null);
+        CharacterSetFacialExpression(Player, "Blush", this.blushAtTimeOfPassout);
         clearTimeout(this.chokeTimeout);
 
         if (reason == PassoutReason.COLLAR) {
