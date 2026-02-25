@@ -331,15 +331,6 @@ export function CompressLSCGSettings(): string {
 
 export function ExportSettings(): string {
 	return downloadText(CompressLSCGSettings());
-	// let parsed =  JSON.parse(JSON.stringify(Player.LSCG)); //CleanDefaultsFromSettings(Player.LSCG);
-	// Object.keys(parsed).filter(key => key != "Version").forEach(key => {
-	// 	let module = (<any>parsed)[key];
-	// 	Object.keys(module).forEach(mk => {
-	// 		if (mk == "stats")
-	// 			delete module[mk];
-	// 	});
-	// });
-	// return LZString.compressToBase64(JSON.stringify(parsed));
 }
 
 export function downloadText(text: string, filename?: string | undefined): string {
