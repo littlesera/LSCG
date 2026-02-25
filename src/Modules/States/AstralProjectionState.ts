@@ -171,68 +171,71 @@ export class AstralProjectionState extends BaseState {
                 });
 
                 let ghostChar = this.GetGhostCharacter(C);
-                ghostChar.Canvas = ghostCanvases[0];
-                ghostChar.CanvasBlink = ghostCanvases[1];
-
                 let corporealChar = this.GetCorporealCharacter(C);
-                corporealChar.Canvas = corporealCanvases[0];
-                corporealChar.CanvasBlink = corporealCanvases[1];
 
-                let hideGhostChar = this.hideGhost;
-                let hideCorpChar = !CurrentCharacter && (CurrentScreen == "ChatRoom") && (this.hideCorporeal || C.LSCG.MagicModule.hideCorporeal);
+                try {
+                    ghostChar.Canvas = ghostCanvases[0];
+                    ghostChar.CanvasBlink = ghostCanvases[1];
 
-                if (!hideGhostChar) {
-                    next([ghostChar]);
+                    corporealChar.Canvas = corporealCanvases[0];
+                    corporealChar.CanvasBlink = corporealCanvases[1];
 
-                    ghostCanvases.forEach((canvas, index) => {
-                        const ctx = canvas.getContext("2d");
-                        if (ctx) {
-                            ctx.shadowBlur = 0;
-                            ctx.globalAlpha = 0.3;
-                            // Apply ghostly tint
-                            ctx.globalCompositeOperation = 'source-atop';
-                            ctx.fillStyle = this.GetProjectionTintColor(C);
-                            ctx.fillRect(0, 0, canvas?.width || CanvasDrawWidth, canvas?.height || CanvasDrawHeight);
-                            // Fade out bottom half
-                            ctx.globalCompositeOperation = 'destination-in';
-                            ctx.globalAlpha = 1;
-                            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-                            gradient.addColorStop(0.5, 'rgba(0, 0, 0, 1)'); 
-                            gradient.addColorStop(0.8, 'rgba(0, 0, 0, 0)');
-                            ctx.fillStyle = gradient;
-                            ctx.fillRect(0, 0, canvas.width, canvas.height);
-                            ctx.globalCompositeOperation = 'source-over';
-                        }
-                    });
+                    let hideGhostChar = this.hideGhost;
+                    let hideCorpChar = !CurrentCharacter && (CurrentScreen == "ChatRoom") && (this.hideCorporeal || C.LSCG.MagicModule.hideCorporeal);
 
-                    CharacterAppearanceSetHeightModifiers(ghostChar);
-                    const ghostYOffset = CharacterAppearanceYOffset(ghostChar, ghostChar.HeightRatio) - origYOffset;
-                    origCanvases.forEach((origCanvas, index) => {
-                        let ctx = origCanvas?.getContext("2d");
-                        if (!!ctx) {
-                            ctx.drawImage(ghostCanvases[index], hideCorpChar ? 0 : 80, (hideCorpChar ? 0 : -80) + ghostYOffset);
-                        }
-                    });
+                    if (!hideGhostChar) {
+                        next([ghostChar]);
+
+                        ghostCanvases.forEach((canvas, index) => {
+                            const ctx = canvas.getContext("2d");
+                            if (ctx) {
+                                ctx.shadowBlur = 0;
+                                ctx.globalAlpha = 0.3;
+                                // Apply ghostly tint
+                                ctx.globalCompositeOperation = 'source-atop';
+                                ctx.fillStyle = this.GetProjectionTintColor(C);
+                                ctx.fillRect(0, 0, canvas?.width || CanvasDrawWidth, canvas?.height || CanvasDrawHeight);
+                                // Fade out bottom half
+                                ctx.globalCompositeOperation = 'destination-in';
+                                ctx.globalAlpha = 1;
+                                const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+                                gradient.addColorStop(0.5, 'rgba(0, 0, 0, 1)'); 
+                                gradient.addColorStop(0.8, 'rgba(0, 0, 0, 0)');
+                                ctx.fillStyle = gradient;
+                                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                                ctx.globalCompositeOperation = 'source-over';
+                            }
+                        });
+
+                        CharacterAppearanceSetHeightModifiers(ghostChar);
+                        const ghostYOffset = CharacterAppearanceYOffset(ghostChar, ghostChar.HeightRatio) - origYOffset;
+                        origCanvases.forEach((origCanvas, index) => {
+                            let ctx = origCanvas?.getContext("2d");
+                            if (!!ctx) {
+                                ctx.drawImage(ghostCanvases[index], hideCorpChar ? 0 : 80, (hideCorpChar ? 0 : -80) + ghostYOffset);
+                            }
+                        });
+                    }
+
+                    if (!hideCorpChar) {
+                        next([corporealChar]);
+
+                        CharacterAppearanceSetHeightModifiers(corporealChar);
+                        const corpYOffset = CharacterAppearanceYOffset(corporealChar, corporealChar.HeightRatio) - origYOffset;
+                        origCanvases.forEach((origCanvas, index) => {
+                            let ctx = origCanvas?.getContext("2d");
+                            if (!!ctx) {
+                                ctx.drawImage(corporealCanvases[index], 0, corpYOffset);
+                            }
+                        });
+                    }
+
+                    C.Canvas = origCanvases[0];
+                    C.CanvasBlink = origCanvases[1];
+                } finally {
+                    CharacterDelete(ghostChar);
+                    CharacterDelete(corporealChar);
                 }
-
-                if (!hideCorpChar) {
-                    next([corporealChar]);
-
-                    CharacterAppearanceSetHeightModifiers(corporealChar);
-                    const corpYOffset = CharacterAppearanceYOffset(corporealChar, corporealChar.HeightRatio) - origYOffset;
-                    origCanvases.forEach((origCanvas, index) => {
-                        let ctx = origCanvas?.getContext("2d");
-                        if (!!ctx) {
-                            ctx.drawImage(corporealCanvases[index], 0, corpYOffset);
-                        }
-                    });
-                }
-
-                C.Canvas = origCanvases[0];
-                C.CanvasBlink = origCanvases[1];
-
-                CharacterDelete(ghostChar);
-                CharacterDelete(corporealChar);
             }
         }, ModuleCategory.States);
 
@@ -294,12 +297,16 @@ export class AstralProjectionState extends BaseState {
             let activeStateConfig = Player?.LSCG?.StateModule.states.find(state => state.type === "astral-projection");
             if (activeStateConfig?.active && C?.IsPlayer()) {
                 let ghostChar = this.GetGhostCharacter(C);
-                if (ghostChar.PoseMapping[(<Pose>pose).Category] === pose.Name) {
-                    return;
-                }
-                PoseSetActive(C, pose.Name, undefined, false);
-                if (CurrentScreen === "ChatRoom") {
-                    ServerSend("ChatRoomCharacterPoseUpdate", { Pose: C.ActivePose });
+                try {
+                    if (ghostChar.PoseMapping[(<Pose>pose).Category] === pose.Name) {
+                        return;
+                    }
+                    PoseSetActive(C, pose.Name, undefined, false);
+                    if (CurrentScreen === "ChatRoom") {
+                        ServerSend("ChatRoomCharacterPoseUpdate", { Pose: C.ActivePose });
+                    }
+                } finally {
+                    CharacterDelete(ghostChar);
                 }
             } else return next(args);
         }, ModuleCategory.States);
@@ -311,14 +318,18 @@ export class AstralProjectionState extends BaseState {
             let activeStateConfig = C?.LSCG?.StateModule.states.find(state => state.type === "astral-projection");
             if (activeStateConfig?.active) {
                 let ghostChar = this.GetGhostCharacter(C);
-                PoseRefresh(ghostChar);
+                try {
+                    PoseRefresh(ghostChar);
 
-                let prevAllowed = C.AllowedActivePoseMapping;
-                C.AllowedActivePoseMapping = ghostChar.AllowedActivePoseMapping;
-                const result = next(args);
-                C.AllowedActivePoseMapping = prevAllowed;
-                CharacterDelete(ghostChar);
-                return result;
+                    let prevAllowed = C.AllowedActivePoseMapping;
+                    C.AllowedActivePoseMapping = ghostChar.AllowedActivePoseMapping;
+                    const result = next(args);
+                    C.AllowedActivePoseMapping = prevAllowed;
+                    return result;
+                }
+                finally {
+                    CharacterDelete(ghostChar);
+                }
             } else return next(args);
         }, ModuleCategory.States);
 
@@ -338,18 +349,21 @@ export class AstralProjectionState extends BaseState {
                 var temp = Player;
                 let ghostChar = this.GetGhostCharacter(Player) as PlayerCharacter;
                 let corpChar = this.GetCorporealCharacter(C) as PlayerCharacter;
-                Player = ghostChar
-                if (C.IsPlayer()) {
-                    args[0] = corpChar;
-                }
+                try {
+                    Player = ghostChar
+                    if (C.IsPlayer()) {
+                        args[0] = corpChar;
+                    }
 
-                const ret = next(args);
+                    const ret = next(args);
                 
-                CharacterDelete(ghostChar);
-                CharacterDelete(corpChar);
-                Player = temp;
-                args[0] = C;
-                return ret;
+                    Player = temp;
+                    args[0] = C;
+                    return ret;
+                } finally {
+                    CharacterDelete(ghostChar);
+                    CharacterDelete(corpChar);
+                }
             } else {
                 return next(args);
             }
@@ -365,30 +379,54 @@ export class AstralProjectionState extends BaseState {
         hookFunction("ActivityBuildChatTag", 1, (args, next) => {
             let C = args[0] as OtherCharacter;
             if (this.Active && C.IsPlayer()) {
-                args[0] = this.GetCorporealCharacter(C) as PlayerCharacter;
-                const result = next(args);
-                args[0] = C;
-                return result;
+                let ghostChar = this.GetCorporealCharacter(C) as PlayerCharacter;
+                try {
+                    args[0] = ghostChar;
+                    const result = next(args);
+                    args[0] = C;
+                    return result;
+                } finally {
+                    CharacterDelete(ghostChar);
+                }
             } else return next(args);
         }, ModuleCategory.States);
 
         hookFunction("SpeechTransformProcess", 1, (args, next) => {
             let C = args[0];
             if (this.Active && C.IsPlayer()) {
-                args[2] = [];
-                return next(args);
+                let ghostChar = this.GetGhostCharacter(C);
+                try {
+                    args[0] = ghostChar;
+                    let ret = next(args);
+                    args[0] = C;
+                    return ret;
+                } finally {
+                    CharacterDelete(ghostChar);
+                }
             } else return next(args);
         }, ModuleCategory.States);
 
         hookFunction('Player.GetDeafLevel', 1, (args, next) => {
-            if (this.Active)
-                return 0;
+            if (this.Active) {
+                let ghostChar = this.GetGhostCharacter(Player);
+                try {
+                    return ghostChar.GetDeafLevel();
+                } finally {
+                    CharacterDelete(ghostChar);
+                }
+            }
             return next(args);
         }, ModuleCategory.States);
 
         hookFunction('Player.GetBlindLevel', 1, (args, next) => {
-            if (this.Active)
-                return 0;
+            if (this.Active) {
+                let ghostChar = this.GetGhostCharacter(Player);
+                try {
+                    return ghostChar.GetBlindLevel();
+                } finally {
+                    CharacterDelete(ghostChar);
+                }
+            }
             return next(args);
         }, ModuleCategory.States);
 

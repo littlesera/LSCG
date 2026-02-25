@@ -1154,7 +1154,9 @@ export function getBCXActiveCurseSlots(): AssetGroupName[] {
 
 export function CopyCharacter(C: Character, id: string, strip: boolean = true, removeItems: boolean = true): Character {
 	let newCharacter = CharacterLoadSimple(`LSCG-${id || C.ID}`);
-	
+	newCharacter.Name = C.Name;
+	newCharacter.Nickname = C.Nickname;
+
 	newCharacter.Appearance = AppearanceItemParse(CharacterAppearanceStringify(C));
 	if (strip) CharacterNaked(newCharacter, false);
 	if (removeItems) CharacterReleaseTotal(newCharacter, false);
