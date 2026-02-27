@@ -121,8 +121,8 @@ export class AstralProjectionState extends BaseState {
     }
 
     RestoreExpression(C: Character, config: GhostConfig) {
-        this.SetExpression(C, "Eyes", config.e);
-        this.SetExpression(C, "Mouth", config.m);
+        this.SetExpression(C, "Eyes", config?.e);
+        this.SetExpression(C, "Mouth", config?.m);
     }
 
     SetExpression(C: Character, group: ExpressionGroupName, expression: ExpressionName | undefined) {
