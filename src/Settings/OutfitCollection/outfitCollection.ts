@@ -184,7 +184,7 @@ export class OutfitCollection implements IOutfitCollection {
     }
 
     GetOutfitCollectionBytes(): number {
-        return GetDataSizeReport(LZString.compressToBase64(JSON.stringify(this)), false);
+        return GetDataSizeReport(LZString.compressToBase64(JSON.stringify(this)), false)?.sizeBytes;
     }
 
     GetOutfitKeys(): string[] {

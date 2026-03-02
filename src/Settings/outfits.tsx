@@ -1,12 +1,12 @@
 import { h } from "tsx-dom";
-import { ApplyItem, CopyCharacter, GetDataSizeReport, hookFunction, ICONS, isBind, isBody, isCloth, isCosplay, isGenitals, isHair, isPronouns, isSkin, parseFromBase64, smartGetAssetGroup } from "utils";
+import { ApplyItem, CopyCharacter, hookFunction, ICONS, isBind, isBody, isCloth, isCosplay, isGenitals, isHair, isPronouns, isSkin, smartGetAssetGroup } from "utils";
 import { GuiSubscreen, HelpInfo } from "./settingBase";
 import { OutfitSettings } from "./Models/base";
 import { OutfitCollectionModule } from "Modules/outfitCollection";
 import styles from "./outfits.scss?inline";
 import editorStyles from "./outfitEditor.scss?inline";
 import { clamp, entries, toArray, remove } from "lodash-es";
-import { Outfit, OutfitCollection } from "./OutfitCollection/outfitCollection";
+import { Outfit } from "./OutfitCollection/outfitCollection";
 import { drawTooltip } from "./settingUtils";
 import { OutfitStorageStrategy } from "./OutfitCollection/IOutfitCollection";
 
