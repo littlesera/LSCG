@@ -1,10 +1,8 @@
-import { ApplyBundleToCharacter, ApplyItem, BC_ItemToItemBundle, CopyCharacter, GetConfiguredItemBundlesFromOutfitKey, GetHandheldItemNameAndDescriptionConcat, GetItemNameAndDescriptionConcat, hookFunction, isAppearance, isBind, isCloth, isPhraseInString, settingsSave, StripCharacterNoRedraw } from "utils";
+import { ApplyBundleToCharacter, ApplyItem, BC_ItemToItemBundle, CopyCharacter, GetConfiguredItemBundlesFromOutfitKey, GetItemNameAndDescriptionConcat, hookFunction, isBind, isPhraseInString, settingsSave, StripCharacterNoRedraw } from "utils";
 import { BaseState } from "./BaseState";
 import { StateModule } from "Modules/states";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { getModule } from "modules";
-import { MagicModule } from "Modules/magic";
-import { CoreModule } from "Modules/core";
+import { debounce } from 'lodash-es';
 
 // TODO:
 // - Allow 'soulbind' bindings to be added to ghost and carry over from corporeal form if applied there.
@@ -47,6 +45,11 @@ export class AstralProjectionState extends BaseState {
 
     ghostCanvases: HTMLCanvasElement[] = [document.createElement("canvas"), document.createElement("canvas")];
     corporealCanvases: HTMLCanvasElement[] = [document.createElement("canvas"), document.createElement("canvas")];
+    CharactersToRequestAnim: Character[] = [];
+
+    debouncedRequestAnim = debounce(this.RequestAnim, 500, {
+        maxWait: 500
+    });
 
     constructor(state: StateModule) {
         super(state);
@@ -121,8 +124,8 @@ export class AstralProjectionState extends BaseState {
     }
 
     RestoreExpression(C: Character, config: GhostConfig) {
-        this.SetExpression(C, "Eyes", config.e);
-        this.SetExpression(C, "Mouth", config.m);
+        this.SetExpression(C, "Eyes", config?.e);
+        this.SetExpression(C, "Mouth", config?.m);
     }
 
     SetExpression(C: Character, group: ExpressionGroupName, expression: ExpressionName | undefined) {
@@ -140,7 +143,27 @@ export class AstralProjectionState extends BaseState {
         return C;
     }
 
+    RequestAnim() {
+        for (let char of this.CharactersToRequestAnim) {
+            AnimationPersistentStorage[AnimationGetDynamicDataName(char, AnimationDataTypes.Rebuild)] = true;
+        }
+        this.CharactersToRequestAnim = [];
+    }
+
     Init(): void {
+        // Limit animation frames if actively projected
+        hookFunction("AnimationRequestDraw", 4, (args, next) => {
+            let C = args[0] as OtherCharacter;
+            let activeStateConfig = C.LSCG?.StateModule.states.find(state => state.type === "astral-projection")
+            if (!activeStateConfig || !activeStateConfig.active || !C.MemberNumber) {
+                return next(args);
+            } else {
+                if (!this.CharactersToRequestAnim.find(ch => ch.MemberNumber == C.MemberNumber))
+                    this.CharactersToRequestAnim.push(C);
+                this.debouncedRequestAnim();
+            }
+        })
+
         hookFunction("CommonDrawResolveLayerExpression", 1, (args, next) => {
             if (!this.StateModule.Enabled) return next(args);
             let C = args[0] as Character;

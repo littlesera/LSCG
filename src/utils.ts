@@ -5,7 +5,7 @@ import { getModule } from "modules";
 import { CoreModule } from "Modules/core";
 import { ActivityEntryModel } from "Settings/Models/activities";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { clone, includes, trim } from "lodash-es";
+import { clone, debounce, includes, trim } from "lodash-es";
 import { SettingsModel } from "Settings/Models/settings";
 import { lt } from "semver";
 import { regEscape } from "./regEscape";
@@ -292,37 +292,45 @@ export function getRandomEntry<T>(arr: T[]) {
 	return arr[getRandomInt(arr.length)];
 }
 
-let savingFlag = 0;
-let savingPublishFlag = false;
+let pendingPublish = false;
+
+const executeSettingsSave = () => {
+    const shouldPublish = pendingPublish;
+    pendingPublish = false;
+
+    if (!Player.ExtensionSettings) {
+        Player.ExtensionSettings = <ExtensionSettings>{};
+    }
+
+    Player.ExtensionSettings.LSCG = LZString.compressToBase64(JSON.stringify(Player.LSCG));
+    localStorage.setItem(`LSCG_${Player.MemberNumber}_Backup`, Player.ExtensionSettings.LSCG);
+
+    // try {
+	// 	let cleaned = CleanDefaultsFromSettings(Player.LSCG);
+	// 	let cleanedAndCompressed = LZString.compressToBase64(JSON.stringify(cleaned));
+	// 	let cleanedDataSize = GetDataSizeReport(cleanedAndCompressed, false)?.sizeBytes;
+	// 	let currentDataSize = GetDataSizeReport(Player.ExtensionSettings.LSCG, false)?.sizeBytes;
+	// 	console.debug(`LSCG Save Size: ${currentDataSize} bytes, with clean it could be: ${cleanedDataSize} bytes`);
+    // } catch (error) {
+    //     console.debug(`Error during experimental clean: ${error}`);
+    // }
+
+    ServerPlayerExtensionSettingsSync("LSCG");
+    
+    if (shouldPublish) {
+        getModule<CoreModule>("CoreModule")?.SendPublicPacket(false, "sync");
+    }
+};
+
+const debouncedSave = debounce(executeSettingsSave, 1000, {
+    leading: true,
+    trailing: true,
+    maxWait: 1000
+});
 
 export function settingsSave(publish: boolean = false) {
-	if (!Player.ExtensionSettings)
-		Player.ExtensionSettings = <ExtensionSettings>{};
-	Player.ExtensionSettings.LSCG = LZString.compressToBase64(JSON.stringify(Player.LSCG));
-	localStorage.setItem(`LSCG_${Player.MemberNumber}_Backup`, Player.ExtensionSettings.LSCG);
-	
-	try {
-		let cleaned = CleanDefaultsFromSettings(Player.LSCG);
-		let cleanedAndCompressed = LZString.compressToBase64(JSON.stringify(cleaned));
-		let cleanedDataSize = GetDataSizeReport(cleanedAndCompressed, false);
-		let currentDataSize = GetDataSizeReport(Player.ExtensionSettings.LSCG, false);
-		//console.debug(`LSCG Save Size: ${currentDataSize} bytes, with clean it could be: ${cleanedDataSize} bytes`);
-	} catch (error) {
-		console.debug(`Error during experimental clean: ${error}`);
-	}
-
-	savingPublishFlag = savingPublishFlag || publish;
-	if (!savingFlag) {
-		savingFlag = setTimeout(() => {
-			ServerPlayerExtensionSettingsSync("LSCG");
-			if (savingPublishFlag) {
-				getModule<CoreModule>("CoreModule")?.SendPublicPacket(false, "sync");
-			}
-			clearTimeout(savingFlag);
-			savingPublishFlag = false;
-			savingFlag = 0;
-		}, 1000);
-	}
+    pendingPublish = pendingPublish || publish;
+    debouncedSave();
 }
 
 export function CompressLSCGSettings(): string {
@@ -926,26 +934,93 @@ function measureDataSize(data: any) {
     return 0;
 }
 
-// Data Measuring Function from Joshmir
-export function GetDataSizeReport(data: any, log: boolean = true): number {
-    let res = `Type: ${data == null ? "null" : Array.isArray(data) ? "array" : typeof data}\n`;
-	let totalSize = measureDataSize(data);
-    res += `Size: ${totalSize}\n`;
+export interface SizeReport {
+    type: string;
+    sizeBytes: number;
+    value?: any; // Only populated for smaller primitives to aid debugging
+    children?: Record<string, SizeReport>; // Breakdown of arrays/objects
+}
 
-    if (typeof data === "string" && data.length < 64) {
-        res += `Value: ${JSON.stringify(data)}\n`;
+/**
+ * Recursively calculates the size of a JavaScript value.
+ * @param data The data to measure
+ * @param visited A WeakSet to keep track of objects and prevent infinite circular loops
+ */
+function buildSizeTree(data: any, visited: WeakSet<any> = new WeakSet()): SizeReport {
+    // 1. Handle Null/Undefined
+    if (data === null) return { type: "null", sizeBytes: 0, value: "null" };
+    if (data === undefined) return { type: "undefined", sizeBytes: 0, value: "undefined" };
+
+    const type = typeof data;
+
+    // 2. Handle Primitives
+    if (type === "string") {
+        return { type, sizeBytes: data.length * 2, value: data.length < 64 ? data : undefined };
+    }
+    if (type === "number") {
+        return { type, sizeBytes: 8, value: data };
+    }
+    if (type === "boolean") {
+        return { type, sizeBytes: 4, value: data };
+    }
+    if (type === "symbol") {
+        return { type, sizeBytes: data.toString().length * 2 };
     }
 
-    if (!!data && typeof data === "object" && !Array.isArray(data)) {
-        res += "Breakdown by keys:\n";
-        for (const [key, value] of Object.entries(data).sort((a, b) => measureDataSize(b[1]) - measureDataSize(a[1]))) {
-            res += `- ${key}: ${measureDataSize(value)}\n`;
+    // 3. Handle Objects and Arrays
+    if (type === "object") {
+        // Prevent infinite loops from circular references
+        if (visited.has(data)) {
+            return { type: "circular_reference", sizeBytes: 0, value: "[Circular]" };
         }
+        visited.add(data);
+
+        const isArray = Array.isArray(data);
+        let totalSizeBytes = 0;
+        const childrenMap: Record<string, SizeReport> = {};
+
+        // Iterate through keys, calculate inclusive child size, and add to total
+        for (const key of Object.keys(data)) {
+            const childReport = buildSizeTree(data[key], visited);
+            
+            // Note: Object keys are strings and take up memory too!
+            const keySizeBytes = key.length * 2; 
+            
+            totalSizeBytes += keySizeBytes + childReport.sizeBytes;
+            childrenMap[key] = childReport;
+        }
+
+        // Sort children by size descending so the biggest items are at the top
+        const sortedChildren: Record<string, SizeReport> = {};
+        Object.entries(childrenMap)
+            .sort((a, b) => b[1].sizeBytes - a[1].sizeBytes)
+            .forEach(([k, v]) => {
+                sortedChildren[k] = v;
+            });
+
+        return {
+            type: isArray ? "array" : "object",
+            sizeBytes: totalSizeBytes,
+            children: sortedChildren,
+        };
     }
 
-	if (log)
-    	console.log(res);
-	return totalSize;
+    // Fallback for functions, etc.
+    return { type, sizeBytes: 0 };
+}
+
+/**
+ * Generates an inclusive size report of a JS object/array and optionally logs it.
+ */
+export function GetDataSizeReport(data: any, log: boolean = true): SizeReport {
+    const report = buildSizeTree(data);
+    
+    if (log) {
+        // Log formatted JSON with 2-space indentation for easy reading
+        console.log(JSON.stringify(report, null, 2));
+    }
+    
+    return report;
 }
 
 export function stringIsCompressedItemBundleArray(str: string): boolean {
