@@ -1232,7 +1232,8 @@ export function CopyCharacter(C: Character, id: string, strip: boolean = true, r
 	let newCharacter = CharacterLoadSimple(`LSCG-${id || C.ID}`);
 	newCharacter.Name = C.Name;
 	newCharacter.Nickname = C.Nickname;
-
+	newCharacter.ArousalSettings = C.ArousalSettings;
+	
 	newCharacter.Appearance = AppearanceItemParse(CharacterAppearanceStringify(C));
 	if (strip) StripCharacterNoRedraw(newCharacter);
 	if (removeItems) CharacterReleaseTotal(newCharacter, false);
