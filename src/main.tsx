@@ -35,13 +35,10 @@ export {
 	HypnoTriggers, 
 	ConfiguredActivities, 
 	GetDataSizeReport,
-	CleanDefaultsFromSettings,
 	ExportSettings,
 	ImportSettings,
 	getModule,
 	sendLSCGBeep,
-	CheckVersionUpdate,
-	TestOutfitMigration,
 	Outfits
 };
 
