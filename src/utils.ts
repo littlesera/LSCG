@@ -690,6 +690,9 @@ export function GetMetadata(data: ServerChatRoomMessage): LSCGChatRoomMessageMet
 	let sender = getCharacter(data.Sender ?? -1);
 	if (!sender)
 		sender = Player; // No sender usually means we're actively sending it..
+	if (!ChatRoomData) // Some weird race condition maybe where the ChatRoomData hasn't loaded yet?
+		return undefined;
+		
 	return ChatRoomMessageRunExtractors(data, sender).metadata;
 }
 
