@@ -690,6 +690,9 @@ export function GetMetadata(data: ServerChatRoomMessage): LSCGChatRoomMessageMet
 	let sender = getCharacter(data.Sender ?? -1);
 	if (!sender)
 		sender = Player; // No sender usually means we're actively sending it..
+	if (!ChatRoomData) // Some weird race condition maybe where the ChatRoomData hasn't loaded yet?
+		return undefined;
+		
 	return ChatRoomMessageRunExtractors(data, sender).metadata;
 }
 
@@ -941,6 +944,8 @@ export interface SizeReport {
     children?: Record<string, SizeReport>; // Breakdown of arrays/objects
 }
 
+const utf8Encoder = new TextEncoder();
+
 /**
  * Recursively calculates the size of a JavaScript value.
  * @param data The data to measure
@@ -955,7 +960,7 @@ function buildSizeTree(data: any, visited: WeakSet<any> = new WeakSet()): SizeRe
 
     // 2. Handle Primitives
     if (type === "string") {
-        return { type, sizeBytes: data.length * 2, value: data.length < 64 ? data : undefined };
+        return { type, sizeBytes: utf8Encoder.encode(data).byteLength, value: data.length < 64 ? data : undefined };
     }
     if (type === "number") {
         return { type, sizeBytes: 8, value: data };
@@ -969,7 +974,6 @@ function buildSizeTree(data: any, visited: WeakSet<any> = new WeakSet()): SizeRe
 
     // 3. Handle Objects and Arrays
     if (type === "object") {
-        // Prevent infinite loops from circular references
         if (visited.has(data)) {
             return { type: "circular_reference", sizeBytes: 0, value: "[Circular]" };
         }
@@ -979,13 +983,9 @@ function buildSizeTree(data: any, visited: WeakSet<any> = new WeakSet()): SizeRe
         let totalSizeBytes = 0;
         const childrenMap: Record<string, SizeReport> = {};
 
-        // Iterate through keys, calculate inclusive child size, and add to total
         for (const key of Object.keys(data)) {
             const childReport = buildSizeTree(data[key], visited);
-            
-            // Note: Object keys are strings and take up memory too!
-            const keySizeBytes = key.length * 2; 
-            
+            const keySizeBytes = isArray ? 0 : utf8Encoder.encode(key).byteLength; 
             totalSizeBytes += keySizeBytes + childReport.sizeBytes;
             childrenMap[key] = childReport;
         }
