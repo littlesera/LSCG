@@ -251,3 +251,8 @@
 		border-width: min(0.3dvh, 0.15dvw);
 	}
 }
+
+/* Add a minor background discoloration in order to subtely increase the contrast w.r.t. the other crafting modes */
+#crafting-slot-screen[data-mode="LSCGShare"] {
+	background-color: rgba(0, 255, 255, 0.06);
+}
