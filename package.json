@@ -9,7 +9,8 @@
     "watch-prod": "vite build --watch",
     "serve": "serve dist -p 10001 --cors",
     "dev": "typed-scss-modules src --exportType=default --nameFormat=none && concurrently \"npm run watch\" \"npm run serve\"",
-    "prod-watch": "typed-scss-modules src --exportType=default --nameFormat=none && concurrently \"npm run watch-prod\" \"npm run serve\""
+    "prod-watch": "typed-scss-modules src --exportType=default --nameFormat=none && concurrently \"npm run watch-prod\" \"npm run serve\"",
+    "typecheck": "tsc --noEmit -p ."
   },
   "keywords": [],
   "author": "Little Sera",
