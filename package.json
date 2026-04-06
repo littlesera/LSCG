@@ -9,7 +9,8 @@
     "watch-prod": "vite build --watch",
     "serve": "serve dist -p 10001 --cors",
     "dev": "typed-scss-modules src --exportType=default --nameFormat=none && concurrently \"npm run watch\" \"npm run serve\"",
-    "prod-watch": "typed-scss-modules src --exportType=default --nameFormat=none && concurrently \"npm run watch-prod\" \"npm run serve\""
+    "prod-watch": "typed-scss-modules src --exportType=default --nameFormat=none && concurrently \"npm run watch-prod\" \"npm run serve\"",
+    "typecheck": "tsc --noEmit -p ."
   },
   "keywords": [],
   "author": "Little Sera",
@@ -29,7 +30,7 @@
   "devDependencies": {
     "@types/node": "^25.3.0",
     "@types/semver": "^7.7.1",
-    "bc-stubs": "^125.0.1",
+    "bc-stubs": "^126.0.0",
     "concurrently": "^9.2.1",
     "eslint": "^10.0.1",
     "lodash-es": "^4.17.23",

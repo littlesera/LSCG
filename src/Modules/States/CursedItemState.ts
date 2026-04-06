@@ -176,7 +176,7 @@ export class CursedItemState extends BaseState {
 
         //TODO -- On each tick (1s interval) check each active outfitfor their spread speed and if they are due (need to save last tick time)
         //let cursesToCheck = this.ActiveOutfits?.filter(cursedItem => cursedItem.lastTick + this.ItemInterval(cursedItem) < now);
-        // When due: 
+        // When due:
         activeOutfits?.forEach(cursedItem => {
             refreshNeeded ||= this.TickCursedItem(now, cursedItem);
         });
@@ -228,7 +228,7 @@ export class CursedItemState extends BaseState {
     ];
 
     getItemColorString(item: ItemBundle | Item) {
-        let itemColor = isString(item.Color) ? item.Color : "Default";
+        let itemColor: string = isString(item.Color) ? item.Color : "Default";
         if (isArray(item.Color) && ((item.Color.length == 1 && item.Color[0] == "Default") || item.Color.length == 0)) {
             itemColor = "Default";
         }
@@ -255,7 +255,7 @@ export class CursedItemState extends BaseState {
 
     itemBundleMatch(bundle: ItemBundle, item: Item) {
         return item.Craft?.Name == bundle.Craft?.Name &&
-                item.Asset.Name == bundle.Name && 
+                item.Asset.Name == bundle.Name &&
                 item.Asset.Group.Name == bundle.Group &&
                 this.equateColor(bundle, item);
     }
@@ -280,11 +280,11 @@ export class CursedItemState extends BaseState {
             let otherWornCursedOutfitItemGroups = this.getAllOtherCursedBundles(cursedItem).map(b => InventoryGet(Player, b.Group)?.Asset.Group.Name).filter(i => !!i).concat(getBCXActiveCurseSlots());
 
             //  2a) Check for strippable items
-            let itemsToStrip = wornItems.filter(item => 
+            let itemsToStrip = wornItems.filter(item =>
                 this.shouldStripItem(item, cursedItem.Strip) &&
                 !otherWornCursedOutfitItemGroups.includes(item.Asset.Group.Name) &&
                 !outfitItems.some(bundle => this.itemBundleMatch(bundle, item)));
-            
+
             if (!!itemsToStrip && itemsToStrip.length > 0) {
                 if (cursedItem.Speed == "instant" || cursedItem.InstaStrip) {
                     // If instant strip all
@@ -315,7 +315,7 @@ export class CursedItemState extends BaseState {
             let replacingKeyItemWhileItemsStillToRemove = itemsToStrip.length > 0 && itemsToApply.length == 1 && itemsToApply[0]?.Group == keyItem.Asset.Group.Name;
             // 3) If no items remain unworn and cursed item is not inexhaustable, remove the key item otherwise pick what to wear
             if ((itemsToStrip?.length <= 0) &&
-                (itemsToApply?.length <= 0) && 
+                (itemsToApply?.length <= 0) &&
                 !this.Inexhaustable(cursedItem)) {
                 this.ClearActiveOutfit(cursedItem.CurseName);
                 refreshNeeded = true;
@@ -382,8 +382,8 @@ export class CursedItemState extends BaseState {
     _cursesAppliedRecently: string[] = [];
 
     checkItemIsValid(item: CursedItemWorn) {
-        if (!this.Settings || !this.Settings.enabled || !this.Settings.Vulnerable) return false;        
-        
+        if (!this.Settings || !this.Settings.enabled || !this.Settings.Vulnerable) return false;
+
         let curseKey = item.CurseName + "|" + item.Crafter;
         if (includes(this._cursesAppliedRecently, curseKey)) {
             return false;
@@ -396,7 +396,7 @@ export class CursedItemState extends BaseState {
 
         let allowedMember = false;
         switch (this.Settings.Allowed) {
-            case "Public": 
+            case "Public":
                 allowedMember = Player.BlackList.indexOf(item.Crafter) == -1;
             case "Friend":
                 allowedMember ||= (Player.FriendList?.indexOf(item.Crafter) ?? -1) > -1;
@@ -410,7 +410,7 @@ export class CursedItemState extends BaseState {
                 allowedMember ||= item.Crafter == Player.MemberNumber;
                 break;
         }
-        
+
         return allowedMember;
     }
 
@@ -421,11 +421,11 @@ export class CursedItemState extends BaseState {
             .filter((val, ix, arr) => arr.indexOf(val) == ix) ?? [];
     }
 
-    itemIsAllowed(item: ItemBundle, acting: number) {        
+    itemIsAllowed(item: ItemBundle, acting: number) {
         let asset = AssetGet(Player.AssetFamily, item.Group, item.Name);
         if (!asset) return false;
         let worn = InventoryGet(Player, item.Group);
-        
+
         let ownerBlocked = asset.OwnerOnly && !Player.IsOwnedByMemberNumber(acting);
         let loverBlocked = asset.LoverOnly && !Player.IsLoverOfMemberNumber(acting);
         let familyBlocked = asset.FamilyOnly && !Player.IsInFamilyOfMemberNumber(acting);
@@ -433,7 +433,7 @@ export class CursedItemState extends BaseState {
         let isBlocked = asset && InventoryIsPermissionBlocked(Player, asset.DynamicName(Player), asset.Group.Name);
         let isLimited = asset && InventoryIsPermissionLimited(Player, asset.DynamicName(Player), asset.Group.Name);
         let isRoomDisallowed = !InventoryChatRoomAllow(asset?.Category ?? []);
-        
+
         let isLocked = !!worn && !CanUnlock(acting, Player, worn);
         let cosplayBlocked = isCosplay(asset) && !canChangeCosplay(acting, Player);
 
@@ -448,10 +448,10 @@ export class CursedItemState extends BaseState {
 
         let keyItemIsCollarAcc = keyItem.Asset.Group.Name == "ItemNeckAccessories" || keyItem.Asset.Group.Name == "ItemNeckRestraints";
 
-        let res = sortBy(array, 
+        let res = sortBy(array,
             item => item.Group == keyItem.Asset.Group.Name,
             item => (keyItemIsCollarAcc && item.Group == "ItemNeck"),
-            item => isBind(item.Group, []), 
+            item => isBind(item.Group, []),
             item => AssetGet(Player.AssetFamily ?? "Female3DCG", item.Group, item.Name)?.IsRestraint,
             item => CommonIsNumeric(item.Property?.OverridePriority ?? 0) ? (item.Property?.OverridePriority ?? 0) : Math.max(...Object.values(item.Property?.OverridePriority ?? {}), 0)
         )

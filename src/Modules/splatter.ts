@@ -84,7 +84,7 @@ export class SplatterMapping {
         return group.map(key => record[key]).reduce((sum, x) => sum + x, 0);
     }
 
-    incrementSplat(loc: SplatterLocation, colorOverride: ItemColor | null = "Default", opacityOverride: number | null = 70): void {
+    incrementSplat(loc: SplatterLocation, colorOverride: BCColor = "Default", opacityOverride: number | null = 70): void {
         if (!(loc in locations)) {
             console.warn(`Location '${loc}' not found.`);
             return;
@@ -143,7 +143,7 @@ export class SplatterMapping {
         })
     }
 
-    splatAtFlag(flagToFlip: string | undefined, colorOverride: ItemColor | null = "Default", opacityOverride: number | null = 70) {
+    splatAtFlag(flagToFlip: string | undefined, colorOverride: BCColor = "Default", opacityOverride: number | null = 70) {
         if (!!flagToFlip) {
             let items = this.getSplatItems();
             let targetItem;
@@ -162,7 +162,7 @@ export class SplatterMapping {
                     targetItem.Color = recKeys.map(k => "Default");
                 }
                 if (Array.isArray(targetItem.Color)) {
-                    targetItem.Color = targetItem.Color.map((col, ix, arr) => (ix == recKeys.indexOf(flagToFlip!)) ? (<string>colorOverride) : col);
+                    targetItem.Color = targetItem.Color.map((col, ix, arr) => (ix == recKeys.indexOf(flagToFlip!)) ? colorOverride : col);
                 }
                 if (!targetItem.Property.Opacity) {
                     targetItem.Property.Opacity = recKeys.map(k => 1);
@@ -195,11 +195,11 @@ export class SplatterMapping {
         if (!!foundFlag) {
             return this.getSplatItems().find(item => item?.Property?.TypeRecord?.[foundFlag!] == 1);
         }
-        
+
         return;
     }
 
-    getColorAtLocation(location: SplatterLocation): ItemColor | undefined {
+    getColorAtLocation(location: SplatterLocation): BCColor | undefined {
         let foundFlag = this.findHighestFlagFromLocation(location);
         let item = this.findItemFromLocation(location);
         let allFlags = Object.keys(bcSplats);
@@ -223,11 +223,11 @@ export class SplatterMapping {
             else
                 return item.Property?.Opacity;
         }
-        
+
         return;
     }
 
-    splatInMouth(colorOverride: ItemColor | null = "Default", opacityOverride: number | null = 70) {
+    splatInMouth(colorOverride: BCColor = "Default", opacityOverride: number | null = 70) {
         this.splatAtFlag('o', colorOverride, opacityOverride);
     }
 
@@ -271,7 +271,7 @@ export class SplatterModule extends BaseModule {
 
     get settings(): SplatterSettingsModel {
         return super.settings as SplatterSettingsModel;
-	}    
+	}
 
     recentPartners: number[] = [];
 
@@ -283,10 +283,10 @@ export class SplatterModule extends BaseModule {
         this.CleanSplatter("all");
     }
 
-    getColorOverride(colorOverride: string | null): string {
+    getColorOverride(colorOverride: string | null): BCColor {
         if (!colorOverride)
             return "Default";
-        let colorOverrideArr = colorOverride?.split(",").map(s => s.trim()).filter(color => /^#(?:[0-9a-fA-F]{3}){1,2}$/.test(color));
+        let colorOverrideArr = colorOverride?.split(",").map(s => s.trim()).filter(color => CommonIsColor(color));
         return (!!colorOverrideArr && colorOverrideArr?.length > 0) ? colorOverrideArr[getRandomInt(colorOverrideArr?.length)] : "Default";
     }
 
@@ -316,7 +316,7 @@ export class SplatterModule extends BaseModule {
             if (!this.Enabled)
                 return;
             let target = GetTargetCharacter(data);
-            if (!!target && 
+            if (!!target &&
                 !!sender &&
                 target == Player.MemberNumber) {
                     if (this.splatAllowed(sender, <OtherCharacter><Character>Player)) {
@@ -333,7 +333,7 @@ export class SplatterModule extends BaseModule {
                                 this.AddSplatter(sender, "forehead", colorOverride, opacityOverride);
                                 break;
                             case "ChatOther-ItemBreast-LSCG_Splat":
-                            case "ChatSelf-ItemBreast-LSCG_Splat":    
+                            case "ChatSelf-ItemBreast-LSCG_Splat":
                                 this.AddSplatter(sender, "chest", colorOverride, opacityOverride);
                                 break;
                             case "ChatOther-ItemPelvis-LSCG_Splat":
@@ -388,7 +388,7 @@ export class SplatterModule extends BaseModule {
                                 break;
                         }
                     }
-        
+
                     var item = data.Dictionary?.find((d: any) => d.Tag == "ActivityAsset");
                     if (!!item && item.AssetName == "Towel") {
                         switch (data.Content) {
@@ -503,8 +503,8 @@ export class SplatterModule extends BaseModule {
             let C = args[0];
             if (C.IsPlayer() &&
                 CurrentScreen == "ChatRoom" &&
-                this.Enabled && 
-                this.canGiveSplat(Player) && 
+                this.Enabled &&
+                this.canGiveSplat(Player) &&
                 this.settings.autoSplat &&
                 !ActivityOrgasmRuined) {
                 this.PromptForSplat(() => next(args));
@@ -524,7 +524,7 @@ export class SplatterModule extends BaseModule {
                         DrawButton(this.START_X, 480, 240, 60, "Yourself", "White", undefined, undefined, false);
                         DrawButton(this.START_X + 250, 480, 240, 60, "Nobody", "White", undefined, undefined, false);
                         DrawButton(this.START_X + 500, 480, 240, 60, "Uncontrolled", "White", undefined, undefined, false);
-                        
+
                         if (!this.settings.uncontrollableWhenBound || !Player.IsRestrained()) { // If bound, remove control of where to cum if setting is true
                             this.getTargetSelectAreas().forEach(pair => {
                                 let rect = pair[0];
@@ -552,7 +552,7 @@ export class SplatterModule extends BaseModule {
             } else if (this.AutoSplatPrompt) {
                 this.ResetPrompt();
             }
-            return next(args);            
+            return next(args);
         }, ModuleCategory.Splatter);
 
         hookFunction("ChatRoomClick", 1, (args, next) => {
@@ -561,7 +561,7 @@ export class SplatterModule extends BaseModule {
                     if (MouseIn(this.START_X, 480, 240, 60)) this.AutoSplatTarget = Player.MemberNumber ?? -1;
                     if (MouseIn(this.START_X + 250, 480, 240, 60)) this.ResetPrompt();
                     if (MouseIn(this.START_X + 500, 480, 240, 60)) this.RandomSplat();
-                    
+
                     if (!Player.IsRestrained() || Player.CanWalk()) { // If bound, remove control of where to cum
                         this.getTargetSelectAreas().forEach(pair => {
                             let rect = pair[0];
@@ -636,7 +636,7 @@ export class SplatterModule extends BaseModule {
     unload(): void {
         removeAllHooksByModule(ModuleCategory.Splatter);
     }
-    
+
     splatAllowed(acting: Character, acted: OtherCharacter) {
         if (acted.MemberNumber == acting.MemberNumber)
             return true;
@@ -662,12 +662,12 @@ export class SplatterModule extends BaseModule {
     getSplats(C?: Character): Array<Item | null> {
         C = C ?? Player;
         return [InventoryGet(C, "BodyMarkings"),InventoryGet(C, "FaceMarkings" as AssetGroupBodyName)].filter(m => !!m && m.Asset.Name == "Splatter");
-    }    
-    
+    }
+
     splatSlotOccupied() {
         return this.getSplats().length == this.TOTAL_SPLAT_SLOTS;
     }
-    
+
     FindSplatterTargets(): Character[] {
         let partners = this.recentPartners.map(p => getCharacter(p)).filter(c => !!c) as Character[];
         let mySpot = ChatRoomCharacter.findIndex(c => c.MemberNumber == Player.MemberNumber);
@@ -684,7 +684,7 @@ export class SplatterModule extends BaseModule {
             ActivityOrgasmGameTimer = Player.ArousalSettings.OrgasmTimer - CurrentTime;
             Player.ArousalSettings.OrgasmStage = 2;
         }
-        
+
         if (Player.IsRestrained() && !Player.CanWalk()) { // If bound, remove control of where to cum
             this.RandomSplat();
         }
@@ -751,7 +751,7 @@ export class SplatterModule extends BaseModule {
         ChatRoomCharacterUpdate(Player);
     }
 
-    AddSplatter(sender: Character, location: SplatterLocation, colorOverride: ItemColor | null, opacityOverride: number | null) {
+    AddSplatter(sender: Character, location: SplatterLocation, colorOverride: BCColor, opacityOverride: number | null) {
         console.info(`Adding splatter to ${location}`);
         new SplatterMapping(Player).incrementSplat(location, colorOverride, opacityOverride);
         ChatRoomCharacterUpdate(Player);
@@ -781,7 +781,7 @@ export class SplatterModule extends BaseModule {
         return new SplatterMapping(C).getCurrentSplatTier(location) > 0;
     }
 
-    private getColorSource(source: Character | undefined | null, sourceLocation: SplatterLocation | undefined | null): ItemColor | undefined {
+    private getColorSource(source: Character | undefined | null, sourceLocation: SplatterLocation | undefined | null): BCColor | undefined {
         if (!source || !sourceLocation)
             return;
 
