@@ -263,8 +263,8 @@ export class CursedItemState extends BaseState {
     shouldStripItem(item: Item, level: StripLevel): boolean {
         return  !isProtectedFromRemoval(item) &&
                 ((isCloth(item, false, false) && !!(level & StripLevel.CLOTHES)) ||
-                (isCosplay(item) && !!(level & StripLevel.UNDERWEAR)) ||
-                (isUnderwear(item) && !!(level & StripLevel.COSPLAY)));
+                (isCosplay(item) && !!(level & StripLevel.COSPLAY)) ||
+                (isUnderwear(item) && !!(level & StripLevel.UNDERWEAR)));
     }
 
     TickCursedItem(now: number, cursedItem: CursedItemWorn): boolean {
