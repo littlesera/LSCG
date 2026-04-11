@@ -70,6 +70,8 @@ export class OpacityModule extends BaseModule {
     TranslateYElement: HTMLInputElement | undefined;
     lastX: number = 0;
     lastY: number = 0;
+    /** An abort controller for removing the canvas-attached translation listeners */
+    listenerRemover: null | AbortController = null;
 
     domUI = Object.freeze({
         shape: [40, 80, 650, 740] as RectTuple,
@@ -753,10 +755,11 @@ export class OpacityModule extends BaseModule {
         if (!CanvasElement)
             return;
 
-        CanvasElement.addEventListener("pointerdown", evt => this.TranslateStart(CanvasElement, evt));
-        CanvasElement.addEventListener("pointermove", evt => this.TranslateMove(CanvasElement, evt));
-        CanvasElement.addEventListener("pointerup", evt => this.TranslateEnd(CanvasElement, evt));
-        CanvasElement.addEventListener("pointercancel", evt => this.TranslateEnd(CanvasElement, evt));
+        const controller = this.listenerRemover = new AbortController();
+        CanvasElement.addEventListener("pointerdown", evt => this.TranslateStart(CanvasElement, evt), { signal: controller.signal });
+        CanvasElement.addEventListener("pointermove", evt => this.TranslateMove(CanvasElement, evt), { signal: controller.signal });
+        CanvasElement.addEventListener("pointerup", evt => this.TranslateEnd(CanvasElement, evt), { signal: controller.signal });
+        CanvasElement.addEventListener("pointercancel", evt => this.TranslateEnd(CanvasElement, evt), { signal: controller.signal });
 
         // Propagate the vanilla BC opacity slider changes to LSCG
         const rootID: string = ColorPicker.ids.root;
@@ -790,10 +793,10 @@ export class OpacityModule extends BaseModule {
         let CanvasElement = document.getElementById("MainCanvas");
         if (!CanvasElement)
             return;
-        CanvasElement.removeEventListener("pointerdown", evt => this.TranslateStart(CanvasElement, evt));
-        CanvasElement.removeEventListener("pointermove", evt => this.TranslateMove(CanvasElement, evt));
-        CanvasElement.removeEventListener("pointerup", evt => this.TranslateEnd(CanvasElement, evt));
-        CanvasElement.removeEventListener("pointercancel", evt => this.TranslateEnd(CanvasElement, evt));
+
+        // Remove the translation listeners
+        this.listenerRemover?.abort();
+        this.listenerRemover = null;
     }
 
     ResetTranslation() {
