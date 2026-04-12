@@ -333,7 +333,6 @@ export class OpacityModule extends BaseModule {
     }
 
     onToggleTranslate(evt?: Event) {
-        console.info(evt);
         let opacity = document.getElementById(ID.opacity);
         let translate = document.getElementById(ID.translate);
         let allLayerCheck = document.getElementById(ID.allLayersCheck) as HTMLInputElement;
