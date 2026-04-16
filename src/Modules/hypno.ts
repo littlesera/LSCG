@@ -551,7 +551,7 @@ export class HypnoModule extends BaseModule {
         "%NAME%'s eyes flutter as %PRONOUN% fights to keep them open...",
         "%NAME% yawns and struggles to stay awake...",
         "%NAME% can feel %POSSESSIVE% eyelids grow heavy as %PRONOUN% drifts on the edge of sleep...",
-        "%NAME% takes a deep, relaxing breath as %POSSESSIVE% muscles relax and %PRONOUN% eyes start to droop..."
+        "%NAME% takes a deep, relaxing breath as %POSSESSIVE% muscles relax and %POSSESSIVE% eyes start to droop..."
     ]
 
     delayedActivations: Map<string, number> = new Map<string,number>();
