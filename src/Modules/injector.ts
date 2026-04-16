@@ -1224,7 +1224,7 @@ export class InjectorModule extends BaseModule {
     }
 
     breathSedativeEventStr: string[] = [
-        "%NAME%'s muscles relax limply as %PRONOUN% takes a deep breath of.",
+        "%NAME%'s muscles relax limply as %PRONOUN% takes a deep breath.",
         "%NAME%'s eyes flutter weakly as %PRONOUN% inhales.",
         "%NAME% struggles to keep %POSSESSIVE% drooping eyes open as %POSSESSIVE% device continues to emit its sedative gas."
     ];
@@ -1244,7 +1244,7 @@ export class InjectorModule extends BaseModule {
     breathAntidoteEventStr: string[] = [
         "%NAME% sighs with relief as %PRONOUN% takes a deep gulp of healing mist.",
         "%NAME% feels a tingle across %POSSESSIVE% skin as %POSSESSIVE% device heals %INTENSIVE%.",
-        "%NAME% lets out a quiet moan as %POSSESSIVE% device releases a healing mist into %INTENSIVE% lungs."
+        "%NAME% lets out a quiet moan as %POSSESSIVE% device releases a healing mist into %POSSESSIVE% lungs."
     ];
 
     BreathInDrugEvent() {

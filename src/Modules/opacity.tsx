@@ -70,6 +70,8 @@ export class OpacityModule extends BaseModule {
     TranslateYElement: HTMLInputElement | undefined;
     lastX: number = 0;
     lastY: number = 0;
+    /** An abort controller for removing the canvas-attached translation listeners */
+    listenerRemover: null | AbortController = null;
 
     domUI = Object.freeze({
         shape: [40, 80, 650, 740] as RectTuple,
@@ -331,7 +333,6 @@ export class OpacityModule extends BaseModule {
     }
 
     onToggleTranslate(evt?: Event) {
-        console.info(evt);
         let opacity = document.getElementById(ID.opacity);
         let translate = document.getElementById(ID.translate);
         let allLayerCheck = document.getElementById(ID.allLayersCheck) as HTMLInputElement;
@@ -605,27 +606,21 @@ export class OpacityModule extends BaseModule {
 
     isDragging: boolean = false;
 
-    TranslateStart(evt: TouchEvent | MouseEvent) {
-        if (isTouchEvent(evt) && evt.changedTouches) {
-            if (evt.changedTouches.length > 1) return;
-        }
-
+    TranslateStart(elem: HTMLElement, evt: PointerEvent) {
         if (this.TranslationMode && MouseIn(700, 0, 500, 1000)) {
             this.isDragging = true;
             this.lastX = MouseX;
             this.lastY = MouseY;
         }
+        elem.setPointerCapture(evt.pointerId);
         let ui = document.getElementById(ID.root);
         if (!!ui) {
             ui.classList.add("lscg-translate-dragging");
         }
     }
 
-    TranslateMove(evt: TouchEvent | MouseEvent) {
+    TranslateMove(elem: HTMLElement, evt: PointerEvent) {
         if (!this.isDragging || !this.TranslationMode) return;
-        if (isTouchEvent(evt) && evt.changedTouches) {
-            if (evt.changedTouches.length > 1) return;
-        }
 
         let mX = Math.min(Math.max(MouseX, 700), 1200);
         let mY = Math.min(Math.max(MouseY, 0), 1000);
@@ -642,7 +637,8 @@ export class OpacityModule extends BaseModule {
         this.UpdatePreview();
     }
 
-    TranslateEnd(evt: TouchEvent | MouseEvent) {
+    TranslateEnd(elem: HTMLElement, evt: PointerEvent) {
+        elem.releasePointerCapture(evt.pointerId);
         this.isDragging = false;
         let ui = document.getElementById(ID.root);
         if (!!ui) {
@@ -757,14 +753,12 @@ export class OpacityModule extends BaseModule {
         let CanvasElement = document.getElementById("MainCanvas");
         if (!CanvasElement)
             return;
-        if (!CommonIsMobile) {
-            CanvasElement.addEventListener("mousedown", evt => this.TranslateStart(evt));
-            CanvasElement.addEventListener("mouseup", evt => this.TranslateEnd(evt));
-            CanvasElement.addEventListener("mousemove", evt => this.TranslateMove(evt));
-        }
-        CanvasElement.addEventListener("touchstart", evt => this.TranslateStart(evt));
-        CanvasElement.addEventListener("touchend", evt => this.TranslateEnd(evt));
-        CanvasElement.addEventListener("touchmove", evt => this.TranslateMove(evt));
+
+        const controller = this.listenerRemover = new AbortController();
+        CanvasElement.addEventListener("pointerdown", evt => this.TranslateStart(CanvasElement, evt), { signal: controller.signal });
+        CanvasElement.addEventListener("pointermove", evt => this.TranslateMove(CanvasElement, evt), { signal: controller.signal });
+        CanvasElement.addEventListener("pointerup", evt => this.TranslateEnd(CanvasElement, evt), { signal: controller.signal });
+        CanvasElement.addEventListener("pointercancel", evt => this.TranslateEnd(CanvasElement, evt), { signal: controller.signal });
 
         // Propagate the vanilla BC opacity slider changes to LSCG
         const rootID: string = ColorPicker.ids.root;
@@ -798,12 +792,10 @@ export class OpacityModule extends BaseModule {
         let CanvasElement = document.getElementById("MainCanvas");
         if (!CanvasElement)
             return;
-        CanvasElement.removeEventListener("mousedown", evt => this.TranslateStart(evt));
-        CanvasElement.removeEventListener("touchstart", evt => this.TranslateStart(evt));
-        CanvasElement.removeEventListener("mousemove", evt => this.TranslateMove(evt));
-        CanvasElement.removeEventListener("touchmove", evt => this.TranslateMove(evt));
-        CanvasElement.removeEventListener("mouseup", evt => this.TranslateEnd(evt));
-        CanvasElement.removeEventListener("touchend", evt => this.TranslateEnd(evt));
+
+        // Remove the translation listeners
+        this.listenerRemover?.abort();
+        this.listenerRemover = null;
     }
 
     ResetTranslation() {
