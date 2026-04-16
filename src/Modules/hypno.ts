@@ -572,7 +572,7 @@ export class HypnoModule extends BaseModule {
         if (count >= activityEntry.hypnoRequiredRepeats) {
             if (isSleep) {
                 SendAction("%NAME% quivers with one last attempt to stay awake...");
-                setTimeout(() => getModule<InjectorModule>("InjectorModule")?.Sleep(true), EFFECT_DURATIONS.HYPNO_TRIGGER_DELAY);
+                setTimeout(() => getModule<InjectorModule>("InjectorModule")?.Sleep(true, (getRandomInt(25) + 5) * 60 * 1000 /* Sleep for 5-30 minutes */), EFFECT_DURATIONS.HYPNO_TRIGGER_DELAY);
             }
             else {
                 SendAction("%NAME% trembles weakly with one last attempt to maintain %POSSESSIVE% senses...");

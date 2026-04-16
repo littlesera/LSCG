@@ -781,7 +781,7 @@ export class InjectorModule extends BaseModule {
         if (!success) {
             switch (type) {
                 case "sedative":
-                    this.Sleep();
+                    this.Sleep(true, (getRandomInt(20) + 10) * 60 * 1000); // Sleep for 10-30 minutes
                     break;
                 case "mindcontrol":
                     CharacterSetFacialExpression(Player, "Eyes", null);
@@ -791,8 +791,8 @@ export class InjectorModule extends BaseModule {
         }
     }
 
-    Sleep(doEmote: boolean = true) {
-        this.stateModule.SleepState.Activate(undefined, undefined, doEmote);
+    Sleep(doEmote: boolean = true, duration?: number) {
+        this.stateModule.SleepState.Activate(undefined, duration, doEmote);
         this.settings.stats.sedatedCount++;
     }
 

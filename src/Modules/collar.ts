@@ -971,11 +971,12 @@ export class CollarModule extends BaseModule {
 
     Knockout() {
         var injector = getModule<InjectorModule>("InjectorModule");
-        injector.Sleep(false);
+        let sleepTime = 60000 * (this.settings.knockoutMinutes ?? 2);
+        injector.Sleep(false, sleepTime + 1000); // Pass 1 extra second of duration just in case a relog occurs before the knockout timer recovers
         setTimeout(() => {
             if (injector.sedativeLevel <= 0)
                 injector.Wake();
-        }, 60000 * (this.settings.knockoutMinutes ?? 2)); // Sleep for 2 minutes after passout
+        }, sleepTime); // Sleep for 2 minutes after passout
     }
 
     ChokeEvent() {
