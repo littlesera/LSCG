@@ -165,6 +165,248 @@ interface CraftingSlotModeData {
 	LSCGShare: CraftingSlotsMode.Data;
 }
 
+interface QuickAccessButton {
+	label: string;
+	showWhen: (item: Item) => boolean;
+	apply: (item: Item, C: Character) => boolean;
+}
+
+interface QuickAccessItemConfig {
+	assetName: string;
+	assetGroup: AssetGroupName;
+	displayLabel: string;
+	buttons: QuickAccessButton[];
+}
+
+/**
+ * Resolves the previous/next full ItemProperties for a state change on a single TypeRecord key.
+ * Works for both modular items (via ModularItemDataLookup, merging all modules) and typed items
+ * (via TypedItemDataLookup, treated as a single-module item whose key is data.name).
+ */
+function resolveStateChange(
+	item: Item,
+	moduleKey: string,
+	targetIndex: number
+): { previous: ItemProperties; next: ItemProperties } | null {
+	const currentIndex = (item.Property?.TypeRecord?.[moduleKey] as number) ?? 0;
+	if (currentIndex === targetIndex) return null;
+	const lookupKey = `${item.Asset.Group.Name}${item.Asset.Name}`;
+
+	const modularData = ModularItemDataLookup[lookupKey];
+	if (modularData) {
+		const moduleIndex = modularData.modules.findIndex(m => m.Key === moduleKey);
+		if (moduleIndex < 0) return null;
+		const previousValues = ModularItemParseCurrent(modularData, item.Property?.TypeRecord ?? null);
+		const newValues = [...previousValues];
+		newValues[moduleIndex] = targetIndex;
+		return {
+			previous: ModularItemMergeModuleValues(modularData, previousValues),
+			next:     ModularItemMergeModuleValues(modularData, newValues),
+		};
+	}
+
+	const typedData = TypedItemDataLookup[lookupKey];
+	if (typedData && typedData.name === moduleKey) {
+		const newOpt = typedData.options[targetIndex];
+		if (!newOpt) return null;
+		return {
+			previous: typedData.options[currentIndex]?.Property ?? {},
+			next:     newOpt.Property,
+		};
+	}
+
+	return null;
+}
+
+/**
+ * Single button factory for both typed and modular items.
+ * moduleKey is the TypeRecord key to change ("typed" for typed items, or the module Key for modular).
+ * getTarget receives the current index and returns the desired target index.
+ */
+function makeButton(
+	label: string,
+	showWhen: (typeRecord: Record<string, number>) => boolean,
+	moduleKey: string,
+	getTarget: number | ((current: number) => number),
+	chatAction: string
+): QuickAccessButton {
+	const resolveTarget = typeof getTarget === "number" ? () => getTarget : getTarget;
+	return {
+		label,
+		showWhen: (item) => showWhen((item.Property?.TypeRecord ?? {}) as Record<string, number>),
+		apply: (item, C) => {
+			item.Property = item.Property ?? {};
+			const currentIndex = (item.Property.TypeRecord?.[moduleKey] as number) ?? 0;
+			const props = resolveStateChange(item, moduleKey, resolveTarget(currentIndex));
+			if (!props) return false;
+			SendAction(chatAction, C);
+			PropertyDifference(item.Property, props.previous);
+			PropertyUnion(item.Property, props.next);
+			CharacterRefresh(C, false, false);
+			ChatRoomCharacterItemUpdate(C, item.Asset.Group.Name);
+			return true;
+		}
+	};
+}
+
+/**
+ * All items that get quick-access state buttons in the dialog UI.
+ * - TYPED items: state is item.Property.TypeRecord.typed (numeric index)
+ * - MODULAR items: state is item.Property.TypeRecord keyed by module Key (e.g. { h: 0, l: 1 })
+ */
+const QUICK_ACCESS_ITEMS: QuickAccessItemConfig[] = [
+	{
+		assetName: "PullDownPanties",
+		assetGroup: "Panties" as AssetGroupName,
+		displayLabel: "Pulldown Panties",
+		buttons: [
+			// typed 0=On, 1=Aside, 2=Exposed, 3=Thighs, 4=Knees, 5=Ankles
+			makeButton("Aside",   tr => (tr.typed ?? 0) === 0, "typed", 1,                         "%NAME% moves %OPP_NAME_POSSESSIVE% panties aside, exposing %OPP_INTENSIVE%."),
+			makeButton("Restore", tr => (tr.typed ?? 0) === 1, "typed", 0,                         "%NAME% restores %OPP_NAME_POSSESSIVE% panties to the normal position."),
+			makeButton("Up",      tr => (tr.typed ?? 0) >= 2,  "typed", s => s === 2 ? 0 : s - 1, "%NAME% pulls %OPP_NAME_POSSESSIVE% panties up."),
+			makeButton("Down",    tr => (tr.typed ?? 0) < 5,   "typed", s => s <= 1 ? 2 : s + 1,  "%NAME% pulls %OPP_NAME_POSSESSIVE% panties down."),
+		]
+	},
+	{
+		assetName: "BusinessTrousers",
+		assetGroup: "ClothLower" as AssetGroupName,
+		displayLabel: "Business Trousers",
+		buttons: [
+			// typed 0=Zipped, 1=Unzipped, 2=Down
+			makeButton("Zipped", tr => (tr.typed ?? 0) === 1, "typed", 0, "%NAME% zips up %OPP_NAME_POSSESSIVE% trousers."),
+			makeButton("Unzip",  tr => (tr.typed ?? 0) === 0, "typed", 1, "%NAME% unzips %OPP_NAME_POSSESSIVE% trousers."),
+			makeButton("Up",     tr => (tr.typed ?? 0) > 1,   "typed", 1, "%NAME% pulls %OPP_NAME_POSSESSIVE% trousers back up."),
+			makeButton("Down",   tr => (tr.typed ?? 0) <= 1,  "typed", 2, "%NAME% pulls %OPP_NAME_POSSESSIVE% trousers down."),
+		]
+	},
+	{
+		assetName: "Hoodie",
+		assetGroup: "Cloth" as AssetGroupName,
+		displayLabel: "Hoodie",
+		buttons: [
+			// Hood module (h): 0=Down, 1=Up Regular, 2=Up Ears
+			// Length module (l): 0=Full Length, 1=Cropped, 2=Bolero
+			makeButton("Full",      tr => (tr.l ?? 0) !== 0, "l", 0, "%NAME% lets %OPP_NAME_POSSESSIVE% hoodie fall to its full length."),
+			makeButton("Cropped",   tr => (tr.l ?? 0) !== 1, "l", 1, "%NAME% adjusts %OPP_NAME_POSSESSIVE% hoodie to a cropped length."),
+			makeButton("Bolero",    tr => (tr.l ?? 0) !== 2, "l", 2, "%NAME% adjusts %OPP_NAME_POSSESSIVE% hoodie to a bolero style."),
+			makeButton("Hood Up",   tr => (tr.h ?? 0) === 0, "h", 1, "%NAME% pulls %OPP_NAME_POSSESSIVE% hood up."),
+			makeButton("Ears Up",   tr => (tr.h ?? 0) === 0, "h", 2, "%NAME% pulls %OPP_NAME_POSSESSIVE% hood ears up."),
+			makeButton("Hood Down", tr => (tr.h ?? 0) !== 0, "h", 0, "%NAME% pulls %OPP_NAME_POSSESSIVE% hood down."),
+		]
+	},
+	{
+		assetName: "SexyBikini1",
+		assetGroup: "Bra" as AssetGroupName,
+		displayLabel: "Demonique Bikini",
+		buttons: [
+			// typed 0=Open, 1=Closed
+			makeButton("Open",  tr => (tr.typed ?? 0) === 1, "typed", 0, "%NAME% opens %OPP_NAME_POSSESSIVE% bikini."),
+			makeButton("Close", tr => (tr.typed ?? 0) === 0, "typed", 1, "%NAME% closes %OPP_NAME_POSSESSIVE% bikini."),
+		]
+	},
+	{
+		assetName: "CuteBikini1",
+		assetGroup: "Bra" as AssetGroupName,
+		displayLabel: "Cute Bikini",
+		buttons: [
+			// typed 0=Open, 1=Closed
+			makeButton("Open",  tr => (tr.typed ?? 0) === 1, "typed", 0, "%NAME% opens %OPP_NAME_POSSESSIVE% bikini."),
+			makeButton("Close", tr => (tr.typed ?? 0) === 0, "typed", 1, "%NAME% closes %OPP_NAME_POSSESSIVE% bikini."),
+		]
+	},
+	{
+		assetName: "JacketHoodie",
+		assetGroup: "ClothOuter" as AssetGroupName,
+		displayLabel: "Jacket Hoodie",
+		buttons: [
+			// h module: 0=HoodUp, 1=HoodDown
+			makeButton("Hood Up",   tr => (tr.h ?? 0) === 0, "h", 1, "%NAME% pulls %OPP_NAME_POSSESSIVE% hood up."),
+			makeButton("Hood Down", tr => (tr.h ?? 0) === 1, "h", 0, "%NAME% pushes %OPP_NAME_POSSESSIVE% hood down."),
+		]
+	},
+	{
+		assetName: "PVCHobbleSkirt",
+		assetGroup: "ClothLower" as AssetGroupName,
+		displayLabel: "PVC Hobble Skirt",
+		buttons: [
+			// s module: 0=Normal, 1=ZipperDown (legs closed)
+			makeButton("Zip Legs",  tr => (tr.s ?? 0) === 0, "s", 1, "%NAME% zips the bottom of %OPP_NAME_POSSESSIVE% skirt closed around %OPP_INTENSIVE%."),
+			makeButton("Unzip",     tr => (tr.s ?? 0) === 1, "s", 0, "%NAME% unzips the bottom of %OPP_NAME_POSSESSIVE% skirt, freeing %OPP_INTENSIVE%."),
+		]
+	},
+	{
+		assetName: "Scarf",
+		assetGroup: "ClothAccessory" as AssetGroupName,
+		displayLabel: "Scarf",
+		buttons: [
+			// typed 0=ShowMouth, 1=Bundled, 2=HideMouth
+			makeButton("Let Down",     tr => (tr.typed ?? 0) !== 0, "typed", 0, "%NAME% loosens %OPP_NAME_POSSESSIVE% scarf so it hangs down."),
+			makeButton("Cover Mouth",  tr => (tr.typed ?? 0) !== 2, "typed", 2, "%NAME% pulls %OPP_NAME_POSSESSIVE% scarf up over %OPP_POSSESSIVE% mouth."),
+		]
+	},
+	{
+		assetName: "NecklaceKey",
+		assetGroup: "Necklace" as AssetGroupName,
+		displayLabel: "Key Necklace",
+		buttons: [
+			// typed 0=Normal, 1=Tucked
+			makeButton("Tuck In",   tr => (tr.typed ?? 0) === 0, "typed", 1, "%NAME% tucks %OPP_NAME_POSSESSIVE% key necklace under %OPP_POSSESSIVE% clothing."),
+			makeButton("Pull Out",  tr => (tr.typed ?? 0) === 1, "typed", 0, "%NAME% pulls %OPP_NAME_POSSESSIVE% key necklace out."),
+		]
+	},
+	{
+		assetName: "NecklaceLock",
+		assetGroup: "Necklace" as AssetGroupName,
+		displayLabel: "Lock Necklace",
+		buttons: [
+			// typed 0=Normal, 1=Tucked
+			makeButton("Tuck In",  tr => (tr.typed ?? 0) === 0, "typed", 1, "%NAME% tucks %OPP_NAME_POSSESSIVE% lock necklace under %OPP_POSSESSIVE% clothing."),
+			makeButton("Pull Out", tr => (tr.typed ?? 0) === 1, "typed", 0, "%NAME% pulls %OPP_NAME_POSSESSIVE% lock necklace out."),
+		]
+	},
+	{
+		assetName: "LatexTankTop",
+		assetGroup: "Cloth" as AssetGroupName,
+		displayLabel: "Latex Tank Top",
+		buttons: [
+			// lh module: 0=None, 1=Down, 2=PulledUp
+			makeButton("Hood Down",      tr => (tr.lh ?? 0) === 2, "lh", 1, "%NAME% pulls %OPP_NAME_POSSESSIVE% tank top hood down."),
+			makeButton("Hood Pulled Up", tr => (tr.lh ?? 0) === 1, "lh", 2, "%NAME% pulls %OPP_NAME_POSSESSIVE% tank top hood fully up."),
+			// rh module: 0=None, 1=Loose, 2=PulledUp
+			makeButton("Front Loose",      tr => (tr.rh ?? 0) === 2, "rh", 1, "%NAME% loosens the front of %OPP_NAME_POSSESSIVE% tank top hood."),
+			makeButton("Front Pulled Up",  tr => (tr.rh ?? 0) === 1, "rh", 2, "%NAME% pulls the front of %OPP_NAME_POSSESSIVE% tank top hood fully up."),
+		]
+	},
+	{
+		assetName: "HoodedCloak",
+		assetGroup: "ClothAccessory" as AssetGroupName,
+		displayLabel: "Hooded Cloak",
+		buttons: [
+			// h module: 0=Off, 1=Over head, 2=Over eyes
+			makeButton("Hood Up",     tr => (tr.h ?? 0) === 0, "h", 1, "%NAME% raises %OPP_NAME_POSSESSIVE% cloak hood up over %OPP_POSSESSIVE% head."),
+			makeButton("Over Eyes",   tr => (tr.h ?? 0) === 1, "h", 2, "%NAME% pulls %OPP_NAME_POSSESSIVE% cloak hood down over %OPP_POSSESSIVE% eyes."),
+			makeButton("Hood Back",   tr => (tr.h ?? 0) === 2, "h", 1, "%NAME% pushes %OPP_NAME_POSSESSIVE% cloak hood back from %OPP_POSSESSIVE% eyes."),
+			makeButton("Hood Down",   tr => (tr.h ?? 0) !== 0, "h", 0, "%NAME% lets %OPP_NAME_POSSESSIVE% cloak hood fall back."),
+		]
+	},
+	{
+		assetName: "LatexHobbleDress",
+		assetGroup: "Cloth" as AssetGroupName,
+		displayLabel: "Latex Hobble Dress",
+		buttons: [
+			// b module: 0=None, 1=Knee Strap (+Slow), 2=Ankle Strap (+Slow), 3=Both Straps (+Slow)
+			makeButton("Knee Strap",   tr => (tr.b ?? 0) === 0, "b", 1, "%NAME% cinches the knee strap on %OPP_NAME_POSSESSIVE% dress."),
+			makeButton("Ankle Strap",  tr => (tr.b ?? 0) === 0, "b", 2, "%NAME% cinches the ankle strap on %OPP_NAME_POSSESSIVE% dress."),
+			makeButton("Both Straps",  tr => (tr.b ?? 0) !== 3 && (tr.b ?? 0) !== 0, "b", 3, "%NAME% cinches both straps on %OPP_NAME_POSSESSIVE% dress."),
+			makeButton("Remove Straps", tr => (tr.b ?? 0) !== 0, "b", 0, "%NAME% releases the straps on %OPP_NAME_POSSESSIVE% dress."),
+		]
+	},
+];
+
+type QARenderItem =
+	| { kind: 'header'; config: QuickAccessItemConfig; expanded: boolean }
+	| { kind: 'button'; button: QuickAccessButton; item: Item; config: QuickAccessItemConfig };
+
 // Remote UI Module to handle configuration on other characters
 // Can be used to "program" another character's hypnosis, collar, etc.
 // Framework inspired from BCX
@@ -236,131 +478,109 @@ export class ItemUseModule extends BaseModule {
 		}
 	]
 
-	IsWearingPulldownPanties(C: Character | null): boolean {
-		return !!C && C.Appearance.findIndex(a => a.Asset.Name == "PullDownPanties") != -1;
+	readonly quickAccessItems: QuickAccessItemConfig[] = QUICK_ACCESS_ITEMS;
+
+	collapsedItems: Set<string> = new Set(QUICK_ACCESS_ITEMS.map(c => c.assetName));
+
+	private qaPanel: HTMLDivElement | null = null;
+
+	private updateQAPanel(C: Character): void {
+		const renderItems = this.getQuickAccessRenderItems(C);
+		if (renderItems.length === 0) {
+			this.removeQAPanel();
+			return;
+		}
+
+		const widthRatio = MainCanvas.canvas.clientWidth / 2000;
+		const heightRatio = MainCanvas.canvas.clientHeight / 1000;
+
+		let panel = this.qaPanel;
+		if (!panel || !document.contains(panel)) {
+			panel = document.createElement('div');
+			panel.id = 'lscg-quick-access';
+			panel.style.cssText = 'position:absolute;display:flex;flex-direction:column;gap:3px;z-index:10;pointer-events:all;';
+			document.body.appendChild(panel);
+			this.qaPanel = panel;
+		}
+		panel.style.left = `${MainCanvas.canvas.offsetLeft + 975 * widthRatio}px`;
+		panel.style.top  = `${MainCanvas.canvas.offsetTop  +  80 * heightRatio}px`;
+
+		const btnW  = Math.round(130 * widthRatio);
+		const btnH  = Math.round(36  * heightRatio);
+		const fSize = Math.round(13  * heightRatio);
+		const baseStyle = `width:${btnW}px;height:${btnH}px;font-size:${fSize}px;border:1px solid #999;border-radius:3px;cursor:pointer;font-family:${CommonGetFontName()};box-sizing:border-box;`;
+
+		panel.replaceChildren();
+		for (const ri of renderItems) {
+			const btn = document.createElement('button');
+			if (ri.kind === 'header') {
+				btn.textContent = (ri.expanded ? '▼ ' : '▶ ') + ri.config.displayLabel;
+				btn.style.cssText = baseStyle + 'background:#DDEEFF;font-weight:bold;';
+				btn.addEventListener('click', (e) => {
+					e.stopPropagation();
+					if (this.collapsedItems.has(ri.config.assetName))
+						this.collapsedItems.delete(ri.config.assetName);
+					else
+						this.collapsedItems.add(ri.config.assetName);
+					// Use C from render time — CharacterGetCurrent() may be null after BC processes a state change
+					this.updateQAPanel(C);
+				});
+			} else {
+				btn.textContent = ri.button.label;
+				btn.style.cssText = baseStyle + 'background:white;margin-left:4px;width:' + (btnW - 4) + 'px;';
+					btn.addEventListener('click', (e) => {
+					e.stopPropagation();
+					const c = C;
+					ri.button.apply(ri.item, c);
+					this.updateQAPanel(c);
+				});
+			}
+			panel.appendChild(btn);
+		}
 	}
 
-	pantiesButtonInfo = [965, 80, 100, 40, 5];
-	pantiesButtonCoords: [number,number,number,number] = [this.pantiesButtonInfo[0], this.pantiesButtonInfo[1], this.pantiesButtonInfo[3], this.pantiesButtonInfo[3]];
+	removeQAPanel(): void {
+		this.qaPanel?.remove();
+		this.qaPanel = null;
+	}
+
+	getQuickAccessRenderItems(C: Character): QARenderItem[] {
+		const result: QARenderItem[] = [];
+		for (const config of this.quickAccessItems) {
+			const item = InventoryGet(C, config.assetGroup);
+			if (item?.Asset.Name !== config.assetName) continue;
+			const activeButtons = config.buttons.filter(b => b.showWhen(item));
+			if (activeButtons.length === 0) continue;
+			const expanded = !this.collapsedItems.has(config.assetName);
+			result.push({ kind: 'header', config, expanded });
+			if (expanded) {
+				for (const button of activeButtons) {
+					result.push({ kind: 'button', button, item, config });
+				}
+			}
+		}
+		return result;
+	}
 
     load(): void {
-		// Manually handle pull down panties adjustments... This should be either made more generic or moved to vanilla BC
-		hookFunction("DialogDraw", 10, (args, next) => {
-			const C = CharacterGetCurrent();
-			if (this.Enabled && this.IsWearingPulldownPanties(C)) {
-				let panties = C?.Appearance.find(a => a.Asset.Name == "PullDownPanties");
-				if (!!panties) {
-					let pantiesState = panties?.Property?.TypeRecord?.typed;
-					let buttons = [];
-					switch (pantiesState) {
-						case undefined:
-						case 0: // On
-							buttons.push("Aside");
-							buttons.push("Down");
-							break;
-						case 1: // Aside
-							buttons.push("Restore");
-							buttons.push("Down");
-							break;
-						case 2: // Exposed
-							buttons.push("Up");
-							buttons.push("Down");
-							break;
-						case 3: // Thighs
-							buttons.push("Up");
-							buttons.push("Down");
-							break;
-						case 4: // Knees
-							buttons.push("Up");
-							buttons.push("Down");
-							break;
-						case 5: // Ankles
-							buttons.push("Up");
-							break;
-					}
-
-					if (buttons.length > 0) {
-						buttons.forEach((b, ix, arr) => {
-							let coords = [this.pantiesButtonCoords[0], this.pantiesButtonCoords[1] + ix * (this.pantiesButtonCoords[3] + 5), this.pantiesButtonCoords[2], this.pantiesButtonCoords[3]]
-							DrawButton(coords[0], coords[1], coords[2], coords[3], b, "White");
-							if (MouseIn(coords[0], coords[1], coords[2], coords[3])) {
-								mouseTooltip("Pulldown Panties");
-							}
-						});
-					}
-				}
-			}
-
+		hookFunction("DialogLoad", 10, (args, next) => {
 			next(args);
-		}, ModuleCategory.Magic);
-
-		hookFunction("DialogClick", 10, (args, next) => {
 			const C = CharacterGetCurrent();
-			if (this.Enabled && this.IsWearingPulldownPanties(C)) {
-				let panties = C?.Appearance.find(a => a.Asset.Name == "PullDownPanties");
-				let pantiesState = panties?.Property?.TypeRecord?.typed ?? 0;
-				let buttons = [];
-				switch (pantiesState) {
-					case 0: // On
-						buttons.push("Aside");
-						buttons.push("Down");
-						break;
-					case 1: // Aside
-						buttons.push("Restore");
-						buttons.push("Down");
-						break;
-					case 2: // Exposed
-						buttons.push("Up");
-						buttons.push("Down");
-						break;
-					case 3: // Thighs
-						buttons.push("Up");
-						buttons.push("Down");
-						break;
-					case 4: // Knees
-						buttons.push("Up");
-						buttons.push("Down");
-						break;
-					case 5: // Ankles
-						buttons.push("Up");
-						break;
-				}
-				let targetOpt: TypedItemOption | undefined;
-				if (buttons.length > 0) {
-					buttons.forEach((b, ix, arr) => {
-						if (MouseIn(this.pantiesButtonCoords[0], this.pantiesButtonCoords[1] + ix * (this.pantiesButtonCoords[3] + 5), this.pantiesButtonCoords[2], this.pantiesButtonCoords[3])) {
-							let pantyOptions = TypedItemDataLookup[`PantiesPullDownPanties`];
-							switch (b) {
-								case "Aside":
-									targetOpt = pantyOptions.options?.find(o => o?.Property?.TypeRecord?.typed == 1);
-									SendAction(`%NAME% moves %OPP_NAME_POSSESSIVE% panties aside, exposing %OPP_INTENSIVE%.`, C);
-									break;
-								case "Down":
-									targetOpt = pantyOptions.options?.find(o => o?.Property?.TypeRecord?.typed == (pantiesState <= 1 ? 2 : pantiesState + 1));
-									SendAction(`%NAME% pulls %OPP_NAME_POSSESSIVE% panties down.`, C);
-									break;
-								case "Restore":
-									targetOpt = pantyOptions.options?.find(o => o?.Property?.TypeRecord?.typed == 0);
-									SendAction(`%NAME% restores %OPP_NAME_POSSESSIVE% panties to the normal position.`, C);
-									break;
-								case "Up":
-									targetOpt = pantyOptions.options?.find(o => o?.Property?.TypeRecord?.typed == (pantiesState == 2 ? 0 : pantiesState - 1));
-									SendAction(`%NAME% pulls %OPP_NAME_POSSESSIVE% panties up.`, C);
-									break;
-							}
-							if (!!targetOpt) {
-								let tmp = DialogFocusItem;
-								DialogFocusItem = panties ?? null;
-								TypedItemSetType(pantyOptions, C!, targetOpt!);
-								DialogFocusItem = tmp;
-								ChatRoomCharacterUpdate(C!);
-							}
-						}
-					});
-				}
-			}
+			if (this.Enabled && !!C)
+				this.updateQAPanel(C);
+		}, ModuleCategory.ItemUse);
+
+		hookFunction("DialogLeave", 10, (args, next) => {
+			this.removeQAPanel();
 			next(args);
-		}, ModuleCategory.Magic);
+		}, ModuleCategory.ItemUse);
+
+		hookFunction("DialogResize", 10, (args, next) => {
+			next(args);
+			const C = CharacterGetCurrent();
+			if (this.Enabled && !!C)
+				this.updateQAPanel(C);
+		}, ModuleCategory.ItemUse);
 
 		hookFunction("ActivityGenerateItemActivitiesFromNeed", 1, (args, next) => {
 			let activity = args[3] as Activity;
@@ -1327,6 +1547,7 @@ export class ItemUseModule extends BaseModule {
 
     unload(): void {
         removeAllHooksByModule(ModuleCategory.ItemUse);
+        this.removeQAPanel();
     }
 
 	get d20(): number {
