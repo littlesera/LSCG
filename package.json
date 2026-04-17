@@ -1,7 +1,7 @@
 {
   "name": "ls-club-games",
   "description": "Little Sera's Club Games",
-  "version": "0.8.8",
+  "version": "0.8.9",
   "main": "dist/bundle.js",
   "scripts": {
     "build": "typed-scss-modules src --exportType=default --nameFormat=none && vite build",
