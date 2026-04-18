@@ -364,7 +364,7 @@ export function parseFromBase64<T extends unknown>(data: string): T | undefined 
 	try {
 		const parsed = LZString.decompressFromBase64(data);
 		if (!parsed) return undefined;
-		return JSON.parse(parsed);
+		return JSON.parse(parsed) as T;
 	} catch (e) {
 		console.error(`failed to parse ${data}!`)
 		return undefined;
@@ -375,7 +375,7 @@ export function parseFromUTF16<T extends unknown>(data: string): T | undefined {
 	try {
 		const parsed = LZString.decompressFromUTF16(data);
 		if (!parsed) return undefined;
-		return JSON.parse(parsed);
+		return JSON.parse(parsed) as T;
 	} catch (e) {
 		console.error(`failed to parse ${data}!`)
 		return undefined;
@@ -422,7 +422,7 @@ export async function ImportSettings() {
 export function handleImportString(val: string): boolean {
 	if (!val) return false;
 	try {
-		let oldSettings = JSON.parse(JSON.stringify(Player.LSCG));
+		let oldSettings = structuredClone(Player.LSCG);
 		localStorage.setItem(`LSCG_${Player.MemberNumber}_Backup`, LZString.compressToBase64(JSON.stringify(oldSettings)));
 		let parsed = parseFromBase64<SettingsModel>(val);
 		if (!!parsed && !!parsed.GlobalModule) {
@@ -447,10 +447,10 @@ export function handleImportString(val: string): boolean {
 }
 
 export function CleanDefaultsFromSettings(settings: SettingsModel) : SettingsModel {
-	let newObj = JSON.parse(JSON.stringify(settings));
+	let newObj = structuredClone(settings);
 	Object.keys(newObj).forEach(key => {
 		let defaultModule = getModule(key);
-		let settingModule = (newObj as Record<string, unknown>)[key];
+		let settingModule = (newObj as unknown as Record<string, unknown>)[key];
 		if (!!defaultModule && !!defaultModule.defaultSettings) {
 			let defaults = defaultModule.defaultSettings as unknown as Record<string, unknown>;
 			_compareAndTrimObjects(defaults, settingModule);
@@ -1232,7 +1232,7 @@ export function CopyCharacter(C: Character, id: string, strip: boolean = true, r
 	let newCharacter = CharacterLoadSimple(`LSCG-${id || C.ID}`);
 	newCharacter.Name = C.Name;
 	newCharacter.Nickname = C.Nickname;
-	newCharacter.ArousalSettings = JSON.parse(JSON.stringify(C.ArousalSettings));
+	newCharacter.ArousalSettings = structuredClone(C.ArousalSettings);
 
 	newCharacter.Appearance = AppearanceItemParse(CharacterAppearanceStringify(C));
 	if (strip) StripCharacterNoRedraw(newCharacter);

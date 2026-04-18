@@ -434,7 +434,7 @@ export class MagicModule extends BaseModule {
                 // If this specific activity is clicked, we run it
                 if (!MouseIn(x, y, width, height)) return false;
                 let blocked = Array.isArray(blockedSpellTypes) && spell.Effects.some(effect => blockedSpellTypes.indexOf(effect) > -1);
-                spell = JSON.parse(JSON.stringify(spell));
+                spell = structuredClone(spell);
                 
                 if (!blocked) {
                     this.CastSpellInitial(spell, CurrentCharacter);
@@ -453,7 +453,7 @@ export class MagicModule extends BaseModule {
         if (!spell || this.settings.trueWildMagic)
             spell = this.RandomSpell
         let paired: Character | undefined = undefined;
-        spell = JSON.parse(JSON.stringify(spell));
+        spell = structuredClone(spell);
         if (this.SpellNeedsPair(spell))
             paired = this.PairedCharacterOptions(C)[getRandomInt(this.PairedCharacterOptions(C).length)];
         this.CastSpellActual(spell, C, false, paired);
@@ -1027,7 +1027,7 @@ export class MagicModule extends BaseModule {
         let spells = Player.LSCG.MagicModule.knownSpells.filter(s => s.AllowPotion && !s.Effects.some(e => pairedSpellEffects.indexOf(e) > -1));
         let spell = spells?.filter(x => !!x)?.find(x => !!x && !!x.Name && isPhraseInString(itemStr, x.Name));
         if (!!spell)
-            spell = JSON.parse(JSON.stringify(spell));
+            spell = structuredClone(spell);
             this.UnpackSpellCodes(spell);
             sendLSCGCommandBeep(senderNum, "get-spell-response", [{
                 name: "spell",
