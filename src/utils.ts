@@ -172,6 +172,8 @@ export function hookBCXVoice(listener: (v: {message: string, timer: number, send
 	return true;
 }
 
+// XXX: this is the proper function signature to get hook function type checking
+// export function hookFunction<FunctionName extends string>(target: FunctionName, priority: number, hook: PatchHook<GetDotedPathType<typeof globalThis, FunctionName>>, module: ModuleCategory | null = null): () => void {
 export function hookFunction(target: string, priority: number, hook: PatchHook, module: ModuleCategory | null = null): () => void {
 	const data = initPatchableFunction(target);
 
