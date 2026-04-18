@@ -85,7 +85,8 @@ export class ResizedState extends BaseState {
 
         hookFunction("CommonDrawAppearanceBuild", 1, (args, next) => {
             let C = args[0] as OtherCharacter;
-            C.HeightRatio = CharacterAppearanceGetCurrentValue(C, "Height", "Zoom");
+            const height = CharacterAppearanceGetCurrentValue(C, "Height", "Zoom");
+            if (height !== "None") C.HeightRatio = height;
             // Hack fix in case the body style was actually removed
             if (InventoryGet(C, "BodyStyle") == null) {
                 InventoryWear(C, "Original", "BodyStyle");
@@ -95,7 +96,8 @@ export class ResizedState extends BaseState {
 
         hookFunction("DrawCharacter", 1, (args, next) => {
             let C = args[0] as OtherCharacter;
-            C.HeightRatio = CharacterAppearanceGetCurrentValue(C, "Height", "Zoom");
+            const height = CharacterAppearanceGetCurrentValue(C, "Height", "Zoom");
+            if (height !== "None") C.HeightRatio = height
             return next(args);
         }, ModuleCategory.States);
     }

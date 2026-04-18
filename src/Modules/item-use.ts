@@ -160,9 +160,10 @@ export interface GagTarget {
 	UsedAssetOverride?: string;
 }
 
-interface CraftingSlotModeData {
-	// @ts-expect-error: Requires R127 types
-	LSCGShare: CraftingSlotsMode.Data;
+declare global {
+	interface CraftingSlotModeData {
+		LSCGShare: CraftingSlotsMode.Data;
+	}
 }
 
 interface QuickAccessButton {
@@ -726,66 +727,28 @@ export class ItemUseModule extends BaseModule {
 			next(args);
 		}, ModuleCategory.ItemUse);
 
-		if (GameVersion === "R126") {
-			hookFunction("CraftingRun", 1, (args, next) => {
-				next(args);
-				if (!Player || !Player.Crafting || CraftingReorderMode != "None" || CraftingMode != "Slot")
-					return;
-
-				for (let S = CraftingOffset; S < CraftingOffset + 20; S++) {
-					let X = ((S - CraftingOffset) % 4) * 500 + 15;
-					let Y = Math.floor((S - CraftingOffset) / 4) * 180 + 130;
-					let Craft = Player.Crafting[S];
-					if (!!Craft) {
-						DrawButton(X + 420, Y + 90, 40, 40, "", "White");
-						DrawImageResize("Icons/Chat.png", X + 420 + 2, Y + 90 + 2, 36, 36);
-						if (MouseIn(X + 420, Y + 90, 40, 40)) {
-							mouseTooltip("Share in chat", MouseX, MouseY, 2000);
-						}
+		CraftingSlots.modeData.LSCGShare = {
+			selectLabel: "Share",
+			/** @type {CraftingSlotsMode.Callback} */
+			callback: (crafts: readonly { craft: null | CraftingItem, button: HTMLButtonElement }[]) => {
+				crafts.forEach(({ craft, button }) => {
+					if (craft) {
+						button.addEventListener("click", () => {
+							this.DisplayCraft(craft);
+							CraftingExit(false);
+						});
+					} else {
+						button.disabled = true;
 					}
-				}
-			}, ModuleCategory.ItemUse);
-
-			hookFunction("CraftingClick", 1, (args, next) => {
-				if (!!Player && !!Player.Crafting && CraftingReorderMode == "None" && CraftingMode == "Slot") {
-					for (let S = CraftingOffset; S < CraftingOffset + 20; S++) {
-						let X = ((S - CraftingOffset) % 4) * 500 + 15;
-						let Y = Math.floor((S - CraftingOffset) / 4) * 180 + 130;
-						let Craft = Player.Crafting[S];
-						if (!!Craft && MouseIn(X + 420, Y + 90, 40, 40)) {
-							this.DisplayCraft(Craft);
-							CraftingExit();
-							return;
-						}
-					}
-				}
-				return next(args);
-			}, ModuleCategory.ItemUse);
-		} else {
-			// @ts-expect-error: Requires R127 types
-			CraftingSlots.modeData.LSCGShare = {
-				selectLabel: "Share",
-				/** @type {CraftingSlotsMode.Callback} */
-				callback: (crafts: readonly { craft: null | CraftingItem, button: HTMLButtonElement }[]) => {
-					crafts.forEach(({ craft, button }) => {
-						if (craft) {
-							button.addEventListener("click", () => {
-								this.DisplayCraft(craft);
-								CraftingExit(false);
-							});
-						} else {
-							button.disabled = true;
-						}
-					});
-					return {
-						heading: "LSCG: Share craft in chat",
-						modeAcceptTooltip: "Click on a craft to share it in the chat",
-						modeAcceptImgSrc: ICONS.BOUND_GIRL,
-						modeAcceptQuestionColor: "cyan",
-					};
-				},
-			};
-		}
+				});
+				return {
+					heading: "LSCG: Share craft in chat",
+					modeAcceptTooltip: "Click on a craft to share it in the chat",
+					modeAcceptImgSrc: ICONS.BOUND_GIRL,
+					modeAcceptQuestionColor: "cyan",
+				};
+			},
+		};
 
 		Core().RegisterCommandListener(<CommandListener>{
             id: "craft_share_display",
