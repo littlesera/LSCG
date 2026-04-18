@@ -145,7 +145,7 @@ export class AstralProjectionState extends BaseState {
 
     RequestAnim() {
         for (let char of this.CharactersToRequestAnim) {
-            AnimationPersistentStorage[AnimationGetDynamicDataName(char, AnimationDataTypes.Rebuild)] = true;
+            AnimationRequestDraw(char);
         }
         this.CharactersToRequestAnim = [];
     }
