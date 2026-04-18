@@ -374,7 +374,9 @@ export class OpacityModule extends BaseModule {
         this.SetTranslationElementValues();
     }
 
-    _prevResize: any;
+    /** Function for removing destroying the {@link CurrentScreenFunctions.Resize} coloring hook */
+    _unhookResize: null | (() => void) = null;
+
     load(): void {
         hookFunction("ItemColorLoad", 1, async (args, next) => {
             const ret = next(args);
@@ -390,8 +392,10 @@ export class OpacityModule extends BaseModule {
                     CurrentScreenFunctions = {} as ScreenFunctions;
                 }
 
-                this._prevResize = CurrentScreenFunctions.Resize;
-                CurrentScreenFunctions.Resize = (load) => this.ResizeDomUI(load);
+                this._unhookResize = hookFunction("CurrentScreenFunctions.Resize", 0, (args2, next) => {
+                    this.ResizeDomUI(...args2);
+                    return next(args);
+                });
                 CurrentScreenFunctions.Resize(true);
 
                 this.TranslateRemoveEventListener();
@@ -430,7 +434,8 @@ export class OpacityModule extends BaseModule {
             this.HideDomUI();
 
             this.TranslateRemoveEventListener();
-            CurrentScreenFunctions.Resize = this._prevResize;
+            this._unhookResize?.();
+            this._unhookResize = null;
         }, ModuleCategory.Opacity);
 
         // *** Hack in actual updating of the translation overrides ***
