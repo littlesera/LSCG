@@ -33,7 +33,7 @@ export interface SplatterSettingsModel extends BaseSettingsModel {
     taker: boolean;
     autoSplat: boolean;
     uncontrollableWhenBound: boolean;
-    colorOverride: string | null;
+    colorOverride: BCColor | null;
     opacityOverride: string | null;
     whitelist: number[] | null;
     blacklist: number[] | null;
@@ -58,7 +58,7 @@ export interface MiscSettingsModel extends BaseSettingsModel {
     infiniteChloroformPotency: boolean;
     handChokeEnabled: boolean;
     gagChokeEnabled: boolean;
-    chokeChainEnabled: boolean;    
+    chokeChainEnabled: boolean;
 }
 
 export interface OpacitySettingsModel extends OpacityPublicSettingsModel {

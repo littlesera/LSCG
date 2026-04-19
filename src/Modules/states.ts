@@ -366,7 +366,7 @@ export class StateModule extends BaseModule {
                     if (this.settings.immersive) {
                         if (!this.SleepState.config.duration) {
                             LSCG_SendLocal("Cannot immediately wake while immersive, timer set...");
-                            this.SleepState.config.duration = (10 + getRandomInt(50)) * 60 * 1000; // timeout set to between 10 and 60 minutes.
+                            this.SleepState.config.duration = (2 + getRandomInt(8)) * 60 * 1000; // timeout set to between 2 and 10 minutes.
                         } else {
                             LSCG_SendLocal("Wake disabled while immersive, a timer is set, you will eventually wake up...");
                         }

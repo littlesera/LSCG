@@ -46,52 +46,6 @@ const ID = Object.freeze({
     translateY: `${root}-translate-y`
 });
 
-/**
- * R122 type backport.
- * An item properties subtype with a guaranteed opacity field.
- */
-interface ItemColorProperties extends ItemProperties {
-	Opacity: number[];
-}
-
-/**
- * R122 type backport.
- * An item subtype with a guaranteed color and opacity field.
- */
-interface ItemColorItem extends Item {
-	Color: string[];
-	Property: ItemColorProperties;
-}
-
-// Yoinked from R122
-namespace itemToColorItem {
-    /**
-     * Sanitize the color of the passed item, returning an array of valid color strings and of length {@link Asset.ColorableLayerCount}.
-     * @param item The item whose colors are to be validated
-     * @returns The validated colors returned as array
-     */
-    export function sanitizeColor(item: Item): string[] {
-        return ItemColorSanitizeColor(item);
-    }
-
-    /**
-     * Sanitize the properties of the passed item in relation to any and all color & opacity related fields.
-     * @param item The item whose properties are to be validated
-     * @returns The validated item properties
-     */
-    export function sanitizeProperty(item: Item): ItemColorProperties {
-        return ItemColorSanitizeProperty(item);
-    }
-
-    /**
-     * Convert a plain {@link Item} into an one with guaranteed array-based colors and opacities.
-     * Performs an inplace update of the passed item.
-     */
-    export function convert(item: Item): ItemColorItem {
-        return Object.assign(item, { Color: sanitizeColor(item), Property: sanitizeProperty(item) });
-    }
-}
-
 export class OpacityModule extends BaseModule {
     OpacityMainSlider: OpacitySlider = {
         ElementId: ID.opacityMain,
@@ -116,6 +70,8 @@ export class OpacityModule extends BaseModule {
     TranslateYElement: HTMLInputElement | undefined;
     lastX: number = 0;
     lastY: number = 0;
+    /** An abort controller for removing the canvas-attached translation listeners */
+    listenerRemover: null | AbortController = null;
 
     domUI = Object.freeze({
         shape: [40, 80, 650, 740] as RectTuple,
@@ -377,7 +333,6 @@ export class OpacityModule extends BaseModule {
     }
 
     onToggleTranslate(evt?: Event) {
-        console.info(evt);
         let opacity = document.getElementById(ID.opacity);
         let translate = document.getElementById(ID.translate);
         let allLayerCheck = document.getElementById(ID.allLayersCheck) as HTMLInputElement;
@@ -419,7 +374,9 @@ export class OpacityModule extends BaseModule {
         this.SetTranslationElementValues();
     }
 
-    _prevResize: any;
+    /** Function for removing destroying the {@link CurrentScreenFunctions.Resize} coloring hook */
+    _unhookResize: null | (() => void) = null;
+
     load(): void {
         hookFunction("ItemColorLoad", 1, async (args, next) => {
             const ret = next(args);
@@ -431,12 +388,12 @@ export class OpacityModule extends BaseModule {
                 this.OpacityItem = Item;
 
                 this.ShowDomUI();
-                if (!CurrentScreenFunctions) {
-                    CurrentScreenFunctions = {} as ScreenFunctions;
-                }
 
-                this._prevResize = CurrentScreenFunctions.Resize;
-                CurrentScreenFunctions.Resize = (load) => this.ResizeDomUI(load);
+                this._unhookResize = hookFunction("CurrentScreenFunctions.Resize", 0, (args2, next) => {
+                    const [load] = args2;
+                    this.ResizeDomUI(load);
+                    return next(args);
+                });
                 CurrentScreenFunctions.Resize(true);
 
                 this.TranslateRemoveEventListener();
@@ -475,7 +432,8 @@ export class OpacityModule extends BaseModule {
             this.HideDomUI();
 
             this.TranslateRemoveEventListener();
-            CurrentScreenFunctions.Resize = this._prevResize;
+            this._unhookResize?.();
+            this._unhookResize = null;
         }, ModuleCategory.Opacity);
 
         // *** Hack in actual updating of the translation overrides ***
@@ -534,7 +492,7 @@ export class OpacityModule extends BaseModule {
                     if (isDrawingOverridable(A) || IsSoulBind(item)) {
                         (A as any).DynamicBeforeDraw = true;
                     }
-                })                
+                })
             }
             // Hack fix in case the body style was actually removed
             if (InventoryGet(C, "BodyStyle") == null) {
@@ -625,7 +583,7 @@ export class OpacityModule extends BaseModule {
 
     getOpacityFromProperties(item?: null | Item): number | number[] | undefined {
         if (item?.Property?.LSCGOpacity != null) {
-            const sanitizedProps = Object.assign(item.Property, itemToColorItem.sanitizeProperty(item))
+            const sanitizedProps = Object.assign(item.Property, ItemColorSanitizeProperty(item))
             this.setOpacityInProperty(item.Asset, sanitizedProps, item.Property.LSCGOpacity);
         }
         return item?.Property?.Opacity ?? 1;
@@ -651,27 +609,21 @@ export class OpacityModule extends BaseModule {
 
     isDragging: boolean = false;
 
-    TranslateStart(evt: TouchEvent | MouseEvent) {
-        if (isTouchEvent(evt) && evt.changedTouches) {
-            if (evt.changedTouches.length > 1) return;
-        }
-
+    TranslateStart(elem: HTMLElement, evt: PointerEvent) {
         if (this.TranslationMode && MouseIn(700, 0, 500, 1000)) {
             this.isDragging = true;
             this.lastX = MouseX;
             this.lastY = MouseY;
         }
+        elem.setPointerCapture(evt.pointerId);
         let ui = document.getElementById(ID.root);
         if (!!ui) {
             ui.classList.add("lscg-translate-dragging");
         }
     }
 
-    TranslateMove(evt: TouchEvent | MouseEvent) {
+    TranslateMove(elem: HTMLElement, evt: PointerEvent) {
         if (!this.isDragging || !this.TranslationMode) return;
-        if (isTouchEvent(evt) && evt.changedTouches) {
-            if (evt.changedTouches.length > 1) return;
-        }
 
         let mX = Math.min(Math.max(MouseX, 700), 1200);
         let mY = Math.min(Math.max(MouseY, 0), 1000);
@@ -688,7 +640,8 @@ export class OpacityModule extends BaseModule {
         this.UpdatePreview();
     }
 
-    TranslateEnd(evt: TouchEvent | MouseEvent) {
+    TranslateEnd(elem: HTMLElement, evt: PointerEvent) {
+        elem.releasePointerCapture(evt.pointerId);
         this.isDragging = false;
         let ui = document.getElementById(ID.root);
         if (!!ui) {
@@ -803,14 +756,12 @@ export class OpacityModule extends BaseModule {
         let CanvasElement = document.getElementById("MainCanvas");
         if (!CanvasElement)
             return;
-        if (!CommonIsMobile) {
-            CanvasElement.addEventListener("mousedown", evt => this.TranslateStart(evt));
-            CanvasElement.addEventListener("mouseup", evt => this.TranslateEnd(evt));
-            CanvasElement.addEventListener("mousemove", evt => this.TranslateMove(evt));
-        }
-        CanvasElement.addEventListener("touchstart", evt => this.TranslateStart(evt));
-        CanvasElement.addEventListener("touchend", evt => this.TranslateEnd(evt));
-        CanvasElement.addEventListener("touchmove", evt => this.TranslateMove(evt));
+
+        const controller = this.listenerRemover = new AbortController();
+        CanvasElement.addEventListener("pointerdown", evt => this.TranslateStart(CanvasElement, evt), { signal: controller.signal });
+        CanvasElement.addEventListener("pointermove", evt => this.TranslateMove(CanvasElement, evt), { signal: controller.signal });
+        CanvasElement.addEventListener("pointerup", evt => this.TranslateEnd(CanvasElement, evt), { signal: controller.signal });
+        CanvasElement.addEventListener("pointercancel", evt => this.TranslateEnd(CanvasElement, evt), { signal: controller.signal });
 
         // Propagate the vanilla BC opacity slider changes to LSCG
         const rootID: string = ColorPicker.ids.root;
@@ -844,12 +795,10 @@ export class OpacityModule extends BaseModule {
         let CanvasElement = document.getElementById("MainCanvas");
         if (!CanvasElement)
             return;
-        CanvasElement.removeEventListener("mousedown", evt => this.TranslateStart(evt));
-        CanvasElement.removeEventListener("touchstart", evt => this.TranslateStart(evt));
-        CanvasElement.removeEventListener("mousemove", evt => this.TranslateMove(evt));
-        CanvasElement.removeEventListener("touchmove", evt => this.TranslateMove(evt));
-        CanvasElement.removeEventListener("mouseup", evt => this.TranslateEnd(evt));
-        CanvasElement.removeEventListener("touchend", evt => this.TranslateEnd(evt));
+
+        // Remove the translation listeners
+        this.listenerRemover?.abort();
+        this.listenerRemover = null;
     }
 
     ResetTranslation() {
