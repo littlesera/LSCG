@@ -388,12 +388,10 @@ export class OpacityModule extends BaseModule {
                 this.OpacityItem = Item;
 
                 this.ShowDomUI();
-                if (!CurrentScreenFunctions) {
-                    CurrentScreenFunctions = {} as ScreenFunctions;
-                }
 
                 this._unhookResize = hookFunction("CurrentScreenFunctions.Resize", 0, (args2, next) => {
-                    this.ResizeDomUI(...args2);
+                    const [load] = args2;
+                    this.ResizeDomUI(load);
                     return next(args);
                 });
                 CurrentScreenFunctions.Resize(true);
