@@ -486,6 +486,10 @@ export class ItemUseModule extends BaseModule {
 	private qaPanel: HTMLDivElement | null = null;
 
 	private updateQAPanel(C: Character): void {
+		if (!Player.CanChangeClothesOn(C)) {
+			this.removeQAPanel();
+			return;
+		}
 		const renderItems = this.getQuickAccessRenderItems(C);
 		if (renderItems.length === 0) {
 			this.removeQAPanel();
