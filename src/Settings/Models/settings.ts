@@ -31,6 +31,7 @@ export interface SettingsModel {
     ChaoticItemModule: BaseSettingsModel;
     SplatterModule: SplatterSettingsModel;
     MapModule: MapSettingsModel;
+    SpeechAnalysisModule: BaseSettingsModel;
 }
 
 export interface IPublicSettingsModel extends BaseSettingsModel {
@@ -49,6 +50,7 @@ export interface IPublicSettingsModel extends BaseSettingsModel {
     LeashingModule: BaseSettingsModel;
     ChaoticItemModule: BaseSettingsModel;
     SplatterModule: SplatterSettingsModel;
+    SpeechAnalysisModule: BaseSettingsModel;
 }
 
 export class PublicSettingsModel implements IPublicSettingsModel {
@@ -172,6 +174,7 @@ export class PublicSettingsModel implements IPublicSettingsModel {
         BlockExistingGroups: false
     };
     ChaoticItemModule: BaseSettingsModel = <BaseSettingsModel>{enabled: false};
+    SpeechAnalysisModule: BaseSettingsModel = <BaseSettingsModel>{enabled: true};
     SplatterModule: SplatterSettingsModel = <SplatterSettingsModel>{
         enabled: false,
         giver: false,

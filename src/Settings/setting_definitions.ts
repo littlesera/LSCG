@@ -30,6 +30,7 @@ export enum ModuleCategory {
 	Splatter = 13,
 	CursedItem = 14,
 	Map = 15,
+	SpeechAnalysis = 16,
 	RemoteUI = 98,
 	Misc = 99,
 	Commands = 100

@@ -16,7 +16,7 @@
 (function() {
     'use strict';
     var script = document.createElement("script");
-    script.langauge = "JavaScript";
+    script.language = "JavaScript";
     script.setAttribute("crossorigin", "anonymous");
     script.src = `https://littlesera.github.io/LSCG/dev/bundle.js?${Date.now()}`;
     document.head.appendChild(script);

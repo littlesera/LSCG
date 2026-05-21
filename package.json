@@ -23,13 +23,17 @@
     "@types/lodash-es": "^4.17.12",
     "@types/socket.io-client": "^3.0.0",
     "bondage-club-mod-sdk": "^1.2.0",
+    "compromise": "^14.15.0",
+    "leo-profanity": "^1.9.0",
     "lz-string": "^1.5.0",
+    "sentiment": "^5.0.2",
     "socket.io-client": "^4.8.3",
     "typed-scss-modules": "^8.1.1"
   },
   "devDependencies": {
     "@types/node": "^25.3.0",
     "@types/semver": "^7.7.1",
+    "@types/sentiment": "^5.0.4",
     "bc-stubs": "^127.0.0",
     "concurrently": "^9.2.1",
     "eslint": "^10.0.1",

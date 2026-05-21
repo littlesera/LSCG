@@ -1,4 +1,5 @@
 import { OutfitMigrator } from "Modules/Migrators/OutfitMigrator";
+import { SpeechAnalysisModule } from "Modules/speech-analysis";
 import { ActivityModule } from "Modules/activities";
 import { CoreModule } from "Modules/core";
 import { HypnoModule } from "Modules/hypno";
@@ -81,4 +82,8 @@ export function Outfits(): OutfitCollection {
 
 export function TestOutfitMigration() {
 	new OutfitMigrator().Migrate("");
+}
+
+export function SpeechAnalysis(): SpeechAnalysisModule {
+	return getModule<SpeechAnalysisModule>("SpeechAnalysisModule");
 }
