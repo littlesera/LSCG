@@ -28,6 +28,7 @@ import { hasExtendedOnlineSettings, type ExtendedOnlineSettings } from "./types/
 
 import styles from "./main.scss?inline";
 import { MapModule } from "Modules/map";
+import { SpeechAnalysisModule } from "Modules/speech-analysis";
 
 export { 
 	DrugKeywords, 
@@ -171,6 +172,7 @@ function init_modules(): boolean {
 	registerModule(new SplatterModule());
 	registerModule(new CursedItemModule());
 	registerModule(new MapModule());
+	registerModule(new SpeechAnalysisModule());
 
 	for (const m of modules()) {
 		m.init();
