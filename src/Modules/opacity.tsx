@@ -500,12 +500,8 @@ export class OpacityModule extends BaseModule {
         }, ModuleCategory.Opacity);
 
         patchFunction("CharacterAppearanceVisible", {
-            "const Excluded = HideItemExclude?.includes(GroupName + AssetName);": "const Excluded = HideItemExclude?.includes('*') || HideItemExclude?.includes(GroupName + AssetName);"
-            // "if ((item.Asset.Hide != null) && (item.Asset.Hide.indexOf(GroupName) >= 0) && !Excluded) HidingItem = true;" :
-            // "if (item.Property?.HideItemExclude?.includes('*') || ((item.Asset.Hide != null) && (item.Asset.Hide.indexOf(GroupName) >= 0) && !Excluded)) HidingItem = true;",
-            
-            // "HidingItem = item.Asset.HideItemAttribute.some((val) => assetToCheck.Attribute.indexOf(val) !== -1);" :
-            // "HidingItem = item.Property?.HideItemExclude?.includes('*') || item.Asset.HideItemAttribute.some((val) => assetToCheck.Attribute.indexOf(val) !== -1);"
+            "const Excluded = HideItemExclude?.includes(GroupName + AssetName);" : 
+            "const Excluded = !((item.Property != null) && (item.Property.Hide != null) && (item.Property.Hide.indexOf(GroupName) >= 0)) && HideItemExclude?.includes('*') || HideItemExclude?.includes(GroupName + AssetName);"
         });
 
         // Prevent see-through items from contributing cross-group alpha masks (GroupAlpha) to other layers.
