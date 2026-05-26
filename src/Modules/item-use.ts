@@ -713,7 +713,7 @@ export class ItemUseModule extends BaseModule {
 		}, ModuleCategory.ItemUse);
 
 		hookFunction("StruggleMinigameStart", 1, (args, next) => {
-			this.Struggling = true;
+			if (args[0].IsPlayer()) this.Struggling = true;
 			next(args);
 		})
 
