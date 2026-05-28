@@ -921,7 +921,7 @@ export class MagicModule extends BaseModule {
             if (!s.AllowVoiceCast)
                 continue;
             let searchPhrase = (!!s.CastingPhrase && s.CastingPhrase.length > 0) ? s.CastingPhrase : s.Name;
-            let re = new RegExp(`^(?:.+)?${escapeRegExp(searchPhrase)} (${characterNames.map(c => escapeRegExp(c!)).join("|")})`, "i");
+            let re = new RegExp(`\\b${escapeRegExp(searchPhrase)}\\b (${characterNames.map(c => escapeRegExp(c!)).join("|")})`, "i");
             let matches = re.exec(oocParsedString);
             if (!matches)
                 continue;
