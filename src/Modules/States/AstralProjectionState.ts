@@ -193,7 +193,7 @@ export class AstralProjectionState extends BaseState {
                 let layerIx = CA.Asset.Layer.findIndex(l => l.Name == layerName);
                 let originalLayerOpacity = (Array.isArray(CA?.Property?.Opacity) ? CA?.Property?.Opacity[layerIx] : CA.Property?.Opacity) ?? 1;
                 let curOpacity = ret.Opacity ?? originalLayerOpacity ?? 1;
-                ret.Opacity = curOpacity * .4;
+                ret.Opacity = curOpacity * .4;                
                 ret.AlphaMasks = [];
             }
             return ret;

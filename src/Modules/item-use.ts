@@ -1283,7 +1283,7 @@ export class ItemUseModule extends BaseModule {
 				<ActivityTarget>{
 					Name: "ItemHands",
 					TargetLabel: "Give Item",
-					TargetAction: "SourceCharacter grabs at TargetCharacters hands, trying to steal TargetPronounPossessive item!",
+					TargetAction: "",
 					SelfAllowed: false
 				}
 			],

@@ -426,8 +426,7 @@ export class OpacityModule extends BaseModule {
             return next([type, ...args]);
         });
 
-        hookFunction("ItemColorFireExit", 1, (args, next) => {
-            next(args);
+        hookFunction("ColorPickerExit", 1, (args, next) => {
             this.OpacityCharacter = null;
             this.OpacityItem = null;
             this.HideDomUI();
@@ -435,6 +434,7 @@ export class OpacityModule extends BaseModule {
             this.TranslateRemoveEventListener();
             this._unhookResize?.();
             this._unhookResize = null;
+            next(args);
         }, ModuleCategory.Opacity);
 
         // *** Hack in actual updating of the translation overrides ***
@@ -520,6 +520,16 @@ export class OpacityModule extends BaseModule {
                 }
             }
             return next(args);
+        }, ModuleCategory.Opacity);
+
+        hookFunction("AssetLayerSort", 1, (args, next) => {
+            var ret = next(args);
+            if (this.Enabled) {
+                ret.forEach((layer: AssetLayer) => {
+                    (layer.MinOpacity as any) = 0;
+                });
+            }
+            return ret;
         }, ModuleCategory.Opacity);
 
         hookFunction("CharacterAppearanceSortLayers", 1, (args, next) => {
@@ -614,7 +624,7 @@ export class OpacityModule extends BaseModule {
             if (i >= value.length || i >= props.Opacity.length) {
                 break;
             }
-            props.Opacity[i] = CommonClamp(value[i], layer.MinOpacity, layer.MaxOpacity);
+            props.Opacity[i] = CommonClamp(value[i], 0, layer.MaxOpacity);
         }
         if (!!props.LSCGOpacity)
             delete props.LSCGOpacity;
