@@ -225,7 +225,7 @@ export class OpacityModule extends BaseModule {
                     opacityId,
                     opacityVal,
                     (evt) => this.onOpacityChange(evt, layer),
-                    Math.round(layer.MinOpacity * 100),
+                    0,//Math.round(layer.MinOpacity * 100),
                     Math.round(layer.MaxOpacity * 100),
                 );
                 let translateButton = this.createTranslateButton(layerName, (evt) => this.onClickTranslate(evt, layer));
