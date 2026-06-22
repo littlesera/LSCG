@@ -1283,7 +1283,7 @@ export class ItemUseModule extends BaseModule {
 				<ActivityTarget>{
 					Name: "ItemHands",
 					TargetLabel: "Give Item",
-					TargetAction: "SourceCharacter grabs at TargetCharacters hands, trying to steal TargetPronounPossessive item!",
+					TargetAction: `SourceCharacter gives PronounPossessive ActivityAsset to TargetCharacter.`,
 					SelfAllowed: false
 				}
 			],
@@ -1708,7 +1708,7 @@ export class ItemUseModule extends BaseModule {
 		var item = InventoryGet(source, "ItemHandheld");
 		if (!item)
 			return;
-			SendAction(`${CharacterNickname(source)} gives %POSSESSIVE% ${this.getItemName(item)} to ${CharacterNickname(target)}.`);
+		//SendAction(`${CharacterNickname(source)} gives %POSSESSIVE% ${this.getItemName(item)} to ${CharacterNickname(target)}.`);
 		InventoryRemove(source, "ItemHandheld", false);
 		let newItem = InventoryWear(target, item?.Asset.Name!, "ItemHandheld", item?.Color, item?.Difficulty, source.MemberNumber, item?.Craft, false);
 		if (!!newItem) newItem.Property = item.Property;
