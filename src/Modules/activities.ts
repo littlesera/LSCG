@@ -1909,6 +1909,13 @@ export class ActivityModule extends BaseModule {
     }
 
     AddTargetToActivity(activity: LSCGActivity, tgt: ActivityTarget) {
+        let textCachePush: (key: string, value: string) => void;
+        if (GameVersion === "R129") {
+            textCachePush = (key, value) => ActivityDictionary?.push([key, value]);
+        } else { // >= R130Beta1
+            const textCache = TextPrefetchFile(ScreenFileGetPath("ActivityDictionary.csv", "Character", "Preference"));
+            textCachePush = (key, value) => textCache.cache[key] = value;
+        }
         tgt.TargetLabel = tgt.TargetLabel ?? activity.Name.substring(5);
 
         if (tgt.SelfAllowed) {
@@ -1929,29 +1936,29 @@ export class ActivityModule extends BaseModule {
         }
 
         if (!!tgt.TargetLabel) {
-            ActivityDictionary?.push([
+            textCachePush(
                 "Label-ChatOther-" + tgt.Name + "-" + activity.Name,
                 tgt.TargetLabel
-            ]);
+            );
         }
 
         if (!!tgt.TargetAction) {
-            ActivityDictionary?.push([
+            textCachePush(
                 "ChatOther-" + tgt.Name + "-" + activity.Name,
-                tgt.TargetAction
-            ]);
+                tgt.TargetAction,
+            );
         }
 
         if (tgt.SelfAllowed) {
-            ActivityDictionary?.push([
+            textCachePush(
                 "Label-ChatSelf-" + tgt.Name + "-" + activity.Name,
-                tgt.TargetSelfLabel ?? tgt.TargetLabel
-            ]);
+                tgt.TargetSelfLabel ?? tgt.TargetLabel,
+            );
 
-            ActivityDictionary?.push([
+            textCachePush(
                 "ChatSelf-" + tgt.Name + "-" + activity.Name,
-                tgt.TargetSelfAction ?? tgt.TargetAction
-            ]);
+                tgt.TargetSelfAction ?? tgt.TargetAction,
+            );
         }
     }
 

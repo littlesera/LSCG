@@ -1095,15 +1095,24 @@ export function getActivityLabel(activity: Activity, group: AssetGroup) {
 }
 
 export function activityHasDictionaryText(KeyWord: string) {
-	if (!ActivityDictionary)
-		ActivityDictionaryLoad();
-	if (!ActivityDictionary)
-		return;
+	if (GameVersion === "R129") {
+		if (!ActivityDictionary)
+			ActivityDictionaryLoad();
+		if (!ActivityDictionary)
+			return;
 
-	for (let D = 0; D < ActivityDictionary.length; D++)
-		if (ActivityDictionary[D][0] == KeyWord)
-			return true;
-	return false;
+		for (let D = 0; D < ActivityDictionary.length; D++)
+			if (ActivityDictionary[D][0] == KeyWord)
+				return true;
+		return false;
+	} else { // >= R130Beta1
+		const textCache = TextPrefetchFile(ScreenFileGetPath("ActivityDictionary.csv", "Character", "Preference"));
+		if (!textCache.loaded) {
+			return;
+		} else {
+			return textCache.cache[KeyWord] !== undefined;
+		}
+	}
 }
 
 export function getZoneColor(groupName: string, hasConfiguration: boolean): string {
