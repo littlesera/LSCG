@@ -1913,7 +1913,7 @@ export class ActivityModule extends BaseModule {
         if (GameVersion === "R129") {
             textCachePush = (key, value) => ActivityDictionary?.push([key, value]);
         } else { // >= R130Beta1
-            const textCache = TextPrefetchFile(ScreenFileGetPath("ActivityDictionary.csv", "Character", "Preference"));
+            const textCache = ActivityDictionaryLoad();
             textCachePush = (key, value) => textCache.cache[key] = value;
         }
         tgt.TargetLabel = tgt.TargetLabel ?? activity.Name.substring(5);

@@ -1105,8 +1105,8 @@ export function activityHasDictionaryText(KeyWord: string) {
 			if (ActivityDictionary[D][0] == KeyWord)
 				return true;
 		return false;
-	} else { // >= R130Beta1
-		const textCache = TextPrefetchFile(ScreenFileGetPath("ActivityDictionary.csv", "Character", "Preference"));
+	} else { // >= R130Beta2
+		const textCache = ActivityDictionaryLoad();
 		if (!textCache.loaded) {
 			return;
 		} else {
