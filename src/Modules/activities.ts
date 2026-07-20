@@ -119,7 +119,7 @@ export class ActivityModule extends BaseModule {
             let msg = ActivityDictionaryText(data.Content);
             msg = CommonStringSubstitute(msg, substitutions ?? [])
             data.Dictionary?.push({
-                Tag: "MISSING ACTIVITY DESCRIPTION FOR KEYWORD " + data.Content,
+                Tag: `${TEXT_NOT_FOUND_PREFIX} "ActivityDictionary.csv": ${data.Content}`,
                 Text: msg
             });
 
