@@ -1064,32 +1064,33 @@ export function forceOrgasm() {
 	ActivityOrgasmPrepare(Player);
 }
 
-export function getActivities(overrideGroup: AssetGroup | undefined = undefined): Activity[] {
+export function getActivities(overrideGroup: AssetGroup | undefined = undefined, isSelf: boolean): Activity[] {
 	if (!Player.FocusGroup && !overrideGroup)
 		return [];
 	else {
 		let focusGroup = overrideGroup ?? Player.FocusGroup;
 		if (!focusGroup)
 			return [];
-		return AssetActivitiesForGroup("Female3DCG", focusGroup.Name, "any").filter(a => activityHasDictionaryText(getActivityLabelTag(a, focusGroup!)));
+		return AssetActivitiesForGroup("Female3DCG", focusGroup.Name, "any").filter(a => activityHasDictionaryText(getActivityLabelTag(a, focusGroup!, isSelf)));
 	}
 }
 
-export function getActivityLabelTag(activity: Activity, group: AssetGroup) {
+export function getActivityLabelTag(activity: Activity, group: AssetGroup, isSelf: boolean) {
 	let groupName = group.Name as string;
 	if (Player.HasPenis()) {
 		if (groupName == "ItemVulva") groupName = "ItemPenis";
 		if (groupName == "ItemVulvaPiercings") groupName = "ItemGlans";
 	}
+	let who = isSelf ? "Self" : "Other";
 
-	return `Label-ChatOther-${groupName}-${activity.Name}`;
+	return `Label-Chat${who}-${groupName}-${activity.Name}`;
 }
 
-export function getActivityLabel(activity: Activity, group: AssetGroup) {
+export function getActivityLabel(activity: Activity, group: AssetGroup, isSelf: boolean) {
 	if (!activity)
 		return "ACTIVITY NOT FOUND";
 	
-	let tag = getActivityLabelTag(activity, group);
+	let tag = getActivityLabelTag(activity, group, isSelf);
 
 	return ActivityDictionaryText(tag);
 }
