@@ -124,8 +124,7 @@ export class CoreModule extends BaseModule {
                     return;
                 ChatRoomCharacter.forEach(C => {
                     if (C.Crafting != null && !C.IsPlayer() && C.MemberNumber != target.MemberNumber && (C as OtherCharacter).LSCG && (C as OtherCharacter).LSCG.GlobalModule.sharePublicCrafting) {
-                        let Crafting = CraftingDecompressServerData(C.Crafting);
-                        for (let Craft of Crafting)
+                        for (let Craft of C.Crafting)
                             if ((Craft != null) && (Craft.Item != null))
                                 if ((Craft.Private == null) || (Craft.Private == false)) {
                                     Craft.MemberName = CharacterNickname(C);
