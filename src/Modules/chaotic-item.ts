@@ -220,7 +220,7 @@ class PropertyMutator {
             // Idk why but this AssetTextGet almost always fail to retrieve the correct text.
             // And because the string to retrieve the asset's text don't follow any logics, we probably cannot do better
             let propertyName = AssetTextGet(item.Asset.Name + selectedProperty) ?? selectedProperty;
-            if (propertyName.includes("MISSING")) {
+            if (propertyName.startsWith(TEXT_NOT_FOUND_PREFIX)) {
                 propertyName = customPropertyName ?? selectedProperty ?? "unknown property";
             }
             SendAction(`%NAME%'s ${itemName} changed the ${propertyName} settings by itself to ${propertyChangeResult?.newValueStr}`);
