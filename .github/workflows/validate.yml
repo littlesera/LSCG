@@ -16,8 +16,8 @@ jobs:
     - name: Use Node.js 24.x
       uses: actions/setup-node@v3
       with:
-        node-version: ${{ matrix.node-version }}
+        node-version: '24.x'
         cache: 'npm'
     - run: npm ci
     - run: npm run build --if-present
-    #- run: npm test
+    - run: npm test
