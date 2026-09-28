@@ -1668,7 +1668,6 @@ export class ItemUseModule extends BaseModule {
 			InventoryRemove(target, sourceLocation, true);
 			var craft = gag.Craft;
 			if (!!craft) {
-				craft.Lock = "";
 				delete craft.Effects.Large;
 				delete craft.Effects.Small;
 			}
@@ -1801,9 +1800,9 @@ export class ItemUseModule extends BaseModule {
 			if (focusGroup == "ItemNeck" || needsItem == "GagToNecklace") targetAssetGroup = gagTarget?.OverrideNeckLocation ?? "Necklace";
 			else if (needsItem == "GagTakeItem") targetAssetGroup = "ItemHandheld";
 
-			let targetItem = <Item>{Asset: AssetGet("Female3DCG", targetAssetGroup, targetItemName ?? "")};
+			let targetItem = targetItemName ? AppearanceItem.fromName(targetAssetGroup, targetItemName) : null;
 			let targetOwner = needsItem == "GagTakeItem" ? acting : acted;
-			if (targetItem.Asset != null) {
+			if (targetItem) {
 				if (types.some((type) => InventoryIsAllowedLimited(targetOwner, targetItem, type ?? ""))) {
 					blocked = "limited";
 				} else if (types.some((type) => InventoryBlockedOrLimited(targetOwner, targetItem, type ?? ""))) {

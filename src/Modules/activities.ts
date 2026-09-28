@@ -34,7 +34,7 @@ export interface CustomReaction {
 
 export interface CustomAction {
     /**
-     * @param target 
+     * @param target
      * @returns false means skip processing the sent message hook, true or undefined means pass it down
      */
     Func(target: Character | null, data: ServerChatRoomMessage, meta: IChatRoomMessageMetadata | undefined): boolean | void;
@@ -96,7 +96,7 @@ export class ActivityModule extends BaseModule {
             stats: {}
         };
     }
-    
+
     collarModule: CollarModule = getModule<CollarModule>("CollarModule");
 
     load(): void {
@@ -250,14 +250,14 @@ export class ActivityModule extends BaseModule {
                 let c = getCharacter(sender);
                 if (!c)
                     return;
-                
+
                 let str = escapeHtml(`${CharacterNickname(c)} would like to high five you.`);
                 let promptHtml = `<span>${str}</span><button style="background-color:green;border-radius:5px;margin:5px" id="h5-accept">Slap it!</button><button style="background-color:red;border-radius:5px;margin:5px" id="h5-deny">Ignore</button>`;
                 if (!(Player.CanInteract() && !Player.Effect.includes("MergedFingers"))) {
                     promptHtml = `<span>${str}</span><button style="background-color:green;border-radius:5px;margin:5px" id="h5-apologize">Can't...</button><button style="background-color:red;border-radius:5px;margin:5px" id="h5-deny">Ignore</button>`;
                 }
                 LSCG_SendLocal(promptHtml, false, 10000);
-                
+
                 let timeout = setTimeout(() => {
                     if (!c)
                         return;
@@ -265,7 +265,7 @@ export class ActivityModule extends BaseModule {
                     acceptEle?.remove();
                     denyEle?.remove();
                 }, 12000);
-                
+
                 var acceptEle = document.getElementById("h5-accept");
                 var denyEle = document.getElementById("h5-deny");
                 var apologizeEle = document.getElementById("h5-apologize");
@@ -280,8 +280,8 @@ export class ActivityModule extends BaseModule {
                         apologizeEle?.remove();
                     });
                 }
-                
-                if (!!apologizeEle) {  
+
+                if (!!apologizeEle) {
                     apologizeEle.addEventListener("click", (evt) => {
                         clearTimeout(timeout);
                         SendAction(`%NAME% shrugs towards %OPP_NAME% apologetically, unable to high five.`, c);
@@ -311,7 +311,7 @@ export class ActivityModule extends BaseModule {
                 let c = getCharacter(sender);
                 if (!c)
                     return;
-                
+
                 let str = escapeHtml(`${CharacterNickname(c)} refuses to high five you. Grab them?`);
                 LSCG_SendLocal(`<span>${str}</span><button style="background-color:orange;border-radius:5px;margin:5px" id="h5-grab">Grab!</button><button style="background-color:green;border-radius:5px;margin:5px" id="h5-nah">Nah</button>`, false, 10000);
 
@@ -334,7 +334,7 @@ export class ActivityModule extends BaseModule {
                 }
             }
         });
-        
+
         Core().RegisterCommandListener(<CommandListener>{
             id: "h5_exec_listener",
             command: "h5-execute",
@@ -342,7 +342,7 @@ export class ActivityModule extends BaseModule {
                 let c = getCharacter(sender);
                 if (!c)
                     return;
-                
+
                 let targetNum = msg?.command?.args?.find(a => a.name == "target")?.value ?? -1;
 
                 if (!AudioShouldSilenceSound(c.IsPlayer() || targetNum == Player.MemberNumber))
@@ -631,7 +631,7 @@ export class ActivityModule extends BaseModule {
                             return !!InventoryGet(acted, "TailStraps");
                         else if (group.Name == "ItemHood")
                             return !!InventoryGet(acted, "Wings")
-                        else if (group.Name == "ItemHead") 
+                        else if (group.Name == "ItemHead")
                             return (InventoryGet(acted, "HairAccessory1")?.Asset.Name == "Halo" || InventoryGet(acted, "HairAccessory3")?.Asset.Name == "Halo")
                         else if (group.Name === "ItemVulva")
                             return (InventoryPrerequisiteMessage(acted, "AccessCrotch") === "") && !acted.IsVulvaChaste();
@@ -695,7 +695,7 @@ export class ActivityModule extends BaseModule {
                             return !acting.IsVulvaFull();
                         }
                         else {
-                            return acted.Pose?.indexOf("Kneel") > -1 || 
+                            return acted.Pose?.indexOf("Kneel") > -1 ||
                                 acted.Pose?.indexOf("KneelingSpread") > -1 ||
                                 acted.Pose?.indexOf("Hogtied") > -1 ||
                                 acted.Pose?.indexOf("KneelingSpread") > -1 ||
@@ -732,7 +732,7 @@ export class ActivityModule extends BaseModule {
             CustomPrereqs: [
                 {
                     Name: "SourceAssEmpty",
-                    Func: (acting, acted, group) => InventoryPrerequisiteMessage(acting, "AccessButt") === "" && 
+                    Func: (acting, acted, group) => InventoryPrerequisiteMessage(acting, "AccessButt") === "" &&
                         !(acting.IsPlugged() || acting.IsButtChaste() &&
                         !InventoryGroupIsBlocked(acting, "ItemButt", true))
                 }
@@ -1036,7 +1036,7 @@ export class ActivityModule extends BaseModule {
                         this.leashingModule.DoGrab(target, "arm");
                 }
             },
-        });        
+        });
 
         // Grab Tail
         this.AddActivity({
@@ -1642,7 +1642,7 @@ export class ActivityModule extends BaseModule {
             ],
             CustomAction: {
                 Func: (target) => {
-                    if (!!target) 
+                    if (!!target)
                         this.leashingModule.DoGrab(target, "chomp");
                 }
             },
@@ -1690,7 +1690,7 @@ export class ActivityModule extends BaseModule {
             ],
             CustomAction: {
                 Func: (target) => {
-                    if (!!target) 
+                    if (!!target)
                         this.leashingModule.DoRelease(target, "chomp");
                 }
             },
@@ -1909,13 +1909,8 @@ export class ActivityModule extends BaseModule {
     }
 
     AddTargetToActivity(activity: LSCGActivity, tgt: ActivityTarget) {
-        let textCachePush: (key: string, value: string) => void;
-        if (GameVersion === "R129") {
-            textCachePush = (key, value) => ActivityDictionary?.push([key, value]);
-        } else { // >= R130Beta1
-            const textCache = ActivityDictionaryLoad();
-            textCachePush = (key, value) => textCache.cache[key] = value;
-        }
+        const textCache = ActivityDictionaryLoad();
+        const textCachePush: (key: string, value: string) => void = (key, value) => textCache.cache[key] = value;
         tgt.TargetLabel = tgt.TargetLabel ?? activity.Name.substring(5);
 
         if (tgt.SelfAllowed) {
@@ -1932,7 +1927,7 @@ export class ActivityModule extends BaseModule {
 
             if (activity.Target.indexOf(tgt.Name) == -1) {
                 activity.Target.push(tgt.Name);
-            }            
+            }
         }
 
         if (!!tgt.TargetLabel) {
@@ -2009,7 +2004,7 @@ export class ActivityModule extends BaseModule {
     isPlayerHoldingHandsWith(holdingMemberNumber: number) {
         return this.leashingModule.ContainsLeashing(holdingMemberNumber, "hand");
     }
-    
+
     isPlayerPinchedBy(member: number) {
         return this.leashingModule.IsLeashedByType(member, "ear");
     }
@@ -2058,7 +2053,7 @@ export class ActivityModule extends BaseModule {
     CheckForErection(target: Character) {
         let isChastity = target.IsVulvaChaste();
         let isClothed = InventoryPrerequisiteMessage(target, "AccessCrotch") === "RemoveClothesForItem";
-        if (target.HasPenis() && 
+        if (target.HasPenis() &&
         isClothed &&
         (WardrobeGetExpression(target)?.Pussy ?? "") == "Hard") {
             if (!isChastity) {

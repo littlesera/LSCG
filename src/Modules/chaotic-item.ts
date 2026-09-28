@@ -457,7 +457,7 @@ export class ChaoticItemModule extends BaseModule {
 
         // Strip the square parenthesis from the name keywords and italicize them and add a dedicated `Status & Effect` tooltip entry for the keword
         hookFunction("ElementButton.CreateForAsset", 1, ([idPrefix, asset, C, onClick, options, ...args], next) => {
-            const craft: CraftingItem | undefined = "Asset" in asset ? asset.Craft : undefined;
+            const craft: CraftingPartialItem | undefined = "Asset" in asset ? asset.Craft : undefined;
             if (!craft) {
                 return next([idPrefix, asset, C, onClick, options, ...args]);
             }

@@ -560,7 +560,7 @@ export class InjectorModule extends BaseModule {
 
     InjectionLocationTable: Map<string, number> = new Map<string, number>(Object.entries(locationObj))
 
-    GetDrugTypes(item: CraftingItem): DrugType[] {
+    GetDrugTypes(item: CraftingPartialItem): DrugType[] {
         var name = item.Name;
         var description = typeof CraftingDescription === "undefined" ? item.Description : CraftingDescription.Decode(item.Description); // R109
         var totalString = name + " | " + description;
@@ -926,7 +926,7 @@ export class InjectorModule extends BaseModule {
         if (!!craftingMember && craftingMember >= 0 && craftingMember != Player.MemberNumber) {
             let craftingChar = getCharacter(craftingMember);
             if (!!craftingChar) {
-                craftedNets = craftedNets?.concat(<CraftingItem[]>CraftingDecompressServerData(craftingChar.Crafting?.filter(x => x?.Item == "Net") ?? ""));
+                craftedNets = craftedNets?.concat(craftingChar.Crafting?.filter((x): x is CraftingItem => x?.Item == "Net") ?? "");
             }
         }
 
