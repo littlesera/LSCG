@@ -2,7 +2,7 @@ import { BaseModule } from "base";
 import { getModule } from "modules";
 import { BaseSettingsModel } from "Settings/Models/base";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { GetActivityName, GetTargetCharacter, ICONS, IsIncapacitated, LSCG_SendLocal, OnAction, OnActivity, SendAction, callOriginal, getCharacter, getRandomInt, hookFunction, mouseTooltip, patchFunction, removeAllHooksByModule, replace_template, sendLSCGCommand, sendLSCGCommandBeep, setOrIgnoreBlush } from "../utils";
+import { GetActivityName, GetTargetCharacter, ICONS, IsIncapacitated, LSCG_SendLocal, OnAction, OnActivity, SendAction, callOriginal, getCharacter, getRandomInt, hookFunction, mouseTooltip, removeAllHooksByModule, replace_template, sendLSCGCommand, sendLSCGCommandBeep, setOrIgnoreBlush } from "../utils";
 import { MiscModule } from "./misc";
 import { Pairing } from "./States/PairedBaseState";
 import { ItemUseModule } from "./item-use";
@@ -366,20 +366,30 @@ export class LeashingModule extends BaseModule {
             }
         }, ModuleCategory.Leashed);
 
-        patchFunction("ServerHandleLeashBeep", {
-            "if (ChatRoomLeashPlayer !== data.MemberNumber) return;":
-                "if (ChatRoomLeashPlayer !== data.MemberNumber && this.LeashedByPairings.map(p => p.PairedMember).indexOf(data.MemberNumber) === -1) return;",
-        });
-
-        // We need to track that acrodd ServerHandleLeashBeep/ChatRoomBreakLeash
-        let beepSourceNumber: number;
+        // We need to track that across ServerHandleLeashBeep/ChatRoomBreakLeash
+        let beepSourceNumber = -1;
 
         hookFunction("ServerHandleLeashBeep", 1, async (args, next) => {
             const [data] = args;
+            // BC only follows ChatRoomLeashPlayer's beeps, and only checks it before its first await,
+            // so stand our leasher in for that and put theirs straight back
+            const vanillaLeashPlayer = ChatRoomLeashPlayer;
+            const isOurLeasher = vanillaLeashPlayer !== data.MemberNumber && this.LeashedByMemberNumbers.indexOf(data.MemberNumber) > -1;
+            if (isOurLeasher)
+                ChatRoomLeashPlayer = data.MemberNumber;
             beepSourceNumber = data.MemberNumber;
-            const res = next(args);
-            beepSourceNumber = -1;
-            return res;
+            try {
+                let res: Promise<void>;
+                try {
+                    res = next(args);
+                } finally {
+                    if (isOurLeasher)
+                        ChatRoomLeashPlayer = vanillaLeashPlayer;
+                }
+                return await res;
+            } finally {
+                beepSourceNumber = -1;
+            }
         }, ModuleCategory.Leashed);
         
         hookFunction("ChatRoomBreakLeash", 1, (args, next) => {
@@ -387,7 +397,7 @@ export class LeashingModule extends BaseModule {
                 this.RemoveLeashings(beepSourceNumber, false);
             }
             return next(args);
-        });
+        }, ModuleCategory.Leashed);
 
         hookFunction("ChatRoomSync", 1, (args, next) => {
             const ret = next(args);
