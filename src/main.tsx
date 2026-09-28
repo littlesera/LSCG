@@ -11,6 +11,7 @@ import { GUI } from "Settings/settingUtils";
 import { ActivityModule } from "Modules/activities";
 import { InjectorModule } from 'Modules/injector';
 import { CoreModule } from 'Modules/core';
+import { ConsentModule } from 'Modules/consent';
 import { RemoteUIModule } from 'Modules/remoteUI';
 import { CommandModule } from 'Modules/commands';
 import { ItemUseModule } from 'Modules/item-use';
@@ -149,6 +150,7 @@ function init() {
 
 function init_modules(): boolean {
 	registerModule(new CoreModule());
+	registerModule(new ConsentModule());
 	registerModule(new OpacityModule());
 	registerModule(new GUI());
 	registerModule(new OutfitCollectionModule());

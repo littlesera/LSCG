@@ -27,14 +27,15 @@ export const MagicWandItems: string[] = [
 	"Baguette"
 ]
 
-export const QuaffableItems: string[] = [
+/** Handheld items the base game doesn't allow SipItem on, but we do. */
+export const AdditionalSippableItems: string[] = [
 	"PotionBottle"
 ]
 
 export const PourableItems: string[] = [
 	"GlassFilled",
 	"Mug"
-].concat(QuaffableItems);
+].concat(AdditionalSippableItems);
 
 export const AdditionalPenetrateItems: string[] = [
 
@@ -70,7 +71,6 @@ export const ChewableItems: string[] = [
 ]
 
 export const EnhancedItemActivityNames: string[] = [
-	"LSCG_Quaff",
 	"LSCG_Eat",
 	"LSCG_FunnelPour",
 	"SipItem",
@@ -676,9 +676,9 @@ export class ItemUseModule extends BaseModule {
 				let item = InventoryGet(C, "ItemHandheld");
 				if (item && MagicWandItems.includes(item.Asset.Name))
 					results.push(item);
-			} else if (itemType == "QuaffableItem") {
+			} else if (itemType == "SipItem") {
 				let item = InventoryGet(C, "ItemHandheld");
-				if (item && QuaffableItems.includes(item.Asset.Name))
+				if (item && AdditionalSippableItems.includes(item.Asset.Name) && !results.includes(item))
 					results.push(item);
 			} else if (itemType == "PourableItem") {
 				let item = InventoryGet(C, "ItemHandheld");

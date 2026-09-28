@@ -2,7 +2,6 @@ import { BaseModule } from "base";
 import { getModule } from "modules";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
 import { GetConfiguredItemBundlesFromOutfitKey, GetDelimitedList, OnChat, GetHandheldItemNameAndDescriptionConcat, GetItemNameAndDescriptionConcat, GetMetadata, ICONS, LSCG_SendLocal, LSCG_TEAL, OnActivity, SendAction, forceOrgasm, getCharacter, getRandomInt, hookFunction, isPhraseInString, removeAllHooksByModule, sendLSCGCommand, sendLSCGCommandBeep, settingsSave, getCharacterByNicknameOrMemberNumber, excludeParentheticalContent, escapeRegExp } from "../utils";
-import { ActivityModule, ActivityTarget } from "./activities";
 import { cleanEffect, KNOWN_SPELLS_LIMIT, LSCGSpellEffect, MagicSettingsModel, OutfitConfig, OutfitOption, SpellDefinition } from "Settings/Models/magic";
 import { GuiMagic, pairedSpellEffects } from "Settings/magic";
 import { StateModule } from "./states";
@@ -140,8 +139,6 @@ export class MagicModule extends BaseModule {
     }
 
     load(): void {
-        let activities = getModule<ActivityModule>("ActivityModule");
-
         OnChat(1, ModuleCategory.Magic, (data, sender, msg, metadata) => {
             if (!this.Enabled || !sender?.IsPlayer())
                 return;
@@ -194,30 +191,13 @@ export class MagicModule extends BaseModule {
             let activityName = meta?.ActivityName;
             let target = meta?.TargetMemberNumber;
             let thrownInMouth = activityName == "ThrowItem" && meta?.GroupName == "ItemMouth";
-            if (target == Player.MemberNumber && 
+            // Offered sips are resolved by the injector's "sip" consent flow instead
+            if (target == Player.MemberNumber &&
                 IsActivityEnhanced(data) &&
+                data.Content != InjectorModule.SIP_OFFER_CONTENT &&
                 !!sender) {
                 this.HandleQuaff(sender);
             }
-        });
-
-        activities?.AddActivity({
-            Activity: {
-                Name: "Quaff",
-                MaxProgress: 90,
-                MaxProgressSelf: 90,
-                Prerequisite: ["UseHands", "Needs-QuaffableItem"]
-            },
-            Targets: [
-                {
-                    Name: "ItemMouth",
-					TargetLabel: "Quaff",
-                    SelfAllowed: true,
-                    TargetSelfAction: "SourceCharacter quaffs the ActivityAsset in one gulp.",
-                    TargetAction: "SourceCharacter presses PronounPossessive ActivityAsset up against TargetCharacter's lips."
-                }
-            ],
-            CustomImage: "Icons/Magic.png"
         });
     }
 
@@ -934,15 +914,21 @@ export class MagicModule extends BaseModule {
     }
 
     // ***************** Potions *******************
-    HandleQuaff(sender: Character) {
+    /**
+     * @param consented The drinker already accepted (or lost a force contest over) this potion,
+     * so it's swallowed without another resist roll or swallow message.
+     */
+    HandleQuaff(sender: Character, consented: boolean = false) {
         let item = InventoryGet(sender, "ItemHandheld");
-        let spell = this.GetSpellFromItem(item, sender);
+        let spell = this.GetSpellFromItem(item, sender, consented);
         if (!!spell && !!item)
-            this.HandleQuaffWithSpell(sender, getModule<ItemUseModule>("ItemUseModule")?.getItemName(item), spell);
+            this.HandleQuaffWithSpell(sender, getModule<ItemUseModule>("ItemUseModule")?.getItemName(item), spell, consented);
     }
 
-    HandleQuaffWithSpell(sender: Character | null, itemName: string, spell: SpellDefinition | undefined) {
+    HandleQuaffWithSpell(sender: Character | null, itemName: string, spell: SpellDefinition | undefined, consented: boolean = false) {
         if (!!spell && !!itemName && !!sender) {
+            if (consented)
+                return this.ProcessPotion(sender, spell);
             let gagType = getModule<InjectorModule>("InjectorModule")?.GetGagDrinkAccess(Player);
             if (!this.SpellIsBeneficial(spell) && gagType == "nothing" && sender.MemberNumber != Player.MemberNumber) {
                 this.TryForcePotion(sender, itemName, spell);
@@ -978,9 +964,10 @@ export class MagicModule extends BaseModule {
         }, 1000);
     }
 
-    itemSpellRequests: number[] = [];
+    /** Outstanding spell lookups from other crafters, mapped to whether the potion was consented to. */
+    itemSpellRequests: Map<number, boolean> = new Map<number, boolean>();
 
-    GetSpellFromItem(item: Item | null, itemUser: Character): SpellDefinition | undefined {
+    GetSpellFromItem(item: Item | null, itemUser: Character, consented: boolean = false): SpellDefinition | undefined {
         let itemCraft = item?.Craft;
         let itemStr = GetItemNameAndDescriptionConcat(item) ?? "";
         if (!item || !itemCraft || !itemStr)
@@ -998,7 +985,7 @@ export class MagicModule extends BaseModule {
                 return foundSpell;
             } else {
                 let reqId = Date.now();
-                this.itemSpellRequests.push(reqId);
+                this.itemSpellRequests.set(reqId, consented);
                 sendLSCGCommandBeep(craftingMember, "get-spell", [{
                     name: "itemStr",
                     value: itemStr
@@ -1051,10 +1038,11 @@ export class MagicModule extends BaseModule {
         let originator = response.command?.args.find(a => a.name == "originator")?.value as number;
         let sender = getCharacter(originator);
 
-        if (this.itemSpellRequests.indexOf(reqId) > -1) {
-            this.itemSpellRequests.splice(this.itemSpellRequests.indexOf(reqId));
+        if (this.itemSpellRequests.has(reqId)) {
+            let consented = this.itemSpellRequests.get(reqId);
+            this.itemSpellRequests.delete(reqId);
             setTimeout(() => {
-                this.HandleQuaffWithSpell(sender, itemName, spell);
+                this.HandleQuaffWithSpell(sender, itemName, spell, consented);
             }, 1000);
         }
     }

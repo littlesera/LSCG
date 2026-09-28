@@ -1,6 +1,7 @@
 import { OutfitMigrator } from "Modules/Migrators/OutfitMigrator";
 import { ActivityModule } from "Modules/activities";
 import { CoreModule } from "Modules/core";
+import { ConsentModule } from "Modules/consent";
 import { HypnoModule } from "Modules/hypno";
 import { InjectorModule } from "Modules/injector";
 import { MagicModule } from "Modules/magic";
@@ -26,6 +27,10 @@ export function getModule<T extends BaseModule>(moduleType: string): T {
 
 export function Core(): CoreModule {
 	return getModule<CoreModule>("CoreModule");
+}
+
+export function Consent(): ConsentModule {
+	return getModule<ConsentModule>("ConsentModule");
 }
 
 export function Activities(): ActivityModule {

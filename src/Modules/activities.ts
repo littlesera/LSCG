@@ -1,7 +1,7 @@
 import { BaseModule } from "base";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
-import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, hookFunction, ICONS, getCharacter, OnAction, callOriginal, LSCG_SendLocal, GetTargetCharacter, GetActivityName, GetMetadata, GetActivityEntryFromContent, IsActivityAllowed, sendLSCGCommand, replace_template, escapeHtml, sendLSCGMessage } from "../utils";
-import { Core, getModule } from "modules";
+import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, hookFunction, ICONS, getCharacter, OnAction, callOriginal, LSCG_SendLocal, GetTargetCharacter, GetActivityName, GetMetadata, GetActivityEntryFromContent, IsActivityAllowed, replace_template, sendLSCGMessage } from "../utils";
+import { Consent, Core, getModule } from "modules";
 import { ItemUseModule } from "./item-use";
 import { CollarModule } from "./collar";
 import { ActivitySettingsModel } from "Settings/Models/activities";
@@ -243,95 +243,34 @@ export class ActivityModule extends BaseModule {
         // })
 
 
-        Core().RegisterCommandListener(<CommandListener>{
-            id: "h5_ask_listener",
-            command: "h5-ask",
-            func: (sender: number, msg: LSCGMessageModel) => {
-                let c = getCharacter(sender);
-                if (!c)
-                    return;
-
-                let str = escapeHtml(`${CharacterNickname(c)} would like to high five you.`);
-                let promptHtml = `<span>${str}</span><button style="background-color:green;border-radius:5px;margin:5px" id="h5-accept">Slap it!</button><button style="background-color:red;border-radius:5px;margin:5px" id="h5-deny">Ignore</button>`;
-                if (!(Player.CanInteract() && !Player.Effect.includes("MergedFingers"))) {
-                    promptHtml = `<span>${str}</span><button style="background-color:green;border-radius:5px;margin:5px" id="h5-apologize">Can't...</button><button style="background-color:red;border-radius:5px;margin:5px" id="h5-deny">Ignore</button>`;
-                }
-                LSCG_SendLocal(promptHtml, false, 10000);
-
-                let timeout = setTimeout(() => {
-                    if (!c)
-                        return;
-                    sendLSCGCommand(c, "h5-respond");
-                    acceptEle?.remove();
-                    denyEle?.remove();
-                }, 12000);
-
-                var acceptEle = document.getElementById("h5-accept");
-                var denyEle = document.getElementById("h5-deny");
-                var apologizeEle = document.getElementById("h5-apologize");
-
-                if (!!acceptEle) {
-                    acceptEle.addEventListener("click", (evt) => {
-                        clearTimeout(timeout);
-                        SendAction(`%NAME% raises %POSSESSIVE% hand and executes a perfect high five with %OPP_NAME%!`, c);
-                        this.ExecuteHighFive(c);
-                        acceptEle?.remove();
-                        denyEle?.remove();
-                        apologizeEle?.remove();
-                    });
-                }
-
-                if (!!apologizeEle) {
-                    apologizeEle.addEventListener("click", (evt) => {
-                        clearTimeout(timeout);
-                        SendAction(`%NAME% shrugs towards %OPP_NAME% apologetically, unable to high five.`, c);
-                        acceptEle?.remove();
-                        denyEle?.remove();
-                        apologizeEle?.remove();
-                    });
-                }
-
-                if (!!denyEle) {
-                    denyEle.addEventListener("click", (evt) => {
-                        clearTimeout(timeout);
-                        SendAction(`${CharacterNickname(Player)} ignores ${CharacterNickname(c!)}.`);
-                        sendLSCGCommand(c!, "h5-respond");
-                        acceptEle?.remove();
-                        denyEle?.remove();
-                        apologizeEle?.remove();
-                    });
-                }
-            }
-        });
-
-        Core().RegisterCommandListener(<CommandListener>{
-            id: "h5_resp_listener",
-            command: "h5-respond",
-            func: (sender: number, msg: LSCGMessageModel) => {
-                let c = getCharacter(sender);
-                if (!c)
-                    return;
-
-                let str = escapeHtml(`${CharacterNickname(c)} refuses to high five you. Grab them?`);
-                LSCG_SendLocal(`<span>${str}</span><button style="background-color:orange;border-radius:5px;margin:5px" id="h5-grab">Grab!</button><button style="background-color:green;border-radius:5px;margin:5px" id="h5-nah">Nah</button>`, false, 10000);
-
-                var grabEle = document.getElementById("h5-grab");
-                if (!!grabEle) {
-                    grabEle.addEventListener("click", (evt) => {
-                        SendAction(`%NAME% grabs %OPP_NAME% by the wrist.`, c);
-                        this.leashingModule.DoGrab(c, "arm");
-                        grabEle?.remove();
-                        leaveEle?.remove();
-                    });
-                }
-
-                var leaveEle = document.getElementById("h5-nah");
-                if (!!leaveEle) {
-                    leaveEle.addEventListener("click", (evt) => {
-                        grabEle?.remove();
-                        leaveEle?.remove();
-                    });
-                }
+        Consent().RegisterFlow({
+            id: "high-five",
+            prompt: (sender) => ({
+                text: `${CharacterNickname(sender)} would like to high five you.`,
+                accept: "Slap it!",
+                refuse: "Ignore"
+            }),
+            canAccept: () => Player.CanInteract() && !Player.Effect.includes("MergedFingers"),
+            unableLabel: "Can't...",
+            onAccepted: (sender) => {
+                SendAction(`%NAME% raises %POSSESSIVE% hand and executes a perfect high five with %OPP_NAME%!`, sender);
+                this.ExecuteHighFive(sender);
+            },
+            onRefused: (sender, _, answer, timedOut) => {
+                if (answer == "unable")
+                    SendAction(`%NAME% shrugs towards %OPP_NAME% apologetically, unable to high five.`, sender);
+                else if (!timedOut)
+                    SendAction(`${CharacterNickname(Player)} ignores ${CharacterNickname(sender)}.`);
+            },
+            // Someone who physically can't high five isn't asked to be grabbed for it
+            forcePrompt: (target, answer) => answer == "unable" ? undefined : {
+                text: `${CharacterNickname(target)} refuses to high five you. Grab them?`,
+                force: "Grab!",
+                backOff: "Nah"
+            },
+            forceLocally: (target) => {
+                SendAction(`%NAME% grabs %OPP_NAME% by the wrist.`, target);
+                this.leashingModule.DoGrab(target, "arm");
             }
         });
 
@@ -1791,7 +1730,7 @@ export class ActivityModule extends BaseModule {
                         this.ExecuteHighFive(target);
                         return false;
                     } else {
-                        this.TryHighFive(target);
+                        Consent().Offer("high-five", target);
                         return true;
                     }
 				}
@@ -1883,9 +1822,16 @@ export class ActivityModule extends BaseModule {
         this.PatchedActivities.push(patch.ActivityName);
     }
 
+    /**
+     * Registers a standalone activity dictionary entry, e.g. an alternate chat line
+     * that a CustomPreparse can swap into data.Content.
+     */
+    RegisterActivityText(key: string, text: string) {
+        ActivityDictionaryLoad().cache[key] = text;
+    }
+
     AddTargetToActivity(activity: LSCGActivity, tgt: ActivityTarget) {
-        const textCache = ActivityDictionaryLoad();
-        const textCachePush: (key: string, value: string) => void = (key, value) => textCache.cache[key] = value;
+        const textCachePush = (key: string, value: string) => this.RegisterActivityText(key, value);
         tgt.TargetLabel = tgt.TargetLabel ?? activity.Name.substring(5);
 
         if (tgt.SelfAllowed) {
@@ -2038,10 +1984,6 @@ export class ActivityModule extends BaseModule {
             }
         }
     }
-
-    TryHighFive(target: Character) {
-		sendLSCGCommand(target, "h5-ask");
-	}
 
     ExecuteHighFive(target: Character | null) {
         if (!!target)
