@@ -21,7 +21,7 @@ export class RedressedState extends ItemBundleBaseState {
     }
 
     static AssetIsAllowed(asset: Asset): boolean {
-        return isCloth(asset) || 
+        return isCloth(asset) ||
                 isBind(asset, []);
     }
 
@@ -98,7 +98,7 @@ export class RedressedState extends ItemBundleBaseState {
         items.forEach(item => {
             let asset = AssetGet(Player.AssetFamily, item.Group, item.Name);
             if (!!asset && this.DoChange(asset, spell)) {
-                let isBlocked = this.InventoryBlockedOrLimited(sender, {Asset: asset});
+                let isBlocked = this.InventoryBlockedOrLimited(sender, AppearanceItem.fromAsset(asset));
                 let isRoomDisallowed = !InventoryChatRoomAllow(asset?.Category ?? []);
                 if (isRestore || !(isBlocked || isRoomDisallowed)) {
                     ApplyItem(item, memberNumber, true, !isRestore);

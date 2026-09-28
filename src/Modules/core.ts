@@ -124,8 +124,7 @@ export class CoreModule extends BaseModule {
                     return;
                 ChatRoomCharacter.forEach(C => {
                     if (C.Crafting != null && !C.IsPlayer() && C.MemberNumber != target.MemberNumber && (C as OtherCharacter).LSCG && (C as OtherCharacter).LSCG.GlobalModule.sharePublicCrafting) {
-                        let Crafting = CraftingDecompressServerData(C.Crafting);
-                        for (let Craft of Crafting)
+                        for (let Craft of C.Crafting)
                             if ((Craft != null) && (Craft.Item != null))
                                 if ((Craft.Private == null) || (Craft.Private == false)) {
                                     Craft.MemberName = CharacterNickname(C);
@@ -134,7 +133,7 @@ export class CoreModule extends BaseModule {
                                     const canUseCraftedItem = DialogCanUseCraftedItem as (C: Character, Craft: CraftingItem, asset: Asset) => boolean;
                                     for (const Asset of (CraftingAssets[Craft.Item] ?? [])) {
                                         if (Asset.Group.Name === target.FocusGroup?.Name && canUseCraftedItem(target, Craft, Asset)) {
-                                            DialogInventoryAdd(target, { Asset, Craft }, false);
+                                            DialogInventoryAdd(target, AppearanceItem.fromAsset(Asset), false, undefined, Craft);
                                         }
                                     }
                                 }
@@ -161,7 +160,9 @@ export class CoreModule extends BaseModule {
 
                     coreModule.settings.seeSharedCrafts = this.getAttribute("aria-checked") === "true";
                     settingsSave();
-                    DialogInventoryBuild(C, true, false, false);
+                    if (C.FocusGroup) {
+                        DialogInventoryBuild(C, C.FocusGroup, true, false, false);
+                    }
                 },
                 { image: "./Icons/Online.png", role: "checkbox", tooltip: "Toggle Shared Crafts", tooltipPosition: "left" },
                 { button: { parent: document.body, attributes: { "aria-checked": this.settings.seeSharedCrafts } } },

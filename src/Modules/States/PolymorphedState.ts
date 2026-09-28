@@ -21,7 +21,7 @@ export class PolymorphedState extends ItemBundleBaseState {
     }
 
     static AssetIsAllowed(asset: Asset): boolean {
-        return isCosplay(asset) || 
+        return isCosplay(asset) ||
             isBody(asset) ||
             isHair(asset) ||
             isSkin(asset) ||
@@ -44,7 +44,7 @@ export class PolymorphedState extends ItemBundleBaseState {
     }
 
     storedOutfitKey: string = "stored";
-    
+
     DoChange(asset: Asset | null, spell: SpellDefinition | null): boolean {
         if (!asset)
             return false;
@@ -53,13 +53,13 @@ export class PolymorphedState extends ItemBundleBaseState {
         let config = spell.Polymorph;
         if (!config)
             return false;
-        
+
         let allow = config.IncludeCosplay && isCosplay(asset);
         allow ||= config.IncludeAllBody && isBody(asset);
         allow ||= config.IncludeHair && isHair(asset);
         allow ||= config.IncludeSkin && isSkin(asset);
         allow ||= config.IncludeGenitals && isGenitals(asset);
-        
+
         if ((isGenitals(asset) && !Player?.LSCG?.MagicModule?.allowChangeGenitals) ||
             (isPronouns(asset) && !Player?.LSCG?.MagicModule?.allowChangePronouns))
             allow = false;
@@ -83,12 +83,12 @@ export class PolymorphedState extends ItemBundleBaseState {
             const asset = appearance[i].Asset;
             if (this.DoChange(asset, spell)) {
                 let newItem = newList.find(x => x.Group == asset.Group.Name);
-                if ((!spell || (!spell.Polymorph?.IncludeAllBody && spell.Polymorph?.IncludeSkin)) && 
-                    !!newItem && 
+                if ((!spell || (!spell.Polymorph?.IncludeAllBody && spell.Polymorph?.IncludeSkin)) &&
+                    !!newItem &&
                     this.skinColorChangeOnly.indexOf(asset.Group.Name) > -1) {
                     // Special handling for simple color change.
                     if (asset.Group.Name != "Mouth" || (!!newItem && !!newItem.Color && newItem.Color != "Default"))
-                        appearance[i].Color = newItem.Color;
+                        appearance[i].Color = ServerParseColor(asset, newItem.Color, asset.Group.ColorSchema);
                 }
                 else if (newList.length == 0 || newList.some(x => x.Group == asset.Group.Name))
                     appearance.splice(i, 1);
@@ -116,11 +116,11 @@ export class PolymorphedState extends ItemBundleBaseState {
 
     WearMany(items: ItemBundle[], spell: SpellDefinition, isRestore: boolean = false, memberNumber: number | undefined = undefined) {
         if (!memberNumber || memberNumber == -1)
-            memberNumber = Player.MemberNumber ?? 0;        
+            memberNumber = Player.MemberNumber ?? 0;
         items.forEach(item => {
             let asset = AssetGet(Player.AssetFamily, item.Group, item.Name);
             if (!!asset && this.DoChange(asset, spell)) {
-                let isBlocked = this.InventoryBlockedOrLimited(Player, {Asset: asset});
+                let isBlocked = this.InventoryBlockedOrLimited(Player, AppearanceItem.fromAsset(asset));
                 let isRoomDisallowed = !InventoryChatRoomAllow(asset?.Category ?? []);
 
                 let isSkinColorChangeOnly = (!spell || (!spell.Polymorph?.IncludeAllBody && spell.Polymorph?.IncludeSkin)) && this.skinColorChangeOnly.indexOf(asset.Group.Name) > -1;

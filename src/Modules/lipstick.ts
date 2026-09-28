@@ -31,7 +31,7 @@ export class LipstickModule extends BaseModule {
             if (!this.Enabled)
                 return;
             let target = GetTargetCharacter(data);
-            if (!!target && 
+            if (!!target &&
                 !!sender &&
                 !(sender as OtherCharacter).LSCG?.LipstickModule?.dry &&
                 target == Player.MemberNumber) {
@@ -52,7 +52,7 @@ export class LipstickModule extends BaseModule {
                         default:
                             break;
                     }
-        
+
                     var item = data.Dictionary?.find((d: any) => d.Tag == "ActivityAsset");
                     if (!!item && item.AssetName == "Towel") {
                         switch (data.Content) {
@@ -83,7 +83,7 @@ export class LipstickModule extends BaseModule {
     getKisserLipColor(sender: Character): ItemColor | undefined {
         try {
             var mouth = InventoryGet(sender, "Mouth");
-            if (!!mouth && mouth.Color && mouth.Color != "Default")
+            if (!!mouth && !ItemColorIsDefault(mouth))
                 return mouth.Color;
             else
                 return "Default";
@@ -92,7 +92,7 @@ export class LipstickModule extends BaseModule {
             return "Default";
         }
     }
-    
+
     getExistingLipstickMarks(color: ItemColor | undefined) {
         let slots = [InventoryGet(Player, "Mask"), InventoryGet(Player, "ClothAccessory")].filter(s => !!s && s.Asset.Name == "Kissmark");
 
@@ -102,10 +102,10 @@ export class LipstickModule extends BaseModule {
 
         if (slots.length < 2)
             return this.addLipstickMarks();
-        else 
+        else
             return slots[0];
     }
-    
+
     addLipstickMarks() {
         let slot: AssetGroupName = "Mask";
         var mask = InventoryGet(Player, "Mask");
@@ -124,7 +124,7 @@ export class LipstickModule extends BaseModule {
             return marks;
         } else return undefined;
     }
-    
+
     kissMarkSlotsOccupied() {
         var mask = InventoryGet(Player, "Mask");
         var acc = InventoryGet(Player, "ClothAccessory");
@@ -132,7 +132,7 @@ export class LipstickModule extends BaseModule {
             return true;
         return false;
     }
-    
+
     getKissMarkStatus(typeRecord: TypeRecord) {
         //"c0r1f0n0l0"
         return {
@@ -143,7 +143,7 @@ export class LipstickModule extends BaseModule {
             neck2: typeRecord["l"] == 1
         };
     }
-    
+
     getKissMarkTypeRecord(status: any) {
         return <TypeRecord>{
             "c": status.cheek1 ? 1 : 0,
@@ -152,7 +152,7 @@ export class LipstickModule extends BaseModule {
             "n": status.neck1 ? 1 : 0,
             "l": status.neck2 ? 1 : 0
         }
-    }    
+    }
 
     RemoveKissMark(location: "cheek" | "forehead" | "neck" | "all") {
         var marks = [InventoryGet(Player, "Mask"), InventoryGet(Player, "ClothAccessory")].filter(m => !!m && m.Asset.Name == "Kissmark")
@@ -183,11 +183,11 @@ export class LipstickModule extends BaseModule {
                 default :
                     break;
             }
-        
+
             if (!!mark && !!mark.Property)
                 mark.Property.TypeRecord = this.getKissMarkTypeRecord(status);
         })
-        
+
         if (location == "cheek" || location == "all")
             this.removeGagKissMark();
 
@@ -198,14 +198,14 @@ export class LipstickModule extends BaseModule {
         var color = this.getKisserLipColor(sender);
         if (color == "Default")
             return; // No lipstick
-    
+
         var marks = this.getExistingLipstickMarks(color);
         if (!marks)
             return;
-    
-        marks.Color = color;
+
+        marks.Color = ServerParseColor(marks.Asset, color, marks.Asset.Group.ColorSchema);
         var status = this.getKissMarkStatus(marks?.Property?.TypeRecord ?? this.baseKissTypeRecord);
-    
+
         // Adjust marks
         switch (location) {
             case "cheek" :
@@ -226,7 +226,7 @@ export class LipstickModule extends BaseModule {
             default :
                 break;
         }
-    
+
         if (!!marks && !!marks.Property)
             marks.Property.TypeRecord = this.getKissMarkTypeRecord(status);
         ChatRoomCharacterUpdate(Player);
@@ -250,7 +250,7 @@ export class LipstickModule extends BaseModule {
         if (!existingItem)
             return;
 
-        existingItem.Color = color;
+        existingItem.Color = ServerParseColor(existingItem.Asset, color, existingItem.Asset.Group.ColorSchema);
 
         ChatRoomCharacterUpdate(Player);
     }
