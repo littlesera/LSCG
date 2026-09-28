@@ -937,6 +937,7 @@ export class ActivityModule extends BaseModule {
             AddedTargets: [{
                     Name: "ItemMouth",
                     SelfAllowed: true,
+                    TargetLabel: "Fast Penetration",
                     TargetSelfLabel: "Fast Penetration",
                     TargetSelfAction: "SourceCharacter roughly penetrates PronounPossessive own mouth with PronounPossessive ActivityAsset."
                 }
@@ -949,8 +950,9 @@ export class ActivityModule extends BaseModule {
             AddedTargets: [{
                     Name: "ItemMouth",
                     SelfAllowed: true,
+                    TargetLabel: "Slow Penetration",
                     TargetSelfLabel: "Slow Penetration",
-                    TargetSelfAction: "SourceCharacter penetrates PronounPossessive own mouth with PronounPossessive ActivityAsset."
+                    TargetSelfAction: "SourceCharacter slowly penetrates PronounPossessive own mouth with PronounPossessive ActivityAsset."
                 }
             ]
         });
