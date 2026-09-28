@@ -945,7 +945,7 @@ export class ActivityModule extends BaseModule {
             ],
             CustomAction: {
                 Func: (target, data, meta) => {
-                    if (!target || meta?.GroupName) return;
+                    if (!target || !meta?.GroupName) return;
                     if (meta?.GroupName === "ItemArms")
                         this.leashingModule.DoGrab(target, "arm");
                 }
