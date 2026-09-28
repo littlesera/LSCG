@@ -21,3 +21,9 @@ jobs:
     - run: npm ci
     - run: npm run build --if-present
     - run: npm test
+    - name: Cache real-BC client (test/bc-client.json's pinned commit)
+      uses: actions/cache@v4
+      with:
+        path: .cache/bc-*
+        key: bc-client-${{ hashFiles('test/bc-client.json') }}
+    - run: npm run test:bc

@@ -34,6 +34,20 @@ export default defineConfig({
 					exclude: ['test/**/*.bc.test.ts'],
 				},
 			},
+			{
+				extends: true,
+				test: {
+					name: 'bc',
+					environment: 'jsdom',
+					// One real BC client load takes real wall-clock time (see
+					// test/harness/bc-loader.ts); give it room over the 5s default.
+					testTimeout: 20_000,
+					hookTimeout: 20_000,
+					globalSetup: ['test/setup/bc-global-setup.ts'],
+					setupFiles: ['test/setup/bc-globals.ts'],
+					include: ['test/**/*.bc.test.ts'],
+				},
+			},
 		],
 		coverage: {
 			provider: 'v8',

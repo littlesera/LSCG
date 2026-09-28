@@ -5,8 +5,13 @@
 // target it might touch must already exist as a function -- see the SDK's `l()` in
 // node_modules/bondage-club-mod-sdk/dist/bcmodsdk.js.
 //
-// This installs everything needed regardless of which modules a given test `boot()`s;
-// it is cheap, generic and only run once per test file.
+// installHookTargetStubs()/installNetworkCapture() are also used by the "bc" project
+// (test/setup/bc-loader.ts): that tier loads *real* BC scripts for real Asset/
+// Character/Inventory data, but real BC's own GUI/canvas files (which define these
+// same hook targets for real) are deliberately never loaded, and network/save
+// side effects need capturing there too. installBcLite() (everything, including
+// fake simple implementations of InventoryGet/CharacterNickname/etc.) is only for
+// the "unit" project.
 import { vi } from "vitest";
 import * as LZStringLib from "lz-string";
 
@@ -66,6 +71,18 @@ function ensureFn(root: Record<string, unknown>, path: string[]): AnyFn {
 	return parent[leaf] as AnyFn;
 }
 
+/** Stubs every hookFunction target neither tier's loaded scripts define for real. */
+export function installHookTargetStubs(g: Record<string, unknown> = globalThis as unknown as Record<string, unknown>): void {
+	for (const name of HOOK_TARGETS) ensureFn(g, [name]);
+	for (const [obj, prop] of DOTTED_HOOK_TARGETS) ensureFn(g, [obj, prop]);
+	// DialogMenuMapping.items.{Load,Resize,Exit,Unload} and DialogSelfMenuMapping.Pose._ClickButton
+	ensureFn(g, ["DialogMenuMapping", "items", "Load"]);
+	ensureFn(g, ["DialogMenuMapping", "items", "Resize"]);
+	ensureFn(g, ["DialogMenuMapping", "items", "Exit"]);
+	ensureFn(g, ["DialogMenuMapping", "items", "Unload"]);
+	ensureFn(g, ["DialogSelfMenuMapping", "Pose", "_ClickButton"]);
+}
+
 export interface BcLite {
 	ServerSend: ReturnType<typeof vi.fn>;
 	ChatRoomSendLocal: ReturnType<typeof vi.fn>;
@@ -73,7 +90,37 @@ export interface BcLite {
 	ServerPlayerExtensionSettingsSync: ReturnType<typeof vi.fn>;
 }
 
-/** Installs (or re-stubs) everything. Safe to call multiple times; last call wins for spies. */
+/**
+ * Replaces network/save/UI-output globals with capturing `vi.fn()`s, in both
+ * tiers -- neither one should make real network calls or write real DOM outside
+ * of what LSCG_SendLocalPrompt needs (see the ChatRoomSendLocal comment below).
+ */
+export function installNetworkCapture(g: Record<string, unknown> = globalThis as unknown as Record<string, unknown>): BcLite {
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	const gg = g as any;
+	gg.ServerSend = gg.ServerSend?._isMockFunction ? gg.ServerSend : vi.fn();
+	// LSCG_SendLocalPrompt (utils.ts) wires button onClick handlers with
+	// document.getElementById() right after this call, so this has to actually
+	// insert DOM nodes (not just record the call) for a test to be able to click
+	// a prompt's buttons and drive ConsentModule's accept/refuse/force flow.
+	gg.ChatRoomSendLocal = gg.ChatRoomSendLocal?._isMockFunction
+		? gg.ChatRoomSendLocal
+		: vi.fn((html: string) => {
+			const container = document.createElement("div");
+			container.innerHTML = html;
+			document.body.appendChild(container);
+		});
+	gg.ChatRoomCharacterUpdate = gg.ChatRoomCharacterUpdate?._isMockFunction ? gg.ChatRoomCharacterUpdate : vi.fn();
+	gg.ServerPlayerExtensionSettingsSync = gg.ServerPlayerExtensionSettingsSync?._isMockFunction ? gg.ServerPlayerExtensionSettingsSync : vi.fn();
+	return {
+		ServerSend: gg.ServerSend,
+		ChatRoomSendLocal: gg.ChatRoomSendLocal,
+		ChatRoomCharacterUpdate: gg.ChatRoomCharacterUpdate,
+		ServerPlayerExtensionSettingsSync: gg.ServerPlayerExtensionSettingsSync,
+	};
+}
+
+/** Installs (or re-stubs) everything the "unit" project needs. Safe to call multiple times. */
 export function installBcLite(): BcLite {
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	const g = globalThis as any;
@@ -90,14 +137,7 @@ export function installBcLite(): BcLite {
 	g.TEXT_NOT_FOUND_PREFIX = "MISSING TEXT: ";
 	g.MainCanvas = { save: vi.fn(), restore: vi.fn(), translate: vi.fn(), scale: vi.fn() };
 
-	for (const name of HOOK_TARGETS) ensureFn(g, [name]);
-	for (const [obj, prop] of DOTTED_HOOK_TARGETS) ensureFn(g, [obj, prop]);
-	// DialogMenuMapping.items.{Load,Resize,Exit,Unload} and DialogSelfMenuMapping.Pose._ClickButton
-	ensureFn(g, ["DialogMenuMapping", "items", "Load"]);
-	ensureFn(g, ["DialogMenuMapping", "items", "Resize"]);
-	ensureFn(g, ["DialogMenuMapping", "items", "Exit"]);
-	ensureFn(g, ["DialogMenuMapping", "items", "Unload"]);
-	ensureFn(g, ["DialogSelfMenuMapping", "Pose", "_ClickButton"]);
+	installHookTargetStubs(g);
 
 	// ---- Inventory / permission surface (real, simple implementations) --------
 	g.InventoryGet = (C: { Appearance?: { Asset: { Group: { Name: string } } }[] }, group: string) =>
@@ -155,21 +195,7 @@ export function installBcLite(): BcLite {
 		return { metadata };
 	};
 
-	// ---- Outgoing capture -- shared identity used by room.ts ---------------
-	g.ServerSend = g.ServerSend?._isMockFunction ? g.ServerSend : vi.fn();
-	// LSCG_SendLocalPrompt (utils.ts) wires button onClick handlers with
-	// document.getElementById() right after this call, so this has to actually
-	// insert DOM nodes (not just record the call) for a test to be able to click
-	// a prompt's buttons and drive ConsentModule's accept/refuse/force flow.
-	g.ChatRoomSendLocal = g.ChatRoomSendLocal?._isMockFunction
-		? g.ChatRoomSendLocal
-		: vi.fn((html: string) => {
-			const container = document.createElement("div");
-			container.innerHTML = html;
-			document.body.appendChild(container);
-		});
-	g.ChatRoomCharacterUpdate = g.ChatRoomCharacterUpdate?._isMockFunction ? g.ChatRoomCharacterUpdate : vi.fn();
-	g.ServerPlayerExtensionSettingsSync = g.ServerPlayerExtensionSettingsSync?._isMockFunction ? g.ServerPlayerExtensionSettingsSync : vi.fn();
+	installNetworkCapture(g);
 
 	g.AssetGroup = g.AssetGroup ?? [];
 	g.Asset = g.Asset ?? [];

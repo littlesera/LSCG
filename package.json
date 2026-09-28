@@ -14,7 +14,10 @@
     "typecheck": "tsc --noEmit -p . && tsc --noEmit -p tsconfig.test.json",
     "test": "vitest run --project unit",
     "test:watch": "vitest --project unit",
-    "coverage": "vitest run --project unit --coverage"
+    "test:bc": "vitest run --project bc",
+    "test:all": "vitest run",
+    "coverage": "vitest run --project unit --coverage",
+    "fetch-bc": "node scripts/fetch-bc.mjs"
   },
   "keywords": [],
   "author": "Little Sera",
