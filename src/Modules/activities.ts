@@ -759,33 +759,6 @@ export class ActivityModule extends BaseModule {
             ]
         });
 
-        // Chew Item
-        this.AddActivity({
-            Activity: {
-                Name: "Chew",
-                MaxProgress: 50,
-                MaxProgressSelf: 50,
-                Prerequisite: ["ZoneAccessible", "TargetNeeds-ChewableItem"]
-            },
-            Targets: [
-                {
-                    Name: "ItemHands",
-                    SelfAllowed: true,
-                    TargetLabel: "Chew On",
-                    TargetAction: "SourceCharacter chews on TargetCharacter's ActivityAsset.",
-                    TargetSelfAction: "SourceCharacter chews on PronounPossessive ActivityAsset."
-                },
-                {
-                    Name: "ItemMouth",
-                    SelfAllowed: true,
-                    SelfOnly: true,
-                    TargetLabel: "Chew On",
-                    TargetAction: "SourceCharacter chews on TargetCharacter's ActivityAsset.",
-                    TargetSelfAction: "SourceCharacter chews on PronounPossessive ActivityAsset."
-                }
-            ]
-        });
-
         // GrabTongue
         this.AddActivity({
             Activity: {
