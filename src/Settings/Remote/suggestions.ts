@@ -302,7 +302,7 @@ export class RemoteSuggestions extends RemoteHypno {
 			MainCanvas.textAlign = "left";
 			
 			for (let Group of AssetGroup) {
-				let activitiesByGroup = getActivities(Group);
+				let activitiesByGroup = getActivities(Group, this._SelectConfigureInstruction.arguments["self"] ?? false);
 				if (Group.IsItem() && !Group.MirrorActivitiesFrom && AssetActivitiesForGroup("Female3DCG", Group.Name).length) {
 					let groupContainsSelection = Group.Name == currentValue?.group;
 					DrawAssetGroupZone(Player, Group.Zone, 0.7, coords.x + 50, coords.y + 60, 1, "#808080FF", 3, getZoneColor(Group.Name, groupContainsSelection));
@@ -310,10 +310,10 @@ export class RemoteSuggestions extends RemoteHypno {
 			}
 
 			if (Player.FocusGroup != null) {
-				let activity = getActivities()[this._activityIndex ?? 0];
+				let activity = getActivities(undefined, this._SelectConfigureInstruction.arguments["self"] ?? false)[this._activityIndex ?? 0];
 				DrawAssetGroupZone(Player, Player.FocusGroup.Zone, 0.7, coords.x + 50, coords.y + 60, 1, "cyan");
 				MainCanvas.textAlign = "center";
-				DrawBackNextButton(coords.x + (coords.w/2), coords.y + 380, 300, 64, getActivityLabel(activity, Player.FocusGroup), "White", "", () => "", () => "");
+				DrawBackNextButton(coords.x + (coords.w/2), coords.y + 380, 300, 64, getActivityLabel(activity, Player.FocusGroup, this._SelectConfigureInstruction.arguments["self"] ?? false), "White", "", () => "", () => "");
 				MainCanvas.textAlign = "left";
 				if (!!activity) {
 					let image = "Assets/" + Player.AssetFamily + "/Activity/" + activity.Name + ".png";
@@ -484,7 +484,7 @@ export class RemoteSuggestions extends RemoteHypno {
 					if (Zone) {
 						Player.FocusGroup = Group;
 						currentValue.group = Group.Name;
-						let activities = getActivities();
+						let activities = getActivities(undefined, this._SelectConfigureInstruction.arguments["self"] ?? false);
 						this._activityIndex = currentValue.name !== "" ? activities.map(a => a.Name).indexOf(currentValue.name) : -1;
 						if (this._activityIndex == -1 || this._activityIndex >= activities.length)
 							this._activityIndex = 0;
@@ -492,14 +492,14 @@ export class RemoteSuggestions extends RemoteHypno {
 				}
 			}
 			if (Player.FocusGroup != null) {
-				let activities = getActivities();
+				let activities = getActivities(undefined, this._SelectConfigureInstruction.arguments["self"] ?? false);
 				// Arousal activity control
 				if (MouseIn(coords.x + (coords.w/2), coords.y + 380, 300, 64)) {
 					if (MouseX <= (coords.x + (coords.w/2) + 150)) this._activityIndex = (activities.length + this._activityIndex - 1) % activities.length;
 					else this._activityIndex = (this._activityIndex + 1) % activities.length;
 				}
 			}
-			currentValue.name = getActivities()[this._activityIndex]?.Name;
+			currentValue.name = getActivities(undefined, this._SelectConfigureInstruction.arguments["self"] ?? false)[this._activityIndex]?.Name;
 		} else if (this._SelectConfigureInstruction?.type == LSCGHypnoInstruction.pose) {
 			let currentValue = this._selectionValue as PoseSelection;
 			let upperPoses = PoseFemale3DCG.filter(p => p.Category == "BodyUpper");

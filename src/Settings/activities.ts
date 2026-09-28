@@ -28,7 +28,7 @@ export class GuiActivities extends GuiSubscreen {
 	}
 
 	get currentActivityEntry(): ActivityEntryModel | undefined {
-		let actName = getActivities()[this.activityIndex]?.Name;
+		let actName = getActivities(undefined, false)[this.activityIndex]?.Name;
 		let groupName = Player.FocusGroup?.Name ?? "";
 		let entry = this.getActivityEntry(actName, groupName);
 		return entry;
@@ -70,10 +70,10 @@ export class GuiActivities extends GuiSubscreen {
 		}
 
 		if (Player.FocusGroup != null) {
-			let activity = getActivities()[this.activityIndex ?? 0];
+			let activity = getActivities(undefined, false)[this.activityIndex ?? 0];
 			DrawAssetGroupZone(Player, Player.FocusGroup.Zone, 0.9, 50, 50, 1, "cyan");
 			MainCanvas.textAlign = "center";
-			DrawBackNextButton(550, this.getYPos(0), 600, 64, getActivityLabel(activity, Player.FocusGroup), "White", "", () => "", () => "");
+			DrawBackNextButton(550, this.getYPos(0), 600, 64, getActivityLabel(activity, Player.FocusGroup, false), "White", "", () => "", () => "");
 			MainCanvas.textAlign = "left";
 			if (!!activity) {
 				let image = "Assets/" + Player.AssetFamily + "/Activity/" + activity.Name + ".png";
@@ -103,7 +103,7 @@ export class GuiActivities extends GuiSubscreen {
 				if (Zone) {
 					this.SetActivityEntryVals(this.currentActivityEntry);
 					Player.FocusGroup = Group;
-					let activities = getActivities();
+					let activities = getActivities(undefined, false);
 					if (this.activityIndex >= activities.length)
 						this.activityIndex = 0;
 					this.LoadActivityEntry(this.currentActivityEntry);
@@ -112,7 +112,7 @@ export class GuiActivities extends GuiSubscreen {
 		}
 
 		if (Player.FocusGroup != null) {
-			let activities = getActivities();
+			let activities = getActivities(undefined, false);
 			// Arousal activity control
 			if (MouseIn(this.getXPos(0), this.getYPos(0), 600, 64)) {
 				this.SetActivityEntryVals(this.currentActivityEntry);
@@ -184,7 +184,7 @@ export class GuiActivities extends GuiSubscreen {
 
 	createEntryIfNeeded(existing: ActivityEntryModel | undefined): ActivityEntryModel {
 		if (!existing) {
-			existing = this.newDefaultEntry(getActivities()[this.activityIndex].Name, Player.FocusGroup?.Name ?? "");
+			existing = this.newDefaultEntry(getActivities(undefined, false)[this.activityIndex].Name, Player.FocusGroup?.Name ?? "");
 			this.settings.activities.push(existing);
 			this.LoadActivityEntry(this.currentActivityEntry);
 		}

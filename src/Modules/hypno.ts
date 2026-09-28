@@ -1035,10 +1035,11 @@ export class HypnoModule extends BaseModule {
     }
 
     ForceActivity(opts: SuggestionMiniGameOptions, instruction: HypnoInstruction) {
+        console.log(JSON.stringify(instruction, null, 2));
         let target = this.FindConfigurableTarget(instruction, opts.sender, opts.msg);
         let activitySelection = instruction.arguments["selection"] as ActivitySelection;
         let activityGroup = AssetGroup.find(a => a.Name == activitySelection?.group);
-        let activity = !!activityGroup ? getActivities(activityGroup).find(a => a.Name == activitySelection?.name) : undefined;
+        let activity = !!activityGroup ? getActivities(activityGroup, instruction.arguments["self"] as boolean ?? false).find(a => a.Name == activitySelection?.name) : undefined;
         if (!!target && !!activityGroup && !!activity) {
             let tmp = this.StateModule.HypnoState.Restrictions;
             this.StateModule.HypnoState.Restrictions = <StateRestrictions>{
