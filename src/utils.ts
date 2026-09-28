@@ -663,6 +663,39 @@ export function LSCG_SendLocal(msg: string, escapeText: boolean = true, timeout?
 	ChatRoomSendLocal(text, timeout);
 }
 
+export interface LocalPromptButton {
+	label: string;
+	color: string;
+	onClick: () => void;
+}
+
+let localPromptCounter = 0;
+/**
+ * Sends a local message with buttons. Clicking any button (or the timeout) removes them all,
+ * so each prompt resolves exactly once. Ids are unique per prompt so overlapping prompts don't collide.
+ */
+export function LSCG_SendLocalPrompt(text: string, buttons: LocalPromptButton[], timeout: number, onTimeout?: () => void) {
+	const promptId = `lscg-prompt-${++localPromptCounter}`;
+	const buttonHtml = buttons.map((b, i) =>
+		`<button style="background-color:${b.color};border-radius:5px;margin:5px" id="${promptId}-${i}">${escapeHtml(b.label)}</button>`
+	).join("");
+	LSCG_SendLocal(`<span>${escapeHtml(text)}</span>${buttonHtml}`, false, timeout);
+
+	const elements = buttons.map((_, i) => document.getElementById(`${promptId}-${i}`));
+	const close = () => {
+		clearTimeout(timer);
+		elements.forEach(ele => ele?.remove());
+	};
+	const timer = setTimeout(() => {
+		close();
+		onTimeout?.();
+	}, timeout);
+	elements.forEach((ele, i) => ele?.addEventListener("click", () => {
+		close();
+		buttons[i].onClick();
+	}));
+}
+
 export function excludeParentheticalContent(msg: string): string {
 	var result = "";
 	var Par = false;

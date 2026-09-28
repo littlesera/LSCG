@@ -2,16 +2,17 @@ import { BaseModule } from "base";
 import { BrainwashMiniGame } from "MiniGames/Brainwash";
 import { registerMiniGame } from "MiniGames/minigames";
 import { SleepyMiniGame } from "MiniGames/Sleepy";
-import { getModule } from "modules";
+import { Consent, getModule } from "modules";
 import { GuiInjector } from "Settings/injector";
 import { InjectorSettingsModel } from "Settings/Models/injector";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
 import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, isPhraseInString, settingsSave, hookFunction, getCharacter, AUDIO, getPlayerVolume, OnAction, hookBCXCurse, GetTargetCharacter, GetActivityName, GetMetadata, GetActivityEntryFromContent, IsActivityAllowed, GetHandheldItemNameAndDescriptionConcat, GetItemName, LSCG_SendLocal } from "../utils";
-import { ActivityBundle, ActivityModule, ActivityTarget, CustomAction, CustomPrerequisite } from "./activities";
+import { ActivityBundle, ActivityModule, ActivityPatch, ActivityTarget, CustomAction, CustomPrerequisite } from "./activities";
 import { HypnoModule } from "./hypno";
 import { MiscModule } from "./misc";
 import { ItemUseModule } from "./item-use";
 import { StateModule } from "./states";
+import type { MagicModule } from "./magic";
 import {
     COOLDOWNS,
     CHECK_INTERVALS,
@@ -193,6 +194,9 @@ export class InjectorModule extends BaseModule {
                 this.ProcessInjection(sender, location);
             }
             else if (target == Player.MemberNumber && (activityName == "SipItem" || activityName == "LSCG_FunnelPour") && !!sender) {
+                // Offered sips are resolved by the "sip" consent flow instead
+                if (data.Content == InjectorModule.SIP_OFFER_CONTENT)
+                    return;
                 let gagType = this.GetGagDrinkAccess(Player);
                 let isFullPour = activityName == "LSCG_FunnelPour";
                 if (gagType == "nothing" && sender.MemberNumber != Player.MemberNumber && this.IsDrugAllowed(sender)) {
@@ -242,22 +246,15 @@ export class InjectorModule extends BaseModule {
                 let actName = GetActivityName(data) ?? "";
                 if (actName == "SipItem" || actName == "LSCG_FunnelPour") {
                     let fullPour = actName == "LSCG_FunnelPour";
-                    let glass = InventoryGet(Player, "ItemHandheld");
-                    if (glass?.Asset.Name == "GlassFilled") {
-                        if (!fullPour) {
-                            if (!glass.Property) glass.Property = {};
-                            if (!glass.Property.SipLimit) glass.Property.SipLimit = this.settings.sipLimit;
-                            if (!glass.Property.SipCount) glass.Property.SipCount = 1;
-                            else glass.Property.SipCount++;
-                        }
-                        if (fullPour || glass.Property!.SipLimit! > 0 && glass.Property!.SipCount! >= glass.Property!.SipLimit!) {
-                            SendAction("%NAME%'s uses up the last drop of %POSSESSIVE% drink.");
-                            var craft = glass.Craft;
-                            InventoryRemove(Player, "ItemHandheld", false);
-                            InventoryWear(Player, "GlassEmpty", "ItemHandheld", glass.Color, glass.Difficulty, Player.MemberNumber, craft, false);
-                            ChatRoomCharacterUpdate(Player);
-                        }
+                    let target = getCharacter(GetTargetCharacter(data) ?? -1);
+                    if (!fullPour && !!target && this.IsSipOffer(target)) {
+                        // Send the offer after the activity so the emote lands first.
+                        // The sip only counts once it's drunk or spilled, see the "sip" flow's onComplete.
+                        const ret = next(args);
+                        Consent().Offer("sip", target);
+                        return ret;
                     }
+                    this.ConsumeSip(fullPour);
                 }
             }
 
@@ -405,7 +402,57 @@ export class InjectorModule extends BaseModule {
                     }
                 ]
             });
+
+            // Sip offered to someone else reads as an offer rather than a done deal.
+            // The swapped key keeps the "ChatOther-<group>-<activity>" shape so GetActivityEntryFromContent still resolves it,
+            // and is unknown to vanilla clients so they fall back to the text LSCG attaches in the ServerSend hook.
+            this.activityModule.RegisterActivityText(InjectorModule.SIP_OFFER_CONTENT, "SourceCharacter holds PronounPossessive ActivityAsset up to TargetCharacter's lips.");
+            this.activityModule.PatchActivity(<ActivityPatch>{
+                ActivityName: "SipItem",
+                CustomPreparse: {
+                    Func: (args) => {
+                        const data = args[1] as ServerChatRoomMessage;
+                        if (data.Content != InjectorModule.SIP_CONTENT)
+                            return;
+                        const target = getCharacter(GetTargetCharacter(data) ?? -1);
+                        if (this.IsSipOffer(target))
+                            data.Content = InjectorModule.SIP_OFFER_CONTENT;
+                    }
+                }
+            });
         }
+
+        Consent().RegisterFlow({
+            id: "sip",
+            enabled: () => this.Enabled,
+            prompt: (sender) => ({
+                text: `${CharacterNickname(sender)} holds ${this.HeldDrinkName(sender)} up to your lips.`,
+                accept: "Drink",
+                refuse: "Refuse"
+            }),
+            onAccepted: (sender) => {
+                SendAction(`%NAME% takes a sip of %OPP_NAME%'s ${this.HeldDrinkName(sender)}.`, sender);
+                this.ApplyOfferedSip(sender);
+            },
+            onRefused: (sender, _, answer, timedOut) => {
+                if (answer == "refused" && !timedOut)
+                    SendAction(`%NAME% turns %POSSESSIVE% head away from %OPP_NAME%'s ${this.HeldDrinkName(sender)}.`, sender);
+            },
+            onForced: (sender) => this.TryForceDrink(sender, false, () => this.ApplyOfferedSip(sender)),
+            forcePrompt: (target, answer) => ({
+                text: answer == "unable"
+                    ? `${CharacterNickname(target)} can't respond. Make them drink?`
+                    : `${CharacterNickname(target)} refuses your ${this.HeldDrinkName(Player)}. Force it?`,
+                force: "Force it",
+                backOff: "Back off"
+            }),
+            onBackOff: () => SendAction(`%NAME% lowers %POSSESSIVE% ${this.HeldDrinkName(Player)}.`),
+            // Drunk or spilled in a failed force, the sip is used up. Declining leaves the drink untouched.
+            onComplete: (_, outcome) => {
+                if (outcome != "declined")
+                    this.ConsumeSip(false);
+            }
+        });
 
         this.activityModule.AddCustomPrereq({
             Name: "InjectorIsNotNetgun",
@@ -1032,6 +1079,50 @@ export class InjectorModule extends BaseModule {
         return drugTypes.length > 0;
     }
 
+    static readonly SIP_CONTENT = "ChatOther-ItemMouth-SipItem";
+    static readonly SIP_OFFER_CONTENT = "LSCG_Offer-ChatOther-ItemMouth-SipItem";
+
+    /** A sip is an offer when the target gets a say: another LSCG user whose mouth isn't held open. */
+    IsSipOffer(target: Character | null | undefined): boolean {
+        if (!this.Enabled || !target || target.IsPlayer())
+            return false;
+        if (!(target as unknown as OtherCharacter).LSCG?.InjectorModule?.enabled)
+            return false;
+        return this.GetGagDrinkAccess(target) == "nothing";
+    }
+
+    HeldDrinkName(C: Character): string {
+        let item = InventoryGet(C, "ItemHandheld");
+        return !!item ? GetItemName(item) : "drink";
+    }
+
+    /** Applies everything in an offered drink the target has already agreed to (or been forced) to take. */
+    ApplyOfferedSip(sender: Character) {
+        this.ProcessDruggedDrink(sender);
+        let magic = getModule<MagicModule>("MagicModule");
+        if (magic?.Enabled)
+            magic.HandleQuaff(sender, true);
+    }
+
+    ConsumeSip(fullPour: boolean) {
+        let glass = InventoryGet(Player, "ItemHandheld");
+        if (glass?.Asset.Name != "GlassFilled")
+            return;
+        if (!fullPour) {
+            if (!glass.Property) glass.Property = {};
+            if (!glass.Property.SipLimit) glass.Property.SipLimit = this.settings.sipLimit;
+            if (!glass.Property.SipCount) glass.Property.SipCount = 1;
+            else glass.Property.SipCount++;
+        }
+        if (fullPour || glass.Property!.SipLimit! > 0 && glass.Property!.SipCount! >= glass.Property!.SipLimit!) {
+            SendAction("%NAME%'s uses up the last drop of %POSSESSIVE% drink.");
+            var craft = glass.Craft;
+            InventoryRemove(Player, "ItemHandheld", false);
+            InventoryWear(Player, "GlassEmpty", "ItemHandheld", glass.Color, glass.Difficulty, Player.MemberNumber, craft, false);
+            ChatRoomCharacterUpdate(Player);
+        }
+    }
+
     GetGagDrinkAccess(C: Character): GagDrinkAccess {
         var mouthItems = [
             InventoryGet(C, "ItemMouth"),
@@ -1060,18 +1151,22 @@ export class InjectorModule extends BaseModule {
             return "nothing";
     }
 
-    TryForceDrink(sender: Character, fullPour: boolean = false) {
+    /** Rolls to resist a forced drink, calling apply on a successful force. Returns whether the force succeeded. */
+    TryForceDrink(sender: Character, fullPour: boolean = false, apply: () => void = () => this.ProcessDruggedDrink(sender, fullPour)): boolean {
         let itemUseModule = getModule<ItemUseModule>("ItemUseModule");
         if (!itemUseModule) {
-            return this.ProcessDruggedDrink(sender);
+            apply();
+            return true;
         }
         var itemName = itemUseModule.getItemName(InventoryGet(sender, "ItemHandheld")!);
         let check = getModule<ItemUseModule>("ItemUseModule")?.MakeActivityCheck(sender, Player);
         if (check.AttackerRoll.Total >= check.DefenderRoll.Total) {
             SendAction(`${CharacterNickname(sender)} ${check.AttackerRoll.TotalStr}manages to get %OPP_POSSESSIVE% ${itemName} past ${CharacterNickname(Player)}'s ${check.DefenderRoll.TotalStr}lips, forcing %INTENSIVE% to swallow.`, sender);
-            setTimeout(() => this.ProcessDruggedDrink(sender, fullPour), EFFECT_DURATIONS.ACTION_DELAY);
+            setTimeout(apply, EFFECT_DURATIONS.ACTION_DELAY);
+            return true;
         } else {
             SendAction(`${CharacterNickname(Player)} ${check.DefenderRoll.TotalStr}successfully defends against ${CharacterNickname(sender)}'s ${check.AttackerRoll.TotalStr}attempt to force %INTENSIVE% to drink %OPP_POSSESSIVE% ${itemName}, spilling drink all over.`, sender);
+            return false;
         }
     }
 

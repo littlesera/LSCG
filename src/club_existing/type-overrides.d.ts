@@ -52,9 +52,11 @@ type LSCGCommandName = "debug"
     | "swap-respond"
     | "cursed-item-request"
     | "cursed-item-response"
-    | "h5-respond"
-    | "h5-ask"
-    | "h5-execute";
+    | "h5-execute"
+    | "consent-offer"
+    | "consent-answer"
+    | "consent-force"
+    | "consent-force-result";
 
 type LSCGState = "none" | "hypnotized" | "asleep" | "horny" | "choking" | "held" | "blind" | "deaf" | "frozen" | "gagged" | "redressed" | "arousal-paired" | "orgasm-siphoned" | "leashed" | "resized" | "buffed" | "polymorphed" | "x-ray-vision" | "denied" | "protected" | "cursed-item" | "astral-projection";
 
@@ -122,7 +124,6 @@ type LSCGActivityName = ActivityName
     | "NecklaceToGag"
     | "NetGun"
     | "Nuzzle"
-    | "Quaff"
     | "Release"
     | "ReleaseChomp"
     | "ReleaseCollar"
@@ -154,7 +155,6 @@ type LSCGSpecialItems =
     | "MagicItem"
     | "PlushItem"
     | "PourableItem"
-    | "QuaffableItem"
     | "AnyItem"
 ;
 
