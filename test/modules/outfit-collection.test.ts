@@ -2,10 +2,13 @@
 // base64/LZString round-tripping, key management) -- none of it touches real BC Character/Asset
 // data (ItemBundle here is plain {Group, Name, Color, Property, Craft} data), so it's tested on
 // the fake "unit" tier like any other pure-logic module, not the "bc" tier.
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { OutfitCollection, Outfit } from "Settings/OutfitCollection/outfitCollection";
 import { OutfitSaveResult } from "Settings/OutfitCollection/IOutfitCollection";
-import { resetWorld } from "../harness/world";
+import { CoreModule } from "Modules/core";
+import { OutfitCollectionModule } from "Modules/outfitCollection";
+import { boot, resetWorld } from "../harness/world";
+import { sent } from "../harness/room";
 
 function bundle(...groups: string[]): ItemBundle[] {
 	return groups.map(g => ({ Group: g, Name: `${g}Item` } as ItemBundle));
@@ -148,5 +151,37 @@ describe("OutfitCollection", () => {
 			outfits.Clear(false);
 			expect(outfits.GetOutfitKeys()).toEqual([]);
 		});
+	});
+});
+
+describe("OutfitCollectionModule 'remove-outfit' command", () => {
+	let outfitModule: OutfitCollectionModule;
+
+	beforeAll(() => {
+		[, outfitModule] = boot(new CoreModule(), new OutfitCollectionModule());
+	});
+
+	beforeEach(() => {
+		resetWorld({ LSCG: { GlobalModule: { enabled: true }, OutfitCollectionModule: {} } });
+		outfitModule.init();
+	});
+
+	function removeOutfit(key: string) {
+		const command = outfitModule.commands.find(c => c.Tag === "remove-outfit")!;
+		command.Action!.call(command, key, `remove-outfit ${key}`, [key]);
+	}
+
+	it("removes an outfit that exists and confirms removal", () => {
+		outfitModule.data.SetOutfitCode("MyOutfit", outfitModule.data.EncodeBundle([]), [], false);
+		removeOutfit("MyOutfit");
+		expect(outfitModule.data.GetOutfit("myoutfit")).toBeUndefined();
+		expect(sent.local()).toEqual([expect.stringContaining("Outfit myoutfit removed.")]);
+	});
+
+	it("reports 'not found' for an outfit key that doesn't exist, without touching the collection", () => {
+		outfitModule.data.SetOutfitCode("MyOutfit", outfitModule.data.EncodeBundle([]), [], false);
+		removeOutfit("doesnotexist");
+		expect(outfitModule.data.GetOutfit("myoutfit")).toBeTruthy(); // untouched
+		expect(sent.local()).toEqual([expect.stringContaining("Outfit doesnotexist not found.")]);
 	});
 });
