@@ -233,7 +233,7 @@ export class LeashingModule extends BaseModule {
                     else {
                         let nameStr = "everyone chomping down";
                         try {
-                            nameStr = chars.slice(0, chars.length - 2).map(c => CharacterNickname(c!)).join(", ") + ", and " + CharacterNickname(chars[chars.length - 1]!)
+                            nameStr = CommonArrayJoinPretty(chars.map(c => CharacterNickname(c as Character)));
                         } catch {}
                         SendAction(`%NAME% drags ${nameStr} out of the room with a wince.`);
                     }
@@ -244,7 +244,7 @@ export class LeashingModule extends BaseModule {
                     else {
                         let nameStr = "";
                         try {
-                            nameStr = chars.slice(0, chars.length - 2).map(c => CharacterNickname(c!)).join(", ") + ", and " + CharacterNickname(chars[chars.length - 1]!)
+                            nameStr = CommonArrayJoinPretty(chars.map(c => CharacterNickname(c as Character)));
                         } catch {}
                         SendAction(`${nameStr} follow %NAME% out of the room obediently.`);
                     }
