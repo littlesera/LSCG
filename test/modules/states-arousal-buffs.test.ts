@@ -1,19 +1,21 @@
-// HornyState and BuffedState: arousal-driven buffs (positive and negative skill
-// modifiers) and arousal timer hooks.
+// HornyState, HypnoState, and BuffedState: arousal-driven buffs (positive and negative
+// skill modifiers) and arousal timer hooks.
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { CoreModule } from "Modules/core";
+import { HypnoModule } from "Modules/hypno";
 import { StateModule } from "Modules/states";
 import { replace_template, ICONS, hookFunction } from "utils";
 import { boot, resetWorld, player } from "../harness/world";
 import { sent } from "../harness/room";
 
-// boot() runs once for the whole file, shared by both describe blocks below -- see the
+// boot() runs once for the whole file, shared by all describe blocks below -- see the
 // same note in states-restrictions-simple.test.ts for why a second boot() per describe
 // would stack duplicate hooks on the shared globals.
 let states: StateModule;
+let hypno: HypnoModule;
 
 beforeAll(() => {
-	[, states] = boot(new CoreModule(), new StateModule());
+	[, hypno, states] = boot(new CoreModule(), new HypnoModule(), new StateModule());
 	vi.useFakeTimers();
 });
 
@@ -95,6 +97,70 @@ describe("HornyState", () => {
 		}, null);
 		(globalThis.ActivitySetArousalTimer as any)(undefined, "SomeActivity", "SomeZone", 40);
 		expect(capturedProgress).toBe(40); // Unchanged
+	});
+});
+
+describe("HypnoState", () => {
+	beforeEach(() => {
+		resetWorld({ MemberNumber: 1, LSCG: { GlobalModule: { enabled: true } } });
+		hypno.init();
+		states.init();
+		hypno.settings.enableArousal = true;
+		player().ArousalSettings = { Progress: 10 } as any;
+		(globalThis.ActivitySetArousal as any).mockClear();
+		// states.HypnoState is one shared instance across every test in this file (boot()
+		// runs once in beforeAll) -- resetWorld() doesn't touch its own instance fields, so
+		// a prior test's Tick() call would otherwise leave _hornyCheck pointing at that
+		// test's "next due" timestamp and desync every test after it.
+		states.HypnoState._hornyCheck = 0;
+	});
+
+	// ActivitySetArousal is a real, hooked BC function stubbed to a no-op vi.fn() on this
+	// tier -- it never actually mutates Player.ArousalSettings.Progress here, so these
+	// assert on the call itself (whether/how ArousalTick invoked it) rather than on Progress.
+
+	it("Tick() runs ArousalTick immediately on the first call (next-due-time starts at 0)", () => {
+		states.HypnoState.Activate(1, undefined, false);
+		states.HypnoState.Tick(Date.now());
+		expect(globalThis.ActivitySetArousal).toHaveBeenCalledTimes(1);
+		expect(globalThis.ActivitySetArousal).toHaveBeenCalledWith(player(), 15);
+	});
+
+	it("Tick() does not run ArousalTick again before _hornyInterval has elapsed since the last run", () => {
+		states.HypnoState.Activate(1, undefined, false);
+		const start = Date.now();
+		states.HypnoState.Tick(start);
+		states.HypnoState.Tick(start + states.HypnoState._hornyInterval - 1000);
+		expect(globalThis.ActivitySetArousal).toHaveBeenCalledTimes(1);
+	});
+
+	it("Tick() runs ArousalTick again once _hornyInterval has elapsed since the last run", () => {
+		states.HypnoState.Activate(1, undefined, false);
+		const start = Date.now();
+		states.HypnoState.Tick(start);
+		states.HypnoState.Tick(start + states.HypnoState._hornyInterval);
+		expect(globalThis.ActivitySetArousal).toHaveBeenCalledTimes(2);
+	});
+
+	it("Tick() keeps running ArousalTick on each subsequent interval", () => {
+		states.HypnoState.Activate(1, undefined, false);
+		const start = Date.now();
+		states.HypnoState.Tick(start);
+		states.HypnoState.Tick(start + states.HypnoState._hornyInterval);
+		states.HypnoState.Tick(start + states.HypnoState._hornyInterval * 2);
+		expect(globalThis.ActivitySetArousal).toHaveBeenCalledTimes(3);
+	});
+
+	it("ArousalTick() does nothing when not Active", () => {
+		states.HypnoState.Tick(Date.now());
+		expect(globalThis.ActivitySetArousal).not.toHaveBeenCalled();
+	});
+
+	it("ArousalTick() does nothing when enableArousal is off", () => {
+		hypno.settings.enableArousal = false;
+		states.HypnoState.Activate(1, undefined, false);
+		states.HypnoState.Tick(Date.now());
+		expect(globalThis.ActivitySetArousal).not.toHaveBeenCalled();
 	});
 });
 
