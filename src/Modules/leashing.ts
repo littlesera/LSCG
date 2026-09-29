@@ -2,7 +2,7 @@ import { BaseModule } from "base";
 import { getModule } from "modules";
 import { BaseSettingsModel } from "Settings/Models/base";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { GetActivityName, GetTargetCharacter, ICONS, IsIncapacitated, LSCG_SendLocal, OnAction, OnActivity, SendAction, callOriginal, getCharacter, getRandomInt, hookFunction, mouseTooltip, removeAllHooksByModule, replace_template, sendLSCGCommand, sendLSCGCommandBeep, setOrIgnoreBlush } from "../utils";
+import { GetActivityName, GetTargetCharacter, ICONS, IsIncapacitated, LSCG_SendLocal, OnAction, OnActivity, SendAction, callOriginal, getCharacter, isAllowedMember, getRandomInt, hookFunction, mouseTooltip, removeAllHooksByModule, replace_template, sendLSCGCommand, sendLSCGCommandBeep, setOrIgnoreBlush } from "../utils";
 import { MiscModule } from "./misc";
 import { Pairing } from "./States/PairedBaseState";
 import { ItemUseModule } from "./item-use";
@@ -681,6 +681,8 @@ export class LeashingModule extends BaseModule {
         let pairedMember = args.find(a => a.name == "pairedMember")?.value as number;
         let type = args.find(a => a.name == "type")?.value as GrabType;
         let isSource = args.find(a => a.name == "isSource")?.value as boolean;
+        if (!this.CanBeChangedBy(sender, pairedMember))
+            return;
         this.AddLeashing(new Leashing(pairedMember, sender, isSource, type));
     }
 
@@ -691,7 +693,14 @@ export class LeashingModule extends BaseModule {
         let pairedMember = args.find(a => a.name == "pairedMember")?.value as number;
         let type = args.find(a => a.name == "type")?.value as GrabType;
         let isSource = args.find(a => a.name == "isSource")?.value as boolean;
+        if (!this.CanBeChangedBy(sender, pairedMember))
+            return;
         this.RemoveLeashings(pairedMember, isSource, type);
+    }
+
+    // Anyone can change a grab with themselves; one between us and someone else needs item permission on us
+    CanBeChangedBy(sender: number, pairedMember: number) {
+        return sender === pairedMember || isAllowedMember(getCharacter(sender) ?? undefined);
     }
 
     DoGrab(target: Character, type: GrabType) {
