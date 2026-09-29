@@ -60,14 +60,27 @@ export function resetWorld(playerOverrides: Omit<Partial<FixtureCharacter>, "fla
 
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	const g = globalThis as any;
-	const fresh = makeCharacter({
+	const { flags: freshFlags, ...freshRest } = makeCharacter({
 		MemberNumber: g.Player.MemberNumber,
 		LSCG: {},
 		...playerOverrides,
 		flags: { isPlayer: true, ...playerOverrides.flags },
 	});
-	for (const key of Object.keys(g.Player)) delete g.Player[key];
-	Object.assign(g.Player, fresh);
+	// Data fields are reset freely, but a *method* already on Player is left alone: any
+	// StateModule (or similar) dotted hookFunction("Player.CanWalk", ...) installs the SDK's
+	// router directly onto that property the moment it's first hooked, and overwriting it
+	// here would silently disable the hook for the rest of the file. The methods themselves
+	// (fixtures.ts) read `this.flags`/`this.X`, so mutating `flags` (and the other data
+	// fields) in place is enough to keep both hooked and unhooked methods correct.
+	for (const key of Object.keys(g.Player)) {
+		if (typeof g.Player[key] !== "function" && key !== "flags") delete g.Player[key];
+	}
+	for (const [key, value] of Object.entries(freshRest)) {
+		if (typeof value !== "function") g.Player[key] = value;
+	}
+	if (!g.Player.flags) g.Player.flags = {};
+	for (const key of Object.keys(g.Player.flags)) delete g.Player.flags[key];
+	Object.assign(g.Player.flags, freshFlags);
 
 	g.ChatRoomCharacter = [];
 	resetAssetRegistry();

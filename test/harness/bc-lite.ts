@@ -66,11 +66,37 @@ function ensurePath(root: Record<string, unknown>, path: string[]): Record<strin
 	return node;
 }
 
+/**
+ * The `vi.fn()` originally created for each bare hook target, keyed by name -- populated
+ * once, the first time `ensureFn` creates it. Needed because `hookFunction(name, ...)`
+ * (real bcModSdk) *overwrites* `globalThis[name]` with its own router the moment anything
+ * hooks it (`e[r.contextProperty] = r.router` in bcmodsdk.js), which is a plain function,
+ * not a mock -- so `globalThis[name].mock`/`.mockClear()` stop working on it after that.
+ * Since bc-lite.ts installs every stub *before* any module's `load()` runs, and a module a
+ * test isn't even testing may still hook a shared global (e.g. AstralProjectionState hooks
+ * "CharacterSetFacialExpression" and "PoseSetActive" in its own Init()), a test asserting on
+ * calls to such a global should use `rawStub(name)` here instead of `globalThis[name]`
+ * directly -- the router still calls through to this exact same original function via its
+ * `next()` chain, so its call history stays accurate regardless of who else hooked it.
+ */
+const rawHookStubs = new Map<string, ReturnType<typeof vi.fn>>();
+
 function ensureFn(root: Record<string, unknown>, path: string[]): AnyFn {
 	const parent = ensurePath(root, path.slice(0, -1));
 	const leaf = path[path.length - 1];
-	if (typeof parent[leaf] !== "function") parent[leaf] = vi.fn();
+	if (typeof parent[leaf] !== "function") {
+		const stub = vi.fn();
+		parent[leaf] = stub;
+		if (path.length === 1 && !rawHookStubs.has(path[0])) rawHookStubs.set(path[0], stub);
+	}
 	return parent[leaf] as AnyFn;
+}
+
+/** The original `vi.fn()` for a bare hook target, even if something has since hooked it
+ *  (see the comment on `rawHookStubs` above). Returns `undefined` for a target that isn't
+ *  a plain bare global (dotted paths like "Player.CanWalk" aren't tracked here). */
+export function rawStub(name: string): ReturnType<typeof vi.fn> | undefined {
+	return rawHookStubs.get(name);
 }
 
 /** Stubs every hookFunction target neither tier's loaded scripts define for real. */
@@ -137,6 +163,9 @@ export function installBcLite(): BcLite {
 	// Read (but not hooked) by SleepState/HypnoState's constructors to decide whether to
 	// refresh the open expression panel -- harmless as long as it isn't "Expression".
 	g.DialogSelfMenuSelected = "";
+	// CurrentCharacter is read by ResizedState's CharacterAppearanceGetCurrentValue hook to
+	// check if a dialog is currently open (and thus whether to apply height modifications).
+	g.CurrentCharacter = undefined;
 	g.DialogMenuMapping = g.DialogMenuMapping ?? {};
 	g.DialogSelfMenuMapping = g.DialogSelfMenuMapping ?? {};
 	// StateModule.load() writes a click-status callback directly onto this (not via hookFunction).
@@ -207,6 +236,12 @@ export function installBcLite(): BcLite {
 	g.CommandCombine = vi.fn((...args: unknown[]) => args.flat());
 	g.ActivityOrgasmPrepare = vi.fn();
 	g.ActivitySetArousal = vi.fn();
+	// DeniedState/OrgasmSiphonedState's ActivityOrgasmStart hook assigns to this bare global
+	// directly (not via a setter function) -- it must already exist or the assignment throws
+	// a strict-mode ReferenceError.
+	g.ActivityOrgasmRuined = false;
+	g.SkillSetModifier = vi.fn();
+	g.ActivityAllowed = vi.fn(() => true);
 	g.ToastManager = { Show: vi.fn() };
 	g.ChatRoomCharacter = g.ChatRoomCharacter ?? [];
 
@@ -269,4 +304,7 @@ export function resetBcLiteSpies(): void {
 	for (const name of HOOK_TARGETS) {
 		if (g[name]?.mock) g[name].mockClear();
 	}
+	// A target some *other* module has hooked is no longer a mock on `globalThis` itself
+	// (see the comment on `rawHookStubs`/`rawStub()`) -- clear the original stub directly.
+	for (const stub of rawHookStubs.values()) stub.mockClear();
 }

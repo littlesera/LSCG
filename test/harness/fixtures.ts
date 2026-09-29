@@ -26,6 +26,7 @@ export interface CharacterFlags {
 	standing: boolean;
 	edged: boolean;
 	gagged: boolean;
+	canKneel: boolean;
 }
 
 export function defaultFlags(overrides: Partial<CharacterFlags> = {}): CharacterFlags {
@@ -47,6 +48,7 @@ export function defaultFlags(overrides: Partial<CharacterFlags> = {}): Character
 		standing: true,
 		edged: false,
 		gagged: false,
+		canKneel: true,
 		...overrides,
 	};
 }
@@ -70,9 +72,15 @@ export interface FixtureCharacter {
 	// Real BC's per-extension save blob (OutfitCollection's server storage strategy reads
 	// its own key from this directly during load()).
 	ExtensionSettings: Record<string, string>;
+	// Real BC's currently-drawn facial expression per group; AstralProjectionState writes
+	// to it unconditionally on Recover() (even for a state that was never activated).
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	ActiveExpression: Record<string, any>;
 	// LSCG's own settings blob, present on both Player and other LSCG-running characters.
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	LSCG?: any;
+	// Character's visual height ratio, read by ResizedState's hooks
+	HeightRatio?: number;
 	flags: CharacterFlags;
 	GetPronouns: () => "HeHim" | "SheHer" | "TheyThem";
 	IsPlayer: () => boolean;
@@ -97,6 +105,7 @@ export interface FixtureCharacter {
 	IsLoverOfMemberNumber: (n: number) => boolean;
 	IsEdged: () => boolean;
 	IsGagged: () => boolean;
+	CanKneel: () => boolean;
 }
 
 let nextMemberNumber = 100000;
@@ -121,38 +130,46 @@ export function makeCharacter(overrides: Omit<Partial<FixtureCharacter>, "flags"
 		ArousalSettings: overrides.ArousalSettings ?? { Progress: 0 },
 		AssetFamily: overrides.AssetFamily ?? "Female3DCG",
 		ExtensionSettings: overrides.ExtensionSettings ?? {},
+		ActiveExpression: overrides.ActiveExpression ?? {},
 		LSCG: overrides.LSCG,
+		HeightRatio: overrides.HeightRatio ?? 1,
 		flags,
-		GetPronouns: () => flags.pronouns,
-		IsPlayer: () => flags.isPlayer,
-		CanTalk: () => flags.canTalk,
-		CanWalk: () => flags.canWalk,
-		CanInteract: () => flags.canInteract,
+		// Every method below is a regular `function` reading `this.flags`/`this.X`, never an
+		// arrow function closing over this call's local `flags`/`c` variables. Two reasons,
+		// both stemming from resetWorld() (world.ts) mutating Player *in place* rather than
+		// replacing it:
+		//  1. resetWorld() deliberately never overwrites a Player method that already exists
+		//     (see its own comment) -- hookFunction("Player.CanWalk", ...) installs the SDK's
+		//     router directly onto that exact property the first time it's hooked, and
+		//     overwriting it on a later reset would silently disable the hook for the rest of
+		//     the file. That means these method closures are only ever created ONCE per test
+		//     file (from globals.ts's initial Player), so a closure capturing this call's
+		//     local `flags` would keep reading that first call's now-stale object forever.
+		//  2. Reading `this.flags`/`this.X` instead always reflects whatever `flags`/data
+		//     object resetWorld() has mutated *this* Player's `.flags` (or `.OwnerMemberNumber`
+		//     etc.) into, regardless of which call created the method itself.
+		GetPronouns(this: FixtureCharacter) { return this.flags.pronouns; },
+		IsPlayer(this: FixtureCharacter) { return this.flags.isPlayer; },
+		CanTalk(this: FixtureCharacter) { return this.flags.canTalk; },
+		CanWalk(this: FixtureCharacter) { return this.flags.canWalk; },
+		CanInteract(this: FixtureCharacter) { return this.flags.canInteract; },
 		CanChangeClothesOn: () => true,
-		IsRestrained: () => flags.restrained,
-		IsMouthBlocked: () => flags.mouthBlocked,
-		IsMouthOpen: () => flags.mouthOpen,
-		GetBlindLevel: () => flags.blindLevel,
-		GetDeafLevel: () => flags.deafLevel,
-		IsVulvaChaste: () => flags.vulvaChaste,
-		HasPenis: () => flags.hasPenis,
-		IsEnclose: () => flags.enclosed,
-		IsKneeling: () => flags.kneeling,
-		IsStanding: () => flags.standing,
-		IsGagged: () => flags.gagged,
+		IsRestrained(this: FixtureCharacter) { return this.flags.restrained; },
+		IsMouthBlocked(this: FixtureCharacter) { return this.flags.mouthBlocked; },
+		IsMouthOpen(this: FixtureCharacter) { return this.flags.mouthOpen; },
+		GetBlindLevel(this: FixtureCharacter) { return this.flags.blindLevel; },
+		GetDeafLevel(this: FixtureCharacter) { return this.flags.deafLevel; },
+		IsVulvaChaste(this: FixtureCharacter) { return this.flags.vulvaChaste; },
+		HasPenis(this: FixtureCharacter) { return this.flags.hasPenis; },
+		IsEnclose(this: FixtureCharacter) { return this.flags.enclosed; },
+		IsKneeling(this: FixtureCharacter) { return this.flags.kneeling; },
+		IsStanding(this: FixtureCharacter) { return this.flags.standing; },
+		IsGagged(this: FixtureCharacter) { return this.flags.gagged; },
+		CanKneel(this: FixtureCharacter) { return this.flags.canKneel; },
 		HasTints: () => false,
 		GetTints: () => [],
 		GetBlurLevel: () => 0,
-		IsEdged: () => flags.edged,
-		// Regular `function`s reading `this`, not arrow functions closing over
-		// `c`: resetWorld() (world.ts) mutates Player in place via
-		// `Object.assign(Player, freshCharacter)`, which copies these method
-		// *references* onto Player but leaves OwnerMemberNumber/LoverMemberNumber
-		// as plain copied values, not shared storage. An arrow function closing
-		// over this call's `c` would keep reading `c`'s now-disconnected values
-		// forever after such a copy, ignoring any later `Player.OwnerMemberNumber
-		// = x` a test does. Reading `this.OwnerMemberNumber` instead always
-		// reflects whatever object the method is actually called on.
+		IsEdged(this: FixtureCharacter) { return this.flags.edged; },
 		IsOwnedByMemberNumber(this: FixtureCharacter, n: number) {
 			return this.OwnerMemberNumber === n;
 		},
