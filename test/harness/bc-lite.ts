@@ -202,11 +202,20 @@ export function installBcLite(): BcLite {
 
 	g.ChatRoomMessageHandlers = g.ChatRoomMessageHandlers ?? [];
 	g.ChatRoomRegisterMessageHandler = vi.fn((handler: { Description?: string }) => g.ChatRoomMessageHandlers.push(handler));
+	// ItemUseModule.load() writes CraftingSlots.modeData.LSCGShare = {...}
+	// directly (not via hookFunction), to register its own crafting-share mode.
+	g.CraftingSlots = g.CraftingSlots ?? { modeData: {} };
 
 	g.AssetGroup = g.AssetGroup ?? [];
 	g.Asset = g.Asset ?? [];
 	g.AssetGet = vi.fn((_family: string, groupName: string, name: string) =>
 		(g.Asset as { Name: string; Group: { Name: string } }[]).find(a => a.Name === name && a.Group.Name === groupName) ?? null);
+	// The raw per-family asset *definition* data BC loads from Female3DCG.js
+	// (shape: [{Group, Asset: [...]}, ...]) -- distinct from the runtime
+	// Asset/AssetGroup arrays above. Nothing in the "unit" tier has real family
+	// definitions; an empty array is enough for code that just .filter()s it
+	// (e.g. ItemUseModule.GetHempRopeLocations()).
+	g.AssetFemale3DCG = g.AssetFemale3DCG ?? [];
 
 	return {
 		ServerSend: g.ServerSend,

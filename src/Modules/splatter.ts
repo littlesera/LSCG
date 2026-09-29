@@ -356,6 +356,7 @@ export class SplatterModule extends BaseModule {
                             case "ChatOther-ItemMouth-Lick":
                             case "ChatSelf-ItemMouth-Lick":
                                 this.CleanSingleSplatter("mouth");
+                                break;
                             case "ChatOther-ItemHead-Lick":
                             case "ChatSelf-ItemHead-Lick":
                                 this.CleanSingleSplatter("forehead");

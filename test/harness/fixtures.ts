@@ -24,6 +24,7 @@ export interface CharacterFlags {
 	enclosed: boolean;
 	kneeling: boolean;
 	standing: boolean;
+	edged: boolean;
 }
 
 export function defaultFlags(overrides: Partial<CharacterFlags> = {}): CharacterFlags {
@@ -43,6 +44,7 @@ export function defaultFlags(overrides: Partial<CharacterFlags> = {}): Character
 		enclosed: false,
 		kneeling: false,
 		standing: true,
+		edged: false,
 		...overrides,
 	};
 }
@@ -60,6 +62,8 @@ export interface FixtureCharacter {
 	OwnerMemberNumber?: number;
 	LoverMemberNumber?: number[];
 	ChatSettings: { ColorTheme: string };
+	Reputation: { Type: string; Value: number }[];
+	ArousalSettings: { Progress: number };
 	// LSCG's own settings blob, present on both Player and other LSCG-running characters.
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	LSCG?: any;
@@ -85,6 +89,7 @@ export interface FixtureCharacter {
 	GetBlurLevel: () => number;
 	IsOwnedByMemberNumber: (n: number) => boolean;
 	IsLoverOfMemberNumber: (n: number) => boolean;
+	IsEdged: () => boolean;
 }
 
 let nextMemberNumber = 100000;
@@ -105,6 +110,8 @@ export function makeCharacter(overrides: Omit<Partial<FixtureCharacter>, "flags"
 		OwnerMemberNumber: overrides.OwnerMemberNumber,
 		LoverMemberNumber: overrides.LoverMemberNumber ?? [],
 		ChatSettings: overrides.ChatSettings ?? { ColorTheme: "Dark" },
+		Reputation: overrides.Reputation ?? [],
+		ArousalSettings: overrides.ArousalSettings ?? { Progress: 0 },
 		LSCG: overrides.LSCG,
 		flags,
 		GetPronouns: () => flags.pronouns,
@@ -126,6 +133,7 @@ export function makeCharacter(overrides: Omit<Partial<FixtureCharacter>, "flags"
 		HasTints: () => false,
 		GetTints: () => [],
 		GetBlurLevel: () => 0,
+		IsEdged: () => flags.edged,
 		// Regular `function`s reading `this`, not arrow functions closing over
 		// `c`: resetWorld() (world.ts) mutates Player in place via
 		// `Object.assign(Player, freshCharacter)`, which copies these method
