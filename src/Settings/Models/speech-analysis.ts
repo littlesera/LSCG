@@ -151,7 +151,7 @@ export function defaultSpeechReactions(): SpeechReactionRule[] {
 
 export function defaultSpeechPublicSettings(): SpeechAnalysisPublicSettingsModel {
     return {
-        enabled: true,
+        enabled: false,
         remoteAccess: false,
         remoteLevel: "Owner",
         remoteRequiresTrance: true,
