@@ -127,4 +127,22 @@ describe("activity registry contract (real BC data)", () => {
 		activities.PatchActivity({ ActivityName: "__does_not_exist__", AddedTargets: [{ Name: "ItemMouth" } as ActivityTarget] });
 		expect(activities.PatchedActivities.length).toBe(before); // silently no-ops
 	});
+
+	it("PatchActivity's AddedPrerequisites appends a named prerequisite onto the real activity", () => {
+		// "Caress" isn't one of LSCG's own patched activities, so this is isolated from any
+		// real patch's own Prerequisite state.
+		const activity = (g.ActivityFemale3DCG as { Name: string; Prerequisite: string[] }[]).find(a => a.Name === "Caress")!;
+		const before = activity.Prerequisite.length;
+		activities.PatchActivity({ ActivityName: "Caress", AddedPrerequisites: ["__test_added_prereq__" as never] });
+		expect(activity.Prerequisite).toContain("__test_added_prereq__");
+		expect(activity.Prerequisite.length).toBe(before + 1);
+	});
+
+	it("PatchActivity's AddedPrerequisites does not add a duplicate if already present", () => {
+		const activity = (g.ActivityFemale3DCG as { Name: string; Prerequisite: string[] }[]).find(a => a.Name === "Caress")!;
+		activities.PatchActivity({ ActivityName: "Caress", AddedPrerequisites: ["__test_dedup_prereq__" as never] });
+		const afterFirst = activity.Prerequisite.length;
+		activities.PatchActivity({ ActivityName: "Caress", AddedPrerequisites: ["__test_dedup_prereq__" as never] });
+		expect(activity.Prerequisite.length).toBe(afterFirst);
+	});
 });

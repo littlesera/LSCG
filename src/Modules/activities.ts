@@ -1817,6 +1817,13 @@ export class ActivityModule extends BaseModule {
             });
         }
 
+        if (!!patch.AddedPrerequisites) {
+            patch.AddedPrerequisites.forEach(prereq => {
+                if (activity!.Prerequisite.indexOf(prereq as LSCGActivityPrerequisite) == -1)
+                    activity!.Prerequisite.push(prereq as LSCGActivityPrerequisite);
+            });
+        }
+
         this.RegisterCustomFuncs(patch, activity!);
 
         this.PatchedActivities.push(patch.ActivityName);
