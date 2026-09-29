@@ -82,6 +82,13 @@ describe("SpeechAnalysisModule detection", () => {
 			["I'd rather stay than go", "neutral"], ["I love you more than anything", "neutral"],
 			["you are smarter than Bob", "neutral"], ["I'm older than her", "neutral"],
 			["other than me, nobody came", "neutral"],
+			// "I'm [not] ___ing" is a progressive-tense hedge/activity, not a self-worth claim, even
+			// though "I'm" precedes it -- compromise tags every -ing word the same (Verb, Gerund)
+			// whether it's an activity or a genuine evaluative adjective like "amazing"/"boring".
+			["hope I'm not interrupting..!", "neutral"], ["I'm not relaxing right now", "neutral"],
+			["I'm trying my best", "neutral"], ["I'm just kidding", "neutral"], ["I'm leaving now", "neutral"],
+			// the closed set of -ing words that really are evaluative adjectives must still detect
+			["I'm amazing", "positive"], ["I'm boring", "negative"], ["I'm so annoying", "negative"],
 		];
 		it.each(table)('"%s" -> %s', (text, expected) => {
 			expect(tone(speech.analyze(text))).toBe(expected);
