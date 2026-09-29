@@ -275,4 +275,20 @@ describe("CollarModule", () => {
 			expect(collar.settings.chokeLevel).toBe(1);
 		});
 	});
+
+	describe("unload", () => {
+		// The shared `collar` instance's own eventInterval (from load() in beforeAll) was
+		// registered against real timers before any test's vi.useFakeTimers() existed, so
+		// unload()ing it here wouldn't be observable under fake time -- a fresh instance is
+		// load()ed (and unload()ed) entirely within this test instead, matching the pattern
+		// in boops.test.ts's own interval-under-fake-timers test.
+		it("clears the ChokeEvent interval so it no longer fires after unload", () => {
+			const fresh = new CollarModule();
+			fresh.load();
+			const chokeEventSpy = vi.spyOn(fresh, "ChokeEvent");
+			fresh.unload();
+			vi.advanceTimersByTime(fresh.chokeEventTimer * 3);
+			expect(chokeEventSpy).not.toHaveBeenCalled();
+		});
+	});
 });

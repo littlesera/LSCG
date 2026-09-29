@@ -463,6 +463,7 @@ export class CollarModule extends BaseModule {
 
     unload(): void {
         removeAllHooksByModule(ModuleCategory.Collar);
+        clearInterval(this.eventInterval);
     }
 
     // Choke Collar Code
