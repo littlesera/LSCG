@@ -206,12 +206,22 @@
 		.lscg-kit-dialog-actions {
 			display: flex;
 			justify-content: flex-end;
+			gap: min(1.5dvh, 0.75dvw);
 			margin-top: min(2dvh, 1dvw);
 
 			.lscg-button {
 				width: auto;
 				height: min(6dvh, 3dvw);
 			}
+		}
+	}
+
+	.lscg-kit-danger {
+		background-color: color-mix(in srgb, #b00020 85%, var(--lscg-button-color));
+		color: white;
+
+		&:hover {
+			background-color: #b00020;
 		}
 	}
 }

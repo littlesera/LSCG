@@ -163,7 +163,7 @@ export function defaultSpeechPublicSettings(): SpeechAnalysisPublicSettingsModel
 export function defaultSpeechSettings(): SpeechAnalysisSettingsModel {
     return {
         ...defaultSpeechPublicSettings(),
-        negativeThreshold: 0,
+        negativeThreshold: -0.1,
         positiveThreshold: 0.3,
         incomingThreshold: 0.2,
         contextWindowSeconds: 60,

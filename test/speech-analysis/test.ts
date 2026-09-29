@@ -79,6 +79,13 @@ const table: [string, string][] = [
     ["I suck", "negative"], ["I suck at this", "negative"], ["I fail", "negative"], ["I failed", "negative"],
     // same shape, but the verb has an external object, so it's not self-deprecation
     ["I failed the test", "neutral"], ["I ruined everything", "neutral"], ["I love cooking dinner", "neutral"],
+    // "without X" negates X, so a negative X shouldn't read as self-deprecation ("repercussions" alone is negative)
+    ["Now I can sass Sylvin all I want without repercussions >.>", "neutral"],
+    ["I did that without any regrets", "neutral"], ["I can relax without any worries", "neutral"],
+    ["I feel amazing without any worries", "positive"], ["I survived without any help", "positive"],
+    // a modal states ability/intent for an activity, not a self-judgment, regardless of the activity's own valence
+    ["I can't relax", "neutral"], ["I can't find my keys", "neutral"], ["I will go home", "neutral"],
+    ["I couldn't care less", "neutral"],
     // comparisons
     ["other people are cuter than me", "negative"], ["everyone is better than me", "negative"],
     ["you are all so much smarter than me", "negative"], ["she is more beautiful than me", "negative"],
@@ -341,9 +348,9 @@ m.settings.remoteLevel = "Owner"; send(3, { eruditeGrade: 8 }); check("hypnotize
 send(99, { remoteRequiresTrance: false }); check("remote cannot turn off trance requirement", String(m.settings.remoteRequiresTrance), "true");
 hypno.Active = false;
 m.settings.eruditeGrade = 10; m.settings.remoteRequiresTrance = false;
-m.settings.remoteAccess = false; send(99, { negativeThreshold: -1 }); check("remote disabled -> ignored", String(m.settings.negativeThreshold), "0");
+m.settings.remoteAccess = false; send(99, { negativeThreshold: -1 }); check("remote disabled -> ignored", String(m.settings.negativeThreshold), "-0.1");
 m.settings.remoteAccess = true; m.settings.remoteLevel = "Owner";
-send(2, { negativeThreshold: -1 }); check("Owner level, non-owner -> ignored", String(m.settings.negativeThreshold), "0");
+send(2, { negativeThreshold: -1 }); check("Owner level, non-owner -> ignored", String(m.settings.negativeThreshold), "-0.1");
 send(99, { negativeThreshold: -1 }); check("Owner level, owner -> applied", String(m.settings.negativeThreshold), "-1");
 m.settings.remoteLevel = "Friends";
 send(3, { positiveThreshold: 1 }); check("Friends level, stranger -> ignored", String(m.settings.positiveThreshold), "0.3");

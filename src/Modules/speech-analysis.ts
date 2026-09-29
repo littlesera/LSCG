@@ -85,7 +85,9 @@ const DOMAIN_LEXICON: Record<string, number> = {
 
 const FIRST_PERSON_RE = /\b(i'm|i've|i'll|i'd|im|i|me|my|myself|mine)\b/i;
 // Self-evaluative framing — a positive affirmation must be *about* the player, not just contain "I".
-const SELF_EVAL_RE = /\b(i\s+am|i'm|im|i\s+feel|i\s+deserve|i\s+look|i\s+did|i\s+can|i\s+will|i\s+(?:love|like|accept)\s+myself|proud\s+of\s+myself|i'?ve\s+been)\b/i;
+// "I can"/"I will" are deliberately excluded: a modal just states ability/intent for whatever follows
+// ("I can't relax", "I will go home") and isn't itself a claim about the speaker's character.
+const SELF_EVAL_RE = /\b(i\s+am|i'm|im|i\s+feel|i\s+deserve|i\s+look|i\s+did|i\s+(?:love|like|accept)\s+myself|proud\s+of\s+myself|i'?ve\s+been)\b/i;
 // Others' feelings toward the player — self-referential even without "I am" framing.
 const DIRECTED_AT_ME_RE = /\b(hates?|despises?|dislikes?|can'?t\s+stand|disgusted\s+(?:by|with))\s+(me|myself)\b/i;
 const SECOND_PERSON_RE = /\b(you|your|you're|youre|you've|you'll|you'd|yours|yourself|ur|u)\b/i;
@@ -111,6 +113,9 @@ const IRREGULAR_POLARITY: Record<string, number> = { better: 1, best: 1, worse: 
 const SELF_OBJECT_RE = /\b(me|myself|mine|i|i'm|im)\b/;
 const NEGATOR_RE = /\bnot\b|\bnever\b|n't\b/;
 const OTHER_NEGATOR_RE = /\b(nobody|no one|noone|none|nothing)\b/;
+// sentiment's own negation list only covers not/never/n't-style words, not "without": "without repercussions"
+// otherwise scores negative purely from "repercussions", though the phrase means there are none.
+const WITHOUT_RE = /\bwithout\s+((?:[a-z][a-z'-]*\s+){0,2}[a-z][a-z'-]*)/gi;
 
 const MAX_INCOMING = 20;
 const OUTGOING_WINDOW = 5;
@@ -525,7 +530,17 @@ export class SpeechAnalysisModule extends BaseModule {
     }
 
     private _sentiment(text: string) {
-        return _sentimentAnalyzer.analyze(text, { extras: this._lexicon() });
+        const result = _sentimentAnalyzer.analyze(text, { extras: this._lexicon() });
+        let offset = 0;
+        for (const m of text.matchAll(WITHOUT_RE)) {
+            const span = _sentimentAnalyzer.analyze(m[1], { extras: this._lexicon() });
+            // "without repercussions" means the opposite of what "repercussions" alone scores; a positive span
+            // ("without help") is a genuine lack of something good, so it's left as the library scored it.
+            if (span.score < 0) offset -= span.score;
+        }
+        if (offset === 0) return result;
+        const score = result.score + offset;
+        return { ...result, score, comparative: score / Math.max(1, result.tokens.length) };
     }
 
     /** Built-in list (with its usual leetspeak/repeat handling) plus exact words/phrases the wearer added,
@@ -636,8 +651,12 @@ export class SpeechAnalysisModule extends BaseModule {
     /** "I" as the subject of a verb (or verb chain) with no external object ("I suck", "I failed", "I suck at this")
      *  — as opposed to "I love pizza" or "I love being her slave", where the verb chain evaluates something other
      *  than the speaker. SELF_EVAL_RE only covers a fixed list of framings ("I am…", "I feel…"); this generalizes
-     *  to any plain self-referential verb. */
+     *  to any plain self-referential verb.
+     *  Modal-governed verbs ("I can't relax", "I couldn't find my keys") are excluded even with no object: a modal
+     *  states ability/permission/intent for an activity, not a judgment about the speaker — there are plenty of
+     *  reasons to not be able to relax that have nothing to do with self-worth. */
     private _selfVerbNoObject(doc: ReturnType<typeof nlp>): boolean {
+        if (doc.match("i #Modal").found) return false;
         return doc.match("i #Verb").found && !doc.match("i #Verb+ (#Determiner|#Noun|#ProperNoun)").found;
     }
 

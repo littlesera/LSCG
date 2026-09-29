@@ -107,6 +107,20 @@ export function SelectRow(ctx: KitContext, props: RowProps<string> & { options: 
     return row(ctx, props, id, select);
 }
 
+export function ButtonRow(ctx: KitContext, props: {
+    label: string; description?: string; buttonLabel: string; onClick: (button: HTMLButtonElement) => void;
+    disabled?: () => boolean; hidden?: () => boolean; danger?: boolean;
+}): HTMLElement {
+    const id = uid("btn");
+    const button = (
+        <button type="button" id={id} class={props.danger ? "lscg-button lscg-kit-danger" : "lscg-button"} onClick={() => props.onClick(button)}>
+            {props.buttonLabel}
+        </button>
+    ) as HTMLButtonElement;
+    bindDisabled(ctx, button, props.disabled);
+    return row(ctx, props, id, button);
+}
+
 export function SectionLabel(text: string, description?: string): HTMLElement {
     return (
         <div class="lscg-kit-section">
@@ -132,6 +146,24 @@ export function openDialog(anchor: HTMLElement, parent: KitContext, title: strin
             <div class="lscg-kit-dialog-body">{body(ctx)}</div>
             <div class="lscg-kit-dialog-actions">
                 <button class="lscg-button" onClick={() => dialog.close()}>Done</button>
+            </div>
+        </dialog>
+    ) as HTMLDialogElement;
+    dialog.addEventListener("close", () => dialog.remove());
+    root.appendChild(dialog);
+    dialog.showModal();
+}
+
+/** A yes/no confirmation dialog. `onConfirm` only runs if the confirm button is picked; Cancel or Escape does nothing. */
+export function confirmDialog(anchor: HTMLElement, title: string, message: string, confirmLabel: string, onConfirm: () => void): void {
+    const root = anchor.closest(".lscg-kit") ?? document.body;
+    const dialog = (
+        <dialog class="lscg-kit-dialog" aria-label={title}>
+            <h2>{title}</h2>
+            <p class="lscg-kit-desc">{message}</p>
+            <div class="lscg-kit-dialog-actions">
+                <button class="lscg-button" onClick={() => dialog.close()}>Cancel</button>
+                <button class="lscg-button lscg-kit-danger" onClick={() => { dialog.close(); onConfirm(); }}>{confirmLabel}</button>
             </div>
         </dialog>
     ) as HTMLDialogElement;

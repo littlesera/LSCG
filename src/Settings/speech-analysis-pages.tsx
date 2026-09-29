@@ -2,10 +2,10 @@ import { Outfits } from "modules";
 import { StripLevel } from "./Models/cursed-item";
 import { OutfitOption } from "./Models/magic";
 import { h } from "tsx-dom";
-import { CheckboxRow, openDialog, KitContext, KitTab, Notice, NumberRow, RuleTable, SectionLabel, SelectOption, SelectRow, TextRow } from "./Dom/kit";
+import { ButtonRow, CheckboxRow, confirmDialog, openDialog, KitContext, KitTab, Notice, NumberRow, RuleTable, SectionLabel, SelectOption, SelectRow, TextRow } from "./Dom/kit";
 import {
-    SPEECH_DETECTIONS, SPEECH_DETECTION_DETECTOR, SPEECH_DETECTORS, SpeechDetectorId, SPEECH_MAX_COOLDOWN_MS, SPEECH_MAX_DURATION_MS, SPEECH_MAX_RULES, SPEECH_MAX_TEXT_LENGTH, SPEECH_NUMBER_RANGES as R,
-    SPEECH_MAX_PHRASE_GROUPS, SPEECH_PHRASE_GROUP_NAME_MAX, SpeechPhraseGroup, newPhraseGroupId,
+    SPEECH_DETECTIONS, SPEECH_DETECTION_DETECTOR, SPEECH_DETECTORS, SPEECH_EDITABLE_KEYS, SpeechDetectorId, SPEECH_MAX_COOLDOWN_MS, SPEECH_MAX_DURATION_MS, SPEECH_MAX_RULES, SPEECH_MAX_TEXT_LENGTH, SPEECH_NUMBER_RANGES as R,
+    SPEECH_MAX_PHRASE_GROUPS, SPEECH_PHRASE_GROUP_NAME_MAX, SpeechPhraseGroup, defaultSpeechSettings, newPhraseGroupId,
     SPEECH_OUTFIT_KEY_MAX, SPEECH_OUTFIT_OPTIONS, SPEECH_REACTION_ACTIONS, SPEECH_REACTION_STATES, SPEECH_REMOTE_LEVELS, SPEECH_REMOVE_ONLY_STATES, SpeechSettingsView, SpeechDetection, SpeechReactionAction, SpeechReactionRule, SpeechRemoteLevel,
 } from "./Models/speech-analysis";
 
@@ -186,6 +186,38 @@ export function buildSpeechTabs(ctx: KitContext, s: SpeechSettingsView, opts: Sp
                 NumberRow(ctx, { label: "Context window (seconds)", description: "How long a message said to you can still be answered.", ...R.contextWindowSeconds, get: () => s.contextWindowSeconds, set: v => s.contextWindowSeconds = v, disabled: () => !detectorOn(s, "tone") }),
                 SectionLabel("Reading level"),
                 NumberRow(ctx, { label: "Maximum grade level", description: "Flesch-Kincaid grade. Lines of 5+ words at or above this count as too complex.", ...R.eruditeGrade, get: () => s.eruditeGrade, set: v => s.eruditeGrade = v, disabled: () => !detectorOn(s, "erudite") }),
+                ...(opts.remote ? [] : [
+                    SectionLabel("Reset"),
+                    ButtonRow(ctx, {
+                        label: "Tone thresholds & reading level",
+                        description: "Puts the negative/positive thresholds, context settings, and reading-level grade back to default.",
+                        buttonLabel: "Reset to default",
+                        onClick: () => {
+                            const d = defaultSpeechSettings();
+                            s.negativeThreshold = d.negativeThreshold;
+                            s.positiveThreshold = d.positiveThreshold;
+                            s.incomingThreshold = d.incomingThreshold;
+                            s.contextWindowSeconds = d.contextWindowSeconds;
+                            s.eruditeGrade = d.eruditeGrade;
+                            ctx.changed();
+                        },
+                    }),
+                    ButtonRow(ctx, {
+                        label: "Entire speech analysis config",
+                        description: "Puts detectors, thresholds, vocabulary, phrase groups and reaction rules back to default. Doesn't change whether the module or remote access is enabled. This can't be undone.",
+                        buttonLabel: "Reset everything…",
+                        danger: true,
+                        onClick: button => confirmDialog(button, "Reset speech analysis?",
+                            "This clears your detectors, thresholds, vocabulary, phrase groups, and every reaction rule, and puts them all back to default. This can't be undone.",
+                            "Reset everything",
+                            () => {
+                                const d = defaultSpeechSettings();
+                                for (const key of SPEECH_EDITABLE_KEYS) (s as any)[key] = (d as any)[key];
+                                local.debugLog = d.debugLog;
+                                ctx.changed();
+                            }),
+                    }),
+                ]),
             ],
         },
         {
