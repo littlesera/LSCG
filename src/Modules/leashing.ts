@@ -580,10 +580,10 @@ export class LeashingModule extends BaseModule {
 
     NotifyUnleashings(leashings: Leashing[]) {
         leashings.forEach(l => {
-            sendLSCGCommandBeep(l.PairedMember, "release", [{
-                name: "type",
-                value: l.Type
-            }])
+            sendLSCGCommandBeep(l.PairedMember, "release", [
+                { name: "type", value: l.Type },
+                { name: "isSource", value: l.IsSource },
+            ]);
         });
     }
 
@@ -724,12 +724,12 @@ export class LeashingModule extends BaseModule {
         }
     }
 
-    IncomingRelease(sender: OtherCharacter | null, grabType: GrabType) {
-        if (!!sender && !!sender.MemberNumber) {
-            this.RemoveLeashings(sender.MemberNumber, false, grabType);
-            if (LeashDefinitions.get(grabType)?.Bidirectional)
-                this.RemoveLeashings(sender.MemberNumber, true, grabType);
-        }
+    // By member number, as a release often comes from another room, where getCharacter finds nobody.
+    // Usually the grabber lets go, but a safeword sends it from the one grabbed
+    IncomingRelease(sender: number, grabType: GrabType, senderIsSource?: boolean) {
+        this.RemoveLeashings(sender, senderIsSource === false, grabType);
+        if (LeashDefinitions.get(grabType)?.Bidirectional)
+            this.RemoveLeashings(sender, senderIsSource !== false, grabType);
     }
 
     IncomingEscape(sender: OtherCharacter | null, escapeFromMemberNumber: number) {
