@@ -167,7 +167,10 @@ export function installBcLite(): BcLite {
 	g.WardrobeGetExpression = vi.fn(() => ({ Blush: "Default" }));
 	g.AudioVolumeFromModifier = vi.fn((m: number) => m);
 	g.AudioPlaySoundEffect = vi.fn();
-	g.SpeechGarbleByGagLevel = (_C: unknown, msg: string) => msg;
+	g.SpeechGarbleByGagLevel = vi.fn((_gagLevel: unknown, msg: string) => msg);
+	g.SpeechStutter = vi.fn((_C: unknown, msg: string) => msg);
+	g.SpeechBabyTalk = vi.fn((_C: unknown, msg: string) => msg);
+	g.SpeechGetTotalGagLevel = vi.fn(() => 0);
 	g.CommonStringSubstitute = (msg: string) => msg;
 	g.CommandCombine = vi.fn((...args: unknown[]) => args.flat());
 	g.ActivityOrgasmPrepare = vi.fn();
