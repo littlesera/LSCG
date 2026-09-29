@@ -1,0 +1,217 @@
+.lscg-kit {
+	grid-template-rows: 1fr;
+	text-align: left;
+	user-select: text;
+
+	.lscg-kit-tabs {
+		display: grid;
+		grid-template-rows: auto 1fr;
+		gap: min(1.5dvh, 0.75dvw);
+		min-height: 0;
+		height: 100%;
+	}
+
+	.lscg-kit-tabbar {
+		display: flex;
+		gap: min(1dvh, 0.5dvw);
+	}
+
+	.lscg-kit-tab {
+		width: auto;
+		height: min(7dvh, 3.5dvw);
+
+		&[aria-selected="true"] {
+			background-color: var(--lscg-tooltip-color);
+			font-weight: bold;
+		}
+	}
+
+	.lscg-kit-body {
+		background-color: color-mix(in srgb, var(--lscg-background-color) 85%, transparent);
+		border: min(0.3dvh, 0.15dvw) solid var(--lscg-border-color);
+		min-height: 0;
+		overflow-y: auto;
+		padding: min(2dvh, 1dvw);
+	}
+
+	.lscg-kit-panel {
+		display: grid;
+		gap: min(1.5dvh, 0.75dvw);
+		align-content: start;
+	}
+
+	.lscg-kit-row {
+		display: grid;
+		grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+		grid-template-areas: "label control" "desc desc";
+		align-items: center;
+		column-gap: min(2dvh, 1dvw);
+
+		&[hidden] {
+			display: none;
+		}
+	}
+
+	.lscg-kit-label {
+		grid-area: label;
+	}
+
+	.lscg-kit-control {
+		grid-area: control;
+		display: flex;
+		align-items: center;
+
+		input[type="text"], input[type="number"], select, textarea {
+			width: 100%;
+			min-height: min(6dvh, 3dvw);
+		}
+
+		textarea {
+			box-sizing: border-box;
+			font: inherit;
+			resize: vertical;
+		}
+	}
+
+	.lscg-kit-desc {
+		grid-area: desc;
+		font-size: calc(var(--lscg-font-small) * 0.7);
+		opacity: 0.75;
+		margin: 0;
+	}
+
+	.lscg-kit-section h2 {
+		margin: min(1dvh, 0.5dvw) 0 0;
+		font-size: calc(var(--lscg-font-small) * 1.15);
+	}
+
+	.lscg-kit-notice {
+		font-size: var(--lscg-font-large);
+		text-align: center;
+		align-self: center;
+	}
+
+	.lscg-kit-table {
+		border-collapse: collapse;
+		width: 100%;
+		// Fixed layout: column widths come from the header, so a long cell (like a rule summary) truncates
+		// instead of stretching its column and squeezing the dropdowns. Columns without a width share the rest.
+		table-layout: fixed;
+
+		.lscg-kit-delete-col {
+			width: 3em;
+		}
+
+		th {
+			text-align: left;
+			font-size: calc(var(--lscg-font-small) * 0.8);
+			padding: 0 min(0.5dvh, 0.25dvw);
+			white-space: nowrap;
+
+			&.lscg-kit-has-tip {
+				cursor: help;
+				text-decoration: underline dotted;
+			}
+		}
+
+		td {
+			padding: min(0.5dvh, 0.25dvw);
+		}
+
+		select, input[type="number"], input[type="text"] {
+			width: 100%;
+			min-height: min(5dvh, 2.5dvw);
+			box-sizing: border-box;
+		}
+
+		input[type="checkbox"] {
+			height: min(5dvh, 2.5dvw);
+			width: min(5dvh, 2.5dvw);
+		}
+
+		tbody tr:nth-child(even) {
+			background-color: color-mix(in srgb, var(--lscg-background-color) 90%, black 10%);
+		}
+	}
+
+	.lscg-kit-delete {
+		width: min(5dvh, 2.5dvw);
+		height: min(5dvh, 2.5dvw);
+		padding: 0;
+	}
+
+	.lscg-kit-table-footer {
+		display: flex;
+		align-items: center;
+		gap: min(2dvh, 1dvw);
+		margin-top: min(1dvh, 0.5dvw);
+	}
+
+	.lscg-kit-add {
+		width: auto;
+		height: min(6dvh, 3dvw);
+	}
+
+	.lscg-kit-details {
+		display: flex;
+		align-items: center;
+		gap: min(1dvh, 0.5dvw);
+		min-width: 0;
+
+		.lscg-kit-summary {
+			flex: 1;
+			min-width: 0;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			white-space: nowrap;
+			font-size: calc(var(--lscg-font-small) * 0.85);
+		}
+
+		.lscg-kit-summary.lscg-kit-warning {
+			color: #b00020;
+		}
+	}
+
+	.lscg-kit-edit {
+		width: auto;
+		height: min(5dvh, 2.5dvw);
+		flex: none;
+	}
+
+	.lscg-kit-dialog {
+		background-color: var(--lscg-background-color);
+		border: min(0.4dvh, 0.2dvw) solid var(--lscg-border-color);
+		box-shadow: 0 0 min(3dvh, 1.5dvw) rgb(0 0 0 / 50%);
+		color: var(--lscg-text-color);
+		font-family: var(--lscg-font-family);
+		font-size: var(--lscg-font-small);
+		min-width: min(90dvh, 45dvw);
+		max-width: min(150dvh, 75dvw);
+		padding: min(3dvh, 1.5dvw);
+		text-align: left;
+
+		&::backdrop {
+			background-color: rgb(0 0 0 / 40%);
+		}
+
+		h2 {
+			margin: 0 0 min(2dvh, 1dvw);
+		}
+
+		.lscg-kit-dialog-body {
+			display: grid;
+			gap: min(1.5dvh, 0.75dvw);
+		}
+
+		.lscg-kit-dialog-actions {
+			display: flex;
+			justify-content: flex-end;
+			margin-top: min(2dvh, 1dvw);
+
+			.lscg-button {
+				width: auto;
+				height: min(6dvh, 3dvw);
+			}
+		}
+	}
+}

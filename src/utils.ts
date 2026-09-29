@@ -4,6 +4,7 @@ import bcModSDKRef from "bondage-club-mod-sdk";
 import { getModule } from "modules";
 import { CoreModule } from "Modules/core";
 import { ActivityEntryModel } from "Settings/Models/activities";
+import { StripLevel } from "Settings/Models/cursed-item";
 import { ModuleCategory } from "Settings/setting_definitions";
 import { clone, debounce, includes, trim } from "lodash-es";
 import { SettingsModel } from "Settings/Models/settings";
@@ -190,6 +191,21 @@ export function hookFunction<FunctionName extends string>(target: FunctionName, 
 	});
 	data.hooks.sort((a, b) => b.priority - a.priority);
 	return removeCallback;
+}
+
+/** Calls `callback(true)` now, then `callback(false)` whenever the game canvas moves or resizes. Returns a cleanup function.
+ *  Use this instead of hooking "CurrentScreenFunctions.Resize": BC replaces that object on every screen change, and the
+ *  mod SDK only resolves a hooked path the first time, so later hooks attach to a stale function and never run. */
+export function onCanvasResize(callback: (load: boolean) => void): () => void {
+	const onResize = () => callback(false);
+	window.addEventListener("resize", onResize);
+	const observer = typeof ResizeObserver !== "undefined" ? new ResizeObserver(onResize) : null;
+	observer?.observe(MainCanvas.canvas);
+	callback(true);
+	return () => {
+		window.removeEventListener("resize", onResize);
+		observer?.disconnect();
+	};
 }
 
 export function removeHooksByModule(target: string, module: ModuleCategory): boolean {
@@ -560,6 +576,25 @@ export function isAllowedMember(member: Character | undefined) {
 	return !!member && ServerChatRoomGetAllowItem(member, Player);
 }
 
+export type RemoteAccessLevel = "Public" | "PublicExceptBlacklist" | "Friends" | "Whitelist" | "Lovers" | "Owner";
+
+/** Whether `memberNumber` may configure `wearer` at `level`; each level includes the stricter ones.
+ *  Friend lists aren't synced for other characters, so only the wearer's own client can enforce "Friends". */
+export function hasRemotePermission(wearer: Character, level: RemoteAccessLevel, memberNumber: number): boolean {
+	if (wearer.IsOwnedByMemberNumber(memberNumber)) return true;
+	const lover = wearer.IsLoverOfMemberNumber(memberNumber);
+	const whitelisted = wearer.WhiteList?.includes(memberNumber) ?? false;
+	switch (level) {
+		case "Owner": return false;
+		case "Lovers": return lover;
+		case "Whitelist": return lover || whitelisted;
+		case "Friends": return lover || whitelisted || (wearer.IsPlayer() ? (Player.FriendList?.includes(memberNumber) ?? false) : true);
+		case "PublicExceptBlacklist": return !(wearer.BlackList?.includes(memberNumber) ?? false);
+		case "Public": return true;
+		default: return false;
+	}
+}
+
 export function drawSvg(
 	ctx: CanvasRenderingContext2D,
 	icon: string,
@@ -806,6 +841,14 @@ export function smartGetAssetGroup(item: Item | Asset | AssetGroup | AssetGroupN
 export function isProtectedFromRemoval(item: Item | Asset | AssetGroup | AssetGroupName) {
 	const group = smartGetAssetGroup(item);
 	return group?.Name === "BodyStyle";
+}
+
+/** Whether a worn item falls under a strip level (bit flags of clothes / underwear / cosplay), as used by cursed items. */
+export function matchesStripLevel(item: Item, level: StripLevel): boolean {
+	return !isProtectedFromRemoval(item) &&
+		((isCloth(item, false, false) && !!(level & StripLevel.CLOTHES)) ||
+		(isCosplay(item) && !!(level & StripLevel.COSPLAY)) ||
+		(isUnderwear(item) && !!(level & StripLevel.UNDERWEAR)));
 }
 
 export function isDrawingOverridable(item: Item | Asset | AssetGroup | AssetGroupName): boolean {
@@ -1208,6 +1251,17 @@ export function RemoveItem(item: Item, acting: number | undefined, C?: Character
 	if (CanUnlock(acting, C, item) || item.Asset.Group.IsAppearance()) InventoryRemove(C, item.Asset.Group.Name, false);
 }
 
+/** BC replaced the single `Craft.Property` with an `Effects` map and now logs an error for any crafted item that still has
+ *  `Property` (e.g. from outfit codes saved before the change). Migrate the same way BC does before handing it over. */
+function migrateLegacyCraft<T extends object>(craft: T | undefined): T | undefined {
+	const legacy = craft as { Property?: CraftingPropertyType; Effects?: Partial<Record<CraftingPropertyType, number>> } | undefined;
+	if (!legacy || legacy.Property === undefined) return craft;
+	const { Property, ...rest } = legacy;
+	if (Property !== "Normal" && CraftingPropertyMap.has(Property) && !rest.Effects?.[Property])
+		rest.Effects = { ...(rest.Effects ?? {}), [Property]: 1 };
+	return rest as T;
+}
+
 export function ApplyItem(item: ItemBundle, acting: number | undefined, replace: boolean = true, locksafe: boolean = true, C?: Character): Item | undefined {
 	if (!C) C = Player;
 	let existing = InventoryGet(C, item.Group);
@@ -1219,7 +1273,7 @@ export function ApplyItem(item: ItemBundle, acting: number | undefined, replace:
 		if (replace && !includes(blockedRemovals, existing.Asset.Name)) RemoveItem(existing, acting, C);
 		else return;
 	}
-	let newItem = InventoryWear(C, item.Name, item.Group, item.Color, item.Difficulty, acting, item.Craft, false);
+	let newItem = InventoryWear(C, item.Name, item.Group, item.Color, item.Difficulty, acting, migrateLegacyCraft(item.Craft), false);
 	if (!!newItem) {
 		newItem.Property = ItemPropertiesDecompress(newItem, item.Property);
 		if ((<any>C).LSCG?.GlobalModule?.blockDOGS && (<any>newItem.Property)?.["Name"] == "DeviousPadlock") // REMOVE DOGS LOCKS ON APPLY

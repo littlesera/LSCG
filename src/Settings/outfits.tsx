@@ -1,5 +1,5 @@
 import { h } from "tsx-dom";
-import { ApplyItem, CopyCharacter, hookFunction, ICONS, isBind, isBody, isCloth, isCosplay, isGenitals, isHair, isPronouns, isSkin, smartGetAssetGroup } from "utils";
+import { ApplyItem, CopyCharacter, hookFunction, onCanvasResize, ICONS, isBind, isBody, isCloth, isCosplay, isGenitals, isHair, isPronouns, isSkin, smartGetAssetGroup } from "utils";
 import { GuiSubscreen, HelpInfo } from "./settingBase";
 import { OutfitSettings } from "./Models/base";
 import { OutfitCollectionModule } from "Modules/outfitCollection";
@@ -380,12 +380,8 @@ export class GuiOutfits extends GuiSubscreen {
         this.#refreshListing();
         
         this.#updateElements();
-        this._unhookResize = hookFunction("CurrentScreenFunctions.Resize", 0, (args, next) => {
-            const [load] = args;
-            this.Resize(load)
-            return next(args);
-        })
-        CurrentScreenFunctions.Resize(true);
+        this._unhookResize?.();
+        this._unhookResize = onCanvasResize(load => this.Resize(load));
     }
 
     Resize(load: boolean) {
