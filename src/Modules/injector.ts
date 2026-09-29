@@ -464,6 +464,9 @@ export class InjectorModule extends BaseModule {
 
     unload(): void {
         removeAllHooksByModule(ModuleCategory.Injector);
+        clearInterval(this.sedativeCooldownInterval);
+        clearInterval(this.mindControlCooldownInterval);
+        clearInterval(this.hornyCooldownInterval);
     }
 
     _bcxHooked: boolean = false;
@@ -908,11 +911,11 @@ export class InjectorModule extends BaseModule {
         if (!C)
             return false;
 
-        var item = InventoryGet(Player, "ItemHandheld");
+        var item = InventoryGet(C, "ItemHandheld");
         if (!item || !item.Asset || AllowedNetGuns.indexOf(item.Asset.Name) == -1)
             return false;
 
-        var totalString = GetHandheldItemNameAndDescriptionConcat();
+        var totalString = GetHandheldItemNameAndDescriptionConcat(C);
         if (!totalString)
             return false;
 

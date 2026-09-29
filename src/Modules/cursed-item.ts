@@ -201,6 +201,10 @@ export class CursedItemModule extends BaseModule {
         console.debug(`Receiving cursed item response: ${sender} -- ${JSON.stringify(msg.command)}`);
         let item = msg.command?.args.find(a => a.name == "item")?.value as CursedItemWorn;
         if (!this.Enabled || !item) return;
+        // Every downstream permission check (checkItemIsValid's Allowed ladder, itemIsAllowed's
+        // owner/lover/family checks) keys off item.Crafter -- trust the verified packet sender,
+        // not this sender-controlled field, or a stranger could claim to be the owner.
+        item.Crafter = sender;
         this.spreadingState.AddCursedItem(item, sender);
     }
 }

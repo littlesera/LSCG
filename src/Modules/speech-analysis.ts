@@ -88,6 +88,20 @@ const FIRST_PERSON_RE = /\b(i'm|i've|i'll|i'd|im|i|me|my|myself|mine)\b/i;
 // "I can"/"I will" are deliberately excluded: a modal just states ability/intent for whatever follows
 // ("I can't relax", "I will go home") and isn't itself a claim about the speaker's character.
 const SELF_EVAL_RE = /\b(i\s+am|i'm|im|i\s+feel|i\s+deserve|i\s+look|i\s+did|i\s+(?:love|like|accept)\s+myself|proud\s+of\s+myself|i'?ve\s+been)\b/i;
+// "I'm being X" (copula-progressive, "I am being X"): X — whatever it is, adjective or not — is the
+// actual predicate under evaluation, "being" itself never is ("I'm being stupid"/"difficult"/"silly").
+// Handled as its own alternative so the general gerund-hedge check below never has to judge "being".
+const SELF_EVAL_BEING_RE = /\bi(?:'m|\s+am)\s+being\s+[a-z']+\b/i;
+// "I'm [not] [adverb] ___ing": matches both a real self-evaluation ("I'm boring", "I'm not amazing")
+// and a progressive-tense hedge/activity that only looks like one ("I'm not interrupting", "I'm just
+// trying my best"). compromise tags every -ing word identically (Verb, Gerund) whether it's a genuine
+// participial adjective or an ongoing action, so the two can't be told apart by part-of-speech alone —
+// EVALUATIVE_GERUND_ADJECTIVES below is the (small, AFINN-scored) allowlist of the ones that actually are.
+const SELF_EVAL_GERUND_RE = /\bi(?:'m|\s+am)\s+(?:not\s+)?(?:\w+\s+)?([a-z]+ing)\b/i;
+const EVALUATIVE_GERUND_ADJECTIVES = new Set([
+    "amazing", "interesting", "boring", "exciting", "stunning", "charming", "fascinating",
+    "annoying", "disappointing", "embarrassing", "confusing", "frustrating",
+]);
 // Others' feelings toward the player — self-referential even without "I am" framing.
 const DIRECTED_AT_ME_RE = /\b(hates?|despises?|dislikes?|can'?t\s+stand|disgusted\s+(?:by|with))\s+(me|myself)\b/i;
 const SECOND_PERSON_RE = /\b(you|your|you're|youre|you've|you'll|you'd|yours|yourself|ur|u)\b/i;
@@ -165,6 +179,21 @@ function _mentionsOtherCharacter(text: string, senderNum: number): boolean {
 
 function _isQuestion(text: string): boolean {
     return text.includes("?") || QUESTION_START_RE.test(text);
+}
+
+/** SELF_EVAL_RE, with two corrections:
+ *  - "I'm being X" always counts — X is the predicate, whatever it is (SELF_EVAL_BEING_RE).
+ *  - Otherwise, an "I'm [not] ___ing" match only counts as self-evaluative when the -ing word is a
+ *    genuine evaluative adjective (EVALUATIVE_GERUND_ADJECTIVES) — otherwise it's a progressive-tense
+ *    hedge or activity ("I'm not interrupting", "I'm just trying my best") that isn't a claim about the
+ *    speaker at all, and would otherwise read as one purely because "I'm" precedes it.
+ *  SELF_EVAL_RE's other framings ("I feel…", "proud of myself…") are unaffected and still checked as-is. */
+function _isSelfEvaluative(text: string): boolean {
+    if (SELF_EVAL_BEING_RE.test(text)) return true;
+    const gerund = SELF_EVAL_GERUND_RE.exec(text);
+    const gerundIsEvaluative = !gerund || EVALUATIVE_GERUND_ADJECTIVES.has(gerund[1].toLowerCase());
+    const withoutGerundMatch = gerund ? text.slice(0, gerund.index) + text.slice(gerund.index + gerund[0].length) : text;
+    return (gerundIsEvaluative && SELF_EVAL_RE.test(text)) || SELF_EVAL_RE.test(withoutGerundMatch);
 }
 
 function _hasSecondPersonSubject(text: string): boolean {
@@ -632,7 +661,7 @@ export class SpeechAnalysisModule extends BaseModule {
                 const [match, mostLeast, word] = sup;
                 const isSuperlative = !!mostLeast || word in IRREGULAR_POLARITY || (word.length > 4 && word.endsWith("est"));
                 const prefix = sentence.slice(0, sup.index);
-                if (isSuperlative && SELF_EVAL_RE.test(prefix) && !prefix.includes(" than ") && !!match) {
+                if (isSuperlative && _isSelfEvaluative(prefix) && !prefix.includes(" than ") && !!match) {
                     const quality = mostLeast ? this._adjectivePolarity(word) : this._adjectivePolarity(word, true);
                     let p = mostLeast === "least" ? -quality : quality;
                     if (NEGATOR_RE.test(prefix)) p = -p;
@@ -654,10 +683,15 @@ export class SpeechAnalysisModule extends BaseModule {
      *  to any plain self-referential verb.
      *  Modal-governed verbs ("I can't relax", "I couldn't find my keys") are excluded even with no object: a modal
      *  states ability/permission/intent for an activity, not a judgment about the speaker — there are plenty of
-     *  reasons to not be able to relax that have nothing to do with self-worth. */
+     *  reasons to not be able to relax that have nothing to do with self-worth.
+     *  A copula (the "'m"/"am" in "I'm …") is itself tagged #Verb, so "i #Verb" alone matches "I'm" even when the
+     *  real content verb is a gerund further on ("I'm not interrupting") — that's SELF_EVAL_RE/_isSelfEvaluative's
+     *  domain, not this one's, so a copula-only match here doesn't count as a self-referential verb. */
     private _selfVerbNoObject(doc: ReturnType<typeof nlp>): boolean {
         if (doc.match("i #Modal").found) return false;
-        return doc.match("i #Verb").found && !doc.match("i #Verb+ (#Determiner|#Noun|#ProperNoun)").found;
+        const verbTags: string[][] = doc.match("i #Verb").json().flatMap((t: any) => t.terms.filter((x: any) => x.tags.includes("Verb")).map((x: any) => x.tags));
+        const hasNonCopulaVerb = verbTags.some(tags => !tags.includes("Copula"));
+        return hasNonCopulaVerb && !doc.match("i #Verb+ (#Determiner|#Noun|#ProperNoun)").found;
     }
 
     /** Negated *positive* adjective ("not very good"). A negated negative ("not bad") is not self-deprecation. */
@@ -680,7 +714,7 @@ export class SpeechAnalysisModule extends BaseModule {
 
         // Raw sentiment only counts when the line evaluates the player ("I am…", "…hates me"),
         // not whenever "I"/"me" appears ("I hate this game", "nothing can stop me").
-        const selfEvaluative = SELF_EVAL_RE.test(text) || DIRECTED_AT_ME_RE.test(text) || _mentionsPlayer(text) || this._selfVerbNoObject(doc);
+        const selfEvaluative = _isSelfEvaluative(text) || DIRECTED_AT_ME_RE.test(text) || _mentionsPlayer(text) || this._selfVerbNoObject(doc);
         const clearlyNegative = selfEvaluative && result.comparative < this.settings.negativeThreshold;
         const negatedPositive = this._negatedPositiveAdjective(doc);
         // AFINN can't score "nobody"; "nobody likes me" otherwise reads as positive.
@@ -700,7 +734,7 @@ export class SpeechAnalysisModule extends BaseModule {
         if (rhetorical !== 0) return { detected: rhetorical > 0, viaPhrase, ...base };
         if (comparison !== null) return { detected: comparison > 0, viaPhrase, ...base };
 
-        const selfEvaluative = SELF_EVAL_RE.test(text) || _mentionsPlayer(text) || this._selfVerbNoObject(doc);
+        const selfEvaluative = _isSelfEvaluative(text) || _mentionsPlayer(text) || this._selfVerbNoObject(doc);
         const detected = selfEvaluative
             && result.comparative > this.settings.positiveThreshold
             && !this._negatedPositiveAdjective(doc);
