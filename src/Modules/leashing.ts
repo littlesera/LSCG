@@ -375,6 +375,11 @@ export class LeashingModule extends BaseModule {
             // so stand our leasher in for that and put theirs straight back
             const vanillaLeashPlayer = ChatRoomLeashPlayer;
             const isOurLeasher = vanillaLeashPlayer !== data.MemberNumber && this.LeashedByMemberNumbers.indexOf(data.MemberNumber) > -1;
+            // With leashing turned off the game won't pull us, so the grab breaks instead of stretching across rooms
+            if (isOurLeasher && Player.OnlineSharedSettings?.AllowPlayerLeashing === false) {
+                this.BreakLeashingsWith(data.MemberNumber);
+                return;
+            }
             if (isOurLeasher)
                 ChatRoomLeashPlayer = data.MemberNumber;
             beepSourceNumber = data.MemberNumber;
@@ -394,7 +399,7 @@ export class LeashingModule extends BaseModule {
         
         hookFunction("ChatRoomBreakLeash", 1, (args, next) => {
             if (this.Enabled && Player.OnlineSharedSettings.AllowPlayerLeashing && beepSourceNumber !== -1) {
-                this.RemoveLeashings(beepSourceNumber, false);
+                this.BreakLeashingsWith(beepSourceNumber);
             }
             return next(args);
         }, ModuleCategory.Leashed);
@@ -590,6 +595,14 @@ export class LeashingModule extends BaseModule {
     ClearAllLeashings() {
         this.NotifyUnleashings(this.Pairings);
         this.Pairings = [];
+    }
+
+    // A grab that couldn't pull us ends at both sides
+    BreakLeashingsWith(member: number) {
+        const broken = this.Pairings.filter(p => p.PairedMember === member && (!p.IsSource || this.CanDragPlayer(p)));
+        this.NotifyUnleashings(broken);
+        for (const p of broken)
+            this.RemoveLeashings(p.PairedMember, p.IsSource, p.Type);
     }
 
     IsLeashedByType(target: number, type: GrabType) {
