@@ -247,6 +247,11 @@ export function installBcLite(): BcLite {
 	g.CommandCombine = vi.fn((...args: unknown[]) => args.flat());
 	g.ActivityOrgasmPrepare = vi.fn();
 	g.ActivitySetArousal = vi.fn();
+	// Minigame presentation (canvas/GUI) is out of scope for this harness -- callers that
+	// reach this just need it to exist and not throw; the observable state change they
+	// cause happens before this is reached.
+	g.MiniGameStart = vi.fn();
+	g.DrawFlashScreen = vi.fn();
 	// DeniedState/OrgasmSiphonedState's ActivityOrgasmStart hook assigns to this bare global
 	// directly (not via a setter function) -- it must already exist or the assignment throws
 	// a strict-mode ReferenceError.
