@@ -737,7 +737,7 @@ export function excludeParentheticalContent(msg: string): string {
 	if (msg == null) msg = "";
 	for (let i = 0; i < msg.length; i++) {
 		let char = msg.charAt(i);
-		if (char == "(" || char == '）') Par = true;
+		if (char == "(" || char == '（') Par = true;
 		if (!Par)
 			result += char;
 		if (char == ")" || char == "）") Par = false;

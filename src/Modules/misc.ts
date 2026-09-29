@@ -283,6 +283,7 @@ export class MiscModule extends BaseModule {
 
     unload(): void {
         removeAllHooksByModule(ModuleCategory.Misc);
+        clearInterval(this.chloroEventInterval);
     }
 
     IsWearingChloroform() {

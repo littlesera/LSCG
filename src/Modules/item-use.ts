@@ -617,99 +617,7 @@ export class ItemUseModule extends BaseModule {
 			let C = args[0];
 			let itemType = args[1];
 			let results = next(args as [C: Character, act: ActivityName]);
-			var focusGroup: AssetGroupName | undefined = C?.FocusGroup?.Name ?? undefined;
-
-			let gagTargets = this.GagTargets.filter(t => !!t.MouthItemName).map(t => t.MouthItemName!);
-			let neckTargets = this.GagTargets.filter(t => !!t.NeckItemName).map(t => t.NeckItemName!);
-			let handTargets = this.GagTargets.filter(t => !!t.HandItemName).map(t => t.HandItemName!);
-
-			if (itemType == "AnyItem") {
-				let item = InventoryGet(C, "ItemHandheld");
-				if (item) results.push(item);
-			} else if (itemType == "GagTakeItem") {
-				let item = InventoryGet(C, focusGroup);
-				if (focusGroup == "ItemNeck") {
-					focusGroup = "Necklace";
-					item = InventoryGet(C, focusGroup);
-					if (!item || !neckTargets.includes(item.Asset.Name)) {
-						focusGroup = "ClothAccessory";
-						item = InventoryGet(C, focusGroup);
-					}
-					if (item && neckTargets.includes(item.Asset.Name))
-						results.push(item);
-				} else {
-					if (item && gagTargets.includes(item.Asset.Name))
-						results.push(item);
-				}
-			} else if (itemType == "GagGiveItem") {
-				let item = InventoryGet(C, "ItemHandheld");
-				if (item && handTargets.includes(item.Asset.Name)) results.push(item);
-			}else if (itemType == "GagToNecklace") {
-				let item = InventoryGet(C, focusGroup);
-				if (item && gagTargets.includes(item.Asset.Name)) results.push(item);
-			} else if (itemType == "NecklaceToGag") {
-				let item = InventoryGet(C, "Necklace");
-				let altItem = InventoryGet(C, "ClothAccessory");
-				if (item && neckTargets.includes(item.Asset.Name))
-					results.push(item);
-				if (altItem && neckTargets.includes(altItem.Asset.Name))
-					results.push(altItem);
-			} else if (itemType == "RopeCoil") {
-				let item = InventoryGet(C, "ItemHandheld")
-				if (item && item.Asset.Name.startsWith("RopeCoil"))
-					results.push(item)
-			} else if (itemType == "PlushItem") {
-				let teddy = InventoryGet(C, "ItemMisc");
-				let itemHand = InventoryGet(C, "ItemHandheld");
-				if (teddy && teddy.Asset.Name == "TeddyBear")
-					results.push(teddy);
-				if (itemHand && (ExplicitSqueezableItems.includes(itemHand.Asset.Name) || itemHand.Asset.Name.toLocaleLowerCase().indexOf("plush") > -1 || itemHand.Asset.Name.toLocaleLowerCase().indexOf("pet") > -1))
-					results.push(itemHand);
-			} else if (itemType == "CameraItem") {
-				let item = InventoryGet(C, "ItemHandheld");
-				let acc = InventoryGet(C, "ClothAccessory");
-				if (item && CameraItems.includes(item.Asset.Name))
-					results.push(item);
-				else if (acc && CameraItems.includes(acc.Asset.Name))
-					results.push(acc);
-			} else if (itemType == "MagicItem") {
-				let item = InventoryGet(C, "ItemHandheld");
-				if (item && MagicWandItems.includes(item.Asset.Name))
-					results.push(item);
-			} else if (itemType == "SipItem") {
-				let item = InventoryGet(C, "ItemHandheld");
-				if (item && AdditionalSippableItems.includes(item.Asset.Name) && !results.includes(item))
-					results.push(item);
-			} else if (itemType == "PourableItem") {
-				let item = InventoryGet(C, "ItemHandheld");
-				if (item && PourableItems.includes(item.Asset.Name))
-					results.push(item);
-			} else if (itemType == "FellatioItem") {
-				let item = InventoryGet(C, focusGroup);
-				if (item && (AdditionalPenetrateItems.includes(item.Asset.Name) || InventoryGetItemProperty(item, "AllowActivity")?.includes("PenetrateItem")))
-					results.push(item);
-			} else if (itemType == "EdibleItem") {
-				let item = InventoryGet(C, "ItemHandheld");
-				if (item && EdibleItems.includes(item.Asset.Name))
-					results.push(item);
-				else if (item && isPhraseInString(GetItemNameAndDescriptionConcat(item) ?? "", "edible", true))
-					results.push(item);
-			} else if (itemType == "ChewableItem") {
-				let handItem = InventoryGet(C, "ItemHandheld");
-				let mouthItem = InventoryGet(C, "ItemMouth") || InventoryGet(C, "ItemMouth2") || InventoryGet(C, "ItemMouth3")
-
-				if (mouthItem && ChewableItems.includes(mouthItem.Asset.Name))
-					results.push(mouthItem);
-				else if (mouthItem && isPhraseInString(GetItemNameAndDescriptionConcat(mouthItem) ?? "", "chewable", true))
-					results.push(mouthItem);
-				else if (!C.IsMouthBlocked() && C.CanTalk()) {
-					if (handItem && ChewableItems.includes(handItem.Asset.Name))
-						results.push(handItem);
-					else if (handItem && isPhraseInString(GetItemNameAndDescriptionConcat(handItem) ?? "", "chewable", true))
-						results.push(handItem);
-				}
-			}
-			return results;
+			return this.getItemsForActivityNeed(C, itemType, results);
 		}, ModuleCategory.ItemUse);
 
 		hookFunction("StruggleMinigameStart", 1, (args, next) => {
@@ -855,6 +763,106 @@ export class ItemUseModule extends BaseModule {
 		});
     }
 
+	/** The `CharacterItemsForActivity` hook's own logic, extracted unchanged so it can be
+	 *  exercised directly by a test without going through the real, hooked global. `results`
+	 *  is whatever the real BC implementation (or an earlier-priority hook) already
+	 *  produced for `itemType`; this only ever pushes onto it, never replaces it. */
+	getItemsForActivityNeed(C: Character, itemType: LSCGActivityName, results: Item[]): Item[] {
+		var focusGroup: AssetGroupName | undefined = C?.FocusGroup?.Name ?? undefined;
+
+		let gagTargets = this.GagTargets.filter(t => !!t.MouthItemName).map(t => t.MouthItemName!);
+		let neckTargets = this.GagTargets.filter(t => !!t.NeckItemName).map(t => t.NeckItemName!);
+		let handTargets = this.GagTargets.filter(t => !!t.HandItemName).map(t => t.HandItemName!);
+
+		if (itemType == "AnyItem") {
+			let item = InventoryGet(C, "ItemHandheld");
+			if (item) results.push(item);
+		} else if (itemType == "GagTakeItem") {
+			let item = InventoryGet(C, focusGroup);
+			if (focusGroup == "ItemNeck") {
+				focusGroup = "Necklace";
+				item = InventoryGet(C, focusGroup);
+				if (!item || !neckTargets.includes(item.Asset.Name)) {
+					focusGroup = "ClothAccessory";
+					item = InventoryGet(C, focusGroup);
+				}
+				if (item && neckTargets.includes(item.Asset.Name))
+					results.push(item);
+			} else {
+				if (item && gagTargets.includes(item.Asset.Name))
+					results.push(item);
+			}
+		} else if (itemType == "GagGiveItem") {
+			let item = InventoryGet(C, "ItemHandheld");
+			if (item && handTargets.includes(item.Asset.Name)) results.push(item);
+		}else if (itemType == "GagToNecklace") {
+			let item = InventoryGet(C, focusGroup);
+			if (item && gagTargets.includes(item.Asset.Name)) results.push(item);
+		} else if (itemType == "NecklaceToGag") {
+			let item = InventoryGet(C, "Necklace");
+			let altItem = InventoryGet(C, "ClothAccessory");
+			if (item && neckTargets.includes(item.Asset.Name))
+				results.push(item);
+			if (altItem && neckTargets.includes(altItem.Asset.Name))
+				results.push(altItem);
+		} else if (itemType == "RopeCoil") {
+			let item = InventoryGet(C, "ItemHandheld")
+			if (item && item.Asset.Name.startsWith("RopeCoil"))
+				results.push(item)
+		} else if (itemType == "PlushItem") {
+			let teddy = InventoryGet(C, "ItemMisc");
+			let itemHand = InventoryGet(C, "ItemHandheld");
+			if (teddy && teddy.Asset.Name == "TeddyBear")
+				results.push(teddy);
+			if (itemHand && (ExplicitSqueezableItems.includes(itemHand.Asset.Name) || itemHand.Asset.Name.toLocaleLowerCase().indexOf("plush") > -1 || itemHand.Asset.Name.toLocaleLowerCase().indexOf("pet") > -1))
+				results.push(itemHand);
+		} else if (itemType == "CameraItem") {
+			let item = InventoryGet(C, "ItemHandheld");
+			let acc = InventoryGet(C, "ClothAccessory");
+			if (item && CameraItems.includes(item.Asset.Name))
+				results.push(item);
+			else if (acc && CameraItems.includes(acc.Asset.Name))
+				results.push(acc);
+		} else if (itemType == "MagicItem") {
+			let item = InventoryGet(C, "ItemHandheld");
+			if (item && MagicWandItems.includes(item.Asset.Name))
+				results.push(item);
+		} else if (itemType == "SipItem") {
+			let item = InventoryGet(C, "ItemHandheld");
+			if (item && AdditionalSippableItems.includes(item.Asset.Name) && !results.includes(item))
+				results.push(item);
+		} else if (itemType == "PourableItem") {
+			let item = InventoryGet(C, "ItemHandheld");
+			if (item && PourableItems.includes(item.Asset.Name))
+				results.push(item);
+		} else if (itemType == "FellatioItem") {
+			let item = InventoryGet(C, focusGroup);
+			if (item && (AdditionalPenetrateItems.includes(item.Asset.Name) || InventoryGetItemProperty(item, "AllowActivity")?.includes("PenetrateItem")))
+				results.push(item);
+		} else if (itemType == "EdibleItem") {
+			let item = InventoryGet(C, "ItemHandheld");
+			if (item && EdibleItems.includes(item.Asset.Name))
+				results.push(item);
+			else if (item && isPhraseInString(GetItemNameAndDescriptionConcat(item) ?? "", "edible", true))
+				results.push(item);
+		} else if (itemType == "ChewableItem") {
+			let handItem = InventoryGet(C, "ItemHandheld");
+			let mouthItem = InventoryGet(C, "ItemMouth") || InventoryGet(C, "ItemMouth2") || InventoryGet(C, "ItemMouth3")
+
+			if (mouthItem && ChewableItems.includes(mouthItem.Asset.Name))
+				results.push(mouthItem);
+			else if (mouthItem && isPhraseInString(GetItemNameAndDescriptionConcat(mouthItem) ?? "", "chewable", true))
+				results.push(mouthItem);
+			else if (!C.IsMouthBlocked() && C.CanTalk()) {
+				if (handItem && ChewableItems.includes(handItem.Asset.Name))
+					results.push(handItem);
+				else if (handItem && isPhraseInString(GetItemNameAndDescriptionConcat(handItem) ?? "", "chewable", true))
+					results.push(handItem);
+			}
+		}
+		return results;
+	}
+
 	Struggling: boolean = false;
 
 	run(): void {
@@ -991,7 +999,7 @@ export class ItemUseModule extends BaseModule {
 								return false;
 
 							var validParams = ValidationCreateDiffParams(acted, acting.MemberNumber!);
-							if (!item && !ValidationCanRemoveItem(item!, validParams, false))
+							if (!ValidationCanRemoveItem(item!, validParams, false))
 								return false;
 						}
 
@@ -1113,7 +1121,7 @@ export class ItemUseModule extends BaseModule {
 								return false;
 
 							var validParams = ValidationCreateDiffParams(acted, acting.MemberNumber!);
-							if (!item && !ValidationCanRemoveItem(item!, validParams, false))
+							if (!ValidationCanRemoveItem(item!, validParams, false))
 								return false;
 						}
 

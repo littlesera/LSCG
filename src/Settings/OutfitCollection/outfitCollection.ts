@@ -148,6 +148,8 @@ export class OutfitCollection implements IOutfitCollection {
         outfit.key = newKey;
         this.outfits[newKey.toLocaleLowerCase()] = outfit;
         delete this.outfits[oldKey];
+        if (save)
+            this.SaveOutfits();
     }
 
     SetOutfitCode(name: string, code: string | undefined, inherits: string[] | undefined = undefined, save: boolean = true): OutfitSaveResult {

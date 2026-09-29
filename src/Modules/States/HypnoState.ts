@@ -87,11 +87,11 @@ export class HypnoState extends BaseState {
         this.IdleEmote();
     }
 
-    _hornyCheck: number = 0;
+    _hornyCheck: number = 0; // when the next arousal tick is due
     _hornyInterval: number = 30000; // 30s horny ticks
     Tick(now: number) {
-        if (this._hornyCheck > (now + this._hornyInterval)) {
-            this._hornyCheck = now;
+        if (now >= this._hornyCheck) {
+            this._hornyCheck = now + this._hornyInterval;
             this.ArousalTick();
         }
         super.Tick(now);
