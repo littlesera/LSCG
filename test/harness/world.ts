@@ -86,4 +86,16 @@ export function currentBcLite(): BcLite {
 	return bc;
 }
 
+/**
+ * `globalThis.Player` typed as the fixture it actually is. bc-stubs' ambient
+ * `declare var Player: PlayerCharacter` (the real BC shape) is what plain
+ * `globalThis.Player` resolves to in a test file, which doesn't know about
+ * fixture-only fields like `OwnerMemberNumber` or `flags` -- use this instead
+ * of casting inline every time one of those needs setting after resetWorld().
+ */
+export function player(): FixtureCharacter {
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	return (globalThis as any).Player as FixtureCharacter;
+}
+
 export { bootedModules };

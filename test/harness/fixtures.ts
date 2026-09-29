@@ -126,8 +126,21 @@ export function makeCharacter(overrides: Omit<Partial<FixtureCharacter>, "flags"
 		HasTints: () => false,
 		GetTints: () => [],
 		GetBlurLevel: () => 0,
-		IsOwnedByMemberNumber: (n: number) => c.OwnerMemberNumber === n,
-		IsLoverOfMemberNumber: (n: number) => (c.LoverMemberNumber ?? []).includes(n),
+		// Regular `function`s reading `this`, not arrow functions closing over
+		// `c`: resetWorld() (world.ts) mutates Player in place via
+		// `Object.assign(Player, freshCharacter)`, which copies these method
+		// *references* onto Player but leaves OwnerMemberNumber/LoverMemberNumber
+		// as plain copied values, not shared storage. An arrow function closing
+		// over this call's `c` would keep reading `c`'s now-disconnected values
+		// forever after such a copy, ignoring any later `Player.OwnerMemberNumber
+		// = x` a test does. Reading `this.OwnerMemberNumber` instead always
+		// reflects whatever object the method is actually called on.
+		IsOwnedByMemberNumber(this: FixtureCharacter, n: number) {
+			return this.OwnerMemberNumber === n;
+		},
+		IsLoverOfMemberNumber(this: FixtureCharacter, n: number) {
+			return (this.LoverMemberNumber ?? []).includes(n);
+		},
 	};
 	return c;
 }

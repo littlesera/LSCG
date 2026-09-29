@@ -197,6 +197,9 @@ export function installBcLite(): BcLite {
 
 	installNetworkCapture(g);
 
+	g.ChatRoomMessageHandlers = g.ChatRoomMessageHandlers ?? [];
+	g.ChatRoomRegisterMessageHandler = vi.fn((handler: { Description?: string }) => g.ChatRoomMessageHandlers.push(handler));
+
 	g.AssetGroup = g.AssetGroup ?? [];
 	g.Asset = g.Asset ?? [];
 	g.AssetGet = vi.fn((_family: string, groupName: string, name: string) =>
