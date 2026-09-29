@@ -10,6 +10,7 @@ import { StatePublicSettingsModel, StateSettingsModel } from "./states";
 import { MagicPublicSettingsModel, MagicSettingsModel } from "./magic";
 import { ChaoticItemModule } from "Modules/chaotic-item";
 import { CursedItemSettingsModel } from "./cursed-item";
+import { SpeechAnalysisPublicSettingsModel, SpeechAnalysisSettingsModel, defaultSpeechPublicSettings } from "./speech-analysis";
 
 export interface SettingsModel {
     Version: string;
@@ -31,7 +32,7 @@ export interface SettingsModel {
     ChaoticItemModule: BaseSettingsModel;
     SplatterModule: SplatterSettingsModel;
     MapModule: MapSettingsModel;
-    SpeechAnalysisModule: BaseSettingsModel;
+    SpeechAnalysisModule: SpeechAnalysisSettingsModel;
 }
 
 export interface IPublicSettingsModel extends BaseSettingsModel {
@@ -50,7 +51,7 @@ export interface IPublicSettingsModel extends BaseSettingsModel {
     LeashingModule: BaseSettingsModel;
     ChaoticItemModule: BaseSettingsModel;
     SplatterModule: SplatterSettingsModel;
-    SpeechAnalysisModule: BaseSettingsModel;
+    SpeechAnalysisModule: SpeechAnalysisPublicSettingsModel;
 }
 
 export class PublicSettingsModel implements IPublicSettingsModel {
@@ -174,7 +175,7 @@ export class PublicSettingsModel implements IPublicSettingsModel {
         BlockExistingGroups: false
     };
     ChaoticItemModule: BaseSettingsModel = <BaseSettingsModel>{enabled: false};
-    SpeechAnalysisModule: BaseSettingsModel = <BaseSettingsModel>{enabled: true};
+    SpeechAnalysisModule: SpeechAnalysisPublicSettingsModel = defaultSpeechPublicSettings();
     SplatterModule: SplatterSettingsModel = <SplatterSettingsModel>{
         enabled: false,
         giver: false,

@@ -3,7 +3,7 @@ import { BaseModule } from "base";
 import { getModule } from "modules";
 import { OpacitySettingsModel } from "Settings/Models/base";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { hookFunction, isDrawingOverridable, patchFunction } from "../utils";
+import { hookFunction, isDrawingOverridable, onCanvasResize, patchFunction } from "../utils";
 import { StateModule } from "./states";
 import { endsWith, kebabCase, replace } from "lodash-es";
 import styles from "./opacity.scss?inline";
@@ -375,7 +375,7 @@ export class OpacityModule extends BaseModule {
         this.SetTranslationElementValues();
     }
 
-    /** Function for removing destroying the {@link CurrentScreenFunctions.Resize} coloring hook */
+    /** Cleanup for the color-picker DOM's canvas resize listener. */
     _unhookResize: null | (() => void) = null;
 
     load(): void {
@@ -390,12 +390,8 @@ export class OpacityModule extends BaseModule {
 
                 this.ShowDomUI();
 
-                this._unhookResize = hookFunction("CurrentScreenFunctions.Resize", 0, (args2, next) => {
-                    const [load] = args2;
-                    this.ResizeDomUI(load);
-                    return next(args2);
-                });
-                CurrentScreenFunctions.Resize(true);
+                this._unhookResize?.();
+                this._unhookResize = onCanvasResize(load => this.ResizeDomUI(load));
 
                 this.TranslateRemoveEventListener();
                 this.TranslateAttachEventListener();

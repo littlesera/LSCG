@@ -15,18 +15,3 @@ declare module 'web-worker:*' {
     const WorkerFactory: new () => Worker;
     export default WorkerFactory;
 }
-
-declare module 'leo-profanity' {
-    const leoProfanity: {
-        loadDictionary(lang?: string): void;
-        check(str: string): boolean;
-        badWordsUsed(str: string): string[];
-        clean(str: string, replaceKey?: string): string;
-        list(): string[];
-        add(word: string | string[]): void;
-        remove(word: string | string[]): void;
-        reset(): void;
-        clearList(): void;
-    };
-    export = leoProfanity;
-}

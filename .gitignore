@@ -2,3 +2,4 @@ node_modules/
 dist/
 .DS_Store
 **/*.scss.d.ts
+test/**/.out/

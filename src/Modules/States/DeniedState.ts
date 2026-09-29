@@ -7,7 +7,7 @@ export class DeniedState extends BaseState {
     Type: LSCGState = "denied";
 
     Icon(C: OtherCharacter): string {
-        return "Icons/Small/Admin.png";
+        return "Icons/Admin.png";
     }
     Label(C: OtherCharacter): string {
         return "Denied";
