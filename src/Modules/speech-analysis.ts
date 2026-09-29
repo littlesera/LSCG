@@ -633,6 +633,14 @@ export class SpeechAnalysisModule extends BaseModule {
         return FIRST_PERSON_RE.test(text) || _mentionsPlayer(text);
     }
 
+    /** "I" as the subject of a verb (or verb chain) with no external object ("I suck", "I failed", "I suck at this")
+     *  — as opposed to "I love pizza" or "I love being her slave", where the verb chain evaluates something other
+     *  than the speaker. SELF_EVAL_RE only covers a fixed list of framings ("I am…", "I feel…"); this generalizes
+     *  to any plain self-referential verb. */
+    private _selfVerbNoObject(doc: ReturnType<typeof nlp>): boolean {
+        return doc.match("i #Verb").found && !doc.match("i #Verb+ (#Determiner|#Noun|#ProperNoun)").found;
+    }
+
     /** Negated *positive* adjective ("not very good"). A negated negative ("not bad") is not self-deprecation. */
     private _negatedPositiveAdjective(doc: ReturnType<typeof nlp>): boolean {
         const adjectives = doc.match("(not|never|barely|hardly) .? [#Adjective]", 0).out("array") as string[];
@@ -653,7 +661,7 @@ export class SpeechAnalysisModule extends BaseModule {
 
         // Raw sentiment only counts when the line evaluates the player ("I am…", "…hates me"),
         // not whenever "I"/"me" appears ("I hate this game", "nothing can stop me").
-        const selfEvaluative = SELF_EVAL_RE.test(text) || DIRECTED_AT_ME_RE.test(text) || _mentionsPlayer(text);
+        const selfEvaluative = SELF_EVAL_RE.test(text) || DIRECTED_AT_ME_RE.test(text) || _mentionsPlayer(text) || this._selfVerbNoObject(doc);
         const clearlyNegative = selfEvaluative && result.comparative < this.settings.negativeThreshold;
         const negatedPositive = this._negatedPositiveAdjective(doc);
         // AFINN can't score "nobody"; "nobody likes me" otherwise reads as positive.
@@ -673,7 +681,7 @@ export class SpeechAnalysisModule extends BaseModule {
         if (rhetorical !== 0) return { detected: rhetorical > 0, viaPhrase, ...base };
         if (comparison !== null) return { detected: comparison > 0, viaPhrase, ...base };
 
-        const selfEvaluative = SELF_EVAL_RE.test(text) || _mentionsPlayer(text);
+        const selfEvaluative = SELF_EVAL_RE.test(text) || _mentionsPlayer(text) || this._selfVerbNoObject(doc);
         const detected = selfEvaluative
             && result.comparative > this.settings.positiveThreshold
             && !this._negatedPositiveAdjective(doc);

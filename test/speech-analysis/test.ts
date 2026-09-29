@@ -75,6 +75,10 @@ const table: [string, string][] = [
     ["I love being her slave", "neutral"], ["the pain feels nice", "neutral"], ["I hate this stupid game", "neutral"],
     ["no worries", "neutral"], ["right, let's go", "neutral"], ["hello everyone", "neutral"],
     ["nothing can stop me", "neutral"], ["I love pizza", "neutral"],
+    // self-referential verb with no object: no fixed "I am/I feel" framing needed
+    ["I suck", "negative"], ["I suck at this", "negative"], ["I fail", "negative"], ["I failed", "negative"],
+    // same shape, but the verb has an external object, so it's not self-deprecation
+    ["I failed the test", "neutral"], ["I ruined everything", "neutral"], ["I love cooking dinner", "neutral"],
     // comparisons
     ["other people are cuter than me", "negative"], ["everyone is better than me", "negative"],
     ["you are all so much smarter than me", "negative"], ["she is more beautiful than me", "negative"],
@@ -348,7 +352,7 @@ send(60, { eruditeGrade: 12 }); check("Friends level, whitelisted -> applied", S
 m.settings.remoteLevel = "PublicExceptBlacklist";
 send(66, { eruditeGrade: 5 }); check("PublicExceptBlacklist, blacklisted -> ignored", String(m.settings.eruditeGrade), "12");
 send(99, { remoteAccess: false, lockable: true, remoteLevel: "Public", enabled: false });
-check("forged remoteAccess/lockable/level/enabled ignored", `${m.settings.remoteAccess}/${m.settings.lockable}/${m.settings.remoteLevel}/${m.settings.enabled}`, "true/false/PublicExceptBlacklist/true");
+check("forged remoteAccess/lockable/level/enabled ignored", `${m.settings.remoteAccess}/${m.settings.lockable}/${m.settings.remoteLevel}/${m.settings.enabled}`, "true/false/PublicExceptBlacklist/false");
 send(99, { locked: true }); check("lock rejected when not lockable", String(m.settings.locked), "false");
 m.settings.lockable = true; send(99, { locked: true }); check("lock accepted when lockable", String(m.settings.locked), "true");
 m.safeword(); check("safeword clears lock", String(m.settings.locked), "false");
