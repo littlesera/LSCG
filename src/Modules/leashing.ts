@@ -199,11 +199,14 @@ export class LeashingModule extends BaseModule {
 
         hookFunction("ChatRoomLeave", 1, (args, next) => {
             if (this.RoomAllowsLeashing) {
-                let earPinchingMemberList = this.Pairings.filter(p => p.IsSource && p.Type == "ear").map(p => p.PairedMember);
-                let armGrabbingMemberList = this.Pairings.filter(p => p.IsSource && p.Type == "arm").map(p => p.PairedMember);
-                let tongueGrabbedMemberList = this.Pairings.filter(p => p.IsSource && p.Type == "tongue").map(p => p.PairedMember);
-                let chompedBy = this.Pairings.filter(p => !p.IsSource && p.Type == "chomp").map(p => p.PairedMember);
-                let compellingList = this.Pairings.filter(p => p.IsSource && p.Type == "compulsion").map(p => p.PairedMember)
+                // Only name whoever's still here: someone pulling us out by the hand has already left
+                const here = (p: Leashing) => getCharacter(p.PairedMember) !== null;
+                const earPinchingMemberList = this.Pairings.filter(p => here(p) && p.IsSource && p.Type === "ear").map(p => p.PairedMember);
+                const armGrabbingMemberList = this.Pairings.filter(p => here(p) && p.IsSource && p.Type === "arm").map(p => p.PairedMember);
+                const tongueGrabbedMemberList = this.Pairings.filter(p => here(p) && p.IsSource && p.Type === "tongue").map(p => p.PairedMember);
+                const chompedBy = this.Pairings.filter(p => here(p) && !p.IsSource && p.Type === "chomp").map(p => p.PairedMember);
+                const compellingList = this.Pairings.filter(p => here(p) && p.IsSource && p.Type === "compulsion").map(p => p.PairedMember);
+                const leading = this.Leashings.filter(here);
 
                 if (earPinchingMemberList.length > 0) {
                     var chars = earPinchingMemberList.map(id => getCharacter(id)).filter(c => !!c);
@@ -245,12 +248,12 @@ export class LeashingModule extends BaseModule {
                         } catch {}
                         SendAction(`${nameStr} follow %NAME% out of the room obediently.`);
                     }
-                } else if (this.Leashings.length > 0) {
-                    let definition = this.GetDefinition(this.Leashings[0]?.Type);
-                    if (this.Leashings.length == 1)
-                        SendAction(`%NAME% ${definition?.Action ?? "leads"} %OPP_NAME% out of the room by the ${this.Leashings[0].Type}.`, getCharacter(this.Leashings[0].PairedMember));
+                } else if (leading.length > 0) {
+                    const definition = this.GetDefinition(leading[0]?.Type);
+                    if (leading.length === 1)
+                        SendAction(`%NAME% ${definition?.Action ?? "leads"} %OPP_NAME% out of the room by the ${leading[0].Type}.`, getCharacter(leading[0].PairedMember));
                     else
-                        SendAction(`%NAME% ${definition?.Action ?? "leads"} ${CharacterNickname(getCharacter(this.Leashings[0].PairedMember)!)} and ${CharacterNickname(getCharacter(this.Leashings[1].PairedMember)!)} out of the room.`);
+                        SendAction(`%NAME% ${definition?.Action ?? "leads"} ${CharacterNickname(getCharacter(leading[0].PairedMember) as Character)} and ${CharacterNickname(getCharacter(leading[1].PairedMember) as Character)} out of the room.`);
                 }
             }
 
