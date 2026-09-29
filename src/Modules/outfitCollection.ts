@@ -83,7 +83,7 @@ export class OutfitCollectionModule extends BaseModule {
                 }
 
                 let keys = Outfits().GetOutfitKeys().map(k => k.toLocaleLowerCase());
-                if (keys.indexOf(key) > -1) {
+                if (keys.indexOf(key) == -1) {
                     LSCG_SendLocal(`Outfit ${key} not found.`)
                 } else {
                     Outfits().RemoveOutfit(key);
