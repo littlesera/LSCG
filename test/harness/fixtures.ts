@@ -59,6 +59,7 @@ export interface FixtureCharacter {
 	Nickname?: string;
 	ID: number;
 	Appearance: FixtureItem[];
+	Wardrobe?: FixtureItem[][];
 	FriendList: number[];
 	GhostList: number[];
 	WhiteList: number[];
@@ -119,6 +120,7 @@ export function makeCharacter(overrides: Omit<Partial<FixtureCharacter>, "flags"
 		Nickname: overrides.Nickname,
 		ID: overrides.ID ?? memberNumber,
 		Appearance: overrides.Appearance ?? [],
+		Wardrobe: overrides.Wardrobe,
 		FriendList: overrides.FriendList ?? [],
 		GhostList: overrides.GhostList ?? [],
 		WhiteList: overrides.WhiteList ?? [],
