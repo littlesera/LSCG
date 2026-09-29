@@ -88,6 +88,10 @@ const FIRST_PERSON_RE = /\b(i'm|i've|i'll|i'd|im|i|me|my|myself|mine)\b/i;
 // "I can"/"I will" are deliberately excluded: a modal just states ability/intent for whatever follows
 // ("I can't relax", "I will go home") and isn't itself a claim about the speaker's character.
 const SELF_EVAL_RE = /\b(i\s+am|i'm|im|i\s+feel|i\s+deserve|i\s+look|i\s+did|i\s+(?:love|like|accept)\s+myself|proud\s+of\s+myself|i'?ve\s+been)\b/i;
+// "I'm being X" (copula-progressive, "I am being X"): X — whatever it is, adjective or not — is the
+// actual predicate under evaluation, "being" itself never is ("I'm being stupid"/"difficult"/"silly").
+// Handled as its own alternative so the general gerund-hedge check below never has to judge "being".
+const SELF_EVAL_BEING_RE = /\bi(?:'m|\s+am)\s+being\s+[a-z']+\b/i;
 // "I'm [not] [adverb] ___ing": matches both a real self-evaluation ("I'm boring", "I'm not amazing")
 // and a progressive-tense hedge/activity that only looks like one ("I'm not interrupting", "I'm just
 // trying my best"). compromise tags every -ing word identically (Verb, Gerund) whether it's a genuine
@@ -177,12 +181,15 @@ function _isQuestion(text: string): boolean {
     return text.includes("?") || QUESTION_START_RE.test(text);
 }
 
-/** SELF_EVAL_RE, with one correction: an "I'm [not] ___ing" match only counts as self-evaluative when
- *  the -ing word is a genuine evaluative adjective (EVALUATIVE_GERUND_ADJECTIVES) — otherwise it's a
- *  progressive-tense hedge or activity ("I'm not interrupting", "I'm just trying my best") that isn't a
- *  claim about the speaker at all, and would otherwise read as one purely because "I'm" precedes it.
+/** SELF_EVAL_RE, with two corrections:
+ *  - "I'm being X" always counts — X is the predicate, whatever it is (SELF_EVAL_BEING_RE).
+ *  - Otherwise, an "I'm [not] ___ing" match only counts as self-evaluative when the -ing word is a
+ *    genuine evaluative adjective (EVALUATIVE_GERUND_ADJECTIVES) — otherwise it's a progressive-tense
+ *    hedge or activity ("I'm not interrupting", "I'm just trying my best") that isn't a claim about the
+ *    speaker at all, and would otherwise read as one purely because "I'm" precedes it.
  *  SELF_EVAL_RE's other framings ("I feel…", "proud of myself…") are unaffected and still checked as-is. */
 function _isSelfEvaluative(text: string): boolean {
+    if (SELF_EVAL_BEING_RE.test(text)) return true;
     const gerund = SELF_EVAL_GERUND_RE.exec(text);
     const gerundIsEvaluative = !gerund || EVALUATIVE_GERUND_ADJECTIVES.has(gerund[1].toLowerCase());
     const withoutGerundMatch = gerund ? text.slice(0, gerund.index) + text.slice(gerund.index + gerund[0].length) : text;

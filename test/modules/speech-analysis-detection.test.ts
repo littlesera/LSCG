@@ -89,6 +89,9 @@ describe("SpeechAnalysisModule detection", () => {
 			["I'm trying my best", "neutral"], ["I'm just kidding", "neutral"], ["I'm leaving now", "neutral"],
 			// the closed set of -ing words that really are evaluative adjectives must still detect
 			["I'm amazing", "positive"], ["I'm boring", "negative"], ["I'm so annoying", "negative"],
+			// "I'm being X" is copula-progressive -- X (not "being") is the predicate, whatever its
+			// own part of speech ("stupid" is a plain adjective, not a gerund like the cases above).
+			["I'm being stupid", "negative"], ["I'm being ridiculous", "negative"], ["I am being silly", "negative"],
 		];
 		it.each(table)('"%s" -> %s', (text, expected) => {
 			expect(tone(speech.analyze(text))).toBe(expected);
