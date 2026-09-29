@@ -52,6 +52,8 @@ const DOTTED_HOOK_TARGETS: [string, string][] = [
 	["Player", "IsKneeling"], ["Player", "IsStanding"], ["Player", "IsEnclose"],
 	["ElementButton", "CreateForActivity"], ["ElementButton", "CreateForAsset"],
 	["DialogMenuMapping", "items"], // items.Load/.Resize/.Exit/.Unload handled specially below
+	// crafted.Reload (3-level path) handled specially below, not as a 2-level dotted target
+	["CraftingDescription", "DecodeToHTML"],
 	["CraftingEventListeners", "_ChangeDescription"],
 	["CurrentScreenFunctions", "Resize"],
 	["DialogSelfMenuMapping", "Pose"], // Pose._ClickButton handled specially below
@@ -108,6 +110,7 @@ export function installHookTargetStubs(g: Record<string, unknown> = globalThis a
 	ensureFn(g, ["DialogMenuMapping", "items", "Resize"]);
 	ensureFn(g, ["DialogMenuMapping", "items", "Exit"]);
 	ensureFn(g, ["DialogMenuMapping", "items", "Unload"]);
+	ensureFn(g, ["DialogMenuMapping", "crafted", "Reload"]);
 	ensureFn(g, ["DialogSelfMenuMapping", "Pose", "_ClickButton"]);
 }
 
@@ -178,6 +181,10 @@ export function installBcLite(): BcLite {
 	g.MainCanvas = { save: vi.fn(), restore: vi.fn(), translate: vi.fn(), scale: vi.fn() };
 
 	installHookTargetStubs(g);
+	// GetItemNameAndDescriptionConcat (utils.ts) reads CraftingDescription.Decode directly
+	// (not a hookFunction target) once CraftingDescription exists at all -- ensureFn's
+	// DecodeToHTML stub above already makes it an object, so this needs adding separately.
+	g.CraftingDescription.Decode = (s: string) => s;
 
 	// ---- Inventory / permission surface (real, simple implementations) --------
 	g.InventoryGet = (C: { Appearance?: { Asset: { Group: { Name: string } } }[] }, group: string) =>
