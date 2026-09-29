@@ -2,7 +2,7 @@
 // while-hypnotized-filtered / cooldown-gated trigger pipeline (TopLevelCheckTriggers),
 // the four distinct wake-up paths (word/boop/snap/timeout), arousal-threshold delayed
 // triggers, suggestion compel + exclusivity, and trigger-word cycling.
-import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { CoreModule } from "Modules/core";
 import { HypnoModule } from "Modules/hypno";
 import { StateModule } from "Modules/states";
@@ -10,6 +10,7 @@ import { replace_template } from "utils";
 import { boot, resetWorld, player, addToRoom } from "../harness/world";
 import { makeCharacter, type FixtureCharacter } from "../harness/fixtures";
 import { receive, sent } from "../harness/room";
+import { seedRandom, restoreRandom } from "../harness/time";
 
 describe("HypnoModule", () => {
 	let hypno: HypnoModule;
@@ -368,6 +369,19 @@ describe("HypnoModule", () => {
 			vi.advanceTimersByTime(11 * 60_000);
 			hypno.CheckNewTrigger();
 			expect(hypno.settings.triggerCycled).toBe(false);
+		});
+	});
+
+	describe("getNewTriggerWord", () => {
+		afterEach(() => restoreRandom());
+
+		it("can select the last word in the override list, not just [0, length-1)", () => {
+			// getRandomInt(max) is [0, max); a Math.random() near 1 must be able to
+			// resolve to the *last* valid index (words.length - 1), not be excluded from it.
+			hypno.settings.overrideWords = "sleepy, drowsy, dreamy";
+			hypno.settings.trigger = "";
+			seedRandom([0.999999]);
+			expect(hypno.getNewTriggerWord()).toBe("dreamy");
 		});
 	});
 });
