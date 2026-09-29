@@ -2,10 +2,10 @@
 // side) and IncomingGrab/IncomingRelease (the receiver side), plus the 2-hands
 // limit CanAddLeashingType enforces for hands-using grab types.
 import { beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { LeashingModule } from "Modules/leashing";
+import { Leashing, LeashingModule } from "Modules/leashing";
 import { CoreModule } from "Modules/core";
-import { boot, resetWorld, addToRoom } from "../harness/world";
-import { sent } from "../harness/room";
+import { boot, resetWorld, addToRoom, player } from "../harness/world";
+import { receive, sent } from "../harness/room";
 import { makeCharacter } from "../harness/fixtures";
 
 describe("LeashingModule Pairings CRUD", () => {
@@ -140,6 +140,21 @@ describe("LeashingModule Pairings CRUD", () => {
 			expect(leashing.Pairings).toHaveLength(2);
 
 			leashing.IncomingRelease(other.MemberNumber, "hand");
+			expect(leashing.Pairings).toHaveLength(0);
+		});
+
+		it("a release from the one we grabbed, sent from another room, clears our side too", () => {
+			// We pinched their ear, then they safeworded after leaving
+			leashing.Pairings = [new Leashing(222, 222, true, "ear")];
+			receive.beep(makeCharacter({ MemberNumber: 222 }), {
+				IsLSCG: true,
+				type: "command",
+				reply: false,
+				settings: null,
+				target: player().MemberNumber,
+				version: "v0",
+				command: { name: "release", args: [{ name: "type", value: "ear" }, { name: "isSource", value: false }] },
+			} as LSCGMessageModel);
 			expect(leashing.Pairings).toHaveLength(0);
 		});
 	});

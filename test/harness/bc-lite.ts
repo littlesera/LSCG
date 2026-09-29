@@ -240,6 +240,11 @@ export function installBcLite(): BcLite {
 	g.ServerPlayerIsInChatRoom = vi.fn(() => true);
 	g.CommonTime = () => Date.now();
 	g.CommonIsNumeric = (s: string) => typeof s === "string" && s.trim() !== "" && !Number.isNaN(Number(s));
+	// Same as the game's, with its English joiners
+	g.CommonArrayJoinPretty = (strings: string[]) => {
+		const last = strings.pop();
+		return `${strings.join(", ")}, and ${last}`;
+	};
 	g.MouseIn = vi.fn(() => false);
 	g.WardrobeGetExpression = vi.fn(() => ({ Blush: "Default" }));
 	g.AudioVolumeFromModifier = vi.fn((m: number) => m);
