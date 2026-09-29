@@ -436,6 +436,19 @@ export class LeashingModule extends BaseModule {
                 return next(args);
         }, ModuleCategory.Leashed)
 
+        // The game's safewords let go of us too
+        for (const safeword of ["ChatRoomSafewordRelease", "ChatRoomSafewordRevert"] as const)
+            hookFunction(safeword, 1, (args, next) => {
+                this.ClearAllLeashings();
+                return next(args);
+            }, ModuleCategory.Leashed);
+
+        // Everyone drops their grabs with us when they see us disconnect, so drop ours too, or they come back stuck to nobody
+        hookFunction("ServerDisconnect", 1, (args, next) => {
+            this.DropAllLeashings();
+            return next(args);
+        }, ModuleCategory.Leashed);
+
         OnAction(1, ModuleCategory.Leashed, (data, sender, msg, metadata) => {
             if (data?.Content == "ServerDisconnect") {
                 let num = sender?.MemberNumber;
@@ -594,6 +607,12 @@ export class LeashingModule extends BaseModule {
 
     ClearAllLeashings() {
         this.NotifyUnleashings(this.Pairings);
+        this.DropAllLeashings();
+    }
+
+    DropAllLeashings() {
+        for (const p of this.Pairings)
+            this.RemoveCallback(p);
         this.Pairings = [];
     }
 
