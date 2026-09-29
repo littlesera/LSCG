@@ -10,7 +10,6 @@
     "serve": "serve dist -p 10001 --cors",
     "dev": "typed-scss-modules src --exportType=default --nameFormat=none && concurrently \"npm run watch\" \"npm run serve\"",
     "prod-watch": "typed-scss-modules src --exportType=default --nameFormat=none && concurrently \"npm run watch-prod\" \"npm run serve\"",
-    "test:speech": "node test/speech-analysis/build.mjs && node test/speech-analysis/.out/test.mjs",
     "typecheck": "tsc --noEmit -p . && tsc --noEmit -p tsconfig.test.json",
     "test": "vitest run --project unit",
     "test:watch": "vitest --project unit",

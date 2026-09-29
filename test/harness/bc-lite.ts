@@ -41,7 +41,9 @@ const HOOK_TARGETS = [
 	"CommonDrawResolveLayerExpression", "CommonCallFunctionByName", "PoseSetActive", "PoseAvailable",
 	"PoseCanChangeUnaidedStatus", "ActivityAllowedForGroup", "CommonSetScreen", "ActivityBuildChatTag",
 	"SpeechTransformProcess", "CharacterSetFacialExpression", "CharacterAppearanceGetCurrentValue",
-	"DrawCharacter", "CharacterGetCurrent", "CharacterRefresh",
+	"DrawCharacter", "CharacterGetCurrent", "CharacterRefresh", "ChatRoomGenerateChatRoomChatMessage",
+	"InventoryGroupIsBlockedForCharacter", "ChatRoomCanAttemptStand", "ChatRoomCanAttemptKneel",
+	"CharacterCanKneel", "PoseCanChangeUnaided", "ChatRoomMessageDisplay", "ActivitySetArousalTimer",
 ] as const;
 
 /** Dotted hook targets: `["Player", "CanWalk"]` needs `window.Player.CanWalk` to exist. */
@@ -132,7 +134,16 @@ export function installBcLite(): BcLite {
 	g.ChatRoomData = { Admin: [] as number[] };
 	g.ChatRoomHideIconState = 0;
 	g.DialogMenuMode = "";
+	// Read (but not hooked) by SleepState/HypnoState's constructors to decide whether to
+	// refresh the open expression panel -- harmless as long as it isn't "Expression".
+	g.DialogSelfMenuSelected = "";
 	g.DialogMenuMapping = g.DialogMenuMapping ?? {};
+	g.DialogSelfMenuMapping = g.DialogSelfMenuMapping ?? {};
+	// StateModule.load() writes a click-status callback directly onto this (not via hookFunction).
+	g.DialogSelfMenuMapping.Expression = g.DialogSelfMenuMapping.Expression ?? {
+		clickStatusCallbacks: {},
+		menubarEventListeners: { blink: {}, clear: {} },
+	};
 	g.CraftingAssets = g.CraftingAssets ?? {};
 	g.TEXT_NOT_FOUND_PREFIX = "MISSING TEXT: ";
 	g.MainCanvas = { save: vi.fn(), restore: vi.fn(), translate: vi.fn(), scale: vi.fn() };
@@ -151,11 +162,32 @@ export function installBcLite(): BcLite {
 	g.InventoryPrerequisiteMessage = vi.fn(() => "");
 	g.InventoryIsPermissionBlocked = vi.fn(() => false);
 	g.InventoryIsPermissionLimited = vi.fn(() => false);
-	g.InventoryWear = vi.fn();
-	g.InventoryRemove = g.InventoryRemove ?? vi.fn();
+	// Real (not a no-op stub): utils.ts's ApplyItem/RemoveItem call these directly,
+	// and several state tests (e.g. RedressedState's outfit-slot restore) depend
+	// on Appearance actually changing, not just on the call happening.
+	g.InventoryWear = vi.fn((C: { AssetFamily?: string; Appearance: { Asset: { Name: string; Group: { Name: string } } }[] }, name: string, group: string, color?: unknown, _difficulty?: unknown, _acting?: unknown, craft?: unknown) => {
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const asset = (g.AssetGet as any)(C.AssetFamily ?? "Female3DCG", group, name);
+		if (!asset) return null;
+		const item = { Asset: asset, Property: {}, Color: color, Craft: craft };
+		C.Appearance = C.Appearance.filter(i => i.Asset.Group.Name !== group);
+		C.Appearance.push(item);
+		return item;
+	});
+	g.InventoryRemove = vi.fn((C: { Appearance: { Asset: { Group: { Name: string } } }[] }, group: string) => {
+		C.Appearance = C.Appearance.filter(i => i.Asset.Group.Name !== group);
+	});
 	g.ValidationCreateDiffParams = vi.fn(() => ({}));
 	g.ValidationCanRemoveItem = vi.fn(() => true);
 	g.LogQuery = vi.fn(() => false);
+	g.InventoryDoesItemAllowLock = vi.fn(() => false);
+	g.InventoryUnlock = vi.fn();
+	g.InventoryChatRoomAllow = vi.fn(() => true);
+	// utils.ts's BC_ItemToItemBundle() is a thin wrapper around this real-BC global.
+	g.ServerBundledItemFromAppearanceItem = (item: { Asset: { Name: string; Group: { Name: string } }; Color?: unknown; Property?: unknown; Craft?: unknown }) =>
+		({ Group: item.Asset.Group.Name, Name: item.Asset.Name, Color: item.Color, Property: item.Property, Craft: item.Craft });
+	g.ItemPropertiesDecompress = vi.fn((_item: unknown, property: unknown) => property ?? {});
+	g.AppearanceItem = { fromAsset: (asset: unknown) => ({ Asset: asset }) };
 
 	// ---- Character / room -------------------------------------------------
 	g.CharacterNickname = (C: { Nickname?: string; Name: string }) => C?.Nickname ?? C?.Name ?? "";
@@ -202,6 +234,11 @@ export function installBcLite(): BcLite {
 
 	g.ChatRoomMessageHandlers = g.ChatRoomMessageHandlers ?? [];
 	g.ChatRoomRegisterMessageHandler = vi.fn((handler: { Description?: string }) => g.ChatRoomMessageHandlers.push(handler));
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	g.IsMsgIdDictionaryEntry = (e: any) => e?.Tag === "MsgId";
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	g.IsReplyIdDictionaryEntry = (e: any) => e?.Tag === "ReplyId";
+	g.PropertyShockPublishAction = vi.fn();
 	// ItemUseModule.load() writes CraftingSlots.modeData.LSCGShare = {...}
 	// directly (not via hookFunction), to register its own crafting-share mode.
 	g.CraftingSlots = g.CraftingSlots ?? { modeData: {} };

@@ -25,6 +25,7 @@ export interface CharacterFlags {
 	kneeling: boolean;
 	standing: boolean;
 	edged: boolean;
+	gagged: boolean;
 }
 
 export function defaultFlags(overrides: Partial<CharacterFlags> = {}): CharacterFlags {
@@ -45,6 +46,7 @@ export function defaultFlags(overrides: Partial<CharacterFlags> = {}): Character
 		kneeling: false,
 		standing: true,
 		edged: false,
+		gagged: false,
 		...overrides,
 	};
 }
@@ -64,6 +66,10 @@ export interface FixtureCharacter {
 	ChatSettings: { ColorTheme: string };
 	Reputation: { Type: string; Value: number }[];
 	ArousalSettings: { Progress: number };
+	AssetFamily: string;
+	// Real BC's per-extension save blob (OutfitCollection's server storage strategy reads
+	// its own key from this directly during load()).
+	ExtensionSettings: Record<string, string>;
 	// LSCG's own settings blob, present on both Player and other LSCG-running characters.
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	LSCG?: any;
@@ -90,6 +96,7 @@ export interface FixtureCharacter {
 	IsOwnedByMemberNumber: (n: number) => boolean;
 	IsLoverOfMemberNumber: (n: number) => boolean;
 	IsEdged: () => boolean;
+	IsGagged: () => boolean;
 }
 
 let nextMemberNumber = 100000;
@@ -112,6 +119,8 @@ export function makeCharacter(overrides: Omit<Partial<FixtureCharacter>, "flags"
 		ChatSettings: overrides.ChatSettings ?? { ColorTheme: "Dark" },
 		Reputation: overrides.Reputation ?? [],
 		ArousalSettings: overrides.ArousalSettings ?? { Progress: 0 },
+		AssetFamily: overrides.AssetFamily ?? "Female3DCG",
+		ExtensionSettings: overrides.ExtensionSettings ?? {},
 		LSCG: overrides.LSCG,
 		flags,
 		GetPronouns: () => flags.pronouns,
@@ -130,6 +139,7 @@ export function makeCharacter(overrides: Omit<Partial<FixtureCharacter>, "flags"
 		IsEnclose: () => flags.enclosed,
 		IsKneeling: () => flags.kneeling,
 		IsStanding: () => flags.standing,
+		IsGagged: () => flags.gagged,
 		HasTints: () => false,
 		GetTints: () => [],
 		GetBlurLevel: () => 0,
@@ -176,6 +186,9 @@ export interface FixtureAsset {
 	FamilyOnly?: boolean;
 	Enable?: boolean;
 	Layer?: { Opacity?: number }[];
+	/** Real BC's Asset.DynamicName(C) resolves a possibly-localized display name; utils.ts's
+	 *  permission checks (InventoryBlockedOrLimited) call it directly, so it must exist. */
+	DynamicName: (C?: FixtureCharacter) => string;
 }
 
 export interface FixtureItem {
@@ -214,6 +227,7 @@ export function makeAsset(group: FixtureAssetGroup, overrides: Partial<FixtureAs
 	const a: FixtureAsset = {
 		Group: group,
 		Description: overrides.Name,
+		DynamicName: () => overrides.Name,
 		...overrides,
 	};
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
