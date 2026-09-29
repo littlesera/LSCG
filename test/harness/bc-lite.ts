@@ -220,6 +220,14 @@ export function installBcLite(): BcLite {
 
 	// ---- Character / room -------------------------------------------------
 	g.CharacterNickname = (C: { Nickname?: string; Name: string }) => C?.Nickname ?? C?.Name ?? "";
+	g.CharacterPronoun = (C: { GetPronouns?: () => "HeHim" | "SheHer" | "TheyThem" }, key: string) => {
+		const table: Record<string, Record<string, string>> = {
+			HeHim: { Possessive: "his", Object: "him", Subject: "he" },
+			SheHer: { Possessive: "her", Object: "her", Subject: "she" },
+			TheyThem: { Possessive: "their", Object: "them", Subject: "they" },
+		};
+		return table[C?.GetPronouns?.() ?? "SheHer"]?.[key] ?? "their";
+	};
 	g.ServerChatRoomGetAllowItem = vi.fn(() => true);
 	g.ServerPlayerIsInChatRoom = vi.fn(() => true);
 	g.CommonTime = () => Date.now();
@@ -228,6 +236,9 @@ export function installBcLite(): BcLite {
 	g.WardrobeGetExpression = vi.fn(() => ({ Blush: "Default" }));
 	g.AudioVolumeFromModifier = vi.fn((m: number) => m);
 	g.AudioPlaySoundEffect = vi.fn();
+	g.AudioShouldSilenceSound = vi.fn(() => true);
+	g.ChatRoomIsViewActive = vi.fn(() => false);
+	g.ChatRoomMapViewName = "MapView";
 	g.SpeechGarbleByGagLevel = vi.fn((_gagLevel: unknown, msg: string) => msg);
 	g.SpeechStutter = vi.fn((_C: unknown, msg: string) => msg);
 	g.SpeechBabyTalk = vi.fn((_C: unknown, msg: string) => msg);
