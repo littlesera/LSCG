@@ -464,6 +464,9 @@ export class InjectorModule extends BaseModule {
 
     unload(): void {
         removeAllHooksByModule(ModuleCategory.Injector);
+        clearInterval(this.sedativeCooldownInterval);
+        clearInterval(this.mindControlCooldownInterval);
+        clearInterval(this.hornyCooldownInterval);
     }
 
     _bcxHooked: boolean = false;

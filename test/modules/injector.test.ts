@@ -537,4 +537,25 @@ describe("InjectorModule", () => {
 			expect(injector.IsSipOffer(other as never)).toBe(false);
 		});
 	});
+
+	describe("unload", () => {
+		// The shared `injector` instance's own cooldown intervals (from load() in beforeAll)
+		// were registered against real timers before any test's vi.useFakeTimers() existed,
+		// so unload()ing it here wouldn't be observable under fake time -- a fresh instance
+		// is init()/load()ed (and unload()ed) entirely within this test instead, matching the
+		// pattern in boops.test.ts's own interval-under-fake-timers test.
+		it("clears all three cooldown intervals so none fire after unload", () => {
+			const fresh = new InjectorModule();
+			fresh.init();
+			fresh.load();
+			const sedativeSpy = vi.spyOn(fresh, "SedativeCooldown");
+			const mindControlSpy = vi.spyOn(fresh, "MindControlCooldown");
+			const hornySpy = vi.spyOn(fresh, "HornyCooldown");
+			fresh.unload();
+			vi.advanceTimersByTime(fresh.cooldownTickMs * 3);
+			expect(sedativeSpy).not.toHaveBeenCalled();
+			expect(mindControlSpy).not.toHaveBeenCalled();
+			expect(hornySpy).not.toHaveBeenCalled();
+		});
+	});
 });
