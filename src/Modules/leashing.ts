@@ -407,15 +407,6 @@ export class LeashingModule extends BaseModule {
             return next(args);
         }, ModuleCategory.Leashed);
 
-        hookFunction("ChatRoomSync", 1, (args, next) => {
-            const ret = next(args);
-            const currentRoomIds = ChatRoomCharacter.map(c => c.MemberNumber!);
-            this.LeashingsMemberNumbers.filter(id => currentRoomIds.indexOf(id) == -1).forEach(memberNumber => {
-                ServerSend("AccountBeep", { MemberNumber: memberNumber, BeepType: "Leash"});
-            });
-            return ret;
-        }, ModuleCategory.Leashed);
-
         hookFunction("ChatRoomMapViewLeash", 1, (args, next) => {
             if (this.Enabled && this.IsLeashed) {
                 let totalLeashedBy = this.LeashedByPairings.map(p => p.PairedMember);
