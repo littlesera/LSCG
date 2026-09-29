@@ -31,6 +31,8 @@ const m = new SpeechAnalysisModule();
 m.load();
 let last: LSCGSpeechAnalysis | null = null;
 m.onAnalysis(a => last = a);
+// All detectors now default to off; most of this suite assumes tone/profanity/phrases are on (erudite has its own tests).
+m.settings.detectors = { tone: true, profanity: true, erudite: false, phrases: true };
 const handler = g.ChatRoomMessageHandlers[0];
 let id = 0;
 
@@ -173,8 +175,8 @@ check("6-word eloquent line exceeds the default threshold (used to be hidden by 
     String(m.analyze("Honestly, I am extremely disappointed today.").erudite.detected), "true");
 check("6-word plain line stays under the default threshold", String(m.analyze("I really don't want to go.").erudite.detected), "false");
 check("describe reports 'not enough words' below the floor, not a grade number", String(m.describe(m.analyze("Absolutely.")).includes("not enough words to assess")), "true");
-m.settings.detectors = { tone: false } as any; m.init();
-check("init fills missing detectors, keeps saved ones", JSON.stringify(m.settings.detectors), `{"tone":false,"profanity":true,"erudite":false,"phrases":true}`);
+m.settings.detectors = { tone: true } as any; m.init();
+check("init fills missing detectors, keeps saved ones", JSON.stringify(m.settings.detectors), `{"tone":true,"profanity":false,"erudite":false,"phrases":false}`);
 m.settings.detectors = { tone: true, profanity: true, erudite: false, phrases: true };
 
 console.log("--- reaction engine emotes ---");
@@ -183,7 +185,11 @@ check("every default rule starts off", String(defaultSpeechReactions().every(r =
 actions.length = 0;
 say("I'm so worthless"); say("fuck");
 check("fresh settings: no reactions fire", String(actions.length), "0");
-m.settings.reactions = defaultSpeechReactions().map((r, i) => ({ ...r, enabled: i < 3 }));
+m.settings.reactions = [
+    { enabled: true, detection: "negative",  action: "applyState",  state: "denied", cooldownMs: 10_000 },
+    { enabled: true, detection: "positive",  action: "removeState", state: "denied", cooldownMs: 10_000 },
+    { enabled: true, detection: "profanity", action: "applyState",  state: "gagged", durationMs: 60_000, cooldownMs: 10_000 },
+];
 m.settings.detectors = { tone: true, profanity: true, erudite: false };
 now += 60_000;
 const [denied, gagged] = fakeStates;
@@ -278,6 +284,7 @@ check("remote orgasm rule accepted, stray fields dropped", JSON.stringify(cleane
 
 console.log("--- phrase lists ---");
 reset();
+m.settings.detectors = { tone: true, profanity: true, erudite: false, phrases: true };
 fakeStates.forEach(s => { s.Active = false; s.calls = []; });
 m.settings.phraseGroups = [
     { id: "release", name: "Release phrases", phrases: `"may I have my clothes back", please mistress` },
@@ -382,6 +389,7 @@ check("remote detectors merge partially, junk dropped", JSON.stringify(m.setting
 console.log("--- private config + hidden phrases ---");
 check("public settings only carry access fields", Object.keys(defaultSpeechPublicSettings()).sort().join(","), "enabled,lockable,locked,remoteAccess,remoteLevel,remoteRequiresTrance");
 reset();
+m.settings.detectors = { tone: true, profanity: true, erudite: false, phrases: true };
 g.ChatRoomCharacter.push(mk(99, "Ownerperson"));
 m.settings.remoteAccess = true; m.settings.remoteLevel = "Public"; m.settings.remoteRequiresTrance = false;
 m.settings.phraseGroups = [{ id: "release", name: "Release", phrases: "wearer secret" }];

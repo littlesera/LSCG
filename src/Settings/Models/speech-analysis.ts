@@ -22,10 +22,10 @@ export interface SpeechDetectorInfo {
 
 /** Registry of detectors. Adding a metric: add its id above, an entry here, and its detections to SPEECH_DETECTION_DETECTOR. */
 export const SPEECH_DETECTORS: SpeechDetectorInfo[] = [
-    { id: "tone", label: "Tone", description: "Negative self-talk and positive affirmations, including comparisons with others and how you respond to what others say about you.", defaultEnabled: true },
-    { id: "profanity", label: "Profanity", description: "Swearing, including disguised spellings like f*ck or sh1t.", defaultEnabled: true },
+    { id: "tone", label: "Tone", description: "Negative self-talk and positive affirmations, including comparisons with others and how you respond to what others say about you.", defaultEnabled: false },
+    { id: "profanity", label: "Profanity", description: "Swearing, including disguised spellings like f*ck or sh1t.", defaultEnabled: false },
     { id: "erudite", label: "Reading level", description: "Speaking above a set reading grade level.", defaultEnabled: false },
-    { id: "phrases", label: "Phrase lists", description: "Your own groups of words and phrases, such as release phrases or banned words.", defaultEnabled: true },
+    { id: "phrases", label: "Phrase lists", description: "Your own groups of words and phrases, such as release phrases or banned words.", defaultEnabled: false },
 ];
 
 export const SPEECH_DETECTION_DETECTOR: Record<SpeechDetection, SpeechDetectorId> = {
@@ -140,17 +140,12 @@ export function defaultSpeechPhraseGroups(): SpeechPhraseGroup[] {
     ];
 }
 
-/** Example rules, all off: nothing reacts until the wearer (or a remote configurer) opts in. */
+/** Two starter examples, both off: nothing reacts until the wearer (or a remote configurer) opts in.
+ *  Everything else (states, shock, outfits, orgasm, phrase-triggered rules) is available to add by hand. */
 export function defaultSpeechReactions(): SpeechReactionRule[] {
     return [
-        { enabled: false, detection: "negative",  action: "applyState",  state: "denied", cooldownMs: 10_000 },
-        { enabled: false, detection: "positive",  action: "removeState", state: "denied", cooldownMs: 10_000 },
-        { enabled: false, detection: "profanity", action: "applyState",  state: "gagged", durationMs: 60_000, cooldownMs: 10_000 },
         { enabled: false, detection: "negative",  action: "shock", cooldownMs: 10_000 },
-        { enabled: false, detection: "profanity", action: "shock", cooldownMs: 10_000 },
-        { enabled: false, detection: "erudite",   action: "applyState",  state: "gagged", durationMs: 60_000, cooldownMs: 10_000 },
-        { enabled: false, detection: "phrase", phraseGroup: "release", action: "removeState", state: "redressed", cooldownMs: 0 },
-        { enabled: false, detection: "phrase", phraseGroup: "banned",  action: "shock", cooldownMs: 5_000 },
+        { enabled: false, detection: "profanity", action: "applyState", state: "gagged", durationMs: 60_000, cooldownMs: 10_000 },
     ];
 }
 
