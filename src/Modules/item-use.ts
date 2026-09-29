@@ -999,7 +999,7 @@ export class ItemUseModule extends BaseModule {
 								return false;
 
 							var validParams = ValidationCreateDiffParams(acted, acting.MemberNumber!);
-							if (!item && !ValidationCanRemoveItem(item!, validParams, false))
+							if (!ValidationCanRemoveItem(item!, validParams, false))
 								return false;
 						}
 
@@ -1121,7 +1121,7 @@ export class ItemUseModule extends BaseModule {
 								return false;
 
 							var validParams = ValidationCreateDiffParams(acted, acting.MemberNumber!);
-							if (!item && !ValidationCanRemoveItem(item!, validParams, false))
+							if (!ValidationCanRemoveItem(item!, validParams, false))
 								return false;
 						}
 
