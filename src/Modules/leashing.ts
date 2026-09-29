@@ -371,6 +371,7 @@ export class LeashingModule extends BaseModule {
 
         // We need to track that across ServerHandleLeashBeep/ChatRoomBreakLeash
         let beepSourceNumber = -1;
+        let beepRoomName = "";
 
         hookFunction("ServerHandleLeashBeep", 1, async (args, next) => {
             const [data] = args;
@@ -383,9 +384,16 @@ export class LeashingModule extends BaseModule {
                 this.BreakLeashingsWith(data.MemberNumber);
                 return;
             }
+            // We can only follow one person. Someone else heading to the same room is fine, anywhere else their grab breaks
+            if (isOurLeasher && beepSourceNumber !== -1 && beepSourceNumber !== data.MemberNumber) {
+                if (data.ChatRoomName !== beepRoomName)
+                    this.BreakLeashingsWith(data.MemberNumber);
+                return;
+            }
             if (isOurLeasher)
                 ChatRoomLeashPlayer = data.MemberNumber;
             beepSourceNumber = data.MemberNumber;
+            beepRoomName = data.ChatRoomName;
             try {
                 let res: Promise<void>;
                 try {
