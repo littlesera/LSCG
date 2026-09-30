@@ -33,24 +33,25 @@ export class LipstickModule extends BaseModule {
             let target = GetTargetCharacter(data);
             if (!!target && 
                 !!sender &&
-                !(sender as OtherCharacter).LSCG?.LipstickModule?.dry &&
                 target == Player.MemberNumber) {
                     if (this.kissMarkSlotsOccupied())
                         return;
-                    switch (data.Content) {
-                        case "ChatOther-ItemNeck-Kiss":
-                            this.AddKissMark(sender, "neck");
-                            break;
-                        case "ChatOther-ItemMouth-PoliteKiss":
-                            this.AddKissMark(sender, "cheek");
-                            break;
-                        case "ChatOther-ItemHead-Kiss":
-                            this.AddKissMark(sender, "forehead");
-                            break;
-                        case "ChatOther-ItemMouth-GagKiss":
-                            this.AddGagKissMark(sender);
-                        default:
-                            break;
+                    if (!(sender as OtherCharacter).LSCG?.LipstickModule?.dry) {
+                        switch (data.Content) {
+                            case "ChatOther-ItemNeck-Kiss":
+                                this.AddKissMark(sender, "neck");
+                                break;
+                            case "ChatOther-ItemMouth-PoliteKiss":
+                                this.AddKissMark(sender, "cheek");
+                                break;
+                            case "ChatOther-ItemHead-Kiss":
+                                this.AddKissMark(sender, "forehead");
+                                break;
+                            case "ChatOther-ItemMouth-GagKiss":
+                                this.AddGagKissMark(sender);
+                            default:
+                                break;
+                        }
                     }
         
                     var item = data.Dictionary?.find((d: any) => d.Tag == "ActivityAsset");
