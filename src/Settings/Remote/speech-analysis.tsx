@@ -3,10 +3,9 @@ import { HelpInfo } from "Settings/settingBase";
 import { hasRemotePermission, replace_template, sendLSCGCommand } from "utils";
 import { getModule } from "modules";
 import type { CoreModule } from "Modules/core";
-import { DomSettingsHost } from "Settings/Dom/host";
-import { KitContext, Notice, Tabs } from "Settings/Dom/kit";
+import { DomSettingsHost } from "Settings/domSettingsHost";
+import { KitContext, Notice, Tabs } from "Dom/kit";
 import { buildSpeechTabs } from "Settings/speech-analysis-pages";
-import { SPEECH_SCREEN_SHAPE } from "Settings/speech-analysis";
 import { SPEECH_EDITABLE_KEYS, SpeechAnalysisPublicSettingsModel, SpeechEditableSettings, SpeechSettingsView } from "Settings/Models/speech-analysis";
 
 const RESPONSE_LISTENER_ID = "remote_speech_settings_response";
@@ -18,7 +17,7 @@ export class RemoteSpeechAnalysis extends RemoteGuiSubscreen {
     private _view: SpeechSettingsView | null = null;
     private _status: "loading" | "ready" | "no-response" = "loading";
     private _timeout: number | undefined;
-    private _host = new DomSettingsHost("lscg-remote-speech-settings", SPEECH_SCREEN_SHAPE, () => this.build());
+    private _host = new DomSettingsHost("lscg-remote-speech-settings", () => this.build());
 
     get name(): string {
         return "Speech Analysis";

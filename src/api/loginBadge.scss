@@ -1,0 +1,83 @@
+// Self-contained: the login screen runs before LSCG's main stylesheet is injected.
+#lscg-login-badge {
+	position: fixed;
+	visibility: hidden;
+	pointer-events: none;
+	display: flex;
+	align-items: flex-end;
+	justify-content: flex-end;
+	font-size: clamp(10px, 1.6dvh, 18px);
+	color: #111;
+
+	.lscg-badge-anchor {
+		position: relative;
+		pointer-events: auto;
+	}
+
+	.lscg-badge {
+		display: flex;
+		align-items: center;
+		gap: 0.4em;
+		padding: 0.3em 0.7em;
+		border: 2px solid #111;
+		border-radius: 0.4em;
+		background: #fff;
+		cursor: pointer;
+		font: inherit;
+		white-space: nowrap;
+
+		.lscg-badge-dot {
+			width: 0.6em;
+			height: 0.6em;
+			border-radius: 50%;
+			background: #2ca58d;
+		}
+
+		&.lscg-badge-warn .lscg-badge-dot {
+			background: #d98a1f;
+		}
+	}
+
+	.lscg-badge-flyout {
+		position: absolute;
+		right: 0;
+		bottom: calc(100% + 0.4em);
+		min-width: 18em;
+		max-height: 50dvh;
+		overflow-y: auto;
+		padding: 0.6em 0.8em;
+		border: 2px solid #111;
+		border-radius: 0.4em;
+		background: #fff;
+		box-shadow: 0 0.2em 0.6em rgba(0, 0, 0, 0.35);
+		text-align: left;
+
+		h2 {
+			margin: 0 0 0.4em;
+			font-size: 1.1em;
+		}
+
+		ul {
+			margin: 0;
+			padding: 0;
+			list-style: none;
+		}
+
+		li {
+			padding: 0.25em 0;
+			border-top: 1px solid #ddd;
+		}
+
+		small {
+			color: #555;
+		}
+
+		.lscg-badge-error {
+			color: #b3261e;
+		}
+	}
+
+	.lscg-badge-anchor:not(.lscg-badge-open):not(:hover) .lscg-badge-flyout {
+		display: none;
+	}
+}

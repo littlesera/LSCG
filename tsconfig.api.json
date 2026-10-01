@@ -1,0 +1,17 @@
+{
+	// Emits the public extension API typings (dist/api/types.d.ts) for extension authors.
+	// src/api/types.ts must stay self-contained (no internal or BC-stub imports).
+	"compilerOptions": {
+		"target": "ES2018",
+		"lib": ["ESNext", "dom"],
+		"types": [],
+		"module": "ESNext",
+		"moduleResolution": "Node",
+		"strict": true,
+		"declaration": true,
+		"emitDeclarationOnly": true,
+		"rootDir": "./src/api",
+		"outDir": "./dist/api"
+	},
+	"files": ["./src/api/types.ts"]
+}

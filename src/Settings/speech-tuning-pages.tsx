@@ -3,7 +3,7 @@ import { getModule } from "modules";
 import { SpeechAnalysisModule } from "Modules/speech-analysis";
 import { suggestTuning, TuningDetector } from "Modules/speech-tuning";
 import { levelBadge, tag, toneBadge, wordTuner, WordTunerState } from "Modules/speech-chat-tune";
-import { CheckboxRow, KitContext, KitTab, SectionLabel, TextRow } from "./Dom/kit";
+import { CheckboxRow, KitContext, KitTab, SectionLabel, TextRow } from "Dom/kit";
 import { SpeechAnalysisSettingsModel } from "./Models/speech-analysis";
 
 const speechModule = () => getModule<SpeechAnalysisModule>("SpeechAnalysisModule");

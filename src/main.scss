@@ -146,6 +146,16 @@
 	visibility: visible;
 }
 
+.lscg-overlay {
+	position: fixed;
+	visibility: hidden;
+	pointer-events: none;
+
+	* {
+		pointer-events: auto;
+	}
+}
+
 .lscg-screen {
 	display: grid;
 	position: fixed;

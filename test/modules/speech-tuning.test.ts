@@ -3,7 +3,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vite
 import { CoreModule } from "Modules/core";
 import { SpeechAnalysisModule } from "Modules/speech-analysis";
 import { addToList, setWordScore, suggestTuning } from "Modules/speech-tuning";
-import { KitContext } from "../../src/Settings/Dom/kit";
+import { KitContext } from "../../src/Dom/kit";
 import { SPEECH_EDITABLE_KEYS, sanitizeRemoteSpeechSettings } from "Settings/Models/speech-analysis";
 import { buildSpeechTabs } from "../../src/Settings/speech-analysis-pages";
 import { boot, resetWorld, addToRoom, player } from "../harness/world";
