@@ -134,6 +134,13 @@ export function Notice(text: string): HTMLElement {
     return <p class="lscg-kit-notice">{text}</p> as HTMLElement;
 }
 
+export type ChipTone = "ok" | "warn" | "blocked" | "info" | "muted";
+
+/** A small rounded tag, e.g. an effect's status or where it comes from. */
+export function Chip(label: string, opts: { tone?: ChipTone; tooltip?: string } = {}): HTMLElement {
+    return <span class={`lscg-kit-chip lscg-kit-chip-${opts.tone ?? "muted"}`} title={opts.tooltip ?? ""}>{label}</span> as HTMLElement;
+}
+
 /** Opens a modal dialog whose rows edit data through their own context; every change is forwarded to `parent`
  *  (so the owning screen marks itself dirty and re-renders summaries). Closed with Done or Escape. */
 export function openDialog(anchor: HTMLElement, parent: KitContext, title: string, body: (ctx: KitContext) => HTMLElement[]): void {
@@ -223,8 +230,10 @@ export interface RuleColumn<R> {
 export interface RuleTableProps<R> {
     rows: () => R[];
     columns: RuleColumn<R>[];
-    create: () => R;
-    max: number;
+    /** Fixed tables (e.g. one row per known thing) have no add/delete controls; `create`/`max` are then unused. */
+    fixed?: boolean;
+    create?: () => R;
+    max?: number;
     readOnly?: () => boolean;
     addLabel?: string;
     deleteLabel?: string;
@@ -271,7 +280,9 @@ export function RuleTable<R>(ctx: KitContext, props: RuleTableProps<R>): HTMLEle
     const render = () => {
         const rows = props.rows();
         const readOnly = props.readOnly?.() ?? false;
-        const add = <button class="lscg-button lscg-kit-add" disabled={readOnly || rows.length >= props.max} onClick={() => {
+        const max = props.max ?? Infinity;
+        const add = <button class="lscg-button lscg-kit-add" disabled={readOnly || rows.length >= max} onClick={() => {
+            if (!props.create) return;
             rows.push(props.create());
             ctx.changed();
         }}>{props.addLabel ?? "+ Add rule"}</button> as HTMLButtonElement;
@@ -280,22 +291,22 @@ export function RuleTable<R>(ctx: KitContext, props: RuleTableProps<R>): HTMLEle
             <table class="lscg-kit-table">
                 <thead><tr>{props.columns.map(c => (
                     <th style={c.width ? { width: c.width } : {}} title={c.tooltip ?? ""} class={c.tooltip ? "lscg-kit-has-tip" : ""}>{c.header}</th>
-                ))}<th class="lscg-kit-delete-col" /></tr></thead>
+                ))}{props.fixed ? null : <th class="lscg-kit-delete-col" />}</tr></thead>
                 <tbody>
                     {rows.map((r, i) => (
                         <tr>
                             {props.columns.map(c => cell(r, c, readOnly))}
-                            <td>
+                            {props.fixed ? null : <td>
                                 <button class="lscg-button lscg-kit-delete" aria-label={props.deleteLabel ?? "Delete rule"} disabled={readOnly} onClick={() => {
                                     rows.splice(i, 1);
                                     ctx.changed();
                                 }}>✕</button>
-                            </td>
+                            </td>}
                         </tr>
                     ))}
                 </tbody>
             </table>,
-            <div class="lscg-kit-table-footer">{add}<small class="lscg-kit-desc">{`${rows.length} / ${props.max}`}</small></div>,
+            props.fixed ? <span /> : <div class="lscg-kit-table-footer">{add}<small class="lscg-kit-desc">{`${rows.length} / ${props.max}`}</small></div>,
         );
     };
     ctx.watch(render);

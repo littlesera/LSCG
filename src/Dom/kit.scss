@@ -194,6 +194,15 @@
 			background-color: rgb(0 0 0 / 40%);
 		}
 
+		// Long bodies (e.g. the spell editor's effect list) scroll while the title and buttons stay in view.
+		// Only when open: a display on the dialog itself would override the closed state.
+		&[open] {
+			display: flex;
+			flex-direction: column;
+			max-height: 85dvh;
+			box-sizing: border-box;
+		}
+
 		h2 {
 			margin: 0 0 min(2dvh, 1dvw);
 		}
@@ -201,6 +210,8 @@
 		.lscg-kit-dialog-body {
 			display: grid;
 			gap: min(1.5dvh, 0.75dvw);
+			min-height: 0;
+			overflow-y: auto;
 		}
 
 		.lscg-kit-dialog-actions {
@@ -215,6 +226,33 @@
 			}
 		}
 	}
+
+	.lscg-kit-chips {
+		display: flex;
+		flex-wrap: wrap;
+		gap: min(0.5dvh, 0.25dvw);
+		min-width: 0;
+	}
+
+	.lscg-kit-chip {
+		--accent: #8a8a8a;
+		display: inline-block;
+		padding: 0 0.6em;
+		border: 1px solid var(--accent);
+		border-radius: 1em;
+		background-color: color-mix(in srgb, var(--accent) 15%, transparent);
+		font-size: calc(var(--lscg-font-small) * 0.8);
+		white-space: nowrap;
+
+		&[title]:not([title=""]) {
+			cursor: help;
+		}
+	}
+
+	.lscg-kit-chip-ok { --accent: #2ca58d; }
+	.lscg-kit-chip-warn { --accent: #d98a1f; }
+	.lscg-kit-chip-blocked { --accent: #b00020; }
+	.lscg-kit-chip-info { --accent: #4a90d9; }
 
 	.lscg-kit-danger {
 		background-color: color-mix(in srgb, #b00020 85%, var(--lscg-button-color));
