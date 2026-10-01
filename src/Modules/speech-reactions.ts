@@ -4,8 +4,16 @@ import type { LSCGSpeechAnalysis, SpeechAnalysisModule } from "./speech-analysis
 import { SPEECH_REMOVE_ONLY_STATES, SpeechReactionRule } from "Settings/Models/speech-analysis";
 import { OutfitOption, SpellDefinition } from "Settings/Models/magic";
 import { StripLevel } from "Settings/Models/cursed-item";
-import { GetConfiguredItemBundlesFromOutfitKey, SendAction, forceOrgasm } from "utils";
+import { GetConfiguredItemBundlesFromOutfitKey, LSCG_SendLocal, SendAction, forceOrgasm, settingsSave } from "utils";
 import { RedressedState } from "./States/RedressedState";
+import type { BaseState } from "./States/BaseState";
+
+function formatDuration(ms: number): string {
+    const seconds = Math.round(ms / 1000);
+    const minutes = Math.floor(seconds / 60);
+    const rest = seconds % 60;
+    return minutes ? `${minutes} min${rest ? ` ${rest} s` : ""}` : `${seconds} s`;
+}
 
 type EmoteText = string | (() => string);
 
@@ -67,6 +75,11 @@ function findShockItem(): Item | undefined {
 /** Built-in consumer of the speech analysis stream: applies the wearer's reaction rules locally. */
 export class SpeechReactionEngine {
     private _lastFired = new Map<SpeechReactionRule, number>();
+    /** State type -> activation time of the activation this engine made. A repeat may extend a state only while it's
+     *  still that activation, so a state someone else applied or re-applied is never touched. */
+    private _applied = new Map<LSCGState, number>();
+    /** Which outfit the engine last put on through the Redressed state, to tell a repeat from a switch. */
+    private _appliedOutfit: string | undefined;
     private _unsubscribe: () => void;
 
     constructor(private module: SpeechAnalysisModule) {
@@ -76,6 +89,8 @@ export class SpeechReactionEngine {
     dispose(): void {
         this._unsubscribe();
         this._lastFired.clear();
+        this._applied.clear();
+        this._appliedOutfit = undefined;
     }
 
     private handle(analysis: LSCGSpeechAnalysis): void {
@@ -107,9 +122,11 @@ export class SpeechReactionEngine {
 
         const state = states?.States.find(s => s.Type === rule.state);
         if (!state) return false;
-        if (rule.action === "applyState" && !state.Active && !SPEECH_REMOVE_ONLY_STATES.includes(state.Type)) {
+        if (rule.action === "applyState" && !SPEECH_REMOVE_ONLY_STATES.includes(state.Type)) {
+            if (state.Active) return this.extend(state, rule);
             emote(APPLY_EMOTES[state.Type], `%NAME%'s words bring on the ${state.Type} state.`);
             state.Activate(Player.MemberNumber, rule.durationMs || undefined);
+            this._applied.set(state.Type, state.config.activatedAt);
             return true;
         }
         if (rule.action === "removeState" && state.Active) {
@@ -118,6 +135,23 @@ export class SpeechReactionEngine {
             return true;
         }
         return false;
+    }
+
+    /** A timed state this engine applied gets its timer restarted when a rule fires again before it ends. Only ever
+     *  lengthens it, never touches an open-ended state or one that someone or something else activated, and tells only
+     *  the wearer (no second apply emote to the room). */
+    private extend(state: BaseState, rule: SpeechReactionRule): boolean {
+        const config = state.config;
+        if (!rule.durationMs || !config.duration || this._applied.get(state.Type) !== config.activatedAt) return false;
+        const now = Date.now();
+        if (now + rule.durationMs <= config.activatedAt + config.duration) return false;
+        config.activatedAt = now;
+        config.duration = rule.durationMs;
+        this._applied.set(state.Type, now);
+        settingsSave(true);
+        // Only the wearer sees this; the room isn't told a second time.
+        LSCG_SendLocal(`Your words renew the ${state.Type} state: it now lasts ${formatDuration(rule.durationMs)} from now.`);
+        return true;
     }
 
     /** Wears an outfit from the collection through the Redressed state, which stores the current outfit
@@ -131,8 +165,17 @@ export class SpeechReactionEngine {
             Name: rule.outfitKey,
             Outfit: { Key: rule.outfitKey, Code: LZString.compressToBase64(JSON.stringify(items)), Option: rule.outfitOption ?? OutfitOption.both },
         };
+        const redressed = states.RedressedState;
+        // The same outfit again while our own application is still running: just renew it, quietly.
+        if (redressed.Active && this._appliedOutfit === rule.outfitKey && this._applied.get("redressed") === redressed.config.activatedAt)
+            return this.extend(redressed, rule);
+
         emote(APPLY_EMOTES.redressed, "%NAME%'s clothing changes.");
-        states.RedressedState.ApplyAdditive(spell, Player.MemberNumber, rule.durationMs || undefined, rule.outfitStrip ?? StripLevel.NONE);
+        redressed.ApplyAdditive(spell, Player.MemberNumber, rule.durationMs || undefined, rule.outfitStrip ?? StripLevel.NONE);
+        if (redressed.Active) {
+            this._applied.set("redressed", redressed.config.activatedAt);
+            this._appliedOutfit = rule.outfitKey;
+        }
         return true;
     }
 }

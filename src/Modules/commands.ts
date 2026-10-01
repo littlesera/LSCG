@@ -117,7 +117,7 @@ export class CommandModule extends BaseModule {
 					target.LSCG.StateModule.states.filter(s => s.active).map(s => s.type);
 				
 				let stateList = states.map(s => `<li>${s}</li>`).join("");
-				LSCG_SendLocal(`<div><b>Active Conditions on ${targetName}:</b><ul>${stateList}</ul></div>`);
+				LSCG_SendLocal(`<div><b>Active Conditions on ${targetName}:</b><ul>${stateList}</ul></div>`, false);
 			}
 		}, {
 			Tag: "get-outfit-code",

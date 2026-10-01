@@ -123,6 +123,8 @@ export interface SpeechEditableSettings {
 
 export interface SpeechAnalysisSettingsModel extends SpeechAnalysisPublicSettingsModel, SpeechEditableSettings {
     debugLog: boolean;
+    /** Show the small tune button beside the wearer's own chat lines. Saved with the account, but private and not remotely editable. */
+    chatTuneButtons: boolean;
 }
 
 /** What the settings pages edit: the full local model, or a remote target's public settings plus fetched config. */
@@ -176,6 +178,7 @@ export function defaultSpeechSettings(): SpeechAnalysisSettingsModel {
         phraseGroups: defaultSpeechPhraseGroups(),
         reactions: defaultSpeechReactions(),
         debugLog: false,
+        chatTuneButtons: false,
     };
 }
 

@@ -9,6 +9,7 @@ export const BASELINE_GAP_TEXTS = new Set<string>([
 	"I'm never going to be useless",
 	"I'm not the best at this",
 	"I'm not the smartest",
+	"I'm the worst at hiding >.>",
 	"I'm your good little pet",
 	"I've been bad",
 	"I've got nothing to worry about",

@@ -13,6 +13,7 @@ import {
     defaultSpeechDetectors, defaultSpeechSettings, sanitizeRemoteSpeechSettings,
 } from "Settings/Models/speech-analysis";
 import { SpeechReactionEngine } from "./speech-reactions";
+import { attachChatTune, canTuneInline } from "./speech-chat-tune";
 
 export type SpeechTone = "negative" | "positive" | "neutral";
 export type SelfEvalReason = "being" | "framing" | "directed-at-me" | "self-question" | "name-mention" | "verb-no-object" | "none";
@@ -86,7 +87,7 @@ const DOMAIN_LEXICON: Record<string, number> = {
     worthless: -3, pathetic: -3, useless: -3, stupid: -3, failure: -3, disappointment: -3,
     unlovable: -3, unworthy: -3, burden: -2, trash: -2, garbage: -2, hopeless: -3, loser: -3,
     // chat spellings and words AFINN lacks
-    waste: -3, worthles: -3, smart: 2, pretty: 2, suk: -3, looser: -3, screw: -2, screwed: -2, disgusting: -3,
+    waste: -3, worthles: -3, genius: 3, smart: 2, pretty: 2, suk: -3, looser: -3, screw: -2, screwed: -2, disgusting: -3,
     talented: 2, sweetheart: 2, stronk: 2, unafraid: 2, fearless: 2, adorable: 3, capable: 2,
     // superlatives AFINN lacks ("who's the prettiest here?" / "me")
     prettiest: 3, cutest: 3, smartest: 3, hottest: 3, sweetest: 3, dumbest: -3, ugliest: -3, stupidest: -3,
@@ -174,7 +175,7 @@ const SENTIMENT_BOOSTERS: Record<string, number> = {
 const NEGATOR_REACH: Record<string, number> = { no: 2 };
 const PRONOUN_AFTER_NEGATOR = new Set(["i", "you", "he", "she", "it", "we", "they"]);
 // Teasing markers: "haha I'm so stupid :P" isn't a sincere put-down.
-const PLAYFUL_RE = /\bha(?:ha)+\b|\bhehe+\b|\bxd\b|:p\b|;p\b|>\.>|<\.</i;
+const PLAYFUL_RE = /\bha(?:ha)+\b|\bhehe+\b|\bxd\b|:p\b|;p\b/i;
 const PLAYFUL_FACTOR = 0;
 const NEGATION_REACH = 3;
 // Denying a real insult ("I'm not stupid") is a meaningful statement; denying an ordinary adjective ("not bad",
@@ -265,7 +266,18 @@ function _hasSecondPersonSubject(text: string): boolean {
     return SECOND_PERSON_RE.test(text.replace(SECOND_PERSON_FILLER_RE, " "));
 }
 
+const MAX_RECENT_LINES = 50;
+
+export interface RecentSpeechLine {
+    msgId?: string;
+    at: number;
+    text: string;
+    tone: SpeechTone;
+}
+
 export class SpeechAnalysisModule extends BaseModule {
+    /** The wearer's own most recent lines and what they read as, newest last. Memory only, never saved. */
+    private _recent: RecentSpeechLine[] = [];
     private _callbacks: Set<LSCGSpeechAnalysisCallback> = new Set();
     private _outgoingWindow: OutgoingLine[] = [];
     private _incoming: IncomingEntry[] = [];
@@ -294,6 +306,10 @@ export class SpeechAnalysisModule extends BaseModule {
         this.settings.detectors = { ...defaultSpeechDetectors(), ...this.settings.detectors };
     }
 
+    get recentLines(): readonly RecentSpeechLine[] {
+        return this._recent;
+    }
+
     isDetectorEnabled(id: SpeechDetectorId): boolean {
         return this.settings.detectors?.[id] ?? SPEECH_DETECTORS.find(d => d.id === id)?.defaultEnabled ?? false;
     }
@@ -312,6 +328,18 @@ export class SpeechAnalysisModule extends BaseModule {
         } as ChatRoomMessageHandler);
 
         // Capture the text before sender-side speech transforms (gag garble etc.) are applied.
+        hookFunction("ChatRoomMessageDisplay", 1, (args, next) => {
+            const message = next(args);
+            try {
+                const msgId = args[3]?.MsgId;
+                const line = msgId && message && canTuneInline(this) ? this._recent.find(l => l.msgId === msgId) : undefined;
+                if (line) attachChatTune(message, this, line);
+            } catch (e) {
+                console.error("LSCG: speech tune button failed", e);
+            }
+            return message;
+        }, ModuleCategory.SpeechAnalysis);
+
         hookFunction("ChatRoomGenerateChatRoomChatMessage", 1, (args, next) => {
             const [type, msg] = args as [string, string];
             if (type === "Chat" || type === "Whisper")
@@ -347,6 +375,7 @@ export class SpeechAnalysisModule extends BaseModule {
         this._callbacks.clear();
         this._outgoingWindow = [];
         this._incoming = [];
+        this._recent = [];
         this._ownMsgIds = [];
         this._lastSpeaker = undefined;
         this._lastPlayerLineAt = 0;
@@ -561,6 +590,8 @@ export class SpeechAnalysisModule extends BaseModule {
             : individual;
 
         if (effective.tone !== "neutral") this._outgoingWindow = [];
+        this._recent.push({ msgId, at: now, text: effective.raw, tone: effective.tone });
+        if (this._recent.length > MAX_RECENT_LINES) this._recent.shift();
         if (this.settings.debugLog) console.log(`[LSCG Speech]\n${this.describe(effective)}`);
         this._callbacks.forEach(cb => {
             try { cb(effective); } catch (e) { console.error("LSCG: speech analysis callback failed", e); }

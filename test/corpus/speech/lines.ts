@@ -25,7 +25,7 @@ export const CATEGORIES: Category[] = [
 		...pos(
 			"I am a good girl", "I'm a good boy", "I'm a good puppy", "i'm so good", "I am proud of myself", "im a good pet", "I'm smart and strong",
 			"i am beautiful", "I'm so lucky", "I am amazing", "im a great helper", "I love myself",
-			"I'm very obedient", "i am worthy", "I'm the best", "im really pretty", "i did so well today",
+			"I'm very obedient", "i am worthy", "I'm the best", "im really pretty", "i did so well today", "I'm a genius"
 		),
 	]),
 	category("neutral statements", [
