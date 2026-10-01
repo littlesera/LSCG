@@ -1,7 +1,7 @@
 import { BaseModule } from "base";
 import { getModule } from "modules";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
-import { GetConfiguredItemBundlesFromOutfitKey, GetDelimitedList, OnChat, GetHandheldItemNameAndDescriptionConcat, GetItemNameAndDescriptionConcat, GetMetadata, ICONS, LSCG_SendLocal, LSCG_TEAL, OnActivity, SendAction, forceOrgasm, getCharacter, getRandomInt, hookFunction, isPhraseInString, removeAllHooksByModule, sendLSCGCommand, sendLSCGCommandBeep, settingsSave, getCharacterByNicknameOrMemberNumber, excludeParentheticalContent, escapeRegExp } from "../utils";
+import { GetConfiguredItemBundlesFromOutfitKey, GetDelimitedList, OnChat, GetHandheldItemNameAndDescriptionConcat, GetItemNameAndDescriptionConcat, GetMetadata, LSCG_SendLocal, LSCG_TEAL, OnActivity, SendAction, forceOrgasm, getCharacter, getRandomInt, hookFunction, isPhraseInString, removeAllHooksByModule, sendLSCGCommand, sendLSCGCommandBeep, settingsSave, getCharacterByNicknameOrMemberNumber, excludeParentheticalContent, escapeRegExp } from "../utils";
 import { KNOWN_SPELLS_LIMIT, LSCGSpellEffect, MagicSettingsModel, OutfitConfig, OutfitOption, SpellDefinition, SpellEffectId } from "Settings/Models/magic";
 import { GuiMagic } from "Settings/magic";
 import { StateModule } from "./states";
@@ -13,6 +13,7 @@ import { OutfitCollection } from "Settings/OutfitCollection/outfitCollection";
 import { OutfitCollectionModule } from "./outfitCollection";
 import { hasMagicModule, hasMBSSettings, hasLSCGData, safeGetLSCGProp } from "../types/guards";
 import { emit, emitBefore, spellInfo } from "api/events";
+import { SPELL_MENU_SHAPE, SpellMenuView } from "./Magic/spellMenu";
 import { advertisedEffectIds, allEffectIds, effectLabel, extensionEffectIds, getSpellEffect, isLegacyEffect, spellEffects, spellForcesDuration, spellHasPairedEffect, spellIsBeneficial } from "./Magic/spellEffects";
 
 const dialogButtonInfo = [965, 10, 100, 40, 5];
@@ -24,8 +25,9 @@ const dialogTeachButtonCoords: [number,number,number,number] = [dialogButtonInfo
 export class MagicModule extends BaseModule {
     DialogMenuOpen: boolean = false;
     SpellMenuOpen: boolean = false;
+    /** The DOM menu drawn while SpellMenuOpen; this module owns the game state it shows. */
+    spellMenu: SpellMenuView = new SpellMenuView(this);
     TeachingSpell: boolean = false;
-    SpellMenuOffset: number = 0;
 
     SpellPairOption: {
         SelectOpen: boolean,
@@ -163,6 +165,8 @@ export class MagicModule extends BaseModule {
         });
 
         hookFunction("DialogDraw", 10, (args, next) => {
+            if (!this.Enabled && this.SpellMenuOpen)
+                this.CloseSpellMenu();
             if (this.Enabled && this.SpellMenuOpen) 
                 return this.DrawSpellMenu();
                 
@@ -222,7 +226,12 @@ export class MagicModule extends BaseModule {
 
     }
 
+    safeword(): void {
+        this.CloseSpellMenu();
+    }
+
     unload(): void {
+        this.CloseSpellMenu();
         this._unhookEffectChanges?.();
         removeAllHooksByModule(ModuleCategory.Magic);
     }
@@ -312,10 +321,12 @@ export class MagicModule extends BaseModule {
             this.PrevScreen = CurrentScreen;
             DialogMenuMapping.dialog.Unload();
             (CurrentScreen as string) = "LSCG_SPELLS_DIALOG";
+            this.spellMenu.open();
         }
     }
 
     CloseSpellMenu() {
+        this.spellMenu.close();
         if (this.SpellMenuOpen || (CurrentScreen as string) == "LSCG_SPELLS_DIALOG") {
             this.SpellMenuOpen = false;
             this.TeachingSpell = false;
@@ -328,139 +339,35 @@ export class MagicModule extends BaseModule {
 
     TeachSpell(target: OtherCharacter) {
         if (this.Enabled) {
-            this.OpenSpellMenu(target);
+            // Before opening: the menu's title is built when it opens.
             this.TeachingSpell = true;
+            this.OpenSpellMenu(target);
         }
     }
 
-    SpellGrid: CommonGenerateGridParameters = {
-        x: 550,
-        y: 200,
-        height: 690,
-        width: 900,
-        itemHeight: 225,
-        itemWidth: 220
-    }
-    boxDimensions = {x: 500, y: 100, width: 1000, height: 850};
-
+    /** The menu itself is DOM (SpellMenuView). This keeps the canvas behind it clean, and the dialog from drawing over it. */
     DrawSpellMenu() {
         if (!CurrentCharacter)
             return this.CloseSpellMenu();
-        const target = CurrentCharacter;
-
-        let toolbarY = this.boxDimensions.y + 5;
-        let toolbarRight = this.boxDimensions.x + this.boxDimensions.width - 5;
-        let buttonSize = 90;
-        
-        // Draw Hovering Box & exit button
-        DrawRect(this.boxDimensions.x, this.boxDimensions.y, this.boxDimensions.width, this.boxDimensions.height, "Black");
-        DrawEmptyRect(this.boxDimensions.x + 2, this.boxDimensions.y + 2, this.boxDimensions.width - 4, this.boxDimensions.height - 4, "White", 2);
-        DrawButton(toolbarRight - buttonSize, toolbarY, buttonSize, buttonSize, "", "White", "Icons/Exit.png", "Cancel");
-
-        if (this.SpellPairOption.SelectOpen) {
-            DrawTextFit("Select a paired target...", this.boxDimensions.x + 400, this.boxDimensions.y + 50, 600, "White", "Grey");
-            // Draw 2x5 columns of character names
-            this.PairedCharacterOptions(this.SpellPairOption.Source).forEach((char, ix, arr) => {
-                DrawButton(this.SpellGrid.x + (ix > 4 ? 450 : 0), this.SpellGrid.y + ((ix % 5) * 120), this.PairedCharacterOptions(this.SpellPairOption.Source).length > 5 ? 400 : 800, 100, CharacterNickname(char), "White");
-            });
-        }
-        else {
-            DrawTextFit("Select a spell to cast...", this.boxDimensions.x + 400, this.boxDimensions.y + 50, 600, "White", "Grey");
-            // Draw toolbar
-            if (this.AvailableSpells.length > 12) {
-                DrawButton(toolbarRight - (buttonSize * 2), toolbarY, buttonSize, buttonSize, "", "White", "Icons/Next.png", "Next");
-                DrawButton(toolbarRight - (buttonSize * 3), toolbarY, buttonSize, buttonSize, "", "White", "Icons/Prev.png", "Previous");
-            }
-
-            // Draw a grid with all activities
-            CommonGenerateGrid(this.AvailableSpells, this.SpellMenuOffset, this.SpellGrid, (spell: SpellDefinition, x: number, y: number, width: number, height: number) => {            
-                let label = spell.Name;
-                let image = "Icons/Magic.png";
-
-                let icons: InventoryIcon[] = [];
-                let background = "white";
-                const status = this.GetSpellStatus(spell, target);
-                if (spellHasPairedEffect(spell))
-                    icons.push("Handheld");
-                if (!status.castable)
-                    background = "grey";
-                else if (status.effects.some(e => e.status !== "ok")) {
-                    icons.push("AllowedLimited");
-                    background = "orange";
-                }
-
-                let desc = status.effects.length == 0 ? "None" : status.effects
-                    .map(e => effectLabel(e.id) + (e.status === "blocked" ? " (blocked)" : e.status === "unsupported" ? " (unsupported)" : ""))
-                    .join(", ");
-
-                DrawPreviewBox(x, y, image, label, { Hover: true, Icons: icons, Background: background, Width: width, Height: height });
-                if (MouseHovering(x, y, width, height)) {
-                    DrawRect(this.boxDimensions.x + (this.boxDimensions.width - 500 - 350), this.boxDimensions.y + this.boxDimensions.height - 56, 700, 50, LSCG_TEAL);
-                    DrawEmptyRect(this.boxDimensions.x + (this.boxDimensions.width-500-350) + 2, this.boxDimensions.y + this.boxDimensions.height - 56 + 2, 700 - 4, 50 - 4, "Black", 2);
-                    DrawTextFit(desc, 1000, this.boxDimensions.y + this.boxDimensions.height - 30, 600, "Black", "White");
-                }
-                return false;
-            });
-        }
+        const [x, y, w, h] = SPELL_MENU_SHAPE;
+        DrawRect(x, y, w, h, "Black");
+        DrawEmptyRect(x + 2, y + 2, w - 4, h - 4, "White", 2);
     }
 
+    /** Clicks inside the menu go to the DOM, not the canvas, so anything arriving here is outside it: dismiss. */
     ClickSpellMenu() {
-        if (!CurrentCharacter)
-            return this.CloseSpellMenu();
+        this.CloseSpellMenu();
+    }
+
+    /** A spell was picked in the menu. */
+    ChooseSpell(spell: SpellDefinition) {
         const target = CurrentCharacter;
-
-        // Handle toolbar clicks
-        let toolbarY = this.boxDimensions.y + 5;
-        let toolbarRight = this.boxDimensions.x + this.boxDimensions.width - 5;
-        let buttonSize = 90;
-        if (MouseIn(toolbarRight - buttonSize, toolbarY, buttonSize, buttonSize)) {
-            this.CloseSpellMenu();
-        }
-
-        if (this.SpellPairOption.SelectOpen) {
-            let characterOptions = this.PairedCharacterOptions(this.SpellPairOption.Source);
-            if (characterOptions.length <= 0) {
-                this.CloseSpellMenu();    
-            }
-            characterOptions.forEach((char, ix, arr) => {
-                if (MouseIn(this.SpellGrid.x + (ix > 4 ? 450 : 0), this.SpellGrid.y + ((ix % 5) * 120), this.PairedCharacterOptions(this.SpellPairOption.Source).length > 5 ? 400 : 800, 100)) {
-                    if (!!this.SpellPairOption.Source)
-                        this.CastSpellActual(this.SpellPairOption.Spell, this.SpellPairOption.Source, false, char);
-                }
-            });
-        } else {
-            if (this.AvailableSpells.length > 12) {
-                // Click Next
-                if (MouseIn(toolbarRight - (buttonSize * 2), toolbarY, buttonSize, buttonSize)) {
-                    this.SpellMenuOffset += 12;
-                    if (this.SpellMenuOffset > this.AvailableSpells.length)
-                        this.SpellMenuOffset = 0;
-                }
-                // Click Prev
-                else if (MouseIn(toolbarRight - (buttonSize * 3), toolbarY, buttonSize, buttonSize)) {
-                    this.SpellMenuOffset -= 12;
-                    if (this.SpellMenuOffset < 0)
-                        this.SpellMenuOffset = this.AvailableSpells.length - (this.AvailableSpells.length % 12)
-                }
-            }
-    
-            // For each activities in the list
-            CommonGenerateGrid(this.AvailableSpells, this.SpellMenuOffset, this.SpellGrid, (spell: SpellDefinition, x: number, y: number, width: number, height: number) => {
-                // If this specific activity is clicked, we run it
-                if (!MouseIn(x, y, width, height)) return false;
-                // Partially blocked spells can be cast; the target's client drops the effects it won't accept.
-                let castable = this.GetSpellStatus(spell, target).castable;
-                spell = structuredClone(spell);
-
-                if (castable) {
-                    this.CastSpellInitial(spell, CurrentCharacter);
-                    return true;
-                }
-                return false;
-            });
-        }
-
-		return;
+        if (!target)
+            return this.CloseSpellMenu();
+        // Partially blocked spells can be cast; the target's client drops the effects it won't accept.
+        if (!this.GetSpellStatus(spell, target).castable)
+            return;
+        this.CastSpellInitial(structuredClone(spell), target);
     }
 
     CastWildMagic(C: OtherCharacter | PlayerCharacter) {
@@ -503,6 +410,7 @@ export class MagicModule extends BaseModule {
                 this.SpellPairOption.Spell = spell;
                 this.SpellPairOption.Source = C;
                 this.SpellPairOption.SelectOpen = true;
+                this.spellMenu.refreshView();
             } else {
                 this.CastSpellActual(spell, C, false);
             }

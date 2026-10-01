@@ -303,6 +303,9 @@ export class CoreModule extends BaseModule {
             return;
         Sender.LSCG = Object.assign(Sender.LSCG ?? {}, msg.settings ?? {});
         CharacterRefresh(Sender, false);
+        // An open spell menu shows what each spell can do to its target; keep that current.
+        if (CurrentCharacter === Sender)
+            getModule<MagicModule>("MagicModule")?.spellMenu.refreshStatus();
         if (msg.reply) {
             this.SendPublicPacket(false, msg.type);
         }

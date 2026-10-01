@@ -134,6 +134,34 @@ export function Notice(text: string): HTMLElement {
     return <p class="lscg-kit-notice">{text}</p> as HTMLElement;
 }
 
+/** A text box that reports every keystroke (unlike TextRow, which commits on blur), for live filtering. */
+export function SearchBox(onInput: (text: string) => void, opts: { placeholder?: string; value?: string; label?: string } = {}): HTMLInputElement {
+    const input = <input type="search" class="lscg-kit-search" aria-label={opts.label ?? "Search"} placeholder={opts.placeholder ?? "Search…"} maxLength={100}
+        onInput={() => onInput(input.value)} /> as HTMLInputElement;
+    input.value = opts.value ?? "";
+    return input;
+}
+
+export interface CardGridProps<T> {
+    items: () => T[];
+    render: (item: T) => HTMLElement;
+    /** Shown instead of the grid when `items()` is empty. */
+    empty?: string;
+}
+
+/** A scrolling grid of cards. Re-renders itself on every `ctx.refresh()`, so a filter (e.g. a search box) just
+ *  calls refresh after updating what `items()` returns. */
+export function CardGrid<T>(ctx: KitContext, props: CardGridProps<T>): HTMLElement {
+    const grid = <div class="lscg-kit-cardgrid scroll-box" /> as HTMLElement;
+    ctx.watch(() => {
+        const items = props.items();
+        grid.replaceChildren(...(items.length > 0
+            ? items.map(props.render)
+            : [<p class="lscg-kit-notice">{props.empty ?? "Nothing to show."}</p> as HTMLElement]));
+    });
+    return grid;
+}
+
 export type ChipTone = "ok" | "warn" | "blocked" | "info" | "muted";
 
 /** A small rounded tag, e.g. an effect's status or where it comes from. */

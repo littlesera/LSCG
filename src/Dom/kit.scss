@@ -227,6 +227,26 @@
 		}
 	}
 
+	.lscg-kit-search {
+		width: 100%;
+		min-height: min(5dvh, 2.5dvw);
+		box-sizing: border-box;
+	}
+
+	.lscg-kit-cardgrid {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(min(40dvh, 20dvw), 1fr));
+		align-content: start;
+		gap: min(1.2dvh, 0.6dvw);
+		min-height: 0;
+		overflow-y: auto;
+		padding: min(1dvh, 0.5dvw);
+
+		> .lscg-kit-notice {
+			grid-column: 1 / -1;
+		}
+	}
+
 	.lscg-kit-chips {
 		display: flex;
 		flex-wrap: wrap;
