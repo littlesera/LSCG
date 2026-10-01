@@ -159,7 +159,9 @@ export class RedressedState extends ItemBundleBaseState {
         for (const [group, entry] of Object.entries(snapshot) as [AssetGroupName, SlotSnapshotEntry][]) {
             const worn = InventoryGet(Player, group);
             if ((worn?.Asset.Name ?? null) !== entry.applied) continue;
-            if (worn) RemoveItem(worn, Player.MemberNumber);
+            // The speech outfit put this item here, so its wearing off must remove it even if it has since been locked
+            // (e.g. an owner lock); RemoveItem would refuse because the player can't unlock it.
+            if (worn) InventoryRemove(Player, group, false);
             if (entry.original) ApplyItem(entry.original, Player.MemberNumber, true, false);
         }
         this.SlotSnapshot = undefined;
