@@ -89,6 +89,8 @@ export function effectiveBackground(el: HTMLElement | null): string | null {
     return null;
 }
 
+const formatMs = (ms: number): string => ms < 0.1 ? "<0.1 ms" : `${ms.toFixed(1)} ms`;
+
 /** Adds a small, hover-revealed button to one of the wearer's own chat lines; it opens an inline panel showing how
  *  the line read and the settings changes that would alter that. Nothing is changed until a suggestion is clicked. */
 export function attachChatTune(message: HTMLElement, speech: SpeechAnalysisModule, line: RecentSpeechLine): void {
@@ -139,6 +141,12 @@ export function attachChatTune(message: HTMLElement, speech: SpeechAnalysisModul
         if (a.detectors.erudite)
             row("erudite", "Reading", [levelBadge(a, speech.settings.eruditeGrade) ?? "too short to assess"]);
 
+        // For debugging: what this line cost when it was spoken (not the re-analysis done to draw this panel).
+        const timing = <span class="lscg-chat-tune-info" title="Time spent analyzing this line, and then running the reaction rules, when it was spoken">
+            ⏱ {formatMs(line.analysisMs)} analysis · {formatMs(line.reactionMs)} reactions
+        </span> as HTMLElement;
+        panel.append(<div class="lscg-chat-tune-row lscg-chat-tune-row-time"><span class="lscg-chat-tune-label">Time</span>{timing}</div>);
+
     };
 
     const toggle = <button type="button" class="lscg-chat-tune" title="LSCG speech analysis: see how this line read, and tune it" aria-label="Tune how this line read" aria-expanded="false" onClick={() => {
@@ -155,18 +163,24 @@ export function attachChatTune(message: HTMLElement, speech: SpeechAnalysisModul
     // horizontal position is taken from it; vertically the button stays centered in its own message, because the
     // reply control can be taller than the line and start above it.
     // It may be created or shown a moment after the hover starts, so measure again shortly after.
-    if (getComputedStyle(message).position === "static") message.style.position = "relative";
     const place = () => {
+        if (getComputedStyle(message).position === "static") message.style.position = "relative";
         // Opaque, in the colors of the row it sits on, so it stays readable over the text it may overlap.
         const background = effectiveBackground(message);
         if (background) toggle.style.backgroundColor = background;
         const messageBox = message.getBoundingClientRect();
+        // Only controls in the right half count: a whisper has its own small reply icon at the start of the text,
+        // and measuring from that would put the button at the far left. With nothing on the right, keep the stylesheet position.
         const candidates = Array.from(message.querySelectorAll<HTMLElement>('[class*="reply" i], button, a, [role="button"]'))
-            .filter(el => el !== toggle && !panel?.contains(el) && !el.classList.contains("lscg-chat-tune") && el.getBoundingClientRect().width > 0);
+            .filter(el => el !== toggle && !panel?.contains(el) && !el.classList.contains("lscg-chat-tune"))
+            .filter(el => {
+                const box = el.getBoundingClientRect();
+                return box.width > 0 && box.left > messageBox.left + messageBox.width / 2;
+            });
         const byName = candidates.find(el => /reply/i.test(el.className));
         const reply = byName ?? candidates.sort((x, y) => y.getBoundingClientRect().right - x.getBoundingClientRect().right)[0];
         const replyBox = reply?.getBoundingClientRect();
-        if (!replyBox || !replyBox.width) return;
+        if (!replyBox) return;
         toggle.style.right = `${Math.max(0, messageBox.right - replyBox.left) + 4}px`;
     };
     message.addEventListener("mouseenter", () => { place(); setTimeout(place, 60); });

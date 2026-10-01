@@ -268,11 +268,22 @@ function _hasSecondPersonSubject(text: string): boolean {
 
 const MAX_RECENT_LINES = 50;
 
+/** How long after being spoken a line can still be matched to its displayed chat message. */
+const RECENT_MATCH_MS = 10_000;
+
 export interface RecentSpeechLine {
     msgId?: string;
+    /** Whether it was said to the room or whispered. */
+    type: "Chat" | "Whisper";
+    /** Set once a chat message has been matched to this line, so each line is matched only once. */
+    shown?: boolean;
     at: number;
     text: string;
     tone: SpeechTone;
+    /** Milliseconds spent analyzing this line. */
+    analysisMs: number;
+    /** Milliseconds the analysis listeners took afterwards, including the built-in reaction rules. */
+    reactionMs: number;
 }
 
 export class SpeechAnalysisModule extends BaseModule {
@@ -306,6 +317,18 @@ export class SpeechAnalysisModule extends BaseModule {
         this.settings.detectors = { ...defaultSpeechDetectors(), ...this.settings.detectors };
     }
 
+    /** The line a displayed chat message belongs to: by its message id, or, if BC didn't pass one (own whispers may not),
+     *  the player's own oldest not-yet-matched recent line of the same type. Other people's messages never match. */
+    private _lineForDisplayed(data: ServerChatRoomMessage | undefined, sender: Character | undefined, msgId: string | undefined): RecentSpeechLine | undefined {
+        if (msgId) {
+            const byId = this._recent.find(l => l.msgId === msgId);
+            if (byId) return byId;
+        }
+        if (!sender?.IsPlayer() || (data?.Type !== "Chat" && data?.Type !== "Whisper")) return undefined;
+        const now = Date.now();
+        return this._recent.find(l => !l.shown && l.type === data.Type && now - l.at < RECENT_MATCH_MS);
+    }
+
     get recentLines(): readonly RecentSpeechLine[] {
         return this._recent;
     }
@@ -331,9 +354,11 @@ export class SpeechAnalysisModule extends BaseModule {
         hookFunction("ChatRoomMessageDisplay", 1, (args, next) => {
             const message = next(args);
             try {
-                const msgId = args[3]?.MsgId;
-                const line = msgId && message && canTuneInline(this) ? this._recent.find(l => l.msgId === msgId) : undefined;
-                if (line) attachChatTune(message, this, line);
+                const line = message && canTuneInline(this) ? this._lineForDisplayed(args[0], args[2], args[3]?.MsgId) : undefined;
+                if (line) {
+                    line.shown = true;
+                    attachChatTune(message, this, line);
+                }
             } catch (e) {
                 console.error("LSCG: speech tune button failed", e);
             }
@@ -577,6 +602,7 @@ export class SpeechAnalysisModule extends BaseModule {
         }
 
         const target = data.Type === "Whisper" ? data.Target : undefined;
+        const started = performance.now();
         const individual = this._analyze(text, { replyId, target, sinceAt: this._lastPlayerLineAt });
         this._lastPlayerLineAt = now;
         this._lastSpeaker = Player.MemberNumber;
@@ -590,12 +616,15 @@ export class SpeechAnalysisModule extends BaseModule {
             : individual;
 
         if (effective.tone !== "neutral") this._outgoingWindow = [];
-        this._recent.push({ msgId, at: now, text: effective.raw, tone: effective.tone });
+        const analyzed = performance.now();
+        const line: RecentSpeechLine = { msgId, type: data.Type as "Chat" | "Whisper", at: now, text: effective.raw, tone: effective.tone, analysisMs: analyzed - started, reactionMs: 0 };
+        this._recent.push(line);
         if (this._recent.length > MAX_RECENT_LINES) this._recent.shift();
-        if (this.settings.debugLog) console.log(`[LSCG Speech]\n${this.describe(effective)}`);
+        if (this.settings.debugLog) console.log(`[LSCG Speech]\n${this.describe(effective)}\ntime: ${line.analysisMs.toFixed(2)} ms`);
         this._callbacks.forEach(cb => {
             try { cb(effective); } catch (e) { console.error("LSCG: speech analysis callback failed", e); }
         });
+        line.reactionMs = performance.now() - analyzed;
     }
 
     /** Catches self-talk split across messages ("am I pretty?" … "no"). Only tone is merged —

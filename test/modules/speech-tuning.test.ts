@@ -214,7 +214,8 @@ describe("speech tuning", () => {
 
 		it("adds nothing to lines that weren't analyzed (other people's, emotes)", () => {
 			driver.say("I'm so stupid");
-			expect(display("someone-else")?.querySelector(".lscg-chat-tune")).toBeNull();
+			const other = makeCharacter({ MemberNumber: 9, Nickname: "Zed" });
+			expect((g.ChatRoomMessageDisplay({ Type: "Chat" }, "x", other, { MsgId: "someone-else" }) as HTMLElement).querySelector(".lscg-chat-tune")).toBeNull();
 		});
 
 		it("opens a panel with the verdict, applies a suggestion, and closes again", () => {
@@ -385,6 +386,35 @@ describe("speech tuning", () => {
 			}
 		});
 
+		it("ignores the small reply icon at the start of a whisper and sits beside the control on the right", () => {
+			const { msgId } = driver.say("I'm so stupid", { whisperTo: 2 });
+			const message = display(msgId)!;
+			const rect = (left: number, right: number) => ({ left, right, top: 100, bottom: 130, width: right - left, height: 30, x: left, y: 100, toJSON() { return {}; } });
+			message.getBoundingClientRect = () => rect(0, 500);
+			const inline = document.createElement("button");
+			inline.className = "chat-whisper-reply";
+			inline.getBoundingClientRect = () => rect(8, 40);
+			const control = document.createElement("div");
+			control.className = "chat-room-message-reply-button";
+			control.getBoundingClientRect = () => rect(440, 490);
+			message.append(inline, control);
+			message.dispatchEvent(new Event("mouseenter"));
+			expect((message.querySelector(".lscg-chat-tune") as HTMLButtonElement).style.right).toBe("64px");
+		});
+
+		it("leaves the default position alone when only a left-side icon is found", () => {
+			const { msgId } = driver.say("I'm so stupid", { whisperTo: 2 });
+			const message = display(msgId)!;
+			const rect = (left: number, right: number) => ({ left, right, top: 100, bottom: 130, width: right - left, height: 30, x: left, y: 100, toJSON() { return {}; } });
+			message.getBoundingClientRect = () => rect(0, 500);
+			const inline = document.createElement("button");
+			inline.className = "chat-whisper-reply";
+			inline.getBoundingClientRect = () => rect(8, 40);
+			message.append(inline);
+			message.dispatchEvent(new Event("mouseenter"));
+			expect((message.querySelector(".lscg-chat-tune") as HTMLButtonElement).style.right).toBe("");
+		});
+
 		it("finds BC's reply control even when it has no 'reply' class, and sits left of it", () => {
 			const { msgId } = driver.say("I'm so stupid");
 			const message = display(msgId)!;
@@ -394,6 +424,35 @@ describe("speech tuning", () => {
 			control.getBoundingClientRect = () => ({ left: 400, right: 450, top: 104, bottom: 136, width: 50, height: 32, x: 400, y: 104, toJSON() { return {}; } });
 			message.dispatchEvent(new Event("mouseenter"));
 			expect((message.querySelector(".lscg-chat-tune") as HTMLButtonElement).style.right).toBe("104px");
+		});
+
+		it("whispers are tunable too, even when BC passes no message id for your own copy", () => {
+			const { msgId } = driver.say("I'm so stupid", { whisperTo: 2 });
+			expect(speech.recentLines.find(l => l.msgId === msgId)?.type).toBe("Whisper");
+			const shown = g.ChatRoomMessageDisplay({ Type: "Whisper", Content: "x" }, "x", player(), {}) as HTMLElement;
+			expect(shown.querySelector(".lscg-chat-tune")).not.toBeNull();
+			(shown.querySelector(".lscg-chat-tune") as HTMLButtonElement).click();
+			expect(shown.querySelector(".lscg-chat-tune-row-tone .lscg-tone-negative")).not.toBeNull();
+		});
+
+		it("matches id-less own messages to lines in order, once each, and only by type", () => {
+			driver.say("I'm so stupid");
+			driver.say("I'm so useless", { whisperTo: 2 });
+			const asWhisper = g.ChatRoomMessageDisplay({ Type: "Whisper" }, "x", player(), {}) as HTMLElement;
+			const asChat = g.ChatRoomMessageDisplay({ Type: "Chat" }, "x", player(), {}) as HTMLElement;
+			expect(asWhisper.querySelector(".lscg-chat-tune")).not.toBeNull();
+			expect(asChat.querySelector(".lscg-chat-tune")).not.toBeNull();
+			// both lines are used up now
+			const extra = g.ChatRoomMessageDisplay({ Type: "Chat" }, "x", player(), {}) as HTMLElement;
+			expect(extra.querySelector(".lscg-chat-tune")).toBeNull();
+		});
+
+		it("never attaches to other people's messages or to lines too old to be the one displayed", () => {
+			driver.say("I'm so stupid");
+			const other = makeCharacter({ MemberNumber: 9, Nickname: "Zed" });
+			expect((g.ChatRoomMessageDisplay({ Type: "Chat" }, "x", other, {}) as HTMLElement).querySelector(".lscg-chat-tune")).toBeNull();
+			vi.advanceTimersByTime(60_000);
+			expect((g.ChatRoomMessageDisplay({ Type: "Chat" }, "x", player(), {}) as HTMLElement).querySelector(".lscg-chat-tune")).toBeNull();
 		});
 
 		it("marks the button as open while its flyout is showing, and back when closed", () => {
@@ -460,12 +519,26 @@ describe("speech tuning", () => {
 			expect(actions()[0]).toMatch(/^Treat "fuck"/);
 		});
 
+		it("records how long each line took and shows it in the flyout for debugging", () => {
+			const { msgId } = driver.say("I'm so stupid");
+			const line = speech.recentLines.find(l => l.msgId === msgId)!;
+			expect(line.analysisMs).toBeGreaterThanOrEqual(0);
+			expect(line.reactionMs).toBeGreaterThanOrEqual(0);
+
+			const message = display(msgId)!;
+			(message.querySelector(".lscg-chat-tune") as HTMLButtonElement).click();
+			const row = message.querySelector(".lscg-chat-tune-row-time")!;
+			expect(row.querySelector(".lscg-chat-tune-label")!.textContent).toBe("Time");
+			expect(row.textContent).toMatch(/(<0\.1|\d+\.\d) ms analysis/);
+			expect(row.textContent).toMatch(/ms reactions/);
+		});
+
 		it("groups every control under the detector it tunes", () => {
 			speech.settings.detectors = { tone: true, profanity: true, erudite: true, phrases: false };
 			const { msgId } = driver.say("what the fuck, I'm so stupid and incredibly disappointing");
 			const message = display(msgId)!;
 			(message.querySelector(".lscg-chat-tune") as HTMLButtonElement).click();
-			const rows = Array.from(message.querySelectorAll(".lscg-chat-tune-row"));
+			const rows = Array.from(message.querySelectorAll(".lscg-chat-tune-row:not(.lscg-chat-tune-row-time)"));
 			expect(rows.map(r => r.querySelector(".lscg-chat-tune-label")!.textContent)).toEqual(["Tone", "Profanity", "Reading"]);
 			const titles = (r: Element) => Array.from(r.querySelectorAll("button")).map(b => (b as HTMLButtonElement).title);
 			expect(titles(rows[0]).some(t => t.startsWith("Ignore the word"))).toBe(true);
@@ -481,7 +554,7 @@ describe("speech tuning", () => {
 			const { msgId } = driver.say("what the fuck, I'm so stupid");
 			const message = display(msgId)!;
 			(message.querySelector(".lscg-chat-tune") as HTMLButtonElement).click();
-			expect(Array.from(message.querySelectorAll(".lscg-chat-tune-label")).map(l => l.textContent)).toEqual(["Tone"]);
+			expect(Array.from(message.querySelectorAll(".lscg-chat-tune-label")).map(l => l.textContent)).toEqual(["Tone", "Time"]);
 		});
 
 	});
