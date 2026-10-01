@@ -1,9 +1,10 @@
-import { LSCGEventsApi, LSCGExtensionInfo, LSCGModApi, LSCGSpellsApi } from "./types";
+import { LSCGActivitiesApi, LSCGEventsApi, LSCGExtensionInfo, LSCGModApi, LSCGSpellsApi } from "./types";
 import { Registry } from "./registry";
 import { whenReady } from "./ready";
 import { safeInvoke } from "./safeInvoke";
 import { createEventsApi } from "./events";
 import { createSpellsApi } from "./spells";
+import { createActivitiesApi } from "./activities";
 
 export { safeInvoke };
 
@@ -17,6 +18,7 @@ export class ModApiHandle implements LSCGModApi {
     private _disposers: (() => void)[] = [];
     private _events: LSCGEventsApi | undefined;
     private _spells: LSCGSpellsApi | undefined;
+    private _activities: LSCGActivitiesApi | undefined;
 
     constructor(info: LSCGExtensionInfo) {
         this.id = info.id;
@@ -33,6 +35,10 @@ export class ModApiHandle implements LSCGModApi {
 
     get spells(): LSCGSpellsApi {
         return this._spells ??= createSpellsApi(this, name => this.scopedId(name), disposer => this.track(disposer));
+    }
+
+    get activities(): LSCGActivitiesApi {
+        return this._activities ??= createActivitiesApi(this, name => this.scopedId(name), disposer => this.track(disposer));
     }
 
     onReady(cb: () => void): void {

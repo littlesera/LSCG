@@ -24,6 +24,82 @@ export interface LSCGModApi {
     readonly events: LSCGEventsApi;
     /** Custom spell effects (capability "spells.effects"). */
     readonly spells: LSCGSpellsApi;
+    /** Custom activities (capability "activities"). */
+    readonly activities: LSCGActivitiesApi;
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// Activities
+// ---------------------------------------------------------------------------------------------------------------
+
+/** A BC character, as handed to extension callbacks. Cast to BC's own `Character` for anything beyond this. */
+export interface LSCGCharacterRef {
+    readonly MemberNumber?: number;
+    IsPlayer(): boolean;
+}
+
+export interface LSCGActivityTarget {
+    /** The BC item group the activity is performed on, e.g. "ItemArms" or "ItemMouth". */
+    group: string;
+    /** Can also be done to yourself on this group (shown in your own menu). */
+    selfAllowed?: boolean;
+    /** Only yourself, not other players, on this group. Implies `selfAllowed`. */
+    selfOnly?: boolean;
+    /** Menu label (defaults to the activity's name). */
+    label?: string;
+    /** Menu label when done to yourself (defaults to `label`). */
+    selfLabel?: string;
+    /** The chat line. BC substitutions work: SourceCharacter, TargetCharacter, PronounPossessive, etc. */
+    action: string;
+    /** The chat line when done to yourself (defaults to `action`). */
+    selfAction?: string;
+}
+
+export interface LSCGActivitySendContext {
+    /** Member number of who the activity is aimed at. */
+    readonly target?: number;
+    /** The group it was performed on. */
+    readonly group?: string;
+}
+
+export interface LSCGActivityReceiveContext {
+    /** Member number of who did it to the player. */
+    readonly sender?: number;
+}
+
+export interface LSCGActivityDefinition {
+    /** Name within your extension; BC sees "LSCG_<extension id>.<name>". No ".". */
+    name: string;
+    /** Arousal a full activity gives the target (default 70). */
+    maxProgress?: number;
+    /** Arousal a full activity gives when done to yourself (default 70). */
+    maxProgressSelf?: number;
+    /** What the actor needs, e.g. "UseArms", "UseMouth" (BC's own), or the short name of a prerequisite you registered. */
+    prerequisites?: string[];
+    /** Where it can be done. At least one. */
+    targets: LSCGActivityTarget[];
+    /** Icon shown in the activity menu: a BC asset path such as "Assets/Female3DCG/Activity/Slap.png". */
+    image?: string;
+    /** Runs on the actor's client as the activity is sent. Return `false` to stop it being sent. */
+    onSend?(ctx: LSCGActivitySendContext): boolean | void;
+    /** Runs on the target's client when someone does the activity to them. */
+    onReceive?(ctx: LSCGActivityReceiveContext): void;
+}
+
+export interface LSCGPrerequisiteDefinition {
+    /** Name within your extension; list it in an activity's `prerequisites` by this short name. No ".". */
+    name: string;
+    /** Whether `acting` can do an activity to `acted` on `group`. If it throws, the activity isn't offered. */
+    check(ctx: { acting: LSCGCharacterRef; acted: LSCGCharacterRef; group?: string }): boolean;
+}
+
+export interface LSCGActivitiesApi {
+    /** Adds an activity to BC's activity menu. Returns a function that removes it. */
+    register(definition: LSCGActivityDefinition): () => void;
+    /** Removes one of this extension's activities by name. */
+    unregister(name: string): boolean;
+    /** Adds a prerequisite activities can require. Returns a function that removes it. */
+    registerPrerequisite(definition: LSCGPrerequisiteDefinition): () => void;
 }
 
 // ---------------------------------------------------------------------------------------------------------------

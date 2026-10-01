@@ -8,6 +8,7 @@ LSCG exposes a typed API that other mods can use to extend it. It is delivered i
 | `core` | `getModApi`, `onReady`, `version`, `isReady`, the load queue |
 | `events` | `api.events.on` / `once` / `before` |
 | `spells.effects` | `api.spells.registerEffect` / `unregisterEffect` / `listEffects` |
+| `activities` | `api.activities.register` / `unregister` / `registerPrerequisite` |
 
 Typings: `npm run build:api-types` emits `dist/api/types.d.ts`. It is also run as part of `npm run build`.
 
@@ -162,6 +163,44 @@ can add it to their spells and block it or allow it.
   applies.
 - **Uninstalling your extension.** Spells that use your effects keep them as "(unavailable)" entries.
   Nothing is persisted on the player's side.
+
+## Custom activities
+
+```js
+api.activities.registerPrerequisite({
+    name: "not-gagged",                    // referenced below by this short name
+    check: ({ acting }) => !acting.IsGagged(),
+});
+
+api.activities.register({
+    name: "headpat",                       // BC sees "LSCG_<your id>.headpat"
+    prerequisites: ["UseArms", "not-gagged"],
+    targets: [{
+        group: "ItemHead",
+        label: "Pat head",
+        action: "SourceCharacter gently pats TargetCharacter's head.",
+    }],
+    image: "Assets/Female3DCG/Activity/Slap.png",
+    onSend: ({ target }) => { /* the actor's client; return false to stop it being sent */ },
+    onReceive: ({ sender }) => { /* the target's client */ },
+});
+```
+
+The activity then appears in BC's activity menu on the groups it targets, and in LSCG's per-activity
+trigger settings, just like LSCG's own.
+
+- **Targets.** Each target is one BC item group (`ItemArms`, `ItemMouth`, …). `selfAllowed` also offers it
+  on yourself, with its own `selfLabel` and `selfAction`. `selfOnly` offers it only on yourself and implies
+  `selfAllowed`. A group that isn't a real BC item group logs a warning, because the activity could never
+  be offered there.
+- **Chat text.** `action` uses BC's usual substitutions (`SourceCharacter`, `TargetCharacter`, and so on).
+  Players who don't have your extension still see it: the text travels with the message.
+- **Prerequisites.** List BC's own (`UseArms`, `UseMouth`, …), or the short name of one you registered. A
+  prerequisite that throws counts as not met, so the activity isn't offered.
+- **Callbacks.** `onSend` runs on the actor's client; returning `false` stops the activity being sent. An
+  error in it never stops the activity. `onReceive` runs on the target's client.
+- **Cleanup.** `dispose()` removes the activities, their menu text and their prerequisites.
+- Extensions can't change BC's or LSCG's own activities; `register` only adds new ones.
 
 ## Login badge
 

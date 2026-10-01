@@ -50,6 +50,20 @@
             });
         }
 
+        // A custom activity: pat someone's head.
+        if (LSCG.capabilities.has("activities")) {
+            api.activities.register({
+                name: "headpat",
+                prerequisites: ["UseArms"],
+                targets: [{
+                    group: "ItemHead",
+                    label: "Pat head",
+                    action: "SourceCharacter gently pats TargetCharacter's head.",
+                }],
+                image: "Assets/Female3DCG/Activity/Slap.png",
+            });
+        }
+
         // Intercept: refuse any spell whose name contains "veto".
         api.events.before("spell.beforeReceive", ctx => {
             if (ctx.payload.spell.name.toLowerCase().includes("veto"))

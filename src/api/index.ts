@@ -8,7 +8,7 @@ export type { LSCGExtensionInfo, LSCGGlobal, LSCGModApi } from "./types";
 /** LSCG version without the leading "v". */
 export const apiVersion: string = LSCG_VERSION.replace(/^v/, "");
 
-const _capabilities = new Set<string>(["core", "events", "spells.effects"]);
+const _capabilities = new Set<string>(["core", "events", "spells.effects", "activities"]);
 export const apiCapabilities: ReadonlySet<string> = _capabilities;
 
 /** Internal: advertise an API feature once its implementation is wired up. */
