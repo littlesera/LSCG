@@ -1,31 +1,9 @@
-import { LSCGBuiltInStateType, LSCGBuiltInStatesApi, LSCGSpellEffectContext, LSCGSpellEffectDefinition, LSCGSpellsApi, LSCGStateHandle } from "./types";
+import { LSCGSpellEffectContext, LSCGSpellEffectDefinition, LSCGSpellsApi } from "./types";
+import { builtInStates } from "./builtInStates";
 import { ErrorOwner, safeInvoke } from "./safeInvoke";
 import { spellInfo } from "./events";
 import { isBuiltInEffect, spellEffects, type SpellEffectContext } from "Modules/Magic/spellEffects";
-import type { StateModule } from "Modules/states";
 import { SendAction } from "utils";
-
-/** States an extension may drive directly; the rest need special entry points (outfits, pairings, sizes...). */
-const DRIVABLE_STATES: readonly LSCGBuiltInStateType[] = ["asleep", "hypnotized", "horny", "denied", "blind", "deaf", "frozen", "gagged", "x-ray-vision"];
-
-function builtInStates(stateModule: StateModule, defaultActivator?: number): LSCGBuiltInStatesApi {
-    return {
-        get(type: LSCGBuiltInStateType): LSCGStateHandle | undefined {
-            if (DRIVABLE_STATES.indexOf(type) < 0) return undefined;
-            const state = stateModule.States.find(s => s.Type === type);
-            if (!state) return undefined;
-            return Object.freeze({
-                type,
-                get active() { return state.Active; },
-                activate: (activatedBy?: number, durationMs?: number) => {
-                    const duration = typeof durationMs === "number" && Number.isFinite(durationMs) && durationMs >= 0 ? durationMs : undefined;
-                    state.Activate(activatedBy ?? defaultActivator, duration);
-                },
-                recover: () => { state.Recover(); },
-            });
-        },
-    };
-}
 
 function publicContext(ctx: SpellEffectContext): LSCGSpellEffectContext {
     return Object.freeze({

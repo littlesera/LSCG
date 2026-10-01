@@ -9,6 +9,7 @@ LSCG exposes a typed API that other mods can use to extend it. It is delivered i
 | `events` | `api.events.on` / `once` / `before` |
 | `spells.effects` | `api.spells.registerEffect` / `unregisterEffect` / `listEffects` |
 | `activities` | `api.activities.register` / `unregister` / `registerPrerequisite` |
+| `drugs` | `api.drugs.register` / `unregister` |
 
 Typings: `npm run build:api-types` emits `dist/api/types.d.ts`. It is also run as part of `npm run build`.
 
@@ -201,6 +202,47 @@ trigger settings, just like LSCG's own.
   error in it never stops the activity. `onReceive` runs on the target's client.
 - **Cleanup.** `dispose()` removes the activities, their menu text and their prerequisites.
 - Extensions can't change BC's or LSCG's own activities; `register` only adds new ones.
+
+## Custom drugs
+
+```js
+api.drugs.register({
+    name: "giggle",                         // id becomes "<your id>.giggle"
+    label: "Giggle Juice",
+    description: "Makes the drinker giddy.",
+    keywords: ["giggle juice", "giggly"],   // in a crafted item's name or description
+    color: "#ff9ff3",                       // bar colour
+    max: 10,
+    decayPerMinute: 1,
+    onDose(ctx) {
+        ctx.addLevel(ctx.multiplier);
+        ctx.sendAction("%NAME% giggles uncontrollably.");
+    },
+    onTick(ctx) {
+        if (ctx.level > 6) ctx.states.get("blind")?.activate(undefined, 10000);
+    },
+    onWearOff(ctx) {
+        ctx.sendAction("%NAME% stops giggling.");
+    },
+});
+```
+
+A crafted Medical Injector, Latex Respirator, Filled Glass or Mug whose name or description contains one of
+the keywords is a dose of the drug. The crafting screen offers it as a checkbox next to LSCG's own.
+
+- **Opt-in.** Like LSCG's own drugs, each extension drug does nothing to a player until they enable it in
+  their Drug Enhancements settings, which lists it with its source and keywords.
+- **Doses.** `onDose` runs for each drink, injection or breath of gas. `ctx.multiplier` is the strength on
+  LSCG's own scale: a drink is 2, an injection 1 to 2.2 by where it goes in (`ctx.location`), and each breath
+  a small fraction. `ctx.sender` is who dosed them.
+- **Levels.** The drug keeps a level from 0 to `max` for you. `addLevel` and `setLevel` keep it in range and
+  return the new value. It falls by `decayPerMinute` each minute and is saved with the player's settings.
+  Other players see it as a bar beside the character, in your colour, even without your extension.
+- **Callbacks.** `onTick` runs every few seconds while the level is above 0 (for players who enabled the
+  drug). `onWearOff` runs once when it reaches 0, including when an antidote or a safeword clears it.
+- **States.** `ctx.states.get(...)` can switch the same nine built-in states spell effects can.
+- **Events.** Extension drugs appear in `drug.applied`, and `drug.beforeApply` can veto them like any other.
+- Extensions can't change LSCG's own four drugs; `register` only adds new ones.
 
 ## Login badge
 

@@ -14,6 +14,14 @@ export interface InjectorModuleStats extends ModuleStats {
     totalNettingsCount: number;
 }
 
+/** One extension drug's level bar, as published to other players. */
+export interface ExtensionDrugBar {
+    id: string;
+    level: number;
+    max: number;
+    color: string;
+}
+
 export interface InjectorSettingsModel extends InjectorPublicSettingsModel {
     //immersive: boolean;
     enableSedative: boolean;
@@ -37,6 +45,10 @@ export interface InjectorSettingsModel extends InjectorPublicSettingsModel {
     continuousDeliveryForever: boolean;
     stats: InjectorModuleStats;
     sipLimit: number;
+    /** Extension drugs the player has opted in to (like enableSedative, but per drug). */
+    enabledExtensionDrugs: string[];
+    /** Current level of each extension drug, by id. */
+    extensionDrugLevels: Record<string, number>;
 }
 
 export interface InjectorPublicSettingsModel extends BaseSettingsModel {
@@ -49,4 +61,6 @@ export interface InjectorPublicSettingsModel extends BaseSettingsModel {
     sedativeMax: number;
     mindControlMax: number;
     hornyLevelMax: number;
+    /** Extension drug bars. Filled at sync time from the registry and levels, never persisted. */
+    drugLevels?: ExtensionDrugBar[];
 }

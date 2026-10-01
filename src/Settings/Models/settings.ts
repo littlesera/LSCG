@@ -129,6 +129,7 @@ export class PublicSettingsModel implements IPublicSettingsModel {
         hornyLevel: 0,
         hornyLevelMax: 5,
         drugLevelMultiplier: 100,
+        drugLevels: [],
         asleep: false,
         brainwashed: false
     };

@@ -3,6 +3,11 @@ import { InjectorSettingsModel } from "./Models/injector";
 import { GuiSubscreen, HelpInfo, Setting } from "./settingBase";
 import { getModule } from "modules";
 import { MiscModule } from "Modules/misc";
+import { extensionDrugs } from "api/drugs";
+import type { InjectorModule } from "Modules/injector";
+
+/** Checkboxes per settings page; the canvas layout fits about this many. */
+const EXTENSION_DRUGS_PER_PAGE = 10;
 
 export class GuiInjector extends GuiSubscreen {
 
@@ -25,7 +30,27 @@ export class GuiInjector extends GuiSubscreen {
 		}
 	}
 
+	/** One opt-in checkbox per drug extensions have registered, a few to a page. Drugs only work on you once enabled. */
+	private extensionDrugPages(): Setting[][] {
+		const injector = getModule<InjectorModule>("InjectorModule");
+		const drugs = extensionDrugs.all();
+		const pages: Setting[][] = [];
+		for (let i = 0; i < drugs.length; i += EXTENSION_DRUGS_PER_PAGE)
+			pages.push(drugs.slice(i, i + EXTENSION_DRUGS_PER_PAGE).map(drug => <Setting>{
+				type: "checkbox",
+				label: `Enable ${drug.label}:`,
+				description: `${drug.description ? drug.description + " " : ""}From "${drug.source}". Activates for any injector or drink with ${drug.keywords.map(k => `"${k}"`).join(", ")} in its crafted name or description.`,
+				setting: () => injector?.ExtensionDrugEnabled(drug.id) ?? false,
+				setSetting: (val) => injector?.SetExtensionDrugEnabled(drug.id, val)
+			}));
+		return pages;
+	}
+
 	get multipageStructure(): Setting[][] {
+		return [...this.builtInPages, ...this.extensionDrugPages()];
+	}
+
+	get builtInPages(): Setting[][] {
 		return [
 			// Page 1 (general checkboxes)
 			[

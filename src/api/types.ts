@@ -26,6 +26,72 @@ export interface LSCGModApi {
     readonly spells: LSCGSpellsApi;
     /** Custom activities (capability "activities"). */
     readonly activities: LSCGActivitiesApi;
+    /** Custom drugs (capability "drugs"). */
+    readonly drugs: LSCGDrugsApi;
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// Drugs
+// ---------------------------------------------------------------------------------------------------------------
+
+/** Passed to every callback of a custom drug. */
+export interface LSCGDrugContext {
+    /** This drug's namespaced id ("<extension id>.<name>"). */
+    readonly drug: string;
+    /** The player's current level of this drug, from 0 to `max`. Reflects `addLevel`/`setLevel` calls as they happen. */
+    readonly level: number;
+    /** The level that fills the drug's bar. */
+    readonly max: number;
+    /** Raises (or, if negative, lowers) the level, keeping it between 0 and `max`. Returns the new level. */
+    addLevel(amount: number): number;
+    /** Sets the level, keeping it between 0 and `max`. Returns the new level. */
+    setLevel(level: number): number;
+    /** Sends an emote about the player. Supports %NAME%, %POSSESSIVE%, and %OPP_NAME% (whoever dosed them, if known). */
+    sendAction(text: string): void;
+    /** Built-in states the drug may activate or recover, e.g. to put the player to sleep at a high level. */
+    readonly states: LSCGBuiltInStatesApi;
+}
+
+export interface LSCGDrugDoseContext extends LSCGDrugContext {
+    readonly method: LSCGDrugMethod;
+    /** How strong this dose is, on the scale LSCG's own drugs use: a drink is 2, an injection is 1 to 2.2 depending
+     *  on where it goes in, and each breath of a gas is a small fraction. */
+    readonly multiplier: number;
+    /** Member number of whoever dosed the player. */
+    readonly sender?: number;
+    /** The item group an injection went into, e.g. "ItemNeck". */
+    readonly location?: string;
+}
+
+export interface LSCGDrugDefinition {
+    /** Name within your extension; the drug id becomes "<extension id>.<name>". No ".". */
+    name: string;
+    /** Shown in LSCG's settings and the crafting screen. */
+    label: string;
+    /** One line for the settings and crafting screens. */
+    description?: string;
+    /** Phrases that make a crafted item this drug: if its name or description contains one, it's a dose. Case
+     *  and punctuation don't matter. Items must be a Medical Injector, Latex Respirator, Filled Glass or Mug. */
+    keywords: string[];
+    /** Colour of the level bar drawn beside the character, any CSS colour string (default a soft blue). */
+    color?: string;
+    /** The level that fills the bar (default 10). */
+    max?: number;
+    /** How much the level falls each minute (default 1; 0 means it never wears off by itself). */
+    decayPerMinute?: number;
+    /** Runs on the player when they take a dose. Players have to opt in to each drug in LSCG's settings first. */
+    onDose(ctx: LSCGDrugDoseContext): void;
+    /** Runs every few seconds while the player's level is above 0. */
+    onTick?(ctx: LSCGDrugContext): void;
+    /** Runs once when the level falls back to 0, however that happens. */
+    onWearOff?(ctx: LSCGDrugContext): void;
+}
+
+export interface LSCGDrugsApi {
+    /** Registers a drug. Returns a function that unregisters it. */
+    register(definition: LSCGDrugDefinition): () => void;
+    /** Unregisters one of this extension's drugs by name. */
+    unregister(name: string): boolean;
 }
 
 // ---------------------------------------------------------------------------------------------------------------

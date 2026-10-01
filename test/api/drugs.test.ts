@@ -1,0 +1,410 @@
+// Extension drugs: registration and validation, detection from crafted items, the per-drug opt-in, dose delivery by
+// drink / injection / breath, levels and decay, wearing off, curing, the bars published to other players, and the
+// crafting-screen and settings entries.
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { CoreModule } from "Modules/core";
+import { ActivityModule } from "Modules/activities";
+import { ConsentModule } from "Modules/consent";
+import { HypnoModule } from "Modules/hypno";
+import { InjectorModule } from "Modules/injector";
+import { LeashingModule } from "Modules/leashing";
+import { MiscModule } from "Modules/misc";
+import { StateModule } from "Modules/states";
+import { GuiInjector } from "Settings/injector";
+import { registerExtension, type ModApiHandle } from "api/extensions";
+import { extensionDrugs, DEFAULT_DRUG_COLOR } from "api/drugs";
+import { apiCapabilities } from "api";
+import type { LSCGDrugDefinition, LSCGDrugDoseContext } from "api/types";
+import { boot, resetWorld, player, addToRoom } from "../harness/world";
+import { makeGroup, makeAsset, wear, makeItem, type FixtureCharacter } from "../harness/fixtures";
+
+describe("extension drugs", () => {
+    let injector: InjectorModule;
+    let core: CoreModule;
+    let states: StateModule;
+    let api: ModApiHandle;
+    let handheldGroup: ReturnType<typeof makeGroup>;
+    let sender: FixtureCharacter;
+    let ids = 0;
+
+    beforeAll(() => {
+        [core, , , , injector, , states] = boot(
+            new CoreModule(), new ConsentModule(), new ActivityModule(), new LeashingModule(),
+            new InjectorModule(), new HypnoModule(), new StateModule(),
+        );
+        vi.useFakeTimers();
+    });
+
+    beforeEach(() => {
+        resetWorld({ MemberNumber: 1, LSCG: { GlobalModule: { enabled: true } } });
+        states.init();
+        injector.init();
+        injector.settings.enabled = true;
+        injector.settings.extensionDrugLevels = {};
+        injector.settings.enabledExtensionDrugs = [];
+        handheldGroup = makeGroup({ Name: "ItemHandheld" });
+        sender = addToRoom({ ...player(), MemberNumber: 5, IsPlayer: () => false, Appearance: [] as never[] } as FixtureCharacter);
+        api = registerExtension({ id: `drugs-${++ids}`, name: "Drug Pack", version: "1" });
+    });
+
+    afterEach(() => {
+        api.dispose();
+    });
+
+    const id = (name: string) => `${api.id}.${name}`;
+    const euphoria = (overrides: Partial<LSCGDrugDefinition> = {}): LSCGDrugDefinition => ({
+        name: "euphoria", label: "Euphoria", keywords: ["euphoria"], onDose: () => {}, ...overrides,
+    });
+    const give = (craftName: string, asset = "GlassFilled", description = "") =>
+        wear(sender, makeItem(makeAsset(handheldGroup, { Name: asset }), { Craft: { Name: craftName, Description: description } }));
+    const opt = (name: string, on = true) => injector.SetExtensionDrugEnabled(id(name), on);
+
+    it("is advertised as a capability", () => {
+        expect(apiCapabilities.has("drugs")).toBe(true);
+    });
+
+    describe("registration", () => {
+        it("registers under the extension's namespace, with defaults", () => {
+            api.drugs.register(euphoria());
+            expect(extensionDrugs.get(id("euphoria"))).toMatchObject({
+                id: id("euphoria"), source: "Drug Pack", label: "Euphoria", keywords: ["euphoria"], color: DEFAULT_DRUG_COLOR, max: 10, decayPerMinute: 1,
+            });
+        });
+
+        it("rejects duplicates and bad definitions, registering nothing", () => {
+            api.drugs.register(euphoria());
+            expect(() => api.drugs.register(euphoria())).toThrow(/already registered/);
+            expect(() => api.drugs.register(euphoria({ name: "a.b" }))).toThrow(/invalid name/);
+            expect(() => api.drugs.register(euphoria({ name: "x", keywords: [] }))).toThrow(/at least one keyword/);
+            expect(() => api.drugs.register(euphoria({ name: "x", keywords: [" "] }))).toThrow(/keyword 1/);
+            expect(() => api.drugs.register(euphoria({ name: "x", label: "" }))).toThrow(/label/);
+            expect(() => api.drugs.register(euphoria({ name: "x", onDose: undefined as never }))).toThrow(/onDose/);
+            expect(() => api.drugs.register(euphoria({ name: "x", max: 0 }))).toThrow(/max/);
+            expect(() => api.drugs.register(euphoria({ name: "x", decayPerMinute: -1 }))).toThrow(/decayPerMinute/);
+            expect(extensionDrugs.has(id("x"))).toBe(false);
+        });
+
+        it("unregister and dispose remove it", () => {
+            api.drugs.register(euphoria());
+            expect(api.drugs.unregister("euphoria")).toBe(true);
+            expect(api.drugs.unregister("euphoria")).toBe(false);
+            api.drugs.register(euphoria());
+            api.dispose();
+            expect(extensionDrugs.has(id("euphoria"))).toBe(false);
+        });
+    });
+
+    describe("detection", () => {
+        it("a crafted item is the drug if its name or description has a keyword, alongside LSCG's own", () => {
+            api.drugs.register(euphoria());
+            expect(injector.GetDrugTypes({ Name: "Pure Euphoria", Description: "" } as never)).toEqual([id("euphoria")]);
+            expect(injector.GetDrugTypes({ Name: "Mystery", Description: "a hint of EUPHORIA, and a sedative" } as never)).toEqual(["sedative", id("euphoria")]);
+            expect(injector.GetDrugTypes({ Name: "Water", Description: "" } as never)).toEqual([]);
+        });
+
+        it("leaves LSCG's own detection alone when no extension drugs exist", () => {
+            expect(injector.GetDrugTypes({ Name: "Tranquilizer Serum", Description: "" } as never)).toEqual(["sedative"]);
+        });
+    });
+
+    describe("opting in", () => {
+        it("a drug does nothing to a player who hasn't enabled it", () => {
+            const onDose = vi.fn();
+            api.drugs.register(euphoria({ onDose }));
+            give("Euphoria Cocktail");
+            expect(injector.IsDrugAllowed(sender as never)).toBe(false);
+            injector.ProcessDruggedDrink(sender as never);
+            expect(onDose).not.toHaveBeenCalled();
+        });
+
+        it("enabling one drug doesn't enable another", () => {
+            const first = vi.fn();
+            const second = vi.fn();
+            api.drugs.register(euphoria({ onDose: first }));
+            api.drugs.register(euphoria({ name: "calm", label: "Calm", keywords: ["calm"], onDose: second }));
+            opt("euphoria");
+            give("Euphoria and Calm");
+            injector.ProcessDruggedDrink(sender as never);
+            expect(first).toHaveBeenCalledOnce();
+            expect(second).not.toHaveBeenCalled();
+        });
+
+        it("makes the item count as an allowed drug, and can be turned off again", () => {
+            api.drugs.register(euphoria());
+            give("Euphoria Cocktail");
+            opt("euphoria");
+            expect(injector.IsDrugAllowed(sender as never)).toBe(true);
+            opt("euphoria", false);
+            expect(injector.IsDrugAllowed(sender as never)).toBe(false);
+        });
+
+        it("is off when the whole module is off", () => {
+            api.drugs.register(euphoria());
+            opt("euphoria");
+            injector.settings.enabled = false;
+            expect(injector.Enabled).toBe(false);
+        });
+    });
+
+    describe("doses", () => {
+        it("a drink delivers the drink multiplier and the sender", () => {
+            const onDose = vi.fn();
+            api.drugs.register(euphoria({ onDose }));
+            opt("euphoria");
+            give("Euphoria Cocktail");
+            injector.ProcessDruggedDrink(sender as never);
+            expect(onDose).toHaveBeenCalledOnce();
+            expect(onDose.mock.calls[0][0]).toMatchObject({ drug: id("euphoria"), method: "drink", multiplier: 2, sender: 5, level: 0, max: 10 });
+        });
+
+        it("an injection delivers the site multiplier and where it went", () => {
+            const doses: LSCGDrugDoseContext[] = [];
+            api.drugs.register(euphoria({ onDose: ctx => { doses.push({ ...ctx }); } }));
+            opt("euphoria");
+            give("Euphoria Shot", "MedicalInjector");
+            injector.ProcessInjection(sender as never, "ItemNeck");
+            injector.ProcessInjection(sender as never, "ItemFeet");
+            expect(doses.map(d => [d.method, d.multiplier, d.location])).toEqual([["inject", 2, "ItemNeck"], ["inject", 0.8, "ItemFeet"]]);
+        });
+
+        it("a breath delivers a small dose with no sender", () => {
+            const onDose = vi.fn();
+            api.drugs.register(euphoria({ onDose }));
+            injector.ApplyExtensionDrug(id("euphoria"), "breath", { multiplier: 0.15 });
+            expect(onDose.mock.calls[0][0]).toMatchObject({ method: "breath", multiplier: 0.15, sender: undefined });
+        });
+
+        it("a dose can raise the level, which is kept within 0 and max and saved", () => {
+            api.drugs.register(euphoria({ max: 4, onDose: ctx => { ctx.addLevel(ctx.multiplier * 3); } }));
+            opt("euphoria");
+            give("Euphoria Cocktail");
+            injector.ProcessDruggedDrink(sender as never);
+            expect(injector.GetExtensionLevel(id("euphoria"))).toBe(4);
+            expect(injector.settings.extensionDrugLevels[id("euphoria")]).toBe(4);
+        });
+
+        it("ctx.level is live, and setLevel returns the clamped value", () => {
+            let seen: number[] = [];
+            api.drugs.register(euphoria({
+                onDose: ctx => {
+                    seen.push(ctx.level);
+                    ctx.addLevel(3);
+                    seen.push(ctx.level);
+                    seen.push(ctx.setLevel(999));
+                    seen.push(ctx.setLevel(Number.NaN));
+                },
+            }));
+            injector.ApplyExtensionDrug(id("euphoria"), "drink", { multiplier: 1 });
+            expect(seen).toEqual([0, 3, 10, 0]);
+        });
+
+        it("the dose can drive a built-in state and send an emote", () => {
+            api.drugs.register(euphoria({
+                onDose: ctx => {
+                    ctx.sendAction("%NAME% giggles.");
+                    ctx.states.get("blind")?.activate(undefined, 5000);
+                    expect(ctx.states.get("redressed" as never)).toBeUndefined();
+                },
+            }));
+            injector.ApplyExtensionDrug(id("euphoria"), "drink", { multiplier: 1, sender: sender as never });
+            expect(states.BlindState.Active).toBe(true);
+            expect(states.BlindState.config.activatedBy).toBe(5);
+        });
+
+        it("an error in onDose is contained and counted", () => {
+            const err = vi.spyOn(console, "error").mockImplementation(() => {});
+            api.drugs.register(euphoria({ onDose: () => { throw new Error("boom"); } }));
+            expect(() => injector.ApplyExtensionDrug(id("euphoria"), "drink", { multiplier: 1 })).not.toThrow();
+            expect(api.errorCount).toBe(1);
+            err.mockRestore();
+        });
+
+        it("a drug that was unregistered after the item was checked is skipped", () => {
+            expect(() => injector.ApplyExtensionDrug("gone.drug", "drink", { multiplier: 1 })).not.toThrow();
+        });
+    });
+
+    describe("events", () => {
+        it("drug.applied lists extension drugs with the built-ins, and drug.beforeApply can veto them", () => {
+            api.drugs.register(euphoria());
+            opt("euphoria");
+            injector.settings.enableSedative = true;
+            give("Sedative Euphoria");
+            const applied = vi.fn();
+            api.events.on("drug.applied", applied);
+            injector.ProcessDruggedDrink(sender as never);
+            expect(applied.mock.calls[0][0].types).toEqual(["sedative", id("euphoria")]);
+
+            const onDose = vi.fn();
+            api.drugs.unregister("euphoria");
+            api.drugs.register(euphoria({ onDose }));
+            api.events.before("drug.beforeApply", ctx => { ctx.payload.types = ctx.payload.types.filter(t => t !== id("euphoria")); });
+            injector.ProcessDruggedDrink(sender as never);
+            expect(onDose).not.toHaveBeenCalled();
+        });
+    });
+
+    describe("levels over time", () => {
+        const minute = () => vi.advanceTimersByTime(60_000);
+        const tick = (times: number) => { for (let i = 0; i < times; i++) injector.ExtensionDrugTick(); };
+        const ticksPerMinute = () => 60_000 / injector.cooldownTickMs;
+
+        it("falls by the drug's own rate each minute, and is forgotten at 0", () => {
+            api.drugs.register(euphoria({ decayPerMinute: 2 }));
+            injector.SetExtensionLevel(id("euphoria"), 5);
+            tick(ticksPerMinute());
+            expect(injector.GetExtensionLevel(id("euphoria"))).toBeCloseTo(3, 5);
+            tick(ticksPerMinute() * 2);
+            expect(injector.GetExtensionLevel(id("euphoria"))).toBe(0);
+            expect(injector.settings.extensionDrugLevels).toEqual({});
+            minute();
+        });
+
+        it("decayPerMinute 0 never wears off by itself", () => {
+            api.drugs.register(euphoria({ decayPerMinute: 0 }));
+            injector.SetExtensionLevel(id("euphoria"), 5);
+            tick(ticksPerMinute() * 10);
+            expect(injector.GetExtensionLevel(id("euphoria"))).toBe(5);
+        });
+
+        it("runs onTick while the level is above 0, but only for a drug the player enabled", () => {
+            const onTick = vi.fn();
+            api.drugs.register(euphoria({ onTick }));
+            injector.SetExtensionLevel(id("euphoria"), 5);
+            injector.ExtensionDrugTick();
+            expect(onTick).not.toHaveBeenCalled();
+            opt("euphoria");
+            injector.ExtensionDrugTick();
+            expect(onTick).toHaveBeenCalledOnce();
+            expect(onTick.mock.calls[0][0]).toMatchObject({ drug: id("euphoria"), max: 10 });
+            expect(onTick.mock.calls[0][0].level).toBeLessThan(5);
+        });
+
+        it("runs onWearOff once when the level reaches 0, whether by decay or setLevel", () => {
+            const onWearOff = vi.fn();
+            api.drugs.register(euphoria({ onWearOff, decayPerMinute: 60 }));
+            injector.SetExtensionLevel(id("euphoria"), 0.05);
+            injector.ExtensionDrugTick();
+            expect(onWearOff).toHaveBeenCalledOnce();
+
+            injector.SetExtensionLevel(id("euphoria"), 3);
+            injector.SetExtensionLevel(id("euphoria"), 0);
+            expect(onWearOff).toHaveBeenCalledTimes(2);
+            injector.SetExtensionLevel(id("euphoria"), 0);
+            expect(onWearOff).toHaveBeenCalledTimes(2);
+        });
+
+        it("an antidote (and a safeword) clears extension drugs and runs onWearOff", () => {
+            const onWearOff = vi.fn();
+            api.drugs.register(euphoria({ onWearOff }));
+            injector.SetExtensionLevel(id("euphoria"), 7);
+            injector.DoCure();
+            expect(injector.GetExtensionLevel(id("euphoria"))).toBe(0);
+            expect(onWearOff).toHaveBeenCalledOnce();
+
+            injector.SetExtensionLevel(id("euphoria"), 7);
+            injector.safeword();
+            expect(injector.GetExtensionLevel(id("euphoria"))).toBe(0);
+        });
+
+        it("keeps a level for a drug whose extension isn't loaded, without publishing it", () => {
+            api.drugs.register(euphoria());
+            injector.SetExtensionLevel(id("euphoria"), 5);
+            api.dispose();
+            expect(injector.settings.extensionDrugLevels[id("euphoria")]).toBe(5);
+            expect(injector.PublicExtensionBars()).toEqual([]);
+            injector.ExtensionDrugTick();
+            expect(injector.settings.extensionDrugLevels[id("euphoria")]).toBe(5);
+        });
+    });
+
+    describe("bars published to the room", () => {
+        it("lists only drugs with a level, with their colour and max", () => {
+            api.drugs.register(euphoria({ color: "#ff00ff", max: 8 }));
+            api.drugs.register(euphoria({ name: "calm", label: "Calm", keywords: ["calm"] }));
+            expect(injector.PublicExtensionBars()).toEqual([]);
+            injector.SetExtensionLevel(id("euphoria"), 4);
+            expect(injector.PublicExtensionBars()).toEqual([{ id: id("euphoria"), level: 4, max: 8, color: "#ff00ff" }]);
+        });
+
+        it("goes out in the public settings packet", () => {
+            api.drugs.register(euphoria());
+            injector.SetExtensionLevel(id("euphoria"), 4);
+            expect(core.publicSettings.InjectorModule.drugLevels).toEqual([{ id: id("euphoria"), level: 4, max: 10, color: DEFAULT_DRUG_COLOR }]);
+            expect(injector.settings).not.toHaveProperty("drugLevels");
+        });
+
+        it("draws the player's own from the registry, and others' from what they published, sanity-checked", () => {
+            api.drugs.register(euphoria());
+            injector.SetExtensionLevel(id("euphoria"), 4);
+            expect(injector.ExtensionBarsFor(player() as never, undefined)).toHaveLength(1);
+
+            const other = { IsPlayer: () => false } as never;
+            const published = [
+                { id: "a.good", level: 2, max: 5, color: "#abc" },
+                { id: "a.badcolor", level: 2, max: 5, color: "url(javascript:alert(1))<>" },
+                { id: "a.empty", level: 0, max: 5, color: "red" },
+                { id: "a.nan", level: Number.NaN, max: 5, color: "red" },
+                { id: "a.nomax", level: 1, max: 0, color: "red" },
+                null,
+            ] as never;
+            expect(injector.ExtensionBarsFor(other, published)).toEqual([
+                { id: "a.good", level: 2, max: 5, color: "#abc" },
+                { id: "a.badcolor", level: 2, max: 5, color: DEFAULT_DRUG_COLOR },
+            ]);
+            expect(injector.ExtensionBarsFor(other, "nope" as never)).toEqual([]);
+            expect(injector.ExtensionBarsFor(other, undefined)).toEqual([]);
+        });
+
+        it("caps how many bars one player can make appear", () => {
+            const many = Array.from({ length: 40 }, (_, i) => ({ id: `x.d${i}`, level: 1, max: 5, color: "red" }));
+            expect(injector.ExtensionBarsFor({ IsPlayer: () => false } as never, many)).toHaveLength(8);
+        });
+    });
+
+    describe("crafting screen and settings", () => {
+        it("the crafting screen offers each drug, with element ids that are safe for any name", () => {
+            api.drugs.register(euphoria({ name: "weird name!", label: "Weird", keywords: ["weird"], description: "Odd." }));
+            const misc = new MiscModule();
+            const option = misc.allDrugOptions.find(o => o.label === "Weird")!;
+            expect(option).toMatchObject({ type: "checkbox", keywords: ["weird"] });
+            expect(option.description).toContain("Odd.");
+            expect(option.id_button).toMatch(/^crafting-lscg-effects-ext-[a-z0-9_-]+-checkbox$/);
+            expect(option.id_label).not.toBe(option.id_button);
+            // the built-ins are still there, first
+            expect(misc.allDrugOptions.slice(0, 4).map(o => o.label)).toEqual(["Sedative", "Aphrodisiac", "Mind control", "Antidote"]);
+            expect(misc.getAllOptionsElem().some(o => o.id_button === option.id_button)).toBe(true);
+        });
+
+        it("only offers it for the same items as the built-in drugs", () => {
+            api.drugs.register(euphoria());
+            const option = new MiscModule().allDrugOptions.find(o => o.label === "Euphoria")!;
+            (globalThis as any).CraftingSelectedItem = { Asset: { Name: "Mug" } };
+            expect(option.condition()).toBe(true);
+            (globalThis as any).CraftingSelectedItem = { Asset: { Name: "Rope" } };
+            expect(option.condition()).toBe(false);
+            (globalThis as any).CraftingSelectedItem = undefined;
+        });
+
+        it("the settings screen adds opt-in pages for extension drugs, ten to a page", () => {
+            const gui = new GuiInjector(injector);
+            const builtIn = gui.builtInPages.length;
+            expect(gui.multipageStructure).toHaveLength(builtIn);
+            for (let i = 0; i < 12; i++)
+                api.drugs.register(euphoria({ name: `d${i}`, label: `Drug ${i}`, keywords: [`d${i}`] }));
+            const pages = gui.multipageStructure;
+            expect(pages).toHaveLength(builtIn + 2);
+            expect(pages[builtIn]).toHaveLength(10);
+            expect(pages[builtIn + 1]).toHaveLength(2);
+
+            const first = pages[builtIn][0];
+            expect(first.label).toBe("Enable Drug 0:");
+            expect(first.description).toContain('"d0"');
+            expect(first.description).toContain("Drug Pack");
+            expect(first.setting()).toBe(false);
+            first.setSetting(true);
+            expect(injector.ExtensionDrugEnabled(id("d0"))).toBe(true);
+            expect(first.setting()).toBe(true);
+        });
+    });
+});

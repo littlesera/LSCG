@@ -64,6 +64,24 @@
             });
         }
 
+        // A custom drug: a craftable "giggle juice" that makes the drinker giddy.
+        if (LSCG.capabilities.has("drugs")) {
+            api.drugs.register({
+                name: "giggle",
+                label: "Giggle Juice",
+                description: "Makes the drinker giddy.",
+                keywords: ["giggle juice"],
+                color: "#ff9ff3",
+                onDose(ctx) {
+                    ctx.addLevel(ctx.multiplier);
+                    ctx.sendAction("%NAME% giggles uncontrollably.");
+                },
+                onWearOff(ctx) {
+                    ctx.sendAction("%NAME% finally stops giggling.");
+                },
+            });
+        }
+
         // Intercept: refuse any spell whose name contains "veto".
         api.events.before("spell.beforeReceive", ctx => {
             if (ctx.payload.spell.name.toLowerCase().includes("veto"))

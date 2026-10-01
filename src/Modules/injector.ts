@@ -14,7 +14,10 @@ import { ItemUseModule } from "./item-use";
 import { StateModule } from "./states";
 import type { MagicModule } from "./magic";
 import { emit, emitBefore } from "api/events";
-import type { LSCGDrugMethod } from "api/types";
+import type { LSCGDrugContext, LSCGDrugDoseContext, LSCGDrugMethod } from "api/types";
+import { DEFAULT_DRUG_COLOR, extensionDrugs, isExtensionDrugId, type ExtensionDrug } from "api/drugs";
+import { builtInStates } from "api/builtInStates";
+import type { ExtensionDrugBar } from "Settings/Models/injector";
 import {
     COOLDOWNS,
     CHECK_INTERVALS,
@@ -31,11 +34,15 @@ import {
 } from "../constants";
 
 type DrugType = "sedative" | "mindcontrol" | "horny" | "antidote";
+/** A built-in drug, or an extension's namespaced "<extension id>.<name>". */
+type AnyDrugType = DrugType | `${string}.${string}`;
 
 export interface DrugLevel {
-    type: DrugType;
+    type: string;
     level: number;
     max: number;
+    /** Bar colour; built-in drugs pick theirs by type. */
+    color?: string;
 }
 
 const locationObj = {
@@ -119,7 +126,10 @@ export class InjectorModule extends BaseModule {
             //brainwashed: false,
             stats: {},
 
-            sipLimit: DRUG_LEVELS.DEFAULT_SIP_LIMIT
+            sipLimit: DRUG_LEVELS.DEFAULT_SIP_LIMIT,
+
+            enabledExtensionDrugs: <string[]>[],
+            extensionDrugLevels: <Record<string, number>>{}
         };
     }
 
@@ -271,7 +281,7 @@ export class InjectorModule extends BaseModule {
             if (!charSettings)
                 return next(args);
 
-            if (charSettings.sedativeLevel + charSettings.mindControlLevel + charSettings.hornyLevel > 0) {
+            {
                 let bars: DrugLevel[] = [];
                 if (charSettings.sedativeLevel > 0)
                     bars.push({
@@ -291,7 +301,10 @@ export class InjectorModule extends BaseModule {
                         level: charSettings.hornyLevel,
                         max: charSettings.hornyLevelMax * charSettings.drugLevelMultiplier
                     });
-                this.DrawBars(Char, CharX, CharY, Zoom, bars);
+                for (const bar of this.ExtensionBarsFor(Char, charSettings.drugLevels))
+                    bars.push({ type: bar.id, level: bar.level, max: bar.max, color: bar.color });
+                if (bars.length > 0)
+                    this.DrawBars(Char, CharX, CharY, Zoom, bars);
             }
             return next(args);
         }, ModuleCategory.Injector);
@@ -309,6 +322,7 @@ export class InjectorModule extends BaseModule {
         this.sedativeCooldownInterval = setInterval(() => this.SedativeCooldown(), this.cooldownTickMs);
         this.mindControlCooldownInterval = setInterval(() => this.MindControlCooldown(), this.cooldownTickMs);
         this.hornyCooldownInterval = setInterval(() => this.HornyCooldown(), this.cooldownTickMs);
+        this.extensionDrugInterval = setInterval(() => this.ExtensionDrugTick(), this.cooldownTickMs);
     }
 
     hookBCX() {
@@ -469,6 +483,7 @@ export class InjectorModule extends BaseModule {
         clearInterval(this.sedativeCooldownInterval);
         clearInterval(this.mindControlCooldownInterval);
         clearInterval(this.hornyCooldownInterval);
+        clearInterval(this.extensionDrugInterval);
     }
 
     _bcxHooked: boolean = false;
@@ -607,17 +622,18 @@ export class InjectorModule extends BaseModule {
     sedativeCooldownInterval: number = 0;
     mindControlCooldownInterval: number = 0;
     hornyCooldownInterval: number = 0;
+    extensionDrugInterval: number = 0;
     hornyLastBumped: number = 0;
     cooldownTickMs: number = CHECK_INTERVALS.COOLDOWN_TICK;
 
     InjectionLocationTable: Map<string, number> = new Map<string, number>(Object.entries(locationObj))
 
-    GetDrugTypes(item: CraftingPartialItem): DrugType[] {
+    GetDrugTypes(item: CraftingPartialItem): AnyDrugType[] {
         var name = item.Name;
         var description = typeof CraftingDescription === "undefined" ? item.Description : CraftingDescription.Decode(item.Description); // R109
         var totalString = name + " | " + description;
 
-        var types: DrugType[] = [];
+        var types: AnyDrugType[] = [];
 
         if (this.settings.sedativeKeywords?.some(ph => isPhraseInString(totalString, ph, true)))
             types.push("sedative");
@@ -627,6 +643,10 @@ export class InjectorModule extends BaseModule {
             types.push("horny");
         if (this.settings.cureKeywords?.some(ph => isPhraseInString(totalString, ph, true)))
             types.push("antidote");
+        for (const drug of extensionDrugs.all()) {
+            if (drug.keywords.some(ph => isPhraseInString(totalString, ph, true)))
+                types.push(drug.id as AnyDrugType);
+        }
 
         return types;
     }
@@ -639,15 +659,17 @@ export class InjectorModule extends BaseModule {
         if ((types.indexOf("sedative") > -1 && this.settings.enableSedative) ||
             (types.indexOf("mindcontrol") > -1 && this.settings.enableMindControl) ||
             (types.indexOf("horny") > -1 && this.settings.enableHorny) ||
-            (types.indexOf("antidote") > -1))
+            (types.indexOf("antidote") > -1) ||
+            types.some(t => isExtensionDrugId(t) && this.ExtensionDrugEnabled(t)))
             return true;
 
         return false;
     }
 
     /** Drug types this player has enabled (antidote is always allowed). */
-    EnabledDrugTypes(types: DrugType[]): DrugType[] {
+    EnabledDrugTypes(types: AnyDrugType[]): AnyDrugType[] {
         return types.filter(t =>
+            (isExtensionDrugId(t) && this.ExtensionDrugEnabled(t)) ||
             (t === "sedative" && this.settings.enableSedative) ||
             (t === "mindcontrol" && this.settings.enableMindControl) ||
             (t === "horny" && this.settings.enableHorny) ||
@@ -655,7 +677,7 @@ export class InjectorModule extends BaseModule {
     }
 
     /** Runs the "drug.beforeApply" hook. Returns the types still to apply; extensions may only remove types. */
-    HookDrugApply(types: DrugType[], method: LSCGDrugMethod, sender?: Character | null, location?: string): DrugType[] {
+    HookDrugApply(types: AnyDrugType[], method: LSCGDrugMethod, sender?: Character | null, location?: string): AnyDrugType[] {
         if (types.length === 0)
             return types;
         const hook = emitBefore("drug.beforeApply", { types: [...types], method, sender: sender?.MemberNumber, location });
@@ -678,6 +700,8 @@ export class InjectorModule extends BaseModule {
             this.DrinkHorny(sender, fullPour);
         if (types.indexOf("antidote") > -1)
             this.DrinkCure(sender);
+        for (const id of types.filter(isExtensionDrugId))
+            this.ApplyExtensionDrug(id, "drink", { multiplier: DRUG_EFFECT_MULTIPLIERS.DRINK_MULTIPLIER, sender });
         if (types.length > 0)
             emit("drug.applied", { types, method: "drink", sender: sender.MemberNumber });
     }
@@ -701,6 +725,8 @@ export class InjectorModule extends BaseModule {
             this.InjectHorny(sender, location);
         if (types.indexOf("antidote") > -1)
             this.InjectCure(sender, location);
+        for (const id of types.filter(isExtensionDrugId))
+            this.ApplyExtensionDrug(id, "inject", { multiplier: this.InjectionLocationTable.get(location) ?? 1, sender, location });
         if (types.length > 0)
             emit("drug.applied", { types, method: "inject", sender: sender.MemberNumber, location });
     }
@@ -848,6 +874,9 @@ export class InjectorModule extends BaseModule {
         this.settings.sedativeLevel = 0;
         this.settings.mindControlLevel = 0;
         this.settings.hornyLevel = 0;
+        // An antidote (and a safeword) clears extension drugs too.
+        for (const id of Object.keys(this.settings.extensionDrugLevels ?? {}))
+            this.SetExtensionLevel(id, 0);
         if (this.asleep) this.Wake();
         if (this.brainwashed) this.SnapBack();
         this.settings.stats.curedCount++;
@@ -1034,6 +1063,103 @@ export class InjectorModule extends BaseModule {
         SendAction(`%NAME%'s ${isDefaultNet ? "net" : craftedNet.Name} engulfs %OPP_NAME%.`, target);
     }
 
+    // ---- Extension drugs ----
+
+    ExtensionDrugEnabled(id: string): boolean {
+        return (this.settings.enabledExtensionDrugs ?? []).includes(id);
+    }
+
+    SetExtensionDrugEnabled(id: string, enabled: boolean) {
+        const list = (this.settings.enabledExtensionDrugs ?? []).filter(x => x !== id);
+        this.settings.enabledExtensionDrugs = enabled ? [...list, id] : list;
+        settingsSave(true);
+    }
+
+    GetExtensionLevel(id: string): number {
+        const level = this.settings.extensionDrugLevels?.[id];
+        return typeof level === "number" && Number.isFinite(level) ? level : 0;
+    }
+
+    /** Sets a drug's level (kept between 0 and its max), saving and syncing it. Falling to 0 runs onWearOff. */
+    SetExtensionLevel(id: string, level: number): number {
+        const drug = extensionDrugs.get(id);
+        if (!drug)
+            return 0;
+        const next = Number.isFinite(level) ? Math.max(0, Math.min(drug.max, level)) : 0;
+        const levels = this.settings.extensionDrugLevels ??= {};
+        const previous = this.GetExtensionLevel(id);
+        if (next === previous)
+            return next;
+        if (next <= 0)
+            delete levels[id];
+        else
+            levels[id] = next;
+        settingsSave(true);
+        if (previous > 0 && next <= 0)
+            drug.onWearOff?.(this.ExtensionContext(drug));
+        return next;
+    }
+
+    /** What an extension drug's callbacks receive. `level` is live, so it reflects addLevel/setLevel as they happen. */
+    ExtensionContext(drug: ExtensionDrug, sender?: Character | null): LSCGDrugContext {
+        // eslint-disable-next-line @typescript-eslint/no-this-alias -- the `level` getter needs the module, not the context
+        const mod = this;
+        return {
+            drug: drug.id,
+            get level() { return mod.GetExtensionLevel(drug.id); },
+            max: drug.max,
+            addLevel: (amount: number) => mod.SetExtensionLevel(drug.id, mod.GetExtensionLevel(drug.id) + (Number.isFinite(amount) ? amount : 0)),
+            setLevel: (level: number) => mod.SetExtensionLevel(drug.id, level),
+            sendAction: (text: string) => SendAction(String(text), sender ?? null),
+            states: builtInStates(mod.stateModule, sender?.MemberNumber ?? undefined),
+        };
+    }
+
+    ApplyExtensionDrug(id: string, method: LSCGDrugMethod, dose: { multiplier: number; sender?: Character | null; location?: string }) {
+        const drug = extensionDrugs.get(id);
+        if (!drug) // the extension went away after the item was checked
+            return;
+        const ctx = Object.assign(this.ExtensionContext(drug, dose.sender), {
+            method,
+            multiplier: dose.multiplier,
+            sender: dose.sender?.MemberNumber ?? undefined,
+            location: dose.location,
+        }) as LSCGDrugDoseContext;
+        drug.onDose(ctx);
+    }
+
+    /** Wears each extension drug off at its own rate, and runs onTick for those still active. */
+    ExtensionDrugTick() {
+        for (const drug of extensionDrugs.all()) {
+            const level = this.GetExtensionLevel(drug.id);
+            if (level <= 0)
+                continue;
+            const remaining = this.SetExtensionLevel(drug.id, level - drug.decayPerMinute * (this.cooldownTickMs / 60000));
+            if (remaining > 0 && this.Enabled && this.ExtensionDrugEnabled(drug.id))
+                drug.onTick?.(this.ExtensionContext(drug));
+        }
+    }
+
+    /** This player's extension drug bars as published to the room: only drugs with a level, from drugs we have. */
+    PublicExtensionBars(): ExtensionDrugBar[] {
+        return extensionDrugs.all()
+            .map(d => ({ id: d.id, level: this.GetExtensionLevel(d.id), max: d.max, color: d.color }))
+            .filter(b => b.level > 0);
+    }
+
+    /** The extension bars to draw for `C`: our own from the registry, someone else's from what they published
+     *  (which we sanity-check, since it came over the network). */
+    ExtensionBarsFor(C: Character, published: ExtensionDrugBar[] | undefined): ExtensionDrugBar[] {
+        if (C.IsPlayer())
+            return this.PublicExtensionBars();
+        if (!Array.isArray(published))
+            return [];
+        return published
+            .filter(b => !!b && typeof b.id === "string" && Number.isFinite(b.level) && b.level > 0 && Number.isFinite(b.max) && b.max > 0)
+            .slice(0, 8)
+            .map(b => ({ id: b.id, level: b.level, max: b.max, color: typeof b.color === "string" && /^[#\w(),.%\s-]{1,40}$/.test(b.color) ? b.color : DEFAULT_DRUG_COLOR }));
+    }
+
     /**
      * Draws Drug Level Bars
      * @param C Character for which to draw
@@ -1047,7 +1173,7 @@ export class InjectorModule extends BaseModule {
             let barY = Y + (DRUG_BAR_DIMENSIONS.Y_OFFSET * Zoom);
             let barZoom = Zoom * DRUG_BAR_DIMENSIONS.BAR_ZOOM
             let barProgress = Math.max(0, Math.min(100, bar.level / bar.max)) * 100;
-            let color = "#5C5CFF";
+            let color = bar.color ?? "#5C5CFF";
             if (bar.type == "mindcontrol") color = "#A020F0";
             else if (bar.type == "horny") color = "#FF647F";
             DrawRect(barX, barY, (DRUG_BAR_DIMENSIONS.BAR_WIDTH * barZoom), (Math.round(DRUG_BAR_DIMENSIONS.BAR_HEIGHT * barZoom)), "Black");
@@ -1433,6 +1559,9 @@ export class InjectorModule extends BaseModule {
                 SendAction(this.breathAntidoteEventStr[getRandomInt(this.breathAntidoteEventStr.length)]);
                 this.DoCure();
             }
+            // Each breath is a small dose, like the built-in drugs' small ticks.
+            for (const id of types.filter(isExtensionDrugId))
+                this.ApplyExtensionDrug(id, "breath", { multiplier: randomLevelIncrease / BREATH_DRUG_INCREASES.SMALL_TICK_DIVISOR });
             if (types.length > 0)
                 emit("drug.applied", { types, method: "breath" });
         }
