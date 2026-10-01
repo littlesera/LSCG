@@ -15,6 +15,7 @@
     "test:watch": "vitest --project unit",
     "test:bc": "vitest run --project bc",
     "test:all": "vitest run",
+    "report:speech": "node scripts/speech-report.mjs",
     "coverage": "vitest run --project unit --coverage",
     "fetch-bc": "node scripts/fetch-bc.mjs"
   },
