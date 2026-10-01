@@ -409,7 +409,7 @@ export class StateModule extends BaseModule {
     }
 
     Clear(emote: boolean, magical: boolean = false) {
-        this.States.forEach(s => s.Recover(emote));
+        this.States.forEach(s => s.RecoverFor(magical ? "dispel" : "manual", emote));
     }
 
     IncomingUnpair(sender: number, msg: LSCGMessageModel) {

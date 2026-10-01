@@ -31,6 +31,7 @@ import { MapModule } from "Modules/map";
 import { SpeechAnalysisModule } from "Modules/speech-analysis";
 import { announceReady, apiCapabilities, apiVersion, exposeIsReady, extensions, getModApi, installLoadQueue, onReady } from "api";
 import { installLoginBadge, removeLoginBadge } from "api/loginBadge";
+import { emit } from "api/events";
 
 export { 
 	DrugKeywords, 
@@ -204,7 +205,9 @@ function init_modules(): boolean {
 			m.safeword();
 		}
 		settingsSave(true);
-		return next(args);
+		const ret = next(args);
+		emit("safeword", { kind: "revert" });
+		return ret;
 	});
 
 	hookFunction("ChatRoomSafewordRelease", 1, (args, next) => {
@@ -213,6 +216,7 @@ function init_modules(): boolean {
 			m.safeword();
 		}
 		settingsSave(true);
+		emit("safeword", { kind: "release" });
 		return ret;
 	});
 

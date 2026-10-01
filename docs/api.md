@@ -6,6 +6,7 @@ LSCG exposes a typed API that other mods can use to extend it. It is delivered i
 | Capability | Provides |
 |---|---|
 | `core` | `getModApi`, `onReady`, `version`, `isReady`, the load queue |
+| `events` | `api.events.on` / `once` / `before` |
 
 Typings: `npm run build:api-types` emits `dist/api/types.d.ts`. It is also run as part of `npm run build`.
 
@@ -57,6 +58,66 @@ too, so check `capabilities` for what your extension needs rather than comparing
 `window.LSCG` also contains internals that were exported before the API existed: `getModule`,
 `sendLSCGBeep`, `DrugKeywords`, `Outfits` and others. They still work, but they are not part of the
 supported API and may change without notice.
+
+## Events
+
+```js
+const off = api.events.on("state.activated", ({ type, activatedBy, duration }) => { /* ... */ });
+off(); // unsubscribe (dispose() also removes all of an extension's listeners)
+
+api.events.before("spell.beforeReceive", ctx => {
+    if (ctx.payload.spell.name.includes("veto")) ctx.cancel("warded");
+    ctx.payload.effects = ctx.payload.effects.filter(e => e !== "Petrifying");
+});
+```
+
+- `on` and `once` **observe only**. The payload is a frozen snapshot, and nothing a listener does
+  changes LSCG's behaviour.
+- `before` handlers run before the action and may cancel it or change the fields listed as mutable
+  below. They are offered for a few actions only.
+- Handlers with a higher `priority` run first (default 0). Ties run in registration order. Among
+  before-handlers, the first cancel stops the rest.
+- Member numbers identify characters. Durations are in milliseconds.
+
+### Observe-only events
+
+| Event | Payload |
+|---|---|
+| `ready` | `{}` |
+| `state.activated` | `{ type, activatedBy?, duration? }`, e.g. `type: "asleep"`, `"hypnotized"`, `"blind"` |
+| `state.recovered` | `{ type, reason: "expired" \| "safeword" \| "dispel" \| "manual" }` |
+| `spell.cast` | `{ spell, target, paired? }`. The player cast a spell. |
+| `spell.resisted` | `{ spell, sender, bounced }`. The player saved against a spell. |
+| `spell.received` | `{ spell, sender?, effects, duration? }`. A spell took hold on the player. |
+| `spell.effectApplied` | `{ effect, spell, sender?, duration? }` |
+| `hypno.triggered` | `{ by?, byWord }` |
+| `hypno.awakened` | `{ method: "word" \| "boop" \| "snap" \| "timeout" \| "other", by? }` |
+| `activity.sent` | `{ name, group?, target?, isLSCG }` |
+| `activity.received` | `{ name, group?, source?, isLSCG }`. Fires for activities that target the player. |
+| `grab.added` / `grab.removed` | `{ type, pairedMember, isSource }` |
+| `drug.applied` | `{ types, method: "drink" \| "inject" \| "breath", sender?, location? }` |
+| `collar.choke` | `{ level, previousLevel }` |
+| `collar.passout` | `{ reason: "collar" \| "hand" \| "plugs" \| "chain", by? }` |
+| `command.received` | `{ sender, name }`. An LSCG player-to-player command addressed to the player was handled. |
+| `settings.saved` | `{ published }` |
+| `safeword` | `{ kind: "revert" \| "release" }` |
+
+`spell` payloads are `{ name, effects, creator? }`.
+
+### Before-events
+
+| Event | Mutable | On cancel |
+|---|---|---|
+| `spell.beforeReceive` | `duration`; `effects` (removals only) | The spell fizzles, with your reason in the emote |
+| `spell.beforeEffect` | `duration` | That effect fails to take hold |
+| `grab.beforeIncoming` | — | The grab is refused and released on the grabber's side too |
+| `drug.beforeApply` | `types` (removals only) | Nothing is applied |
+
+LSCG validates what handlers return. Effects or drug types a handler adds are ignored. A duration
+that isn't a non-negative number falls back to LSCG's own value, and `undefined` means no expiry.
+
+LSCG settings saves, safeword handling, `/lscg` commands, and the handling of player-to-player
+commands cannot be intercepted.
 
 ## Login badge
 

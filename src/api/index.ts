@@ -1,13 +1,14 @@
 import { LSCGExtensionInfo, LSCGGlobal, LSCGLoadCallback, LSCGModApi } from "./types";
 import { extensions, registerExtension } from "./extensions";
 import { isLSCGReady, markReady, whenReady } from "./ready";
+import { emit } from "./events";
 
 export type { LSCGExtensionInfo, LSCGGlobal, LSCGModApi } from "./types";
 
 /** LSCG version without the leading "v". */
 export const apiVersion: string = LSCG_VERSION.replace(/^v/, "");
 
-const _capabilities = new Set<string>(["core"]);
+const _capabilities = new Set<string>(["core", "events"]);
 export const apiCapabilities: ReadonlySet<string> = _capabilities;
 
 /** Internal: advertise an API feature once its implementation is wired up. */
@@ -74,6 +75,7 @@ export function installLoadQueue(): void {
 /** Called once at the end of LSCG's init: runs onReady callbacks and fires the `lscg:ready` window event. */
 export function announceReady(): void {
     markReady();
+    emit("ready", {});
     window.dispatchEvent(new CustomEvent("lscg:ready", { detail: lscg }));
 }
 

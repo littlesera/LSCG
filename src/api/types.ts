@@ -20,6 +20,106 @@ export interface LSCGModApi {
     onReady(cb: () => void): void;
     /** Removes everything this extension registered and frees its id for re-registration. */
     dispose(): void;
+    /** LSCG event hooks (capability "events"). */
+    readonly events: LSCGEventsApi;
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// Events
+// ---------------------------------------------------------------------------------------------------------------
+
+/** A snapshot of a spell as seen by event listeners. */
+export interface LSCGSpellInfo {
+    name: string;
+    /** Effect ids, e.g. "Blinding". */
+    effects: string[];
+    /** Member number of the spell's creator. */
+    creator?: number;
+}
+
+export type LSCGStateRecoverReason = "expired" | "safeword" | "dispel" | "manual";
+export type LSCGDrugMethod = "drink" | "inject" | "breath";
+export type LSCGHypnoAwakenMethod = "word" | "boop" | "snap" | "timeout" | "other";
+export type LSCGPassoutReason = "collar" | "hand" | "plugs" | "chain";
+
+/** Observe-only events. Payloads are frozen snapshots; listeners can't change what LSCG does. */
+export interface LSCGEventMap {
+    /** LSCG finished initializing with the player's settings. */
+    "ready": {};
+    /** One of the player's LSCG states (e.g. "asleep", "hypnotized", "blind") became active. */
+    "state.activated": { type: string; activatedBy?: number; duration?: number };
+    /** One of the player's LSCG states ended. */
+    "state.recovered": { type: string; reason: LSCGStateRecoverReason };
+    /** The player cast a spell. */
+    "spell.cast": { spell: LSCGSpellInfo; target: number; paired?: number };
+    /** The player saved against an incoming spell. `bounced` is true if a magic barrier sent it back to the caster. */
+    "spell.resisted": { spell: LSCGSpellInfo; sender: number; bounced: boolean };
+    /** A spell took hold on the player; `effects` are the ones that will be applied. */
+    "spell.received": { spell: LSCGSpellInfo; sender?: number; effects: string[]; duration?: number };
+    /** One effect of a spell was applied to the player. */
+    "spell.effectApplied": { effect: string; spell: LSCGSpellInfo; sender?: number; duration?: number };
+    /** The player was hypnotized by a trigger. `byWord` is false when triggered some other way (e.g. an activity). */
+    "hypno.triggered": { by?: number; byWord: boolean };
+    /** The player was brought out of a trigger hypnosis. */
+    "hypno.awakened": { method: LSCGHypnoAwakenMethod; by?: number };
+    /** The player sent an activity. `isLSCG` is true for LSCG's own (and LSCG-patched) activities. */
+    "activity.sent": { name: string; group?: string; target?: number; isLSCG: boolean };
+    /** An activity targeting the player was performed (including by the player on themselves). */
+    "activity.received": { name: string; group?: string; source?: number; isLSCG: boolean };
+    /** A grab/leash involving the player started. `isSource` is true when the player is the one holding. */
+    "grab.added": { type: string; pairedMember: number; isSource: boolean };
+    /** A grab/leash involving the player ended. */
+    "grab.removed": { type: string; pairedMember: number; isSource: boolean };
+    /** A drug took effect on the player. */
+    "drug.applied": { types: string[]; method: LSCGDrugMethod; sender?: number; location?: string };
+    /** The player's collar choke level changed. */
+    "collar.choke": { level: number; previousLevel: number };
+    /** The player started passing out. */
+    "collar.passout": { reason: LSCGPassoutReason; by?: number };
+    /** An LSCG player-to-player command addressed to the player was handled. */
+    "command.received": { sender: number; name: string };
+    /** The player's LSCG settings were saved. `published` is true if they were also synced to the room. */
+    "settings.saved": { published: boolean };
+    /** The player used BC's safeword (LSCG states and effects have been cleared). */
+    "safeword": { kind: "revert" | "release" };
+}
+
+/** Events with a "before" phase. Handlers may cancel the action or change the fields documented as mutable. */
+export interface LSCGBeforeEventMap {
+    /** Before an incoming spell takes hold. Mutable: `duration`; `effects` may only have entries removed. Cancel: the spell fizzles. */
+    "spell.beforeReceive": { readonly spell: LSCGSpellInfo; readonly sender?: number; effects: string[]; duration?: number };
+    /** Before one effect of a spell is applied. Mutable: `duration`. Cancel: that effect fizzles. */
+    "spell.beforeEffect": { readonly effect: string; readonly spell: LSCGSpellInfo; readonly sender?: number; duration?: number };
+    /** Before another player's grab on the player takes hold. Cancel: the grab is refused and released on both sides. */
+    "grab.beforeIncoming": { readonly type: string; readonly sender: number };
+    /** Before a drug takes effect. Mutable: `types` may only have entries removed. Cancel: nothing is applied. */
+    "drug.beforeApply": { types: string[]; readonly method: LSCGDrugMethod; readonly sender?: number; readonly location?: string };
+}
+
+export type LSCGEventName = keyof LSCGEventMap;
+export type LSCGBeforeEventName = keyof LSCGBeforeEventMap;
+
+export interface LSCGBeforeContext<P> {
+    /** The pending action. Only fields documented as mutable for this event are honored. */
+    readonly payload: P;
+    readonly cancelled: boolean;
+    readonly reason?: string;
+    /** Stops the action. Remaining before-handlers are skipped. */
+    cancel(reason?: string): void;
+}
+
+export interface LSCGListenerOptions {
+    /** Higher runs first (default 0). Ties run in registration order. */
+    priority?: number;
+}
+
+export interface LSCGEventsApi {
+    /** Observe an event. Returns an unsubscribe function. */
+    on<K extends LSCGEventName>(event: K, handler: (payload: Readonly<LSCGEventMap[K]>) => void, options?: LSCGListenerOptions): () => void;
+    /** Observe the next occurrence of an event only. */
+    once<K extends LSCGEventName>(event: K, handler: (payload: Readonly<LSCGEventMap[K]>) => void, options?: LSCGListenerOptions): () => void;
+    /** Intercept an action before it happens. Returns an unsubscribe function. */
+    before<K extends LSCGBeforeEventName>(event: K, handler: (ctx: LSCGBeforeContext<LSCGBeforeEventMap[K]>) => void, options?: LSCGListenerOptions): () => void;
 }
 
 /** The public surface on `window.LSCG`. */

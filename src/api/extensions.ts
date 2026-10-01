@@ -1,23 +1,12 @@
-import { LSCGExtensionInfo, LSCGModApi } from "./types";
+import { LSCGEventsApi, LSCGExtensionInfo, LSCGModApi } from "./types";
 import { Registry } from "./registry";
 import { whenReady } from "./ready";
+import { safeInvoke } from "./safeInvoke";
+import { createEventsApi } from "./events";
+
+export { safeInvoke };
 
 const EXTENSION_ID_PATTERN = /^[a-z0-9_-]+$/;
-
-/** Runs extension code so a throwing extension can't break LSCG. Errors are logged and counted against the extension;
- *  they only propagate when the player has RethrowExceptions enabled (debugging). */
-export function safeInvoke<T>(ext: ModApiHandle | string, fn: () => T): T | undefined {
-    const handle = typeof ext === "string" ? extensions.get(ext) : ext;
-    try {
-        return fn();
-    } catch (e) {
-        if (handle) handle.errorCount++;
-        console.error(`LSCG[ext:${handle?.id ?? ext}] extension callback failed`, e);
-        if ((globalThis as any).Player?.LSCG?.RethrowExceptions)
-            throw e;
-        return undefined;
-    }
-}
 
 export class ModApiHandle implements LSCGModApi {
     readonly id: string;
@@ -25,6 +14,7 @@ export class ModApiHandle implements LSCGModApi {
     errorCount = 0;
     private _disposed = false;
     private _disposers: (() => void)[] = [];
+    private _events: LSCGEventsApi | undefined;
 
     constructor(info: LSCGExtensionInfo) {
         this.id = info.id;
@@ -33,6 +23,10 @@ export class ModApiHandle implements LSCGModApi {
 
     get disposed(): boolean {
         return this._disposed;
+    }
+
+    get events(): LSCGEventsApi {
+        return this._events ??= createEventsApi(this, disposer => this.track(disposer));
     }
 
     onReady(cb: () => void): void {

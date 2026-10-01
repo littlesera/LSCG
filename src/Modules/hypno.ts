@@ -13,6 +13,8 @@ import { SuggestionMiniGame } from 'MiniGames/Suggestion';
 import { registerMiniGame } from 'MiniGames/minigames';
 import { StateRestrictions } from './States/BaseState';
 import { Leashing, LeashingModule } from './leashing';
+import { emit } from 'api/events';
+import type { LSCGHypnoAwakenMethod } from 'api/types';
 import {
     CHECK_INTERVALS,
     EFFECT_DURATIONS,
@@ -240,7 +242,7 @@ export class HypnoModule extends BaseModule {
                 sender?.MemberNumber != Player.MemberNumber &&
                 this.hypnoActivated) {
                 if (this.settings.enableSnapWakeup) {
-                    this.TriggerRestoreSnap();
+                    this.TriggerRestoreSnap(sender);
                 } else {
                     SendAction("%NAME% sways faintly, the snap failing to wake %POSSESSIVE% up.");
                 }
@@ -256,7 +258,7 @@ export class HypnoModule extends BaseModule {
                 if (!activityEntry || !sender || !IsActivityAllowed(activityEntry, sender))
                     return;
                 if (activityEntry?.awakener && this.hypnoActivated && !sender?.IsPlayer())
-                    this.TriggerRestoreBoop();
+                    this.TriggerRestoreBoop(sender);
                 else if (activityEntry?.hypno && !this.hypnoActivated && !this.IsOnCooldown() && (Player.ArousalSettings?.Progress ?? 0) >= activityEntry.hypnoThreshold) {
                     this.DelayedTrigger(activityEntry, sender?.MemberNumber);
                 }
@@ -664,33 +666,37 @@ export class HypnoModule extends BaseModule {
         
         this.settings.stats.hypnotizedCount++;
         this.StateModule.HypnoState.Activate(memberNumber);
+        emit("hypno.triggered", { by: memberNumber || undefined, byWord: wasWord });
     }
 
     TriggerRestoreWord(speaker: Character) {
         if (!!speaker.Name)
             SendAction("%NAME% snaps back into %POSSESSIVE% senses at %OPP_NAME%'s voice.", speaker);
-        this.TriggerRestore();
+        this.TriggerRestore("word", speaker);
     }
 
-    TriggerRestoreBoop() {
+    TriggerRestoreBoop(by?: Character | null) {
         SendAction("%NAME% reboots, blinking and gasping as %PRONOUN% regains %POSSESSIVE% senses.");
-        this.TriggerRestore();
+        this.TriggerRestore("boop", by);
     }
 
-    TriggerRestoreSnap() {
+    TriggerRestoreSnap(by?: Character | null) {
         SendAction("%NAME% blinks, shaking %POSSESSIVE% head with confusion as %PRONOUN% regains %POSSESSIVE% senses.");
-        this.TriggerRestore();
+        this.TriggerRestore("snap", by);
     }
 
     TriggerRestoreTimeout() {
         SendAction("%NAME% gasps, blinking and blushing with confusion.");
-        this.TriggerRestore();
+        this.TriggerRestore("timeout");
     }
 
-    TriggerRestore() {        
+    TriggerRestore(method: LSCGHypnoAwakenMethod = "other", by?: Character | null) {        
         if (!AudioShouldSilenceSound(true))
             AudioPlaySoundEffect("SpankSkin");
+        const wasActive = this.StateModule.HypnoState.Active;
         this.StateModule.HypnoState.Recover();
+        if (wasActive)
+            emit("hypno.awakened", { method, by: by?.MemberNumber });
     }
 
     CheckNewTrigger() {

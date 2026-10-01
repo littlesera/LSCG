@@ -20,6 +20,7 @@ import { OpacityMigrator } from "./Migrators/OpacityMigrator";
 import { SuggestionSettingMigrator } from "./Migrators/SuggestionSettingMigrator";
 import { OutfitMigrator } from "./Migrators/OutfitMigrator";
 import { CursedItemMigrator } from "./Migrators/CursedItemMigrator";
+import { emit } from "api/events";
 
 // >= R111
 declare var DialogMenuMapping: { items: ScreenFunctions & { C: null | Character } };
@@ -370,6 +371,7 @@ export class CoreModule extends BaseModule {
                 break;
         }
         this.CommandListeners.filter(com => com.command == msg.command!.name).forEach(command => command.func(senderNumber, msg));
+        emit("command.received", { sender: senderNumber, name: msg.command.name });
     }
 
     Broadcast(senderNumber: number, msg: LSCGMessageModel) {

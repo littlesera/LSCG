@@ -13,6 +13,7 @@ import { PolymorphedState } from "./States/PolymorphedState";
 import { OutfitCollection } from "Settings/OutfitCollection/outfitCollection";
 import { OutfitCollectionModule } from "./outfitCollection";
 import { hasMagicModule, hasMBSSettings, hasLSCGData, safeGetLSCGProp } from "../types/guards";
+import { emit, emitBefore, spellInfo } from "api/events";
 
 const dialogButtonInfo = [965, 10, 100, 40, 5];
 const dialogButtonCoords: [number,number,number,number] = [dialogButtonInfo[0], dialogButtonInfo[1], 40, 40];
@@ -522,6 +523,7 @@ export class MagicModule extends BaseModule {
             }
 
             this.UnpackSpellCodes(spell);
+            emit("spell.cast", { spell: spellInfo(spell), target: spellTarget.MemberNumber ?? -1, paired: pairedTarget?.MemberNumber });
 
             if (spellTarget.IsPlayer()) {
                 let check = getModule<ItemUseModule>("ItemUseModule").UnopposedActivityRoll(spellTarget);
@@ -605,6 +607,7 @@ export class MagicModule extends BaseModule {
                 if (!this.SpellIsBeneficial(spell) && this.DefendAgainst(sender.MemberNumber ?? -1)) {
                     if (check.AttackerRoll.Total < check.DefenderRoll.Total) {
                         SendAction(`${CharacterNickname(Player)} ${check.DefenderRoll.TotalStr}successfully saves against ${CharacterNickname(sender)}'s ${check.AttackerRoll.TotalStr}${spell.Name}.`);
+                        emit("spell.resisted", { spell: spellInfo(spell), sender: sender.MemberNumber ?? -1, bounced: !!magicBarrier?.active });
                         if (magicBarrier?.active) {
                             // if saved with a protected barrier, the spell will bounce back to sender
                             SendAction(`The magical barrier around ${CharacterNickname(Player)} make the spell bounce back to ${CharacterNickname(sender)}!`);
@@ -666,16 +669,35 @@ export class MagicModule extends BaseModule {
             duration = saveDiff * 5 * (60 * 1000) // 5 minutes for every level of "spell power" (difference between caster and defender checks)
             if (!this.settings.limitedDuration && !spell.Effects.some(e => e == LSCGSpellEffect.bane))
                 duration = 0;
-            else if (this.settings.maxDuration > 0) {
+            else if (this.settings.maxDuration > 0)
                 duration = Math.min(duration, this.settings.maxDuration * (60 * 1000));
-                LSCG_SendLocal(`${sender?.IsPlayer() ? 'Your' : senderName + "'s"} ${spell.Name} spell will last ${duration / (60 * 1000)} minutes.`);
-            }
-        }            
+        }
 
+        const info = spellInfo(spell);
+        const spellHook = emitBefore("spell.beforeReceive", { spell: info, sender: sender?.MemberNumber, effects: [...allowedSpellEffects], duration });
+        if (spellHook.cancelled) {
+            SendAction(`${senderName}'s ${spell.Name} fizzles when cast on %NAME%${spellHook.reason ? ` (${spellHook.reason})` : ""}.`);
+            return;
+        }
+        // Extensions may only remove effects, never add them.
+        allowedSpellEffects = allowedSpellEffects.filter(e => spellHook.payload.effects.includes(e));
+        duration = sanitizeDuration(spellHook.payload.duration, duration);
+        if (allowedSpellEffects.length <= 0) {
+            SendAction(`${senderName}'s ${spell.Name} fizzles when cast on %NAME%, none of its effects allowed to take hold.`);
+            return;
+        }
+        if (!!duration && duration > 0 && this.settings.maxDuration > 0)
+            LSCG_SendLocal(`${sender?.IsPlayer() ? 'Your' : senderName + "'s"} ${spell.Name} spell will last ${duration / (60 * 1000)} minutes.`);
+        emit("spell.received", { spell: info, sender: sender?.MemberNumber, effects: allowedSpellEffects, duration });
+
+        const spellDuration = duration;
         allowedSpellEffects.forEach((effect, ix, arr) => {
             setTimeout(() => {
+                const effectHook = emitBefore("spell.beforeEffect", { effect, spell: info, sender: sender?.MemberNumber, duration: spellDuration });
+                // Shadows the spell-wide duration: the cases below use this effect's (possibly adjusted) duration.
+                const duration = sanitizeDuration(effectHook.payload.duration, spellDuration);
                 let state: BaseState | undefined;
-                switch (cleanEffect(effect)) {
+                switch (effectHook.cancelled ? undefined : cleanEffect(effect)) {
                     case LSCGSpellEffect.blindness:
                         SendAction("%NAME%'s eyes dart around, %POSSESSIVE% world suddenly plunged into darkness.");
                         state = this.stateModule.BlindState.Activate(sender?.MemberNumber, duration);
@@ -787,6 +809,10 @@ export class MagicModule extends BaseModule {
                         state = this.stateModule.AstralProjectionState.Activate(sender?.MemberNumber, duration);
                         break;
                 }
+                if (effectHook.cancelled)
+                    SendAction(`The ${effect} magic of ${senderName}'s ${spell.Name} fails to take hold on %NAME%${effectHook.reason ? ` (${effectHook.reason})` : ""}.`);
+                else
+                    emit("spell.effectApplied", { effect, spell: info, sender: sender?.MemberNumber, duration });
                 if (ix == arr.length - 1)
                     settingsSave(true);
             }, 2000 * ix);
@@ -1058,4 +1084,10 @@ export class MagicModule extends BaseModule {
             spell.Polymorph.Code = LZString.compressToBase64(JSON.stringify(GetConfiguredItemBundlesFromOutfitKey(spell.Polymorph.Key, item => skipFilter || PolymorphedState.ItemIsAllowed(item))));
         }
     }
+}
+
+/** Accepts an extension-adjusted duration (ms) only if it's sane; otherwise keeps LSCG's own. `undefined` stays allowed. */
+function sanitizeDuration(duration: unknown, fallback: number | undefined): number | undefined {
+    if (duration === undefined) return undefined;
+    return typeof duration === "number" && Number.isFinite(duration) && duration >= 0 ? duration : fallback;
 }

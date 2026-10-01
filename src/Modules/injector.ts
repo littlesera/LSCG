@@ -13,6 +13,8 @@ import { MiscModule } from "./misc";
 import { ItemUseModule } from "./item-use";
 import { StateModule } from "./states";
 import type { MagicModule } from "./magic";
+import { emit, emitBefore } from "api/events";
+import type { LSCGDrugMethod } from "api/types";
 import {
     COOLDOWNS,
     CHECK_INTERVALS,
@@ -643,20 +645,41 @@ export class InjectorModule extends BaseModule {
         return false;
     }
 
+    /** Drug types this player has enabled (antidote is always allowed). */
+    EnabledDrugTypes(types: DrugType[]): DrugType[] {
+        return types.filter(t =>
+            (t === "sedative" && this.settings.enableSedative) ||
+            (t === "mindcontrol" && this.settings.enableMindControl) ||
+            (t === "horny" && this.settings.enableHorny) ||
+            t === "antidote");
+    }
+
+    /** Runs the "drug.beforeApply" hook. Returns the types still to apply; extensions may only remove types. */
+    HookDrugApply(types: DrugType[], method: LSCGDrugMethod, sender?: Character | null, location?: string): DrugType[] {
+        if (types.length === 0)
+            return types;
+        const hook = emitBefore("drug.beforeApply", { types: [...types], method, sender: sender?.MemberNumber, location });
+        if (hook.cancelled)
+            return [];
+        return types.filter(t => hook.payload.types.includes(t));
+    }
+
     ProcessDruggedDrink(sender: Character, fullPour: boolean = false) {
         var asset = InventoryGet(sender, "ItemHandheld");
         if (!asset?.Craft)
             return;
         //var multiplier = ((<any>asset.Property)?.SipLimit ?? 1) - ((<any>asset.Property)?.SipCount ?? 0)
-        let types = this.GetDrugTypes(asset.Craft!);
-        if (types.indexOf("sedative") > -1 && this.settings.enableSedative)
+        let types = this.HookDrugApply(this.EnabledDrugTypes(this.GetDrugTypes(asset.Craft!)), "drink", sender);
+        if (types.indexOf("sedative") > -1)
             this.DrinkSedative(sender, fullPour);
-        if (types.indexOf("mindcontrol") > -1 && this.settings.enableMindControl)
+        if (types.indexOf("mindcontrol") > -1)
             this.DrinkMindControl(sender, fullPour);
-        if (types.indexOf("horny") > -1 && this.settings.enableHorny)
+        if (types.indexOf("horny") > -1)
             this.DrinkHorny(sender, fullPour);
         if (types.indexOf("antidote") > -1)
             this.DrinkCure(sender);
+        if (types.length > 0)
+            emit("drug.applied", { types, method: "drink", sender: sender.MemberNumber });
     }
 
     ProcessInjection(sender: Character, location: AssetGroupItemName) {
@@ -664,19 +687,22 @@ export class InjectorModule extends BaseModule {
         if (!asset?.Craft)
             return;
 
-        let types = this.GetDrugTypes(asset.Craft!);
-
-        if (!AudioShouldSilenceSound(true) && types.length > 0)
+        let allTypes = this.GetDrugTypes(asset.Craft!);
+        let types = this.HookDrugApply(this.EnabledDrugTypes(allTypes), "inject", sender, location);
+        // A vetoed injection is still a needle: only stay silent if nothing was in it.
+        if (!AudioShouldSilenceSound(true) && allTypes.length > 0)
             AudioPlayInstantSound(AUDIO.INJECTION, getPlayerVolume(0));
 
-        if (types.indexOf("sedative") > -1 && this.settings.enableSedative)
+        if (types.indexOf("sedative") > -1)
             this.InjectSedative(sender, location);
-        if (types.indexOf("mindcontrol") > -1 && this.settings.enableMindControl)
+        if (types.indexOf("mindcontrol") > -1)
             this.InjectMindControl(sender, location);
-        if (types.indexOf("horny") > -1 && this.settings.enableHorny)
+        if (types.indexOf("horny") > -1)
             this.InjectHorny(sender, location);
         if (types.indexOf("antidote") > -1)
             this.InjectCure(sender, location);
+        if (types.length > 0)
+            emit("drug.applied", { types, method: "inject", sender: sender.MemberNumber, location });
     }
 
     sedativeInjectStr = [
@@ -1382,7 +1408,7 @@ export class InjectorModule extends BaseModule {
             let mask = this.WornRespirator;
             if (!mask)
                 return;
-            let types = this.GetDrugTypes(mask.Item.Craft!);
+            let types = this.HookDrugApply(this.EnabledDrugTypes(this.GetDrugTypes(mask.Item.Craft!)), "breath");
             let randomLevelIncrease = (getRandomInt(4) + 2) / (1 / BREATH_DRUG_INCREASES.MIN_INCREASE); // .2 to .5
 
             if (types.indexOf("sedative") > -1 && this.settings.enableSedative) {
@@ -1407,6 +1433,8 @@ export class InjectorModule extends BaseModule {
                 SendAction(this.breathAntidoteEventStr[getRandomInt(this.breathAntidoteEventStr.length)]);
                 this.DoCure();
             }
+            if (types.length > 0)
+                emit("drug.applied", { types, method: "breath" });
         }
     }
 

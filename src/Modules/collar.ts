@@ -7,6 +7,8 @@ import { ActivityBundle, ActivityModule, ActivityTarget, CustomPrerequisite } fr
 import { getModule } from 'modules';
 import { InjectorModule } from './injector';
 import { LeashingModule } from './leashing';
+import { emit } from 'api/events';
+import type { LSCGPassoutReason } from 'api/types';
 
 enum PassoutReason {
     COLLAR,
@@ -14,6 +16,13 @@ enum PassoutReason {
     PLUGS,
     CHAIN
 }
+
+const PASSOUT_REASON_NAMES: Record<PassoutReason, LSCGPassoutReason> = {
+    [PassoutReason.COLLAR]: "collar",
+    [PassoutReason.HAND]: "hand",
+    [PassoutReason.PLUGS]: "plugs",
+    [PassoutReason.CHAIN]: "chain",
+};
 
 export class CollarModule extends BaseModule {
     activities: ActivityModule | undefined;
@@ -745,7 +754,9 @@ export class CollarModule extends BaseModule {
             this.settings.chokeLevel = 0;
         if (this.settings.chokeLevel == 4)
             return;
+        const previousLevel = this.settings.chokeLevel;
         this.settings.chokeLevel = Math.min(this.settings.chokeLevel + 1, 4);
+        emit("collar.choke", { level: this.settings.chokeLevel, previousLevel });
         if (!AudioShouldSilenceSound(true))
             AudioPlaySoundEffect("HydraulicLock");
         this.IncreaseArousal();
@@ -790,6 +801,7 @@ export class CollarModule extends BaseModule {
         if (!AudioShouldSilenceSound(true))
             AudioPlaySoundEffect("Deflation");
         this.settings.chokeLevel--;
+        emit("collar.choke", { level: this.settings.chokeLevel, previousLevel: this.settings.chokeLevel + 1 });
         if (this.settings.chokeLevel > 0)
         this.setChokeTimeout(() => this.DecreaseCollarChoke(), this.chokeTimer);
 
@@ -861,6 +873,7 @@ export class CollarModule extends BaseModule {
         this.passout2Timer = totalTime * .3; // -- 3/10 of the total tiem in stage 1
         this.passout3Timer = totalTime * .2; // -- 1/5 of the total tiem in stage 1
         this.isPassingOut = true;
+        emit("collar.passout", { reason: PASSOUT_REASON_NAMES[reason], by: chokingMember?.MemberNumber });
         this.eyesAtTimeOfPassout = WardrobeGetExpression(Player)?.Eyes ?? null;
         this.blushAtTimeOfPassout = WardrobeGetExpression(Player)?.Blush ?? null;
         setOrIgnoreBlush("VeryHigh");

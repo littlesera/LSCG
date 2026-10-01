@@ -1,5 +1,6 @@
 import { BaseModule } from "base";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
+import { emit, hasListeners } from "api/events";
 import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, hookFunction, ICONS, getCharacter, OnAction, callOriginal, LSCG_SendLocal, GetTargetCharacter, GetActivityName, GetMetadata, GetActivityEntryFromContent, IsActivityAllowed, replace_template, sendLSCGMessage } from "../utils";
 import { Consent, Core, getModule } from "modules";
 import { ItemUseModule } from "./item-use";
@@ -135,6 +136,22 @@ export class ActivityModule extends BaseModule {
             return next(args);
         }, ModuleCategory.Activities);
 
+        // Low priority: only runs for activities the hook above actually let through.
+        hookFunction("ServerSend", -100, (args, next) => {
+            const data = args[1] as ServerChatRoomMessage;
+            if (args[0] === "ChatRoomChat" && data?.Type === "Activity" && hasListeners("activity.sent")) {
+                const meta = GetMetadata(data);
+                const name = meta?.ActivityName ?? "";
+                emit("activity.sent", {
+                    name,
+                    group: meta?.GroupName,
+                    target: meta?.TargetMemberNumber,
+                    isLSCG: name.startsWith("LSCG_") || this.PatchedActivities.indexOf(name) > -1,
+                });
+            }
+            return next(args);
+        }, ModuleCategory.Activities);
+
         hookFunction("ActivityCheckPrerequisite", 100, (args, next) => {
             var prereqName = <string>args[0];
             if (this.CustomPrerequisiteFuncs.has(prereqName)) {
@@ -157,6 +174,17 @@ export class ActivityModule extends BaseModule {
         }, ModuleCategory.Activities)
 
         OnActivity(1, ModuleCategory.Activities, (data, sender, msg, metadata) => {
+            if (hasListeners("activity.received")) {
+                const meta = GetMetadata(data);
+                const name = meta?.ActivityName ?? "";
+                if (!!name && meta?.TargetMemberNumber === Player.MemberNumber)
+                    emit("activity.received", {
+                        name,
+                        group: meta?.GroupName,
+                        source: sender?.MemberNumber,
+                        isLSCG: name.startsWith("LSCG_") || this.PatchedActivities.indexOf(name) > -1,
+                    });
+            }
             let target = GetTargetCharacter(data);
             let activityName = GetActivityName(data);
             if (!this.Enabled)

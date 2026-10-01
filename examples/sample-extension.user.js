@@ -22,6 +22,21 @@
         api.onReady(() => {
             console.log("[sample] LSCG is ready and the player's settings are loaded.");
         });
+
+        if (!LSCG.capabilities.has("events"))
+            return;
+
+        // Observe: log what LSCG does to the player.
+        for (const name of ["state.activated", "state.recovered", "spell.received", "spell.effectApplied",
+            "grab.added", "grab.removed", "drug.applied", "hypno.triggered", "hypno.awakened", "safeword"]) {
+            api.events.on(name, payload => console.log(`[sample] ${name}`, payload));
+        }
+
+        // Intercept: refuse any spell whose name contains "veto".
+        api.events.before("spell.beforeReceive", ctx => {
+            if (ctx.payload.spell.name.toLowerCase().includes("veto"))
+                ctx.cancel("the sample extension wards it off");
+        });
     }
 
     // Works whether this script loads before or after LSCG: queued callbacks run as soon as LSCG loads,
