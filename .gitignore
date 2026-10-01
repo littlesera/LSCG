@@ -5,3 +5,4 @@ dist/
 test/**/.out/
 coverage/
 .cache/
+.vitest/

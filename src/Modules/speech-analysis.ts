@@ -13,8 +13,11 @@ import {
     defaultSpeechDetectors, defaultSpeechSettings, sanitizeRemoteSpeechSettings,
 } from "Settings/Models/speech-analysis";
 import { SpeechReactionEngine } from "./speech-reactions";
+import { attachChatTune, canTuneInline } from "./speech-chat-tune";
 
 export type SpeechTone = "negative" | "positive" | "neutral";
+export type SelfEvalReason = "being" | "framing" | "directed-at-me" | "self-question" | "name-mention" | "verb-no-object" | "none";
+export interface SelfEvaluation { evaluates: boolean; reason: SelfEvalReason }
 export type SpeechContextReason = "agreed" | "disagreed" | "self-nominated";
 export type SpeechContextVia = "reply" | "whisper" | "addressed" | "open-question";
 
@@ -44,6 +47,8 @@ export interface LSCGSpeechAnalysis {
     erudite: { detected: boolean; gradeLevel: number };
     /** Phrase groups (by id) with at least one phrase spoken, and which phrases matched. */
     phrases: { matched: string[]; hits: { group: string; phrase: string }[] };
+    /** Why the tone came out as it did: the scored words (after boosters/negation/"but"), the self-talk gate, and whether a teasing marker silenced the score. */
+    trace: { words: { word: string; score: number }[]; gate: SelfEvalReason; playful: boolean };
 }
 
 export type LSCGSpeechAnalysisCallback = (analysis: LSCGSpeechAnalysis) => void;
@@ -78,16 +83,27 @@ const DOMAIN_LEXICON: Record<string, number> = {
     trapped: 0, captive: 0, captured: 0, prisoner: 0, restrained: 0, restrict: 0, restricted: 0,
     gag: 0, gagged: 0, whip: 0, whipped: 0, spank: 0, spanked: 0, spanking: 0,
     tease: 0, teased: 0, teasing: 0, torture: 0, tortured: 0, desperate: 0, beg: 0, begging: 0,
-    submissive: 0, obedient: 1, owned: 0, collared: 0,
+    submissive: 0, obedient: 2, owned: 0, collared: 0,
     worthless: -3, pathetic: -3, useless: -3, stupid: -3, failure: -3, disappointment: -3,
     unlovable: -3, unworthy: -3, burden: -2, trash: -2, garbage: -2, hopeless: -3, loser: -3,
+    // chat spellings and words AFINN lacks
+    waste: -3, worthles: -3, genius: 3, smart: 2, pretty: 2, suk: -3, looser: -3, screw: -2, screwed: -2, disgusting: -3,
+    talented: 2, sweetheart: 2, stronk: 2, unafraid: 2, fearless: 2, adorable: 3, capable: 2,
+    // superlatives AFINN lacks ("who's the prettiest here?" / "me")
+    prettiest: 3, cutest: 3, smartest: 3, hottest: 3, sweetest: 3, dumbest: -3, ugliest: -3, stupidest: -3,
+    // tepid words: "I'm fine" or "not bad" is neither a put-down nor an affirmation
+    fine: 0, okay: 0, ok: 0, alright: 0, decent: 0, passable: 0, average: 0, mediocre: 0,
+    // laughter is a tone marker, not praise ("im so dumb lol" must not cancel out)
+    oops: 0, whoops: 0, ouch: 0, ugh: 0, argh: 0, yikes: 0, lol: 0, lmao: 0, rofl: 0, haha: 0, hehe: 0, lmfao: 0, careful: 0, mercy: 0,
+    // ordinary states, not a verdict on the speaker
+    tired: 0, sleepy: 0, bored: 0, angry: 0, sorry: 0, hungry: 0, thirsty: 0, excited: 0, stuck: 0,
 };
 
 const FIRST_PERSON_RE = /\b(i'm|i've|i'll|i'd|im|i|me|my|myself|mine)\b/i;
 // Self-evaluative framing — a positive affirmation must be *about* the player, not just contain "I".
 // "I can"/"I will" are deliberately excluded: a modal just states ability/intent for whatever follows
 // ("I can't relax", "I will go home") and isn't itself a claim about the speaker's character.
-const SELF_EVAL_RE = /\b(i\s+am|i'm|im|i\s+feel|i\s+deserve|i\s+look|i\s+did|i\s+(?:love|like|accept)\s+myself|proud\s+of\s+myself|i'?ve\s+been)\b/i;
+const SELF_EVAL_RE = /\b(i\s+am|i'm|im|i\s+feel|i\s+deserve|i\s+look|i\s+did|i\s+(?:love|like|accept)\s+myself|proud\s+of\s+myself|i'?ve\s+been|what(?:'s|\s+is)\s+wrong\s+with\s+me)\b/i;
 // "I'm being X" (copula-progressive, "I am being X"): X — whatever it is, adjective or not — is the
 // actual predicate under evaluation, "being" itself never is ("I'm being stupid"/"difficult"/"silly").
 // Handled as its own alternative so the general gerund-hedge check below never has to judge "being".
@@ -101,7 +117,28 @@ const SELF_EVAL_GERUND_RE = /\bi(?:'m|\s+am)\s+(?:not\s+)?(?:\w+\s+)?([a-z]+ing)
 const EVALUATIVE_GERUND_ADJECTIVES = new Set([
     "amazing", "interesting", "boring", "exciting", "stunning", "charming", "fascinating",
     "annoying", "disappointing", "embarrassing", "confusing", "frustrating",
+    "disgusting", "irritating", "depressing", "revolting", "exhausting", "tiresome",
 ]);
+// "am I that stupid?": asking whether a flaw is true is self-doubt. Only the negative direction uses this ("am I pretty?" isn't an affirmation).
+const SELF_QUESTION_RE = /\bam\s+i\b/i;
+// Idioms whose valence AFINN can't see ("never do anything right", "I am nothing"). Kept narrow: each is a clear
+// statement about the speaker, never a description of an external event.
+const SELF_NEGATIVE_IDIOM_RE = /\bi(?:'m|\s+am)\s+nothing\b|\bi\s+(?:don'?t\s+)?deserve\s+(?:nothing|anything)\b|\bsomeone\s+like\s+me\s+(?:doesn'?t|does\s+not)\s+deserve\b|\bi\s+(?:never|can'?t|cannot|can\s+never)\s+(?:\w+\s+){0,3}right(?:\s*[.!?]*$|\s+(?:ever|again)\b)|\bi'?ll\s+never\s+be\s+(?:good|smart|pretty|enough)|\bi'?m\s+(?:just\s+|such\s+)?(?:a\s+)?(?:pain|nuisance|drag|burden)\b|\bi'?m\s+(?:just\s+)?(?:wasting|burdening|bothering)\s+(?:your\s+time|you|everyone|everybody)\b|\b(?:to\s+be\s+around|being\s+around|stuck\s+with|put\s+up\s+with)\s+me\b/i;
+const HEDGE_RE = /\b(?:a\s+(?:little|bit)|little\s+bit|kinda|sorta|somewhat|slightly)\b/i;
+const SELF_POSITIVE_IDIOM_RE = /\bi\s+did\s+(?:so\s+|really\s+|very\s+)?well\b|\bproud\s+of\s+(?:myself|how\s+far\s+i)/i;
+// "i hate my self" -> "i hate myself"
+const MY_SELF_RE = /\bmy\s+self\b/gi;
+// "I hate/blame/despise myself": a verb whose object is the speaker is a statement about the speaker.
+// Clauses of one line; a strong word only counts as self-talk when its own clause is about the speaker
+// ("pretty good, I went shopping" answers a question, it isn't "I'm good").
+const CLAUSE_SPLIT_RE = /[,;]|\bbut\b|\band\b/i;
+const REFLEXIVE_RE = /\bi\s+(?:\w+\s+)?(?:hate|despise|loathe|blame|resent|punish|hurt|embarrass(?:ed)?|disappoint(?:ed)?)\s+myself\b/i;
+// Negative words right after these are being dismissed, not claimed ("ignore all the hate").
+const DISMISSAL_WORDS = new Set(["ignore", "ignoring", "overcome", "unbothered", "above"]);
+const WISH_RE = /\b(?:wish|if\s+only)\b/;
+// "pretty" is the adjective only here; before anything else it's an adverb ("pretty hungry", "pretty good").
+const PRETTY_ADJECTIVE_NEXT = new Set(["af", "as", "and", "but", "too", "girl", "boy", "pet", "enough", "lol"]);
+const SELF_LOVE_VERBS = new Set(["love", "loves", "like", "likes", "adore", "adores", "enjoy", "enjoys"]);
 // Others' feelings toward the player — self-referential even without "I am" framing.
 const DIRECTED_AT_ME_RE = /\b(hates?|despises?|dislikes?|can'?t\s+stand|disgusted\s+(?:by|with))\s+(me|myself)\b/i;
 const SECOND_PERSON_RE = /\b(you|your|you're|youre|you've|you'll|you'd|yours|yourself|ur|u)\b/i;
@@ -127,9 +164,34 @@ const IRREGULAR_POLARITY: Record<string, number> = { better: 1, best: 1, worse: 
 const SELF_OBJECT_RE = /\b(me|myself|mine|i|i'm|im)\b/;
 const NEGATOR_RE = /\bnot\b|\bnever\b|n't\b/;
 const OTHER_NEGATOR_RE = /\b(nobody|no one|noone|none|nothing)\b/;
-// sentiment's own negation list only covers not/never/n't-style words, not "without": "without repercussions"
-// otherwise scores negative purely from "repercussions", though the phrase means there are none.
-const WITHOUT_RE = /\bwithout\s+((?:[a-z][a-z'-]*\s+){0,2}[a-z][a-z'-]*)/gi;
+// Sentiment rules (VADER-style). The library's own negation only sees the word right before, and knows nothing
+// of boosters, "but" or "without", so scoring is done per token here.
+const SENTIMENT_NEGATORS = new Set(["not", "no", "never", "nothing", "nobody", "none", "neither", "nor", "rarely", "seldom", "hardly", "barely", "cant", "can't", "cannot", "dont", "don't", "doesnt", "doesn't", "didnt", "didn't", "wont", "won't", "isnt", "isn't", "arent", "aren't", "wasnt", "wasn't", "werent", "weren't", "non", "aint", "ain't"]);
+const SENTIMENT_BOOSTERS: Record<string, number> = {
+    very: 1.3, really: 1.3, so: 1.3, super: 1.3, extremely: 1.4, incredibly: 1.4, totally: 1.3, completely: 1.3, absolutely: 1.4, utterly: 1.4, such: 1.2, truly: 1.3, sooo: 1.3, soooo: 1.3,
+    kinda: 0.5, sorta: 0.5, somewhat: 0.5, slightly: 0.5, little: 0.5, bit: 0.5, fairly: 0.5,
+};
+// "no" only negates an immediately following word or two ("no good", "no failure"); "no, I'm bad" isn't negated.
+const NEGATOR_REACH: Record<string, number> = { no: 2 };
+const PRONOUN_AFTER_NEGATOR = new Set(["i", "you", "he", "she", "it", "we", "they"]);
+// Teasing markers: "haha I'm so stupid :P" isn't a sincere put-down.
+const PLAYFUL_RE = /\bha(?:ha)+\b|\bhehe+\b|\bxd\b|:p\b|;p\b/i;
+const PLAYFUL_FACTOR = 0;
+const NEGATION_REACH = 3;
+// Denying a real insult ("I'm not stupid") is a meaningful statement; denying an ordinary adjective ("not bad",
+// "not the best") is only a mild one, so it's weakened.
+const NEGATION_FACTOR = 0.85;
+const WEAK_NEGATION_FACTOR = 0.4;
+// Understated denials: "not the best", "not that good", "not perfect" are mild, unlike "not good enough" or "not worth it".
+const MILD_POSITIVES = new Set(["perfect", "great", "special", "expert", "brilliant", "amazing", "fantastic", "wonderful"]);
+const MILD_NEGATION_LEAD = new Set(["the", "that", "too"]);
+const SELF_INSULTS = new Set(["stupid", "dumb", "ugly", "idiot", "fool", "worthless", "useless", "pathetic", "failure", "loser", "hopeless", "unlovable", "unworthy", "disgusting", "suk", "looser"]);
+// A line needs at least one clearly strong word to count as self-talk; mild words ("lazy", "forgot", "fine") never do alone.
+const MIN_PEAK = 1.6;
+const BOOSTER_REACH = 2;
+const WITHOUT_REACH = 3;
+const BUT_BEFORE = 0.75;
+const BUT_AFTER = 1.25;
 
 const MAX_INCOMING = 20;
 const OUTGOING_WINDOW = 5;
@@ -189,18 +251,33 @@ function _isQuestion(text: string): boolean {
  *    speaker at all, and would otherwise read as one purely because "I'm" precedes it.
  *  SELF_EVAL_RE's other framings ("I feel…", "proud of myself…") are unaffected and still checked as-is. */
 function _isSelfEvaluative(text: string): boolean {
-    if (SELF_EVAL_BEING_RE.test(text)) return true;
+    return _selfEvalFraming(text) !== null;
+}
+
+function _selfEvalFraming(text: string): "being" | "framing" | null {
+    if (SELF_EVAL_BEING_RE.test(text)) return "being";
     const gerund = SELF_EVAL_GERUND_RE.exec(text);
     const gerundIsEvaluative = !gerund || EVALUATIVE_GERUND_ADJECTIVES.has(gerund[1].toLowerCase());
     const withoutGerundMatch = gerund ? text.slice(0, gerund.index) + text.slice(gerund.index + gerund[0].length) : text;
-    return (gerundIsEvaluative && SELF_EVAL_RE.test(text)) || SELF_EVAL_RE.test(withoutGerundMatch);
+    return (gerundIsEvaluative && SELF_EVAL_RE.test(text)) || SELF_EVAL_RE.test(withoutGerundMatch) ? "framing" : null;
 }
 
 function _hasSecondPersonSubject(text: string): boolean {
     return SECOND_PERSON_RE.test(text.replace(SECOND_PERSON_FILLER_RE, " "));
 }
 
+const MAX_RECENT_LINES = 50;
+
+export interface RecentSpeechLine {
+    msgId?: string;
+    at: number;
+    text: string;
+    tone: SpeechTone;
+}
+
 export class SpeechAnalysisModule extends BaseModule {
+    /** The wearer's own most recent lines and what they read as, newest last. Memory only, never saved. */
+    private _recent: RecentSpeechLine[] = [];
     private _callbacks: Set<LSCGSpeechAnalysisCallback> = new Set();
     private _outgoingWindow: OutgoingLine[] = [];
     private _incoming: IncomingEntry[] = [];
@@ -208,7 +285,7 @@ export class SpeechAnalysisModule extends BaseModule {
     private _lastSpeaker: number | undefined;
     private _lastPlayerLineAt = 0;
     private _pendingRaw: { type: string; text: string; at: number } | null = null;
-    private _lexiconCache: { key: string; extras: Record<string, number> } | null = null;
+    private _lexiconCache: { key: string; extras: Record<string, number>; words: Map<string, number> } | null = null;
     private _reactions: SpeechReactionEngine | null = null;
 
     get settingsScreen(): Subscreen | null {
@@ -229,6 +306,10 @@ export class SpeechAnalysisModule extends BaseModule {
         this.settings.detectors = { ...defaultSpeechDetectors(), ...this.settings.detectors };
     }
 
+    get recentLines(): readonly RecentSpeechLine[] {
+        return this._recent;
+    }
+
     isDetectorEnabled(id: SpeechDetectorId): boolean {
         return this.settings.detectors?.[id] ?? SPEECH_DETECTORS.find(d => d.id === id)?.defaultEnabled ?? false;
     }
@@ -247,6 +328,18 @@ export class SpeechAnalysisModule extends BaseModule {
         } as ChatRoomMessageHandler);
 
         // Capture the text before sender-side speech transforms (gag garble etc.) are applied.
+        hookFunction("ChatRoomMessageDisplay", 1, (args, next) => {
+            const message = next(args);
+            try {
+                const msgId = args[3]?.MsgId;
+                const line = msgId && message && canTuneInline(this) ? this._recent.find(l => l.msgId === msgId) : undefined;
+                if (line) attachChatTune(message, this, line);
+            } catch (e) {
+                console.error("LSCG: speech tune button failed", e);
+            }
+            return message;
+        }, ModuleCategory.SpeechAnalysis);
+
         hookFunction("ChatRoomGenerateChatRoomChatMessage", 1, (args, next) => {
             const [type, msg] = args as [string, string];
             if (type === "Chat" || type === "Whisper")
@@ -282,6 +375,7 @@ export class SpeechAnalysisModule extends BaseModule {
         this._callbacks.clear();
         this._outgoingWindow = [];
         this._incoming = [];
+        this._recent = [];
         this._ownMsgIds = [];
         this._lastSpeaker = undefined;
         this._lastPlayerLineAt = 0;
@@ -331,6 +425,10 @@ export class SpeechAnalysisModule extends BaseModule {
             `context: ${ctx}`,
         );
         else lines.push("tone: off");
+        if (a.detectors.tone) {
+            const words = a.trace.words.map(w => `${w.word} ${w.score > 0 ? "+" : ""}${w.score.toFixed(1)}`).join(", ");
+            lines.push(`scored words: ${words || "none"}${a.trace.playful ? " (teasing marker: score ignored)" : ""}`, `about the speaker: ${a.trace.gate}`);
+        }
         lines.push(`profanity: ${!a.detectors.profanity ? "off" : a.profanity.detected ? a.profanity.words.join(", ") : "none"}`);
         lines.push(`reading level: ${!a.detectors.erudite ? "off" : a.raw.split(/\s+/).length < MIN_WORDS_FOR_ERUDITE ? "not enough words to assess" : `${a.erudite.gradeLevel.toFixed(1)}${a.erudite.detected ? " (too high)" : ""}`}`);
         // Remotely-set phrases stay secret from the wearer: don't reveal that a hidden group matched, let alone which phrase.
@@ -492,6 +590,8 @@ export class SpeechAnalysisModule extends BaseModule {
             : individual;
 
         if (effective.tone !== "neutral") this._outgoingWindow = [];
+        this._recent.push({ msgId, at: now, text: effective.raw, tone: effective.tone });
+        if (this._recent.length > MAX_RECENT_LINES) this._recent.shift();
         if (this.settings.debugLog) console.log(`[LSCG Speech]\n${this.describe(effective)}`);
         this._callbacks.forEach(cb => {
             try { cb(effective); } catch (e) { console.error("LSCG: speech analysis callback failed", e); }
@@ -514,12 +614,19 @@ export class SpeechAnalysisModule extends BaseModule {
 
     // ---------- analysis ----------
 
-    private _analyze(text: string, outgoing: { replyId?: string; target?: number; sinceAt: number } | null): LSCGSpeechAnalysis {
+    private _trace(text: string, doc: ReturnType<typeof nlp>, toneOn: boolean, direction: "negative" | "positive"): LSCGSpeechAnalysis["trace"] {
+        if (!toneOn) return { words: [], gate: "none", playful: false };
+        const { words, playful } = this._sentiment(text);
+        return { words, gate: this._selfEvaluation(text, doc, direction).reason, playful };
+    }
+
+    private _analyze(rawText: string, outgoing: { replyId?: string; target?: number; sinceAt: number } | null): LSCGSpeechAnalysis {
+        const text = rawText.replace(MY_SELF_RE, "myself");
         const doc = nlp(text);
         const detectors = Object.fromEntries(SPEECH_DETECTORS.map(d => [d.id, this.isDetectorEnabled(d.id)])) as Record<SpeechDetectorId, boolean>;
 
         const off = { detected: false, score: 0, comparative: 0 };
-        const comparison = detectors.tone ? this._comparison(text) : null;
+        const comparison = detectors.tone && !PLAYFUL_RE.test(text) ? this._comparison(text) : null;
         const negativeSelf = detectors.tone ? this._analyzeNegativeSelf(text, doc, comparison) : off;
         const positiveSelf = detectors.tone ? this._analyzePositiveSelf(text, doc, negativeSelf.detected, comparison) : { ...off, viaPhrase: false };
         const context = detectors.tone && outgoing
@@ -529,7 +636,7 @@ export class SpeechAnalysisModule extends BaseModule {
         const negative = negativeSelf.detected || context.negative;
         const positive = positiveSelf.detected || context.positive;
         return {
-            raw: text,
+            raw: rawText,
             doc,
             target: outgoing?.target,
             detectors,
@@ -541,6 +648,7 @@ export class SpeechAnalysisModule extends BaseModule {
             profanity: detectors.profanity ? this._analyzeProfanity(text) : { detected: false, words: [] },
             erudite: detectors.erudite ? this._analyzeErudite(text) : { detected: false, gradeLevel: 0 },
             phrases: detectors.phrases ? this._analyzePhrases(text) : { matched: [], hits: [] },
+            trace: this._trace(text, doc, detectors.tone, positiveSelf.detected ? "positive" : "negative"),
         };
     }
 
@@ -553,23 +661,69 @@ export class SpeechAnalysisModule extends BaseModule {
                 const n = Number(score);
                 if (word && Number.isFinite(n)) extras[word] = Math.max(-5, Math.min(5, n));
             }
-            this._lexiconCache = { key, extras };
+            this._lexiconCache = { key, extras, words: new Map() };
         }
         return this._lexiconCache.extras;
     }
 
-    private _sentiment(text: string) {
-        const result = _sentimentAnalyzer.analyze(text, { extras: this._lexicon() });
-        let offset = 0;
-        for (const m of text.matchAll(WITHOUT_RE)) {
-            const span = _sentimentAnalyzer.analyze(m[1], { extras: this._lexicon() });
-            // "without repercussions" means the opposite of what "repercussions" alone scores; a positive span
-            // ("without help") is a genuine lack of something good, so it's left as the library scored it.
-            if (span.score < 0) offset -= span.score;
+    private _wordScore(word: string): number {
+        const cache = this._lexiconCache!;
+        let score = cache.words.get(word);
+        if (score === undefined) {
+            const lookup = (w: string) => _sentimentAnalyzer.analyze(w, { extras: cache.extras }).score;
+            score = lookup(word);
+            // "bessst", "fuuuck": squeeze elongated letters back to a known word.
+            if (score === 0 && /(.)\1\1/.test(word)) score = lookup(word.replace(/(.)\1{2,}/g, "$1$1")) || lookup(word.replace(/(.)\1{2,}/g, "$1"));
+            cache.words.set(word, score);
         }
-        if (offset === 0) return result;
-        const score = result.score + offset;
-        return { ...result, score, comparative: score / Math.max(1, result.tokens.length) };
+        return score;
+    }
+
+    /** AFINN-style word valence plus VADER-style context rules: a negator within the previous few words flips a
+     *  word, boosters/dampeners scale the next word, "but" shifts weight to the clause after it, and a negative
+     *  word after "without" doesn't count ("without repercussions"). Rules are plain constants above. */
+    private _sentiment(text: string) {
+        this._lexicon();
+        const tokens = _sentimentAnalyzer.analyze(text).tokens;
+        const contributions: number[] = [];
+        const strengths: number[] = [];
+        const isQuestion = text.includes("?");
+        let negatorReach = NEGATION_REACH;
+        let negatorAt = -Infinity, boostAt = -Infinity, boost = 1, withoutAt = -Infinity, butAt = -1;
+        tokens.forEach((tok, i) => {
+            // "don't I look amazing?" is a question, not a negation.
+            if (SENTIMENT_NEGATORS.has(tok) && !(isQuestion && PRONOUN_AFTER_NEGATOR.has(tokens[i + 1]))) { negatorAt = i; negatorReach = NEGATOR_REACH[tok] ?? NEGATION_REACH; }
+            if (tok === "without") withoutAt = i;
+            if (tok === "but" || tok === "however") butAt = i;
+            const kindOf = tok === "kind" && tokens[i + 1] === "of";
+            // "pretty good" / "pretty bad": an adverb when a scored word follows, otherwise the adjective.
+            const prettyAdverb = tok === "pretty" && !!tokens[i + 1] && !PRETTY_ADJECTIVE_NEXT.has(tokens[i + 1]);
+            const factor = kindOf ? 0.5 : prettyAdverb ? 0.9 : tok === "kind" ? 0 : SENTIMENT_BOOSTERS[tok];
+            if (factor) { boostAt = i; boost = factor; }
+            if (kindOf || prettyAdverb) { contributions.push(0); return; }
+            let score = this._wordScore(tok);
+            // "I love being helpless" / "I love it": affection for something else, not praise of the speaker.
+            if (SELF_LOVE_VERBS.has(tok) && !["me", "myself"].includes(tokens[i + 1])) score = 0;
+            if (DISMISSAL_WORDS.has(tok)) withoutAt = i;
+            if (!score) { contributions.push(0); return; }
+            const negated = i - negatorAt <= negatorReach;
+            const boosted = i - boostAt <= BOOSTER_REACH;
+            if (boosted) score *= boost;
+            if (negated) {
+                const mild = score > 0 ? MILD_POSITIVES.has(tok) || MILD_NEGATION_LEAD.has(tokens[i - 1]) : !SELF_INSULTS.has(tok);
+                score *= mild ? -WEAK_NEGATION_FACTOR : -NEGATION_FACTOR;
+            }
+            // Strength gate: the word as hedged/negated, ignoring boosters, must still be clearly strong.
+            strengths.push(Math.abs(boosted && boost > 1 ? score / boost : score));
+            if (score < 0 && i - withoutAt <= WITHOUT_REACH) score = 0;
+            contributions.push(score);
+        });
+        if (butAt >= 0) contributions.forEach((c, i) => { contributions[i] = i < butAt ? c * BUT_BEFORE : i > butAt ? c * BUT_AFTER : c; });
+        const playful = PLAYFUL_RE.test(text);
+        const peak = playful ? 0 : Math.max(0, ...strengths);
+        const score = contributions.reduce((sum, c) => sum + c, 0) * (playful ? PLAYFUL_FACTOR : 1);
+        const words = tokens.map((word, i) => ({ word, score: contributions[i] })).filter(w => w.score !== 0);
+        return { score, comparative: score / Math.max(1, tokens.length), tokens, words, playful, peak };
     }
 
     /** Built-in list (with its usual leetspeak/repeat handling) plus exact words/phrases the wearer added,
@@ -592,7 +746,11 @@ export class SpeechAnalysisModule extends BaseModule {
         if (q === -1) return 0;
         const question = text.slice(0, q);
         const answer = text.slice(q + 1);
-        if (!FIRST_PERSON_RE.test(question) || !answer.trim()) return 0;
+        if (!answer.trim()) return 0;
+        if (!FIRST_PERSON_RE.test(question)) {
+            const reply = answer.toLowerCase().trim().replace(/[.!]+$/, "");
+            return SELF_NOMINATE_RE.test(reply) ? Math.sign(this._sentiment(question).score) : 0;
+        }
         const questionPolarity = Math.sign(this._sentiment(question).score);
         const answerPolarity = ANSWER_NEGATE_RE.test(answer) ? -1 : ANSWER_AFFIRM_RE.test(answer) ? 1 : 0;
         return questionPolarity * answerPolarity;
@@ -619,7 +777,7 @@ export class SpeechAnalysisModule extends BaseModule {
         const names = _playerNames();
         const refsSelf = (s: string, asObject: boolean) =>
             (asObject ? SELF_OBJECT_RE : FIRST_PERSON_RE).test(s) || names.some(n => isPhraseInString(s, n, true));
-        const negated = (s: string) => NEGATOR_RE.test(s) || OTHER_NEGATOR_RE.test(s);
+        const negated = (s: string) => NEGATOR_RE.test(s) || OTHER_NEGATOR_RE.test(s) || WISH_RE.test(s);
 
         // A comparison in the player's favour only counts as positive when it lifts the player with a positive
         // quality ("I'm prettier than her", "nobody is prettier than me"). Winning by putting others down
@@ -689,15 +847,40 @@ export class SpeechAnalysisModule extends BaseModule {
      *  domain, not this one's, so a copula-only match here doesn't count as a self-referential verb. */
     private _selfVerbNoObject(doc: ReturnType<typeof nlp>): boolean {
         if (doc.match("i #Modal").found) return false;
-        const verbTags: string[][] = doc.match("i #Verb").json().flatMap((t: any) => t.terms.filter((x: any) => x.tags.includes("Verb")).map((x: any) => x.tags));
+        const verbTags: string[][] = doc.match("i #Adverb? #Verb").json().flatMap((t: any) => t.terms.filter((x: any) => x.tags.includes("Verb")).map((x: any) => x.tags));
         const hasNonCopulaVerb = verbTags.some(tags => !tags.includes("Copula"));
-        return hasNonCopulaVerb && !doc.match("i #Verb+ (#Determiner|#Noun|#ProperNoun)").found;
+        const evaluated = doc.match("i #Adverb? #Verb+ (#Determiner|#Noun|#ProperNoun)");
+        // "I ruin everything" / "I never get anything right": a sweeping object is a claim about the speaker, not an external target.
+        const externalObject = evaluated.found && !(evaluated.has("(everything|anything|nothing|things)") && !evaluated.has("#PastTense"));
+        return hasNonCopulaVerb && !externalObject;
     }
 
     /** Negated *positive* adjective ("not very good"). A negated negative ("not bad") is not self-deprecation. */
     private _negatedPositiveAdjective(doc: ReturnType<typeof nlp>): boolean {
-        const adjectives = doc.match("(not|never|barely|hardly) .? [#Adjective]", 0).out("array") as string[];
-        return adjectives.some(adj => this._sentiment(adj).score > 0);
+        // Only an emphatic denial ("not very good", "not good at all") is a put-down; "not great"/"not the best" is understatement.
+        const emphatic = doc.match("(not|never|barely|hardly) (very|really|so|remotely|even) [#Adjective]", 0).out("array") as string[];
+        const atAll = doc.match("(not|never) [#Adjective] at all", 0).out("array") as string[];
+        return [...emphatic, ...atAll].some(adj => this._sentiment(adj).score > 0);
+    }
+
+    /** Whether the line is a statement *about the speaker* (so its sentiment counts as self-talk), and why. */
+    /** False when none of the line's strong sentiment words sits in a clause that mentions the speaker. */
+    private _strongClauseIsAboutSpeaker(text: string): boolean {
+        const clauses = text.split(CLAUSE_SPLIT_RE).map(c => c.trim()).filter(Boolean);
+        if (clauses.length < 2) return true;
+        const strong = clauses.filter(c => this._sentiment(c).peak >= MIN_PEAK);
+        return strong.length === 0 || strong.some(c => this._selfReferenced(c));
+    }
+
+    private _selfEvaluation(text: string, doc: ReturnType<typeof nlp>, direction: "negative" | "positive"): SelfEvaluation {
+        const framing = _selfEvalFraming(text);
+        if (!this._strongClauseIsAboutSpeaker(text)) return { evaluates: false, reason: "none" };
+        if (framing) return { evaluates: true, reason: framing };
+        if (direction === "negative" && SELF_QUESTION_RE.test(text)) return { evaluates: true, reason: "self-question" };
+        if (DIRECTED_AT_ME_RE.test(text) || REFLEXIVE_RE.test(text)) return { evaluates: true, reason: "directed-at-me" };
+        if (_mentionsPlayer(text)) return { evaluates: true, reason: "name-mention" };
+        if (this._selfVerbNoObject(doc)) return { evaluates: true, reason: "verb-no-object" };
+        return { evaluates: false, reason: "none" };
     }
 
     private _analyzeNegativeSelf(text: string, doc: ReturnType<typeof nlp>, comparison: number | null): LSCGSpeechAnalysis["negativeSelf"] {
@@ -712,10 +895,11 @@ export class SpeechAnalysisModule extends BaseModule {
         // Likewise a self-comparison: "I'm smarter than those idiots" is not negative despite "idiots".
         if (comparison !== null) return { detected: comparison < 0, ...base };
 
+        if (SELF_NEGATIVE_IDIOM_RE.test(text)) return { detected: true, ...base };
         // Raw sentiment only counts when the line evaluates the player ("I am…", "…hates me"),
         // not whenever "I"/"me" appears ("I hate this game", "nothing can stop me").
-        const selfEvaluative = _isSelfEvaluative(text) || DIRECTED_AT_ME_RE.test(text) || _mentionsPlayer(text) || this._selfVerbNoObject(doc);
-        const clearlyNegative = selfEvaluative && result.comparative < this.settings.negativeThreshold;
+        const selfEvaluative = this._selfEvaluation(text, doc, "negative").evaluates;
+        const clearlyNegative = selfEvaluative && result.comparative < this.settings.negativeThreshold && result.peak >= MIN_PEAK;
         const negatedPositive = this._negatedPositiveAdjective(doc);
         // AFINN can't score "nobody"; "nobody likes me" otherwise reads as positive.
         const nobodyToMe = doc.match("(nobody|no one|noone) .* (me|myself)").found;
@@ -734,9 +918,11 @@ export class SpeechAnalysisModule extends BaseModule {
         if (rhetorical !== 0) return { detected: rhetorical > 0, viaPhrase, ...base };
         if (comparison !== null) return { detected: comparison > 0, viaPhrase, ...base };
 
-        const selfEvaluative = _isSelfEvaluative(text) || _mentionsPlayer(text) || this._selfVerbNoObject(doc);
+        if (SELF_POSITIVE_IDIOM_RE.test(text) && !NEGATOR_RE.test(text) && !HEDGE_RE.test(text)) return { detected: true, viaPhrase, ...base };
+        const selfEvaluative = this._selfEvaluation(text, doc, "positive").evaluates;
         const detected = selfEvaluative
             && result.comparative > this.settings.positiveThreshold
+            && result.peak >= MIN_PEAK
             && !this._negatedPositiveAdjective(doc);
         return { detected, viaPhrase, ...base };
     }

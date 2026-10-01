@@ -256,3 +256,187 @@
 #crafting-slot-screen[data-mode="LSCGShare"] {
 	background-color: rgba(0, 255, 255, 0.06);
 }
+
+/* Speech analysis: small, hover-revealed tune button on the wearer's own chat lines */
+.ChatMessage .lscg-chat-tune {
+	/* Sits beside BC's own hover-revealed reply control; its position is set from that control when hovered. */
+	position: absolute;
+	/* Pinned to the top, on the line it belongs to: it must not follow the message down when the flyout opens. */
+	top: 0.1rem;
+	/* Fallback only, in rem so it doesn't shrink with the button; the real position is measured from BC's reply control. */
+	right: 8rem;
+	z-index: 2;
+	display: none;
+	padding: 0 0.4em;
+	font-size: 0.85em;
+	line-height: 1.25;
+	cursor: pointer;
+	color: inherit;
+	opacity: 0.55;
+	/* The row's own background color is filled in when hovered; this is only the fallback. */
+	background-color: rgb(128 128 128 / 60%);
+	border: 1px solid rgb(128 128 128 / 50%);
+	border-radius: 0.3em;
+
+	&:hover {
+		opacity: 0.9;
+	}
+}
+
+.ChatMessage:hover .lscg-chat-tune,
+.ChatMessage .lscg-chat-tune:focus-visible,
+.ChatMessage .lscg-chat-tune[aria-expanded="true"] {
+	display: block;
+}
+
+/* While its flyout is open the button stays visible and looks pressed in */
+.ChatMessage .lscg-chat-tune[aria-expanded="true"] {
+	opacity: 0.9;
+	/* Tint layered over the filled-in row color */
+	background-image: linear-gradient(rgb(128 128 128 / 25%), rgb(128 128 128 / 25%));
+	border-color: currentColor;
+}
+
+.ChatMessage .lscg-chat-tune-panel {
+	display: grid;
+	gap: 0.3em;
+	margin: 0.3em 0.5em 0.3em 0;
+	padding: 0.4em 0.6em;
+	font-size: 0.75em;
+	opacity: 0.9;
+	background: rgb(128 128 128 / 10%);
+	border-radius: 0.4em;
+}
+
+/* One row per detector: a fixed-width colored label, the verdict, then that detector's tags */
+.ChatMessage .lscg-chat-tune-row {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 0.25em;
+	padding-left: 0.5em;
+	border-left: 3px solid var(--accent, #8a8a8a);
+}
+
+.ChatMessage .lscg-chat-tune-row-tone { --accent: #9065d6; }
+.ChatMessage .lscg-chat-tune-row-profanity { --accent: #d98a1f; }
+.ChatMessage .lscg-chat-tune-row-erudite { --accent: #4a90d9; }
+
+.ChatMessage .lscg-chat-tune-label {
+	flex: 0 0 5.5em;
+	font-weight: bold;
+	color: var(--accent, inherit);
+}
+
+.ChatMessage .lscg-chat-tune-info {
+	margin-right: 0.4em;
+}
+
+.ChatMessage .lscg-chat-tune-action {
+	padding: 0 0.4em;
+	font-size: inherit;
+	line-height: 1.4;
+	color: inherit;
+	cursor: pointer;
+	background: transparent;
+	border: 1px solid rgb(128 128 128 / 30%);
+	border-radius: 999px;
+
+	&:hover {
+		background: rgb(128 128 128 / 20%);
+	}
+
+	&[aria-pressed="true"] {
+		background: rgb(128 128 128 / 35%);
+	}
+}
+
+/* Speech analysis tone markers: shared by the Tune tab and the chat tune panel */
+.lscg-tone {
+	font-weight: bold;
+	white-space: nowrap;
+}
+
+.lscg-tone-negative {
+	color: #d9534f;
+}
+
+.lscg-tone-positive {
+	color: #3c9d5d;
+}
+
+.lscg-tone-neutral {
+	color: #8a8a8a;
+}
+
+/* Word picker shared by the Tune tab and the chat tune panel */
+.lscg-wordtuner {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	flex-basis: 100%;
+	gap: 0.25em;
+}
+
+.lscg-wordtuner-actions {
+	display: flex;
+	flex-basis: 100%;
+	align-items: center;
+	gap: 0.25em;
+}
+
+.lscg-word {
+	padding: 0 0.4em;
+	font: inherit;
+	font-size: 0.85em;
+	cursor: pointer;
+	background: transparent;
+	border: 1px dashed rgb(128 128 128 / 40%);
+	border-radius: 0.3em;
+
+	&[aria-pressed="true"] {
+		background: rgb(128 128 128 / 30%);
+		border-style: solid;
+	}
+}
+
+.lscg-wordtuner .lscg-chat-tune-action {
+	padding: 0 0.4em;
+	font-size: 0.85em;
+	line-height: 1.4;
+	color: inherit;
+	cursor: pointer;
+	background: transparent;
+	border: 1px solid rgb(128 128 128 / 30%);
+	border-radius: 999px;
+}
+
+/* Tuning tags: color by what they do; "allowed" tags strike their icon through. Doubled class so they beat the
+   generic button color above, wherever the tag is shown. */
+.lscg-chat-tune-action.lscg-tag-negative { color: #d9534f; }
+.lscg-chat-tune-action.lscg-tag-positive { color: #3c9d5d; }
+.lscg-chat-tune-action.lscg-tag-profane { color: #d98a1f; }
+.lscg-chat-tune-action.lscg-tag-safe { color: #2a9d8f; }
+.lscg-chat-tune-action.lscg-tag-threshold { color: #9065d6; }
+.lscg-chat-tune-action.lscg-tag-level { color: #4a90d9; }
+.lscg-chat-tune-action.lscg-tag-ignore { color: #8a8a8a; }
+
+.lscg-chat-tune-action[class*="lscg-tag-"] {
+	border-color: currentColor;
+}
+
+.lscg-tag-safe .lscg-tag-icon {
+	text-decoration: line-through;
+}
+
+/* Tags outside the chat window (the Tune tab) */
+.lscg-kit .lscg-chat-tune-action {
+	padding: 0 0.5em;
+	font: inherit;
+	font-size: calc(var(--lscg-font-small) * 0.85);
+	line-height: 1.5;
+	cursor: pointer;
+	background: transparent;
+	border: 1px solid rgb(128 128 128 / 40%);
+	border-radius: 999px;
+}

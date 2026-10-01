@@ -110,6 +110,92 @@ describe("SpeechReactionEngine", () => {
 			expect(sent.actions().at(-1)).toBe(emote("%NAME%'s mouth keeps moving, but after those words not a single sound escapes."));
 		});
 
+		describe("a repeat fire while a timed state is still running", () => {
+			const denied = () => states.settings.states.find(s => s.type === "denied")!;
+			const timedRule = (durationMs?: number) => [{ enabled: true, detection: "negative" as const, action: "applyState" as const, state: "denied" as const, durationMs, cooldownMs: 0 }];
+
+			beforeEach(() => {
+				speech.settings.reactions = timedRule(60_000);
+			});
+
+			it("restarts the timer instead of letting the first one run out", () => {
+				driver.say("I'm so worthless");
+				const first = denied().activatedAt;
+				vi.advanceTimersByTime(40_000);
+				const actionsBefore = sent.actions().length;
+				driver.say("I'm so worthless");
+				expect(denied().activatedAt).toBeGreaterThan(first);
+				expect(denied().duration).toBe(60_000);
+				expect(sent.actions().length).toBe(actionsBefore);
+				vi.advanceTimersByTime(40_000);
+				states.DeniedState.Tick(Date.now());
+				expect(states.DeniedState.Active).toBe(true);
+				vi.advanceTimersByTime(30_000);
+				states.DeniedState.Tick(Date.now());
+				expect(states.DeniedState.Active).toBe(false);
+			});
+
+			it("tells only the wearer, locally, that the effect was renewed", () => {
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				const local = (globalThis as any).ChatRoomSendLocal as ReturnType<typeof vi.fn>;
+				driver.say("I'm so worthless");
+				local.mockClear();
+				const actionsBefore = sent.actions().length;
+				vi.advanceTimersByTime(40_000);
+				driver.say("I'm so worthless");
+				expect(local).toHaveBeenCalledTimes(1);
+				expect(local.mock.calls[0][0]).toContain("Your words renew the denied state: it now lasts 1 min from now.");
+				expect(sent.actions().length).toBe(actionsBefore);
+				// a fire that changes nothing says nothing
+				local.mockClear();
+				speech.settings.reactions = timedRule(10_000);
+				driver.say("I'm so worthless");
+				expect(local).not.toHaveBeenCalled();
+			});
+
+			it("never shortens a longer remaining time", () => {
+				speech.settings.reactions = timedRule(120_000);
+				driver.say("I'm so worthless");
+				const before = { at: denied().activatedAt, duration: denied().duration };
+				vi.advanceTimersByTime(10_000);
+				speech.settings.reactions = timedRule(30_000);
+				driver.say("I'm so worthless");
+				expect({ at: denied().activatedAt, duration: denied().duration }).toEqual(before);
+			});
+
+			it("leaves a state the engine didn't apply, and one that was re-applied since, alone", () => {
+				states.DeniedState.Activate(2, 60_000);
+				const external = denied().activatedAt;
+				vi.advanceTimersByTime(30_000);
+				driver.say("I'm so worthless");
+				expect(denied().activatedAt).toBe(external);
+				expect(denied().activatedBy).toBe(2);
+
+				states.DeniedState.Recover(false);
+				driver.say("I'm so worthless");
+				vi.advanceTimersByTime(30_000);
+				states.DeniedState.Activate(2, 60_000);
+				const reapplied = denied().activatedAt;
+				vi.advanceTimersByTime(30_000);
+				driver.say("I'm so worthless");
+				expect(denied().activatedAt).toBe(reapplied);
+				expect(denied().activatedBy).toBe(2);
+			});
+
+			it("doesn't turn an open-ended state into a timed one, or extend with an open-ended rule", () => {
+				states.DeniedState.Activate(1, undefined);
+				driver.say("I'm so worthless");
+				expect(denied().duration).toBeFalsy();
+				states.DeniedState.Recover(false);
+				speech.settings.reactions = timedRule(undefined);
+				driver.say("I'm so worthless");
+				vi.advanceTimersByTime(1000);
+				const at = denied().activatedAt;
+				driver.say("I'm so worthless");
+				expect(denied().activatedAt).toBe(at);
+			});
+		});
+
 		it("a rule blocked by its own cooldown does not re-fire", () => {
 			driver.say("I'm so worthless");
 			expect(states.DeniedState.Active).toBe(true);
@@ -149,6 +235,47 @@ describe("SpeechReactionEngine", () => {
 			expect(states.RedressedState.Active).toBe(true);
 			expect(worn()).toBe("Cloth:MaidOutfit1");
 			expect(sent.actions().at(-1)).toContain("clothing shimmers and morphs");
+		});
+
+		it("the same outfit again while it's running only restarts the timer, with a local notice and no public emote", () => {
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			const local = (globalThis as any).ChatRoomSendLocal as ReturnType<typeof vi.fn>;
+			const cfg = () => states.settings.states.find(s => s.type === "redressed")!;
+			driver.say("fuck");
+			const first = cfg().activatedAt;
+			const actionsBefore = sent.actions().length;
+			local.mockClear();
+			vi.advanceTimersByTime(100_000);
+			driver.say("fuck");
+			expect(cfg().activatedAt).toBeGreaterThan(first);
+			expect(cfg().duration).toBe(300_000);
+			expect(worn()).toBe("Cloth:MaidOutfit1");
+			expect(sent.actions().length).toBe(actionsBefore);
+			expect(local).toHaveBeenCalledTimes(1);
+			expect(local.mock.calls[0][0]).toContain("Your words renew the redressed state");
+		});
+
+		it("a different outfit while one is running is a full switch with the public emote", () => {
+			driver.say("fuck");
+			const actionsBefore = sent.actions().length;
+			speech.settings.reactions = [{ enabled: true, detection: "profanity", action: "outfit", outfitKey: "maid-with-gag", outfitOption: OutfitOption.clothes_only, durationMs: 300_000, cooldownMs: 0 }];
+			vi.advanceTimersByTime(1000);
+			driver.say("fuck");
+			expect(sent.actions().length).toBe(actionsBefore + 1);
+			expect(sent.actions().at(-1)).toContain("clothing shimmers and morphs");
+		});
+
+		it("an outfit someone else applied isn't treated as ours to renew", () => {
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			const local = (globalThis as any).ChatRoomSendLocal as ReturnType<typeof vi.fn>;
+			states.RedressedState.Activate(2, 300_000);
+			const external = states.settings.states.find(s => s.type === "redressed")!.activatedAt;
+			local.mockClear();
+			vi.advanceTimersByTime(10_000);
+			driver.say("fuck");
+			expect(local).not.toHaveBeenCalled();
+			expect(states.settings.states.find(s => s.type === "redressed")!.activatedBy).toBe(1);
+			expect(states.settings.states.find(s => s.type === "redressed")!.activatedAt).toBeGreaterThan(external);
 		});
 
 		it("positive tone removes the redressed state, restoring what was worn before", () => {

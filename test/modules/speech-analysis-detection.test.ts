@@ -48,7 +48,7 @@ describe("SpeechAnalysisModule detection", () => {
 		const table: [string, string][] = [
 			["I'm so stupid", "negative"], ["I'm not very good", "negative"], ["nobody likes me", "negative"],
 			["I am worthless", "negative"], ["will anyone ever love me? probably not", "negative"],
-			["am I useless? yes", "negative"], ["I'm not bad at this", "positive"], ["everyone hates me", "negative"],
+			["am I useless? yes", "negative"], ["I'm not bad at this", "neutral"], ["everyone hates me", "negative"],
 			["I feel like such a failure", "negative"], ["I am not stupid", "positive"],
 			["I am amazing", "positive"], ["I'm proud of myself", "positive"], ["am I useless? no", "positive"],
 			["I love being her slave", "neutral"], ["the pain feels nice", "neutral"], ["I hate this stupid game", "neutral"],
@@ -91,7 +91,7 @@ describe("SpeechAnalysisModule detection", () => {
 			["I'm amazing", "positive"], ["I'm boring", "negative"], ["I'm so annoying", "negative"],
 			// "I'm being X" is copula-progressive -- X (not "being") is the predicate, whatever its
 			// own part of speech ("stupid" is a plain adjective, not a gerund like the cases above).
-			["I'm being stupid", "negative"], ["I'm being ridiculous", "negative"], ["I am being silly", "negative"],
+			["I'm being stupid", "negative"], ["I'm being ridiculous", "negative"], ["I am being pathetic", "negative"],
 		];
 		it.each(table)('"%s" -> %s', (text, expected) => {
 			expect(tone(speech.analyze(text))).toBe(expected);
