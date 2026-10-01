@@ -634,6 +634,44 @@ export class LeashingModule extends BaseModule {
         return this.Pairings.some(p => this.PlayerCanDrag(p, true) && p.Type == type && p.PairedMember == target)
     }
 
+    // Same checks as the game's Hold Leash dialog option
+    CanHoldLeash(C: Character) {
+        return C.MemberNumber !== undefined && ServerChatRoomGetAllowItem(Player, C) && Player.CanInteract() &&
+            !!C.OnlineSharedSettings && C.OnlineSharedSettings.AllowPlayerLeashing !== false &&
+            !ChatRoomLeashList.includes(C.MemberNumber) && ChatRoomCanBeLeashed(C);
+    }
+
+    // Same checks as the game's Let Go Of Leash dialog option, which also forgets a leash that can't be held any more
+    CanLetGoOfLeash(C: Character) {
+        if (C.MemberNumber === undefined || !ServerChatRoomGetAllowItem(Player, C) || !Player.CanInteract() ||
+            !C.OnlineSharedSettings || C.OnlineSharedSettings.AllowPlayerLeashing === false || !ChatRoomLeashList.includes(C.MemberNumber))
+            return false;
+        if (ChatRoomCanBeLeashed(C))
+            return true;
+        ChatRoomLeashList = ChatRoomLeashList.filter(n => n !== C.MemberNumber);
+        return false;
+    }
+
+    // The game's own leash, minus leaving the dialog (the activity menu closes itself)
+    HoldLeash(C: Character) {
+        if (C.MemberNumber === undefined)
+            return;
+        const Dictionary = new DictionaryBuilder().sourceCharacter(Player).targetCharacter(C).build();
+        ServerSend("ChatRoomChat", { Content: "HoldLeash", Type: "Action", Dictionary });
+        ServerSend("ChatRoomChat", { Content: "HoldLeash", Type: "Hidden", Target: C.MemberNumber });
+        if (!ChatRoomLeashList.includes(C.MemberNumber))
+            ChatRoomLeashList.push(C.MemberNumber);
+    }
+
+    LetGoOfLeash(C: Character) {
+        if (C.MemberNumber === undefined)
+            return;
+        const Dictionary = new DictionaryBuilder().sourceCharacter(Player).targetCharacter(C).build();
+        ServerSend("ChatRoomChat", { Content: "StopHoldLeash", Type: "Action", Dictionary });
+        ServerSend("ChatRoomChat", { Content: "StopHoldLeash", Type: "Hidden", Target: C.MemberNumber });
+        ChatRoomLeashList = ChatRoomLeashList.filter(n => n !== C.MemberNumber);
+    }
+
     // *** HELPERS ***
 
     IsBidirectionalType(type: GrabType) {

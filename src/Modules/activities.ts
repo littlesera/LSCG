@@ -1235,6 +1235,69 @@ export class ActivityModule extends BaseModule {
             CustomImage: "Assets/Female3DCG/Activity/Slap.png"
         });
 
+        // HoldLeash
+        this.AddActivity({
+            Activity: {
+                Name: "HoldLeash",
+                MaxProgress: 30,
+                Prerequisite: ["ZoneAccessible"],
+            },
+            Targets: [
+                {
+                    Name: "ItemNeck",
+                    SelfAllowed: false,
+                    TargetLabel: "Hold Leash",
+                    TargetAction: "SourceCharacter picks up TargetCharacter's leash.",
+                },
+            ],
+            CustomPrereqs: [
+                {
+                    Name: "CanHoldLeash",
+                    Func: (_acting, acted) => this.leashingModule.CanHoldLeash(acted),
+                },
+            ],
+            CustomAction: {
+                // The game's own leash message stands in for ours
+                Func: (target) => {
+                    if (target)
+                        this.leashingModule.HoldLeash(target);
+                    return false;
+                },
+            },
+            CustomImage: ICONS.LEASH_HANDLE,
+        });
+
+        // LetGoOfLeash
+        this.AddActivity({
+            Activity: {
+                Name: "LetGoOfLeash",
+                MaxProgress: 30,
+                Prerequisite: ["ZoneAccessible"],
+            },
+            Targets: [
+                {
+                    Name: "ItemNeck",
+                    SelfAllowed: false,
+                    TargetLabel: "Let Go Of Leash",
+                    TargetAction: "SourceCharacter lets go of TargetCharacter's leash.",
+                },
+            ],
+            CustomPrereqs: [
+                {
+                    Name: "CanLetGoOfLeash",
+                    Func: (_acting, acted) => this.leashingModule.CanLetGoOfLeash(acted),
+                },
+            ],
+            CustomAction: {
+                Func: (target) => {
+                    if (target)
+                        this.leashingModule.LetGoOfLeash(target);
+                    return false;
+                },
+            },
+            CustomImage: ICONS.LEASH_HANDLE,
+        });
+
         // Patch HandGag
         this.PatchActivity(<ActivityPatch>{
             ActivityName: "HandGag",
