@@ -315,7 +315,7 @@ export class CoreModule extends BaseModule {
                 getModule<LeashingModule>("LeashingModule")?.IncomingGrab(Sender, msg.command.args.find(a => a.name == "type")?.value as GrabType);
                 break;
             case "release":
-                getModule<LeashingModule>("LeashingModule")?.IncomingRelease(Sender, msg.command.args.find(a => a.name == "type")?.value as GrabType);
+                getModule<LeashingModule>("LeashingModule")?.IncomingRelease(senderNumber, msg.command.args.find(a => a.name === "type")?.value as GrabType, msg.command.args.find(a => a.name === "isSource")?.value as boolean | undefined);
                 break;
             case "escape":
                 getModule<LeashingModule>("LeashingModule")?.IncomingEscape(Sender, msg.target);

@@ -2,7 +2,7 @@ import { BaseModule } from "base";
 import { getModule } from "modules";
 import { BaseSettingsModel } from "Settings/Models/base";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { GetActivityName, GetTargetCharacter, ICONS, IsIncapacitated, LSCG_SendLocal, OnAction, OnActivity, SendAction, callOriginal, getCharacter, getRandomInt, hookFunction, mouseTooltip, removeAllHooksByModule, replace_template, sendLSCGCommand, sendLSCGCommandBeep, setOrIgnoreBlush } from "../utils";
+import { GetActivityName, GetTargetCharacter, ICONS, IsIncapacitated, LSCG_SendLocal, OnAction, OnActivity, SendAction, callOriginal, getCharacter, isAllowedMember, getRandomInt, hookFunction, mouseTooltip, removeAllHooksByModule, replace_template, sendLSCGCommand, sendLSCGCommandBeep, setOrIgnoreBlush } from "../utils";
 import { MiscModule } from "./misc";
 import { Pairing } from "./States/PairedBaseState";
 import { ItemUseModule } from "./item-use";
@@ -199,11 +199,14 @@ export class LeashingModule extends BaseModule {
 
         hookFunction("ChatRoomLeave", 1, (args, next) => {
             if (this.RoomAllowsLeashing) {
-                let earPinchingMemberList = this.Pairings.filter(p => p.IsSource && p.Type == "ear").map(p => p.PairedMember);
-                let armGrabbingMemberList = this.Pairings.filter(p => p.IsSource && p.Type == "arm").map(p => p.PairedMember);
-                let tongueGrabbedMemberList = this.Pairings.filter(p => p.IsSource && p.Type == "tongue").map(p => p.PairedMember);
-                let chompedBy = this.Pairings.filter(p => !p.IsSource && p.Type == "chomp").map(p => p.PairedMember);
-                let compellingList = this.Pairings.filter(p => p.IsSource && p.Type == "compulsion").map(p => p.PairedMember)
+                // Only name whoever's still here: someone pulling us out by the hand has already left
+                const here = (p: Leashing) => getCharacter(p.PairedMember) !== null;
+                const earPinchingMemberList = this.Pairings.filter(p => here(p) && p.IsSource && p.Type === "ear").map(p => p.PairedMember);
+                const armGrabbingMemberList = this.Pairings.filter(p => here(p) && p.IsSource && p.Type === "arm").map(p => p.PairedMember);
+                const tongueGrabbedMemberList = this.Pairings.filter(p => here(p) && p.IsSource && p.Type === "tongue").map(p => p.PairedMember);
+                const chompedBy = this.Pairings.filter(p => here(p) && !p.IsSource && p.Type === "chomp").map(p => p.PairedMember);
+                const compellingList = this.Pairings.filter(p => here(p) && p.IsSource && p.Type === "compulsion").map(p => p.PairedMember);
+                const leading = this.Leashings.filter(here);
 
                 if (earPinchingMemberList.length > 0) {
                     var chars = earPinchingMemberList.map(id => getCharacter(id)).filter(c => !!c);
@@ -230,7 +233,7 @@ export class LeashingModule extends BaseModule {
                     else {
                         let nameStr = "everyone chomping down";
                         try {
-                            nameStr = chars.slice(0, chars.length - 2).map(c => CharacterNickname(c!)).join(", ") + ", and " + CharacterNickname(chars[chars.length - 1]!)
+                            nameStr = CommonArrayJoinPretty(chars.map(c => CharacterNickname(c as Character)));
                         } catch {}
                         SendAction(`%NAME% drags ${nameStr} out of the room with a wince.`);
                     }
@@ -241,16 +244,16 @@ export class LeashingModule extends BaseModule {
                     else {
                         let nameStr = "";
                         try {
-                            nameStr = chars.slice(0, chars.length - 2).map(c => CharacterNickname(c!)).join(", ") + ", and " + CharacterNickname(chars[chars.length - 1]!)
+                            nameStr = CommonArrayJoinPretty(chars.map(c => CharacterNickname(c as Character)));
                         } catch {}
                         SendAction(`${nameStr} follow %NAME% out of the room obediently.`);
                     }
-                } else if (this.Leashings.length > 0) {
-                    let definition = this.GetDefinition(this.Leashings[0]?.Type);
-                    if (this.Leashings.length == 1)
-                        SendAction(`%NAME% ${definition?.Action ?? "leads"} %OPP_NAME% out of the room by the ${this.Leashings[0].Type}.`, getCharacter(this.Leashings[0].PairedMember));
+                } else if (leading.length > 0) {
+                    const definition = this.GetDefinition(leading[0]?.Type);
+                    if (leading.length === 1)
+                        SendAction(`%NAME% ${definition?.Action ?? "leads"} %OPP_NAME% out of the room by the ${leading[0].Type}.`, getCharacter(leading[0].PairedMember));
                     else
-                        SendAction(`%NAME% ${definition?.Action ?? "leads"} ${CharacterNickname(getCharacter(this.Leashings[0].PairedMember)!)} and ${CharacterNickname(getCharacter(this.Leashings[1].PairedMember)!)} out of the room.`);
+                        SendAction(`%NAME% ${definition?.Action ?? "leads"} ${CharacterNickname(getCharacter(leading[0].PairedMember) as Character)} and ${CharacterNickname(getCharacter(leading[1].PairedMember) as Character)} out of the room.`);
                 }
             }
 
@@ -368,6 +371,7 @@ export class LeashingModule extends BaseModule {
 
         // We need to track that across ServerHandleLeashBeep/ChatRoomBreakLeash
         let beepSourceNumber = -1;
+        let beepRoomName = "";
 
         hookFunction("ServerHandleLeashBeep", 1, async (args, next) => {
             const [data] = args;
@@ -375,9 +379,21 @@ export class LeashingModule extends BaseModule {
             // so stand our leasher in for that and put theirs straight back
             const vanillaLeashPlayer = ChatRoomLeashPlayer;
             const isOurLeasher = vanillaLeashPlayer !== data.MemberNumber && this.LeashedByMemberNumbers.indexOf(data.MemberNumber) > -1;
+            // With leashing turned off the game won't pull us, so the grab breaks instead of stretching across rooms
+            if (isOurLeasher && Player.OnlineSharedSettings?.AllowPlayerLeashing === false) {
+                this.BreakLeashingsWith(data.MemberNumber);
+                return;
+            }
+            // We can only follow one person. Someone else heading to the same room is fine, anywhere else their grab breaks
+            if (isOurLeasher && beepSourceNumber !== -1 && beepSourceNumber !== data.MemberNumber) {
+                if (data.ChatRoomName !== beepRoomName)
+                    this.BreakLeashingsWith(data.MemberNumber);
+                return;
+            }
             if (isOurLeasher)
                 ChatRoomLeashPlayer = data.MemberNumber;
             beepSourceNumber = data.MemberNumber;
+            beepRoomName = data.ChatRoomName;
             try {
                 let res: Promise<void>;
                 try {
@@ -394,18 +410,9 @@ export class LeashingModule extends BaseModule {
         
         hookFunction("ChatRoomBreakLeash", 1, (args, next) => {
             if (this.Enabled && Player.OnlineSharedSettings.AllowPlayerLeashing && beepSourceNumber !== -1) {
-                this.RemoveLeashings(beepSourceNumber, false);
+                this.BreakLeashingsWith(beepSourceNumber);
             }
             return next(args);
-        }, ModuleCategory.Leashed);
-
-        hookFunction("ChatRoomSync", 1, (args, next) => {
-            const ret = next(args);
-            const currentRoomIds = ChatRoomCharacter.map(c => c.MemberNumber!);
-            this.LeashingsMemberNumbers.filter(id => currentRoomIds.indexOf(id) == -1).forEach(memberNumber => {
-                ServerSend("AccountBeep", { MemberNumber: memberNumber, BeepType: "Leash"});
-            });
-            return ret;
         }, ModuleCategory.Leashed);
 
         hookFunction("ChatRoomMapViewLeash", 1, (args, next) => {
@@ -430,6 +437,19 @@ export class LeashingModule extends BaseModule {
             } else
                 return next(args);
         }, ModuleCategory.Leashed)
+
+        // The game's safewords let go of us too
+        for (const safeword of ["ChatRoomSafewordRelease", "ChatRoomSafewordRevert"] as const)
+            hookFunction(safeword, 1, (args, next) => {
+                this.ClearAllLeashings();
+                return next(args);
+            }, ModuleCategory.Leashed);
+
+        // Everyone drops their grabs with us when they see us disconnect, so drop ours too, or they come back stuck to nobody
+        hookFunction("ServerDisconnect", 1, (args, next) => {
+            this.DropAllLeashings();
+            return next(args);
+        }, ModuleCategory.Leashed);
 
         OnAction(1, ModuleCategory.Leashed, (data, sender, msg, metadata) => {
             if (data?.Content == "ServerDisconnect") {
@@ -580,16 +600,30 @@ export class LeashingModule extends BaseModule {
 
     NotifyUnleashings(leashings: Leashing[]) {
         leashings.forEach(l => {
-            sendLSCGCommandBeep(l.PairedMember, "release", [{
-                name: "type",
-                value: l.Type
-            }])
+            sendLSCGCommandBeep(l.PairedMember, "release", [
+                { name: "type", value: l.Type },
+                { name: "isSource", value: l.IsSource },
+            ]);
         });
     }
 
     ClearAllLeashings() {
         this.NotifyUnleashings(this.Pairings);
+        this.DropAllLeashings();
+    }
+
+    DropAllLeashings() {
+        for (const p of this.Pairings)
+            this.RemoveCallback(p);
         this.Pairings = [];
+    }
+
+    // A grab that couldn't pull us ends at both sides
+    BreakLeashingsWith(member: number) {
+        const broken = this.Pairings.filter(p => p.PairedMember === member && (!p.IsSource || this.CanDragPlayer(p)));
+        this.NotifyUnleashings(broken);
+        for (const p of broken)
+            this.RemoveLeashings(p.PairedMember, p.IsSource, p.Type);
     }
 
     IsLeashedByType(target: number, type: GrabType) {
@@ -655,6 +689,8 @@ export class LeashingModule extends BaseModule {
         let pairedMember = args.find(a => a.name == "pairedMember")?.value as number;
         let type = args.find(a => a.name == "type")?.value as GrabType;
         let isSource = args.find(a => a.name == "isSource")?.value as boolean;
+        if (!this.CanBeChangedBy(sender, pairedMember))
+            return;
         this.AddLeashing(new Leashing(pairedMember, sender, isSource, type));
     }
 
@@ -665,7 +701,14 @@ export class LeashingModule extends BaseModule {
         let pairedMember = args.find(a => a.name == "pairedMember")?.value as number;
         let type = args.find(a => a.name == "type")?.value as GrabType;
         let isSource = args.find(a => a.name == "isSource")?.value as boolean;
+        if (!this.CanBeChangedBy(sender, pairedMember))
+            return;
         this.RemoveLeashings(pairedMember, isSource, type);
+    }
+
+    // Anyone can change a grab with themselves; one between us and someone else needs item permission on us
+    CanBeChangedBy(sender: number, pairedMember: number) {
+        return sender === pairedMember || isAllowedMember(getCharacter(sender) ?? undefined);
     }
 
     DoGrab(target: Character, type: GrabType) {
@@ -724,12 +767,12 @@ export class LeashingModule extends BaseModule {
         }
     }
 
-    IncomingRelease(sender: OtherCharacter | null, grabType: GrabType) {
-        if (!!sender && !!sender.MemberNumber) {
-            this.RemoveLeashings(sender.MemberNumber, false, grabType);
-            if (LeashDefinitions.get(grabType)?.Bidirectional)
-                this.RemoveLeashings(sender.MemberNumber, true, grabType);
-        }
+    // By member number, as a release often comes from another room, where getCharacter finds nobody.
+    // Usually the grabber lets go, but a safeword sends it from the one grabbed
+    IncomingRelease(sender: number, grabType: GrabType, senderIsSource?: boolean) {
+        this.RemoveLeashings(sender, senderIsSource === false, grabType);
+        if (LeashDefinitions.get(grabType)?.Bidirectional)
+            this.RemoveLeashings(sender, senderIsSource !== false, grabType);
     }
 
     IncomingEscape(sender: OtherCharacter | null, escapeFromMemberNumber: number) {
