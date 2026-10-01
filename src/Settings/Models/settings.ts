@@ -144,6 +144,7 @@ export class PublicSettingsModel implements IPublicSettingsModel {
         trueWildMagic: false,
         blockedSpellEffects: [],
         bypassForSelfEffects: [],
+        knownEffects: [],
         lockable: false,
         locked: false,
         remoteAccess: false,

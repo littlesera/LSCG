@@ -32,6 +32,24 @@
             api.events.on(name, payload => console.log(`[sample] ${name}`, payload));
         }
 
+        // A custom spell effect: the target can't help but bark like a dog.
+        if (LSCG.capabilities.has("spells.effects")) {
+            const barks = [
+                "%NAME% lets out a startled \"Woof!\"",
+                "%NAME% barks happily at %OPP_NAME%, tail very nearly wagging.",
+                "%NAME% claps a hand over %POSSESSIVE% mouth, but a loud \"Arf! Arf!\" escapes anyway.",
+            ];
+            api.spells.registerEffect({
+                name: "bark",
+                label: "Barking",
+                description: "Makes the target bark like a dog.",
+                allowRandom: true,
+                apply(ctx) {
+                    ctx.sendAction(barks[Math.floor(Math.random() * barks.length)]);
+                },
+            });
+        }
+
         // Intercept: refuse any spell whose name contains "veto".
         api.events.before("spell.beforeReceive", ctx => {
             if (ctx.payload.spell.name.toLowerCase().includes("veto"))

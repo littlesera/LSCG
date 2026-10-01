@@ -21,6 +21,7 @@ import { SuggestionSettingMigrator } from "./Migrators/SuggestionSettingMigrator
 import { OutfitMigrator } from "./Migrators/OutfitMigrator";
 import { CursedItemMigrator } from "./Migrators/CursedItemMigrator";
 import { emit } from "api/events";
+import { advertisedEffectIds } from "./Magic/spellEffects";
 
 // >= R111
 declare var DialogMenuMapping: { items: ScreenFunctions & { C: null | Character } };
@@ -50,6 +51,9 @@ export class CoreModule extends BaseModule {
             }
             settings.enabled = Player.LSCG.GlobalModule.enabled;
         }
+        // Runtime capability, not a stored setting: which non-legacy spell effects this client can apply.
+        if (settings.MagicModule)
+            settings.MagicModule.knownEffects = advertisedEffectIds();
         return settings;
     }
 

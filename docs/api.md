@@ -7,6 +7,7 @@ LSCG exposes a typed API that other mods can use to extend it. It is delivered i
 |---|---|
 | `core` | `getModApi`, `onReady`, `version`, `isReady`, the load queue |
 | `events` | `api.events.on` / `once` / `before` |
+| `spells.effects` | `api.spells.registerEffect` / `unregisterEffect` / `listEffects` |
 
 Typings: `npm run build:api-types` emits `dist/api/types.d.ts`. It is also run as part of `npm run build`.
 
@@ -118,6 +119,49 @@ that isn't a non-negative number falls back to LSCG's own value, and `undefined`
 
 LSCG settings saves, safeword handling, `/lscg` commands, and the handling of player-to-player
 commands cannot be intercepted.
+
+## Custom spell effects
+
+```js
+api.spells.registerEffect({
+    name: "bark",                   // id becomes "<your id>.bark"
+    label: "Barking",
+    description: "Makes the target bark like a dog.",
+    apply(ctx) {
+        ctx.sendAction("%NAME% lets out a startled \"Woof!\"");
+    },
+});
+```
+
+Once registered, the effect appears in the Magic™ settings, alongside LSCG's own effects. Players
+can add it to their spells and block it or allow it.
+
+- **Where `apply` runs.** It runs on the client of the player the spell hit, after the save roll
+  and after that player's blocks are applied. `ctx` contains:
+  - `effect`: the effect's id
+  - `spell`: `{ name, effects, creator? }`
+  - `sender`: the caster's member number
+  - `duration`: in ms. `0` or `undefined` means no expiry.
+  - `sendAction(text)`: an emote. Substitutions such as `%NAME%`, `%POSSESSIVE%` and `%OPP_NAME%`
+    (the caster) work.
+  - `states`
+- **Giving an effect a duration.** Extensions can't add persistent states yet. Use
+  `ctx.states.get(type)` with one of `asleep`, `hypnotized`, `horny`, `denied`, `blind`, `deaf`,
+  `frozen`, `gagged` or `x-ray-vision`, and pass `ctx.duration`. For example:
+  `ctx.states.get("gagged")?.activate(ctx.sender, ctx.duration)`.
+- **Flags:**
+  - `beneficial`: a spell made only of beneficial effects gets no save roll and no duration.
+  - `forcesDuration`: always expires, even for players who allow unlimited spells.
+  - `allowRandom`: wild magic may pick it.
+  - `defaultBlocked`: blocked the first time a player sees it, until they unblock it.
+- **Players without your extension.** Every client advertises the effects it has beyond LSCG's
+  original set. That covers extension effects and newer built-ins such as Tightening and Loosening. When a
+  spell contains effects the target doesn't support, the caster's spell menu marks it as limited and
+  lists them as "(unsupported)". A spell whose effects are all unsupported can't be cast at that
+  target. If one arrives anyway, those effects fizzle with a message, and the rest of the spell still
+  applies.
+- **Uninstalling your extension.** Spells that use your effects keep them as "(unavailable)" entries.
+  Nothing is persisted on the player's side.
 
 ## Login badge
 

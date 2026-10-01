@@ -3,7 +3,8 @@ import { HelpInfo, Setting } from "Settings/settingBase";
 import { HypnoPublicSettingsModel } from "Settings/Models/hypno";
 import { GetDelimitedList, ICONS, replace_template } from "utils";
 import { StateConfig } from "Settings/Models/states";
-import { LSCGSpellEffect, MagicPublicSettingsModel } from "Settings/Models/magic";
+import { MagicPublicSettingsModel, SpellEffectId } from "Settings/Models/magic";
+import { effectLabel, legacyEffectIds } from "Modules/Magic/spellEffects";
 import { GuiMagic } from "Settings/magic";
 import { drawTooltip } from "Settings/settingUtils";
 
@@ -187,7 +188,7 @@ export class RemoteMagic extends RemoteGuiSubscreen {
 			this.settings.blockedSpellEffects = [];
 		let val = this.settings.blockedSpellEffects.indexOf(this.Effect) > -1;
 		let blockedStr = val ? "Blocked" : "Allowed";
-		DrawBackNextButton(780, this.getYPos(7)-32, 600, 64, this.Effect, "White", "", () => "", () => "");
+		DrawBackNextButton(780, this.getYPos(7)-32, 600, 64, effectLabel(this.Effect), "White", "", () => "", () => "");
 		DrawCheckbox(780 + 600 + 64, this.getYPos(7) - 32, 64, 64, "Block", val);
 		
 		if (val) {
@@ -224,14 +225,13 @@ export class RemoteMagic extends RemoteGuiSubscreen {
 		}
 	}
 
-	get Effect(): LSCGSpellEffect {
+	get Effect(): SpellEffectId {
 		return this.ActualEffects[this.EffectIndex];
 	}
-	get ActualEffects(): LSCGSpellEffect[] {
-		return this.Effects.filter(e => e != LSCGSpellEffect.none);
-	}
-	get Effects(): LSCGSpellEffect[] {
-		return Object.values(LSCGSpellEffect);
+	/** The effects the target's client supports: the legacy built-ins, plus whatever it advertises. */
+	get ActualEffects(): SpellEffectId[] {
+		const known = (this.settings.knownEffects ?? []) as SpellEffectId[];
+		return [...legacyEffectIds(), ...known.filter(id => legacyEffectIds().indexOf(id) < 0)];
 	}
 	EffectIndex: number = 0;
 }

@@ -1,14 +1,10 @@
 import { GuiSubscreen, HelpInfo, Setting } from "./settingBase";
-import { cleanEffect, KNOWN_SPELLS_LIMIT, LSCGSpellEffect, MagicSettingsModel, OutfitConfig, OutfitOption, PolymorphConfig, SpellDefinition } from "./Models/magic";
+import { KNOWN_SPELLS_LIMIT, LSCGSpellEffect, MagicSettingsModel, OutfitConfig, OutfitOption, PolymorphConfig, SpellDefinition, SpellEffectId } from "./Models/magic";
 import { stringIsCompressedItemBundleArray } from "utils";
 import { drawTooltip } from "./settingUtils";
 import { getModule } from "modules";
 import { OutfitCollectionModule } from "Modules/outfitCollection";
-
-export const pairedSpellEffects = [
-	LSCGSpellEffect.orgasm_siphon,
-	LSCGSpellEffect.paired_arousal
-];
+import { allEffectIds, effectDescription, effectLabel, getSpellEffect, spellHasPairedEffect } from "Modules/Magic/spellEffects";
 
 export type SpiritTextType = "None" | "Glow" | "Float";
 
@@ -119,7 +115,7 @@ export class GuiMagic extends GuiSubscreen {
 						id: "effect1",
 						label: "Effect #1:",
 						description: "An effect the spell has.",
-						options: this.Effects,
+						options: this.ActualEffects,
 						hidden: !this.Spell,
 						setting: () => this.Spell?.Effects.length > 0 ? (this.Spell?.Effects[0] ?? "None") : "None",
 						setSetting: (val) => { if (!!this.Spell) this.Spell.Effects = this.Spell.Effects.concat(val).filter((eff, ix, arr) => arr.indexOf(eff) == ix) },
@@ -132,7 +128,7 @@ export class GuiMagic extends GuiSubscreen {
 						id: "effect2",
 						label: "Effect #2:",
 						description: "An effect the spell has.",
-						options: this.Effects,
+						options: this.ActualEffects,
 						hidden: !this.Spell,
 						setting: () => this.Spell?.Effects.length > 1 ? (this.Spell?.Effects[1] ?? "None") : "None",
 						setSetting: (val) => { if (!!this.Spell) this.Spell.Effects = this.Spell.Effects.concat(val).filter((eff, ix, arr) => arr.indexOf(eff) == ix) },
@@ -145,7 +141,7 @@ export class GuiMagic extends GuiSubscreen {
 						id: "effect3",
 						label: "Effect #3:",
 						description: "An effect the spell has.",
-						options: this.Effects,
+						options: this.ActualEffects,
 						hidden: !this.Spell,
 						setting: () => this.Spell?.Effects.length > 2 ? (this.Spell?.Effects[2] ?? "None") : "None",
 						setSetting: (val) => { if (!!this.Spell) this.Spell.Effects = this.Spell.Effects.concat(val).filter((eff, ix, arr) => arr.indexOf(eff) == ix) },
@@ -322,10 +318,14 @@ export class GuiMagic extends GuiSubscreen {
 		ElementCreateDropdown(this.outfitDropId, Object.values(OutfitOption), (evt) => this.OutfitConfigDropChanged(evt));
 	}
 
-	outfitEffects: LSCGSpellEffect[] = [
-		LSCGSpellEffect.outfit,
-		LSCGSpellEffect.polymorph
-	]
+	/** Effects with a "Configure" action (outfit/polymorph). */
+	IsConfigurable(effect: SpellEffectId | undefined): boolean {
+		return !!getSpellEffect(effect)?.configurable;
+	}
+
+	Configure(effect: SpellEffectId) {
+		getSpellEffect(effect)?.configurable == "outfit" ? this.ConfigureOutfitEffect() : this.ConfigurePolymorphEffect();
+	}
 
 	blinkLastTime = 0;
 	blinkColor = "Pink";
@@ -449,7 +449,7 @@ export class GuiMagic extends GuiSubscreen {
 					this.settings.blockedSpellEffects = [];
 				let val = this.settings.blockedSpellEffects.indexOf(this.Effect) > -1;
 				let blockedStr = val ? "Blocked" : "Allowed";
-				DrawBackNextButton(780, this.getYPos(5)-32, 600, 64, this.Effect, "White", "", () => "", () => "");
+				DrawBackNextButton(780, this.getYPos(5)-32, 600, 64, effectLabel(this.Effect), "White", "", () => "", () => "");
 				DrawCheckbox(780 + 600 + 64, this.getYPos(5) - 32, 64, 64, "Block", val);
 
 				if (val) {
@@ -475,39 +475,39 @@ export class GuiMagic extends GuiSubscreen {
 					DrawImageResize("Icons/Trash.png", 1180, this.getYPos(0) - 32, 64, 64);
 
 					// Draw Effect Pickers
-					DrawBackNextButton(780, this.getYPos(3) - 32, 600, 64, this.Spell.Effects.length > 0 ? cleanEffect(this.Spell.Effects[0]) : LSCGSpellEffect.none, "White", "", () => "", () => "");
+					DrawBackNextButton(780, this.getYPos(3) - 32, 600, 64, effectLabel(this.Spell.Effects[0]), "White", "", () => "", () => "");
 					if (this.Spell.Effects.length == 1) {
 						DrawButton(1410 - 4, this.getYPos(3) - 32 - 4, 72, 72, "", "White", "", `Delete ${this.Spell.Name}`); // Delete Effect
 						DrawImageResize("Icons/Trash.png", 1410, this.getYPos(3) - 32, 64, 64);
 					}
 					
 					MainCanvas.textAlign = "center";
-					if (this.outfitEffects.indexOf(this.Spell.Effects[0]) > -1) DrawButton(1500, this.getYPos(3) - 32, 200, 64, "Configure", "White");
+					if (this.IsConfigurable(this.Spell.Effects[0])) DrawButton(1500, this.getYPos(3) - 32, 200, 64, "Configure", "White");
 					MainCanvas.textAlign = "left";
 					DrawTextFit(GuiMagic.SpellEffectDescription(this.Spell.Effects[0]), 780, this.getYPos(4), 1000, "Black");
 					MainCanvas.textAlign = "center";
 					if (this.Spell.Effects.length > 0) {
-						DrawBackNextButton(780, this.getYPos(5) - 32, 600, 64, cleanEffect(this.Spell.Effects[1]) ?? LSCGSpellEffect.none, "White", "", () => "", () => "");
+						DrawBackNextButton(780, this.getYPos(5) - 32, 600, 64, effectLabel(this.Spell.Effects[1]), "White", "", () => "", () => "");
 						if (this.Spell.Effects.length == 2) {
 							DrawButton(1410 - 4, this.getYPos(5) - 32 - 4, 72, 72, "", "White", "", `Delete ${this.Spell.Name}`); // Delete Effect
 							DrawImageResize("Icons/Trash.png", 1410, this.getYPos(5) - 32, 64, 64);
 						}
 						
 						MainCanvas.textAlign = "center";
-						if (this.outfitEffects.indexOf(this.Spell.Effects[1]) > -1) DrawButton(1500, this.getYPos(5) - 32, 200, 64, "Configure", "White");
+						if (this.IsConfigurable(this.Spell.Effects[1])) DrawButton(1500, this.getYPos(5) - 32, 200, 64, "Configure", "White");
 						MainCanvas.textAlign = "left";
 						DrawTextFit(GuiMagic.SpellEffectDescription(this.Spell.Effects[1]), 780, this.getYPos(6), 1000, "Black");
 						MainCanvas.textAlign = "center";
 					}
 					if (this.Spell.Effects.length > 1) {
-						DrawBackNextButton(780, this.getYPos(7) - 32, 600, 64, cleanEffect(this.Spell.Effects[2]) ?? LSCGSpellEffect.none, "White", "", () => "", () => "");
+						DrawBackNextButton(780, this.getYPos(7) - 32, 600, 64, effectLabel(this.Spell.Effects[2]), "White", "", () => "", () => "");
 						if (this.Spell.Effects.length > 2) {
 							DrawButton(1410 - 4, this.getYPos(7) - 32 - 4, 72, 72, "", "White", "", `Delete ${this.Spell.Name}`); // Delete Effect
 							DrawImageResize("Icons/Trash.png", 1410, this.getYPos(7) - 32, 64, 64);
 						}
 						
 						MainCanvas.textAlign = "center";
-						if (this.outfitEffects.indexOf(this.Spell.Effects[2]) > -1) DrawButton(1500, this.getYPos(7) - 32, 200, 64, "Configure", "White");
+						if (this.IsConfigurable(this.Spell.Effects[2])) DrawButton(1500, this.getYPos(7) - 32, 200, 64, "Configure", "White");
 						MainCanvas.textAlign = "left";
 						DrawTextFit(GuiMagic.SpellEffectDescription(this.Spell.Effects[2]), 780, this.getYPos(8), 1000, "Black");
 						MainCanvas.textAlign = "center";
@@ -639,8 +639,8 @@ export class GuiMagic extends GuiSubscreen {
 						}
 					} else if (this.Spell.Effects.length < 2 && MouseIn(1410, this.getYPos(3) - 32, 64, 64)) {
 						this.Spell.Effects.splice(0);
-					} else if (this.outfitEffects.indexOf(this.Spell.Effects[0]) > -1 && MouseIn(1500, this.getYPos(3)-32, 200, 64)){
-						this.Spell.Effects[0] == LSCGSpellEffect.outfit ? this.ConfigureOutfitEffect() : this.ConfigurePolymorphEffect();
+					} else if (this.IsConfigurable(this.Spell.Effects[0]) && MouseIn(1500, this.getYPos(3)-32, 200, 64)){
+						this.Configure(this.Spell.Effects[0]);
 					} else if (MouseIn(780, this.getYPos(5) - 32, 600, 64)) {
 						let effects = this.UniqueEffects(1);
 						if (MouseX <= 1080) {
@@ -653,8 +653,8 @@ export class GuiMagic extends GuiSubscreen {
 						}
 					} else if (this.Spell.Effects.length < 3 && MouseIn(1410, this.getYPos(5) - 32, 64, 64)) {
 						this.Spell.Effects.splice(1)
-					} else if (this.outfitEffects.indexOf(this.Spell.Effects[1]) > -1 && MouseIn(1500, this.getYPos(5)-32, 200, 64)){
-						this.Spell.Effects[1] == LSCGSpellEffect.outfit ? this.ConfigureOutfitEffect() : this.ConfigurePolymorphEffect();
+					} else if (this.IsConfigurable(this.Spell.Effects[1]) && MouseIn(1500, this.getYPos(5)-32, 200, 64)){
+						this.Configure(this.Spell.Effects[1]);
 					}else if (MouseIn(780, this.getYPos(7) - 32, 600, 64)) {
 						let effects = this.UniqueEffects(2);
 						if (MouseX <= 1080) {
@@ -667,8 +667,8 @@ export class GuiMagic extends GuiSubscreen {
 						}
 					} else if (this.Spell.Effects.length < 4 && MouseIn(1410, this.getYPos(7) - 32, 64, 64)) {
 						this.Spell.Effects.splice(2)
-					} else if (this.outfitEffects.indexOf(this.Spell.Effects[2]) > -1 && MouseIn(1500, this.getYPos(7)-32, 200, 64)){
-						this.Spell.Effects[2] == LSCGSpellEffect.outfit ? this.ConfigureOutfitEffect() : this.ConfigurePolymorphEffect();
+					} else if (this.IsConfigurable(this.Spell.Effects[2]) && MouseIn(1500, this.getYPos(7)-32, 200, 64)){
+						this.Configure(this.Spell.Effects[2]);
 					}
 				}
 			} else if (PreferencePageCurrent == 4) {
@@ -689,7 +689,7 @@ export class GuiMagic extends GuiSubscreen {
 
 	CleanPotionSettings() {
 		this.settings.knownSpells.forEach(spell => {
-			if (spell.Effects.some(e => pairedSpellEffects.indexOf(e) > -1) ?? false)
+			if (spellHasPairedEffect(spell))
 				spell.AllowPotion = false;
 		});
 	}
@@ -731,7 +731,7 @@ export class GuiMagic extends GuiSubscreen {
 	}
 
 	get SpellHasPairedEffect(): boolean {
-		return this.Spell?.Effects.some(e => pairedSpellEffects.indexOf(e) > -1) ?? false;
+		return spellHasPairedEffect(this.Spell);
 	}
 
 	UniqueEffects(ix: number) {
@@ -740,14 +740,12 @@ export class GuiMagic extends GuiSubscreen {
 		let otherEffects = this.Spell.Effects.filter((v, i, arr) => i != ix);
 		return this.ActualEffects.filter(eff => otherEffects.indexOf(eff) == -1);
 	}
-	get Effect(): LSCGSpellEffect {
+	get Effect(): SpellEffectId {
 		return this.ActualEffects[this.EffectIndex];
 	}
-	get ActualEffects(): LSCGSpellEffect[] {
-		return this.Effects.filter(e => e != LSCGSpellEffect.none);
-	}
-	get Effects(): LSCGSpellEffect[] {
-		return Object.values(LSCGSpellEffect);
+	/** Built-in effects, then any registered by extensions. */
+	get ActualEffects(): SpellEffectId[] {
+		return allEffectIds();
 	}
 	EffectIndex: number = 0;
 
@@ -788,56 +786,8 @@ export class GuiMagic extends GuiSubscreen {
 		this.ElementSetValue(this.outfitFieldId, "");
 	}
 
-	static SpellEffectDescription(effect: LSCGSpellEffect): string {
-		switch (cleanEffect(effect)) {
-			case LSCGSpellEffect.blindness:
-				return "Prevents the target from seeing.";
-			case LSCGSpellEffect.deafened:
-				return "Prevents the target from hearing.";
-			case LSCGSpellEffect.muted:
-				return "Gags the target.";
-			case LSCGSpellEffect.frozen:
-				return "Petrifies the target.";
-			case LSCGSpellEffect.horny:
-				return "Arouses the target.";
-			case LSCGSpellEffect.denial:
-				return "Denies the target any orgasms.";
-			case LSCGSpellEffect.orgasm:
-				return "Forced an orgasm upon the target.";
-			case LSCGSpellEffect.hypnotizing:
-				return "Hypnotizes the target.";
-			case LSCGSpellEffect.slumber:
-				return "Induces a deep slumber in the target.";
-			case LSCGSpellEffect.enlarge:
-				return "Enlarges the target to twice their size.";
-			// case LSCGSpellEffect.reduce:
-			// 	return "Shrinks the target to half their size."
-			case LSCGSpellEffect.outfit:
-				return "Magically change the target's clothing and equipment.";
-			case LSCGSpellEffect.paired_arousal:
-				return "Pair two targets, such that when one feels arousal the other also does.";
-			case LSCGSpellEffect.orgasm_siphon:
-				return "Redirect all of the target's orgasmic pleasure to another.";
-			case LSCGSpellEffect.dispel:
-				return "Dispels any existing effects on the target (including anything drug induced).";
-			case LSCGSpellEffect.bless:
-				return "Applies a +5 buff to all the target's skills for 15 minutes";
-			case LSCGSpellEffect.bane:
-				return "Applies a -5 debuff to all the target's skills for 15 minutes";
-			case LSCGSpellEffect.polymorph:
-				return "Polymorph the target's body and/or cosplay items";
-			case LSCGSpellEffect.xRay:
-				return "Grants the target X-Ray vision";
-			case LSCGSpellEffect.barrier:
-				return "Create a magic barrier that protect and reflect incoming spell";
-			case LSCGSpellEffect.disarm:
-				return "Disarm the target";
-			case LSCGSpellEffect.project:
-				return "Project the target's soul into the Astral Plane";
-			case LSCGSpellEffect.none:
-			default:
-				return ""			;
-		}
+	static SpellEffectDescription(effect: SpellEffectId | undefined): string {
+		return effectDescription(effect);
 	}
 
 	ParseCode(code: string, trimFunc: (str: string) => string): string {

@@ -22,6 +22,77 @@ export interface LSCGModApi {
     dispose(): void;
     /** LSCG event hooks (capability "events"). */
     readonly events: LSCGEventsApi;
+    /** Custom spell effects (capability "spells.effects"). */
+    readonly spells: LSCGSpellsApi;
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// Spells
+// ---------------------------------------------------------------------------------------------------------------
+
+/** Built-in LSCG states an extension may drive (e.g. to give a custom spell effect a duration). */
+export type LSCGBuiltInStateType = "asleep" | "hypnotized" | "horny" | "denied" | "blind" | "deaf" | "frozen" | "gagged" | "x-ray-vision";
+
+export interface LSCGStateHandle {
+    readonly type: LSCGBuiltInStateType;
+    readonly active: boolean;
+    /** Activates the state on the player. `durationMs` 0 or undefined means no expiry. */
+    activate(activatedBy?: number, durationMs?: number): void;
+    recover(): void;
+}
+
+export interface LSCGBuiltInStatesApi {
+    get(type: LSCGBuiltInStateType): LSCGStateHandle | undefined;
+}
+
+/** What a custom spell effect's `apply` receives. Runs on the client of the player the spell hit. */
+export interface LSCGSpellEffectContext {
+    /** This effect's namespaced id ("<extension id>.<name>"). */
+    readonly effect: string;
+    readonly spell: LSCGSpellInfo;
+    /** Member number of the caster, if known. */
+    readonly sender?: number;
+    /** Duration (ms) LSCG computed for this effect; 0 or undefined means no expiry. */
+    readonly duration?: number;
+    /** Sends an emote about the player. Supports BC/LSCG substitutions such as %NAME%, %POSSESSIVE%, %OPP_NAME% (the caster). */
+    sendAction(text: string): void;
+    /** Built-in states the effect may activate or recover. */
+    readonly states: LSCGBuiltInStatesApi;
+}
+
+export interface LSCGSpellEffectDefinition {
+    /** Name within your extension; the effect id becomes "<extension id>.<name>". No ".". */
+    name: string;
+    /** Shown in spell editors and menus. */
+    label: string;
+    /** One line, shown in the spell editor and block list. */
+    description: string;
+    /** Helpful effect: if every effect of a spell is beneficial, the target gets no save roll and no duration. */
+    beneficial?: boolean;
+    /** Always give this effect a duration, even when the target allows unlimited-duration spells. */
+    forcesDuration?: boolean;
+    /** May be picked by wild magic (default false). */
+    allowRandom?: boolean;
+    /** Block the effect by default the first time a player sees it (they can unblock it in LSCG's Magic™ settings). */
+    defaultBlocked?: boolean;
+    /** Applies the effect to the player. Errors are contained and counted against your extension. */
+    apply(ctx: LSCGSpellEffectContext): void;
+}
+
+export interface LSCGSpellEffectInfo {
+    id: string;
+    label: string;
+    description: string;
+    builtIn: boolean;
+}
+
+export interface LSCGSpellsApi {
+    /** Registers a spell effect; players can then add it to their spells. Returns a function that unregisters it. */
+    registerEffect(definition: LSCGSpellEffectDefinition): () => void;
+    /** Unregisters one of this extension's effects by name. */
+    unregisterEffect(name: string): boolean;
+    /** All spell effects known to this client (built-in and from any extension). */
+    listEffects(): LSCGSpellEffectInfo[];
 }
 
 // ---------------------------------------------------------------------------------------------------------------

@@ -3,9 +3,12 @@ import { BaseSettingsModel } from "./base";
 
 export const KNOWN_SPELLS_LIMIT: number = 48;
 
-export function cleanEffect(effect: LSCGSpellEffect) : LSCGSpellEffect {
+/** A spell effect id: a built-in effect, or an extension's namespaced "<extension id>.<name>". */
+export type SpellEffectId = LSCGSpellEffect | `${string}.${string}`;
+
+export function cleanEffect<T extends SpellEffectId>(effect: T) : T {
 		if (effect?.toLocaleLowerCase() == "dispell")
-			effect = LSCGSpellEffect.dispel;
+			return LSCGSpellEffect.dispel as T;
 		return effect;
 	}
 
@@ -32,7 +35,9 @@ export enum LSCGSpellEffect {
     disarm = "Disarming",
     denial = "Denying",
     orgasm = "Forced Orgasm",
-    project = "Astral Projection"
+    project = "Astral Projection",
+    tighten = "Tightening",
+    loosen = "Loosening"
 }
 
 export enum OutfitOption {
@@ -69,7 +74,7 @@ export interface SpellDefinition {
     Name: string;
     CastingPhrase?: string;
     Creator: number;
-    Effects: LSCGSpellEffect[];
+    Effects: SpellEffectId[];
     AllowPotion: boolean;
     AllowVoiceCast: boolean;
     Outfit?: OutfitConfig;
@@ -82,11 +87,15 @@ export interface MagicSettingsModel extends MagicPublicSettingsModel {
     spiritTextFormat: SpiritTextType;
     spiritFormOutfitKey: string;
     disableSoulBindings: boolean;
+    /** Extension spell effects this player has been shown, so `defaultBlocked` applies only once. */
+    seenExtensionEffects: string[];
 }
 
 export interface MagicPublicSettingsModel extends BaseSettingsModel{
-    blockedSpellEffects: LSCGSpellEffect[];
-    bypassForSelfEffects: LSCGSpellEffect[]; // Awkward second collection to preserve existing blocks...
+    blockedSpellEffects: SpellEffectId[];
+    bypassForSelfEffects: SpellEffectId[]; // Awkward second collection to preserve existing blocks...
+    /** Non-legacy spell effects this client can apply (newer built-ins and extension effects). Filled at sync time, never persisted. */
+    knownEffects?: string[];
     enableWildMagic: boolean;
     trueWildMagic: boolean;
     forceWildMagic: boolean;
