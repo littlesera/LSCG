@@ -3,9 +3,12 @@
 # when a matching version is published). If tests fail, it files an issue
 # instead of a PR, so the mod gets fixed before the pin moves.
 #
-# A PR opened here with the default GITHUB_TOKEN does not itself trigger
-# validate.yml (GitHub's usual restriction on token-authored PRs), so the PR
-# body links back to this run's own `test:bc` result instead.
+# With a BC_BUMP_TOKEN secret (a fine-grained token with Contents and Pull
+# requests write access to this repo), the PR is opened as that token's owner,
+# so validate.yml runs on it, and auto-merge is turned on: the bump lands by
+# itself once the required checks pass. Without the secret it falls back to the
+# default GITHUB_TOKEN, whose PRs don't trigger validate.yml (GitHub's rule for
+# token-authored PRs), so they wait for someone to merge them by hand.
 name: Bump BC client pin
 
 on:
@@ -23,6 +26,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Pushing as BC_BUMP_TOKEN's owner is what lets the bump PR trigger validate.yml.
+          token: ${{ secrets.BC_BUMP_TOKEN || github.token }}
 
       - uses: actions/setup-node@v4
         with:
@@ -58,7 +64,8 @@ jobs:
       - name: Open a PR with the bump
         if: steps.check.outputs.should_bump == 'true' && steps.test.outcome == 'success'
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.BC_BUMP_TOKEN || secrets.GITHUB_TOKEN }}
+          HAS_BUMP_TOKEN: ${{ secrets.BC_BUMP_TOKEN != '' }}
         run: |
           VERSION="${{ steps.check.outputs.game_version }}"
           SHA="${{ steps.check.outputs.sha }}"
@@ -75,11 +82,18 @@ jobs:
           git push origin "$BRANCH" --force
 
           EXISTING_PR=$(gh pr list --head "$BRANCH" --json number -q '.[0].number')
-          BODY="Automated bump. \`test:bc\` passed against BC master @ $SHA in this run's own \"Run tests against BC master\" step (a PR opened with the default token doesn't trigger validate.yml itself -- see this run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}). $STUBS_NOTE"
+          BODY="Automated bump. \`test:bc\` passed against BC master @ $SHA in this run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}. $STUBS_NOTE"
           if [ -n "$EXISTING_PR" ]; then
             gh pr edit "$EXISTING_PR" --body "$BODY"
           else
             gh pr create --title "Bump BC client pin to $VERSION" --body "$BODY" --base dev --head "$BRANCH"
+          fi
+
+          # Merges by itself once the branch's required checks pass. Needs "Allow auto-merge" in the repo settings.
+          if [ "$HAS_BUMP_TOKEN" = "true" ]; then
+            gh pr merge "$BRANCH" --auto --squash || echo "::warning::Couldn't turn on auto-merge; is 'Allow auto-merge' enabled in the repo settings?"
+          else
+            echo "::notice::No BC_BUMP_TOKEN secret: the PR won't run validate.yml, so merge it by hand."
           fi
 
       - name: File (or update) an issue on failure
