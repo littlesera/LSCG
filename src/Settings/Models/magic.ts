@@ -3,6 +3,29 @@ import { BaseSettingsModel } from "./base";
 
 export const KNOWN_SPELLS_LIMIT: number = 48;
 
+/** How many effects one of the player's spells can have, unless their settings say otherwise. Kept as a per-player
+ *  setting so a future progression system can raise it. Spells apply their effects in order, one after another. */
+export const DEFAULT_MAX_SPELL_EFFECTS: number = 3;
+
+/** The most effects any spell may have, whoever made it. A client can't know the limit of the player a spell came
+ *  from, so this is what it will accept from others, keeping stored and applied spells to a sane size. */
+export const ABSOLUTE_MAX_SPELL_EFFECTS: number = 8;
+
+/** The player's effect limit per spell, whatever the saved settings hold. */
+export function maxSpellEffects(settings?: { maxSpellEffects?: number }): number {
+    const limit = settings?.maxSpellEffects;
+    return typeof limit === "number" && Number.isInteger(limit) && limit >= 1
+        ? Math.min(limit, ABSOLUTE_MAX_SPELL_EFFECTS)
+        : DEFAULT_MAX_SPELL_EFFECTS;
+}
+
+/** A spell's effects as they should be stored when it comes from another player: strings only, no repeats,
+ *  within the ceiling. Order is kept, since it is the order the effects are applied in. */
+export function sanitizeIncomingEffects(effects: unknown): SpellEffectId[] {
+    if (!Array.isArray(effects))
+        return [];
+    return [...new Set(effects.filter((e): e is SpellEffectId => typeof e === "string" && e !== ""))].slice(0, ABSOLUTE_MAX_SPELL_EFFECTS);
+}
 /** A spell effect id: a built-in effect, or an extension's namespaced "<extension id>.<name>". */
 export type SpellEffectId = LSCGSpellEffect | `${string}.${string}`;
 
@@ -87,6 +110,8 @@ export interface MagicSettingsModel extends MagicPublicSettingsModel {
     spiritTextFormat: SpiritTextType;
     spiritFormOutfitKey: string;
     disableSoulBindings: boolean;
+    /** Most effects one of this player's spells can have (see DEFAULT_MAX_SPELL_EFFECTS). */
+    maxSpellEffects: number;
     /** Extension spell effects this player has been shown, so `defaultBlocked` applies only once. */
     seenExtensionEffects: string[];
 }

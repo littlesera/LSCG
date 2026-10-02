@@ -240,7 +240,9 @@ the keywords is a dose of the drug. The crafting screen offers it as a checkbox 
   a small fraction. `ctx.sender` is who dosed them.
 - **Levels.** The drug keeps a level from 0 to `max` for you. `addLevel` and `setLevel` keep it in range and
   return the new value. It falls by `decayPerMinute` each minute and is saved with the player's settings.
-  Other players see it as a bar beside the character, in your colour, even without your extension.
+  Other players see it as a bar beside the character, in your colour, even without your extension. Up to
+  12 extension bars are shown for one player (the fullest, if there are more), after LSCG's own three; they
+  wrap into a second row after eight.
 - **Callbacks.** `onTick` runs every few seconds while the level is above 0 (for players who enabled the
   drug). `onWearOff` runs once when it reaches 0, including when an antidote or a safeword clears it.
 - **States.** `ctx.states.get(...)` can switch the same nine built-in states spell effects can.

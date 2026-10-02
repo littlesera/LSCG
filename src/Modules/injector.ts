@@ -15,7 +15,7 @@ import { StateModule } from "./states";
 import type { MagicModule } from "./magic";
 import { emit, emitBefore } from "api/events";
 import type { LSCGDrugContext, LSCGDrugDoseContext, LSCGDrugMethod } from "api/types";
-import { DEFAULT_DRUG_COLOR, extensionDrugs, isExtensionDrugId, type ExtensionDrug } from "api/drugs";
+import { DEFAULT_DRUG_COLOR, MAX_EXTENSION_BARS, extensionDrugs, isExtensionDrugId, type ExtensionDrug } from "api/drugs";
 import { builtInStates } from "api/builtInStates";
 import type { ExtensionDrugBar } from "Settings/Models/injector";
 import {
@@ -1142,9 +1142,21 @@ export class InjectorModule extends BaseModule {
 
     /** This player's extension drug bars as published to the room: only drugs with a level, from drugs we have. */
     PublicExtensionBars(): ExtensionDrugBar[] {
-        return extensionDrugs.all()
+        return InjectorModule.FullestBars(extensionDrugs.all()
             .map(d => ({ id: d.id, level: this.GetExtensionLevel(d.id), max: d.max, color: d.color }))
-            .filter(b => b.level > 0);
+            .filter(b => b.level > 0));
+    }
+
+    /** At most MAX_EXTENSION_BARS, keeping the ones closest to full when there are more (ties keep their order). */
+    static FullestBars(bars: ExtensionDrugBar[]): ExtensionDrugBar[] {
+        if (bars.length <= MAX_EXTENSION_BARS)
+            return bars;
+        return bars
+            .map((bar, index) => ({ bar, index, fill: bar.level / bar.max }))
+            .sort((a, b) => b.fill - a.fill || a.index - b.index)
+            .slice(0, MAX_EXTENSION_BARS)
+            .sort((a, b) => a.index - b.index)
+            .map(x => x.bar);
     }
 
     /** The extension bars to draw for `C`: our own from the registry, someone else's from what they published
@@ -1154,10 +1166,9 @@ export class InjectorModule extends BaseModule {
             return this.PublicExtensionBars();
         if (!Array.isArray(published))
             return [];
-        return published
+        return InjectorModule.FullestBars(published
             .filter(b => !!b && typeof b.id === "string" && Number.isFinite(b.level) && b.level > 0 && Number.isFinite(b.max) && b.max > 0)
-            .slice(0, 8)
-            .map(b => ({ id: b.id, level: b.level, max: b.max, color: typeof b.color === "string" && /^[#\w(),.%\s-]{1,40}$/.test(b.color) ? b.color : DEFAULT_DRUG_COLOR }));
+            .map(b => ({ id: b.id, level: b.level, max: b.max, color: typeof b.color === "string" && /^[#\w(),.%\s-]{1,40}$/.test(b.color) ? b.color : DEFAULT_DRUG_COLOR })));
     }
 
     /**
@@ -1168,9 +1179,13 @@ export class InjectorModule extends BaseModule {
      * @param Zoom
      */
     DrawBars(C: Character, X: number, Y: number, Zoom: number, bars: DrugLevel[]) {
-        bars?.forEach((bar, ix, arr) => {
-            let barX = X + (DRUG_BAR_DIMENSIONS.X_OFFSET * Zoom) + (DRUG_BAR_DIMENSIONS.BAR_SPACING * ix * Zoom);
-            let barY = Y + (DRUG_BAR_DIMENSIONS.Y_OFFSET * Zoom);
+        const perRow = DRUG_BAR_DIMENSIONS.BARS_PER_ROW;
+        bars?.slice(0, perRow * DRUG_BAR_DIMENSIONS.MAX_ROWS).forEach((bar, ix, arr) => {
+            // Past a full row, wrap to a new one above the first rather than running out past the character.
+            const row = Math.floor(ix / perRow);
+            const col = ix % perRow;
+            let barX = X + (DRUG_BAR_DIMENSIONS.X_OFFSET * Zoom) + (DRUG_BAR_DIMENSIONS.BAR_SPACING * col * Zoom);
+            let barY = Y + (DRUG_BAR_DIMENSIONS.Y_OFFSET * Zoom) - (DRUG_BAR_DIMENSIONS.ROW_SPACING * row * Zoom);
             let barZoom = Zoom * DRUG_BAR_DIMENSIONS.BAR_ZOOM
             let barProgress = Math.max(0, Math.min(100, bar.level / bar.max)) * 100;
             let color = bar.color ?? "#5C5CFF";

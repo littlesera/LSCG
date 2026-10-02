@@ -10,7 +10,7 @@ import { InjectorModule } from "Modules/injector";
 import { MagicModule } from "Modules/magic";
 import { StateModule } from "Modules/states";
 import { OutfitCollectionModule } from "Modules/outfitCollection";
-import { LSCGSpellEffect, type SpellDefinition, type SpellEffectId } from "Settings/Models/magic";
+import { ABSOLUTE_MAX_SPELL_EFFECTS, DEFAULT_MAX_SPELL_EFFECTS, LSCGSpellEffect, maxSpellEffects, sanitizeIncomingEffects, type SpellDefinition, type SpellEffectId } from "Settings/Models/magic";
 import { builtInEffectIds, effectDescription, effectLabel, extensionEffectIds, getSpellEffect, spellEffects, spellIsBeneficial } from "Modules/Magic/spellEffects";
 import { registerExtension, type ModApiHandle } from "api/extensions";
 import { boot, resetWorld, player, addToRoom } from "../harness/world";
@@ -262,6 +262,60 @@ describe("extension spell effects", () => {
             expect(cloth.Difficulty).toBeUndefined();
             expect(fixed.Difficulty).toBeUndefined();
             expect(sent.actions().some(a => a.includes("finds nothing it can tighten"))).toBe(true);
+        });
+    });
+
+    describe("how many effects a spell can have", () => {
+        it("a player's limit is 3 by default, and a bad saved value falls back to it", () => {
+            expect(DEFAULT_MAX_SPELL_EFFECTS).toBe(3);
+            expect(magic.settings.maxSpellEffects).toBe(3);
+            expect(maxSpellEffects(magic.settings)).toBe(3);
+            for (const bad of [undefined, 0, -1, 1.5, "4", Number.NaN, Infinity])
+                expect(maxSpellEffects({ maxSpellEffects: bad as never })).toBe(3);
+        });
+
+        it("a raised limit is honoured, up to the ceiling", () => {
+            expect(maxSpellEffects({ maxSpellEffects: 5 })).toBe(5);
+            expect(maxSpellEffects({ maxSpellEffects: 1 })).toBe(1);
+            expect(maxSpellEffects({ maxSpellEffects: 999 })).toBe(ABSOLUTE_MAX_SPELL_EFFECTS);
+        });
+
+        it("effects from another player are strings only, without repeats, within the ceiling, in order", () => {
+            const lots = Array.from({ length: 30 }, (_, i) => `x.e${i}`);
+            const cleaned = sanitizeIncomingEffects(["Blinding", 5, null, "", "Blinding", { a: 1 }, "Deafening", ...lots]);
+            expect(cleaned.slice(0, 2)).toEqual(["Blinding", "Deafening"]);
+            expect(cleaned).toHaveLength(ABSOLUTE_MAX_SPELL_EFFECTS);
+            expect(sanitizeIncomingEffects("nope")).toEqual([]);
+            expect(sanitizeIncomingEffects(undefined)).toEqual([]);
+        });
+
+        it("a spell taught by another player is stored within those limits", () => {
+            const lots = Array.from({ length: 30 }, (_, i) => `x.e${i}`);
+            const taught = { Name: "greedy", Creator: 2, Effects: [LSCGSpellEffect.blindness, 7, ...lots], AllowPotion: false, AllowVoiceCast: false };
+            magic.IncomingSpellTeachCommand(alice as never, { command: { name: "spell-teach", args: [{ name: "spell", value: taught }] } } as never);
+            const stored = magic.settings.knownSpells.find(sp => sp.Name === "greedy")!;
+            expect(stored.Effects).toHaveLength(ABSOLUTE_MAX_SPELL_EFFECTS);
+            expect(stored.Effects[0]).toBe(LSCGSpellEffect.blindness);
+        });
+
+        it("a cast spell applies at most the ceiling's worth of effects, in order", () => {
+            const applied: string[] = [];
+            const effects = Array.from({ length: 12 }, (_, i) => {
+                api.spells.registerEffect({ name: `e${i}`, label: `E${i}`, description: "", apply: () => {} });
+                return `${api.id}.e${i}` as SpellEffectId;
+            });
+            api.events.on("spell.effectApplied", p => applied.push(p.effect));
+            magic.IncomingSpell(alice as never, spell("flood", effects), null, 1);
+            vi.advanceTimersByTime(2000 * 12 + 500);
+            expect(applied).toEqual(effects.slice(0, ABSOLUTE_MAX_SPELL_EFFECTS));
+        });
+
+        it("effects are applied in the order the spell lists them", () => {
+            const applied: string[] = [];
+            api.events.on("spell.effectApplied", p => applied.push(p.effect));
+            magic.IncomingSpell(alice as never, spell("ordered", [LSCGSpellEffect.muted, LSCGSpellEffect.blindness, LSCGSpellEffect.deafened]), null, 1);
+            vi.advanceTimersByTime(7000);
+            expect(applied).toEqual([LSCGSpellEffect.muted, LSCGSpellEffect.blindness, LSCGSpellEffect.deafened]);
         });
     });
 

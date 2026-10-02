@@ -1,10 +1,13 @@
 // Magic™ settings pages (DOM kit): tabs for local vs remote, the effect block table including extension and
 // uninstalled effects, and the spell list and editor dialog (no effect-slot limit).
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { readFileSync } from "node:fs";
 import { CoreModule } from "Modules/core";
 import { MagicModule } from "Modules/magic";
 import { StateModule } from "Modules/states";
-import { LSCGSpellEffect, type MagicPublicSettingsModel, type SpellDefinition, type SpellEffectId } from "Settings/Models/magic";
+import { OutfitCollectionModule } from "Modules/outfitCollection";
+import { LSCGSpellEffect, OutfitOption, type MagicPublicSettingsModel, type SpellDefinition, type SpellEffectId } from "Settings/Models/magic";
+import { OutfitCollection } from "Settings/OutfitCollection/outfitCollection";
 import { allEffectIds, legacyEffectIds } from "Modules/Magic/spellEffects";
 import { KitContext } from "../../src/Dom/kit";
 import { buildMagicTabs } from "../../src/Settings/magic-pages";
@@ -20,7 +23,7 @@ describe("Magic™ settings pages", () => {
         // jsdom has no <dialog> modal support; the kit's openDialog only needs the element attached and open.
         HTMLDialogElement.prototype.showModal ??= function (this: HTMLDialogElement) { this.setAttribute("open", ""); };
         HTMLDialogElement.prototype.close ??= function (this: HTMLDialogElement) { this.removeAttribute("open"); this.dispatchEvent(new Event("close")); };
-        [, magic] = boot(new CoreModule(), new MagicModule(), new StateModule());
+        [, magic] = boot(new CoreModule(), new MagicModule(), new StateModule(), new OutfitCollectionModule());
     });
 
     beforeEach(() => {
@@ -162,64 +165,354 @@ describe("Magic™ settings pages", () => {
             expect(potion.checked).toBe(false);
         });
 
-        it("the editor dialog can give a spell any number of effects, including extension effects", () => {
-            api.spells.registerEffect({ name: "bark", label: "Barking", description: "Woof.", apply: () => {} });
-            const barkId = `${api.id}.bark` as SpellEffectId;
-            magic.settings.knownSpells = [spell("many")];
-            const root = render("Spells");
-            (root.querySelector(".lscg-kit-edit") as HTMLButtonElement).click();
-            const dialog = document.querySelector("dialog") as HTMLDialogElement;
-            const effectBox = (label: string) => Array.from(dialog.querySelectorAll(".lscg-kit-row"))
-                .find(r => r.querySelector("label")?.textContent === label)!.querySelector("input[type=checkbox]") as HTMLInputElement;
-
-            for (const label of ["Blinding", "Deafening", "Gagged", "Petrifying", "Barking"]) {
-                const box = effectBox(label);
-                box.checked = true;
-                box.dispatchEvent(new Event("change"));
-            }
-            expect(magic.settings.knownSpells[0].Effects).toEqual([
-                LSCGSpellEffect.blindness, LSCGSpellEffect.deafened, LSCGSpellEffect.muted, LSCGSpellEffect.frozen, barkId,
-            ]);
-
-            const barking = effectBox("Barking");
-            barking.checked = false;
-            barking.dispatchEvent(new Event("change"));
-            expect(magic.settings.knownSpells[0].Effects).not.toContain(barkId);
-        });
-
-        it("the editor keeps (and can remove) an effect from an uninstalled extension", () => {
-            magic.settings.knownSpells = [spell("orphan", ["gone.effect" as SpellEffectId])];
-            (render("Spells").querySelector(".lscg-kit-edit") as HTMLButtonElement).click();
-            const dialog = document.querySelector("dialog") as HTMLDialogElement;
-            const row = Array.from(dialog.querySelectorAll(".lscg-kit-row")).find(r => r.querySelector("label")?.textContent === "(unavailable) gone.effect")!;
-            const box = row.querySelector("input[type=checkbox]") as HTMLInputElement;
-            expect(box.checked).toBe(true);
-            box.checked = false;
-            box.dispatchEvent(new Event("change"));
-            expect(magic.settings.knownSpells[0].Effects).toEqual([]);
-        });
-
-        it("adding a paired effect turns potions off; outfit and polymorph options show only for those effects", () => {
-            magic.settings.knownSpells = [spell("link")];
-            magic.settings.knownSpells[0].AllowPotion = true;
-            (render("Spells").querySelector(".lscg-kit-edit") as HTMLButtonElement).click();
-            const dialog = document.querySelector("dialog") as HTMLDialogElement;
-            const rows = () => Array.from(dialog.querySelectorAll(".lscg-kit-row")) as HTMLElement[];
-            const rowByLabel = (label: string) => rows().find(r => r.querySelector("label")?.textContent === label)!;
-            const toggleEffect = (label: string) => {
-                const box = rowByLabel(label).querySelector("input[type=checkbox]") as HTMLInputElement;
-                box.checked = true;
-                box.dispatchEvent(new Event("change"));
+        describe("effect order editor", () => {
+            const openEditor = (sp: SpellDefinition) => {
+                magic.settings.knownSpells = [sp];
+                (render("Spells").querySelector(".lscg-kit-edit") as HTMLButtonElement).click();
+                return document.querySelector("dialog") as HTMLDialogElement;
             };
+            const dropdowns = (dialog: HTMLElement) => Array.from(dialog.querySelectorAll(".lscg-spell-effects select")) as HTMLSelectElement[];
+            const options = (select: HTMLSelectElement) => Array.from(select.options).map(o => o.value);
+            const choose = (dialog: HTMLElement, slot: number, value: string) => {
+                const select = dropdowns(dialog)[slot];
+                select.value = value;
+                select.dispatchEvent(new Event("change"));
+            };
+            const labelOf = (select: HTMLSelectElement) => select.closest(".lscg-kit-row")!.querySelector("label")!.textContent;
 
-            // The "Outfit" effect checkbox shares its label with the config text field; only the text field hides.
-            const outfitRows = () => rows().filter(r => r.querySelector("label")?.textContent === "Outfit" && r.querySelector("input[type=text]"));
-            expect(outfitRows().every(r => r.hidden)).toBe(true);
-            toggleEffect("Outfit");
-            expect(outfitRows().some(r => !r.hidden)).toBe(true);
+            it("starts with a single dropdown to choose the first effect", () => {
+                const dialog = openEditor(spell("new"));
+                const selects = dropdowns(dialog);
+                expect(selects).toHaveLength(1);
+                expect(labelOf(selects[0])).toBe("Effect 1");
+                expect(selects[0].selectedOptions[0].textContent).toBe("— choose an effect —");
+                expect(options(selects[0])).toContain(LSCGSpellEffect.blindness);
+            });
 
-            toggleEffect("Pairing");
-            expect(magic.settings.knownSpells[0].AllowPotion).toBe(false);
+            it("adds another dropdown each time an effect is chosen, in order, up to the limit of 3", () => {
+                const sp = spell("ordered");
+                const dialog = openEditor(sp);
+                choose(dialog, 0, LSCGSpellEffect.deafened);
+                expect(dropdowns(dialog)).toHaveLength(2);
+                expect(dropdowns(dialog)[1].selectedOptions[0].textContent).toBe("— add another effect —");
+                choose(dialog, 1, LSCGSpellEffect.blindness);
+                choose(dialog, 2, LSCGSpellEffect.muted);
+                expect(sp.Effects).toEqual([LSCGSpellEffect.deafened, LSCGSpellEffect.blindness, LSCGSpellEffect.muted]);
+                expect(dropdowns(dialog)).toHaveLength(3); // at the limit: no fourth dropdown
+                expect(dropdowns(dialog).map(labelOf)).toEqual(["Effect 1", "Effect 2", "Effect 3"]);
+            });
+
+            it("the order of the dropdowns is the order of the spell's effects, and changing one keeps its place", () => {
+                const sp = spell("ordered", [LSCGSpellEffect.blindness, LSCGSpellEffect.deafened, LSCGSpellEffect.muted]);
+                const dialog = openEditor(sp);
+                choose(dialog, 1, LSCGSpellEffect.frozen);
+                expect(sp.Effects).toEqual([LSCGSpellEffect.blindness, LSCGSpellEffect.frozen, LSCGSpellEffect.muted]);
+            });
+
+            it("an effect already chosen in another dropdown isn't offered again", () => {
+                const dialog = openEditor(spell("dupes", [LSCGSpellEffect.blindness, LSCGSpellEffect.deafened]));
+                const [first, second, third] = dropdowns(dialog);
+                expect(options(first)).toContain(LSCGSpellEffect.blindness); // its own choice stays
+                expect(options(first)).not.toContain(LSCGSpellEffect.deafened);
+                expect(options(second)).not.toContain(LSCGSpellEffect.blindness);
+                expect(options(third)).not.toContain(LSCGSpellEffect.blindness);
+                expect(options(third)).not.toContain(LSCGSpellEffect.deafened);
+            });
+
+            it("choosing remove takes that effect out and moves the later ones up", () => {
+                const sp = spell("shrink", [LSCGSpellEffect.blindness, LSCGSpellEffect.deafened, LSCGSpellEffect.muted]);
+                const dialog = openEditor(sp);
+                expect(dropdowns(dialog)[0].selectedOptions[0].value).toBe(LSCGSpellEffect.blindness);
+                expect(options(dropdowns(dialog)[0])[0]).toBe("");
+                choose(dialog, 0, "");
+                expect(sp.Effects).toEqual([LSCGSpellEffect.deafened, LSCGSpellEffect.muted]);
+                expect(dropdowns(dialog)).toHaveLength(3); // two effects, plus room for another
+                expect(dropdowns(dialog)[0].value).toBe(LSCGSpellEffect.deafened);
+            });
+
+            it("shows each chosen effect's description under its dropdown", () => {
+                const dialog = openEditor(spell("desc", [LSCGSpellEffect.blindness]));
+                expect(dropdowns(dialog)[0].closest(".lscg-kit-row")!.textContent).toContain("Prevents the target from seeing.");
+            });
+
+            it("keeps keyboard focus on the dropdown at the same position after a change", () => {
+                const dialog = openEditor(spell("focus"));
+                choose(dialog, 0, LSCGSpellEffect.blindness);
+                expect(document.activeElement).toBe(dropdowns(dialog)[0]);
+            });
+
+            it("honours the player's own limit from their settings", () => {
+                magic.settings.maxSpellEffects = 5;
+                const dialog = openEditor(spell("big", [LSCGSpellEffect.blindness, LSCGSpellEffect.deafened, LSCGSpellEffect.muted]));
+                expect(dropdowns(dialog)).toHaveLength(4);
+                expect(dialog.textContent).toContain("Up to 5");
+                magic.settings.maxSpellEffects = 1;
+                document.body.replaceChildren();
+                const small = openEditor(spell("small"));
+                choose(small, 0, LSCGSpellEffect.blindness);
+                expect(dropdowns(small)).toHaveLength(1);
+            });
+
+            it("falls back to 3 if the saved limit is missing or nonsense", () => {
+                for (const bad of [undefined, 0, -2, 2.5, "7", Number.NaN]) {
+                    (magic.settings as any).maxSpellEffects = bad;
+                    document.body.replaceChildren();
+                    expect(dropdowns(openEditor(spell("x", [LSCGSpellEffect.blindness, LSCGSpellEffect.deafened, LSCGSpellEffect.muted])))).toHaveLength(3);
+                }
+            });
+
+            it("a spell already over the limit keeps its effects, offers no new dropdown, and says why", () => {
+                magic.settings.maxSpellEffects = 2;
+                const sp = spell("over", [LSCGSpellEffect.blindness, LSCGSpellEffect.deafened, LSCGSpellEffect.muted]);
+                const dialog = openEditor(sp);
+                expect(dropdowns(dialog)).toHaveLength(3);
+                expect(dialog.textContent).toContain("more than your limit of 2");
+                choose(dialog, 2, "");
+                expect(sp.Effects).toHaveLength(2);
+                expect(dialog.textContent).not.toContain("more than your limit");
+            });
+
+            it("offers extension effects, in the order chosen", () => {
+                api.spells.registerEffect({ name: "bark", label: "Barking", description: "Woof.", apply: () => {} });
+                const barkId = `${api.id}.bark` as SpellEffectId;
+                const sp = spell("many");
+                const dialog = openEditor(sp);
+                expect(options(dropdowns(dialog)[0])).toContain(barkId);
+                choose(dialog, 0, barkId);
+                choose(dialog, 1, LSCGSpellEffect.blindness);
+                expect(sp.Effects).toEqual([barkId, LSCGSpellEffect.blindness]);
+                expect(dropdowns(dialog)[0].selectedOptions[0].textContent).toBe("Barking");
+            });
+
+            it("keeps (and can replace or remove) an effect from an uninstalled extension", () => {
+                const sp = spell("orphan", ["gone.effect" as SpellEffectId]);
+                const dialog = openEditor(sp);
+                const first = dropdowns(dialog)[0];
+                expect(first.value).toBe("gone.effect");
+                expect(first.selectedOptions[0].textContent).toBe("(unavailable) gone.effect");
+                choose(dialog, 0, LSCGSpellEffect.blindness);
+                expect(sp.Effects).toEqual([LSCGSpellEffect.blindness]);
+
+                const sp2 = spell("orphan2", ["gone.effect" as SpellEffectId]);
+                document.body.replaceChildren();
+                const dialog2 = openEditor(sp2);
+                choose(dialog2, 0, "");
+                expect(sp2.Effects).toEqual([]);
+            });
+
+            it("adding a paired effect turns potions off", () => {
+                const sp = spell("link");
+                sp.AllowPotion = true;
+                const dialog = openEditor(sp);
+                choose(dialog, 0, LSCGSpellEffect.paired_arousal);
+                expect(sp.AllowPotion).toBe(false);
+            });
+
+            describe("each effect's own settings", () => {
+                const group = (dialog: HTMLElement, slot: number) => Array.from(dialog.querySelectorAll(".lscg-spell-effects > *"))[slot] as HTMLElement;
+                const nested = (dialog: HTMLElement, slot: number) => group(dialog, slot).querySelector(".lscg-kit-expando") as HTMLDetailsElement | null;
+                const rowIn = (scope: ParentNode, label: string) =>
+                    Array.from(scope.querySelectorAll(".lscg-kit-row")).find(r => r.querySelector("label")?.textContent === label) as HTMLElement;
+                const type = (el: HTMLInputElement, value: string) => { el.value = value; el.dispatchEvent(new Event("change")); };
+
+                it("shows an effect's settings directly under its dropdown, and only for effects that have any", () => {
+                    const dialog = openEditor(spell("cfg", [LSCGSpellEffect.blindness, LSCGSpellEffect.outfit]));
+                    expect(nested(dialog, 0)).toBeNull();
+                    const outfitGroup = group(dialog, 1);
+                    expect(outfitGroup.className).toContain("lscg-spell-effect");
+                    expect(outfitGroup.firstElementChild!.querySelector("label")!.textContent).toBe("Effect 2");
+                    expect(nested(dialog, 1)).not.toBeNull();
+                    // nothing is left over at the bottom of the dialog
+                    expect(dialog.textContent).not.toContain("Which outfit the Outfit effect puts on");
+                });
+
+                it("are a collapsible section, set apart from the dialog with its own background", () => {
+                    const dialog = openEditor(spell("expando", [LSCGSpellEffect.outfit]));
+                    const section = nested(dialog, 0)!;
+                    expect(section.tagName).toBe("DETAILS");
+                    expect(section.querySelector("summary")).not.toBeNull();
+                    expect(section.className).toContain("lscg-kit-expando");
+                    // The tint lives with the kit's styles (rendered here without the overlay host, so read the source).
+                    const scss = readFileSync("src/Dom/kit.scss", "utf-8");
+                    const block = scss.slice(scss.indexOf(".lscg-kit-expando {"), scss.indexOf(".lscg-kit-expando-summary"));
+                    expect(block).toMatch(/background-color:\s*color-mix\(/);
+                });
+
+                it("open when the effect still needs something chosen, closed once it has been", () => {
+                    const fresh = openEditor(spell("fresh", [LSCGSpellEffect.outfit]));
+                    expect(nested(fresh, 0)!.open).toBe(true);
+
+                    document.body.replaceChildren();
+                    const done = spell("done", [LSCGSpellEffect.outfit]);
+                    done.Outfit = { Code: "", Key: "Maid", Option: OutfitOption.both };
+                    expect(nested(openEditor(done), 0)!.open).toBe(false);
+
+                    document.body.replaceChildren();
+                    const poly = spell("poly", [LSCGSpellEffect.polymorph]);
+                    expect(nested(openEditor(poly), 0)!.open).toBe(true);
+                    document.body.replaceChildren();
+                    poly.Polymorph = { Code: "", Key: "Fox" } as never;
+                    expect(nested(openEditor(poly), 0)!.open).toBe(false);
+                });
+
+                it("a newly added effect opens its settings", () => {
+                    const dialog = openEditor(spell("added"));
+                    choose(dialog, 0, LSCGSpellEffect.outfit);
+                    expect(nested(dialog, 0)!.open).toBe(true);
+                });
+
+                it("the summary line describes the current settings, even while closed, and follows edits", () => {
+                    const sp = spell("summary", [LSCGSpellEffect.outfit]);
+                    sp.Outfit = { Code: "", Key: "Maid", Option: OutfitOption.clothes_only };
+                    const dialog = openEditor(sp);
+                    const summary = () => nested(dialog, 0)!.querySelector("summary")!.textContent;
+                    expect(nested(dialog, 0)!.open).toBe(false);
+                    expect(summary()).toBe("Outfit settings: Maid (Clothes Only)");
+                    type(rowIn(nested(dialog, 0)!, "Other outfit").querySelector("input") as HTMLInputElement, "Fox");
+                    expect(summary()).toBe("Outfit settings: Fox (Clothes Only)");
+                    type(rowIn(nested(dialog, 0)!, "Other outfit").querySelector("input") as HTMLInputElement, "");
+                    expect(summary()).toBe("Outfit settings: no outfit chosen yet (Clothes Only)");
+                });
+
+                it("remembers which sections the player opened or closed when the list rebuilds", () => {
+                    const sp = spell("remember", [LSCGSpellEffect.outfit, LSCGSpellEffect.polymorph]);
+                    sp.Outfit = { Code: "", Key: "Maid", Option: OutfitOption.both };       // closed by default
+                    const dialog = openEditor(sp);
+                    expect(nested(dialog, 0)!.open).toBe(false);
+                    expect(nested(dialog, 1)!.open).toBe(true);                             // nothing chosen: open by default
+
+                    const first = nested(dialog, 0)!;
+                    first.open = true; first.dispatchEvent(new Event("toggle"));
+                    const second = nested(dialog, 1)!;
+                    second.open = false; second.dispatchEvent(new Event("toggle"));
+
+                    choose(dialog, 2, LSCGSpellEffect.blindness);                           // rebuilds the list
+                    expect(nested(dialog, 0)!.open).toBe(true);
+                    expect(nested(dialog, 1)!.open).toBe(false);
+                });
+
+                it("the settings come and go with the effect, and follow it when the order changes", () => {
+                    const sp = spell("move", [LSCGSpellEffect.outfit, LSCGSpellEffect.blindness]);
+                    const dialog = openEditor(sp);
+                    expect(nested(dialog, 0)).not.toBeNull();
+                    choose(dialog, 0, "");                       // outfit removed: blindness moves to slot 1
+                    expect(dialog.querySelector(".lscg-kit-expando")).toBeNull();
+                    choose(dialog, 1, LSCGSpellEffect.outfit);   // added in the second slot
+                    expect(nested(dialog, 1)).not.toBeNull();
+                    expect(nested(dialog, 0)).toBeNull();
+                });
+
+                // The collection reads player settings the harness doesn't have; stub just the list of saved names.
+                const savedOutfits = (...names: string[]) => vi.spyOn(OutfitCollection.prototype, "GetOutfitNames").mockReturnValue(names);
+                afterEach(() => vi.restoreAllMocks());
+
+                it("Outfit: which outfit, from the saved ones or typed in, and which parts to put on", () => {
+                    savedOutfits("Maid");
+                    const sp = spell("outfit");
+                    const dialog = openEditor(sp);
+                    choose(dialog, 0, LSCGSpellEffect.outfit);
+                    const panel = nested(dialog, 0)!;
+
+                    const picker = rowIn(panel, "Outfit").querySelector("select") as HTMLSelectElement;
+                    expect(Array.from(picker.options).map(o => o.textContent)).toEqual(["— none, or typed below —", "Maid"]);
+                    picker.value = "Maid"; picker.dispatchEvent(new Event("change"));
+                    expect(sp.Outfit?.Key).toBe("Maid");
+
+                    const typed = rowIn(nested(dialog, 0)!, "Other outfit").querySelector("input") as HTMLInputElement;
+                    expect(typed.value).toBe(""); // a saved outfit isn't repeated in the text box
+                    type(typed, "  My MBS Set ");
+                    expect(sp.Outfit?.Key).toBe("My MBS Set");
+                    const after = nested(dialog, 0)!;
+                    expect((rowIn(after, "Outfit").querySelector("select") as HTMLSelectElement).value).toBe("");
+                    expect((rowIn(after, "Other outfit").querySelector("input") as HTMLInputElement).value).toBe("My MBS Set");
+
+                    const parts = rowIn(after, "Parts to put on").querySelector("select") as HTMLSelectElement;
+                    expect(parts.value).toBe(OutfitOption.both);
+                    parts.value = OutfitOption.binds_only; parts.dispatchEvent(new Event("change"));
+                    expect(sp.Outfit?.Option).toBe(OutfitOption.binds_only);
+                });
+
+                it("an outfit chosen earlier is shown when the spell is reopened", () => {
+                    savedOutfits("Maid");
+                    const sp = spell("saved", [LSCGSpellEffect.outfit]);
+                    sp.Outfit = { Code: "", Key: "maid", Option: OutfitOption.clothes_only };
+                    const dialog = openEditor(sp);
+                    const panel = nested(dialog, 0)!;
+                    expect((rowIn(panel, "Outfit").querySelector("select") as HTMLSelectElement).value).toBe("Maid"); // matched ignoring case
+                    expect((rowIn(panel, "Parts to put on").querySelector("select") as HTMLSelectElement).value).toBe(OutfitOption.clothes_only);
+                });
+
+                it("says when there are no saved outfits", () => {
+                    savedOutfits();
+                    const dialog = openEditor(spell("none", [LSCGSpellEffect.outfit]));
+                    expect(nested(dialog, 0)!.textContent).toContain("You have no saved LSCG outfits");
+                });
+
+                it("Polymorph: which outfit and which parts of the body", () => {
+                    const sp = spell("poly");
+                    const dialog = openEditor(sp);
+                    choose(dialog, 0, LSCGSpellEffect.polymorph);
+                    const panel = () => nested(dialog, 0)!;
+                    type(rowIn(panel(), "Other outfit").querySelector("input") as HTMLInputElement, "Fox");
+                    expect(sp.Polymorph?.Key).toBe("Fox");
+
+                    const box = (label: string) => rowIn(panel(), label).querySelector("input[type=checkbox]") as HTMLInputElement;
+                    box("Cosplay").checked = true; box("Cosplay").dispatchEvent(new Event("change"));
+                    expect(sp.Polymorph?.IncludeCosplay).toBe(true);
+
+                    expect(box("Hair").disabled).toBe(false);
+                    box("Whole body").checked = true; box("Whole body").dispatchEvent(new Event("change"));
+                    expect(sp.Polymorph).toMatchObject({ IncludeAllBody: true, IncludeHair: true, IncludeSkin: true, IncludeGenitals: true });
+                    expect(box("Hair").disabled).toBe(true);
+                    expect(box("Genitals").disabled).toBe(true);
+                });
+
+                it("both can be on one spell, each with its own settings in its own place", () => {
+                    const sp = spell("both", [LSCGSpellEffect.polymorph, LSCGSpellEffect.outfit]);
+                    const dialog = openEditor(sp);
+                    expect(rowIn(nested(dialog, 0)!, "Whole body")).toBeDefined();
+                    expect(rowIn(nested(dialog, 1)!, "Parts to put on")).toBeDefined();
+                    expect(rowIn(nested(dialog, 0)!, "Parts to put on")).toBeUndefined();
+                    type(rowIn(nested(dialog, 0)!, "Other outfit").querySelector("input") as HTMLInputElement, "A");
+                    type(rowIn(nested(dialog, 1)!, "Other outfit").querySelector("input") as HTMLInputElement, "B");
+                    expect(sp.Polymorph?.Key).toBe("A");
+                    expect(sp.Outfit?.Key).toBe("B");
+                });
+
+                it("editing a setting doesn't rebuild the effect list, so keyboard focus isn't lost", () => {
+                    const sp = spell("focus", [LSCGSpellEffect.outfit]);
+                    const dialog = openEditor(sp);
+                    const dropdown = dropdowns(dialog)[0];
+                    const text = rowIn(nested(dialog, 0)!, "Other outfit").querySelector("input") as HTMLInputElement;
+                    type(text, "Anything");
+                    expect(dropdowns(dialog)[0]).toBe(dropdown);
+                    expect(rowIn(nested(dialog, 0)!, "Other outfit").querySelector("input")).toBe(text);
+                });
+
+                it("a setting change still updates the spell list behind the dialog", () => {
+                    const sp = spell("table", [LSCGSpellEffect.outfit]);
+                    const dialog = openEditor(sp);
+                    const rerender = vi.spyOn(document, "createElement");
+                    type(rowIn(nested(dialog, 0)!, "Other outfit").querySelector("input") as HTMLInputElement, "X");
+                    expect(rerender).toHaveBeenCalled(); // the spells table re-renders its rows
+                    rerender.mockRestore();
+                });
+
+                it("an extension effect has no settings", () => {
+                    api.spells.registerEffect({ name: "bark", label: "Barking", description: "", apply: () => {} });
+                    const dialog = openEditor(spell("ext", [`${api.id}.bark` as SpellEffectId]));
+                    expect(nested(dialog, 0)).toBeNull();
+                });
+            });
+
+            it("the spell list's effect chips follow the new order", () => {
+                const sp = spell("chips");
+                const dialog = openEditor(sp);
+                choose(dialog, 0, LSCGSpellEffect.muted);
+                choose(dialog, 1, LSCGSpellEffect.blindness);
+                const chips = Array.from(document.querySelectorAll("tbody .lscg-kit-chip")).map(c => c.textContent);
+                expect(chips).toEqual(["Gagged", "Blinding"]);
+            });
         });
     });
 

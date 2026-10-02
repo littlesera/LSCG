@@ -1,5 +1,10 @@
-// Self-contained: the login screen runs before LSCG's main stylesheet is injected.
+// Self-contained: the login screen runs before LSCG's main stylesheet is injected, so the LSCG teal palette
+// (see :root in main.scss) is repeated here.
 #lscg-login-badge {
+	--lscg-teal: #00d5d5;
+	--lscg-teal-light: #aaf7f7;
+	--lscg-teal-dark: #007f7f;
+
 	position: fixed;
 	visibility: hidden;
 	pointer-events: none;
@@ -19,22 +24,28 @@
 		align-items: center;
 		gap: 0.4em;
 		padding: 0.3em 0.7em;
-		border: 2px solid #111;
+		border: 2px solid var(--lscg-teal-dark);
 		border-radius: 0.4em;
-		background: #fff;
+		background: var(--lscg-teal);
 		cursor: pointer;
 		font: inherit;
+		font-weight: bold;
 		white-space: nowrap;
+
+		&:hover {
+			background: var(--lscg-teal-light);
+		}
 
 		.lscg-badge-dot {
 			width: 0.6em;
 			height: 0.6em;
 			border-radius: 50%;
-			background: #2ca58d;
+			background: #fff;
+			border: 1px solid var(--lscg-teal-dark);
 		}
 
 		&.lscg-badge-warn .lscg-badge-dot {
-			background: #d98a1f;
+			background: #ffb347;
 		}
 	}
 
@@ -46,9 +57,9 @@
 		max-height: 50dvh;
 		overflow-y: auto;
 		padding: 0.6em 0.8em;
-		border: 2px solid #111;
+		border: 2px solid var(--lscg-teal-dark);
 		border-radius: 0.4em;
-		background: #fff;
+		background: var(--lscg-teal-light);
 		box-shadow: 0 0.2em 0.6em rgba(0, 0, 0, 0.35);
 		text-align: left;
 
@@ -65,11 +76,11 @@
 
 		li {
 			padding: 0.25em 0;
-			border-top: 1px solid #ddd;
+			border-top: 1px solid var(--lscg-teal);
 		}
 
 		small {
-			color: #555;
+			color: #1d5f5f;
 		}
 
 		.lscg-badge-error {

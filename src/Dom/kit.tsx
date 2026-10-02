@@ -164,6 +164,21 @@ export function CardGrid<T>(ctx: KitContext, props: CardGridProps<T>): HTMLEleme
 
 export type ChipTone = "ok" | "warn" | "blocked" | "info" | "muted";
 
+/** A collapsible section with its own tinted background, for settings that belong to the row above it. The summary
+ *  line is re-read after every change (via `ctx`), so it can describe the current settings while the section is
+ *  closed. `onToggle` reports when the player opens or closes it. */
+export function Expando(ctx: KitContext, props: { summary: () => string; content: HTMLElement[]; open?: boolean; onToggle?: (open: boolean) => void }): HTMLDetailsElement {
+    const label = <span /> as HTMLElement;
+    const details = (
+        <details class="lscg-kit-expando" open={!!props.open} onToggle={() => props.onToggle?.(details.open)}>
+            <summary class="lscg-kit-expando-summary">{label}</summary>
+            <div class="lscg-kit-expando-body">{props.content}</div>
+        </details>
+    ) as HTMLDetailsElement;
+    ctx.watch(() => { label.textContent = props.summary(); });
+    return details;
+}
+
 /** A small rounded tag, e.g. an effect's status or where it comes from. */
 export function Chip(label: string, opts: { tone?: ChipTone; tooltip?: string } = {}): HTMLElement {
     return <span class={`lscg-kit-chip lscg-kit-chip-${opts.tone ?? "muted"}`} title={opts.tooltip ?? ""}>{label}</span> as HTMLElement;

@@ -10,9 +10,11 @@ import { InjectorModule } from "Modules/injector";
 import { LeashingModule } from "Modules/leashing";
 import { MiscModule } from "Modules/misc";
 import { StateModule } from "Modules/states";
-import { GuiInjector } from "Settings/injector";
+import { KitContext } from "../../src/Dom/kit";
+import { buildInjectorTabs } from "../../src/Settings/injector-pages";
+import { DRUG_BAR_DIMENSIONS } from "../../src/constants/ui-dimensions";
 import { registerExtension, type ModApiHandle } from "api/extensions";
-import { extensionDrugs, DEFAULT_DRUG_COLOR } from "api/drugs";
+import { extensionDrugs, DEFAULT_DRUG_COLOR, MAX_EXTENSION_BARS } from "api/drugs";
 import { apiCapabilities } from "api";
 import type { LSCGDrugDefinition, LSCGDrugDoseContext } from "api/types";
 import { boot, resetWorld, player, addToRoom } from "../harness/world";
@@ -356,9 +358,73 @@ describe("extension drugs", () => {
             expect(injector.ExtensionBarsFor(other, undefined)).toEqual([]);
         });
 
-        it("caps how many bars one player can make appear", () => {
+        it("caps how many bars one player can make appear, so they fit in two rows with LSCG's own three", () => {
+            expect(MAX_EXTENSION_BARS + 3).toBeLessThanOrEqual(DRUG_BAR_DIMENSIONS.BARS_PER_ROW * DRUG_BAR_DIMENSIONS.MAX_ROWS);
             const many = Array.from({ length: 40 }, (_, i) => ({ id: `x.d${i}`, level: 1, max: 5, color: "red" }));
-            expect(injector.ExtensionBarsFor({ IsPlayer: () => false } as never, many)).toHaveLength(8);
+            expect(injector.ExtensionBarsFor({ IsPlayer: () => false } as never, many)).toHaveLength(MAX_EXTENSION_BARS);
+        });
+
+        it("when over the cap keeps the fullest bars, in their original order", () => {
+            const bars = Array.from({ length: MAX_EXTENSION_BARS + 3 }, (_, i) => ({ id: `x.d${i}`, level: i === 0 || i === 1 || i === 2 ? 1 : 4, max: 5, color: "red" }));
+            const kept = InjectorModule.FullestBars(bars).map(b => b.id);
+            expect(kept).toHaveLength(MAX_EXTENSION_BARS);
+            expect(kept).not.toContain("x.d0");
+            expect(kept).not.toContain("x.d1");
+            expect(kept).not.toContain("x.d2");
+            expect(kept).toEqual([...kept].sort((a, b) => Number(a.slice(3)) - Number(b.slice(3))));
+            expect(InjectorModule.FullestBars(bars.slice(0, 3))).toHaveLength(3);
+        });
+
+        it("the player's own published bars follow the same cap", () => {
+            for (let i = 0; i < MAX_EXTENSION_BARS + 4; i++) {
+                api.drugs.register(euphoria({ name: `d${i}`, label: `D${i}`, keywords: [`d${i}`] }));
+                injector.SetExtensionLevel(id(`d${i}`), i + 1 > 10 ? 10 : i + 1);
+            }
+            const bars = injector.PublicExtensionBars();
+            expect(bars).toHaveLength(MAX_EXTENSION_BARS);
+            expect(bars.map(b => b.id)).toContain(id(`d${MAX_EXTENSION_BARS + 3}`)); // the fullest are kept
+            expect(bars.map(b => b.id)).not.toContain(id("d0"));
+        });
+
+        describe("drawing", () => {
+            const draw = (count: number) => {
+                const rect = vi.fn();
+                (globalThis as any).DrawRect = rect;
+                (globalThis as any).DrawEmptyRect = vi.fn();
+                injector.DrawBars({ IsPlayer: () => true } as never, 100, 200, 1, Array.from({ length: count }, (_, i) => ({ type: `x.d${i}`, level: 1, max: 2, color: "red" })));
+                // the first call per bar is its black background: x, y, width, height
+                return rect.mock.calls.filter(c => c[4] === "Black").map(c => ({ x: c[0] as number, y: c[1] as number }));
+            };
+
+            it("puts the first row side by side, as before", () => {
+                const bars = draw(3);
+                const { X_OFFSET, Y_OFFSET, BAR_SPACING } = DRUG_BAR_DIMENSIONS;
+                expect(bars).toEqual([0, 1, 2].map(i => ({ x: 100 + X_OFFSET + BAR_SPACING * i, y: 200 + Y_OFFSET })));
+            });
+
+            it("wraps past a full row onto a second row above, starting over from the left", () => {
+                const perRow = DRUG_BAR_DIMENSIONS.BARS_PER_ROW;
+                const bars = draw(perRow + 2);
+                expect(bars[perRow].x).toBe(bars[0].x);
+                expect(bars[perRow + 1].x).toBe(bars[1].x);
+                expect(bars[perRow].y).toBe(bars[0].y - DRUG_BAR_DIMENSIONS.ROW_SPACING);
+                expect(bars[perRow - 1].y).toBe(bars[0].y);
+            });
+
+            it("keeps every bar within the character's width, and never draws more than the rows allow", () => {
+                const bars = draw(100);
+                expect(bars).toHaveLength(DRUG_BAR_DIMENSIONS.BARS_PER_ROW * DRUG_BAR_DIMENSIONS.MAX_ROWS);
+                const widest = Math.max(...bars.map(b => b.x - 100)) + DRUG_BAR_DIMENSIONS.BAR_WIDTH * DRUG_BAR_DIMENSIONS.BAR_ZOOM;
+                expect(widest).toBeLessThanOrEqual(500);
+            });
+
+            it("a bar's own colour is used", () => {
+                const rect = vi.fn();
+                (globalThis as any).DrawRect = rect;
+                (globalThis as any).DrawEmptyRect = vi.fn();
+                injector.DrawBars({ IsPlayer: () => true } as never, 0, 0, 1, [{ type: "x.d", level: 1, max: 2, color: "#ff00ff" }]);
+                expect(rect.mock.calls.some(c => c[4] === "#ff00ff")).toBe(true);
+            });
         });
     });
 
@@ -386,25 +452,86 @@ describe("extension drugs", () => {
             (globalThis as any).CraftingSelectedItem = undefined;
         });
 
-        it("the settings screen adds opt-in pages for extension drugs, ten to a page", () => {
-            const gui = new GuiInjector(injector);
-            const builtIn = gui.builtInPages.length;
-            expect(gui.multipageStructure).toHaveLength(builtIn);
-            for (let i = 0; i < 12; i++)
-                api.drugs.register(euphoria({ name: `d${i}`, label: `Drug ${i}`, keywords: [`d${i}`] }));
-            const pages = gui.multipageStructure;
-            expect(pages).toHaveLength(builtIn + 2);
-            expect(pages[builtIn]).toHaveLength(10);
-            expect(pages[builtIn + 1]).toHaveLength(2);
+        describe("the Drug Enhancements settings (DOM)", () => {
+            const tabs = (misc: Record<string, unknown> = {}) => buildInjectorTabs(new KitContext(), injector.settings, misc as never, injector);
+            const render = (label: string, misc?: Record<string, unknown>) => {
+                const root = document.createElement("div");
+                document.body.append(root);
+                root.append(...tabs(misc).find(t => t.label === label)!.render());
+                return root;
+            };
+            const row = (root: HTMLElement, label: string) =>
+                Array.from(root.querySelectorAll(".lscg-kit-row")).find(r => r.querySelector("label")?.textContent === label) as HTMLElement;
+            const change = (el: HTMLInputElement) => el.dispatchEvent(new Event("change"));
+            afterEach(() => document.body.replaceChildren());
 
-            const first = pages[builtIn][0];
-            expect(first.label).toBe("Enable Drug 0:");
-            expect(first.description).toContain('"d0"');
-            expect(first.description).toContain("Drug Pack");
-            expect(first.setting()).toBe(false);
-            first.setSetting(true);
-            expect(injector.ExtensionDrugEnabled(id("d0"))).toBe(true);
-            expect(first.setting()).toBe(true);
+            it("has a tab each for general options, drugs, and gases & chloroform", () => {
+                expect(tabs().map(t => t.label)).toEqual(["General", "Drugs", "Gases & chloroform"]);
+            });
+
+            it("general options read and write the injector settings, and the sip limit is off while disabled", () => {
+                injector.settings.enabled = false;
+                injector.settings.sipLimit = 0;
+                const root = render("General");
+                const sips = row(root, "Filled glass sip limit").querySelector("input") as HTMLInputElement;
+                expect(sips.disabled).toBe(true);
+                const enabled = row(root, "Enabled").querySelector("input") as HTMLInputElement;
+                enabled.checked = true; change(enabled);
+                expect(injector.settings.enabled).toBe(true);
+                expect((row(root, "Filled glass sip limit").querySelector("input") as HTMLInputElement).disabled).toBe(false);
+                const sips2 = row(root, "Filled glass sip limit").querySelector("input") as HTMLInputElement;
+                sips2.value = "4"; change(sips2);
+                expect(injector.settings.sipLimit).toBe(4);
+                const chaotic = row(root, "Chaotic net gun").querySelector("input") as HTMLInputElement;
+                chaotic.checked = true; change(chaotic);
+                expect(injector.settings.netgunIsChaotic).toBe(true);
+            });
+
+            it("LSCG's own drugs have their opt-in toggles", () => {
+                injector.settings.enableSedative = false;
+                const root = render("Drugs");
+                const box = row(root, "Sedative").querySelector("input") as HTMLInputElement;
+                box.checked = true; change(box);
+                expect(injector.settings.enableSedative).toBe(true);
+                expect(row(root, "Brainwash drug")).toBeDefined();
+                expect(row(root, "Aphrodisiac")).toBeDefined();
+            });
+
+            it("says so when no extension adds a drug", () => {
+                expect(render("Drugs").textContent).toContain("No installed extension adds a drug.");
+            });
+
+            it("lists each extension drug with its source and keywords, and opts in per drug, with no page limit", () => {
+                for (let i = 0; i < 25; i++)
+                    api.drugs.register(euphoria({ name: `d${i}`, label: `Drug ${i}`, keywords: [`d${i}`, `alt ${i}`], description: "Odd." }));
+                const root = render("Drugs");
+                const rows = Array.from(root.querySelectorAll("tbody tr"));
+                expect(rows).toHaveLength(25);
+                const first = rows[0];
+                expect(first.textContent).toContain("Drug 0");
+                expect(first.textContent).toContain("Drug Pack");
+                expect(first.textContent).toContain('"d0"');
+                expect(first.textContent).toContain('"alt 0"');
+                const box = first.querySelector("input[type=checkbox]") as HTMLInputElement;
+                expect(box.checked).toBe(false);
+                box.checked = true; change(box);
+                expect(injector.ExtensionDrugEnabled(id("d0"))).toBe(true);
+                expect(injector.ExtensionDrugEnabled(id("d1"))).toBe(false);
+            });
+
+            it("gases and chloroform write to the right modules' settings", () => {
+                const misc = { chloroformEnabled: false, infiniteChloroformPotency: false };
+                const root = render("Gases & chloroform", misc);
+                const chloro = row(root, "Enable chloroform").querySelector("input") as HTMLInputElement;
+                chloro.checked = true; change(chloro);
+                expect(misc.chloroformEnabled).toBe(true);
+                const forever = row(root, "Chloroform never fades").querySelector("input") as HTMLInputElement;
+                forever.checked = true; change(forever);
+                expect(misc.infiniteChloroformPotency).toBe(true);
+                const gas = row(root, "Inexhaustible gases").querySelector("input") as HTMLInputElement;
+                gas.checked = true; change(gas);
+                expect(injector.settings.continuousDeliveryForever).toBe(true);
+            });
         });
     });
 });

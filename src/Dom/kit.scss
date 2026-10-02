@@ -227,6 +227,34 @@
 		}
 	}
 
+	// A collapsible section for settings that belong to the row above it, e.g. an effect's own options under its
+	// dropdown. Tinted so it reads as set apart from the surrounding (white) panel or dialog.
+	.lscg-kit-expando {
+		margin: min(0.8dvh, 0.4dvw) 0 min(1.5dvh, 0.75dvw) min(3dvh, 1.5dvw);
+		border: min(0.3dvh, 0.15dvw) solid var(--lscg-hover-color);
+		border-left-width: min(0.8dvh, 0.4dvw);
+		border-radius: min(0.8dvh, 0.4dvw);
+		background-color: color-mix(in srgb, var(--lscg-hover-color) 16%, var(--lscg-background-color));
+
+		.lscg-kit-expando-summary {
+			padding: min(1dvh, 0.5dvw) min(1.5dvh, 0.75dvw);
+			font-weight: bold;
+			cursor: pointer;
+			user-select: none;
+
+			&:hover {
+				background-color: color-mix(in srgb, var(--lscg-hover-color) 28%, transparent);
+			}
+		}
+
+		.lscg-kit-expando-body {
+			display: grid;
+			gap: min(1.2dvh, 0.6dvw);
+			padding: min(1dvh, 0.5dvw) min(1.5dvh, 0.75dvw) min(1.5dvh, 0.75dvw);
+			border-top: min(0.2dvh, 0.1dvw) solid color-mix(in srgb, var(--lscg-hover-color) 50%, transparent);
+		}
+	}
+
 	.lscg-kit-search {
 		width: 100%;
 		min-height: min(5dvh, 2.5dvw);

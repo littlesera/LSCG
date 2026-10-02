@@ -2,8 +2,8 @@ import { h } from "tsx-dom";
 import { getModule } from "modules";
 import { OutfitCollectionModule } from "Modules/outfitCollection";
 import { allEffectIds, effectDescription, effectLabel, getSpellEffect, isPairedEffect, spellHasPairedEffect } from "Modules/Magic/spellEffects";
-import { Chip, CheckboxRow, KitContext, KitTab, NumberRow, openDialog, RuleTable, SectionLabel, SelectOption, SelectRow, TextRow } from "Dom/kit";
-import { KNOWN_SPELLS_LIMIT, MagicPublicSettingsModel, MagicSettingsModel, OutfitOption, PolymorphConfig, SpellDefinition, SpellEffectId } from "./Models/magic";
+import { Chip, CheckboxRow, Expando, KitContext, KitTab, Notice, NumberRow, openDialog, RuleTable, SectionLabel, SelectOption, SelectRow, TextRow } from "Dom/kit";
+import { KNOWN_SPELLS_LIMIT, MagicPublicSettingsModel, MagicSettingsModel, OutfitOption, PolymorphConfig, SpellDefinition, SpellEffectId, maxSpellEffects } from "./Models/magic";
 import type { SpiritTextType } from "./magic";
 
 export interface MagicPagesOptions {
@@ -19,12 +19,6 @@ const MAX_DURATION_MINUTES = 7 * 24 * 60;
 
 const OUTFIT_OPTIONS: SelectOption[] = Object.values(OutfitOption).map(o => ({ value: o, label: o }));
 const SPIRIT_TEXT_OPTIONS: SelectOption[] = (["None", "Glow", "Float"] as SpiritTextType[]).map(o => ({ value: o, label: o }));
-
-/** Shows/hides `el` with `hidden()`, re-checked after every change. */
-function hiddenWhen<T extends HTMLElement>(ctx: KitContext, el: T, hidden: () => boolean): T {
-    ctx.watch(() => { el.hidden = hidden(); });
-    return el;
-}
 
 function toggle<T>(list: T[], item: T, on: boolean): T[] {
     const without = list.filter(x => x !== item);
@@ -74,85 +68,181 @@ function blockedEffectsTable(ctx: KitContext, s: MagicPublicSettingsModel, opts:
     });
 }
 
-/** The spell editor dialog: casting options, effects (no slot limit), and outfit/polymorph configuration. */
-function openSpellDialog(anchor: HTMLElement, ctx: KitContext, spell: SpellDefinition) {
-    openDialog(anchor, ctx, spell.Name || "Spell", dctx => {
-        const has = (id: SpellEffectId) => spell.Effects.includes(id);
-        const hasConfig = (kind: "outfit" | "polymorph") => spell.Effects.some(e => getSpellEffect(e)?.configurable === kind);
-        const polymorph = (): PolymorphConfig => spell.Polymorph ??= { Code: "", Key: "" } as PolymorphConfig;
-        // Every known effect, plus any the spell has from an extension that's no longer installed.
-        const ids = [...allEffectIds(), ...spell.Effects.filter(e => !getSpellEffect(e))];
-        return [
-            CheckboxRow(dctx, {
-                label: "Allow voice casting",
-                description: "Cast by typing the spell's name, or its casting phrase, followed by the target's name.",
-                get: () => !!spell.AllowVoiceCast, set: v => spell.AllowVoiceCast = v,
-            }),
-            TextRow(dctx, {
-                label: "Casting phrase", placeholder: spell.Name, maxLength: SPELL_NAME_MAX,
-                description: "Optional phrase to use instead of the spell's name when voice casting.",
-                get: () => spell.CastingPhrase ?? "", set: v => spell.CastingPhrase = v.trim(),
-                disabled: () => !spell.AllowVoiceCast,
-            }),
-            CheckboxRow(dctx, {
-                label: "Allow potion",
-                description: "Can be brewed into crafted bottles, glasses or mugs named after the spell. Not possible for spells with a paired effect.",
-                get: () => !spellHasPairedEffect(spell) && !!spell.AllowPotion, set: v => spell.AllowPotion = v,
-                disabled: () => spellHasPairedEffect(spell),
-            }),
-            SectionLabel("Effects", "Everything the spell does to its target, applied in this order."),
-            ...ids.map(id => CheckboxRow(dctx, {
-                label: effectLabel(id),
-                description: effectDescription(id),
-                get: () => has(id),
-                set: v => {
-                    spell.Effects = toggle(spell.Effects, id, v);
-                    if (v && isPairedEffect(id)) spell.AllowPotion = false;
+/** Picks which outfit an effect uses: from the player's saved outfits, or typed in for anything else the game accepts
+ *  (an MBS wheel name, a wardrobe slot number, or a pasted outfit code). Both edit the same value. */
+function outfitPicker(ctx: KitContext, get: () => string, set: (key: string) => void): HTMLElement[] {
+    const names = (getModule<OutfitCollectionModule>("OutfitCollectionModule")?.data?.GetOutfitNames() ?? []).slice().sort();
+    const listed = (key: string) => names.some(n => n.toLowerCase() === key.toLowerCase());
+    return [
+        SelectRow(ctx, {
+            label: "Outfit",
+            description: names.length ? "One of your saved LSCG outfits." : "You have no saved LSCG outfits. Enter a name below instead.",
+            options: [{ value: "", label: "— none, or typed below —" }, ...names.map(n => ({ value: n, label: n }))],
+            get: () => { const key = get(); return listed(key) ? names.find(n => n.toLowerCase() === key.toLowerCase())! : ""; },
+            set: v => set(v),
+        }),
+        TextRow(ctx, {
+            label: "Other outfit", maxLength: OUTFIT_KEY_MAX, placeholder: "Name, slot number or pasted code",
+            description: "An outfit name from your MBS wheel, a wardrobe slot number, or a pasted outfit code.",
+            get: () => (listed(get()) ? "" : get()), set: v => set(v.trim()),
+        }),
+    ];
+}
+
+/** The Outfit effect's own settings: which outfit, and which parts of it to put on. */
+function outfitEffectConfig(ctx: KitContext, spell: SpellDefinition): HTMLElement[] {
+    const outfit = () => spell.Outfit ??= { Code: "", Key: "", Option: OutfitOption.both };
+    return [
+        ...outfitPicker(ctx, () => spell.Outfit?.Key ?? "", key => { outfit().Key = key; }),
+        SelectRow(ctx, {
+            label: "Parts to put on", options: OUTFIT_OPTIONS,
+            description: "Clothes, restraints, or both. Items of these kinds already worn are taken off first.",
+            get: () => spell.Outfit?.Option ?? OutfitOption.both,
+            set: v => { outfit().Option = v as OutfitOption; },
+        }),
+    ];
+}
+
+/** The Polymorph effect's own settings: which outfit, and which parts of the body it changes. */
+function polymorphEffectConfig(ctx: KitContext, spell: SpellDefinition): HTMLElement[] {
+    const polymorph = (): PolymorphConfig => spell.Polymorph ??= { Code: "", Key: "" } as PolymorphConfig;
+    return [
+        ...outfitPicker(ctx, () => spell.Polymorph?.Key ?? "", key => { polymorph().Key = key; }),
+        CheckboxRow(ctx, {
+            label: "Cosplay", description: "Applies cosplay items from the outfit.",
+            get: () => !!spell.Polymorph?.IncludeCosplay, set: v => polymorph().IncludeCosplay = v,
+        }),
+        CheckboxRow(ctx, {
+            label: "Whole body", description: "Changes the whole body: hair, skin, jewelry, makeup and genitals.",
+            get: () => !!spell.Polymorph?.IncludeAllBody,
+            set: v => {
+                const p = polymorph();
+                p.IncludeAllBody = p.IncludeHair = p.IncludeSkin = p.IncludeGenitals = v;
+            },
+        }),
+        ...([["IncludeHair", "Hair"], ["IncludeSkin", "Skin, jewelry and makeup"], ["IncludeGenitals", "Genitals"]] as const).map(([key, label]) => CheckboxRow(ctx, {
+            label,
+            get: () => !!spell.Polymorph?.[key], set: v => polymorph()[key] = v,
+            disabled: () => !!spell.Polymorph?.IncludeAllBody,
+        })),
+    ];
+}
+
+/** An effect's own settings: the rows, a one-line summary for when the section is closed, and whether it still
+ *  needs the player's attention (no outfit chosen yet). Only the effects that have any (outfit, polymorph). */
+function effectConfig(ctx: KitContext, spell: SpellDefinition, effect: SpellEffectId):
+        { rows: HTMLElement[]; summary: () => string; needsAttention: () => boolean } | undefined {
+    switch (getSpellEffect(effect)?.configurable) {
+        case "outfit":
+            return {
+                rows: outfitEffectConfig(ctx, spell),
+                summary: () => `Outfit settings: ${spell.Outfit?.Key || "no outfit chosen yet"} (${spell.Outfit?.Option ?? OutfitOption.both})`,
+                needsAttention: () => !spell.Outfit?.Key,
+            };
+        case "polymorph":
+            return {
+                rows: polymorphEffectConfig(ctx, spell),
+                summary: () => `Polymorph settings: ${spell.Polymorph?.Key || "no outfit chosen yet"}`,
+                needsAttention: () => !spell.Polymorph?.Key,
+            };
+        default:
+            return undefined;
+    }
+}
+
+/** The ordered effect pickers: a dropdown for each effect the spell has, plus one to add the next while there is room
+ *  under `limit`. Order matters, since a spell applies its effects one after another in this order. Picking
+ *  "remove" in a dropdown takes that effect out and moves the later ones up. An effect with settings of its own
+ *  shows them right beneath its dropdown. */
+function effectSlots(dctx: KitContext, tableCtx: KitContext, spell: SpellDefinition, limit: number): HTMLElement {
+    const container = <div class="lscg-spell-effects" /> as HTMLElement;
+    let focusSlot: number | undefined;
+    // Which settings sections the player has opened or closed, so a rebuild (adding another effect) keeps them.
+    const expanded = new Map<string, boolean>();
+
+    dctx.watch(() => {
+        // A context per render: rows register watchers that can't be removed, so don't let old ones pile up.
+        const rctx = new KitContext(() => dctx.changed());
+        const have = spell.Effects.length;
+        const slots = have + (have < limit ? 1 : 0);
+
+        const row = (i: number): HTMLElement => {
+            const current = i < have ? spell.Effects[i] : undefined;
+            const taken = new Set(spell.Effects.filter((_, j) => j !== i));
+            const options: SelectOption[] = [
+                { value: "", label: current ? "— remove this effect —" : have === 0 ? "— choose an effect —" : "— add another effect —" },
+                ...allEffectIds().filter(id => !taken.has(id)).map(id => ({ value: id as string, label: effectLabel(id) })),
+                // An effect from an extension that isn't installed stays selectable so it can be kept or replaced.
+                ...(current && !getSpellEffect(current) ? [{ value: current as string, label: effectLabel(current) }] : []),
+            ];
+            const picker = SelectRow(rctx, {
+                label: `Effect ${i + 1}`,
+                description: current ? effectDescription(current) : undefined,
+                options,
+                get: () => current ?? "",
+                set: value => {
+                    focusSlot = i;
+                    if (value === "") {
+                        if (i < spell.Effects.length) spell.Effects.splice(i, 1);
+                    } else {
+                        spell.Effects[i] = value as SpellEffectId;
+                        if (isPairedEffect(value)) spell.AllowPotion = false;
+                    }
                 },
-            })),
-            hiddenWhen(dctx, SectionLabel("Outfit", "Which outfit the Outfit effect puts on the target."), () => !hasConfig("outfit")),
-            TextRow(dctx, {
-                label: "Outfit", maxLength: OUTFIT_KEY_MAX, placeholder: "Outfit name",
-                description: "An outfit name from your LSCG outfits or MBS wheel, a wardrobe slot number, or a pasted outfit code.",
-                get: () => spell.Outfit?.Key ?? "",
-                set: v => spell.Outfit = { Code: "", Option: spell.Outfit?.Option ?? OutfitOption.both, ...spell.Outfit, Key: v.trim() },
-                hidden: () => !hasConfig("outfit"),
-            }),
-            SelectRow(dctx, {
-                label: "Parts to put on", options: OUTFIT_OPTIONS,
-                get: () => spell.Outfit?.Option ?? OutfitOption.both,
-                set: v => spell.Outfit = { Code: "", Key: "", ...spell.Outfit, Option: v as OutfitOption },
-                hidden: () => !hasConfig("outfit"),
-            }),
-            hiddenWhen(dctx, SectionLabel("Polymorph", "Which body the Polymorph effect gives the target."), () => !hasConfig("polymorph")),
-            TextRow(dctx, {
-                label: "Outfit", maxLength: OUTFIT_KEY_MAX, placeholder: "Outfit name",
-                description: "An outfit name from your LSCG outfits or MBS wheel, a wardrobe slot number, or a pasted outfit code.",
-                get: () => spell.Polymorph?.Key ?? "", set: v => polymorph().Key = v.trim(),
-                hidden: () => !hasConfig("polymorph"),
-            }),
-            CheckboxRow(dctx, {
-                label: "Cosplay", description: "Applies cosplay items from the outfit.",
-                get: () => !!spell.Polymorph?.IncludeCosplay, set: v => polymorph().IncludeCosplay = v,
-                hidden: () => !hasConfig("polymorph"),
-            }),
-            CheckboxRow(dctx, {
-                label: "Whole body", description: "Changes the whole body: hair, skin, jewelry, makeup and genitals.",
-                get: () => !!spell.Polymorph?.IncludeAllBody,
-                set: v => {
-                    const p = polymorph();
-                    p.IncludeAllBody = p.IncludeHair = p.IncludeSkin = p.IncludeGenitals = v;
-                },
-                hidden: () => !hasConfig("polymorph"),
-            }),
-            ...([["IncludeHair", "Hair"], ["IncludeSkin", "Skin, jewelry and makeup"], ["IncludeGenitals", "Genitals"]] as const).map(([key, label]) => CheckboxRow(dctx, {
-                label,
-                get: () => !!spell.Polymorph?.[key], set: v => polymorph()[key] = v,
-                disabled: () => !!spell.Polymorph?.IncludeAllBody,
-                hidden: () => !hasConfig("polymorph"),
-            })),
-        ];
+            });
+            // The settings edit the spell directly. They don't change which effects there are, so they don't rebuild this
+            // list (which would drop keyboard focus mid-way through filling them in); they only update the spell table.
+            const gctx = new KitContext(() => tableCtx.changed());
+            const config = current ? effectConfig(gctx, spell, current) : undefined;
+            if (!current || !config)
+                return picker;
+            // Open until the player has chosen what the effect needs; after that, tucked away behind its summary.
+            const section = Expando(gctx, {
+                summary: config.summary,
+                content: config.rows,
+                open: expanded.get(current) ?? config.needsAttention(),
+                onToggle: open => expanded.set(current, open),
+            });
+            return <div class="lscg-spell-effect">{picker}{section}</div> as HTMLElement;
+        };
+
+        const rows: HTMLElement[] = Array.from({ length: slots }, (_, i) => row(i));
+        if (have > limit)
+            rows.push(Notice(`This spell has more than your limit of ${limit} effects. Remove some before adding others.`));
+        container.replaceChildren(...rows);
+
+        // The dropdown that was just used is gone; keep keyboard focus on its replacement.
+        if (focusSlot !== undefined) {
+            (container.querySelectorAll(".lscg-spell-effect > .lscg-kit-row select, .lscg-spell-effects > .lscg-kit-row select")[focusSlot] as HTMLSelectElement | undefined)?.focus();
+            focusSlot = undefined;
+        }
     });
+    return container;
+}
+
+/** The spell editor dialog: casting options, then the ordered effects with each one's own settings. */
+function openSpellDialog(anchor: HTMLElement, ctx: KitContext, spell: SpellDefinition, limit: number) {
+    openDialog(anchor, ctx, spell.Name || "Spell", dctx => [
+        CheckboxRow(dctx, {
+            label: "Allow voice casting",
+            description: "Cast by typing the spell's name, or its casting phrase, followed by the target's name.",
+            get: () => !!spell.AllowVoiceCast, set: v => spell.AllowVoiceCast = v,
+        }),
+        TextRow(dctx, {
+            label: "Casting phrase", placeholder: spell.Name, maxLength: SPELL_NAME_MAX,
+            description: "Optional phrase to use instead of the spell's name when voice casting.",
+            get: () => spell.CastingPhrase ?? "", set: v => spell.CastingPhrase = v.trim(),
+            disabled: () => !spell.AllowVoiceCast,
+        }),
+        CheckboxRow(dctx, {
+            label: "Allow potion",
+            description: "Can be brewed into crafted bottles, glasses or mugs named after the spell. Not possible for spells with a paired effect.",
+            get: () => !spellHasPairedEffect(spell) && !!spell.AllowPotion, set: v => spell.AllowPotion = v,
+            disabled: () => spellHasPairedEffect(spell),
+        }),
+        SectionLabel("Effects", `What the spell does to its target, one after another in this order. Up to ${limit}.`),
+        effectSlots(dctx, ctx, spell, limit),
+    ]);
 }
 
 function spellsTable(ctx: KitContext, s: MagicSettingsModel): HTMLElement {
@@ -173,7 +263,7 @@ function spellsTable(ctx: KitContext, s: MagicSettingsModel): HTMLElement {
             {
                 header: "Effects", kind: "custom",
                 render: (sp, readOnly) => {
-                    const edit = <button class="lscg-button lscg-kit-edit" disabled={readOnly} onClick={() => openSpellDialog(edit, ctx, sp)}>Edit…</button> as HTMLButtonElement;
+                    const edit = <button class="lscg-button lscg-kit-edit" disabled={readOnly} onClick={() => openSpellDialog(edit, ctx, sp, maxSpellEffects(s))}>Edit…</button> as HTMLButtonElement;
                     return <div class="lscg-kit-details">
                         <div class="lscg-kit-chips lscg-kit-summary">
                             {sp.Effects.length > 0 ? sp.Effects.map(effectChip) : <small class="lscg-kit-desc">No effects yet</small>}

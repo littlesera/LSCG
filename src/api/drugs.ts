@@ -23,6 +23,8 @@ export interface ExtensionDrug {
 export const extensionDrugs = new Registry<ExtensionDrug>("drug");
 
 export const DEFAULT_DRUG_COLOR = "#5C9CFF";
+/** Most extension bars shown (and published) for one player. With LSCG's own three they fill two rows of eight. */
+export const MAX_EXTENSION_BARS = 12;
 const DEFAULT_MAX = 10;
 const DEFAULT_DECAY_PER_MINUTE = 1;
 

@@ -2,7 +2,7 @@ import { BaseModule } from "base";
 import { getModule } from "modules";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
 import { GetConfiguredItemBundlesFromOutfitKey, GetDelimitedList, OnChat, GetHandheldItemNameAndDescriptionConcat, GetItemNameAndDescriptionConcat, GetMetadata, LSCG_SendLocal, LSCG_TEAL, OnActivity, SendAction, forceOrgasm, getCharacter, getRandomInt, hookFunction, isPhraseInString, removeAllHooksByModule, sendLSCGCommand, sendLSCGCommandBeep, settingsSave, getCharacterByNicknameOrMemberNumber, excludeParentheticalContent, escapeRegExp } from "../utils";
-import { KNOWN_SPELLS_LIMIT, LSCGSpellEffect, MagicSettingsModel, OutfitConfig, OutfitOption, SpellDefinition, SpellEffectId } from "Settings/Models/magic";
+import { ABSOLUTE_MAX_SPELL_EFFECTS, DEFAULT_MAX_SPELL_EFFECTS, KNOWN_SPELLS_LIMIT, LSCGSpellEffect, MagicSettingsModel, OutfitConfig, OutfitOption, SpellDefinition, SpellEffectId, sanitizeIncomingEffects } from "Settings/Models/magic";
 import { GuiMagic } from "Settings/magic";
 import { StateModule } from "./states";
 import { EnhancedItemActivityNames, IsActivityEnhanced, ItemUseModule, MagicWandItems } from "./item-use";
@@ -72,6 +72,7 @@ export class MagicModule extends BaseModule {
             disableSoulBindings: false,
             spiritFormOutfitKey: "",
             hideCorporeal: false,
+            maxSpellEffects: DEFAULT_MAX_SPELL_EFFECTS,
             seenExtensionEffects: []
         };
     }
@@ -608,7 +609,8 @@ export class MagicModule extends BaseModule {
     IncomingSpell(sender: Character | null, spell: SpellDefinition, paired?: Character | null, saveDiff: number = 1) {
         let senderName = !sender ? "Someone" : CharacterNickname(sender);
         let pairedName = !paired ? "someone else" : CharacterNickname(paired);
-        let allowedSpellEffects = this.filterAllowedSpellEffects(spell, sender);
+        // However many a caster's spell claims, only so many are applied: each one is a timer on this client.
+        let allowedSpellEffects = this.filterAllowedSpellEffects(spell, sender).slice(0, ABSOLUTE_MAX_SPELL_EFFECTS);
         if (allowedSpellEffects.length <= 0) {
             SendAction(`${senderName}'s ${spell.Name} fizzles when cast on %NAME%, none of its effects allowed to take hold.`);
             return;
@@ -708,6 +710,9 @@ export class MagicModule extends BaseModule {
         if (!this.Enabled || !sender || this.WhitelistBlocked(sender))
             return;
         let spell = msg.command?.args?.find(arg => arg.name == "spell")?.value as SpellDefinition;
+        // It is saved with this player's settings, so keep what a sender can make it carry within limits.
+        if (spell && typeof spell === "object")
+            spell.Effects = sanitizeIncomingEffects(spell.Effects);
         if (this.AvailableSpells.length >= KNOWN_SPELLS_LIMIT)
             SendAction(`%NAME%'s mind is already full of spells. %INTENSIVE% must forget one before %INTENSIVE% can learn ${spell.Name}.`);
         if (this.AvailableSpells.find(s => s.Name == spell.Name)) {
