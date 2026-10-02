@@ -62,6 +62,28 @@ values need an explicit sync step onto Node's own `globalThis`).
   `bc-stubs` in the same change; `.github/workflows/bc-bump.yml` does this
   automatically on a weekly schedule (or on demand).
 
+## The playground (real browser)
+
+Neither project above draws anything: jsdom has no canvas or layout. For UI work, `npm run playground` serves a
+local, offline Bondage Club at the same pinned commit (http://localhost:10003/) with LSCG's `dist/bundle.js` loaded,
+for a real browser — by hand, or driven by [agent-browser](https://github.com/vercel-labs/agent-browser).
+
+- `scripts/bc-playground.mjs` fetches BC client files from gitgud on first use and caches them in
+  `.cache/bc-full-<sha>/` (the first page load is slow; later ones are local).
+- `test/playground/fake-server.js` replaces socket.io, so nothing reaches the real BC server. Everything the client
+  sends is recorded on `Playground.sent`; `Playground.receive(event, data)` delivers a server event.
+- `test/playground/harness.js` adds page helpers: `Playground.login()`, `openSettings("Breathplay")`,
+  `addCharacter({ pose: ["Kneel"], lscg: {...} })` (another LSCG player in the room), `openProfile(C)`, and
+  `toPage(x, y)` (BC canvas coordinates to page pixels, for real mouse clicks on canvas-drawn UI).
+- `npm run ui:shots` (playground running) screenshots every LSCG settings screen to `test/.out/ui/`.
+
+```sh
+npm run build && npm run playground          # in one terminal
+agent-browser open http://localhost:10003/
+agent-browser eval "(async () => { await Playground.login(); return Playground.openSettings('Activities'); })()"
+agent-browser screenshot shot.png
+```
+
 ## Two pitfalls
 
 1. **`Player` is one stable object for the whole test file, mutated in place.**

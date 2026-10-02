@@ -183,6 +183,7 @@ export function SectionLabel(text: string, description?: string): HTMLElement {
 }
 
 export interface ZonePickerProps {
+    /** Whose body and worn items to show. Drawn standing, whatever their pose. */
     character: Character;
     /** The zones that can be picked, e.g. body groups that have activities. */
     groups: () => AssetGroup[];
@@ -197,14 +198,24 @@ export interface ZonePickerProps {
  *  while drawing, and clicks are tested with DialogClickedInZone, so zones line up exactly. Redraws every frame while
  *  on the page, so the character shows once its images load. */
 export function ZonePicker(ctx: KitContext, props: ZonePickerProps): HTMLCanvasElement {
-    const C = props.character;
-    const canvas = <canvas class="lscg-kit-zones" width={500} height={1000} role="img" aria-label="Body zones" onClick={(e: MouseEvent) => {
+    // Drawn on a standing copy (same worn items, base poses), so kneeling etc. doesn't hide zones; deleted when done.
+    const C = CharacterLoadSimple(uid("zones"));
+    C.Appearance = AppearanceItemParse(CharacterAppearanceStringify(props.character));
+    PoseSetActive(C, "BaseUpper", true);
+    PoseSetActive(C, "BaseLower", true);
+    CharacterRefresh(C, false, false);
+
+    // Some zones sit above the character's top edge, so shift everything down until every outline fits.
+    const PAD = 6;
+    const zoneTops = props.groups().flatMap(g => (g.Zone ?? []).map(z => DialogGetCharacterZone(C, z, 0, 0, 1, 1)[1]));
+    const TOP = PAD - Math.min(0, ...zoneTops);
+    const canvas = <canvas class="lscg-kit-zones" width={500 + PAD * 2} height={1000 + TOP + PAD} role="img" aria-label="Body zones" onClick={(e: MouseEvent) => {
         const r = canvas.getBoundingClientRect();
         const [mouseX, mouseY] = [MouseX, MouseY];
         MouseX = (e.clientX - r.left) * canvas.width / r.width;
         MouseY = (e.clientY - r.top) * canvas.height / r.height;
         try {
-            const group = props.groups().find(g => g.Zone?.some(z => DialogClickedInZone(C, z, 1, 0, 0, 1)));
+            const group = props.groups().find(g => g.Zone?.some(z => DialogClickedInZone(C, z, 1, PAD, TOP, 1)));
             if (group) {
                 props.onPick(group);
                 ctx.changed();
@@ -220,11 +231,11 @@ export function ZonePicker(ctx: KitContext, props: ZonePickerProps): HTMLCanvasE
         MainCanvas = draw;
         try {
             draw.clearRect(0, 0, canvas.width, canvas.height);
-            DrawCharacter(C, 0, 0, 1, false, draw);
+            DrawCharacter(C, PAD, TOP, 1, false, draw);
             for (const g of props.groups())
-                if (g.Zone) DrawAssetGroupZone(C, g.Zone, 1, 0, 0, 1, "#808080FF", 3, props.highlighted?.(g) ? "#00FF0044" : "#80808044");
+                if (g.Zone) DrawAssetGroupZone(C, g.Zone, 1, PAD, TOP, 1, "#808080FF", 3, props.highlighted?.(g) ? "#00FF0044" : "#80808044");
             const picked = props.groups().find(g => g.Name === props.selected());
-            if (picked?.Zone) DrawAssetGroupZone(C, picked.Zone, 1, 0, 0, 1, "cyan");
+            if (picked?.Zone) DrawAssetGroupZone(C, picked.Zone, 1, PAD, TOP, 1, "cyan");
         } finally {
             MainCanvas = main;
         }
@@ -236,6 +247,7 @@ export function ZonePicker(ctx: KitContext, props: ZonePickerProps): HTMLCanvasE
             attached = true;
             render();
         } else if (attached || ++waited > 300) {
+            CharacterDelete(C, false);
             return;
         }
         requestAnimationFrame(frame);

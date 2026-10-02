@@ -14,6 +14,8 @@
     "dev": "typed-scss-modules src --exportType=default --nameFormat=none && concurrently \"npm run watch\" \"npm run serve\" \"npm run serve:examples\"",
     "prod-watch": "typed-scss-modules src --exportType=default --nameFormat=none && concurrently \"npm run watch-prod\" \"npm run serve\"",
     "lint": "eslint src",
+    "playground": "node scripts/bc-playground.mjs",
+    "ui:shots": "node scripts/ui-shots.mjs",
     "typecheck": "tsc --noEmit -p . && tsc --noEmit -p tsconfig.test.json",
     "test": "vitest run --project unit",
     "test:watch": "vitest --project unit",

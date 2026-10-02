@@ -1,16 +1,12 @@
 import { h } from "tsx-dom";
-import { GetDelimitedList, ICONS, getActivities, getActivityLabel, getZoneColor } from "utils";
+import { GetDelimitedList, ICONS, getActivities, getActivityLabel } from "utils";
 import { GuiSubscreen, HelpInfo } from "./settingBase";
 import { ActivityEntryModel, ActivitySettingsModel } from "./Models/activities";
 import { DomSettingsHost } from "./domSettingsHost";
-import { ButtonRow, CheckboxRow, KitContext, Notice, NumberRow, Panel, SelectRow, TextRow } from "Dom/kit";
-
-/** Left of this is the character, whose zones are picked on the canvas. */
-const OPTIONS_X = 550;
+import { ButtonRow, CheckboxRow, KitContext, Notice, NumberRow, Panel, SelectRow, TextRow, ZonePicker } from "Dom/kit";
 
 export class GuiActivities extends GuiSubscreen {
-	private _host = new DomSettingsHost("lscg-activity-settings", () => this.build(),
-		[OPTIONS_X, GuiSubscreen.START_Y - 25, 1780 - OPTIONS_X, 740]);
+	private _host = new DomSettingsHost("lscg-activity-settings", () => this.build());
 
 	get name(): string {
 		return "Activities";
@@ -31,40 +27,68 @@ export class GuiActivities extends GuiSubscreen {
 		};
 	}
 
+	/** The picked zone and activity. */
+	group: AssetGroup | undefined;
+	activityName: string | undefined;
+
 	get currentActivityEntry(): ActivityEntryModel | undefined {
-		const actName = getActivities(undefined, false)[this.activityIndex]?.Name;
-		const groupName = Player.FocusGroup?.Name ?? "";
-		return this.getActivityEntry(actName, groupName);
+		if (!this.group || !this.activityName) return undefined;
+		return this.getActivityEntry(this.activityName, this.group.Name);
 	}
 
 	getActivityEntry(actName: string, grpName: string): ActivityEntryModel | undefined {
 		return this.settings.activities.find(a => a.name == actName && a.group == grpName);
 	}
 
-	activityIndex: number = 0;
-
 	private build(): Node {
-		const group = Player.FocusGroup;
+		const groups = AssetGroup.filter(g => g.IsItem() && !g.MirrorActivitiesFrom && AssetActivitiesForGroup("Female3DCG", g.Name).length);
+		const options = <div class="lscg-kit-panel" /> as HTMLElement;
+		const showOptions = () => options.replaceChildren(...this.buildOptions());
+		showOptions();
+		return Panel([
+			<div class="lscg-kit-zone-layout">
+				{ZonePicker(new KitContext(), {
+					character: Player, groups: () => groups,
+					selected: () => this.group?.Name,
+					highlighted: g => this.settings.activities.some(a => a.group == g.Name),
+					onPick: g => {
+						this.group = g;
+						const names = getActivities(g, false).map(a => a.Name);
+						if (!this.activityName || names.indexOf(this.activityName as ActivityName) < 0) this.activityName = undefined;
+						showOptions();
+					},
+				})}
+				{options}
+			</div> as HTMLElement,
+		]);
+	}
+
+	/** The picked zone's activities and what each does. Rebuilt when the zone changes. */
+	private buildOptions(): HTMLElement[] {
+		const group = this.group;
 		if (!group)
-			return Panel([Notice("Please Select a Zone")]);
+			return [Notice("Please Select a Zone")];
 
 		const ctx = new KitContext();
-		const activities = getActivities(undefined, false);
+		const activities = getActivities(group, false);
+		const activityOptions = activities.map(a => ({ value: a.Name, label: getActivityLabel(a, group, false) }))
+			.sort((a, b) => a.label.localeCompare(b.label));
+		this.activityName ??= activityOptions[0]?.value;
 		const entry = () => this.currentActivityEntry;
 		const edit = () => this.createEntryIfNeeded(entry());
 		const icon = <img class="lscg-kit-activity-icon" alt="" /> as HTMLImageElement;
 		ctx.watch(() => {
-			const activity = activities[this.activityIndex];
-			icon.hidden = !activity;
-			if (activity)
-				icon.src = activity.Name.indexOf("Item") > -1 ? "Icons/Dress.png" : `Assets/${Player.AssetFamily}/Activity/${activity.Name}.png`;
+			const name = this.activityName;
+			icon.hidden = !name;
+			if (name)
+				icon.src = name.indexOf("Item") > -1 ? "Icons/Dress.png" : `Assets/${Player.AssetFamily}/Activity/${name}.png`;
 		});
 
-		return Panel([
+		return [
 			SelectRow(ctx, {
 				label: "Activity", description: "Configure what this activity does when done to you on the selected zone.",
-				options: activities.map((a, i) => ({ value: String(i), label: getActivityLabel(a, group, false) })),
-				get: () => String(this.activityIndex), set: v => this.activityIndex = +v,
+				options: activityOptions,
+				get: () => this.activityName ?? "", set: v => this.activityName = v,
 			}),
 			icon,
 			ButtonRow(ctx, {
@@ -108,52 +132,16 @@ export class GuiActivities extends GuiSubscreen {
 				set: v => edit().allowedMemberIds = GetDelimitedList(v, ",").filter(str => CommonIsNumeric(str)).map(str => +str),
 				disabled: () => { const e = entry(); return !e?.hypno && !e?.orgasm && !e?.awakener && !e?.sleep; },
 			}),
-		]);
+		];
 	}
 
 	Load() {
 		super.Load();
-		CharacterAppearanceForceUpCharacter = Player.MemberNumber ?? -1;
 		this._host.mount();
-	}
-
-	Run() {
-		const tmp = GuiSubscreen.START_X;
-		GuiSubscreen.START_X = OPTIONS_X;
-		super.Run();
-		GuiSubscreen.START_X = tmp;
-		DrawCharacter(Player, 50, 50, 0.9, false);
-
-		// Draws all the available character zones
-		for (const Group of AssetGroup) {
-			if (Group.IsItem() && !Group.MirrorActivitiesFrom && AssetActivitiesForGroup("Female3DCG", Group.Name).length)
-				DrawAssetGroupZone(Player, Group.Zone, 0.9, 50, 50, 1, "#808080FF", 3, getZoneColor(Group.Name, this.settings.activities.some(a => a.group == Group.Name)));
-		}
-		if (Player.FocusGroup != null)
-			DrawAssetGroupZone(Player, Player.FocusGroup.Zone, 0.9, 50, 50, 1, "cyan");
-	}
-
-	Click() {
-		super.Click();
-
-		for (const Group of AssetGroup) {
-			if (Group.IsItem() && !Group.MirrorActivitiesFrom && AssetActivitiesForGroup("Female3DCG", Group.Name).length) {
-				const Zone = Group.Zone.find(z => DialogClickedInZone(Player, z, 0.9, 50, 50, 1));
-				if (Zone) {
-					Player.FocusGroup = Group;
-					if (this.activityIndex >= getActivities(undefined, false).length)
-						this.activityIndex = 0;
-					this._host.remount();
-				}
-			}
-		}
 	}
 
 	Exit() {
 		this._host.unmount();
-		CharacterAppearanceForceUpCharacter = -1;
-		CharacterLoadCanvas(Player);
-		Player.FocusGroup = null;
 		super.Exit();
 	}
 
@@ -182,7 +170,7 @@ export class GuiActivities extends GuiSubscreen {
 
 	createEntryIfNeeded(existing: ActivityEntryModel | undefined): ActivityEntryModel {
 		if (!existing) {
-			existing = this.newDefaultEntry(getActivities(undefined, false)[this.activityIndex].Name, Player.FocusGroup?.Name ?? "");
+			existing = this.newDefaultEntry(this.activityName ?? "", this.group?.Name ?? "");
 			this.settings.activities.push(existing);
 		}
 		return existing;

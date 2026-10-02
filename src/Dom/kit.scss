@@ -76,12 +76,23 @@
 		}
 	}
 
+	// BC styles every <canvas> as its full-screen main canvas (absolute, 100% wide); undo that here.
 	.lscg-kit-zones {
+		position: sticky; // stays in view while a long options column beside it scrolls
+		top: 0;
 		display: block;
-		justify-self: center;
+		margin: min(0.5dvh, 0.25dvw) 0 0;
+		width: auto;
 		height: min(55dvh, 27.5dvw);
-		aspect-ratio: 1 / 2;
 		cursor: pointer;
+	}
+
+	// A ZonePicker beside the rows it fills in.
+	.lscg-kit-zone-layout {
+		display: grid;
+		grid-template-columns: auto minmax(0, 1fr);
+		align-items: start;
+		gap: min(2dvh, 1dvw);
 	}
 
 	.lscg-kit-label {
@@ -102,6 +113,11 @@
 			box-sizing: border-box;
 			font: inherit;
 			resize: vertical;
+		}
+
+		input:disabled, select:disabled, textarea:disabled, button:disabled {
+			opacity: 0.5;
+			cursor: not-allowed;
 		}
 
 		// A slider with its number box beside it (NumberRow's `slider`).
@@ -268,6 +284,11 @@
 
 		h2 {
 			margin: 0 0 min(2dvh, 1dvw);
+		}
+
+		// Fixed width, so the dialog doesn't resize with each zone's activity names.
+		.lscg-kit-zone-layout {
+			width: min(130dvh, 65dvw);
 		}
 
 		.lscg-kit-dialog-body {

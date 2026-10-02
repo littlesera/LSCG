@@ -313,7 +313,9 @@ export class RemoteSuggestions extends RemoteHypnoBase {
 				const isSelf = () => args["self"] ?? false;
 				const groups = AssetGroup.filter(g => g.IsItem() && !g.MirrorActivitiesFrom && AssetActivitiesForGroup("Female3DCG", g.Name).length);
 				const group = () => groups.find(g => g.Name == sel.group);
-				const activities = () => group() ? getActivities(group(), isSelf()) : [];
+				const activityOptions = (g: AssetGroup): SelectOption[] => getActivities(g, isSelf())
+					.map(a => ({ value: a.Name, label: getActivityLabel(a, g, isSelf()) }))
+					.sort((a, b) => a.label.localeCompare(b.label));
 				// The activity list depends on the zone, so it's rebuilt when the zone changes.
 				const activityRow = <div /> as HTMLElement;
 				let shownGroup: string | undefined;
@@ -324,27 +326,32 @@ export class RemoteSuggestions extends RemoteHypnoBase {
 					activityRow.replaceChildren(g
 						? SelectRow(ctx, {
 							label: "Activity", description: "Select an activity for this instruction",
-							options: activities().map(a => ({ value: a.Name, label: getActivityLabel(a, g, isSelf()) })),
+							options: activityOptions(g),
 							get: () => sel.name, set: v => sel.name = v as ActivityName,
 						})
 						: Notice("Please Select a Zone"));
 				});
 				const pickZone = (name: string) => {
 					sel.group = name;
-					const names = activities().map(a => a.Name);
-					if (names.indexOf(sel.name as ActivityName) < 0) sel.name = names[0] ?? "";
+					const g = group();
+					const names = g ? activityOptions(g).map(o => o.value) : [];
+					if (names.indexOf(sel.name) < 0) sel.name = (names[0] ?? "") as ActivityName;
 				};
 				return [
-					ZonePicker(ctx, {
-						character: this.Character, groups: () => groups,
-						selected: () => sel.group, highlighted: g => g.Name == sel.group, onPick: g => pickZone(g.Name),
-					}),
-					SelectRow(ctx, {
-						label: "Zone", description: "Click a zone on the character, or pick it here.",
-						options: [{ value: "", label: "— choose zone —" }, ...groups.map(g => ({ value: g.Name, label: g.Description || g.Name }))],
-						get: () => sel.group, set: pickZone,
-					}),
-					activityRow,
+					<div class="lscg-kit-zone-layout">
+						{ZonePicker(ctx, {
+							character: this.Character, groups: () => groups,
+							selected: () => sel.group, highlighted: g => g.Name == sel.group, onPick: g => pickZone(g.Name),
+						})}
+						<div class="lscg-kit-panel">
+							{SelectRow(ctx, {
+								label: "Zone", description: "Click a zone on the character, or pick it here.",
+								options: [{ value: "", label: "— choose zone —" }, ...groups.map(g => ({ value: g.Name, label: g.Description || g.Name }))],
+								get: () => sel.group, set: pickZone,
+							})}
+							{activityRow}
+						</div>
+					</div> as HTMLElement,
 				];
 			}
 			case LSCGHypnoInstruction.pose: {

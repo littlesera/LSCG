@@ -413,6 +413,17 @@ export class GuiOutfits extends GuiSubscreen {
     }
 
     Exit(): void {
+        this.#teardown();
+        super.Exit();
+    }
+
+    /** BC unloads the screen without an Exit when it leaves Preferences itself (e.g. being led out of the room). */
+    Unload(): void {
+        this.#teardown();
+    }
+
+    #teardown() {
+        if (!this.charHook) return; // not loaded, or already torn down
         document.activeElement?.dispatchEvent(new FocusEvent("blur"));
         this.SelectedKey = undefined;
         this.SelectedOutfit = undefined;
@@ -421,10 +432,11 @@ export class GuiOutfits extends GuiSubscreen {
             ElementRemove(id);
         }
         DialogMenuMapping.items.Unload();
-        if (this.charHook) this.charHook();
+        this.charHook();
+        this.charHook = undefined;
         CommonPhotoMode = false;
         this._unhookResize?.();
-        super.Exit();
+        this._unhookResize = undefined;
     }
 
     #refreshListing() {
