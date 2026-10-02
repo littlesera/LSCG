@@ -26,6 +26,9 @@ import type { InjectorModule } from "./injector";
 import { publishedExtensionData } from "api/publish";
 import { dispatchExtensionCommand } from "api/network";
 
+/** State extension keys holding compressed outfit snapshots (cursed outfits, redress slots, polymorph/redress originals). */
+const PRIVATE_STATE_EXTENSIONS = ["outfits", "slot-snapshot", "stored", "stored-outfit"];
+
 // >= R111
 declare var DialogMenuMapping: { items: ScreenFunctions & { C: null | Character } };
 
@@ -54,6 +57,14 @@ export class CoreModule extends BaseModule {
             }
             settings.enabled = Player.LSCG.GlobalModule.enabled;
         }
+        // Outfit snapshots are only read by their owner; leave them out of every room broadcast (#680)
+        if (settings.StateModule?.states)
+            settings.StateModule.states = settings.StateModule.states.map(state => {
+                if (!state.extensions) return state;
+                const extensions = { ...state.extensions };
+                for (const key of PRIVATE_STATE_EXTENSIONS) delete extensions[key];
+                return { ...state, extensions };
+            });
         // Runtime capability, not a stored setting: which non-legacy spell effects this client can apply.
         if (settings.MagicModule)
             settings.MagicModule.knownEffects = advertisedEffectIds();

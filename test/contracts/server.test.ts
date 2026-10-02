@@ -69,4 +69,23 @@ describe("server relay contract", () => {
 		const bytes = new TextEncoder().encode(JSON.stringify(data)).length;
 		expect(bytes).toBeLessThan(SYNC_BUDGET_BYTES);
 	});
+
+	it("public sync leaves out state outfit snapshots without touching the saved settings (#680)", async () => {
+		resetWorld({ LSCG: {} });
+		const { registerModule } = await import("modules");
+		const { CoreModule } = await import("Modules/core");
+		const { StateModule } = await import("Modules/states");
+		const core = registerModule(new CoreModule());
+		const states = registerModule(new StateModule());
+		core.init();
+		states.init();
+		const stored = { type: "polymorphed", active: true, extensions: { stored: "x".repeat(50_000), ghost: 1 } };
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		(Player.LSCG.StateModule.states as any[]).push(stored);
+
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const sentState = core.publicSettings.StateModule.states.find((st: any) => st.type === "polymorphed");
+		expect(sentState?.extensions).toEqual({ ghost: 1 });
+		expect(stored.extensions.stored).toHaveLength(50_000);
+	});
 });
