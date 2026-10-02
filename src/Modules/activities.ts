@@ -1331,6 +1331,82 @@ export class ActivityModule extends BaseModule {
             CustomImage: ICONS.LEASH_HANDLE,
         });
 
+        // ClaspLeash
+        this.AddActivity({
+            Activity: {
+                Name: "ClaspLeash",
+                MaxProgress: 30,
+                Prerequisite: ["ZoneAccessible", "UseHands"],
+            },
+            Targets: [
+                {
+                    Name: "ItemNeck",
+                    SelfAllowed: true,
+                    TargetLabel: "Clasp Leash",
+                    TargetAction: "SourceCharacter clasps the leash in PronounPossessive hand to TargetCharacter's leash.",
+                    TargetSelfAction: "SourceCharacter clasps the leash in PronounPossessive hand to PronounPossessive own leash.",
+                },
+            ],
+            CustomPrereqs: [
+                {
+                    Name: "CanClaspLeash",
+                    Func: (_acting, acted) => {
+                        const held = this.leashingModule.HeldLeash(acted);
+                        return held !== null && this.leashingModule.CanClaspTo(held, acted);
+                    },
+                },
+            ],
+            CustomAction: {
+                // Says whether it went on their leash or their collar, in place of the activity's own line
+                Func: (target) => {
+                    const held = target ? this.leashingModule.HeldLeash(target) : null;
+                    if (!target || held === null)
+                        return false;
+                    const onto = this.leashingModule.ClaspLeash(held, target) ? "collar" : "leash";
+                    const whose = target.IsPlayer() ? "%POSSESSIVE% own" : "%OPP_NAME_POSSESSIVE%";
+                    SendAction(`%NAME% clasps the leash in %POSSESSIVE% hand to ${whose} ${onto}.`, target);
+                    return false;
+                },
+            },
+            CustomImage: ICONS.LEASH,
+        });
+
+        // UnclaspLeash
+        this.AddActivity({
+            Activity: {
+                Name: "UnclaspLeash",
+                MaxProgress: 30,
+                Prerequisite: ["ZoneAccessible", "UseHands"],
+            },
+            Targets: [
+                {
+                    Name: "ItemNeck",
+                    SelfAllowed: true,
+                    TargetLabel: "Unclasp Leash",
+                    TargetAction: "SourceCharacter unclasps TargetCharacter's leash.",
+                    TargetSelfAction: "SourceCharacter unclasps PronounPossessive own leash.",
+                },
+            ],
+            CustomPrereqs: [
+                {
+                    Name: "TargetHasClaspedLeash",
+                    Func: (_acting, acted) => this.leashingModule.ClaspsOn(acted.MemberNumber ?? -1).length > 0,
+                },
+            ],
+            CustomAction: {
+                Func: (target) => {
+                    const at = target?.MemberNumber ?? -1;
+                    const clasps = this.leashingModule.ClaspsOn(at);
+                    const ours = clasps.filter(c => c.a === Player.MemberNumber || c.b === Player.MemberNumber);
+                    // On a partner, only our own clasp with them. On ourselves, or someone we clasped, all of theirs
+                    const undo = at !== Player.MemberNumber && ours.length > 0 ? ours : clasps;
+                    for (const clasp of undo)
+                        this.leashingModule.UnclaspLeash(clasp, at);
+                },
+            },
+            CustomImage: ICONS.LEASH,
+        });
+
         // Patch HandGag
         this.PatchActivity(<ActivityPatch>{
             ActivityName: "HandGag",

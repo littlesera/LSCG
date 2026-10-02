@@ -44,7 +44,7 @@ const HOOK_TARGETS = [
 	"DrawCharacter", "CharacterGetCurrent", "CharacterRefresh", "ChatRoomGenerateChatRoomChatMessage",
 	"InventoryGroupIsBlockedForCharacter", "ChatRoomCanAttemptStand", "ChatRoomCanAttemptKneel",
 	"CharacterCanKneel", "PoseCanChangeUnaided", "ChatRoomMessageDisplay", "ActivitySetArousalTimer",
-	"ServerDisconnect",
+	"ServerDisconnect", "ChatRoomCanLeave", "CharacterRefreshLeash",
 ] as const;
 
 /** Dotted hook targets: `["Player", "CanWalk"]` needs `window.Player.CanWalk` to exist. */
