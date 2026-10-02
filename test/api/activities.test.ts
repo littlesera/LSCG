@@ -59,7 +59,7 @@ describe("extension activities", () => {
     describe("registration", () => {
         it("adds the activity to BC under a namespaced LSCG_ name, with defaults", () => {
             api.activities.register(pat());
-            expect(find("pat")).toMatchObject({ Name: wire("pat"), MaxProgress: 70, MaxProgressSelf: 70, Prerequisite: [], Target: ["ItemHead"] });
+            expect(find("pat")).toMatchObject({ Name: wire("pat"), MaxProgress: 70, MaxProgressSelf: 70, Prerequisite: ["ZoneAccessible"], Target: ["ItemHead"] });
             expect(g.ActivityFemale3DCGOrdering).toContain(wire("pat"));
             expect(g.ActivityDictionary).toContainEqual([`Activity${wire("pat")}`, "Pat head"]);
         });
@@ -201,7 +201,7 @@ describe("extension activities", () => {
         it("an activity can require one of the extension's own prerequisites by its short name", () => {
             api.activities.registerPrerequisite({ name: "friendly", check: () => true });
             api.activities.register({ ...pat(), prerequisites: ["UseArms", "friendly"] });
-            expect(find("pat").Prerequisite).toEqual(["UseArms", `${api.id}.friendly`]);
+            expect(find("pat").Prerequisite).toEqual(["UseArms", `${api.id}.friendly`, "ZoneAccessible"]);
         });
 
         it("is evaluated with who is acting, who is acted on, and the group", () => {

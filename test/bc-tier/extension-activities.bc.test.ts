@@ -57,7 +57,7 @@ const activity = () => g.AssetGetActivity("Female3DCG", NAME) as Activity | null
 
 describe("extension activities (real BC data)", () => {
     it("BC finds the activity by its name", () => {
-        expect(activity()).toMatchObject({ Name: NAME, Target: ["ItemHead"], Prerequisite: ["bc-ext.first-member-only"] });
+        expect(activity()).toMatchObject({ Name: NAME, Target: ["ItemHead"], Prerequisite: ["bc-ext.first-member-only", "ZoneAccessible"] });
     });
 
     it("BC offers it on the groups it targets, and only those", () => {
