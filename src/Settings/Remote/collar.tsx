@@ -83,7 +83,7 @@ export class RemoteCollar extends RemoteGuiSubscreen {
 				get: () => s.locked ?? false, set: v => s.locked = v,
 				disabled: () => !s.lockable,
 			}),
-		], msg => this.message = msg));
+		]));
 		ctx.watch(() => {
 			promo.hidden = !!s.collarPurchased;
 			rows.hidden = !s.collarPurchased;

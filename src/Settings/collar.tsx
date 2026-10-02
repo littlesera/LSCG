@@ -9,7 +9,7 @@ import { ButtonRow, CheckboxRow, KitContext, Notice, NumberRow, Tabs, TextRow } 
 
 /** The collar settings both the wearer and remote users edit. `access` are the rows that differ between the two
  *  (remote access/lockable for the wearer, locked for a remote user); "Update" reads the collar `wearer` has on. */
-export function collarRows(ctx: KitContext, s: CollarPublicSettingsModel, wearer: Character, access: HTMLElement[], setMessage: (msg: string) => void): HTMLElement[] {
+export function collarRows(ctx: KitContext, s: CollarPublicSettingsModel, wearer: Character, access: HTMLElement[]): HTMLElement[] {
 	const current = <small class="lscg-kit-desc" /> as HTMLElement;
 	ctx.watch(() => {
 		current.hidden = !s.collar?.name || s.anyCollar;
@@ -62,8 +62,9 @@ export function collarRows(ctx: KitContext, s: CollarPublicSettingsModel, wearer
 			disabled: () => !s.enabled || s.anyCollar,
 			onClick: () => {
 				const collar = InventoryGet(wearer, "ItemNeck");
-				if (!collar) return setMessage("No Collar Equipped");
-				setMessage("Collar updated");
+				// BC doesn't show PreferenceMessage on extension pages, so this reports with a toast.
+				if (!collar) return ToastManager.error(`No collar equipped${wearer.IsPlayer() ? "" : ` on ${CharacterNickname(wearer)}`}.`);
+				ToastManager.success("Collar updated.");
 				s.collar = {
 					name: collar.Craft?.Name ?? collar.Asset.Name,
 					creator: collar.Craft?.MemberNumber ?? 0,
@@ -166,7 +167,7 @@ export class GuiCollar extends GuiSubscreen {
 							label: "Lockable", description: "Allowes Remote Access Users to lock you out of these settings.",
 							get: () => s.lockable ?? false, set: v => s.lockable = v,
 						}),
-					], msg => this.message = msg)}</div> as HTMLElement;
+					])}</div> as HTMLElement;
 					ctx.watch(() => {
 						promo.hidden = !!s.collarPurchased;
 						locked.hidden = !s.collarPurchased || !s.locked;

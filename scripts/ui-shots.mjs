@@ -22,6 +22,7 @@ browser("set", "viewport", "1600", "800");
 browser("open", URL);
 browser("wait", "--load", "networkidle", "--timeout", "240000");
 evaluate("await Playground.login()");
+evaluate("Playground.enableAll()");
 // The first open races BC's own Preference screen load; open once to settle it.
 evaluate("await Playground.openSettings()");
 
@@ -37,7 +38,17 @@ for (const name of screens) {
         continue;
     }
     evaluate("await new Promise(r => setTimeout(r, 400))"); // images and fonts
-    const file = join(OUT, `${name.replace(/[^\w-]+/g, "_")}.png`);
-    browser("screenshot", file);
-    console.log(file);
+    // Every tab (or the page, if it has none), at the top and scrolled to the end.
+    const tabs = evaluate("[...document.querySelectorAll('.lscg-kit-tab')].map(t => t.textContent)");
+    for (const tab of tabs.length ? tabs : [null]) {
+        if (tab) evaluate(`[...document.querySelectorAll('.lscg-kit-tab')].find(t => t.textContent === ${JSON.stringify(tab)}).click(), await new Promise(r => setTimeout(r, 300))`);
+        const base = join(OUT, [name, tab].filter(Boolean).join("-").replace(/[^\w-]+/g, "_"));
+        browser("screenshot", `${base}.png`);
+        const scrolls = evaluate("[...document.querySelectorAll('.lscg-kit-body')].some(b => b.scrollHeight > b.clientHeight + 4)");
+        if (scrolls) {
+            evaluate("document.querySelectorAll('.lscg-kit-body').forEach(b => b.scrollTop = 1e6), await new Promise(r => setTimeout(r, 200))");
+            browser("screenshot", `${base}-end.png`);
+        }
+        console.log(`${base}.png${scrolls ? " (+ -end)" : ""}`);
+    }
 }

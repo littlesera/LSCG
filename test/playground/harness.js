@@ -41,8 +41,28 @@
         return Player.MemberNumber;
     };
 
+    /** Switches on every LSCG module, with a little sample data (a cursed item, a purchased collar), so settings
+     *  screens show all their inputs instead of mostly disabled ones. */
+    Playground.enableAll = () => {
+        for (const m of ["HypnoModule", "CursedItemModule", "SplatterModule", "InjectorModule", "MagicModule", "CollarModule", "SpeechAnalysisModule", "MapModule"])
+            LSCG.getModule(m)?.settings; // fills in defaults
+        const L = Player.LSCG;
+        Object.assign(L.HypnoModule, { enabled: true, remoteAccess: true });
+        Object.assign(L.CursedItemModule, { enabled: true, Vulnerable: true });
+        L.CursedItemModule.CursedItems ??= [];
+        if (!L.CursedItemModule.CursedItems.length) L.CursedItemModule.CursedItems.push({ Name: "Sample curse", Enabled: true });
+        L.SplatterModule.enabled = true;
+        L.InjectorModule.enabled = true;
+        L.MagicModule.enabled = true;
+        Object.assign(L.CollarModule, { collarPurchased: true, enabled: true, knockout: true });
+        L.SpeechAnalysisModule.enabled = true;
+        L.MapModule.enhancedLighting = true;
+    };
+
     /** Opens LSCG's settings, optionally on one screen by its title (e.g. "Breathplay", "Cursed Items"). */
     Playground.openSettings = async (screen) => {
+        // BC skips switching screens if the Extensions page was the last one open, even from another screen.
+        if (CurrentScreen !== "Preference") await PreferenceOpenSubscreen("Extensions");
         await PreferenceSubscreenExtensionsOpen("LSCG");
         if (screen) LSCG.getModule("GUI").currentSubscreen = screen;
         await new Promise(requestAnimationFrame);

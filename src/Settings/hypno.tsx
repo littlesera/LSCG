@@ -9,7 +9,12 @@ import { CheckboxRow, KitContext, Notice, NumberRow, RuleTable, SectionLabel, Ta
 
 /** Upper bound for the hypnosis timing inputs; the old screen had none. */
 export const HYPNO_TIME_MAX = 99999;
-const EYE_TYPE_MAX = 14; // UPDATE THIS WHEN EYE STYLES CHANGE
+/** The numbered eye styles BC has ("Eyes1", "Eyes2", ...), read from its assets so new ones show up by themselves. */
+const eyeTypes = () => {
+    const types = (AssetGroupGet("Female3DCG", "Eyes")?.Asset ?? [])
+        .map(a => /^Eyes(\d+)$/.exec(a.Name)?.[1]).filter((n): n is string => !!n).map(Number);
+    return types.length ? types : [9];
+};
 
 export class GuiHypno extends GuiSubscreen {
 	private _host = new DomSettingsHost("lscg-hypno-settings", this, () => this.build());
@@ -141,7 +146,7 @@ export class GuiHypno extends GuiSubscreen {
 					NumberRow(ctx, {
 						// Consider making bigger UI for eye picking here, similar to selecting from wardrobe.
 						label: "Hypnotized eye type", description: "Eye type # to use while under hypnosis (default: 9).",
-						min: 0, max: EYE_TYPE_MAX, get: () => s.hypnoEyeType ?? 9, disabled: off,
+						min: Math.min(...eyeTypes()), max: Math.max(...eyeTypes()), get: () => s.hypnoEyeType ?? 9, disabled: off,
 						set: v => {
 							// default to style 9 if somehow we can't find a valid eye type here.
 							s.hypnoEyeType = AssetGet("Female3DCG", "Eyes", "Eyes" + v) ? v : 9;
