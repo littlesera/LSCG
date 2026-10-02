@@ -24,7 +24,7 @@ function makeCharacter(memberNumber: number, lscg = true): Character {
 	C.Nickname = `Player${String.fromCharCode(64 + memberNumber)}`;
 	C.OnlineSharedSettings = { AllowPlayerLeashing: true };
 	C.PermissionItems = {};
-	if (lscg) C.LSCG = { GlobalModule: { enabled: true }, LeashingModule: { enabled: true } };
+	if (lscg) C.LSCG = { GlobalModule: { enabled: true }, LeashingModule: { enabled: true, clasps: [] } };
 	return C;
 }
 

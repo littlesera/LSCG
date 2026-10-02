@@ -1396,12 +1396,12 @@ export class ActivityModule extends BaseModule {
             CustomAction: {
                 Func: (target) => {
                     const at = target?.MemberNumber ?? -1;
-                    const clasps = this.leashingModule.ClaspsOn(at);
-                    const ours = clasps.filter(c => c.a === Player.MemberNumber || c.b === Player.MemberNumber);
-                    // On a partner, only our own clasp with them. On ourselves, or someone we clasped, all of theirs
-                    const undo = at !== Player.MemberNumber && ours.length > 0 ? ours : clasps;
-                    for (const clasp of undo)
-                        this.leashingModule.UnclaspLeash(clasp, at);
+                    const me = Player.MemberNumber ?? -1;
+                    const partners = this.leashingModule.ClaspsOn(at);
+                    // On a partner, only our own clasp with them. On ourselves, or anyone else, all of theirs
+                    const undo = at !== me && partners.includes(me) ? [me] : partners;
+                    for (const other of undo)
+                        this.leashingModule.UnclaspLeash(at, other);
                 },
             },
             CustomImage: ICONS.LEASH,

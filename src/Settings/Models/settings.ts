@@ -1,6 +1,6 @@
 import { BoopsModule } from "Modules/boops";
 import { InjectorModule } from "Modules/injector";
-import { BaseSettingsModel, GlobalPublicSettingsModel, GlobalSettingsModel, LipstickSettingsModel, MapSettingsModel, MiscSettingsModel, OpacityPublicSettingsModel, OpacitySettingsModel, OutfitSettings, SplatterSettingsModel } from "./base";
+import { BaseSettingsModel, GlobalPublicSettingsModel, GlobalSettingsModel, LeashingPublicSettingsModel, LipstickSettingsModel, MapSettingsModel, MiscSettingsModel, OpacityPublicSettingsModel, OpacitySettingsModel, OutfitSettings, SplatterSettingsModel } from "./base";
 import { CollarModel, CollarPublicSettingsModel, CollarSettingsModel } from "./collar";
 import { HypnoPublicSettingsModel, HypnoSettingsModel } from "./hypno";
 import { InjectorPublicSettingsModel, InjectorSettingsModel } from "./injector";
@@ -53,7 +53,7 @@ export interface IPublicSettingsModel extends BaseSettingsModel {
     MagicModule: MagicPublicSettingsModel;
     CursedItemModule: CursedItemSettingsModel;
     OpacityModule: OpacityPublicSettingsModel;
-    LeashingModule: BaseSettingsModel;
+    LeashingModule: LeashingPublicSettingsModel;
     ChaoticItemModule: BaseSettingsModel;
     SplatterModule: SplatterSettingsModel;
     SpeechAnalysisModule: SpeechAnalysisPublicSettingsModel;
@@ -116,7 +116,7 @@ export class PublicSettingsModel implements IPublicSettingsModel {
         alwaysSubmitMemberIds: ""
     };
     BoopsModule: BaseSettingsModel = <BaseSettingsModel>{enabled: false};
-    LeashingModule: BaseSettingsModel = <BaseSettingsModel>{enabled: false};
+    LeashingModule: LeashingPublicSettingsModel = <LeashingPublicSettingsModel>{enabled: false, clasps: []};
     LipstickModule: LipstickSettingsModel = <LipstickSettingsModel>{
         enabled: false,
         dry: false
