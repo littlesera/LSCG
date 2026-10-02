@@ -98,6 +98,17 @@ export class ConsentModule extends BaseModule {
         });
     }
 
+    unload(): void {
+        for (const offer of this.sentOffers.values()) clearTimeout(offer.timer);
+        for (const offer of this.refusedOffers.values()) clearTimeout(offer.timer);
+        this.sentOffers.clear();
+        this.refusedOffers.clear();
+        Core().RemoveCommandListenerById("consent_offer_listener");
+        Core().RemoveCommandListenerById("consent_answer_listener");
+        Core().RemoveCommandListenerById("consent_force_listener");
+        Core().RemoveCommandListenerById("consent_force_result_listener");
+    }
+
     RegisterFlow(flow: ConsentFlow) {
         this.flows.set(flow.id, flow);
     }
@@ -191,6 +202,9 @@ export class ConsentModule extends BaseModule {
         const flow = this.flows.get(flowId);
         const sender = getCharacter(fromNum);
         if (!flow || !sender || !id || flow.enabled?.() === false)
+            return;
+        // Ghosted or blacklisted players don't get to prompt us
+        if (Player.GhostList?.includes(fromNum) || Player.BlackList?.includes(fromNum))
             return;
 
         // Answered for them, so no emote as if they'd reacted

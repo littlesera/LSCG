@@ -425,6 +425,9 @@ api.network.send(targetMemberNumber, "wave", { text: "hello!" });
   arrives frozen and with no prototype, so a key like `__proto__` is just data.
 - **Who can send to you.** By default a command is only accepted from players in the room whom the player gives
   item permission. Pass `{ permission: "anyone" }` to `on` to accept it from any LSCG player, in any room.
+  With `"anyone"`, item permission, blacklists and room are all bypassed, so your handler is the only gate: validate
+  every field, and never act on the sender's behalf of the player (move them, restrain them, change their settings)
+  without the player's own confirmation.
 - **Reaching other rooms.** `send` needs the target in the same room. Pass `{ beep: true }` to send by beep,
   which reaches them anywhere.
 - **Limits.** `args` must be JSON and at most about 4 KB, both ways. `send` throws on invalid input, and returns

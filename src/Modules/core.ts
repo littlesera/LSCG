@@ -150,11 +150,11 @@ export class CoreModule extends BaseModule {
                     return;
                 ChatRoomCharacter.forEach(C => {
                     if (C.Crafting != null && !C.IsPlayer() && C.MemberNumber != target.MemberNumber && (C as OtherCharacter).LSCG && (C as OtherCharacter).LSCG.GlobalModule.sharePublicCrafting) {
-                        for (const Craft of C.Crafting)
-                            if ((Craft != null) && (Craft.Item != null))
-                                if ((Craft.Private == null) || (Craft.Private == false)) {
-                                    Craft.MemberName = CharacterNickname(C);
-                                    Craft.MemberNumber = C.MemberNumber;
+                        for (const original of C.Crafting)
+                            if ((original != null) && (original.Item != null))
+                                if ((original.Private == null) || (original.Private == false)) {
+                                    // Copy, so the other player's own crafting data isn't altered
+                                    const Craft = { ...original, MemberName: CharacterNickname(C), MemberNumber: C.MemberNumber };
 
                                     const canUseCraftedItem = DialogCanUseCraftedItem as (C: Character, Craft: CraftingItem, asset: Asset) => boolean;
                                     for (const Asset of (CraftingAssets[Craft.Item] ?? [])) {
