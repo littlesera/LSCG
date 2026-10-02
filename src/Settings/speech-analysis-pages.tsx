@@ -2,11 +2,12 @@ import { Outfits } from "modules";
 import { StripLevel } from "./Models/cursed-item";
 import { OutfitOption } from "./Models/magic";
 import { h } from "tsx-dom";
-import { ButtonRow, CheckboxRow, confirmDialog, openDialog, KitContext, KitTab, Notice, NumberRow, RuleTable, SectionLabel, SelectOption, SelectRow, TextRow } from "./Dom/kit";
+import { buildTuneTab } from "./speech-tuning-pages";
+import { ButtonRow, CheckboxRow, confirmDialog, openDialog, KitContext, KitTab, Notice, NumberRow, RuleTable, SectionLabel, SelectOption, SelectRow, TextRow } from "Dom/kit";
 import {
     SPEECH_DETECTIONS, SPEECH_DETECTION_DETECTOR, SPEECH_DETECTORS, SPEECH_EDITABLE_KEYS, SpeechDetectorId, SPEECH_MAX_COOLDOWN_MS, SPEECH_MAX_DURATION_MS, SPEECH_MAX_RULES, SPEECH_MAX_TEXT_LENGTH, SPEECH_NUMBER_RANGES as R,
     SPEECH_MAX_PHRASE_GROUPS, SPEECH_PHRASE_GROUP_NAME_MAX, SpeechPhraseGroup, defaultSpeechSettings, newPhraseGroupId,
-    SPEECH_OUTFIT_KEY_MAX, SPEECH_OUTFIT_OPTIONS, SPEECH_REACTION_ACTIONS, SPEECH_REACTION_STATES, SPEECH_REMOTE_LEVELS, SPEECH_REMOVE_ONLY_STATES, SpeechSettingsView, SpeechDetection, SpeechReactionAction, SpeechReactionRule, SpeechRemoteLevel,
+    SpeechAnalysisSettingsModel, SPEECH_OUTFIT_KEY_MAX, SPEECH_OUTFIT_OPTIONS, SPEECH_REACTION_ACTIONS, SPEECH_REACTION_STATES, SPEECH_REMOTE_LEVELS, SPEECH_REMOVE_ONLY_STATES, SpeechSettingsView, SpeechDetection, SpeechReactionAction, SpeechReactionRule, SpeechRemoteLevel,
 } from "./Models/speech-analysis";
 
 const DETECTION_LABELS: Record<SpeechDetection, string> = {
@@ -232,6 +233,7 @@ export function buildSpeechTabs(ctx: KitContext, s: SpeechSettingsView, opts: Sp
                 TextRow(ctx, { label: "Never profane", placeholder: "damn, hell", multiline: true, maxLength: SPEECH_MAX_TEXT_LENGTH, get: () => s.profanitySafe ?? "", set: v => s.profanitySafe = v, disabled: () => !detectorOn(s, "profanity") }),
             ],
         },
+        ...(opts.remote ? [] : [buildTuneTab(ctx, s as SpeechAnalysisSettingsModel)]),
         {
             label: "Phrases",
             render: () => [

@@ -19,12 +19,13 @@ jobs:
     env:
       IS_DEV: true
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v7
     - name: Use Node.js 24.x
-      uses: actions/setup-node@v3
+      uses: actions/setup-node@v7
       with:
-        node-version: ${{ matrix.node-version }}
+        node-version: '24.x'
         cache: 'npm'
+        registry-url: 'https://registry.npmjs.org' # lets npm publish read NODE_AUTH_TOKEN below
     - run: npm ci
     - run: npm run build --if-present
     #- run: npm test
@@ -37,3 +38,19 @@ jobs:
         target-folder: dev
         git-config-name: github-actions[bot]
         git-config-email: github-actions[bot]@users.noreply.github.com
+
+    # Beta typings for extension authors testing against dev: published as e.g. 0.9.3-beta.<run> under npm's
+    # "beta" tag (`npm i -D @lscg/types@beta`), so `npm i @lscg/types` still gets the last release. Skipped when
+    # the types haven't changed since the last beta, so ordinary dev pushes don't publish anything.
+    - name: Publish @lscg/types beta to npm
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      run: |
+        node scripts/pack-types.mjs --prerelease "beta.${{ github.run_number }}"
+        HASH=$(node -p "require('./build/types-package/package.json').lscgTypesHash")
+        PUBLISHED=$(npm view @lscg/types@beta lscgTypesHash 2>/dev/null || true)
+        if [ "$HASH" = "$PUBLISHED" ]; then
+          echo "The types haven't changed since the last beta; nothing to publish."
+        else
+          npm publish ./build/types-package --tag beta --access public --provenance
+        fi

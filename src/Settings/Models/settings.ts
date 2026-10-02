@@ -1,16 +1,13 @@
-import { BoopsModule } from "Modules/boops";
-import { InjectorModule } from "Modules/injector";
-import { BaseSettingsModel, GlobalPublicSettingsModel, GlobalSettingsModel, LipstickSettingsModel, MapSettingsModel, MiscSettingsModel, OpacityPublicSettingsModel, OpacitySettingsModel, OutfitSettings, SplatterSettingsModel } from "./base";
+import { BaseSettingsModel, GlobalPublicSettingsModel, GlobalSettingsModel, LeashingPublicSettingsModel, LipstickSettingsModel, MapSettingsModel, MiscSettingsModel, OpacityPublicSettingsModel, OpacitySettingsModel, OutfitSettings, SplatterSettingsModel } from "./base";
 import { CollarModel, CollarPublicSettingsModel, CollarSettingsModel } from "./collar";
 import { HypnoPublicSettingsModel, HypnoSettingsModel } from "./hypno";
 import { InjectorPublicSettingsModel, InjectorSettingsModel } from "./injector";
 import { ActivitySettingsModel } from "./activities";
-import { StateModule } from "Modules/states";
 import { StatePublicSettingsModel, StateSettingsModel } from "./states";
 import { MagicPublicSettingsModel, MagicSettingsModel } from "./magic";
-import { ChaoticItemModule } from "Modules/chaotic-item";
 import { CursedItemSettingsModel } from "./cursed-item";
 import { SpeechAnalysisPublicSettingsModel, SpeechAnalysisSettingsModel, defaultSpeechPublicSettings } from "./speech-analysis";
+import type { ExtensionStorageEntry } from "api/storage";
 
 export interface SettingsModel {
     Version: string;
@@ -33,10 +30,14 @@ export interface SettingsModel {
     SplatterModule: SplatterSettingsModel;
     MapModule: MapSettingsModel;
     SpeechAnalysisModule: SpeechAnalysisSettingsModel;
+    /** Data extensions saved, by extension id (see api/storage). Part of exports; only the public part is shared. */
+    Extensions?: Record<string, ExtensionStorageEntry>;
 }
 
 export interface IPublicSettingsModel extends BaseSettingsModel {
     Version: string;
+    /** Public data extensions share with the room, by extension id. Built at sync time, never stored. */
+    ExtensionData?: Record<string, unknown>;
     CollarModule: CollarPublicSettingsModel;
     HypnoModule: HypnoPublicSettingsModel;
     BoopsModule: BaseSettingsModel;
@@ -48,7 +49,7 @@ export interface IPublicSettingsModel extends BaseSettingsModel {
     MagicModule: MagicPublicSettingsModel;
     CursedItemModule: CursedItemSettingsModel;
     OpacityModule: OpacityPublicSettingsModel;
-    LeashingModule: BaseSettingsModel;
+    LeashingModule: LeashingPublicSettingsModel;
     ChaoticItemModule: BaseSettingsModel;
     SplatterModule: SplatterSettingsModel;
     SpeechAnalysisModule: SpeechAnalysisPublicSettingsModel;
@@ -57,6 +58,7 @@ export interface IPublicSettingsModel extends BaseSettingsModel {
 export class PublicSettingsModel implements IPublicSettingsModel {
     enabled: boolean = false;
     Version: string = LSCG_VERSION;
+    ExtensionData: Record<string, unknown> = {};
     CollarModule: CollarPublicSettingsModel = <CollarPublicSettingsModel>{
         enabled: false,
         chokeLevel: 0,
@@ -75,7 +77,7 @@ export class PublicSettingsModel implements IPublicSettingsModel {
         allowButtons: false,
         anyCollar: false,
         knockout: false,
-        knockoutMinutes: 2
+        knockoutMinutes: 2,
     };
     HypnoModule: HypnoPublicSettingsModel = <HypnoPublicSettingsModel>{
         enabled: false,
@@ -107,17 +109,17 @@ export class PublicSettingsModel implements IPublicSettingsModel {
         allowSuggestionRemoval: true,
         blockedInstructions: [],
         alwaysSubmit: false,
-        alwaysSubmitMemberIds: ""
+        alwaysSubmitMemberIds: "",
     };
     BoopsModule: BaseSettingsModel = <BaseSettingsModel>{enabled: false};
-    LeashingModule: BaseSettingsModel = <BaseSettingsModel>{enabled: false};
+    LeashingModule: LeashingPublicSettingsModel = <LeashingPublicSettingsModel>{enabled: false, clasps: []};
     LipstickModule: LipstickSettingsModel = <LipstickSettingsModel>{
         enabled: false,
-        dry: false
+        dry: false,
     };
     GlobalModule: GlobalPublicSettingsModel = <GlobalPublicSettingsModel>{
         enabled: false,
-        sharePublicCrafting: false
+        sharePublicCrafting: false,
     };
     MiscModule: BaseSettingsModel = <BaseSettingsModel>{enabled: false};
     InjectorModule: InjectorPublicSettingsModel = <InjectorPublicSettingsModel>{
@@ -129,13 +131,14 @@ export class PublicSettingsModel implements IPublicSettingsModel {
         hornyLevel: 0,
         hornyLevelMax: 5,
         drugLevelMultiplier: 100,
+        drugLevels: [],
         asleep: false,
-        brainwashed: false
+        brainwashed: false,
     };
     StateModule: StatePublicSettingsModel = <StatePublicSettingsModel>{
         enabled: true,
         immersive: false,
-        states: []
+        states: [],
     };
     MagicModule: MagicPublicSettingsModel = <MagicPublicSettingsModel>{
         enabled: false,
@@ -144,6 +147,7 @@ export class PublicSettingsModel implements IPublicSettingsModel {
         trueWildMagic: false,
         blockedSpellEffects: [],
         bypassForSelfEffects: [],
+        knownEffects: [],
         lockable: false,
         locked: false,
         remoteAccess: false,
@@ -159,11 +163,11 @@ export class PublicSettingsModel implements IPublicSettingsModel {
         requireWhitelist: false,
         blockXRay: true,
         projectionTintColor: "#00CED1",
-        hideCorporeal: false
+        hideCorporeal: false,
     };
     OpacityModule: OpacityPublicSettingsModel = <OpacityPublicSettingsModel>{
         enabled: true,
-        preventExternalMod: false
+        preventExternalMod: false,
     };
     CursedItemModule: CursedItemSettingsModel = <CursedItemSettingsModel>{
         enabled: false,
@@ -172,7 +176,7 @@ export class PublicSettingsModel implements IPublicSettingsModel {
         CursedItems: [],
         SuppressEmote: false,
         AlwaysExhaust: false,
-        BlockExistingGroups: false
+        BlockExistingGroups: false,
     };
     ChaoticItemModule: BaseSettingsModel = <BaseSettingsModel>{enabled: false};
     SpeechAnalysisModule: SpeechAnalysisPublicSettingsModel = defaultSpeechPublicSettings();
@@ -187,6 +191,6 @@ export class PublicSettingsModel implements IPublicSettingsModel {
         blacklist: [],
         whitelist: [],
         requireLover: false,
-        minArousal: 90
+        minArousal: 90,
     };
 }

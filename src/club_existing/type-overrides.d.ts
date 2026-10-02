@@ -25,6 +25,9 @@ interface LSCGMessageDictionaryEntry {
 
 type LSCGMessageModelType = "init" | "sync" | "command" | "broadcast";
 
+/** A command sent by an extension: "<extension id>.<name>". Built-in command names never contain a ".". */
+type LSCGExtensionCommandName = `${string}.${string}`;
+
 type LSCGCommandName = "debug"
     | "grab"
     | "release"
@@ -73,7 +76,7 @@ interface LSCGMessageModel {
     target: number | null,
     reply: boolean,
     command?: {
-        name: LSCGCommandName,
+        name: LSCGCommandName | LSCGExtensionCommandName,
         args: {name: string, value: any}[]
     }
 }
@@ -105,6 +108,7 @@ type LSCGActivityName = ActivityName
     | "Bap"
     | "Chew"
     | "Chomp"
+    | "ClaspLeash"
     | "CollarTighten"
     | "CollarLoosen"
     | "CollarStats"
@@ -122,8 +126,10 @@ type LSCGActivityName = ActivityName
     | "GrabTongueWithFoot"
     | "Headbutt"
     | "HoldHand"
+    | "HoldLeash"
     | "Hug"
     | "KissEyes"
+    | "LetGoOfLeash"
     | "NecklaceToGag"
     | "NetGun"
     | "Nuzzle"
@@ -146,6 +152,7 @@ type LSCGActivityName = ActivityName
     | "Throat"
     | "ThroatHandheld"
     | "Tug"
+    | "UnclaspLeash"
     | "LSCG_FunnelPour"
     | "LSCG_Splat"
 ;
@@ -163,11 +170,14 @@ type LSCGSpecialItems =
 
 type LSCGActivityPrerequisite = ActivityPrerequisite
     | "CanChomp"
+    | "CanClaspLeash"
     | "CanCustomFlick"
     | "CanCustomNibble"
     | "CanGrindWithPussy"
     | "CanGive"
     | "CanHeadbutt"
+    | "CanHoldLeash"
+    | "CanLetGoOfLeash"
     | "CanPourIntoFunnel"
     | "CanSquirt"
     | "CanSteal"
@@ -205,6 +215,7 @@ type LSCGActivityPrerequisite = ActivityPrerequisite
     | "TargetIsHandUnleashed"
     | "TargetIsNeckChoked"
     | "TargetIsWearingGagNecklace"
+    | "TargetHasClaspedLeash"
     | "TargetHasPenis"
     | "TargetHornAvailable"
     | "TargetNotAlreadyCollarGrabbed"

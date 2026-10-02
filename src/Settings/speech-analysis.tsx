@@ -1,13 +1,11 @@
 import { GuiSubscreen, HelpInfo } from "./settingBase";
-import { DomSettingsHost } from "./Dom/host";
-import { KitContext, Notice, Tabs } from "./Dom/kit";
+import { DomSettingsHost } from "./domSettingsHost";
+import { KitContext, Notice, Tabs } from "Dom/kit";
 import { buildSpeechTabs } from "./speech-analysis-pages";
 import { SpeechAnalysisSettingsModel } from "./Models/speech-analysis";
 
-export const SPEECH_SCREEN_SHAPE: RectTuple = [GuiSubscreen.START_X, GuiSubscreen.START_Y - 25, 1780 - GuiSubscreen.START_X, 740];
-
 export class GuiSpeechAnalysis extends GuiSubscreen {
-    private _host = new DomSettingsHost("lscg-speech-settings", SPEECH_SCREEN_SHAPE, () => this.build());
+    private _host = new DomSettingsHost("lscg-speech-settings", this, () => this.build());
 
     get name(): string {
         return "Speech Analysis";
@@ -22,7 +20,7 @@ export class GuiSpeechAnalysis extends GuiSubscreen {
     }
 
     get help(): HelpInfo {
-        return { label: "Open LSCG Wiki on GitHub", link: "https://github.com/littlesera/LSCG/wiki" };
+        return { label: "Open Speech Analysis Wiki on GitHub", link: "https://github.com/littlesera/LSCG/wiki/Speech-Analysis" };
     }
 
     private build(): Node {

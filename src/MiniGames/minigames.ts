@@ -7,7 +7,7 @@ export function miniGames(): BaseMiniGame[] {
 }
 
 export function registerMiniGame<T extends BaseMiniGame>(miniGame: T): T {
-    var name = miniGame.name;
+    const name = miniGame.name;
     if (miniGameMap.has(name)) 
         return miniGameMap.get(name) as T ?? miniGame;
     else {
@@ -33,7 +33,7 @@ hookFunction("TextLoad", 5, (args, next) => {
         return undefined!;
     else
         return next(args);
-})
+});
 
 export abstract class BaseMiniGame {
     get name(): LSCGMiniGames {

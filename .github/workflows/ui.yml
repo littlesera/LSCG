@@ -1,0 +1,79 @@
+# Browser UI tests: LSCG's built bundle inside a real, offline Bondage Club (scripts/bc-playground.mjs), driven by
+# Playwright. See test/README.md ("The playground").
+#
+# NON-BLOCKING for now: `continue-on-error` keeps a failure here from failing the PR, and this job isn't (and
+# shouldn't be) a required check until it has proven reliable and caught real problems. To promote it, drop
+# `continue-on-error` and mark "UI tests" as required in the branch protection rules.
+name: UI tests
+on:
+  pull_request:
+    branches: [ "main", "dev" ]
+  # Also on pushes to the branches PRs target: GitHub only lets a PR restore caches made on its own branch, its base
+  # branch or the default branch, so without these every new PR would start with a cold BC cache (slow, and it
+  # fails when gitgud rate-limits the downloads).
+  push:
+    branches: [ "main", "dev" ]
+  workflow_dispatch: {}
+
+jobs:
+  ui:
+    name: UI tests
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    timeout-minutes: 20
+
+    steps:
+    - uses: actions/checkout@v7
+    - name: Use Node.js 24.x
+      uses: actions/setup-node@v7
+      with:
+        node-version: '24.x'
+        cache: 'npm'
+    - run: npm ci
+    - run: npm run build
+
+    # The playground fetches each BC client file from gitgud the first time it's needed (~1,100 files); caching it
+    # keeps PR runs off gitgud (it rate-limits bursts). Keyed on the pinned BC commit, like validate.yml's cache.
+    - name: Restore BC client cache (test/bc-client.json's pinned commit)
+      id: bc-cache
+      uses: actions/cache/restore@v6
+      with:
+        path: .cache/bc-full-*
+        key: bc-playground-${{ hashFiles('test/bc-client.json') }}
+
+    - name: Get Playwright version
+      id: playwright
+      run: echo "version=$(npx playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+    - name: Cache Playwright browser
+      id: browser-cache
+      uses: actions/cache@v6
+      with:
+        path: ~/.cache/ms-playwright
+        key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+    - name: Install Chromium
+      run: npx playwright install --with-deps chromium
+      if: steps.browser-cache.outputs.cache-hit != 'true'
+    - name: Install Chromium's system libraries
+      run: npx playwright install-deps chromium
+      if: steps.browser-cache.outputs.cache-hit == 'true'
+
+    - run: npm run test:ui
+
+    # Saved even when the tests fail: the default cache step only saves after a successful job, so a failing run would
+    # leave every later run cold, re-downloading BC from gitgud (which rate-limits) and failing the same way.
+    - name: Save BC client cache
+      if: always() && steps.bc-cache.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v6
+      with:
+        path: .cache/bc-full-*
+        key: bc-playground-${{ hashFiles('test/bc-client.json') }}
+
+    - name: Upload the report (traces and screenshots of failures)
+      if: failure()
+      uses: actions/upload-artifact@v7
+      with:
+        name: ui-test-report
+        path: |
+          test/.out/ui-report
+          test/.out/ui-results
+        retention-days: 7

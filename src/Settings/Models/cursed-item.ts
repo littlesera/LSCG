@@ -1,4 +1,4 @@
-import { BaseSettingsModel, ModuleStats } from "./base";
+import { BaseSettingsModel } from "./base";
 
 export type SpreadSpeed = "slow" | "medium" | "fast" | "instant" | "custom";
 export type ItemType = "cloth" | "bind" | "cosplay" | "body" | "gender";

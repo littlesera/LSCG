@@ -14,10 +14,10 @@ import type { MagicSettingsModel } from "../Settings/Models/magic";
  */
 export function isCharacter(value: unknown): value is Character {
 	return (
-		typeof value === 'object' &&
+		typeof value === "object" &&
 		value !== null &&
-		'MemberNumber' in value &&
-		'Name' in value
+		"MemberNumber" in value &&
+		"Name" in value
 	);
 }
 
@@ -28,9 +28,9 @@ export function isCharacter(value: unknown): value is Character {
 export function hasLSCGData(char: unknown): char is Character & { LSCG: SettingsModel } {
 	return (
 		isCharacter(char) &&
-		'LSCG' in char &&
+		"LSCG" in char &&
 		char.LSCG !== null &&
-		typeof char.LSCG === 'object'
+		typeof char.LSCG === "object"
 	);
 }
 
@@ -40,14 +40,14 @@ export function hasLSCGData(char: unknown): char is Character & { LSCG: Settings
  */
 export function hasLSCGModule<K extends keyof SettingsModel>(
 	char: unknown,
-	moduleName: K
+	moduleName: K,
 ): char is Character & { LSCG: SettingsModel & { [P in K]: NonNullable<SettingsModel[P]> } } {
 	return (
 		hasLSCGData(char) &&
 		moduleName in char.LSCG &&
 		char.LSCG[moduleName] !== null &&
 		char.LSCG[moduleName] !== undefined &&
-		typeof char.LSCG[moduleName] === 'object'
+		typeof char.LSCG[moduleName] === "object"
 	);
 }
 
@@ -57,8 +57,8 @@ export function hasLSCGModule<K extends keyof SettingsModel>(
  */
 export function hasMagicModule(char: unknown): char is Character & { LSCG: SettingsModel & { MagicModule: MagicSettingsModel & { enabled: true } } } {
 	return (
-		hasLSCGModule(char, 'MagicModule') &&
-		'enabled' in char.LSCG.MagicModule &&
+		hasLSCGModule(char, "MagicModule") &&
+		"enabled" in char.LSCG.MagicModule &&
 		char.LSCG.MagicModule.enabled === true
 	);
 }
@@ -71,7 +71,7 @@ export function isFileInputEvent(event: Event): event is Event & { target: HTMLI
 	return (
 		event.target !== null &&
 		event.target instanceof HTMLInputElement &&
-		'files' in event.target &&
+		"files" in event.target &&
 		event.target.files instanceof FileList
 	);
 }
@@ -82,9 +82,9 @@ export function isFileInputEvent(event: Event): event is Event & { target: HTMLI
  */
 export function hasProperty<K extends string>(
 	obj: unknown,
-	key: K
+	key: K,
 ): obj is Record<K, unknown> {
-	return typeof obj === 'object' && obj !== null && key in obj;
+	return typeof obj === "object" && obj !== null && key in obj;
 }
 
 /**
@@ -94,7 +94,7 @@ export function hasProperty<K extends string>(
 export function hasTypedProperty<K extends string, T>(
 	obj: unknown,
 	key: K,
-	typeCheck: (value: unknown) => value is T
+	typeCheck: (value: unknown) => value is T,
 ): obj is Record<K, T> {
 	return hasProperty(obj, key) && typeCheck((obj as Record<K, unknown>)[key]);
 }
@@ -103,21 +103,21 @@ export function hasTypedProperty<K extends string, T>(
  * Type guard for checking if a value is a string
  */
 export function isString(value: unknown): value is string {
-	return typeof value === 'string';
+	return typeof value === "string";
 }
 
 /**
  * Type guard for checking if a value is a number
  */
 export function isNumber(value: unknown): value is number {
-	return typeof value === 'number' && !isNaN(value);
+	return typeof value === "number" && !isNaN(value);
 }
 
 /**
  * Type guard for checking if a value is a boolean
  */
 export function isBoolean(value: unknown): value is boolean {
-	return typeof value === 'boolean';
+	return typeof value === "boolean";
 }
 
 /**
@@ -140,7 +140,7 @@ export interface ExtendedOnlineSettings {
 export function hasExtendedOnlineSettings(player: typeof Player): player is typeof Player & { OnlineSettings: ExtendedOnlineSettings } {
 	return (
 		player.OnlineSettings !== null &&
-		typeof player.OnlineSettings === 'object'
+		typeof player.OnlineSettings === "object"
 	);
 }
 
@@ -156,9 +156,9 @@ export interface PlayerWithMBS extends PlayerCharacter {
 
 export function hasMBSSettings(player: PlayerCharacter): player is PlayerWithMBS {
 	return (
-		'MBSSettings' in player &&
+		"MBSSettings" in player &&
 		player.MBSSettings !== null &&
-		typeof player.MBSSettings === 'object'
+		typeof player.MBSSettings === "object"
 	);
 }
 
@@ -195,21 +195,21 @@ export interface LegacyMiscModule {
  */
 export function hasLegacyHypnoProps(module: unknown): module is LegacyHypnoModule {
 	return (
-		typeof module === 'object' &&
+		typeof module === "object" &&
 		module !== null &&
-		('hypnotized' in module ||
-		'existingEye1Color' in module ||
-		'immersive' in module)
+		("hypnotized" in module ||
+		"existingEye1Color" in module ||
+		"immersive" in module)
 	);
 }
 
 export function hasLegacyInjectorProps(module: unknown): module is LegacyInjectorModule {
 	return (
-		typeof module === 'object' &&
+		typeof module === "object" &&
 		module !== null &&
-		('brainwashed' in module ||
-		'asleep' in module ||
-		'immersive' in module)
+		("brainwashed" in module ||
+		"asleep" in module ||
+		"immersive" in module)
 	);
 }
 
@@ -225,9 +225,9 @@ export interface ModifiedAsset {
 
 export function isModifiedAsset(asset: unknown): asset is Asset & ModifiedAsset {
 	return (
-		typeof asset === 'object' &&
+		typeof asset === "object" &&
 		asset !== null &&
-		'Name' in asset
+		"Name" in asset
 	);
 }
 
@@ -241,13 +241,13 @@ export function isModifiedAsset(asset: unknown): asset is Asset & ModifiedAsset 
 export function safeGetLSCGProp<K extends keyof SettingsModel, P extends keyof NonNullable<SettingsModel[K]>>(
 	char: unknown,
 	moduleName: K,
-	propName: P
+	propName: P,
 ): NonNullable<SettingsModel[K]>[P] | undefined {
 	if (!hasLSCGModule(char, moduleName)) {
 		return undefined;
 	}
 	const module = char.LSCG[moduleName];
-	if (module && typeof module === 'object' && propName in module) {
+	if (module && typeof module === "object" && propName in module) {
 		return (module as NonNullable<SettingsModel[K]>)[propName];
 	}
 	return undefined;
@@ -276,7 +276,7 @@ export function isValidHookReturn(value: unknown): value is unknown {
  */
 export function unsafeCast<T>(value: unknown, reason: string): T {
 	// Log in development to track usage
-	if (typeof console !== 'undefined' && console.debug) {
+	if (typeof console !== "undefined" && console.debug) {
 		console.debug(`LSCG: Unsafe cast used: ${reason}`);
 	}
 	return value as T;

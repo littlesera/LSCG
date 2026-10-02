@@ -1,22 +1,24 @@
-import { BaseModule } from 'base';
-import { HypnoInfluence, HypnoSettingsModel, LSCGHypnoInstruction } from 'Settings/Models/hypno';
-import { ModuleCategory, Subscreen } from 'Settings/setting_definitions';
-import { settingsSave, parseMsgWords, OnAction, OnActivity, SendAction, getRandomInt, hookFunction, removeAllHooksByModule, callOriginal, setOrIgnoreBlush, isAllowedMember, isPhraseInString, GetTargetCharacter, GetDelimitedList, GetActivityEntryFromContent, escapeRegExp, IsActivityAllowed, LSCG_SendLocal, getCharacter, sendLSCGCommandBeep, htmlToElement, OnChat, getDominance, getCharacterByNicknameOrMemberNumber, getActivities, isCloth, replace_template, hookBCXVoice, parseFromBase64 } from '../utils';
-import { GuiHypno } from 'Settings/hypno';
-import { getModule } from 'modules';
-import { ActivityEntryModel } from 'Settings/Models/activities';
-import { InjectorModule } from './injector';
-import { StateModule } from './states';
-import { CommandListener, CoreModule } from './core';
-import { ActivitySelection, ClothingSelection, ForgetSelection, PoseSelection } from 'Settings/Remote/suggestions';
-import { SuggestionMiniGame } from 'MiniGames/Suggestion';
-import { registerMiniGame } from 'MiniGames/minigames';
-import { StateRestrictions } from './States/BaseState';
-import { Leashing, LeashingModule } from './leashing';
+import { BaseModule } from "base";
+import { HypnoInfluence, HypnoSettingsModel, LSCGHypnoInstruction } from "Settings/Models/hypno";
+import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
+import { settingsSave, parseMsgWords, OnAction, OnActivity, SendAction, getRandomInt, hookFunction, removeAllHooksByModule, isAllowedMember, isPhraseInString, GetTargetCharacter, GetDelimitedList, GetActivityEntryFromContent, escapeRegExp, IsActivityAllowed, LSCG_SendLocal, getCharacter, sendLSCGCommandBeep, htmlToElement, getCharacterByNicknameOrMemberNumber, getActivities, isCloth, replace_template, hookBCXVoice, parseFromBase64 } from "../utils";
+import { GuiHypno } from "Settings/hypno";
+import { getModule } from "modules";
+import { ActivityEntryModel } from "Settings/Models/activities";
+import { InjectorModule } from "./injector";
+import { StateModule } from "./states";
+import { CommandListener, CoreModule } from "./core";
+import { ActivitySelection, ClothingSelection, ForgetSelection, PoseSelection } from "Settings/Remote/suggestions";
+import { SuggestionMiniGame } from "MiniGames/Suggestion";
+import { registerMiniGame } from "MiniGames/minigames";
+import { StateRestrictions } from "./States/BaseState";
+import { Leashing, LeashingModule } from "./leashing";
+import { emit } from "api/events";
+import type { LSCGHypnoAwakenMethod } from "api/types";
 import {
     CHECK_INTERVALS,
     EFFECT_DURATIONS,
-    TRIGGER_TIMES
+    TRIGGER_TIMES,
 } from "../constants";
 
 export class SuggestionMiniGameOptions {
@@ -31,7 +33,7 @@ export class SuggestionMiniGameOptions {
     tintColor: {r: number, g: number, b: number, a: number}[] = [{r: 148, g: 0, b: 211, a: 0}];
     gameLength: number = 4000;
     get senderNum(): number { return this.sender?.MemberNumber ?? -1; }
-    get senderName(): string { return !!this.sender ? CharacterNickname(this.sender) : ""; }
+    get senderName(): string { return this.sender ? CharacterNickname(this.sender) : ""; }
     get hintText(): string { return `${this.senderName}'s words compel you...`; }
     get failText(): string { return `You fail to resist ${this.senderName}'s suggestion.`; }
     get successText(): string { return `You shake off ${this.senderName}'s suggestion!`; }
@@ -102,7 +104,7 @@ export class HypnoModule extends BaseModule {
             silenceTriggers: "",
             stats: {},
             influence: <HypnoInfluence[]>[],
-            suggestions: <HypnoSuggestion[]>[]
+            suggestions: <HypnoSuggestion[]>[],
         };
     }
 
@@ -120,7 +122,7 @@ export class HypnoModule extends BaseModule {
 
     get commands(): ICommand[] {
         return [{
-			Tag: 'zonk',
+			Tag: "zonk",
 			Description: ": Hypnotize yourself",
 			Action: () => {
 				if (!this.Enabled)
@@ -132,9 +134,9 @@ export class HypnoModule extends BaseModule {
 				}
 				if (!this.hypnoActivated)
 					this.StartTriggerWord(true, Player.MemberNumber);
-			}
+			},
 		}, {
-			Tag: 'unzonk',
+			Tag: "unzonk",
 			Description: ": Awaken yourself",
 			Action: () => {
 				if (!this.Enabled)
@@ -146,7 +148,7 @@ export class HypnoModule extends BaseModule {
 				}
 				if (this.hypnoActivated)
 					this.TriggerRestoreTimeout();
-			}
+			},
 		}, {
 			Tag: "cycle-trigger",
 			Description: ": Force a cycle to a new trigger word if enabled",
@@ -157,7 +159,7 @@ export class HypnoModule extends BaseModule {
 				}
 				if (this.settings.enableCycle)
 					this.RollTriggerWord();
-			}
+			},
 		}, {
             Tag: "show-influence",
             Description: ": Display which characters have hypnotic influence over you",
@@ -167,21 +169,21 @@ export class HypnoModule extends BaseModule {
 					return;
 				}
                 this.settings.influence.forEach(inf => {
-                    let fmt = new Intl.RelativeTimeFormat("en", {
-                        style: "long"
+                    const fmt = new Intl.RelativeTimeFormat("en", {
+                        style: "long",
                     });
-                    let diff = new Date().getTime() - new Date(inf.lastInfluenced).getTime();
-                    let minutes = diff / 1000 / 60;
-                    let hours = minutes / 60;
-                    let days = hours / 24;
-                    let weeks = days / 7;
-                    let diffStr = weeks > 1 ? fmt.format(-weeks, "weeks") :
+                    const diff = new Date().getTime() - new Date(inf.lastInfluenced).getTime();
+                    const minutes = diff / 1000 / 60;
+                    const hours = minutes / 60;
+                    const days = hours / 24;
+                    const weeks = days / 7;
+                    const diffStr = weeks > 1 ? fmt.format(-weeks, "weeks") :
                         days > 1 ? fmt.format(-days, "days") :
                         hours > 1 ? fmt.format(-hours, "hours") :
                         fmt.format(-Math.floor(minutes), "minutes");
                     LSCG_SendLocal(`${inf.memberName} [<i>${inf.memberId}</i>] -- <br>&emsp;<b>Influence:</b> ${inf.influence}, <b>Last Update:</b> ${diffStr}`, false);
                 });
-            }
+            },
         }, {
             Tag: "show-suggestions",
             Description: ": Display which suggestions currently reside in your mind",
@@ -193,7 +195,7 @@ export class HypnoModule extends BaseModule {
                 this.settings.suggestions.forEach(s => {
                     LSCG_SendLocal(`<b>${s.name}</b> -- <br>&emsp;Installed By: <i>${s.installedByName} [${s.installedBy}]</i>, trigger: <i>${s.trigger}</i>`, false);
                 });
-            }
+            },
         }, {
             Tag: "remove-suggestion",
             Description: ": Remove an installed suggestion",
@@ -213,18 +215,18 @@ export class HypnoModule extends BaseModule {
 					return;
                 }
 
-                let suggestionName = args.trim();
-                let ix = this.settings.suggestions.findIndex(s => s.name.toLocaleLowerCase() == suggestionName.toLocaleLowerCase());
-                let suggestion = this.settings.suggestions[ix];
+                const suggestionName = args.trim();
+                const ix = this.settings.suggestions.findIndex(s => s.name.toLocaleLowerCase() == suggestionName.toLocaleLowerCase());
+                const suggestion = this.settings.suggestions[ix];
                 if (ix < 0 || !suggestion) {
                     LSCG_SendLocal(`Suggestion '${suggestionName}' not found`);
 					return;
                 } else {
                     this.settings.suggestions.splice(ix, 1);
                     settingsSave();
-                    LSCG_SendLocal(`Suggestion '${suggestion.name}' by ${suggestion.installedByName} [${suggestion.installedBy}] removed`)
+                    LSCG_SendLocal(`Suggestion '${suggestion.name}' by ${suggestion.installedByName} [${suggestion.installedBy}] removed`);
                 }
-            }
+            },
         }];
     }
 
@@ -235,12 +237,12 @@ export class HypnoModule extends BaseModule {
         OnAction(1, ModuleCategory.Hypno, (data, sender, msg, metadata) => {
             if (!this.Enabled)
                 return;
-            var lowerMsgWords = parseMsgWords(msg);
+            const lowerMsgWords = parseMsgWords(msg);
             if ((lowerMsgWords?.indexOf("snaps") ?? -1) >= 0 && 
                 sender?.MemberNumber != Player.MemberNumber &&
                 this.hypnoActivated) {
                 if (this.settings.enableSnapWakeup) {
-                    this.TriggerRestoreSnap();
+                    this.TriggerRestoreSnap(sender);
                 } else {
                     SendAction("%NAME% sways faintly, the snap failing to wake %POSSESSIVE% up.");
                 }
@@ -250,45 +252,45 @@ export class HypnoModule extends BaseModule {
         OnActivity(1, ModuleCategory.Hypno, (data, sender, msg, metadata) => {
             if (!this.Enabled)
                 return;
-            let target = GetTargetCharacter(data);
+            const target = GetTargetCharacter(data);
             if (!!target && target == Player.MemberNumber) {
-                let activityEntry = GetActivityEntryFromContent(data.Content);
+                const activityEntry = GetActivityEntryFromContent(data.Content);
                 if (!activityEntry || !sender || !IsActivityAllowed(activityEntry, sender))
                     return;
                 if (activityEntry?.awakener && this.hypnoActivated && !sender?.IsPlayer())
-                    this.TriggerRestoreBoop();
+                    this.TriggerRestoreBoop(sender);
                 else if (activityEntry?.hypno && !this.hypnoActivated && !this.IsOnCooldown() && (Player.ArousalSettings?.Progress ?? 0) >= activityEntry.hypnoThreshold) {
                     this.DelayedTrigger(activityEntry, sender?.MemberNumber);
                 }
             }
         });
 
-        let handlerPriority = (ChatRoomMessageHandlers.find(h => h.Description == "Save chats and whispers to the chat log")?.Priority ?? 110) - 1;
+        const handlerPriority = (ChatRoomMessageHandlers.find(h => h.Description == "Save chats and whispers to the chat log")?.Priority ?? 110) - 1;
         ChatRoomRegisterMessageHandler(<ChatRoomMessageHandler>{
             Priority: handlerPriority, // Try to make sure we run last. Other mods could potentially add handlers after this depending on arbitrary load order.
             Description: "LSCG Hypnosis Trigger Checks",
             Callback: (data: ServerChatRoomMessage, sender: Character, msg: string, metadata?: IChatRoomMessageMetadata) => {
                 if (data.Type == "Chat" || data.Type == "Whisper") {
-                    let newMsg = this.BlankOutTriggers(msg, sender);
+                    const newMsg = this.BlankOutTriggers(msg, sender);
                     if (!this.TopLevelCheckTriggers(msg, sender))
                         return false;
-                    return { msg: newMsg }
+                    return { msg: newMsg };
                 } 
                 return false;
-            }
+            },
         });
 
         let lastCycleCheck = 0;
-        let downgradeInterval = CHECK_INTERVALS.INFLUENCE_DOWNGRADE;
+        const downgradeInterval = CHECK_INTERVALS.INFLUENCE_DOWNGRADE;
         let lastInfluenceCheck = CommonTime();
 
-        let bcxCheckInterval = CHECK_INTERVALS.BCX_CHECK;
-        let lastbcxCheck = CommonTime();
-        hookFunction('TimerProcess', 1, (args, next) => {
+        const bcxCheckInterval = CHECK_INTERVALS.BCX_CHECK;
+        const lastbcxCheck = CommonTime();
+        hookFunction("TimerProcess", 1, (args, next) => {
             if (ActivityAllowed()) {
-                var now = CommonTime();
-                let triggerTimer = (this.settings.triggerTime ?? TRIGGER_TIMES.DEFAULT_TRIGGER_TIME_MINUTES) * 60000;
-                let hypnoEnd = this.StateModule.HypnoState.config.activatedAt + triggerTimer;
+                const now = CommonTime();
+                const triggerTimer = (this.settings.triggerTime ?? TRIGGER_TIMES.DEFAULT_TRIGGER_TIME_MINUTES) * 60000;
+                const hypnoEnd = this.StateModule.HypnoState.config.activatedAt + triggerTimer;
                 
                 if (this.hypnoActivated && this.settings.triggerTime > 0 && hypnoEnd < now) {
                     // Hypno Trigger Timeout --
@@ -314,14 +316,14 @@ export class HypnoModule extends BaseModule {
         getModule<CoreModule>("CoreModule").RegisterCommandListener(<CommandListener>{
             id: "suggestions_get_responder",
             command: "get-suggestions",
-            func: (sender: number, msg: LSCGMessageModel) => this.SuggestionsRequestHandler(sender, msg)
+            func: (sender: number, msg: LSCGMessageModel) => this.SuggestionsRequestHandler(sender, msg),
         });
 
         getModule<CoreModule>("CoreModule").RegisterCommandListener(<CommandListener>{
             id: "suggestions_set_responder",
             command: "set-suggestions",
-            func: (sender: number, msg: LSCGMessageModel) => this.SuggestionsPushHandler(sender, msg)
-        })
+            func: (sender: number, msg: LSCGMessageModel) => this.SuggestionsPushHandler(sender, msg),
+        });
 
         // Set Trigger
         if (!this.settings.trigger) {
@@ -338,13 +340,13 @@ export class HypnoModule extends BaseModule {
         if (!this._bcxHooked) {
             this._bcxHooked = hookBCXVoice((evt) => {
                 let msg = evt?.message;
-                if (!!msg && typeof msg === 'string' && msg.startsWith("[Voice] ") && ((<any>Player.ExtensionSettings).BCX || (<any>Player.OnlineSettings).BCX)) {
-                    let bcxSettings = parseFromBase64<any>((<any>Player.ExtensionSettings).BCX) ?? parseFromBase64<any>((<any>Player.OnlineSettings).BCX);
-                    let senderId = bcxSettings?.conditions?.rules?.conditions?.other_constant_reminder?.addedBy as number;
-                    if (!!senderId) {
+                if (!!msg && typeof msg === "string" && msg.startsWith("[Voice] ") && ((<any>Player.ExtensionSettings).BCX || (<any>Player.OnlineSettings).BCX)) {
+                    const bcxSettings = parseFromBase64<any>((<any>Player.ExtensionSettings).BCX) ?? parseFromBase64<any>((<any>Player.OnlineSettings).BCX);
+                    const senderId = bcxSettings?.conditions?.rules?.conditions?.other_constant_reminder?.addedBy as number;
+                    if (senderId) {
                         msg = msg.substring(8);
                         this.TopLevelCheckTriggers(msg, <Character>{
-                            MemberNumber: senderId
+                            MemberNumber: senderId,
                         });
                     }
                 }
@@ -360,8 +362,8 @@ export class HypnoModule extends BaseModule {
         if (!this.hypnoActivated && this.CheckTrigger(msg, sender) && !this.IsOnCooldown()) {
             this.StartTriggerWord(true, sender.MemberNumber);
         } else if (this.hypnoActivated) {
-            var lowerMsg = msg.toLowerCase();
-            var names = [CharacterNickname(Player)];
+            const lowerMsg = msg.toLowerCase();
+            const names = [CharacterNickname(Player)];
             if (!!Player.Name && names.indexOf(Player.Name) == -1)
                 names.push(Player.Name);
             if (names.some(n => isPhraseInString(lowerMsg, n)) || 
@@ -375,7 +377,7 @@ export class HypnoModule extends BaseModule {
                 }
             }
             else
-                msg =  msg.replace(/\S/gm, '-');
+                msg =  msg.replace(/\S/gm, "-");
         }
         
         if (this.settings.allowSuggestions)
@@ -384,7 +386,7 @@ export class HypnoModule extends BaseModule {
         return true;
     }
 
-    _suggestionHooks: any[] = []
+    _suggestionHooks: any[] = [];
     RegisterSuggestionHooks() {
         this._suggestionHooks.push(hookFunction("CommandParse", 1000, (args, next) => {
 			const msg = args[0].trim() as string;
@@ -392,7 +394,7 @@ export class HypnoModule extends BaseModule {
 			if (this.forceSay_sayText && msg && (ChatRoomTargetMemberNumber ?? -1) == -1 && !msg.includes("(") && isChat) {
 				if (msg.toLocaleLowerCase() === this.forceSay_sayText.toLocaleLowerCase()) {
                     this.forceSay_sayText = "";
-                    let ret = next(args);
+                    const ret = next(args);
                     if (this.forceSay_BypassingSpeechBlock) {
                         this.forceSay_BypassingSpeechBlock = false;
                         this.StateModule.HypnoState.PreventSpeech();
@@ -420,16 +422,16 @@ export class HypnoModule extends BaseModule {
                 this.allowedSpeaker(getCharacter(sender) ?? undefined))) {
                 sendLSCGCommandBeep(sender, "get-suggestions-response", [{
                     name: "suggestions",
-                    value: this.settings.suggestions?.filter(s => s.installedBy == sender || !s.exclusive || this._senderCanAlwaysModifySuggestions(sender)) ?? []
+                    value: this.settings.suggestions?.filter(s => s.installedBy == sender || !s.exclusive || this._senderCanAlwaysModifySuggestions(sender)) ?? [],
                 }, {
                     name: "total",
-                    value: this.settings.suggestions?.length ?? 0
-                }])
+                    value: this.settings.suggestions?.length ?? 0,
+                }]);
             }
     }
 
     SuggestionsPushHandler(sender: number, msg: LSCGMessageModel) {
-        let senderChar = getCharacter(sender);
+        const senderChar = getCharacter(sender);
         if (this.Enabled &&
             this._senderCanAlwaysModifySuggestions(sender) ||
                 (this.hypnoActivated &&
@@ -437,12 +439,12 @@ export class HypnoModule extends BaseModule {
                 this.allowedSpeaker(senderChar ?? undefined))) {
                     if (!this.settings.suggestions)
                         this.settings.suggestions = [];
-                    let incomingSuggestions = (msg.command?.args.find(a => a.name == "suggestions")?.value as HypnoSuggestion[]).filter(s => !!s.trigger) ?? [];
-                    let removedSuggestions = msg.command?.args.find(a => a.name == "removed")?.value as HypnoSuggestion[];
+                    const incomingSuggestions = (msg.command?.args.find(a => a.name == "suggestions")?.value as HypnoSuggestion[]).filter(s => !!s.trigger) ?? [];
+                    const removedSuggestions = msg.command?.args.find(a => a.name == "removed")?.value as HypnoSuggestion[];
                     if (!incomingSuggestions)
                         return;
                     incomingSuggestions.forEach(incoming => {
-                        let existing = this.settings.suggestions.find(s => s.id == incoming.id);
+                        const existing = this.settings.suggestions.find(s => s.id == incoming.id);
                         if (!existing) {
                             this.settings.suggestions.push(incoming);
                             if (!(this.settings.influence as HypnoInfluence[]))
@@ -452,24 +454,24 @@ export class HypnoModule extends BaseModule {
                         else Object.assign(existing, incoming);
                     });
                     removedSuggestions.forEach(removed => {
-                        let ix = this.settings.suggestions.findIndex(s => s.id == removed.id);
+                        const ix = this.settings.suggestions.findIndex(s => s.id == removed.id);
                         this.settings.suggestions.splice(ix, 1);
                     });
                     if (!AudioShouldSilenceSound(true))
                         AudioPlaySoundEffect("BellSmall");
-                    LSCG_SendLocal(`${!!senderChar ? CharacterNickname(senderChar) : "Someone"} whispers into your ear, burying suggestions deep into your mind.`)
+                    LSCG_SendLocal(`${senderChar ? CharacterNickname(senderChar) : "Someone"} whispers into your ear, burying suggestions deep into your mind.`);
                     settingsSave();
                 }
     }
 
     initializeTriggerWord() {
-        var recycleFromCommon = this.settings.randomTrigger && (!this.settings.trigger || commonWords.indexOf(this.settings.trigger) == -1);
+        const recycleFromCommon = this.settings.randomTrigger && (!this.settings.trigger || commonWords.indexOf(this.settings.trigger) == -1);
         if (recycleFromCommon) {
             this.settings.trigger = this.getNewTriggerWord();
             settingsSave();
         }
-        else if (!!this.settings.overrideWords) {
-            var words = this.settings.overrideWords.split(',').filter(word => !!word).map(word => word.toLocaleLowerCase());
+        else if (this.settings.overrideWords) {
+            const words = this.settings.overrideWords.split(",").filter(word => !!word).map(word => word.toLocaleLowerCase());
             if (words.indexOf(this.settings.trigger) == -1)
                 this.settings.trigger = this.getNewTriggerWord();
             settingsSave();
@@ -485,7 +487,7 @@ export class HypnoModule extends BaseModule {
     }
 
     get triggers(): string[] {
-        var overrideWords = GetDelimitedList(this.settings.overrideWords);
+        const overrideWords = GetDelimitedList(this.settings.overrideWords);
         if (overrideWords.length > 0 && !this.settings.enableCycle)
             return overrideWords;
         else
@@ -501,20 +503,20 @@ export class HypnoModule extends BaseModule {
     }
 
     getNewTriggerWord(): string {
-        var currentTrigger = this.settings.trigger;
-        var words = this.settings.randomTrigger ? commonWords : GetDelimitedList(this.settings.overrideWords)?.filter((word, ix, arr) => !!word && arr.indexOf(word) == ix) ?? [];
+        const currentTrigger = this.settings.trigger;
+        let words = this.settings.randomTrigger ? commonWords : GetDelimitedList(this.settings.overrideWords)?.filter((word, ix, arr) => !!word && arr.indexOf(word) == ix) ?? [];
         
         if (words.length > 1 && words.indexOf(currentTrigger) > -1)
             words = words.filter(val => val != currentTrigger);
 
-        return words[getRandomInt(words.length - 1)]?.toLocaleLowerCase() ?? "";
+        return words[getRandomInt(words.length)]?.toLocaleLowerCase() ?? "";
     }
 
     allowedSpeaker(speaker: Character | undefined): boolean {
         if (speaker?.MemberNumber == Player.MemberNumber)
             return false;
-        var memberId = speaker?.MemberNumber ?? 0;
-        var allowedMembers = GetDelimitedList(this.settings.overrideMemberIds).map(id => +id).filter(id => id > 0) ?? [];
+        const memberId = speaker?.MemberNumber ?? 0;
+        const allowedMembers = GetDelimitedList(this.settings.overrideMemberIds).map(id => +id).filter(id => id > 0) ?? [];
         if (allowedMembers.length <= 0)
             return isAllowedMember(speaker);
         else return allowedMembers.includes(memberId);
@@ -530,10 +532,10 @@ export class HypnoModule extends BaseModule {
         triggers?.filter(t => !!t).forEach(t => {
             let tWords = t?.split(" ");
             tWords = tWords.map(tw => {
-                let hashLength = Math.max(3, tw.length) + (getRandomInt(4) - 2);
-                return new Array(hashLength + 1).join('-');
+                const hashLength = Math.max(3, tw.length) + (getRandomInt(4) - 2);
+                return new Array(hashLength + 1).join("-");
             });
-            let str = "⚠" + tWords.join(" ") + "⚠";
+            const str = "⚠" + tWords.join(" ") + "⚠";
 
             let re = this._blankOutRegexCache.get(t);
             if (!re) {
@@ -549,25 +551,25 @@ export class HypnoModule extends BaseModule {
         "%NAME%'s eyes flutter as %PRONOUN% fights to keep control of %POSSESSIVE% senses...",
         "%NAME% whimpers and struggles to stay awake...",
         "%NAME% can feel %POSSESSIVE% eyelids grow heavy as %PRONOUN% drifts on the edge of trance...",
-        "%NAME% lets out a low moan as %POSSESSIVE% muscles relax and %PRONOUN% starts to drop..."
+        "%NAME% lets out a low moan as %POSSESSIVE% muscles relax and %PRONOUN% starts to drop...",
     ];
 
     delayedSleepStrings = [
         "%NAME%'s eyes flutter as %PRONOUN% fights to keep them open...",
         "%NAME% yawns and struggles to stay awake...",
         "%NAME% can feel %POSSESSIVE% eyelids grow heavy as %PRONOUN% drifts on the edge of sleep...",
-        "%NAME% takes a deep, relaxing breath as %POSSESSIVE% muscles relax and %POSSESSIVE% eyes start to droop..."
-    ]
+        "%NAME% takes a deep, relaxing breath as %POSSESSIVE% muscles relax and %POSSESSIVE% eyes start to droop...",
+    ];
 
     delayedActivations: Map<string, number> = new Map<string,number>();
     private _blankOutRegexCache = new Map<string, RegExp>();
 
     DelayedTrigger(activityEntry: ActivityEntryModel, memberNumber: number = 0, isSleep: boolean = false) {
-        let entryName = activityEntry.group + "-" + activityEntry.name;
+        const entryName = activityEntry.group + "-" + activityEntry.name;
         
         setTimeout(() => {
             let activation = this.delayedActivations.get(entryName);
-            if (!!activation) {
+            if (activation) {
                 activation = Math.max(0, activation - 1);
                 this.delayedActivations.set(entryName, activation);
             }
@@ -587,7 +589,7 @@ export class HypnoModule extends BaseModule {
             count = 0; // reset repeats
         }
         else {
-            let str = isSleep ? this.delayedSleepStrings[getRandomInt(this.delayedSleepStrings.length)] : this.delayedHypnoStrings[getRandomInt(this.delayedHypnoStrings.length)];
+            const str = isSleep ? this.delayedSleepStrings[getRandomInt(this.delayedSleepStrings.length)] : this.delayedHypnoStrings[getRandomInt(this.delayedHypnoStrings.length)];
             SendAction(str);
         }
         this.delayedActivations.set(entryName, count);
@@ -608,11 +610,11 @@ export class HypnoModule extends BaseModule {
     CheckSuggestions(msg: string, sender: Character) {
         if (!this.settings.suggestions.length || msg.startsWith("("))
             return;
-        let suggestion = this.settings.suggestions.find(s => this._CheckForTriggers(msg, sender, [s.trigger], this.hypnoActivated) && (!s.exclusive || s.installedBy == sender.MemberNumber))
-        if (!!suggestion) {
-            let commandArgs = msg.slice(msg.toLocaleLowerCase().indexOf(suggestion.trigger.toLocaleLowerCase()) + suggestion.trigger.length)?.trim() ?? "";
+        const suggestion = this.settings.suggestions.find(s => this._CheckForTriggers(msg, sender, [s.trigger], this.hypnoActivated) && (!s.exclusive || s.installedBy == sender.MemberNumber));
+        if (suggestion) {
+            const commandArgs = msg.slice(msg.toLocaleLowerCase().indexOf(suggestion.trigger.toLocaleLowerCase()) + suggestion.trigger.length)?.trim() ?? "";
             setTimeout(() => {
-                if (!!suggestion) this.CompelSuggestion(suggestion, sender, commandArgs)
+                if (suggestion) this.CompelSuggestion(suggestion, sender, commandArgs);
             }, 500);
         }
     }
@@ -626,17 +628,17 @@ export class HypnoModule extends BaseModule {
         if (msg.startsWith("(") || !triggers)
             return false;
 
-        let matched = triggers.some(trigger => {
+        const matched = triggers.some(trigger => {
             return isPhraseInString(msg, trigger);
-        })        
+        });        
 
         return (matched && 
             (awakener ? this.hypnoActivated : !this.hypnoActivated) &&
-            this.allowedSpeaker(sender))
+            this.allowedSpeaker(sender));
     }
 
     IsOnCooldown(): boolean {
-        var now = new Date().getTime();
+        const now = new Date().getTime();
         if ((now - (this.settings.cooldownTime * 1000)) < this.StateModule.HypnoState.config.recoveredAt) {
             // Triggered during cooldown...
             if (!this.cooldownMsgSent){
@@ -664,45 +666,49 @@ export class HypnoModule extends BaseModule {
         
         this.settings.stats.hypnotizedCount++;
         this.StateModule.HypnoState.Activate(memberNumber);
+        emit("hypno.triggered", { by: memberNumber || undefined, byWord: wasWord });
     }
 
     TriggerRestoreWord(speaker: Character) {
-        if (!!speaker.Name)
+        if (speaker.Name)
             SendAction("%NAME% snaps back into %POSSESSIVE% senses at %OPP_NAME%'s voice.", speaker);
-        this.TriggerRestore();
+        this.TriggerRestore("word", speaker);
     }
 
-    TriggerRestoreBoop() {
+    TriggerRestoreBoop(by?: Character | null) {
         SendAction("%NAME% reboots, blinking and gasping as %PRONOUN% regains %POSSESSIVE% senses.");
-        this.TriggerRestore();
+        this.TriggerRestore("boop", by);
     }
 
-    TriggerRestoreSnap() {
+    TriggerRestoreSnap(by?: Character | null) {
         SendAction("%NAME% blinks, shaking %POSSESSIVE% head with confusion as %PRONOUN% regains %POSSESSIVE% senses.");
-        this.TriggerRestore();
+        this.TriggerRestore("snap", by);
     }
 
     TriggerRestoreTimeout() {
         SendAction("%NAME% gasps, blinking and blushing with confusion.");
-        this.TriggerRestore();
+        this.TriggerRestore("timeout");
     }
 
-    TriggerRestore() {        
+    TriggerRestore(method: LSCGHypnoAwakenMethod = "other", by?: Character | null) {        
         if (!AudioShouldSilenceSound(true))
             AudioPlaySoundEffect("SpankSkin");
+        const wasActive = this.StateModule.HypnoState.Active;
         this.StateModule.HypnoState.Recover();
+        if (wasActive)
+            emit("hypno.awakened", { method, by: by?.MemberNumber });
     }
 
     CheckNewTrigger() {
         if (this.hypnoActivated || !this.settings.enableCycle || this.settings.triggerCycled)
             return;
-        var cycleAtTime = Math.max(this.StateModule.HypnoState.config.activatedAt, this.StateModule.HypnoState.config.recoveredAt) + (Math.max(1, this.settings.cycleTime || 0) * 60000)
+        const cycleAtTime = Math.max(this.StateModule.HypnoState.config.activatedAt, this.StateModule.HypnoState.config.recoveredAt) + (Math.max(1, this.settings.cycleTime || 0) * 60000);
         if (cycleAtTime < CommonTime())
             this.RollTriggerWord();
     }
 
     RollTriggerWord() {
-        var newTrigger = this.getNewTriggerWord();
+        const newTrigger = this.getNewTriggerWord();
         if (newTrigger != this.settings.trigger)
             SendAction("%NAME% concentrates, breaking the hold the previous trigger word held over %POSSESSIVE%.");
         this.settings.trigger = newTrigger;
@@ -716,8 +722,8 @@ export class HypnoModule extends BaseModule {
     }
 
     GetSuggestionInfluence(suggestion: HypnoSuggestion, sender: Character) {
-        let suggestionInfluenceVal = (this.settings.influence.find(i => i.memberId == suggestion.installedBy)?.influence ?? 0)/2;
-        let speakerInfluenceVal = (this.settings.influence.find(i => i.memberId == sender.MemberNumber)?.influence ?? 0)/2;
+        const suggestionInfluenceVal = (this.settings.influence.find(i => i.memberId == suggestion.installedBy)?.influence ?? 0)/2;
+        const speakerInfluenceVal = (this.settings.influence.find(i => i.memberId == sender.MemberNumber)?.influence ?? 0)/2;
         let totalInfluence = suggestionInfluenceVal + speakerInfluenceVal;
         if (this.hypnoActivated)
             totalInfluence *= 2;
@@ -735,9 +741,9 @@ export class HypnoModule extends BaseModule {
         if (!AudioShouldSilenceSound(true))
             AudioPlaySoundEffect("BellMedium");
 
-        let bypassResistance = this.settings.alwaysSubmit || (this.settings.alwaysSubmitMemberIds.split(",").map(id => id.trim()).indexOf(sender.MemberNumber + "") > -1)
-        let totalInfluence = this.GetSuggestionInfluence(suggestion, sender);
-        let playerDomRepMod = 0;//getDominance(Player) / 2;
+        const bypassResistance = this.settings.alwaysSubmit || (this.settings.alwaysSubmitMemberIds.split(",").map(id => id.trim()).indexOf(sender.MemberNumber + "") > -1);
+        const totalInfluence = this.GetSuggestionInfluence(suggestion, sender);
+        const playerDomRepMod = 0;//getDominance(Player) / 2;
         // Calculate chance to resist suggestion, if 0 force activate
         // Otherwise prompt user in local chat with constructed message based on instructions
         if (bypassResistance || totalInfluence >= (100 + playerDomRepMod))
@@ -750,8 +756,8 @@ export class HypnoModule extends BaseModule {
     }
 
     ReduceSpeakerInfluence(memberNumber: number, forceSave: boolean = false) {
-        let influence = this.settings.influence.find(i => i.memberId == memberNumber);
-        if (!!influence) {
+        const influence = this.settings.influence.find(i => i.memberId == memberNumber);
+        if (influence) {
             influence.influence--;
             influence.lastInfluenced = new Date().getTime();
             if (forceSave) settingsSave();
@@ -759,19 +765,19 @@ export class HypnoModule extends BaseModule {
     }
 
     IncreaseSpeakerInfluence(memberNumber: number, multi: number = 1) {
-        let increaseAmt = 2 * multi;
-        let sender = getCharacter(memberNumber);
-        let influence = this.settings.influence.find(i => i.memberId == memberNumber);
-        if (!!influence) {
+        const increaseAmt = 2 * multi;
+        const sender = getCharacter(memberNumber);
+        const influence = this.settings.influence.find(i => i.memberId == memberNumber);
+        if (influence) {
             influence.influence = Math.min(influence.influence + increaseAmt, 100);
             influence.lastInfluenced = new Date().getTime();
-            if (!!sender) influence.memberName = CharacterNickname(sender);
+            if (sender) influence.memberName = CharacterNickname(sender);
         } else {
             this.settings.influence.push(<HypnoInfluence>{
                 memberId: memberNumber,
-                memberName: !!sender ? CharacterNickname(sender) : "Someone",
+                memberName: sender ? CharacterNickname(sender) : "Someone",
                 lastInfluenced: new Date().getTime(),
-                influence: increaseAmt
+                influence: increaseAmt,
             });
         }
         settingsSave();
@@ -780,8 +786,8 @@ export class HypnoModule extends BaseModule {
     AttemptResistSuggestion(suggestion: HypnoSuggestion, sender: Character, command: string) {
         // Attempt resist roll!
         // Send emote or private whisper to sender informing of the resist 
-        let roll = this.GetResistRoll();
-        let influence = this.GetSuggestionInfluence(suggestion, sender);
+        const roll = this.GetResistRoll();
+        const influence = this.GetSuggestionInfluence(suggestion, sender);
         if (roll > influence) {
             LSCG_SendLocal(`Successfully resisted the suggestion! [${roll}/${influence}]`);
             this.ReduceSpeakerInfluence(sender.MemberNumber ?? -1);
@@ -805,9 +811,8 @@ export class HypnoModule extends BaseModule {
         // Iterate through instructions, calculating the configuration and target
         // Wait 2s between intstructions similar to magic
         // Send emote as player performs each instruction
-        let suggestion = opts.suggestion;
-        let sender = opts.sender;
-        let command = opts.msg;
+        const suggestion = opts.suggestion;
+        const sender = opts.sender;
 
         this.IncreaseSpeakerInfluence(sender.MemberNumber ?? -1);
         if (suggestion.installedBy != sender.MemberNumber)
@@ -815,7 +820,6 @@ export class HypnoModule extends BaseModule {
         
         suggestion.instructions.forEach((instruction, ix, arr) => {
             setTimeout(() => {
-                let config = instruction.arguments["config"];
                 if (this.settings.blockedInstructions.indexOf(instruction.type) > -1) {
                     return this.BlockedInstruction(opts, instruction);
                 }
@@ -831,7 +835,7 @@ export class HypnoModule extends BaseModule {
                         break;
                     case LSCGHypnoInstruction.orgasm:
                         SendAction(`%NAME% ${Player.IsGagged() ? "trembled" : "gasps"} as pleasure rushes over %INTENSIVE%.`);
-                        if (!!Player.ArousalSettings) {
+                        if (Player.ArousalSettings) {
                             Player.ArousalSettings.Progress = 100;
                             Player.ArousalSettings.OrgasmTimer = CurrentTime - 1;
                         }
@@ -847,13 +851,15 @@ export class HypnoModule extends BaseModule {
                         this.ForceStrip(opts, instruction);
                         break;
                     case LSCGHypnoInstruction.denial:
-                        SendAction("%NAME%'s blank expression hides %POSSESSIVE% impending denial.")
+                        SendAction("%NAME%'s blank expression hides %POSSESSIVE% impending denial.");
                         this.StateModule.DeniedState.Activate(opts.senderNum);
+                        break;
                     case LSCGHypnoInstruction.insatiable:
                         SendAction("%NAME%'s face begins to blush and %POSSESSIVE% breathing speeds up.");
                         this.StateModule.HornyState.Activate(opts.senderNum);
+                        break;
                     case LSCGHypnoInstruction.forget:
-                        let selection = instruction.arguments["selection"] as ForgetSelection;
+                        const selection = instruction.arguments["selection"] as ForgetSelection;
                         if (!selection)
                             break;
                         HypnoModule.forgettableInstruction.forEach(i => {
@@ -876,13 +882,14 @@ export class HypnoModule extends BaseModule {
                                         break;
                                 }
                             }
-                        })
+                        });
+                        break;
                     default:
                         break;
                 }
                 settingsSave();
             }, ix * EFFECT_DURATIONS.SUGGESTION_INSTRUCTION_DELAY);
-        })
+        });
     }
 
 	//Show a button on screen to accept or reject money from sender
@@ -915,7 +922,7 @@ export class HypnoModule extends BaseModule {
     MiniGameEnd(resisted: boolean) {
         console.info("suggestion minigame ended - " + resisted);
         CommonSetScreen("Online", "ChatRoom");
-        if (!!this.MiniGameOptions) {
+        if (this.MiniGameOptions) {
             if (resisted) this.ResistSuggestion(this.MiniGameOptions);
             else this.DoSuggestion(this.MiniGameOptions);
             this.MiniGameOptions = undefined;
@@ -930,7 +937,7 @@ export class HypnoModule extends BaseModule {
         }
         let target = getCharacterByNicknameOrMemberNumber(instruction.arguments["config"] as string ?? "");
         if (!target) {
-            let parsedMsg = msg.replace(/[^a-zA-Z ]/, "");
+            const parsedMsg = msg.replace(/[^a-zA-Z ]/, "");
             target = getCharacterByNicknameOrMemberNumber(parsedMsg ?? "");
         }
         if (!target)
@@ -939,30 +946,30 @@ export class HypnoModule extends BaseModule {
     }
 
     ForcePose(opts: SuggestionMiniGameOptions, instruction: HypnoInstruction) {
-        let poseSelection = instruction.arguments["selection"] as PoseSelection;
+        const poseSelection = instruction.arguments["selection"] as PoseSelection;
         if (!poseSelection) {
-            LSCG_SendLocal(`You recieve vague and incomplete instructions and you shake a little bit of influence.`);
+            LSCG_SendLocal("You recieve vague and incomplete instructions and you shake a little bit of influence.");
             this.ReduceSpeakerInfluence(opts.senderNum);
             return;
         }
         console.debug(`Pose -- ${poseSelection?.upper ?? "none"} :: ${poseSelection?.lower ?? "none"} :: ${poseSelection?.full ?? "none"}`);
-        SendAction(`%NAME% moves their body into a pose obediently.`);
+        SendAction("%NAME% moves their body into a pose obediently.");
         let blocked = false;
         CharacterRefresh(Player, false);
-        if (!!poseSelection?.full) {
+        if (poseSelection?.full) {
             if (PoseCategoryAvailable(Player, "BodyFull"))
                 PoseSetActive(Player, poseSelection.full);
             else 
                 blocked = true;
         }
         else {
-            if (!!poseSelection?.lower) {
+            if (poseSelection?.lower) {
                 if (PoseCategoryAvailable(Player, "BodyLower"))
                     PoseSetActive(Player, poseSelection.lower);
                 else 
                     blocked = true;
             }
-            if (!!poseSelection?.upper) {
+            if (poseSelection?.upper) {
                 if (PoseCategoryAvailable(Player, "BodyUpper"))
                     PoseSetActive(Player, poseSelection.upper);
                 else 
@@ -982,7 +989,7 @@ export class HypnoModule extends BaseModule {
 
     ForceMaidWork(opts: SuggestionMiniGameOptions, instruction: HypnoInstruction) {
         // Code borrowed from BCX~
-        let senderName = CharacterNickname(opts.sender);
+        const senderName = CharacterNickname(opts.sender);
         if (ReputationCharacterGet(Player, "Maid") < 1) {
             LSCG_SendLocal(`The maids don't allow you to fulfill your instruction and you shake a little bit of ${senderName}'s influence.`);
             SendAction("%NAME% looks confused as the maids refuse their attempt to serve drinks.");
@@ -996,8 +1003,8 @@ export class HypnoModule extends BaseModule {
             return;
         }
         PoseSetActive(Player, null);
-        const D = `(You find yourself in the maid sorority with only a fuzzy memory of walking here.  Another maid addresses you.) Thank you for agreeing to work!`;
-        SendAction(`%NAME% suddenly walks off in the direction of the maid quarters.`);
+        const D = "(You find yourself in the maid sorority with only a fuzzy memory of walking here.  Another maid addresses you.) Thank you for agreeing to work!";
+        SendAction("%NAME% suddenly walks off in the direction of the maid quarters.");
         ChatRoomLeave();
         CommonSetScreen("Room", "MaidQuarters");
         if (MaidQuartersMaid == null)
@@ -1011,7 +1018,7 @@ export class HypnoModule extends BaseModule {
 	forceSay_sayText: string = "";
     forceSay_BypassingSpeechBlock: boolean = false;
     ForceSay(opts: SuggestionMiniGameOptions, instruction: HypnoInstruction) {
-        let sentence = instruction.arguments["config"] as string
+        let sentence = instruction.arguments["config"] as string;
         if (!sentence) sentence = opts.msg;
         if (!sentence) {
             LSCG_SendLocal(`You are prompted no sentence... You shake a little bit of ${opts.senderName}'s influence.`);
@@ -1023,8 +1030,8 @@ export class HypnoModule extends BaseModule {
             this.ReduceSpeakerInfluence(opts.sender.MemberNumber ?? -1);
             return;
         }
-        if (!!this.forceSay_sayText)
-            LSCG_SendLocal(`A new phrase enters your mind...`);
+        if (this.forceSay_sayText)
+            LSCG_SendLocal("A new phrase enters your mind...");
         this.forceSay_sayText = sentence;
         if (this.StateModule.HypnoState.Restrictions.Speech == "true") {
             this.forceSay_BypassingSpeechBlock = true;
@@ -1036,12 +1043,12 @@ export class HypnoModule extends BaseModule {
 
     ForceActivity(opts: SuggestionMiniGameOptions, instruction: HypnoInstruction) {
         console.log(JSON.stringify(instruction, null, 2));
-        let target = this.FindConfigurableTarget(instruction, opts.sender, opts.msg);
-        let activitySelection = instruction.arguments["selection"] as ActivitySelection;
-        let activityGroup = AssetGroup.find(a => a.Name == activitySelection?.group);
-        let activity = !!activityGroup ? getActivities(activityGroup, instruction.arguments["self"] as boolean ?? false).find(a => a.Name == activitySelection?.name) : undefined;
+        const target = this.FindConfigurableTarget(instruction, opts.sender, opts.msg);
+        const activitySelection = instruction.arguments["selection"] as ActivitySelection;
+        const activityGroup = AssetGroup.find(a => a.Name == activitySelection?.group);
+        const activity = activityGroup ? getActivities(activityGroup, instruction.arguments["self"] as boolean ?? false).find(a => a.Name == activitySelection?.name) : undefined;
         if (!!target && !!activityGroup && !!activity) {
-            let tmp = this.StateModule.HypnoState.Restrictions;
+            const tmp = this.StateModule.HypnoState.Restrictions;
             this.StateModule.HypnoState.Restrictions = <StateRestrictions>{
                 Walk: "false",
                 Stand: "false",
@@ -1049,14 +1056,14 @@ export class HypnoModule extends BaseModule {
                 Sight: "false",
                 Wardrobe: "false",
                 Move: "false",
-                Speech: "false"
+                Speech: "false",
             };
-            let hasItemPermission = ServerChatRoomGetAllowItem(Player, target);
-            let isAllowed = hasItemPermission && ActivityAllowedForGroup(target, activityGroup?.Name as AssetGroupItemName).filter(a => !a.Blocked).findIndex(a => a.Activity.Name == activity?.Name) > -1;
+            const hasItemPermission = ServerChatRoomGetAllowItem(Player, target);
+            const isAllowed = hasItemPermission && ActivityAllowedForGroup(target, activityGroup?.Name as AssetGroupItemName).filter(a => !a.Blocked).findIndex(a => a.Activity.Name == activity?.Name) > -1;
             if (isAllowed) ActivityRun(Player, target, activityGroup as AssetItemGroup, <ItemActivity>{
                 Activity: activity,
                 Group: activityGroup.Name,
-                Item: InventoryGet(Player, "ItemHandheld")
+                Item: InventoryGet(Player, "ItemHandheld"),
             }, true);
             else {
                 SendAction("%NAME% struggles to perform some action.");
@@ -1077,7 +1084,7 @@ export class HypnoModule extends BaseModule {
             return;
         }
         
-        let clothing = instruction.arguments["selection"] as ClothingSelection;
+        const clothing = instruction.arguments["selection"] as ClothingSelection;
         if (!clothing || !clothing?.groups) {
             LSCG_SendLocal(`You feel a fuzzy confusion without complete instructions and shake a little bit of ${opts.senderName}'s influence.`);
             this.ReduceSpeakerInfluence(opts.sender.MemberNumber ?? -1);
@@ -1087,20 +1094,20 @@ export class HypnoModule extends BaseModule {
         
 
         if (clothing.random) {
-            let allGroups = AssetGroup
+            const allGroups = AssetGroup
                             .filter(g => g.Family === Player.AssetFamily && g.Category === "Appearance" && g.AllowCustomize && isCloth(g, false))
                             .map(g => g.Name)
                             .filter(g => Player.Appearance.some(a => a.Asset.Group.Name == g));
             groups = allGroups.length > 0 ? [allGroups[getRandomInt(allGroups.length)]] : [];
             if (groups.length <= 0) {
-                LSCG_SendLocal(`You feel disappointed that you have no more clothes to remove.`);
+                LSCG_SendLocal("You feel disappointed that you have no more clothes to remove.");
             }
         }
         else if (clothing.all) {
             groups = AssetGroup.filter(g => g.Family === Player.AssetFamily && g.Category === "Appearance" && g.AllowCustomize && isCloth(g, false)).map(g => g.Name);
         }
         
-        SendAction(`%NAME% starts to remove clothing from %POSSESSIVE% body.`);
+        SendAction("%NAME% starts to remove clothing from %POSSESSIVE% body.");
 
         groups.forEach(grp => {
             InventoryRemove(Player, grp as AssetGroupName, false);
@@ -1111,42 +1118,42 @@ export class HypnoModule extends BaseModule {
     }
 
     ForceFollow(opts: SuggestionMiniGameOptions, instruction: HypnoInstruction) {
-        let target = this.FindConfigurableTarget(instruction, opts.sender, opts.msg);
+        const target = this.FindConfigurableTarget(instruction, opts.sender, opts.msg);
         if (!target || !target.MemberNumber || target.IsPlayer()) {
             LSCG_SendLocal(`You are unable to find the person you are supposed to follow and shake some of ${opts.senderName}'s influence.`);
             this.ReduceSpeakerInfluence(opts.sender.MemberNumber ?? -1);
             return;
         }
-        let module = getModule<LeashingModule>("LeashingModule");
+        const module = getModule<LeashingModule>("LeashingModule");
         module.AddLeashing(new Leashing(target.MemberNumber, opts.senderNum, false, "compulsion"));
         sendLSCGCommandBeep(target.MemberNumber, "add-leashing", [{
             name: "pairedMember",
-            value: Player.MemberNumber
+            value: Player.MemberNumber,
         }, {
             name: "type",
-            value: "compulsion"
+            value: "compulsion",
         }, {
             name: "isSource",
-            value: true
+            value: true,
         }]);
         SendAction("%NAME%'s eyes start to follow %OPP_NAME%'s every movement.", target);
     }
 
     BreakFollow(opts: SuggestionMiniGameOptions, instruction: HypnoInstruction) {
-        let module = getModule<LeashingModule>("LeashingModule");
-        let allCompelledTargets = module.Pairings.filter(p => !p.IsSource && p.Type == "compulsion").map(p => p.PairedMember);
+        const module = getModule<LeashingModule>("LeashingModule");
+        const allCompelledTargets = module.Pairings.filter(p => !p.IsSource && p.Type == "compulsion").map(p => p.PairedMember);
         if (allCompelledTargets.length > 0) {
             module.RemoveAllLeashingsOfType("compulsion");
             allCompelledTargets.filter(m => !!m).forEach(memberNum => {
                 sendLSCGCommandBeep(memberNum, "remove-leashing", [{
                     name: "pairedMember",
-                    value: Player.MemberNumber
+                    value: Player.MemberNumber,
                 }, {
                     name: "type",
-                    value: "compulsion"
+                    value: "compulsion",
                 }, {
                     name: "isSource",
-                    value: true
+                    value: true,
                 }]);
             });
             SendAction("%NAME% looks around, a little confused about how %PRONOUN% got here.");
@@ -1168,7 +1175,7 @@ export class HypnoModule extends BaseModule {
             if (!entry.influence || entry.influence <= 1) {
                 entry.influence = 0;
             } else {
-                let newVal = entry.influence - Math.ceil(Math.log10(entry.influence));
+                const newVal = entry.influence - Math.ceil(Math.log10(entry.influence));
                 entry.influence = newVal;
             }
         });
@@ -1180,8 +1187,8 @@ export class HypnoModule extends BaseModule {
 		LSCGHypnoInstruction.denial,
 		LSCGHypnoInstruction.insatiable,
 		LSCGHypnoInstruction.follow,
-		LSCGHypnoInstruction.say
-	]
+		LSCGHypnoInstruction.say,
+	];
 }
 
 // Random Trigger Word List

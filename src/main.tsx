@@ -1,34 +1,37 @@
 import { h } from "tsx-dom";
-import { CleanDefaultsFromSettings, ExportSettings, GetDataSizeReport, hookFunction, ICONS, ImportSettings, isObject, parseFromBase64, parseFromUTF16, sendLSCGBeep, settingsSave } from './utils';
-import { CheckVersionUpdate, ConfiguredActivities, CraftableItemSpellNames, DrugKeywords, getModule, HypnoTriggers, modules, NetgunKeywords, Outfits, registerModule, TestOutfitMigration } from 'modules';
-import { SettingsModel } from 'Settings/Models/settings';
-import { HypnoModule } from './Modules/hypno';
-import { CollarModule } from './Modules/collar';
-import { BoopsModule } from './Modules/boops';
-import { MiscModule } from './Modules/misc';
-import { LipstickModule } from './Modules/lipstick';
+import { ExportSettings, GetDataSizeReport, hookFunction, ImportSettings, isObject, parseFromBase64, parseFromUTF16, sendLSCGBeep, settingsSave } from "./utils";
+import { ConfiguredActivities, CraftableItemSpellNames, DrugKeywords, getModule, HypnoTriggers, modules, NetgunKeywords, Outfits, registerModule } from "modules";
+import { SettingsModel } from "Settings/Models/settings";
+import { HypnoModule } from "./Modules/hypno";
+import { CollarModule } from "./Modules/collar";
+import { BoopsModule } from "./Modules/boops";
+import { MiscModule } from "./Modules/misc";
+import { LipstickModule } from "./Modules/lipstick";
 import { GUI } from "Settings/settingUtils";
 import { ActivityModule } from "Modules/activities";
-import { InjectorModule } from 'Modules/injector';
-import { CoreModule } from 'Modules/core';
-import { ConsentModule } from 'Modules/consent';
-import { RemoteUIModule } from 'Modules/remoteUI';
-import { CommandModule } from 'Modules/commands';
-import { ItemUseModule } from 'Modules/item-use';
-import { StateModule } from 'Modules/states';
-import { MagicModule } from 'Modules/magic';
-import { CursedItemModule } from 'Modules/cursed-item';
-import { OpacityModule } from 'Modules/opacity';
-import { lt } from 'semver';
-import { LeashingModule } from 'Modules/leashing';
-import { ChaoticItemModule } from './Modules/chaotic-item';
-import { SplatterModule } from 'Modules/splatter';
-import { OutfitCollectionModule } from 'Modules/outfitCollection';
+import { InjectorModule } from "Modules/injector";
+import { CoreModule } from "Modules/core";
+import { ConsentModule } from "Modules/consent";
+import { RemoteUIModule } from "Modules/remoteUI";
+import { CommandModule } from "Modules/commands";
+import { ItemUseModule } from "Modules/item-use";
+import { StateModule } from "Modules/states";
+import { MagicModule } from "Modules/magic";
+import { CursedItemModule } from "Modules/cursed-item";
+import { OpacityModule } from "Modules/opacity";
+import { lt } from "semver";
+import { LeashingModule } from "Modules/leashing";
+import { ChaoticItemModule } from "./Modules/chaotic-item";
+import { SplatterModule } from "Modules/splatter";
+import { OutfitCollectionModule } from "Modules/outfitCollection";
 import { hasExtendedOnlineSettings, type ExtendedOnlineSettings } from "./types/guards";
 
 import styles from "./main.scss?inline";
 import { MapModule } from "Modules/map";
 import { SpeechAnalysisModule } from "Modules/speech-analysis";
+import { announceReady, apiCapabilities, apiVersion, exposeIsReady, extensions, getModApi, installLoadQueue, onReady } from "api";
+import { installLoginBadge, removeLoginBadge } from "api/loginBadge";
+import { emit } from "api/events";
 
 export { 
 	DrugKeywords, 
@@ -41,7 +44,12 @@ export {
 	ImportSettings,
 	getModule,
 	sendLSCGBeep,
-	Outfits
+	Outfits,
+	// Extension API (see docs/api.md)
+	getModApi,
+	onReady,
+	apiVersion as version,
+	apiCapabilities as capabilities,
 };
 
 function initWait() {
@@ -55,7 +63,7 @@ function initWait() {
 				loginInit(args[0]);
 			}
 		});
-		console.log(`LSCG Ready!`);
+		console.log("LSCG Ready!");
 	} else {
 		console.debug("LSCG: Already logged in, init");
 		init();
@@ -84,14 +92,14 @@ function init() {
 	}
 
 	let settings = Player.ExtensionSettings?.LSCG ?? Player.OnlineSettings?.LSCG ?? "";
-	let localSettings = localStorage.getItem(`LSCG_${Player.MemberNumber}_Backup`) ?? "";
+	const localSettings = localStorage.getItem(`LSCG_${Player.MemberNumber}_Backup`) ?? "";
 	
 	// If localStorage setting backup exist, compare the versions to restore from backup
-	if (!!localSettings) {
+	if (localSettings) {
 		let localIsMoreRecent = false;
 		try {
-			let settingsVer = parseFromBase64<SettingsModel>(settings)?.Version || "v0.0.0";
-			let localSettingsVer = parseFromBase64<SettingsModel>(localSettings)?.Version || "v0.0.0";
+			const settingsVer = parseFromBase64<SettingsModel>(settings)?.Version || "v0.0.0";
+			const localSettingsVer = parseFromBase64<SettingsModel>(localSettings)?.Version || "v0.0.0";
 			localIsMoreRecent = lt(settingsVer, localSettingsVer);
 		} catch (error) {
 			console.debug(`LSCG: Failed to compare local and remote setting versions -- ${error}`);
@@ -107,9 +115,9 @@ function init() {
 			parsed = parseFromUTF16<SettingsModel>(settings);
 		}
 		if (!parsed) {
-			throw new Error(`LSCG: Failed to load corrupted server data.`)
+			throw new Error("LSCG: Failed to load corrupted server data.");
 		}
-		localStorage.setItem(`LSCG_${Player.MemberNumber}_Backup`, settings)
+		localStorage.setItem(`LSCG_${Player.MemberNumber}_Backup`, settings);
 		Player.LSCG = parsed || {} as SettingsModel;
 		// Clean old settings
 		if (hasExtendedOnlineSettings(Player) && Player.OnlineSettings.LSCG) {
@@ -118,7 +126,7 @@ function init() {
 			settingsSave();
 		}
 	}
-	else if (!!settings)
+	else if (settings)
 		Player.LSCG = settings as unknown as SettingsModel;
 
 	if (!init_modules()) {
@@ -147,6 +155,12 @@ function init() {
 	window.LSCG_Loaded = true;
 	document.body.appendChild(<style id="lscg-style">{styles}</style>);
 	console.log(`LSCG loaded! Version: ${LSCG_VERSION}`);
+
+	removeLoginBadge();
+	announceReady();
+	const extCount = extensions.all().length;
+	if (typeof ToastManager !== "undefined")
+		ToastManager.success(`LSCG ${LSCG_VERSION} loaded` + (extCount > 0 ? ` with ${extCount} extension(s)` : ""));
 }
 
 function init_modules(): boolean {
@@ -191,15 +205,18 @@ function init_modules(): boolean {
 			m.safeword();
 		}
 		settingsSave(true);
-		return next(args);
+		const ret = next(args);
+		emit("safeword", { kind: "revert" });
+		return ret;
 	});
 
 	hookFunction("ChatRoomSafewordRelease", 1, (args, next) => {
-		var ret = next(args);
+		const ret = next(args);
 		for (const m of modules()) {
 			m.safeword();
 		}
 		settingsSave(true);
+		emit("safeword", { kind: "release" });
 		return ret;
 	});
 
@@ -224,13 +241,20 @@ function unload_modules() {
 // LSCG: Little Sera's Club Games
 if (typeof window.ImportBondageCollege !== "function") {
   alert("Club not detected! Please only use this while you have Club open!");
-  throw "Dependency not met";
+  throw new Error("Dependency not met");
 }
 if (window.LSCG_Loaded !== undefined) {
   alert("LSCG is already detected in current window. To reload, please refresh the window.");
-  throw "Already loaded";
+  throw new Error("Already loaded");
 }
 window.LSCG_Loaded = false;
+window.LSCG_Version = apiVersion;
 console.debug("LSCG: Parse start...");
+
+// Extensions that loaded before LSCG register now, so they are known before login.
+installLoadQueue();
+installLoginBadge();
+// window.LSCG is only assigned once this IIFE returns; add the live `isReady` getter right after.
+queueMicrotask(() => exposeIsReady(window.LSCG));
 
 initWait();
