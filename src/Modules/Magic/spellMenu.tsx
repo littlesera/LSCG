@@ -60,7 +60,7 @@ export class SpellMenuView {
 
         const search = picking ? null : SearchBox(text => { this._search = text; ctx.refresh(); }, { value: this._search, placeholder: "Search spells…" });
         const close = <button type="button" class="lscg-button lscg-spellmenu-close" title="Cancel" aria-label="Cancel" onClick={() => magic.CloseSpellMenu()}>✕</button>;
-        const header = <div class={search ? "lscg-spellmenu-header" : "lscg-spellmenu-header lscg-spellmenu-header-nosearch"}>
+        const header = <div class="lscg-spellmenu-header">
             <h2>{title}</h2>
             {search}
             {close}

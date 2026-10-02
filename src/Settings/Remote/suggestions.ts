@@ -2,7 +2,7 @@ import { RemoteGuiSubscreen } from "./remoteBase";
 import { HelpInfo, Setting } from "Settings/settingBase";
 import { InstructionDescription, LSCGHypnoInstruction, SUGGESTION_LIMIT } from "Settings/Models/hypno";
 import { getActivities, ICONS, getActivityLabel, getZoneColor, replace_template, sendLSCGCommandBeep, isCloth } from "utils";
-import { RemoteHypno } from "./hypno";
+import { RemoteHypnoBase } from "./hypno";
 import { HypnoInstruction, HypnoModule, HypnoSuggestion } from "Modules/hypno";
 import { getModule } from "modules";
 import { CommandListener, CoreModule } from "Modules/core";
@@ -29,7 +29,7 @@ export interface ForgetSelection {
 	instructions: LSCGHypnoInstruction[];
 }
 
-export class RemoteSuggestions extends RemoteHypno {
+export class RemoteSuggestions extends RemoteHypnoBase {
 	subscreens: RemoteGuiSubscreen[] = [];
 
 	get name(): string {

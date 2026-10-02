@@ -12,9 +12,15 @@
 
 	.lscg-spellmenu-header {
 		display: grid;
-		grid-template-columns: minmax(0, 1fr) minmax(0, 18em) auto;
+		// Title and close button on top, search on its own full-width row below.
+		grid-template-columns: minmax(0, 1fr) auto;
 		align-items: center;
 		gap: min(1.5dvh, 0.75dvw);
+
+		.lscg-kit-search {
+			grid-column: 1 / -1;
+			grid-row: 2;
+		}
 
 		h2 {
 			margin: 0;
@@ -22,10 +28,6 @@
 			font-size: var(--lscg-font-large);
 			text-align: left;
 		}
-	}
-
-	.lscg-spellmenu-header.lscg-spellmenu-header-nosearch {
-		grid-template-columns: minmax(0, 1fr) auto;
 	}
 
 	.lscg-spellmenu-close {

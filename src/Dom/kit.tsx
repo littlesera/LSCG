@@ -172,6 +172,11 @@ export function SectionLabel(text: string, description?: string): HTMLElement {
     ) as HTMLElement;
 }
 
+/** A single scrolling page of rows, for screens too short to need tabs. */
+export function Panel(children: HTMLElement[]): HTMLElement {
+    return <div class="lscg-kit-body scroll-box"><div class="lscg-kit-panel">{children}</div></div> as HTMLElement;
+}
+
 export function Notice(text: string): HTMLElement {
     return <p class="lscg-kit-notice">{text}</p> as HTMLElement;
 }
