@@ -147,6 +147,9 @@ describe("DOM spell menu", () => {
             expect(card("mixed").disabled).toBe(false); // still castable: Blinding applies
             const barkChip = card("mixed").querySelectorAll(".lscg-kit-chip")[2] as HTMLElement;
             expect(barkChip.title).toContain("Woof.");
+            expect(barkChip.title).toContain("Added by extension");
+            expect(barkChip.querySelector(".lscg-kit-icon-extension")).not.toBeNull();
+            expect(card("mixed").querySelectorAll(".lscg-kit-icon").length).toBe(1);
             expect(barkChip.title).toContain("doesn't have this effect");
             bark();
         });

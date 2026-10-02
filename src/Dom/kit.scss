@@ -297,6 +297,35 @@
 		}
 	}
 
+	// A vector icon as a mask, so it takes the text colour. Sized to the text it sits in.
+	.lscg-kit-icon {
+		display: inline-block;
+		width: 1em;
+		height: 1em;
+		margin-right: 0.3em;
+		vertical-align: -0.125em;
+		background-color: currentColor;
+		mask: var(--icon) center / contain no-repeat;
+	}
+
+	// A four-pointed star, for things added by an extension. Matches the ✦ text character used where only text can go.
+	.lscg-kit-icon-extension {
+		--icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2C12.6 7.5 16.5 11.4 22 12C16.5 12.6 12.6 16.5 12 22C11.4 16.5 7.5 12.6 2 12C7.5 11.4 11.4 7.5 12 2Z'/%3E%3C/svg%3E");
+	}
+
+	// Dropdowns whose options have icons, in browsers with customizable selects (Chromium 135+). Elsewhere options
+	// get the icon's text character instead (see ICON_GLYPHS in kit.tsx).
+	.lscg-kit-select-rich,
+	.lscg-kit-select-rich::picker(select) {
+		appearance: base-select;
+	}
+
+	.lscg-kit-select-rich option,
+	.lscg-kit-select-rich selectedcontent {
+		display: flex;
+		align-items: center;
+	}
+
 	.lscg-kit-chip-ok { --accent: #2ca58d; }
 	.lscg-kit-chip-warn { --accent: #d98a1f; }
 	.lscg-kit-chip-blocked { --accent: #b00020; }

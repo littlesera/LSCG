@@ -1,5 +1,5 @@
 import { LSCGExtensionInfo, LSCGGlobal, LSCGLoadCallback, LSCGModApi } from "./types";
-import { extensions, registerExtension } from "./extensions";
+import { ExtensionDisabledError, extensions, registerExtension, runRegistering } from "./extensions";
 import { isLSCGReady, markReady, whenReady } from "./ready";
 import { emit } from "./events";
 
@@ -51,11 +51,17 @@ export function exposeIsReady(target: object | undefined): void {
 
 function runLoadCallback(cb: LSCGLoadCallback): void {
     if (typeof cb !== "function") return;
-    try {
-        cb(lscg);
-    } catch (e) {
-        console.error("LSCG: LSCG_OnLoad callback failed", e);
-    }
+    // Remembered so an extension turned back on from the login screen can load without a page reload.
+    runRegistering(() => runLoadCallback(cb), () => {
+        try {
+            cb(lscg);
+        } catch (e) {
+            if (e instanceof ExtensionDisabledError)
+                console.info(e.message);
+            else
+                console.error("LSCG: LSCG_OnLoad callback failed", e);
+        }
+    });
 }
 
 /** Runs callbacks queued on `window.LSCG_OnLoad` by extensions that loaded first, then replaces the queue

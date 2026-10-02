@@ -33,6 +33,11 @@ import {
     DRUG_BAR_DIMENSIONS
 } from "../constants";
 
+/** How often decayed (but otherwise unchanged) drug levels are saved. */
+const DECAY_SAVE_INTERVAL_MS = 5 * 60 * 1000;
+/** Most decay one tick can apply, a little over the 1-minute timer throttling of a hidden tab. */
+const MAX_DECAY_STEP_MS = 2 * 60 * 1000;
+
 type DrugType = "sedative" | "mindcontrol" | "horny" | "antidote";
 /** A built-in drug, or an extension's namespaced "<extension id>.<name>". */
 type AnyDrugType = DrugType | `${string}.${string}`;
@@ -185,9 +190,8 @@ export class InjectorModule extends BaseModule {
         this.settings.cureKeywords = d.cureKeywords;
         this.settings.netgunKeywords = d.netgunKeywords;
         this.settings.hornyTickTime = d.hornyTickTime;
-        this.settings.sedativeCooldown = d.sedativeCooldown;
-        this.settings.mindControlCooldown = d.mindControlCooldown;
-        this.settings.hornyCooldown = d.hornyCooldown;
+        // Decay rates follow the defaults unless the player set their own in the Drugs settings.
+        this.ApplyDecayOverrides();
         this.settings.drugLevelMultiplier = d.drugLevelMultiplier;
         this.settings.sedativeMax = d.sedativeMax;
         this.settings.mindControlMax = d.mindControlMax;
@@ -283,26 +287,35 @@ export class InjectorModule extends BaseModule {
 
             {
                 let bars: DrugLevel[] = [];
-                if (charSettings.sedativeLevel > 0)
+                const rates = charSettings.drugDecay;
+                const at = charSettings.receivedAt; // only set for other players: our own levels are live
+                const estimate = (level: number, rate?: number) => InjectorModule.EstimateLevel(level, rate, at);
+                const sedative = estimate(charSettings.sedativeLevel, rates?.sedative);
+                const mindControl = estimate(charSettings.mindControlLevel, rates?.mindcontrol);
+                const horny = estimate(charSettings.hornyLevel, rates?.horny);
+                if (sedative > 0)
                     bars.push({
                         type: "sedative",
-                        level: charSettings.sedativeLevel,
+                        level: sedative,
                         max: charSettings.sedativeMax * charSettings.drugLevelMultiplier
                     });
-                if (charSettings.mindControlLevel > 0)
+                if (mindControl > 0)
                     bars.push({
                         type: "mindcontrol",
-                        level: charSettings.mindControlLevel,
+                        level: mindControl,
                         max: charSettings.mindControlMax * charSettings.drugLevelMultiplier
                     });
-                if (charSettings.hornyLevel > 0)
+                if (horny > 0)
                     bars.push({
                         type: "horny",
-                        level: charSettings.hornyLevel,
+                        level: horny,
                         max: charSettings.hornyLevelMax * charSettings.drugLevelMultiplier
                     });
-                for (const bar of this.ExtensionBarsFor(Char, charSettings.drugLevels))
-                    bars.push({ type: bar.id, level: bar.level, max: bar.max, color: bar.color });
+                for (const bar of this.ExtensionBarsFor(Char, charSettings.drugLevels)) {
+                    const level = InjectorModule.EstimateLevel(bar.level, bar.decayPerSec, at);
+                    if (level > 0)
+                        bars.push({ type: bar.id, level, max: bar.max, color: bar.color });
+                }
                 if (bars.length > 0)
                     this.DrawBars(Char, CharX, CharY, Zoom, bars);
             }
@@ -319,10 +332,13 @@ export class InjectorModule extends BaseModule {
         (<any>window).LSCG_InjectEnd_Sedative = () => this.MiniGameEnd("sedative", MiniGameVictory);
         (<any>window).LSCG_InjectEnd_Brainwash = () => this.MiniGameEnd("mindcontrol", MiniGameVictory);
 
-        this.sedativeCooldownInterval = setInterval(() => this.SedativeCooldown(), this.cooldownTickMs);
-        this.mindControlCooldownInterval = setInterval(() => this.MindControlCooldown(), this.cooldownTickMs);
-        this.hornyCooldownInterval = setInterval(() => this.HornyCooldown(), this.cooldownTickMs);
-        this.extensionDrugInterval = setInterval(() => this.ExtensionDrugTick(), this.cooldownTickMs);
+        this.decaySaveInterval = setInterval(() => this.SaveDecayedLevels(), DECAY_SAVE_INTERVAL_MS);
+        window.addEventListener("beforeunload", this.saveOnUnload);
+        this.sedativeCooldownInterval = setInterval(() => this.SedativeCooldown(Date.now()), this.cooldownTickMs);
+        this.mindControlCooldownInterval = setInterval(() => this.MindControlCooldown(Date.now()), this.cooldownTickMs);
+        this.hornyCooldownInterval = setInterval(() => this.HornyCooldown(Date.now()), this.cooldownTickMs);
+        // Polled every second so a drug can tick faster than the default (see ExtensionDrugTick).
+        this.extensionDrugInterval = setInterval(() => this.ExtensionDrugTick(Date.now()), 1000);
     }
 
     hookBCX() {
@@ -484,6 +500,49 @@ export class InjectorModule extends BaseModule {
         clearInterval(this.mindControlCooldownInterval);
         clearInterval(this.hornyCooldownInterval);
         clearInterval(this.extensionDrugInterval);
+        clearInterval(this.decaySaveInterval);
+        window.removeEventListener("beforeunload", this.saveOnUnload);
+    }
+
+    decaySaveInterval: number = 0;
+    /** Decay that changed levels in memory but hasn't been saved yet. */
+    private decayUnsaved = false;
+    private saveOnUnload = () => this.SaveDecayedLevels();
+
+    /** Levels only decay while the player is online, so the decayed level has to reach the server eventually:
+     *  every few minutes, and (best effort) when the page closes. Not published, since other clients estimate decay. */
+    SaveDecayedLevels() {
+        if (!this.decayUnsaved)
+            return;
+        this.decayUnsaved = false;
+        settingsSave(false);
+    }
+
+    /** Built-in decay: minutes for one dose to wear off, or undefined for LSCG's default. */
+    GetDecayOverride(type: "sedative" | "mindcontrol" | "horny"): number | undefined {
+        return this.settings.decayMinutes?.[type];
+    }
+
+    SetDecayOverride(type: "sedative" | "mindcontrol" | "horny", minutes: number | undefined) {
+        const overrides = { ...(this.settings.decayMinutes ?? {}) };
+        if (minutes && minutes > 0)
+            overrides[type] = minutes;
+        else
+            delete overrides[type];
+        this.settings.decayMinutes = overrides;
+        this.ApplyDecayOverrides();
+        settingsSave(true); // others animate our bars from the published rate
+    }
+
+    private ApplyDecayOverrides() {
+        const d = this.defaultSettings;
+        const ms = (type: "sedative" | "mindcontrol" | "horny", fallback: number) => {
+            const minutes = this.GetDecayOverride(type);
+            return minutes && minutes > 0 ? minutes * 60_000 : fallback;
+        };
+        this.settings.sedativeCooldown = ms("sedative", d.sedativeCooldown);
+        this.settings.mindControlCooldown = ms("mindcontrol", d.mindControlCooldown);
+        this.settings.hornyCooldown = ms("horny", d.hornyCooldown);
     }
 
     _bcxHooked: boolean = false;
@@ -596,11 +655,59 @@ export class InjectorModule extends BaseModule {
     // set brainwashed(val: boolean) { if (this.settings.brainwashed != val) {this.settings.brainwashed = val; settingsSave(true);}}
 
     get sedativeLevel(): number {return this.settings.sedativeLevel};
-    set sedativeLevel(val: number) {if (this.settings.sedativeLevel != val) {this.settings.sedativeLevel = val; settingsSave(true);}}
+    set sedativeLevel(val: number) {const previous = this.settings.sedativeLevel; if (previous != val) {this.settings.sedativeLevel = val; this.LevelChanged("sedative", previous, val, this.settings.sedativeMax * this.drugLevelMultiplier);}}
     get mindControlLevel(): number {return this.settings.mindControlLevel};
-    set mindControlLevel(val: number) {if (this.settings.mindControlLevel != val) {this.settings.mindControlLevel = val; settingsSave(true);}}
+    set mindControlLevel(val: number) {const previous = this.settings.mindControlLevel; if (previous != val) {this.settings.mindControlLevel = val; this.LevelChanged("mindcontrol", previous, val, this.settings.mindControlMax * this.drugLevelMultiplier);}}
     get hornyLevel(): number {return this.settings.hornyLevel};
-    set hornyLevel(val: number) {if (this.settings.hornyLevel != val) {this.settings.hornyLevel = val; settingsSave(true);}}
+    set hornyLevel(val: number) {const previous = this.settings.hornyLevel; if (previous != val) {this.settings.hornyLevel = val; this.LevelChanged("horny", previous, val, this.settings.hornyLevelMax * this.drugLevelMultiplier);}}
+
+    /** True while a cooldown tick is lowering a built-in level, so the change can be saved lazily. */
+    private decaying = false;
+
+    /** Saves and announces a built-in drug's new level. Decay isn't published (other clients animate the bar from the
+     *  published decay rate) and is saved only now and then (SaveDecayedLevels). Doses, antidotes and wear-off are
+     *  explicit events and save right away. */
+    private LevelChanged(type: string, previous: number, level: number, max: number) {
+        if (this.decaying && level > 0)
+            this.decayUnsaved = true;
+        else
+            settingsSave(true);
+        emit("drug.levelChanged", { type, previous, level, max });
+    }
+
+    /** When each drug (built-in key or extension id) last decayed. */
+    private decayAt = new Map<string, number>();
+
+    /** Milliseconds of decay owed to `key` since it last decayed, by the clock so a throttled background tab still
+     *  decays. Capped, so a computer waking from sleep doesn't count the time it was asleep: drugs only wear off
+     *  while the player is online. */
+    private DecayElapsedMs(key: string, now = Date.now()): number {
+        const last = this.decayAt.get(key) ?? now;
+        this.decayAt.set(key, now);
+        return Math.min(MAX_DECAY_STEP_MS, Math.max(0, now - last));
+    }
+
+    /** Each built-in drug's decay in level units per second, as published for other clients to animate. */
+    DecayRatesPerSec() {
+        const perSec = (cooldownMs: number) => cooldownMs > 0 ? this.drugLevelMultiplier * 1000 / cooldownMs : 0;
+        return {
+            sedative: perSec(this.settings.sedativeCooldown),
+            mindcontrol: perSec(this.settings.mindControlCooldown),
+            horny: perSec(this.settings.hornyCooldown),
+        };
+    }
+
+    /** A level published by another client, decayed forward from when its packet arrived. */
+    static EstimateLevel(level: number, perSec: number | undefined, receivedAt: number | undefined, now = Date.now()): number {
+        if (!(level > 0) || !receivedAt || !(typeof perSec === "number" && perSec > 0) || !Number.isFinite(perSec))
+            return level;
+        return Math.max(0, level - perSec * Math.max(0, now - receivedAt) / 1000);
+    }
+
+    private Decay(change: () => void) {
+        this.decaying = true;
+        try { change(); } finally { this.decaying = false; }
+    }
 
     get drugLevelMultiplier(): number {return this.settings.drugLevelMultiplier};
     set drugLevelMultiplier(val: number) {if (this.settings.drugLevelMultiplier != val) {this.settings.drugLevelMultiplier = val; settingsSave(true);}}
@@ -883,33 +990,34 @@ export class InjectorModule extends BaseModule {
         settingsSave(true);
     }
 
-    // Cooldown func fires every cooldownTickMs
-    SedativeCooldown() {
+    // Cooldown funcs fire every cooldownTickMs and decay by the wall-clock time since their last run. Called without
+    // `now` (tests, forced ticks) they decay by exactly one tick.
+    SedativeCooldown(now?: number) {
+        const elapsed = now === undefined ? this.cooldownTickMs : this.DecayElapsedMs("sedative", now);
         if (this.sedativeLevel <= 0)
             return;
-        // subtractive will be mow much of the multiplier to subtract per tick to reduce by full multiplier every setting cooldown.
-        let subtractive = this.drugLevelMultiplier / (this.settings.sedativeCooldown / this.cooldownTickMs)
-        this.sedativeLevel = Math.max(0, this.sedativeLevel - subtractive);
+        const subtractive = this.drugLevelMultiplier * elapsed / this.settings.sedativeCooldown;
+        this.Decay(() => { this.sedativeLevel = Math.max(0, this.sedativeLevel - subtractive); });
         if (this.sedativeLevel <= 0 && this.asleep)
             this.Wake();
     }
 
-    MindControlCooldown() {
+    MindControlCooldown(now?: number) {
+        const elapsed = now === undefined ? this.cooldownTickMs : this.DecayElapsedMs("mindcontrol", now);
         if (this.mindControlLevel <= 0)
             return;
-        // subtractive will be mow much of the multiplier to subtract per tick to reduce by full multiplier every setting cooldown.
-        let subtractive = this.drugLevelMultiplier / (this.settings.mindControlCooldown / this.cooldownTickMs)
-        this.mindControlLevel = Math.max(0, this.mindControlLevel - subtractive);
+        const subtractive = this.drugLevelMultiplier * elapsed / this.settings.mindControlCooldown;
+        this.Decay(() => { this.mindControlLevel = Math.max(0, this.mindControlLevel - subtractive); });
         if (this.mindControlLevel <= 0 && this.brainwashed)
             this.SnapBack();
     }
 
-    HornyCooldown() {
+    HornyCooldown(now?: number) {
+        const elapsed = now === undefined ? this.cooldownTickMs : this.DecayElapsedMs("horny", now);
         if (this.hornyLevel <= 0)
             return;
-        // subtractive will be mow much of the multiplier to subtract per tick to reduce by full multiplier every setting cooldown.
-        let subtractive = this.drugLevelMultiplier / (this.settings.hornyCooldown / this.cooldownTickMs)
-        this.hornyLevel = Math.max(0, this.hornyLevel - subtractive);
+        const subtractive = this.drugLevelMultiplier * elapsed / this.settings.hornyCooldown;
+        this.Decay(() => { this.hornyLevel = Math.max(0, this.hornyLevel - subtractive); });
     }
 
     MiniGameEnd(type: "sedative" | "mindcontrol", success: boolean) {
@@ -1081,7 +1189,7 @@ export class InjectorModule extends BaseModule {
     }
 
     /** Sets a drug's level (kept between 0 and its max), saving and syncing it. Falling to 0 runs onWearOff. */
-    SetExtensionLevel(id: string, level: number): number {
+    SetExtensionLevel(id: string, level: number, decaying = false): number {
         const drug = extensionDrugs.get(id);
         if (!drug)
             return 0;
@@ -1094,11 +1202,25 @@ export class InjectorModule extends BaseModule {
             delete levels[id];
         else
             levels[id] = next;
-        settingsSave(true);
+        if (decaying && next > 0)
+            this.decayUnsaved = true;
+        else
+            settingsSave(true);
+        emit("drug.levelChanged", { type: id, previous, level: next, max: drug.max });
+        // Stage callbacks, in bar order: rising crosses lowest first, falling highest first.
+        if (drug.thresholds.length > 0) {
+            const ctx = this.ExtensionContext(drug);
+            if (next > previous)
+                drug.thresholds.filter(t => previous < t.level && next >= t.level).forEach(t => t.onReach?.(ctx));
+            else
+                drug.thresholds.filter(t => next < t.level && previous >= t.level).reverse().forEach(t => t.onDrop?.(ctx));
+        }
         if (previous > 0 && next <= 0)
             drug.onWearOff?.(this.ExtensionContext(drug));
         return next;
     }
+
+    private inOnFull = new Set<string>();
 
     /** What an extension drug's callbacks receive. `level` is live, so it reflects addLevel/setLevel as they happen. */
     ExtensionContext(drug: ExtensionDrug, sender?: Character | null): LSCGDrugContext {
@@ -1108,7 +1230,16 @@ export class InjectorModule extends BaseModule {
             drug: drug.id,
             get level() { return mod.GetExtensionLevel(drug.id); },
             max: drug.max,
-            addLevel: (amount: number) => mod.SetExtensionLevel(drug.id, mod.GetExtensionLevel(drug.id) + (Number.isFinite(amount) ? amount : 0)),
+            addLevel: (amount: number) => {
+                const wanted = mod.GetExtensionLevel(drug.id) + (Number.isFinite(amount) ? amount : 0);
+                const next = mod.SetExtensionLevel(drug.id, wanted);
+                // A dose that overflows the bar always fires onFull; the guard stops onFull's own addLevel looping.
+                if (wanted > drug.max && amount > 0 && drug.onFull && !mod.inOnFull.has(drug.id)) {
+                    mod.inOnFull.add(drug.id);
+                    try { drug.onFull(mod.ExtensionContext(drug, sender)); } finally { mod.inOnFull.delete(drug.id); }
+                }
+                return next;
+            },
             setLevel: (level: number) => mod.SetExtensionLevel(drug.id, level),
             sendAction: (text: string) => SendAction(String(text), sender ?? null),
             states: builtInStates(mod.stateModule, sender?.MemberNumber ?? undefined),
@@ -1128,22 +1259,71 @@ export class InjectorModule extends BaseModule {
         drug.onDose(ctx);
     }
 
-    /** Wears each extension drug off at its own rate, and runs onTick for those still active. */
-    ExtensionDrugTick() {
+    private extensionNextTick = new Map<string, number>();
+
+    /** Wears each extension drug off at its own rate, and runs onTick for those still active. A drug ticks every
+     *  `tickMs`; pass `now` to tick only the drugs that are due, or omit it to tick every drug once. */
+    ExtensionDrugTick(now?: number) {
         for (const drug of extensionDrugs.all()) {
             const level = this.GetExtensionLevel(drug.id);
-            if (level <= 0)
+            if (level <= 0) {
+                this.extensionNextTick.delete(drug.id);
+                this.decayAt.delete(drug.id);
                 continue;
-            const remaining = this.SetExtensionLevel(drug.id, level - drug.decayPerMinute * (this.cooldownTickMs / 60000));
-            if (remaining > 0 && this.Enabled && this.ExtensionDrugEnabled(drug.id))
+            }
+            if (now !== undefined) {
+                if (now < (this.extensionNextTick.get(drug.id) ?? 0))
+                    continue;
+                this.extensionNextTick.set(drug.id, now + drug.tickMs);
+            }
+            // Forced ticks (no `now`) are one tick's worth.
+            const elapsed = now === undefined ? drug.tickMs : this.DecayElapsedMs(drug.id, now);
+            const remaining = this.SetExtensionLevel(drug.id, level - drug.decayPerMinute * (elapsed / 60000), true);
+            if (remaining > 0 && this.Enabled && this.ExtensionDrugEnabled(drug.id)) {
                 drug.onTick?.(this.ExtensionContext(drug));
+                if (drug.onSpike && Math.random() < drug.spikeChance * (remaining / drug.max))
+                    drug.onSpike(this.ExtensionContext(drug));
+            }
         }
+    }
+
+    /** Current level of any drug type: built-ins on their internal scale, extensions 0 to their max. */
+    GetDrugLevel(type: string): number {
+        switch (type) {
+            case "sedative": return this.sedativeLevel;
+            case "mindcontrol": return this.mindControlLevel;
+            case "horny": return this.hornyLevel;
+            case "antidote": return 0;
+            default: return isExtensionDrugId(type) ? this.GetExtensionLevel(type) : 0;
+        }
+    }
+
+    /** Doses the player as an item would (opt-in check, "drug.beforeApply", "drug.applied") without the flavour text. */
+    DoseDrug(type: string, opts: { method?: LSCGDrugMethod; multiplier: number; sender?: number; location?: string; minigame?: boolean }): boolean {
+        const known = isExtensionDrugId(type) ? extensionDrugs.get(type) !== undefined : ["sedative", "mindcontrol", "horny", "antidote"].includes(type);
+        if (!known)
+            return false;
+        const method = opts.method ?? "drink";
+        const sender = getCharacter(opts.sender);
+        const [applied] = this.HookDrugApply(this.EnabledDrugTypes([type as AnyDrugType]), method, sender, opts.location);
+        if (!applied)
+            return false;
+        const minigame = opts.minigame ?? true;
+        switch (applied) {
+            case "sedative": this.AddSedative(opts.multiplier, minigame); break;
+            case "mindcontrol": this.AddMindControl(opts.multiplier, minigame); break;
+            case "horny": this.AddHorny(opts.multiplier, false); break;
+            case "antidote": this.DoCure(); break;
+            default: this.ApplyExtensionDrug(applied, method, { multiplier: opts.multiplier, sender, location: opts.location });
+        }
+        emit("drug.applied", { types: [applied], method, sender: opts.sender, location: opts.location });
+        return true;
     }
 
     /** This player's extension drug bars as published to the room: only drugs with a level, from drugs we have. */
     PublicExtensionBars(): ExtensionDrugBar[] {
         return InjectorModule.FullestBars(extensionDrugs.all()
-            .map(d => ({ id: d.id, level: this.GetExtensionLevel(d.id), max: d.max, color: d.color }))
+            .map(d => ({ id: d.id, level: this.GetExtensionLevel(d.id), max: d.max, color: d.color, decayPerSec: d.decayPerMinute / 60 }))
             .filter(b => b.level > 0));
     }
 
@@ -1168,7 +1348,7 @@ export class InjectorModule extends BaseModule {
             return [];
         return InjectorModule.FullestBars(published
             .filter(b => !!b && typeof b.id === "string" && Number.isFinite(b.level) && b.level > 0 && Number.isFinite(b.max) && b.max > 0)
-            .map(b => ({ id: b.id, level: b.level, max: b.max, color: typeof b.color === "string" && /^[#\w(),.%\s-]{1,40}$/.test(b.color) ? b.color : DEFAULT_DRUG_COLOR })));
+            .map(b => ({ id: b.id, level: b.level, max: b.max, decayPerSec: typeof b.decayPerSec === "number" && Number.isFinite(b.decayPerSec) && b.decayPerSec > 0 ? b.decayPerSec : undefined, color: typeof b.color === "string" && /^[#\w(),.%\s-]{1,40}$/.test(b.color) ? b.color : DEFAULT_DRUG_COLOR })));
     }
 
     /**

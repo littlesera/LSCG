@@ -35,6 +35,25 @@ export interface RowProps<T> {
 export interface SelectOption {
     value: string;
     label: string;
+    /** Options with the same group, next to each other, are listed under that heading. */
+    group?: string;
+    /** Drawn before the label where the browser supports rich dropdowns (customizable select, Chromium 135+). */
+    icon?: KitIcon;
+}
+
+/** Small vector icons, drawn in the current text colour (see .lscg-kit-icon in kit.scss). */
+export type KitIcon = "extension";
+
+/** A plain text character for each icon, the same shape, for where only text can go: a dropdown's options in
+ *  browsers without customizable selects. Not an emoji: it's drawn by the text font, in the text colour. */
+const ICON_GLYPHS: Record<KitIcon, string> = { extension: "\u2726" }; // ✦ black four pointed star
+
+/** Whether this browser can draw elements (our icons) inside a dropdown's options. */
+const richSelects = typeof CSS !== "undefined" && typeof CSS.supports === "function" && CSS.supports("appearance", "base-select");
+
+export function Icon(icon: KitIcon, title?: string): HTMLElement {
+    return <span class={`lscg-kit-icon lscg-kit-icon-${icon}`} role={title ? "img" : undefined}
+        aria-label={title} aria-hidden={title ? undefined : "true"} title={title ?? ""} /> as HTMLElement;
 }
 
 let _uid = 0;
@@ -92,10 +111,33 @@ export function NumberRow(ctx: KitContext, props: RowProps<number> & { min: numb
     return row(ctx, props, id, input);
 }
 
+/** Runs of consecutive options that share a group (undefined for ungrouped). */
+function groupOptions(options: SelectOption[]): [string | undefined, SelectOption[]][] {
+    const runs: [string | undefined, SelectOption[]][] = [];
+    for (const o of options) {
+        const last = runs[runs.length - 1];
+        if (last && last[0] === o.group) last[1].push(o);
+        else runs.push([o.group, [o]]);
+    }
+    return runs;
+}
+
 function createSelect(options: SelectOption[], id: string, onChange: (value: string) => void): HTMLSelectElement {
-    const select = <select id={id} onChange={() => onChange(select.value)}>
-        {options.map(o => <option value={o.value}>{o.label}</option>)}
+    const rich = richSelects && options.some(o => !!o.icon);
+    const select = <select id={id} class={rich ? "lscg-kit-select-rich" : ""} onChange={() => onChange(select.value)}>
+        {groupOptions(options).map(([group, opts]) => {
+            const items = opts.map(o => <option value={o.value}>
+                {o.icon ? (richSelects ? Icon(o.icon) : `${ICON_GLYPHS[o.icon]} `) : null}{o.label}
+            </option>);
+            return group ? <optgroup label={group}>{items}</optgroup> : items;
+        })}
     </select> as HTMLSelectElement;
+    // A customizable select shows the chosen option's content, icon included, through <selectedcontent>.
+    if (rich) {
+        const button = document.createElement("button");
+        button.appendChild(document.createElement("selectedcontent"));
+        select.prepend(button);
+    }
     return select;
 }
 
@@ -180,8 +222,10 @@ export function Expando(ctx: KitContext, props: { summary: () => string; content
 }
 
 /** A small rounded tag, e.g. an effect's status or where it comes from. */
-export function Chip(label: string, opts: { tone?: ChipTone; tooltip?: string } = {}): HTMLElement {
-    return <span class={`lscg-kit-chip lscg-kit-chip-${opts.tone ?? "muted"}`} title={opts.tooltip ?? ""}>{label}</span> as HTMLElement;
+export function Chip(label: string, opts: { tone?: ChipTone; tooltip?: string; icon?: KitIcon } = {}): HTMLElement {
+    return <span class={`lscg-kit-chip lscg-kit-chip-${opts.tone ?? "muted"}`} title={opts.tooltip ?? ""}>
+        {opts.icon ? Icon(opts.icon) : null}{label}
+    </span> as HTMLElement;
 }
 
 /** Opens a modal dialog whose rows edit data through their own context; every change is forwarded to `parent`

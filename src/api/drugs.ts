@@ -1,4 +1,6 @@
-import { LSCGDrugContext, LSCGDrugDefinition, LSCGDrugDoseContext, LSCGDrugsApi } from "./types";
+import { getModule } from "modules";
+import type { InjectorModule } from "Modules/injector";
+import { LSCGDoseOptions, LSCGDrugType, LSCGDrugContext, LSCGDrugThreshold, LSCGDrugDefinition, LSCGDrugDoseContext, LSCGDrugsApi } from "./types";
 import { Registry } from "./registry";
 import { ErrorOwner, safeInvoke } from "./safeInvoke";
 
@@ -13,9 +15,15 @@ export interface ExtensionDrug {
     keywords: string[];
     color: string;
     max: number;
+    tickMs: number;
     decayPerMinute: number;
     onDose(ctx: LSCGDrugDoseContext): void;
     onTick?(ctx: LSCGDrugContext): void;
+    /** Sorted by `at`, with each `at` already turned into an absolute level. */
+    thresholds: (LSCGDrugThreshold & { level: number })[];
+    onFull?(ctx: LSCGDrugContext): void;
+    onSpike?(ctx: LSCGDrugContext): void;
+    spikeChance: number;
     onWearOff?(ctx: LSCGDrugContext): void;
 }
 
@@ -27,6 +35,9 @@ export const DEFAULT_DRUG_COLOR = "#5C9CFF";
 export const MAX_EXTENSION_BARS = 12;
 const DEFAULT_MAX = 10;
 const DEFAULT_DECAY_PER_MINUTE = 1;
+const DEFAULT_SPIKE_CHANCE = 0.1;
+const DEFAULT_TICK_SECONDS = 6;
+const MIN_TICK_SECONDS = 1;
 
 /** Whether a drug type id belongs to an extension (they are namespaced; LSCG's own never contain a "."). */
 export function isExtensionDrugId(type: string): boolean {
@@ -61,6 +72,14 @@ export function createDrugsApi(owner: ErrorOwner & { readonly info: { name: stri
                 throw new Error(`LSCG[ext:${owner.id}]: drug "${def.name}" needs at least one keyword.`);
             const keywords = def.keywords.map((k, i) => requireText(owner, `drug "${def.name}" keyword ${i + 1}`, k));
 
+            const max = positive(owner, "max", def.max, DEFAULT_MAX, false);
+            const thresholds = (def.thresholds ?? []).map((t, i) => {
+                if (!t || typeof t.at !== "number" || !(t.at > 0) || t.at > 1)
+                    throw new Error(`LSCG[ext:${owner.id}]: drug "${def.name}" threshold ${i + 1}: at must be above 0 and at most 1.`);
+                const wrap = (fn?: (ctx: LSCGDrugContext) => void) => typeof fn === "function" ? (ctx: LSCGDrugContext) => { safeInvoke(owner, () => fn.call(t, ctx)); } : undefined;
+                return { at: t.at, level: t.at * max, onReach: wrap(t.onReach), onDrop: wrap(t.onDrop) };
+            }).sort((a, b) => a.level - b.level);
+
             const unregister = extensionDrugs.register({
                 id,
                 source: owner.info.name,
@@ -68,10 +87,15 @@ export function createDrugsApi(owner: ErrorOwner & { readonly info: { name: stri
                 description: typeof def.description === "string" ? def.description : "",
                 keywords,
                 color: typeof def.color === "string" && def.color.trim() !== "" ? def.color.trim() : DEFAULT_DRUG_COLOR,
-                max: positive(owner, "max", def.max, DEFAULT_MAX, false),
+                max,
+                tickMs: Math.max(MIN_TICK_SECONDS, positive(owner, "tickSeconds", def.tickSeconds, DEFAULT_TICK_SECONDS, true)) * 1000,
+                thresholds,
                 decayPerMinute: positive(owner, "decayPerMinute", def.decayPerMinute, DEFAULT_DECAY_PER_MINUTE, true),
                 onDose: ctx => { safeInvoke(owner, () => def.onDose(ctx)); },
                 onTick: typeof def.onTick === "function" ? ctx => { safeInvoke(owner, () => def.onTick!(ctx)); } : undefined,
+                onFull: typeof def.onFull === "function" ? ctx => { safeInvoke(owner, () => def.onFull!(ctx)); } : undefined,
+                onSpike: typeof def.onSpike === "function" ? ctx => { safeInvoke(owner, () => def.onSpike!(ctx)); } : undefined,
+                spikeChance: Math.min(1, positive(owner, "spikeChance", def.spikeChance, DEFAULT_SPIKE_CHANCE, true)),
                 onWearOff: typeof def.onWearOff === "function" ? ctx => { safeInvoke(owner, () => def.onWearOff!(ctx)); } : undefined,
             });
             const remove = () => {
@@ -80,6 +104,18 @@ export function createDrugsApi(owner: ErrorOwner & { readonly info: { name: stri
             mine.set(def.name, remove);
             track(remove);
             return remove;
+        },
+
+        dose(type: LSCGDrugType, options: LSCGDoseOptions = {}): boolean {
+            if (typeof type !== "string" || type === "")
+                throw new Error(`LSCG[ext:${owner.id}]: dose needs a drug type.`);
+            const multiplier = positive(owner, "multiplier", options.multiplier, 1, true);
+            const injector = getModule<InjectorModule>("InjectorModule");
+            return !!injector?.DoseDrug(type, { ...options, multiplier });
+        },
+
+        getLevel(type: LSCGDrugType): number {
+            return getModule<InjectorModule>("InjectorModule")?.GetDrugLevel(type) ?? 0;
         },
 
         unregister(name: string): boolean {

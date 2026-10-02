@@ -174,6 +174,16 @@ export interface LSCGDrugDoseContext extends LSCGDrugContext {
     readonly location?: string;
 }
 
+/** A point on a drug's bar that triggers callbacks when the level crosses it. */
+export interface LSCGDrugThreshold {
+    /** Where on the bar, as a fraction of `max` (above 0, up to 1). 1 is a full bar. */
+    at: number;
+    /** Runs when the level rises to or past `at`, however it got there (a dose, `addLevel`, `setLevel`). */
+    onReach?(ctx: LSCGDrugContext): void;
+    /** Runs when the level falls back below `at`, by decay, an antidote, `addLevel` or `setLevel`. */
+    onDrop?(ctx: LSCGDrugContext): void;
+}
+
 export interface LSCGDrugDefinition {
     /** Name within your extension; the drug id becomes "<extension id>.<name>". No ".". */
     name: string;
@@ -192,10 +202,43 @@ export interface LSCGDrugDefinition {
     decayPerMinute?: number;
     /** Runs on the player when they take a dose. Players have to opt in to each drug in LSCG's settings first. */
     onDose(ctx: LSCGDrugDoseContext): void;
-    /** Runs every few seconds while the player's level is above 0. */
+    /** Seconds between ticks, at least 1 (default 6). Sets how often `onTick` and `onSpike` can run and how often
+     *  the level decays; the decay per minute is still `decayPerMinute`. */
+    tickSeconds?: number;
+    /** Runs every tick (see `tickSeconds`) while the player's level is above 0. */
     onTick?(ctx: LSCGDrugContext): void;
+    /** Stages along the bar, e.g. drowsy at 0.3, blurred at 0.6, asleep at 1. Each fires its `onReach` as the level
+     *  rises past it and its `onDrop` as it falls back, in order when one change crosses several. Unlike `onFull`,
+     *  a threshold at 1 fires on reaching max, not only on overflowing it. */
+    thresholds?: LSCGDrugThreshold[];
+    /** Runs every time a dose (`addLevel`) would push the level past `max`, so the bar overflows. The level is
+     *  clamped to `max` first. Like the built-in sedative's "fall asleep", use it for the drug's big moment. */
+    onFull?(ctx: LSCGDrugContext): void;
+    /** Runs at random on a tick, with a chance that grows as the bar fills: `spikeChance` at a full bar, scaling
+     *  down linearly to 0 at an empty one. Like the sedative's "nodding off" at lower levels. */
+    onSpike?(ctx: LSCGDrugContext): void;
+    /** Chance per tick (0 to 1) that `onSpike` runs at a full bar (default 0.1). */
+    spikeChance?: number;
     /** Runs once when the level falls back to 0, however that happens. */
     onWearOff?(ctx: LSCGDrugContext): void;
+}
+
+/** Where a dose comes from. Built-in drug types are "sedative", "mindcontrol", "horny" and "antidote"; an
+ *  extension's drug is its namespaced id ("<extension id>.<name>"), yours or another extension's. */
+export type LSCGDrugType = "sedative" | "mindcontrol" | "horny" | "antidote" | (string & {});
+
+export interface LSCGDoseOptions {
+    /** How the dose is delivered, as far as `drug.beforeApply` listeners and `onDose` are concerned (default "drink"). */
+    method?: LSCGDrugMethod;
+    /** Strength on LSCG's own scale (default 1; see `LSCGDrugDoseContext.multiplier`). */
+    multiplier?: number;
+    /** Member number to credit as whoever dosed the player. */
+    sender?: number;
+    /** The item group an injection went into, e.g. "ItemNeck". */
+    location?: string;
+    /** Built-in sedative and mind control only: start their incapacitation minigame if the player isn't already
+     *  under, as an item dose does (default true). Pass false for a gentle build-up. */
+    minigame?: boolean;
 }
 
 export interface LSCGDrugsApi {
@@ -203,6 +246,14 @@ export interface LSCGDrugsApi {
     register(definition: LSCGDrugDefinition): () => void;
     /** Unregisters one of this extension's drugs by name. */
     unregister(name: string): boolean;
+    /** Gives the player a dose of a drug, as if they'd drunk or been injected with it, minus any flavour text (send
+     *  your own with a `sendAction`-style emote). It respects the player's opt-in to that drug and
+     *  `drug.beforeApply` vetoes, and emits `drug.applied`. Returns false if nothing was applied (not enabled,
+     *  vetoed, unknown drug, or LSCG not ready). An "antidote" clears every drug and ignores `multiplier`. */
+    dose(type: LSCGDrugType, options?: LSCGDoseOptions): boolean;
+    /** The player's current level of a drug, from 0 to its max (0 for an unknown drug). Built-in levels are on LSCG's
+     *  internal scale, multiplied by the player's drug level multiplier. */
+    getLevel(type: LSCGDrugType): number;
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -395,6 +446,9 @@ export interface LSCGEventMap {
     /** A grab/leash involving the player ended. */
     "grab.removed": { type: string; pairedMember: number; isSource: boolean };
     /** A drug took effect on the player. */
+    /** A drug's level changed, including slow decay (built-in or extension). `level` and `max` are on the same scale
+     *  as `LSCGDrugsApi.getLevel`; `level / max` is the fraction of the bar, e.g. to apply effects at thresholds. */
+    "drug.levelChanged": { type: string; previous: number; level: number; max: number };
     "drug.applied": { types: string[]; method: LSCGDrugMethod; sender?: number; location?: string };
     /** The player's collar choke level changed. */
     "collar.choke": { level: number; previousLevel: number };

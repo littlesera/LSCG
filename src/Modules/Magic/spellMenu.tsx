@@ -3,7 +3,7 @@ import type { MagicModule } from "Modules/magic";
 import { DomOverlayHost } from "Dom/host";
 import { CardGrid, Chip, ChipTone, KitContext, Notice, SearchBox } from "Dom/kit";
 import type { SpellDefinition } from "Settings/Models/magic";
-import { effectDescription, effectLabel, spellHasPairedEffect } from "./spellEffects";
+import { effectDescription, effectLabel, effectTooltip, isExtensionEffect, spellHasPairedEffect } from "./spellEffects";
 import menuStyles from "./spellMenu.scss?inline";
 
 /** Where the menu sits on the 2000x1000 canvas; the canvas fills the same rectangle (see MagicModule.DrawSpellMenu). */
@@ -97,8 +97,9 @@ export class SpellMenuView {
         const reason = (s: EffectStatus) => s === "blocked" ? `${target.IsPlayer() ? "You have" : `${CharacterNickname(target)} has`} blocked this effect.`
             : s === "unsupported" ? `${target.IsPlayer() ? "Your" : `${CharacterNickname(target)}'s`} client doesn't have this effect.` : "";
         const chips = status.effects.map(e => Chip(effectLabel(e.id) + STATUS_SUFFIX[e.status], {
+            icon: isExtensionEffect(e.id) ? "extension" : undefined,
             tone: STATUS_TONE[e.status],
-            tooltip: [effectDescription(e.id), reason(e.status)].filter(t => !!t).join("\n"),
+            tooltip: [effectTooltip(e.id), reason(e.status)].filter(t => !!t).join("\n"),
         }));
         if (spellHasPairedEffect(spell))
             chips.push(Chip("paired", { tone: "info", tooltip: "Needs a second target." }));

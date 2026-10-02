@@ -100,6 +100,17 @@ export function effectDescription(id: SpellEffectId | string | undefined): strin
     return getSpellEffect(id)?.description ?? "This effect comes from an extension that isn't installed.";
 }
 
+/** Added by an installed extension (shown with an extension icon so it stands apart from built-ins). */
+export function isExtensionEffect(id: SpellEffectId | string | undefined): boolean {
+    return !!getSpellEffect(id)?.source;
+}
+
+/** Description plus, for extension effects, which extension added it. */
+export function effectTooltip(id: SpellEffectId | string | undefined): string {
+    const source = getSpellEffect(id)?.source;
+    return [effectDescription(id), source ? `Added by extension: ${source}` : ""].filter(t => !!t).join("\n");
+}
+
 export function isPairedEffect(id: SpellEffectId | string): boolean {
     return !!getSpellEffect(id)?.paired;
 }

@@ -114,6 +114,34 @@
 		.lscg-badge-error {
 			color: #b3261e;
 		}
+
+		.lscg-badge-toggle {
+			display: flex;
+			align-items: center;
+			gap: 0.4em;
+			cursor: pointer;
+
+			input {
+				margin: 0;
+				cursor: pointer;
+			}
+		}
+
+		.lscg-badge-off .lscg-badge-toggle span {
+			opacity: 0.55;
+			text-decoration: line-through;
+		}
+
+		.lscg-badge-note {
+			font-size: 0.85em;
+			font-style: italic;
+		}
+
+		.lscg-badge-hint {
+			display: block;
+			margin-top: 0.4em;
+			font-size: 0.8em;
+		}
 	}
 
 	.lscg-badge-anchor:not(.lscg-badge-open):not(:hover) .lscg-badge-flyout {

@@ -2,7 +2,8 @@
 // LSCG is loaded, with a flyout of the version and extensions, and pulses when there are extensions.
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
-import { registerExtension, type ModApiHandle } from "api/extensions";
+import { extensions, knownExtensions, registerExtension, setExtensionEnabled, type ModApiHandle } from "api/extensions";
+import { installLoadQueue } from "api";
 import { apiVersion } from "api";
 import { ICONS } from "utils";
 import { removeLoginBadge, showLoginBadge } from "api/loginBadge";
@@ -29,6 +30,8 @@ describe("login badge", () => {
 
     afterEach(() => {
         handles.forEach(h => h.dispose());
+        localStorage.removeItem("LSCG_DisabledExtensions");
+        knownExtensions.clear();
         handles = [];
         removeLoginBadge();
         document.body.replaceChildren();
@@ -151,6 +154,60 @@ describe("login badge", () => {
             showLoginBadge();
             removeLoginBadge();
             expect(root()).toBeNull();
+        });
+    });
+
+    describe("turning extensions off", () => {
+        const checkbox = (id: string) => root()!.querySelector(`input[aria-label="${id} enabled"]`) as HTMLInputElement;
+        const queue = (id: string) => {
+            const loaded = { count: 0 };
+            (window as any).LSCG_OnLoad.push((lscg: any) => {
+                const api = lscg.getModApi({ id, name: id, version: "1" });
+                handles.push(api);
+                loaded.count++; // only reached when getModApi didn't refuse
+            });
+            return loaded;
+        };
+        beforeEach(() => installLoadQueue());
+
+        it("unticking disposes it now, keeps it listed, and keeps it off next load", () => {
+            const loaded = queue("offable");
+            showLoginBadge();
+            expect(checkbox("offable").checked).toBe(true);
+            checkbox("offable").click();
+            expect(extensions.get("offable")).toBeUndefined();
+            expect(checkbox("offable").checked).toBe(false);
+            expect(flyout().textContent).toContain("Turned off");
+
+            // Next page load: the callback stops at getModApi, so none of the extension's own code runs.
+            queue("offable");
+            expect(loaded.count).toBe(1);
+            expect(extensions.get("offable")).toBeUndefined();
+        });
+
+        it("ticking it again re-runs its load callback, without a reload", () => {
+            const loaded = queue("onagain");
+            setExtensionEnabled("onagain", false);
+            showLoginBadge();
+            checkbox("onagain").click();
+            expect(extensions.get("onagain")).toBeDefined();
+            expect(loaded.count).toBe(2);
+            expect(flyout().textContent).toContain("Turned on");
+        });
+
+        it("asks for a reload when it registered without the load queue", () => {
+            handles.push(registerExtension({ id: "direct", name: "direct", version: "1" }));
+            setExtensionEnabled("direct", false);
+            showLoginBadge();
+            checkbox("direct").click();
+            expect(extensions.get("direct")).toBeUndefined();
+            expect(flyout().textContent).toContain("Reload the page");
+        });
+
+        it("forgets an extension that disposes itself", () => {
+            make("Gone").dispose();
+            showLoginBadge();
+            expect(flyout().textContent).toContain("No extensions registered.");
         });
     });
 });

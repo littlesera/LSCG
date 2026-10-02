@@ -296,6 +296,62 @@ describe("extension drugs", () => {
             expect(onWearOff).toHaveBeenCalledTimes(2);
         });
 
+        it("runs onFull whenever a dose overflows the bar, once even if onFull doses again", () => {
+            const onFull = vi.fn((ctx: { addLevel(n: number): number }) => { ctx.addLevel(5); });
+            api.drugs.register(euphoria({ onFull, onDose: ctx => { ctx.addLevel(ctx.multiplier); } }));
+            injector.ApplyExtensionDrug(id("euphoria"), "drink", { multiplier: 6 });
+            expect(onFull).not.toHaveBeenCalled();
+            injector.ApplyExtensionDrug(id("euphoria"), "drink", { multiplier: 6 });
+            expect(onFull).toHaveBeenCalledOnce();
+        });
+
+        it("runs onSpike at random on a tick, never at a near-empty bar when the roll is high", () => {
+            const onSpike = vi.fn();
+            api.drugs.register(euphoria({ onSpike, spikeChance: 1, decayPerMinute: 0 }));
+            opt("euphoria");
+            injector.SetExtensionLevel(id("euphoria"), 10);
+            const roll = vi.spyOn(Math, "random").mockReturnValue(0.5);
+            injector.ExtensionDrugTick();
+            expect(onSpike).toHaveBeenCalledOnce();
+            injector.SetExtensionLevel(id("euphoria"), 1);
+            injector.ExtensionDrugTick();
+            expect(onSpike).toHaveBeenCalledOnce();
+            roll.mockRestore();
+        });
+
+        it("runs threshold callbacks as the level crosses them, in bar order, rising and falling", () => {
+            const log: string[] = [];
+            const t = (at: number) => ({ at, onReach: () => { log.push(`up${at}`); }, onDrop: () => { log.push(`down${at}`); } });
+            api.drugs.register(euphoria({ thresholds: [t(1), t(0.3), t(0.6)] }));
+            injector.SetExtensionLevel(id("euphoria"), 4);
+            expect(log).toEqual(["up0.3"]);
+            injector.SetExtensionLevel(id("euphoria"), 10);
+            expect(log).toEqual(["up0.3", "up0.6", "up1"]);
+            injector.SetExtensionLevel(id("euphoria"), 2);
+            expect(log.slice(3)).toEqual(["down1", "down0.6", "down0.3"]);
+        });
+
+        it("rejects a threshold outside (0, 1]", () => {
+            expect(() => api.drugs.register(euphoria({ thresholds: [{ at: 0 }] }))).toThrow(/threshold 1/);
+            expect(() => api.drugs.register(euphoria({ thresholds: [{ at: 1.5 }] }))).toThrow(/threshold 1/);
+        });
+
+        it("ticks each drug at its own tickSeconds, decaying by decayPerMinute either way", () => {
+            const fast = vi.fn(), slow = vi.fn();
+            api.drugs.register(euphoria({ name: "fast", label: "Fast", keywords: ["fast"], onTick: fast, tickSeconds: 1, decayPerMinute: 6 }));
+            api.drugs.register(euphoria({ name: "slow", label: "Slow", keywords: ["slow"], onTick: slow, decayPerMinute: 6 }));
+            opt("fast"); opt("slow");
+            injector.SetExtensionLevel(id("fast"), 5);
+            injector.SetExtensionLevel(id("slow"), 5);
+            // The module polls once a second; do the same by hand.
+            for (let i = 0; i < 12; i++) { injector.ExtensionDrugTick(Date.now()); vi.advanceTimersByTime(1000); }
+            expect(fast).toHaveBeenCalledTimes(12);
+            expect(slow).toHaveBeenCalledTimes(2);
+            // Decay is wall-clock: the first tick owes nothing, then 11s have passed for fast and 6s for slow.
+            expect(injector.GetExtensionLevel(id("fast"))).toBeCloseTo(5 - 1.1);
+            expect(injector.GetExtensionLevel(id("slow"))).toBeCloseTo(5 - 0.6);
+        });
+
         it("an antidote (and a safeword) clears extension drugs and runs onWearOff", () => {
             const onWearOff = vi.fn();
             api.drugs.register(euphoria({ onWearOff }));
@@ -320,19 +376,149 @@ describe("extension drugs", () => {
         });
     });
 
+    describe("api.drugs.dose", () => {
+        it("doses an extension drug only if the player opted in, firing drug.applied", () => {
+            const onDose = vi.fn((ctx: LSCGDrugDoseContext) => { ctx.addLevel(ctx.multiplier); });
+            api.drugs.register(euphoria({ onDose }));
+            const applied = vi.fn();
+            api.events.on("drug.applied", applied);
+            expect(api.drugs.dose(id("euphoria"))).toBe(false);
+            opt("euphoria");
+            expect(api.drugs.dose(id("euphoria"), { multiplier: 3, method: "inject" })).toBe(true);
+            expect(onDose.mock.calls[0][0]).toMatchObject({ method: "inject", multiplier: 3 });
+            expect(api.drugs.getLevel(id("euphoria"))).toBe(3);
+            expect(applied).toHaveBeenCalledOnce();
+        });
+
+        it("can be vetoed by drug.beforeApply, and returns false for an unknown drug", () => {
+            api.drugs.register(euphoria());
+            opt("euphoria");
+            api.events.before("drug.beforeApply", ctx => ctx.cancel("no"));
+            expect(api.drugs.dose(id("euphoria"))).toBe(false);
+            expect(api.drugs.dose("nobody.nothing")).toBe(false);
+        });
+
+        it("doses a built-in drug the player enabled, without the minigame when asked", () => {
+            injector.settings.enableSedative = true;
+            injector.sedativeLevel = 0;
+            expect(api.drugs.dose("sedative", { multiplier: 1, minigame: false })).toBe(true);
+            expect(api.drugs.getLevel("sedative")).toBeGreaterThan(0);
+            injector.settings.enableSedative = false;
+            expect(api.drugs.dose("sedative", { minigame: false })).toBe(false);
+        });
+    });
+
+    describe("level events and saving", () => {
+        it("emits drug.levelChanged for built-in and extension drugs", () => {
+            const seen: unknown[] = [];
+            api.events.on("drug.levelChanged", p => seen.push(p));
+            api.drugs.register(euphoria());
+            injector.SetExtensionLevel(id("euphoria"), 4);
+            injector.sedativeLevel = 0;
+            injector.sedativeLevel = 3;
+            expect(seen).toEqual([
+                { type: id("euphoria"), previous: 0, level: 4, max: 10 },
+                { type: "sedative", previous: 0, level: 3, max: injector.settings.sedativeMax * injector.drugLevelMultiplier },
+            ]);
+        });
+
+        it("doesn't save on decay ticks, only on doses and wear-off", () => {
+            api.drugs.register(euphoria({ decayPerMinute: 6 }));
+            const saves = vi.fn();
+            api.events.on("settings.saved", saves);
+            injector.SetExtensionLevel(id("euphoria"), 5);
+            vi.advanceTimersByTime(2000);
+            const afterDose = saves.mock.calls.length;
+            expect(afterDose).toBeGreaterThan(0);
+            for (let i = 0; i < 5; i++) injector.ExtensionDrugTick();
+            vi.advanceTimersByTime(60_000);
+            expect(saves).toHaveBeenCalledTimes(afterDose);
+            expect(injector.GetExtensionLevel(id("euphoria"))).toBeCloseTo(2);
+            injector.SetExtensionLevel(id("euphoria"), 0);
+            vi.advanceTimersByTime(2000);
+            expect(saves.mock.calls.length).toBeGreaterThan(afterDose);
+        });
+
+        it("decays by wall-clock time while online, capped so time asleep or logged out doesn't count", () => {
+            api.drugs.register(euphoria({ decayPerMinute: 1 }));
+            injector.SetExtensionLevel(id("euphoria"), 10);
+            const t = Date.now();
+            injector.ExtensionDrugTick(t);          // first sight: nothing owed yet
+            injector.ExtensionDrugTick(t + 60_000); // a minute later in one go, as a throttled tab would
+            expect(injector.GetExtensionLevel(id("euphoria"))).toBeCloseTo(9, 5);
+            injector.ExtensionDrugTick(t + 60_000 + 3_600_000); // an hour with the laptop shut: only 2 minutes count
+            expect(injector.GetExtensionLevel(id("euphoria"))).toBeCloseTo(7, 5);
+        });
+
+        it("saves decayed levels every few minutes without publishing, and only if they changed", () => {
+            api.drugs.register(euphoria({ decayPerMinute: 1 }));
+            injector.SetExtensionLevel(id("euphoria"), 5);
+            injector.SaveDecayedLevels(); // clear anything earlier tests left unsaved
+            vi.advanceTimersByTime(2000);
+            const saves = vi.fn();
+            api.events.on("settings.saved", saves);
+            injector.SaveDecayedLevels();
+            expect(saves).not.toHaveBeenCalled();
+            injector.ExtensionDrugTick();
+            injector.SaveDecayedLevels();
+            expect(saves).toHaveBeenCalledWith({ published: false });
+            vi.advanceTimersByTime(2000);
+            injector.SaveDecayedLevels();
+            expect(saves).toHaveBeenCalledOnce();
+        });
+
+        it("publishes decay rates and estimates another player's level between syncs", () => {
+            api.drugs.register(euphoria({ decayPerMinute: 6 }));
+            injector.SetExtensionLevel(id("euphoria"), 5);
+            expect(injector.PublicExtensionBars()[0].decayPerSec).toBeCloseTo(0.1);
+            const rates = injector.DecayRatesPerSec();
+            expect(rates.sedative).toBeCloseTo(injector.drugLevelMultiplier * 1000 / injector.settings.sedativeCooldown);
+            expect(InjectorModule.EstimateLevel(5, 0.1, 1000, 11_000)).toBeCloseTo(4);
+            expect(InjectorModule.EstimateLevel(5, 0.1, 1000, 100_000)).toBe(0);
+            expect(InjectorModule.EstimateLevel(5, undefined, 1000, 11_000)).toBe(5); // an old client: no estimate
+            expect(InjectorModule.EstimateLevel(5, 0.1, undefined, 11_000)).toBe(5);   // our own: already live
+        });
+    });
+
+    describe("built-in decay overrides", () => {
+        afterEach(() => { injector.settings.decayMinutes = {}; injector.SetDecayOverride("sedative", undefined); });
+
+        it("uses the default until the player sets minutes per dose, and 0 goes back to the default", () => {
+            const fallback = injector.defaultSettings.sedativeCooldown;
+            expect(injector.settings.sedativeCooldown).toBe(fallback);
+            injector.SetDecayOverride("sedative", 10);
+            expect(injector.GetDecayOverride("sedative")).toBe(10);
+            expect(injector.settings.sedativeCooldown).toBe(600_000);
+            expect(injector.DecayRatesPerSec().sedative).toBeCloseTo(injector.drugLevelMultiplier / 600);
+            injector.SetDecayOverride("sedative", 0);
+            expect(injector.GetDecayOverride("sedative")).toBeUndefined();
+            expect(injector.settings.sedativeCooldown).toBe(fallback);
+        });
+
+        it("survives a reload, where defaults are otherwise re-applied", () => {
+            injector.SetDecayOverride("sedative", 10);
+            injector.settings.sedativeCooldown = 1;
+            const reloaded = new InjectorModule();
+            reloaded.init();
+            reloaded.load();
+            expect(reloaded.settings.sedativeCooldown).toBe(600_000);
+            reloaded.unload();
+        });
+    });
+
     describe("bars published to the room", () => {
         it("lists only drugs with a level, with their colour and max", () => {
             api.drugs.register(euphoria({ color: "#ff00ff", max: 8 }));
             api.drugs.register(euphoria({ name: "calm", label: "Calm", keywords: ["calm"] }));
             expect(injector.PublicExtensionBars()).toEqual([]);
             injector.SetExtensionLevel(id("euphoria"), 4);
-            expect(injector.PublicExtensionBars()).toEqual([{ id: id("euphoria"), level: 4, max: 8, color: "#ff00ff" }]);
+            expect(injector.PublicExtensionBars()).toEqual([{ id: id("euphoria"), level: 4, max: 8, color: "#ff00ff", decayPerSec: 1 / 60 }]);
         });
 
         it("goes out in the public settings packet", () => {
             api.drugs.register(euphoria());
             injector.SetExtensionLevel(id("euphoria"), 4);
-            expect(core.publicSettings.InjectorModule.drugLevels).toEqual([{ id: id("euphoria"), level: 4, max: 10, color: DEFAULT_DRUG_COLOR }]);
+            expect(core.publicSettings.InjectorModule.drugLevels).toEqual([{ id: id("euphoria"), level: 4, max: 10, color: DEFAULT_DRUG_COLOR, decayPerSec: 1 / 60 }]);
             expect(injector.settings).not.toHaveProperty("drugLevels");
         });
 

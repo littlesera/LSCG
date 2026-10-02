@@ -281,7 +281,11 @@ describe("Magic™ settings pages", () => {
                 choose(dialog, 0, barkId);
                 choose(dialog, 1, LSCGSpellEffect.blindness);
                 expect(sp.Effects).toEqual([barkId, LSCGSpellEffect.blindness]);
-                expect(dropdowns(dialog)[0].selectedOptions[0].textContent).toBe("Barking");
+                // The test DOM has no customizable selects, so options get the icon's text character.
+                expect(dropdowns(dialog)[0].selectedOptions[0].textContent).toBe("\u2726 Barking");
+                // Extension effects are listed under their own heading in the picker.
+                const barkOption = dropdowns(dialog)[0].querySelector("optgroup[label='From extensions'] option");
+                expect(barkOption?.textContent).toBe("\u2726 Barking");
             });
 
             it("keeps (and can replace or remove) an effect from an uninstalled extension", () => {

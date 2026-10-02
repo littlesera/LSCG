@@ -39,6 +39,12 @@ Each extension registers once and gets its own handle. This follows the same pat
   registered throws.
 - Everything an extension registers is namespaced as `"<id>.<name>"`.
 - `api.dispose()` removes everything the extension registered and frees its id.
+- **Players can turn extensions off** from the login-screen badge. LSCG remembers this per browser. For a
+  turned-off extension, `getModApi` throws, which stops the rest of its `LSCG_OnLoad` callback. So call
+  `getModApi` **first**, before you hook anything or change the page yourself. Turning one off after it loaded
+  disposes its handle. Anything it did outside LSCG's API stays until the page reloads. Turning one back on
+  re-runs its `LSCG_OnLoad` callback, so keep that callback safe to run twice. An extension that registered
+  some other way (calling `window.LSCG.getModApi` directly) needs a page reload to turn back on.
 - Errors thrown from your callbacks are caught and logged as `LSCG[ext:<id>]`. They are counted in the
   login badge and never break LSCG. Players who enable LSCG's *RethrowExceptions* debug setting get the
   exceptions rethrown instead.
@@ -101,6 +107,7 @@ api.events.before("spell.beforeReceive", ctx => {
 | `activity.sent` | `{ name, group?, target?, isLSCG }` |
 | `activity.received` | `{ name, group?, source?, isLSCG }`. Fires for activities that target the player. |
 | `grab.added` / `grab.removed` | `{ type, pairedMember, isSource }` |
+| `drug.levelChanged` | `{ type, previous, level, max }`: any drug, built-in or extension, including decay. `level / max` is the fraction of the bar |
 | `drug.applied` | `{ types, method: "drink" \| "inject" \| "breath", sender?, location? }` |
 | `collar.choke` | `{ level, previousLevel }` |
 | `collar.passout` | `{ reason: "collar" \| "hand" \| "plugs" \| "chain", by? }` |
@@ -217,12 +224,25 @@ api.drugs.register({
     color: "#ff9ff3",                       // bar colour
     max: 10,
     decayPerMinute: 1,
+    tickSeconds: 6,                         // how often onTick/onSpike/decay run (default 6, minimum 1)
     onDose(ctx) {
         ctx.addLevel(ctx.multiplier);
         ctx.sendAction("%NAME% giggles uncontrollably.");
     },
     onTick(ctx) {
         if (ctx.level > 6) ctx.states.get("blind")?.activate(undefined, 10000);
+    },
+    onFull(ctx) {                           // a dose overflowed the bar: always runs
+        ctx.sendAction("%NAME% collapses into helpless giggles.");
+        ctx.states.get("frozen")?.activate(undefined, 8000);
+    },
+    thresholds: [                           // stages along the bar, as fractions of max
+        { at: 0.3, onReach: ctx => ctx.sendAction("%NAME% giggles a little."), onDrop: ctx => ctx.sendAction("%NAME% calms down.") },
+        { at: 1, onReach: ctx => ctx.sendAction("%NAME% is completely giddy.") },
+    ],
+    spikeChance: 0.1,                       // chance per tick at a full bar, scaled down to 0 at an empty one
+    onSpike(ctx) {                          // random, likelier the fuller the bar
+        ctx.sendAction("%NAME% snorts with sudden laughter.");
     },
     onWearOff(ctx) {
         ctx.sendAction("%NAME% stops giggling.");
@@ -239,12 +259,29 @@ the keywords is a dose of the drug. The crafting screen offers it as a checkbox 
   LSCG's own scale: a drink is 2, an injection 1 to 2.2 by where it goes in (`ctx.location`), and each breath
   a small fraction. `ctx.sender` is who dosed them.
 - **Levels.** The drug keeps a level from 0 to `max` for you. `addLevel` and `setLevel` keep it in range and
-  return the new value. It falls by `decayPerMinute` each minute and is saved with the player's settings.
+  return the new value. It falls by `decayPerMinute` each minute the player is online (it pauses while
+  they're logged out) and is saved with the player's settings. Decay is saved every few minutes and never sent:
+  other clients animate the bar from the published rate.
   Other players see it as a bar beside the character, in your colour, even without your extension. Up to
   12 extension bars are shown for one player (the fullest, if there are more), after LSCG's own three; they
   wrap into a second row after eight.
-- **Callbacks.** `onTick` runs every few seconds while the level is above 0 (for players who enabled the
+- **Giving a dose from code.** `api.drugs.dose(type, { method, multiplier, sender, location, minigame })` doses
+  the player directly, e.g. from your own item or event. `type` is a built-in (`"sedative"`, `"mindcontrol"`,
+  `"horny"`, `"antidote"`) or any extension drug id. It is the same path an item takes: the player must have
+  enabled that drug, `drug.beforeApply` can veto it, and `drug.applied` fires, but there is no flavour text, so
+  send your own. It returns `false` if nothing was applied. `minigame: false` skips the sedative or mind
+  control incapacitation minigame for a gentle build-up. `api.drugs.getLevel(type)` reads a level.
+- **Callbacks.** `onTick` runs every `tickSeconds` (default 6) while the level is above 0 (for players who enabled the
   drug). `onWearOff` runs once when it reaches 0, including when an antidote or a safeword clears it.
+- **Overflow and spikes.** `onFull` runs every time a dose (`addLevel`) would push the level past `max`; the
+  level is clamped first. This is the drug's big moment, like the sedative putting the player to sleep.
+  `onSpike` runs at random on a tick, with chance `spikeChance` (default 0.1) at a full bar, scaling linearly
+  down to 0 at an empty one. Calling `addLevel` inside `onFull` won't re-trigger it.
+- **Thresholds.** `thresholds` lists stages along the bar as fractions of `max`. Each runs `onReach` when the
+  level rises to or past it and `onDrop` when it falls back below, whether by a dose, decay, an antidote,
+  `addLevel` or `setLevel`. One change that crosses several runs them in bar order (lowest first going up,
+  highest first going down). Use them for a gradual build such as chloroform: surprised, drowsy, blurred,
+  weak, then asleep at 1. A threshold at 1 fires on reaching max; `onFull` fires only on overflowing it.
 - **States.** `ctx.states.get(...)` can switch the same nine built-in states spell effects can.
 - **Events.** Extension drugs appear in `drug.applied`, and `drug.beforeApply` can veto them like any other.
 - Extensions can't change LSCG's own four drugs; `register` only adds new ones.
@@ -335,4 +372,4 @@ While the login screen is shown, a badge in the bottom-right corner confirms tha
 Hovering over it or clicking it lists the registered extensions and flags any extension whose callbacks
 have thrown. A toast confirms the load after login.
 
-See [`examples/sample-extension.user.js`](../examples/sample-extension.user.js).
+See [`examples/sample-extension.js`](../examples/sample-extension.js), a plain script you can paste into the console or load with a script tag; its header explains both. For local development, [`examples/lscgLoader-local.user.js`](../examples/lscgLoader-local.user.js) loads your local build and the example together.

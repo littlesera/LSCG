@@ -1,11 +1,18 @@
 import { h } from "tsx-dom";
 import { Chip, CheckboxRow, KitContext, KitTab, NumberRow, RuleTable, SectionLabel } from "Dom/kit";
+import { COOLDOWNS } from "constants/timing";
 import { extensionDrugs, type ExtensionDrug } from "api/drugs";
 import type { InjectorModule } from "Modules/injector";
 import type { InjectorSettingsModel } from "./Models/injector";
 import type { MiscSettingsModel } from "./Models/base";
 
 const MAX_SIPS = 1000;
+const MAX_DECAY_MINUTES = 240;
+const DEFAULT_DECAY_MINUTES = {
+    sedative: COOLDOWNS.SEDATIVE / 60_000,
+    mindcontrol: COOLDOWNS.MIND_CONTROL / 60_000,
+    horny: COOLDOWNS.AROUSAL / 60_000,
+};
 
 /** What a crafted item needs to say to be this drug, as chips so long keyword lists stay readable. */
 function keywordChips(drug: ExtensionDrug): HTMLElement {
@@ -82,6 +89,15 @@ export function buildInjectorTabs(ctx: KitContext, s: InjectorSettingsModel, mis
                     label: "Aphrodisiac", description: "Activates for \"horny\" or \"aphrodisiac\".",
                     get: () => s.enableHorny ?? false, set: v => s.enableHorny = v,
                 }),
+                SectionLabel("How fast they wear off", "Minutes for one dose to wear off while you're online. Leave at 0 for LSCG's default."),
+                ...(["sedative", "mindcontrol", "horny"] as const).map(type => NumberRow(ctx, {
+                    label: { sedative: "Sedative", mindcontrol: "Brainwash drug", horny: "Aphrodisiac" }[type],
+                    description: `Default: ${DEFAULT_DECAY_MINUTES[type]} minutes per dose.`,
+                    min: 0, max: MAX_DECAY_MINUTES, step: 0.5,
+                    get: () => injector?.GetDecayOverride(type) ?? 0,
+                    set: v => injector?.SetDecayOverride(type, v),
+                    disabled: () => !injector,
+                })),
                 SectionLabel("Extension drugs", "Drugs added by extensions. Each one only affects you once you enable it."),
                 extensionDrugs.all().length > 0 ? extensionDrugTable(ctx, injector) : <p class="lscg-kit-notice">No installed extension adds a drug.</p> as HTMLElement,
             ],

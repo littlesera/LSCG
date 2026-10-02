@@ -1,8 +1,8 @@
 import { h } from "tsx-dom";
 import { getModule } from "modules";
 import { OutfitCollectionModule } from "Modules/outfitCollection";
-import { allEffectIds, effectDescription, effectLabel, getSpellEffect, isPairedEffect, spellHasPairedEffect } from "Modules/Magic/spellEffects";
-import { Chip, CheckboxRow, Expando, KitContext, KitTab, Notice, NumberRow, openDialog, RuleTable, SectionLabel, SelectOption, SelectRow, TextRow } from "Dom/kit";
+import { allEffectIds, effectDescription, effectLabel, effectTooltip, isExtensionEffect, getSpellEffect, isPairedEffect, spellHasPairedEffect } from "Modules/Magic/spellEffects";
+import { Chip, CheckboxRow, Expando, Icon, KitContext, KitTab, Notice, NumberRow, openDialog, RuleTable, SectionLabel, SelectOption, SelectRow, TextRow } from "Dom/kit";
 import { KNOWN_SPELLS_LIMIT, MagicPublicSettingsModel, MagicSettingsModel, OutfitOption, PolymorphConfig, SpellDefinition, SpellEffectId, maxSpellEffects } from "./Models/magic";
 import type { SpiritTextType } from "./magic";
 
@@ -27,13 +27,13 @@ function toggle<T>(list: T[], item: T, on: boolean): T[] {
 
 function effectChip(id: SpellEffectId): HTMLElement {
     const def = getSpellEffect(id);
-    return Chip(effectLabel(id), { tone: def ? "muted" : "warn", tooltip: effectDescription(id) });
+    return Chip(effectLabel(id), { tone: def ? "muted" : "warn", tooltip: effectTooltip(id), icon: isExtensionEffect(id) ? "extension" : undefined });
 }
 
 function effectNameCell(id: SpellEffectId): HTMLElement {
     const def = getSpellEffect(id);
     return <div class="lscg-kit-chips">
-        <span>{effectLabel(id)}</span>
+        <span>{isExtensionEffect(id) ? Icon("extension", "Added by an extension") : null}{effectLabel(id)}</span>
         {!def ? Chip("not installed", { tone: "warn", tooltip: "Comes from an extension this client doesn't have." })
             : def.source ? Chip(def.source, { tone: "info", tooltip: "Added by an extension." }) : null}
     </div> as HTMLElement;
@@ -171,13 +171,13 @@ function effectSlots(dctx: KitContext, tableCtx: KitContext, spell: SpellDefinit
             const taken = new Set(spell.Effects.filter((_, j) => j !== i));
             const options: SelectOption[] = [
                 { value: "", label: current ? "— remove this effect —" : have === 0 ? "— choose an effect —" : "— add another effect —" },
-                ...allEffectIds().filter(id => !taken.has(id)).map(id => ({ value: id as string, label: effectLabel(id) })),
+                ...allEffectIds().filter(id => !taken.has(id)).map(id => ({ value: id as string, label: effectLabel(id), ...(isExtensionEffect(id) ? { group: "From extensions", icon: "extension" as const } : {}) })),
                 // An effect from an extension that isn't installed stays selectable so it can be kept or replaced.
                 ...(current && !getSpellEffect(current) ? [{ value: current as string, label: effectLabel(current) }] : []),
             ];
             const picker = SelectRow(rctx, {
                 label: `Effect ${i + 1}`,
-                description: current ? effectDescription(current) : undefined,
+                description: current ? effectTooltip(current) : undefined,
                 options,
                 get: () => current ?? "",
                 set: value => {

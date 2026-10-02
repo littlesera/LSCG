@@ -60,8 +60,11 @@ export class CoreModule extends BaseModule {
         // Likewise the data extensions share with the room.
         settings.ExtensionData = publishedExtensionData();
         // Likewise the extension drug bars: derived from the registry and current levels, never stored.
-        if (settings.InjectorModule)
-            settings.InjectorModule.drugLevels = getModule<InjectorModule>("InjectorModule")?.PublicExtensionBars() ?? [];
+        if (settings.InjectorModule) {
+            const injector = getModule<InjectorModule>("InjectorModule");
+            settings.InjectorModule.drugLevels = injector?.PublicExtensionBars() ?? [];
+            settings.InjectorModule.drugDecay = injector?.DecayRatesPerSec();
+        }
         return settings;
     }
 
@@ -310,6 +313,9 @@ export class CoreModule extends BaseModule {
         if (!Sender)
             return;
         Sender.LSCG = Object.assign(Sender.LSCG ?? {}, msg.settings ?? {});
+        // Their drug levels were current as of now: bars animate from here until the next sync.
+        if (Sender.LSCG.InjectorModule)
+            Sender.LSCG.InjectorModule.receivedAt = Date.now();
         CharacterRefresh(Sender, false);
         // An open spell menu shows what each spell can do to its target; keep that current.
         if (CurrentCharacter === Sender)
