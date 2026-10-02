@@ -92,6 +92,11 @@ describe("isPhraseInString", () => {
 		expect(isPhraseInString("axb test", "a.b")).toBe(false);
 	});
 
+	it("matches a bracketed keyword followed by punctuation", () => {
+		expect(isPhraseInString("A [changing]? suit", "[changing]")).toBe(true);
+		expect(isPhraseInString("A ([changing]) suit", "[changing]", true)).toBe(true);
+	});
+
 	it("excludes OOC parenthetical content by default", () => {
 		expect(isPhraseInString("hello (mentions sit here) world", "sit")).toBe(false);
 	});

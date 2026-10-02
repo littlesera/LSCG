@@ -135,8 +135,8 @@ export class CoreModule extends BaseModule {
         hookFunction("DialogInventoryBuild", 1, (args, next) => {
             next(args);
             if (this.settings.seeSharedCrafts && DialogMenuMode !== "permissions") {
-                let target = args[0];
-                if (!target.FocusGroup)
+                const [target, focusGroup, , locks] = args;
+                if (!focusGroup || locks)
                     return;
                 ChatRoomCharacter.forEach(C => {
                     if (C.Crafting != null && !C.IsPlayer() && C.MemberNumber != target.MemberNumber && (C as OtherCharacter).LSCG && (C as OtherCharacter).LSCG.GlobalModule.sharePublicCrafting) {
@@ -148,7 +148,7 @@ export class CoreModule extends BaseModule {
 
                                     const canUseCraftedItem = DialogCanUseCraftedItem as (C: Character, Craft: CraftingItem, asset: Asset) => boolean;
                                     for (const Asset of (CraftingAssets[Craft.Item] ?? [])) {
-                                        if (Asset.Group.Name === target.FocusGroup?.Name && canUseCraftedItem(target, Craft, Asset)) {
+                                        if (Asset.Group.Name === focusGroup.Name && canUseCraftedItem(target, Craft, Asset)) {
                                             DialogInventoryAdd(target, AppearanceItem.fromAsset(Asset), false, undefined, Craft);
                                         }
                                     }

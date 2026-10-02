@@ -1,4 +1,4 @@
-import { ApplyItem, canChangeCosplay, CanUnlock, getBCXActiveCurseSlots, getRandomEntry, getRandomInt, isBind, isCloth, isCosplay, isUnderwear, LSCG_SendLocal, matchesStripLevel, parseFromBase64, RemoveItem, SendAction } from "utils";
+import { ApplyItem, CanRemoveItem, CanReplaceItem, canChangeCosplay, CanUnlock, getBCXActiveCurseSlots, getRandomEntry, getRandomInt, isBind, isCloth, isCosplay, isUnderwear, LSCG_SendLocal, matchesStripLevel, parseFromBase64, RemoveItem, SendAction } from "utils";
 import { getModule } from "modules";
 import { BaseState } from "./BaseState";
 import { StateModule } from "Modules/states";
@@ -228,16 +228,11 @@ export class CursedItemState extends BaseState {
     ];
 
     getItemColorString(item: ItemBundle | Item) {
-        let itemColor: string = isString(item.Color) ? item.Color : "Default";
-        if (isArray(item.Color) && ((item.Color.length == 1 && item.Color[0] == "Default") || item.Color.length == 0)) {
-            itemColor = "Default";
-        }
-        else if (isArray(item.Color)) {
-            itemColor = JSON.stringify(item.Color);
-        }
-        if (!itemColor || itemColor == "")
-            itemColor = "Default";
-        return itemColor;
+        // Outfit codes may hold "#2A2A2A" where the worn item holds ["#2A2A2A"]; compare them as the same color (#838)
+        const colors = isString(item.Color) ? [item.Color] : isArray(item.Color) ? item.Color : [];
+        if (colors.every(c => !c || c == "Default"))
+            return "Default";
+        return JSON.stringify(colors);
     }
 
     equateColor(item: ItemBundle, worn: Item): boolean {
@@ -257,7 +252,13 @@ export class CursedItemState extends BaseState {
         return item.Craft?.Name == bundle.Craft?.Name &&
                 item.Asset.Name == bundle.Name &&
                 item.Asset.Group.Name == bundle.Group &&
-                this.equateColor(bundle, item);
+                // Crafted items take their colors from the craft, so the worn color need not match the bundle's (#776)
+                (!!bundle.Craft || this.equateColor(bundle, item));
+    }
+
+    slotIsReplaceable(group: AssetGroupName, acting: number): boolean {
+        const worn = InventoryGet(Player, group);
+        return !worn || CanReplaceItem(worn, acting);
     }
 
     shouldStripItem(item: Item, level: StripLevel): boolean {
@@ -280,6 +281,8 @@ export class CursedItemState extends BaseState {
             let itemsToStrip = wornItems.filter(item =>
                 this.shouldStripItem(item, cursedItem.Strip) &&
                 !otherWornCursedOutfitItemGroups.includes(item.Asset.Group.Name) &&
+                // Skip what can never come off (cosplay-protected, others' locks...) or the curse loops forever (#723, #741)
+                CanRemoveItem(item, cursedItem.Crafter) &&
                 !outfitItems.some(bundle => this.itemBundleMatch(bundle, item)));
 
             if (!!itemsToStrip && itemsToStrip.length > 0) {
@@ -305,6 +308,7 @@ export class CursedItemState extends BaseState {
                     this.itemIsAllowed(bundle, cursedItem.Crafter) &&                                                 // Item allowed to apply
                     (!this.Inexhaustable(cursedItem) || bundle.Group != keyItem.Asset.Group.Name) &&    // Item not key item if inexhaustable (leave key item behind if overlap)
                     !otherWornCursedOutfitItemGroups.includes(bundle.Group) &&
+                    this.slotIsReplaceable(bundle.Group, cursedItem.Crafter) &&
                     !wornItems.some(item => this.itemBundleMatch(bundle, item))
                 }
             );
