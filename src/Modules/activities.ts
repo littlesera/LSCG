@@ -335,7 +335,7 @@ export class ActivityModule extends BaseModule {
                     TargetAction: "SourceCharacter baps TargetCharacter.",
                 },
             ],
-            CustomImage: "Assets/Female3DCG/Activity/Slap.png",
+            CustomImage: "Icons/Activity/Slap.png"
         });
 
         // Headbutt
@@ -357,7 +357,7 @@ export class ActivityModule extends BaseModule {
                 Name: "CanHeadbutt",
                 Func: (acting, acted, group) => !acting.IsFixedHead(),
             }],
-            CustomImage: "Assets/Female3DCG/Activity/Nod.png",
+            CustomImage: "Icons/Activity/Nod.png"
         });
 
         // Nuzzle
@@ -411,7 +411,7 @@ export class ActivityModule extends BaseModule {
                     TargetAction: "SourceCharacter nuzzles under TargetCharacter's feet.",
                 },
             ],
-            CustomImage: "Assets/Female3DCG/Activity/Kiss.png",
+            CustomImage: "Icons/Activity/Kiss.png"
         });
 
         // Hug
@@ -448,7 +448,7 @@ export class ActivityModule extends BaseModule {
                     TargetAction: "SourceCharacter full body tackles TargetCharacter!",
                 },
             ],
-            CustomImage: "Assets/Female3DCG/Activity/Grope.png",
+            CustomImage: "Icons/Activity/Grope.png"
         });
 
         // Flop
@@ -466,7 +466,7 @@ export class ActivityModule extends BaseModule {
                     TargetAction: "SourceCharacter flops on top of TargetCharacter.",
                 },
             ],
-            CustomImage: "Assets/Female3DCG/Activity/Cuddle.png",
+            CustomImage: "Icons/Activity/Cuddle.png"
         });
 
         // KissEyes
@@ -485,7 +485,7 @@ export class ActivityModule extends BaseModule {
                     TargetAction: "SourceCharacter gently kisses over TargetCharacter's eyes.",
                 },
             ],
-            CustomImage: "Assets/Female3DCG/Activity/Kiss.png",
+            CustomImage: "Icons/Activity/Kiss.png"
         });
 
         // RubPussy
@@ -504,7 +504,7 @@ export class ActivityModule extends BaseModule {
                     TargetAction: "SourceCharacter grinds PronounPossessive pussy against TargetCharacter's penis.",
                 },
             ],
-            CustomImage: "Assets/Female3DCG/Activity/MasturbateHand.png",
+            CustomImage: "Icons/Activity/MasturbateHand.png"
         });
 
         // SlapPenis
@@ -566,7 +566,7 @@ export class ActivityModule extends BaseModule {
                     TargetAction: "SourceCharacter slaps PronounPossessive ActivityAsset against TargetCharacter's penis.",
                 },
             ],
-            CustomImage: "Assets/Female3DCG/Activity/PenetrateSlow.png",
+            CustomImage: "Icons/Activity/PenetrateSlow.png"
         });
 
         // NibbleTail
@@ -757,7 +757,7 @@ export class ActivityModule extends BaseModule {
                         this.leashingModule.DoGrab(target, "tongue");
                 },
             },
-            CustomImage: "Assets/Female3DCG/Activity/Pinch.png",
+            CustomImage: "Icons/Activity/Pinch.png"
         });
 
         // ReleaseTongue
@@ -790,7 +790,7 @@ export class ActivityModule extends BaseModule {
                         this.leashingModule.DoRelease(target, "tongue");
                 },
             },
-            CustomImage: "Assets/Female3DCG/Activity/Pinch.png",
+            CustomImage: "Icons/Activity/Pinch.png"
         });
 
         // HoldHand
@@ -956,7 +956,7 @@ export class ActivityModule extends BaseModule {
                         this.leashingModule.DoRelease(target, "ear");
                 },
             },
-            CustomImage: "Assets/Female3DCG/Activity/Pinch.png",
+            CustomImage: "Icons/Activity/Pinch.png"
         });
 
         // Patch Grab Arm
@@ -1033,7 +1033,7 @@ export class ActivityModule extends BaseModule {
                         this.leashingModule.DoGrab(target, "tail");
                 },
             },
-            CustomImage: "Assets/Female3DCG/Activity/Grope.png",
+            CustomImage: "Icons/Activity/Grope.png"
         });
 
         this.PatchActivity(<ActivityPatch>{
@@ -1142,7 +1142,7 @@ export class ActivityModule extends BaseModule {
                     this.leashingModule.DoRelease(target, area);
                 },
             },
-            CustomImage: "Assets/Female3DCG/Activity/Slap.png",
+            CustomImage: "Icons/Activity/Slap.png"
         });
 
         // PatchChoke Neck
@@ -1188,7 +1188,7 @@ export class ActivityModule extends BaseModule {
                         this.leashingModule.DoRelease(target, "neck");
                 },
             },
-            CustomImage: "Assets/Female3DCG/Activity/Choke.png",
+            CustomImage: "Icons/Activity/Choke.png"
         });
 
         // Patch Collar Grab
@@ -1482,7 +1482,7 @@ export class ActivityModule extends BaseModule {
                         this.leashingModule.DoRelease(target, "eyes");
                 },
             },
-            CustomImage: "Assets/Female3DCG/Activity/HandGag.png",
+            CustomImage: "Icons/Activity/HandGag.png"
         });
 
         // GrabTongueWithFoot
@@ -1515,7 +1515,7 @@ export class ActivityModule extends BaseModule {
                         this.leashingModule.DoGrab(target, "mouth-with-foot");
                 },
             },
-            CustomImage: "Assets/Female3DCG/Activity/MassageFeet.png",
+            CustomImage: "Icons/Activity/MassageFeet.png"
         });
 
         // ReleaseFootGrabbedTongue
@@ -1548,7 +1548,7 @@ export class ActivityModule extends BaseModule {
                         this.leashingModule.DoRelease(target, "mouth-with-foot");
                 },
             },
-            CustomImage: "Assets/Female3DCG/Activity/MassageFeet.png",
+            CustomImage: "Icons/Activity/MassageFeet.png"
         });
 
         // Tug Crotch Rope
@@ -1680,7 +1680,7 @@ export class ActivityModule extends BaseModule {
                         return true;
                 },
             }],
-            CustomImage: "Assets/Female3DCG/Activity/Pinch.png",
+            CustomImage: "Icons/Activity/Pinch.png"
         });
 
         // Chomp
@@ -1728,7 +1728,7 @@ export class ActivityModule extends BaseModule {
                         this.leashingModule.DoGrab(target, "chomp");
                 },
             },
-            CustomImage: "Assets/Female3DCG/Activity/Bite.png",
+            CustomImage: "Icons/Activity/Bite.png"
         });
 
         // ReleaseChomp
@@ -1776,7 +1776,7 @@ export class ActivityModule extends BaseModule {
                         this.leashingModule.DoRelease(target, "chomp");
                 },
             },
-            CustomImage: "Assets/Female3DCG/Activity/Kiss.png",
+            CustomImage: "Icons/Activity/Kiss.png"
         });
 
         // SwallowLoad
@@ -1812,7 +1812,7 @@ export class ActivityModule extends BaseModule {
                         getModule<SplatterModule>("SplatterModule")?.ClearSplatInMouth(Player);
                 },
             },
-            CustomImage: "Assets/Female3DCG/Activity/Kiss.png",
+            CustomImage: "Icons/Activity/Kiss.png"
         });
 
         this.PatchActivity(<ActivityPatch>{
@@ -1903,7 +1903,7 @@ export class ActivityModule extends BaseModule {
                     }
 				},
 			},
-			CustomImage: "Assets/Female3DCG/Activity/Spank.png",
+			CustomImage: "Icons/Activity/Spank.png"
 		});
 
         // Erect Penis Detection...
