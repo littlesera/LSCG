@@ -1262,7 +1262,7 @@ export class ActivityModule extends BaseModule {
                         this.leashingModule.DoRelease(target, "collar");
                 },
             },
-            CustomImage: "Assets/Female3DCG/Activity/Slap.png",
+            CustomImage: "Icons/Activity/Slap.png",
         });
 
         // HoldLeash
