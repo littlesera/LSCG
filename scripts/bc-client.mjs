@@ -141,7 +141,7 @@ function readPin() {
 	return JSON.parse(readFileSync(PIN_FILE, "utf-8"));
 }
 
-function rawUrl(repo, sha, path) {
+export function rawUrl(repo, sha, path) {
 	const base = repo.replace(/\.git$/, "");
 	return `${base}/-/raw/${sha}/BondageClub/${path}`;
 }

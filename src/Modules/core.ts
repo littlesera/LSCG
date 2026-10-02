@@ -6,7 +6,6 @@ import { ModuleCategory } from "Settings/setting_definitions";
 import { removeAllHooksByModule, hookFunction, getCharacter, drawSvg, SVG_ICONS, sendLSCGMessage, settingsSave, LSCG_CHANGES, LSCG_SendLocal, mouseTooltip } from "../utils";
 import { HypnoModule } from "./hypno";
 import { CollarModule } from "./collar";
-import { CursedItemModule } from "./cursed-item";
 
 //import * as semver from "semver";
 import { lt } from "semver";
@@ -14,7 +13,6 @@ import { BaseMigrator } from "./Migrators/BaseMigrator";
 import { StateMigrator } from "./Migrators/StateMigrator";
 import { MagicModule } from "./magic";
 import { StateModule } from "./states";
-import { drawTooltip } from "Settings/settingUtils";
 import { GrabType, LeashingModule } from "./leashing";
 import { OpacityMigrator } from "./Migrators/OpacityMigrator";
 import { SuggestionSettingMigrator } from "./Migrators/SuggestionSettingMigrator";
@@ -30,7 +28,7 @@ import { dispatchExtensionCommand } from "api/network";
 const PRIVATE_STATE_EXTENSIONS = ["outfits", "slot-snapshot", "stored", "stored-outfit"];
 
 // >= R111
-declare var DialogMenuMapping: { items: ScreenFunctions & { C: null | Character } };
+declare let DialogMenuMapping: { items: ScreenFunctions & { C: null | Character } };
 
 // Core Module that can handle basic functionality like server handshakes etc.
 export class CoreModule extends BaseModule {
@@ -44,12 +42,12 @@ export class CoreModule extends BaseModule {
     };
 
     get publicSettings(): IPublicSettingsModel {
-        var settings = new PublicSettingsModel();
+        const settings = new PublicSettingsModel();
         for (const m of modules()) {
-            var moduleSettings = m.settings ?? <BaseSettingsModel>{enabled:false};
-            var moduleSettingStorage = m.settingsStorage ?? "";
+            const moduleSettings = m.settings ?? <BaseSettingsModel>{enabled:false};
+            const moduleSettingStorage = m.settingsStorage ?? "";
             if (Object.hasOwn(settings, moduleSettingStorage)) {
-                var publicModuleSetting = (<any>settings)[moduleSettingStorage];
+                const publicModuleSetting = (<any>settings)[moduleSettingStorage];
                 for (const k of Object.keys(moduleSettings)) {
                     if (Object.hasOwn(publicModuleSetting, k))
                         publicModuleSetting[k] = (<any>moduleSettings)[k];
@@ -98,7 +96,7 @@ export class CoreModule extends BaseModule {
             seeSharedCrafts: true,
             sharePublicCrafting: false,
             showCheckRolls: true,
-            blockDOGS: false
+            blockDOGS: false,
         };
 	}
 
@@ -114,7 +112,7 @@ export class CoreModule extends BaseModule {
         }, ModuleCategory.Core);
 
         hookFunction("ServerAccountBeep", 10, (args, next) => {
-            let data = args[0];
+            const data = args[0];
             // Intercept LSCG beeps directly
             const msg = data.Message as unknown as LSCGMessageModel;
             if (data.BeepType === "Leash" && msg && msg.IsLSCG === true) {
@@ -130,12 +128,11 @@ export class CoreModule extends BaseModule {
             const [C, CharX, CharY, Zoom] = args as [Character, number, number, number];
             const Char = getCharacter(C.MemberNumber!) as OtherCharacter | PlayerCharacter;
             const ModUser = !!Char?.LSCG;
-            const Friend = C.ID === 0 || (Player.FriendList ?? []).includes(C.MemberNumber!);
             const Ghosted = (Player.GhostList ?? []).includes(C.MemberNumber!);
-            const isAdmin = (Array.isArray(ChatRoomData?.Admin) && ChatRoomData?.Admin.includes(C.MemberNumber!))
+            const isAdmin = (Array.isArray(ChatRoomData?.Admin) && ChatRoomData?.Admin.includes(C.MemberNumber!));
             if (ModUser && ChatRoomHideIconState === 0 && !Ghosted) {
-                var version = C.IsPlayer() ? LSCG_VERSION : (C as OtherCharacter).LSCG?.Version;
-                var starColor = isAdmin ? "#008080" : "#00AEAE";
+                const version = C.IsPlayer() ? LSCG_VERSION : (C as OtherCharacter).LSCG?.Version;
+                let starColor = isAdmin ? "#008080" : "#00AEAE";
                 if (version != LSCG_VERSION)
                     starColor = "#ff4545";
                 drawSvg(MainCanvas, SVG_ICONS.STAR, CharX + 400 * Zoom, CharY + 8 * Zoom, 40 * Zoom, 40 * Zoom, 50, 0.8, 1, starColor);
@@ -154,7 +151,7 @@ export class CoreModule extends BaseModule {
                     return;
                 ChatRoomCharacter.forEach(C => {
                     if (C.Crafting != null && !C.IsPlayer() && C.MemberNumber != target.MemberNumber && (C as OtherCharacter).LSCG && (C as OtherCharacter).LSCG.GlobalModule.sharePublicCrafting) {
-                        for (let Craft of C.Crafting)
+                        for (const Craft of C.Crafting)
                             if ((Craft != null) && (Craft.Item != null))
                                 if ((Craft.Private == null) || (Craft.Private == false)) {
                                     Craft.MemberName = CharacterNickname(C);
@@ -239,7 +236,7 @@ export class CoreModule extends BaseModule {
     }
 
     CheckVersionUpdate() {
-        var previousVersion = Player.LSCG?.Version;
+        const previousVersion = Player.LSCG?.Version;
         let saveRequired = false;
         if (!previousVersion || previousVersion != LSCG_VERSION) {
             this.ShowChangelog();
@@ -259,13 +256,13 @@ export class CoreModule extends BaseModule {
         new OpacityMigrator(),
         new SuggestionSettingMigrator(),
         new OutfitMigrator(),
-        new CursedItemMigrator()
+        new CursedItemMigrator(),
     ];
 
     CheckForMigrations(fromVersion: string): boolean {
         if (!fromVersion)
             return false;
-        if (fromVersion[0] == 'v')
+        if (fromVersion[0] == "v")
             fromVersion = fromVersion.substring(1);
 
         let saveRequired = false;
@@ -284,14 +281,14 @@ export class CoreModule extends BaseModule {
             type: type,
             settings: this.publicSettings,
             target: null,
-            reply: replyRequested
+            reply: replyRequested,
         });
     }
 
     CheckForPublicPacket(data: ServerChatRoomMessage) {
         if (!!data.Sender && data.Type == "Hidden" && data.Content == "LSCGMsg" && !!data.Dictionary && !!data.Dictionary[0]) {
-            var C = getCharacter(data.Sender) as OtherCharacter;
-            var msg = (data.Dictionary[0] as unknown as LSCGMessageDictionaryEntry).message;
+            const C = getCharacter(data.Sender) as OtherCharacter;
+            const msg = (data.Dictionary[0] as unknown as LSCGMessageDictionaryEntry).message;
             if (data.Sender != Player.MemberNumber) { // LSCG messages that must come from another user
                 switch (msg.type) {
                     case "init":
@@ -342,7 +339,7 @@ export class CoreModule extends BaseModule {
     Command(senderNumber: number, msg: LSCGMessageModel) {
         if (!msg.command || msg.target != Player.MemberNumber)
             return;
-        let Sender = getCharacter(senderNumber) as OtherCharacter;
+        const Sender = getCharacter(senderNumber) as OtherCharacter;
         switch (msg.command!.name) {
             case "debug":
                 LSCG_SendLocal(msg.command.args[0].value as string);
@@ -357,7 +354,7 @@ export class CoreModule extends BaseModule {
                 getModule<LeashingModule>("LeashingModule")?.IncomingEscape(Sender, msg.target);
                 break;
             case "remote":
-                let prevCollarPurchase = Player.LSCG?.CollarModule?.collarPurchased;
+                const prevCollarPurchase = Player.LSCG?.CollarModule?.collarPurchased;
                 if (Player.LSCG.HypnoModule.enabled && Player.LSCG.HypnoModule.remoteAccess) {
                     Object.assign(Player.LSCG.HypnoModule, msg.settings?.HypnoModule);
                     getModule<HypnoModule>("HypnoModule")?.initializeTriggerWord();
@@ -367,20 +364,20 @@ export class CoreModule extends BaseModule {
                 if (Player.LSCG.MagicModule.enabled && Player.LSCG.MagicModule.remoteAccess)
                     Object.assign(Player.LSCG.MagicModule, msg.settings?.MagicModule);
                 settingsSave(true);
-                let currentCollarPurchase = Player.LSCG?.CollarModule?.collarPurchased;
+                const currentCollarPurchase = Player.LSCG?.CollarModule?.collarPurchased;
                 if (!prevCollarPurchase && currentCollarPurchase)
                     LSCG_SendLocal(`${!Sender ? "Someone" : CharacterNickname(Sender)} has purchased the Collar Module for you!`);
                 else
                     LSCG_SendLocal(`${!Sender ? "Someone" : CharacterNickname(Sender)} has accessed your remote settings!`);
                 break;
             case "collar-tighten":
-                if (!!Sender) getModule<CollarModule>("CollarModule")?.TightenButtonPress(Sender);
+                if (Sender) getModule<CollarModule>("CollarModule")?.TightenButtonPress(Sender);
                 break;
             case "collar-loosen":
-                if (!!Sender) getModule<CollarModule>("CollarModule")?.LoosenButtonPress(Sender);
+                if (Sender) getModule<CollarModule>("CollarModule")?.LoosenButtonPress(Sender);
                 break;
             case "collar-stats":
-                if (!!Sender) getModule<CollarModule>("CollarModule")?.StatsButtonPress(Sender);
+                if (Sender) getModule<CollarModule>("CollarModule")?.StatsButtonPress(Sender);
                 break;
             case "photo":
                 DrawFlashScreen("#FFFFFF", 500, 1500);
@@ -427,7 +424,7 @@ ${LSCG_CHANGES}`;
             Private: true,
             Message: message,
             ChatRoomSpace: "",
-            BeepType: ""
+            BeepType: "",
         });
         console.info(`LSCG Updated:${LSCG_CHANGES}`);
     }
@@ -439,14 +436,14 @@ ${LSCG_CHANGES}`;
     }
 
     RemoveCommandListenerById(id: string) {
-        if (!!id)
+        if (id)
             this.CommandListeners = this.CommandListeners.filter(c => c.id != id);
     }
 
     RemoveCommandListener(listener: CommandListener) {
         if (this.CommandListeners.indexOf(listener) > -1)
             this.CommandListeners.splice(this.CommandListeners.indexOf(listener), 1);
-        if (!!listener.id)
+        if (listener.id)
             this.CommandListeners = this.CommandListeners.filter(c => c.id != listener.id);
     }
 }

@@ -11,7 +11,7 @@ const TIGHTEN_STEP = 4;
  *  Tighten/Loosen dialog uses. The maximum depends on the caster's Bondage skill, as it does for whoever uses the
  *  dialog. Locked items are skipped: BC only lets you tighten or loosen what you could unlock. Returns how many changed. */
 function adjustRestraints(delta: number, caster: Character | null): number {
-    const casterSkill = !!caster ? SkillGetLevel(caster, "Bondage") : 0;
+    const casterSkill = caster ? SkillGetLevel(caster, "Bondage") : 0;
     let changed = 0;
     for (const item of Player.Appearance) {
         if (item.Asset.Group.Category !== "Item" || !item.Asset.AllowTighten || !!item.Property?.LockedBy)
@@ -140,13 +140,13 @@ export const BUILTIN_SPELL_EFFECTS: SpellEffectDefinition[] = [
         allowRandom: true,
         apply: ({ magic, sender, paired, duration }) => {
             if (!!paired && !!sender) {
-                SendAction(`%NAME% squirms as %POSSESSIVE% arousal is paired.`);
+                SendAction("%NAME% squirms as %POSSESSIVE% arousal is paired.");
                 magic.stateModule.ArousalPairedState.DoPair(paired, sender, duration);
                 magic.NotifyPair(sender, paired, LSCGSpellEffect.paired_arousal, magic.stateModule.ArousalPairedState.Type);
             }
         },
         applyPaired: ({ magic, sender }, originalTarget) => {
-            SendAction(`%NAME% squirms as %POSSESSIVE% arousal is paired.`);
+            SendAction("%NAME% squirms as %POSSESSIVE% arousal is paired.");
             magic.stateModule.ArousalPairedState.RespondToPairing(originalTarget, sender);
         },
     },
@@ -159,14 +159,14 @@ export const BUILTIN_SPELL_EFFECTS: SpellEffectDefinition[] = [
         apply: ({ magic, sender, paired, duration }) => {
             if (!!paired && !!sender) {
                 magic.stateModule.GaggedState.Active ?
-                    SendAction(`%NAME% quivers as %PRONOUN% feels %POSSESSIVE% impending denial.`) :
-                    SendAction(`%NAME% whimpers as %PRONOUN% feels %POSSESSIVE% impending denial.`);
+                    SendAction("%NAME% quivers as %PRONOUN% feels %POSSESSIVE% impending denial.") :
+                    SendAction("%NAME% whimpers as %PRONOUN% feels %POSSESSIVE% impending denial.");
                 magic.stateModule.OrgasmSiphonedState.DoPair(paired, sender, duration);
                 magic.NotifyPair(sender, paired, LSCGSpellEffect.orgasm_siphon, magic.stateModule.OrgasmSiphonedState.Type);
             }
         },
         applyPaired: ({ magic, sender }, originalTarget) => {
-            SendAction(`%NAME% lets out a quiet gasp as the pleasure center of %POSSESSIVE% mind starts to tingle.`);
+            SendAction("%NAME% lets out a quiet gasp as the pleasure center of %POSSESSIVE% mind starts to tingle.");
             magic.stateModule.OrgasmSiphonedState.RespondToPairing(originalTarget, sender);
         },
     },
@@ -177,7 +177,7 @@ export const BUILTIN_SPELL_EFFECTS: SpellEffectDefinition[] = [
         configurable: "outfit",
         allowRandom: true,
         apply: ({ magic, sender, spell, duration }) => {
-            if (!!spell.Outfit?.Code) {
+            if (spell.Outfit?.Code) {
                 magic.stateModule.GaggedState.Active ?
                     SendAction("%NAME% trembles as %POSSESSIVE% clothing shimmers and morphs around %INTENSIVE%.") :
                     SendAction("%NAME% squeaks as %POSSESSIVE% clothing shimmers and morphs around %INTENSIVE%.");
@@ -192,7 +192,7 @@ export const BUILTIN_SPELL_EFFECTS: SpellEffectDefinition[] = [
         configurable: "polymorph",
         allowRandom: true,
         apply: ({ magic, sender, spell, duration }) => {
-            if (!!spell.Polymorph?.Code) {
+            if (spell.Polymorph?.Code) {
                 magic.stateModule.GaggedState.Active ?
                     SendAction("%NAME% trembles as %POSSESSIVE% body shimmers and morphs.") :
                     SendAction("%NAME% squeaks as %POSSESSIVE% body shimmers and morphs.");
@@ -218,7 +218,7 @@ export const BUILTIN_SPELL_EFFECTS: SpellEffectDefinition[] = [
         beneficial: true,
         allowRandom: true,
         apply: ({ magic, sender, duration }) => {
-            SendAction(`%NAME% blinks with a grin.`);
+            SendAction("%NAME% blinks with a grin.");
             magic.stateModule.XRayState.Activate(sender?.MemberNumber, duration);
         },
     },
@@ -238,20 +238,20 @@ export const BUILTIN_SPELL_EFFECTS: SpellEffectDefinition[] = [
         description: "Disarm the target",
         allowRandom: true,
         apply: ({ sender }) => {
-            var handItem = InventoryGet(Player, "ItemHandheld");
+            const handItem = InventoryGet(Player, "ItemHandheld");
             if (!handItem) {
-                SendAction(`The spell has no effect as %NAME%'s hand are already empty.`);
+                SendAction("The spell has no effect as %NAME%'s hand are already empty.");
                 return;
             }
-            var validParams = ValidationCreateDiffParams(Player, sender?.MemberNumber!);
+            const validParams = ValidationCreateDiffParams(Player, sender?.MemberNumber!);
             if (ValidationCanRemoveItem(handItem, validParams, false)) {
                 InventoryRemove(Player, "ItemHandheld", true);
                 CharacterRefresh(Player, true);
                 ChatRoomCharacterUpdate(Player);
-                SendAction(`%NAME% flinches as the item in %POSSESSIVE% hand is flung into the air.`);
+                SendAction("%NAME% flinches as the item in %POSSESSIVE% hand is flung into the air.");
             }
             else {
-                SendAction(`The spell was not strong enough to disarm %NAME%.`);
+                SendAction("The spell was not strong enough to disarm %NAME%.");
             }
         },
     },
@@ -262,8 +262,8 @@ export const BUILTIN_SPELL_EFFECTS: SpellEffectDefinition[] = [
         allowRandom: true,
         apply: ({ magic, sender, duration }) => {
             magic.stateModule.GaggedState.Active ?
-                SendAction(`%NAME% quivers as %PRONOUN% feels %POSSESSIVE% impending denial.`) :
-                SendAction(`%NAME% whimpers as %PRONOUN% feels %POSSESSIVE% impending denial.`);
+                SendAction("%NAME% quivers as %PRONOUN% feels %POSSESSIVE% impending denial.") :
+                SendAction("%NAME% whimpers as %PRONOUN% feels %POSSESSIVE% impending denial.");
             magic.stateModule.DeniedState.Activate(sender?.MemberNumber, duration);
         },
     },
@@ -282,7 +282,7 @@ export const BUILTIN_SPELL_EFFECTS: SpellEffectDefinition[] = [
         description: "Project the target's soul into the Astral Plane",
         allowRandom: true,
         apply: ({ magic, sender, duration }) => {
-            SendAction(`%NAME_POSSESSIVE_DIRECT% body slumps weakly as a shimmering projection of %POSSESSIVE% form appears nearby.`);
+            SendAction("%NAME_POSSESSIVE_DIRECT% body slumps weakly as a shimmering projection of %POSSESSIVE% form appears nearby.");
             magic.stateModule.AstralProjectionState.Activate(sender?.MemberNumber, duration);
         },
     },

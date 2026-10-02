@@ -1,4 +1,4 @@
-import { BaseSettingsModel, ModuleStats } from "./base";
+import { BaseSettingsModel } from "./base";
 
 export interface StateConfig {
     type: LSCGState;

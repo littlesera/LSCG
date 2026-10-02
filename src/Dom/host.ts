@@ -19,7 +19,7 @@ export class DomOverlayHost {
         readonly id: string,
         readonly shape: RectTuple | (() => RectTuple),
         private build: () => Node | Node[],
-        private options: DomOverlayOptions = {}
+        private options: DomOverlayOptions = {},
     ) {}
 
     get root(): HTMLElement | undefined {

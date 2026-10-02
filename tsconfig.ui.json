@@ -1,0 +1,15 @@
+{
+	// The Playwright UI tests (test/ui) and their config. Separate from tsconfig.test.json, which has no Node types
+	// (see its comment) -- Playwright's own types need them. The specs reach BC and LSCG only through `window`.
+	"compilerOptions": {
+		"target": "ES2022",
+		"lib": ["ESNext", "dom", "dom.iterable"],
+		"module": "ESNext",
+		"moduleResolution": "bundler",
+		"types": ["node"],
+		"strict": true,
+		"noEmit": true,
+		"skipLibCheck": true
+	},
+	"include": ["test/ui/**/*", "playwright.config.ts"]
+}

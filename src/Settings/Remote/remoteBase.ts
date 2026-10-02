@@ -10,7 +10,7 @@ import { RemoteMainMenu } from "./mainmenu";
 export abstract class RemoteGuiSubscreen extends GuiSubscreen {
 
 	dirty: boolean = false;
-	readonly Character: OtherCharacter
+	readonly Character: OtherCharacter;
 
 	constructor(module: BaseModule, C: OtherCharacter) {
 		super(module);
@@ -22,7 +22,7 @@ export abstract class RemoteGuiSubscreen extends GuiSubscreen {
     }
 
 	setSubscreen(screen: RemoteGuiSubscreen): RemoteGuiSubscreen {
-		var rootModule = getModule<RemoteUIModule>("RemoteUIModule")
+		const rootModule = getModule<RemoteUIModule>("RemoteUIModule");
 		if (!!rootModule && !!screen)
 			rootModule.currentSubscreen = screen;
 		return screen;
@@ -46,9 +46,9 @@ export abstract class RemoteGuiSubscreen extends GuiSubscreen {
             version: LSCG_VERSION,
 			settings: this.Character.LSCG,
             command: {
-                name: "remote"
-            }
-        })
+                name: "remote",
+            },
+        });
 	}
 
 	Load(): void {
@@ -69,8 +69,9 @@ export abstract class RemoteGuiSubscreen extends GuiSubscreen {
 						ElementRemove(item.id);
 						break;
 					}
+				// falls through
 				case "text":
-					let val = ElementValue(item.id);
+					const val = ElementValue(item.id);
 					if (val != item.setting()) this.dirty = true;
 					item.setSetting(ElementValue(item.id));
 					ElementRemove(item.id);
@@ -79,8 +80,8 @@ export abstract class RemoteGuiSubscreen extends GuiSubscreen {
 		});
 
 		this.settingsSave();
-		var rootModule = getModule<RemoteUIModule>("RemoteUIModule")
-		if (!!rootModule)
+		const rootModule = getModule<RemoteUIModule>("RemoteUIModule");
+		if (rootModule)
 			rootModule.currentSubscreen = new RemoteMainMenu(rootModule, this.Character);
 	}
 }

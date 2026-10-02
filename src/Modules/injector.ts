@@ -7,7 +7,7 @@ import { GuiInjector } from "Settings/injector";
 import { InjectorSettingsModel } from "Settings/Models/injector";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
 import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, isPhraseInString, settingsSave, hookFunction, getCharacter, AUDIO, getPlayerVolume, OnAction, hookBCXCurse, GetTargetCharacter, GetActivityName, GetMetadata, GetActivityEntryFromContent, IsActivityAllowed, GetHandheldItemNameAndDescriptionConcat, GetItemName, LSCG_SendLocal } from "../utils";
-import { ActivityBundle, ActivityModule, ActivityPatch, ActivityTarget, CustomAction, CustomPrerequisite } from "./activities";
+import { ActivityModule, ActivityPatch } from "./activities";
 import { HypnoModule } from "./hypno";
 import { MiscModule } from "./misc";
 import { ItemUseModule } from "./item-use";
@@ -30,7 +30,7 @@ import {
     RANDOM_EVENT_ODDS,
     BREATH_DRUG_INCREASES,
     AROUSAL_LIMITS,
-    DRUG_BAR_DIMENSIONS
+    DRUG_BAR_DIMENSIONS,
 } from "../constants";
 
 /** How often decayed (but otherwise unchanged) drug levels are saved. */
@@ -57,14 +57,14 @@ const locationObj = {
     "ItemButt": INJECTION_MULTIPLIERS.BUTT,
     "ItemVulvaPiercings": INJECTION_MULTIPLIERS.VULVA_PIERCINGS,
     "ItemLegs": INJECTION_MULTIPLIERS.LEGS,
-    "ItemFeet": INJECTION_MULTIPLIERS.FEET
+    "ItemFeet": INJECTION_MULTIPLIERS.FEET,
 };
 
 export const AllowedNetGuns = [
     "MedicalInjector",
     "RainbowWand",
-    "Baguette"
-]
+    "Baguette",
+];
 
 type GagDrinkAccess = "nothing" | "blocked" | "open";
 
@@ -134,7 +134,7 @@ export class InjectorModule extends BaseModule {
             sipLimit: DRUG_LEVELS.DEFAULT_SIP_LIMIT,
 
             enabledExtensionDrugs: <string[]>[],
-            extensionDrugLevels: <Record<string, number>>{}
+            extensionDrugLevels: <Record<string, number>>{},
         };
     }
 
@@ -171,7 +171,7 @@ export class InjectorModule extends BaseModule {
                     default:
                         LSCG_SendLocal("Usage: /lscg drug-boost &lt;sleepy|hypno|horny&gt;");
                 }
-            }
+            },
         }];
     }
 
@@ -183,7 +183,7 @@ export class InjectorModule extends BaseModule {
 
     load(): void {
         // Override these with defaults. Remove from here if opened to user configuration later.
-        let d = this.defaultSettings;
+        const d = this.defaultSettings;
         this.settings.sedativeKeywords = d.sedativeKeywords;
         this.settings.mindControlKeywords = d.mindControlKeywords;
         this.settings.hornyKeywords = d.hornyKeywords;
@@ -202,26 +202,26 @@ export class InjectorModule extends BaseModule {
         OnActivity(10, ModuleCategory.Injector, (data, sender, msg, megadata) => {
             if (!this.Enabled)
                 return;
-            let meta = GetMetadata(data);
-            var activityName = meta?.ActivityName;
-            var target = meta?.TargetMemberNumber;
+            const meta = GetMetadata(data);
+            const activityName = meta?.ActivityName;
+            const target = meta?.TargetMemberNumber;
             if (target == Player.MemberNumber && activityName == "Inject" && !!sender) {
-                var location = <AssetGroupItemName>meta?.GroupName;
+                const location = <AssetGroupItemName>meta?.GroupName;
                 this.ProcessInjection(sender, location);
             }
             else if (target == Player.MemberNumber && (activityName == "SipItem" || activityName == "LSCG_FunnelPour") && !!sender) {
                 // Offered sips are resolved by the "sip" consent flow instead
                 if (data.Content == InjectorModule.SIP_OFFER_CONTENT)
                     return;
-                let gagType = this.GetGagDrinkAccess(Player);
-                let isFullPour = activityName == "LSCG_FunnelPour";
+                const gagType = this.GetGagDrinkAccess(Player);
+                const isFullPour = activityName == "LSCG_FunnelPour";
                 if (gagType == "nothing" && sender.MemberNumber != Player.MemberNumber && this.IsDrugAllowed(sender)) {
                     this.TryForceDrink(sender, isFullPour);
                 } else {
                     this.ProcessDruggedDrink(sender, isFullPour);
                 }
             } else if (target == Player.MemberNumber) {
-                let activityEntry = GetActivityEntryFromContent(data.Content);
+                const activityEntry = GetActivityEntryFromContent(data.Content);
                 if (!activityEntry || !sender || !IsActivityAllowed(activityEntry, sender))
                     return;
                 if (activityEntry?.awakener && !sender?.IsPlayer()) {
@@ -235,20 +235,20 @@ export class InjectorModule extends BaseModule {
             if (!this.Enabled)
                 return;
 
-            let deliverySlots = ["ItemHandheld"];
-            let messagesToCheck = [
+            const deliverySlots = ["ItemHandheld"];
+            const messagesToCheck = [
                 "ActionUse",
-                "ActionSwap"
+                "ActionSwap",
             ];
 
-            let target = GetTargetCharacter(data);
-            let targetGroup = GetMetadata(data)?.GroupName;
+            const target = GetTargetCharacter(data);
+            const targetGroup = GetMetadata(data)?.GroupName;
 
             if (target == Player.MemberNumber &&
                 sender?.IsPlayer() &&
                 (!targetGroup || deliverySlots.indexOf(targetGroup) > -1) &&
                 messagesToCheck.some(x => msg.startsWith(x))) {
-                let glass = InventoryGet(Player, "ItemHandheld");
+                const glass = InventoryGet(Player, "ItemHandheld");
                 if (glass?.Asset.Name == "GlassFilled"){
                     if (!glass.Property) glass.Property = {};
                     if (!glass.Property.SipLimit) glass.Property.SipLimit = this.settings.sipLimit;
@@ -259,10 +259,10 @@ export class InjectorModule extends BaseModule {
         hookFunction("ServerSend", 100, (args, next) => {
             const data = args[1] as ServerChatRoomMessage;
             if (args[0] == "ChatRoomChat" && data?.Type == "Activity" && this.Enabled){
-                let actName = GetActivityName(data) ?? "";
+                const actName = GetActivityName(data) ?? "";
                 if (actName == "SipItem" || actName == "LSCG_FunnelPour") {
-                    let fullPour = actName == "LSCG_FunnelPour";
-                    let target = getCharacter(GetTargetCharacter(data) ?? -1);
+                    const fullPour = actName == "LSCG_FunnelPour";
+                    const target = getCharacter(GetTargetCharacter(data) ?? -1);
                     if (!fullPour && !!target && this.IsSipOffer(target)) {
                         // Send the offer after the activity so the emote lands first.
                         // The sip only counts once it's drunk or spilled, see the "sip" flow's onComplete.
@@ -280,13 +280,13 @@ export class InjectorModule extends BaseModule {
         hookFunction("DrawArousalMeter", 1, (args, next) => {
             if (!this.Enabled || !this.settings.showDrugLevels)
                 return next(args);
-            let [Char, CharX, CharY, Zoom] = args as [Character, number, number, number];
-            var charSettings = (getCharacter(Char.MemberNumber!) as OtherCharacter)?.LSCG?.InjectorModule;
+            const [Char, CharX, CharY, Zoom] = args as [Character, number, number, number];
+            const charSettings = (getCharacter(Char.MemberNumber!) as OtherCharacter)?.LSCG?.InjectorModule;
             if (!charSettings)
                 return next(args);
 
             {
-                let bars: DrugLevel[] = [];
+                const bars: DrugLevel[] = [];
                 const rates = charSettings.drugDecay;
                 const at = charSettings.receivedAt; // only set for other players: our own levels are live
                 const estimate = (level: number, rate?: number) => InjectorModule.EstimateLevel(level, rate, at);
@@ -297,19 +297,19 @@ export class InjectorModule extends BaseModule {
                     bars.push({
                         type: "sedative",
                         level: sedative,
-                        max: charSettings.sedativeMax * charSettings.drugLevelMultiplier
+                        max: charSettings.sedativeMax * charSettings.drugLevelMultiplier,
                     });
                 if (mindControl > 0)
                     bars.push({
                         type: "mindcontrol",
                         level: mindControl,
-                        max: charSettings.mindControlMax * charSettings.drugLevelMultiplier
+                        max: charSettings.mindControlMax * charSettings.drugLevelMultiplier,
                     });
                 if (horny > 0)
                     bars.push({
                         type: "horny",
                         level: horny,
-                        max: charSettings.hornyLevelMax * charSettings.drugLevelMultiplier
+                        max: charSettings.hornyLevelMax * charSettings.drugLevelMultiplier,
                     });
                 for (const bar of this.ExtensionBarsFor(Char, charSettings.drugLevels)) {
                     const level = InjectorModule.EstimateLevel(bar.level, bar.decayPerSec, at);
@@ -355,14 +355,14 @@ export class InjectorModule extends BaseModule {
         this.activityModule = getModule<ActivityModule>("ActivityModule");
         this.miscModule = getModule<MiscModule>("MiscModule");
 
-        if (!!this.activityModule) {
+        if (this.activityModule) {
             // Netgun
             this.activityModule.AddActivity({
                 Activity: {
                     Name: "NetGun",
                     MaxProgress: ACTIVITY_VALUES.NETGUN_MAX_PROGRESS,
                     MaxProgressSelf: ACTIVITY_VALUES.NETGUN_MAX_PROGRESS,
-                    Prerequisite: ["UseHands"]
+                    Prerequisite: ["UseHands"],
                 },
                 Targets: [
                     {
@@ -370,25 +370,25 @@ export class InjectorModule extends BaseModule {
                         SelfAllowed: true,
                         TargetLabel: "Shoot Netgun",
                         TargetAction: "SourceCharacter takes aim at TargetCharacter with PronounPossessive net gun.",
-                        TargetSelfAction: "SourceCharacter turns PronounPossessive net gun on PronounSelf."
-                    }
+                        TargetSelfAction: "SourceCharacter turns PronounPossessive net gun on PronounSelf.",
+                    },
                 ],
                 CustomPrereqs: [
                     {
                         Name: "HasNetgun",
                         Func: (acting, acted, group) => {
                             return this.Enabled && this.HasNetgun(acting);
-                        }
+                        },
                     }, {
                         Name: "DevicesSlotIsFree",
                         Func: (acting, acted, group) => {
                             return !InventoryGet(acted, "ItemDevices");
-                        }
-                    }
+                        },
+                    },
                 ],
                 CustomAction: {
                     Func: (target) => {
-                        if (!!target) {
+                        if (target) {
                             // if (target.MemberName != Player.MemberNumber) {
                             // 	SendAction("%NAME% takes aim at %OPP_NAME% with %POSSESSIVE% net gun.", target);
                             // 	setTimeout(() => this.ShootNetgun(target), 5000);
@@ -398,9 +398,9 @@ export class InjectorModule extends BaseModule {
                             // }
                             setTimeout(() => this.ShootNetgun(target), EFFECT_DURATIONS.ACTION_DELAY);
                         }
-                    }
+                    },
                 },
-                CustomImage: "Assets/Female3DCG/ItemDevices/Preview/Net.png"
+                CustomImage: "Assets/Female3DCG/ItemDevices/Preview/Net.png",
             });
 
             // Pour drink into funnel
@@ -409,7 +409,7 @@ export class InjectorModule extends BaseModule {
                     Name: "FunnelPour",
                     MaxProgress: ACTIVITY_VALUES.FUNNEL_POUR_MAX_PROGRESS,
                     MaxProgressSelf: ACTIVITY_VALUES.FUNNEL_POUR_MAX_PROGRESS,
-                    Prerequisite: ["UseHands", "Needs-PourableItem"]
+                    Prerequisite: ["UseHands", "Needs-PourableItem"],
                 },
                 Targets: [
                     {
@@ -417,22 +417,22 @@ export class InjectorModule extends BaseModule {
                         TargetLabel: "Pour into Funnel",
                         SelfAllowed: true,
                         TargetAction: "SourceCharacter pours PronounPossessive ActivityAsset into TargetCharacter's funnel.",
-                        TargetSelfAction: "SourceCharacter pours PronounPossessive ActivityAsset into PronounPossessive own funnel."
-                    }
+                        TargetSelfAction: "SourceCharacter pours PronounPossessive ActivityAsset into PronounPossessive own funnel.",
+                    },
                 ],
                 CustomPrereqs: [
                     {
                         Name: "CanPourIntoFunnel",
                         Func: (acting, acted, group) => {
-                            let funnelGag = [
+                            const funnelGag = [
                                 InventoryGet(acted, "ItemMouth"),
                                 InventoryGet(acted, "ItemMouth2"),
-                                InventoryGet(acted, "ItemMouth3")
+                                InventoryGet(acted, "ItemMouth3"),
                             ].find(g => g?.Asset.Name == "FunnelGag");
                             return !!funnelGag && (funnelGag.Property?.TypeRecord ?? {})["typed"] == 1;
-                        }
-                    }
-                ]
+                        },
+                    },
+                ],
             });
 
             // Sip offered to someone else reads as an offer rather than a done deal.
@@ -449,8 +449,8 @@ export class InjectorModule extends BaseModule {
                         const target = getCharacter(GetTargetCharacter(data) ?? -1);
                         if (this.IsSipOffer(target))
                             data.Content = InjectorModule.SIP_OFFER_CONTENT;
-                    }
-                }
+                    },
+                },
             });
         }
 
@@ -460,7 +460,7 @@ export class InjectorModule extends BaseModule {
             prompt: (sender) => ({
                 text: `${CharacterNickname(sender)} holds ${this.HeldDrinkName(sender)} up to your lips.`,
                 accept: "Drink",
-                refuse: "Refuse"
+                refuse: "Refuse",
             }),
             onAccepted: (sender) => {
                 SendAction(`%NAME% takes a sip of %OPP_NAME%'s ${this.HeldDrinkName(sender)}.`, sender);
@@ -476,19 +476,19 @@ export class InjectorModule extends BaseModule {
                     ? `${CharacterNickname(target)} can't respond. Make them drink?`
                     : `${CharacterNickname(target)} refuses your ${this.HeldDrinkName(Player)}. Force it?`,
                 force: "Force it",
-                backOff: "Back off"
+                backOff: "Back off",
             }),
             onBackOff: () => SendAction(`%NAME% lowers %POSSESSIVE% ${this.HeldDrinkName(Player)}.`),
             // Drunk or spilled in a failed force, the sip is used up. Declining leaves the drink untouched.
             onComplete: (_, outcome) => {
                 if (outcome != "declined")
                     this.ConsumeSip(false);
-            }
+            },
         });
 
         this.activityModule.AddCustomPrereq({
             Name: "InjectorIsNotNetgun",
-            Func: (acting, acted, group) => !this.HasNetgun(acting)
+            Func: (acting, acted, group) => !this.HasNetgun(acting),
         });
         const injectActivity = ActivityFemale3DCG.find(act => act.Name == "Inject") as LSCGActivity;
         injectActivity?.Prerequisite.push("InjectorIsNotNetgun");
@@ -570,20 +570,20 @@ export class InjectorModule extends BaseModule {
         }, ModuleCategory.Injector);
 
         OnAction(1, ModuleCategory.Injector, (data, sender, msg, metadata) => {
-            let deliverySlots = ["ItemMouth", "ItemMouth2", "ItemMouth3"];
-            let messagesToCheck = [
+            const deliverySlots = ["ItemMouth", "ItemMouth2", "ItemMouth3"];
+            const messagesToCheck = [
                 "ActionUse",
                 "ActionSwap",
-                "ActionRemove"
+                "ActionRemove",
             ];
 
-            let target = GetTargetCharacter(data);
-            let targetGroup = data.Dictionary?.find((dictItem: { Tag: string; }) => dictItem.Tag == "FocusAssetGroup")?.AssetGroupName;
+            const target = GetTargetCharacter(data);
+            const targetGroup = data.Dictionary?.find((dictItem: { Tag: string; }) => dictItem.Tag == "FocusAssetGroup")?.AssetGroupName;
 
             if (target == Player.MemberNumber &&
                 (!targetGroup || deliverySlots.indexOf(targetGroup) > -1) &&
                 messagesToCheck.some(x => msg.startsWith(x))) {
-                let _ = this.IsWearingRespirator;
+                const _ = this.IsWearingRespirator;
             } else if (target == Player.MemberNumber && msg.indexOf("LatexRespiratorSetGlow") > -1 && !!sender) {
                 this.CheckForContinuousToggle(sender);
             } else if (target == Player.MemberNumber && msg.indexOf("CryoCapsuleSet") > -1 && !!sender) {
@@ -595,12 +595,12 @@ export class InjectorModule extends BaseModule {
         this._bcxHooked = hookBCXCurse((evt) => {
             if (evt.group.startsWith("ItemMouth") && this.Enabled && this.settings.enableContinuousDelivery)
                 this.CheckRespiratorCurseUpdate();
-        })
+        });
 
         let lastBreathEvent = 0;
-        let breathInterval = CHECK_INTERVALS.BREATH_DRUG_EVENT;
-        hookFunction('TimerProcess', 1, (args, next) => {
-            let now = CommonTime();
+        const breathInterval = CHECK_INTERVALS.BREATH_DRUG_EVENT;
+        hookFunction("TimerProcess", 1, (args, next) => {
+            const now = CommonTime();
             if (!ActivityAllowed() || !this.Enabled)
                 return next(args);
 
@@ -611,7 +611,7 @@ export class InjectorModule extends BaseModule {
                     if (this.settings.heartbeat && !AudioShouldSilenceSound(true)) AudioPlayInstantSound(AUDIO.HEARTBEAT, getPlayerVolume(0));
                     DrawFlashScreen("#FF647F", EFFECT_DURATIONS.FLASH_SCREEN, this.hornyLevel);
                 }
-                var newProgress = (Player.ArousalSettings?.Progress ?? 0) + (this.hornyLevel/this.drugLevelMultiplier) * DRUG_EFFECT_MULTIPLIERS.HORNY_AROUSAL_FACTOR;
+                let newProgress = (Player.ArousalSettings?.Progress ?? 0) + (this.hornyLevel/this.drugLevelMultiplier) * DRUG_EFFECT_MULTIPLIERS.HORNY_AROUSAL_FACTOR;
                 newProgress = Math.min(AROUSAL_LIMITS.MAX_PROGRESS, newProgress);
                 ActivitySetArousal(Player, newProgress);
             }
@@ -627,12 +627,10 @@ export class InjectorModule extends BaseModule {
             return next(args);
         }, ModuleCategory.Injector);
 
-        hookFunction('ActivitySetArousalTimer', 1, (args, next) => {
-            let Activity = args[1];
-            let Zone = args[2];
-            let Progress = args[3];
+        hookFunction("ActivitySetArousalTimer", 1, (args, next) => {
+            const Progress = args[3];
 
-            let hornyMod = 1 + this.hornyLevel/DRUG_EFFECT_MULTIPLIERS.HORNY_ACTIVITY_FACTOR;
+            const hornyMod = 1 + this.hornyLevel/DRUG_EFFECT_MULTIPLIERS.HORNY_ACTIVITY_FACTOR;
             args[3] = Math.min(99, Progress * hornyMod);
 
             return next(args);
@@ -649,16 +647,16 @@ export class InjectorModule extends BaseModule {
     sleepTimer: number = 0;
     hypnoTimer: number = 0;
 
-    get asleep(): boolean { return this.stateModule.SleepState.Active };
+    get asleep(): boolean { return this.stateModule.SleepState.Active; };
     //set asleep(val: boolean) { if (this.settings.asleep != val){ this.settings.asleep = val; settingsSave(true);}}
-    get brainwashed(): boolean { return this.stateModule.HypnoState.Active };
+    get brainwashed(): boolean { return this.stateModule.HypnoState.Active; };
     // set brainwashed(val: boolean) { if (this.settings.brainwashed != val) {this.settings.brainwashed = val; settingsSave(true);}}
 
-    get sedativeLevel(): number {return this.settings.sedativeLevel};
+    get sedativeLevel(): number {return this.settings.sedativeLevel;};
     set sedativeLevel(val: number) {const previous = this.settings.sedativeLevel; if (previous != val) {this.settings.sedativeLevel = val; this.LevelChanged("sedative", previous, val, this.settings.sedativeMax * this.drugLevelMultiplier);}}
-    get mindControlLevel(): number {return this.settings.mindControlLevel};
+    get mindControlLevel(): number {return this.settings.mindControlLevel;};
     set mindControlLevel(val: number) {const previous = this.settings.mindControlLevel; if (previous != val) {this.settings.mindControlLevel = val; this.LevelChanged("mindcontrol", previous, val, this.settings.mindControlMax * this.drugLevelMultiplier);}}
-    get hornyLevel(): number {return this.settings.hornyLevel};
+    get hornyLevel(): number {return this.settings.hornyLevel;};
     set hornyLevel(val: number) {const previous = this.settings.hornyLevel; if (previous != val) {this.settings.hornyLevel = val; this.LevelChanged("horny", previous, val, this.settings.hornyLevelMax * this.drugLevelMultiplier);}}
 
     /** True while a cooldown tick is lowering a built-in level, so the change can be saved lazily. */
@@ -709,22 +707,22 @@ export class InjectorModule extends BaseModule {
         try { change(); } finally { this.decaying = false; }
     }
 
-    get drugLevelMultiplier(): number {return this.settings.drugLevelMultiplier};
+    get drugLevelMultiplier(): number {return this.settings.drugLevelMultiplier;};
     set drugLevelMultiplier(val: number) {if (this.settings.drugLevelMultiplier != val) {this.settings.drugLevelMultiplier = val; settingsSave(true);}}
 
-    get sedativeMax(): number {return this.settings.sedativeMax};
+    get sedativeMax(): number {return this.settings.sedativeMax;};
     set sedativeMax(val: number) {if (this.settings.sedativeMax != val) {this.settings.sedativeMax = val; settingsSave(true);}}
-    get mindControlMax(): number {return this.settings.mindControlMax};
+    get mindControlMax(): number {return this.settings.mindControlMax;};
     set mindControlMax(val: number) {if (this.settings.mindControlMax != val) {this.settings.mindControlMax = val; settingsSave(true);}}
-    get hornyLevelMax(): number {return this.settings.hornyLevelMax};
+    get hornyLevelMax(): number {return this.settings.hornyLevelMax;};
     set hornyLevelMax(val: number) {if (this.settings.hornyLevelMax != val) {this.settings.hornyLevelMax = val; settingsSave(true);}}
 
     _targetSedativeLevel: number = 0;
-    get targetSedativeLevel(): number {return Math.max(this.sedativeLevel, this._targetSedativeLevel)};
+    get targetSedativeLevel(): number {return Math.max(this.sedativeLevel, this._targetSedativeLevel);};
     _targetMindControlLevel: number = 0;
-    get targetMindControlLevel(): number {return Math.max(this.mindControlLevel, this._targetMindControlLevel)};
+    get targetMindControlLevel(): number {return Math.max(this.mindControlLevel, this._targetMindControlLevel);};
     _targetHornyLevel: number = 0;
-    get targetHornyLevel(): number {return Math.max(this.hornyLevel, this._targetHornyLevel)};
+    get targetHornyLevel(): number {return Math.max(this.hornyLevel, this._targetHornyLevel);};
 
     sedativeCooldownInterval: number = 0;
     mindControlCooldownInterval: number = 0;
@@ -733,14 +731,14 @@ export class InjectorModule extends BaseModule {
     hornyLastBumped: number = 0;
     cooldownTickMs: number = CHECK_INTERVALS.COOLDOWN_TICK;
 
-    InjectionLocationTable: Map<string, number> = new Map<string, number>(Object.entries(locationObj))
+    InjectionLocationTable: Map<string, number> = new Map<string, number>(Object.entries(locationObj));
 
     GetDrugTypes(item: CraftingPartialItem): AnyDrugType[] {
-        var name = item.Name;
-        var description = typeof CraftingDescription === "undefined" ? item.Description : CraftingDescription.Decode(item.Description); // R109
-        var totalString = name + " | " + description;
+        const name = item.Name;
+        const description = typeof CraftingDescription === "undefined" ? item.Description : CraftingDescription.Decode(item.Description); // R109
+        const totalString = name + " | " + description;
 
-        var types: AnyDrugType[] = [];
+        const types: AnyDrugType[] = [];
 
         if (this.settings.sedativeKeywords?.some(ph => isPhraseInString(totalString, ph, true)))
             types.push("sedative");
@@ -759,10 +757,10 @@ export class InjectorModule extends BaseModule {
     }
 
     IsDrugAllowed(sender: Character): boolean {
-        var asset = InventoryGet(sender, "ItemHandheld");
+        const asset = InventoryGet(sender, "ItemHandheld");
         if (!asset?.Craft)
             return false;
-        let types = this.GetDrugTypes(asset.Craft!);
+        const types = this.GetDrugTypes(asset.Craft!);
         if ((types.indexOf("sedative") > -1 && this.settings.enableSedative) ||
             (types.indexOf("mindcontrol") > -1 && this.settings.enableMindControl) ||
             (types.indexOf("horny") > -1 && this.settings.enableHorny) ||
@@ -794,11 +792,11 @@ export class InjectorModule extends BaseModule {
     }
 
     ProcessDruggedDrink(sender: Character, fullPour: boolean = false) {
-        var asset = InventoryGet(sender, "ItemHandheld");
+        const asset = InventoryGet(sender, "ItemHandheld");
         if (!asset?.Craft)
             return;
         //var multiplier = ((<any>asset.Property)?.SipLimit ?? 1) - ((<any>asset.Property)?.SipCount ?? 0)
-        let types = this.HookDrugApply(this.EnabledDrugTypes(this.GetDrugTypes(asset.Craft!)), "drink", sender);
+        const types = this.HookDrugApply(this.EnabledDrugTypes(this.GetDrugTypes(asset.Craft!)), "drink", sender);
         if (types.indexOf("sedative") > -1)
             this.DrinkSedative(sender, fullPour);
         if (types.indexOf("mindcontrol") > -1)
@@ -814,12 +812,12 @@ export class InjectorModule extends BaseModule {
     }
 
     ProcessInjection(sender: Character, location: AssetGroupItemName) {
-        var asset = InventoryGet(sender, "ItemHandheld");
+        const asset = InventoryGet(sender, "ItemHandheld");
         if (!asset?.Craft)
             return;
 
-        let allTypes = this.GetDrugTypes(asset.Craft!);
-        let types = this.HookDrugApply(this.EnabledDrugTypes(allTypes), "inject", sender, location);
+        const allTypes = this.GetDrugTypes(asset.Craft!);
+        const types = this.HookDrugApply(this.EnabledDrugTypes(allTypes), "inject", sender, location);
         // A vetoed injection is still a needle: only stay silent if nothing was in it.
         if (!AudioShouldSilenceSound(true) && allTypes.length > 0)
             AudioPlayInstantSound(AUDIO.INJECTION, getPlayerVolume(0));
@@ -842,19 +840,19 @@ export class InjectorModule extends BaseModule {
         "%NAME% sighs as a cool relaxing calm glides through %POSSESSIVE% body, fighting to keep %POSSESSIVE% eyes open.",
         "%NAME%'s muscles relax as %OPP_NAME%'s sedative courses through %POSSESSIVE% body",
         "%NAME% fights to stay conscious against the relentless weight of %OPP_NAME%'s drug.",
-        "%NAME%'s eyes droop as %POSSESSIVE% fights to stay conscious against the cool, welcoming weight of %OPP_NAME%'s drug."
+        "%NAME%'s eyes droop as %POSSESSIVE% fights to stay conscious against the cool, welcoming weight of %OPP_NAME%'s drug.",
     ];
 
     sedativeDrinkStr = [
         "%NAME% gulps and swallows %OPP_NAME%'s drink, a cool relaxing feeling starting to spread through %POSSESSIVE% body.",
         "%NAME% sighs as a cool relaxing calm glides down %POSSESSIVE% throat, fighting to keep %POSSESSIVE% eyes open.",
         "%NAME%'s muscles relax as %OPP_NAME%'s sedative pours down %POSSESSIVE% throat and starts to take effect.",
-        "%NAME%'s eyes droop as %POSSESSIVE% fights to stay conscious against the cool, welcoming weight of %OPP_NAME%'s drug."
+        "%NAME%'s eyes droop as %POSSESSIVE% fights to stay conscious against the cool, welcoming weight of %OPP_NAME%'s drug.",
     ];
 
     AddSedative(multiplier: number, minigame: boolean = true) {
-        var additive = this.drugLevelMultiplier * multiplier;
-        var newLevel = Math.min(this.sedativeLevel + additive, this.sedativeMax * this.drugLevelMultiplier);
+        const additive = this.drugLevelMultiplier * multiplier;
+        const newLevel = Math.min(this.sedativeLevel + additive, this.sedativeMax * this.drugLevelMultiplier);
         // if (gradual)
         //     this._targetSedativeLevel = newLevel;
         // else
@@ -882,18 +880,18 @@ export class InjectorModule extends BaseModule {
     brainwashInjectStr = [
         "%NAME% whimpers and struggles to keep control of %POSSESSIVE% mind.",
         "%NAME% gasps weakly as %OPP_NAME%'s drug slowly erases %POSSESSIVE% free will.",
-        "%NAME%'s eyes struggle to focus as %OPP_NAME%'s drug makes %POSSESSIVE% more suggestible."
+        "%NAME%'s eyes struggle to focus as %OPP_NAME%'s drug makes %POSSESSIVE% more suggestible.",
     ];
 
     brainwashDrinkStr = [
         "%NAME% starts to drift dreamily as they swallow %OPP_NAME%'s drink.",
         "%NAME% gasps weakly and starts to lose focus as %OPP_NAME%'s drug warms %POSSESSIVE% comfortably.",
-        "%NAME%'s eyes flutter and defocus as %OPP_NAME%'s drink slides warmly down %POSSESSIVE% throat."
+        "%NAME%'s eyes flutter and defocus as %OPP_NAME%'s drink slides warmly down %POSSESSIVE% throat.",
     ];
 
     AddMindControl(multiplier: number, minigame: boolean = true) {
-        var additive = this.drugLevelMultiplier * multiplier
-        var newLevel = Math.min(this.mindControlLevel + additive, this.mindControlMax * this.drugLevelMultiplier);
+        const additive = this.drugLevelMultiplier * multiplier;
+        const newLevel = Math.min(this.mindControlLevel + additive, this.mindControlMax * this.drugLevelMultiplier);
         // if (gradual)
         //     this._targetMindControlLevel = newLevel;
         // else
@@ -919,18 +917,18 @@ export class InjectorModule extends BaseModule {
     hornyInjectStr = [
         "%NAME% moans uncontrollably as %OPP_NAME%'s drug takes effect.",
         "%NAME%'s eyes roll back as a wave of pleasure washes over %POSSESSIVE% body.",
-        "%NAME% quivers as %POSSESSIVE% body is flooded with %OPP_NAME%'s aphrodisiac."
+        "%NAME% quivers as %POSSESSIVE% body is flooded with %OPP_NAME%'s aphrodisiac.",
     ];
 
     hornyDrinkStr = [
         "%NAME% lets out a long low moan as %OPP_NAME%'s drink burns pleasurably down %POSSESSIVE% throat.",
         "%NAME%'s eyes roll back as a wave of pleasure emanates from %POSSESSIVE% belly.",
-        "%NAME% gulps and quivers as %POSSESSIVE% body is slowly flooded with %OPP_NAME%'s aphrodisiac."
+        "%NAME% gulps and quivers as %POSSESSIVE% body is slowly flooded with %OPP_NAME%'s aphrodisiac.",
     ];
 
     AddHorny(multiplier: number, forceCum: boolean = true, flash: boolean = false) {
-        var additive = this.drugLevelMultiplier * multiplier
-        let newLevelActual = this.hornyLevel + additive;
+        const additive = this.drugLevelMultiplier * multiplier;
+        const newLevelActual = this.hornyLevel + additive;
 
         this.hornyLevel = Math.min(newLevelActual, this.hornyLevelMax * this.drugLevelMultiplier);
         if (newLevelActual >= this.hornyLevelMax * this.drugLevelMultiplier && forceCum) {
@@ -939,7 +937,7 @@ export class InjectorModule extends BaseModule {
             settingsSave();
         }
 
-        if (!!(<any>Player).BCT?.splitOrgasmArousal?.arousalProgress) {
+        if ((<any>Player).BCT?.splitOrgasmArousal?.arousalProgress) {
             (<any>Player).BCT.splitOrgasmArousal.arousalProgress = AROUSAL_LIMITS.BCT_SPLIT_ORGASM;
         }
     }
@@ -958,13 +956,13 @@ export class InjectorModule extends BaseModule {
     cureInjectStr = [
         "%NAME% moans thankfully as %OPP_NAME_POSSESSIVE% medicine heals %POSSESSIVE%.",
         "%NAME%'s body glows slightly as %OPP_NAME_POSSESSIVE% cure washes warmly over %POSSESSIVE%.",
-        "%OPP_NAME_POSSESSIVE% drug rushes warmly through %NAME%'s body, curing what ails %POSSESSIVE%."
+        "%OPP_NAME_POSSESSIVE% drug rushes warmly through %NAME%'s body, curing what ails %POSSESSIVE%.",
     ];
 
     cureDrinkStr = [
         "%NAME% gulps thankfully as %OPP_NAME_POSSESSIVE% medicine slowly heals %POSSESSIVE%.",
         "%NAME%'s body glows slightly as %OPP_NAME_POSSESSIVE% cure glides warmly through %POSSESSIVE%.",
-        "%OPP_NAME_POSSESSIVE_DIRECT% antidote slowly washes through %NAME_POSSESSIVE% body, curing what ails %POSSESSIVE%."
+        "%OPP_NAME_POSSESSIVE_DIRECT% antidote slowly washes through %NAME_POSSESSIVE% body, curing what ails %POSSESSIVE%.",
     ];
 
     DrinkCure(sender: Character) {
@@ -1063,7 +1061,7 @@ export class InjectorModule extends BaseModule {
         "%NAME%'s eyes move dreamily under %POSSESSIVE% closed eyelids...",
         "%NAME% exhales slowly, fully relaxed...",
         "%NAME%'s muscles twitch weakly in %POSSESSIVE% sleep...",
-        "%NAME% moans softly and relaxes..."
+        "%NAME% moans softly and relaxes...",
     ];
 
     ActivateSleepEvent() {
@@ -1074,15 +1072,15 @@ export class InjectorModule extends BaseModule {
         if (!C)
             return false;
 
-        var item = InventoryGet(C, "ItemHandheld");
+        const item = InventoryGet(C, "ItemHandheld");
         if (!item || !item.Asset || AllowedNetGuns.indexOf(item.Asset.Name) == -1)
             return false;
 
-        var totalString = GetHandheldItemNameAndDescriptionConcat(C);
+        const totalString = GetHandheldItemNameAndDescriptionConcat(C);
         if (!totalString)
             return false;
 
-        var isNetgun = this.settings.netgunKeywords?.some(ph => isPhraseInString(totalString ?? "", ph, true));
+        const isNetgun = this.settings.netgunKeywords?.some(ph => isPhraseInString(totalString ?? "", ph, true));
         return isNetgun;
     }
 
@@ -1105,7 +1103,7 @@ export class InjectorModule extends BaseModule {
 
     ResolveNetting(intendedTarget: Character, chaotic: boolean = false) {
         this.settings.stats.totalNettingsCount++;
-        let actualTarget = intendedTarget
+        let actualTarget = intendedTarget;
         if (chaotic)
             actualTarget = this.GetChaoticNetTarget(intendedTarget);
         if (actualTarget.MemberNumber == intendedTarget.MemberNumber)
@@ -1116,10 +1114,10 @@ export class InjectorModule extends BaseModule {
 
     GetChaoticNetTarget(intendedTarget: Character) {
         // 50/50 chance to hit intended target..
-        let val = getRandomInt(100);
+        const val = getRandomInt(100);
         if (val > RANDOM_EVENT_ODDS.CHAOTIC_NET_HIT_CHANCE)
             return intendedTarget;
-        var filteredList = ChatRoomCharacterDrawlist.filter(c => !InventoryGet(c, "ItemDevices"));
+        const filteredList = ChatRoomCharacterDrawlist.filter(c => !InventoryGet(c, "ItemDevices"));
         if (filteredList.length <= 0)
             return intendedTarget; // Also hit the intended target if they're the _only_ one who has no devices already equipped
 
@@ -1127,23 +1125,23 @@ export class InjectorModule extends BaseModule {
     }
 
     GetCraftedNet(): CraftingItem | undefined {
-        let netgun = InventoryGet(Player, "ItemHandheld");
-        let netgunCraft = netgun?.Craft;
-        var netgunStr = GetHandheldItemNameAndDescriptionConcat() ?? "";
+        const netgun = InventoryGet(Player, "ItemHandheld");
+        const netgunCraft = netgun?.Craft;
+        const netgunStr = GetHandheldItemNameAndDescriptionConcat() ?? "";
         if (!netgunCraft || !netgunStr)
             return;
 
         let craftedNets: CraftingItem[] = Player.Crafting?.filter(x => !!x && x.Item == "Net").map(x => <CraftingItem>x) ?? [];
 
-        let craftingMember = netgunCraft.MemberNumber;
+        const craftingMember = netgunCraft.MemberNumber;
         if (!!craftingMember && craftingMember >= 0 && craftingMember != Player.MemberNumber) {
-            let craftingChar = getCharacter(craftingMember);
-            if (!!craftingChar) {
+            const craftingChar = getCharacter(craftingMember);
+            if (craftingChar) {
                 craftedNets = craftedNets?.concat(craftingChar.Crafting?.filter((x): x is CraftingItem => x?.Item == "Net") ?? "");
             }
         }
 
-        let craftedNet = craftedNets?.filter(x => !!x)?.find(x => !!x && !!x.Name && isPhraseInString(netgunStr, x.Name));
+        const craftedNet = craftedNets?.filter(x => !!x)?.find(x => !!x && !!x.Name && isPhraseInString(netgunStr, x.Name));
         return craftedNet;
     }
 
@@ -1158,10 +1156,10 @@ export class InjectorModule extends BaseModule {
                 MemberName: CharacterNickname(Player),
                 Name: "Net Gun Net",
                 Description: "A lightweight net designed to be shot from a handheld launcher.",
-                Color: "Default"
+                Color: "Default",
             };
         }
-        var net = InventoryWear(target, "Net", "ItemDevices", null, isDefaultNet ? 0 : craftedNet.DifficultyFactor, Player.MemberNumber, craftedNet, false);
+        const net = InventoryWear(target, "Net", "ItemDevices", null, isDefaultNet ? 0 : craftedNet.DifficultyFactor, Player.MemberNumber, craftedNet, false);
         InventoryCraft(Player, target, "ItemDevices", craftedNet, true);
         if (!!net && !!net.Property && isDefaultNet) {
             net.Difficulty = ACTIVITY_VALUES.DEFAULT_NET_DIFFICULTY;
@@ -1224,7 +1222,7 @@ export class InjectorModule extends BaseModule {
 
     /** What an extension drug's callbacks receive. `level` is live, so it reflects addLevel/setLevel as they happen. */
     ExtensionContext(drug: ExtensionDrug, sender?: Character | null): LSCGDrugContext {
-        // eslint-disable-next-line @typescript-eslint/no-this-alias -- the `level` getter needs the module, not the context
+        // The `level` getter needs the module, not the context.
         const mod = this;
         return {
             drug: drug.id,
@@ -1364,10 +1362,10 @@ export class InjectorModule extends BaseModule {
             // Past a full row, wrap to a new one above the first rather than running out past the character.
             const row = Math.floor(ix / perRow);
             const col = ix % perRow;
-            let barX = X + (DRUG_BAR_DIMENSIONS.X_OFFSET * Zoom) + (DRUG_BAR_DIMENSIONS.BAR_SPACING * col * Zoom);
-            let barY = Y + (DRUG_BAR_DIMENSIONS.Y_OFFSET * Zoom) - (DRUG_BAR_DIMENSIONS.ROW_SPACING * row * Zoom);
-            let barZoom = Zoom * DRUG_BAR_DIMENSIONS.BAR_ZOOM
-            let barProgress = Math.max(0, Math.min(100, bar.level / bar.max)) * 100;
+            const barX = X + (DRUG_BAR_DIMENSIONS.X_OFFSET * Zoom) + (DRUG_BAR_DIMENSIONS.BAR_SPACING * col * Zoom);
+            const barY = Y + (DRUG_BAR_DIMENSIONS.Y_OFFSET * Zoom) - (DRUG_BAR_DIMENSIONS.ROW_SPACING * row * Zoom);
+            const barZoom = Zoom * DRUG_BAR_DIMENSIONS.BAR_ZOOM;
+            const barProgress = Math.max(0, Math.min(100, bar.level / bar.max)) * 100;
             let color = bar.color ?? "#5C5CFF";
             if (bar.type == "mindcontrol") color = "#A020F0";
             else if (bar.type == "horny") color = "#FF647F";
@@ -1380,7 +1378,7 @@ export class InjectorModule extends BaseModule {
     ProcessGradualLevels() {
         if (this._targetHornyLevel > 0){
             if (this.targetHornyLevel > this.hornyLevel) {
-                let newHorny = Math.max(this.targetHornyLevel, this.hornyLevel + this.drugLevelMultiplier / DRUG_EFFECT_MULTIPLIERS.GRADUAL_LEVEL_DIVISOR);
+                const newHorny = Math.max(this.targetHornyLevel, this.hornyLevel + this.drugLevelMultiplier / DRUG_EFFECT_MULTIPLIERS.GRADUAL_LEVEL_DIVISOR);
                 if (newHorny > this.hornyLevelMax * this.drugLevelMultiplier && Player.ArousalSettings?.Progress! > RANDOM_EVENT_ODDS.CHAOTIC_NET_HIT_CHANCE) {
                     ActivityOrgasmPrepare(Player);
                     this.hornyLevel -= this.drugLevelMultiplier;
@@ -1422,10 +1420,10 @@ export class InjectorModule extends BaseModule {
     }
 
     HoldingDruggedDrink(C: Character): boolean {
-        var item = InventoryGet(C, "ItemHandheld");
+        const item = InventoryGet(C, "ItemHandheld");
         if (!item || (item.Asset.Name != "GlassFilled" && item.Asset.Name != "Mug") || !item.Craft)
             return false;
-        var drugTypes = this.GetDrugTypes(item.Craft!);
+        const drugTypes = this.GetDrugTypes(item.Craft!);
         return drugTypes.length > 0;
     }
 
@@ -1442,20 +1440,20 @@ export class InjectorModule extends BaseModule {
     }
 
     HeldDrinkName(C: Character): string {
-        let item = InventoryGet(C, "ItemHandheld");
-        return !!item ? GetItemName(item) : "drink";
+        const item = InventoryGet(C, "ItemHandheld");
+        return item ? GetItemName(item) : "drink";
     }
 
     /** Applies everything in an offered drink the target has already agreed to (or been forced) to take. */
     ApplyOfferedSip(sender: Character) {
         this.ProcessDruggedDrink(sender);
-        let magic = getModule<MagicModule>("MagicModule");
+        const magic = getModule<MagicModule>("MagicModule");
         if (magic?.Enabled)
             magic.HandleQuaff(sender, true);
     }
 
     ConsumeSip(fullPour: boolean) {
-        let glass = InventoryGet(Player, "ItemHandheld");
+        const glass = InventoryGet(Player, "ItemHandheld");
         if (glass?.Asset.Name != "GlassFilled")
             return;
         if (!fullPour) {
@@ -1466,7 +1464,7 @@ export class InjectorModule extends BaseModule {
         }
         if (fullPour || glass.Property!.SipLimit! > 0 && glass.Property!.SipCount! >= glass.Property!.SipLimit!) {
             SendAction("%NAME%'s uses up the last drop of %POSSESSIVE% drink.");
-            var craft = glass.Craft;
+            const craft = glass.Craft;
             InventoryRemove(Player, "ItemHandheld", false);
             InventoryWear(Player, "GlassEmpty", "ItemHandheld", glass.Color, glass.Difficulty, Player.MemberNumber, craft, false);
             ChatRoomCharacterUpdate(Player);
@@ -1474,25 +1472,25 @@ export class InjectorModule extends BaseModule {
     }
 
     GetGagDrinkAccess(C: Character): GagDrinkAccess {
-        var mouthItems = [
+        const mouthItems = [
             InventoryGet(C, "ItemMouth"),
             InventoryGet(C, "ItemMouth2"),
             InventoryGet(C, "ItemMouth3"),
         ].filter(g => !!g);
-        let gagOverrideAllowChecks = [
+        const gagOverrideAllowChecks = [
             ["FunnelGag", 1],
-            ["RingGag"]
+            ["RingGag"],
         ];
 
-        var overrideGag = mouthItems.find(gag => gagOverrideAllowChecks.map(o => o[0]).indexOf(gag?.Asset.Name!) > -1);
-        if (!!overrideGag) {
-            let check = gagOverrideAllowChecks.find(x => x[0] == overrideGag?.Asset.Name);
+        const overrideGag = mouthItems.find(gag => gagOverrideAllowChecks.map(o => o[0]).indexOf(gag?.Asset.Name!) > -1);
+        if (overrideGag) {
+            const check = gagOverrideAllowChecks.find(x => x[0] == overrideGag?.Asset.Name);
             if (!!check && (check.length == 1 || check[1] == (overrideGag.Property?.TypeRecord ?? {})["typed"]))
                 return "open";
         }
 
-        let blocked = C.IsMouthBlocked();
-        let isOpen = C.IsMouthOpen();
+        const blocked = C.IsMouthBlocked();
+        const isOpen = C.IsMouthOpen();
         if (blocked)
             return "blocked";
         else if (!blocked && isOpen)
@@ -1503,13 +1501,13 @@ export class InjectorModule extends BaseModule {
 
     /** Rolls to resist a forced drink, calling apply on a successful force. Returns whether the force succeeded. */
     TryForceDrink(sender: Character, fullPour: boolean = false, apply: () => void = () => this.ProcessDruggedDrink(sender, fullPour)): boolean {
-        let itemUseModule = getModule<ItemUseModule>("ItemUseModule");
+        const itemUseModule = getModule<ItemUseModule>("ItemUseModule");
         if (!itemUseModule) {
             apply();
             return true;
         }
-        var itemName = itemUseModule.getItemName(InventoryGet(sender, "ItemHandheld")!);
-        let check = getModule<ItemUseModule>("ItemUseModule")?.MakeActivityCheck(sender, Player);
+        const itemName = itemUseModule.getItemName(InventoryGet(sender, "ItemHandheld")!);
+        const check = getModule<ItemUseModule>("ItemUseModule")?.MakeActivityCheck(sender, Player);
         if (check.AttackerRoll.Total >= check.DefenderRoll.Total) {
             SendAction(`${CharacterNickname(sender)} ${check.AttackerRoll.TotalStr}manages to get %OPP_POSSESSIVE% ${itemName} past ${CharacterNickname(Player)}'s ${check.DefenderRoll.TotalStr}lips, forcing %INTENSIVE% to swallow.`, sender);
             setTimeout(apply, EFFECT_DURATIONS.ACTION_DELAY);
@@ -1542,7 +1540,7 @@ export class InjectorModule extends BaseModule {
                 if (!this._respiratorHasGas) {
                     SendAction("%OPP_NAME% reloads %NAME%'s mask and turns it back on, pumping gas back into %POSSESSIVE% lungs.", sender);
                     this.settings.continuousDeliveryActivatedAt = CommonTime();
-                    settingsSave()
+                    settingsSave();
                 } else if (sender.IsPlayer())
                     SendAction("%NAME% switches on %POSSESSIVE% own mask, filling %POSSESSIVE% lungs.", sender);
                 else
@@ -1562,7 +1560,7 @@ export class InjectorModule extends BaseModule {
                 if (!this._respiratorHasGas) {
                     SendAction("%OPP_NAME% reloads %NAME%'s device and turns it back on, filling quickly with gas.", sender);
                     this.settings.continuousDeliveryActivatedAt = CommonTime();
-                    settingsSave()
+                    settingsSave();
                 } else if (sender.IsPlayer())
                     SendAction("%NAME% closes %POSSESSIVE% device, filling with gas.", sender);
                 else
@@ -1584,8 +1582,8 @@ export class InjectorModule extends BaseModule {
             AllowedGroups: ["ItemMouth", "ItemMouth2", "ItemMouth3"],
             IsValid: (item: Item) => {
                 if (!item.Property || !item.Property.TypeRecord || !item.Craft) return false;
-                let hasHose = item.Property.TypeRecord["f"] == 2 || item.Property.TypeRecord["f"] == 3;
-                let isDrugged = this.GetDrugTypes(item.Craft).length > 0;
+                const hasHose = item.Property.TypeRecord["f"] == 2 || item.Property.TypeRecord["f"] == 3;
+                const isDrugged = this.GetDrugTypes(item.Craft).length > 0;
                 return hasHose && isDrugged;
             },
             IsActive: (item: Item) => {
@@ -1594,7 +1592,7 @@ export class InjectorModule extends BaseModule {
             ExhaustItem: (item: Item) => {
                 if (item?.Property?.TypeRecord)
                     item.Property.TypeRecord["g"] = 0;
-            }
+            },
         }, {
             AssetName: "CryoCapsule",
             AllowedGroups: ["ItemDevices"],
@@ -1608,14 +1606,14 @@ export class InjectorModule extends BaseModule {
             ExhaustItem: (item: Item) => {
                 if (item?.Property?.TypeRecord)
                     item.Property.TypeRecord["typed"] = 0;
-            }
-        }
-    ]
+            },
+        },
+    ];
 
     // IsInContinuousDelivery
     get IsWearingRespirator(): boolean {
-        let item = this.WornRespirator;
-        let isWearing = item != null;
+        const item = this.WornRespirator;
+        const isWearing = item != null;
         if (!this._wasWearingRespirator && isWearing) {
             if (!this.asleep && !this.brainwashed && this.IsRespiratorOn) {
                 SendAction(`%NAME%'s eyes widen as %POSSESSIVE% ${GetItemName(item!.Item)} activates, slowly filling %POSSESSIVE% lungs with its drug.`);
@@ -1638,9 +1636,9 @@ export class InjectorModule extends BaseModule {
 
     // ContinuousDeviceHasGas
     get RespiratorHasGas(): boolean {
-        let hasGas = this._respiratorHasGas;
+        const hasGas = this._respiratorHasGas;
         if (!hasGas && this.IsWearingRespirator && this.IsRespiratorOn) {
-            let item = this.WornRespirator;
+            const item = this.WornRespirator;
             if (!!item && !!item.Item) {
                 SendAction(`%NAME%'s ${GetItemName(item.Item)} hisses quietly as it runs out of its supply of gas.`);
                 item.Definition.ExhaustItem(item.Item);
@@ -1653,17 +1651,17 @@ export class InjectorModule extends BaseModule {
     // ActiveContinuousDevice
     get WornRespirator(): WornContinuousDevice | null {
         return this.continuousGasDevices.map(device => {
-            let item = device.AllowedGroups.map(grp => InventoryGet(Player, grp)).filter(item => !!item && device.IsValid(item))[0] ?? null
+            const item = device.AllowedGroups.map(grp => InventoryGet(Player, grp)).filter(item => !!item && device.IsValid(item))[0] ?? null;
             return !item ? null : {
                 Definition: device,
-                Item: item
-            }
+                Item: item,
+            };
         }).filter(device => !!device && !!device.Item)[0] ?? null;
     }
 
     get IsRespiratorOn(): boolean {
-        let item = this.WornRespirator;
-        if (!!item)
+        const item = this.WornRespirator;
+        if (item)
             return item.Definition.IsActive(item.Item);
         else
             return false;
@@ -1676,23 +1674,23 @@ export class InjectorModule extends BaseModule {
     headsetMindControlEventStr: string[] = [
         "%NAME% groans helplessly as %POSSESSIVE% headset manipulates %POSSESSIVE% mind.",
         "%NAME% struggles to keep %POSSESSIVE% focus through the overwhelming influence of %POSSESSIVE% headset.",
-        "%NAME% whimpers as %POSSESSIVE% headset erases %POSSESSIVE% own mind relentlessly."
+        "%NAME% whimpers as %POSSESSIVE% headset erases %POSSESSIVE% own mind relentlessly.",
     ];
 
     hypnoItems: {name: string, active: (item: Item) => boolean }[] = [
         {name: "InteractiveVRHeadset", active: item => !!item?.Property?.TypeRecord && item?.Property?.TypeRecord["b"] == 5 },
         {name: "TechnoHelmet1", active: item => !!item?.Property?.TypeRecord && item?.Property?.TypeRecord["v"] == 5 },
-        {name: "HypnoticVisor", active: item => !!item?.Property?.TypeRecord && item?.Property?.TypeRecord["p"] != 0 }
-    ]
+        {name: "HypnoticVisor", active: item => !!item?.Property?.TypeRecord && item?.Property?.TypeRecord["p"] != 0 },
+    ];
 
     CheckForHypnoHelmet() {
         // Use new spirals setting for hypno headsets
         if (!Player.LSCG.HypnoModule.enableSpirals)
             return;
-        let isWearingHypnoItem = Player.Appearance.some(item => this.hypnoItems.some(hypnoItem => hypnoItem.name == item.Asset.Name && hypnoItem.active(item)))
+        const isWearingHypnoItem = Player.Appearance.some(item => this.hypnoItems.some(hypnoItem => hypnoItem.name == item.Asset.Name && hypnoItem.active(item)));
 
         if (isWearingHypnoItem) {
-            let randomLevelIncrease = (getRandomInt(4) + 2) / (1 / BREATH_DRUG_INCREASES.MIN_INCREASE); // .2 to .5
+            const randomLevelIncrease = (getRandomInt(4) + 2) / (1 / BREATH_DRUG_INCREASES.MIN_INCREASE); // .2 to .5
             if (getRandomInt(RANDOM_EVENT_ODDS.HYPNO_HEADSET_BIG_JUMP) == 0) { // Odds are big jump once every 10 seconds
                 if (!this.brainwashed) SendAction(this.headsetMindControlEventStr[getRandomInt(this.headsetMindControlEventStr.length)]);
                 this.AddMindControl(randomLevelIncrease + BREATH_DRUG_INCREASES.BIG_JUMP_BASE, getRandomInt(RANDOM_EVENT_ODDS.HYPNO_HEADSET_MINIGAME_CHANCE) != 0); // 2/3 chance to start incap minigame
@@ -1703,34 +1701,34 @@ export class InjectorModule extends BaseModule {
     breathSedativeEventStr: string[] = [
         "%NAME%'s muscles relax limply as %PRONOUN% takes a deep breath.",
         "%NAME%'s eyes flutter weakly as %PRONOUN% inhales.",
-        "%NAME% struggles to keep %POSSESSIVE% drooping eyes open as %POSSESSIVE% device continues to emit its sedative gas."
+        "%NAME% struggles to keep %POSSESSIVE% drooping eyes open as %POSSESSIVE% device continues to emit its sedative gas.",
     ];
 
     breathMindControlEventStr: string[] = [
         "%NAME% groans helplessly as %POSSESSIVE% device sends another dose into %POSSESSIVE% lungs.",
         "%NAME% struggles to keep %POSSESSIVE% focus through the suggestible haze caused by %POSSESSIVE% device.",
-        "%NAME% whimpers as %POSSESSIVE% device's drug pushes %POSSESSIVE% further out of %POSSESSIVE% own mind."
+        "%NAME% whimpers as %POSSESSIVE% device's drug pushes %POSSESSIVE% further out of %POSSESSIVE% own mind.",
     ];
 
     breathAphrodesiacEventStr: string[] = [
         "%NAME%'s spine tingles as %PRONOUN% takes a deep breath of drug.",
         "%NAME% lets out a muffled moan as %PRONOUN% inhales.",
-        "%NAME%'s sensitive areas burn hot as %PRONOUN% breathes of drug."
+        "%NAME%'s sensitive areas burn hot as %PRONOUN% breathes of drug.",
     ];
 
     breathAntidoteEventStr: string[] = [
         "%NAME% sighs with relief as %PRONOUN% takes a deep gulp of healing mist.",
         "%NAME% feels a tingle across %POSSESSIVE% skin as %POSSESSIVE% device heals %INTENSIVE%.",
-        "%NAME% lets out a quiet moan as %POSSESSIVE% device releases a healing mist into %POSSESSIVE% lungs."
+        "%NAME% lets out a quiet moan as %POSSESSIVE% device releases a healing mist into %POSSESSIVE% lungs.",
     ];
 
     BreathInDrugEvent() {
         if (this.IsContinuousDeliveryActive) {
-            let mask = this.WornRespirator;
+            const mask = this.WornRespirator;
             if (!mask)
                 return;
-            let types = this.HookDrugApply(this.EnabledDrugTypes(this.GetDrugTypes(mask.Item.Craft!)), "breath");
-            let randomLevelIncrease = (getRandomInt(4) + 2) / (1 / BREATH_DRUG_INCREASES.MIN_INCREASE); // .2 to .5
+            const types = this.HookDrugApply(this.EnabledDrugTypes(this.GetDrugTypes(mask.Item.Craft!)), "breath");
+            const randomLevelIncrease = (getRandomInt(4) + 2) / (1 / BREATH_DRUG_INCREASES.MIN_INCREASE); // .2 to .5
 
             if (types.indexOf("sedative") > -1 && this.settings.enableSedative) {
                 if (getRandomInt(RANDOM_EVENT_ODDS.BREATH_SEDATIVE_BIG_JUMP) == 0) { // Odds are big jump once every 60 seconds

@@ -1,5 +1,4 @@
-import { StateConfig } from "Settings/Models/states";
-import { BaseState, StateRestrictions } from "./BaseState";
+import { BaseState } from "./BaseState";
 import { ICONS, LSCG_SendLocal, SendAction, getRandomInt, hookFunction, setOrIgnoreBlush, settingsSave } from "utils";
 import { getModule } from "modules";
 import { HypnoModule } from "Modules/hypno";
@@ -72,7 +71,7 @@ export class HypnoState extends BaseState {
 
     Recover(emote?: boolean) {
         if (this.Active) {
-            if (emote) SendAction("%NAME% blinks and returns to %POSSESSIVE% senses.")
+            if (emote) SendAction("%NAME% blinks and returns to %POSSESSIVE% senses.");
             this.ResetEyes();
             super.Recover(false);
         }
@@ -106,19 +105,19 @@ export class HypnoState extends BaseState {
         "%NAME% quivers, patiently awaiting something to fill %POSSESSIVE% empty head...",
         "%NAME% stares blankly, %POSSESSIVE% mind open and suggestible...",
         "%NAME%'s eyelids flutter gently, awaiting a command...",
-        "%NAME% trembles with a quiet moan as %PRONOUN% yearns to obey..."
+        "%NAME% trembles with a quiet moan as %PRONOUN% yearns to obey...",
     ];
 
     allowSpeechStrings = [
         "%NAME% groans softly as %PRONOUN% is allowed speech once more...",
         "%NAME% gasps quietly as %POSSESSIVE% mind can suddenly form sentences once again...",
-        "%NAME% furrows %POSSESSIVE% brow briefly, words returning to %INTENSIVE%"
+        "%NAME% furrows %POSSESSIVE% brow briefly, words returning to %INTENSIVE%",
     ];
 
     blockSpeechStrings = [
         "%NAME% moans quietly as %PRONOUN% slips back down under trance...",
         "%NAME%'s eyelids flutter gently as %PRONOUN% slumps back into silence...",
-        "%NAME%'s mouth falls silent once again..."
+        "%NAME%'s mouth falls silent once again...",
     ];
 
     IdleEmote() {
@@ -149,24 +148,24 @@ export class HypnoState extends BaseState {
     }
 
     SetHypnoEyes() {
-        let hypnoSettings = getModule<HypnoModule>("HypnoModule")?.settings;
-        var eyeAsset1 = AssetGet("Female3DCG", "Eyes", "Eyes" + (hypnoSettings.hypnoEyeType ?? 9));
+        const hypnoSettings = getModule<HypnoModule>("HypnoModule")?.settings;
+        let eyeAsset1 = AssetGet("Female3DCG", "Eyes", "Eyes" + (hypnoSettings.hypnoEyeType ?? 9));
         if (!eyeAsset1)
             eyeAsset1 = AssetGet("Female3DCG", "Eyes", "Eyes9");
 
-            var eyeAsset2 = AssetGet("Female3DCG", "Eyes2", "Eyes" + (hypnoSettings.hypnoEyeType ?? 9));
+            let eyeAsset2 = AssetGet("Female3DCG", "Eyes2", "Eyes" + (hypnoSettings.hypnoEyeType ?? 9));
         if (!eyeAsset2)
             eyeAsset2 = AssetGet("Female3DCG", "Eyes", "Eyes9");
 
-        var eyes1 = InventoryGet(Player, "Eyes");
-        var eyes2 = InventoryGet(Player, "Eyes2");
+        const eyes1 = InventoryGet(Player, "Eyes");
+        const eyes2 = InventoryGet(Player, "Eyes2");
 
-        let hypnoEyeColors = hypnoSettings.hypnoEyeColor?.split(",").map((x) => x.trim()) as BCColor[] ?? undefined;
-        if (!!eyes1) {
+        const hypnoEyeColors = hypnoSettings.hypnoEyeColor?.split(",").map((x) => x.trim()) as BCColor[] ?? undefined;
+        if (eyes1) {
             eyes1.Asset = eyeAsset1 ?? eyes1.Asset;
             eyes1.Color = hypnoEyeColors ?? "#A2A2A2";
         }
-        if (!!eyes2) {
+        if (eyes2) {
             eyes2.Asset = eyeAsset2  ?? eyes2.Asset;
             eyes2.Color = hypnoEyeColors ?? "#A2A2A2";
         }
@@ -176,17 +175,17 @@ export class HypnoState extends BaseState {
     }
 
     ResetEyes() {
-        var eyeAsset1 = AssetGet("Female3DCG", "Eyes", this.extensions["existingEye1Name"] ?? "Eyes5");
-        var eyeAsset2 = AssetGet("Female3DCG", "Eyes2", this.extensions["existingEye2Name"] ?? "Eyes5");
+        const eyeAsset1 = AssetGet("Female3DCG", "Eyes", this.extensions["existingEye1Name"] ?? "Eyes5");
+        const eyeAsset2 = AssetGet("Female3DCG", "Eyes2", this.extensions["existingEye2Name"] ?? "Eyes5");
 
-        var eyes1 = InventoryGet(Player, "Eyes");
-        var eyes2 = InventoryGet(Player, "Eyes2");
+        const eyes1 = InventoryGet(Player, "Eyes");
+        const eyes2 = InventoryGet(Player, "Eyes2");
 
-        if (!!eyes1) {
+        if (eyes1) {
             eyes1.Asset = eyeAsset1 ?? <Asset>{};
             eyes1.Color = this.extensions["existingEye1Color"];
         }
-        if (!!eyes2) {
+        if (eyes2) {
             eyes2.Asset = eyeAsset2  ?? <Asset>{};
             eyes2.Color = this.extensions["existingEye2Color"];
         }
@@ -204,7 +203,7 @@ export class HypnoState extends BaseState {
 
     ArousalTick() {
         if (this.Active && this.hypnoSettings.enableArousal) {
-            var progress = Math.min(99, (Player.ArousalSettings?.Progress ?? 0) + 5);
+            const progress = Math.min(99, (Player.ArousalSettings?.Progress ?? 0) + 5);
             ActivitySetArousal(Player, progress);
         }
     }

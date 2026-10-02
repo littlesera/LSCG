@@ -1,14 +1,11 @@
 import { BaseModule } from "base";
 import { getModule, modules } from "modules";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { CompressLSCGSettings, ExportSettings, getCharacter, getCharacterByNicknameOrMemberNumber, GetDelimitedList, ImportSettings, LSCG_SendLocal, parseFromBase64, removeAllHooksByModule, SendAction, sendLSCGCommandBeep, settingsSave, toItemBundle } from "../utils";
+import { ExportSettings, getCharacterByNicknameOrMemberNumber, GetDelimitedList, ImportSettings, LSCG_SendLocal, parseFromBase64, removeAllHooksByModule, SendAction, settingsSave, toItemBundle } from "../utils";
 import { HypnoModule } from "./hypno";
 import { ItemUseModule } from "./item-use";
-import { ActivityModule } from "./activities";
 import { CollarModule } from "./collar";
 import { StateModule } from "./states";
-import { PolymorphedState } from "./States/PolymorphedState";
-import { RedressedState } from "./States/RedressedState";
 import { LeashingModule } from "./leashing";
 
 // Remote UI Module to handle configuration on other characters
@@ -16,47 +13,47 @@ import { LeashingModule } from "./leashing";
 // Framework inspired from BCX
 export class CommandModule extends BaseModule {   
     
-	get states(): StateModule { return getModule<StateModule>("StateModule")! }
-	get hypno(): HypnoModule { return getModule<HypnoModule>("HypnoModule")! }
-	get collar(): CollarModule { return getModule<CollarModule>("CollarModule")! }
+	get states(): StateModule { return getModule<StateModule>("StateModule")!; }
+	get hypno(): HypnoModule { return getModule<HypnoModule>("HypnoModule")!; }
+	get collar(): CollarModule { return getModule<CollarModule>("CollarModule")!; }
 
 	get commands(): ICommand[] {
 		return [{
 			Tag: "help",
 			Description: ": Opens the help for LSCG commands",
 			Action: (args, msg, parsed) => {
-				let helpLines: string[] = [];
-				let lightMode = (Player.ChatSettings!.ColorTheme!.indexOf("Light") > -1);
-				let lscgColor = lightMode ? "slategrey" : "darkgrey";
-				let commandColor = lightMode ? "midnightblue" : "mintcream";
-				let descColor = lightMode ? "slategrey" : "moccasin";
+				const helpLines: string[] = [];
+				const lightMode = (Player.ChatSettings!.ColorTheme!.indexOf("Light") > -1);
+				const lscgColor = lightMode ? "slategrey" : "darkgrey";
+				const commandColor = lightMode ? "midnightblue" : "mintcream";
+				const descColor = lightMode ? "slategrey" : "moccasin";
 				this.orderedCommands.forEach(c => {
 					helpLines.push(`<br><b><span style="color:${lscgColor}">/lscg</span> <span style="color:${commandColor};text-decoration-line: underline;">${c.Tag}</span></b> <span style="color:${descColor}">${c.Description}</span>`);
-				})
-				let helpText = `<b>- Little Sera's Club Games -</b>${helpLines.join()}`;
+				});
+				const helpText = `<b>- Little Sera's Club Games -</b>${helpLines.join()}`;
 				LSCG_SendLocal(helpText, false);
 			},
 		}, {
 			Tag: "show-triggers",
 			Description: ": Reveal your current trigger word(s) to yourself",
 			Action: () => {
-				let hypnoTriggers = this.hypno.triggers;
-				let awakenerTriggers = this.hypno.awakeners;
-				let tightenTrigger = GetDelimitedList(this.collar.settings.tightTrigger);
-				let loosenTrigger = GetDelimitedList(this.collar.settings.looseTrigger);
+				const hypnoTriggers = this.hypno.triggers;
+				const awakenerTriggers = this.hypno.awakeners;
+				const tightenTrigger = GetDelimitedList(this.collar.settings.tightTrigger);
+				const loosenTrigger = GetDelimitedList(this.collar.settings.looseTrigger);
 
-				let hypnoStr = !this.hypno.Enabled ? "<i>Hypnosis not enabled.</i>" : (this.states.settings.immersive ? "<i>Hypnosis triggers hidden while immersive...</i>" : `<b>Hypnosis:</b> ${hypnoTriggers}<br><b>Awakeners:</b> ${awakenerTriggers}`);
-				let collarStr = !this.collar.settings.enabled ? "<i>Breathplay Collar not enabled.</i>" : (this.collar.settings.immersive ? "<i>Collar triggers hidden while immersive...</i>" : `<b>Collar Tighten:</b> ${tightenTrigger}<br><b>Collar Loosen:</b> ${loosenTrigger}`);
+				const hypnoStr = !this.hypno.Enabled ? "<i>Hypnosis not enabled.</i>" : (this.states.settings.immersive ? "<i>Hypnosis triggers hidden while immersive...</i>" : `<b>Hypnosis:</b> ${hypnoTriggers}<br><b>Awakeners:</b> ${awakenerTriggers}`);
+				const collarStr = !this.collar.settings.enabled ? "<i>Breathplay Collar not enabled.</i>" : (this.collar.settings.immersive ? "<i>Collar triggers hidden while immersive...</i>" : `<b>Collar Tighten:</b> ${tightenTrigger}<br><b>Collar Loosen:</b> ${loosenTrigger}`);
 
 				LSCG_SendLocal(`Your current triggers are: <br>${hypnoStr}<br>${collarStr}`, false);
-			}
+			},
 		}, {
 			Tag: "roll",
 			Description: ": Make an unopposed activity roll and display the results.",
 			Action: (args, msg, parsed) => {
-				let roll = getModule<ItemUseModule>("ItemUseModule")?.UnopposedActivityRoll(Player);
+				const roll = getModule<ItemUseModule>("ItemUseModule")?.UnopposedActivityRoll(Player);
 				SendAction(`${CharacterNickname(Player)} makes an activity roll and gets: ${roll.Total} ${roll.TotalStr}`);
-			}
+			},
 		}, {
 			Tag: "roll-attack",
 			Description: "[defender] : Make a contested activity roll against another user where you are the attacker.",
@@ -65,15 +62,15 @@ export class CommandModule extends BaseModule {
 					LSCG_SendLocal("Please specify a defender for your roll.");
 					return;
 				}
-				let tgt = getCharacterByNicknameOrMemberNumber(args);
+				const tgt = getCharacterByNicknameOrMemberNumber(args);
 				if (!tgt) {
 					LSCG_SendLocal(`Defender ${args} not found.`);
 					return;
 				}
-				let check = getModule<ItemUseModule>("ItemUseModule")?.MakeActivityCheck(Player, tgt);
+				const check = getModule<ItemUseModule>("ItemUseModule")?.MakeActivityCheck(Player, tgt);
 				SendAction(`${CharacterNickname(Player)} makes an activity check attack against ${CharacterNickname(tgt)}!`);
-				SendAction(`${CharacterNickname(Player)}: ${check.AttackerRoll.Total} ${check.AttackerRoll.TotalStr}-- ${CharacterNickname(tgt)}: ${check.DefenderRoll.Total} ${check.DefenderRoll.TotalStr}`)
-			}
+				SendAction(`${CharacterNickname(Player)}: ${check.AttackerRoll.Total} ${check.AttackerRoll.TotalStr}-- ${CharacterNickname(tgt)}: ${check.DefenderRoll.Total} ${check.DefenderRoll.TotalStr}`);
+			},
 		}, {
 			Tag: "roll-defend",
 			Description: "[attacker] : Make a contested activity roll where you are defending against another user.",
@@ -82,21 +79,21 @@ export class CommandModule extends BaseModule {
 					LSCG_SendLocal("Please specify an attacker for your roll.");
 					return;
 				}
-				let tgt = getCharacterByNicknameOrMemberNumber(args);
+				const tgt = getCharacterByNicknameOrMemberNumber(args);
 				if (!tgt) {
 					LSCG_SendLocal(`Attacker ${args} not found.`);
 					return;
 				}
-				let check = getModule<ItemUseModule>("ItemUseModule")?.MakeActivityCheck(tgt, Player);
+				const check = getModule<ItemUseModule>("ItemUseModule")?.MakeActivityCheck(tgt, Player);
 				SendAction(`${CharacterNickname(Player)} makes an activity check defending from ${CharacterNickname(tgt)}!`);
-				SendAction(`${CharacterNickname(Player)}: ${check.DefenderRoll.Total} ${check.DefenderRoll.TotalStr}-- ${CharacterNickname(tgt)}: ${check.AttackerRoll.Total} ${check.AttackerRoll.TotalStr}`)
-			}
+				SendAction(`${CharacterNickname(Player)}: ${check.DefenderRoll.Total} ${check.DefenderRoll.TotalStr}-- ${CharacterNickname(tgt)}: ${check.AttackerRoll.Total} ${check.AttackerRoll.TotalStr}`);
+			},
 		}, {
 			Tag: "escape",
 			Description: ": If you are arm-grabbed or ear-pinched, will attempt to escape from their grip.",
 			Action: (args, msg, parsed) => {
 				getModule<LeashingModule>("LeashingModule")?.TryEscape();
-			}
+			},
 		}, {
 			Tag: "emergency",
 			Description: ": Use in case of emergency to revert all LSCG settings to their default values.",
@@ -104,21 +101,21 @@ export class CommandModule extends BaseModule {
 				if (confirm("Are you sure you want to reset all LSCG settings to their default values? If you have existing settings it's highly recommended you make a backup export first, if possible.")) {
 					this.EmergencyRelease();
 				}
-			}
+			},
 		}, {
 			Tag: "conditions",
 			Description: " [target?] : List which conditions are currently active on you or [target].",
 			Action: (args, msg, parsed) => {
-				let target = getCharacterByNicknameOrMemberNumber(args) as OtherCharacter;
+				const target = getCharacterByNicknameOrMemberNumber(args) as OtherCharacter;
 
-				let targetName = !target ? CharacterNickname(Player) : CharacterNickname(target);
-				let states = !target ? 
+				const targetName = !target ? CharacterNickname(Player) : CharacterNickname(target);
+				const states = !target ? 
 					this.states.States.filter(s => s.Active).map(s => s.Type) :
 					target.LSCG.StateModule.states.filter(s => s.active).map(s => s.type);
 				
-				let stateList = states.map(s => `<li>${s}</li>`).join("");
+				const stateList = states.map(s => `<li>${s}</li>`).join("");
 				LSCG_SendLocal(`<div><b>Active Conditions on ${targetName}:</b><ul>${stateList}</ul></div>`, false);
-			}
+			},
 		}, {
 			Tag: "get-outfit-code",
 			Description: " [target?] : Prints the current base64 encoded item bundle array for yourself or [target].",
@@ -128,17 +125,17 @@ export class CommandModule extends BaseModule {
 					target = Player;
 				if (!target)
 					return;
-				let targetName = CharacterNickname(target);
-				let items = target.Appearance.map(item => toItemBundle(item, target));
-				let str = LZString.compressToBase64(JSON.stringify(items));
+				const targetName = CharacterNickname(target);
+				const items = target.Appearance.map(item => toItemBundle(item, target));
+				const str = LZString.compressToBase64(JSON.stringify(items));
 				navigator.clipboard.writeText(str);
 				LSCG_SendLocal(`<b>Encoded Item Bundle Code for ${targetName} copied to clipboard.`, false);
-			}
+			},
 		}, {
 			Tag: "parse-code",
 			Description: ": Reports what items/assets are in a compressed item code stored in the clipboard.",
 			Action: (args, msg, parsed) => {
-					let code = window.prompt("Compressed item code:")
+					const code = window.prompt("Compressed item code:");
 					if (!code) {
 						LSCG_SendLocal("No code entered.");
 						return;
@@ -153,22 +150,22 @@ export class CommandModule extends BaseModule {
 						LSCG_SendLocal("Invalid code.");
 					}
 
-					let itemList = items.map(item => `<li>${item.Group} - ${item.Name}</li>`).join("");
+					const itemList = items.map(item => `<li>${item.Group} - ${item.Name}</li>`).join("");
 					LSCG_SendLocal(`<div><b>Encoded Items:</b><ul>${itemList}</ul></div>`, false);
-			}
+			},
 		}, {
 			Tag: "export",
 			Description: ": Exports all LSCG settings into the clipboard.",
 			Action: (args, msg, parsed) => {
 				ExportSettings();
-			}
+			},
 		}, {
 			Tag: "import",
 			Description: ": Imports all LSCG settings from the clipboard, overwriting any current configuration.",
 			Action: (args, msg, parsed) => {
 				if (confirm("Importing settings will overwrite existing settings. \nAre you sure?")) {
 					ImportSettings().then(() => {
-						alert(`LSCG settings imported`);
+						alert("LSCG settings imported");
 					});
 
 					// let compressed = window.prompt("LSCG Export string:");
@@ -182,7 +179,7 @@ export class CommandModule extends BaseModule {
 					// else
 					// 	LSCG_SendLocal(`Failed to import LSCG settings from clipboard.`);
 				}
-			}
+			},
 		}];
 	}
 
@@ -195,8 +192,8 @@ export class CommandModule extends BaseModule {
 	}
 
 	get orderedCommands(): ICommand[] {
-		var helpCommand = this.getSubcommand("help")!;
-		var sorted = this.allCommands.filter(c => c.Tag != "help").sort((a, b) => a.Tag.localeCompare(b.Tag));
+		const helpCommand = this.getSubcommand("help")!;
+		const sorted = this.allCommands.filter(c => c.Tag != "help").sort((a, b) => a.Tag.localeCompare(b.Tag));
 		return [helpCommand, ...sorted];
 	}
 
@@ -211,7 +208,7 @@ export class CommandModule extends BaseModule {
     load(): void {
         CommandCombine([
             {
-                Tag: 'lscg',
+                Tag: "lscg",
                 Description: "or <b>/lscg help</b> : Opens the help for LSCG commands",
 				AutoComplete(parsed, low, msg) {
 					
@@ -220,12 +217,12 @@ export class CommandModule extends BaseModule {
                     if (parsed.length <= 0) {
 						this.getSubcommand("help")!.Action!("", msg, []);
 					} else {
-						var command = this.getSubcommand(parsed[0]);
-						var subArgs = parsed.slice(1);
-						command?.Action!(subArgs.join(" "), msg, subArgs)
+						const command = this.getSubcommand(parsed[0]);
+						const subArgs = parsed.slice(1);
+						command?.Action!(subArgs.join(" "), msg, subArgs);
 					}
-                }
-            }
+                },
+            },
 		]);
     }
 
@@ -237,7 +234,7 @@ export class CommandModule extends BaseModule {
 		// Run Safeword action on all modules
 		for (const m of modules()) {
 			m.safeword();
-			if (!!m.settingsStorage)
+			if (m.settingsStorage)
 				(<any>Player.LSCG)[m.settingsStorage] = m.defaultSettings;
 		}
 		settingsSave(true);

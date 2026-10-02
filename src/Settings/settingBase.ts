@@ -1,4 +1,4 @@
-import { ICONS, mouseTooltip, settingsSave } from "utils";
+import { ICONS, settingsSave } from "utils";
 import { BaseSettingsModel } from "./Models/base";
 import { SETTING_FUNC_NAMES, SETTING_FUNC_PREFIX, SETTING_NAME_PREFIX, setSubscreen } from "./setting_definitions";
 import { BaseModule } from "base";
@@ -36,6 +36,8 @@ export abstract class GuiSubscreen {
     static START_Y: number = 205;
     static X_MOD: number = 950;
 	static Y_MOD: number = 75;
+	/** True while a DomSettingsHost shows the screen's title, exit and help buttons, so the canvas doesn't too. */
+	static domChrome: boolean = false;
 	readonly module: BaseModule;
 
 	constructor(module: BaseModule) {
@@ -51,7 +53,7 @@ export abstract class GuiSubscreen {
 	}
 
 	get label(): string {
-		return "UNDEFINED SETTING SCREEN"
+		return "UNDEFINED SETTING SCREEN";
 	}
 
 	get hidden(): boolean {
@@ -59,7 +61,7 @@ export abstract class GuiSubscreen {
 	}
 
 	get disabledReason(): string {
-		return "Setting is unavailable."
+		return "Setting is unavailable.";
 	}
 
 	get enabled(): boolean {
@@ -80,9 +82,9 @@ export abstract class GuiSubscreen {
 
 	get help(): HelpInfo {
 		return {
-			label: 'Open LSCG Wiki on GitHub',
-			link: 'https://github.com/littlesera/LSCG/wiki'
-		}
+			label: "Open LSCG Wiki on GitHub",
+			link: "https://github.com/littlesera/LSCG/wiki",
+		};
 	}
 
 	setSubscreen(screen: GuiSubscreen | string | null) {
@@ -131,9 +133,9 @@ export abstract class GuiSubscreen {
 						if (setting.type == "range")
 							this.ElementHide(setting.id + "_numeric");
 					}
-				})
+				});
 			}
-		})
+		});
 	}
 
 	Load() {
@@ -146,11 +148,11 @@ export abstract class GuiSubscreen {
 					ElementCreateInput(item.id, "number", item.setting(), "255");
 					break;	
 				case "range":
-					let min = item.range?.min ?? 0;
-					let max = item.range?.max ?? 100;
-					let init = clamp(item.setting() ?? 0, min, max);
-					let slider = ElementCreateRangeInput(item.id, init, min, max, Math.max(item.range?.step ?? 1, 1), item.range?.thumb, item.range?.vertical);
-					let text = ElementCreateInput(item.id + "_numeric", "number", item.setting());
+					const min = item.range?.min ?? 0;
+					const max = item.range?.max ?? 100;
+					const init = clamp(item.setting() ?? 0, min, max);
+					const slider = ElementCreateRangeInput(item.id, init, min, max, Math.max(item.range?.step ?? 1, 1), item.range?.thumb, item.range?.vertical);
+					const text = ElementCreateInput(item.id + "_numeric", "number", item.setting());
 					slider.addEventListener("input", () => { 
 						this.ElementSetValue(text.id, ElementValue(slider.id)); 
 						item.setSetting(ElementValue(slider.id));
@@ -169,11 +171,13 @@ export abstract class GuiSubscreen {
 	}
 
 	Run() {
-		var prev = MainCanvas.textAlign;
+		const prev = MainCanvas.textAlign;
 		MainCanvas.textAlign = "left";
 
-		DrawText("- LSCG " + this.name + " -", GuiSubscreen.START_X, GuiSubscreen.START_Y - GuiSubscreen.Y_MOD, "Black", "#D7F6E9");
-		DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png", "Main Menu");
+		if (!GuiSubscreen.domChrome) {
+			DrawText("- LSCG " + this.name + " -", GuiSubscreen.START_X, GuiSubscreen.START_Y - GuiSubscreen.Y_MOD, "Black", "#D7F6E9");
+			DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png", "Main Menu");
+		}
 		
 		if (this.multipageStructure.length > 1) {
 			MainCanvas.textAlign = "center";
@@ -200,13 +204,14 @@ export abstract class GuiSubscreen {
 			}
 		});
 		
-		DrawButton(1815, 820, 90, 90, "", "White", "Icons/Introduction.png", this.help.label);
+		if (!GuiSubscreen.domChrome)
+			DrawButton(1815, 820, 90, 90, "", "White", "Icons/Introduction.png", this.help.label);
 
 		MainCanvas.textAlign = prev;
 	}
 
 	Click() {
-		if (MouseIn(1815, 75, 90, 90)) return this.Exit();
+		if (!GuiSubscreen.domChrome && MouseIn(1815, 75, 90, 90)) return this.Exit();
 		if (this.multipageStructure.length > 1)
 			PreferencePageChangeClick(1595, 75, this.multipageStructure.length);
 
@@ -220,8 +225,8 @@ export abstract class GuiSubscreen {
 			}
 		});
 
-		if (MouseIn(1500, 820, 400, 80))
-            window.open(this.help.link, '_blank');
+		if (!GuiSubscreen.domChrome && MouseIn(1815, 820, 90, 90))
+            window.open(this.help.link, "_blank");
 	}
 
 	Exit() {
@@ -229,11 +234,13 @@ export abstract class GuiSubscreen {
 			switch (item.type) {
 				case "range" :
 					ElementRemove(item.id + "_numeric");
+				// falls through
 				case "number":
 					if (!CommonIsNumeric(ElementValue(item.id))) {
 						ElementRemove(item.id);
 						break;
 					}
+				// falls through
 				case "text":
 				case "dropdown":
 					item.setSetting(ElementValue(item.id));
@@ -255,7 +262,7 @@ export abstract class GuiSubscreen {
 	}
 
 	Tooltip(text: string) {
-		if (!!text)
+		if (text)
 			drawTooltip(300,
 				850,
 				1400,
@@ -264,17 +271,17 @@ export abstract class GuiSubscreen {
 	}
 
 	DrawCheckboxNarrow(label: string, description: string, value: boolean, row: number, column: number, disabled: boolean = false, hidden: boolean = false) {
-		let x = this.getNarrowXPos(column);
-		let y = this.getNarrowYPos(row);
-		let width = 400;
-		var isHovering = MouseIn(x, y - 32, width, 64) && !hidden;
+		const x = this.getNarrowXPos(column);
+		const y = this.getNarrowYPos(row);
+		const width = 400;
+		const isHovering = MouseIn(x, y - 32, width, 64) && !hidden;
 		DrawTextFit(label, x, y, width, isHovering ? "Red" : "Black", "Gray");
 		DrawCheckbox(x + width, y - 32, 64, 64, "", value ?? false, disabled);
 		if (isHovering) this.Tooltip(description);
 	}
 
 	DrawCheckbox(label: string, description: string, value: boolean, order: number, disabled: boolean = false, hidden: boolean = false) {
-		var isHovering = MouseIn(this.getXPos(order), this.getYPos(order) - 32, 600, 64) && !hidden;
+		const isHovering = MouseIn(this.getXPos(order), this.getYPos(order) - 32, 600, 64) && !hidden;
 		if (!hidden) {
 			DrawCheckbox(this.getXPos(order) + 600, this.getYPos(order) - 32, 64, 64, "", value ?? false, disabled);
 			DrawTextFit(label, this.getXPos(order), this.getYPos(order), 600, isHovering ? "Red" : "Black", "Gray");
@@ -283,18 +290,18 @@ export abstract class GuiSubscreen {
 	}
 
 	DrawCheckboxAbsolute(label: string, description: string, value: boolean, coords: {x: number, y: number, w?: number}, disabled: boolean = false, hidden: boolean = false) {
-		let x = coords.x;
-		let y = coords.y;
-		let width = coords.w ?? 400;
-		var isHovering = MouseIn(x, y - 32, width + 64, 64) && !hidden;
+		const x = coords.x;
+		const y = coords.y;
+		const width = coords.w ?? 400;
+		const isHovering = MouseIn(x, y - 32, width + 64, 64) && !hidden;
 		DrawTextFit(label, x, y, width, isHovering ? "Red" : "Black", "Gray");
 		DrawCheckbox(x + width, y - 32, 64, 64, "", value ?? false, disabled);
 		if (isHovering) this.Tooltip(description);
 	}
 	ClickCheckboxAbsolute(coords: {x: number, y: number, w?: number}, action: () => void) {
-		let x = coords.x;
-		let y = coords.y;
-		let width = coords.w ?? 400;
+		const x = coords.x;
+		const y = coords.y;
+		const width = coords.w ?? 400;
 		if (MouseIn(x + width, y - 32, 64, 64))
 			action();
 	}
@@ -307,18 +314,18 @@ export abstract class GuiSubscreen {
 		let yOffset = 0;
 		if (item.type == "range") {
 			yOffset = 15;
-			let hide = item.disabled || item.hidden;
+			const hide = item.disabled || item.hidden;
 			ElementPosition(item.id + "_numeric", this.getXPos(ix) + 750 + (item.overrideWidth ?? 300) + 20, hide ? 9999 : this.getYPos(ix), 200);
 		}
 		this.ElementPosition(item.id, item.label, item.description, ix, item.disabled, item.hidden, item.overrideWidth, yOffset);
 	}
 
 	ElementPosition(elementId: string, label: string, description: string, order: number, disabled: boolean = false, hidden: boolean = false, overrideWidth: number | undefined = undefined, yOffset: number = 0) {
-		var isHovering = MouseIn(this.getXPos(order), this.getYPos(order) - 32, 600, 64) && !hidden;
+		const isHovering = MouseIn(this.getXPos(order), this.getYPos(order) - 32, 600, 64) && !hidden;
 		if (!hidden)
 			DrawTextFit(label, this.getXPos(order), this.getYPos(order), 600, isHovering ? "Red" : "Black", "Gray");
 		let xPos = this.getXPos(order) + 750;
-		if (!!overrideWidth)
+		if (overrideWidth)
 			xPos += (overrideWidth - 300) / 2;
 		ElementPosition(elementId, xPos, hidden ? 9999 : this.getYPos(order) + yOffset, overrideWidth ?? 300);
 		if (disabled)
@@ -330,18 +337,18 @@ export abstract class GuiSubscreen {
 	}
 
 	ElementSetValue(elementId: string, value: any) {
-		let element = document.getElementById(elementId) as HTMLInputElement;
+		const element = document.getElementById(elementId) as HTMLInputElement;
 		if (!!element && value != null)
 			element.value = value;
 		if (element.localName == "div") { // Top of dropdown
-			let displayDiv = (element as Element).childNodes[1];
-			if (!!displayDiv)
+			const displayDiv = (element as Element).childNodes[1];
+			if (displayDiv)
 				displayDiv.textContent = value;
 		}
 	}
 
 	DrawLabel(name: string, description: string, order: number, hidden: boolean = false, overrideWidth: number | undefined = undefined) {
-		var isHovering = MouseIn(this.getXPos(order), this.getYPos(order) - 32, 600, 64) && !hidden;
+		const isHovering = MouseIn(this.getXPos(order), this.getYPos(order) - 32, 600, 64) && !hidden;
 		DrawTextFit(name, this.getXPos(order), this.getYPos(order), overrideWidth ?? 600, isHovering ? "Red" : "Black", "Gray");
 		if (isHovering) this.Tooltip(description);
 	}
