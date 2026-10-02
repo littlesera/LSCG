@@ -97,6 +97,7 @@ export interface FixtureCharacter {
 	IsVulvaChaste: () => boolean;
 	HasPenis: () => boolean;
 	IsEnclose: () => boolean;
+	HasEffect: (effect: string) => boolean;
 	IsKneeling: () => boolean;
 	IsStanding: () => boolean;
 	HasTints: () => boolean;
@@ -164,6 +165,8 @@ export function makeCharacter(overrides: Omit<Partial<FixtureCharacter>, "flags"
 		IsVulvaChaste(this: FixtureCharacter) { return this.flags.vulvaChaste; },
 		HasPenis(this: FixtureCharacter) { return this.flags.hasPenis; },
 		IsEnclose(this: FixtureCharacter) { return this.flags.enclosed; },
+		// Same source as bc-lite's InventoryItemHasEffect: the effects on each worn item's Property
+		HasEffect(this: FixtureCharacter, effect: string) { return this.Appearance.some(item => !!item.Property?.Effect?.includes(effect)); },
 		IsKneeling(this: FixtureCharacter) { return this.flags.kneeling; },
 		IsStanding(this: FixtureCharacter) { return this.flags.standing; },
 		IsGagged(this: FixtureCharacter) { return this.flags.gagged; },
