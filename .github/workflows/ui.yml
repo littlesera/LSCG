@@ -8,6 +8,11 @@ name: UI tests
 on:
   pull_request:
     branches: [ "main", "dev" ]
+  # Also on pushes to the branches PRs target: GitHub only lets a PR restore caches made on its own branch, its base
+  # branch or the default branch, so without these every new PR would start with a cold BC cache (slow, and it
+  # fails when gitgud rate-limits the downloads).
+  push:
+    branches: [ "main", "dev" ]
   workflow_dispatch: {}
 
 jobs:
@@ -29,8 +34,9 @@ jobs:
 
     # The playground fetches each BC client file from gitgud the first time it's needed (~1,100 files); caching it
     # keeps PR runs off gitgud (it rate-limits bursts). Keyed on the pinned BC commit, like validate.yml's cache.
-    - name: Cache BC client (test/bc-client.json's pinned commit)
-      uses: actions/cache@v6
+    - name: Restore BC client cache (test/bc-client.json's pinned commit)
+      id: bc-cache
+      uses: actions/cache/restore@v6
       with:
         path: .cache/bc-full-*
         key: bc-playground-${{ hashFiles('test/bc-client.json') }}
@@ -52,6 +58,15 @@ jobs:
       if: steps.browser-cache.outputs.cache-hit == 'true'
 
     - run: npm run test:ui
+
+    # Saved even when the tests fail: the default cache step only saves after a successful job, so a failing run would
+    # leave every later run cold, re-downloading BC from gitgud (which rate-limits) and failing the same way.
+    - name: Save BC client cache
+      if: always() && steps.bc-cache.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v6
+      with:
+        path: .cache/bc-full-*
+        key: bc-playground-${{ hashFiles('test/bc-client.json') }}
 
     - name: Upload the report (traces and screenshots of failures)
       if: failure()

@@ -22,10 +22,17 @@ test("zone picker drawings ignore the player's own tint, blur and blindness", as
         await w.Playground.openSettings();
         await new Promise(r => setTimeout(r, 250));
         await w.Playground.openSettings("Activities");
-        await new Promise(r => setTimeout(r, 1500));
         const canvas = document.querySelector("canvas.lscg-kit-zones") as HTMLCanvasElement;
         // Thigh skin: untinted it's a warm light pink (red high, blue lower), never the purple tint's blue-heavy mix.
-        const [r, , b] = canvas.getContext("2d")!.getImageData(230, 640, 1, 1).data;
+        // The picker shows only its grey zone boxes until the character's images have loaded, so wait for skin.
+        const pixel = () => [...canvas.getContext("2d")!.getImageData(230, 640, 1, 1).data];
+        const start = Date.now();
+        while (Date.now() - start < 45_000) {
+            const [pr, pg, pb] = pixel();
+            if (!(pr === pg && pg === pb)) break; // grey: the zone fill, not skin
+            await new Promise(r => setTimeout(r, 250));
+        }
+        const [r, , b] = pixel();
         return { r, b, blindLevelStillSet: w.Player.GetBlindLevel() === 3, tintsRestored: w.Player.GetTints !== original.GetTints };
     });
     expect(result.r).toBeGreaterThan(result.b);
@@ -69,7 +76,7 @@ test("Outfit Collection: the editor can't save over another outfit's name, and c
         const characters = () => w.Character.filter((c: any) => String(c.CharacterID).includes("LSCGOutfitsCollection")).length;
         const before = characters();
         gui.clickOutfit("Maid");
-        await new Promise(r => setTimeout(r, 500));
+        for (let i = 0; i < 120 && !document.getElementById("lscg-outfit-edit-outfit-name"); i++) await new Promise(r => setTimeout(r, 250));
         const name = document.getElementById("lscg-outfit-edit-outfit-name") as HTMLInputElement;
         name.value = "base look";
         name.dispatchEvent(new Event("input"));

@@ -8,7 +8,7 @@ export default defineConfig({
     testDir: "test/ui",
     testMatch: "**/*.spec.ts",
     globalSetup: "./test/ui/global-setup.ts",
-    timeout: 60_000,
+    timeout: 120_000,
     expect: { timeout: 10_000 },
     // One browser at a time: every test logs in as the same fake account, and the server is a single process.
     workers: 1,

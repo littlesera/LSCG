@@ -86,6 +86,10 @@ for a real browser — by hand, or driven by [agent-browser](https://github.com/
   - A failure keeps a screenshot and a trace in `test/.out/ui-results/`; `npx playwright show-trace <trace.zip>`
     replays it.
   - `.github/workflows/ui.yml` runs it on PRs, **non-blocking** (`continue-on-error`) until it has proven reliable.
+  - The first run downloads BC's files from gitgud (it rate-limits), so a cold cache is slow (~7-9 min) and can
+    stall; a warm one takes about 1.5 min. `test/ui/global-setup.ts` pre-visits what the tests use, and
+    `ui.yml` caches `.cache/bc-full-*` (saved even when tests fail, and refreshed by pushes to `main`/`dev` so
+    PRs start warm). `UI_CPU_THROTTLE=4 npm run test:ui` slows the browser to reproduce timing failures.
   - LSCG errors in the browser console fail a test, but BC's own noise (missing optional files, rejected
     appearance bundles) is ignored; see `IGNORED` in `test/ui/fixtures.ts`.
 

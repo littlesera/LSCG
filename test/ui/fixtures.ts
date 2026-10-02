@@ -24,6 +24,13 @@ export const test = base.extend<{ bc: Bc }>({
             errors.push(text);
         });
 
+        // UI_CPU_THROTTLE=4 makes the browser 4x slower, to reproduce timing failures seen on slow CI runners.
+        const throttle = Number(process.env.UI_CPU_THROTTLE ?? 1);
+        if (throttle > 1) {
+            const cdp = await page.context().newCDPSession(page);
+            await cdp.send("Emulation.setCPUThrottlingRate", { rate: throttle });
+        }
+
         await page.goto("/");
         await page.waitForFunction(() => (window as any).Playground && (window as any).CurrentScreen === "Login");
         await page.evaluate(async () => {
