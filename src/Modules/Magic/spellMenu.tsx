@@ -3,7 +3,7 @@ import type { MagicModule } from "Modules/magic";
 import { DomOverlayHost } from "Dom/host";
 import { CardGrid, Chip, ChipTone, KitContext, Notice, SearchBox } from "Dom/kit";
 import type { SpellDefinition } from "Settings/Models/magic";
-import { effectDescription, effectLabel, effectTooltip, isExtensionEffect, spellHasPairedEffect } from "./spellEffects";
+import { effectLabel, effectTooltip, isExtensionEffect, spellHasPairedEffect } from "./spellEffects";
 import menuStyles from "./spellMenu.scss?inline";
 
 /** Where the menu sits on the 2000x1000 canvas; the canvas fills the same rectangle (see MagicModule.DrawSpellMenu). */
@@ -127,7 +127,7 @@ export class SpellMenuView {
                 ? Notice("No one else in the room can be paired.")
                 : <div class="lscg-spellmenu-people">
                     {people.map(char => <button type="button" class="lscg-button lscg-spellmenu-person" onClick={() => {
-                        if (!!pair.Source) magic.CastSpellActual(pair.Spell, pair.Source, false, char);
+                        if (pair.Source) magic.CastSpellActual(pair.Spell, pair.Source, false, char);
                     }}>{CharacterNickname(char)}</button>)}
                 </div>}
             {back}

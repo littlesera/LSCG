@@ -6,7 +6,7 @@ import { Color, Light, LineObstacle, OpaqueObstacle, Viewpoint } from "Utilities
 import { drawBlindfold, GetItemNameAndDescriptionConcat, hookFunction, isPhraseInString } from "utils";
 import { StateModule } from "./states";
 import { ScreenItems } from "./item-use";
-import { debounce } from 'lodash-es';
+import { debounce } from "lodash-es";
 import { GuiMaps } from "Settings/maps";
 import { LightingEngine } from "Utilities/lighting.engine";
 
@@ -39,7 +39,7 @@ export class MapModule extends BaseModule {
         // Lodash gives you some awesome optional settings:
         leading: false,  // Run on the very first event? (default: false)
         trailing: true,  // Run after the wait time ends? (default: true)
-        maxWait: 1000    // Force it to run every 1000ms even if events keep firing
+        maxWait: 1000,    // Force it to run every 1000ms even if events keep firing
     });
 
     get zoomLevel(): number {
@@ -59,7 +59,7 @@ export class MapModule extends BaseModule {
             useEnhancedBlinding: true,
             useRoomCustomization: true,
             hideVanillaFog: false,
-            hideDarkLights: false
+            hideDarkLights: false,
         };
     }
 
@@ -80,27 +80,27 @@ export class MapModule extends BaseModule {
             objId: 3030, // Candelabra
             radius: 5,
             animType: "flicker",
-            color: [250, 220, 150, 0.8]
+            color: [250, 220, 150, 0.8],
         },
         {
             objId: 2090, // Lamppost
             heightOffset: 1.4,
             radius: 6,
-            color: [200, 200, 200, 0.8]
+            color: [200, 200, 200, 0.8],
         },
         {
             objId: 610, // Log Fire
             radius: 4,
             color: [250, 220, 150, 1],
             animType: "flicker",
-            heightOffset: 0.2
+            heightOffset: 0.2,
         },
         {
             objId: 611, // Log Fire (anim)
             radius: 4,
             color: [255, 194, 90, 0.9],
             animType: "flicker",
-            heightOffset: 0.2
+            heightOffset: 0.2,
         },
         {
             objId: 3050, // Fireplace left
@@ -110,7 +110,7 @@ export class MapModule extends BaseModule {
             color: [209, 137, 69, 0.8],
             animType: "flicker",
             xOffset: -0.2,
-            heightOffset: -0.25
+            heightOffset: -0.25,
         },
         {
             objId: 3050, // Fireplace right
@@ -120,7 +120,7 @@ export class MapModule extends BaseModule {
             color: [232, 174, 107, 0.8],
             animType: "flicker",
             xOffset: 0.2,
-            heightOffset: -0.25
+            heightOffset: -0.25,
         },
         {
             objId: 3050, // Fireplace center
@@ -129,29 +129,29 @@ export class MapModule extends BaseModule {
             fov: 120,
             color: [250, 220, 150, 1],
             animType: "flicker",
-            heightOffset: -0.1
+            heightOffset: -0.1,
         },
         {
             objId: 2060, // xmas tree White
             radius: 0.3,
             animType: "flicker",
             color: [255, 217, 125, 1],
-            heightOffset: 1.15
+            heightOffset: 1.15,
         },
         {
             objId: 2060, // xmas tree Red
             radius: 1,
             animType: "flicker",
             color: [182, 0, 0, 0.8],
-            heightOffset: 0.3
+            heightOffset: 0.3,
         },
         {
             objId: 2060, // xmas tree Green
             radius: 1,
             animType: "flicker",
             color: [7, 86, 0, 0.8],
-            heightOffset: -0.2
-        }
+            heightOffset: -0.2,
+        },
     ];
 
     lightingEngine: LightingEngine = new LightingEngine();
@@ -163,7 +163,7 @@ export class MapModule extends BaseModule {
     viewpoint: Viewpoint = {
         x: 500, 
         y: 450,
-        radius: this.TileUnit * 8
+        radius: this.TileUnit * 8,
     };
     
     drawingMapFlag: boolean = false;
@@ -202,13 +202,13 @@ export class MapModule extends BaseModule {
             if (this.EnhancedLightingEnabled) {
                 if (this.lightingEngine.debug && Player && Player.MapData && Player.MapData.Pos) {
                     for (let Pos = 0; Pos < ChatRoomMapViewWidth * ChatRoomMapViewHeight; Pos++) {
-                        let X = Pos % ChatRoomMapViewWidth;
-                        let Y = Math.floor(Pos / ChatRoomMapViewWidth);
-                        let MaxRange = Math.max(Math.abs(X - Player.MapData?.Pos.X), Math.abs(Y - Player?.MapData?.Pos.Y));
+                        const X = Pos % ChatRoomMapViewWidth;
+                        const Y = Math.floor(Pos / ChatRoomMapViewWidth);
+                        const MaxRange = Math.max(Math.abs(X - Player.MapData?.Pos.X), Math.abs(Y - Player?.MapData?.Pos.Y));
                         if (MaxRange > ChatRoomMapViewGetSightRange()) continue;
 
-                        let ScreenX = (X - Player.MapData.Pos.X) * this.TileUnit + ChatRoomMapViewPerceptionRange * this.TileUnit;
-                        let ScreenY = (Y - Player.MapData.Pos.Y) * this.TileUnit + ChatRoomMapViewPerceptionRange * this.TileUnit;
+                        const ScreenX = (X - Player.MapData.Pos.X) * this.TileUnit + ChatRoomMapViewPerceptionRange * this.TileUnit;
+                        const ScreenY = (Y - Player.MapData.Pos.Y) * this.TileUnit + ChatRoomMapViewPerceptionRange * this.TileUnit;
                         MainCanvas.save();
                         MainCanvas.textAlign = "left";
                         MainCanvas.textBaseline = "top";
@@ -229,11 +229,11 @@ export class MapModule extends BaseModule {
 
                 let ambientColor = "rgb(60, 60, 60)";
                 if (this.settings.useRoomCustomization && !!ChatRoomData?.Custom?.ImageFilter) {
-                    let color = this.hexToColor(ChatRoomData?.Custom?.ImageFilter, 1);
+                    const color = this.hexToColor(ChatRoomData?.Custom?.ImageFilter, 1);
                     ambientColor = `rgba(${color[0]}, ${color[1]}, ${color[2]}, ${color[3]})`;
                 }
 
-                let useViewpoint = ChatRoomMapFogIsActive() && !ChatRoomMapViewHasSuperPowers();
+                const useViewpoint = ChatRoomMapFogIsActive() && !ChatRoomMapViewHasSuperPowers();
                 
                 this.lightingEngine.render({
                     mainCtx: MainCanvas, 
@@ -241,11 +241,11 @@ export class MapModule extends BaseModule {
                     height: MainCanvas.canvas.height, 
                     lights: this.allLights, 
                     viewpoint: (useViewpoint ? this.viewpoint : undefined),
-                    ambientColor: ambientColor
+                    ambientColor: ambientColor,
                 });
 
                 if (this.settings.useEnhancedBlinding) {
-                    let blindLevel = Player.GetBlindLevel();
+                    const blindLevel = Player.GetBlindLevel();
                     if (blindLevel > 0) {
                         drawBlindfold(blindLevel, MainCanvas);
                     }
@@ -281,7 +281,7 @@ export class MapModule extends BaseModule {
         }, ModuleCategory.Map);
 
         hookFunction("CharacterLoadCanvas", 1, (args, next) => {
-            let ret = next(args);
+            const ret = next(args);
             this.ParseMapForObjects();
             return ret;
         }, ModuleCategory.Map);
@@ -298,33 +298,33 @@ export class MapModule extends BaseModule {
     }
 
     GetCharacterLights(C: Character, X: number, Y: number): Light[] {
-        let ScreenX = (X - (Player?.MapData?.Pos?.X ?? 0)) * this.TileUnit + ChatRoomMapViewPerceptionRange * this.TileUnit;
-        let ScreenY = (Y - (Player?.MapData?.Pos?.Y ?? 0)) * this.TileUnit + ChatRoomMapViewPerceptionRange * this.TileUnit;
+        const ScreenX = (X - (Player?.MapData?.Pos?.X ?? 0)) * this.TileUnit + ChatRoomMapViewPerceptionRange * this.TileUnit;
+        const ScreenY = (Y - (Player?.MapData?.Pos?.Y ?? 0)) * this.TileUnit + ChatRoomMapViewPerceptionRange * this.TileUnit;
         const CX = ScreenX + (this.TileUnit/2);
         const CY = C.IsKneeling() ? ScreenY + (this.TileUnit*0.45) : ScreenY;
 
-        let charLights: Light[] = [];
-        var handheldItem = InventoryGet(C, "ItemHandheld");
+        const charLights: Light[] = [];
+        const handheldItem = InventoryGet(C, "ItemHandheld");
         if (handheldItem?.Asset?.Name == "CandleWax") {
             charLights.push(this.NewLight(X, Y, {
                 x: CX,
                 y: CY + (this.TileUnit/10),
                 radius: this.TileUnit * 3,
                 color: [250, 220, 150, 0.5],
-                animType: "flicker"
+                animType: "flicker",
             }, C.MemberNumber));
         }
 
         if (handheldItem?.Asset?.Name == "Cigarette") {
-            let inMouth = handheldItem.Property?.TypeRecord?.typed == 0;
-            let xOffset = inMouth ? (this.TileUnit * 0.06) : (this.TileUnit * 0.09);
-            let yOffset = inMouth ? (this.TileUnit * 0.4) : (this.TileUnit * 0.02);
+            const inMouth = handheldItem.Property?.TypeRecord?.typed == 0;
+            const xOffset = inMouth ? (this.TileUnit * 0.06) : (this.TileUnit * 0.09);
+            const yOffset = inMouth ? (this.TileUnit * 0.4) : (this.TileUnit * 0.02);
             charLights.push(this.NewLight(X, Y, {
                 x: CX + xOffset,
                 y: CY - yOffset,
                 radius: this.TileUnit/4,
                 color: [250, 220, 150, 0.5],
-                animType: "flicker"
+                animType: "flicker",
             }, C.MemberNumber));
         }
 
@@ -335,7 +335,7 @@ export class MapModule extends BaseModule {
                 radius: this.TileUnit * 0.8,
                 color: [64, 183, 255, 0.4],
                 fov: 45,
-                angle: 270
+                angle: 270,
             }, C.MemberNumber));
         }
 
@@ -345,13 +345,13 @@ export class MapModule extends BaseModule {
                 y: CY,
                 radius: this.TileUnit * 2,
                 color: [173, 216, 230, 0.4],
-                animType: "pulse"
+                animType: "pulse",
             }, C.MemberNumber));
         }
 
-        let flashlight = C.Appearance.find(i => isPhraseInString(GetItemNameAndDescriptionConcat(i) || "", "flashlight", true))
-        if (!!flashlight) {
-            let searchStr = GetItemNameAndDescriptionConcat(flashlight) ?? ""; 
+        const flashlight = C.Appearance.find(i => isPhraseInString(GetItemNameAndDescriptionConcat(i) || "", "flashlight", true));
+        if (flashlight) {
+            const searchStr = GetItemNameAndDescriptionConcat(flashlight) ?? ""; 
             let fov = 40;
             if (isPhraseInString(searchStr, "narrow")) fov = 20;
             if (isPhraseInString(searchStr, "wide")) fov = 60;
@@ -361,20 +361,20 @@ export class MapModule extends BaseModule {
                 radius: C.IsPlayer() ? (this.TileUnit * 6) : (this.TileUnit * 3),
                 fov: fov,
                 color: [200, 200, 200, C.IsPlayer() ? 0.8 : 0.2],
-                animType: C.IsPlayer() ? "flashlight" : "none"
+                animType: C.IsPlayer() ? "flashlight" : "none",
             }, C.MemberNumber));
         }
 
-        if (!!(C as OtherCharacter)) {
-            let ghostState = (C as OtherCharacter).LSCG?.StateModule.states.find(state => state.type === "astral-projection");
+        if (C as OtherCharacter) {
+            const ghostState = (C as OtherCharacter).LSCG?.StateModule.states.find(state => state.type === "astral-projection");
             if (!!ghostState && ghostState.active) {
-                let hexColor = getModule<StateModule>("StateModule").AstralProjectionState.GetProjectionTintColor(C as OtherCharacter);
+                const hexColor = getModule<StateModule>("StateModule").AstralProjectionState.GetProjectionTintColor(C as OtherCharacter);
                 charLights.push(this.NewLight(X, Y, {
                     x: CX,
                     y: CY,
                     radius: this.TileUnit * 2,
                     color: this.hexToColor(hexColor, 0.6),
-                    animType: "pulse"
+                    animType: "pulse",
                 }, C.MemberNumber));
             }
         }
@@ -383,15 +383,15 @@ export class MapModule extends BaseModule {
     }
 
     get TileUnit(): number {
-        return 1000 / ((ChatRoomMapViewPerceptionRange * 2) + 1)
+        return 1000 / ((ChatRoomMapViewPerceptionRange * 2) + 1);
     }
 
     NewLight(tileX: number, tileY: number, light: Partial<Light>, playerNum: number = 0): Light {
-        const key = !!playerNum ? `${playerNum}` : `${tileX}_${tileY}`;
+        const key = playerNum ? `${playerNum}` : `${tileX}_${tileY}`;
         const customId = `L_${key}_${light.color}`;
         
-        let ScreenX = (tileX - (Player?.MapData?.Pos?.X ?? 0)) * this.TileUnit + ChatRoomMapViewPerceptionRange * this.TileUnit;
-        let ScreenY = (tileY - (Player?.MapData?.Pos?.Y ?? 0)) * this.TileUnit + ChatRoomMapViewPerceptionRange * this.TileUnit;
+        const ScreenX = (tileX - (Player?.MapData?.Pos?.X ?? 0)) * this.TileUnit + ChatRoomMapViewPerceptionRange * this.TileUnit;
+        const ScreenY = (tileY - (Player?.MapData?.Pos?.Y ?? 0)) * this.TileUnit + ChatRoomMapViewPerceptionRange * this.TileUnit;
 
         const defaults: Light = {
             id: customId,
@@ -403,8 +403,8 @@ export class MapModule extends BaseModule {
 
         return {
             ...defaults,
-            ...light
-        }
+            ...light,
+        };
     }
 
     RecomputeCharacterLights() {
@@ -424,11 +424,11 @@ export class MapModule extends BaseModule {
         let MaxVisibleRange = this.lightingVisionMax;
 	    if (MaxVisibleRange < 1) MaxVisibleRange = 1;
         this.charLights = [];
-        for (let C of ChatRoomCharacter) {
+        for (const C of ChatRoomCharacter) {
             //if (C.IsPlayer()) continue;
-            let X = C.MapData?.Pos.X ?? 0;
-            let Y = C.MapData?.Pos.Y ?? 0;
-            let MaxRange = Math.max(Math.abs(X - Player.MapData.Pos.X), Math.abs(Y - Player.MapData.Pos.Y));
+            const X = C.MapData?.Pos.X ?? 0;
+            const Y = C.MapData?.Pos.Y ?? 0;
+            const MaxRange = Math.max(Math.abs(X - Player.MapData.Pos.X), Math.abs(Y - Player.MapData.Pos.Y));
             if (MaxRange > MaxVisibleRange) continue;
             this.charLights.push(...this.GetCharacterLights(C, X, Y));
         }
@@ -440,34 +440,34 @@ export class MapModule extends BaseModule {
         if (!ChatRoomData || !ChatRoomData.MapData) return;
         if (!this.EnhancedLightingEnabled) return;
 
-        let objects: OpaqueObstacle[] = [];
+        const objects: OpaqueObstacle[] = [];
         this.mapLights = [];
 
-        let [Left, Top, Width, Height] = [0, 0, 1000, 1000];
+        const [Left, Top, Width, Height] = [0, 0, 1000, 1000];
         let MaxVisibleRange = this.lightingVisionMax;
 	    if (MaxVisibleRange < 1) MaxVisibleRange = 1;
 
-        let TileWidth = Width / ((ChatRoomMapViewPerceptionRange * 2) + 1);
-        let TileHeight = Height / ((ChatRoomMapViewPerceptionRange * 2) + 1);
+        const TileWidth = Width / ((ChatRoomMapViewPerceptionRange * 2) + 1);
+        const TileHeight = Height / ((ChatRoomMapViewPerceptionRange * 2) + 1);
 
         for (let Pos = 0; Pos < ChatRoomMapViewWidth * ChatRoomMapViewHeight; Pos++) {
-            let X = Pos % ChatRoomMapViewWidth;
-            let Y = Math.floor(Pos / ChatRoomMapViewWidth);
+            const X = Pos % ChatRoomMapViewWidth;
+            const Y = Math.floor(Pos / ChatRoomMapViewWidth);
 
-            let MaxRange = Math.max(Math.abs(X - Player.MapData.Pos.X), Math.abs(Y - Player.MapData.Pos.Y));
+            const MaxRange = Math.max(Math.abs(X - Player.MapData.Pos.X), Math.abs(Y - Player.MapData.Pos.Y));
 		    if (MaxRange > MaxVisibleRange) continue;
 
-            let ScreenX = (X - Player.MapData.Pos.X) * TileWidth + ChatRoomMapViewPerceptionRange * TileWidth;
-            let ScreenY = (Y - Player.MapData.Pos.Y) * TileHeight + ChatRoomMapViewPerceptionRange * TileWidth;
+            const ScreenX = (X - Player.MapData.Pos.X) * TileWidth + ChatRoomMapViewPerceptionRange * TileWidth;
+            const ScreenY = (Y - Player.MapData.Pos.Y) * TileHeight + ChatRoomMapViewPerceptionRange * TileWidth;
 
-            let Object = ChatRoomMapViewGetObjectAtPos(X, Y);
-            let TileData = ChatRoomMapViewGetTileAtPos(X, Y);
+            const Object = ChatRoomMapViewGetObjectAtPos(X, Y);
+            const TileData = ChatRoomMapViewGetTileAtPos(X, Y);
 
             // Parse Light Sources
-            let ObjectID = Object?.ID;
-            let lightingSources = this.lightSources.filter(ls => ls.objId == ObjectID);
+            const ObjectID = Object?.ID;
+            const lightingSources = this.lightSources.filter(ls => ls.objId == ObjectID);
             if (!!ObjectID && !!lightingSources && lightingSources.length > 0) {
-                for (let lightSource of lightingSources) {
+                for (const lightSource of lightingSources) {
                     this.mapLights.push(this.NewLight(X, Y, {
                         x: ScreenX + (TileWidth/2) + ((lightSource.xOffset ?? 0) * TileWidth),
                         y: ScreenY + ((TileHeight/2) - ((lightSource.heightOffset ?? 0) * TileHeight)),
@@ -475,7 +475,7 @@ export class MapModule extends BaseModule {
                         color: lightSource.color ?? [250, 220, 150, 0.8],
                         animType: lightSource.animType ?? "none",
                         angle: lightSource.angle,
-                        fov: lightSource.fov
+                        fov: lightSource.fov,
                     }));
                 }
             }
@@ -485,12 +485,12 @@ export class MapModule extends BaseModule {
 
             // Parse Obstacles
             if (!!TileData && TileData.Type == "Wall") {
-                let effectbottom = ScreenY + (this.TileUnit * 0.4);
+                const effectbottom = ScreenY + (this.TileUnit * 0.4);
 
                 if (this.PositionContainsDoor(X, Y)) { // Special Door Cutout
                     objects.push(...this.GetDoorObstacles(X, Y, ScreenX, ScreenY));
                 } else {
-                    let sides = this.GetWallSides(X, Y);
+                    const sides = this.GetWallSides(X, Y);
                     if (sides.isolated) {
                         objects.push(...this.GetSingleColumnWallLines(X, Y, ScreenX, ScreenY));
                     } else {
@@ -499,8 +499,8 @@ export class MapModule extends BaseModule {
                                 type: "line",
                                 points: [
                                     {x: ScreenX, y: ScreenY},
-                                    {x: ScreenX + TileWidth, y: ScreenY}
-                                ]
+                                    {x: ScreenX + TileWidth, y: ScreenY},
+                                ],
                             });
                         }
                         if (sides.left) {
@@ -508,8 +508,8 @@ export class MapModule extends BaseModule {
                                 type: "line",
                                 points: [
                                     {x: ScreenX, y: ScreenY},
-                                    {x: ScreenX, y: sides.doorBelow ? effectbottom : ScreenY + TileHeight}
-                                ]
+                                    {x: ScreenX, y: sides.doorBelow ? effectbottom : ScreenY + TileHeight},
+                                ],
                             });
                         }
                         if (sides.right) {
@@ -517,8 +517,8 @@ export class MapModule extends BaseModule {
                                 type: "line",
                                 points: [
                                     {x: ScreenX + TileWidth, y: ScreenY},
-                                    {x: ScreenX + TileWidth, y: sides.doorBelow ? effectbottom : ScreenY + TileHeight}
-                                ]
+                                    {x: ScreenX + TileWidth, y: sides.doorBelow ? effectbottom : ScreenY + TileHeight},
+                                ],
                             });
                         }
                     }
@@ -542,16 +542,16 @@ export class MapModule extends BaseModule {
 
     ParseMapEffectsForLighting(X: number, Y: number, ScreenX: number, ScreenY: number): Light[] {
         if (!ChatRoomMapManager || !ChatRoomMapManager.Map || ChatRoomMapViewEditMode == "Effect") return [];
-        let effects = ChatRoomMapManager.Map.getEffectsByXY(X, Y);
-        let lights: Light[] = [];
-        for (let effect of effects) {
+        const effects = ChatRoomMapManager.Map.getEffectsByXY(X, Y);
+        const lights: Light[] = [];
+        for (const effect of effects) {
             if (effect.Type == "StaticLighting") {
                 lights.push(this.NewLight(X, Y, {
                     x: ScreenX + (this.TileUnit/2),
                     y: ScreenY + (this.TileUnit/2),
                     radius: this.TileUnit * 5,
                     color: effect.Color ?? [250, 220, 150, 0.4],
-                    animType: "none"
+                    animType: "none",
                 }));
             }
         }
@@ -559,46 +559,46 @@ export class MapModule extends BaseModule {
     }
 
     private PositionContainsDoor(X: number, Y: number): boolean {
-        let Object = ChatRoomMapViewGetObjectAtPos(X, Y);
+        const Object = ChatRoomMapViewGetObjectAtPos(X, Y);
         return Object?.Type == "WallPath";
     }
         
     private DootAtPositionIsOpen(X: number, Y: number): boolean {
-        let alwaysOpenDoorStyles = ["WoodOpen"];
+        const alwaysOpenDoorStyles = ["WoodOpen"];
 
-        let Object = ChatRoomMapViewGetObjectAtPos(X, Y);
+        const Object = ChatRoomMapViewGetObjectAtPos(X, Y);
         return(this.PositionContainsDoor(X, Y) && 
-            (ChatRoomMapViewGetCharacterAtPos(X, Y)?.IsPlayer() || alwaysOpenDoorStyles.includes(Object?.Style ?? "")))
+            (ChatRoomMapViewGetCharacterAtPos(X, Y)?.IsPlayer() || alwaysOpenDoorStyles.includes(Object?.Style ?? "")));
     }
 
     private GetWallSides(X: number, Y: number): WallSides {
         // Find all other walls around the current tile
-        let CW = ChatRoomMapViewIsWall(X - 1, Y);
-        let CE = ChatRoomMapViewIsWall(X + 1, Y);
-        let SW = ChatRoomMapViewIsWall(X - 1, Y + 1);
-        let SC = ChatRoomMapViewIsWall(X, Y + 1);
-        let SE = ChatRoomMapViewIsWall(X + 1, Y + 1);
-        let NC = ChatRoomMapViewIsWall(X, Y - 1);
-        let NW = ChatRoomMapViewIsWall(X - 1, Y - 1);
-        let NE = ChatRoomMapViewIsWall(X + 1, Y - 1);
+        const CW = ChatRoomMapViewIsWall(X - 1, Y);
+        const CE = ChatRoomMapViewIsWall(X + 1, Y);
+        const SW = ChatRoomMapViewIsWall(X - 1, Y + 1);
+        const SC = ChatRoomMapViewIsWall(X, Y + 1);
+        const SE = ChatRoomMapViewIsWall(X + 1, Y + 1);
+        const NC = ChatRoomMapViewIsWall(X, Y - 1);
+        const NW = ChatRoomMapViewIsWall(X - 1, Y - 1);
+        const NE = ChatRoomMapViewIsWall(X + 1, Y - 1);
 
         return {
             isolated: !CW && !CE && !SW && !SC && !SE && !NC && !NW && !NE,
             left: SC && (!CW || !SW),
             right: SC && (!CE || !SE),
             top: (!NC || !SC),
-            doorBelow: this.PositionContainsDoor(X, Y + 1)
-        }
+            doorBelow: this.PositionContainsDoor(X, Y + 1),
+        };
     }
 
     private GetDoorObstacles(X: number, Y: number, ScreenX: number, ScreenY: number): OpaqueObstacle[] {
         if (!this.PositionContainsDoor(X, Y)) return [];
 
-        let effectTop = ScreenY - (this.TileUnit * 0.6);
+        const effectTop = ScreenY - (this.TileUnit * 0.6);
 
-        let isHorizontalDoor = !ChatRoomMapViewIsWall(X - 1, Y) && !ChatRoomMapViewIsWall(X + 1, Y);
+        const isHorizontalDoor = !ChatRoomMapViewIsWall(X - 1, Y) && !ChatRoomMapViewIsWall(X + 1, Y);
 
-        let lines: LineObstacle[] = []
+        const lines: LineObstacle[] = [];
         
         if (!this.DootAtPositionIsOpen(X, Y) || ChatRoomMapViewIsWall(X, Y - 1)) {
             // always block top of door when closed or if wall north
@@ -606,8 +606,8 @@ export class MapModule extends BaseModule {
                 type: "line",
                 points: [
                     {x: ScreenX, y: effectTop},
-                    {x: ScreenX + this.TileUnit, y: effectTop}
-                ]
+                    {x: ScreenX + this.TileUnit, y: effectTop},
+                ],
             });
         } 
 
@@ -617,8 +617,8 @@ export class MapModule extends BaseModule {
                     type: "line",
                     points: [
                         {x: ScreenX + this.TileUnit, y: isHorizontalDoor ? ScreenY + this.TileUnit : ScreenY},
-                        {x: ScreenX + this.TileUnit, y: effectTop}
-                    ]
+                        {x: ScreenX + this.TileUnit, y: effectTop},
+                    ],
                 });
             } 
             if (X <= (Player?.MapData?.Pos?.X ?? X)) { // Door is left of Player, block left side
@@ -626,8 +626,8 @@ export class MapModule extends BaseModule {
                     type: "line",
                     points: [
                         {x: ScreenX, y: isHorizontalDoor ? ScreenY + this.TileUnit : ScreenY},
-                        {x: ScreenX, y: effectTop}
-                    ]
+                        {x: ScreenX, y: effectTop},
+                    ],
                 });
             }
         }
@@ -636,7 +636,7 @@ export class MapModule extends BaseModule {
     }
 
     private GetSingleColumnWallLines(X: number, Y: number, ScreenX: number, ScreenY: number): OpaqueObstacle[] {
-        let fxUnit = (this.TileUnit * 0.8);
+        const fxUnit = (this.TileUnit * 0.8);
         if (this.zoomLevel <= 10) {
             return [
                 {
@@ -644,8 +644,8 @@ export class MapModule extends BaseModule {
                     center: {x: ScreenX + (this.TileUnit/2), y: ScreenY - (fxUnit/2) + (this.TileUnit * 0.2)},
                     radiusX: fxUnit / 2,
                     radiusY: fxUnit / 2,
-                    resolution: 3
-                }
+                    resolution: 3,
+                },
             ];
         } else {
             return [
@@ -653,20 +653,20 @@ export class MapModule extends BaseModule {
                     type: "line",
                     points: [
                         {x: ScreenX , y: ScreenY},
-                        {x: ScreenX + this.TileUnit, y: ScreenY}
-                    ]
-                }
-            ]
+                        {x: ScreenX + this.TileUnit, y: ScreenY},
+                    ],
+                },
+            ];
         }
     }
 
     private hexToColor(hex: string, defaultAlpha: number = 1.0): Color {
         // 1. Strip the hash if it exists
-        let cleanHex = hex.replace(/^#/, '');
+        let cleanHex = hex.replace(/^#/, "");
 
         // 2. Expand shorthand hexes (e.g., "0cf" becomes "00ccff")
         if (cleanHex.length === 3 || cleanHex.length === 4) {
-            cleanHex = cleanHex.split('').map(char => char + char).join('');
+            cleanHex = cleanHex.split("").map(char => char + char).join("");
         }
 
         // 3. Parse the red, green, and blue channels

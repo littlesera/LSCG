@@ -1,9 +1,7 @@
 import { BaseModule } from "base";
-import { getModule } from "modules";
 import { BaseSettingsModel } from "Settings/Models/base";
 import { ModuleCategory } from "Settings/setting_definitions";
 import { GetTargetCharacter, IsIncapacitated, OnActivity, SendAction, getRandomInt, removeAllHooksByModule, setOrIgnoreBlush } from "../utils";
-import { MiscModule } from "./misc";
 
 export class BoopsModule extends BaseModule {
     boops: number = 0;
@@ -12,20 +10,20 @@ export class BoopsModule extends BaseModule {
 
     get defaultSettings() {
         return <BaseSettingsModel>{
-            enabled: false
+            enabled: false,
         };
     }
 
     boopActivitied = [
         "ChatOther-ItemNose-Pet",
-        "ChatOther-ItemNose-LSCG_ItemBoop"
-    ]
+        "ChatOther-ItemNose-LSCG_ItemBoop",
+    ];
 
     load(): void {
         OnActivity(1, ModuleCategory.Boops, (data, sender, msg, metadata) => {
             if (!this.Enabled)
                 return;
-            let target = GetTargetCharacter(data);
+            const target = GetTargetCharacter(data);
             if (!!target && 
                 target == Player.MemberNumber && 
                 this.boopActivitied.indexOf(data.Content) > -1 && 
@@ -51,32 +49,32 @@ export class BoopsModule extends BaseModule {
         "%NAME% sneezes in surprise.",
         "%NAME% looks crosseyed at %POSSESSIVE% nose.",
         "%NAME% wiggles %POSSESSIVE% nose with a squeak.",
-        "%NAME% meeps!"
-    ]
+        "%NAME% meeps!",
+    ];
     
     protestBoopReactions = [
         "%NAME% swats at %OPP_NAME%'s hand.",
         "%NAME% covers %POSSESSIVE% nose protectively, squinting at %OPP_NAME%.",
-        "%NAME% snatches %OPP_NAME%'s booping finger."
-    ]
+        "%NAME% snatches %OPP_NAME%'s booping finger.",
+    ];
     
     bigProtestBoopReactions = [
-        "%NAME%'s nose overloads and shuts down."
-    ]
+        "%NAME%'s nose overloads and shuts down.",
+    ];
     
     boundBoopReactions = [
         "%NAME% struggles in %POSSESSIVE% bindings, huffing.",
         "%NAME% frowns and squirms in %POSSESSIVE% bindings.",
         "%NAME% whimpers in %POSSESSIVE% bondage.",
         "%NAME% groans helplessly.",
-        "%NAME% whines and wiggles in %POSSESSIVE% bondage."
-    ]
+        "%NAME% whines and wiggles in %POSSESSIVE% bondage.",
+    ];
     
     BoopReact(booperId: number | undefined) {
         if (this.boopShutdown || !booperId)
             return;
     
-        let booper = ChatRoomCharacter.find(c => c.MemberNumber == booperId);
+        const booper = ChatRoomCharacter.find(c => c.MemberNumber == booperId);
         if (!booper)
             return;
     

@@ -1,7 +1,7 @@
 import { StateModule } from "Modules/states";
 import { StateConfig } from "Settings/Models/states";
 import { getModule } from "modules";
-import { ICONS, SendAction, getRandomInt, settingsSave } from "utils";
+import { SendAction, settingsSave } from "utils";
 import { emit } from "api/events";
 import type { LSCGStateRecoverReason } from "api/types";
 
@@ -31,7 +31,7 @@ export abstract class BaseState {
         Sight: "false",
         Wardrobe: "false",
         Move: "false",
-        Speech: "false"
+        Speech: "false",
     };
 
     _state : StateModule | undefined;
@@ -100,7 +100,7 @@ export abstract class BaseState {
 
     Recover(emote?: boolean): BaseState | undefined {
         const wasActive = this.config.active;
-        if (emote) SendAction(`%NAME%'s ${this.Type} state wears off.`)
+        if (emote) SendAction(`%NAME%'s ${this.Type} state wears off.`);
         this.config.active = false;
         this.config.recoveredAt = new Date().getTime();
         settingsSave(true);
@@ -111,7 +111,7 @@ export abstract class BaseState {
 
     Tick(now: number): void {
         if (!!this.config.duration && this.config.duration > 0) {
-            let isExpired = this.config.active && this.config.activatedAt + this.config.duration < now;
+            const isExpired = this.config.active && this.config.activatedAt + this.config.duration < now;
             if (isExpired)
                 this.RecoverFor("expired", true);
         }

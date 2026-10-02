@@ -66,7 +66,7 @@ export function collarRows(ctx: KitContext, s: CollarPublicSettingsModel, wearer
 				setMessage("Collar updated");
 				s.collar = {
 					name: collar.Craft?.Name ?? collar.Asset.Name,
-					creator: collar.Craft?.MemberNumber ?? 0
+					creator: collar.Craft?.MemberNumber ?? 0,
 				} as CollarModel;
 				ctx.changed();
 			},
@@ -106,9 +106,9 @@ export class GuiCollar extends GuiSubscreen {
 
 	get help(): HelpInfo {
 		return {
-			label: 'Open Breathplay Wiki on GitHub',
-			link: 'https://github.com/littlesera/LSCG/wiki/Breathplay'
-		}
+			label: "Open Breathplay Wiki on GitHub",
+			link: "https://github.com/littlesera/LSCG/wiki/Breathplay",
+		};
 	}
 
 	private build(): Node {
@@ -180,7 +180,7 @@ export class GuiCollar extends GuiSubscreen {
 
 	Load(): void {
 		// Load up module settings to ensure defaults..
-		getModule<MiscModule>("MiscModule")?.settings;
+		void getModule<MiscModule>("MiscModule")?.settings;
 		super.Load();
 		this._host.mount();
 	}

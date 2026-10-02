@@ -4,6 +4,7 @@ export interface BaseSettingsModel {
     enabled: boolean;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type -- the base each module's stats extend
 export interface ModuleStats {
 
 }

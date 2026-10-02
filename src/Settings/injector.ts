@@ -25,9 +25,9 @@ export class GuiInjector extends GuiSubscreen {
 
 	get help(): HelpInfo {
 		return {
-			label: 'Open Drug Enhancements Wiki on GitHub',
-			link: 'https://github.com/littlesera/LSCG/wiki/Drug-Enhancements-and-Net-Gun'
-		}
+			label: "Open Drug Enhancements Wiki on GitHub",
+			link: "https://github.com/littlesera/LSCG/wiki/Drug-Enhancements-and-Net-Gun",
+		};
 	}
 
 	private build(): Node {
@@ -37,7 +37,7 @@ export class GuiInjector extends GuiSubscreen {
 
 	Load(): void {
 		// Load up module settings to ensure defaults..
-		getModule<MiscModule>("MiscModule")?.settings;
+		void getModule<MiscModule>("MiscModule")?.settings;
 		super.Load();
 		this._host.mount();
 	}

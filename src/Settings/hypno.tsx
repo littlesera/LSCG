@@ -28,9 +28,9 @@ export class GuiHypno extends GuiSubscreen {
 
 	get help(): HelpInfo {
 		return {
-			label: 'Open Hypnosis Wiki on GitHub',
-			link: 'https://github.com/littlesera/LSCG/wiki/Hypnosis'
-		}
+			label: "Open Hypnosis Wiki on GitHub",
+			link: "https://github.com/littlesera/LSCG/wiki/Hypnosis",
+		};
 	}
 
 	get ActualInstructions(): LSCGHypnoInstruction[] {

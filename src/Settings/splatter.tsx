@@ -29,9 +29,9 @@ export class GuiSplatter extends GuiSubscreen {
 
 	get help(): HelpInfo {
 		return {
-			label: 'Open Splatter Wiki on GitHub',
-			link: 'https://github.com/littlesera/LSCG/wiki/Splatters'
-		}
+			label: "Open Splatter Wiki on GitHub",
+			link: "https://github.com/littlesera/LSCG/wiki/Splatters",
+		};
 	}
 
 	private build(): Node {

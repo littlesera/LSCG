@@ -23,7 +23,7 @@ export class RedressedState extends ItemBundleBaseState {
     }
 
     static ItemIsAllowed(item: ItemBundle): boolean {
-        let asset = AssetGet(Player.AssetFamily, item.Group, item.Name);
+        const asset = AssetGet(Player.AssetFamily, item.Group, item.Name);
         if (!asset)
             return false;
         return RedressedState.AssetIsAllowed(asset);
@@ -54,7 +54,7 @@ export class RedressedState extends ItemBundleBaseState {
         if (!spell)
             return RedressedState.AssetIsAllowed(asset);
 
-        let neckExclusions: AssetGroupItemName[] = Player.LSCG.MagicModule.allowOutfitToChangeNeckItems ? [] : ["ItemNeck", "ItemNeckAccessories", "ItemNeckRestraints"];
+        const neckExclusions: AssetGroupItemName[] = Player.LSCG.MagicModule.allowOutfitToChangeNeckItems ? [] : ["ItemNeck", "ItemNeckAccessories", "ItemNeckRestraints"];
         switch(spell.Outfit?.Option) {
             case OutfitOption.clothes_only:
                 return isCloth(asset);
@@ -71,8 +71,7 @@ export class RedressedState extends ItemBundleBaseState {
         if (!skipStore && !this.StoredOutfit)
             this.SetStoredOutfit();
 
-        const cosplayBlocked = Player.OnlineSharedSettings?.BlockBodyCosplay ?? true;
-        let appearance = Player.Appearance;
+        const appearance = Player.Appearance;
         for (let i = appearance.length - 1; i >= 0; i--) {
             const asset = appearance[i].Asset;
             if (this.DoChange(asset, spell)) {
@@ -84,9 +83,9 @@ export class RedressedState extends ItemBundleBaseState {
 
     Apply(spell: SpellDefinition, memberNumber?: number | undefined, duration?: number, emote?: boolean | undefined): BaseState {
         try{
-            let outfit = spell.Outfit;
-            if (!!outfit) {
-                let outfitList = this.GetConfiguredItemBundles(outfit.Code, item => RedressedState.ItemIsAllowed(item));
+            const outfit = spell.Outfit;
+            if (outfit) {
+                const outfitList = this.GetConfiguredItemBundles(outfit.Code, item => RedressedState.ItemIsAllowed(item));
                 if (!!outfitList && typeof outfitList == "object") {
                     this.StripCharacter(false, spell, outfitList);
                     this.WearMany(outfitList, spell, false, memberNumber);
@@ -179,12 +178,12 @@ export class RedressedState extends ItemBundleBaseState {
     WearMany(items: ItemBundle[], spell: SpellDefinition, isRestore: boolean = false, memberNumber: number | undefined = undefined) {
         if (!memberNumber || memberNumber == -1)
             memberNumber = Player.MemberNumber ?? 0;
-        let sender = !!memberNumber ? getCharacter(memberNumber) : null;
+        const sender = memberNumber ? getCharacter(memberNumber) : null;
         items.forEach(item => {
-            let asset = AssetGet(Player.AssetFamily, item.Group, item.Name);
+            const asset = AssetGet(Player.AssetFamily, item.Group, item.Name);
             if (!!asset && this.DoChange(asset, spell)) {
-                let isBlocked = this.InventoryBlockedOrLimited(sender, AppearanceItem.fromAsset(asset));
-                let isRoomDisallowed = !InventoryChatRoomAllow(asset?.Category ?? []);
+                const isBlocked = this.InventoryBlockedOrLimited(sender, AppearanceItem.fromAsset(asset));
+                const isRoomDisallowed = !InventoryChatRoomAllow(asset?.Category ?? []);
                 if (isRestore || !(isBlocked || isRoomDisallowed)) {
                     ApplyItem(item, memberNumber, true, !isRestore);
                 }

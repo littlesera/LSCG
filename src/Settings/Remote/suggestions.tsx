@@ -8,7 +8,7 @@ import { HypnoInstruction, HypnoModule, HypnoSuggestion } from "Modules/hypno";
 import { getModule } from "modules";
 import { CommandListener, CoreModule } from "Modules/core";
 import { DomSettingsHost } from "Settings/domSettingsHost";
-import { ButtonRow, CheckboxRow, KitContext, Notice, openDialog, Panel, RuleTable, SectionLabel, SelectOption, SelectRow, TextRow } from "Dom/kit";
+import { ButtonRow, CheckboxRow, KitContext, Notice, openDialog, Panel, RuleTable, SectionLabel, SelectOption, SelectRow, TextRow, ZonePicker } from "Dom/kit";
 
 export interface PoseSelection {
 	upper: AssetPoseName | undefined | "";
@@ -74,20 +74,19 @@ export class RemoteSuggestions extends RemoteHypnoBase {
 
 	get help(): HelpInfo {
 		return {
-			label: 'Open Hypnotic Suggestion Wiki on GitHub',
-			link: 'https://github.com/littlesera/LSCG/wiki/Hypnotic-Suggestions'
-		}
+			label: "Open Hypnotic Suggestion Wiki on GitHub",
+			link: "https://github.com/littlesera/LSCG/wiki/Hypnotic-Suggestions",
+		};
 	}
 
 	get disabledReason(): string {
-		var memberIdIsAllowed = ServerChatRoomGetAllowItem(Player, this.Character);
+		let memberIdIsAllowed = ServerChatRoomGetAllowItem(Player, this.Character);
 		if (this.overrideMemberIds.length > 0)
 			memberIdIsAllowed = this.overrideMemberIds.indexOf(Player.MemberNumber!) > -1;
 
-		var passTranceReq = this.Character.LSCG.StateModule.states.find(s => s.type == "hypnotized")?.active ?? false;
-		var passHypnotizerReq = !this.settings.suggestionRequireHypnotizer || this.Character.LSCG.StateModule.states.find(s => s.type == "hypnotized")?.activatedBy == Player.MemberNumber;
+		const passTranceReq = this.Character.LSCG.StateModule.states.find(s => s.type == "hypnotized")?.active ?? false;
+		const passHypnotizerReq = !this.settings.suggestionRequireHypnotizer || this.Character.LSCG.StateModule.states.find(s => s.type == "hypnotized")?.activatedBy == Player.MemberNumber;
 
-		let reason;
 		if (!memberIdIsAllowed)
 			return replace_template("You do not have access to %OPP_POSSESSIVE% mind...", this.Character);
 		if (!passTranceReq)
@@ -95,25 +94,25 @@ export class RemoteSuggestions extends RemoteHypnoBase {
 		if (!passHypnotizerReq)
 			return replace_template("%OPP_NAME% seems suggestable, but not to you...", this.Character);
 		if (!this.settings.allowSuggestions)
-			return replace_template("%OPP_NAME% is resisting any hypnotic suggestions...", this.Character)
+			return replace_template("%OPP_NAME% is resisting any hypnotic suggestions...", this.Character);
 		else
 			return "Section is Unavailable";
 	}
 
 	get enabled(): boolean {
-		var memberIdIsAllowed = ServerChatRoomGetAllowItem(Player, this.Character);
+		let memberIdIsAllowed = ServerChatRoomGetAllowItem(Player, this.Character);
 		if (this.overrideMemberIds.length > 0)
 			memberIdIsAllowed = this.overrideMemberIds.indexOf(Player.MemberNumber!) > -1;
 
-		var passTranceReq = this.Character.LSCG.StateModule.states.find(s => s.type == "hypnotized")?.active ?? false;
-		var passHypnotizerReq = !this.settings.suggestionRequireHypnotizer || this.Character.LSCG.StateModule.states.find(s => s.type == "hypnotized")?.activatedBy == Player.MemberNumber;
+		const passTranceReq = this.Character.LSCG.StateModule.states.find(s => s.type == "hypnotized")?.active ?? false;
+		const passHypnotizerReq = !this.settings.suggestionRequireHypnotizer || this.Character.LSCG.StateModule.states.find(s => s.type == "hypnotized")?.activatedBy == Player.MemberNumber;
 
 		return this.settings.enabled && 
 				(this.Character.IsOwnedByPlayer() ||
 					(this.settings.allowSuggestions &&
 					memberIdIsAllowed &&
 					passTranceReq &&
-					passHypnotizerReq))
+					passHypnotizerReq));
 	}
 
 
@@ -125,7 +124,7 @@ export class RemoteSuggestions extends RemoteHypnoBase {
 	Load(): void {
 		this.Suggestions = undefined;
 		this.RemovedSuggestions = [];
-		if (!!this.Character.MemberNumber)
+		if (this.Character.MemberNumber)
 			sendLSCGCommandBeep(this.Character.MemberNumber, "get-suggestions", []);
 
 		getModule<CoreModule>("CoreModule").RegisterCommandListener({
@@ -136,7 +135,7 @@ export class RemoteSuggestions extends RemoteHypnoBase {
 					this.Suggestions = msg.command?.args.find(a => a.name == "suggestions")?.value as HypnoSuggestion[];
 				super.Load();
 				this._host.remount();
-			}
+			},
 		} as CommandListener);
 		this._host.mount();
 	}
@@ -152,13 +151,13 @@ export class RemoteSuggestions extends RemoteHypnoBase {
 		this._host.unmount();
 		super.Exit();
 
-		if (!!this.Character.MemberNumber)
+		if (this.Character.MemberNumber)
 			sendLSCGCommandBeep(this.Character.MemberNumber, "set-suggestions", [{
 				name: "suggestions",
-				value: this.Suggestions?.filter(s => !!s.trigger) ?? []
+				value: this.Suggestions?.filter(s => !!s.trigger) ?? [],
 			}, {
 				name: "removed",
-				value: this.RemovedSuggestions
+				value: this.RemovedSuggestions,
 			}]);
 		getModule<CoreModule>("CoreModule").RemoveCommandListenerById("remote_suggestion");
 	}
@@ -330,16 +329,20 @@ export class RemoteSuggestions extends RemoteHypnoBase {
 						})
 						: Notice("Please Select a Zone"));
 				});
+				const pickZone = (name: string) => {
+					sel.group = name;
+					const names = activities().map(a => a.Name);
+					if (names.indexOf(sel.name as ActivityName) < 0) sel.name = names[0] ?? "";
+				};
 				return [
+					ZonePicker(ctx, {
+						character: this.Character, groups: () => groups,
+						selected: () => sel.group, highlighted: g => g.Name == sel.group, onPick: g => pickZone(g.Name),
+					}),
 					SelectRow(ctx, {
-						label: "Zone", description: "Where on the body the activity is done.",
+						label: "Zone", description: "Click a zone on the character, or pick it here.",
 						options: [{ value: "", label: "— choose zone —" }, ...groups.map(g => ({ value: g.Name, label: g.Description || g.Name }))],
-						get: () => sel.group,
-						set: v => {
-							sel.group = v;
-							const names = activities().map(a => a.Name);
-							if (names.indexOf(sel.name as ActivityName) < 0) sel.name = names[0] ?? "";
-						},
+						get: () => sel.group, set: pickZone,
 					}),
 					activityRow,
 				];

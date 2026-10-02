@@ -26,14 +26,14 @@ export class GuiActivities extends GuiSubscreen {
 
 	get help(): HelpInfo {
 		return {
-			label: 'Open Activity Wiki on GitHub',
-			link: 'https://github.com/littlesera/LSCG/wiki/Custom-Activities'
-		}
+			label: "Open Activity Wiki on GitHub",
+			link: "https://github.com/littlesera/LSCG/wiki/Custom-Activities",
+		};
 	}
 
 	get currentActivityEntry(): ActivityEntryModel | undefined {
-		let actName = getActivities(undefined, false)[this.activityIndex]?.Name;
-		let groupName = Player.FocusGroup?.Name ?? "";
+		const actName = getActivities(undefined, false)[this.activityIndex]?.Name;
+		const groupName = Player.FocusGroup?.Name ?? "";
 		return this.getActivityEntry(actName, groupName);
 	}
 
@@ -118,14 +118,14 @@ export class GuiActivities extends GuiSubscreen {
 	}
 
 	Run() {
-		let tmp = GuiSubscreen.START_X;
+		const tmp = GuiSubscreen.START_X;
 		GuiSubscreen.START_X = OPTIONS_X;
 		super.Run();
 		GuiSubscreen.START_X = tmp;
 		DrawCharacter(Player, 50, 50, 0.9, false);
 
 		// Draws all the available character zones
-		for (let Group of AssetGroup) {
+		for (const Group of AssetGroup) {
 			if (Group.IsItem() && !Group.MirrorActivitiesFrom && AssetActivitiesForGroup("Female3DCG", Group.Name).length)
 				DrawAssetGroupZone(Player, Group.Zone, 0.9, 50, 50, 1, "#808080FF", 3, getZoneColor(Group.Name, this.settings.activities.some(a => a.group == Group.Name)));
 		}
@@ -176,7 +176,7 @@ export class GuiActivities extends GuiSubscreen {
 			awakener: false,
 			orgasm: false,
 			orgasmThreshold: 75,
-			allowedMemberIds: []
+			allowedMemberIds: [],
 		} as ActivityEntryModel;
 	}
 

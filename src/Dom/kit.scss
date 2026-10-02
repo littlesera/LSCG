@@ -53,9 +53,35 @@
 		align-items: center;
 		column-gap: min(2dvh, 1dvw);
 
+		padding: min(1dvh, 0.5dvw) min(1.5dvh, 0.75dvw);
+
 		&[hidden] {
 			display: none;
 		}
+
+		// Alternate shading so each setting reads as its own row.
+		&:nth-child(even of .lscg-kit-row:not([hidden])) {
+			background-color: color-mix(in srgb, var(--lscg-background-color) 92%, black 8%);
+		}
+
+		// A little smaller than the global checkbox, still centred in its box.
+		input[type="checkbox"] {
+			height: min(5.5dvh, 2.75dvw);
+			width: min(5.5dvh, 2.75dvw);
+
+			&::before {
+				height: min(3.6dvh, 1.8dvw);
+				width: min(3.6dvh, 1.8dvw);
+			}
+		}
+	}
+
+	.lscg-kit-zones {
+		display: block;
+		justify-self: center;
+		height: min(55dvh, 27.5dvw);
+		aspect-ratio: 1 / 2;
+		cursor: pointer;
 	}
 
 	.lscg-kit-label {
@@ -152,9 +178,18 @@
 			box-sizing: border-box;
 		}
 
+		td:has(> input[type="checkbox"]) {
+			text-align: center;
+		}
+
 		input[type="checkbox"] {
-			height: min(5dvh, 2.5dvw);
-			width: min(5dvh, 2.5dvw);
+			height: min(4.5dvh, 2.25dvw);
+			width: min(4.5dvh, 2.25dvw);
+
+			&::before {
+				height: min(3dvh, 1.5dvw);
+				width: min(3dvh, 1.5dvw);
+			}
 		}
 
 		tbody tr:nth-child(even) {

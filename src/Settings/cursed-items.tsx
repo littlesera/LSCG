@@ -120,9 +120,9 @@ export class GuiCursedItems extends GuiSubscreen {
 
 	get help(): HelpInfo {
 		return {
-			label: 'Open Cursed Items Wiki on GitHub',
-			link: 'https://github.com/littlesera/LSCG/wiki/Cursed-Items'
-		}
+			label: "Open Cursed Items Wiki on GitHub",
+			link: "https://github.com/littlesera/LSCG/wiki/Cursed-Items",
+		};
 	}
 
 	private build(): Node {

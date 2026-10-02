@@ -182,6 +182,68 @@ export function SectionLabel(text: string, description?: string): HTMLElement {
     ) as HTMLElement;
 }
 
+export interface ZonePickerProps {
+    character: Character;
+    /** The zones that can be picked, e.g. body groups that have activities. */
+    groups: () => AssetGroup[];
+    /** The picked group's name, outlined. */
+    selected: () => string | undefined;
+    /** Zones drawn filled green, e.g. ones that already have a setting. */
+    highlighted?: (group: AssetGroup) => boolean;
+    onPick: (group: AssetGroup) => void;
+}
+
+/** A character with clickable body zones, as in BC's own dialogs. BC draws it: MainCanvas is pointed at this canvas
+ *  while drawing, and clicks are tested with DialogClickedInZone, so zones line up exactly. Redraws every frame while
+ *  on the page, so the character shows once its images load. */
+export function ZonePicker(ctx: KitContext, props: ZonePickerProps): HTMLCanvasElement {
+    const C = props.character;
+    const canvas = <canvas class="lscg-kit-zones" width={500} height={1000} role="img" aria-label="Body zones" onClick={(e: MouseEvent) => {
+        const r = canvas.getBoundingClientRect();
+        const [mouseX, mouseY] = [MouseX, MouseY];
+        MouseX = (e.clientX - r.left) * canvas.width / r.width;
+        MouseY = (e.clientY - r.top) * canvas.height / r.height;
+        try {
+            const group = props.groups().find(g => g.Zone?.some(z => DialogClickedInZone(C, z, 1, 0, 0, 1)));
+            if (group) {
+                props.onPick(group);
+                ctx.changed();
+            }
+        } finally {
+            [MouseX, MouseY] = [mouseX, mouseY];
+        }
+    }} /> as HTMLCanvasElement;
+    const draw = canvas.getContext("2d")!;
+
+    const render = () => {
+        const main = MainCanvas;
+        MainCanvas = draw;
+        try {
+            draw.clearRect(0, 0, canvas.width, canvas.height);
+            DrawCharacter(C, 0, 0, 1, false, draw);
+            for (const g of props.groups())
+                if (g.Zone) DrawAssetGroupZone(C, g.Zone, 1, 0, 0, 1, "#808080FF", 3, props.highlighted?.(g) ? "#00FF0044" : "#80808044");
+            const picked = props.groups().find(g => g.Name === props.selected());
+            if (picked?.Zone) DrawAssetGroupZone(C, picked.Zone, 1, 0, 0, 1, "cyan");
+        } finally {
+            MainCanvas = main;
+        }
+    };
+    // ponytail: per-frame redraw; stops once removed from the page (or if never added within ~5s).
+    let attached = false, waited = 0;
+    const frame = () => {
+        if (canvas.isConnected) {
+            attached = true;
+            render();
+        } else if (attached || ++waited > 300) {
+            return;
+        }
+        requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
+    return canvas;
+}
+
 /** A single scrolling page of rows, for screens too short to need tabs. */
 export function Panel(children: HTMLElement[]): HTMLElement {
     return <div class="lscg-kit-body scroll-box"><div class="lscg-kit-panel">{children}</div></div> as HTMLElement;

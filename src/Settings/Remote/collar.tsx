@@ -16,13 +16,13 @@ export class RemoteCollar extends RemoteGuiSubscreen {
 
 	get help(): HelpInfo {
 		return {
-			label: 'Open Breathplay Wiki on GitHub',
-			link: 'https://github.com/littlesera/LSCG/wiki/Breathplay'
-		}
+			label: "Open Breathplay Wiki on GitHub",
+			link: "https://github.com/littlesera/LSCG/wiki/Breathplay",
+		};
 	}
 
 	get allowedMemberIds(): number[] {
-		let idList = GetDelimitedList(this.settings.allowedMembers).map(id => +id).filter(id => id > 0) ?? [];
+		const idList = GetDelimitedList(this.settings.allowedMembers).map(id => +id).filter(id => id > 0) ?? [];
 		if (this.settings.limitToCrafted && this.settings.collar.creator >= 0)
 			idList.push(this.settings.collar.creator);
 		return idList;
@@ -32,7 +32,7 @@ export class RemoteCollar extends RemoteGuiSubscreen {
 		if (!this.settings.collarPurchased && !this.Character.IsOwnedByPlayer())
 			return replace_template("You must be the owner to purchase this module for %OPP_NAME%...", this.Character);
 
-		var memberIdIsAllowed = ServerChatRoomGetAllowItem(Player, this.Character);
+		let memberIdIsAllowed = ServerChatRoomGetAllowItem(Player, this.Character);
 		if (this.allowedMemberIds.length > 0)
 			memberIdIsAllowed = this.allowedMemberIds.indexOf(Player.MemberNumber!) > -1;
 
@@ -46,13 +46,13 @@ export class RemoteCollar extends RemoteGuiSubscreen {
 		if (!this.settings.collarPurchased)
 			return this.Character.IsOwnedByPlayer();
 
-		var memberIdIsAllowed = ServerChatRoomGetAllowItem(Player, this.Character);
+		let memberIdIsAllowed = ServerChatRoomGetAllowItem(Player, this.Character);
 		if (this.allowedMemberIds.length > 0)
 			memberIdIsAllowed = this.allowedMemberIds.indexOf(Player.MemberNumber!) > -1;
 
 		return this.settings.remoteAccess && 
 				(this.Character.IsOwnedByPlayer() ||
-					(this.settings.enabled && memberIdIsAllowed))
+					(this.settings.enabled && memberIdIsAllowed));
 	}
 
 	get icon(): string {

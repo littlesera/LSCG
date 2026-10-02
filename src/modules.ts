@@ -39,7 +39,7 @@ export function Activities(): ActivityModule {
 }
 
 export function DrugKeywords(): string[] {
-	let settings = getModule<InjectorModule>("InjectorModule")?.settings;
+	const settings = getModule<InjectorModule>("InjectorModule")?.settings;
 	if (!settings)
 		return [];
 	return settings?.hornyKeywords.concat(settings?.sedativeKeywords).concat(settings?.mindControlKeywords).concat(settings?.cureKeywords);

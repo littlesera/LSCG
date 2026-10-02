@@ -54,12 +54,12 @@ export const QUICK_TRIGGER_TIME_MS = 3 * 60 * 1000; // 3min
 export const SLOW_TRIGGER_TIME_MS = 30 * 60 * 1000; // 30min
 
 class PropertyChangeResult {
-    propertyChanged: boolean
-    newValueStr: string | undefined
+    propertyChanged: boolean;
+    newValueStr: string | undefined;
 
     constructor(propertyChanged: boolean, newValueStr: string | undefined) {
-        this.propertyChanged = propertyChanged
-        this.newValueStr = newValueStr
+        this.propertyChanged = propertyChanged;
+        this.newValueStr = newValueStr;
     }
 
     // Helper methods
@@ -69,7 +69,7 @@ class PropertyChangeResult {
     }
 
     static changedHidden() {
-        return PropertyChangeResult.changed('<hidden>');
+        return PropertyChangeResult.changed("<hidden>");
     }
 
     static unchanged() {
@@ -84,7 +84,7 @@ type PropertyChangeRequest = {
     propertyName: string
 }
 
-type ChangeLogic = 'random' | 'evolving';
+type ChangeLogic = "random" | "evolving";
 
 /*
 ***** A class to change item's properties (i.e. other options not identified in data's options) *****
@@ -96,7 +96,7 @@ class PropertyMutator {
             return [];
         }
         // editableProperty are others options that are not part of an extended item's options such as checkbox / voice command trigger word
-        let editableProperty = [
+        const editableProperty = [
             "AutoPunish",
             "PunishActivity",
             "PunishOrgasm",
@@ -108,12 +108,12 @@ class PropertyMutator {
             "PunishProhibitedSpeech",
             "PunishRequiredSpeech",
             "PunishProhibitedSpeechWords",
-            "PunishRequiredSpeechWord"
-        ]
+            "PunishRequiredSpeechWord",
+        ];
 
-        let existingProperty: string[] = [];
+        const existingProperty: string[] = [];
         if (baselineProperty) {
-            for (let property of editableProperty) {
+            for (const property of editableProperty) {
                 if (property in baselineProperty) {
                     existingProperty.push(property);
                 }
@@ -125,7 +125,7 @@ class PropertyMutator {
     // Change specific properties that are part of the options of an item
     // This is based on itemData.baselineProperty that provide us all special properties of an item
     changeEditableProperty(item: Item, itemData: TypedItemData | ModularItemData | VibratingItemData, logic: ChangeLogic): boolean {
-        let newProperty: ItemProperties | undefined = CommonCloneDeep(item.Property);
+        const newProperty: ItemProperties | undefined = CommonCloneDeep(item.Property);
         if (!item.Property || !newProperty) {
             console.warn("changeEditableProperty: item.Property or newProperty is undefined !");
             return false;
@@ -133,7 +133,7 @@ class PropertyMutator {
 
         // Get all the item's property that we can modify
         // EditableProperty is our handcrafted list of specific properties that we can modify
-        let existingProperty: string[] = PropertyMutator.geEditablePropertyInBaseline(itemData.baselineProperty);
+        const existingProperty: string[] = PropertyMutator.geEditablePropertyInBaseline(itemData.baselineProperty);
         if (existingProperty.length <= 0) {
             return false;
         }
@@ -143,9 +143,9 @@ class PropertyMutator {
         let propertyChangeResult: PropertyChangeResult | undefined = undefined;
         if (existingProperty.length > 0) {
             //console.log("changeEditableProperty: existingProperty: ", existingProperty);
-            if (logic === 'random') {
-                let maxRandom = existingProperty.length;
-                let propertyIndex = Math.floor(Math.random() * maxRandom);
+            if (logic === "random") {
+                const maxRandom = existingProperty.length;
+                const propertyIndex = Math.floor(Math.random() * maxRandom);
                 selectedProperty = existingProperty[propertyIndex];
 
                 // References of the variable types of all editable properties
@@ -167,7 +167,7 @@ class PropertyMutator {
                     newProperties: newProperty,
                     itemData: itemData,
                     propertyName: selectedProperty,
-                }
+                };
 
                 // boolean properties
                 if (PropertyMutator.BOOLEAN_PROPERTIES.has(selectedProperty)) {
@@ -183,14 +183,14 @@ class PropertyMutator {
                 }
             } else if (logic === "evolving") {
                 // Find the next property to set
-                for (let property of existingProperty) {
+                for (const property of existingProperty) {
                     selectedProperty = property;
                     const request: PropertyChangeRequest = {
                         originalProperties: item.Property,
                         newProperties: newProperty,
                         itemData: itemData,
                         propertyName: selectedProperty,
-                    }
+                    };
 
                     // boolean properties
                     if (PropertyMutator.BOOLEAN_PROPERTIES.has(selectedProperty)) {
@@ -216,7 +216,7 @@ class PropertyMutator {
         if (propertyChangeResult?.propertyChanged) {
             // Update item
             ExtendedItemSetProperty(Player, item, item.Property, newProperty, true, true);
-            let itemName = (item?.Craft?.Name ?? item.Asset.Name);
+            const itemName = (item?.Craft?.Name ?? item.Asset.Name);
             // Idk why but this AssetTextGet almost always fail to retrieve the correct text.
             // And because the string to retrieve the asset's text don't follow any logics, we probably cannot do better
             let propertyName = AssetTextGet(item.Asset.Name + selectedProperty) ?? selectedProperty;
@@ -258,7 +258,7 @@ class PropertyMutator {
             this.setItemPropertyValue(
                 request.newProperties,
                 "PunishProhibitedSpeechWords",
-                request.itemData.baselineProperty.PunishProhibitedSpeechWords
+                request.itemData.baselineProperty.PunishProhibitedSpeechWords,
             );
         } else if (request.propertyName == "PunishRequiredSpeech" && request.itemData.baselineProperty?.PunishRequiredSpeechWord) {
             this.setItemPropertyValue(request.newProperties, "PunishRequiredSpeechWord", request.itemData.baselineProperty.PunishRequiredSpeechWord);
@@ -332,7 +332,7 @@ class PropertyMutator {
         let nbWordTodo = baselineTriggerValues.split(",").length;
         let newTriggerValues = "";
 
-        let commonWordList: string[] = [
+        const commonWordList: string[] = [
             "Hi",
             "Goodbye",
             "Bye",
@@ -390,8 +390,8 @@ class PropertyMutator {
             commonWordList.push(Player.Nickname);
 
         while (nbWordTodo > 0 && commonWordList.length > 0) {
-            let maxRandom = commonWordList.length;
-            let wordIndex = Math.floor(Math.random() * maxRandom);
+            const maxRandom = commonWordList.length;
+            const wordIndex = Math.floor(Math.random() * maxRandom);
 
             if (newTriggerValues.length == 0) {
                 newTriggerValues = commonWordList[wordIndex];
@@ -423,14 +423,14 @@ export class ChaoticItemModule extends BaseModule {
 
     get defaultSettings() {
         return <BaseSettingsModel>{
-            enabled: true
+            enabled: true,
         };
     }
 
     load(): void {
-        this.defaultTriggerInterval = setInterval(() => { this.checkForChaoticItem("default") }, DEFAULT_TRIGGER_TIME_MS);
-        this.quickTriggerInterval = setInterval(() => { this.checkForChaoticItem("quick") }, QUICK_TRIGGER_TIME_MS);
-        this.slowTriggerInterval = setInterval(() => { this.checkForChaoticItem("slow") }, SLOW_TRIGGER_TIME_MS);
+        this.defaultTriggerInterval = setInterval(() => { this.checkForChaoticItem("default"); }, DEFAULT_TRIGGER_TIME_MS);
+        this.quickTriggerInterval = setInterval(() => { this.checkForChaoticItem("quick"); }, QUICK_TRIGGER_TIME_MS);
+        this.slowTriggerInterval = setInterval(() => { this.checkForChaoticItem("slow"); }, SLOW_TRIGGER_TIME_MS);
 
         // Strip the square parenthesis from the description keywords and italicize them
         hookFunction("CraftingDescription.DecodeToHTML", 1, (args, next) => {
@@ -497,13 +497,13 @@ export class ChaoticItemModule extends BaseModule {
         if (!this.Enabled)
             return;
 
-        let chaoticItems = Player.Appearance.filter(a => {
-            let itemStr = GetItemNameAndDescriptionConcat(a) ?? "";
+        const chaoticItems = Player.Appearance.filter(a => {
+            const itemStr = GetItemNameAndDescriptionConcat(a) ?? "";
             return a.Asset.Group.Name != "ItemHandheld" && (chaoticKeywords.some(k => isPhraseInString(itemStr, k)) || evolvingKeywords.some(k => isPhraseInString(itemStr, k)));
         });
 
         // Filter the items that correspond to the correct trigger timer
-        let filteredChaoticItems: Item[] = [];
+        const filteredChaoticItems: Item[] = [];
 
         // Default filter: no slow nor quick keywords
         let itemCheckPredicate = (itemStr: string) =>
@@ -516,14 +516,14 @@ export class ChaoticItemModule extends BaseModule {
             itemCheckPredicate = (itemStr: string) => slowKeywords.some(k => isPhraseInString(itemStr, k));
         }
 
-        for (let item of chaoticItems) {
+        for (const item of chaoticItems) {
             if (itemCheckPredicate(GetItemNameAndDescriptionConcat(item) ?? "")) {
                 filteredChaoticItems.push(item);
             }
         }
 
         let changed = false;
-        for (let item of filteredChaoticItems) {
+        for (const item of filteredChaoticItems) {
 			changed = this.triggerChaoticItem(item) || changed;
         }
 
@@ -541,7 +541,7 @@ export class ChaoticItemModule extends BaseModule {
         // Change item's option based on the logic provided (random or evolving)
         // evolving logic will select a higher indexed option (or do nothing if nothing higher)
         let logic: ChangeLogic = "random";
-        let itemStr = GetItemNameAndDescriptionConcat(item) ?? "";
+        const itemStr = GetItemNameAndDescriptionConcat(item) ?? "";
         if (evolvingKeywords.some(k => isPhraseInString(itemStr, k)))
             logic = "evolving";
 
@@ -584,7 +584,7 @@ export class ChaoticItemModule extends BaseModule {
         //console.log("shapeshiftTypedItem: availableOptions: ", typedAvailableOptions);
 
         // Select next item option
-        let typedPreviousOption = TypedItemFindPreviousOption(typedData, item);
+        const typedPreviousOption = TypedItemFindPreviousOption(typedData, item);
         let typedNewOption = undefined;
         if (logic == "random") {
             typedNewOption = CommonRandomItemFromList(typedPreviousOption, typedAvailableOptions);
@@ -599,8 +599,8 @@ export class ChaoticItemModule extends BaseModule {
 
         // Update item
         ExtendedItemSetOption(typedData, Player, item, typedNewOption, typedPreviousOption, true);
-        let itemName = (item?.Craft?.Name ?? item.Asset.Name);
-        let optionName = AssetTextGet(typedData.dialogPrefix.option + typedNewOption.Name) ?? typedNewOption.Name;
+        const itemName = (item?.Craft?.Name ?? item.Asset.Name);
+        const optionName = AssetTextGet(typedData.dialogPrefix.option + typedNewOption.Name) ?? typedNewOption.Name;
         SendAction(`%NAME%'s ${itemName} shapeshifted by itself to ${optionName} shape`);
         return true;
     }
@@ -622,7 +622,7 @@ export class ChaoticItemModule extends BaseModule {
         }
 
         // slect random module
-        let moduleIndexAlreadyUsed: number[] = [];
+        const moduleIndexAlreadyUsed: number[] = [];
         let moduleLength = modularData.modules.length;
         if (isItemHaveEditableProperty) {
             // The last module index will be for EditableProperty
@@ -645,7 +645,7 @@ export class ChaoticItemModule extends BaseModule {
                 }
             }
             else {
-                let modularModule = modularData.modules[moduleIndex];
+                const modularModule = modularData.modules[moduleIndex];
                 if (!modularModule) {
                     console.warn("Couldn't find modularModule with modularData.modules.length=", modularData.modules.length, " moduleIndex=", moduleIndex);
                     return false;
@@ -668,8 +668,8 @@ export class ChaoticItemModule extends BaseModule {
         let itemTypeRecord: TypeRecord | undefined | null = item.Property?.TypeRecord;
         if (!itemTypeRecord)
             itemTypeRecord = null;
-        let modularCurrentModuleValues = ModularItemParseCurrent(modularData, itemTypeRecord/*DialogFocusItem.Property.TypeRecord*/);
-        let modularPreviousOption = modularModule.Options[modularCurrentModuleValues[moduleIndex]];
+        const modularCurrentModuleValues = ModularItemParseCurrent(modularData, itemTypeRecord/*DialogFocusItem.Property.TypeRecord*/);
+        const modularPreviousOption = modularModule.Options[modularCurrentModuleValues[moduleIndex]];
         if (!modularPreviousOption) {
             console.warn("Couldn't find modularPreviousOption with modularCurrentModuleValues=", modularCurrentModuleValues, " and moduleIndex=", moduleIndex);
             return false;
@@ -686,13 +686,13 @@ export class ChaoticItemModule extends BaseModule {
         //console.log("changeModuleOption: availableOptions: ", moduleAvailableOptions);
 
         let modularNewOption = undefined;
-        if (logic == 'random') {
+        if (logic == "random") {
             modularNewOption = modularPreviousOption;
             let i = 0; // Anti-infinite loop just in case
             while (modularNewOption.Name == modularPreviousOption.Name && i < 30) {
                 // select a random option
-                let maxRandom = moduleAvailableOptions.length;
-                let optionIndex = Math.floor(Math.random() * maxRandom);
+                const maxRandom = moduleAvailableOptions.length;
+                const optionIndex = Math.floor(Math.random() * maxRandom);
                 modularNewOption = moduleAvailableOptions[optionIndex];
                 if (!modularNewOption) {
                     console.warn("Couldn't find modularNewOption with moduleAvailableOptions.length=", moduleAvailableOptions.length, " optionIndex=", optionIndex);
@@ -703,7 +703,7 @@ export class ChaoticItemModule extends BaseModule {
         }
         else if (logic == "evolving") {
             // Find the next option just after the current option
-            modularNewOption = this.getNextOptionFromOptionsList(modularPreviousOption, moduleAvailableOptions)
+            modularNewOption = this.getNextOptionFromOptionsList(modularPreviousOption, moduleAvailableOptions);
         }
         //console.log("shapeShiftModularItem: modularNewOption: ", modularNewOption);
         if (!modularNewOption) {
@@ -712,9 +712,9 @@ export class ChaoticItemModule extends BaseModule {
 
         // set new option
         ExtendedItemSetOption(modularData, Player, item, modularNewOption, modularPreviousOption, true, true);
-        let itemName = (item?.Craft?.Name ?? item.Asset.Name);
-        let moduleName = AssetTextGet(modularData.dialogPrefix.module + modularNewOption.ModuleName) ?? modularNewOption.ModuleName;
-        let optionName = AssetTextGet(modularData.dialogPrefix.option + modularNewOption.Name) ?? modularNewOption.Name;
+        const itemName = (item?.Craft?.Name ?? item.Asset.Name);
+        const moduleName = AssetTextGet(modularData.dialogPrefix.module + modularNewOption.ModuleName) ?? modularNewOption.ModuleName;
+        const optionName = AssetTextGet(modularData.dialogPrefix.option + modularNewOption.Name) ?? modularNewOption.Name;
         SendAction(`%NAME%'s ${itemName} changed the ${moduleName} settings by itself to ${optionName}`);
         return true;
     }
@@ -741,8 +741,8 @@ export class ChaoticItemModule extends BaseModule {
         //console.log("shapeShiftVibratorItem: availableOptions: ", vibratorAvailableOptions);
 
         // Select an option based on the logic
-        let vibratorNewOption = undefined;
-        let vibratorPrevOptionName = item.Property?.Mode;
+        let vibratorNewOption;
+        const vibratorPrevOptionName = item.Property?.Mode;
         if (logic == "evolving" && vibratorPrevOptionName) {
             // find current/previous option index
             const previousOptionIndex = vibratorAvailableOptions.findIndex(option => option.Name === vibratorPrevOptionName);
@@ -760,8 +760,8 @@ export class ChaoticItemModule extends BaseModule {
             vibratorNewOption = vibratorAvailableOptions[previousOptionIndex + 1].Name;
         } else {
             // random logic
-            let maxRandom = vibratorAvailableOptions.length;
-            let vibratorOptionIndex = Math.floor(Math.random() * maxRandom);
+            const maxRandom = vibratorAvailableOptions.length;
+            const vibratorOptionIndex = Math.floor(Math.random() * maxRandom);
             vibratorNewOption = vibratorAvailableOptions[vibratorOptionIndex].Name;
         }
 
@@ -772,8 +772,8 @@ export class ChaoticItemModule extends BaseModule {
         // Update item
         //console.log("shapeShiftVibratorItem: VIBRATING: vibratorNewOption: ", vibratorNewOption);
         VibratorModeSetOptionByName(Player, item, vibratorNewOption);
-        let itemName = (item?.Craft?.Name ?? item.Asset.Name);
-        let optionName = AssetTextGet(vibratorData.dialogPrefix.option + vibratorNewOption) ?? vibratorNewOption;
+        const itemName = (item?.Craft?.Name ?? item.Asset.Name);
+        const optionName = AssetTextGet(vibratorData.dialogPrefix.option + vibratorNewOption) ?? vibratorNewOption;
         SendAction(`%NAME%'s ${itemName} changed settings by itself to ${optionName} mode`);
         return true;
     }

@@ -18,13 +18,13 @@ export abstract class RemoteHypnoBase extends RemoteGuiSubscreen {
 	}
 
 	get disabledReason(): string {
-		var memberIdIsAllowed = ServerChatRoomGetAllowItem(Player, this.Character);
+		let memberIdIsAllowed = ServerChatRoomGetAllowItem(Player, this.Character);
 		if (this.overrideMemberIds.length > 0)
 			memberIdIsAllowed = this.overrideMemberIds.indexOf(Player.MemberNumber!) > -1;
 
-		var isTrance = this.Character.LSCG.StateModule.states.find(s => s.type == "hypnotized")?.active ?? false;
-		var passTranceReq = (this.settings.remoteAccessRequiredTrance && isTrance) || !this.settings.remoteAccessRequiredTrance;
-		var passHypnotizerReq = (this.settings.limitRemoteAccessToHypnotizer && this.Character.LSCG.StateModule.states.find(s => s.type == "hypnotized")?.activatedBy == Player.MemberNumber) || 
+		const isTrance = this.Character.LSCG.StateModule.states.find(s => s.type == "hypnotized")?.active ?? false;
+		const passTranceReq = (this.settings.remoteAccessRequiredTrance && isTrance) || !this.settings.remoteAccessRequiredTrance;
+		const passHypnotizerReq = (this.settings.limitRemoteAccessToHypnotizer && this.Character.LSCG.StateModule.states.find(s => s.type == "hypnotized")?.activatedBy == Player.MemberNumber) || 
 								!this.settings.limitRemoteAccessToHypnotizer;
 
 		if (!memberIdIsAllowed)
@@ -38,13 +38,13 @@ export abstract class RemoteHypnoBase extends RemoteGuiSubscreen {
 	}
 
 	get enabled(): boolean {
-		var memberIdIsAllowed = ServerChatRoomGetAllowItem(Player, this.Character);
+		let memberIdIsAllowed = ServerChatRoomGetAllowItem(Player, this.Character);
 		if (this.overrideMemberIds.length > 0)
 			memberIdIsAllowed = this.overrideMemberIds.indexOf(Player.MemberNumber!) > -1;
 
-		var isTrance = this.Character.LSCG.StateModule.states.find(s => s.type == "hypnotized")?.active ?? false;
-		var passTranceReq = (this.settings.remoteAccessRequiredTrance && isTrance) || !this.settings.remoteAccessRequiredTrance;
-		var passHypnotizerReq = (this.settings.limitRemoteAccessToHypnotizer && this.Character.LSCG.StateModule.states.find(s => s.type == "hypnotized")?.activatedBy == Player.MemberNumber) || 
+		const isTrance = this.Character.LSCG.StateModule.states.find(s => s.type == "hypnotized")?.active ?? false;
+		const passTranceReq = (this.settings.remoteAccessRequiredTrance && isTrance) || !this.settings.remoteAccessRequiredTrance;
+		const passHypnotizerReq = (this.settings.limitRemoteAccessToHypnotizer && this.Character.LSCG.StateModule.states.find(s => s.type == "hypnotized")?.activatedBy == Player.MemberNumber) || 
 								!this.settings.limitRemoteAccessToHypnotizer;
 
 		return this.settings.remoteAccess && 
@@ -52,7 +52,7 @@ export abstract class RemoteHypnoBase extends RemoteGuiSubscreen {
 					(this.settings.enabled &&
 					memberIdIsAllowed &&
 					passTranceReq &&
-					passHypnotizerReq))
+					passHypnotizerReq));
 	}
 
 	get icon(): string {

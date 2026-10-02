@@ -22,7 +22,7 @@ export class OutfitCollectionModule extends BaseModule {
     get defaultSettings() {
         return <OutfitSettings>{
             enabled: true,
-            strategy: OutfitStorageStrategy.SERVER
+            strategy: OutfitStorageStrategy.SERVER,
         };
     }
 
@@ -37,30 +37,30 @@ export class OutfitCollectionModule extends BaseModule {
     get commands(): ICommand[] {
 		// Empty
 		return [{
-			Tag: 'list-outfits',
+			Tag: "list-outfits",
 			Description: ": List all available outfit keys",
 			Action: () => {
 				if (!this.Enabled)
 					return;
 
-				let keys = Outfits().GetOutfitKeys().map(key => `<li>${key}</li>`).join("");
+				const keys = Outfits().GetOutfitKeys().map(key => `<li>${key}</li>`).join("");
                 LSCG_SendLocal(`Your current outfit keys are: <ul style="margin: 0;list-style-type: circle;">${keys}</ul>`, false);
-			}
+			},
 		}, {
-			Tag: 'add-outfit',
+			Tag: "add-outfit",
 			Description: "[key] [code] : Add new outfit to collection.",
 			Action: (args, msg, parsed) => {
 				if (!this.Enabled)
 					return;
-                let key = parsed[0];
-                let code = parsed[1];
+                const key = parsed[0];
+                const code = parsed[1];
 
                 if (!key || !code) {
                     LSCG_SendLocal("Invalid outfit arguments.");
                     return;
                 }
 
-                let result = Outfits().SetOutfitCode(key, code);
+                const result = Outfits().SetOutfitCode(key, code);
                 if (result == OutfitSaveResult.SUCCESS)
                     LSCG_SendLocal(`Outfit ${key} saved.`);
                 else if (result == OutfitSaveResult.SPACE_LOW)
@@ -68,36 +68,36 @@ export class OutfitCollectionModule extends BaseModule {
                 else if (result == OutfitSaveResult.NAME_EXISTS)
                     LSCG_SendLocal(`Outfit key ${key} already exists.`);
                     
-			}
+			},
 		}, {
-			Tag: 'remove-outfit',
+			Tag: "remove-outfit",
 			Description: "[key] : Remove outfit from collection.",
 			Action: (args, msg, parsed) => {
 				if (!this.Enabled)
 					return;
-                let key = parsed[0]?.toLocaleLowerCase();
+                const key = parsed[0]?.toLocaleLowerCase();
 
                 if (!key) {
                     LSCG_SendLocal("Invalid outfit arguments.");
                     return;
                 }
 
-                let keys = Outfits().GetOutfitKeys().map(k => k.toLocaleLowerCase());
+                const keys = Outfits().GetOutfitKeys().map(k => k.toLocaleLowerCase());
                 if (keys.indexOf(key) == -1) {
-                    LSCG_SendLocal(`Outfit ${key} not found.`)
+                    LSCG_SendLocal(`Outfit ${key} not found.`);
                 } else {
                     Outfits().RemoveOutfit(key);
                     LSCG_SendLocal(`Outfit ${key} removed.`);
                 }
-			}
+			},
 		}, {
-			Tag: 'clear-outfits',
+			Tag: "clear-outfits",
 			Description: " : Removes all outfits from collection.",
 			Action: (args, msg, parsed) => {
 				if (!this.Enabled)
 					return;
                 Outfits().Clear();
-			}
+			},
 		}];
 	}
 }

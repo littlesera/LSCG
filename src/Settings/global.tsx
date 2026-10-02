@@ -97,14 +97,14 @@ export class GuiGlobal extends GuiSubscreen {
 
 	Load(): void {
 		// Load up module settings to ensure defaults..
-		getModule<MiscModule>("MiscModule")?.settings;
-		getModule<LipstickModule>("LipstickModule")?.settings;
-		getModule<LeashingModule>("LeashingModule")?.settings;
-		getModule<BoopsModule>("BoopsModule")?.settings;
-		getModule<OpacityModule>("OpacityModule")?.settings;
-		getModule<ChaoticItemModule>("ChaoticItemModule")?.settings;
-		getModule<SplatterModule>("SplatterModule")?.settings;
-		getModule<MapModule>("MapModule")?.settings;
+		void getModule<MiscModule>("MiscModule")?.settings;
+		void getModule<LipstickModule>("LipstickModule")?.settings;
+		void getModule<LeashingModule>("LeashingModule")?.settings;
+		void getModule<BoopsModule>("BoopsModule")?.settings;
+		void getModule<OpacityModule>("OpacityModule")?.settings;
+		void getModule<ChaoticItemModule>("ChaoticItemModule")?.settings;
+		void getModule<SplatterModule>("SplatterModule")?.settings;
+		void getModule<MapModule>("MapModule")?.settings;
 		super.Load();
 		this._host.mount();
 	}

@@ -1,15 +1,14 @@
 import { BaseModule } from "base";
 import { getModule } from "modules";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
-import { GetConfiguredItemBundlesFromOutfitKey, GetDelimitedList, OnChat, GetHandheldItemNameAndDescriptionConcat, GetItemNameAndDescriptionConcat, GetMetadata, LSCG_SendLocal, LSCG_TEAL, OnActivity, SendAction, forceOrgasm, getCharacter, getRandomInt, hookFunction, isPhraseInString, removeAllHooksByModule, sendLSCGCommand, sendLSCGCommandBeep, settingsSave, getCharacterByNicknameOrMemberNumber, excludeParentheticalContent, escapeRegExp } from "../utils";
-import { ABSOLUTE_MAX_SPELL_EFFECTS, DEFAULT_MAX_SPELL_EFFECTS, KNOWN_SPELLS_LIMIT, LSCGSpellEffect, MagicSettingsModel, OutfitConfig, OutfitOption, SpellDefinition, SpellEffectId, sanitizeIncomingEffects } from "Settings/Models/magic";
+import { GetConfiguredItemBundlesFromOutfitKey, GetDelimitedList, OnChat, GetItemNameAndDescriptionConcat, GetMetadata, LSCG_SendLocal, LSCG_TEAL, OnActivity, SendAction, getCharacter, getRandomInt, hookFunction, isPhraseInString, removeAllHooksByModule, sendLSCGCommand, sendLSCGCommandBeep, settingsSave, getCharacterByNicknameOrMemberNumber, excludeParentheticalContent, escapeRegExp } from "../utils";
+import { ABSOLUTE_MAX_SPELL_EFFECTS, DEFAULT_MAX_SPELL_EFFECTS, KNOWN_SPELLS_LIMIT, LSCGSpellEffect, MagicSettingsModel, OutfitOption, SpellDefinition, SpellEffectId, sanitizeIncomingEffects } from "Settings/Models/magic";
 import { GuiMagic } from "Settings/magic";
 import { StateModule } from "./states";
-import { EnhancedItemActivityNames, IsActivityEnhanced, ItemUseModule, MagicWandItems } from "./item-use";
+import { IsActivityEnhanced, ItemUseModule, MagicWandItems } from "./item-use";
 import { InjectorModule } from "./injector";
 import { RedressedState } from "./States/RedressedState";
 import { PolymorphedState } from "./States/PolymorphedState";
-import { OutfitCollection } from "Settings/OutfitCollection/outfitCollection";
 import { OutfitCollectionModule } from "./outfitCollection";
 import { hasMagicModule, hasMBSSettings, hasLSCGData, safeGetLSCGProp } from "../types/guards";
 import { emit, emitBefore, spellInfo } from "api/events";
@@ -36,11 +35,11 @@ export class MagicModule extends BaseModule {
     } = {
         SelectOpen: false,
         Spell: undefined,
-        Source: undefined
-    }
+        Source: undefined,
+    };
 
     get Enabled(): boolean {
-		return super.Enabled && (ChatRoomData?.BlockCategory?.indexOf("Fantasy") ?? -1) == -1
+		return super.Enabled && (ChatRoomData?.BlockCategory?.indexOf("Fantasy") ?? -1) == -1;
 	}
 
     get defaultSettings() {
@@ -73,7 +72,7 @@ export class MagicModule extends BaseModule {
             spiritFormOutfitKey: "",
             hideCorporeal: false,
             maxSpellEffects: DEFAULT_MAX_SPELL_EFFECTS,
-            seenExtensionEffects: []
+            seenExtensionEffects: [],
         };
     }
 
@@ -94,36 +93,36 @@ export class MagicModule extends BaseModule {
         if (this._testSpells.length <= 0)
             this._testSpells = [...Array(18).keys()].map(i => <SpellDefinition>{
                     Name: `Spell ${i+1}`,
-                    Effects: this.PickRandomEffects(allEffectIds(), getRandomInt(3) + 1)
+                    Effects: this.PickRandomEffects(allEffectIds(), getRandomInt(3) + 1),
                 });
         return this._testSpells;
     }
 
     get RandomSpell(): SpellDefinition {
-        let candidates = spellEffects.all().filter(d => d.allowRandom).map(d => d.id);
-        let spell = <SpellDefinition>{
-            Name: `wild magic`,
-            Effects: this.PickRandomEffects(candidates, getRandomInt(3) + 1)
-        }
+        const candidates = spellEffects.all().filter(d => d.allowRandom).map(d => d.id);
+        const spell = <SpellDefinition>{
+            Name: "wild magic",
+            Effects: this.PickRandomEffects(candidates, getRandomInt(3) + 1),
+        };
         if (spell.Effects.indexOf(LSCGSpellEffect.outfit) > -1) {
-        	let outfitCollection = getModule<OutfitCollectionModule>("OutfitCollectionModule")?.data;
-        	let outfitKeys = outfitCollection?.GetOutfitKeys() ?? [];
-        	let lscgChoice = outfitKeys.length > 0 ? outfitCollection.GetOutfitBundle(outfitKeys[getRandomInt(outfitKeys.length)]) : undefined;
+        	const outfitCollection = getModule<OutfitCollectionModule>("OutfitCollectionModule")?.data;
+        	const outfitKeys = outfitCollection?.GetOutfitKeys() ?? [];
+        	const lscgChoice = outfitKeys.length > 0 ? outfitCollection.GetOutfitBundle(outfitKeys[getRandomInt(outfitKeys.length)]) : undefined;
         	let mbsOutfits: ItemBundle[][] = [];
         	if (hasMBSSettings(Player) && Player.MBSSettings?.FortuneWheelItemSets) {
         		mbsOutfits = Player.MBSSettings.FortuneWheelItemSets
         			.filter((s): s is { itemList?: ItemBundle[] } => !!s)
         			.map(s => s.itemList ?? []);
         	}
-        	let mbsChoice = mbsOutfits.length > 0 ? mbsOutfits[getRandomInt(mbsOutfits.length)] : undefined;
-            let wardrobeChoice = !Player.Wardrobe ? undefined : Player.Wardrobe[getRandomInt(Player.Wardrobe?.length)];
-            let choices = [lscgChoice, mbsChoice, wardrobeChoice].filter(x => !!x);
-            let outfit = choices[getRandomInt(choices.length)];
+        	const mbsChoice = mbsOutfits.length > 0 ? mbsOutfits[getRandomInt(mbsOutfits.length)] : undefined;
+            const wardrobeChoice = !Player.Wardrobe ? undefined : Player.Wardrobe[getRandomInt(Player.Wardrobe?.length)];
+            const choices = [lscgChoice, mbsChoice, wardrobeChoice].filter(x => !!x);
+            const outfit = choices[getRandomInt(choices.length)];
             spell.Outfit = {
                 Option: OutfitOption.both,
                 Key: "",
-                Code: LZString.compressToBase64(JSON.stringify(outfit))
-            }
+                Code: LZString.compressToBase64(JSON.stringify(outfit)),
+            };
         }
         return spell;
     }
@@ -149,7 +148,7 @@ export class MagicModule extends BaseModule {
         return ChatRoomCharacter.filter(c =>
             !!c &&
             hasMagicModule(c) &&
-            c.MemberNumber != spellTarget?.MemberNumber
+            c.MemberNumber != spellTarget?.MemberNumber,
         );
     }
 
@@ -204,15 +203,13 @@ export class MagicModule extends BaseModule {
         hookFunction("DialogLeave", 1, (args, next) => {
             this.CloseSpellMenu();
             return next(args);
-        }, ModuleCategory.Magic)
+        }, ModuleCategory.Magic);
 
         OnActivity(1, ModuleCategory.Magic, (data: ServerChatRoomMessage, sender, msg, megadata) => {
             if (!this.Enabled)
                 return;
-            let meta = GetMetadata(data);
-            let activityName = meta?.ActivityName;
-            let target = meta?.TargetMemberNumber;
-            let thrownInMouth = activityName == "ThrowItem" && meta?.GroupName == "ItemMouth";
+            const meta = GetMetadata(data);
+            const target = meta?.TargetMemberNumber;
             // Offered sips are resolved by the injector's "sip" consent flow instead
             if (target == Player.MemberNumber &&
                 IsActivityEnhanced(data) &&
@@ -270,12 +267,12 @@ export class MagicModule extends BaseModule {
     }
 
     IsMagicItem(item: Item | null): boolean {
-        let magicItemKeywords = [
+        const magicItemKeywords = [
             "wand",
             "enchanted",
-            "magic"
+            "magic",
         ];
-        let craftStr = GetItemNameAndDescriptionConcat(item) ?? "";
+        const craftStr = GetItemNameAndDescriptionConcat(item) ?? "";
         if (!item || !item.Asset)
             return false;
         else if (MagicWandItems.indexOf(item?.Asset?.Name ?? "") > -1)
@@ -287,19 +284,19 @@ export class MagicModule extends BaseModule {
     }
 
     IsRangedItem(item: Item | null) : boolean {
-        let rangedItemKeywords = [
-            "wand"
+        const rangedItemKeywords = [
+            "wand",
         ];
-        let craftStr = GetItemNameAndDescriptionConcat(item) ?? "";
+        const craftStr = GetItemNameAndDescriptionConcat(item) ?? "";
         return rangedItemKeywords.some(keyword => isPhraseInString(craftStr, keyword));
     }
 
     CanUseMagic(target: Character, checkMagicItem: boolean = true, requireHands: boolean = true) {
-        let item = InventoryGet(Player, "ItemHandheld");
-        let isWieldingMagicItem = (checkMagicItem) ? (!!item && this.IsMagicItem(item)) : true;
-        let hasItemPermission = ServerChatRoomGetAllowItem(Player, target);
-        let targetHasMagicEnabled = (target as OtherCharacter).LSCG?.MagicModule?.enabled;
-        let whitelisted = !(target as OtherCharacter).LSCG?.MagicModule?.requireWhitelist || (!!Player.MemberNumber && target.WhiteList.indexOf(Player.MemberNumber) > -1) || target.IsPlayer();
+        const item = InventoryGet(Player, "ItemHandheld");
+        const isWieldingMagicItem = (checkMagicItem) ? (!!item && this.IsMagicItem(item)) : true;
+        const hasItemPermission = ServerChatRoomGetAllowItem(Player, target);
+        const targetHasMagicEnabled = (target as OtherCharacter).LSCG?.MagicModule?.enabled;
+        const whitelisted = !(target as OtherCharacter).LSCG?.MagicModule?.requireWhitelist || (!!Player.MemberNumber && target.WhiteList.indexOf(Player.MemberNumber) > -1) || target.IsPlayer();
         return this.Enabled &&
                 targetHasMagicEnabled &&
                 isWieldingMagicItem &&
@@ -308,7 +305,7 @@ export class MagicModule extends BaseModule {
                 whitelisted &&
                 (this.CanCastSpell(target as OtherCharacter) ||
                 this.CanWildMagic(target as OtherCharacter) ||
-                this.CanTeachSpell(target as OtherCharacter))
+                this.CanTeachSpell(target as OtherCharacter));
     }
 
     CanCastSpell(target: Character): boolean {
@@ -323,7 +320,7 @@ export class MagicModule extends BaseModule {
 
     CanTeachSpell(target: Character): boolean {
         // Must have available spells and can only cast on LSCG users
-        let targetItem = InventoryGet(target, "ItemHandheld");
+        const targetItem = InventoryGet(target, "ItemHandheld");
         return this.Enabled && 
             !target.IsPlayer() &&
             this.AvailableSpells.length > 0 &&
@@ -387,10 +384,10 @@ export class MagicModule extends BaseModule {
     }
 
     CastWildMagic(C: OtherCharacter | PlayerCharacter) {
-        let spellIndex = getRandomInt(this.AvailableSpells.length + 1);
+        const spellIndex = getRandomInt(this.AvailableSpells.length + 1);
         let spell = this.AvailableSpells[spellIndex];
         if (!spell || this.settings.trueWildMagic)
-            spell = this.RandomSpell
+            spell = this.RandomSpell;
         let paired: Character | undefined = undefined;
         spell = structuredClone(spell);
         if (this.SpellNeedsPair(spell))
@@ -405,10 +402,10 @@ export class MagicModule extends BaseModule {
     /** How each of a spell's effects would land on `target`: blocked by their settings, or unsupported by their client
      *  (an extension effect they don't have). A spell is castable if at least one effect would apply. */
     GetSpellStatus(spell: SpellDefinition, target: Character): { effects: { id: SpellEffectId, status: "ok" | "blocked" | "unsupported" }[], castable: boolean } {
-        const blocked: string[] = safeGetLSCGProp(target, 'MagicModule', 'blockedSpellEffects') ?? [];
-        const bypassed: string[] = target.IsPlayer() ? (safeGetLSCGProp(target, 'MagicModule', 'bypassForSelfEffects') ?? []) : [];
+        const blocked: string[] = safeGetLSCGProp(target, "MagicModule", "blockedSpellEffects") ?? [];
+        const bypassed: string[] = target.IsPlayer() ? (safeGetLSCGProp(target, "MagicModule", "bypassForSelfEffects") ?? []) : [];
         // Older clients don't send knownEffects: they support the legacy built-ins only.
-        const known: string[] = target.IsPlayer() ? advertisedEffectIds() : (safeGetLSCGProp(target, 'MagicModule', 'knownEffects') ?? []);
+        const known: string[] = target.IsPlayer() ? advertisedEffectIds() : (safeGetLSCGProp(target, "MagicModule", "knownEffects") ?? []);
         const effects = spell.Effects.map(id => {
             const supported = isLegacyEffect(id) || known.indexOf(id) > -1;
             const isBlocked = blocked.indexOf(id) > -1 && bypassed.indexOf(id) == -1;
@@ -418,7 +415,7 @@ export class MagicModule extends BaseModule {
     }
 
     CastSpellInitial(spell: SpellDefinition, C: Character | null) {
-        if (!!C) {
+        if (C) {
             if (this.TeachingSpell) {
                 this.TeachSpellActual(spell, C as OtherCharacter);
             }
@@ -434,32 +431,32 @@ export class MagicModule extends BaseModule {
     }
 
     getTeachingActionString(spell: SpellDefinition, item: Item | null, targetItem: Item | null): string {
-        let itemName = !!item ? (item?.Craft?.Name ?? item?.Asset.Description) : "wand";
-        let targetItemName = !!targetItem ? (targetItem?.Craft?.Name ?? targetItem?.Asset.Description) : "wand";
-        let teachingActionStrings: string[] = [
+        const itemName = item ? (item?.Craft?.Name ?? item?.Asset.Description) : "wand";
+        const targetItemName = targetItem ? (targetItem?.Craft?.Name ?? targetItem?.Asset.Description) : "wand";
+        const teachingActionStrings: string[] = [
             `%NAME% slowly waves %POSSESSIVE% ${itemName} in an intricate pattern, making sure %OPP_NAME% follows along with %OPP_POSSESSIVE% ${targetItemName}.`,
             `%NAME% repeats an indecipherable phrase, touching %POSSESSIVE% ${itemName} to %OPP_NAME%'s ${targetItemName}.`,
-            `%NAME% holds both %POSSESSIVE% ${itemName} and %OPP_NAME%'s ${targetItemName} tightly, energy traveling from one to the other.`
+            `%NAME% holds both %POSSESSIVE% ${itemName} and %OPP_NAME%'s ${targetItemName} tightly, energy traveling from one to the other.`,
         ];
         return teachingActionStrings[getRandomInt(teachingActionStrings.length)];
     }
 
     getCastingActionString(spell: SpellDefinition, item: Item | null, voiceCast: boolean, target: Character, paired?: Character): string {
-        let itemName = !!item ? (item?.Craft?.Name ?? item?.Asset.Description) : "wand";
-        let pairedDefaultStr = `${!!paired ? ", the spell's power also arcing to " + CharacterNickname(paired) + "." : "."}`;
-        let rangedCastingActionStrings: string[] = [
+        const itemName = item ? (item?.Craft?.Name ?? item?.Asset.Description) : "wand";
+        const pairedDefaultStr = `${paired ? ", the spell's power also arcing to " + CharacterNickname(paired) + "." : "."}`;
+        const rangedCastingActionStrings: string[] = [
             `%NAME% waves %POSSESSIVE% ${itemName} in an intricate pattern and casts ${spell.Name} on %OPP_NAME%${pairedDefaultStr}`,
             `%NAME% chants an indecipherable phrase, pointing %POSSESSIVE% ${itemName} at %OPP_NAME% and casting ${spell.Name}${pairedDefaultStr}`,
-            `%NAME% aims %POSSESSIVE% ${itemName} at %OPP_NAME% and, with a grin, casts ${spell.Name}${pairedDefaultStr}`
+            `%NAME% aims %POSSESSIVE% ${itemName} at %OPP_NAME% and, with a grin, casts ${spell.Name}${pairedDefaultStr}`,
         ];
-        let meleeCastingActionStrings: string[] = [
+        const meleeCastingActionStrings: string[] = [
             `%NAME% waves %POSSESSIVE% ${itemName} in front of %OPP_NAME%, and with a sudden boop, casts ${spell.Name} on %OPP_NAME%${pairedDefaultStr}`,
             `%NAME% chants an indecipherable phrase, tapping %POSSESSIVE% ${itemName} against %OPP_NAME% and casting ${spell.Name}${pairedDefaultStr}`,
-            `%NAME% baps %OPP_NAME% with %POSSESSIVE% ${itemName} and, with a grin, casts ${spell.Name}${pairedDefaultStr}`
+            `%NAME% baps %OPP_NAME% with %POSSESSIVE% ${itemName} and, with a grin, casts ${spell.Name}${pairedDefaultStr}`,
         ];
-        let voiceCastingActionStrings: string[] = [
+        const voiceCastingActionStrings: string[] = [
             `%NAME% intones with magical power, using nothing but %POSSESSIVE% voice to cast ${spell.Name} on %OPP_NAME%${pairedDefaultStr}`,
-            `%NAME% chants an indecipherable phrase containing the name of %OPP_NAME% and casting ${spell.Name}${pairedDefaultStr}`
+            `%NAME% chants an indecipherable phrase containing the name of %OPP_NAME% and casting ${spell.Name}${pairedDefaultStr}`,
         ];
 
         let castingActionStrings;
@@ -473,10 +470,10 @@ export class MagicModule extends BaseModule {
 
     CastSpellActual(spell: SpellDefinition | undefined, spellTarget: Character, voiceCast: boolean, pairedTarget?: Character) {
         if (!!spell && !!spellTarget) {
-            let wand = InventoryGet(Player, "ItemHandheld");
+            const wand = InventoryGet(Player, "ItemHandheld");
             if (!!wand && !!wand.Craft && wand.Craft.MemberNumber != Player.MemberNumber && getRandomInt(2) == 0) { // 50% chance of backfire when using someone else's wand
-                let crafter = getCharacter(wand.Craft.MemberNumber ?? -1);
-                let crafterName = !crafter ? "someone" : CharacterNickname(crafter);
+                const crafter = getCharacter(wand.Craft.MemberNumber ?? -1);
+                const crafterName = !crafter ? "someone" : CharacterNickname(crafter);
                 if (!spellTarget.IsPlayer()) {
                     SendAction(`%NAME% struggles to wield ${crafterName}'s ${wand.Craft.Name}, %POSSESSIVE% spell backfiring.`);
                     spellTarget = Player;
@@ -500,18 +497,18 @@ export class MagicModule extends BaseModule {
             emit("spell.cast", { spell: spellInfo(spell), target: spellTarget.MemberNumber ?? -1, paired: pairedTarget?.MemberNumber });
 
             if (spellTarget.IsPlayer()) {
-                let check = getModule<ItemUseModule>("ItemUseModule").UnopposedActivityRoll(spellTarget);
+                const check = getModule<ItemUseModule>("ItemUseModule").UnopposedActivityRoll(spellTarget);
                 setTimeout(() => this.IncomingSpell(Player, spell, pairedTarget, Math.max(1, check.Total / 2)), 1000);
             }
             else
                 sendLSCGCommand(spellTarget, "spell", [
                     {
                         name: "spell",
-                        value: spell
+                        value: spell,
                     }, {
                         name: "paired",
-                        value: pairedTarget?.MemberNumber
-                    }
+                        value: pairedTarget?.MemberNumber,
+                    },
                 ]);
         }
         this.CloseSpellMenu();
@@ -532,8 +529,8 @@ export class MagicModule extends BaseModule {
                     sendLSCGCommand(target, "spell-teach", [
                         {
                             name: "spell",
-                            value: spell
-                        }
+                            value: spell,
+                        },
                     ]);
                 }, 2000); // 2sec wait until actual teach
             }
@@ -564,12 +561,12 @@ export class MagicModule extends BaseModule {
         }
         setTimeout(() => {
             if (msg.command?.name == "spell") {
-                let paired = getCharacter((msg.command?.args.find(arg => arg.name == "paired")?.value as number));
-                let magicBarrier = Player?.LSCG?.StateModule?.states?.find(s => s.type == "protected");
-                let spell = msg.command?.args?.find(arg => arg.name == "spell")?.value as SpellDefinition;
+                const paired = getCharacter((msg.command?.args.find(arg => arg.name == "paired")?.value as number));
+                const magicBarrier = Player?.LSCG?.StateModule?.states?.find(s => s.type == "protected");
+                const spell = msg.command?.args?.find(arg => arg.name == "spell")?.value as SpellDefinition;
                 if (!spell || !sender)
                     return;
-                let check = getModule<ItemUseModule>("ItemUseModule")?.MakeActivityCheck(sender, Player);
+                const check = getModule<ItemUseModule>("ItemUseModule")?.MakeActivityCheck(sender, Player);
                 if (!this.SpellIsBeneficial(spell) && this.DefendAgainst(sender.MemberNumber ?? -1)) {
                     if (check.AttackerRoll.Total < check.DefenderRoll.Total) {
                         SendAction(`${CharacterNickname(Player)} ${check.DefenderRoll.TotalStr}successfully saves against ${CharacterNickname(sender)}'s ${check.AttackerRoll.TotalStr}${spell.Name}.`);
@@ -580,11 +577,11 @@ export class MagicModule extends BaseModule {
                             sendLSCGCommand(sender, "spell", [
                                 {
                                     name: "spell",
-                                    value: spell
+                                    value: spell,
                                 }, {
                                     name: "paired",
-                                    value: undefined
-                                }
+                                    value: undefined,
+                                },
                             ]);
                             this.stateModule.BarrierState.Recover(false);
                             SendAction(`The magical barrier around ${CharacterNickname(Player)} disappear, drained of all its magical power.`);
@@ -599,9 +596,9 @@ export class MagicModule extends BaseModule {
                 this.IncomingSpell(sender, spell, paired, Math.max(1, check.AttackerRoll.Total - check.DefenderRoll.Total));
             }
             else if (msg.command?.name == "pair") {
-                let origin = getCharacter(msg.command?.args.find(arg => arg.name == "paired")?.value as number);
-                let spellEffect = msg.command?.args?.find(arg => arg.name == "spell-effect")?.value as SpellEffectId;
-                let pairType = msg.command?.args?.find(arg => arg.name == "pair-type")?.value as LSCGState;
+                const origin = getCharacter(msg.command?.args.find(arg => arg.name == "paired")?.value as number);
+                const spellEffect = msg.command?.args?.find(arg => arg.name == "spell-effect")?.value as SpellEffectId;
+                const pairType = msg.command?.args?.find(arg => arg.name == "pair-type")?.value as LSCGState;
                 if (!!origin && !!spellEffect && !!pairType)
                     this.IncomingSpellPair(sender, spellEffect, origin, pairType);
                 else if (!!sender && !origin) {
@@ -616,14 +613,13 @@ export class MagicModule extends BaseModule {
     }
 
     effectIsAllowed(effect: SpellEffectId, caster: Character | null): boolean {
-        let isBlocked = this.settings.blockedSpellEffects.indexOf(effect) > -1;
-        let isBypassed = (caster?.IsPlayer() ?? false) && this.settings.bypassForSelfEffects.indexOf(effect) > -1;
+        const isBlocked = this.settings.blockedSpellEffects.indexOf(effect) > -1;
+        const isBypassed = (caster?.IsPlayer() ?? false) && this.settings.bypassForSelfEffects.indexOf(effect) > -1;
         return (!isBlocked || isBypassed);
     }
 
     IncomingSpell(sender: Character | null, spell: SpellDefinition, paired?: Character | null, saveDiff: number = 1) {
-        let senderName = !sender ? "Someone" : CharacterNickname(sender);
-        let pairedName = !paired ? "someone else" : CharacterNickname(paired);
+        const senderName = !sender ? "Someone" : CharacterNickname(sender);
         // However many a caster's spell claims, only so many are applied: each one is a timer on this client.
         let allowedSpellEffects = this.filterAllowedSpellEffects(spell, sender).slice(0, ABSOLUTE_MAX_SPELL_EFFECTS);
         if (allowedSpellEffects.length <= 0) {
@@ -633,7 +629,7 @@ export class MagicModule extends BaseModule {
         let duration: number | undefined = undefined;
         
         if (!this.SpellIsBeneficial(spell)) {
-            duration = saveDiff * 5 * (60 * 1000) // 5 minutes for every level of "spell power" (difference between caster and defender checks)
+            duration = saveDiff * 5 * (60 * 1000); // 5 minutes for every level of "spell power" (difference between caster and defender checks)
             if (!this.settings.limitedDuration && !spellForcesDuration(spell))
                 duration = 0;
             else if (this.settings.maxDuration > 0)
@@ -654,7 +650,7 @@ export class MagicModule extends BaseModule {
             return;
         }
         if (!!duration && duration > 0 && this.settings.maxDuration > 0)
-            LSCG_SendLocal(`${sender?.IsPlayer() ? 'Your' : senderName + "'s"} ${spell.Name} spell will last ${duration / (60 * 1000)} minutes.`);
+            LSCG_SendLocal(`${sender?.IsPlayer() ? "Your" : senderName + "'s"} ${spell.Name} spell will last ${duration / (60 * 1000)} minutes.`);
         emit("spell.received", { spell: info, sender: sender?.MemberNumber, effects: allowedSpellEffects, duration });
 
         const spellDuration = duration;
@@ -685,30 +681,29 @@ export class MagicModule extends BaseModule {
         sendLSCGCommand(pairedTarget, "pair", [
             {
                 name: "spell-effect",
-                value: spellEffect
+                value: spellEffect,
             }, {
                 name: "paired",
-                value: Player.MemberNumber
+                value: Player.MemberNumber,
             }, {
                 name: "caster",
-                value: caster?.MemberNumber
+                value: caster?.MemberNumber,
             }, {
                 name: "pair-type",
-                value: pairType
-            }
+                value: pairType,
+            },
         ]);
     }
 
     IncomingSpellPair(sender: Character | null, spellEffect: SpellEffectId, originalTarget: Character, pairType: LSCGState) {
-        let senderName = !sender ? "Someone" : CharacterNickname(sender);
-        let originalTargetName = CharacterNickname(originalTarget);
-        let isAllowed = this.effectIsAllowed(spellEffect, sender);
+        const senderName = !sender ? "Someone" : CharacterNickname(sender);
+        const isAllowed = this.effectIsAllowed(spellEffect, sender);
 
         if (!isAllowed) {
             SendAction(`${senderName}'s paired spell fizzles as it attempts to pair with %NAME%.`);
             sendLSCGCommandBeep(originalTarget.MemberNumber ?? -1, "unpair", [{
                 name: "type",
-                value: pairType
+                value: pairType,
             }]);
         } else {
             getSpellEffect(spellEffect)?.applyPaired?.({ effect: spellEffect, sender, senderName, spell: { Name: "", Creator: -1, Effects: [spellEffect], AllowPotion: false, AllowVoiceCast: false }, magic: this }, originalTarget);
@@ -724,7 +719,7 @@ export class MagicModule extends BaseModule {
     IncomingSpellTeachCommand(sender: Character | null, msg: LSCGMessageModel) {
         if (!this.Enabled || !sender || this.WhitelistBlocked(sender))
             return;
-        let spell = msg.command?.args?.find(arg => arg.name == "spell")?.value as SpellDefinition;
+        const spell = msg.command?.args?.find(arg => arg.name == "spell")?.value as SpellDefinition;
         // It is saved with this player's settings, so keep what a sender can make it carry within limits.
         if (spell && typeof spell === "object")
             spell.Effects = sanitizeIncomingEffects(spell.Effects);
@@ -734,7 +729,7 @@ export class MagicModule extends BaseModule {
             SendAction(`%NAME% already knows a spell called ${spell.Name} and ignores %POSSESSIVE% new instructions.`);
         } else {
             SendAction(`%NAME% grins as they finally understand the details of ${spell.Name} and memorizes it for later.`);
-            let outfitModule = getModule<OutfitCollectionModule>("OutfitCollectionModule");
+            const outfitModule = getModule<OutfitCollectionModule>("OutfitCollectionModule");
             let outfitSave = false;
             if (!!spell.Outfit?.Code && !!spell.Outfit?.Key && !outfitModule.data.GetOutfit(spell.Outfit.Key)) {
                 outfitModule?.data.SetOutfitCode(spell.Outfit.Key, spell.Outfit.Code);
@@ -744,8 +739,8 @@ export class MagicModule extends BaseModule {
                 outfitModule?.data.SetOutfitCode(spell.Polymorph.Key, spell.Polymorph.Code);
                 outfitSave = true;
             }
-            if (!!spell.Outfit) spell.Outfit.Code = "";
-            if (!!spell.Polymorph) spell.Polymorph.Code = "";
+            if (spell.Outfit) spell.Outfit.Code = "";
+            if (spell.Polymorph) spell.Polymorph.Code = "";
             this.settings.knownSpells.push(spell);
             settingsSave(true);
             if (outfitSave) outfitModule.data.SaveOutfits();
@@ -755,12 +750,12 @@ export class MagicModule extends BaseModule {
     // ***************** Voice Casting *******************
 
     CheckForSpellVoiceCasting(msg: string): void {
-        let spellTargetPair: [SpellDefinition | null, Character | null] | undefined = this.getSpellTargetTupleFromMsg(msg);
+        const spellTargetPair: [SpellDefinition | null, Character | null] | undefined = this.getSpellTargetTupleFromMsg(msg);
         if (!spellTargetPair || !spellTargetPair[0] || !spellTargetPair[1]) // Skip if no or invalid tuple result
             return;
 
-        let foundSpell = spellTargetPair[0];
-        let target = spellTargetPair[1];
+        const foundSpell = spellTargetPair[0];
+        const target = spellTargetPair[1];
         if (!this.CanUseMagic(target, false, false)) {
             return;
         }
@@ -772,19 +767,19 @@ export class MagicModule extends BaseModule {
     }
 
     getSpellTargetTupleFromMsg(msg: string): [SpellDefinition | null, Character | null] | undefined {
-        let oocParsedString = excludeParentheticalContent(msg); // Don't allow voice casting in OOC chat   
-        let characterNames = ChatRoomCharacter.map(c => [c.Name, c.Nickname, c.Nickname?.normalize('NFKC'), c.MemberNumber + ""]).reduce((a, b) => a.concat(b)).filter(c => !!c);
-        for (let s of this.AvailableSpells.filter(s => s.AllowVoiceCast)) { // Only look at spells which allow voice cast
+        const oocParsedString = excludeParentheticalContent(msg); // Don't allow voice casting in OOC chat   
+        const characterNames = ChatRoomCharacter.map(c => [c.Name, c.Nickname, c.Nickname?.normalize("NFKC"), c.MemberNumber + ""]).reduce((a, b) => a.concat(b)).filter(c => !!c);
+        for (const s of this.AvailableSpells.filter(s => s.AllowVoiceCast)) { // Only look at spells which allow voice cast
             if (!s.AllowVoiceCast)
                 continue;
-            let searchPhrase = (!!s.CastingPhrase && s.CastingPhrase.length > 0) ? s.CastingPhrase : s.Name;
-            let re = new RegExp(`\\b${escapeRegExp(searchPhrase)}\\b (${characterNames.map(c => escapeRegExp(c!)).join("|")})`, "i");
-            let matches = re.exec(oocParsedString);
+            const searchPhrase = (!!s.CastingPhrase && s.CastingPhrase.length > 0) ? s.CastingPhrase : s.Name;
+            const re = new RegExp(`\\b${escapeRegExp(searchPhrase)}\\b (${characterNames.map(c => escapeRegExp(c!)).join("|")})`, "i");
+            const matches = re.exec(oocParsedString);
             if (!matches)
                 continue;
-            let characterPhrase = matches?.[1] ?? "";
-            let character = getCharacterByNicknameOrMemberNumber(characterPhrase);
-            if (!!character)
+            const characterPhrase = matches?.[1] ?? "";
+            const character = getCharacterByNicknameOrMemberNumber(characterPhrase);
+            if (character)
                 return [structuredClone(s), character]; // UnpackSpellCodes mutates; keep stored spells key-only (#680)
         }
         return undefined;
@@ -796,8 +791,8 @@ export class MagicModule extends BaseModule {
      * so it's swallowed without another resist roll or swallow message.
      */
     HandleQuaff(sender: Character, consented: boolean = false) {
-        let item = InventoryGet(sender, "ItemHandheld");
-        let spell = this.GetSpellFromItem(item, sender, consented);
+        const item = InventoryGet(sender, "ItemHandheld");
+        const spell = this.GetSpellFromItem(item, sender, consented);
         if (!!spell && !!item)
             this.HandleQuaffWithSpell(sender, getModule<ItemUseModule>("ItemUseModule")?.getItemName(item), spell, consented);
     }
@@ -806,25 +801,25 @@ export class MagicModule extends BaseModule {
         if (!!spell && !!itemName && !!sender) {
             if (consented)
                 return this.ProcessPotion(sender, spell);
-            let gagType = getModule<InjectorModule>("InjectorModule")?.GetGagDrinkAccess(Player);
+            const gagType = getModule<InjectorModule>("InjectorModule")?.GetGagDrinkAccess(Player);
             if (!this.SpellIsBeneficial(spell) && gagType == "nothing" && sender.MemberNumber != Player.MemberNumber) {
                 this.TryForcePotion(sender, itemName, spell);
             } else {
                 if (sender.IsPlayer())
                     SendAction(`%NAME% swallows %POSSESSIVE% ${itemName}.`, sender);
                 else
-                    SendAction(`%NAME% swallows %OPP_NAME%'s ${itemName}.`, sender)
+                    SendAction(`%NAME% swallows %OPP_NAME%'s ${itemName}.`, sender);
                 this.ProcessPotion(sender, spell);
             }
         }
     }
 
     TryForcePotion(sender: Character, itemName: string, spell: SpellDefinition) {
-        let itemUseModule = getModule<ItemUseModule>("ItemUseModule");
+        const itemUseModule = getModule<ItemUseModule>("ItemUseModule");
         if (!itemUseModule) {
             return this.ProcessPotion(sender, spell);
         }
-        let check = itemUseModule?.MakeActivityCheck(sender, Player);
+        const check = itemUseModule?.MakeActivityCheck(sender, Player);
         if (check.AttackerRoll.Total >= check.DefenderRoll.Total) {
             SendAction(`%OPP_NAME% ${check.AttackerRoll.TotalStr}manages to get %OPP_POSSESSIVE% ${itemName} past %NAME%'s ${check.DefenderRoll.TotalStr}lips, forcing %INTENSIVE% to swallow it.`, sender);
             this.ProcessPotion(sender, spell);
@@ -845,16 +840,16 @@ export class MagicModule extends BaseModule {
     itemSpellRequests: Map<number, boolean> = new Map<number, boolean>();
 
     GetSpellFromItem(item: Item | null, itemUser: Character, consented: boolean = false): SpellDefinition | undefined {
-        let itemCraft = item?.Craft;
-        let itemStr = GetItemNameAndDescriptionConcat(item) ?? "";
+        const itemCraft = item?.Craft;
+        const itemStr = GetItemNameAndDescriptionConcat(item) ?? "";
         if (!item || !itemCraft || !itemStr)
             return;
 
-        let itemName = getModule<ItemUseModule>("ItemUseModule")?.getItemName(item);
-        let spells: SpellDefinition[] = []
-        let craftingMember = itemCraft.MemberNumber;
+        const itemName = getModule<ItemUseModule>("ItemUseModule")?.getItemName(item);
+        let spells: SpellDefinition[];
+        const craftingMember = itemCraft.MemberNumber;
         if (!!craftingMember && craftingMember >= 0) {
-            let craftingChar = getCharacter(craftingMember) as OtherCharacter;
+            const craftingChar = getCharacter(craftingMember) as OtherCharacter;
             if (!!craftingChar && craftingChar.IsPlayer()) {
                 spells = Player.LSCG.MagicModule.knownSpells.filter(s => s.AllowPotion && !spellHasPairedEffect(s));
                 let foundSpell = spells?.filter(x => !!x)?.find(x => !!x && !!x.Name && isPhraseInString(itemStr, x.Name));
@@ -862,20 +857,20 @@ export class MagicModule extends BaseModule {
                 this.UnpackSpellCodes(foundSpell);
                 return foundSpell;
             } else {
-                let reqId = Date.now();
+                const reqId = Date.now();
                 this.itemSpellRequests.set(reqId, consented);
                 sendLSCGCommandBeep(craftingMember, "get-spell", [{
                     name: "itemStr",
-                    value: itemStr
+                    value: itemStr,
                 }, {
                     name: "id",
-                    value: reqId
+                    value: reqId,
                 }, {
                     name: "originator",
-                    value: itemUser?.MemberNumber ?? Player.MemberNumber
+                    value: itemUser?.MemberNumber ?? Player.MemberNumber,
                 }, {
                     name: "itemName",
-                    value: itemName
+                    value: itemName,
                 }]);
             }
         }
@@ -883,41 +878,41 @@ export class MagicModule extends BaseModule {
     }
 
     HandleItemSpellRequest(senderNum: number, request: LSCGMessageModel) {
-        let itemStr = request.command?.args.find(a => a.name == "itemStr")?.value as string;
-        let reqId = request.command?.args.find(a => a.name == "id")?.value as number;
+        const itemStr = request.command?.args.find(a => a.name == "itemStr")?.value as string;
+        const reqId = request.command?.args.find(a => a.name == "id")?.value as number;
 
         if (!itemStr || !reqId)
             return;
 
-        let spells = Player.LSCG.MagicModule.knownSpells.filter(s => s.AllowPotion && !spellHasPairedEffect(s));
+        const spells = Player.LSCG.MagicModule.knownSpells.filter(s => s.AllowPotion && !spellHasPairedEffect(s));
         let spell = spells?.filter(x => !!x)?.find(x => !!x && !!x.Name && isPhraseInString(itemStr, x.Name));
-        if (!!spell)
+        if (spell)
             spell = structuredClone(spell);
             this.UnpackSpellCodes(spell);
             sendLSCGCommandBeep(senderNum, "get-spell-response", [{
                 name: "spell",
-                value: spell
+                value: spell,
             }, {
                 name: "id",
-                value: reqId
+                value: reqId,
             }, {
                 name: "originator",
-                value: request.command?.args.find(a => a.name == "originator")?.value as number
+                value: request.command?.args.find(a => a.name == "originator")?.value as number,
             }, {
                 name: "itemName",
-                value: request.command?.args.find(a => a.name == "itemName")?.value as Item
+                value: request.command?.args.find(a => a.name == "itemName")?.value as Item,
             }]);
     }
 
     IncomingGetItemSpellResponse(senderNum: number, response: LSCGMessageModel) {
-        let reqId = response.command?.args.find(a => a.name == "id")?.value as number;
-        let spell = response.command?.args.find(a => a.name == "spell")?.value as SpellDefinition;
-        let itemName = response.command?.args.find(a => a.name == "itemName")?.value as string;
-        let originator = response.command?.args.find(a => a.name == "originator")?.value as number;
-        let sender = getCharacter(originator);
+        const reqId = response.command?.args.find(a => a.name == "id")?.value as number;
+        const spell = response.command?.args.find(a => a.name == "spell")?.value as SpellDefinition;
+        const itemName = response.command?.args.find(a => a.name == "itemName")?.value as string;
+        const originator = response.command?.args.find(a => a.name == "originator")?.value as number;
+        const sender = getCharacter(originator);
 
         if (this.itemSpellRequests.has(reqId)) {
-            let consented = this.itemSpellRequests.get(reqId);
+            const consented = this.itemSpellRequests.get(reqId);
             this.itemSpellRequests.delete(reqId);
             setTimeout(() => {
                 this.HandleQuaffWithSpell(sender, itemName, spell, consented);
