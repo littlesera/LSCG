@@ -359,7 +359,13 @@ export function buildMagicTabs(ctx: KitContext, s: MagicPublicSettingsModel, opt
             ...(opts.remote ? [] : [
                 CheckboxRow(ctx, { label: "Polymorph may change pronouns", get: () => local.allowChangePronouns ?? true, set: v => local.allowChangePronouns = v }),
             ]),
-            SectionLabel("Remote access"),
+        ],
+    });
+
+    tabs.push({
+        label: "Remote access",
+        render: () => [
+            SectionLabel("Remote access", opts.remote ? "How remote access to this player's Magic™ settings works." : "Let other players change your Magic™ settings through LSCG's remote settings."),
             ...(opts.remote
                 ? [
                     CheckboxRow(ctx, {

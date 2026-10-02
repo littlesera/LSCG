@@ -1,11 +1,12 @@
 import { h } from "tsx-dom";
 import { DomOverlayHost } from "Dom/host";
-import { hookFunction } from "utils";
+import { hookFunction, ICONS } from "utils";
 import { apiVersion, extensions } from "api";
 import badgeStyles from "./loginBadge.scss?inline";
 
-// Bottom-right corner of the 2000x1000 canvas; the flyout opens upward/left from the badge.
-const BADGE_SHAPE: RectTuple = [1500, 930, 490, 60];
+// A small square in the bottom-right corner of the 2000x1000 canvas, with the logo above the version. The flyout
+// opens upward and to the left.
+const BADGE_SHAPE: RectTuple = [1916, 916, 66, 66];
 
 function buildFlyout(): HTMLElement {
     const exts = extensions.all();
@@ -32,8 +33,10 @@ function buildFlyout(): HTMLElement {
 function buildBadge(): Node[] {
     const exts = extensions.all();
     const hasErrors = exts.some(e => e.errorCount > 0);
-    const label = exts.length > 0 ? `LSCG v${apiVersion} · ${exts.length} ext` : `LSCG v${apiVersion}`;
+    // It pulses while there are extensions (in amber if one has thrown), and sits still when LSCG is on its own.
+    const classes = ["lscg-badge", exts.length > 0 ? "lscg-badge-pulse" : "", hasErrors ? "lscg-badge-warn" : ""].filter(c => !!c).join(" ");
     let flyout = buildFlyout();
+    // Note: a "//" comment inside the markup below would be rendered as text, so comments stay out here.
     const anchor = (
         <div class="lscg-badge-anchor" onMouseEnter={() => {
             // Error counts change without a registry notification; refresh on open.
@@ -41,11 +44,11 @@ function buildBadge(): Node[] {
             flyout.replaceWith(fresh);
             flyout = fresh;
         }}>
-            <button type="button" class={hasErrors ? "lscg-badge lscg-badge-warn" : "lscg-badge"}
-                title="LSCG is loaded. Hover or click for registered extensions."
+            <button type="button" class={classes} aria-label={`LSCG v${apiVersion} loaded`}
+                title={`LSCG v${apiVersion} loaded. Hover or click for registered extensions.`}
                 onClick={() => anchor.classList.toggle("lscg-badge-open")}>
-                <span class="lscg-badge-dot" />
-                {label}
+                <img src={ICONS.BOUND_GIRL} alt="" draggable="false" />
+                <span class="lscg-badge-version">{`v${apiVersion}`}</span>
             </button>
             {flyout}
         </div>
@@ -57,18 +60,25 @@ function buildBadge(): Node[] {
 
 const badgeHost = new DomOverlayHost("lscg-login-badge", BADGE_SHAPE, buildBadge, { injectKitStyles: false });
 
-/** Shows an "LSCG loaded" badge on the login screen with a flyout listing registered extensions. */
+/** Shows the badge, unless LSCG has finished loading after login (it is for the login screen). */
+export function showLoginBadge(): void {
+    if (!badgeHost.mounted && !window.LSCG_Loaded)
+        badgeHost.mount();
+}
+
+/** Puts a small LSCG badge on the login screen (the logo with the version beneath it): a flyout with the registered
+ *  extensions, and a pulse when there are any. */
 export function installLoginBadge(): void {
     hookFunction("LoginRun", 0, (args, next) => {
         const ret = next(args);
-        if (!badgeHost.mounted && !window.LSCG_Loaded)
-            badgeHost.mount();
+        showLoginBadge();
         return ret;
     });
     hookFunction("LoginUnload", 0, (args, next) => {
         badgeHost.unmount();
         return next(args);
     });
+    // Extensions registering or leaving change the pulse and the flyout's list.
     extensions.onChange(() => badgeHost.remount());
 }
 

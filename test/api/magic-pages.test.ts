@@ -52,8 +52,8 @@ describe("Magic™ settings pages", () => {
         Array.from(root.querySelectorAll("tbody tr")).find(tr => tr.textContent?.includes(text)) as HTMLTableRowElement;
 
     it("offers every tab to the wearer, and no spell editing or astral projection remotely", () => {
-        expect(tabsFor(false).map(t => t.label)).toEqual(["General", "Effects", "Spells", "Defense", "Astral projection"]);
-        expect(tabsFor(true).map(t => t.label)).toEqual(["General", "Effects", "Defense"]);
+        expect(tabsFor(false).map(t => t.label)).toEqual(["General", "Effects", "Spells", "Defense", "Remote access", "Astral projection"]);
+        expect(tabsFor(true).map(t => t.label)).toEqual(["General", "Effects", "Defense", "Remote access"]);
     });
 
     describe("Effects tab", () => {
@@ -517,7 +517,9 @@ describe("Magic™ settings pages", () => {
     });
 
     describe("Defense tab", () => {
-        it("edits the wearer's settings, and shows remote-only wording and controls for a remote view", () => {
+        const labels = (root: HTMLElement) => Array.from(root.querySelectorAll(".lscg-kit-row label")).map(l => l.textContent);
+
+        it("edits the wearer's settings, and leaves out the wearer-only ones for a remote view", () => {
             magic.settings.limitedDuration = true;
             const local = render("Defense");
             const maxBox = Array.from(local.querySelectorAll(".lscg-kit-row")).find(r => r.querySelector("label")?.textContent === "Maximum duration (minutes)")!.querySelector("input") as HTMLInputElement;
@@ -527,10 +529,76 @@ describe("Magic™ settings pages", () => {
             expect(local.textContent).toContain("Require whitelist");
 
             const target = { enabled: true, lockable: false, locked: false } as unknown as MagicPublicSettingsModel;
-            const remote = render("Defense", true, target);
-            expect(remote.textContent).not.toContain("Require whitelist");
-            const locked = Array.from(remote.querySelectorAll(".lscg-kit-row")).find(r => r.querySelector("label")?.textContent === "Locked")!.querySelector("input") as HTMLInputElement;
-            expect(locked.disabled).toBe(true);
+            expect(render("Defense", true, target).textContent).not.toContain("Require whitelist");
+        });
+
+        it("no longer holds the remote access settings, which have their own tab", () => {
+            const defense = labels(render("Defense"));
+            for (const remoteRow of ["Allow remote access", "Lockable", "Allowed members", "Requires trance", "Only the hypnotizer"])
+                expect(defense).not.toContain(remoteRow);
+            expect(render("Defense").textContent).not.toContain("Remote access");
+        });
+    });
+
+    describe("Remote access tab", () => {
+        const row = (root: HTMLElement, label: string) =>
+            Array.from(root.querySelectorAll(".lscg-kit-row")).find(r => r.querySelector("label")?.textContent === label) as HTMLElement;
+        const input = (root: HTMLElement, label: string) => row(root, label).querySelector("input") as HTMLInputElement;
+        const flip = (el: HTMLInputElement, checked: boolean) => { el.checked = checked; el.dispatchEvent(new Event("change")); };
+
+        it("is its own tab, for the wearer and for a remote view", () => {
+            expect(tabsFor(false).map(t => t.label)).toContain("Remote access");
+            expect(tabsFor(true).map(t => t.label)).toContain("Remote access");
+        });
+
+        it("the wearer chooses who can change their settings, and the rest follow from allowing it", () => {
+            magic.settings.remoteAccess = false;
+            const root = render("Remote access");
+            expect(root.textContent).toContain("Let other players change your Magic™ settings");
+            expect(input(root, "Lockable").disabled).toBe(true);
+            expect(input(root, "Allowed members").disabled).toBe(true);
+            expect(input(root, "Requires trance").disabled).toBe(true);
+            expect(input(root, "Only the hypnotizer").disabled).toBe(true);
+
+            flip(input(root, "Allow remote access"), true);
+            expect(magic.settings.remoteAccess).toBe(true);
+            expect(input(root, "Lockable").disabled).toBe(false);
+            expect(input(root, "Allowed members").disabled).toBe(false);
+            expect(input(root, "Requires trance").disabled).toBe(false);
+
+            flip(input(root, "Lockable"), true);
+            expect(magic.settings.lockable).toBe(true);
+            const members = input(root, "Allowed members");
+            members.value = "12, 34"; members.dispatchEvent(new Event("change"));
+            expect(magic.settings.remoteMemberIds).toBe("12, 34");
+        });
+
+        it("'Only the hypnotizer' needs the trance requirement", () => {
+            magic.settings.remoteAccess = true;
+            magic.settings.remoteAccessRequiredTrance = true;
+            const root = render("Remote access");
+            expect(input(root, "Only the hypnotizer").disabled).toBe(false);
+            flip(input(root, "Requires trance"), false);
+            expect(magic.settings.remoteAccessRequiredTrance).toBe(false);
+            expect(input(root, "Only the hypnotizer").disabled).toBe(true);
+        });
+
+        it("a remote view locks or unlocks the wearer, only if they allow it, and sets the trance rules", () => {
+            const target = { enabled: true, lockable: false, locked: false, remoteAccessRequiredTrance: true, limitRemoteAccessToHypnotizer: true } as unknown as MagicPublicSettingsModel;
+            const root = render("Remote access", true, target);
+            expect(root.textContent).toContain("How remote access to this player's Magic™ settings works.");
+            expect(input(root, "Locked").disabled).toBe(true);
+            expect(root.textContent).not.toContain("Allow remote access");
+            expect(root.textContent).not.toContain("Allowed members");
+
+            target.lockable = true;
+            const again = render("Remote access", true, target);
+            flip(input(again, "Locked"), true);
+            expect(target.locked).toBe(true);
+
+            flip(input(again, "Requires trance"), false);
+            expect(target.remoteAccessRequiredTrance).toBe(false);
+            expect(input(again, "Only the hypnotizer").disabled).toBe(true);
         });
     });
 });

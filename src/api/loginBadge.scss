@@ -4,6 +4,9 @@
 	--lscg-teal: #00d5d5;
 	--lscg-teal-light: #aaf7f7;
 	--lscg-teal-dark: #007f7f;
+	--lscg-cream: #fff6e0;
+	// The colour the badge pulses, as "r, g, b". Amber replaces teal if an extension has thrown.
+	--lscg-pulse: 0, 213, 213;
 
 	position: fixed;
 	visibility: hidden;
@@ -12,53 +15,78 @@
 	align-items: flex-end;
 	justify-content: flex-end;
 	font-size: clamp(10px, 1.6dvh, 18px);
-	color: #111;
+	color: #1d2b2b;
 
 	.lscg-badge-anchor {
 		position: relative;
+		width: 100%;
+		height: 100%;
 		pointer-events: auto;
 	}
 
+	// A small cream square with rounded corners: the bound-girl logo, with the version small beneath it.
 	.lscg-badge {
 		display: flex;
+		flex-direction: column;
 		align-items: center;
-		gap: 0.4em;
-		padding: 0.3em 0.7em;
-		border: 2px solid var(--lscg-teal-dark);
-		border-radius: 0.4em;
-		background: var(--lscg-teal);
-		cursor: pointer;
+		justify-content: center;
+		gap: 0.1em;
+		box-sizing: border-box;
+		width: 100%;
+		height: 100%;
+		padding: 8% 6% 6%;
+		border: 1px solid rgba(0, 0, 0, 0.2);
+		border-radius: 22%;
+		color: inherit;
 		font: inherit;
-		font-weight: bold;
 		white-space: nowrap;
+		background: var(--lscg-cream);
+		box-shadow: 0 0.1em 0.3em rgba(0, 0, 0, 0.3);
+		cursor: pointer;
 
 		&:hover {
-			background: var(--lscg-teal-light);
+			background: #fffdf3;
 		}
 
-		.lscg-badge-dot {
-			width: 0.6em;
-			height: 0.6em;
-			border-radius: 50%;
-			background: #fff;
-			border: 1px solid var(--lscg-teal-dark);
+		img {
+			// Takes whatever height the version leaves, kept square.
+			flex: 1 1 0;
+			min-height: 0;
+			aspect-ratio: 1;
+			object-fit: contain;
+			pointer-events: none;
+			user-select: none;
 		}
 
-		&.lscg-badge-warn .lscg-badge-dot {
-			background: #ffb347;
+		.lscg-badge-version {
+			flex: none;
+			font-size: 0.62em;
+			font-weight: bold;
+			line-height: 1.1;
+			pointer-events: none;
+			user-select: none;
+		}
+
+		&.lscg-badge-warn {
+			--lscg-pulse: 255, 152, 0;
+		}
+
+		// With extensions installed: a soft glow that swells and fades.
+		&.lscg-badge-pulse {
+			animation: lscg-badge-pulse 2.4s infinite ease-in-out;
 		}
 	}
 
 	.lscg-badge-flyout {
 		position: absolute;
 		right: 0;
-		bottom: calc(100% + 0.4em);
+		bottom: calc(100% + 0.5em);
 		min-width: 18em;
 		max-height: 50dvh;
 		overflow-y: auto;
 		padding: 0.6em 0.8em;
 		border: 2px solid var(--lscg-teal-dark);
-		border-radius: 0.4em;
+		border-radius: 0.5em;
 		background: var(--lscg-teal-light);
 		box-shadow: 0 0.2em 0.6em rgba(0, 0, 0, 0.35);
 		text-align: left;
@@ -90,5 +118,21 @@
 
 	.lscg-badge-anchor:not(.lscg-badge-open):not(:hover) .lscg-badge-flyout {
 		display: none;
+	}
+}
+
+@keyframes lscg-badge-pulse {
+	0%, 100% {
+		box-shadow: 0 0.1em 0.3em rgba(0, 0, 0, 0.3), 0 0 0 0 rgba(var(--lscg-pulse), 0);
+	}
+	50% {
+		box-shadow: 0 0.1em 0.3em rgba(0, 0, 0, 0.3), 0 0 0 0.35em rgba(var(--lscg-pulse), 0.55), 0 0 0.9em rgba(var(--lscg-pulse), 0.8);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	#lscg-login-badge .lscg-badge.lscg-badge-pulse {
+		animation: none;
+		box-shadow: 0 0.1em 0.3em rgba(0, 0, 0, 0.3), 0 0 0 0.25em rgba(var(--lscg-pulse), 0.55);
 	}
 }
