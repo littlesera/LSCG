@@ -104,7 +104,7 @@ function openCursedItemDialog(anchor: HTMLElement, ctx: KitContext, item: Cursed
 }
 
 export class GuiCursedItems extends GuiSubscreen {
-	private _host = new DomSettingsHost("lscg-cursed-item-settings", () => this.build());
+	private _host = new DomSettingsHost("lscg-cursed-item-settings", this, () => this.build());
 
 	get name(): string {
 		return "Cursed Items";

@@ -66,7 +66,7 @@ export abstract class RemoteHypnoBase extends RemoteGuiSubscreen {
 }
 
 export class RemoteHypno extends RemoteHypnoBase {
-	private _host = new DomSettingsHost("lscg-remote-hypno-settings", () => this.build());
+	private _host = new DomSettingsHost("lscg-remote-hypno-settings", this, () => this.build());
 
 	private build(): Node {
 		const s = this.settings;

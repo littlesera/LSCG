@@ -116,7 +116,7 @@ export class RemoteSuggestions extends RemoteHypnoBase {
 	}
 
 
-	private _host = new DomSettingsHost("lscg-remote-suggestion-settings", () => this.build());
+	private _host = new DomSettingsHost("lscg-remote-suggestion-settings", this, () => this.build());
 
 	RemovedSuggestions: HypnoSuggestion[] = [];
 	Suggestions: HypnoSuggestion[] | undefined = undefined;

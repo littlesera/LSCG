@@ -8,7 +8,7 @@ import { collarPromo, collarRows } from "Settings/collar";
 
 export class RemoteCollar extends RemoteGuiSubscreen {
 	subscreens: RemoteGuiSubscreen[] = [];
-	private _host = new DomSettingsHost("lscg-remote-collar-settings", () => this.build());
+	private _host = new DomSettingsHost("lscg-remote-collar-settings", this, () => this.build());
 
 	get name(): string {
 		return "Control Collar";

@@ -9,7 +9,7 @@ import { KitContext, Tabs } from "Dom/kit";
 import { buildInjectorTabs } from "./injector-pages";
 
 export class GuiInjector extends GuiSubscreen {
-	private _host = new DomSettingsHost("lscg-injector-settings", () => this.build());
+	private _host = new DomSettingsHost("lscg-injector-settings", this, () => this.build());
 
 	get name(): string {
 		return "Drug Enhancements";

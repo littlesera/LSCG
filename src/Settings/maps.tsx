@@ -14,7 +14,7 @@ import { SplatterModule } from "Modules/splatter";
 import { MapModule } from "Modules/map";
 
 export class GuiMaps extends GuiSubscreen {
-	private _host = new DomSettingsHost("lscg-map-settings", () => this.build());
+	private _host = new DomSettingsHost("lscg-map-settings", this, () => this.build());
 
 	get name(): string {
 		return "Map Enhancements";

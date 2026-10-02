@@ -182,6 +182,35 @@ export function SectionLabel(text: string, description?: string): HTMLElement {
     ) as HTMLElement;
 }
 
+/** The viewing player's state that BC applies to every other character it draws: blindness, tints (e.g. hypnosis's
+ *  purple) and blur, from BC itself or from LSCG's hooks on these methods. */
+const VIEWER_EFFECTS = {
+    IsBlind: () => false,
+    GetBlindLevel: () => 0,
+    HasTints: () => false,
+    GetTints: () => [],
+    GetBlurLevel: () => 0,
+} as const;
+
+/** Runs `draw` as if the player had no blindness, tints or blur, so a preview isn't drawn through their eyes. The
+ *  player's own methods (and any mod hooks on them) are put back exactly as they were. */
+export function drawUnaffected<T>(draw: () => T): T {
+    const saved = (Object.keys(VIEWER_EFFECTS) as (keyof typeof VIEWER_EFFECTS)[])
+        .map(key => [key, Object.getOwnPropertyDescriptor(Player, key)] as const);
+    const photo = CommonPhotoMode;
+    Object.assign(Player, VIEWER_EFFECTS);
+    CommonPhotoMode = true; // no blink or darkening either
+    try {
+        return draw();
+    } finally {
+        for (const [key, descriptor] of saved) {
+            if (descriptor) Object.defineProperty(Player, key, descriptor);
+            else delete (Player as any)[key];
+        }
+        CommonPhotoMode = photo;
+    }
+}
+
 export interface ZonePickerProps {
     /** Whose body and worn items to show. Drawn standing, whatever their pose. */
     character: Character;
@@ -207,7 +236,7 @@ export function ZonePicker(ctx: KitContext, props: ZonePickerProps): HTMLCanvasE
 
     // Some zones sit above the character's top edge, so shift everything down until every outline fits.
     const PAD = 6;
-    const zoneTops = props.groups().flatMap(g => (g.Zone ?? []).map(z => DialogGetCharacterZone(C, z, 0, 0, 1, 1)[1]));
+    const zoneTops = AssetGroup.flatMap(g => (g.Zone ?? []).map(z => DialogGetCharacterZone(C, z, 0, 0, 1, 1)[1]));
     const TOP = PAD - Math.min(0, ...zoneTops);
     const canvas = <canvas class="lscg-kit-zones" width={500 + PAD * 2} height={1000 + TOP + PAD} role="img" aria-label="Body zones" onClick={(e: MouseEvent) => {
         const r = canvas.getBoundingClientRect();
@@ -226,7 +255,7 @@ export function ZonePicker(ctx: KitContext, props: ZonePickerProps): HTMLCanvasE
     }} /> as HTMLCanvasElement;
     const draw = canvas.getContext("2d")!;
 
-    const render = () => {
+    const render = () => drawUnaffected(() => {
         const main = MainCanvas;
         MainCanvas = draw;
         try {
@@ -239,7 +268,7 @@ export function ZonePicker(ctx: KitContext, props: ZonePickerProps): HTMLCanvasE
         } finally {
             MainCanvas = main;
         }
-    };
+    });
     // ponytail: per-frame redraw; stops once removed from the page (or if never added within ~5s).
     let attached = false, waited = 0;
     const frame = () => {

@@ -8,6 +8,7 @@ import editorStyles from "./outfitEditor.scss?inline";
 import { clamp, entries, toArray, remove } from "lodash-es";
 import { Outfit } from "./OutfitCollection/outfitCollection";
 import { drawTooltip } from "./settingUtils";
+import { drawUnaffected } from "Dom/kit";
 import { OutfitStorageStrategy } from "./OutfitCollection/IOutfitCollection";
 
 function createButton(screen: GuiOutfits, key: string, i: number, onClick: (key: string) => void) {
@@ -85,22 +86,6 @@ const EDITOR_ID = Object.freeze({
     skinCheck: `${editorRoot}-skin-check`,
     bodyCheck: `${editorRoot}-body-check`,
     genderCheck: `${editorRoot}-gender-check`,
-});
-
-const itemsRoot = "lscg-outfit-edit-items";
-const ITEMS_ID = Object.freeze({
-    root: itemsRoot,
-    styles: `${itemsRoot}-style`,
-
-    menu: "lscg-button-menu",
-
-    layering: `${itemsRoot}-layering`,
-    color: `${itemsRoot}-color`,
-    use: `${itemsRoot}-use`,
-    remove: `${itemsRoot}-remove`,
-    lock: `${itemsRoot}-lock`,
-    tighten: `${itemsRoot}-tighten`,
-    back: `${itemsRoot}-back`,
 });
 
 export class GuiOutfits extends GuiSubscreen {
@@ -210,7 +195,7 @@ export class GuiOutfits extends GuiSubscreen {
                             <option value={OutfitStorageStrategy[OutfitStorageStrategy.SERVER]}>BC Server</option>
                             <option value={OutfitStorageStrategy[OutfitStorageStrategy.LOCALSTORE]}>Local Storage</option>
                         </select>
-                        <span class="lscg-button-tooltip" id={ID.newOutfitTooltip}>
+                        <span class="lscg-button-tooltip" id={ID.storageTooltip}>
                             Change Storage Location
                         </span>
                     </label>
@@ -321,33 +306,6 @@ export class GuiOutfits extends GuiSubscreen {
                 </div>
             </div>,
         }),
-        // [itemsRoot]: Object.freeze({
-        //     shape: [GuiSubscreen.START_X, GuiSubscreen.START_Y, 1800 - GuiSubscreen.START_X, 900 - GuiSubscreen.START_Y] as RectTuple,
-        //     visibility: "hidden",
-        //     dom: <div id={ITEMS_ID.root} class="lscg-screen">
-        //         <style id={ITEMS_ID.styles}>{editorStyles.toString()}</style>
-        //         {
-        //             ElementMenu.Create(
-        //                 "lscg-outfit-edit-menubar",
-        //                 [
-        //                     // ElementButton.Create(
-        //                     //     ITEMS_ID.layering,
-        //                     //     () => this.LayerItem(),
-        //                     //     { image: "./Icons/Cancel.png", tooltip: "Cancel", tooltipPosition: "left" },
-        //                     //     { button: { attributes: { "screen-generated": undefined } } },
-        //                     // ),
-        //                     // ElementButton.Create(
-        //                     //     ITEMS_ID.cancel,
-        //                     //     () => this.ExitItems(),
-        //                     //     { image: "./Icons/Cancel.png", tooltip: "Cancel", tooltipPosition: "left" },
-        //                     //     { button: { attributes: { "screen-generated": undefined } } },
-        //                     // )
-        //                 ],
-        //                 { direction: "ltr" },
-        //             )
-        //         }
-        //     </div>
-        // })
     };
 
     #showScreen(screenId: string) {
@@ -357,7 +315,6 @@ export class GuiOutfits extends GuiSubscreen {
             if (id === screenId) ele.style["visibility"] = "visible";
             else ele.style["visibility"] = "hidden";
         }
-        DialogMenuMapping.items.Unload();
     }
 
     charHook: (() => void) | undefined;
@@ -409,7 +366,6 @@ export class GuiOutfits extends GuiSubscreen {
             if (elem)
                 Object.assign(elem.style, style);
         }
-        this.#resizeInventoryGrid(load);
     }
 
     Exit(): void {
@@ -427,11 +383,10 @@ export class GuiOutfits extends GuiSubscreen {
         document.activeElement?.dispatchEvent(new FocusEvent("blur"));
         this.SelectedKey = undefined;
         this.SelectedOutfit = undefined;
-        this.preview = undefined;
+        this.#dropPreview();
         for (const [id] of entries(this.screens)) {
             ElementRemove(id);
         }
-        DialogMenuMapping.items.Unload();
         this.charHook();
         this.charHook = undefined;
         CommonPhotoMode = false;
@@ -454,14 +409,12 @@ export class GuiOutfits extends GuiSubscreen {
         const strategy = this.outfitModule.data.strategy;
 
         const nKBTotal = clamp(byteToKB(this.outfitModule.data.GetOutfitCollectionBytes()), 0, 9999);
-        const percentage = 100 * nKBTotal / (MAX_DATA / 1000);
+        const percentage = strategy == OutfitStorageStrategy.SERVER ? Math.min(100, 100 * nKBTotal / (MAX_DATA / 1000)) : 0;
         storageFooter.innerText = `${nKBTotal} / ${strategy == OutfitStorageStrategy.SERVER ? (MAX_DATA / 1000) : "♾️"} KB`;
         storageInner.style.height = `${100 - percentage}%`;
         storageInner.style.backgroundColor = "var(--lscg-background-color)";
         storageInner.style.borderBottom = "min(0.3dvh, 0.15dvw) solid var(--lscg-border-color)";
-        if (percentage >= 90) {
-            storageOuter.style.boxShadow = "0 0 min(2dvh, 1dvw) red";
-        }
+        storageOuter.style.boxShadow = percentage >= 90 ? "0 0 min(2dvh, 1dvw) red" : "";
 
         storageSelect.value = OutfitStorageStrategy[strategy];
     }
@@ -495,12 +448,12 @@ export class GuiOutfits extends GuiSubscreen {
         super.Run();
         if (this.preview) {
             //DrawText("- LSCG Edit Outfit -", GuiSubscreen.START_X, GuiSubscreen.START_Y - GuiSubscreen.Y_MOD, "Black", "#D7F6E9");
-            DrawCharacter(this.preview, this.coords.x, this.coords.y, this.coords.zoom, false);
+            const preview = this.preview;
+            drawUnaffected(() => DrawCharacter(preview, this.coords.x, this.coords.y, this.coords.zoom, false));
 
             // Draws all the available character zones
-            const selectedGroupName = this.preview.FocusGroup?.Name ?? "";
             let tooltipToDraw = undefined;
-            for (const Group of AssetGroup.sort((a, b) => b.Name == selectedGroupName ? -1 : 1)) {
+            for (const Group of AssetGroup) {
                 const occupied = InventoryGet(this.preview, Group.Name);
                 const selected = false;// selectedGroupName == Group.Name;
                 const excluded = this.ExcludeZones.includes(Group.Name);
@@ -592,35 +545,16 @@ export class GuiOutfits extends GuiSubscreen {
         });
     }
 
-    removeItem(group: AssetItemGroup) {
-        this.IncomingCode = this.outfitModule.data.EncodeBundle(this.outfitModule.data.ConvertToBundle(this.IncomingCode).filter(item => item.Group != group.Name));
-        this.setFilteredIncoming();
-    }
-
-    // eslint-disable-next-line no-unused-private-class-members -- for the item list screen, currently commented out
-    #openItemList(group: AssetItemGroup) {
-        if (!this.preview) return;
-        console.info(`FocusGroup: ${group.Name}`);
-        this.preview.FocusGroup = group;
-        this.#showScreen(itemsRoot);
-        const ele = DialogMenuMapping["items"].Init({ C: this.preview, focusGroup: this.preview.FocusGroup });
-        DialogMenuButtonBuild(this.preview);
-        const menuEle = document.getElementById(ITEMS_ID.menu) ?? <div id={ITEMS_ID.menu}></div>;
-        menuEle.replaceChildren(...this.GetInventoryDrawMenu());
-        if (!toArray(ele?.children).some(ele => ele.id == ITEMS_ID.menu))
-            ele?.insertBefore(menuEle, ele.firstChild);
-        this.#resizeInventoryGrid(false);
-    }
-
-    // eslint-disable-next-line no-unused-private-class-members -- for the item list screen, currently commented out
-    #closeItemList() {
-        DialogMenuMapping["items"].Unload();
+    #nameTaken() {
+        const key = this.SelectedOutfit?.key.toLocaleLowerCase();
+        return !!key && key != this.SelectedKey && this.outfitModule.data.GetOutfitKeys().includes(key);
     }
 
     #canSave() {
         return (
             !!this.SelectedOutfit &&
             !!this.SelectedOutfit.key &&
+            !this.#nameTaken() &&
             (this.outfitModule.data.strategy == OutfitStorageStrategy.LOCALSTORE || this.outfitModule.data.GetOutfitCollectionBytes() < (MAX_DATA * .9))
         );
     }
@@ -672,10 +606,10 @@ export class GuiOutfits extends GuiSubscreen {
                 } else if (!this.#canSave()) {
                     if (!this.SelectedOutfit?.key) {
                         tooltip.innerText = `${prefix}:\nMissing key`;
-                    } else if (this.outfitModule.data.GetOutfitKeys().filter(x => x != this.SelectedKey).indexOf(this.SelectedOutfit.key.toLocaleLowerCase()) > -1) {
+                    } else if (this.#nameTaken()) {
                         tooltip.innerText = `${prefix}:\nDuplicate name`;
                     } else if (dataSize >= (MAX_DATA * .9)) {
-                        tooltip.innerText = `${prefix}:\nMax allowed Outfit storage size exceeded (${byteToKB(dataSize)} / ${byteToKB(dataSize)}`;
+                        tooltip.innerText = `${prefix}:\nMax allowed Outfit storage size exceeded (${byteToKB(dataSize)} / ${byteToKB(MAX_DATA)} KB)`;
                     }
                 } else {
                     tooltip.innerText = prefix;
@@ -804,10 +738,15 @@ export class GuiOutfits extends GuiSubscreen {
         } else this.#closeEditor();
     }
 
+    #dropPreview() {
+        if (this.preview) CharacterDelete(this.preview, false);
+        this.preview = undefined;
+    }
+
     #closeEditor() {
         this.SelectedKey = undefined;
         this.SelectedOutfit = undefined;
-        this.preview = undefined;
+        this.#dropPreview();
         this.#refreshListing();
         this.#updateElements();
         this.#showScreen(root);
@@ -833,17 +772,17 @@ export class GuiOutfits extends GuiSubscreen {
     }
 
     DeleteOutfit() {
-        if (confirm(`Are you sure you want to delete the outfit: ${this.SelectedOutfit?.key}`)) {        
-            if (this.SelectedKey)
-                this.outfitModule.data.RemoveOutfit(this.SelectedKey, true);
-        }
+        if (!confirm(`Are you sure you want to delete the outfit: ${this.SelectedOutfit?.key}`)) return;
+        if (this.SelectedKey)
+            this.outfitModule.data.RemoveOutfit(this.SelectedKey, true);
         this.#closeEditor();
     }
 
     SaveOutfit() {
         if (this.SelectedOutfit){
-            if (!!this.SelectedKey && this.SelectedKey != this.SelectedOutfit.key.toLocaleLowerCase())
-                this.outfitModule.data.RenameOutfit(this.SelectedKey, this.SelectedOutfit.key, false);
+            // Also catches a change of case only, which keeps the same lowercased key.
+            if (!!this.SelectedKey && this.outfitModule.data.GetOutfit(this.SelectedKey)?.key !== this.SelectedOutfit.key)
+                this.outfitModule.RenameOutfit(this.SelectedKey, this.SelectedOutfit.key);
             this.outfitModule.data.SetOutfitCode(this.SelectedOutfit?.key, this.SelectedOutfit?.code, this.SelectedOutfit?.inherit, true);
         }
         this.#closeEditor();
@@ -913,57 +852,6 @@ export class GuiOutfits extends GuiSubscreen {
         }
 
         this.setFilteredIncoming();
-    }
-
-    /******************* Item Inventory **********************/
-
-    GetInventoryDrawMenu(): JSX.Element[] {
-        if (!this.preview) return [];
-        const FocusItem = InventoryGet(this.preview, this.preview.FocusGroup?.Name as AssetGroupName);
- 
-        return DialogMenuButton.map(button => {
-            const ButtonColor = DialogGetMenuButtonColor(button);
-            const ButtonImage = DialogGetMenuButtonImage(button, FocusItem as Item);
-            const ButtonHoverText = InterfaceTextGet(`DialogMenu${button}`);
-            const ButtonDisabled = DialogIsMenuButtonDisabled(button);
-            return <div class="lscg-button-div">
-                    <button
-                        class="lscg-button"
-                        id={ITEMS_ID.root + "-" + button}
-                        disabled={ButtonDisabled}
-                        onClick={(evt) => this.ClickInventoryMenu(button)}
-                        style={{ backgroundImage: `url('./Icons/${ButtonImage}.png')`, backgroundColor: ButtonColor }}
-                    />
-                    <span class="lscg-button-tooltip" id={ID.newOutfitTooltip} style={{ justifySelf: "right" }}>
-                        {ButtonHoverText}
-                    </span>
-                </div>;
-        });
-    }
-
-    ClickInventoryMenu(button: DialogMenuButtonType) {
-        console.info(`Button press: ${button}`);
-    }
-
-    #resizeInventoryGrid(load: boolean = false) {
-        DialogMenuMapping["items"]?.Resize(load);
-        document.getElementById("lscg-share-crafts")?.remove();
-        const gridEle = document.getElementById(DialogMenuMapping["items"].ids.root);
-        if (gridEle) {
-            const menuEle = document.getElementById(ITEMS_ID.menu);
-            if (menuEle) {
-                const heightRatio = MainCanvas.canvas.clientHeight / 1000;
-                const top = gridEle.clientTop - 100 * heightRatio;
-                const width = gridEle.clientWidth;
-
-                const style: Partial<CSSStyleDeclaration> = {
-                    top: `${top}px`,
-                    width: `${width}px`,
-                };
-                
-                Object.assign(menuEle.style, style);
-            }
-        }
     }
 
     SelectStorageStrategy(ele: HTMLSelectElement) {

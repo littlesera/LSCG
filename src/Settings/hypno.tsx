@@ -12,7 +12,7 @@ export const HYPNO_TIME_MAX = 99999;
 const EYE_TYPE_MAX = 14; // UPDATE THIS WHEN EYE STYLES CHANGE
 
 export class GuiHypno extends GuiSubscreen {
-	private _host = new DomSettingsHost("lscg-hypno-settings", () => this.build());
+	private _host = new DomSettingsHost("lscg-hypno-settings", this, () => this.build());
 
 	get name(): string {
 		return "Triggered Hypnosis";

@@ -90,7 +90,7 @@ export function collarPromo(lines: string[], price: number, canAfford: () => boo
 }
 
 export class GuiCollar extends GuiSubscreen {
-	private _host = new DomSettingsHost("lscg-collar-settings", () => this.build());
+	private _host = new DomSettingsHost("lscg-collar-settings", this, () => this.build());
 
 	get name(): string {
 		return "Breathplay";

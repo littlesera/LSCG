@@ -141,15 +141,21 @@ export class OutfitCollection implements IOutfitCollection {
         return bundle;
     }
     
-    RenameOutfit(oldKey: string, newKey: string, save: boolean = true) {
+    /** Renames an outfit and every inherit reference to it. False (and nothing changes) if there's no such outfit, or
+     *  another outfit already has the new name. */
+    RenameOutfit(oldKey: string, newKey: string, save: boolean = true): boolean {
         oldKey = oldKey.toLocaleLowerCase();
+        const lowerNew = newKey.toLocaleLowerCase();
         const outfit = this.outfits[oldKey];
-        if (!outfit) return;
+        if (!outfit || (lowerNew !== oldKey && this.outfits[lowerNew])) return false;
         outfit.key = newKey;
-        this.outfits[newKey.toLocaleLowerCase()] = outfit;
         delete this.outfits[oldKey];
+        this.outfits[lowerNew] = outfit;
+        for (const other of Object.values(this.outfits))
+            other.inherit = (other.inherit ?? []).map(k => k.toLocaleLowerCase() === oldKey ? newKey : k);
         if (save)
             this.SaveOutfits();
+        return true;
     }
 
     SetOutfitCode(name: string, code: string | undefined, inherits: string[] | undefined = undefined, save: boolean = true): OutfitSaveResult {
@@ -164,7 +170,7 @@ export class OutfitCollection implements IOutfitCollection {
             let outfit: Outfit = this.outfits[key];
             if (!outfit) outfit = <Outfit>{key: name};
             outfit.code = code ?? outfit.code ?? "";
-            outfit.inherit = inherits ?? outfit.inherit ?? [];
+            outfit.inherit = (inherits ?? outfit.inherit ?? []).filter(k => k.toLocaleLowerCase() !== key);
             this.outfits[key] = outfit;
             if (save)
                 return this.SaveOutfits() ? OutfitSaveResult.SUCCESS : OutfitSaveResult.ERROR;

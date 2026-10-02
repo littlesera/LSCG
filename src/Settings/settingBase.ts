@@ -36,6 +36,8 @@ export abstract class GuiSubscreen {
     static START_Y: number = 205;
     static X_MOD: number = 950;
 	static Y_MOD: number = 75;
+	/** True while a DomSettingsHost shows the screen's title, exit and help buttons, so the canvas doesn't too. */
+	static domChrome: boolean = false;
 	readonly module: BaseModule;
 
 	constructor(module: BaseModule) {
@@ -172,8 +174,10 @@ export abstract class GuiSubscreen {
 		const prev = MainCanvas.textAlign;
 		MainCanvas.textAlign = "left";
 
-		DrawText("- LSCG " + this.name + " -", GuiSubscreen.START_X, GuiSubscreen.START_Y - GuiSubscreen.Y_MOD, "Black", "#D7F6E9");
-		DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png", "Main Menu");
+		if (!GuiSubscreen.domChrome) {
+			DrawText("- LSCG " + this.name + " -", GuiSubscreen.START_X, GuiSubscreen.START_Y - GuiSubscreen.Y_MOD, "Black", "#D7F6E9");
+			DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png", "Main Menu");
+		}
 		
 		if (this.multipageStructure.length > 1) {
 			MainCanvas.textAlign = "center";
@@ -200,13 +204,14 @@ export abstract class GuiSubscreen {
 			}
 		});
 		
-		DrawButton(1815, 820, 90, 90, "", "White", "Icons/Introduction.png", this.help.label);
+		if (!GuiSubscreen.domChrome)
+			DrawButton(1815, 820, 90, 90, "", "White", "Icons/Introduction.png", this.help.label);
 
 		MainCanvas.textAlign = prev;
 	}
 
 	Click() {
-		if (MouseIn(1815, 75, 90, 90)) return this.Exit();
+		if (!GuiSubscreen.domChrome && MouseIn(1815, 75, 90, 90)) return this.Exit();
 		if (this.multipageStructure.length > 1)
 			PreferencePageChangeClick(1595, 75, this.multipageStructure.length);
 
@@ -220,7 +225,7 @@ export abstract class GuiSubscreen {
 			}
 		});
 
-		if (MouseIn(1500, 820, 400, 80))
+		if (!GuiSubscreen.domChrome && MouseIn(1815, 820, 90, 90))
             window.open(this.help.link, "_blank");
 	}
 

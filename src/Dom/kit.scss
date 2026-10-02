@@ -9,6 +9,55 @@
 		display: none !important;
 	}
 
+	// A settings screen's frame (DomSettingsHost): title and exit button on top, content, help button bottom right.
+	// Sizes match the canvas buttons they replace (90 of the canvas's 1000 units).
+	.lscg-kit-screen {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) auto;
+		grid-template-rows: auto minmax(0, 1fr) auto;
+		grid-template-areas: "title exit" "body ." "body help";
+		column-gap: min(2dvh, 1dvw);
+		row-gap: min(1dvh, 0.5dvw);
+		min-height: 0;
+	}
+
+	.lscg-kit-screen-title {
+		grid-area: title;
+		align-self: center;
+		margin: 0;
+		font-size: min(3.6dvh, 1.8dvw);
+		font-weight: normal;
+		text-align: left;
+	}
+
+	.lscg-kit-screen-exit,
+	.lscg-kit-screen-help {
+		width: min(9dvh, 4.5dvw);
+		height: min(9dvh, 4.5dvw);
+		padding: 0;
+		background-position: center;
+		background-repeat: no-repeat;
+		background-size: 85%;
+	}
+
+	.lscg-kit-screen-exit {
+		grid-area: exit;
+		background-image: url("Icons/Exit.png");
+	}
+
+	.lscg-kit-screen-help {
+		grid-area: help;
+		align-self: end;
+		background-image: url("Icons/Introduction.png");
+	}
+
+	.lscg-kit-screen-body {
+		grid-area: body;
+		display: grid;
+		grid-template-rows: minmax(0, 1fr);
+		min-height: 0;
+	}
+
 	.lscg-kit-tabs {
 		display: grid;
 		grid-template-rows: auto 1fr;

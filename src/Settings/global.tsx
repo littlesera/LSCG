@@ -14,7 +14,7 @@ import { SplatterModule } from "Modules/splatter";
 import { MapModule } from "Modules/map";
 
 export class GuiGlobal extends GuiSubscreen {
-	private _host = new DomSettingsHost("lscg-global-settings", () => this.build());
+	private _host = new DomSettingsHost("lscg-global-settings", this, () => this.build());
 
 	get name(): string {
 		return "General";

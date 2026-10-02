@@ -5,7 +5,7 @@ import { GuiOutfits } from "Settings/outfits";
 import { Subscreen } from "Settings/setting_definitions";
 import { BaseModule } from "base";
 import { Outfits } from "modules";
-import { LSCG_SendLocal } from "utils";
+import { LSCG_SendLocal, settingsSave } from "utils";
 
 export class OutfitCollectionModule extends BaseModule {
     data: OutfitCollection;
@@ -34,6 +34,30 @@ export class OutfitCollectionModule extends BaseModule {
         return GuiOutfits;
     }
 
+    /** Renames an outfit along with everything that refers to it by name: outfits that inherit it, cursed items,
+     *  speech-analysis reactions, spells and the spirit form. False (and nothing changes) if the collection refuses,
+     *  e.g. because another outfit already has the new name. */
+    RenameOutfit(oldName: string, newName: string, save: boolean = true): boolean {
+        if (!this.data.RenameOutfit(oldName, newName, save)) return false;
+        const old = oldName.toLocaleLowerCase();
+        const matches = (key: string | undefined) => key?.toLocaleLowerCase() === old;
+        const L = Player.LSCG;
+        for (const item of L.CursedItemModule?.CursedItems ?? [])
+            if (matches(item.OutfitKey)) item.OutfitKey = newName;
+        for (const rule of L.SpeechAnalysisModule?.reactions ?? [])
+            if (matches(rule.outfitKey)) rule.outfitKey = newName;
+        const magic = L.MagicModule;
+        if (magic) {
+            if (matches(magic.spiritFormOutfitKey)) magic.spiritFormOutfitKey = newName;
+            for (const spell of magic.knownSpells ?? []) {
+                if (spell.Outfit && matches(spell.Outfit.Key)) spell.Outfit.Key = newName;
+                if (spell.Polymorph && matches(spell.Polymorph.Key)) spell.Polymorph.Key = newName;
+            }
+        }
+        if (save) settingsSave();
+        return true;
+    }
+
     get commands(): ICommand[] {
 		// Empty
 		return [{
@@ -60,6 +84,10 @@ export class OutfitCollectionModule extends BaseModule {
                     return;
                 }
 
+                if (Outfits().GetOutfit(key)) {
+                    LSCG_SendLocal(`Outfit key ${key} already exists.`);
+                    return;
+                }
                 const result = Outfits().SetOutfitCode(key, code);
                 if (result == OutfitSaveResult.SUCCESS)
                     LSCG_SendLocal(`Outfit ${key} saved.`);

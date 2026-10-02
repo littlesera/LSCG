@@ -9,7 +9,7 @@ import { CheckboxRow, KitContext, NumberRow, Panel, SectionLabel, TextRow } from
 const memberList = (val: string) => val.split(",").map(x => x.trim()).filter(x => !!x) as any[];
 
 export class GuiSplatter extends GuiSubscreen {
-	private _host = new DomSettingsHost("lscg-splatter-settings", () => this.build());
+	private _host = new DomSettingsHost("lscg-splatter-settings", this, () => this.build());
 
 	get name(): string {
 		return "Splatters";

@@ -6,7 +6,7 @@ import { DomSettingsHost } from "./domSettingsHost";
 import { ButtonRow, CheckboxRow, KitContext, Notice, NumberRow, Panel, SelectRow, TextRow, ZonePicker } from "Dom/kit";
 
 export class GuiActivities extends GuiSubscreen {
-	private _host = new DomSettingsHost("lscg-activity-settings", () => this.build());
+	private _host = new DomSettingsHost("lscg-activity-settings", this, () => this.build());
 
 	get name(): string {
 		return "Activities";

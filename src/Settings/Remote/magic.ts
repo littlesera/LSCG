@@ -9,7 +9,7 @@ import { buildMagicTabs } from "Settings/magic-pages";
 
 export class RemoteMagic extends RemoteGuiSubscreen {
 	subscreens: RemoteGuiSubscreen[] = [];
-	private _host = new DomSettingsHost("lscg-remote-magic-settings", () => this.build());
+	private _host = new DomSettingsHost("lscg-remote-magic-settings", this, () => this.build());
 
 	get name(): string {
 		return "Magic™";

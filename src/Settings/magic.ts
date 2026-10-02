@@ -8,7 +8,7 @@ import { buildMagicTabs } from "./magic-pages";
 export type SpiritTextType = "None" | "Glow" | "Float";
 
 export class GuiMagic extends GuiSubscreen {
-	private _host = new DomSettingsHost("lscg-magic-settings", () => this.build());
+	private _host = new DomSettingsHost("lscg-magic-settings", this, () => this.build());
 
 	get name(): string {
 		return "Magic™";
