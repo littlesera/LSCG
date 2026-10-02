@@ -108,6 +108,10 @@ type LeashingRemovalReason =
 export class LeashingModule extends BaseModule {
     Pairings: Leashing[] = [];
     claspChangeQueued = false;
+    // Who's clasping us while we check they could leash us (see CanBeClaspedBy)
+    claspingFrom: number | undefined;
+    // How our leash looked when we last put it right, so a refresh only checks again once that's changed
+    leashLook: boolean | undefined;
 
     get defaultSettings() {
         return <BaseSettingsModel>{
@@ -205,7 +209,7 @@ export class LeashingModule extends BaseModule {
     }
 
     load(): void {
-        hookFunction('Player.CanWalk', 1, (args, next) => {
+        hookFunction("Player.CanWalk", 1, (args, next) => {
             if (this.Pairings.some(p => (this.CanDragPlayer(p) && !this.IsBidirectionalType(p.Type))))
                 return false;
             return next(args);
@@ -290,7 +294,9 @@ export class LeashingModule extends BaseModule {
             if (args[0]?.IsPlayer() && this.Clasps.length > 0) {
                 if (this.NeckLeash(Player) === null)
                     this.BreakClasps();
-                else
+                // Not every refresh, only once its look has changed (say a leash swapped in): checking asks every mod
+                // whether whoever we're clasped to may leash us, and BCX says so in chat each time it says no
+                else if (this.LeashLook() !== this.leashLook)
                     this.RefreshLeashLook();
             }
             return ret;
@@ -392,7 +398,7 @@ export class LeashingModule extends BaseModule {
 
             // Someone stuck in a clasped group holds everyone in it in place, like being tethered: nothing but the
             // clasps themselves still leash them
-            if (this.Enabled && !this.ClaspPartners(C).includes(sourceMemberNumber) && this.HeldInPlace(C))
+            if (this.Enabled && sourceMemberNumber !== this.claspingFrom && !this.ClaspPartners(C).includes(sourceMemberNumber) && this.HeldInPlace(C))
                 return false;
 
             if (this.Enabled && this.IsLeashedBy(sourceMemberNumber) && this.RoomAllowsLeashing) {
@@ -511,9 +517,9 @@ export class LeashingModule extends BaseModule {
             if (this.Enabled && this.IsLeashed) {
                 // Vanilla's map leash doesn't check if we're stuck in place, so a clasp checks for itself
                 const stuck = this.CantBePulled(Player);
-                let totalLeashedBy = this.LeashedByPairings.filter(p => p.Type !== "leash" || !stuck).map(p => p.PairedMember);
-                let leashedByMovedAway = totalLeashedBy.filter(leashedByNum => {
-                    let C = getCharacter(leashedByNum);
+                const totalLeashedBy = this.LeashedByPairings.filter(p => p.Type !== "leash" || !stuck).map(p => p.PairedMember);
+                const leashedByMovedAway = totalLeashedBy.filter(leashedByNum => {
+                    const C = getCharacter(leashedByNum);
                     if (!C) return false;
                     if ((Player.MapData == null) || (Player.MapData.Pos.X == null) || (Player.MapData.Pos.Y == null)) return false;
 			        if ((C.MapData?.Pos == null) || (C.MapData.Pos.X == null) || (C.MapData.Pos.Y == null)) return false;
@@ -850,7 +856,7 @@ export class LeashingModule extends BaseModule {
         const refused = !this.Enabled || this.NeckLeash(Player) === null || (fromSomeoneElse && (
             Player.OnlineSharedSettings?.AllowPlayerLeashing === false ||
             !this.CanBeChangedBy(by, other) ||
-            !ChatRoomCanBeLeashedBy(by, Player)
+            !this.CanBeClaspedBy(by)
         ));
         const vetoed = !refused && fromSomeoneElse && emitBefore("grab.beforeIncoming", { type: "leash", sender: by }).cancelled;
         if (refused || vetoed) {
@@ -864,6 +870,17 @@ export class LeashingModule extends BaseModule {
         }
         // Clasping the same two again doesn't make it any less shared
         this.AddLeashing(new Leashing(other, by, false, "leash", shared || was?.SharedLeash));
+    }
+
+    // Whoever clasps us has to be someone who could leash us, the same as to hold our leash. Being held in place
+    // doesn't count against them: clasping onto someone held in place is fine
+    CanBeClaspedBy(member: number) {
+        this.claspingFrom = member;
+        try {
+            return ChatRoomCanBeLeashedBy(member, Player);
+        } finally {
+            this.claspingFrom = undefined;
+        }
     }
 
     // Our end of a clasp: whoever held our leash the vanilla way loses it, like when someone else picks it up
@@ -888,14 +905,20 @@ export class LeashingModule extends BaseModule {
         });
     }
 
-    // The leash vanilla shows as held or not, by whoever holds it or, standing in for them, whoever we're clasped to.
-    // Only redone when it's wrong, as each time sends our whole appearance
-    RefreshLeashLook() {
+    // Whether vanilla shows our leash as held, if it shows one
+    LeashLook() {
         const leash = Player.Appearance.find(item => item.Asset.AllowEffect?.includes("IsLeashed") && InventoryItemHasEffect(item, "Leash", true));
+        return leash === undefined ? undefined : InventoryItemHasEffect(leash, "IsLeashed", true);
+    }
+
+    // Puts that right, held by whoever holds it or, standing in for them, whoever we're clasped to. Only redone when
+    // it's wrong, as each time sends our whole appearance
+    RefreshLeashLook() {
+        const look = this.LeashLook();
         const holder = ChatRoomLeashPlayer ?? this.Clasps[0]?.PairedMember;
-        const held = holder !== undefined && !!ChatRoomCanBeLeashedBy(holder, Player);
-        if (leash !== undefined && InventoryItemHasEffect(leash, "IsLeashed", true) !== held)
+        if (look !== undefined && look !== (holder !== undefined && !!ChatRoomCanBeLeashedBy(holder, Player)))
             CharacterRefreshLeash(Player);
+        this.leashLook = this.LeashLook();
     }
 
     // Who C is clasped to. Ours we know, anyone else's comes from their room settings and only counts when the
@@ -1018,7 +1041,6 @@ export class LeashingModule extends BaseModule {
     }
 
     CanEscape(leashing: Leashing) {
-        let def = LeashDefinitions.get(leashing.Type);
         return !leashing.IsSource && !this.IsLocked(leashing);
     }
 
@@ -1063,9 +1085,9 @@ export class LeashingModule extends BaseModule {
         const args = msg.command?.args;
         if (!args || msg.command?.name != "add-leashing")
             return;
-        let pairedMember = args.find(a => a.name == "pairedMember")?.value as number;
-        let type = args.find(a => a.name == "type")?.value as GrabType;
-        let isSource = args.find(a => a.name == "isSource")?.value as boolean;
+        const pairedMember = args.find(a => a.name == "pairedMember")?.value as number;
+        const type = args.find(a => a.name == "type")?.value as GrabType;
+        const isSource = args.find(a => a.name == "isSource")?.value as boolean;
         if (type === "leash") {
             this.AcceptClasp(pairedMember, sender, args.find(a => a.name === "shared")?.value as boolean | undefined);
             return;
@@ -1208,10 +1230,10 @@ export class LeashingModule extends BaseModule {
             return;
         }
         if (pairing === undefined) {
-            LSCG_SendLocal(`You are not grabbed by anyone! (Try refreshing if you're stuck)`);
+            LSCG_SendLocal("You are not grabbed by anyone! (Try refreshing if you're stuck)");
             return;
         }
-        var grabber = getCharacter(pairing.PairedMember);
+        const grabber = getCharacter(pairing.PairedMember);
 
         SendAction(`${CharacterNickname(Player)} tries %POSSESSIVE% best to escape from %OPP_NAME_POSSESSIVE% grip...`, grabber);
         setTimeout(() => {

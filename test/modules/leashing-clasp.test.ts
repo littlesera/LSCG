@@ -50,6 +50,7 @@ describe("LeashingModule clasped leashes", () => {
 		resetWorld({ MemberNumber: 1, Nickname: "PlayerA", LSCG: lscgOn() });
 		leashing.Pairings = [];
 		leashing.claspChangeQueued = false;
+		leashing.leashLook = undefined;
 		// The game lists us among the room's characters too
 		addToRoom(player());
 		g.Player.OnlineSharedSettings = { AllowPlayerLeashing: true };
@@ -367,6 +368,7 @@ describe("LeashingModule clasped leashes", () => {
 			claspedBy(c, 2);
 			expect(clasps()).toEqual([]);
 			expect(releaseBeeps().map(([target]) => target)).toEqual([2]);
+			expect(sent.actions()).toEqual([]);
 		});
 
 		it("not while our leashing is off, whatever the clasper last saw of our settings", () => {
@@ -392,6 +394,16 @@ describe("LeashingModule clasped leashes", () => {
 			claspedBy(join(3), 2);
 			expect(clasps()).toEqual([]);
 			expect(releaseBeeps().map(([target]) => target)).toEqual([2]);
+		});
+
+		it("held in place, we still take a clasp from someone who could otherwise leash us", () => {
+			const b = join(2);
+			listClasps(b, [1]);
+			stuck(b);
+			claspedTo(2);
+			join(4);
+			claspedBy(join(3), 4);
+			expect(clasps().map(c => c.with)).toEqual([2, 4]);
 		});
 
 		it("refusing it again keeps a clasp we already had", () => {
@@ -1050,6 +1062,24 @@ describe("LeashingModule clasped leashes", () => {
 			g.CharacterRefresh(g.Player);
 			g.CharacterRefresh(g.Player);
 			expect(original("CharacterRefreshLeash")).not.toHaveBeenCalled();
+		});
+
+		it("whoever we're clasped to isn't checked on every refresh, as BCX says so in chat each time it says no", () => {
+			let asked = 0;
+			const bcx = bcModSDK.registerMod({ name: "BCXish", fullName: "BCXish", version: "1" });
+			bcx.hookFunction("ChatRoomCanBeLeashedBy", 4, () => {
+				asked++;
+				return false;
+			});
+			try {
+				wearLeash(player(), { held: true });
+				claspedTo(2);
+				for (let i = 0; i < 5; i++)
+					g.CharacterRefresh(g.Player);
+				expect(asked).toBe(1);
+			} finally {
+				bcx.unload();
+			}
 		});
 
 		it("whose clasp icons we draw on someone: who they list that lists them back", () => {
