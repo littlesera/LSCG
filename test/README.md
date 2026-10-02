@@ -75,7 +75,19 @@ for a real browser — by hand, or driven by [agent-browser](https://github.com/
 - `test/playground/harness.js` adds page helpers: `Playground.login()`, `openSettings("Breathplay")`,
   `addCharacter({ pose: ["Kneel"], lscg: {...} })` (another LSCG player in the room), `openProfile(C)`, and
   `toPage(x, y)` (BC canvas coordinates to page pixels, for real mouse clicks on canvas-drawn UI).
-- `npm run ui:shots` (playground running) screenshots every LSCG settings screen to `test/.out/ui/`.
+- `npm run ui:shots` (playground running) screenshots every LSCG settings screen, every tab, to `test/.out/ui/`.
+- `npm run test:ui` runs the Playwright suite in `test/ui/` (`*.spec.ts`, so vitest never picks them up) against the
+  playground, which Playwright starts itself. Run `npm run build` first: it tests the built `dist/bundle.js`.
+  - `settings.spec.ts` opens every settings screen and tab and changes every enabled input once, failing for any
+    input that doesn't change a saved setting (`sweep.ts`), and checks that leaving a screen leaves no overlays,
+    preview characters or photo mode behind. A new screen fails the "every screen is covered" test until it's
+    added to its list.
+  - `flows.spec.ts` covers specific behaviour: the zone picker, outfit renames, the spell menu, remote settings.
+  - A failure keeps a screenshot and a trace in `test/.out/ui-results/`; `npx playwright show-trace <trace.zip>`
+    replays it.
+  - `.github/workflows/ui.yml` runs it on PRs, **non-blocking** (`continue-on-error`) until it has proven reliable.
+  - LSCG errors in the browser console fail a test, but BC's own noise (missing optional files, rejected
+    appearance bundles) is ignored; see `IGNORED` in `test/ui/fixtures.ts`.
 
 ```sh
 npm run build && npm run playground          # in one terminal
