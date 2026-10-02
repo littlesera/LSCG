@@ -9,6 +9,7 @@ import { ItemUseModule } from "./item-use";
 import { CollarModel } from "Settings/Models/collar";
 import { CollarModule } from "./collar";
 import { CommandListener, CoreModule } from "./core";
+import { emit, emitBefore } from "api/events";
 
 export type GrabType = "hand"  | "ear" | "tongue" | "arm" | "neck" | "mouth" | "horn" | "mouth-with-foot" | "chomp" | "eyes" | "compulsion" | "tail" | "hair" | "nose" | "nipples" | "collar"
 
@@ -559,6 +560,8 @@ export class LeashingModule extends BaseModule {
             pairing = Object.assign(exists, pairing);
         const definition = LeashDefinitions.get(pairing.Type);
         definition?.OnAdd?.(pairing);
+        if (!exists)
+            emit("grab.added", { type: pairing.Type, pairedMember: pairing.PairedMember, isSource: pairing.IsSource });
     }
 
     ReleaseAllLeashingsAsSource() {
@@ -594,8 +597,10 @@ export class LeashingModule extends BaseModule {
         });
     }
 
+    // Every removal path goes through here. Returns nothing, so filter callers drop the pairing.
     RemoveCallback(pairing: Leashing) {
         LeashDefinitions.get(pairing.Type)?.OnRemove?.(pairing);
+        emit("grab.removed", { type: pairing.Type, pairedMember: pairing.PairedMember, isSource: pairing.IsSource });
     }
 
     NotifyUnleashings(leashings: Leashing[]) {
@@ -796,6 +801,15 @@ export class LeashingModule extends BaseModule {
 
     IncomingGrab(sender: Character | null, grabType: GrabType) {
         if (!!sender && !!sender.MemberNumber) {
+            if (emitBefore("grab.beforeIncoming", { type: grabType, sender: sender.MemberNumber }).cancelled) {
+                // Refused: tell the grabber to drop their side, as if we had released.
+                SendAction(`%NAME% slips out of %OPP_NAME%'s grab.`, sender);
+                sendLSCGCommandBeep(sender.MemberNumber, "release", [
+                    { name: "type", value: grabType },
+                    { name: "isSource", value: false },
+                ]);
+                return;
+            }
             this.AddLeashing(new Leashing(sender.MemberNumber,
                 sender.MemberNumber,
                 false, 

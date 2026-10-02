@@ -15,12 +15,13 @@ jobs:
     runs-on: ubuntu-latest
     environment: release
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v7
     - name: Use Node.js 24.x
-      uses: actions/setup-node@v3
+      uses: actions/setup-node@v7
       with:
-        node-version: ${{ matrix.node-version }}
+        node-version: '24.x'
         cache: 'npm'
+        registry-url: 'https://registry.npmjs.org' # lets npm publish read NODE_AUTH_TOKEN below
     - run: npm ci
     - run: npm run build --if-present
     #- run: npm test
@@ -33,3 +34,17 @@ jobs:
         clean-exclude: dev
         git-config-name: github-actions[bot]
         git-config-email: github-actions[bot]@users.noreply.github.com
+
+    # After the deploy, so a publishing problem never holds up a release. `npm run build` has already emitted the
+    # typings; this assembles the package (versioned to match LSCG) and publishes it unless that version exists.
+    - name: Publish @lscg/types to npm
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      run: |
+        node scripts/pack-types.mjs
+        VERSION=$(node -p "require('./build/types-package/package.json').version")
+        if npm view "@lscg/types@$VERSION" version >/dev/null 2>&1; then
+          echo "@lscg/types@$VERSION is already on npm; nothing to publish."
+        else
+          npm publish ./build/types-package --access public --provenance
+        fi

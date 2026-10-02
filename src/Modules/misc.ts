@@ -3,6 +3,7 @@ import { MiscSettingsModel } from "Settings/Models/base";
 import { ModuleCategory } from "Settings/setting_definitions";
 import { getCharacter, GetItemNameAndDescriptionConcat, GetMetadata, getRandomInt, GetTargetCharacter, hookFunction, isPhraseInString, LSCG_SendLocal, OnAction, OnActivity, removeAllHooksByModule, SendAction, settingsSave, ICONS, GetCraftingNameAndDescriptionConcat } from "../utils";
 import { CureKeywords, getModule, HornyKeywords, MindControlKeywords, NetgunKeywords, SedativeKeywords } from "modules";
+import { extensionDrugs, type ExtensionDrug } from "api/drugs";
 import { StateModule } from "./states";
 import { SleepState } from "./States/SleepState";
 import { LeashingModule } from "./leashing";
@@ -724,12 +725,32 @@ export class MiscModule extends BaseModule {
         },
     ];
 
+    /** The built-in drugs, then any extensions have registered, which can appear after this module is built. */
+    get allDrugOptions(): ScreenElem[] {
+        return [...this.drugOptionsList, ...extensionDrugs.all().map(drug => this.extensionDrugOption(drug))];
+    }
+
+    extensionDrugOption(drug: ExtensionDrug): ScreenElem {
+        // Element ids can't carry the "." in a drug id (or whatever else an extension puts in a name) safely.
+        const safe = drug.id.replace(/[^a-z0-9_]/gi, c => `-${c.charCodeAt(0).toString(16)}-`);
+        const allowedItems = ["MedicalInjector", "LatexRespirator", "GlassFilled", "Mug"];
+        return {
+            type: "checkbox",
+            id_label: `crafting-lscg-effects-ext-${safe}-label`,
+            id_button: `crafting-lscg-effects-ext-${safe}-checkbox`,
+            label: drug.label,
+            description: `${drug.description || `Add the ${drug.label} effect to the item`} (Only for: Medical Injector, Latex Respirator, Filled Glass or Mug)`,
+            keywords: drug.keywords,
+            condition: (): boolean => !!CraftingSelectedItem?.Asset && allowedItems.includes(CraftingSelectedItem.Asset.Name),
+        };
+    }
+
     // concat all elem from OptionsList above
     getAllOptionsElem(): ScreenElem[] {
         let allElemList = this.chaoticEvolvingOptionList;
         allElemList = allElemList.concat(this.tamperproofOptionList);
         allElemList = allElemList.concat(this.miscsOptionsList);
-        allElemList = allElemList.concat(this.drugOptionsList);
+        allElemList = allElemList.concat(this.allDrugOptions);
         return allElemList;
     }
 
@@ -857,7 +878,7 @@ export class MiscModule extends BaseModule {
             this.createGenericGridArea(this.LscgEffectCraftingId.miscGrid, parent, this.createHtmlElemList(this.miscsOptionsList));
 
             // drug grid
-            this.createGenericGridArea(this.LscgEffectCraftingId.drugGrid, parent, this.createHtmlElemList(this.drugOptionsList));
+            this.createGenericGridArea(this.LscgEffectCraftingId.drugGrid, parent, this.createHtmlElemList(this.allDrugOptions));
 
             // tooltip (bottom grid)
             ElementCreate({

@@ -6,6 +6,7 @@ import { SETTING_NAME_PREFIX, Subscreen, setSubscreen } from "./setting_definiti
 import { modules } from "modules";
 import { GlobalSettingsModel } from "./Models/base";
 import { ICONS } from "utils";
+import { GuiExtensions } from "./extensions";
 
 export class GUI extends BaseModule {
 	static instance: GUI | null = null;
@@ -98,6 +99,9 @@ export class GUI extends BaseModule {
 
 			this._subscreens.push(new module.settingsScreen(module));
 		}
+
+		// One page for every extension's screens; it hides itself until some extension has one.
+		this._subscreens.push(new GuiExtensions(this));
 
 		this._mainMenu.subscreens = this._subscreens;
 

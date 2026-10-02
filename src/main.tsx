@@ -29,6 +29,9 @@ import { hasExtendedOnlineSettings, type ExtendedOnlineSettings } from "./types/
 import styles from "./main.scss?inline";
 import { MapModule } from "Modules/map";
 import { SpeechAnalysisModule } from "Modules/speech-analysis";
+import { announceReady, apiCapabilities, apiVersion, exposeIsReady, extensions, getModApi, installLoadQueue, onReady } from "api";
+import { installLoginBadge, removeLoginBadge } from "api/loginBadge";
+import { emit } from "api/events";
 
 export { 
 	DrugKeywords, 
@@ -41,7 +44,12 @@ export {
 	ImportSettings,
 	getModule,
 	sendLSCGBeep,
-	Outfits
+	Outfits,
+	// Extension API (see docs/api.md)
+	getModApi,
+	onReady,
+	apiVersion as version,
+	apiCapabilities as capabilities
 };
 
 function initWait() {
@@ -147,6 +155,12 @@ function init() {
 	window.LSCG_Loaded = true;
 	document.body.appendChild(<style id="lscg-style">{styles}</style>);
 	console.log(`LSCG loaded! Version: ${LSCG_VERSION}`);
+
+	removeLoginBadge();
+	announceReady();
+	const extCount = extensions.all().length;
+	if (typeof ToastManager !== "undefined")
+		ToastManager.success(`LSCG ${LSCG_VERSION} loaded` + (extCount > 0 ? ` with ${extCount} extension(s)` : ""));
 }
 
 function init_modules(): boolean {
@@ -191,7 +205,9 @@ function init_modules(): boolean {
 			m.safeword();
 		}
 		settingsSave(true);
-		return next(args);
+		const ret = next(args);
+		emit("safeword", { kind: "revert" });
+		return ret;
 	});
 
 	hookFunction("ChatRoomSafewordRelease", 1, (args, next) => {
@@ -200,6 +216,7 @@ function init_modules(): boolean {
 			m.safeword();
 		}
 		settingsSave(true);
+		emit("safeword", { kind: "release" });
 		return ret;
 	});
 
@@ -231,6 +248,13 @@ if (window.LSCG_Loaded !== undefined) {
   throw "Already loaded";
 }
 window.LSCG_Loaded = false;
+window.LSCG_Version = apiVersion;
 console.debug("LSCG: Parse start...");
+
+// Extensions that loaded before LSCG register now, so they are known before login.
+installLoadQueue();
+installLoginBadge();
+// window.LSCG is only assigned once this IIFE returns; add the live `isReady` getter right after.
+queueMicrotask(() => exposeIsReady(window.LSCG));
 
 initWait();

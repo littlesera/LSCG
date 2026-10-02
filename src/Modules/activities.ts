@@ -1,5 +1,6 @@
 import { BaseModule } from "base";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
+import { emit, hasListeners } from "api/events";
 import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, hookFunction, ICONS, getCharacter, OnAction, callOriginal, LSCG_SendLocal, GetTargetCharacter, GetActivityName, GetMetadata, GetActivityEntryFromContent, IsActivityAllowed, replace_template, sendLSCGMessage } from "../utils";
 import { Consent, Core, getModule } from "modules";
 import { ItemUseModule } from "./item-use";
@@ -11,6 +12,7 @@ import { HypnoModule } from "./hypno";
 import { StateMigrator } from "./Migrators/StateMigrator";
 import { StateModule } from "./states";
 import { SplatterMapping, SplatterModule } from "./splatter";
+import { extensionActivities, extensionPrerequisites } from "api/activities";
 import { CommandListener } from "./core";
 
 export interface ActivityTarget {
@@ -135,6 +137,22 @@ export class ActivityModule extends BaseModule {
             return next(args);
         }, ModuleCategory.Activities);
 
+        // Low priority: only runs for activities the hook above actually let through.
+        hookFunction("ServerSend", -100, (args, next) => {
+            const data = args[1] as ServerChatRoomMessage;
+            if (args[0] === "ChatRoomChat" && data?.Type === "Activity" && hasListeners("activity.sent")) {
+                const meta = GetMetadata(data);
+                const name = meta?.ActivityName ?? "";
+                emit("activity.sent", {
+                    name,
+                    group: meta?.GroupName,
+                    target: meta?.TargetMemberNumber,
+                    isLSCG: name.startsWith("LSCG_") || this.PatchedActivities.indexOf(name) > -1,
+                });
+            }
+            return next(args);
+        }, ModuleCategory.Activities);
+
         hookFunction("ActivityCheckPrerequisite", 100, (args, next) => {
             var prereqName = <string>args[0];
             if (this.CustomPrerequisiteFuncs.has(prereqName)) {
@@ -157,6 +175,17 @@ export class ActivityModule extends BaseModule {
         }, ModuleCategory.Activities)
 
         OnActivity(1, ModuleCategory.Activities, (data, sender, msg, metadata) => {
+            if (hasListeners("activity.received")) {
+                const meta = GetMetadata(data);
+                const name = meta?.ActivityName ?? "";
+                if (!!name && meta?.TargetMemberNumber === Player.MemberNumber)
+                    emit("activity.received", {
+                        name,
+                        group: meta?.GroupName,
+                        source: sender?.MemberNumber,
+                        isLSCG: name.startsWith("LSCG_") || this.PatchedActivities.indexOf(name) > -1,
+                    });
+            }
             let target = GetTargetCharacter(data);
             let activityName = GetActivityName(data);
             if (!this.Enabled)
@@ -225,6 +254,10 @@ export class ActivityModule extends BaseModule {
         this.AddCommandListeners();
         this.InitTongueGrabHooks();
         this.RegisterActivities();
+
+        // Extensions may have registered before this module loaded, or may register later.
+        this.SyncExtensionActivities();
+        this.ListenForExtensions();
     }
 
     run(): void {
@@ -1811,6 +1844,11 @@ export class ActivityModule extends BaseModule {
     prevMouth: ExpressionName | null = null;
 
     unload(): void {
+        this.StopListeningForExtensions();
+        this._appliedExtActivities.forEach(name => this.RemoveActivity(name));
+        this._appliedExtActivities.clear();
+        this._appliedExtPrereqs.forEach(id => this.CustomPrerequisiteFuncs.delete(id));
+        this._appliedExtPrereqs.clear();
         removeAllHooksByModule(ModuleCategory.Activities);
     }
 
@@ -1970,6 +2008,93 @@ export class ActivityModule extends BaseModule {
 
         ActivityFemale3DCG.push(activity as Activity);
         ActivityFemale3DCGOrdering.push(activity.Name);
+    }
+
+    /** Extension registry id -> the activity's name in BC, for what is currently applied. */
+    private _appliedExtActivities = new Map<string, string>();
+    private _appliedExtPrereqs = new Set<string>();
+    private _unhookExtensions: (() => void)[] = [];
+
+    /** Keeps BC's activity list in step as extensions register and unregister after load. */
+    ListenForExtensions() {
+        this.StopListeningForExtensions();
+        this._unhookExtensions = [
+            extensionActivities.onChange(() => this.SyncExtensionActivities()),
+            extensionPrerequisites.onChange(() => this.SyncExtensionActivities()),
+        ];
+    }
+
+    StopListeningForExtensions() {
+        this._unhookExtensions.forEach(unhook => unhook());
+        this._unhookExtensions = [];
+    }
+
+    /** Makes BC's activity list match what extensions have registered: adds new activities and prerequisites, removes gone ones. */
+    SyncExtensionActivities() {
+        const prereqs = extensionPrerequisites.all();
+        const livePrereqs = new Set(prereqs.map(p => p.id));
+        for (const id of [...this._appliedExtPrereqs]) {
+            if (livePrereqs.has(id)) continue;
+            this.CustomPrerequisiteFuncs.delete(id);
+            this._appliedExtPrereqs.delete(id);
+        }
+        // Before activities, so an activity's own prerequisites exist as soon as it can be offered.
+        for (const p of prereqs) {
+            if (this._appliedExtPrereqs.has(p.id)) continue;
+            this.CustomPrerequisiteFuncs.set(p.id, p.check);
+            this._appliedExtPrereqs.add(p.id);
+        }
+
+        const live = extensionActivities.all();
+        const liveIds = new Set(live.map(a => a.id));
+        for (const [id, name] of [...this._appliedExtActivities]) {
+            if (liveIds.has(id)) continue;
+            this.RemoveActivity(name);
+            this._appliedExtActivities.delete(id);
+        }
+        for (const a of live) {
+            if (this._appliedExtActivities.has(a.id)) continue;
+            const bundle = a.build();
+            // A typo'd group would leave the activity silently unreachable; say so while it's easy to spot.
+            for (const target of bundle.Targets ?? []) {
+                const known = (AssetGroup ?? []) as AssetGroup[];
+                if (known.length > 0 && !known.some(g => g.Name === target.Name && g.Category === "Item"))
+                    console.warn(`LSCG: extension activity "${a.id}" targets "${target.Name}", which isn't a BC item group, so it can't be offered there.`);
+            }
+            this.AddActivity(bundle);
+            this._appliedExtActivities.set(a.id, bundle.Activity.Name);
+        }
+    }
+
+    /** Undoes AddActivity: the activity, its menu text, and every callback registered for it. */
+    RemoveActivity(name: string) {
+        const activity = ActivityFemale3DCG.find(a => (a.Name as string) === name);
+        if (activity) {
+            const groups = new Set<string>([
+                ...(Array.isArray(activity.Target) ? activity.Target : []),
+                ...(Array.isArray(activity.TargetSelf) ? activity.TargetSelf : []),
+            ]);
+            const cache = ActivityDictionaryLoad().cache as Record<string, string>;
+            for (const group of groups)
+                for (const prefix of ["Label-ChatOther-", "ChatOther-", "Label-ChatSelf-", "ChatSelf-"])
+                    delete cache[`${prefix}${group}-${name}`];
+            ActivityFemale3DCG.splice(ActivityFemale3DCG.indexOf(activity), 1);
+        }
+
+        const ordering = ActivityFemale3DCGOrdering.indexOf(name as ActivityName);
+        if (ordering > -1)
+            ActivityFemale3DCGOrdering.splice(ordering, 1);
+
+        if (ActivityDictionary) {
+            for (let i = ActivityDictionary.length - 1; i >= 0; i--)
+                if (ActivityDictionary[i][0] === "Activity" + name)
+                    ActivityDictionary.splice(i, 1);
+        }
+
+        this.CustomIncomingActivityReactions.delete(name);
+        this.CustomImages.delete(name);
+        this.CustomActionCallbacks.delete(name);
+        this.CustomPreparseCallbacks.delete(name);
     }
 
     InitTongueGrabHooks(): void {

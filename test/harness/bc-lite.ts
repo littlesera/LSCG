@@ -284,12 +284,14 @@ export function installBcLite(): BcLite {
 
 	// `ChatRoomMessageRunExtractors` derives {TargetMemberNumber, ActivityName, ...}
 	// metadata from a message's Dictionary, the way BC's real chat pipeline does.
-	g.ChatRoomMessageRunExtractors = (data: { Dictionary?: { Tag?: string; MemberNumber?: number; TargetCharacter?: number; text?: string }[] }) => {
+	g.ChatRoomMessageRunExtractors = (data: { Dictionary?: { Tag?: string; MemberNumber?: number; TargetCharacter?: number; text?: string; FocusGroupName?: string }[] }) => {
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		const metadata: Record<string, any> = {};
 		for (const entry of data?.Dictionary ?? []) {
 			if (entry.Tag === "DestinationCharacter" || entry.Tag === "TargetCharacterName") metadata.TargetMemberNumber = entry.MemberNumber;
 			if (entry.Tag === "ActivityName") metadata.ActivityName = entry.text;
+			// BC resolves this against the asset groups; the fake takes it as given.
+			if (entry.FocusGroupName) metadata.GroupName = entry.FocusGroupName;
 		}
 		return { metadata };
 	};

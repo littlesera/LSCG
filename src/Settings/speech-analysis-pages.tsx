@@ -3,7 +3,7 @@ import { StripLevel } from "./Models/cursed-item";
 import { OutfitOption } from "./Models/magic";
 import { h } from "tsx-dom";
 import { buildTuneTab } from "./speech-tuning-pages";
-import { ButtonRow, CheckboxRow, confirmDialog, openDialog, KitContext, KitTab, Notice, NumberRow, RuleTable, SectionLabel, SelectOption, SelectRow, TextRow } from "./Dom/kit";
+import { ButtonRow, CheckboxRow, confirmDialog, openDialog, KitContext, KitTab, Notice, NumberRow, RuleTable, SectionLabel, SelectOption, SelectRow, TextRow } from "Dom/kit";
 import {
     SPEECH_DETECTIONS, SPEECH_DETECTION_DETECTOR, SPEECH_DETECTORS, SPEECH_EDITABLE_KEYS, SpeechDetectorId, SPEECH_MAX_COOLDOWN_MS, SPEECH_MAX_DURATION_MS, SPEECH_MAX_RULES, SPEECH_MAX_TEXT_LENGTH, SPEECH_NUMBER_RANGES as R,
     SPEECH_MAX_PHRASE_GROUPS, SPEECH_PHRASE_GROUP_NAME_MAX, SpeechPhraseGroup, defaultSpeechSettings, newPhraseGroupId,

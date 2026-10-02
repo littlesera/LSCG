@@ -12,6 +12,7 @@ import { lt } from "semver";
 import { regEscape } from "./regEscape";
 import { OutfitCollectionModule } from "Modules/outfitCollection";
 import { isFileInputEvent } from "./types/guards";
+import { emit } from "api/events";
 
 export const LSCG_CHANGES: string = "https://github.com/littlesera/LSCG/releases/latest";
 export const LSCG_TEAL: string = "#00d5d5";
@@ -339,6 +340,7 @@ const executeSettingsSave = () => {
     if (shouldPublish) {
         getModule<CoreModule>("CoreModule")?.SendPublicPacket(false, "sync");
     }
+    emit("settings.saved", { published: shouldPublish });
 };
 
 const debouncedSave = debounce(executeSettingsSave, 1000, {
@@ -654,7 +656,7 @@ export function sendLSCGBeep(target: number, msg: LSCGMessageModel) {
 	} as unknown as ServerAccountBeepRequest);
 }
 
-export function sendLSCGCommand(target: Character, commandName: LSCGCommandName, commandArgs: {name: string, value: any}[] = []) {
+export function sendLSCGCommand(target: Character, commandName: LSCGCommandName | LSCGExtensionCommandName, commandArgs: {name: string, value: any}[] = []) {
 	sendLSCGMessage(<LSCGMessageModel>{
 		IsLSCG: true,
 		type: "command",
@@ -669,7 +671,7 @@ export function sendLSCGCommand(target: Character, commandName: LSCGCommandName,
 	});
 }
 
-export function sendLSCGCommandBeep(target: number, commandName: LSCGCommandName, commandArgs: {name: string, value: any}[] = []) {
+export function sendLSCGCommandBeep(target: number, commandName: LSCGCommandName | LSCGExtensionCommandName, commandArgs: {name: string, value: any}[] = []) {
 	sendLSCGBeep(target, <LSCGMessageModel>{
 		IsLSCG: true,
 		type: "command",

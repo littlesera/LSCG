@@ -11,6 +11,7 @@ import { MagicPublicSettingsModel, MagicSettingsModel } from "./magic";
 import { ChaoticItemModule } from "Modules/chaotic-item";
 import { CursedItemSettingsModel } from "./cursed-item";
 import { SpeechAnalysisPublicSettingsModel, SpeechAnalysisSettingsModel, defaultSpeechPublicSettings } from "./speech-analysis";
+import type { ExtensionStorageEntry } from "api/storage";
 
 export interface SettingsModel {
     Version: string;
@@ -33,10 +34,14 @@ export interface SettingsModel {
     SplatterModule: SplatterSettingsModel;
     MapModule: MapSettingsModel;
     SpeechAnalysisModule: SpeechAnalysisSettingsModel;
+    /** Data extensions saved, by extension id (see api/storage). Part of exports; only the public part is shared. */
+    Extensions?: Record<string, ExtensionStorageEntry>;
 }
 
 export interface IPublicSettingsModel extends BaseSettingsModel {
     Version: string;
+    /** Public data extensions share with the room, by extension id. Built at sync time, never stored. */
+    ExtensionData?: Record<string, unknown>;
     CollarModule: CollarPublicSettingsModel;
     HypnoModule: HypnoPublicSettingsModel;
     BoopsModule: BaseSettingsModel;
@@ -57,6 +62,7 @@ export interface IPublicSettingsModel extends BaseSettingsModel {
 export class PublicSettingsModel implements IPublicSettingsModel {
     enabled: boolean = false;
     Version: string = LSCG_VERSION;
+    ExtensionData: Record<string, unknown> = {};
     CollarModule: CollarPublicSettingsModel = <CollarPublicSettingsModel>{
         enabled: false,
         chokeLevel: 0,
@@ -129,6 +135,7 @@ export class PublicSettingsModel implements IPublicSettingsModel {
         hornyLevel: 0,
         hornyLevelMax: 5,
         drugLevelMultiplier: 100,
+        drugLevels: [],
         asleep: false,
         brainwashed: false
     };
@@ -144,6 +151,7 @@ export class PublicSettingsModel implements IPublicSettingsModel {
         trueWildMagic: false,
         blockedSpellEffects: [],
         bypassForSelfEffects: [],
+        knownEffects: [],
         lockable: false,
         locked: false,
         remoteAccess: false,

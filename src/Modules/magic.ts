@@ -1,18 +1,20 @@
 import { BaseModule } from "base";
 import { getModule } from "modules";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
-import { GetConfiguredItemBundlesFromOutfitKey, GetDelimitedList, OnChat, GetHandheldItemNameAndDescriptionConcat, GetItemNameAndDescriptionConcat, GetMetadata, ICONS, LSCG_SendLocal, LSCG_TEAL, OnActivity, SendAction, forceOrgasm, getCharacter, getRandomInt, hookFunction, isPhraseInString, removeAllHooksByModule, sendLSCGCommand, sendLSCGCommandBeep, settingsSave, getCharacterByNicknameOrMemberNumber, excludeParentheticalContent, escapeRegExp } from "../utils";
-import { cleanEffect, KNOWN_SPELLS_LIMIT, LSCGSpellEffect, MagicSettingsModel, OutfitConfig, OutfitOption, SpellDefinition } from "Settings/Models/magic";
-import { GuiMagic, pairedSpellEffects } from "Settings/magic";
+import { GetConfiguredItemBundlesFromOutfitKey, GetDelimitedList, OnChat, GetHandheldItemNameAndDescriptionConcat, GetItemNameAndDescriptionConcat, GetMetadata, LSCG_SendLocal, LSCG_TEAL, OnActivity, SendAction, forceOrgasm, getCharacter, getRandomInt, hookFunction, isPhraseInString, removeAllHooksByModule, sendLSCGCommand, sendLSCGCommandBeep, settingsSave, getCharacterByNicknameOrMemberNumber, excludeParentheticalContent, escapeRegExp } from "../utils";
+import { ABSOLUTE_MAX_SPELL_EFFECTS, DEFAULT_MAX_SPELL_EFFECTS, KNOWN_SPELLS_LIMIT, LSCGSpellEffect, MagicSettingsModel, OutfitConfig, OutfitOption, SpellDefinition, SpellEffectId, sanitizeIncomingEffects } from "Settings/Models/magic";
+import { GuiMagic } from "Settings/magic";
 import { StateModule } from "./states";
 import { EnhancedItemActivityNames, IsActivityEnhanced, ItemUseModule, MagicWandItems } from "./item-use";
 import { InjectorModule } from "./injector";
-import { BaseState } from "./States/BaseState";
 import { RedressedState } from "./States/RedressedState";
 import { PolymorphedState } from "./States/PolymorphedState";
 import { OutfitCollection } from "Settings/OutfitCollection/outfitCollection";
 import { OutfitCollectionModule } from "./outfitCollection";
 import { hasMagicModule, hasMBSSettings, hasLSCGData, safeGetLSCGProp } from "../types/guards";
+import { emit, emitBefore, spellInfo } from "api/events";
+import { SPELL_MENU_SHAPE, SpellMenuView } from "./Magic/spellMenu";
+import { advertisedEffectIds, allEffectIds, effectLabel, extensionEffectIds, getSpellEffect, isLegacyEffect, spellEffects, spellForcesDuration, spellHasPairedEffect, spellIsBeneficial } from "./Magic/spellEffects";
 
 const dialogButtonInfo = [965, 10, 100, 40, 5];
 const dialogButtonCoords: [number,number,number,number] = [dialogButtonInfo[0], dialogButtonInfo[1], 40, 40];
@@ -23,8 +25,9 @@ const dialogTeachButtonCoords: [number,number,number,number] = [dialogButtonInfo
 export class MagicModule extends BaseModule {
     DialogMenuOpen: boolean = false;
     SpellMenuOpen: boolean = false;
+    /** The DOM menu drawn while SpellMenuOpen; this module owns the game state it shows. */
+    spellMenu: SpellMenuView = new SpellMenuView(this);
     TeachingSpell: boolean = false;
-    SpellMenuOffset: number = 0;
 
     SpellPairOption: {
         SelectOpen: boolean,
@@ -68,7 +71,9 @@ export class MagicModule extends BaseModule {
             spiritTextFormat: "Float",
             disableSoulBindings: false,
             spiritFormOutfitKey: "",
-            hideCorporeal: false
+            hideCorporeal: false,
+            maxSpellEffects: DEFAULT_MAX_SPELL_EFFECTS,
+            seenExtensionEffects: []
         };
     }
 
@@ -89,20 +94,21 @@ export class MagicModule extends BaseModule {
         if (this._testSpells.length <= 0)
             this._testSpells = [...Array(18).keys()].map(i => <SpellDefinition>{
                     Name: `Spell ${i+1}`,
-                    Effects: Array(getRandomInt(3) + 1).fill(0).map(t => Object.values(LSCGSpellEffect)[getRandomInt(Object.keys(LSCGSpellEffect).length)])
+                    Effects: this.PickRandomEffects(allEffectIds(), getRandomInt(3) + 1)
                 });
         return this._testSpells;
     }
 
     get RandomSpell(): SpellDefinition {
+        let candidates = spellEffects.all().filter(d => d.allowRandom).map(d => d.id);
         let spell = <SpellDefinition>{
             Name: `wild magic`,
-            Effects: Array(getRandomInt(3) + 1).fill(0).map((t, ix, arr) => Object.values(LSCGSpellEffect).filter(v => arr.indexOf(v) == -1)[getRandomInt(Object.keys(LSCGSpellEffect).length)])
+            Effects: this.PickRandomEffects(candidates, getRandomInt(3) + 1)
         }
-        if (spell.Effects.indexOf(LSCGSpellEffect.outfit)) {
+        if (spell.Effects.indexOf(LSCGSpellEffect.outfit) > -1) {
         	let outfitCollection = getModule<OutfitCollectionModule>("OutfitCollectionModule")?.data;
-        	let outfitKeys = outfitCollection.GetOutfitKeys();
-        	let lscgChoice = outfitCollection.GetOutfitBundle(outfitKeys[getRandomInt(outfitKeys.length)]);
+        	let outfitKeys = outfitCollection?.GetOutfitKeys() ?? [];
+        	let lscgChoice = outfitKeys.length > 0 ? outfitCollection.GetOutfitBundle(outfitKeys[getRandomInt(outfitKeys.length)]) : undefined;
         	let mbsOutfits: ItemBundle[][] = [];
         	if (hasMBSSettings(Player) && Player.MBSSettings?.FortuneWheelItemSets) {
         		mbsOutfits = Player.MBSSettings.FortuneWheelItemSets
@@ -122,6 +128,15 @@ export class MagicModule extends BaseModule {
         return spell;
     }
 
+    /** Up to `count` distinct effects picked at random. */
+    PickRandomEffects(candidates: SpellEffectId[], count: number): SpellEffectId[] {
+        const pool = [...candidates];
+        const picked: SpellEffectId[] = [];
+        while (picked.length < count && pool.length > 0)
+            picked.push(pool.splice(getRandomInt(pool.length), 1)[0]);
+        return picked;
+    }
+
     get AvailableSpells(): SpellDefinition[] {
         return this.settings.knownSpells ?? [];//this.TestSpells;
     }
@@ -138,7 +153,12 @@ export class MagicModule extends BaseModule {
         );
     }
 
+    _unhookEffectChanges: (() => void) | undefined;
+
     load(): void {
+        this.SyncExtensionEffects(false);
+        this._unhookEffectChanges = spellEffects.onChange(() => this.SyncExtensionEffects(true));
+
         OnChat(1, ModuleCategory.Magic, (data, sender, msg, metadata) => {
             if (!this.Enabled || !sender?.IsPlayer())
                 return;
@@ -146,6 +166,8 @@ export class MagicModule extends BaseModule {
         });
 
         hookFunction("DialogDraw", 10, (args, next) => {
+            if (!this.Enabled && this.SpellMenuOpen)
+                this.CloseSpellMenu();
             if (this.Enabled && this.SpellMenuOpen) 
                 return this.DrawSpellMenu();
                 
@@ -205,8 +227,31 @@ export class MagicModule extends BaseModule {
 
     }
 
+    safeword(): void {
+        this.CloseSpellMenu();
+    }
+
     unload(): void {
+        this.CloseSpellMenu();
+        this._unhookEffectChanges?.();
         removeAllHooksByModule(ModuleCategory.Magic);
+    }
+
+    /** Applies `defaultBlocked` the first time this player sees an extension effect, and (when `publish`) re-syncs
+     *  so others learn which extension effects this client supports (CoreModule.publicSettings sends knownEffects). */
+    SyncExtensionEffects(publish: boolean) {
+        const seen = this.settings.seenExtensionEffects ??= [];
+        let changed = false;
+        for (const id of extensionEffectIds()) {
+            if (seen.indexOf(id) > -1)
+                continue;
+            seen.push(id);
+            changed = true;
+            if (getSpellEffect(id)?.defaultBlocked && this.settings.blockedSpellEffects.indexOf(id) == -1)
+                this.settings.blockedSpellEffects.push(id);
+        }
+        if (changed || publish)
+            settingsSave(publish);
     }
 
     IsMagicItem(item: Item | null): boolean {
@@ -277,10 +322,12 @@ export class MagicModule extends BaseModule {
             this.PrevScreen = CurrentScreen;
             DialogMenuMapping.dialog.Unload();
             (CurrentScreen as string) = "LSCG_SPELLS_DIALOG";
+            this.spellMenu.open();
         }
     }
 
     CloseSpellMenu() {
+        this.spellMenu.close();
         if (this.SpellMenuOpen || (CurrentScreen as string) == "LSCG_SPELLS_DIALOG") {
             this.SpellMenuOpen = false;
             this.TeachingSpell = false;
@@ -293,138 +340,35 @@ export class MagicModule extends BaseModule {
 
     TeachSpell(target: OtherCharacter) {
         if (this.Enabled) {
-            this.OpenSpellMenu(target);
+            // Before opening: the menu's title is built when it opens.
             this.TeachingSpell = true;
+            this.OpenSpellMenu(target);
         }
     }
 
-    SpellGrid: CommonGenerateGridParameters = {
-        x: 550,
-        y: 200,
-        height: 690,
-        width: 900,
-        itemHeight: 225,
-        itemWidth: 220
-    }
-    boxDimensions = {x: 500, y: 100, width: 1000, height: 850};
-
+    /** The menu itself is DOM (SpellMenuView). This keeps the canvas behind it clean, and the dialog from drawing over it. */
     DrawSpellMenu() {
         if (!CurrentCharacter)
             return this.CloseSpellMenu();
-        const blockedSpellEffects = safeGetLSCGProp(CurrentCharacter, 'MagicModule', 'blockedSpellEffects') ?? [];
-        const bypassForSelfEffects = safeGetLSCGProp(CurrentCharacter, 'MagicModule', 'bypassForSelfEffects') ?? [];
-        const filteredBlockedEffects = blockedSpellEffects.filter((effect: LSCGSpellEffect) => {
-            let bypassed = (CurrentCharacter?.IsPlayer() && bypassForSelfEffects.indexOf(effect) > -1);
-            return !bypassed;
-        });
-
-        let toolbarY = this.boxDimensions.y + 5;
-        let toolbarRight = this.boxDimensions.x + this.boxDimensions.width - 5;
-        let buttonSize = 90;
-        
-        // Draw Hovering Box & exit button
-        DrawRect(this.boxDimensions.x, this.boxDimensions.y, this.boxDimensions.width, this.boxDimensions.height, "Black");
-        DrawEmptyRect(this.boxDimensions.x + 2, this.boxDimensions.y + 2, this.boxDimensions.width - 4, this.boxDimensions.height - 4, "White", 2);
-        DrawButton(toolbarRight - buttonSize, toolbarY, buttonSize, buttonSize, "", "White", "Icons/Exit.png", "Cancel");
-
-        if (this.SpellPairOption.SelectOpen) {
-            DrawTextFit("Select a paired target...", this.boxDimensions.x + 400, this.boxDimensions.y + 50, 600, "White", "Grey");
-            // Draw 2x5 columns of character names
-            this.PairedCharacterOptions(this.SpellPairOption.Source).forEach((char, ix, arr) => {
-                DrawButton(this.SpellGrid.x + (ix > 4 ? 450 : 0), this.SpellGrid.y + ((ix % 5) * 120), this.PairedCharacterOptions(this.SpellPairOption.Source).length > 5 ? 400 : 800, 100, CharacterNickname(char), "White");
-            });
-        }
-        else {
-            DrawTextFit("Select a spell to cast...", this.boxDimensions.x + 400, this.boxDimensions.y + 50, 600, "White", "Grey");
-            // Draw toolbar
-            if (this.AvailableSpells.length > 12) {
-                DrawButton(toolbarRight - (buttonSize * 2), toolbarY, buttonSize, buttonSize, "", "White", "Icons/Next.png", "Next");
-                DrawButton(toolbarRight - (buttonSize * 3), toolbarY, buttonSize, buttonSize, "", "White", "Icons/Prev.png", "Previous");
-            }
-
-            // Draw a grid with all activities
-            CommonGenerateGrid(this.AvailableSpells, this.SpellMenuOffset, this.SpellGrid, (spell: SpellDefinition, x: number, y: number, width: number, height: number) => {            
-                let label = spell.Name;
-                let image = "Icons/Magic.png";
-
-                let icons: InventoryIcon[] = [];
-                let background = "white";
-                if (spell.Effects.some(effect => pairedSpellEffects.indexOf(effect) > -1))
-                    icons.push("Handheld");
-                if (spell.Effects.some(effect => filteredBlockedEffects.indexOf(effect) > -1)) {
-                    icons.push("AllowedLimited");
-                    background = "orange";
-                }
-
-                let desc = spell.Effects.length == 0 ? "None" : spell.Effects.join(", ");
-
-                DrawPreviewBox(x, y, image, label, { Hover: true, Icons: icons, Background: background, Width: width, Height: height });
-                if (MouseHovering(x, y, width, height)) {
-                    DrawRect(this.boxDimensions.x + (this.boxDimensions.width - 500 - 350), this.boxDimensions.y + this.boxDimensions.height - 56, 700, 50, LSCG_TEAL);
-                    DrawEmptyRect(this.boxDimensions.x + (this.boxDimensions.width-500-350) + 2, this.boxDimensions.y + this.boxDimensions.height - 56 + 2, 700 - 4, 50 - 4, "Black", 2);
-                    DrawTextFit(desc, 1000, this.boxDimensions.y + this.boxDimensions.height - 30, 600, "Black", "White");
-                }
-                return false;
-            });
-        }
+        const [x, y, w, h] = SPELL_MENU_SHAPE;
+        DrawRect(x, y, w, h, "Black");
+        DrawEmptyRect(x + 2, y + 2, w - 4, h - 4, "White", 2);
     }
 
+    /** Clicks inside the menu go to the DOM, not the canvas, so anything arriving here is outside it: dismiss. */
     ClickSpellMenu() {
-        if (!CurrentCharacter)
+        this.CloseSpellMenu();
+    }
+
+    /** A spell was picked in the menu. */
+    ChooseSpell(spell: SpellDefinition) {
+        const target = CurrentCharacter;
+        if (!target)
             return this.CloseSpellMenu();
-        let blockedSpellTypes = safeGetLSCGProp(CurrentCharacter, 'MagicModule', 'blockedSpellEffects') ?? [];
-
-        // Handle toolbar clicks
-        let toolbarY = this.boxDimensions.y + 5;
-        let toolbarRight = this.boxDimensions.x + this.boxDimensions.width - 5;
-        let buttonSize = 90;
-        if (MouseIn(toolbarRight - buttonSize, toolbarY, buttonSize, buttonSize)) {
-            this.CloseSpellMenu();
-        }
-
-        if (this.SpellPairOption.SelectOpen) {
-            let characterOptions = this.PairedCharacterOptions(this.SpellPairOption.Source);
-            if (characterOptions.length <= 0) {
-                this.CloseSpellMenu();    
-            }
-            characterOptions.forEach((char, ix, arr) => {
-                if (MouseIn(this.SpellGrid.x + (ix > 4 ? 450 : 0), this.SpellGrid.y + ((ix % 5) * 120), this.PairedCharacterOptions(this.SpellPairOption.Source).length > 5 ? 400 : 800, 100)) {
-                    if (!!this.SpellPairOption.Source)
-                        this.CastSpellActual(this.SpellPairOption.Spell, this.SpellPairOption.Source, false, char);
-                }
-            });
-        } else {
-            if (this.AvailableSpells.length > 12) {
-                // Click Next
-                if (MouseIn(toolbarRight - (buttonSize * 2), toolbarY, buttonSize, buttonSize)) {
-                    this.SpellMenuOffset += 12;
-                    if (this.SpellMenuOffset > this.AvailableSpells.length)
-                        this.SpellMenuOffset = 0;
-                }
-                // Click Prev
-                else if (MouseIn(toolbarRight - (buttonSize * 3), toolbarY, buttonSize, buttonSize)) {
-                    this.SpellMenuOffset -= 12;
-                    if (this.SpellMenuOffset < 0)
-                        this.SpellMenuOffset = this.AvailableSpells.length - (this.AvailableSpells.length % 12)
-                }
-            }
-    
-            // For each activities in the list
-            CommonGenerateGrid(this.AvailableSpells, this.SpellMenuOffset, this.SpellGrid, (spell: SpellDefinition, x: number, y: number, width: number, height: number) => {
-                // If this specific activity is clicked, we run it
-                if (!MouseIn(x, y, width, height)) return false;
-                let blocked = Array.isArray(blockedSpellTypes) && spell.Effects.some(effect => blockedSpellTypes.indexOf(effect) > -1);
-                spell = structuredClone(spell);
-                
-                if (!blocked) {
-                    this.CastSpellInitial(spell, CurrentCharacter);
-                    return true;
-                }
-                return false;
-            });
-        }
-
-		return;
+        // Partially blocked spells can be cast; the target's client drops the effects it won't accept.
+        if (!this.GetSpellStatus(spell, target).castable)
+            return;
+        this.CastSpellInitial(structuredClone(spell), target);
     }
 
     CastWildMagic(C: OtherCharacter | PlayerCharacter) {
@@ -440,7 +384,22 @@ export class MagicModule extends BaseModule {
     }
 
     SpellNeedsPair(spell: SpellDefinition): boolean {
-        return spell.Effects.some(e => pairedSpellEffects.indexOf(e) > -1);
+        return spellHasPairedEffect(spell);
+    }
+
+    /** How each of a spell's effects would land on `target`: blocked by their settings, or unsupported by their client
+     *  (an extension effect they don't have). A spell is castable if at least one effect would apply. */
+    GetSpellStatus(spell: SpellDefinition, target: Character): { effects: { id: SpellEffectId, status: "ok" | "blocked" | "unsupported" }[], castable: boolean } {
+        const blocked: string[] = safeGetLSCGProp(target, 'MagicModule', 'blockedSpellEffects') ?? [];
+        const bypassed: string[] = target.IsPlayer() ? (safeGetLSCGProp(target, 'MagicModule', 'bypassForSelfEffects') ?? []) : [];
+        // Older clients don't send knownEffects: they support the legacy built-ins only.
+        const known: string[] = target.IsPlayer() ? advertisedEffectIds() : (safeGetLSCGProp(target, 'MagicModule', 'knownEffects') ?? []);
+        const effects = spell.Effects.map(id => {
+            const supported = isLegacyEffect(id) || known.indexOf(id) > -1;
+            const isBlocked = blocked.indexOf(id) > -1 && bypassed.indexOf(id) == -1;
+            return { id, status: !supported ? "unsupported" as const : isBlocked ? "blocked" as const : "ok" as const };
+        });
+        return { effects, castable: effects.some(e => e.status === "ok") };
     }
 
     CastSpellInitial(spell: SpellDefinition, C: Character | null) {
@@ -452,6 +411,7 @@ export class MagicModule extends BaseModule {
                 this.SpellPairOption.Spell = spell;
                 this.SpellPairOption.Source = C;
                 this.SpellPairOption.SelectOpen = true;
+                this.spellMenu.refreshView();
             } else {
                 this.CastSpellActual(spell, C, false);
             }
@@ -522,6 +482,7 @@ export class MagicModule extends BaseModule {
             }
 
             this.UnpackSpellCodes(spell);
+            emit("spell.cast", { spell: spellInfo(spell), target: spellTarget.MemberNumber ?? -1, paired: pairedTarget?.MemberNumber });
 
             if (spellTarget.IsPlayer()) {
                 let check = getModule<ItemUseModule>("ItemUseModule").UnopposedActivityRoll(spellTarget);
@@ -578,15 +539,7 @@ export class MagicModule extends BaseModule {
     }
 
     SpellIsBeneficial(spell: SpellDefinition) {
-        let beneficialEffects: LSCGSpellEffect[] = [
-            LSCGSpellEffect.dispel,
-            LSCGSpellEffect.bless,
-            LSCGSpellEffect.xRay,
-            LSCGSpellEffect.barrier
-        ];
-        return  spell.Effects.every(e => {
-            return beneficialEffects.indexOf(cleanEffect(e)) > -1;
-        });
+        return spellIsBeneficial(spell);
     }
 
     IncomingSpellCommand(sender: Character | null, msg: LSCGMessageModel) {
@@ -605,6 +558,7 @@ export class MagicModule extends BaseModule {
                 if (!this.SpellIsBeneficial(spell) && this.DefendAgainst(sender.MemberNumber ?? -1)) {
                     if (check.AttackerRoll.Total < check.DefenderRoll.Total) {
                         SendAction(`${CharacterNickname(Player)} ${check.DefenderRoll.TotalStr}successfully saves against ${CharacterNickname(sender)}'s ${check.AttackerRoll.TotalStr}${spell.Name}.`);
+                        emit("spell.resisted", { spell: spellInfo(spell), sender: sender.MemberNumber ?? -1, bounced: !!magicBarrier?.active });
                         if (magicBarrier?.active) {
                             // if saved with a protected barrier, the spell will bounce back to sender
                             SendAction(`The magical barrier around ${CharacterNickname(Player)} make the spell bounce back to ${CharacterNickname(sender)}!`);
@@ -631,7 +585,7 @@ export class MagicModule extends BaseModule {
             }
             else if (msg.command?.name == "pair") {
                 let origin = getCharacter(msg.command?.args.find(arg => arg.name == "paired")?.value as number);
-                let spellEffect = msg.command?.args?.find(arg => arg.name == "spell-effect")?.value as LSCGSpellEffect;
+                let spellEffect = msg.command?.args?.find(arg => arg.name == "spell-effect")?.value as SpellEffectId;
                 let pairType = msg.command?.args?.find(arg => arg.name == "pair-type")?.value as LSCGState;
                 if (!!origin && !!spellEffect && !!pairType)
                     this.IncomingSpellPair(sender, spellEffect, origin, pairType);
@@ -642,11 +596,11 @@ export class MagicModule extends BaseModule {
         }, 1000); // Slight delay on responding to spell commands, builds anticipation.
     }
 
-    filterAllowedSpellEffects(spell: SpellDefinition, caster: Character | null): LSCGSpellEffect[] {
+    filterAllowedSpellEffects(spell: SpellDefinition, caster: Character | null): SpellEffectId[] {
         return spell.Effects.filter(effect => this.effectIsAllowed(effect, caster));
     }
 
-    effectIsAllowed(effect: LSCGSpellEffect, caster: Character | null): boolean {
+    effectIsAllowed(effect: SpellEffectId, caster: Character | null): boolean {
         let isBlocked = this.settings.blockedSpellEffects.indexOf(effect) > -1;
         let isBypassed = (caster?.IsPlayer() ?? false) && this.settings.bypassForSelfEffects.indexOf(effect) > -1;
         return (!isBlocked || isBypassed);
@@ -655,7 +609,8 @@ export class MagicModule extends BaseModule {
     IncomingSpell(sender: Character | null, spell: SpellDefinition, paired?: Character | null, saveDiff: number = 1) {
         let senderName = !sender ? "Someone" : CharacterNickname(sender);
         let pairedName = !paired ? "someone else" : CharacterNickname(paired);
-        let allowedSpellEffects = this.filterAllowedSpellEffects(spell, sender);
+        // However many a caster's spell claims, only so many are applied: each one is a timer on this client.
+        let allowedSpellEffects = this.filterAllowedSpellEffects(spell, sender).slice(0, ABSOLUTE_MAX_SPELL_EFFECTS);
         if (allowedSpellEffects.length <= 0) {
             SendAction(`${senderName}'s ${spell.Name} fizzles when cast on %NAME%, none of its effects allowed to take hold.`);
             return;
@@ -664,128 +619,43 @@ export class MagicModule extends BaseModule {
         
         if (!this.SpellIsBeneficial(spell)) {
             duration = saveDiff * 5 * (60 * 1000) // 5 minutes for every level of "spell power" (difference between caster and defender checks)
-            if (!this.settings.limitedDuration && !spell.Effects.some(e => e == LSCGSpellEffect.bane))
+            if (!this.settings.limitedDuration && !spellForcesDuration(spell))
                 duration = 0;
-            else if (this.settings.maxDuration > 0) {
+            else if (this.settings.maxDuration > 0)
                 duration = Math.min(duration, this.settings.maxDuration * (60 * 1000));
-                LSCG_SendLocal(`${sender?.IsPlayer() ? 'Your' : senderName + "'s"} ${spell.Name} spell will last ${duration / (60 * 1000)} minutes.`);
-            }
-        }            
+        }
 
+        const info = spellInfo(spell);
+        const spellHook = emitBefore("spell.beforeReceive", { spell: info, sender: sender?.MemberNumber, effects: [...allowedSpellEffects], duration });
+        if (spellHook.cancelled) {
+            SendAction(`${senderName}'s ${spell.Name} fizzles when cast on %NAME%${spellHook.reason ? ` (${spellHook.reason})` : ""}.`);
+            return;
+        }
+        // Extensions may only remove effects, never add them.
+        allowedSpellEffects = allowedSpellEffects.filter(e => spellHook.payload.effects.includes(e));
+        duration = sanitizeDuration(spellHook.payload.duration, duration);
+        if (allowedSpellEffects.length <= 0) {
+            SendAction(`${senderName}'s ${spell.Name} fizzles when cast on %NAME%, none of its effects allowed to take hold.`);
+            return;
+        }
+        if (!!duration && duration > 0 && this.settings.maxDuration > 0)
+            LSCG_SendLocal(`${sender?.IsPlayer() ? 'Your' : senderName + "'s"} ${spell.Name} spell will last ${duration / (60 * 1000)} minutes.`);
+        emit("spell.received", { spell: info, sender: sender?.MemberNumber, effects: allowedSpellEffects, duration });
+
+        const spellDuration = duration;
         allowedSpellEffects.forEach((effect, ix, arr) => {
             setTimeout(() => {
-                let state: BaseState | undefined;
-                switch (cleanEffect(effect)) {
-                    case LSCGSpellEffect.blindness:
-                        SendAction("%NAME%'s eyes dart around, %POSSESSIVE% world suddenly plunged into darkness.");
-                        state = this.stateModule.BlindState.Activate(sender?.MemberNumber, duration);
-                        break;
-                    case LSCGSpellEffect.deafened:
-                        SendAction("%NAME% frowns as %PRONOUN% is completely deafened.");
-                        state = this.stateModule.DeafState.Activate(sender?.MemberNumber, duration);
-                        break;
-                    case LSCGSpellEffect.frozen:
-                        SendAction("%NAME%'s eyes widen in a panic as %POSSESSIVE% muscles seize in place.");
-                        state = this.stateModule.FrozenState.Activate(sender?.MemberNumber, duration);
-                        break;
-                    case LSCGSpellEffect.horny:
-                        this.stateModule.GaggedState.Active ? SendAction("A blush runs into %NAME%'s cheeks uncontrollably.") : SendAction("A moan escapes %NAME%'s lips uncontrollably.");
-                        state = this.stateModule.HornyState.Activate(sender?.MemberNumber, duration);
-                        break;
-                    case LSCGSpellEffect.orgasm:
-                        forceOrgasm();
-                        break;
-                    case LSCGSpellEffect.denial:
-                        this.stateModule.GaggedState.Active ? 
-                                SendAction(`%NAME% quivers as %PRONOUN% feels %POSSESSIVE% impending denial.`) :
-                                SendAction(`%NAME% whimpers as %PRONOUN% feels %POSSESSIVE% impending denial.`);
-                        state = this.stateModule.DeniedState.Activate(sender?.MemberNumber, duration);
-                        break;
-                    case LSCGSpellEffect.hypnotizing:
-                        SendAction("%NAME% is unable to fight the spell's hypnotizing influence, slumping weakly as %POSSESSIVE% eyes go blank.");
-                        state = this.stateModule.HypnoState.Activate(sender?.MemberNumber, duration);
-                        break;
-                    case LSCGSpellEffect.muted:
-                        Player.IsGagged() ? SendAction("%NAME%'s protests suddenly fall completely silent.") : SendAction("%NAME%'s mouth moves in protest but not a single sound escapes.");
-                        state = this.stateModule.GaggedState.Activate(sender?.MemberNumber, duration);
-                        break;
-                    case LSCGSpellEffect.slumber:
-                        SendAction("%NAME% succumbs to the spell's overwhelming pressure, %POSSESSIVE% eyes closing as %PRONOUN% falls unconscious.");
-                        state = this.stateModule.SleepState.Activate(sender?.MemberNumber, duration);
-                        break;
-                    case LSCGSpellEffect.enlarge:
-                        state = this.stateModule.ResizedState.Enlarge(sender?.MemberNumber, duration, true);
-                        break;
-                    case LSCGSpellEffect.dispel:
-                        SendAction("%NAME% gasps, blinking as any magic affecting %INTENSIVE% is removed.");
-                        this.stateModule.Clear(false, true);
-                        break;
-                    case LSCGSpellEffect.bless:
-                        state = this.stateModule.BuffedState.Bless(sender?.MemberNumber, true, duration);
-                        break;
-                    case LSCGSpellEffect.bane:
-                        state = this.stateModule.BuffedState.Bane(sender?.MemberNumber, true, duration);
-                        break;
-                    case LSCGSpellEffect.barrier:
-                        state = this.stateModule.BarrierState.Barrier(sender?.MemberNumber, true, duration);
-                        break;
-                    case LSCGSpellEffect.disarm:
-                        var handItem = InventoryGet(Player, "ItemHandheld");
-                        if (!handItem) {
-                            SendAction(`The spell has no effect as %NAME%'s hand are already empty.`);
-                            break;
-                        }
-                        var validParams = ValidationCreateDiffParams(Player, sender?.MemberNumber!);
-                        if (ValidationCanRemoveItem(handItem, validParams, false)) {
-                            InventoryRemove(Player, "ItemHandheld", true);
-                            CharacterRefresh(Player, true);
-                            ChatRoomCharacterUpdate(Player);
-                            SendAction(`%NAME% flinches as the item in %POSSESSIVE% hand is flung into the air.`);
-                        }
-                        else {
-                            SendAction(`The spell was not strong enough to disarm %NAME%.`);
-                        }
-                        break;
-                    case LSCGSpellEffect.outfit:
-                        if (!!spell.Outfit?.Code) {
-                            this.stateModule.GaggedState.Active ? 
-                                SendAction("%NAME% trembles as %POSSESSIVE% clothing shimmers and morphs around %INTENSIVE%.") : 
-                                SendAction("%NAME% squeaks as %POSSESSIVE% clothing shimmers and morphs around %INTENSIVE%.");
-                            state = this.stateModule.RedressedState.Apply(spell, sender?.MemberNumber, duration);
-                        }
-                        break;
-                    case LSCGSpellEffect.polymorph:
-                        if (!!spell.Polymorph?.Code) {
-                            this.stateModule.GaggedState.Active ? 
-                                SendAction("%NAME% trembles as %POSSESSIVE% body shimmers and morphs.") : 
-                                SendAction("%NAME% squeaks as %POSSESSIVE% body shimmers and morphs.");
-                            state = this.stateModule.PolymorphedState.Apply(spell, sender?.MemberNumber, duration);
-                        }
-                        break;
-                    case LSCGSpellEffect.paired_arousal:
-                        if (!!paired && !!sender) {
-                            SendAction(`%NAME% squirms as %POSSESSIVE% arousal is paired.`);
-                            state = this.stateModule.ArousalPairedState.DoPair(paired, sender, duration);
-                            this.NotifyPair(sender, paired, LSCGSpellEffect.paired_arousal, this.stateModule.ArousalPairedState.Type);
-                        }
-                        break;
-                    case LSCGSpellEffect.orgasm_siphon:
-                        if (!!paired && !!sender) {
-                            this.stateModule.GaggedState.Active ? 
-                                SendAction(`%NAME% quivers as %PRONOUN% feels %POSSESSIVE% impending denial.`) :
-                                SendAction(`%NAME% whimpers as %PRONOUN% feels %POSSESSIVE% impending denial.`);
-                            state = this.stateModule.OrgasmSiphonedState.DoPair(paired, sender, duration);
-                            this.NotifyPair(sender, paired, LSCGSpellEffect.orgasm_siphon, this.stateModule.OrgasmSiphonedState.Type);
-                        }
-                        break;
-                    case LSCGSpellEffect.xRay:
-                        SendAction(`%NAME% blinks with a grin.`);
-                        state = this.stateModule.XRayState.Activate(sender?.MemberNumber, duration);
-                        break;
-                    case LSCGSpellEffect.project:
-                        SendAction(`%NAME_POSSESSIVE_DIRECT% body slumps weakly as a shimmering projection of %POSSESSIVE% form appears nearby.`);
-                        state = this.stateModule.AstralProjectionState.Activate(sender?.MemberNumber, duration);
-                        break;
+                const effectHook = emitBefore("spell.beforeEffect", { effect, spell: info, sender: sender?.MemberNumber, duration: spellDuration });
+                // Shadows the spell-wide duration: the cases below use this effect's (possibly adjusted) duration.
+                const duration = sanitizeDuration(effectHook.payload.duration, spellDuration);
+                const definition = getSpellEffect(effect);
+                if (effectHook.cancelled)
+                    SendAction(`The ${effectLabel(effect)} magic of ${senderName}'s ${spell.Name} fails to take hold on %NAME%${effectHook.reason ? ` (${effectHook.reason})` : ""}.`);
+                else if (!definition)
+                    SendAction(`Part of ${senderName}'s ${spell.Name} washes over %NAME% without effect, its magic unfamiliar.`);
+                else {
+                    definition.apply({ effect, sender, senderName, spell, paired, duration, magic: this });
+                    emit("spell.effectApplied", { effect, spell: info, sender: sender?.MemberNumber, duration });
                 }
                 if (ix == arr.length - 1)
                     settingsSave(true);
@@ -793,7 +663,7 @@ export class MagicModule extends BaseModule {
         });
     }
 
-    NotifyPair(caster: Character | null, pairedTarget: Character | undefined, spellEffect: LSCGSpellEffect, pairType: LSCGState) {
+    NotifyPair(caster: Character | null, pairedTarget: Character | undefined, spellEffect: SpellEffectId, pairType: LSCGState) {
         if (!pairedTarget)
             return;
 
@@ -814,7 +684,7 @@ export class MagicModule extends BaseModule {
         ]);
     }
 
-    IncomingSpellPair(sender: Character | null, spellEffect: LSCGSpellEffect, originalTarget: Character, pairType: LSCGState) {
+    IncomingSpellPair(sender: Character | null, spellEffect: SpellEffectId, originalTarget: Character, pairType: LSCGState) {
         let senderName = !sender ? "Someone" : CharacterNickname(sender);
         let originalTargetName = CharacterNickname(originalTarget);
         let isAllowed = this.effectIsAllowed(spellEffect, sender);
@@ -826,18 +696,7 @@ export class MagicModule extends BaseModule {
                 value: pairType
             }]);
         } else {
-            switch (spellEffect) {
-                case LSCGSpellEffect.paired_arousal:
-                    // TODO
-                    SendAction(`%NAME% squirms as %POSSESSIVE% arousal is paired.`);
-                    this.stateModule.ArousalPairedState.RespondToPairing(originalTarget, sender);
-                    break;
-                case LSCGSpellEffect.orgasm_siphon:
-                    // TODO
-                    SendAction(`%NAME% lets out a quiet gasp as the pleasure center of %POSSESSIVE% mind starts to tingle.`);
-                    this.stateModule.OrgasmSiphonedState.RespondToPairing(originalTarget, sender);
-                    break;
-            }
+            getSpellEffect(spellEffect)?.applyPaired?.({ effect: spellEffect, sender, senderName, spell: { Name: "", Creator: -1, Effects: [spellEffect], AllowPotion: false, AllowVoiceCast: false }, magic: this }, originalTarget);
         }
 
         settingsSave(true);
@@ -851,6 +710,9 @@ export class MagicModule extends BaseModule {
         if (!this.Enabled || !sender || this.WhitelistBlocked(sender))
             return;
         let spell = msg.command?.args?.find(arg => arg.name == "spell")?.value as SpellDefinition;
+        // It is saved with this player's settings, so keep what a sender can make it carry within limits.
+        if (spell && typeof spell === "object")
+            spell.Effects = sanitizeIncomingEffects(spell.Effects);
         if (this.AvailableSpells.length >= KNOWN_SPELLS_LIMIT)
             SendAction(`%NAME%'s mind is already full of spells. %INTENSIVE% must forget one before %INTENSIVE% can learn ${spell.Name}.`);
         if (this.AvailableSpells.find(s => s.Name == spell.Name)) {
@@ -979,7 +841,7 @@ export class MagicModule extends BaseModule {
         if (!!craftingMember && craftingMember >= 0) {
             let craftingChar = getCharacter(craftingMember) as OtherCharacter;
             if (!!craftingChar && craftingChar.IsPlayer()) {
-                spells = Player.LSCG.MagicModule.knownSpells.filter(s => s.AllowPotion && !s.Effects.some(e => pairedSpellEffects.indexOf(e) > -1));
+                spells = Player.LSCG.MagicModule.knownSpells.filter(s => s.AllowPotion && !spellHasPairedEffect(s));
                 let foundSpell = spells?.filter(x => !!x)?.find(x => !!x && !!x.Name && isPhraseInString(itemStr, x.Name));
                 this.UnpackSpellCodes(foundSpell);
                 return foundSpell;
@@ -1011,7 +873,7 @@ export class MagicModule extends BaseModule {
         if (!itemStr || !reqId)
             return;
 
-        let spells = Player.LSCG.MagicModule.knownSpells.filter(s => s.AllowPotion && !s.Effects.some(e => pairedSpellEffects.indexOf(e) > -1));
+        let spells = Player.LSCG.MagicModule.knownSpells.filter(s => s.AllowPotion && !spellHasPairedEffect(s));
         let spell = spells?.filter(x => !!x)?.find(x => !!x && !!x.Name && isPhraseInString(itemStr, x.Name));
         if (!!spell)
             spell = structuredClone(spell);
@@ -1058,4 +920,10 @@ export class MagicModule extends BaseModule {
             spell.Polymorph.Code = LZString.compressToBase64(JSON.stringify(GetConfiguredItemBundlesFromOutfitKey(spell.Polymorph.Key, item => skipFilter || PolymorphedState.ItemIsAllowed(item))));
         }
     }
+}
+
+/** Accepts an extension-adjusted duration (ms) only if it's sane; otherwise keeps LSCG's own. `undefined` stays allowed. */
+function sanitizeDuration(duration: unknown, fallback: number | undefined): number | undefined {
+    if (duration === undefined) return undefined;
+    return typeof duration === "number" && Number.isFinite(duration) && duration >= 0 ? duration : fallback;
 }

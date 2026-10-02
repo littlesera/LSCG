@@ -35,6 +35,25 @@ export interface RowProps<T> {
 export interface SelectOption {
     value: string;
     label: string;
+    /** Options with the same group, next to each other, are listed under that heading. */
+    group?: string;
+    /** Drawn before the label where the browser supports rich dropdowns (customizable select, Chromium 135+). */
+    icon?: KitIcon;
+}
+
+/** Small vector icons, drawn in the current text colour (see .lscg-kit-icon in kit.scss). */
+export type KitIcon = "extension";
+
+/** A plain text character for each icon, the same shape, for where only text can go: a dropdown's options in
+ *  browsers without customizable selects. Not an emoji: it's drawn by the text font, in the text colour. */
+const ICON_GLYPHS: Record<KitIcon, string> = { extension: "\u2726" }; // ✦ black four pointed star
+
+/** Whether this browser can draw elements (our icons) inside a dropdown's options. */
+const richSelects = typeof CSS !== "undefined" && typeof CSS.supports === "function" && CSS.supports("appearance", "base-select");
+
+export function Icon(icon: KitIcon, title?: string): HTMLElement {
+    return <span class={`lscg-kit-icon lscg-kit-icon-${icon}`} role={title ? "img" : undefined}
+        aria-label={title} aria-hidden={title ? undefined : "true"} title={title ?? ""} /> as HTMLElement;
 }
 
 let _uid = 0;
@@ -92,10 +111,33 @@ export function NumberRow(ctx: KitContext, props: RowProps<number> & { min: numb
     return row(ctx, props, id, input);
 }
 
+/** Runs of consecutive options that share a group (undefined for ungrouped). */
+function groupOptions(options: SelectOption[]): [string | undefined, SelectOption[]][] {
+    const runs: [string | undefined, SelectOption[]][] = [];
+    for (const o of options) {
+        const last = runs[runs.length - 1];
+        if (last && last[0] === o.group) last[1].push(o);
+        else runs.push([o.group, [o]]);
+    }
+    return runs;
+}
+
 function createSelect(options: SelectOption[], id: string, onChange: (value: string) => void): HTMLSelectElement {
-    const select = <select id={id} onChange={() => onChange(select.value)}>
-        {options.map(o => <option value={o.value}>{o.label}</option>)}
+    const rich = richSelects && options.some(o => !!o.icon);
+    const select = <select id={id} class={rich ? "lscg-kit-select-rich" : ""} onChange={() => onChange(select.value)}>
+        {groupOptions(options).map(([group, opts]) => {
+            const items = opts.map(o => <option value={o.value}>
+                {o.icon ? (richSelects ? Icon(o.icon) : `${ICON_GLYPHS[o.icon]} `) : null}{o.label}
+            </option>);
+            return group ? <optgroup label={group}>{items}</optgroup> : items;
+        })}
     </select> as HTMLSelectElement;
+    // A customizable select shows the chosen option's content, icon included, through <selectedcontent>.
+    if (rich) {
+        const button = document.createElement("button");
+        button.appendChild(document.createElement("selectedcontent"));
+        select.prepend(button);
+    }
     return select;
 }
 
@@ -132,6 +174,58 @@ export function SectionLabel(text: string, description?: string): HTMLElement {
 
 export function Notice(text: string): HTMLElement {
     return <p class="lscg-kit-notice">{text}</p> as HTMLElement;
+}
+
+/** A text box that reports every keystroke (unlike TextRow, which commits on blur), for live filtering. */
+export function SearchBox(onInput: (text: string) => void, opts: { placeholder?: string; value?: string; label?: string } = {}): HTMLInputElement {
+    const input = <input type="search" class="lscg-kit-search" aria-label={opts.label ?? "Search"} placeholder={opts.placeholder ?? "Search…"} maxLength={100}
+        onInput={() => onInput(input.value)} /> as HTMLInputElement;
+    input.value = opts.value ?? "";
+    return input;
+}
+
+export interface CardGridProps<T> {
+    items: () => T[];
+    render: (item: T) => HTMLElement;
+    /** Shown instead of the grid when `items()` is empty. */
+    empty?: string;
+}
+
+/** A scrolling grid of cards. Re-renders itself on every `ctx.refresh()`, so a filter (e.g. a search box) just
+ *  calls refresh after updating what `items()` returns. */
+export function CardGrid<T>(ctx: KitContext, props: CardGridProps<T>): HTMLElement {
+    const grid = <div class="lscg-kit-cardgrid scroll-box" /> as HTMLElement;
+    ctx.watch(() => {
+        const items = props.items();
+        grid.replaceChildren(...(items.length > 0
+            ? items.map(props.render)
+            : [<p class="lscg-kit-notice">{props.empty ?? "Nothing to show."}</p> as HTMLElement]));
+    });
+    return grid;
+}
+
+export type ChipTone = "ok" | "warn" | "blocked" | "info" | "muted";
+
+/** A collapsible section with its own tinted background, for settings that belong to the row above it. The summary
+ *  line is re-read after every change (via `ctx`), so it can describe the current settings while the section is
+ *  closed. `onToggle` reports when the player opens or closes it. */
+export function Expando(ctx: KitContext, props: { summary: () => string; content: HTMLElement[]; open?: boolean; onToggle?: (open: boolean) => void }): HTMLDetailsElement {
+    const label = <span /> as HTMLElement;
+    const details = (
+        <details class="lscg-kit-expando" open={!!props.open} onToggle={() => props.onToggle?.(details.open)}>
+            <summary class="lscg-kit-expando-summary">{label}</summary>
+            <div class="lscg-kit-expando-body">{props.content}</div>
+        </details>
+    ) as HTMLDetailsElement;
+    ctx.watch(() => { label.textContent = props.summary(); });
+    return details;
+}
+
+/** A small rounded tag, e.g. an effect's status or where it comes from. */
+export function Chip(label: string, opts: { tone?: ChipTone; tooltip?: string; icon?: KitIcon } = {}): HTMLElement {
+    return <span class={`lscg-kit-chip lscg-kit-chip-${opts.tone ?? "muted"}`} title={opts.tooltip ?? ""}>
+        {opts.icon ? Icon(opts.icon) : null}{label}
+    </span> as HTMLElement;
 }
 
 /** Opens a modal dialog whose rows edit data through their own context; every change is forwarded to `parent`
@@ -223,8 +317,10 @@ export interface RuleColumn<R> {
 export interface RuleTableProps<R> {
     rows: () => R[];
     columns: RuleColumn<R>[];
-    create: () => R;
-    max: number;
+    /** Fixed tables (e.g. one row per known thing) have no add/delete controls; `create`/`max` are then unused. */
+    fixed?: boolean;
+    create?: () => R;
+    max?: number;
     readOnly?: () => boolean;
     addLabel?: string;
     deleteLabel?: string;
@@ -271,7 +367,9 @@ export function RuleTable<R>(ctx: KitContext, props: RuleTableProps<R>): HTMLEle
     const render = () => {
         const rows = props.rows();
         const readOnly = props.readOnly?.() ?? false;
-        const add = <button class="lscg-button lscg-kit-add" disabled={readOnly || rows.length >= props.max} onClick={() => {
+        const max = props.max ?? Infinity;
+        const add = <button class="lscg-button lscg-kit-add" disabled={readOnly || rows.length >= max} onClick={() => {
+            if (!props.create) return;
             rows.push(props.create());
             ctx.changed();
         }}>{props.addLabel ?? "+ Add rule"}</button> as HTMLButtonElement;
@@ -280,22 +378,22 @@ export function RuleTable<R>(ctx: KitContext, props: RuleTableProps<R>): HTMLEle
             <table class="lscg-kit-table">
                 <thead><tr>{props.columns.map(c => (
                     <th style={c.width ? { width: c.width } : {}} title={c.tooltip ?? ""} class={c.tooltip ? "lscg-kit-has-tip" : ""}>{c.header}</th>
-                ))}<th class="lscg-kit-delete-col" /></tr></thead>
+                ))}{props.fixed ? null : <th class="lscg-kit-delete-col" />}</tr></thead>
                 <tbody>
                     {rows.map((r, i) => (
                         <tr>
                             {props.columns.map(c => cell(r, c, readOnly))}
-                            <td>
+                            {props.fixed ? null : <td>
                                 <button class="lscg-button lscg-kit-delete" aria-label={props.deleteLabel ?? "Delete rule"} disabled={readOnly} onClick={() => {
                                     rows.splice(i, 1);
                                     ctx.changed();
                                 }}>✕</button>
-                            </td>
+                            </td>}
                         </tr>
                     ))}
                 </tbody>
             </table>,
-            <div class="lscg-kit-table-footer">{add}<small class="lscg-kit-desc">{`${rows.length} / ${props.max}`}</small></div>,
+            props.fixed ? <span /> : <div class="lscg-kit-table-footer">{add}<small class="lscg-kit-desc">{`${rows.length} / ${props.max}`}</small></div>,
         );
     };
     ctx.watch(render);

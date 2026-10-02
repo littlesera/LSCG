@@ -20,6 +20,11 @@ import { OpacityMigrator } from "./Migrators/OpacityMigrator";
 import { SuggestionSettingMigrator } from "./Migrators/SuggestionSettingMigrator";
 import { OutfitMigrator } from "./Migrators/OutfitMigrator";
 import { CursedItemMigrator } from "./Migrators/CursedItemMigrator";
+import { emit } from "api/events";
+import { advertisedEffectIds } from "./Magic/spellEffects";
+import type { InjectorModule } from "./injector";
+import { publishedExtensionData } from "api/publish";
+import { dispatchExtensionCommand } from "api/network";
 
 // >= R111
 declare var DialogMenuMapping: { items: ScreenFunctions & { C: null | Character } };
@@ -48,6 +53,17 @@ export class CoreModule extends BaseModule {
                 }
             }
             settings.enabled = Player.LSCG.GlobalModule.enabled;
+        }
+        // Runtime capability, not a stored setting: which non-legacy spell effects this client can apply.
+        if (settings.MagicModule)
+            settings.MagicModule.knownEffects = advertisedEffectIds();
+        // Likewise the data extensions share with the room.
+        settings.ExtensionData = publishedExtensionData();
+        // Likewise the extension drug bars: derived from the registry and current levels, never stored.
+        if (settings.InjectorModule) {
+            const injector = getModule<InjectorModule>("InjectorModule");
+            settings.InjectorModule.drugLevels = injector?.PublicExtensionBars() ?? [];
+            settings.InjectorModule.drugDecay = injector?.DecayRatesPerSec();
         }
         return settings;
     }
@@ -297,7 +313,13 @@ export class CoreModule extends BaseModule {
         if (!Sender)
             return;
         Sender.LSCG = Object.assign(Sender.LSCG ?? {}, msg.settings ?? {});
+        // Their drug levels were current as of now: bars animate from here until the next sync.
+        if (Sender.LSCG.InjectorModule)
+            Sender.LSCG.InjectorModule.receivedAt = Date.now();
         CharacterRefresh(Sender, false);
+        // An open spell menu shows what each spell can do to its target; keep that current.
+        if (CurrentCharacter === Sender)
+            getModule<MagicModule>("MagicModule")?.spellMenu.refreshStatus();
         if (msg.reply) {
             this.SendPublicPacket(false, msg.type);
         }
@@ -370,6 +392,8 @@ export class CoreModule extends BaseModule {
                 break;
         }
         this.CommandListeners.filter(com => com.command == msg.command!.name).forEach(command => command.func(senderNumber, msg));
+        dispatchExtensionCommand(senderNumber, msg);
+        emit("command.received", { sender: senderNumber, name: msg.command.name });
     }
 
     Broadcast(senderNumber: number, msg: LSCGMessageModel) {

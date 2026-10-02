@@ -1,0 +1,25 @@
+# Changes reach `main` only by way of `dev`, so they get tested there first. This check fails on any PR into
+# `main` that isn't this repo's own `dev` branch (a fork's branch named "dev" doesn't count). Make it a required
+# status check in the ruleset for `main` so such PRs can't be merged; retarget them to `dev` instead.
+name: Main from dev
+
+on:
+  pull_request:
+    branches: [ "main" ]
+    types: [opened, reopened, synchronize, edited] # "edited" catches a PR retargeted to main
+
+jobs:
+  from-dev:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Only dev may merge into main
+        env:
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          HEAD_REF: ${{ github.head_ref }}
+        run: |
+          if [ "$HEAD_REPO" = "${{ github.repository }}" ] && [ "$HEAD_REF" = "dev" ]; then
+            echo "PR from dev: OK."
+          else
+            echo "::error::PRs into main must come from this repo's dev branch (this one is $HEAD_REPO:$HEAD_REF). Please retarget it to dev."
+            exit 1
+          fi
