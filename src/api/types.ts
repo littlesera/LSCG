@@ -28,6 +28,117 @@ export interface LSCGModApi {
     readonly activities: LSCGActivitiesApi;
     /** Custom drugs (capability "drugs"). */
     readonly drugs: LSCGDrugsApi;
+    /** Messages between players running your extension (capability "network"). */
+    readonly network: LSCGNetworkApi;
+    /** Data saved with the player's LSCG settings (capability "storage"). */
+    readonly storage: LSCGStorageApi;
+    /** Screens in LSCG's settings (capability "settings"). */
+    readonly settings: LSCGSettingsApi;
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// Settings screens
+// ---------------------------------------------------------------------------------------------------------------
+
+export interface LSCGKitRow {
+    label: string;
+    /** Smaller text under the label. */
+    description?: string;
+    /** Re-checked after every change. */
+    disabled?(): boolean;
+    /** Re-checked after every change. */
+    hidden?(): boolean;
+}
+
+export interface LSCGKitOption {
+    value: string;
+    label: string;
+}
+
+/** The same building blocks LSCG's own settings screens use, so extension screens look and behave alike. Every
+ *  `get`/`set`/`onClick` you pass runs inside your extension's error handling. Rows call `set` when the player
+ *  changes them; save there (for example with `api.storage.set`). */
+export interface LSCGKit {
+    section(title: string, description?: string): HTMLElement;
+    notice(text: string): HTMLElement;
+    chip(label: string, options?: { tone?: "ok" | "warn" | "blocked" | "info" | "muted"; tooltip?: string }): HTMLElement;
+    checkbox(row: LSCGKitRow & { get(): boolean; set(value: boolean): void }): HTMLElement;
+    text(row: LSCGKitRow & { get(): string; set(value: string): void; placeholder?: string; maxLength?: number; multiline?: boolean }): HTMLElement;
+    number(row: LSCGKitRow & { get(): number; set(value: number): void; min: number; max: number; step?: number }): HTMLElement;
+    select(row: LSCGKitRow & { get(): string; set(value: string): void; options: LSCGKitOption[] }): HTMLElement;
+    button(row: LSCGKitRow & { buttonLabel: string; onClick(): void; danger?: boolean }): HTMLElement;
+    /** Asks for confirmation before running `onConfirm`. */
+    confirm(title: string, message: string, confirmLabel: string, onConfirm: () => void): void;
+}
+
+export interface LSCGSettingsUi {
+    readonly kit: LSCGKit;
+    /** Re-reads every row's `get`, e.g. after you change data some other way. */
+    refresh(): void;
+}
+
+export interface LSCGSettingsScreenDefinition {
+    /** Name within your extension; no ".". */
+    name: string;
+    /** Shown in the picker beside your extension's name (default: `name`). */
+    label?: string;
+    /** Builds the screen's content, using `ui.kit`. Runs each time the player opens LSCG's Extensions settings. */
+    build(ui: LSCGSettingsUi): HTMLElement | HTMLElement[];
+}
+
+export interface LSCGSettingsApi {
+    /** Adds a screen to LSCG's "Extensions" settings page (which appears once any extension has one). Returns a
+     *  function that removes it. */
+    registerScreen(definition: LSCGSettingsScreenDefinition): () => void;
+    /** Removes one of this extension's screens by name. */
+    unregisterScreen(name: string): boolean;
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// Network and storage
+// ---------------------------------------------------------------------------------------------------------------
+
+/** Anything JSON can hold. Network messages and stored data are limited to this. */
+export type LSCGJson = null | boolean | number | string | LSCGJson[] | { [key: string]: LSCGJson };
+
+export interface LSCGIncomingCommand {
+    /** Member number of the player who sent it. Anyone with LSCG can send anything: treat the contents as untrusted. */
+    readonly sender: number;
+    /** What the sender included. A frozen copy with no prototype, so it can't be used to reach built-in objects. */
+    readonly args: Readonly<Record<string, LSCGJson>>;
+}
+
+export interface LSCGCommandOptions {
+    /** Who may send you this command. "itemPermission" (the default) accepts it only from players in the room whom
+     *  the player gives item permission; "anyone" accepts it from any LSCG player, even from another room. */
+    permission?: "itemPermission" | "anyone";
+}
+
+export interface LSCGSendOptions {
+    /** Reach the target by beep, which works from another room. By default the target must be in the same room. */
+    beep?: boolean;
+}
+
+export interface LSCGNetworkApi {
+    /** Handles a command another player's copy of your extension sends with `send`. Returns an unsubscribe function. */
+    on(name: string, handler: (command: LSCGIncomingCommand) => void, options?: LSCGCommandOptions): () => void;
+    /** Sends a command to a player. `args` must be JSON and at most about 4 KB. Returns false if it couldn't be sent:
+     *  the target isn't in the room (and `beep` isn't set), or is the player themselves. Throws on invalid input. */
+    send(target: number, name: string, args?: Record<string, LSCGJson>, options?: LSCGSendOptions): boolean;
+}
+
+export interface LSCGStorageApi {
+    /** What this extension saved for the player, or undefined. Returns a copy: change it, then call `set`. */
+    get<T extends LSCGJson = LSCGJson>(): T | undefined;
+    /** Saves data with the player's LSCG settings (so it is also in their exports). Up to about 32 KB of JSON.
+     *  `undefined` clears it. Only available once LSCG is ready. */
+    set(value: LSCGJson | undefined): void;
+    /** Data shared with everyone in the room, from the player named or (by default) the player. Others' data comes
+     *  from over the network, so validate it. */
+    getPublic<T extends LSCGJson = LSCGJson>(memberNumber?: number): T | undefined;
+    /** Shares data with everyone in the room, as part of LSCG's sync. Keep it small: up to about 1 KB of JSON.
+     *  `undefined` stops sharing. Only shared while your extension is loaded. */
+    setPublic(value: LSCGJson | undefined): void;
 }
 
 // ---------------------------------------------------------------------------------------------------------------

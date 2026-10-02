@@ -656,7 +656,7 @@ export function sendLSCGBeep(target: number, msg: LSCGMessageModel) {
 	} as unknown as ServerAccountBeepRequest);
 }
 
-export function sendLSCGCommand(target: Character, commandName: LSCGCommandName, commandArgs: {name: string, value: any}[] = []) {
+export function sendLSCGCommand(target: Character, commandName: LSCGCommandName | LSCGExtensionCommandName, commandArgs: {name: string, value: any}[] = []) {
 	sendLSCGMessage(<LSCGMessageModel>{
 		IsLSCG: true,
 		type: "command",
@@ -671,7 +671,7 @@ export function sendLSCGCommand(target: Character, commandName: LSCGCommandName,
 	});
 }
 
-export function sendLSCGCommandBeep(target: number, commandName: LSCGCommandName, commandArgs: {name: string, value: any}[] = []) {
+export function sendLSCGCommandBeep(target: number, commandName: LSCGCommandName | LSCGExtensionCommandName, commandArgs: {name: string, value: any}[] = []) {
 	sendLSCGBeep(target, <LSCGMessageModel>{
 		IsLSCG: true,
 		type: "command",

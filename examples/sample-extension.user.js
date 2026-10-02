@@ -82,6 +82,39 @@
             });
         }
 
+        // Settings, storage and messages together: a screen with a greeting you can send to another player.
+        if (LSCG.capabilities.has("settings") && LSCG.capabilities.has("storage") && LSCG.capabilities.has("network")) {
+            let target = "";
+            api.settings.registerScreen({
+                name: "greeting",
+                label: "Greeting",
+                build({ kit }) {
+                    return [
+                        kit.section("Greeting", "Saved with your LSCG settings."),
+                        kit.text({
+                            label: "Greeting",
+                            get: () => api.storage.get()?.greeting ?? "hello!",
+                            set: value => api.storage.set({ greeting: value }),
+                        }),
+                        kit.text({ label: "Send to member number", get: () => target, set: value => { target = value; } }),
+                        kit.button({
+                            label: "Send",
+                            buttonLabel: "Send greeting",
+                            onClick: () => api.network.send(Number(target), "greet", { text: api.storage.get()?.greeting ?? "hello!" }),
+                        }),
+                    ];
+                },
+            });
+
+            // Receive greetings, from players in the room that the player gives item permission.
+            api.network.on("greet", ({ sender, args }) => {
+                if (typeof args.text === "string")
+                    console.log(`[sample] ${sender} says: ${args.text.slice(0, 200)}`);
+            });
+
+            api.onReady(() => api.storage.setPublic({ sample: "0.1.0" }));
+        }
+
         // Intercept: refuse any spell whose name contains "veto".
         api.events.before("spell.beforeReceive", ctx => {
             if (ctx.payload.spell.name.toLowerCase().includes("veto"))

@@ -10,6 +10,9 @@ LSCG exposes a typed API that other mods can use to extend it. It is delivered i
 | `spells.effects` | `api.spells.registerEffect` / `unregisterEffect` / `listEffects` |
 | `activities` | `api.activities.register` / `unregister` / `registerPrerequisite` |
 | `drugs` | `api.drugs.register` / `unregister` |
+| `network` | `api.network.on` / `send` |
+| `storage` | `api.storage.get` / `set` / `getPublic` / `setPublic` |
+| `settings` | `api.settings.registerScreen` / `unregisterScreen` |
 
 Typings: `npm run build:api-types` emits `dist/api/types.d.ts`. It is also run as part of `npm run build`.
 
@@ -243,6 +246,86 @@ the keywords is a dose of the drug. The crafting screen offers it as a checkbox 
 - **States.** `ctx.states.get(...)` can switch the same nine built-in states spell effects can.
 - **Events.** Extension drugs appear in `drug.applied`, and `drug.beforeApply` can veto them like any other.
 - Extensions can't change LSCG's own four drugs; `register` only adds new ones.
+
+## Messages between players
+
+```js
+// Receive: handle commands other players' copies of your extension send.
+api.network.on("wave", ({ sender, args }) => {
+    if (typeof args.text !== "string") return;     // always validate: anyone with LSCG can send anything
+    console.log(`${sender} waves: ${args.text.slice(0, 100)}`);
+});
+
+// Send: to someone in the room (returns false if they aren't).
+api.network.send(targetMemberNumber, "wave", { text: "hello!" });
+```
+
+- Commands are named `<your id>.<name>` on the wire, so they only reach your extension.
+- **Treat everything received as untrusted.** `sender` is reliable, but `args` is whatever the sender chose.
+  It arrives as a frozen object with no prototype, so keys like `__proto__` are just data.
+- **Permission.** By default a command is accepted only from players in the room whom the player gives item
+  permission. Pass `{ permission: "anyone" }` to `on` to accept it from any LSCG player, including ones in
+  another room. LSCG can't check item permission for a player who isn't in the room.
+- **Reaching other rooms.** `send` needs the target in the room. Pass `{ beep: true }` to reach them from
+  anywhere.
+- **Limits.** `args` must be JSON and at most about 4 KB, both ways. `send` throws on invalid input and
+  returns `false` if it couldn't be sent, such as when the target isn't there or is the player.
+- An error in a handler is contained and counted against your extension.
+
+## Storing data
+
+```js
+api.onReady(() => {                       // storage needs LSCG to have loaded the player's settings
+    const saved = api.storage.get() ?? { launches: 0 };
+    saved.launches++;
+    api.storage.set(saved);               // saved with their LSCG settings, so it's in their exports too
+
+    api.storage.setPublic({ version: "1.2" });          // shared with everyone in the room
+    const theirs = api.storage.getPublic(otherMemberNumber);   // what they last shared, if anything
+});
+```
+
+- **Private data** (`get`/`set`) is saved with the player's LSCG settings: up to about 32 KB of JSON, and
+  included in LSCG exports and imports. `get` returns a copy, so change it and call `set`. `set(undefined)`
+  clears it.
+- **Public data** (`getPublic`/`setPublic`) goes out with LSCG's sync to everyone in the room: up to about
+  1 KB, and about 4 KB across all extensions. It is only shared while your extension is loaded. Use it for
+  things like advertising a version so other players' copies know what you support. Data from another
+  player comes over the network, so validate it; oversized data reads as `undefined`.
+- Storage throws until LSCG is ready, so use it from `onReady` (or later).
+- Each extension only sees its own data.
+
+## Settings screens
+
+```js
+api.settings.registerScreen({
+    name: "main",
+    label: "Greetings",
+    build({ kit }) {
+        return [
+            kit.section("Greetings", "How this extension greets people."),
+            kit.text({
+                label: "Greeting",
+                get: () => api.storage.get()?.greeting ?? "hello",
+                set: value => api.storage.set({ ...api.storage.get(), greeting: value }),
+            }),
+            kit.button({ label: "Test", buttonLabel: "Say it", onClick: () => console.log("hi") }),
+        ];
+    },
+});
+```
+
+Screens appear on one **Extensions** page in LSCG's settings. That page shows up once any extension has a
+screen, and a picker at its top chooses which extension's screen to show. The kit (`kit.section`, `notice`,
+`chip`, `checkbox`, `text`, `number`, `select`, `button`, `confirm`) is the same set LSCG's own screens use,
+so they look and behave alike.
+
+- Rows call `set` when the player changes them, so save there. Rows' `disabled` and `hidden` are re-checked
+  after every change, and `ui.refresh()` re-reads every `get`.
+- `build` runs each time the page opens. Screens that are added or removed while it is open appear straight
+  away.
+- Every callback you give the kit runs inside your extension's error handling, with a safe fallback value if
+  it fails. A screen that fails to build shows a short message instead.
 
 ## Login badge
 

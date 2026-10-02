@@ -23,6 +23,8 @@ import { CursedItemMigrator } from "./Migrators/CursedItemMigrator";
 import { emit } from "api/events";
 import { advertisedEffectIds } from "./Magic/spellEffects";
 import type { InjectorModule } from "./injector";
+import { publishedExtensionData } from "api/publish";
+import { dispatchExtensionCommand } from "api/network";
 
 // >= R111
 declare var DialogMenuMapping: { items: ScreenFunctions & { C: null | Character } };
@@ -55,6 +57,8 @@ export class CoreModule extends BaseModule {
         // Runtime capability, not a stored setting: which non-legacy spell effects this client can apply.
         if (settings.MagicModule)
             settings.MagicModule.knownEffects = advertisedEffectIds();
+        // Likewise the data extensions share with the room.
+        settings.ExtensionData = publishedExtensionData();
         // Likewise the extension drug bars: derived from the registry and current levels, never stored.
         if (settings.InjectorModule)
             settings.InjectorModule.drugLevels = getModule<InjectorModule>("InjectorModule")?.PublicExtensionBars() ?? [];
@@ -382,6 +386,7 @@ export class CoreModule extends BaseModule {
                 break;
         }
         this.CommandListeners.filter(com => com.command == msg.command!.name).forEach(command => command.func(senderNumber, msg));
+        dispatchExtensionCommand(senderNumber, msg);
         emit("command.received", { sender: senderNumber, name: msg.command.name });
     }
 

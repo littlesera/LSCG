@@ -25,6 +25,9 @@ interface LSCGMessageDictionaryEntry {
 
 type LSCGMessageModelType = "init" | "sync" | "command" | "broadcast";
 
+/** A command sent by an extension: "<extension id>.<name>". Built-in command names never contain a ".". */
+type LSCGExtensionCommandName = `${string}.${string}`;
+
 type LSCGCommandName = "debug"
     | "grab"
     | "release"
@@ -73,7 +76,7 @@ interface LSCGMessageModel {
     target: number | null,
     reply: boolean,
     command?: {
-        name: LSCGCommandName,
+        name: LSCGCommandName | LSCGExtensionCommandName,
         args: {name: string, value: any}[]
     }
 }

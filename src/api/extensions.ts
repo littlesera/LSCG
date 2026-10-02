@@ -1,4 +1,4 @@
-import { LSCGActivitiesApi, LSCGDrugsApi, LSCGEventsApi, LSCGExtensionInfo, LSCGModApi, LSCGSpellsApi } from "./types";
+import { LSCGActivitiesApi, LSCGDrugsApi, LSCGEventsApi, LSCGExtensionInfo, LSCGModApi, LSCGNetworkApi, LSCGSettingsApi, LSCGSpellsApi, LSCGStorageApi } from "./types";
 import { Registry } from "./registry";
 import { whenReady } from "./ready";
 import { safeInvoke } from "./safeInvoke";
@@ -6,10 +6,15 @@ import { createEventsApi } from "./events";
 import { createSpellsApi } from "./spells";
 import { createActivitiesApi } from "./activities";
 import { createDrugsApi } from "./drugs";
+import { createNetworkApi } from "./network";
+import { createStorageApi } from "./storage";
+import { createSettingsApi } from "./settings";
 
 export { safeInvoke };
 
 const EXTENSION_ID_PATTERN = /^[a-z0-9_-]+$/;
+/** Names that mean something special on every JavaScript object; never usable as an id. */
+const RESERVED_IDS = new Set(["__proto__", "constructor", "prototype"]);
 
 export class ModApiHandle implements LSCGModApi {
     readonly id: string;
@@ -21,6 +26,9 @@ export class ModApiHandle implements LSCGModApi {
     private _spells: LSCGSpellsApi | undefined;
     private _activities: LSCGActivitiesApi | undefined;
     private _drugs: LSCGDrugsApi | undefined;
+    private _network: LSCGNetworkApi | undefined;
+    private _storage: LSCGStorageApi | undefined;
+    private _settings: LSCGSettingsApi | undefined;
 
     constructor(info: LSCGExtensionInfo) {
         this.id = info.id;
@@ -45,6 +53,18 @@ export class ModApiHandle implements LSCGModApi {
 
     get drugs(): LSCGDrugsApi {
         return this._drugs ??= createDrugsApi(this, name => this.scopedId(name), disposer => this.track(disposer));
+    }
+
+    get network(): LSCGNetworkApi {
+        return this._network ??= createNetworkApi(this, name => this.scopedId(name), disposer => this.track(disposer));
+    }
+
+    get storage(): LSCGStorageApi {
+        return this._storage ??= createStorageApi(this);
+    }
+
+    get settings(): LSCGSettingsApi {
+        return this._settings ??= createSettingsApi(this, name => this.scopedId(name), disposer => this.track(disposer));
     }
 
     onReady(cb: () => void): void {
@@ -91,7 +111,7 @@ export class ModApiHandle implements LSCGModApi {
 export const extensions = new Registry<ModApiHandle>("extension");
 
 export function registerExtension(info: LSCGExtensionInfo): ModApiHandle {
-    if (!info || typeof info.id !== "string" || !EXTENSION_ID_PATTERN.test(info.id))
+    if (!info || typeof info.id !== "string" || !EXTENSION_ID_PATTERN.test(info.id) || RESERVED_IDS.has(info.id))
         throw new Error(`LSCG: invalid extension id "${info?.id}" (use lowercase letters, digits, "_" and "-").`);
     const handle = new ModApiHandle(info);
     extensions.register(handle);
