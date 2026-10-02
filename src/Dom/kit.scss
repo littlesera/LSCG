@@ -77,10 +77,32 @@
 			font: inherit;
 			resize: vertical;
 		}
+
+		// A slider with its number box beside it (NumberRow's `slider`).
+		.lscg-kit-slider {
+			display: flex;
+			flex: 1;
+			align-items: center;
+			gap: min(1.5dvh, 0.75dvw);
+
+			input[type="range"] {
+				flex: 1;
+				min-width: 0;
+			}
+
+			input[type="number"] {
+				width: 6em;
+				flex: none;
+			}
+		}
+	}
+
+	// Only a row has a "desc" area; elsewhere (a panel or dialog grid) the name would add an implicit column.
+	.lscg-kit-row > .lscg-kit-desc {
+		grid-area: desc;
 	}
 
 	.lscg-kit-desc {
-		grid-area: desc;
 		font-size: calc(var(--lscg-font-small) * 0.7);
 		opacity: 0.75;
 		margin: 0;

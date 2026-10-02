@@ -95,7 +95,8 @@ export function TextRow(ctx: KitContext, props: RowProps<string> & { placeholder
     return row(ctx, props, id, input);
 }
 
-export function NumberRow(ctx: KitContext, props: RowProps<number> & { min: number; max: number; step?: number }): HTMLElement {
+/** A number box; with `slider`, also a slider beside it for the same value. */
+export function NumberRow(ctx: KitContext, props: RowProps<number> & { min: number; max: number; step?: number; slider?: boolean }): HTMLElement {
     const id = uid("num");
     const input = <input type="number" id={id} min={props.min} max={props.max} step={props.step ?? 1} onChange={() => {
         const n = Number(input.value);
@@ -108,7 +109,16 @@ export function NumberRow(ctx: KitContext, props: RowProps<number> & { min: numb
     }} /> as HTMLInputElement;
     ctx.watch(() => { if (document.activeElement !== input) input.value = String(props.get() ?? ""); });
     bindDisabled(ctx, input, props.disabled);
-    return row(ctx, props, id, input);
+    if (!props.slider)
+        return row(ctx, props, id, input);
+
+    // Dragging updates the number box live; the value is committed when the slider is let go.
+    const slider = <input type="range" aria-label={props.label} min={props.min} max={props.max} step={props.step ?? 1}
+        onInput={() => { input.value = slider.value; }}
+        onChange={() => { props.set(Number(slider.value)); ctx.changed(); }} /> as HTMLInputElement;
+    ctx.watch(() => { slider.value = String(props.get() ?? props.min); });
+    bindDisabled(ctx, slider, props.disabled);
+    return row(ctx, props, id, <div class="lscg-kit-slider">{slider}{input}</div> as HTMLElement);
 }
 
 /** Runs of consecutive options that share a group (undefined for ungrouped). */
@@ -329,6 +339,10 @@ export interface RuleTableProps<R> {
     readOnly?: () => boolean;
     addLabel?: string;
     deleteLabel?: string;
+    /** Per-row delete permission, on top of the table-wide readOnly. */
+    canDelete?: (row: R) => boolean;
+    /** Called after a row is removed. */
+    onDelete?: (row: R) => void;
 }
 
 /** Editable list of records. Re-renders itself on any change; fine for the small row counts it's meant for. */
@@ -389,8 +403,9 @@ export function RuleTable<R>(ctx: KitContext, props: RuleTableProps<R>): HTMLEle
                         <tr>
                             {props.columns.map(c => cell(r, c, readOnly))}
                             {props.fixed ? null : <td>
-                                <button class="lscg-button lscg-kit-delete" aria-label={props.deleteLabel ?? "Delete rule"} disabled={readOnly} onClick={() => {
+                                <button class="lscg-button lscg-kit-delete" aria-label={props.deleteLabel ?? "Delete rule"} disabled={readOnly || props.canDelete?.(r) === false} onClick={() => {
                                     rows.splice(i, 1);
+                                    props.onDelete?.(r);
                                     ctx.changed();
                                 }}>✕</button>
                             </td>}

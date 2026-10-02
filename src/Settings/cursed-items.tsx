@@ -95,7 +95,7 @@ function openCursedItemDialog(anchor: HTMLElement, ctx: KitContext, item: Cursed
 			}),
 			NumberRow(dctx, {
 				label: "Custom speed (seconds)", description: "Determines the speed (in seconds). Must be between 1 and 3600 (1 hour)",
-				min: 1, max: 3600, get: () => item.CustomSpeed || 300, set: v => item.CustomSpeed = v,
+				min: 1, max: 3600, slider: true, get: () => item.CustomSpeed || 300, set: v => item.CustomSpeed = v,
 				disabled: off, hidden: () => speedOf(item) !== "custom",
 			}),
 			duration,
