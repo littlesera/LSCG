@@ -398,6 +398,14 @@ describe("extension drugs", () => {
             expect(api.drugs.dose("nobody.nothing")).toBe(false);
         });
 
+        it("does nothing while the player has Drug Enhancements turned off", () => {
+            api.drugs.register(euphoria());
+            opt("euphoria");
+            injector.settings.enabled = false;
+            expect(api.drugs.dose(id("euphoria"))).toBe(false);
+            expect(api.drugs.getLevel(id("euphoria"))).toBe(0);
+        });
+
         it("doses a built-in drug the player enabled, without the minigame when asked", () => {
             injector.settings.enableSedative = true;
             injector.sedativeLevel = 0;

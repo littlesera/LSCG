@@ -6,3 +6,4 @@ test/**/.out/
 coverage/
 .cache/
 .vitest/
+build/

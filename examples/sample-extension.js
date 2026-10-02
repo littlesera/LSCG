@@ -21,7 +21,7 @@
         { at: 1, text: "Everything fades to black." },
     ];
 
-    /** @param {import("../dist/api/types").LSCGGlobal} LSCG */
+    /** @param {import("@lscg/types").LSCGGlobal} LSCG  (editor completion: `npm i -D @lscg/types`) */
     function setup(LSCG) {
         // Pasted or loaded twice: drop the previous copy so the id is free again.
         window.__lscgSampleApi?.dispose();

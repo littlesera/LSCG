@@ -1,0 +1,17 @@
+{
+  "name": "@lscg/types",
+  "version": "0.0.0-set-by-scripts/pack-types.mjs",
+  "description": "TypeScript types for the LSCG (Little Sera's Club Games) extension API.",
+  "types": "index.d.ts",
+  "files": ["index.d.ts"],
+  "keywords": ["lscg", "bondage-club", "types", "typescript"],
+  "author": "Little Sera",
+  "license": "MIT",
+  "homepage": "https://github.com/littlesera/LSCG/blob/main/docs/api.md",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/littlesera/LSCG.git",
+    "directory": "packages/types"
+  },
+  "bugs": "https://github.com/littlesera/LSCG/issues"
+}

@@ -6,6 +6,7 @@
   "scripts": {
     "build": "typed-scss-modules src --exportType=default --nameFormat=none && vite build && npm run build:api-types",
     "build:api-types": "tsc -p tsconfig.api.json",
+    "pack:types": "npm run build:api-types && node scripts/pack-types.mjs",
     "watch": "vite build --watch --mode development",
     "watch-prod": "vite build --watch",
     "serve": "serve dist -p 10001 --cors",

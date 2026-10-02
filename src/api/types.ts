@@ -165,7 +165,7 @@ export interface LSCGDrugContext {
 
 export interface LSCGDrugDoseContext extends LSCGDrugContext {
     readonly method: LSCGDrugMethod;
-    /** How strong this dose is, on the scale LSCG's own drugs use: a drink is 2, an injection is 1 to 2.2 depending
+    /** How strong this dose is, on the scale LSCG's own drugs use: a drink is 2, an injection is 0.8 to 2.2 depending
      *  on where it goes in, and each breath of a gas is a small fraction. */
     readonly multiplier: number;
     /** Member number of whoever dosed the player. */
@@ -249,7 +249,7 @@ export interface LSCGDrugsApi {
     /** Gives the player a dose of a drug, as if they'd drunk or been injected with it, minus any flavour text (send
      *  your own with a `sendAction`-style emote). It respects the player's opt-in to that drug and
      *  `drug.beforeApply` vetoes, and emits `drug.applied`. Returns false if nothing was applied (not enabled,
-     *  vetoed, unknown drug, or LSCG not ready). An "antidote" clears every drug and ignores `multiplier`. */
+     *  vetoed, unknown drug, or Drug Enhancements turned off). An "antidote" clears every drug and ignores `multiplier`. */
     dose(type: LSCGDrugType, options?: LSCGDoseOptions): boolean;
     /** The player's current level of a drug, from 0 to its max (0 for an unknown drug). Built-in levels are on LSCG's
      *  internal scale, multiplied by the player's drug level multiplier. */
@@ -445,10 +445,10 @@ export interface LSCGEventMap {
     "grab.added": { type: string; pairedMember: number; isSource: boolean };
     /** A grab/leash involving the player ended. */
     "grab.removed": { type: string; pairedMember: number; isSource: boolean };
-    /** A drug took effect on the player. */
     /** A drug's level changed, including slow decay (built-in or extension). `level` and `max` are on the same scale
      *  as `LSCGDrugsApi.getLevel`; `level / max` is the fraction of the bar, e.g. to apply effects at thresholds. */
     "drug.levelChanged": { type: string; previous: number; level: number; max: number };
+    /** A drug took effect on the player. */
     "drug.applied": { types: string[]; method: LSCGDrugMethod; sender?: number; location?: string };
     /** The player's collar choke level changed. */
     "collar.choke": { level: number; previousLevel: number };

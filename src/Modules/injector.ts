@@ -1301,7 +1301,7 @@ export class InjectorModule extends BaseModule {
     /** Doses the player as an item would (opt-in check, "drug.beforeApply", "drug.applied") without the flavour text. */
     DoseDrug(type: string, opts: { method?: LSCGDrugMethod; multiplier: number; sender?: number; location?: string; minigame?: boolean }): boolean {
         const known = isExtensionDrugId(type) ? extensionDrugs.get(type) !== undefined : ["sedative", "mindcontrol", "horny", "antidote"].includes(type);
-        if (!known)
+        if (!known || !this.Enabled) // like an item dose: nothing happens while Drug Enhancements is off
             return false;
         const method = opts.method ?? "drink";
         const sender = getCharacter(opts.sender);
