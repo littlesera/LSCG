@@ -429,14 +429,10 @@ export function requestFileDrop(): Promise<string | undefined> {
 }
 
 export async function ImportSettings() {
-	console.log("Waiting for user to drop a file...");
 	const fileContent = await requestFileDrop();
 
 	if (fileContent) {
-		console.log("File received:", fileContent);
 		handleImportString(fileContent);
-	} else {
-		console.log("Import cancelled by user.");
 	}
 }
 
@@ -955,7 +951,7 @@ export function GetItemNameAndDescriptionConcat(item: Item | ItemBundle | null):
 		return;
 
 	const name = item.Craft.Name;
-	const description = typeof CraftingDescription === "undefined" ? item.Craft.Description : CraftingDescription.Decode(item.Craft.Description); // R109
+	const description = CraftingDescription.Decode(item.Craft.Description);
 	return name + " | " + description;
 }
 
@@ -1138,24 +1134,10 @@ export function getActivityLabel(activity: Activity, group: AssetGroup, isSelf: 
 }
 
 export function activityHasDictionaryText(KeyWord: string) {
-	if (GameVersion === "R129") {
-		if (!ActivityDictionary)
-			ActivityDictionaryLoad();
-		if (!ActivityDictionary)
-			return;
-
-		for (let D = 0; D < ActivityDictionary.length; D++)
-			if (ActivityDictionary[D][0] == KeyWord)
-				return true;
-		return false;
-	} else { // >= R130Beta2
-		const textCache = ActivityDictionaryLoad();
-		if (!textCache.loaded) {
-			return;
-		} else {
-			return textCache.cache[KeyWord] !== undefined;
-		}
-	}
+	const textCache = ActivityDictionaryLoad();
+	if (!textCache.loaded)
+		return;
+	return textCache.cache[KeyWord] !== undefined;
 }
 
 export function getZoneColor(groupName: string, hasConfiguration: boolean): string {

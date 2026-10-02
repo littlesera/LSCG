@@ -570,7 +570,7 @@ export class CollarModule extends BaseModule {
                 return true;
             else {
                 const name = item.Craft.Name;
-                const description = typeof CraftingDescription === "undefined" ? item.Craft.Description : CraftingDescription.Decode(item.Craft.Description); // R109
+                const description = CraftingDescription.Decode(item.Craft.Description);
                 const totalString = name + " | " + description;
 
                 return !isPhraseInString(totalString, "breathable");

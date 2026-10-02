@@ -70,6 +70,30 @@ describe("server relay contract", () => {
 		expect(bytes).toBeLessThan(SYNC_BUDGET_BYTES);
 	});
 
+	it("a worst-case publicSettings sync packet (every state active, clasps, drug bars) stays within the budget", async () => {
+		const SYNC_BUDGET_BYTES = 16_000;
+
+		resetWorld({ LSCG: {} });
+		const { registerModule } = await import("modules");
+		const { CoreModule } = await import("Modules/core");
+		const { StateModule } = await import("Modules/states");
+		const core = registerModule(new CoreModule());
+		const states = registerModule(new StateModule());
+		core.init();
+		states.init();
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const list = Player.LSCG.StateModule.states as any[];
+		for (let i = 0; i < 18; i++)
+			list.push({ type: `state-${i}`, active: true, duration: 999999999, activatedBy: 1234567, extensions: { note: "x".repeat(200) } });
+
+		core.SendPublicPacket(true, "sync");
+		const [, data] = sent.raw()[0];
+		const bytes = new TextEncoder().encode(JSON.stringify(data)).length;
+		expect(list.length).toBeGreaterThan(5); // the packet really carries the states
+		expect(bytes).toBeGreaterThan(list.length * 200);
+		expect(bytes).toBeLessThan(SYNC_BUDGET_BYTES);
+	});
+
 	it("public sync leaves out state outfit snapshots without touching the saved settings (#680)", async () => {
 		resetWorld({ LSCG: {} });
 		const { registerModule } = await import("modules");

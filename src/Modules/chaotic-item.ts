@@ -142,7 +142,6 @@ class PropertyMutator {
         let customPropertyName: string | undefined = undefined;
         let propertyChangeResult: PropertyChangeResult | undefined = undefined;
         if (existingProperty.length > 0) {
-            //console.log("changeEditableProperty: existingProperty: ", existingProperty);
             if (logic === "random") {
                 const maxRandom = existingProperty.length;
                 const propertyIndex = Math.floor(Math.random() * maxRandom);
@@ -405,7 +404,6 @@ class PropertyMutator {
             commonWordList.splice(wordIndex, 1);
         }
 
-        //console.log("randomizeTriggerValues: newTriggerValues: ", newTriggerValues);
         return newTriggerValues;
     }
 
@@ -568,7 +566,6 @@ export class ChaoticItemModule extends BaseModule {
     shapeShiftTypedItem(item: Item, logic: ChangeLogic): boolean {
         // Mostly copied from TypedItemSetRandomOption implementation
         const typedData = TypedItemDataLookup[`${item.Asset.Group.Name}${item.Asset.Name}`];
-        //console.log("shapeshiftTypedItem: typedData: ", typedData);
 
         // Handle special properties if any
         this.mutator.changeEditableProperty(item, typedData, logic);
@@ -581,7 +578,6 @@ export class ChaoticItemModule extends BaseModule {
         if (typedAvailableOptions.length === 0) {
             return false;
         }
-        //console.log("shapeshiftTypedItem: availableOptions: ", typedAvailableOptions);
 
         // Select next item option
         const typedPreviousOption = TypedItemFindPreviousOption(typedData, item);
@@ -613,7 +609,6 @@ export class ChaoticItemModule extends BaseModule {
     shapeShiftModularItem(item: Item, logic: ChangeLogic): boolean {
         let ret = false;
         const modularData = ModularItemDataLookup[`${item.Asset.Group.Name}${item.Asset.Name}`];
-        //console.log("shapeShiftModularItem: modularData: ", modularData);
 
         // Handle special properties that can be changed
         let isItemHaveEditableProperty = false;
@@ -683,7 +678,6 @@ export class ChaoticItemModule extends BaseModule {
         if (moduleAvailableOptions.length === 0) {
             return false;
         }
-        //console.log("changeModuleOption: availableOptions: ", moduleAvailableOptions);
 
         let modularNewOption = undefined;
         if (logic == "random") {
@@ -705,7 +699,6 @@ export class ChaoticItemModule extends BaseModule {
             // Find the next option just after the current option
             modularNewOption = this.getNextOptionFromOptionsList(modularPreviousOption, moduleAvailableOptions);
         }
-        //console.log("shapeShiftModularItem: modularNewOption: ", modularNewOption);
         if (!modularNewOption) {
             return false;
         }
@@ -726,7 +719,6 @@ export class ChaoticItemModule extends BaseModule {
 
     shapeShiftVibratorItem(item: Item, logic: ChangeLogic): boolean {
         const vibratorData = VibratorModeDataLookup[`${item.Asset.Group.Name}${item.Asset.Name}`];
-        //console.log("shapeShiftVibratorItem: VIBRATING: vibratorData: ", vibratorData);
 
         // Handle additional properties if any
         this.mutator.changeEditableProperty(item, vibratorData, logic);
@@ -738,7 +730,6 @@ export class ChaoticItemModule extends BaseModule {
         if (vibratorAvailableOptions.length === 0) {
             return false;
         }
-        //console.log("shapeShiftVibratorItem: availableOptions: ", vibratorAvailableOptions);
 
         // Select an option based on the logic
         let vibratorNewOption;
@@ -770,7 +761,6 @@ export class ChaoticItemModule extends BaseModule {
         }
 
         // Update item
-        //console.log("shapeShiftVibratorItem: VIBRATING: vibratorNewOption: ", vibratorNewOption);
         VibratorModeSetOptionByName(Player, item, vibratorNewOption);
         const itemName = (item?.Craft?.Name ?? item.Asset.Name);
         const optionName = AssetTextGet(vibratorData.dialogPrefix.option + vibratorNewOption) ?? vibratorNewOption;

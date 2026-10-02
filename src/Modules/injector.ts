@@ -735,7 +735,7 @@ export class InjectorModule extends BaseModule {
 
     GetDrugTypes(item: CraftingPartialItem): AnyDrugType[] {
         const name = item.Name;
-        const description = typeof CraftingDescription === "undefined" ? item.Description : CraftingDescription.Decode(item.Description); // R109
+        const description = CraftingDescription.Decode(item.Description);
         const totalString = name + " | " + description;
 
         const types: AnyDrugType[] = [];
@@ -1019,7 +1019,6 @@ export class InjectorModule extends BaseModule {
     }
 
     MiniGameEnd(type: "sedative" | "mindcontrol", success: boolean) {
-        console.info("sedative minigame ended - " + success);
         CommonSetScreen("Online", "ChatRoom");
         if (!success) {
             switch (type) {

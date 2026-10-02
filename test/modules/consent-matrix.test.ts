@@ -79,6 +79,37 @@ describe("ConsentModule: timeouts, incapacitation, and stale/mismatched ids", ()
 		void sender;
 	});
 
+	it("ignores offers from ghosted or blacklisted players", () => {
+		registerTestFlow();
+		addToRoom(makeCharacter({ MemberNumber: 1001 }));
+		addToRoom(makeCharacter({ MemberNumber: 1002 }));
+		Player.GhostList = [1001];
+		Player.BlackList = [1002];
+
+		consent.IncomingOffer(1001, "offer-g", "test-flow", null);
+		consent.IncomingOffer(1002, "offer-b", "test-flow", null);
+
+		expect(document.body.textContent).not.toContain("Do the thing?");
+		expect(sent.hidden().filter(m => m.command?.name === "consent-answer")).toHaveLength(0);
+		Player.GhostList = [];
+		Player.BlackList = [];
+	});
+
+	it("unload cancels pending offers and removes its command listeners", () => {
+		const flow = registerTestFlow();
+		const target = addToRoom(makeCharacter({ MemberNumber: 2002, LSCG: {} }));
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		consent.Offer("test-flow", target as any, null);
+		expect(consent.sentOffers.size).toBe(1);
+
+		consent.unload();
+		vi.advanceTimersByTime(ConsentModule.PROMPT_TIMEOUT + ConsentModule.REPLY_GRACE);
+
+		expect(consent.sentOffers.size).toBe(0);
+		expect(flow.onComplete).not.toHaveBeenCalled();
+		consent.load(); // other tests in this file share the module
+	});
+
 	it("times out to a decline when the sender never gets a force/back-off click", () => {
 		const flow = registerTestFlow();
 		const target = addToRoom(makeCharacter({ MemberNumber: 2002, LSCG: {} }));

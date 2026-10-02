@@ -77,7 +77,6 @@ export class SleepyMiniGame extends BaseMiniGame {
         this.SleepyMaxPosition = 400;
         this.SleepyPosition = this.SleepyMaxPosition;
 
-        console.info("Sleepy minigame started: difficulty - " + this.SleepyChallenge + " time - " + this.SleepyGameDuration);
 
         this.removeBlurHook = hookFunction("Player.GetBlurLevel", 10, (args, next) => {
             if (this.IsStartDelay) {

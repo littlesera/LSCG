@@ -593,10 +593,7 @@ export class ItemUseModule extends BaseModule {
 			const acting = args[0] as Character;
 			const acted = args[1] as Character;
 			const needsItem = args[2] as string;
-			const targetGroupName = args[4] as AssetGroup | AssetGroupName;
-
-			// `AssetGroupName` as of R111Beta1 and `AssetGroup` as of later versions
-			const targetGroup = typeof targetGroupName === "string" ? AssetGroupGet(acting.AssetFamily, targetGroupName) : targetGroupName;
+			const targetGroup = args[4] as AssetGroup;
 			if (targetGroup == null) {
 				return next(args);
 			}

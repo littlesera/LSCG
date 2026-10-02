@@ -62,7 +62,8 @@ export function createActivitiesApi(owner: ErrorOwner, scopedId: (name: string) 
                         MaxProgress: maxProgress,
                         MaxProgressSelf: maxProgressSelf,
                         // Short names of this extension's own prerequisites become their namespaced ids.
-                        Prerequisite: (def.prerequisites ?? []).map(p => prerequisites.has(p) ? scopedId(p) : p),
+                        // "ZoneAccessible" is always required: an extension can't reach a zone that restraints block.
+                        Prerequisite: [...new Set([...(def.prerequisites ?? []).map(p => prerequisites.has(p) ? scopedId(p) : p), "ZoneAccessible"])],
                     },
                     Targets: targets.map(({ group, action, t }) => ({
                         Name: group,

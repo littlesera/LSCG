@@ -55,8 +55,6 @@ export class SuggestionMiniGame extends BaseMiniGame {
             MiniGameDifficulty = this.Module.GetSuggestionInfluence(this.Options.suggestion, this.Options?.sender);
         }
 
-        console.info(this.Options);
-        console.info(MiniGameDifficulty);
 
         this.removeBlurHook = hookFunction("Player.GetBlurLevel", 10, (args, next) => {
             if (!this.Options)
@@ -148,7 +146,6 @@ export class SuggestionMiniGame extends BaseMiniGame {
     Resist() {
         this.ResistStarted = CommonTime();
         this.ResistRoll = this.Module.GetResistRoll();
-        console.info(`Resist ${this.ResistRoll}`);
     }
 
     Submit() {

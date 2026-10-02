@@ -53,19 +53,15 @@ export {
 };
 
 function initWait() {
-	console.debug("LSCG: Init wait");
 	if (CurrentScreen == null || CurrentScreen === "Login") {
 		hookFunction("LoginResponse", 0, (args, next) => {
-			console.debug("LSCG: Init LoginResponse caught", args);
 			next(args);
 			const response = args[0];
 			if (isObject(response) && typeof response.Name === "string" && typeof response.AccountName === "string") {
 				loginInit(args[0]);
 			}
 		});
-		console.log("LSCG Ready!");
 	} else {
-		console.debug("LSCG: Already logged in, init");
 		init();
 	}
 }
@@ -220,7 +216,6 @@ function init_modules(): boolean {
 		return ret;
 	});
 
-	console.info("LSCG Modules Loaded.");
 	return true;
 }
 
@@ -249,7 +244,6 @@ if (window.LSCG_Loaded !== undefined) {
 }
 window.LSCG_Loaded = false;
 window.LSCG_Version = apiVersion;
-console.debug("LSCG: Parse start...");
 
 // Extensions that loaded before LSCG register now, so they are known before login.
 installLoadQueue();

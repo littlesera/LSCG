@@ -740,7 +740,6 @@ export class SplatterModule extends BaseModule {
     }
 
     CleanSplatter(location: SplatterLocation) {
-        console.info(`Cleaning splatter from ${location}`);
         new SplatterMapping(Player).cleanSplatLocation(location);
         ChatRoomCharacterUpdate(Player);
     }
@@ -751,7 +750,6 @@ export class SplatterModule extends BaseModule {
     }
 
     AddSplatter(sender: Character, location: SplatterLocation, colorOverride: BCColor, opacityOverride: number | null) {
-        console.info(`Adding splatter to ${location}`);
         new SplatterMapping(Player).incrementSplat(location, colorOverride, opacityOverride);
         ChatRoomCharacterUpdate(Player);
     }

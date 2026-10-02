@@ -920,7 +920,6 @@ export class HypnoModule extends BaseModule {
     }
 
     MiniGameEnd(resisted: boolean) {
-        console.info("suggestion minigame ended - " + resisted);
         CommonSetScreen("Online", "ChatRoom");
         if (this.MiniGameOptions) {
             if (resisted) this.ResistSuggestion(this.MiniGameOptions);
@@ -952,7 +951,6 @@ export class HypnoModule extends BaseModule {
             this.ReduceSpeakerInfluence(opts.senderNum);
             return;
         }
-        console.debug(`Pose -- ${poseSelection?.upper ?? "none"} :: ${poseSelection?.lower ?? "none"} :: ${poseSelection?.full ?? "none"}`);
         SendAction("%NAME% moves their body into a pose obediently.");
         let blocked = false;
         CharacterRefresh(Player, false);
@@ -1042,7 +1040,6 @@ export class HypnoModule extends BaseModule {
     }
 
     ForceActivity(opts: SuggestionMiniGameOptions, instruction: HypnoInstruction) {
-        console.log(JSON.stringify(instruction, null, 2));
         const target = this.FindConfigurableTarget(instruction, opts.sender, opts.msg);
         const activitySelection = instruction.arguments["selection"] as ActivitySelection;
         const activityGroup = AssetGroup.find(a => a.Name == activitySelection?.group);
