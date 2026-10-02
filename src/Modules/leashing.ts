@@ -845,8 +845,13 @@ export class LeashingModule extends BaseModule {
     AcceptClasp(other: number, by: number, shared?: boolean) {
         const was = this.Clasps.find(p => p.PairedMember === other);
         const fromSomeoneElse = by !== Player.MemberNumber;
-        // Someone may have seen our leashing as on from settings we've since changed
-        const refused = !this.Enabled || this.NeckLeash(Player) === null || (fromSomeoneElse && !this.CanBeChangedBy(by, other));
+        // Someone may have seen our leashing as on from settings we've since changed. And the clasper checked the rest
+        // on their side, but nothing makes them: we hold our own line here
+        const refused = !this.Enabled || this.NeckLeash(Player) === null || (fromSomeoneElse && (
+            Player.OnlineSharedSettings?.AllowPlayerLeashing === false ||
+            !this.CanBeChangedBy(by, other) ||
+            !ChatRoomCanBeLeashedBy(by, Player)
+        ));
         const vetoed = !refused && fromSomeoneElse && emitBefore("grab.beforeIncoming", { type: "leash", sender: by }).cancelled;
         if (refused || vetoed) {
             // A clasp we already had stays, at both ends

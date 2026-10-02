@@ -59,6 +59,7 @@ describe("LeashingModule clasped leashes", () => {
 		g.ChatRoomData.Name = "Here";
 		g.ServerChatRoomGetAllowItem.mockImplementation(() => true);
 		g.ChatRoomCanBeLeashed.mockImplementation(() => true);
+		original("ChatRoomCanBeLeashedBy").mockReturnValue(true);
 		const restraints = makeGroup({ Name: "ItemNeckRestraints" });
 		collarLeash = makeAsset(restraints, { Name: "CollarLeash", AllowEffect: ["IsLeashed"] });
 		chainLeash = makeAsset(restraints, { Name: "ChainLeash" });
@@ -373,6 +374,22 @@ describe("LeashingModule clasped leashes", () => {
 			const c = join(3);
 			g.Player.LSCG.LeashingModule.enabled = false;
 			claspedBy(c, 2);
+			expect(clasps()).toEqual([]);
+			expect(releaseBeeps().map(([target]) => target)).toEqual([2]);
+		});
+
+		it("is refused, and the other end told to let go, when our own leashing setting is off", () => {
+			g.Player.OnlineSharedSettings = { AllowPlayerLeashing: false };
+			join(2);
+			claspedBy(join(3), 2);
+			expect(clasps()).toEqual([]);
+			expect(releaseBeeps().map(([target]) => target)).toEqual([2]);
+		});
+
+		it("is refused when the clasper couldn't leash us themselves, like with an owner's padlock on our leash", () => {
+			original("ChatRoomCanBeLeashedBy").mockReturnValue(false);
+			join(2);
+			claspedBy(join(3), 2);
 			expect(clasps()).toEqual([]);
 			expect(releaseBeeps().map(([target]) => target)).toEqual([2]);
 		});
@@ -861,12 +878,14 @@ describe("LeashingModule clasped leashes", () => {
 		it("the player we're clasped to may pull us; a stranger may not", () => {
 			leashing.Pairings = [new Leashing(2, 1, false, "leash")];
 			expect(g.ChatRoomCanBeLeashedBy(2, g.Player)).toBe(true);
+			original("ChatRoomCanBeLeashedBy").mockReturnValue(false);
 			expect(g.ChatRoomCanBeLeashedBy(4, g.Player)).not.toBe(true);
 		});
 
 		it("not in a room that blocks leashing", () => {
 			leashing.Pairings = [new Leashing(2, 1, false, "leash")];
 			g.ChatRoomData.BlockCategory = ["Leashing"];
+			original("ChatRoomCanBeLeashedBy").mockReturnValue(false);
 			expect(g.ChatRoomCanBeLeashedBy(2, g.Player)).not.toBe(true);
 		});
 
@@ -1024,9 +1043,10 @@ describe("LeashingModule clasped leashes", () => {
 			g.CharacterRefresh(g.Player);
 			g.CharacterRefresh(g.Player);
 			expect(original("CharacterRefreshLeash")).not.toHaveBeenCalled();
-			// Shut in a box, it's not held, and stays that way
+			// Shut in a box, it's not held (vanilla won't leash someone shut in), and stays that way
 			wearLeash(player());
 			stuck(player(), "Enclose");
+			original("ChatRoomCanBeLeashedBy").mockReturnValue(false);
 			g.CharacterRefresh(g.Player);
 			g.CharacterRefresh(g.Player);
 			expect(original("CharacterRefreshLeash")).not.toHaveBeenCalled();
