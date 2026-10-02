@@ -62,6 +62,44 @@ values need an explicit sync step onto Node's own `globalThis`).
   `bc-stubs` in the same change; `.github/workflows/bc-bump.yml` does this
   automatically on a weekly schedule (or on demand).
 
+## The playground (real browser)
+
+Neither project above draws anything: jsdom has no canvas or layout. For UI work, `npm run playground` serves a
+local, offline Bondage Club at the same pinned commit (http://localhost:10003/) with LSCG's `dist/bundle.js` loaded,
+for a real browser — by hand, or driven by [agent-browser](https://github.com/vercel-labs/agent-browser).
+
+- `scripts/bc-playground.mjs` fetches BC client files from gitgud on first use and caches them in
+  `.cache/bc-full-<sha>/` (the first page load is slow; later ones are local).
+- `test/playground/fake-server.js` replaces socket.io, so nothing reaches the real BC server. Everything the client
+  sends is recorded on `Playground.sent`; `Playground.receive(event, data)` delivers a server event.
+- `test/playground/harness.js` adds page helpers: `Playground.login()`, `openSettings("Breathplay")`,
+  `addCharacter({ pose: ["Kneel"], lscg: {...} })` (another LSCG player in the room), `openProfile(C)`, and
+  `toPage(x, y)` (BC canvas coordinates to page pixels, for real mouse clicks on canvas-drawn UI).
+- `npm run ui:shots` (playground running) screenshots every LSCG settings screen, every tab, to `test/.out/ui/`.
+- `npm run test:ui` runs the Playwright suite in `test/ui/` (`*.spec.ts`, so vitest never picks them up) against the
+  playground, which Playwright starts itself. Run `npm run build` first: it tests the built `dist/bundle.js`.
+  - `settings.spec.ts` opens every settings screen and tab and changes every enabled input once, failing for any
+    input that doesn't change a saved setting (`sweep.ts`), and checks that leaving a screen leaves no overlays,
+    preview characters or photo mode behind. A new screen fails the "every screen is covered" test until it's
+    added to its list.
+  - `flows.spec.ts` covers specific behaviour: the zone picker, outfit renames, the spell menu, remote settings.
+  - A failure keeps a screenshot and a trace in `test/.out/ui-results/`; `npx playwright show-trace <trace.zip>`
+    replays it.
+  - `.github/workflows/ui.yml` runs it on PRs, **non-blocking** (`continue-on-error`) until it has proven reliable.
+  - The first run downloads BC's files from gitgud (it rate-limits), so a cold cache is slow (~7-9 min) and can
+    stall; a warm one takes about 1.5 min. `test/ui/global-setup.ts` pre-visits what the tests use, and
+    `ui.yml` caches `.cache/bc-full-*` (saved even when tests fail, and refreshed by pushes to `main`/`dev` so
+    PRs start warm). `UI_CPU_THROTTLE=4 npm run test:ui` slows the browser to reproduce timing failures.
+  - LSCG errors in the browser console fail a test, but BC's own noise (missing optional files, rejected
+    appearance bundles) is ignored; see `IGNORED` in `test/ui/fixtures.ts`.
+
+```sh
+npm run build && npm run playground          # in one terminal
+agent-browser open http://localhost:10003/
+agent-browser eval "(async () => { await Playground.login(); return Playground.openSettings('Activities'); })()"
+agent-browser screenshot shot.png
+```
+
 ## Two pitfalls
 
 1. **`Player` is one stable object for the whole test file, mutated in place.**

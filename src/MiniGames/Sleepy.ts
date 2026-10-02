@@ -1,5 +1,5 @@
 import { InjectorModule } from "Modules/injector";
-import { getRandomInt, hookFunction, ICONS } from "utils";
+import { getRandomInt, hookFunction } from "utils";
 import { BaseMiniGame } from "./minigames";
 
 export interface SleepyMiniGameOptions {
@@ -13,7 +13,7 @@ export interface SleepyMiniGameOptions {
 export class SleepyMiniGame extends BaseMiniGame {
     Module: InjectorModule;
 
-    startText: string = "You are feeling extrodinarily sleepy..."
+    startText: string = "You are feeling extrodinarily sleepy...";
     hintText: string = "Click to keep your eyes open. Try to stay awake!";
     failText: string = "You fell asleep!";
     successText: string = "You shake out of it!";
@@ -67,8 +67,8 @@ export class SleepyMiniGame extends BaseMiniGame {
             MiniGameTimer = CommonTime() + this.BaseGameLength; // 5 seconds base
             this.SleepyChallenge = 5;
         } else {
-            var difficultyTimeAdd = (MiniGameDifficulty - 8)*.25;
-            var willMod = (SkillGetLevel(Player, "Willpower")/10) * difficultyTimeAdd
+            const difficultyTimeAdd = (MiniGameDifficulty - 8)*.25;
+            const willMod = (SkillGetLevel(Player, "Willpower")/10) * difficultyTimeAdd;
             this.SleepyGameDuration = this.BaseGameLength + 1000 * (difficultyTimeAdd - willMod);
             MiniGameTimer = this.GameStartTime + this.SleepyGameDuration; // One extra second per challenge level, minus a third of a second per willpower.
             this.SleepyChallenge = MiniGameDifficulty;
@@ -83,16 +83,16 @@ export class SleepyMiniGame extends BaseMiniGame {
             if (this.IsStartDelay) {
                 return 5;
             }
-            var maxBlur = 20;
-            var progBlurLevel = (1 - (this.SleepyPosition/this.SleepyMaxPosition)) * maxBlur;
+            const maxBlur = 20;
+            const progBlurLevel = (1 - (this.SleepyPosition/this.SleepyMaxPosition)) * maxBlur;
             return Player.GraphicsSettings?.AllowBlur ? (next(args) + progBlurLevel) : next(args);
         });
         this.removeHasTintHook = hookFunction("Player.HasTints", 10, (args, next) => {
             return Player.ImmersionSettings?.AllowTints ? true : next(args);
         });
         this.removeGetTintHook = hookFunction("Player.GetTints", 10, (args, next) => {
-            var progTintAlpha = Math.min(1, .1 + (1 - (this.SleepyPosition/this.SleepyMaxPosition)));
-            var tint = this.tintColor;
+            const progTintAlpha = Math.min(1, .1 + (1 - (this.SleepyPosition/this.SleepyMaxPosition)));
+            const tint = this.tintColor;
             tint[0].a = progTintAlpha;
             return Player.ImmersionSettings?.AllowTints ? tint : next(args);
         });
@@ -126,7 +126,7 @@ export class SleepyMiniGame extends BaseMiniGame {
     }
 
     RunGame(delta: number) {
-        var timeElapsed = (this.SleepyGameDuration +  CommonTime() - MiniGameTimer) / 1000;
+        const timeElapsed = (this.SleepyGameDuration +  CommonTime() - MiniGameTimer) / 1000;
 
         // Adjust acceleration every .4s ticks
         if (CommonTime() > this.SleepyNextTick) {

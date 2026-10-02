@@ -37,7 +37,7 @@ export class FrozenState extends BaseState {
     speechBlockStr: string[] = [
         "%NAME% barely trembles, unable to move %POSSESSIVE% mouth or make a sound...",
         "%NAME%'s eyes plead helplessly as %POSSESSIVE% muscles refuse to obey...",
-        "%NAME% manages to muster a quiet whimper, %POSSESSIVE% body held fast..."
+        "%NAME% manages to muster a quiet whimper, %POSSESSIVE% body held fast...",
     ];
 
     SpeechBlock(): void {

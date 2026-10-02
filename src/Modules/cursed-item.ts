@@ -1,11 +1,10 @@
 import { BaseModule } from "base";
 import { getModule } from "modules";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
-import { SendAction, getRandomInt, OnChat, settingsSave, removeAllHooksByModule, isPhraseInString, GetDelimitedList, OnAction, GetMetadata, GetTargetCharacter, hookFunction, GetItemNameAndDescriptionConcat, sendLSCGCommandBeep, isObject, isBind, isCloth, isCosplay, isBody, isGenitals, isPronouns, toItemBundle, parseFromBase64, ICONS } from "../utils";
+import { removeAllHooksByModule, isPhraseInString, hookFunction, GetItemNameAndDescriptionConcat, sendLSCGCommandBeep, isObject, isBind, isCloth, isCosplay, isBody, isGenitals, isPronouns, toItemBundle, parseFromBase64, ICONS } from "../utils";
 import { CursedItemModel, CursedItemWorn, ItemType, CursedItemSettingsModel } from "Settings/Models/cursed-item";
 import { GuiCursedItems } from "Settings/cursed-items";
 import { StateModule } from "./states";
-import { BaseState } from "./States/BaseState";
 import { CursedItemState } from "./States/CursedItemState";
 import { CommandListener, CoreModule } from "./core";
 import { OutfitCollectionModule } from "./outfitCollection";
@@ -24,7 +23,7 @@ import { isArray } from "lodash-es";
 
 export const CursedKeywords = [
     "cursed",
-    "enchanted"
+    "enchanted",
 ];
 
 export class CursedItemModule extends BaseModule {
@@ -39,7 +38,7 @@ export class CursedItemModule extends BaseModule {
             CursedItems: [],
             SuppressEmote: false,
             AlwaysExhaust: false,
-            BlockExistingGroups: false
+            BlockExistingGroups: false,
         };
     }
 
@@ -62,7 +61,7 @@ export class CursedItemModule extends BaseModule {
     load(): void {
         let lastCheckedForItems = 0;
         hookFunction("TimerProcess", 1, (args, next) => {
-            let now = CommonTime();
+            const now = CommonTime();
             // Check gags every 5 seconds for any new cursed items..
             if (this.Enabled && this.settings.Vulnerable && lastCheckedForItems + 5000 < now) {
                 lastCheckedForItems = now;
@@ -76,17 +75,17 @@ export class CursedItemModule extends BaseModule {
                 return next([idPrefix, asset, C, onClick, options, ...args]);
             }
             let isCursed = CursedKeywords.some(str => isPhraseInString(GetItemNameAndDescriptionConcat(asset) ?? "", str, true));
-            let myCursedItemNames = this.settings.CursedItems.map(item => item.Name);
+            const myCursedItemNames = this.settings.CursedItems.map(item => item.Name);
             isCursed &&= myCursedItemNames.some(str => isPhraseInString(GetItemNameAndDescriptionConcat(asset) ?? "", str, true));
 
             options ??= {};
             options.icons = [
                 ...(options.icons ?? []),
                 ...(isCursed ? [{
-                    name: `lscg-cursed-item`,
+                    name: "lscg-cursed-item",
                     iconSrc: ICONS.BOUND_GIRL,
-                    tooltipText: `LSCG: Cursed Item`,
-                }] : [])
+                    tooltipText: "LSCG: Cursed Item",
+                }] : []),
             ];
             
             return next([idPrefix, asset, C, onClick, options, ...args]);
@@ -95,14 +94,14 @@ export class CursedItemModule extends BaseModule {
         getModule<CoreModule>("CoreModule").RegisterCommandListener(<CommandListener>{
             id: "cursed_item_request",
             command: "cursed-item-request",
-            func: (sender: number, msg: LSCGMessageModel) => this.HandleCursedItemRequest(sender, msg)
+            func: (sender: number, msg: LSCGMessageModel) => this.HandleCursedItemRequest(sender, msg),
         });
 
         getModule<CoreModule>("CoreModule").RegisterCommandListener(<CommandListener>{
             id: "cursed_item_response",
             command: "cursed-item-response",
-            func: (sender: number, msg: LSCGMessageModel) => this.HandleCursedItemResponse(sender, msg)
-        })
+            func: (sender: number, msg: LSCGMessageModel) => this.HandleCursedItemResponse(sender, msg),
+        });
     }
 
     run(): void {
@@ -117,31 +116,31 @@ export class CursedItemModule extends BaseModule {
         if (!this.Enabled) return;
         // Iterate through Player.Appearance, look for crafted items that contain "cursed" keywords, then compare against our current active outfits.
         // If new items are found, ping the crafting owner for the full outfit code and add as active
-        let allItems = Player.Appearance.filter(item => CursedKeywords.some(str => isPhraseInString(GetItemNameAndDescriptionConcat(item) ?? "", str, true)));
+        const allItems = Player.Appearance.filter(item => CursedKeywords.some(str => isPhraseInString(GetItemNameAndDescriptionConcat(item) ?? "", str, true)));
         if (allItems.length > 0) {
-            let activeItems = this.spreadingState.ActiveOutfits ?? [];
-            let newItems = allItems.filter(item => !activeItems.some(active => active.Crafter == item.Craft?.MemberNumber && isPhraseInString(GetItemNameAndDescriptionConcat(item) ?? "", active.ItemName, true)));
+            const activeItems = this.spreadingState.ActiveOutfits ?? [];
+            const newItems = allItems.filter(item => !activeItems.some(active => active.Crafter == item.Craft?.MemberNumber && isPhraseInString(GetItemNameAndDescriptionConcat(item) ?? "", active.ItemName, true)));
             newItems.forEach(item => this.SendCursedItemRequest(item));
         }
     }
 
     SendCursedItemRequest(item: Item) {
-        let target = item.Craft?.MemberNumber ?? 0;
+        const target = item.Craft?.MemberNumber ?? 0;
         if (target <= 0) return;
-        let bundle = toItemBundle(item, Player);
+        const bundle = toItemBundle(item, Player);
         if (!bundle) return;
 
         console.debug(`Sending cursed item request: ${target} -- ${JSON.stringify(bundle)}`);
 
         sendLSCGCommandBeep(target, "cursed-item-request", [{
             name: "item",
-            value: bundle
+            value: bundle,
         }]);
     }
 
     private filterItem(item: ServerItemBundle, filter: ItemType[] = []): boolean {
         if (!filter || filter.length <= 0) return true;
-        let group = AssetGroup.find(g => g.Name == item.Group);
+        const group = AssetGroup.find(g => g.Name == item.Group);
         if (!group) return false;
         return filter.some(f => {
             switch (f) {
@@ -156,19 +155,19 @@ export class CursedItemModule extends BaseModule {
                 case "gender":
                     return isGenitals(group!) || isPronouns(group!);
             }
-        })
+        });
     }
 
     SendCursedItemResponse(target: number, keyItem: ItemBundle, item: CursedItemModel) {
         let outfitCode = getModule<OutfitCollectionModule>("OutfitCollectionModule")?.data.GetOutfitCode(item.OutfitKey);
         if (!outfitCode) return;
 
-        let outfitBundle = parseFromBase64(outfitCode) as ItemBundle[];
+        const outfitBundle = parseFromBase64(outfitCode) as ItemBundle[];
         if (!outfitBundle || !isArray(outfitBundle) || outfitBundle.some(x => !isObject(x))) return;
-        let filtered = outfitBundle.filter(bundleItem => this.filterItem(bundleItem, item.Filter));
+        const filtered = outfitBundle.filter(bundleItem => this.filterItem(bundleItem, item.Filter));
         outfitCode = LZString.compressToBase64(JSON.stringify(filtered));
 
-        let itemModel = <CursedItemWorn>{
+        const itemModel = <CursedItemWorn>{
             Crafter: Player.MemberNumber,
             ItemName: keyItem.Craft?.Name ?? keyItem.Name,
             CurseName: item.Name,
@@ -178,28 +177,28 @@ export class CursedItemModule extends BaseModule {
             InstaStrip: item.InstaStrip,
             Speed: item.Speed,
             CustomSpeed: item.CustomSpeed,
-            OutfitCode: outfitCode
-        }
+            OutfitCode: outfitCode,
+        };
 
         sendLSCGCommandBeep(target, "cursed-item-response", [{
             name: "item",
-            value: itemModel
+            value: itemModel,
         }]);
     }
 
     HandleCursedItemRequest(sender: number, msg: LSCGMessageModel) {
         if (!this.Enabled) return;
-        let bundle = msg.command?.args.find(a => a.name == "item")?.value as ItemBundle;
+        const bundle = msg.command?.args.find(a => a.name == "item")?.value as ItemBundle;
         if (!bundle) return;
-        let itemStr = GetItemNameAndDescriptionConcat(bundle) ?? "";
-        let foundItem = this.settings.CursedItems.find(item => item.Enabled && isPhraseInString(itemStr, item.Name, true))
-        if (!!foundItem)
+        const itemStr = GetItemNameAndDescriptionConcat(bundle) ?? "";
+        const foundItem = this.settings.CursedItems.find(item => item.Enabled && isPhraseInString(itemStr, item.Name, true));
+        if (foundItem)
             this.SendCursedItemResponse(sender, bundle, foundItem);
     }
 
     HandleCursedItemResponse(sender: number, msg: LSCGMessageModel) {
         console.debug(`Receiving cursed item response: ${sender} -- ${JSON.stringify(msg.command)}`);
-        let item = msg.command?.args.find(a => a.name == "item")?.value as CursedItemWorn;
+        const item = msg.command?.args.find(a => a.name == "item")?.value as CursedItemWorn;
         if (!this.Enabled || !item) return;
         // Every downstream permission check (checkItemIsValid's Allowed ladder, itemIsAllowed's
         // owner/lover/family checks) keys off item.Crafter -- trust the verified packet sender,

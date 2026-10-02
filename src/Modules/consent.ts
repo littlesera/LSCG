@@ -79,22 +79,22 @@ export class ConsentModule extends BaseModule {
         Core().RegisterCommandListener(<CommandListener>{
             id: "consent_offer_listener",
             command: "consent-offer",
-            func: (sender: number, msg: LSCGMessageModel) => this.IncomingOffer(sender, GetArg(msg, "id"), GetArg(msg, "flow"), GetArg(msg, "payload"))
+            func: (sender: number, msg: LSCGMessageModel) => this.IncomingOffer(sender, GetArg(msg, "id"), GetArg(msg, "flow"), GetArg(msg, "payload")),
         });
         Core().RegisterCommandListener(<CommandListener>{
             id: "consent_answer_listener",
             command: "consent-answer",
-            func: (sender: number, msg: LSCGMessageModel) => this.IncomingAnswer(sender, GetArg(msg, "id"), GetArg(msg, "answer"))
+            func: (sender: number, msg: LSCGMessageModel) => this.IncomingAnswer(sender, GetArg(msg, "id"), GetArg(msg, "answer")),
         });
         Core().RegisterCommandListener(<CommandListener>{
             id: "consent_force_listener",
             command: "consent-force",
-            func: (sender: number, msg: LSCGMessageModel) => this.IncomingForce(sender, GetArg(msg, "id"))
+            func: (sender: number, msg: LSCGMessageModel) => this.IncomingForce(sender, GetArg(msg, "id")),
         });
         Core().RegisterCommandListener(<CommandListener>{
             id: "consent_force_result_listener",
             command: "consent-force-result",
-            func: (sender: number, msg: LSCGMessageModel) => this.IncomingForceResult(sender, GetArg(msg, "id"), !!GetArg(msg, "success"))
+            func: (sender: number, msg: LSCGMessageModel) => this.IncomingForceResult(sender, GetArg(msg, "id"), !!GetArg(msg, "success")),
         });
     }
 
@@ -121,7 +121,7 @@ export class ConsentModule extends BaseModule {
         sendLSCGCommand(target, "consent-offer", [
             { name: "id", value: id },
             { name: "flow", value: flowId },
-            { name: "payload", value: payload }
+            { name: "payload", value: payload },
         ]);
         offer.timer = setTimeout(() => this.IncomingAnswer(offer.targetNum, id, "refused"), ConsentModule.PROMPT_TIMEOUT + ConsentModule.REPLY_GRACE);
     }
@@ -146,7 +146,7 @@ export class ConsentModule extends BaseModule {
             { label: prompt.backOff, color: "green", onClick: () => {
                 offer.flow.onBackOff?.(target, offer.payload);
                 this.CompleteOffer(id, "declined");
-            }}
+            }},
         ], ConsentModule.PROMPT_TIMEOUT, () => this.CompleteOffer(id, "declined"));
     }
 
@@ -158,7 +158,7 @@ export class ConsentModule extends BaseModule {
         if (!target)
             return this.CompleteOffer(id, "declined");
 
-        if (!!offer.flow.forceLocally) {
+        if (offer.flow.forceLocally) {
             offer.flow.forceLocally(target, offer.payload);
             return this.CompleteOffer(id, "forced");
         }
@@ -203,7 +203,7 @@ export class ConsentModule extends BaseModule {
             : { label: flow.unableLabel ?? "Can't...", color: "green", onClick: () => this.Answer(flow, sender, id, payload, "unable", false) };
         LSCG_SendLocalPrompt(prompt.text, [
             acceptButton,
-            { label: prompt.refuse, color: "red", onClick: () => this.Answer(flow, sender, id, payload, "refused", false) }
+            { label: prompt.refuse, color: "red", onClick: () => this.Answer(flow, sender, id, payload, "refused", false) },
         ], ConsentModule.PROMPT_TIMEOUT, () => this.Answer(flow, sender, id, payload, "refused", true));
     }
 
@@ -216,12 +216,12 @@ export class ConsentModule extends BaseModule {
                 flow,
                 senderNum: sender.MemberNumber!,
                 payload,
-                timer: setTimeout(() => this.refusedOffers.delete(id), ConsentModule.PROMPT_TIMEOUT + ConsentModule.REPLY_GRACE * 2)
+                timer: setTimeout(() => this.refusedOffers.delete(id), ConsentModule.PROMPT_TIMEOUT + ConsentModule.REPLY_GRACE * 2),
             });
         }
         sendLSCGCommand(sender, "consent-answer", [
             { name: "id", value: id },
-            { name: "answer", value: answer }
+            { name: "answer", value: answer },
         ]);
     }
 
@@ -236,7 +236,7 @@ export class ConsentModule extends BaseModule {
         const success = refused.flow.onForced?.(sender, refused.payload) ?? false;
         sendLSCGCommand(sender, "consent-force-result", [
             { name: "id", value: id },
-            { name: "success", value: success }
+            { name: "success", value: success },
         ]);
     }
 }

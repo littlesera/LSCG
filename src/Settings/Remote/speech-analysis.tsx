@@ -17,7 +17,7 @@ export class RemoteSpeechAnalysis extends RemoteGuiSubscreen {
     private _view: SpeechSettingsView | null = null;
     private _status: "loading" | "ready" | "no-response" = "loading";
     private _timeout: number | undefined;
-    private _host = new DomSettingsHost("lscg-remote-speech-settings", () => this.build());
+    private _host = new DomSettingsHost("lscg-remote-speech-settings", this, () => this.build());
 
     get name(): string {
         return "Speech Analysis";
@@ -28,7 +28,7 @@ export class RemoteSpeechAnalysis extends RemoteGuiSubscreen {
     }
 
     get help(): HelpInfo {
-        return { label: "Open LSCG Wiki on GitHub", link: "https://github.com/littlesera/LSCG/wiki" };
+        return { label: "Open Speech Analysis Wiki on GitHub", link: "https://github.com/littlesera/LSCG/wiki/Speech-Analysis" };
     }
 
     /** The target's published access settings. */

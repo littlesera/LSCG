@@ -1,8 +1,6 @@
-import { InjectorModule } from "Modules/injector";
-import { getRandomInt, hookFunction, ICONS } from "utils";
+import { hookFunction } from "utils";
 import { BaseMiniGame } from "./minigames";
 import { HypnoModule, HypnoSuggestion, SuggestionMiniGameOptions } from "Modules/hypno";
-import { getModule } from "modules";
 
 export class SuggestionMiniGame extends BaseMiniGame {
     Module: HypnoModule;
@@ -27,7 +25,7 @@ export class SuggestionMiniGame extends BaseMiniGame {
     Submitted: boolean = false;
     ResistRoll?: number;
     ResistStarted: number = 0;
-    get Resisting(): boolean { return this.ResistStarted > (CommonTime() - this.ResistTime) };
+    get Resisting(): boolean { return this.ResistStarted > (CommonTime() - this.ResistTime); };
 
     removeBlurHook: () => void = () => {};
     removeHasTintHook: () => void = () => {};
@@ -66,8 +64,8 @@ export class SuggestionMiniGame extends BaseMiniGame {
             if (this.IsStartDelay && Player.GraphicsSettings?.AllowBlur) {
                 return 5;
             }
-            var maxBlur = 20;
-            var progBlurLevel = (1 - (MiniGameDifficulty/100)) * maxBlur;
+            const maxBlur = 20;
+            const progBlurLevel = (1 - (MiniGameDifficulty/100)) * maxBlur;
             return Player.GraphicsSettings?.AllowBlur ? (next(args) + progBlurLevel) : next(args);
         });
         this.removeHasTintHook = hookFunction("Player.HasTints", 10, (args, next) => {
@@ -78,8 +76,8 @@ export class SuggestionMiniGame extends BaseMiniGame {
         this.removeGetTintHook = hookFunction("Player.GetTints", 10, (args, next) => {
             if (!this.Options)
                 return next(args);
-            var progTintAlpha = Math.min(1, .1 + (1 - (MiniGameDifficulty/100)));
-            var tint = this.Options?.tintColor;
+            const progTintAlpha = Math.min(1, .1 + (1 - (MiniGameDifficulty/100)));
+            const tint = this.Options?.tintColor;
             tint[0].a = progTintAlpha;
             return Player.ImmersionSettings?.AllowTints ? tint : next(args);
         });
@@ -124,11 +122,11 @@ export class SuggestionMiniGame extends BaseMiniGame {
         } else if ((this.IsGameTimeout || this.GameFailed) && !MiniGameEnded) {
             this.End(false);
         } else if (this.IsEndGameReport) {
-            let endText = MiniGameVictory ?
+            const endText = MiniGameVictory ?
                 this.Options.successText :
-                (this.Submitted ? this.Options.submissionText : this.Options.failText)
+                (this.Submitted ? this.Options.submissionText : this.Options.failText);
             if (this.Resisting) {
-                let color = (this.ResistRoll ?? 0) > MiniGameDifficulty ? "green" : "red";
+                const color = (this.ResistRoll ?? 0) > MiniGameDifficulty ? "green" : "red";
                 DrawText(`${this.ResistRoll} > ${MiniGameDifficulty} ?`, 500, 500, color, "black");
             }
             DrawText(endText, 500, 875, "white", "black");
@@ -162,17 +160,17 @@ export class SuggestionMiniGame extends BaseMiniGame {
         if (!this.Options)
             return;
 
-        if (!!this.ResistRoll) {
-            let elapsed = CommonTime() - this.ResistStarted;
+        if (this.ResistRoll) {
+            const elapsed = CommonTime() - this.ResistStarted;
             if (elapsed > this.ResistTime) {
                 this.End(this.ResistRoll > MiniGameDifficulty); // Once the walk-up is done, do the end game stage
             }
-            let tempVal = Math.ceil(this.ResistRoll * (elapsed / this.ResistTime));
-            let color = tempVal > MiniGameDifficulty ? "green" : "red";
+            const tempVal = Math.ceil(this.ResistRoll * (elapsed / this.ResistTime));
+            const color = tempVal > MiniGameDifficulty ? "green" : "red";
             DrawText(`${tempVal} > ${MiniGameDifficulty} ?`, 500, 500, color, "black");
         } else {
-            var timeElapsed = (CommonTime() - this.GameStartTime);
-            let perc = Math.min(100, Math.max(0, (1 - (timeElapsed/this.Options.gameLength)) * 100));
+            const timeElapsed = (CommonTime() - this.GameStartTime);
+            const perc = Math.min(100, Math.max(0, (1 - (timeElapsed/this.Options.gameLength)) * 100));
             DrawProgressBar(50, 970, 900, 25, perc);
             DrawText(this.Options.hintText, 500, 875, "white", "black");
             DrawButton(200, 532, 250, 64, "Resist", "White");

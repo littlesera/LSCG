@@ -13,5 +13,6 @@
 		"node_modules/bc-stubs/bc/**/*.d.ts",
 		"./src/**/*",
 		"./test/**/*"
-	]
+	],
+	"exclude": ["./test/ui"]
 }

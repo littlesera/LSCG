@@ -49,19 +49,32 @@ export default [
                 avoidEscape: true,
             }],
 
-            indent: ["error", 4, {
-                SwitchCase: 1,
-            }],
+            // The codebase mixes tabs and 4 spaces, and some files are CRLF; not enforced.
+            indent: "off",
 
             semi: ["error", "always"],
             "comma-dangle": ["error", "always-multiline"],
-            "linebreak-style": ["error", "unix"],
+            "linebreak-style": "off",
             "no-inner-declarations": "off",
 
+            // Hook and override signatures name arguments they don't use, and hook args are unpacked as tuples.
             "@typescript-eslint/no-unused-vars": ["error", {
                 varsIgnorePattern: "_",
-                argsIgnorePattern: "_",
+                args: "none",
+                caughtErrors: "none",
+                destructuredArrayIgnorePattern: ".",
             }],
+            // `cond ? SendAction(a) : SendAction(b);` is the house style for picking a message.
+            "@typescript-eslint/no-unused-expressions": ["error", {
+                allowTernary: true,
+                allowShortCircuit: true,
+            }],
+            // TypeScript already reports a case's let/const used before it's declared.
+            "no-case-declarations": "off",
+            // BC function patches use a plain function (its own `this`) and need the module's.
+            "@typescript-eslint/no-this-alias": "off",
+            // `x?.y!` is used as a type-only assertion; it behaves the same as `x?.y` at runtime.
+            "@typescript-eslint/no-non-null-asserted-optional-chain": "off",
 
             "@typescript-eslint/no-inferrable-types": "off",
             "@typescript-eslint/no-explicit-any": "off",

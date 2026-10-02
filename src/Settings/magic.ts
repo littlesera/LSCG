@@ -8,7 +8,7 @@ import { buildMagicTabs } from "./magic-pages";
 export type SpiritTextType = "None" | "Glow" | "Float";
 
 export class GuiMagic extends GuiSubscreen {
-	private _host = new DomSettingsHost("lscg-magic-settings", () => this.build());
+	private _host = new DomSettingsHost("lscg-magic-settings", this, () => this.build());
 
 	get name(): string {
 		return "Magic™";
@@ -24,9 +24,9 @@ export class GuiMagic extends GuiSubscreen {
 
 	get help(): HelpInfo {
 		return {
-			label: 'Open Magic Wiki on GitHub',
-			link: 'https://github.com/littlesera/LSCG/wiki/Magic'
-		}
+			label: "Open Magic Wiki on GitHub",
+			link: "https://github.com/littlesera/LSCG/wiki/Magic",
+		};
 	}
 
 	private build(): Node {
@@ -50,7 +50,7 @@ export class GuiMagic extends GuiSubscreen {
 		if (this.settings.enabled)
 			return;
 
-		var prev = MainCanvas.textAlign;
+		const prev = MainCanvas.textAlign;
 		MainCanvas.textAlign = "center";
 		if (this.blinkLastTime + 750 < CommonTime()) {
 			this.blinkLastTime = CommonTime();

@@ -5,7 +5,7 @@ import { buildSpeechTabs } from "./speech-analysis-pages";
 import { SpeechAnalysisSettingsModel } from "./Models/speech-analysis";
 
 export class GuiSpeechAnalysis extends GuiSubscreen {
-    private _host = new DomSettingsHost("lscg-speech-settings", () => this.build());
+    private _host = new DomSettingsHost("lscg-speech-settings", this, () => this.build());
 
     get name(): string {
         return "Speech Analysis";
@@ -20,7 +20,7 @@ export class GuiSpeechAnalysis extends GuiSubscreen {
     }
 
     get help(): HelpInfo {
-        return { label: "Open LSCG Wiki on GitHub", link: "https://github.com/littlesera/LSCG/wiki" };
+        return { label: "Open Speech Analysis Wiki on GitHub", link: "https://github.com/littlesera/LSCG/wiki/Speech-Analysis" };
     }
 
     private build(): Node {

@@ -95,7 +95,8 @@ export function TextRow(ctx: KitContext, props: RowProps<string> & { placeholder
     return row(ctx, props, id, input);
 }
 
-export function NumberRow(ctx: KitContext, props: RowProps<number> & { min: number; max: number; step?: number }): HTMLElement {
+/** A number box; with `slider`, also a slider beside it for the same value. */
+export function NumberRow(ctx: KitContext, props: RowProps<number> & { min: number; max: number; step?: number; slider?: boolean }): HTMLElement {
     const id = uid("num");
     const input = <input type="number" id={id} min={props.min} max={props.max} step={props.step ?? 1} onChange={() => {
         const n = Number(input.value);
@@ -108,7 +109,16 @@ export function NumberRow(ctx: KitContext, props: RowProps<number> & { min: numb
     }} /> as HTMLInputElement;
     ctx.watch(() => { if (document.activeElement !== input) input.value = String(props.get() ?? ""); });
     bindDisabled(ctx, input, props.disabled);
-    return row(ctx, props, id, input);
+    if (!props.slider)
+        return row(ctx, props, id, input);
+
+    // Dragging updates the number box live; the value is committed when the slider is let go.
+    const slider = <input type="range" aria-label={props.label} min={props.min} max={props.max} step={props.step ?? 1}
+        onInput={() => { input.value = slider.value; }}
+        onChange={() => { props.set(Number(slider.value)); ctx.changed(); }} /> as HTMLInputElement;
+    ctx.watch(() => { slider.value = String(props.get() ?? props.min); });
+    bindDisabled(ctx, slider, props.disabled);
+    return row(ctx, props, id, <div class="lscg-kit-slider">{slider}{input}</div> as HTMLElement);
 }
 
 /** Runs of consecutive options that share a group (undefined for ungrouped). */
@@ -170,6 +180,114 @@ export function SectionLabel(text: string, description?: string): HTMLElement {
             {description ? <p class="lscg-kit-desc">{description}</p> : null}
         </div>
     ) as HTMLElement;
+}
+
+/** The viewing player's state that BC applies to every other character it draws: blindness, tints (e.g. hypnosis's
+ *  purple) and blur, from BC itself or from LSCG's hooks on these methods. */
+const VIEWER_EFFECTS = {
+    IsBlind: () => false,
+    GetBlindLevel: () => 0,
+    HasTints: () => false,
+    GetTints: () => [],
+    GetBlurLevel: () => 0,
+} as const;
+
+/** Runs `draw` as if the player had no blindness, tints or blur, so a preview isn't drawn through their eyes. The
+ *  player's own methods (and any mod hooks on them) are put back exactly as they were. */
+export function drawUnaffected<T>(draw: () => T): T {
+    const saved = (Object.keys(VIEWER_EFFECTS) as (keyof typeof VIEWER_EFFECTS)[])
+        .map(key => [key, Object.getOwnPropertyDescriptor(Player, key)] as const);
+    const photo = CommonPhotoMode;
+    Object.assign(Player, VIEWER_EFFECTS);
+    CommonPhotoMode = true; // no blink or darkening either
+    try {
+        return draw();
+    } finally {
+        for (const [key, descriptor] of saved) {
+            if (descriptor) Object.defineProperty(Player, key, descriptor);
+            else delete (Player as any)[key];
+        }
+        CommonPhotoMode = photo;
+    }
+}
+
+export interface ZonePickerProps {
+    /** Whose body and worn items to show. Drawn standing, whatever their pose. */
+    character: Character;
+    /** The zones that can be picked, e.g. body groups that have activities. */
+    groups: () => AssetGroup[];
+    /** The picked group's name, outlined. */
+    selected: () => string | undefined;
+    /** Zones drawn filled green, e.g. ones that already have a setting. */
+    highlighted?: (group: AssetGroup) => boolean;
+    onPick: (group: AssetGroup) => void;
+}
+
+/** A character with clickable body zones, as in BC's own dialogs. BC draws it: MainCanvas is pointed at this canvas
+ *  while drawing, and clicks are tested with DialogClickedInZone, so zones line up exactly. Redraws every frame while
+ *  on the page, so the character shows once its images load. */
+export function ZonePicker(ctx: KitContext, props: ZonePickerProps): HTMLCanvasElement {
+    // Drawn on a standing copy (same worn items, base poses), so kneeling etc. doesn't hide zones; deleted when done.
+    const C = CharacterLoadSimple(uid("zones"));
+    C.Appearance = AppearanceItemParse(CharacterAppearanceStringify(props.character));
+    PoseSetActive(C, "BaseUpper", true);
+    PoseSetActive(C, "BaseLower", true);
+    CharacterRefresh(C, false, false);
+
+    // Some zones sit above the character's top edge, so shift everything down until every outline fits.
+    const PAD = 6;
+    const zoneTops = AssetGroup.flatMap(g => (g.Zone ?? []).map(z => DialogGetCharacterZone(C, z, 0, 0, 1, 1)[1]));
+    const TOP = PAD - Math.min(0, ...zoneTops);
+    const canvas = <canvas class="lscg-kit-zones" width={500 + PAD * 2} height={1000 + TOP + PAD} role="img" aria-label="Body zones" onClick={(e: MouseEvent) => {
+        const r = canvas.getBoundingClientRect();
+        const [mouseX, mouseY] = [MouseX, MouseY];
+        MouseX = (e.clientX - r.left) * canvas.width / r.width;
+        MouseY = (e.clientY - r.top) * canvas.height / r.height;
+        try {
+            const group = props.groups().find(g => g.Zone?.some(z => DialogClickedInZone(C, z, 1, PAD, TOP, 1)));
+            if (group) {
+                props.onPick(group);
+                ctx.changed();
+            }
+        } finally {
+            [MouseX, MouseY] = [mouseX, mouseY];
+        }
+    }} /> as HTMLCanvasElement;
+    const draw = canvas.getContext("2d")!;
+
+    const render = () => drawUnaffected(() => {
+        const main = MainCanvas;
+        MainCanvas = draw;
+        try {
+            draw.clearRect(0, 0, canvas.width, canvas.height);
+            DrawCharacter(C, PAD, TOP, 1, false, draw);
+            for (const g of props.groups())
+                if (g.Zone) DrawAssetGroupZone(C, g.Zone, 1, PAD, TOP, 1, "#808080FF", 3, props.highlighted?.(g) ? "#00FF0044" : "#80808044");
+            const picked = props.groups().find(g => g.Name === props.selected());
+            if (picked?.Zone) DrawAssetGroupZone(C, picked.Zone, 1, PAD, TOP, 1, "cyan");
+        } finally {
+            MainCanvas = main;
+        }
+    });
+    // ponytail: per-frame redraw; stops once removed from the page (or if never added within ~5s).
+    let attached = false, waited = 0;
+    const frame = () => {
+        if (canvas.isConnected) {
+            attached = true;
+            render();
+        } else if (attached || ++waited > 300) {
+            CharacterDelete(C, false);
+            return;
+        }
+        requestAnimationFrame(frame);
+    };
+    requestAnimationFrame(frame);
+    return canvas;
+}
+
+/** A single scrolling page of rows, for screens too short to need tabs. */
+export function Panel(children: HTMLElement[]): HTMLElement {
+    return <div class="lscg-kit-body scroll-box"><div class="lscg-kit-panel">{children}</div></div> as HTMLElement;
 }
 
 export function Notice(text: string): HTMLElement {
@@ -324,6 +442,10 @@ export interface RuleTableProps<R> {
     readOnly?: () => boolean;
     addLabel?: string;
     deleteLabel?: string;
+    /** Per-row delete permission, on top of the table-wide readOnly. */
+    canDelete?: (row: R) => boolean;
+    /** Called after a row is removed. */
+    onDelete?: (row: R) => void;
 }
 
 /** Editable list of records. Re-renders itself on any change; fine for the small row counts it's meant for. */
@@ -384,8 +506,9 @@ export function RuleTable<R>(ctx: KitContext, props: RuleTableProps<R>): HTMLEle
                         <tr>
                             {props.columns.map(c => cell(r, c, readOnly))}
                             {props.fixed ? null : <td>
-                                <button class="lscg-button lscg-kit-delete" aria-label={props.deleteLabel ?? "Delete rule"} disabled={readOnly} onClick={() => {
+                                <button class="lscg-button lscg-kit-delete" aria-label={props.deleteLabel ?? "Delete rule"} disabled={readOnly || props.canDelete?.(r) === false} onClick={() => {
                                     rows.splice(i, 1);
+                                    props.onDelete?.(r);
                                     ctx.changed();
                                 }}>✕</button>
                             </td>}

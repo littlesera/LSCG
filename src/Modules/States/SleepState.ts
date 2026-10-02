@@ -40,7 +40,7 @@ export class SleepState extends BaseState {
                 SendAction("%NAME% slumps weakly as %PRONOUN% slips into unconciousness.");
             this.SetSleepExpression(duration);
             this.FallDownIfPossible();
-            this.ReleaseAllGrabs()
+            this.ReleaseAllGrabs();
             addCustomEffect(Player, "ForceKneel");
             return super.Activate(memberNumber, duration, emote);
         }
@@ -76,11 +76,11 @@ export class SleepState extends BaseState {
         "%NAME%'s eyes move dreamily under %POSSESSIVE% closed eyelids...",
         "%NAME% exhales slowly, fully relaxed...",
         "%NAME%'s muscles twitch weakly in %POSSESSIVE% sleep...",
-        "%NAME% moans softly and relaxes..."
+        "%NAME% moans softly and relaxes...",
     ];
 
     SetSleepExpression(duration?: number) {
-        if (!!duration) {
+        if (duration) {
             CharacterSetFacialExpression(Player, "Eyes", "Closed", duration / 1000);
             CharacterSetFacialExpression(Player, "Emoticon", "Sleep", duration / 1000);
         } else {

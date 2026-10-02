@@ -1,6 +1,6 @@
 import { BaseModule } from "base";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { ICONS, LSCG_SendLocal, LSCG_TEAL, SVG_ICONS, SendAction, drawSvg, getRandomInt, hookFunction, mouseTooltip, removeAllHooksByModule } from "../utils";
+import { ICONS, LSCG_SendLocal, LSCG_TEAL, SVG_ICONS, getRandomInt, hookFunction, mouseTooltip, removeAllHooksByModule } from "../utils";
 import { StateConfig, StateSettingsModel } from "Settings/Models/states";
 import { HypnoState } from "./States/HypnoState";
 import { SleepState } from "./States/SleepState";
@@ -14,8 +14,6 @@ import { RedressedState } from "./States/RedressedState";
 import { ArousalPairedState } from "./States/ArousalPairedState";
 import { PairedBaseState } from "./States/PairedBaseState";
 import { OrgasmSiphonedState } from "./States/OrgasmSiphonedState";
-import { getModule } from "modules";
-import { ItemUseModule } from "./item-use";
 import { ResizedState } from "./States/ResizedState";
 import { BuffedState } from "./States/BuffedState";
 import { BarrierState } from "./States/BarrierState";
@@ -44,7 +42,7 @@ export class StateModule extends BaseModule {
         return <StateSettingsModel>{
             enabled: true,
             immersive: false,
-            states: []
+            states: [],
         };
     }
 
@@ -53,13 +51,13 @@ export class StateModule extends BaseModule {
     }
 
     getStateSetting(type: LSCGState): StateConfig {
-        var config = this.settings.states.find(s => s.type == type);
+        let config = this.settings.states.find(s => s.type == type);
         if (!config) {
             config = <StateConfig>{
                 type: type,
                 active: false,
                 activationCount: 0,
-                extensions: {}
+                extensions: {},
             };
             this.settings.states.push(config);
         }
@@ -139,7 +137,7 @@ export class StateModule extends BaseModule {
             this.BarrierState,
             this.XRayState,
             this.CursedItemState,
-            this.AstralProjectionState
+            this.AstralProjectionState,
         ];
         
         // States module in general is always enabled. Toggling is done on each specific state.
@@ -152,10 +150,10 @@ export class StateModule extends BaseModule {
     load(): void {
         hookFunction("DrawStatus", 11, (args, next) => { // Pri 11 to bump above BCX hook
             const ret = next(args);
-            let C = args[0] as OtherCharacter;
-            let CharX = args[1] as number;
-            let CharY = args[2] as number;
-            let Zoom = args[3] as number;
+            const C = args[0] as OtherCharacter;
+            const CharX = args[1] as number;
+            const CharY = args[2] as number;
+            const Zoom = args[3] as number;
             if (
                 !!C && !!C.LSCG && !!C.LSCG.StateModule &&
                 typeof CharX === "number" &&
@@ -164,36 +162,34 @@ export class StateModule extends BaseModule {
                 ChatRoomHideIconState === 0 &&
                 MouseIn(CharX, CharY, 500 * Zoom, 1000 * Zoom)
             ) {
-                let validStates = C.LSCG?.StateModule.states.filter(s => s.active) ?? [];
+                const validStates = C.LSCG?.StateModule.states.filter(s => s.active) ?? [];
                 if (!validStates.length) return ret;
-                let validStateCount = validStates.length;
                 let tooltip = undefined;
-                let lineWidth = ChatRoomCharacterViewCharacterCount > 5 ? 1 : 2;
+                const lineWidth = ChatRoomCharacterViewCharacterCount > 5 ? 1 : 2;
                 validStates.forEach((state, ix, arr) => {
-                    let durationEnabled = (state.duration ?? 0) > 0;
-                    let iconSize = 30;
-                    let yOffset = (ix+1) * 40;
-                    let iconCoords = {
+                    const durationEnabled = (state.duration ?? 0) > 0;
+                    const iconSize = 30;
+                    const yOffset = (ix+1) * 40;
+                    const iconCoords = {
                         x: CharX + 80 * Zoom,
                         y: CharY + ((60 + yOffset) * Zoom),
                         w: iconSize * Zoom,
-                        h: iconSize * Zoom
+                        h: iconSize * Zoom,
                     };
-                    let iconCenter = {x: iconCoords.x + iconCoords.w/2, y: iconCoords.y + iconCoords.h/2}
-                    let statePair = this.GetIconForState(state, C)
+                    const iconCenter = {x: iconCoords.x + iconCoords.w/2, y: iconCoords.y + iconCoords.h/2};
+                    const statePair = this.GetIconForState(state, C);
                     DrawCircle(iconCenter.x, iconCenter.y, (iconSize + 10)/2 * Zoom, lineWidth, "Black", "White");
                     DrawImageResize(
                         statePair.Icon,
-                        iconCoords.x, iconCoords.y, iconCoords.w, iconCoords.h
+                        iconCoords.x, iconCoords.y, iconCoords.w, iconCoords.h,
                     );
                     if (durationEnabled) {
-                        let lengthActive = Math.max(1, (CommonTime() - state.activatedAt));
-                        let durationPercentage = 1 - (lengthActive / Math.max((state.duration ?? 0), lengthActive));
-                        let timeRemainingInMin = Math.max(0, Math.floor(((state.duration ?? 0) - lengthActive)/(60*1000)));
-                        let barH = iconCoords.h * durationPercentage;
-                        let barY = iconCoords.y + (iconCoords.h - barH);
-                        let barXOffset = 10 * Zoom;
-                        let barW = 10;
+                        const lengthActive = Math.max(1, (CommonTime() - state.activatedAt));
+                        const durationPercentage = 1 - (lengthActive / Math.max((state.duration ?? 0), lengthActive));
+                        const barH = iconCoords.h * durationPercentage;
+                        const barY = iconCoords.y + (iconCoords.h - barH);
+                        const barXOffset = 10 * Zoom;
+                        const barW = 10;
                         DrawRect(iconCoords.x + iconCoords.w + barXOffset, iconCoords.y, barW * Zoom, iconCoords.h, "White");
                         DrawRect(iconCoords.x + iconCoords.w + barXOffset, barY, barW * Zoom, barH, LSCG_TEAL);
                         DrawEmptyRect(iconCoords.x + iconCoords.w + barXOffset, iconCoords.y, barW * Zoom, iconCoords.h, "Black", lineWidth);
@@ -204,7 +200,7 @@ export class StateModule extends BaseModule {
                         tooltip = statePair.Label;
                     }
                 });
-                if (!!tooltip)
+                if (tooltip)
                     mouseTooltip(tooltip);
             }
             return ret;
@@ -220,14 +216,14 @@ export class StateModule extends BaseModule {
             return ret;
         }, ModuleCategory.States);
 
-        hookFunction('ServerSend', 5, (args, next) => {
+        hookFunction("ServerSend", 5, (args, next) => {
             if (!this.Enabled)
                 return next(args);
 
             const type = args[0];
             const data = args[1] as ServerChatRoomMessage;
             if (type == "ChatRoomChat" && data.Type == "Chat" && data?.Content[0] != "(") {
-                let speechBlockStates = this.GetRestrictions(r => r.Speech);
+                const speechBlockStates = this.GetRestrictions(r => r.Speech);
                 if (speechBlockStates.length > 0){
                     speechBlockStates[getRandomInt(speechBlockStates.length)].SpeechBlock();
                     return null;
@@ -236,9 +232,9 @@ export class StateModule extends BaseModule {
             return next(args);
         }, ModuleCategory.States);
 
-        hookFunction('TimerProcess', 10, (args, next) => {
+        hookFunction("TimerProcess", 10, (args, next) => {
             if (ActivityAllowed() && this.Enabled) {
-                var now = CommonTime();
+                const now = CommonTime();
                 if (this._tickCheck < now) {
                     this._tickCheck = now + this._tickInterval;
                     this.States.forEach(s => s.Tick(now));
@@ -247,67 +243,67 @@ export class StateModule extends BaseModule {
             return next(args);
         }, ModuleCategory.States);
 
-        hookFunction('Player.CanTalk', 1, (args, next) => {
+        hookFunction("Player.CanTalk", 1, (args, next) => {
             if (this.Enabled && this.AnyRestrictions(r => r.Speech))
                 return false;
             return next(args);
-        }, ModuleCategory.States)
+        }, ModuleCategory.States);
 
-        hookFunction('Player.CanWalk', 1, (args, next) => {
+        hookFunction("Player.CanWalk", 1, (args, next) => {
             if (this.Enabled && this.AnyRestrictions(r => r.Walk))
                 return false;
             return next(args);
         }, ModuleCategory.States);
 
-        hookFunction('Player.CanChangeClothesOn', 1, (args, next) => {
+        hookFunction("Player.CanChangeClothesOn", 1, (args, next) => {
             if (this.Enabled && this.AnyRestrictions(r => r.Wardrobe))
                 return false;
             return next(args);
         }, ModuleCategory.States);
 
-        hookFunction('Player.GetDeafLevel', 1, (args, next) => {
+        hookFunction("Player.GetDeafLevel", 1, (args, next) => {
             if (this.Enabled && this.AnyRestrictions(r => r.Hearing))
                 return 4;
             return next(args);
         }, ModuleCategory.States);
 
-        hookFunction('Player.GetBlindLevel', 1, (args, next) => {
+        hookFunction("Player.GetBlindLevel", 1, (args, next) => {
             if (this.Enabled && this.AnyRestrictions(r => r.Sight))
                 return Player.GameplaySettings?.SensDepChatLog == "SensDepLight" ? 2 : 3;
             return next(args);
         }, ModuleCategory.States);
 
-        hookFunction('Player.CanInteract', 1, (args, next) => {
+        hookFunction("Player.CanInteract", 1, (args, next) => {
             if (this.Enabled && (this.AnyRestrictions(r => r.Move) || this.AnyRestrictions(r => r.Touch)))
                 return false;
             return next(args);
         }, ModuleCategory.States);
 
-        hookFunction('InventoryGroupIsBlockedForCharacter', 1, (args, next) => {
+        hookFunction("InventoryGroupIsBlockedForCharacter", 1, (args, next) => {
             if (this.Enabled && this.AnyRestrictions(r => r.Move))
                 return true;
             return next(args);
         }, ModuleCategory.States);
 
-        hookFunction('ChatRoomCanAttemptStand', 1, (args, next) => {
+        hookFunction("ChatRoomCanAttemptStand", 1, (args, next) => {
             if (this.Enabled && this.AnyRestrictions(r => r.Stand))
                 return false;
             return next(args);
         }, ModuleCategory.States);
 
-        hookFunction('ChatRoomCanAttemptKneel', 1, (args, next) => {
+        hookFunction("ChatRoomCanAttemptKneel", 1, (args, next) => {
             if (this.Enabled && this.AnyRestrictions(r => r.Kneel))
                 return false;
             return next(args);
         }, ModuleCategory.States);
 
-        hookFunction('CharacterCanKneel', 1, (args, next) => {
+        hookFunction("CharacterCanKneel", 1, (args, next) => {
             if (this.Enabled && this.AnyRestrictions(r => r.Kneel))
                 return false;
             return next(args);
         }, ModuleCategory.States);
 
-        hookFunction('PoseCanChangeUnaided', 6, (args, next) => {
+        hookFunction("PoseCanChangeUnaided", 6, (args, next) => {
             if (this.Enabled && this.AnyRestrictions(r => r.Move)) {
                 return false;
             }
@@ -337,7 +333,7 @@ export class StateModule extends BaseModule {
             } else {
                 return null;
             }
-        }
+        };
         (DialogSelfMenuMapping.Expression.menubarEventListeners.blink.validate ??= {}).lscg = menubarValidator;
         (DialogSelfMenuMapping.Expression.menubarEventListeners.clear.validate ??= {}).lscg = menubarValidator;
 
@@ -360,7 +356,7 @@ export class StateModule extends BaseModule {
     get commands(): ICommand[] {
 		return [
             <ICommand>{
-                Tag: 'wake',
+                Tag: "wake",
                 Description: ": wake up from slumber",
                 Action: () => {
                     if (!this.Enabled)
@@ -378,33 +374,33 @@ export class StateModule extends BaseModule {
 
                     if (this.SleepState.Active)
                         this.SleepState.Recover(true);
-                }
+                },
             }, <ICommand>{
-                Tag: 'sleep',
+                Tag: "sleep",
                 Description: "[minutes]: fall asleep (default 10 minutes)",
                 Action: (args, msg, parsed) => {
                     if (!this.Enabled)
                         return;
                     
-                    let duration = parseInt(parsed[0] ?? "10") ?? 10;
+                    const duration = parseInt(parsed[0] ?? "10") ?? 10;
 
                     if (!this.SleepState.Active)
                         this.SleepState.Activate(Player.MemberNumber, duration * (60 * 1000), true);
-                }
-            }
-        ]
+                },
+            },
+        ];
 	}
 
     GetIconForState(state: StateConfig, C: OtherCharacter): StateIcon {
-        let stateObj = this.States.find(s => s.Type == state.type);
+        const stateObj = this.States.find(s => s.Type == state.type);
         if (!stateObj)
             return {
                 Label: state.type,
-                Icon: ICONS.BDSM
+                Icon: ICONS.BDSM,
             };
         return {
             Label: stateObj.Label(C),
-            Icon: stateObj.Icon(C)
+            Icon: stateObj.Icon(C),
         };
     }
 
@@ -413,17 +409,17 @@ export class StateModule extends BaseModule {
     }
 
     IncomingUnpair(sender: number, msg: LSCGMessageModel) {
-        let command = msg.command;
-        let unPairType = command?.args.find(a => a.name == "type")?.value as LSCGState;
-        let unPairingState = this.States.find(s => s.Type == unPairType) as PairedBaseState;
+        const command = msg.command;
+        const unPairType = command?.args.find(a => a.name == "type")?.value as LSCGState;
+        const unPairingState = this.States.find(s => s.Type == unPairType) as PairedBaseState;
         unPairingState.RemovePairing(sender);
     }
 
     PairingUpdate(sender: number, msg: LSCGMessageModel) {
         if (!msg.command)
             return;
-        let pairType = msg.command.args.find(a => a.name == "type")?.value as LSCGState;
-        let pairingState = this.States.find(s => s.Type == pairType) as PairedBaseState;
+        const pairType = msg.command.args.find(a => a.name == "type")?.value as LSCGState;
+        const pairingState = this.States.find(s => s.Type == pairType) as PairedBaseState;
         pairingState.Update(sender, msg.command.args);
     }
 }

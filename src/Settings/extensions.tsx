@@ -8,7 +8,7 @@ import { createExtensionKit } from "./extensionKit";
 /** One page, "Extensions", that holds every settings screen an extension registered, so the main menu needs a
  *  single button however many extensions there are. A picker chooses which extension's screen to show. */
 export class GuiExtensions extends GuiSubscreen {
-    private _host = new DomSettingsHost("lscg-extension-settings", () => this.build());
+    private _host = new DomSettingsHost("lscg-extension-settings", this, () => this.build());
     private _selected: string | undefined;
     private _unwatch: (() => void) | undefined;
 

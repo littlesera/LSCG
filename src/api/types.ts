@@ -420,6 +420,7 @@ export type LSCGPassoutReason = "collar" | "hand" | "plugs" | "chain";
 /** Observe-only events. Payloads are frozen snapshots; listeners can't change what LSCG does. */
 export interface LSCGEventMap {
     /** LSCG finished initializing with the player's settings. */
+    // eslint-disable-next-line @typescript-eslint/no-empty-object-type -- the event carries no data
     "ready": {};
     /** One of the player's LSCG states (e.g. "asleep", "hypnotized", "blind") became active. */
     "state.activated": { type: string; activatedBy?: number; duration?: number };

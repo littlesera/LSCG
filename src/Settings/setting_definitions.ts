@@ -9,7 +9,7 @@ export const SETTING_FUNC_NAMES: string[] = [
     "Unload",
     "Run",
     "Click",
-    "Exit"
+    "Exit",
 ];
 
 export enum ModuleCategory {

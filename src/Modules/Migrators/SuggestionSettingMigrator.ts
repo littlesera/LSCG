@@ -1,4 +1,3 @@
-import { StateConfig } from "Settings/Models/states";
 import { BaseMigrator } from "./BaseMigrator";
 
 export class SuggestionSettingMigrator extends BaseMigrator {
@@ -7,7 +6,7 @@ export class SuggestionSettingMigrator extends BaseMigrator {
     }
     Migrate(fromVersion: string): boolean {
         Player.LSCG.HypnoModule.suggestionRequireHypnotizer = Player.LSCG.HypnoModule.limitRemoteAccessToHypnotizer;
-        Player.LSCG.HypnoModule.randomTrigger = !Player.LSCG.HypnoModule.overrideWords
+        Player.LSCG.HypnoModule.randomTrigger = !Player.LSCG.HypnoModule.overrideWords;
         return true;
     }
 }

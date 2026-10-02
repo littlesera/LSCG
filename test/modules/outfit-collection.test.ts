@@ -143,6 +143,33 @@ describe("OutfitCollection", () => {
 			outfits.RenameOutfit("old", "New", false);
 			expect(saveSpy).not.toHaveBeenCalled();
 		});
+
+		it("refuses to rename onto another outfit's name, keeping both", () => {
+			outfits.SetOutfitCode("Base", outfits.EncodeBundle(bundle("ItemNeck")), [], false);
+			outfits.SetOutfitCode("Maid", outfits.EncodeBundle(bundle("ItemMouth")), ["Base"], false);
+			expect(outfits.RenameOutfit("Maid", "base", false)).toBe(false);
+			expect(outfits.ConvertToBundle(outfits.GetOutfit("base").code)).toEqual(bundle("ItemNeck"));
+			expect(outfits.GetOutfit("maid")).toBeTruthy();
+		});
+
+		it("allows a rename that only changes the name's case", () => {
+			outfits.SetOutfitCode("maid", outfits.EncodeBundle(bundle("ItemMouth")), [], false);
+			expect(outfits.RenameOutfit("maid", "Maid", false)).toBe(true);
+			expect(outfits.GetOutfitNames()).toEqual(["Maid"]);
+		});
+
+		it("updates other outfits that inherit the renamed one", () => {
+			outfits.SetOutfitCode("Base", outfits.EncodeBundle(bundle("ItemNeck")), [], false);
+			outfits.SetOutfitCode("Maid", outfits.EncodeBundle(bundle("ItemMouth")), ["base"], false);
+			outfits.RenameOutfit("Base", "Basics", false);
+			expect(outfits.GetOutfit("maid").inherit).toEqual(["Basics"]);
+			expect(outfits.GetOutfitBundle("maid").map(i => i.Group)).toEqual(["ItemMouth", "ItemNeck"]);
+		});
+	});
+
+	it("SetOutfitCode never lets an outfit inherit itself", () => {
+		outfits.SetOutfitCode("Loop", outfits.EncodeBundle(bundle("ItemMouth")), ["loop", "Other"], false);
+		expect(outfits.GetOutfit("loop").inherit).toEqual(["Other"]);
 	});
 
 	describe("Clear", () => {
@@ -183,5 +210,77 @@ describe("OutfitCollectionModule 'remove-outfit' command", () => {
 		removeOutfit("doesnotexist");
 		expect(outfitModule.data.GetOutfit("myoutfit")).toBeTruthy(); // untouched
 		expect(sent.local()).toEqual([expect.stringContaining("Outfit doesnotexist not found.")]);
+	});
+});
+
+describe("OutfitCollectionModule.RenameOutfit (references elsewhere)", () => {
+	let outfitModule: OutfitCollectionModule;
+
+	beforeAll(() => {
+		[, outfitModule] = boot(new CoreModule(), new OutfitCollectionModule());
+	});
+
+	beforeEach(() => {
+		resetWorld({ LSCG: {
+			GlobalModule: { enabled: true },
+			OutfitCollectionModule: {},
+			CursedItemModule: { CursedItems: [{ Name: "Collar", OutfitKey: "maid" }, { Name: "Other", OutfitKey: "Base" }] },
+			SpeechAnalysisModule: { reactions: [{ action: "outfit", outfitKey: "MAID" }, { action: "shock" }] },
+			MagicModule: {
+				spiritFormOutfitKey: "Maid",
+				knownSpells: [{ Name: "Dress", Outfit: { Key: "maid", Code: "x" }, Polymorph: { Key: "Maid", Code: "y" } }, { Name: "None" }],
+			},
+		} as any });
+		outfitModule.init();
+		outfitModule.data.Clear(false);
+		outfitModule.data.SetOutfitCode("Maid", outfitModule.data.EncodeBundle(bundle("ItemMouth")), [], false);
+	});
+
+	it("updates cursed items, speech reactions and spells that use the old name", () => {
+		expect(outfitModule.RenameOutfit("Maid", "Uniform")).toBe(true);
+		const L = Player.LSCG as any;
+		expect(L.CursedItemModule.CursedItems.map((c: any) => c.OutfitKey)).toEqual(["Uniform", "Base"]);
+		expect(L.SpeechAnalysisModule.reactions[0].outfitKey).toBe("Uniform");
+		expect(L.MagicModule.spiritFormOutfitKey).toBe("Uniform");
+		expect(L.MagicModule.knownSpells[0].Outfit.Key).toBe("Uniform");
+		expect(L.MagicModule.knownSpells[0].Polymorph.Key).toBe("Uniform");
+	});
+
+	it("changes nothing elsewhere when the rename is refused", () => {
+		outfitModule.data.SetOutfitCode("Uniform", outfitModule.data.EncodeBundle(bundle("ItemNeck")), [], false);
+		expect(outfitModule.RenameOutfit("Maid", "uniform")).toBe(false);
+		expect((Player.LSCG as any).CursedItemModule.CursedItems[0].OutfitKey).toBe("maid");
+	});
+});
+
+describe("OutfitCollectionModule 'add-outfit' command", () => {
+	let outfitModule: OutfitCollectionModule;
+
+	beforeAll(() => {
+		[, outfitModule] = boot(new CoreModule(), new OutfitCollectionModule());
+	});
+
+	beforeEach(() => {
+		resetWorld({ LSCG: { GlobalModule: { enabled: true }, OutfitCollectionModule: {} } });
+		outfitModule.init();
+		outfitModule.data.Clear(false);
+	});
+
+	function addOutfit(key: string, code: string) {
+		const command = outfitModule.commands.find(c => c.Tag === "add-outfit")!;
+		command.Action!.call(command, `${key} ${code}`, `add-outfit ${key} ${code}`, [key, code]);
+	}
+
+	it("adds a new outfit", () => {
+		addOutfit("Maid", outfitModule.data.EncodeBundle(bundle("ItemMouth")));
+		expect(outfitModule.data.GetOutfit("maid")).toBeTruthy();
+		expect(sent.local()).toEqual([expect.stringContaining("Outfit Maid saved.")]);
+	});
+
+	it("refuses a name that's already taken, leaving that outfit alone", () => {
+		outfitModule.data.SetOutfitCode("Maid", outfitModule.data.EncodeBundle(bundle("ItemNeck")), [], false);
+		addOutfit("MAID", outfitModule.data.EncodeBundle(bundle("ItemMouth")));
+		expect(outfitModule.data.GetOutfitBundle("maid").map(i => i.Group)).toEqual(["ItemNeck"]);
+		expect(sent.local()).toEqual([expect.stringContaining("already exists")]);
 	});
 });

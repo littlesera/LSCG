@@ -1,9 +1,7 @@
 import { getModule } from "modules";
 import { HypnoModule } from "Modules/hypno";
-import { ICONS } from "utils";
-import { HypnoSettingsModel } from "./Models/hypno";
 import { GuiSubscreen, Setting } from "./settingBase";
-import { StateConfig, StateSettingsModel } from "./Models/states";
+import { StateSettingsModel } from "./Models/states";
 import { StateModule } from "Modules/states";
 
 export class GuiStates extends GuiSubscreen {
@@ -30,28 +28,28 @@ export class GuiStates extends GuiSubscreen {
 				<Setting>{
 					type: "label",
 					label: "General",
-					description: "General settings for LSCG Conditions."
+					description: "General settings for LSCG Conditions.",
 				}, <Setting>{
 					type: "checkbox",
 					label: "Immersive:",
 					description: "If true, will apply more restrictions while incapacitated by LSCG.",
 					setting: () => this.settings.immersive ?? false,
-					setSetting: (val) => this.settings.immersive = val
-				}
+					setSetting: (val) => this.settings.immersive = val,
+				},
 			], [
 				<Setting>{
 					type: "label",
 					label: "Hypnotized",
-					description: "Settings to control your hypnosis."
-				}
+					description: "Settings to control your hypnosis.",
+				},
 			], [
 				<Setting>{
 					type: "label",
 					label: "Sleep",
-					description: "Settings to control your unconsciousness."
-				}
-			]
-		]
+					description: "Settings to control your unconsciousness.",
+				},
+			],
+		];
 	}
 
 	Exit(): void {
