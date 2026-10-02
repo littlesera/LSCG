@@ -44,7 +44,7 @@ const HOOK_TARGETS = [
 	"DrawCharacter", "CharacterGetCurrent", "CharacterRefresh", "ChatRoomGenerateChatRoomChatMessage",
 	"InventoryGroupIsBlockedForCharacter", "ChatRoomCanAttemptStand", "ChatRoomCanAttemptKneel",
 	"CharacterCanKneel", "PoseCanChangeUnaided", "ChatRoomMessageDisplay", "ActivitySetArousalTimer",
-	"ServerDisconnect",
+	"ServerDisconnect", "ChatRoomCanLeave", "CharacterRefreshLeash",
 ] as const;
 
 /** Dotted hook targets: `["Player", "CanWalk"]` needs `window.Player.CanWalk` to exist. */
@@ -237,6 +237,17 @@ export function installBcLite(): BcLite {
 		return table[C?.GetPronouns?.() ?? "SheHer"]?.[key] ?? "their";
 	};
 	g.ServerChatRoomGetAllowItem = vi.fn(() => true);
+	// What the vanilla leash code reads and sends
+	g.ChatRoomLeashList = [];
+	g.ChatRoomLeashPlayer = null;
+	g.ChatRoomCanBeLeashed = vi.fn(() => true);
+	g.ChatRoomCharacterItemUpdate = vi.fn();
+	g.DictionaryBuilder = class {
+		entries: { Tag: string; MemberNumber?: number }[] = [];
+		sourceCharacter(C: { MemberNumber?: number }) { this.entries.push({ Tag: "SourceCharacter", MemberNumber: C.MemberNumber }); return this; }
+		targetCharacter(C: { MemberNumber?: number }) { this.entries.push({ Tag: "TargetCharacter", MemberNumber: C.MemberNumber }); return this; }
+		build() { return this.entries; }
+	};
 	g.ServerPlayerIsInChatRoom = vi.fn(() => true);
 	g.CommonTime = () => Date.now();
 	g.CommonIsNumeric = (s: string) => typeof s === "string" && s.trim() !== "" && !Number.isNaN(Number(s));

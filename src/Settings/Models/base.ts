@@ -65,6 +65,11 @@ export interface MiscSettingsModel extends BaseSettingsModel {
 export interface OpacitySettingsModel extends OpacityPublicSettingsModel {
 }
 
+export interface LeashingPublicSettingsModel extends BaseSettingsModel {
+    /** Who we're clasped to, so everyone can tell who's held in place. Older versions don't send it */
+    clasps?: number[];
+}
+
 export interface OpacityPublicSettingsModel extends BaseSettingsModel {
     preventExternalMod: boolean;
 }

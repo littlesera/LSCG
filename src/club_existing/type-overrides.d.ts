@@ -108,6 +108,7 @@ type LSCGActivityName = ActivityName
     | "Bap"
     | "Chew"
     | "Chomp"
+    | "ClaspLeash"
     | "CollarTighten"
     | "CollarLoosen"
     | "CollarStats"
@@ -151,6 +152,7 @@ type LSCGActivityName = ActivityName
     | "Throat"
     | "ThroatHandheld"
     | "Tug"
+    | "UnclaspLeash"
     | "LSCG_FunnelPour"
     | "LSCG_Splat"
 ;
@@ -168,6 +170,7 @@ type LSCGSpecialItems =
 
 type LSCGActivityPrerequisite = ActivityPrerequisite
     | "CanChomp"
+    | "CanClaspLeash"
     | "CanCustomFlick"
     | "CanCustomNibble"
     | "CanGrindWithPussy"
@@ -212,6 +215,7 @@ type LSCGActivityPrerequisite = ActivityPrerequisite
     | "TargetIsHandUnleashed"
     | "TargetIsNeckChoked"
     | "TargetIsWearingGagNecklace"
+    | "TargetHasClaspedLeash"
     | "TargetHasPenis"
     | "TargetHornAvailable"
     | "TargetNotAlreadyCollarGrabbed"

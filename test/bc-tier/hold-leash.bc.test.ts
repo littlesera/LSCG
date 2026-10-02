@@ -1,5 +1,6 @@
-// LSCG's Hold Leash and Let Go Of Leash activities copy the game's own dialog options, so they should be
-// offered exactly when ChatRoomCanHoldLeash/ChatRoomCanStopHoldLeash say so, on real BC characters and leashes.
+// LSCG's Hold Leash and Let Go Of Leash activities copy vanilla's dialog options, so for a leash on the collar they
+// should be offered exactly when ChatRoomCanHoldLeash/ChatRoomCanStopHoldLeash say so, on real BC characters and
+// leashes. They're on the neck, so a leash anywhere else is left to the dialog.
 //
 // The game's checks run in the BC realm and read its CurrentCharacter and ChatRoomLeashList, while
 // LeashingModule reads ours, so held() sets the list on both sides. Both Let Go checks drop a leash that
@@ -57,7 +58,7 @@ function offers(C: Character) {
 	return { game, ours };
 }
 
-describe("Hold Leash and Let Go Of Leash match the game's dialog options (real BC data)", () => {
+describe("Hold Leash and Let Go Of Leash match vanilla's dialog options (real BC data)", () => {
 	beforeEach(() => {
 		g.Player.Appearance = [];
 		g.Player.Effect = [];
@@ -117,6 +118,16 @@ describe("Hold Leash and Let Go Of Leash match the game's dialog options (real B
 		const C = makeCharacter(2);
 		held(2);
 		expect(offers(C)).toEqual({ game: [false, false, false], ours: [false, false, false] });
+	});
+
+	it("nothing for a leash that isn't on the collar, though the dialog would hold it", () => {
+		const C = makeCharacter(2);
+		wear(C, "ItemNeck", "LeatherCollar");
+		wear(C, "ItemPelvis", "PelvisChainLeash");
+		expect(offers(C)).toEqual({ game: [true, false, false], ours: [false, false, false] });
+		// Held through the dialog: let go of it there too, and it stays on the list until then
+		held(2);
+		expect(offers(C)).toEqual({ game: [false, true, true], ours: [false, false, true] });
 	});
 
 	it("nothing in a room that blocks leashing", () => {

@@ -66,6 +66,9 @@ export class CoreModule extends BaseModule {
         // Runtime capability, not a stored setting: which non-legacy spell effects this client can apply.
         if (settings.MagicModule)
             settings.MagicModule.knownEffects = advertisedEffectIds();
+        // Likewise who we're clasped to.
+        if (settings.LeashingModule)
+            settings.LeashingModule.clasps = getModule<LeashingModule>("LeashingModule")?.ClaspPartners(Player) ?? [];
         // Likewise the data extensions share with the room.
         settings.ExtensionData = publishedExtensionData();
         // Likewise the extension drug bars: derived from the registry and current levels, never stored.
