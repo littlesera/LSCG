@@ -516,7 +516,8 @@ export function isPhraseInString(string: string, phrase: string, ignoreOOC: bool
 		return false;
 	let praseMatch = _phraseRegexCache.get(phrase);
 	if (!praseMatch) {
-		praseMatch = new RegExp("(\\b|^|\\s)" + escapeRegExp(phrase) + "(\\b|$|\\s)", "i");
+		// Punctuation edges too: "[changing]?" has no \b after "]" (#669)
+		praseMatch = new RegExp("(\\b|^|\\s|[^\\w\\s])" + escapeRegExp(phrase) + "(\\b|$|\\s|[^\\w\\s])", "i");
 		_phraseRegexCache.set(phrase, praseMatch);
 	}
 	let oocParsed = ignoreOOC ? string : excludeParentheticalContent(string);
@@ -1246,11 +1247,24 @@ export function CanApplyLock(C: Character, acting: MemberNumber | undefined, loc
 	return true;
 }
 
+/** Items {@link ApplyItem} refuses to replace. */
+const blockedRemovals = ["ClubSlaveCollar", "SlaveCollar"];
+
+/** Whether {@link RemoveItem} would actually remove this item; callers that retry until removed must check this first. */
+export function CanRemoveItem(item: Item, acting: number | undefined, C: Character = Player): boolean {
+	if (isCosplay(item) && !canChangeCosplay(acting, C)) return false;
+	if (isProtectedFromRemoval(item)) return false;
+	return CanUnlock(acting, C, item) || item.Asset.Group.IsAppearance();
+}
+
+/** Whether {@link ApplyItem} with replace=true can put something in place of this worn item. */
+export function CanReplaceItem(item: Item, acting: number | undefined, C: Character = Player): boolean {
+	return !includes(blockedRemovals, item.Asset.Name) && CanRemoveItem(item, acting, C);
+}
+
 export function RemoveItem(item: Item, acting: number | undefined, C?: Character) {
 	if (!C) C = Player;
-	if (isCosplay(item) && !canChangeCosplay(acting, C)) return;
-	if (isProtectedFromRemoval(item)) return;
-	if (CanUnlock(acting, C, item) || item.Asset.Group.IsAppearance()) InventoryRemove(C, item.Asset.Group.Name, false);
+	if (CanRemoveItem(item, acting, C)) InventoryRemove(C, item.Asset.Group.Name, false);
 }
 
 /** BC replaced the single `Craft.Property` with an `Effects` map and now logs an error for any crafted item that still has
@@ -1267,10 +1281,6 @@ function migrateLegacyCraft<T extends object>(craft: T | undefined): T | undefin
 export function ApplyItem(item: ItemBundle, acting: number | undefined, replace: boolean = true, locksafe: boolean = true, C?: Character): Item | undefined {
 	if (!C) C = Player;
 	let existing = InventoryGet(C, item.Group);
-	let blockedRemovals = [
-		"ClubSlaveCollar",
-		"SlaveCollar"
-	]
 	if (!!existing) {
 		if (replace && !includes(blockedRemovals, existing.Asset.Name)) RemoveItem(existing, acting, C);
 		else return;

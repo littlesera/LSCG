@@ -719,9 +719,12 @@ export class GuiOutfits extends GuiSubscreen {
             }
         });
         
-        this.DrawPreview(itemList);
-
-        this.#previewUpdate = false;
+        try {
+            this.DrawPreview(itemList);
+        } finally {
+            // A malformed (hand-edited) code must not wedge every later preview (#840)
+            this.#previewUpdate = false;
+        }
     }
 
     createCheckboxes() {

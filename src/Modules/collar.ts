@@ -410,6 +410,7 @@ export class CollarModule extends BaseModule {
                         this.TightenButtonPress(Player);
                     else if (!!target)
                         sendLSCGCommand(target, "collar-tighten");
+                    return false;
                 }
             },
             CustomImage: ICONS.COLLAR
@@ -437,6 +438,7 @@ export class CollarModule extends BaseModule {
                         this.LoosenButtonPress(Player);
                     else if (!!target)
                         sendLSCGCommand(target, "collar-loosen");
+                    return false;
                 }
             },
             CustomImage: ICONS.COLLAR
@@ -464,6 +466,7 @@ export class CollarModule extends BaseModule {
                         this.StatsButtonPress(Player);
                     else if (!!target)
                         sendLSCGCommand(target, "collar-stats");
+                    return false;
                 }
             },
             CustomImage: ICONS.COLLAR

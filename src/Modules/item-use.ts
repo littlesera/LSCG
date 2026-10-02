@@ -1227,9 +1227,10 @@ export class ItemUseModule extends BaseModule {
 			],
 			CustomAction: {
 				Func: (target) => {
-					if (!target)
-						return;
-					this.TrySteal(target, Player, InventoryGet(target, "ItemHandheld")!);
+					// Sends its own message; suppress the generic activity text (#812)
+					if (target)
+						this.TrySteal(target, Player, InventoryGet(target, "ItemHandheld")!);
+					return false;
 				}
 			},
 			CustomImage: "Icons/Dress.png"
@@ -1271,9 +1272,10 @@ export class ItemUseModule extends BaseModule {
 			],
 			CustomAction: {
 				Func: (target) => {
-					if (!target)
-						return;
-					this.TrySwap(target, InventoryGet(target, "ItemHandheld")!);
+					// Sends its own message; suppress the generic activity text (#812)
+					if (target)
+						this.TrySwap(target, InventoryGet(target, "ItemHandheld")!);
+					return false;
 				}
 			},
 			CustomImage: "Icons/Dress.png"
@@ -1309,9 +1311,10 @@ export class ItemUseModule extends BaseModule {
 			],
 			CustomAction: {
 				Func: (target) => {
-					if (!target)
-						return;
-					this.GiveItem(target, Player);
+					// Sends its own message; suppress the generic activity text (#812)
+					if (target)
+						this.GiveItem(target, Player);
+					return false;
 				}
 			},
 			CustomImage: "Icons/Dress.png"

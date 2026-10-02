@@ -179,7 +179,8 @@ export class OutfitCollection implements IOutfitCollection {
     }
     
     ConvertToBundle(code: string): ItemBundle[] {
-        return parseFromBase64<ItemBundle[]>(code) ?? [];
+        const bundle = parseFromBase64<ItemBundle[]>(code);
+        return Array.isArray(bundle) ? bundle.filter(i => !!i && typeof i.Group === "string" && typeof i.Name === "string") : [];
     }
     EncodeBundle(bundle: ItemBundle[]): string {
         return LZString.compressToBase64(JSON.stringify(bundle));

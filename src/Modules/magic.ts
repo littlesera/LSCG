@@ -224,7 +224,22 @@ export class MagicModule extends BaseModule {
     }
 
     run(): void {
+        this.StripStoredSpellCodes();
+    }
 
+    /** Older builds wrote expanded outfit codes back into known spells on voice/potion casts, bloating the saved profile (#680).
+     *  Drop a stored code only when its key still resolves, so the code is never the last copy of an outfit. */
+    StripStoredSpellCodes() {
+        const outfits = getModule<OutfitCollectionModule>("OutfitCollectionModule")?.data;
+        if (!outfits) return;
+        let changed = false;
+        for (const config of this.AvailableSpells.flatMap(s => [s?.Outfit, s?.Polymorph])) {
+            if (config?.Code && config.Key && outfits.GetOutfit(config.Key)) {
+                config.Code = "";
+                changed = true;
+            }
+        }
+        if (changed) settingsSave();
     }
 
     safeword(): void {
@@ -770,7 +785,7 @@ export class MagicModule extends BaseModule {
             let characterPhrase = matches?.[1] ?? "";
             let character = getCharacterByNicknameOrMemberNumber(characterPhrase);
             if (!!character)
-                return [s, character];
+                return [structuredClone(s), character]; // UnpackSpellCodes mutates; keep stored spells key-only (#680)
         }
         return undefined;
     }
@@ -843,6 +858,7 @@ export class MagicModule extends BaseModule {
             if (!!craftingChar && craftingChar.IsPlayer()) {
                 spells = Player.LSCG.MagicModule.knownSpells.filter(s => s.AllowPotion && !spellHasPairedEffect(s));
                 let foundSpell = spells?.filter(x => !!x)?.find(x => !!x && !!x.Name && isPhraseInString(itemStr, x.Name));
+                if (foundSpell) foundSpell = structuredClone(foundSpell); // UnpackSpellCodes mutates (#680)
                 this.UnpackSpellCodes(foundSpell);
                 return foundSpell;
             } else {

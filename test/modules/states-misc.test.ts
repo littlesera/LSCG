@@ -194,6 +194,14 @@ describe("CursedItemState (basic gating and Recover -- see T4 for the full permi
 		expect(states.CursedItemState.Active).toBe(false);
 	});
 
+	it("treats a string color and the same color as a one-entry array as matching (#838)", () => {
+		const st = states.CursedItemState;
+		const worn = { Asset: { Name: "LongFishnets", Group: { Name: "Socks" } }, Color: ["#2A2A2A"] } as unknown as Item;
+		expect(st.itemBundleMatch({ Group: "Socks", Name: "LongFishnets", Color: "#2A2A2A" } as ItemBundle, worn)).toBe(true);
+		expect(st.itemBundleMatch({ Group: "Socks", Name: "LongFishnets", Color: "#FFFFFF" } as ItemBundle, worn)).toBe(false);
+		expect(st.getItemColorString({ Color: ["Default", "Default"] } as unknown as Item)).toBe("Default");
+	});
+
 	it("Recover() on an already-inactive state is a no-op", () => {
 		const ret = states.CursedItemState.Recover();
 		expect(ret).toBe(states.CursedItemState);
