@@ -211,11 +211,12 @@ export class ActivityModule extends BaseModule {
             }
         });
 
+        this.ProbeIconPath();
         hookFunction("ElementButton.CreateForActivity", 0, (args, next) => {
             const activity: ItemActivity = args[1];
             if (activity.Activity.Name.includes("LSCG")) {
                 args[4] ??= {};
-                args[4].image = this.CustomImages.get(activity.Activity.Name);
+                args[4].image = this.ResolveImage(this.CustomImages.get(activity.Activity.Name));
                 args[4].icons = [
                     ...(args[4].icons ?? []),
                     { name: "lscg", tooltipText: "LSCG activity", iconSrc: ICONS.BOUND_GIRL },
@@ -1933,6 +1934,18 @@ export class ActivityModule extends BaseModule {
     CustomActionCallbacks: Map<string, CustomAction["Func"]> = new Map<string, CustomAction["Func"]>();
     CustomPreparseCallbacks: Map<string, (args: any[]) => void> = new Map<string, (args: any[]) => void>();
     CustomImages: Map<string, string> = new Map<string, string>;
+
+    // Newer BC moved activity icons to Icons/Activity; fall back to the old path until the new one is confirmed to exist.
+    private newIconPathExists = false;
+    private ProbeIconPath() {
+        fetch("Icons/Activity/Slap.png", { method: "HEAD" })
+            .then(r => this.newIconPathExists = r.ok && !!r.headers.get("content-type")?.startsWith("image/"))
+            .catch(() => { });
+    }
+    private ResolveImage(img?: string): string | undefined {
+        if (!img || this.newIconPathExists) return img;
+        return img.replace(/^Icons\/Activity\//, "Assets/Female3DCG/Activity/");
+    }
     PatchedActivities: string[] = [];
 
     AddCustomPrereq(prereq: CustomPrerequisite) {
