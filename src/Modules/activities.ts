@@ -65,8 +65,6 @@ export interface ActivityBundle extends ActivityBundleBase {
     Targets?: ActivityTarget[];
 }
 
-// >= R111
-
 export class ActivityModule extends BaseModule {
     get settings(): ActivitySettingsModel {
 		return super.settings as ActivitySettingsModel;

@@ -27,7 +27,6 @@ export class ArousalPairedState extends PairedBaseState {
                 ProgressTimer: Player.ArousalSettings.ProgressTimer, 
                 OrgasmCount: Player.ArousalSettings.OrgasmCount!, 
             });
-        console.debug(`Arousal updated from ${source} to ${progress}`);
     }
 
     Init(): void {}

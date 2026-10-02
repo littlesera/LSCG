@@ -112,7 +112,6 @@ export class OutfitCollection implements IOutfitCollection {
     }
 
     ExpandOutfit(outfit: Outfit, seenKeys: string[] = []) {
-        console.debug(`expanding outfit: ${outfit.key} -- ${seenKeys.join()}`);
         const bundle = this.ConvertToBundle(outfit.code);
         return bundle.concat(
             (outfit.inherit ?? [])

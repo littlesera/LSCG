@@ -27,7 +27,6 @@ import { dispatchExtensionCommand } from "api/network";
 /** State extension keys holding compressed outfit snapshots (cursed outfits, redress slots, polymorph/redress originals). */
 const PRIVATE_STATE_EXTENSIONS = ["outfits", "slot-snapshot", "stored", "stored-outfit"];
 
-// >= R111
 declare let DialogMenuMapping: { items: ScreenFunctions & { C: null | Character } };
 
 // Core Module that can handle basic functionality like server handshakes etc.
@@ -222,13 +221,6 @@ export class CoreModule extends BaseModule {
         if (DialogMenuMode === "items") {
             loadHook();
         }
-    }
-
-    // R110
-    _drawShareToggleButton(X: number, Y: number, Width: number, Height: number) {
-        DrawButton(X, Y, Width, Height, "", this.settings.seeSharedCrafts ? "White" : "Red", "", "Toggle Shared Crafts", false);
-        DrawImageResize("Icons/Online.png", X + 2, Y + 2, Width - 4, Height - 4);
-        DrawLineCorner(X + 2, Y + 2, X + Width - 2, Y + Height - 2, X + 2, Y + 2, 2, "Black");
     }
 
     unload(): void {

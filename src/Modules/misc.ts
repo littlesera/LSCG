@@ -1065,7 +1065,6 @@ export class MiscModule extends BaseModule {
         const optionList: HTMLOptionsUnion[] = [];
         let curseNameList = getModule<CursedItemModule>("CursedItemModule")?.settings.CursedItems.map(item => item.Name);
         if (!curseNameList || curseNameList.length <= 0) {
-            //console.log("getSelectCurseOptions: no curse found.");
             curseNameList = [];
         }
         // Special value to be able to select nothing
