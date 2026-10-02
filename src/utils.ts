@@ -988,24 +988,6 @@ export function fromItemBundle(bundle: ItemBundle): Item | null {
 	return ServerBundledItemToAppearanceItem("Female3DCG", bundle);
 }
 
-/** Bytes `data` takes once serialized (JSON, UTF-8); 0 if it can't be serialized. Exposed as `LSCG.MeasureDataSize`
- *  so players can check their save data's size from the console. */
-export function MeasureDataSize(data: any): number {
-    try {
-        if (typeof data !== "string") {
-            data = JSON.stringify(data) || "";
-        }
-        if (typeof data === "string") {
-            // We want byte size, so use text encoder
-            return (new TextEncoder()).encode(data).byteLength;
-        }
-    } catch (_err) {
-        // Ignore errors
-    }
-    // If stringification fails, we can't guess how the data would be actually serialized
-    return 0;
-}
-
 export interface SizeReport {
     type: string;
     sizeBytes: number;

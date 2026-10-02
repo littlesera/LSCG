@@ -1,5 +1,5 @@
 import { h } from "tsx-dom";
-import { ExportSettings, GetDataSizeReport, MeasureDataSize, hookFunction, ImportSettings, isObject, parseFromBase64, parseFromUTF16, sendLSCGBeep, settingsSave } from "./utils";
+import { ExportSettings, GetDataSizeReport, hookFunction, ImportSettings, isObject, parseFromBase64, parseFromUTF16, sendLSCGBeep, settingsSave } from "./utils";
 import { ConfiguredActivities, CraftableItemSpellNames, DrugKeywords, getModule, HypnoTriggers, modules, NetgunKeywords, Outfits, registerModule } from "modules";
 import { SettingsModel } from "Settings/Models/settings";
 import { HypnoModule } from "./Modules/hypno";
@@ -40,7 +40,6 @@ export {
 	HypnoTriggers, 
 	ConfiguredActivities, 
 	GetDataSizeReport,
-	MeasureDataSize,
 	ExportSettings,
 	ImportSettings,
 	getModule,
