@@ -140,3 +140,324 @@ test("remote settings: changes made on another player are sent back when leaving
     });
     expect(sent).toBe(true);
 });
+
+test("Outfit Collection: the creator round-trips through BC's appearance editor back into the outfit editor", async ({ bc }) => {
+    await bc.openSettings("Outfit Collection");
+    const result = await bc.run(async () => {
+        const w = window as any;
+        const wait = async (cond: () => boolean) => { for (let i = 0; i < 120 && !cond(); i++) await new Promise(r => setTimeout(r, 250)); };
+        const gui = () => w.LSCG.getModule("GUI").currentSubscreen;
+        const input = () => document.getElementById("lscg-outfit-edit-outfit-input") as HTMLInputElement | null;
+        const leftovers = () => w.Character.filter((c: any) => String(c.CharacterID).includes("OutfitCreator")).length;
+
+        gui().NewOutfit();
+        await wait(() => !!document.getElementById("lscg-outfit-edit-build"));
+        (document.getElementById("lscg-outfit-edit-build") as HTMLButtonElement).click();
+        await wait(() => w.CurrentScreen === "Appearance");
+        const inAppearance = w.CurrentScreen === "Appearance";
+        w.InventoryWear(w.CharacterAppearanceSelection, "CollegeOutfit1", "Cloth");
+        w.CharacterAppearanceReady(w.CharacterAppearanceSelection);
+
+        await wait(() => w.CurrentScreen === "Preference" && !!input()?.value);
+        const code = input()?.value ?? "";
+        const bundles = code ? JSON.parse(w.LZString.decompressFromBase64(code)) : [];
+        return { inAppearance, screen: w.CurrentScreen, sub: gui()?.name, hasCloth: bundles.some((b: any) => b.Group === "Cloth" && b.Name === "CollegeOutfit1"), leftovers: leftovers() };
+    });
+    expect(result).toEqual({ inAppearance: true, screen: "Preference", sub: "Outfit Collection", hasCloth: true, leftovers: 0 });
+});
+
+test("Outfit Collection: the item panel sets, configures, colors and removes an item with BC's own widgets", async ({ bc }) => {
+    await bc.openSettings("Outfit Collection");
+    const result = await bc.run(async () => {
+        const w = window as any;
+        const wait = async (cond: () => boolean) => { for (let i = 0; i < 120 && !cond(); i++) await new Promise(r => setTimeout(r, 100)); };
+        const gui = () => w.LSCG.getModule("GUI").currentSubscreen;
+        const $ = (id: string) => document.getElementById("lscg-outfit-edit-" + id) as any;
+        const bundle = () => {
+            const code = $("outfit-input").value;
+            return (code ? JSON.parse(w.LZString.decompressFromBase64(code)) : []).find((b: any) => b.Group === "ItemMouth");
+        };
+        const out: any = {};
+
+        gui().NewOutfit();
+        await wait(() => $("item-group")?.options.length > 0);
+        $("item-group").value = "ItemMouth";
+        $("item-group").dispatchEvent(new Event("change"));
+        $("item-asset").value = "BallGag";
+        $("item-asset").dispatchEvent(new Event("change"));
+        $("item-set").click();
+        out.set = bundle()?.Name;
+        out.configureEnabled = !$("item-configure").disabled;
+
+        // Configure: BC's extended dialog takes over, and an option set through it lands in the outfit
+        $("item-configure").click();
+        out.extendedFocus = w.DialogFocusItemName;
+        await wait(() => true);
+        await new Promise(r => setTimeout(r, 300)); // a few frames of the real Draw
+        w.TypedItemSetOptionByName(gui().preview, "ItemMouth", "Tight", false);
+        w.DialogLeaveFocusItem();
+        await wait(() => bundle()?.Property?.TypeRecord?.typed === 2);
+        out.typed = bundle()?.Property?.TypeRecord?.typed;
+        out.focusAfterExtended = w.DialogFocusItem;
+        out.editorShown = $("item-set").closest("#lscg-outfit-edit").style.visibility;
+
+        // Color: BC's color widget, closed with its own save
+        $("item-color").click();
+        await wait(() => !!ItemColorState && !!ItemColorItem);
+        await new Promise(r => setTimeout(r, 600)); // the opacity module adds its controls once the picker has loaded
+        out.layerControls = document.querySelectorAll("[id^=lscg-layers]").length > 0; // LSCG's opacity/translation apply to restraints too
+        // ...but lead-lined is dropped by BC from every bundle, so it's hidden rather than left as a dead control
+        out.leadLinedHidden = getComputedStyle(document.querySelector("#lscg-layers-lead-lined-check")!.closest("label")!).display === "none";
+        // What those controls store: BC's own Opacity (via the picker's state) and LSCG's layer translation, both of which
+        // BC's property whitelist lets into a bundle. LSCGLeadLined isn't on it, so BC drops that one from every bundle.
+        ItemColorState.opacity = ItemColorState.opacity.map(() => 0.5);
+        ItemColorItem.Property.LayerOverrides = ItemColorItem.Asset.Layer.map(() => ({ DrawingLeft: { "": 12 }, DrawingTop: { "": -3 } }));
+        ItemColorItem.Color = ["#ff0000"];
+        w.ItemColorSaveAndExit();
+        await wait(() => bundle()?.Color === "#ff0000");
+        out.color = bundle()?.Color;
+        const prop = bundle()?.Property;
+        out.opacity = [].concat(prop?.Opacity)[0];
+        out.translation = prop?.LayerOverrides?.[0]?.DrawingLeft?.[""];
+
+        $("item-remove").click();
+        out.removed = bundle() === undefined;
+        return out;
+    });
+    expect(result).toEqual({
+        set: "BallGag", configureEnabled: true, layerControls: true, leadLinedHidden: true, extendedFocus: "ItemMouthBallGag", typed: 2,
+        focusAfterExtended: null, editorShown: "visible", color: "#ff0000", opacity: 0.5, translation: 12, removed: true,
+    });
+});
+
+test("Outfit Collection: a modular item's module screens work with real clicks, and the exit door closes the dialog", async ({ bc }) => {
+    await bc.openSettings("Outfit Collection");
+    const click = async (x: number, y: number) => {
+        const pt = await bc.run(([x, y]) => (window as any).Playground.toPage(x, y), [x, y]);
+        await bc.page.mouse.click(pt.x, pt.y);
+        await bc.page.waitForTimeout(400);
+    };
+    await bc.run(async () => {
+        const w = window as any;
+        const $ = (id: string) => document.getElementById("lscg-outfit-edit-" + id) as any;
+        const wait = (ms: number) => new Promise(r => setTimeout(r, ms));
+        w.LSCG.getModule("GUI").currentSubscreen.NewOutfit();
+        await wait(1200);
+        $("item-group").value = "ItemLegs"; $("item-group").dispatchEvent(new Event("change"));
+        $("item-asset").value = "BarrelCorset"; $("item-asset").dispatchEvent(new Event("change"));
+        $("item-set").click();
+        await wait(800);
+        $("item-configure").click();
+        await wait(1200);
+    });
+    await click(1360, 812); // "Belly belt" module
+    await click(1700, 637); // its "Equipped" option
+    const result = await bc.run(async () => {
+        const w = window as any;
+        const gui = w.LSCG.getModule("GUI").currentSubscreen;
+        const out: any = {};
+        out.stillFocused = !!DialogFocusItem; // picking an option returns to the item's main screen
+        gui.Exit(); // closes the dialog
+        await new Promise(r => setTimeout(r, 400));
+        out.closed = !DialogFocusItem;
+        out.sub = gui.name;
+        const code = (document.getElementById("lscg-outfit-edit-outfit-input") as HTMLInputElement).value;
+        const b = JSON.parse(w.LZString.decompressFromBase64(code)).find((b: any) => b.Group === "ItemLegs");
+        out.record = b?.Property?.TypeRecord;
+        return out;
+    });
+    expect(result.stillFocused).toBe(true);
+    expect(result.closed).toBe(true);
+    expect(result.sub).toBe("Outfit Collection");
+    expect(JSON.stringify(result.record)).toMatch(/1/); // some module moved off its default
+});
+
+test("Outfit Collection: Build edits the outfit as it is, so a new one starts as your naked self and a saved one has its items", async ({ bc }) => {
+    await bc.openSettings("Outfit Collection");
+    const result = await bc.run(async () => {
+        const w = window as any;
+        const wait = async (cond: () => boolean) => { for (let i = 0; i < 120 && !cond(); i++) await new Promise(r => setTimeout(r, 100)); };
+        const $ = (id: string) => document.getElementById("lscg-outfit-edit-" + id) as any;
+        const gui = () => w.LSCG.getModule("GUI").currentSubscreen;
+        const out: any = {};
+
+        gui().NewOutfit();
+        await wait(() => !!gui().preview && !!$("build"));
+        await new Promise(r => setTimeout(r, 800));
+        $("build").click();
+        await wait(() => w.CurrentScreen === "Appearance");
+        out.newGoesToAppearance = w.CurrentScreen === "Appearance";
+        out.newHasCloth = !!w.InventoryGet(w.CharacterAppearanceSelection, "Cloth");
+        w.CharacterAppearanceExit(w.CharacterAppearanceSelection); // cancel
+        await wait(() => w.CurrentScreen === "Preference" && gui()?.SelectedOutfit && !!$("build"));
+
+        w.LSCG.getModule("OutfitCollectionModule").data.SetOutfitCode("Saved", w.LZString.compressToBase64(JSON.stringify([{ Group: "Cloth", Name: "CollegeOutfit1" }])), [], false);
+        gui().clickOutfit("Saved");
+        await wait(() => !!$("build"));
+        await new Promise(r => setTimeout(r, 1200));
+        $("build").click();
+        await wait(() => w.CurrentScreen === "Appearance");
+        out.savedHasCloth = !!w.InventoryGet(w.CharacterAppearanceSelection, "Cloth");
+        return out;
+    });
+    expect(result).toEqual({ newGoesToAppearance: true, newHasCloth: false, savedHasCloth: true });
+});
+
+test("Outfit Collection: accepting the creator keeps the outfit's own groups and what changed, not the untouched body", async ({ bc }) => {
+    await bc.openSettings("Outfit Collection");
+    const result = await bc.run(async () => {
+        const w = window as any;
+        const wait = async (cond: () => boolean) => { for (let i = 0; i < 120 && !cond(); i++) await new Promise(r => setTimeout(r, 100)); };
+        const gui = () => w.LSCG.getModule("GUI").currentSubscreen;
+        w.LSCG.getModule("OutfitCollectionModule").data.SetOutfitCode("Saved", w.LZString.compressToBase64(JSON.stringify([{ Group: "Cloth", Name: "CollegeOutfit1" }])), [], false);
+        gui().clickOutfit("Saved");
+        await wait(() => !!document.getElementById("lscg-outfit-edit-build") && !!gui().preview);
+        await new Promise(r => setTimeout(r, 800));
+        (document.getElementById("lscg-outfit-edit-build") as HTMLButtonElement).click();
+        await wait(() => w.CurrentScreen === "Appearance");
+        w.InventoryWear(w.CharacterAppearanceSelection, "Socks1", "Socks");
+        w.CharacterAppearanceReady(w.CharacterAppearanceSelection);
+        await wait(() => w.CurrentScreen === "Preference" && !!(document.getElementById("lscg-outfit-edit-outfit-input") as HTMLInputElement | null)?.value);
+        const code = (document.getElementById("lscg-outfit-edit-outfit-input") as HTMLInputElement).value;
+        return JSON.parse(w.LZString.decompressFromBase64(code)).map((b: any) => b.Group).sort();
+    });
+    expect(result).toEqual(["Cloth", "Socks"]);
+});
+
+test("Outfit Collection: clicking a zone on the character picks its group, empty or not", async ({ bc }) => {
+    await bc.openSettings("Outfit Collection");
+    await bc.run(async () => {
+        (window as any).LSCG.getModule("GUI").currentSubscreen.NewOutfit();
+        await new Promise(r => setTimeout(r, 1500));
+    });
+    // The mouth zone is [100,130,100,70] in the character's 500x1000 space; the preview is drawn at (200,175) at 0.78.
+    const pt = await bc.run(() => (window as any).Playground.toPage(200 + 150 * 0.78, 175 + 165 * 0.78));
+    await bc.page.mouse.click(pt.x, pt.y);
+    await bc.page.waitForTimeout(300);
+    const picked = await bc.run(async () => {
+        const grid = document.getElementById("lscg-outfit-edit-item-grid") as HTMLElement;
+        const cells = grid.querySelectorAll<HTMLButtonElement>(".lscg-item-cell");
+        const gag = [...cells].find(c => c.textContent?.trim() === "Ball Gag");
+        const out: any = {
+            group: (document.getElementById("lscg-outfit-edit-item-group") as HTMLSelectElement).value,
+            gridOpen: !grid.hidden, cells: cells.length > 3,
+        };
+        await new Promise(r => setTimeout(r, 1500)); // BC loads the preview images
+        const canvas = gag?.querySelector("canvas") as HTMLCanvasElement;
+        out.previewDrawn = !!canvas && [...canvas.getContext("2d")!.getImageData(0, 0, canvas.width, canvas.height).data].some((v, i) => i % 4 === 0 && v < 200);
+        gag?.dispatchEvent(new MouseEvent("mouseenter"));
+        const tip = document.getElementById("lscg-outfit-edit-item-tip") as HTMLElement;
+        out.tip = tip.hidden ? "hidden" : tip.innerText;
+        gag?.dispatchEvent(new MouseEvent("mouseleave"));
+        out.tipHides = tip.hidden;
+        out.title = (document.getElementById("lscg-outfit-edit-item-grid-title") as HTMLElement).innerText;
+        (document.getElementById("lscg-outfit-edit-item-close") as HTMLButtonElement).click(); // the close button
+        out.closedByButton = grid.hidden;
+        (document.getElementById("lscg-outfit-edit-item-open") as HTMLButtonElement).click();
+        out.reopened = !grid.hidden;
+        [...grid.querySelectorAll<HTMLButtonElement>(".lscg-item-cell")].find(c => c.textContent?.trim() === "Ball Gag")?.click(); // picking a cell puts the item on and closes the grid
+        await new Promise(r => setTimeout(r, 400));
+        out.gridClosed = grid.hidden;
+        const code = (document.getElementById("lscg-outfit-edit-outfit-input") as HTMLInputElement).value;
+        out.inCode = JSON.parse((window as any).LZString.decompressFromBase64(code)).some((b: any) => b.Group === "ItemMouth" && b.Name === "BallGag");
+        return out;
+    });
+    expect(picked).toEqual({
+        group: "ItemMouth", gridOpen: true, cells: true, previewDrawn: true,
+        tip: "Ball Gag", tipHides: true, title: "Mouth", closedByButton: true, reopened: true, gridClosed: true, inCode: true,
+    });
+});
+
+test("Outfit Collection: the creator's appearance screen still shows the character to a blind, tinted player", async ({ bc }) => {
+    await bc.openSettings("Outfit Collection");
+    const skin = await bc.run(async () => {
+        const w = window as any;
+        const wait = async (cond: () => boolean) => { for (let i = 0; i < 120 && !cond(); i++) await new Promise(r => setTimeout(r, 100)); };
+        w.LSCG.getModule("GUI").currentSubscreen.NewOutfit();
+        await wait(() => !!document.getElementById("lscg-outfit-edit-build"));
+        Object.assign(w.Player, { IsBlind: () => true, GetBlindLevel: () => 3, HasTints: () => true, GetTints: () => [{ r: 148, g: 0, b: 211, a: 0.6 }], GetBlurLevel: () => 4 });
+        (document.getElementById("lscg-outfit-edit-build") as HTMLButtonElement).click();
+        await wait(() => w.CurrentScreen === "Appearance");
+        await new Promise(r => setTimeout(r, 2500));
+        // The character's torso. BC hides other characters from a blind viewer, and tints and blurs the rest.
+        const px = (MainCanvas.canvas as HTMLCanvasElement).getContext("2d")!.getImageData(915, 375, 1, 1).data;
+        return [px[0], px[1], px[2]];
+    });
+    // Light skin, not the dark dressing-room background that shows when the character isn't drawn
+    expect(skin[0]).toBeGreaterThan(190);
+    expect(skin[0]).toBeGreaterThanOrEqual(skin[2]);
+});
+
+test("Escape backs out one layer at a time and only the main menu leaves LSCG", async ({ bc }) => {
+    await bc.openSettings("Outfit Collection");
+    const state = () => bc.run(() => {
+        const g = (window as any).LSCG.getModule("GUI").currentSubscreen;
+        return { focus: !!DialogFocusItem, editor: !!g?.SelectedOutfit, sub: g?.name, extension: !!PreferenceExtensionsCurrent };
+    });
+    const escape = async () => { await bc.page.keyboard.press("Escape"); await bc.page.waitForTimeout(500); };
+    await bc.run(async () => {
+        const $ = (id: string) => document.getElementById("lscg-outfit-edit-" + id) as any;
+        (window as any).LSCG.getModule("GUI").currentSubscreen.NewOutfit();
+        await new Promise(r => setTimeout(r, 1200));
+        $("item-group").value = "ItemMouth"; $("item-group").dispatchEvent(new Event("change"));
+        $("item-asset").value = "BallGag"; $("item-asset").dispatchEvent(new Event("change"));
+        $("item-set").click();
+        await new Promise(r => setTimeout(r, 500));
+        $("item-configure").click();
+        await new Promise(r => setTimeout(r, 800));
+    });
+    expect(await state()).toEqual({ focus: true, editor: true, sub: "Outfit Collection", extension: true });
+    await escape();
+    expect(await state()).toEqual({ focus: false, editor: true, sub: "Outfit Collection", extension: true });
+    await escape();
+    expect(await state()).toEqual({ focus: false, editor: false, sub: "Outfit Collection", extension: true });
+    await escape();
+    expect(await state()).toEqual({ focus: false, editor: false, sub: "MainMenu", extension: true });
+    await escape();
+    expect((await state()).extension).toBe(false);
+});
+
+test("the lead-lined checkbox is only hidden for the outfit editor's characters, not for the player's own items", async ({ bc }) => {
+    const hidden = await bc.run(async () => {
+        const w = window as any;
+        w.InventoryWear(w.Player, "CollegeOutfit1", "Cloth");
+        const item = w.InventoryGet(w.Player, "Cloth");
+        await ItemColorLoad(w.Player, item, 1090, 15, 885, 970, true);
+        await new Promise(r => setTimeout(r, 600));
+        const box = document.querySelector("#lscg-layers-lead-lined-check");
+        const out = box ? getComputedStyle(box.closest("label")!).display === "none" : "no controls";
+        ItemColorExitClick();
+        return out;
+    });
+    expect(hidden).toBe(false);
+});
+
+test("Outfit Collection: colouring draws the character at centre, so dragging to translate a layer works on it", async ({ bc }) => {
+    await bc.openSettings("Outfit Collection");
+    await bc.run(async () => {
+        const w = window as any;
+        const $ = (id: string) => document.getElementById("lscg-outfit-edit-" + id) as any;
+        w.LSCG.getModule("GUI").currentSubscreen.NewOutfit();
+        await new Promise(r => setTimeout(r, 1200));
+        $("item-group").value = "ItemMouth"; $("item-group").dispatchEvent(new Event("change"));
+        $("item-asset").value = "BallGag"; $("item-asset").dispatchEvent(new Event("change"));
+        $("item-set").click();
+        await new Promise(r => setTimeout(r, 500));
+        $("item-color").click();
+        await new Promise(r => setTimeout(r, 1500));
+        (document.getElementById("lscg-layers-translate-check") as HTMLInputElement).click();
+    });
+    const from = await bc.run(() => (window as any).Playground.toPage(930, 400));
+    const to = await bc.run(() => (window as any).Playground.toPage(980, 440));
+    await bc.page.mouse.move(from.x, from.y);
+    await bc.page.mouse.down();
+    await bc.page.mouse.move(to.x, to.y, { steps: 5 });
+    await bc.page.mouse.up();
+    const moved = await bc.run(() => {
+        const o = ItemColorItem.Property.LayerOverrides?.[0];
+        return o ? [o.DrawingLeft[""], o.DrawingTop[""]] : null;
+    });
+    expect(moved).not.toBeNull();
+    expect(moved![0]).toBeGreaterThan(0); // dragged right and down
+    expect(moved![1]).toBeGreaterThan(0);
+});

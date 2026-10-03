@@ -1291,6 +1291,15 @@ export function StripCharacterNoRedraw(C: Character) {
 	});
 }
 
+/** Ids (before CopyCharacter's "LSCG-" prefix) of the temporary characters the outfit editor previews and edits. */
+export const OUTFIT_PREVIEW_ID = "LSCGOutfitsCollection";
+export const OUTFIT_CREATOR_ID = "OutfitCreator";
+
+/** Whether `C` is one of the outfit editor's temporary characters rather than someone in the room. */
+export function isOutfitEditorCharacter(C: Character | null | undefined): boolean {
+    return [OUTFIT_PREVIEW_ID, OUTFIT_CREATOR_ID].some(id => String(C?.CharacterID).startsWith(`LSCG-${id}-`));
+}
+
 export function CopyCharacter(C: Character, id: string, strip: boolean = true, removeItems: boolean = true): Character {
 	const newCharacter = CharacterLoadSimple(`LSCG-${id || C.ID}`);
 	newCharacter.Name = C.Name;

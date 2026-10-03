@@ -8,7 +8,8 @@
 		"name-input name-input name-input name-input . . . ." var(--height)
 		"outfit-input outfit-input outfit-input outfit-input outfit-input outfit-input outfit-button options-button" var(--height)
 		"combination-label combination-label combination-label combination-label combination-label outfit-checks outfit-checks outfit-checks" min(2dvh, 2.5dvw)
-		"combination combination combination combination combination outfit-checks outfit-checks outfit-checks" 1fr;
+		"combination combination combination combination combination outfit-checks outfit-checks outfit-checks" 1fr
+		"items items items items items items items items" var(--height);
 	
 	.button-tooltip {
 		--tooltip-gap: var(--gap);
@@ -102,6 +103,10 @@
 		justify-self: center;
 	}
 
+	#lscg-outfit-edit-build {
+		grid-column: 4;
+	}
+
 	#lscg-outfit-edit-clone {
 		grid-column: 5;
 	}
@@ -128,7 +133,7 @@
 	background-color: unset;
 	display: grid;
 	grid-column: 1 / 9;
-	grid-row: 1 / 6;
+	grid-row: 1 / 7;
 	grid-template-columns: subgrid;
 	grid-template-rows: subgrid;
 	height: calc(8.5 * (var(--height) + var(--gap)));
@@ -163,4 +168,147 @@
 	grid-area: options-button;
 	grid-template-columns: auto;
 	grid-template-rows: var(--height) auto;
+}
+#lscg-outfit-edit-items {
+	grid-area: items;
+	display: flex;
+	gap: var(--gap);
+
+	select {
+		flex: 1 1 0;
+		min-width: 0;
+		font: inherit;
+		font-size: var(--lscg-font-small);
+	}
+
+	.button {
+		flex: 0 0 auto;
+		height: var(--height);
+		width: var(--height);
+	}
+}
+
+#lscg-outfit-edit-item-open {
+	flex: 1 1 0;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+#lscg-outfit-edit-item-grid {
+	position: absolute;
+	z-index: 9;
+	left: 0;
+	right: 0;
+	top: 0; // tall enough for the header and three rows of items
+	bottom: calc(var(--height) + var(--gap) * 2);
+	flex-direction: column;
+	gap: var(--gap);
+	padding: var(--gap);
+	background: var(--lscg-background-color);
+	border: min(0.6dvh, 0.3dvw) solid var(--lscg-border-color);
+	// reads as a popup over the editor
+	box-shadow: 0 min(1.2dvh, 0.6dvw) min(4dvh, 2dvw) rgba(0, 0, 0, 0.7), 0 0 0 100vmax rgba(0, 0, 0, 0.25);
+
+	&:not([hidden]) {
+		display: flex;
+	}
+
+	.lscg-item-head {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+
+		h2 {
+			margin: 0;
+		}
+
+		#lscg-outfit-edit-item-close {
+			width: var(--height);
+			height: var(--height);
+			padding: 0;
+			background: #fff;
+			border: min(0.3dvh, 0.15dvw) solid var(--lscg-border-color);
+			color: inherit;
+			font: inherit;
+			font-size: calc(var(--height) * 0.9);
+			line-height: 1;
+			cursor: pointer;
+
+			&:hover {
+				background: var(--lscg-hover-color);
+				color: #fff;
+			}
+		}
+	}
+}
+
+#lscg-outfit-edit-item-cells {
+	flex: 1 1 0;
+	min-height: 0;
+	overflow-y: auto;
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(min(12.5dvh, 6.25dvw), 1fr));
+	grid-auto-rows: min-content;
+	gap: var(--gap);
+
+	.lscg-item-cell {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		width: auto;
+		height: auto;
+		padding: 0;
+		overflow: hidden;
+		background: #fff;
+		color: #000;
+		font: inherit;
+		font-size: calc(var(--lscg-font-small) * 0.8);
+		border: min(0.3dvh, 0.15dvw) solid var(--lscg-border-color);
+		cursor: pointer;
+
+		// BC styles every canvas as an absolutely positioned full-width layer
+		canvas {
+			position: static;
+			margin: 0;
+			width: 100%;
+			height: auto;
+			aspect-ratio: 1;
+		}
+
+		span {
+			width: 100%;
+			padding: 0 .3em;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			white-space: nowrap;
+		}
+
+		&:hover {
+			background: var(--lscg-hover-color);
+			color: #fff;
+		}
+
+		&.worn {
+			background: #bbb;
+		}
+	}
+}
+
+#lscg-outfit-edit-item-tip {
+	position: absolute;
+	z-index: 11;
+	max-width: 90%;
+	padding: .2em .6em;
+	background: #ffff88;
+	color: #000;
+	border: min(0.3dvh, 0.15dvw) solid #000;
+	font-size: var(--lscg-font-small);
+	white-space: nowrap;
+	pointer-events: none;
+
+	&[hidden] {
+		display: none;
+	}
 }
