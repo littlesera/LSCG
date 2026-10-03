@@ -1,13 +1,17 @@
 import { h } from "tsx-dom";
-import { ApplyItem, CopyCharacter, hookFunction, onCanvasResize, ICONS, isBind, isBody, isCloth, isCosplay, isGenitals, isHair, isPronouns, isSkin, smartGetAssetGroup } from "utils";
+import { ApplyItem, BC_ItemsToItemBundles, CopyCharacter, OUTFIT_CREATOR_ID, OUTFIT_PREVIEW_ID, hookFunction, onCanvasResize, ICONS, isBind, isBody, isCloth, isCosplay, isGenitals, isHair, isPronouns, isSkin, smartGetAssetGroup } from "utils";
 import { GuiSubscreen, HelpInfo } from "./settingBase";
 import { OutfitSettings } from "./Models/base";
 import { OutfitCollectionModule } from "Modules/outfitCollection";
+import { craftKeywords } from "Modules/chaotic-item";
+import { InjectorModule } from "Modules/injector";
+import { getModule } from "modules";
 import styles from "./outfits.scss?inline";
 import editorStyles from "./outfitEditor.scss?inline";
-import { clamp, entries, toArray, remove } from "lodash-es";
+import { clamp, entries, toArray } from "lodash-es";
 import { Outfit } from "./OutfitCollection/outfitCollection";
 import { drawTooltip } from "./settingUtils";
+import { setSubscreen } from "./setting_definitions";
 import { drawUnaffected } from "Dom/kit";
 import { OutfitStorageStrategy } from "./OutfitCollection/IOutfitCollection";
 
@@ -57,6 +61,75 @@ const ID = Object.freeze({
     commandSets: `${root}-header1`,
 });
 
+/** Editor state parked while BC's Appearance screen replaces Preferences; restored by `Load`. */
+interface CreatorResume {
+    key: string | undefined;
+    outfit: Outfit;
+    incoming: string;
+    changed: boolean;
+    /** JSON of each group's bundle as the creator started, to tell what the user changed. */
+    start: Record<string, string>;
+    /** Groups the outfit had before; these are kept even if unchanged. */
+    groups: string[];
+    filter: GuiOutfits["_outfitFilter"];
+    returnScreen: ScreenSpecifier;
+    edit: Character;
+}
+let creatorResume: CreatorResume | undefined;
+let appearanceHook: (() => void) | undefined;
+
+/** Where BC's own item and colour widgets draw: the right half of the screen, as in its item dialog. */
+/** Pixel size of an item cell's preview canvas; BC's own item previews are 225 wide. */
+const ITEM_PREVIEW_SIZE = 225;
+/** An item grid cell's tooltip: the name, then optional base item, description and LSCG attribute lines. */
+type GridTab = "items" | "crafted";
+
+/** One cell of a popup's item grid. `icon` stands in for an asset's preview (e.g. "No lock"). */
+interface GridEntry {
+    asset?: Asset;
+    icon?: string;
+    label: string;
+    tip: ItemTip;
+    worn: boolean;
+    pick: () => void;
+}
+
+/** A lock setting the modal edits directly, validated like BC's own lock screens. */
+interface LockField {
+    label: string;
+    prop: string;
+    max: number;
+    valid: RegExp;
+    rule: string;
+    upper?: boolean;
+}
+
+const PASSWORD_FIELDS: LockField[] = [
+    { label: "Password", prop: "Password", max: 8, valid: /^[A-Z]{1,8}$/, rule: "1 to 8 letters, A to Z", upper: true },
+    { label: "Hint", prop: "Hint", max: 140, valid: /^.{0,140}$/, rule: "Up to 140 characters" },
+];
+
+/** The locks that have settings, by asset name; the others (metal, owner, family...) have nothing to set. */
+const LOCK_SETTINGS: Record<string, LockField[] | undefined> = {
+    CombinationPadlock: [{ label: "Combination", prop: "CombinationNumber", max: 4, valid: /^\d{4}$/, rule: "4 digits" }],
+    PasswordPadlock: PASSWORD_FIELDS,
+    SafewordPadlock: PASSWORD_FIELDS,
+    HighSecurityPadlock: [{ label: "Keys (member numbers, comma separated)", prop: "MemberNumberListKeys", max: 250, valid: /^\d+(,\d+)*$/, rule: "Member numbers separated by commas" }],
+};
+
+interface ItemTip {
+    title: string;
+    sub?: string;
+    body?: string;
+    attrs?: string[];
+}
+
+const COLOR_RECT = [1090, 15, 885, 970] as const;
+/** Where BC's Appearance screen draws the player while a colour picker is open: x, y, zoom. */
+const COLOR_CHARACTER = [660, 90, 0.95] as const;
+const PERMISSIONS_BUTTON = [1775, 25, 90, 90] as const;
+const BACK_BUTTON = [1885, 25, 90, 90] as const;
+
 const editorRoot = "lscg-outfit-edit";
 const EDITOR_ID = Object.freeze({
     root: editorRoot,
@@ -66,6 +139,7 @@ const EDITOR_ID = Object.freeze({
     accept: `${editorRoot}-accept`,
     cancel: `${editorRoot}-cancel`,
     clone: `${editorRoot}-clone`,
+    build: `${editorRoot}-build`,
     exit: `${editorRoot}-exit`,
     header: `${editorRoot}-header`,
     midDiv: `${editorRoot}-mid-grid`,
@@ -77,6 +151,28 @@ const EDITOR_ID = Object.freeze({
     outfitButton: `${editorRoot}-outfit-button`,
     combinationSelect: `${editorRoot}-combinations`,
     combinationLabel: `${editorRoot}-combination-label`,
+
+    items: `${editorRoot}-items`,
+    itemGroup: `${editorRoot}-item-group`,
+    itemAsset: `${editorRoot}-item-asset`,
+    itemOpen: `${editorRoot}-item-open`,
+    itemGrid: `${editorRoot}-item-grid`,
+    itemGridTitle: `${editorRoot}-item-grid-title`,
+    itemTabItems: `${editorRoot}-item-tab-items`,
+    itemTabCrafted: `${editorRoot}-item-tab-crafted`,
+    itemLock: `${editorRoot}-item-lock`,
+    lockModal: `${editorRoot}-lock-modal`,
+    lockTitle: `${editorRoot}-lock-title`,
+    lockCells: `${editorRoot}-lock-cells`,
+    lockSettings: `${editorRoot}-lock-settings`,
+    lockClose: `${editorRoot}-lock-close`,
+    lockTip: `${editorRoot}-lock-tip`,
+    itemCells: `${editorRoot}-item-cells`,
+    itemClose: `${editorRoot}-item-close`,
+    itemTip: `${editorRoot}-item-tip`,
+    itemConfigure: `${editorRoot}-item-configure`,
+    itemColor: `${editorRoot}-item-color`,
+    itemRemove: `${editorRoot}-item-remove`,
 
     checkboxes: `${editorRoot}-checkboxes`,
     clothesCheck: `${editorRoot}-clothes-check`,
@@ -93,25 +189,6 @@ export class GuiOutfits extends GuiSubscreen {
     SelectedKey: string | undefined = undefined;
     SelectedOutfit: Outfit | undefined = undefined;
     IncomingCode: string = "";
-    
-    private _excludedItems: {zone: string, item: string}[] = [];
-    
-    get ExcludeZones(): string[] {
-        return this._excludedItems.map(item => item.zone);
-    }
-
-    removeExclusion(zone: string) {
-        remove(this._excludedItems, item => item.zone == zone);
-    }
-
-    addExclusion(item: string, zone: string) {
-        if (!this._excludedItems.find(item => item.zone == zone))
-            this._excludedItems.push({item: item, zone: zone});
-    }
-
-    getExclusion(zone: string): {zone: string, item: string} | undefined {
-        return this._excludedItems.find(item => item.zone == zone);
-    }
     
     preview: Character | undefined = undefined;
 
@@ -219,6 +296,12 @@ export class GuiOutfits extends GuiSubscreen {
                                 { button: { attributes: { "screen-generated": undefined } } },
                             ),
                             ElementButton.Create(
+                                EDITOR_ID.build,
+                                () => this.#startCreator(),
+                                { image: "./Icons/Dress.png", tooltip: "Edit in Wardrobe", tooltipPosition: "right" },
+                                { button: { attributes: { "screen-generated": undefined } } },
+                            ),
+                            ElementButton.Create(
                                 EDITOR_ID.clone,
                                 () => this.CloneOutfit(),
                                 { image: "./Icons/Layering.png", tooltip: "Clone Outfit", tooltipPosition: "right" },
@@ -240,6 +323,27 @@ export class GuiOutfits extends GuiSubscreen {
                         { direction: "ltr" },
                     )
                 }
+                <div id={EDITOR_ID.itemGrid} class="lscg-popup" role="dialog" aria-label="Items" hidden>
+                    <div class="lscg-item-head">
+                        <h2 id={EDITOR_ID.itemGridTitle}>Items</h2>
+                        <div class="lscg-item-tabs" role="tablist">
+                            <button id={EDITOR_ID.itemTabItems} role="tab" aria-selected="true" onClick={() => this.#setGridTab("items")}>Items</button>
+                            <button id={EDITOR_ID.itemTabCrafted} role="tab" aria-selected="false" onClick={() => this.#setGridTab("crafted")}>Crafted</button>
+                        </div>
+                        <button id={EDITOR_ID.itemClose} class="lscg-popup-close" aria-label="Close" title="Close" onClick={() => this.#closeGrid()}>×</button>
+                    </div>
+                    <div id={EDITOR_ID.itemCells} class="lscg-item-cells scroll-box" role="listbox" onScroll={() => this.#hideItemTips()}/>
+                    <div id={EDITOR_ID.itemTip} class="lscg-item-tip" role="tooltip" hidden/>
+                </div>
+                <div id={EDITOR_ID.lockModal} class="lscg-popup" role="dialog" aria-label="Lock" hidden>
+                    <div class="lscg-item-head">
+                        <h2 id={EDITOR_ID.lockTitle}>Lock</h2>
+                        <button id={EDITOR_ID.lockClose} class="lscg-popup-close" aria-label="Close" title="Close" onClick={() => this.#closeLockModal()}>×</button>
+                    </div>
+                    <div id={EDITOR_ID.lockCells} class="lscg-item-cells scroll-box" role="listbox" onScroll={() => this.#hideItemTips()}/>
+                    <div id={EDITOR_ID.lockSettings} class="lscg-lock-settings"/>
+                    <div id={EDITOR_ID.lockTip} class="lscg-item-tip" role="tooltip" hidden/>
+                </div>
                 <div id="lscg-outfit-edit-form" role="form" class="scroll-box" aria-labelledby={EDITOR_ID.header}>
                     <input
                         type="text"
@@ -303,6 +407,35 @@ export class GuiOutfits extends GuiSubscreen {
                     <div id={EDITOR_ID.checkboxes}>
                         {this.createCheckboxes()}
                     </div>
+                    <div id={EDITOR_ID.items}>
+                        <select id={EDITOR_ID.itemGroup} aria-label="Item group" onChange={() => this.#groupChosen()}/>
+                        <select id={EDITOR_ID.itemAsset} aria-label="Item" hidden onChange={() => this.#updateItemPanel()}/>
+                        <button class="lscg-button" id={EDITOR_ID.itemOpen} aria-label="Choose item" onClick={() => this.#gridOpen() ? this.#closeGrid() : this.#openGrid()}>Choose item</button>
+                        {ElementButton.Create(
+                            EDITOR_ID.itemConfigure,
+                            () => this.#focusItem("extended"),
+                            { image: "./Icons/Extensions.png", tooltip: "Item options", tooltipPosition: "top" },
+                            { button: { attributes: { "screen-generated": undefined } } },
+                        )}
+                        {ElementButton.Create(
+                            EDITOR_ID.itemColor,
+                            () => this.#focusItem("color"),
+                            { image: "./Icons/Color.png", tooltip: "Color", tooltipPosition: "top" },
+                            { button: { attributes: { "screen-generated": undefined } } },
+                        )}
+                        {ElementButton.Create(
+                            EDITOR_ID.itemLock,
+                            () => this.#openLockModal(),
+                            { image: "./Icons/Security.png", tooltip: "Lock", tooltipPosition: "top" },
+                            { button: { attributes: { "screen-generated": undefined } } },
+                        )}
+                        {ElementButton.Create(
+                            EDITOR_ID.itemRemove,
+                            () => this.#removeItem(),
+                            { image: "./Icons/Trash.png", tooltip: "Remove from outfit", tooltipPosition: "top" },
+                            { button: { attributes: { "screen-generated": undefined } } },
+                        )}
+                    </div>
                 </div>
             </div>,
         }),
@@ -318,12 +451,22 @@ export class GuiOutfits extends GuiSubscreen {
     }
 
     charHook: (() => void) | undefined;
+    #leaveHook: (() => void) | undefined;
+    /** BC's own extended-item or colour widget is open on the preview; it takes over Run/Click until it exits. */
+    #focus: { kind: "extended" | "color", group: AssetGroupName } | undefined;
 
     _unhookResize: (() => void) | undefined;
     Load(): void {
         CommonPhotoMode = true;
         this.charHook = hookFunction("CharacterGetCurrent", 1, (args, next) => {
             return this.preview ?? next(args);
+        });
+
+        // BC's leave would also switch dialog modes, which means nothing here
+        this.#leaveHook = hookFunction("DialogLeaveFocusItem", 1, (args, next) => {
+            if (!this.#focus) return next(args);
+            if (DialogTightenLoosenItem) TightenLoosenItemExit();
+            else ExtendedItemExit();
         });
 
         this.SelectedKey = undefined;
@@ -339,6 +482,73 @@ export class GuiOutfits extends GuiSubscreen {
         this.#updateElements();
         this._unhookResize?.();
         this._unhookResize = onCanvasResize(load => this.Resize(load));
+
+        const r = creatorResume;
+        creatorResume = undefined;
+        if (r) {
+            this.SelectedKey = r.key;
+            this.SelectedOutfit = r.outfit;
+            this._outfitFilter = r.filter;
+            this.#openEditor(r.incoming);
+            // The editor's own input events clobber IncomingCode, so set it before filtering and again after
+            this.IncomingCode = r.incoming;
+            if (r.changed) {
+                this.setFilteredIncoming();
+                ElementValue(EDITOR_ID.outfitInput, this.SelectedOutfit.code);
+                this.#updateButton(EDITOR_ID.accept);
+            }
+            this.IncomingCode = r.incoming;
+        }
+    }
+
+    /** Edits the outfit as it is now: the preview, which for a new outfit is just your naked character. */
+    #startCreator() {
+        if (!this.SelectedOutfit || !this.preview) return;
+
+        const id = `${OUTFIT_CREATOR_ID}-${Player.MemberNumber}`;
+        const stale = Character.find(c => c.CharacterID === `LSCG-${id}`);
+        if (stale) CharacterDelete(stale, false);
+
+        const edit = CopyCharacter(Player, id);
+        edit.Appearance = AppearanceItemParse(CharacterAppearanceStringify(this.preview));
+        CharacterRefresh(edit, false, false);
+
+        creatorResume = {
+            key: this.SelectedKey,
+            outfit: { ...this.SelectedOutfit },
+            incoming: this.IncomingCode,
+            changed: false,
+            start: Object.fromEntries(BC_ItemsToItemBundles(edit.Appearance).map(b => [b.Group, JSON.stringify(b)])),
+            groups: this.outfitModule.data.ConvertToBundle(this.IncomingCode).map(b => b.Group),
+            filter: { ...this._outfitFilter },
+            returnScreen: InformationSheetReturnScreen ?? ["Room", "MainHall"],
+            edit,
+        };
+        // The Player's blindness, hypnosis tint and the like belong to the chat room, not to the character being edited
+        appearanceHook = hookFunction("AppearanceRun", 1, (args, next) => drawUnaffected(() => next(args)));
+        CharacterAppearanceLoadCharacter(edit, ok => this.#finishCreator(ok));
+    }
+
+    /** Appearance screen closed: capture the result, then rebuild Preferences > LSCG > Outfit Collection. */
+    async #finishCreator(accepted: boolean) {
+        appearanceHook?.();
+        appearanceHook = undefined;
+        const r = creatorResume;
+        if (!r) return;
+        if (accepted) {
+            // Keep what the outfit already had, plus whatever the user changed or added, but not the starting body's untouched groups
+            const kept = BC_ItemsToItemBundles(r.edit.Appearance).filter(b => r.groups.includes(b.Group) || r.start[b.Group] !== JSON.stringify(b));
+            r.incoming = this.outfitModule.data.EncodeBundle(kept);
+        }
+        r.changed = accepted;
+        CharacterDelete(r.edit, false);
+        await CommonSetScreen("Character", "Preference");
+        // ponytail: CommonSetScreen doesn't wait for PreferenceLoad's own open of "Main", which would land after ours; settle first
+        for (let i = 0; i < 100 && (CurrentScreen !== "Preference" || PreferenceSubscreen?.name !== "Main" || !document.getElementById("preference-subscreen")); i++)
+            await new Promise(resolve => setTimeout(resolve, 50));
+        await new Promise(resolve => setTimeout(resolve, 300));
+        await PreferenceSubscreenExtensionsOpen("LSCG", r.returnScreen);
+        setSubscreen(this.name);
     }
 
     Resize(load: boolean) {
@@ -369,6 +579,24 @@ export class GuiOutfits extends GuiSubscreen {
     }
 
     Exit(): void {
+        // Escape and the exit door back out one layer at a time: item widget, item grid, editor, then the screen
+        if (this.#focus) {
+            if (this.#focus.kind === "color") ItemColorExitClick();
+            else DialogLeaveFocusItem();
+            return;
+        }
+        if (this.#lockModalOpen()) {
+            this.#closeLockModal();
+            return;
+        }
+        if (this.#gridOpen()) {
+            this.#closeGrid();
+            return;
+        }
+        if (this.SelectedOutfit) {
+            this.CancelOutfit();
+            return;
+        }
         this.#teardown();
         super.Exit();
     }
@@ -383,12 +611,15 @@ export class GuiOutfits extends GuiSubscreen {
         document.activeElement?.dispatchEvent(new FocusEvent("blur"));
         this.SelectedKey = undefined;
         this.SelectedOutfit = undefined;
+        this.#clearFocus();
         this.#dropPreview();
         for (const [id] of entries(this.screens)) {
             ElementRemove(id);
         }
         this.charHook();
         this.charHook = undefined;
+        this.#leaveHook?.();
+        this.#leaveHook = undefined;
         CommonPhotoMode = false;
         this._unhookResize?.();
         this._unhookResize = undefined;
@@ -446,37 +677,42 @@ export class GuiOutfits extends GuiSubscreen {
 
     Run(): void {
         super.Run();
+        if (this.#focus && this.preview) {
+            const preview = this.preview;
+            // The colour picker gets BC's dark dialog look over the whole screen: the transparent controls LSCG's opacity
+            // module adds to it (layer checkboxes, opacity slider) are made for that, not for the parchment
+            const color = this.#focus.kind === "color";
+            if (color) DrawRect(0, 0, 2000, 1000, "Black");
+            // Colouring draws the character where BC's Appearance screen does, at centre: LSCG's click-and-drag translation
+            // only listens there (x 700-1200) and counts drag distance at that scale
+            drawUnaffected(() => color
+                ? DrawCharacter(preview, ...COLOR_CHARACTER, false)
+                : DrawCharacter(preview, this.coords.x, this.coords.y, this.coords.zoom, false));
+            MainCanvas.textAlign = "center"; // the Preferences wrapper leaves it left, BC's widgets expect centered
+            try {
+                this.#drawFocus(preview, this.#focus);
+            } finally {
+                MainCanvas.textAlign = "left";
+            }
+            return;
+        }
         if (this.preview) {
             //DrawText("- LSCG Edit Outfit -", GuiSubscreen.START_X, GuiSubscreen.START_Y - GuiSubscreen.Y_MOD, "Black", "#D7F6E9");
             const preview = this.preview;
             drawUnaffected(() => DrawCharacter(preview, this.coords.x, this.coords.y, this.coords.zoom, false));
 
-            // Draws all the available character zones
-            let tooltipToDraw = undefined;
-            for (const Group of AssetGroup) {
-                const occupied = InventoryGet(this.preview, Group.Name);
-                const selected = false;// selectedGroupName == Group.Name;
-                const excluded = this.ExcludeZones.includes(Group.Name);
-                if (Group.IsItem() && (occupied || excluded)) {
-                    DrawAssetGroupZone(Player, Group.Zone, this.coords.zoom, this.coords.x, this.coords.y, 1, selected ? "#00d5d5" : "#808080", 3, excluded ? "#FF000022" : "#00FF0022");
-                    const Zone = Group.Zone?.find(z => DialogClickedInZone(Player, z, this.coords.zoom, this.coords.x, this.coords.y, 1));
-                    if (Zone) {
-                        const tmp = this.preview.HeightModifier;
-                        this.preview.HeightModifier = 0;
-                        const CZ = DialogGetCharacterZone(this.preview, Zone, this.coords.x, this.coords.y, this.coords.zoom, 1);
-                        this.preview.HeightModifier = tmp;
-                        const itemName = excluded ? (this.getExclusion(Group.Name)?.item ?? Group.Name) : (occupied?.Craft?.Name ?? occupied?.Asset.Description ?? Group.Name);
-                        tooltipToDraw = {
-                            x: CZ[0] - 150,
-                            y: CZ[1] + CZ[3] - 20,
-                            text: `${excluded ? "✅" : "🚫"} - ${itemName}`,
-                        };
-                    }
-                }
+            // Every item zone, filled when it has something on; click one to pick its group
+            const selected = this.#itemGroup()?.Name;
+            let hover: AssetGroup | undefined;
+            for (const Group of this.#zoneGroups()) {
+                const picked = Group.Name === selected;
+                const occupied = !!InventoryGet(preview, Group.Name);
+                DrawAssetGroupZone(Player, Group.Zone!, this.coords.zoom, this.coords.x, this.coords.y, 1, picked ? "#00d5d5" : "#808080", 3, picked ? "#00d5d533" : occupied ? "#00FF0022" : "#80808011");
+                if (!hover && this.#inZone(Group)) hover = Group;
             }
-            if (tooltipToDraw) {
-                drawTooltip(150, 900, 550, tooltipToDraw.text, "left");
-                //drawTooltip(tooltipToDraw.x, tooltipToDraw.y, 300, tooltipToDraw.text, "center");
+            if (hover) {
+                const worn = InventoryGet(preview, hover.Name);
+                drawTooltip(150, 900, 550, `${hover.Description}: ${worn?.Craft?.Name ?? worn?.Asset.Description ?? "empty"}`, "left");
             }
 
             // if (!!this.preview?.FocusGroup) {
@@ -486,25 +722,38 @@ export class GuiOutfits extends GuiSubscreen {
     }
 
     Click(): void {
+        if (this.#focus && this.preview) {
+            this.#clickFocus(this.preview, this.#focus);
+            return;
+        }
         if (this.preview) {
-            for (const Group of AssetGroup) {
-                const occupied = InventoryGet(this.preview, Group.Name);
-                const excluded = this.ExcludeZones.includes(Group.Name);
-                if (Group.IsItem() && (occupied || excluded)) {
-                    
-                    const Zone = Group.Zone.find(z => DialogClickedInZone(Player, z, this.coords.zoom, this.coords.x, this.coords.y, 1));
-                    if (Zone) {
-                        if (!this.ExcludeZones.includes(Group.Name))
-                            this.addExclusion(occupied?.Craft?.Name ?? occupied?.Asset.Description ?? Group.Name, Group.Name);
-                        else
-                            this.removeExclusion(Group.Name);
-                        this.setFilteredIncoming();
-                        //this.removeItem(Group);
-                    }
-                }
-            }
+            const group = this.#zoneGroups().find(g => this.#inZone(g));
+            if (group) this.#pickGroup(group.Name);
         }
         super.Click();
+    }
+
+    #zoneGroups(): AssetGroup[] {
+        return AssetGroup.filter(g => g.IsItem() && g.Zone?.length);
+    }
+
+    #inZone(group: AssetGroup): boolean {
+        return !!group.Zone?.some(z => DialogClickedInZone(Player, z, this.coords.zoom, this.coords.x, this.coords.y, 1));
+    }
+
+    #pickGroup(name: AssetGroupName) {
+        const sel = document.getElementById(EDITOR_ID.itemGroup) as HTMLSelectElement | null;
+        if (!sel) return;
+        sel.value = name;
+        this.#groupChosen();
+    }
+
+    /** A group was picked. An empty one opens the item grid; one that already has an item waits for a click on the item box. */
+    #groupChosen() {
+        this.#fillAssets();
+        const group = this.#itemGroup();
+        const occupied = !!group && !!this.preview && !!InventoryGet(this.preview, group.Name);
+        if (!occupied || this.#gridOpen()) this.#openGrid();
     }
 
     setFilteredIncoming() {
@@ -524,8 +773,6 @@ export class GuiOutfits extends GuiSubscreen {
 
             if (!assetGroup) return false;
 
-            const notExcludedCheck = !this.ExcludeZones.includes(assetGroup.Name);
-
             const defaultCheck = (assetGroup.IsAppearance() || assetGroup.IsItem());
 
             const bodyFilter = 
@@ -540,9 +787,414 @@ export class GuiOutfits extends GuiSubscreen {
                 (this._outfitFilter.cosplay && isCosplay(assetGroup));
 
             return defaultCheck &&
-                    notExcludedCheck &&
                     (itemClothesFilter || bodyFilter);
         });
+    }
+
+    /********************* ITEM PANEL *****************************/
+
+    #itemGroup(): AssetGroup | undefined {
+        const name = (document.getElementById(EDITOR_ID.itemGroup) as HTMLSelectElement | null)?.value;
+        return AssetGroup.find(g => g.Name === name);
+    }
+
+    #fillGroups() {
+        const sel = document.getElementById(EDITOR_ID.itemGroup) as HTMLSelectElement | null;
+        if (!sel || sel.options.length) return;
+        sel.replaceChildren(...AssetGroup.filter(g => g.IsItem()).map(g => <option value={g.Name}>{g.Description}</option>));
+        this.#fillAssets();
+    }
+
+    #fillAssets() {
+        const sel = document.getElementById(EDITOR_ID.itemAsset) as HTMLSelectElement | null;
+        const group = this.#itemGroup();
+        if (!sel || !group) return;
+        // ponytail: permissions wide open on purpose; only skips assets BC itself hides or disables
+        sel.replaceChildren(...group.Asset.filter(a => a.Enable && a.Visible).map(a => <option value={a.Name}>{a.Description}</option>));
+        const worn = this.preview && InventoryGet(this.preview, group.Name);
+        if (worn) sel.value = worn.Asset.Name;
+        this.#updateItemPanel();
+    }
+
+    /** Bumped on every open, so an older grid's redraw timer notices it was replaced. */
+    #gridGen = 0;
+
+    #gridOpen(): boolean {
+        const grid = document.getElementById(EDITOR_ID.itemGrid);
+        return !!grid && !grid.hidden;
+    }
+
+    #closeGrid() {
+        const grid = document.getElementById(EDITOR_ID.itemGrid);
+        if (grid) grid.hidden = true;
+        this.#hideItemTips();
+    }
+
+    /** The hovered cell's tooltip, whose own label is truncated. Below the cell, or above it when there's no room below. */
+    #showItemTip(cell: HTMLElement, content: ItemTip, tip: HTMLElement, popup: HTMLElement) {
+        tip.replaceChildren(
+            <b>{content.title}</b>,
+            ...(content.sub ? [<div class="lscg-tip-sub">{content.sub}</div>] : []),
+            ...(content.body ? [<div class="lscg-tip-body">{content.body}</div>] : []),
+            ...(content.attrs?.length ? [<div class="lscg-tip-attrs">LSCG: {content.attrs.join(", ")}</div>] : []),
+        );
+        tip.hidden = false;
+        const root = popup.getBoundingClientRect();
+        const at = cell.getBoundingClientRect();
+        const below = at.bottom - root.top + 4;
+        const top = below + tip.offsetHeight <= root.height ? below : at.top - root.top - tip.offsetHeight - 4;
+        tip.style.top = `${Math.max(0, top)}px`;
+        const left = at.left - root.left + (at.width - tip.offsetWidth) / 2;
+        tip.style.left = `${Math.max(0, Math.min(left, root.width - tip.offsetWidth))}px`;
+    }
+
+    #hideItemTips() {
+        for (const id of [EDITOR_ID.itemTip, EDITOR_ID.lockTip]) {
+            const tip = document.getElementById(id);
+            if (tip) tip.hidden = true;
+        }
+    }
+
+    /** Which tab the item grid shows: BC's items for the group, or the player's own crafted items that fit it. */
+    #gridTab: GridTab = "items";
+
+    /** The player's crafted items (from their crafting lists) whose item belongs to `group`. */
+    #craftsFor(group: AssetGroup): { craft: CraftingItem, asset: Asset }[] {
+        return (Player.Crafting ?? []).flatMap(craft => {
+            const asset = craft && (CraftingAssets[craft.Item] ?? []).find(a => a.Group.Name === group.Name && a.Enable);
+            return craft && asset ? [{ craft, asset }] : [];
+        });
+    }
+
+    /** What a crafted item's tooltip says: its name, base item and description, plus any LSCG behavior its text gives it. */
+    #craftTip(craft: CraftingItem, asset: Asset): ItemTip {
+        const description = (typeof CraftingDescription === "undefined" ? craft.Description : CraftingDescription.Decode(craft.Description)).trim();
+        const drugs = getModule<InjectorModule>("InjectorModule")?.GetDrugTypes(craft) ?? [];
+        return {
+            title: craft.Name,
+            sub: asset.Description,
+            body: description,
+            attrs: [...craftKeywords(craft).map(k => k.slice(1, -1)), ...drugs.map(d => `${d} drug`)],
+        };
+    }
+
+    #setGridTab(tab: GridTab) {
+        this.#gridTab = tab;
+        this.#openGrid();
+    }
+
+    /** BC-style scrollable grid of the group's items or crafted items, using BC's own preview images; picking one puts it on. */
+    #openGrid() {
+        const grid = document.getElementById(EDITOR_ID.itemGrid);
+        const cells = document.getElementById(EDITOR_ID.itemCells);
+        const tip = document.getElementById(EDITOR_ID.itemTip);
+        const group = this.#itemGroup();
+        if (!grid || !cells || !tip || !group || !this.preview) return;
+        this.#closeLockModal();
+        const wornItem = InventoryGet(this.preview, group.Name);
+        const crafts = this.#craftsFor(group);
+        if (!crafts.length) this.#gridTab = "items";
+
+        (document.getElementById(EDITOR_ID.itemGridTitle) as HTMLElement).innerText = group.Description;
+        const tabs: [string, GridTab, string, string | undefined][] = [
+            [EDITOR_ID.itemTabItems, "items", "Items", undefined],
+            [EDITOR_ID.itemTabCrafted, "crafted", `Crafted (${crafts.length})`, crafts.length ? undefined : "None of your crafted items fit this group"],
+        ];
+        for (const [id, tab, label, disabledReason] of tabs) {
+            const button = document.getElementById(id) as HTMLButtonElement;
+            button.innerText = label;
+            button.setAttribute("aria-selected", String(this.#gridTab === tab));
+            button.disabled = !!disabledReason;
+            button.title = disabledReason ?? "";
+        }
+
+        const entries: GridEntry[] = this.#gridTab === "crafted"
+            ? crafts.map(({ craft, asset }) => ({
+                asset, label: craft.Name, tip: this.#craftTip(craft, asset),
+                worn: wornItem?.Asset.Name === asset.Name && wornItem.Craft?.Name === craft.Name,
+                pick: () => this.#wearCraft(group, asset, craft),
+            }))
+            : group.Asset.filter(a => a.Enable && a.Visible).map(a => ({
+                asset: a, label: a.Description, tip: { title: a.Description },
+                worn: wornItem?.Asset.Name === a.Name && !wornItem.Craft,
+                pick: () => this.#pickAsset(a.Name),
+            }));
+
+        grid.hidden = false;
+        this.#renderCells(grid, cells, tip, entries);
+    }
+
+    /**
+     * Fills a popup's scrolling cell grid. Previews are drawn by BC's own item preview, so images come through the same loader
+     * (and any mod hooks on it) as in its dialogs, and then scrolls to the selected cell.
+     */
+    #renderCells(popup: HTMLElement, cells: HTMLElement, tip: HTMLElement, entries: GridEntry[]) {
+        const preview = this.preview;
+        const gen = String(++this.#gridGen);
+        cells.dataset.gen = gen;
+        const previews: [Asset | string, CanvasRenderingContext2D][] = [];
+        cells.replaceChildren(...entries.map(e => {
+            const canvas = <canvas width={ITEM_PREVIEW_SIZE} height={ITEM_PREVIEW_SIZE} aria-hidden="true"/> as HTMLCanvasElement;
+            previews.push([(e.asset ?? e.icon)!, canvas.getContext("2d")!]);
+            return (
+                <button class={`lscg-item-cell${e.worn ? " worn" : ""}`} role="option" aria-selected={e.worn} aria-label={e.tip.sub ? `${e.tip.title} (${e.tip.sub})` : e.tip.title} onClick={e.pick} onMouseEnter={ev => this.#showItemTip(ev.currentTarget, e.tip, tip, popup)} onMouseLeave={() => this.#hideItemTips()}>
+                    {canvas}
+                    <span>{e.label}</span>
+                </button>
+            );
+        }));
+        const drawAll = () => {
+            const main = MainCanvas;
+            try {
+                for (const [asset, ctx] of previews) {
+                    MainCanvas = ctx;
+                    // Transparent, so the cell's own color (white, the selected teal, hover) shows behind the image and its label
+                    ctx.clearRect(0, 0, ITEM_PREVIEW_SIZE, ITEM_PREVIEW_SIZE);
+                    if (typeof asset === "string")
+                        DrawImageResize(asset, ITEM_PREVIEW_SIZE * 0.2, ITEM_PREVIEW_SIZE * 0.2, ITEM_PREVIEW_SIZE * 0.6, ITEM_PREVIEW_SIZE * 0.6);
+                    else
+                        DrawAssetPreview(0, 0, asset, { C: preview, Description: "", Background: "transparent", Width: ITEM_PREVIEW_SIZE, Height: ITEM_PREVIEW_SIZE });
+                }
+            } finally {
+                MainCanvas = main;
+            }
+        };
+        drawAll();
+        // ponytail: images arrive asynchronously, so redraw every 250ms for ~10s while the popup stays open
+        let ticks = 0;
+        const timer = setInterval(() => {
+            if (cells.dataset.gen !== gen || !cells.isConnected || popup.hidden || ++ticks > 40) clearInterval(timer);
+            else drawAll();
+        }, 250);
+        // Land on what's selected, so it isn't off-screen below the first rows
+        const selected = cells.querySelector<HTMLElement>(".worn");
+        cells.scrollTop = selected ? Math.max(0, selected.offsetTop - cells.offsetTop - cells.clientHeight / 2 + selected.offsetHeight / 2) : 0;
+    }
+
+    /********************* LOCK MODAL *****************************/
+
+    #lockModalOpen(): boolean {
+        const modal = document.getElementById(EDITOR_ID.lockModal);
+        return !!modal && !modal.hidden;
+    }
+
+    #closeLockModal() {
+        const modal = document.getElementById(EDITOR_ID.lockModal);
+        if (modal) modal.hidden = true;
+        this.#hideItemTips();
+    }
+
+    /** The lock chooser, with the chosen lock's own settings (combination, password...) as plain fields underneath. */
+    #openLockModal() {
+        const modal = document.getElementById(EDITOR_ID.lockModal);
+        const cells = document.getElementById(EDITOR_ID.lockCells);
+        const tip = document.getElementById(EDITOR_ID.lockTip);
+        const group = this.#itemGroup();
+        const item = group && this.preview ? InventoryGet(this.preview, group.Name) : null;
+        if (!modal || !cells || !tip || !group || !item || !InventoryDoesItemAllowLock(item)) return;
+        this.#closeGrid();
+
+        (document.getElementById(EDITOR_ID.lockTitle) as HTMLElement).innerText = `${group.Description}: ${item.Craft?.Name ?? item.Asset.Description}`;
+        const wornLock = item.Property?.LockedBy;
+        const entries: GridEntry[] = [
+            ...(wornLock ? [{ icon: "Icons/Cancel.png", label: "No lock", tip: { title: "No lock", sub: "Take the lock off" }, worn: false, pick: () => this.#chooseLock(group, null) }] : []),
+            // Timer locks keep an absolute expiry time, which would already have passed whenever the outfit is applied
+            ...Asset.filter(a => a.IsLock && a.Enable && a.RemoveTimer <= 0 && !/Timer/.test(a.Name)).map(a => ({
+                asset: a, label: a.Description, tip: { title: a.Description }, worn: a.Name === wornLock, pick: () => this.#chooseLock(group, a),
+            })),
+        ];
+        modal.hidden = false;
+        this.#renderCells(modal, cells, tip, entries);
+        this.#renderLockSettings(group, item);
+    }
+
+    /** Puts a lock on the group's item, or takes it off. The modal stays open so the lock's settings are right there. */
+    #chooseLock(group: AssetGroup, lock: Asset | null) {
+        if (!this.preview) return;
+        const item = InventoryGet(this.preview, group.Name);
+        if (!item) return;
+        if (!lock) {
+            InventoryUnlock(this.preview, item, false);
+        } else if (item.Property?.LockedBy !== lock.Name) {
+            InventoryLock(this.preview, item, lock.Name as AssetLockType, Player, false);
+            if (item.Property?.LockedBy !== lock.Name) {
+                ToastManager.info(`${lock.Description} doesn't fit that item.`);
+                return;
+            }
+        }
+        this.#commitGroup(group.Name, true);
+        this.#openLockModal();
+    }
+
+    /** The settings fields of the lock on `item`, written straight into its properties (no old code needed: this is the editor). */
+    #renderLockSettings(group: AssetGroup, item: Item) {
+        const box = document.getElementById(EDITOR_ID.lockSettings);
+        if (!box) return;
+        const lockName = item.Property?.LockedBy;
+        const fields = lockName ? LOCK_SETTINGS[lockName] : undefined;
+        if (!lockName) {
+            box.replaceChildren(<p class="lscg-lock-note">Pick a lock. It goes on the {item.Craft?.Name ?? item.Asset.Description}.</p>);
+        } else if (!fields) {
+            box.replaceChildren(<p class="lscg-lock-note">{InventoryGetLock(item)?.Asset.Description ?? lockName} has no settings.</p>);
+        } else {
+            box.replaceChildren(...fields.map(f => {
+                const id = `${EDITOR_ID.lockSettings}-${f.prop}`;
+                const input = <input
+                    id={id} type="text" maxLength={f.max} value={String(item.Property?.[f.prop as keyof ItemProperties] ?? "")}
+                    onChange={() => this.#setLockField(group, f, input)}
+                /> as HTMLInputElement;
+                return <label class="lscg-lock-field" for={id}><span>{f.label}</span>{input}</label>;
+            }));
+        }
+    }
+
+    #setLockField(group: AssetGroup, field: LockField, input: HTMLInputElement) {
+        const item = this.preview && InventoryGet(this.preview, group.Name);
+        if (!item?.Property) return;
+        const value = field.upper ? input.value.toUpperCase() : input.value;
+        const valid = field.valid.test(value);
+        input.toggleAttribute("aria-invalid", !valid);
+        input.title = valid ? "" : field.rule;
+        if (!valid) return; // keep the old value in the item; the field shows what's wrong
+        input.value = value;
+        (item.Property as Record<string, unknown>)[field.prop] = value;
+        this.#commitGroup(group.Name, true);
+        this.#openLockModal();
+    }
+
+    /** Wears a crafted item: BC applies the craft's color, type and lock. A copy, so the player's own list isn't touched. */
+    #wearCraft(group: AssetGroup, asset: Asset, craft: CraftingItem) {
+        if (!this.preview) return;
+        this.#closeGrid();
+        InventoryWear(this.preview, asset.Name, group.Name, undefined, 0, Player.MemberNumber, structuredClone(craft));
+        this.#commitGroup(group.Name, true);
+    }
+
+    #pickAsset(name: string) {
+        const sel = document.getElementById(EDITOR_ID.itemAsset) as HTMLSelectElement | null;
+        if (!sel) return;
+        sel.value = name;
+        this.#setItem();
+    }
+
+    #updateItemPanel() {
+        const group = this.#itemGroup();
+        const worn = group && this.preview ? InventoryGet(this.preview, group.Name) : null;
+        const set = (id: string, disabled: boolean) => { (document.getElementById(id) as HTMLButtonElement | null)?.toggleAttribute("disabled", disabled); };
+        const open = document.getElementById(EDITOR_ID.itemOpen);
+        if (open) open.innerText = worn ? (worn.Craft?.Name ?? worn.Asset.Description) : "Choose item";
+        set(EDITOR_ID.itemConfigure, !worn?.Asset.Extended);
+        set(EDITOR_ID.itemColor, !worn || worn.Asset.ColorableLayerCount < 1);
+        set(EDITOR_ID.itemLock, !worn || !InventoryDoesItemAllowLock(worn));
+        set(EDITOR_ID.itemRemove, !worn);
+    }
+
+    /** Rewrites one group's bundle in the incoming code from the preview (or drops it), then reloads the preview from the result. */
+    #commitGroup(group: AssetGroupName, keep: boolean) {
+        if (!this.SelectedOutfit || !this.preview) return;
+        const data = this.outfitModule.data;
+        const bundles = data.ConvertToBundle(this.IncomingCode).filter(b => b.Group !== group);
+        const item = keep ? InventoryGet(this.preview, group) : null;
+        if (item) bundles.push(BC_ItemsToItemBundles([item])[0]);
+        const incoming = data.EncodeBundle(bundles);
+        this.IncomingCode = incoming;
+        this.setFilteredIncoming();
+        ElementValue(EDITOR_ID.outfitInput, this.SelectedOutfit.code);
+        this.IncomingCode = incoming; // the input's own handler just overwrote it
+        if (item && !data.ConvertToBundle(this.SelectedOutfit.code).some(b => b.Group === group))
+            ToastManager.info("That item is hidden by the filter options, so it isn't in the outfit.");
+        this.#updateButton(EDITOR_ID.accept);
+        this.#updateButton(EDITOR_ID.outfitButton);
+        this.#updateItemPanel();
+    }
+
+    #setItem() {
+        const group = this.#itemGroup();
+        const name = (document.getElementById(EDITOR_ID.itemAsset) as HTMLSelectElement | null)?.value;
+        if (!group || !name || !this.preview) return;
+        this.#closeGrid();
+        InventoryWear(this.preview, name, group.Name, undefined, 0, Player.MemberNumber);
+        this.#commitGroup(group.Name, true);
+    }
+
+    #removeItem() {
+        const group = this.#itemGroup();
+        if (group) this.#commitGroup(group.Name, false);
+    }
+
+    #focusItem(kind: "extended" | "color") {
+        const group = this.#itemGroup();
+        const item = group && this.preview ? InventoryGet(this.preview, group.Name) : null;
+        if (!group || !item || !this.preview) return;
+        this.#focus = { kind, group: group.Name };
+        this.#closeGrid();
+        this.#closeLockModal();
+        this.#setChrome(false);
+        if (kind === "color") {
+            ItemColorLoad(this.preview, item, ...COLOR_RECT, true).then(() => ItemColorOnExit(() => setTimeout(() => this.#endFocus()))).catch(() => this.#endFocus());
+        } else {
+            DialogFocusItem = item;
+            DialogFocusItemName = group.Name + item.Asset.Name;
+            ExtendedItemInit(this.preview, item, false, true);
+            CommonDynamicFunction(`Inventory${DialogFocusItemName}Load()`);
+        }
+    }
+
+    /** The widget closed: write the (possibly changed) item back into the outfit and show the editor again. */
+    #endFocus() {
+        const focus = this.#focus;
+        if (!focus) return;
+        this.#clearFocus();
+        this.#commitGroup(focus.group, true);
+    }
+
+    #clearFocus() {
+        if (!this.#focus) return;
+        if (this.#focus.kind === "extended") {
+            DialogFocusItem = null;
+            DialogFocusItemName = null;
+            DialogTightenLoosenItem = null;
+            ExtendedItemSubscreen = null;
+        }
+        this.#focus = undefined;
+        this.#setChrome(true);
+    }
+
+    /** Shows the editor and Preferences' exit door, or hides them while one of BC's item widgets is up. */
+    #setChrome(visible: boolean) {
+        document.getElementById(editorRoot)?.style.setProperty("visibility", visible ? "visible" : "hidden");
+        document.getElementById("preference-exit")?.style.setProperty("visibility", visible ? "visible" : "hidden");
+    }
+
+    #drawFocus(preview: Character, focus: { kind: "extended" | "color", group: AssetGroupName }) {
+        if (focus.kind === "color") {
+            ItemColorDraw(preview, focus.group, ...COLOR_RECT);
+        } else if (DialogTightenLoosenItem) {
+            DrawRect(1000, 0, 1000, 1000, "Black"); // BC's item screens assume its dark dialog background
+            TightenLoosenItemDraw(DialogTightenLoosenItem);
+        } else if (DialogFocusItem) {
+            DrawRect(1000, 0, 1000, 1000, "Black");
+            // BC's permissions button means nothing here: keep its hover and tooltip from showing, then cover it
+            const mouseX = MouseX;
+            if (MouseIn(...PERMISSIONS_BUTTON)) MouseX = -9999;
+            try {
+                CommonDynamicFunction(`Inventory${DialogFocusItemName}Draw()`);
+            } finally {
+                MouseX = mouseX;
+            }
+            DrawRect(...PERMISSIONS_BUTTON, "Black");
+            DrawButton(...BACK_BUTTON, "", "White", "Icons/Exit.png", "Back");
+        } else {
+            this.#endFocus(); // the item's own screens closed it
+        }
+    }
+
+    #clickFocus(preview: Character, focus: { kind: "extended" | "color", group: AssetGroupName }) {
+        if (focus.kind === "color") ItemColorClick(preview, focus.group, ...COLOR_RECT);
+        else if (DialogTightenLoosenItem) TightenLoosenItemClick(preview, DialogTightenLoosenItem);
+        else if (MouseIn(...PERMISSIONS_BUTTON)) return;
+        else if (MouseIn(...BACK_BUTTON)) DialogLeaveFocusItem();
+        else if (DialogFocusItem) CommonDynamicFunction(`Inventory${DialogFocusItemName}Click()`);
     }
 
     #nameTaken() {
@@ -706,10 +1358,10 @@ export class GuiOutfits extends GuiSubscreen {
         );
     }
 
-    #openEditor() {
+    /** @param resumeIncoming - restoring after the creator: keep the parked code and filters */
+    #openEditor(resumeIncoming?: string) {
         if (this.SelectedOutfit) {
-            this.IncomingCode = this.SelectedOutfit.code;
-            this._excludedItems = [];
+            this.IncomingCode = resumeIncoming ?? this.SelectedOutfit.code;
             this.#showScreen(editorRoot);
 
             const comboEle = document.getElementById(EDITOR_ID.combinationSelect);
@@ -723,7 +1375,7 @@ export class GuiOutfits extends GuiSubscreen {
 
             this.#updateButton(EDITOR_ID.accept);
             this.#updateButton(EDITOR_ID.outfitButton);
-            this._outfitFilter = {
+            if (resumeIncoming === undefined) this._outfitFilter = {
                 clothes: true,
                 items: true,
                 cosplay: true,
@@ -735,6 +1387,8 @@ export class GuiOutfits extends GuiSubscreen {
             document.getElementById(EDITOR_ID.checkboxes)?.replaceChildren(this.createCheckboxes());
             this.preview = this.InitializePreview();
             this.reloadPreviewAppearance();
+            this.#fillGroups();
+            this.#updateItemPanel();
         } else this.#closeEditor();
     }
 
@@ -744,6 +1398,8 @@ export class GuiOutfits extends GuiSubscreen {
     }
 
     #closeEditor() {
+        this.#closeGrid();
+        this.#closeLockModal();
         this.SelectedKey = undefined;
         this.SelectedOutfit = undefined;
         this.#dropPreview();
@@ -793,7 +1449,7 @@ export class GuiOutfits extends GuiSubscreen {
     }
 
     InitializePreview(): Character {
-        const newCharacter = CopyCharacter(Player, `LSCGOutfitsCollection-${Player.MemberNumber}`);
+        const newCharacter = CopyCharacter(Player, `${OUTFIT_PREVIEW_ID}-${Player.MemberNumber}`);
 	    
         newCharacter.Owner = Player.Name;
         newCharacter.Ownership = { MemberNumber: Player.MemberNumber, Name: Player.Name, Start: CommonTime(), Stage: 1 };

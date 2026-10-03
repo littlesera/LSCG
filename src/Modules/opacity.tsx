@@ -3,7 +3,7 @@ import { BaseModule } from "base";
 import { getModule } from "modules";
 import { OpacitySettingsModel } from "Settings/Models/base";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { hookFunction, isDrawingOverridable, onCanvasResize, patchFunction } from "../utils";
+import { hookFunction, isDrawingOverridable, isOutfitEditorCharacter, onCanvasResize, patchFunction } from "../utils";
 import { StateModule } from "./states";
 import { endsWith, kebabCase, replace } from "lodash-es";
 import styles from "./opacity.scss?inline";
@@ -185,6 +185,10 @@ export class OpacityModule extends BaseModule {
         const leadLined = document.getElementById(ID.leadLined) as HTMLInputElement;
         if (leadLined)
             leadLined.checked = this.OpacityItem.Property?.LSCGLeadLined ?? false;
+        // BC's property whitelist drops LSCGLeadLined from every bundle, so on an outfit item the box would do nothing
+        const leadLinedLabel = leadLined?.closest("label");
+        if (leadLinedLabel)
+            leadLinedLabel.style.display = isOutfitEditorCharacter(this.OpacityCharacter) ? "none" : "";
 
         const opacityArr = this.getOpacity();
         let opacityValue = 100;

@@ -128,6 +128,9 @@ export class GUI extends BaseModule {
 				if (this._currentSubscreen) {
 					this._currentSubscreen.Exit();
 				}
+				// Exit steps back one level (the main menu clears the extension itself). Returning false keeps BC from
+				// also dropping out of LSCG, which Escape did from every screen.
+				return false;
 			},
 			unload: () => {
 				if (this._currentSubscreen) {
