@@ -158,6 +158,11 @@
 			min-height: min(6dvh, 3dvw);
 		}
 
+		// BC buttons position their label absolutely, so the text no longer gives the button a height.
+		.lscg-button {
+			min-height: min(6dvh, 3dvw);
+		}
+
 		textarea {
 			box-sizing: border-box;
 			font: inherit;

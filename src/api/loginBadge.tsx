@@ -5,9 +5,9 @@ import { apiVersion, extensions } from "api";
 import { isExtensionDisabled, knownExtensions, setExtensionEnabled } from "./extensions";
 import badgeStyles from "./loginBadge.scss?inline";
 
-// A small square in the bottom-right corner of the 2000x1000 canvas, with the logo above the version. The flyout
-// opens upward and to the left.
-const BADGE_SHAPE: RectTuple = [1916, 916, 66, 66];
+// A small square in the bottom-left corner of the 2000x1000 canvas (another mod uses the bottom right), with the
+// logo above the version. The flyout opens upward and to the right.
+const BADGE_SHAPE: RectTuple = [18, 916, 66, 66];
 
 /** Notes shown under an extension after the player toggles it, until the page reloads. */
 const notes = new Map<string, string>();
@@ -38,8 +38,7 @@ function buildFlyout(): HTMLElement {
                         const note = notes.get(info.id);
                         return <li class={enabled ? "" : "lscg-badge-off"}>
                             <label class="lscg-badge-toggle" title={enabled ? "Turn this extension off" : "Turn this extension on"}>
-                                <input type="checkbox" checked={enabled} aria-label={`${info.name} enabled`}
-                                    onChange={e => toggle(info.id, (e.currentTarget as HTMLInputElement).checked)} />
+                                {ElementCheckbox.Create(null, function() { toggle(info.id, this.checked); }, { checked: enabled }, { checkbox: { attributes: { "aria-label": `${info.name} enabled` } } })}
                                 <span><b>{info.name}</b> <small>{info.version ? `v${info.version}` : ""}</small></span>
                             </label>
                             <small>{info.id}</small>

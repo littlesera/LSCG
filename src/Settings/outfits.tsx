@@ -1342,9 +1342,17 @@ export class GuiOutfits extends GuiSubscreen {
                 </fieldset>;
     }
 
+    /** Empties the old checkboxes first: BC refuses to create an element whose id is still in the page. */
+    rebuildCheckboxes() {
+        const host = document.getElementById(EDITOR_ID.checkboxes);
+        host?.replaceChildren();
+        host?.append(this.createCheckboxes());
+    }
+
     createCheckbox(id: string, value: boolean, label: string, disabled: boolean = false) {
+        const self = this;
         return <label>
-                <input id={id} type="checkbox" checked={value} disabled={disabled} onChange={evt => this.toggleCheckbox(evt.currentTarget)}/>
+                {ElementCheckbox.Create(id, function() { self.toggleCheckbox(this); }, { checked: value, disabled })}
                 {label}
             </label>;
     }
@@ -1384,7 +1392,7 @@ export class GuiOutfits extends GuiSubscreen {
                 skin: true,
                 gender: true,
             };
-            document.getElementById(EDITOR_ID.checkboxes)?.replaceChildren(this.createCheckboxes());
+            this.rebuildCheckboxes();
             this.preview = this.InitializePreview();
             this.reloadPreviewAppearance();
             this.#fillGroups();
@@ -1500,7 +1508,7 @@ export class GuiOutfits extends GuiSubscreen {
             case EDITOR_ID.cosplayCheck: this._outfitFilter.cosplay = checked; break;
             case EDITOR_ID.bodyCheck: 
                 this._outfitFilter.body = checked;
-                document.getElementById(EDITOR_ID.checkboxes)?.replaceChildren(this.createCheckboxes());
+                this.rebuildCheckboxes();
                 break;
             case EDITOR_ID.hairCheck: this._outfitFilter.hair = checked; break;
             case EDITOR_ID.skinCheck: this._outfitFilter.skin = checked; break;

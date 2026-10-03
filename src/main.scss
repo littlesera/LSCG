@@ -75,6 +75,11 @@
 	&:disabled {
 		background-color: color-mix(in srgb, var(--lscg-button-color) 60%, black 40%);
 	}
+
+	// BC's button labels get a translucent white backing, for legibility over icons; here it would lighten the colour.
+	.button-label {
+		background: transparent;
+	}
 }
 
 #lscg-button-menu {
