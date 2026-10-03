@@ -8,11 +8,11 @@ export class StateMigrator extends BaseMigrator {
     Migrate(fromVersion: string): boolean {
         // Migration to StatesModule
         console.info("Migrating LSCG Data for new States Module.");
-        let anyImmersive = (Player.LSCG?.HypnoModule as any).immersive || (Player.LSCG?.InjectorModule as any).immersive || (Player.LSCG?.MiscModule as any).immersiveChloroform;
+        const anyImmersive = (Player.LSCG?.HypnoModule as any).immersive || (Player.LSCG?.InjectorModule as any).immersive || (Player.LSCG?.MiscModule as any).immersiveChloroform;
         Player.LSCG.StateModule.immersive = anyImmersive;
 
         // Migrate Hypnosis State
-        if (!!(Player.LSCG.HypnoModule as any).existingEye1Color) {
+        if ((Player.LSCG.HypnoModule as any).existingEye1Color) {
             let hypnoState = Player.LSCG.StateModule.states.find(s => s.type == "hypnotized");
             if (!hypnoState) {
                 hypnoState = <StateConfig>{
@@ -22,8 +22,8 @@ export class StateMigrator extends BaseMigrator {
                     activatedAt: (Player.LSCG.HypnoModule as any).activatedAt,
                     recoveredAt: (Player.LSCG.HypnoModule as any).recoveredAt,
                     activationCount: Player.LSCG.HypnoModule.stats.hypnotizedCount,
-                    extensions: {}
-                }
+                    extensions: {},
+                };
                 Player.LSCG.StateModule.states.push(hypnoState);
             }
             hypnoState.extensions["existingEye1Color"] = (Player.LSCG.HypnoModule as any).existingEye1Color;

@@ -1,8 +1,8 @@
-interface PlayerCharacter extends Character {
+interface PlayerCharacter extends OnlineCharacter {
     LSCG: import("Settings/Models/settings").SettingsModel;
 }
 
-interface OtherCharacter extends Character {
+interface OtherCharacter extends OnlineCharacter {
     LSCG: import("Settings/Models/settings").IPublicSettingsModel;
 }
 
@@ -25,36 +25,44 @@ interface LSCGMessageDictionaryEntry {
 
 type LSCGMessageModelType = "init" | "sync" | "command" | "broadcast";
 
-type LSCGCommandName = "debug" 
-    | "grab" 
-    | "release" 
-    | "remote" 
-    | "escape" 
-    | "collar-tighten" 
-    | "collar-loosen" 
-    | "collar-stats" 
-    | "photo" 
-    | "spell" 
-    | "spell-teach" 
-    | "pair" 
-    | "unpair" 
-    | "pairing-update" 
-    | "get-spell" 
-    | "get-spell-response" 
-    | "get-suggestions" 
-    | "get-suggestions-response" 
-    | "set-suggestions" 
-    | "add-leashing" 
-    | "remove-leashing" 
-    | "craft-share" 
-    | "splat" 
-    | "swap-ask" 
-    | "swap-respond" 
-    | "cursed-item-request" 
-    | "cursed-item-response" 
-    | "h5-respond" 
-    | "h5-ask" 
-    | "h5-execute";
+/** A command sent by an extension: "<extension id>.<name>". Built-in command names never contain a ".". */
+type LSCGExtensionCommandName = `${string}.${string}`;
+
+type LSCGCommandName = "debug"
+    | "grab"
+    | "release"
+    | "remote"
+    | "escape"
+    | "collar-tighten"
+    | "collar-loosen"
+    | "collar-stats"
+    | "photo"
+    | "spell"
+    | "spell-teach"
+    | "pair"
+    | "unpair"
+    | "pairing-update"
+    | "get-spell"
+    | "get-spell-response"
+    | "get-suggestions"
+    | "get-suggestions-response"
+    | "set-suggestions"
+    | "add-leashing"
+    | "remove-leashing"
+    | "craft-share"
+    | "splat"
+    | "swap-ask"
+    | "swap-respond"
+    | "cursed-item-request"
+    | "cursed-item-response"
+    | "h5-execute"
+    | "consent-offer"
+    | "consent-answer"
+    | "consent-force"
+    | "consent-force-result"
+    | "speech-settings-set"
+    | "speech-settings-get"
+    | "speech-settings-response";
 
 type LSCGState = "none" | "hypnotized" | "asleep" | "horny" | "choking" | "held" | "blind" | "deaf" | "frozen" | "gagged" | "redressed" | "arousal-paired" | "orgasm-siphoned" | "leashed" | "resized" | "buffed" | "polymorphed" | "x-ray-vision" | "denied" | "protected" | "cursed-item" | "astral-projection";
 
@@ -68,7 +76,7 @@ interface LSCGMessageModel {
     target: number | null,
     reply: boolean,
     command?: {
-        name: LSCGCommandName,
+        name: LSCGCommandName | LSCGExtensionCommandName,
         args: {name: string, value: any}[]
     }
 }
@@ -100,6 +108,7 @@ type LSCGActivityName = ActivityName
     | "Bap"
     | "Chew"
     | "Chomp"
+    | "ClaspLeash"
     | "CollarTighten"
     | "CollarLoosen"
     | "CollarStats"
@@ -117,12 +126,13 @@ type LSCGActivityName = ActivityName
     | "GrabTongueWithFoot"
     | "Headbutt"
     | "HoldHand"
+    | "HoldLeash"
     | "Hug"
     | "KissEyes"
+    | "LetGoOfLeash"
     | "NecklaceToGag"
     | "NetGun"
     | "Nuzzle"
-    | "Quaff"
     | "Release"
     | "ReleaseChomp"
     | "ReleaseCollar"
@@ -142,6 +152,7 @@ type LSCGActivityName = ActivityName
     | "Throat"
     | "ThroatHandheld"
     | "Tug"
+    | "UnclaspLeash"
     | "LSCG_FunnelPour"
     | "LSCG_Splat"
 ;
@@ -154,17 +165,19 @@ type LSCGSpecialItems =
     | "MagicItem"
     | "PlushItem"
     | "PourableItem"
-    | "QuaffableItem"
     | "AnyItem"
 ;
 
 type LSCGActivityPrerequisite = ActivityPrerequisite
     | "CanChomp"
+    | "CanClaspLeash"
     | "CanCustomFlick"
     | "CanCustomNibble"
     | "CanGrindWithPussy"
     | "CanGive"
     | "CanHeadbutt"
+    | "CanHoldLeash"
+    | "CanLetGoOfLeash"
     | "CanPourIntoFunnel"
     | "CanSquirt"
     | "CanSteal"
@@ -202,6 +215,7 @@ type LSCGActivityPrerequisite = ActivityPrerequisite
     | "TargetIsHandUnleashed"
     | "TargetIsNeckChoked"
     | "TargetIsWearingGagNecklace"
+    | "TargetHasClaspedLeash"
     | "TargetHasPenis"
     | "TargetHornAvailable"
     | "TargetNotAlreadyCollarGrabbed"

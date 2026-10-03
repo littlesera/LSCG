@@ -1,14 +1,14 @@
 import { BaseModule } from "base";
 import { ModuleCategory } from "Settings/setting_definitions";
 import { GetTargetCharacter, OnActivity, removeAllHooksByModule } from "../utils";
-import { BaseSettingsModel, LipstickSettingsModel } from "Settings/Models/base";
+import { LipstickSettingsModel } from "Settings/Models/base";
 
 export class LipstickModule extends BaseModule {
 
     get defaultSettings() {
         return <LipstickSettingsModel>{
             enabled: false,
-            dry: false
+            dry: false,
         };
     }
 
@@ -18,8 +18,8 @@ export class LipstickModule extends BaseModule {
             "r": 1,
             "f": 0,
             "n": 0,
-            "l": 0
-        }
+            "l": 0,
+        };
     }
 
     safeword(): void {
@@ -30,8 +30,8 @@ export class LipstickModule extends BaseModule {
         OnActivity(100, ModuleCategory.Lipstick, (data, sender, msg, metadata) => {
             if (!this.Enabled)
                 return;
-            let target = GetTargetCharacter(data);
-            if (!!target && 
+            const target = GetTargetCharacter(data);
+            if (!!target &&
                 !!sender &&
                 !(sender as OtherCharacter).LSCG?.LipstickModule?.dry &&
                 target == Player.MemberNumber) {
@@ -49,11 +49,12 @@ export class LipstickModule extends BaseModule {
                             break;
                         case "ChatOther-ItemMouth-GagKiss":
                             this.AddGagKissMark(sender);
+                            break;
                         default:
                             break;
                     }
-        
-                    var item = data.Dictionary?.find((d: any) => d.Tag == "ActivityAsset");
+
+                    const item = data.Dictionary?.find((d: any) => d.Tag == "ActivityAsset");
                     if (!!item && item.AssetName == "Towel") {
                         switch (data.Content) {
                             case "ChatOther-ItemHood-RubItem" :
@@ -82,8 +83,8 @@ export class LipstickModule extends BaseModule {
 
     getKisserLipColor(sender: Character): ItemColor | undefined {
         try {
-            var mouth = InventoryGet(sender, "Mouth");
-            if (!!mouth && mouth.Color && mouth.Color != "Default")
+            const mouth = InventoryGet(sender, "Mouth");
+            if (!!mouth && !ItemColorIsDefault(mouth))
                 return mouth.Color;
             else
                 return "Default";
@@ -92,47 +93,47 @@ export class LipstickModule extends BaseModule {
             return "Default";
         }
     }
-    
-    getExistingLipstickMarks(color: ItemColor | undefined) {
-        let slots = [InventoryGet(Player, "Mask"), InventoryGet(Player, "ClothAccessory")].filter(s => !!s && s.Asset.Name == "Kissmark");
 
-        var matching = slots.find(s => Array.isArray(s?.Color) && Array.isArray(color) && s?.Color[0] == color[0]);
-        if (!!matching)
+    getExistingLipstickMarks(color: ItemColor | undefined) {
+        const slots = [InventoryGet(Player, "Mask"), InventoryGet(Player, "ClothAccessory")].filter(s => !!s && s.Asset.Name == "Kissmark");
+
+        const matching = slots.find(s => Array.isArray(s?.Color) && Array.isArray(color) && s?.Color[0] == color[0]);
+        if (matching)
             return matching;
 
         if (slots.length < 2)
             return this.addLipstickMarks();
-        else 
+        else
             return slots[0];
     }
-    
+
     addLipstickMarks() {
         let slot: AssetGroupName = "Mask";
-        var mask = InventoryGet(Player, "Mask");
-        if (!!mask){
+        const mask = InventoryGet(Player, "Mask");
+        if (mask){
             slot = "ClothAccessory";
         }
 
-        let final = InventoryGet(Player, slot);
+        const final = InventoryGet(Player, slot);
         if (!final) {
             InventoryRemove(Player, slot);
             InventoryWear(Player, "Kissmark", slot, "Default", 1, Player.MemberNumber ?? 0, undefined, true);
-            var marks = InventoryGet(Player, slot);
+            const marks = InventoryGet(Player, slot);
             // Maybe not needed anymore?
             if (!!marks && !!marks.Property)
                 marks.Property.TypeRecord = this.baseKissTypeRecord;
             return marks;
         } else return undefined;
     }
-    
+
     kissMarkSlotsOccupied() {
-        var mask = InventoryGet(Player, "Mask");
-        var acc = InventoryGet(Player, "ClothAccessory");
+        const mask = InventoryGet(Player, "Mask");
+        const acc = InventoryGet(Player, "ClothAccessory");
         if (!!mask && mask.Asset.Name != "Kissmark" && !!acc && acc.Asset.Name != "Kissmark")
             return true;
         return false;
     }
-    
+
     getKissMarkStatus(typeRecord: TypeRecord) {
         //"c0r1f0n0l0"
         return {
@@ -140,27 +141,27 @@ export class LipstickModule extends BaseModule {
             cheek2: typeRecord["r"] == 0,
             forehead: typeRecord["f"] == 1,
             neck1: typeRecord["n"] == 1,
-            neck2: typeRecord["l"] == 1
+            neck2: typeRecord["l"] == 1,
         };
     }
-    
+
     getKissMarkTypeRecord(status: any) {
         return <TypeRecord>{
             "c": status.cheek1 ? 1 : 0,
             "r": status.cheek2 ? 0 : 1,
             "f": status.forehead ? 1 : 0,
             "n": status.neck1 ? 1 : 0,
-            "l": status.neck2 ? 1 : 0
-        }
-    }    
+            "l": status.neck2 ? 1 : 0,
+        };
+    }
 
     RemoveKissMark(location: "cheek" | "forehead" | "neck" | "all") {
-        var marks = [InventoryGet(Player, "Mask"), InventoryGet(Player, "ClothAccessory")].filter(m => !!m && m.Asset.Name == "Kissmark")
+        const marks = [InventoryGet(Player, "Mask"), InventoryGet(Player, "ClothAccessory")].filter(m => !!m && m.Asset.Name == "Kissmark");
         if (!marks || marks.length <= 0)
             return;
 
         marks.forEach(mark => {
-            var status = this.getKissMarkStatus(mark?.Property?.TypeRecord ?? this.baseKissTypeRecord);
+            const status = this.getKissMarkStatus(mark?.Property?.TypeRecord ?? this.baseKissTypeRecord);
 
             switch (location) {
                 case "cheek" :
@@ -180,14 +181,15 @@ export class LipstickModule extends BaseModule {
                     status.forehead = false;
                     status.neck1 = false;
                     status.neck2 = false;
+                    break;
                 default :
                     break;
             }
-        
+
             if (!!mark && !!mark.Property)
                 mark.Property.TypeRecord = this.getKissMarkTypeRecord(status);
-        })
-        
+        });
+
         if (location == "cheek" || location == "all")
             this.removeGagKissMark();
 
@@ -195,17 +197,17 @@ export class LipstickModule extends BaseModule {
     }
 
     AddKissMark(sender: Character, location: string) {
-        var color = this.getKisserLipColor(sender);
+        const color = this.getKisserLipColor(sender);
         if (color == "Default")
             return; // No lipstick
-    
-        var marks = this.getExistingLipstickMarks(color);
+
+        const marks = this.getExistingLipstickMarks(color);
         if (!marks)
             return;
-    
-        marks.Color = color;
-        var status = this.getKissMarkStatus(marks?.Property?.TypeRecord ?? this.baseKissTypeRecord);
-    
+
+        marks.Color = ServerParseColor(marks.Asset, color, marks.Asset.Group.ColorSchema);
+        const status = this.getKissMarkStatus(marks?.Property?.TypeRecord ?? this.baseKissTypeRecord);
+
         // Adjust marks
         switch (location) {
             case "cheek" :
@@ -226,18 +228,18 @@ export class LipstickModule extends BaseModule {
             default :
                 break;
         }
-    
+
         if (!!marks && !!marks.Property)
             marks.Property.TypeRecord = this.getKissMarkTypeRecord(status);
         ChatRoomCharacterUpdate(Player);
     }
 
     AddGagKissMark(sender: Character) {
-        var color = this.getKisserLipColor(sender);
+        const color = this.getKisserLipColor(sender);
         if (color == "Default")
             return; // No lipstick
 
-        var existingItem = InventoryGet(Player, "ItemMouth3");
+        let existingItem = InventoryGet(Player, "ItemMouth3");
         if (!!existingItem && existingItem.Asset.Name != "Kissmark")
             return;
 
@@ -250,13 +252,13 @@ export class LipstickModule extends BaseModule {
         if (!existingItem)
             return;
 
-        existingItem.Color = color;
+        existingItem.Color = ServerParseColor(existingItem.Asset, color, existingItem.Asset.Group.ColorSchema);
 
         ChatRoomCharacterUpdate(Player);
     }
 
     removeGagKissMark() {
-        var gagKissmark = InventoryGet(Player, "ItemMouth3");
+        const gagKissmark = InventoryGet(Player, "ItemMouth3");
         if (!!gagKissmark && gagKissmark.Asset.Name == "Kissmark")
             InventoryRemove(Player, "ItemMouth3");
     }

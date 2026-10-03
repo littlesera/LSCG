@@ -1,7 +1,5 @@
 import { ICONS } from "utils";
-import { InjectorSettingsModel } from "./Models/injector";
-import { GuiSubscreen, Setting } from "./settingBase";
-import { BaseSettingsModel } from "./Models/base";
+import { GuiSubscreen } from "./settingBase";
 import { getModule } from "modules";
 import { CommandModule } from "Modules/commands";
 
@@ -25,7 +23,7 @@ export class GuiReset extends GuiSubscreen {
 	Run() {
 		MainCanvas.textAlign = "center";
 
-		DrawText(`- Permanent reset of ALL LSCG data -`, 1000, 125, "Black");
+		DrawText("- Permanent reset of ALL LSCG data -", 1000, 125, "Black");
 
 		DrawText("- Warning -", 1000, 225, "Black", "Black");
 		DrawText("If you confirm, all LSCG data (including settings, overrides, and current states) will be permanently reset!", 1000, 325, "Black");
@@ -40,7 +38,7 @@ export class GuiReset extends GuiSubscreen {
 			return;
 		}
 
-		let now = Date.now();
+		const now = Date.now();
 		if (now < this.allowedConfirmTime) {
 			DrawButton(300, 720, 200, 80, `Confirm (${Math.floor((this.allowedConfirmTime - now) / 1000)})`, "#ddd", undefined, undefined, true);
 		} else {

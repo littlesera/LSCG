@@ -52,8 +52,8 @@ function sendDone() {
         payload: { 
             lightPolygons: cachedLightPolygons, 
             visionPolygon: cachedVisionPolygon, 
-            segments: cachedSegments 
-        }
+            segments: cachedSegments, 
+        },
     });
 }
 

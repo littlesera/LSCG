@@ -1,12 +1,14 @@
-import { BaseModule } from 'base';
-import { CollarSettingsModel } from 'Settings/Models/collar';
-import { ModuleCategory, Subscreen } from 'Settings/setting_definitions';
-import { settingsSave, SendAction, OnChat, getRandomInt, hookFunction, removeAllHooksByModule, OnActivity, OnAction, setOrIgnoreBlush, getCharacter, hookBCXCurse, isPhraseInString, GetTargetCharacter, GetMetadata, GetDelimitedList, sendLSCGCommand, ICONS, LSCG_SendLocal, GetItemNameAndDescriptionConcat, GetItemName } from '../utils';
-import { GuiCollar } from 'Settings/collar';
-import { ActivityBundle, ActivityModule, ActivityTarget, CustomPrerequisite } from './activities';
-import { getModule } from 'modules';
-import { InjectorModule } from './injector';
-import { LeashingModule } from './leashing';
+import { BaseModule } from "base";
+import { CollarSettingsModel } from "Settings/Models/collar";
+import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
+import { settingsSave, SendAction, OnChat, getRandomInt, hookFunction, removeAllHooksByModule, OnAction, setOrIgnoreBlush, getCharacter, hookBCXCurse, isPhraseInString, GetTargetCharacter, GetMetadata, GetDelimitedList, sendLSCGCommand, ICONS, LSCG_SendLocal, GetItemName } from "../utils";
+import { GuiCollar } from "Settings/collar";
+import { ActivityModule } from "./activities";
+import { getModule } from "modules";
+import { InjectorModule } from "./injector";
+import { LeashingModule } from "./leashing";
+import { emit } from "api/events";
+import type { LSCGPassoutReason } from "api/types";
 
 enum PassoutReason {
     COLLAR,
@@ -15,9 +17,16 @@ enum PassoutReason {
     CHAIN
 }
 
+const PASSOUT_REASON_NAMES: Record<PassoutReason, LSCGPassoutReason> = {
+    [PassoutReason.COLLAR]: "collar",
+    [PassoutReason.HAND]: "hand",
+    [PassoutReason.PLUGS]: "plugs",
+    [PassoutReason.CHAIN]: "chain",
+};
+
 export class CollarModule extends BaseModule {
     activities: ActivityModule | undefined;
-    
+
     get settings(): CollarSettingsModel {
 		return super.settings as CollarSettingsModel;
 	}
@@ -27,8 +36,8 @@ export class CollarModule extends BaseModule {
 	}
 
     WearingCorrectCollar(C: OtherCharacter | PlayerCharacter) {
-        var collar = InventoryGet(C, "ItemNeck");
-        let collarSettings = C.LSCG?.CollarModule;
+        const collar = InventoryGet(C, "ItemNeck");
+        const collarSettings = C.LSCG?.CollarModule;
         if (!collar || !collarSettings || !collarSettings.enabled)
             return false;
 
@@ -39,8 +48,8 @@ export class CollarModule extends BaseModule {
         if (!collarSettings.collar.creator) {
             return collar?.Asset.Name == collarSettings.collar.name;
         } else {
-            var collarName = collar?.Craft?.Name ?? (collar?.Asset.Name ?? "");
-            var collarCreator = collar?.Craft?.MemberNumber ?? -1;
+            const collarName = collar?.Craft?.Name ?? (collar?.Asset.Name ?? "");
+            const collarCreator = collar?.Craft?.MemberNumber ?? -1;
             return collarName == collarSettings.collar.name && collarCreator == collarSettings.collar.creator;
         }
     }
@@ -77,8 +86,8 @@ export class CollarModule extends BaseModule {
                 collarPassoutCount: 0,
                 gagPassoutCount: 0,
                 handPassoutCount: 0,
-                chainPassoutCount: 0
-            }
+                chainPassoutCount: 0,
+            },
         };
     }
 
@@ -93,12 +102,12 @@ export class CollarModule extends BaseModule {
 			Description: " [tight/loose/stat] : Use to self-tighten, self-loosen, or read out information about your collar if allowed. Must be unrestrained to use.",
 			Action: (args, msg, parsed) => {
 				if (!this.settings.collarPurchased) {
-					LSCG_SendLocal(`Collar module not purchased.`);
+					LSCG_SendLocal("Collar module not purchased.");
 					return;
 				}
 
 				if (!this.wearingCorrectCollar) {
-					LSCG_SendLocal(`You are not wearing a properly configured collar.`);
+					LSCG_SendLocal("You are not wearing a properly configured collar.");
 					return;
 				}
 				if (!this.Enabled)
@@ -118,11 +127,11 @@ export class CollarModule extends BaseModule {
 						case "stats":
 							this.StatsButtonPress(Player);
 							break;
-					} 
+					}
 				} else if (parsed.length == 0) {
-					LSCG_SendLocal(`<b>/lscg collar</b> [tight/loose/stat] : Use to self-tighten, self-loosen, or read out information about your collar if allowed. Must be unrestrained to use."`);
+					LSCG_SendLocal("<b>/lscg collar</b> [tight/loose/stat] : Use to self-tighten, self-loosen, or read out information about your collar if allowed. Must be unrestrained to use.\"");
 				}
-			}
+			},
 		}];
     }
 
@@ -134,7 +143,7 @@ export class CollarModule extends BaseModule {
         });
 
         OnAction(6, ModuleCategory.Collar, (data, sender, msg, meta) => {
-            var target = GetTargetCharacter(data);
+            const target = GetTargetCharacter(data);
             if (target != Player.MemberNumber)
                 return;
 
@@ -145,21 +154,21 @@ export class CollarModule extends BaseModule {
                     this.CheckChainSuffocate(msg, sender);
                 }
             }
-        })
+        });
 
         hookFunction("InventoryRemove", 1, (args, next) => {
-            let C: Character = args[0];
-            let GroupName: string = args[1];
-            if (GroupName == "ItemNeck" && C.IsPlayer())
+            const C: Character = args[0];
+            const GroupNames: readonly AssetGroupName[] = typeof args[1] === "string" ? [args[1]] : args[1];
+            if (GroupNames.includes("ItemNeck") && C.IsPlayer())
                 this.ReleaseCollar();
-            next(args);
+            return next(args);
         }, ModuleCategory.Collar);
 
         hookFunction("ChatRoomDoHoldLeash", 1, (args, next) => {
             if (super.Enabled && Player.LSCG.MiscModule.chokeChainEnabled) {
-                let chainItem = InventoryGet(Player, "ItemNeckRestraints");
+                const chainItem = InventoryGet(Player, "ItemNeckRestraints");
                 if (!!chainItem && chainItem.Asset.Name == "ChokeChain") {
-                    let sender = args[0];
+                    const sender = args[0];
                     this.ChainChoke(sender, 1, GetItemName(chainItem));
                 }
             }
@@ -168,9 +177,9 @@ export class CollarModule extends BaseModule {
 
         hookFunction("ChatRoomDoStopHoldLeash", 1, (args, next) => {
             if (super.Enabled && Player.LSCG.MiscModule.chokeChainEnabled) {
-                let chainItem = InventoryGet(Player, "ItemNeckRestraints");
+                const chainItem = InventoryGet(Player, "ItemNeckRestraints");
                 if (!!chainItem && chainItem.Asset.Name == "ChokeChain") {
-                    let sender = getCharacter(ChatRoomLeashPlayer ?? 0);
+                    const sender = getCharacter(ChatRoomLeashPlayer ?? 0);
                     this.ChainChoke(sender, -1, GetItemName(chainItem));
                 }
             }
@@ -179,21 +188,21 @@ export class CollarModule extends BaseModule {
 
         // Detect if choking member is bound
         OnAction(6, ModuleCategory.Misc, (data, sender, msg, metadata) => {
-            let meta = GetMetadata(data);
-            let target = meta?.TargetMemberNumber;
-            let targetMember = meta?.TargetCharacter;
-            let groupName = meta?.GroupName;
+            const meta = GetMetadata(data);
+            const target = meta?.TargetMemberNumber;
+            const targetMember = meta?.TargetCharacter;
+            const groupName = meta?.GroupName;
             if (!!targetMember && target == this.handChokingMember && msg == "ActionUse") {
                 if (groupName == "ItemHands" || groupName == "ItemArms") {
                     this.ReleaseHandChoke(targetMember);
-                }                
+                }
             }
             return;
-        })
+        });
 
         let lastCheckedForGags = 0;
         hookFunction("TimerProcess", 1, (args, next) => {
-            let now = CommonTime();
+            const now = CommonTime();
             // Check gags every 10 seconds for any missed change..
             if (lastCheckedForGags + 10000 < now) {
                 lastCheckedForGags = now;
@@ -204,26 +213,26 @@ export class CollarModule extends BaseModule {
                 }
             }
             return next(args);
-        }, ModuleCategory.Collar)
+        }, ModuleCategory.Collar);
 
         // Check for Neck choker tighten/loosen
         OnAction(1, ModuleCategory.Misc, (data, sender, msg, metadata) => {
             if (!super.Enabled || !Player.LSCG.MiscModule.chokeChainEnabled)
                 return;
 
-            let messagesToCheck = [
+            const messagesToCheck = [
                 "ActionLoosenLot",
                 "ActionLoosenLittle",
                 "ActionTightenLot",
-                "ActionTightenLittle"
-            ];
-            
-            let itemNames = [
-                "ChokeChain"
+                "ActionTightenLittle",
             ];
 
-            let target = GetTargetCharacter(data);
-            var targetItem = GetMetadata(data)?.Assets?.PrevAsset;
+            const itemNames = [
+                "ChokeChain",
+            ];
+
+            const target = GetTargetCharacter(data);
+            const targetItem = GetMetadata(data)?.Assets?.PrevAsset;
 
             if (target == Player.MemberNumber &&
                 (!targetItem || itemNames.indexOf(targetItem.Name) > -1) &&
@@ -244,9 +253,9 @@ export class CollarModule extends BaseModule {
                         modifier = 1;
                         break;
                 }
-                let chainItem = InventoryGet(Player, "ItemNeckRestraints");
+                const chainItem = InventoryGet(Player, "ItemNeckRestraints");
                 let itemName = targetItem?.Description;
-                if (!!chainItem)
+                if (chainItem)
                     itemName = GetItemName(chainItem);
                 this.ChainChoke(sender, modifier, itemName);
             }
@@ -258,9 +267,8 @@ export class CollarModule extends BaseModule {
             if (!super.Enabled || !Player.LSCG.MiscModule.gagChokeEnabled)
                 return;
 
-            let airwaySlots = ["ItemMouth", "ItemMouth2", "ItemMouth3", "ItemNose"];
-            let neckSlots = ["ItemNeckRestraints"];
-            let messagesToCheck = [
+            const airwaySlots = ["ItemMouth", "ItemMouth2", "ItemMouth3", "ItemNose"];
+            const messagesToCheck = [
                 "ActionUse",
                 "ActionSwap",
                 "ActionRemove",
@@ -270,11 +278,11 @@ export class CollarModule extends BaseModule {
                 "PumpGagdeflatesTo",
                 "ItemMouthFuturisticHarnessBallGagSet",
                 "ItemMouthFuturisticPanelGagSet",
-                "ItemMouthPonyGagSet"
-            ]
-            
-            let target = GetTargetCharacter(data);
-            var targetGroup = GetMetadata(data)?.GroupName;
+                "ItemMouthPonyGagSet",
+            ];
+
+            const target = GetTargetCharacter(data);
+            const targetGroup = GetMetadata(data)?.GroupName;
 
             if (target == Player.MemberNumber &&
                 messagesToCheck.some(x => msg.startsWith(x))) {
@@ -303,7 +311,7 @@ export class CollarModule extends BaseModule {
             return ret;
         }, ModuleCategory.Collar);
 
-        hookFunction('ServerSend', 4, (args, next) => {
+        hookFunction("ServerSend", 4, (args, next) => {
             // if (!this.Enabled && !Player.LSCG.MiscModule.handChokeEnabled)
             //     return next(args);
             const data = args[1] as ServerChatRoomMessage;
@@ -343,7 +351,7 @@ export class CollarModule extends BaseModule {
             else if (this.totalChokeLevel == 4) return [{r: 0, g: 0, b: 0, a: 0.6}];
             return next(args);
         }, ModuleCategory.Collar);
-            
+
         hookFunction("Player.GetBlurLevel", 5, (args, next) => {
             // if (!this.Enabled)
             //     return next(args);
@@ -374,7 +382,7 @@ export class CollarModule extends BaseModule {
                 Name: "CollarTighten",
                 MaxProgress: 90,
                 MaxProgressSelf: 90,
-                Prerequisite: ["UseHands", "ZoneAccessible"]
+                Prerequisite: ["UseHands", "ZoneAccessible"],
             },
             Targets: [
                 {
@@ -382,8 +390,8 @@ export class CollarModule extends BaseModule {
                     SelfAllowed: true,
                     TargetLabel: "Tighten Collar",
                     TargetAction: "",
-                    TargetSelfAction: ""
-                }
+                    TargetSelfAction: "",
+                },
             ],
             CustomPrereqs: [
                 {
@@ -392,18 +400,19 @@ export class CollarModule extends BaseModule {
                         if (!((<any>acted).LSCG?.CollarModule.allowButtons ?? false))
                             return false;
                         return this.WearingCorrectCollar(acted.IsPlayer() ? acted as PlayerCharacter : acted as OtherCharacter);
-                    }
-                }
+                    },
+                },
             ],
             CustomAction: {
                 Func: (target) => {
                     if (target?.IsPlayer())
                         this.TightenButtonPress(Player);
-                    else if (!!target)
+                    else if (target)
                         sendLSCGCommand(target, "collar-tighten");
-                }
+                    return false;
+                },
             },
-            CustomImage: ICONS.COLLAR
+            CustomImage: ICONS.COLLAR,
         });
 
         this.activities.AddActivity({
@@ -411,7 +420,7 @@ export class CollarModule extends BaseModule {
                 Name: "CollarLoosen",
                 MaxProgress: 90,
                 MaxProgressSelf: 90,
-                Prerequisite: ["UseHands", "ZoneAccessible", "IsWearingChokeCollar"]
+                Prerequisite: ["UseHands", "ZoneAccessible", "IsWearingChokeCollar"],
             },
             Targets: [
                 {
@@ -419,18 +428,19 @@ export class CollarModule extends BaseModule {
                     SelfAllowed: true,
                     TargetLabel: "Loosen Collar",
                     TargetAction: "",
-                    TargetSelfAction: ""
-                }
+                    TargetSelfAction: "",
+                },
             ],
             CustomAction: {
                 Func: (target) => {
                     if (target?.IsPlayer())
                         this.LoosenButtonPress(Player);
-                    else if (!!target)
+                    else if (target)
                         sendLSCGCommand(target, "collar-loosen");
-                }
+                    return false;
+                },
             },
-            CustomImage: ICONS.COLLAR
+            CustomImage: ICONS.COLLAR,
         });
 
         this.activities.AddActivity({
@@ -438,7 +448,7 @@ export class CollarModule extends BaseModule {
                 Name: "CollarStats",
                 MaxProgress: 10,
                 MaxProgressSelf: 10,
-                Prerequisite: ["UseHands", "ZoneAccessible", "IsWearingChokeCollar"]
+                Prerequisite: ["UseHands", "ZoneAccessible", "IsWearingChokeCollar"],
             },
             Targets: [
                 {
@@ -446,29 +456,31 @@ export class CollarModule extends BaseModule {
                     SelfAllowed: true,
                     TargetLabel: "Collar Stats",
                     TargetAction: "",
-                    TargetSelfAction: ""
-                }
+                    TargetSelfAction: "",
+                },
             ],
             CustomAction: {
                 Func: (target) => {
                     if (target?.IsPlayer())
                         this.StatsButtonPress(Player);
-                    else if (!!target)
+                    else if (target)
                         sendLSCGCommand(target, "collar-stats");
-                }
+                    return false;
+                },
             },
-            CustomImage: ICONS.COLLAR
+            CustomImage: ICONS.COLLAR,
         });
     }
 
     unload(): void {
         removeAllHooksByModule(ModuleCategory.Collar);
+        clearInterval(this.eventInterval);
     }
 
     // Choke Collar Code
     get allowedChokeMembers(): number[] {
-        let stringList = GetDelimitedList(this.settings.allowedMembers);
-        let memberList = stringList.filter(str => !!str && (+str === +str)).map(str => parseInt(str)).filter(id => id != Player.MemberNumber);
+        const stringList = GetDelimitedList(this.settings.allowedMembers);
+        const memberList = stringList.filter(str => !!str && (+str === +str)).map(str => parseInt(str)).filter(id => id != Player.MemberNumber);
         if (this.settings.limitToCrafted && this.settings.collar.creator >= 0)
             memberList.push(this.settings.collar.creator);
         return memberList;
@@ -498,14 +510,14 @@ export class CollarModule extends BaseModule {
         "%NAME%'s mouth moves without a sound.",
         "%NAME%'s whimpers inaudibly, unable to breathe.",
         "%NAME% groans and convulses.",
-        "%NAME% shudders as %POSSESSIVE% lungs burn."
-    ]
+        "%NAME% shudders as %POSSESSIVE% lungs burn.",
+    ];
 
     CheckChainSuffocate(msg: string, sender: Character | null) {
         if (this.chainChokeModifier > 0) {
-            let chainItem = InventoryGet(Player, "ItemNeckRestraints");
+            const chainItem = InventoryGet(Player, "ItemNeckRestraints");
             if (!chainItem || chainItem.Asset.Name != "ChokeChain") {
-                this.ChainChoke(sender, -4, !!chainItem ? GetItemName(chainItem) : "choke chain");
+                this.ChainChoke(sender, -4, chainItem ? GetItemName(chainItem) : "choke chain");
             }
         }
     }
@@ -514,16 +526,16 @@ export class CollarModule extends BaseModule {
         if (!Player.LSCG.MiscModule.gagChokeEnabled)
             return;
 
-        var chokeThreshold = 8;
-        var gaspThreshold = 5;
+        let chokeThreshold = 8;
+        const gaspThreshold = 5;
 
         // slightly lower threshold for pump and pony gag to choke at max level...
         if (msg.indexOf("PumpGag") > -1 || msg.indexOf("ItemMouthPonyGag") > -1) {
             chokeThreshold = 7;
         }
 
-        let gagLevel = SpeechGetTotalGagLevel(Player, true);
-        if ((gagLevel >= chokeThreshold && this.IsNosePlugged || 
+        const gagLevel = SpeechGetTotalGagLevel(Player, true);
+        if ((gagLevel >= chokeThreshold && this.IsNosePlugged ||
             (msg.indexOf("PumpGagpumpsTo") > -1 && gagLevel >= 7))) { // allow lower threshold for pump gag, letting it choke when full.
             if (!this.isPassingOut) {
                 if (msg.indexOf("PumpInflate") > -1) {
@@ -542,25 +554,25 @@ export class CollarModule extends BaseModule {
     }
 
     get IsNosePlugged(): boolean {
-        var item = InventoryGet(Player, "ItemNose");
+        const item = InventoryGet(Player, "ItemNose");
         if (!item)
             return false;
-        
-        let nosePlugItems = [
+
+        const nosePlugItems = [
             "NosePlugs",
             "NoseClip",
             "DuctTape",
-            "GlueNose"
-        ]
+            "GlueNose",
+        ];
 
         if (nosePlugItems.indexOf(item.Asset.Name) >= 0) {
             if (!item.Craft)
                 return true;
             else {
-                var name = item.Craft.Name;
-                var description = typeof CraftingDescription === "undefined" ? item.Craft.Description : CraftingDescription.Decode(item.Craft.Description); // R109
-                var totalString = name + " | " + description;
-        
+                const name = item.Craft.Name;
+                const description = CraftingDescription.Decode(item.Craft.Description);
+                const totalString = name + " | " + description;
+
                 return !isPhraseInString(totalString, "breathable");
             }
         } else {
@@ -576,15 +588,15 @@ export class CollarModule extends BaseModule {
             this.chokeTimeout = setTimeout(() => f(), delay);
     }
 
-    ChainChoke(chokingMember: Character | undefined | null, modifier: number, itemName: string = "choke chain") {        
+    ChainChoke(chokingMember: Character | undefined | null, modifier: number, itemName: string = "choke chain") {
         if (!Player.LSCG.MiscModule.chokeChainEnabled || !chokingMember || (this.chainChokeModifier <= 0 && modifier <= 0) || (this.chainChokeModifier >= 4 && modifier >= 0))
             return;
-        let origChokeMod = this.chainChokeModifier;
+        const origChokeMod = this.chainChokeModifier;
         this.chainChokeModifier = Math.max(Math.min(this.chainChokeModifier + modifier, 4), 0);
 
         CharacterSetFacialExpression(Player, "Eyebrows", "Soft", 15);
         if (modifier > 0) {
-            let chainItem = InventoryGet(Player, "ItemNeckRestraints");
+            const chainItem = InventoryGet(Player, "ItemNeckRestraints");
             switch (this.totalChokeLevel) {
                 case 1:
                     clearTimeout(this.chokeTimeout);
@@ -621,7 +633,7 @@ export class CollarModule extends BaseModule {
                     SendAction(`%NAME%'s takes a deep breath as %OPP_NAME_OR_SELF_PRONOUN% loosens %POSSESSIVE% ${itemName}.`, chokingMember);
                     setOrIgnoreBlush("Low");
                     CharacterSetFacialExpression(Player, "Eyes", "Sad");
-                    let chainItem = InventoryGet(Player, "ItemNeckRestraints");
+                    const chainItem = InventoryGet(Player, "ItemNeckRestraints");
                     if (!!chainItem?.Property?.Effect && chainItem?.Property?.Effect?.indexOf("IsLeashed") >= 0 && !ChatRoomLeashPlayer) {
                         chainItem?.Property?.Effect?.splice(chainItem?.Property?.Effect.indexOf("IsLeashed"), 1);
                         ChatRoomCharacterUpdate(Player);
@@ -651,10 +663,10 @@ export class CollarModule extends BaseModule {
         }
     }
 
-    HandChoke(chokingMember: Character | undefined | null) {        
+    HandChoke(chokingMember: Character | undefined | null) {
         if (this.handChokeModifier >= 4 || !Player.LSCG.MiscModule.handChokeEnabled || !chokingMember)
             return;
-            
+
         this.handChokingMember = chokingMember.MemberNumber ?? 0;
         this.handChokeModifier = Math.min(this.handChokeModifier + 1, 4);
 
@@ -730,8 +742,8 @@ export class CollarModule extends BaseModule {
         if (!this.settings.tightTrigger || !this.settings.looseTrigger)
             return;
 
-        let tightTriggers = GetDelimitedList(this.settings.tightTrigger);
-        let looseTriggers = GetDelimitedList(this.settings.looseTrigger);
+        const tightTriggers = GetDelimitedList(this.settings.tightTrigger);
+        const looseTriggers = GetDelimitedList(this.settings.looseTrigger);
 
         if (tightTriggers.some(trig => isPhraseInString(msg, trig)) && this.AllowedMember(sender, true))
             this.IncreaseCollarChoke();
@@ -744,7 +756,9 @@ export class CollarModule extends BaseModule {
             this.settings.chokeLevel = 0;
         if (this.settings.chokeLevel == 4)
             return;
+        const previousLevel = this.settings.chokeLevel;
         this.settings.chokeLevel = Math.min(this.settings.chokeLevel + 1, 4);
+        emit("collar.choke", { level: this.settings.chokeLevel, previousLevel });
         if (!AudioShouldSilenceSound(true))
             AudioPlaySoundEffect("HydraulicLock");
         this.IncreaseArousal();
@@ -789,6 +803,7 @@ export class CollarModule extends BaseModule {
         if (!AudioShouldSilenceSound(true))
             AudioPlaySoundEffect("Deflation");
         this.settings.chokeLevel--;
+        emit("collar.choke", { level: this.settings.chokeLevel, previousLevel: this.settings.chokeLevel + 1 });
         if (this.settings.chokeLevel > 0)
         this.setChokeTimeout(() => this.DecreaseCollarChoke(), this.chokeTimer);
 
@@ -825,7 +840,7 @@ export class CollarModule extends BaseModule {
 
     ReleaseCollar() {
         if (this.settings.chokeLevel > 0)
-            SendAction("%NAME% gulps thankfully as the threat to %POSSESSIVE% airway is removed.")
+            SendAction("%NAME% gulps thankfully as the threat to %POSSESSIVE% airway is removed.");
         this.ResetChoke();
     }
 
@@ -840,8 +855,8 @@ export class CollarModule extends BaseModule {
         "%NAME% gasps and gulps for air.",
         "%NAME%'s lungs expand hungrily as %PRONOUN% gasps in air.",
         "%NAME% groans as air is allowed back into %POSSESSIVE% lungs.",
-        "%NAME% gasps for air with a whimper."
-    ]
+        "%NAME% gasps for air with a whimper.",
+    ];
 
     ResetPlugs() {
         CharacterSetFacialExpression(Player, "Eyes", this.eyesAtTimeOfPassout);
@@ -860,6 +875,7 @@ export class CollarModule extends BaseModule {
         this.passout2Timer = totalTime * .3; // -- 3/10 of the total tiem in stage 1
         this.passout3Timer = totalTime * .2; // -- 1/5 of the total tiem in stage 1
         this.isPassingOut = true;
+        emit("collar.passout", { reason: PASSOUT_REASON_NAMES[reason], by: chokingMember?.MemberNumber });
         this.eyesAtTimeOfPassout = WardrobeGetExpression(Player)?.Eyes ?? null;
         this.blushAtTimeOfPassout = WardrobeGetExpression(Player)?.Blush ?? null;
         setOrIgnoreBlush("VeryHigh");
@@ -927,16 +943,16 @@ export class CollarModule extends BaseModule {
         }
         else if (reason == PassoutReason.HAND) {
             SendAction("As %NAME% collapses unconscious, %OPP_NAME% releases %POSSESSIVE% neck.", chokingMember);
-            if (!!chokingMember)
+            if (chokingMember)
                 getModule<LeashingModule>("LeashingModule").DoEscape(chokingMember);
             else
                 this.ReleaseHandChoke(chokingMember);
             this.settings.stats.handPassoutCount++;
         }
         else if (reason == PassoutReason.PLUGS) {
-            let noseItem = InventoryGet(Player, "ItemNose");
+            const noseItem = InventoryGet(Player, "ItemNose");
             let name = "nose plug";
-            if (!!noseItem) {
+            if (noseItem) {
                 name = GetItemName(noseItem);
             }
             SendAction(`As %NAME% slumps into unconsciousness, %POSSESSIVE% ${name} releases.`);
@@ -945,14 +961,14 @@ export class CollarModule extends BaseModule {
         }
         else if (reason == PassoutReason.CHAIN)
         {
-            let chainItem = InventoryGet(Player, "ItemNeckRestraints");
+            const chainItem = InventoryGet(Player, "ItemNeckRestraints");
             let name = "choke chain";
-            if (!!chainItem) {
+            if (chainItem) {
                 name = GetItemName(chainItem);
             }
             SendAction(`As %NAME% slumps into unconsciousness, %POSSESSIVE% ${name} loosens.`);
             let charRefresh = false;
-            if (!!chainItem) {
+            if (chainItem) {
                 chainItem.Difficulty = chainItem?.Difficulty ?? 10 - 10;
                 charRefresh = true;
             }
@@ -964,15 +980,15 @@ export class CollarModule extends BaseModule {
             this.chainChokeModifier = 0;
             this.settings.stats.chainPassoutCount++;
         }
-        
+
         if (this.settings.knockout)
             this.Knockout();
         settingsSave();
     }
 
     Knockout() {
-        var injector = getModule<InjectorModule>("InjectorModule");
-        let sleepTime = 60000 * (this.settings.knockoutMinutes ?? 2);
+        const injector = getModule<InjectorModule>("InjectorModule");
+        const sleepTime = 60000 * (this.settings.knockoutMinutes ?? 2);
         injector.Sleep(false, sleepTime + 1000); // Pass 1 extra second of duration just in case a relog occurs before the knockout timer recovers
         setTimeout(() => {
             if (injector.sedativeLevel <= 0)
@@ -999,20 +1015,20 @@ export class CollarModule extends BaseModule {
                 "%NAME% gulps as %PRONOUN% feels the tight collar around %POSSESSIVE% neck.",
                 "%NAME% shifts nervously in %POSSESSIVE% tight collar.",
                 "%NAME% trembles, very conscious of the tight collar around %POSSESSIVE% neck.",
-                "%NAME% huffs uncomfortably in %POSSESSIVE% tight collar."
+                "%NAME% huffs uncomfortably in %POSSESSIVE% tight collar.",
             ],
             mid: [
                 "%NAME% whimpers pleadingly as %PRONOUN% struggles to take a full breath.",
                 "%NAME% chokes against %POSSESSIVE% collar, moaning softly.",
                 "%NAME%'s eyes flutter weakly as %POSSESSIVE% collar presses into %POSSESSIVE% neck.",
-                "%NAME% tries to focus on breathing, each inhale an effort in %POSSESSIVE% collar."
+                "%NAME% tries to focus on breathing, each inhale an effort in %POSSESSIVE% collar.",
             ],
             high: [
                 "%NAME% splutters and chokes, struggling to breathe.",
                 "%NAME% grunts and moans, straining to breathe.",
-                "%NAME%'s eyes have trouble focusing, as %PRONOUN% chokes and gets lightheaded."
-            ]
-        }
+                "%NAME%'s eyes have trouble focusing, as %PRONOUN% chokes and gets lightheaded.",
+            ],
+        };
         switch (this.settings.chokeLevel) {
             case 1:
                 SendAction(ChokeEvents.low[getRandomInt(ChokeEvents.low.length)]);
@@ -1037,13 +1053,13 @@ export class CollarModule extends BaseModule {
             LSCG_SendLocal("Collar buttons disabled.");
             return;
         }
-        let playerName = CharacterNickname(Player);
-        let name = CharacterNickname(sender);
-        let possessive = CharacterPronoun(sender, "Possessive", false);
-        let isSelf = sender.IsPlayer();
+        const playerName = CharacterNickname(Player);
+        const name = CharacterNickname(sender);
+        const possessive = CharacterPronoun(sender, "Possessive", false);
+        const isSelf = sender.IsPlayer();
         if (sender.IsRestrained())
-            sender.IsPlayer() ? 
-                SendAction(`${name} struggles in ${possessive} bindings, unable to reach ${possessive} collar's controls.`) : 
+            sender.IsPlayer() ?
+                SendAction(`${name} struggles in ${possessive} bindings, unable to reach ${possessive} collar's controls.`) :
                 SendAction(`${name} struggles in ${possessive} bindings, unable to reach ${playerName}'s collar controls.`);
         else {
             isSelf ? SendAction(`${name} presses a button on ${possessive} collar.`) : SendAction(`${name} presses a button on ${playerName}'s collar.`);
@@ -1066,9 +1082,9 @@ export class CollarModule extends BaseModule {
 
     StatsButtonPress(sender: Character) {
         this._collarPressButton(sender, c => c.IsPlayer() || this.AllowedMember(c, false), () => {
-            let tightenTrigger = GetDelimitedList(this.settings.tightTrigger);
-            let loosenTrigger = GetDelimitedList(this.settings.looseTrigger);
-            let chokeCount = this.settings.stats.collarPassoutCount;
+            const tightenTrigger = GetDelimitedList(this.settings.tightTrigger);
+            const loosenTrigger = GetDelimitedList(this.settings.looseTrigger);
+            const chokeCount = this.settings.stats.collarPassoutCount;
             let remoteAccess = "ENABLED";
             if (!this.settings.remoteAccess)
                 remoteAccess = "DISABLED";

@@ -7,7 +7,7 @@ export class HornyState extends BaseState {
     Type: LSCGState = "horny";
 
     Icon(C: OtherCharacter): string {
-        return "Icons/Small/Lover.png";
+        return "Icons/Lover.png";
     }
     Label(C: OtherCharacter): string {
         return "Aroused";
@@ -18,13 +18,11 @@ export class HornyState extends BaseState {
     }
 
     Init(): void {
-        hookFunction('ActivitySetArousalTimer', 2, (args, next) => {
+        hookFunction("ActivitySetArousalTimer", 2, (args, next) => {
             if (this.Active) {
-                let Activity = args[1];
-                let Zone = args[2];
-                let Progress = args[3];
+                const Progress = args[3];
 
-                let hornyMod = 2;
+                const hornyMod = 2;
                 args[3] = Math.min(99, Progress * hornyMod);
             }
             return next(args);

@@ -13,8 +13,8 @@ export class BuffedState extends BaseState {
         "Evasion",
         "Willpower",
         "Infiltration",
-        "Dressage"
-    ]
+        "Dressage",
+    ];
 
     get negative(): boolean {
         return this.config.extensions["negative"] as boolean;
@@ -24,11 +24,11 @@ export class BuffedState extends BaseState {
     }
 
     Icon(C: OtherCharacter): string {
-        let isNegative = C.LSCG?.StateModule.states.find(s => s.type == "buffed")?.extensions["negative"] as boolean ?? false;
+        const isNegative = C.LSCG?.StateModule.states.find(s => s.type == "buffed")?.extensions["negative"] as boolean ?? false;
         return isNegative ? ICONS.DOWN : ICONS.UP;
     }
     Label(C: OtherCharacter): string {
-        let isNegative = C.LSCG?.StateModule.states.find(s => s.type == "buffed")?.extensions["negative"] as boolean ?? false;
+        const isNegative = C.LSCG?.StateModule.states.find(s => s.type == "buffed")?.extensions["negative"] as boolean ?? false;
         return isNegative ? "Baned" : "Blessed";
     }
 
@@ -70,7 +70,7 @@ export class BuffedState extends BaseState {
             if (emote) SendAction("%NAME%'s abilities return to normal.");
             BuffedState.BUFF_SKILLS.forEach(skill => {
                 SkillSetModifier(Player, skill, 0, 0, true);
-            })
+            });
         }
         return super.Recover(false);
     }
