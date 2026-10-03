@@ -81,15 +81,15 @@ export class OpacityModule extends BaseModule {
             <style id={ID.styles}>{styles}</style>
             <div id={ID.mainToolbar}>
                     <label class="lscg-checkbox">
-                        <input id={ID.allLayersCheck} type="checkbox" onChange={(evt) => this.onToggleAllLayers(evt)}/>
+                        {ElementCheckbox.Create(ID.allLayersCheck, (evt) => this.onToggleAllLayers(evt))}
                         All Layers
                     </label>
                     <label class="lscg-checkbox">
-                        <input id={ID.leadLined} type="checkbox" onChange={(evt) => this.onToggleLeadLined(evt)} checked={this.OpacityItem?.Property?.LSCGLeadLined}/>
+                        {ElementCheckbox.Create(ID.leadLined, (evt) => this.onToggleLeadLined(evt), { checked: !!this.OpacityItem?.Property?.LSCGLeadLined })}
                         Lead-Lined
                     </label>
                     <label class="lscg-checkbox">
-                        <input id={ID.translateCheck} type="checkbox" onChange={(evt) => this.onToggleTranslate(evt)}/>
+                        {ElementCheckbox.Create(ID.translateCheck, (evt) => this.onToggleTranslate(evt))}
                         Translate
                     </label>
                 </div>
