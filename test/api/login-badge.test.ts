@@ -1,11 +1,12 @@
-// The login-screen badge: a small cream square with the bound-girl logo and the version beneath it. It is there whenever
-// LSCG is loaded, with a flyout of the version and extensions, and pulses when there are extensions.
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+// The login-screen badge: a small "Installed Mods (n)" label. It is there whenever LSCG is loaded, with a flyout listing
+// the installed mods (LSCG's own entry holds its extensions), and pulses when there are extensions.
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { extensions, knownExtensions, registerExtension, setExtensionEnabled, type ModApiHandle } from "api/extensions";
 import { installLoadQueue } from "api";
 import { apiVersion } from "api";
 import { ICONS } from "utils";
+import bcModSDKRef from "bondage-club-mod-sdk";
 import { removeLoginBadge, showLoginBadge } from "api/loginBadge";
 
 describe("login badge", () => {
@@ -18,11 +19,15 @@ describe("login badge", () => {
         return handle;
     };
     const root = () => document.getElementById("lscg-login-badge");
-    const anchor = () => root()!.querySelector(".lscg-badge-anchor") as HTMLElement;
     const button = () => root()!.querySelector("button.lscg-badge") as HTMLButtonElement;
-    const flyout = () => root()!.querySelector(".lscg-badge-flyout") as HTMLElement;
+    const otherCount = () => bcModSDKRef.getModsInfo().filter(m => m.name !== "LSCG").length;
+    const flyout = () => root()!.querySelector(".lscg-badge-flyout") as HTMLDialogElement;
 
     beforeEach(() => {
+        // jsdom has no modal dialogs.
+        const proto = HTMLDialogElement.prototype as any;
+        proto.showModal = function () { this.setAttribute("open", ""); };
+        proto.close = function () { this.removeAttribute("open"); this.dispatchEvent(new Event("close")); };
         g.MainCanvas = Object.assign(g.MainCanvas ?? {}, { canvas: document.createElement("canvas") });
         g.CommonGetFontName = () => "arial";
         delete (window as any).LSCG_Loaded;
@@ -38,50 +43,146 @@ describe("login badge", () => {
         delete (window as any).LSCG_Loaded;
     });
 
-    describe("the square", () => {
-        it("is there for LSCG on its own, showing the bound-girl logo", () => {
+    describe("the badge", () => {
+        it("is there for LSCG on its own, counting LSCG as one installed mod", () => {
             showLoginBadge();
             expect(root()).not.toBeNull();
-            expect(button().querySelector("img")!.getAttribute("src")).toBe(ICONS.BOUND_GIRL);
+            expect(button().textContent).toBe(`Installed Mods (${1 + otherCount()})`);
         });
 
-        it("shows the version under the logo", () => {
-            showLoginBadge();
-            const [first, second] = Array.from(button().children);
-            expect(first.tagName).toBe("IMG");
-            expect(second.className).toContain("lscg-badge-version");
-            expect(second.textContent).toBe(`v${apiVersion}`);
-            expect(button().textContent).toBe(`v${apiVersion}`);
-            expect(button().getAttribute("aria-label")).toBe(`LSCG v${apiVersion} loaded`);
+        it("counts the other mods registered with ModSDK too", () => {
+            const before = otherCount();
+            const other = bcModSDKRef.registerMod({ name: "Counted", fullName: "Counted Mod", version: "1" });
+            try {
+                showLoginBadge();
+                expect(button().textContent).toBe(`Installed Mods (${before + 2})`);
+            } finally {
+                other.unload();
+            }
         });
 
-        it("holds nothing else: no stray text that would push the logo out of its box", () => {
+        it("updates its count as mods register, without being opened", () => {
+            vi.useFakeTimers();
+            try {
+                showLoginBadge();
+                const before = button().textContent;
+                const other = bcModSDKRef.registerMod({ name: "Late", fullName: "Late Mod", version: "1" });
+                try {
+                    vi.advanceTimersByTime(1100);
+                    expect(button().textContent).not.toBe(before);
+                    expect(button().textContent).toBe(`Installed Mods (${otherCount() + 1})`);
+                } finally {
+                    other.unload();
+                }
+            } finally {
+                vi.useRealTimers();
+            }
+        });
+
+        it("holds nothing else: no stray text that would push the label out of its box", () => {
             // A comment written inside JSX is rendered as literal text; that once displaced the whole badge.
             make();
             showLoginBadge();
-            expect(Array.from(anchor().childNodes).every(n => n.nodeType === Node.ELEMENT_NODE)).toBe(true);
-            expect(Array.from(button().childNodes).every(n => n.nodeType === Node.ELEMENT_NODE)).toBe(true);
-            expect(anchor().textContent).not.toContain("//");
-            expect(button().textContent).toBe(`v${apiVersion}`);
+            expect(Array.from(root()!.childNodes).every(n => n.nodeType === Node.ELEMENT_NODE)).toBe(true);
+            expect(root()!.textContent).not.toContain("//");
+            expect(button().textContent).toMatch(/^Installed Mods \(\d+\)$/);
         });
 
-        it("is a square, inside the canvas, in the bottom right, with the version stacked under the logo", () => {
+        it("is inside the canvas, centred under the Login button (the corners hold other mods' lists)", () => {
             const source = readFileSync("src/api/loginBadge.tsx", "utf-8");
             const [x, y, w, h] = /BADGE_SHAPE: RectTuple = \[(\d+), (\d+), (\d+), (\d+)\]/.exec(source)!.slice(1).map(Number);
-            expect(w).toBe(h);
             expect(x + w).toBeLessThanOrEqual(2000);
             expect(y + h).toBeLessThanOrEqual(1000);
-            expect(x).toBeGreaterThan(1500);
-            expect(y).toBeGreaterThan(800);
-            expect(readFileSync("src/api/loginBadge.scss", "utf-8")).toMatch(/\.lscg-badge \{[^}]*flex-direction:\s*column/);
+            expect(x + w / 2).toBe(1000);
+            expect(y).toBeGreaterThan(500);
+            expect(y + h).toBeLessThan(690);
+        });
+
+        it("starts with LSCG's extension list collapsed", () => {
+            make();
+            showLoginBadge();
+            expect(root()!.querySelector<HTMLDetailsElement>("details.lscg-badge-mod")!.open).toBe(false);
         });
     });
 
     describe("the flyout", () => {
         it("names the version when LSCG is on its own", () => {
             showLoginBadge();
-            expect(flyout().textContent).toContain(`LSCG v${apiVersion} loaded`);
+            expect(flyout().textContent).toContain(`LSCG v${apiVersion}`);
             expect(flyout().textContent).toContain("No extensions registered.");
+        });
+
+        it("clips another mod's long name to one line, keeping the full name in a tooltip", () => {
+            const long = "Enormous ".repeat(40).trim();
+            const other = bcModSDKRef.registerMod({ name: "Big", fullName: long, version: "1" });
+            try {
+                showLoginBadge();
+                const name = Array.from(flyout().querySelectorAll<HTMLElement>("li.lscg-badge-mod .lscg-badge-clip")).find(e => e.textContent === long)!;
+                expect(name.title).toBe(long);
+                expect(readFileSync("src/api/loginBadge.scss", "utf-8")).toMatch(/\.lscg-badge-clip \{[^}]*text-overflow:\s*ellipsis/);
+                expect(readFileSync("src/api/loginBadge.scss", "utf-8")).toMatch(/\.lscg-badge-flyout \{[^}]*max-width:\s*min\(/);
+            } finally {
+                other.unload();
+            }
+        });
+
+        it("adds a mod that registers while the list is open, without reopening it", () => {
+            vi.useFakeTimers();
+            try {
+                showLoginBadge();
+                button().click();
+                const dialog = flyout();
+                expect(dialog.textContent).not.toContain("Registered Late");
+                const other = bcModSDKRef.registerMod({ name: "Late", fullName: "Registered Late", version: "1" });
+                try {
+                    vi.advanceTimersByTime(1100);
+                    expect(flyout()).toBe(dialog);
+                    expect(dialog.open).toBe(true);
+                    expect(dialog.textContent).toContain("Registered Late");
+                } finally {
+                    other.unload();
+                }
+            } finally {
+                vi.useRealTimers();
+            }
+        });
+
+        it("marks LSCG with a star while any of its extensions is enabled", () => {
+            const star = () => flyout().querySelector("details.lscg-badge-mod > summary .lscg-badge-star");
+            make("Starry");
+            showLoginBadge();
+            expect(star()).not.toBeNull();
+            const id = [...knownExtensions.keys()][0];
+            setExtensionEnabled(id, false);
+            button().click();
+            expect(star()).toBeNull();
+        });
+
+        it("has no star when LSCG has no extensions", () => {
+            showLoginBadge();
+            expect(flyout().querySelector(".lscg-badge-star")).toBeNull();
+        });
+
+        it("links LSCG's own wiki and repository", () => {
+            showLoginBadge();
+            const links = Array.from(flyout().querySelectorAll<HTMLAnchorElement>("details.lscg-badge-mod > summary a")).map(a => a.href);
+            expect(links).toContain("https://github.com/littlesera/LSCG/wiki");
+            expect(links).toContain("https://github.com/littlesera/LSCG");
+        });
+
+        it("lists the other mods registered with ModSDK, read-only, with their repositories", () => {
+            const other = bcModSDKRef.registerMod({ name: "OtherMod", fullName: "The Other Mod", version: "3.2", repository: "https://example.com/other" });
+            try {
+                showLoginBadge();
+                expect(flyout().textContent).toContain("The Other Mod");
+                expect(flyout().textContent).toContain("v3.2");
+                expect(flyout().querySelector<HTMLAnchorElement>("a[href='https://example.com/other']")).not.toBeNull();
+                // LSCG is the one entry with extension toggles; it is not listed a second time.
+                expect(flyout().querySelectorAll("li.lscg-badge-mod").length).toBeGreaterThanOrEqual(1);
+                expect(flyout().textContent!.match(/Little Sera/g) ?? []).toHaveLength(0);
+            } finally {
+                other.unload();
+            }
         });
 
         it("lists the extensions, with their versions", () => {
@@ -103,17 +204,26 @@ describe("login badge", () => {
             showLoginBadge();
             expect(flyout().textContent).not.toContain("error(s)");
             handle.errorCount = 1;
-            anchor().dispatchEvent(new Event("mouseenter"));
+            button().click();
             expect(flyout().textContent).toContain("1 error(s)");
         });
 
-        it("opens and closes when the badge is clicked, for devices without hover", () => {
+        it("opens as a modal when the badge is clicked, and closes with its Close button", () => {
             showLoginBadge();
-            expect(anchor().classList.contains("lscg-badge-open")).toBe(false);
+            expect(flyout().open).toBe(false);
             button().click();
-            expect(anchor().classList.contains("lscg-badge-open")).toBe(true);
+            expect(flyout().open).toBe(true);
+            flyout().querySelector<HTMLButtonElement>(".lscg-badge-close")!.click();
+            expect(flyout().open).toBe(false);
+        });
+
+        it("stays open when an extension is turned off, which rebuilds the badge", async () => {
+            make("Stays");
+            showLoginBadge();
             button().click();
-            expect(anchor().classList.contains("lscg-badge-open")).toBe(false);
+            root()!.querySelector<HTMLInputElement>("input[aria-label='Stays enabled']")!.click();
+            await Promise.resolve();
+            expect(flyout().open).toBe(true);
         });
     });
 
@@ -177,7 +287,7 @@ describe("login badge", () => {
             checkbox("offable").click();
             expect(extensions.get("offable")).toBeUndefined();
             expect(checkbox("offable").checked).toBe(false);
-            expect(flyout().textContent).toContain("Turned off");
+            expect(flyout().textContent).toContain("Reload the page to apply this change.");
 
             // Next page load: the callback stops at getModApi, so none of the extension's own code runs.
             queue("offable");
@@ -185,14 +295,29 @@ describe("login badge", () => {
             expect(extensions.get("offable")).toBeUndefined();
         });
 
-        it("ticking it again re-runs its load callback, without a reload", () => {
+        it("ticking it again re-runs its load callback now, and still notes that a reload settles it", () => {
             const loaded = queue("onagain");
             setExtensionEnabled("onagain", false);
             showLoginBadge();
             checkbox("onagain").click();
             expect(extensions.get("onagain")).toBeDefined();
             expect(loaded.count).toBe(2);
-            expect(flyout().textContent).toContain("Turned on");
+            expect(flyout().textContent).toContain("Reload the page to apply this change.");
+        });
+
+        it("offers a button with the reload note that reloads the page", () => {
+            const reload = vi.fn();
+            vi.stubGlobal("location", { ...window.location, reload });
+            try {
+                queue("reloadable");
+                showLoginBadge();
+                expect(root()!.querySelector(".lscg-badge-reload")).toBeNull();
+                checkbox("reloadable").click();
+                root()!.querySelector<HTMLButtonElement>(".lscg-badge-reload")!.click();
+                expect(reload).toHaveBeenCalledOnce();
+            } finally {
+                vi.unstubAllGlobals();
+            }
         });
 
         it("asks for a reload when it registered without the load queue", () => {

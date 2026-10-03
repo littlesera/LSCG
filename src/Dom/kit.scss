@@ -83,7 +83,7 @@
 
 	.lscg-kit-body {
 		background-color: color-mix(in srgb, var(--lscg-background-color) 85%, transparent);
-		border: min(0.3dvh, 0.15dvw) solid var(--lscg-border-color);
+		border: var(--lscg-border-width) solid var(--lscg-border-color);
 		min-height: 0;
 		overflow-y: auto;
 		padding: min(2dvh, 1dvw);
@@ -110,7 +110,7 @@
 
 		// Alternate shading so each setting reads as its own row.
 		&:nth-child(even of .lscg-kit-row:not([hidden])) {
-			background-color: color-mix(in srgb, var(--lscg-background-color) 92%, black 8%);
+			background-color: var(--lscg-stripe-color);
 		}
 
 		// A little smaller than the global checkbox, still centred in its box.
@@ -155,6 +155,11 @@
 
 		input[type="text"], input[type="number"], select, textarea {
 			width: 100%;
+			min-height: min(6dvh, 3dvw);
+		}
+
+		// BC buttons position their label absolutely, so the text no longer gives the button a height.
+		.lscg-button {
 			min-height: min(6dvh, 3dvw);
 		}
 
@@ -258,7 +263,7 @@
 		}
 
 		tbody tr:nth-child(even) {
-			background-color: color-mix(in srgb, var(--lscg-background-color) 90%, black 10%);
+			background-color: var(--lscg-stripe-color);
 		}
 	}
 
@@ -308,8 +313,8 @@
 
 	.lscg-kit-dialog {
 		background-color: var(--lscg-background-color);
-		border: min(0.4dvh, 0.2dvw) solid var(--lscg-border-color);
-		box-shadow: 0 0 min(3dvh, 1.5dvw) rgb(0 0 0 / 50%);
+		border: var(--lscg-border-width) solid var(--lscg-border-color);
+		box-shadow: var(--lscg-shadow);
 		color: var(--lscg-text-color);
 		font-family: var(--lscg-font-family);
 		font-size: var(--lscg-font-small);
@@ -364,7 +369,7 @@
 	// dropdown. Tinted so it reads as set apart from the surrounding (white) panel or dialog.
 	.lscg-kit-expando {
 		margin: min(0.8dvh, 0.4dvw) 0 min(1.5dvh, 0.75dvw) min(3dvh, 1.5dvw);
-		border: min(0.3dvh, 0.15dvw) solid var(--lscg-hover-color);
+		border: var(--lscg-border-width) solid var(--lscg-hover-color);
 		border-left-width: min(0.8dvh, 0.4dvw);
 		border-radius: min(0.8dvh, 0.4dvw);
 		background-color: color-mix(in srgb, var(--lscg-hover-color) 16%, var(--lscg-background-color));
@@ -465,7 +470,7 @@
 	.lscg-kit-chip-info { --accent: #4a90d9; }
 
 	.lscg-kit-danger {
-		background-color: color-mix(in srgb, #b00020 85%, var(--lscg-button-color));
+		background-color: color-mix(in srgb, #b00020 85%, var(--button-color, var(--lscg-button-color)));
 		color: white;
 
 		&:hover {
@@ -532,12 +537,12 @@
 		max-height: min(28dvh, 14dvw);
 		overflow-y: auto;
 		padding: min(0.75dvh, 0.4dvw);
-		border: min(0.3dvh, 0.15dvw) solid var(--lscg-border-color);
+		border: var(--lscg-border-width) solid var(--lscg-border-color);
 		background-color: color-mix(in srgb, var(--lscg-background-color) 60%, transparent);
 	}
 
 	.lscg-kit-chatline {
-		padding: min(0.4dvh, 0.2dvw) min(1dvh, 0.5dvw);
+		padding: var(--lscg-border-width) min(1dvh, 0.5dvw);
 		font: inherit;
 		font-size: calc(var(--lscg-font-small) * 0.85);
 		text-align: left;

@@ -77,7 +77,7 @@ function bindDisabled(ctx: KitContext, el: HTMLInputElement | HTMLSelectElement 
 
 export function CheckboxRow(ctx: KitContext, props: RowProps<boolean>): HTMLElement {
     const id = uid("cb");
-    const input = <input type="checkbox" id={id} onChange={() => { props.set(input.checked); ctx.changed(); }} /> as HTMLInputElement;
+    const input = ElementCheckbox.Create(id, () => { props.set(input.checked); ctx.changed(); });
     ctx.watch(() => { input.checked = !!props.get(); });
     bindDisabled(ctx, input, props.disabled);
     return row(ctx, props, id, input);
@@ -133,6 +133,9 @@ function groupOptions(options: SelectOption[]): [string | undefined, SelectOptio
 }
 
 function createSelect(options: SelectOption[], id: string, onChange: (value: string) => void): HTMLSelectElement {
+    // BC's dropdown for plain lists; icons and groups (optgroup) need the hand-built select below.
+    if (!options.some(o => o.icon || o.group))
+        return ElementDropdown.Create(id, options.map(o => ({ tag: "option" as const, attributes: { value: o.value }, children: [o.label] })), function () { onChange(this.value); });
     const rich = richSelects && options.some(o => !!o.icon);
     const select = <select id={id} class={rich ? "lscg-kit-select-rich" : ""} onChange={() => onChange(select.value)}>
         {groupOptions(options).map(([group, opts]) => {
@@ -164,11 +167,9 @@ export function ButtonRow(ctx: KitContext, props: {
     disabled?: () => boolean; hidden?: () => boolean; danger?: boolean;
 }): HTMLElement {
     const id = uid("btn");
-    const button = (
-        <button type="button" id={id} class={props.danger ? "lscg-button lscg-kit-danger" : "lscg-button"} onClick={() => props.onClick(button)}>
-            {props.buttonLabel}
-        </button>
-    ) as HTMLButtonElement;
+    const button: HTMLButtonElement = ElementButton.Create(id, () => props.onClick(button),
+        { label: props.buttonLabel, labelPosition: "center" },
+        { button: { classList: props.danger ? ["lscg-button", "lscg-kit-danger"] : ["lscg-button"] } });
     bindDisabled(ctx, button, props.disabled);
     return row(ctx, props, id, button);
 }
@@ -291,7 +292,9 @@ export function Panel(children: HTMLElement[]): HTMLElement {
 }
 
 export function Notice(text: string): HTMLElement {
-    return <p class="lscg-kit-notice">{text}</p> as HTMLElement;
+    const note = ElementText.CreateNote(text);
+    note.classList.add("lscg-kit-notice");
+    return note;
 }
 
 /** A text box that reports every keystroke (unlike TextRow, which commits on blur), for live filtering. */
@@ -457,8 +460,8 @@ export function RuleTable<R>(ctx: KitContext, props: RuleTableProps<R>): HTMLEle
         if (col.kind === "custom") return <td>{col.render?.(r, readOnly) ?? null}</td> as HTMLElement;
         let control: HTMLInputElement | HTMLSelectElement;
         if (col.kind === "checkbox") {
-            control = <input type="checkbox" aria-label={col.header} onChange={() => { col.set(r, (control as HTMLInputElement).checked); ctx.changed(); }} /> as HTMLInputElement;
-            (control as HTMLInputElement).checked = !!col.get(r);
+            control = ElementCheckbox.Create(null, () => { col.set(r, (control as HTMLInputElement).checked); ctx.changed(); }, { checked: !!col.get(r) });
+            control.setAttribute("aria-label", col.header);
         } else if (col.kind === "text") {
             control = <input type="text" aria-label={col.header} maxLength={col.maxLength ?? 255} placeholder={col.placeholder ?? ""} onChange={() => {
                 col.set(r, (control as HTMLInputElement).value.trim());

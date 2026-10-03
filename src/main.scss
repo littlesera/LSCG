@@ -1,10 +1,22 @@
+// BC keeps its colours in variables scoped to each component (--button-color, --hover-color and --disabled-color on
+// .button; --checkbox-color on .checkbox), and only its sizes on :root (--border-width, --gap, --half-gap). So the
+// controls we build with BC's own helpers use BC's variables directly (and follow any retheme), and these defaults,
+// which match BC's, only serve our hand-built elements. Each reads the Themed mod's --tmd-* variable first (when that
+// mod is active) and falls back to BC's default, so our own surfaces (panels, stripes, text) follow its theme too.
 :root {
-	--lscg-background-color: white;
-	--lscg-button-color: white;
-	--lscg-hover-color: #00d5d5;
-	--lscg-tooltip-color: #aaf7f7;
-	--lscg-border-color: black;
-	--lscg-text-color: black;
+	--lscg-background-color: var(--tmd-element, white);
+	--lscg-button-color: var(--tmd-element, white);
+	--lscg-hover-color: var(--tmd-element-hover, cyan);
+	--lscg-tooltip-color: var(--tmd-element-hint, #ffff88);
+	--lscg-border-color: var(--tmd-accent, black);
+	// BC's own border width and tooltip/panel drop shadow, so ours match (and follow a retheme of --border-width).
+	--lscg-border-width: var(--border-width, min(0.2dvh, 0.1dvw));
+	--lscg-shadow: calc(2 * var(--lscg-border-width)) calc(2 * var(--lscg-border-width)) min(2dvh, 1dvw) 0 rgb(0 0 0 / 50%);
+	// The shading on every second row of a list, table or row set.
+	--lscg-stripe-color: color-mix(in srgb, var(--lscg-background-color) 92%, black 8%);
+	// BC's "checked" colour: the button colour mixed with the hover colour (a selected tab, the item currently worn).
+	--lscg-checked-color: color-mix(in srgb, var(--lscg-button-color) 66%, var(--lscg-hover-color) 34%);
+	--lscg-text-color: var(--tmd-text, black);
 	--lscg-font-small: min(3.5dvh, 1.75dvw);
 	--lscg-font-large: min(5dvh, 2.5dvw);
 	--lscg-font-family: arial, sans-serif;
@@ -52,12 +64,12 @@
 }
 
 .lscg-button {
-	background-color: var(--lscg-button-color);
+	background-color: var(--button-color, var(--lscg-button-color));
 	background-origin: content-box;
 	background-position: center;
 	background-repeat: no-repeat;
 	background-size: cover;
-	border: min(0.3dvh, 0.15dvw) solid var(--lscg-border-color);
+	border: var(--lscg-border-width) solid var(--lscg-border-color);
 	font: inherit;
 	height: 100%;
 	overflow: clip;
@@ -69,11 +81,16 @@
 	width: 100%;
 
 	&:hover {
-		background-color: var(--lscg-hover-color);
+		background-color: var(--hover-color, var(--lscg-hover-color));
 	}
 
 	&:disabled {
-		background-color: color-mix(in srgb, var(--lscg-button-color) 60%, black 40%);
+		background-color: var(--disabled-color, color-mix(in srgb, var(--lscg-button-color) 60%, black 40%));
+	}
+
+	// BC's button labels get a translucent white backing, for legibility over icons; here it would lighten the colour.
+	.button-label {
+		background: transparent;
 	}
 }
 
@@ -86,9 +103,9 @@
 
 .lscg-button-tooltip {
 	background-color: var(--lscg-tooltip-color) !important;
-	border: min(0.3dvh, 0.15dvw) solid var(--lscg-border-color);
+	border: var(--lscg-border-width) solid var(--lscg-border-color);
 	bottom: -10%;
-	box-shadow: min(0.4dvh, 0.2dvw) min(0.4dvh, 0.2dvw) min(2dvh, 1dvw) 0 rgb(0 0 0 / 50%);
+	box-shadow: var(--lscg-shadow);
 	line-height: 1.4;
 	padding: min(1dvh, 0.5dvw) min(2dvh, 1dvw);
 	position: relative;
@@ -130,12 +147,12 @@
 	padding-top: min(1dvh, 0.5dvw);
 
 	&:nth-child(even) {
-		background-color: color-mix(in srgb, var(--lscg-button-color) 85%, black 15%);
+		background-color: var(--lscg-stripe-color);
 	}
 }
 
 .lscg-dropdown-content {
-	border: min(0.3dvh, 0.15dvw) solid var(--lscg-border-color);
+	border: var(--lscg-border-width) solid var(--lscg-border-color);
 	overflow-y: scroll;
 	position: absolute;
 	visibility: hidden;
@@ -190,10 +207,27 @@
 		text-align: left;
 	}
 
-	input {
+	// A checkbox from ElementCheckbox.Create keeps BC's own colours (--checkbox-color, --hover-color, --disabled-color on
+	// .checkbox), so only its size is set here.
+	input.checkbox {
+		height: min(7dvh, 3.5dvw);
+		width: min(7dvh, 3.5dvw);
+
+		&::before {
+			height: min(4.6dvh, 2.3dvw);
+			width: min(4.6dvh, 2.3dvw);
+		}
+	}
+
+	// The colours are in :where() blocks (no specificity), so a theme that styles input, textarea and select can
+	// override them without having to out-rank us.
+	:where(input:not(.checkbox)) {
 		background-color: var(--lscg-background-color);
-		box-sizing: border-box;
 		color: var(--lscg-text-color);
+	}
+
+	input:not(.checkbox) {
+		box-sizing: border-box;
 		font: inherit;
 		font-family: var(--lscg-font-family);
 		font-size: var(--lscg-font-small);
@@ -204,34 +238,21 @@
 			background-color: #fbb;
 			box-shadow: 0 0 3px 2px #c22;
 		}
+	}
 
-		&[type="checkbox"] {
-			border: min(0.3dvh, 0.15dvw) solid var(--lscg-border-color);
-			cursor: pointer;
-			height: min(7dvh, 3.5dvw);
-			width: min(7dvh, 3.5dvw);
+	:where(select) {
+		background-color: var(--lscg-button-color);
+		border-color: var(--lscg-border-color);
+		color: var(--lscg-text-color);
 
-			&:hover {
-				background-color: var(--lscg-hover-color);
-			}
-
-			&:disabled {
-				background-color: color-mix(in srgb, var(--lscg-background-color) 60%, black 40%);
-				cursor: auto;
-			}
-
-			&::before {
-				height: min(4.6dvh, 2.3dvw);
-				width: min(4.6dvh, 2.3dvw);
-			}
+		&:disabled {
+			background-color: color-mix(in srgb, var(--lscg-background-color) 60%, black 40%);
 		}
 	}
 
 	select {
-		background-color: var(--lscg-button-color);
-		border: min(0.3dvh, 0.15dvw) solid var(--lscg-border-color);
+		border: var(--lscg-border-width) solid;
 		box-sizing: border-box;
-		color: var(--lscg-text-color);
 		cursor: pointer;
 		font: inherit;
 		font-family: var(--lscg-font-family);
@@ -239,7 +260,6 @@
 		text-overflow: ellipsis;
 
 		&:disabled {
-			background-color: color-mix(in srgb, var(--lscg-background-color) 60%, black 40%);
 			cursor: auto;
 		}
 
@@ -258,7 +278,7 @@
 
 	.button,
 	.button-tooltip {
-		border-width: min(0.3dvh, 0.15dvw);
+		border-width: var(--lscg-border-width);
 	}
 }
 

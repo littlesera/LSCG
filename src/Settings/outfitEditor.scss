@@ -55,7 +55,7 @@
 	grid-area: combination;
 	scroll-behavior: smooth;
 	background-color: var(--lscg-button-color);
-	border: min(0.3dvh, 0.15dvw) solid var(--lscg-border-color);
+	border: var(--lscg-border-width) solid var(--lscg-border-color);
 	box-sizing: border-box;
 	color: var(--lscg-text-color);
 	cursor: pointer;
@@ -72,13 +72,11 @@
 	}
 
 	option:nth-child(even) {
-		background-color: #eef;
+		background-color: var(--lscg-stripe-color);
 	}
 
 	option[selected] {
-		background-color: var(--lscg-hover-color);
-		color: #fff;
-		text-shadow: darkgray;
+		background-color: var(--lscg-checked-color);
 	}
 }
 
@@ -232,24 +230,23 @@
 				width: auto;
 				height: var(--height);
 				padding: 0 1em;
-				background: #fff;
-				color: #000;
+				background: var(--lscg-button-color);
+				color: var(--lscg-text-color);
 				font: inherit;
 				font-size: var(--lscg-font-small);
-				border: min(0.3dvh, 0.15dvw) solid var(--lscg-border-color);
+				border: var(--lscg-border-width) solid var(--lscg-border-color);
 				cursor: pointer;
 
 				&[aria-selected="true"] {
-					background: #bbb;
+					background: var(--lscg-checked-color);
 				}
 
 				&:hover:not(:disabled, [aria-selected="true"]) {
 					background: var(--lscg-hover-color);
-					color: #fff;
 				}
 
 				&:disabled {
-					color: #888;
+					color: color-mix(in srgb, var(--lscg-text-color) 50%, transparent);
 					cursor: default;
 				}
 			}
@@ -259,8 +256,8 @@
 			width: var(--height);
 			height: var(--height);
 			padding: 0;
-			background: #fff;
-			border: min(0.3dvh, 0.15dvw) solid var(--lscg-border-color);
+			background: var(--lscg-button-color);
+			border: var(--lscg-border-width) solid var(--lscg-border-color);
 			color: inherit;
 			font: inherit;
 			font-size: calc(var(--height) * 0.9);
@@ -269,7 +266,6 @@
 
 			&:hover {
 				background: var(--lscg-hover-color);
-				color: #fff;
 			}
 		}
 	}
@@ -292,11 +288,11 @@
 		height: auto;
 		padding: 0;
 		overflow: hidden;
-		background: #fff;
-		color: #000;
+		background: var(--lscg-button-color);
+		color: var(--lscg-text-color);
 		font: inherit;
 		font-size: calc(var(--lscg-font-small) * 0.8);
-		border: min(0.3dvh, 0.15dvw) solid var(--lscg-border-color);
+		border: var(--lscg-border-width) solid var(--lscg-border-color);
 		cursor: pointer;
 
 		// BC styles every canvas as an absolutely positioned full-width layer
@@ -318,12 +314,11 @@
 
 		&:hover {
 			background: var(--lscg-hover-color);
-			color: #fff;
 		}
 
-		// the item or lock currently on: a light teal fill, distinct from the brighter hover
+		// the item or lock currently on: BC's "checked" mix of button and hover colours, distinct from the full hover
 		&.worn {
-			background: #b4ebe3;
+			background: var(--lscg-checked-color);
 		}
 	}
 }
@@ -334,10 +329,10 @@
 	width: max-content;
 	max-width: min(28em, 60%);
 	padding: .3em .7em;
-	background: #ffff88;
-	color: #000;
-	border: min(0.3dvh, 0.15dvw) solid #000;
-	box-shadow: 0 min(0.6dvh, 0.3dvw) min(1.5dvh, 0.75dvw) rgba(0, 0, 0, 0.5);
+	background: var(--lscg-tooltip-color);
+	color: var(--lscg-text-color);
+	border: var(--lscg-border-width) solid var(--lscg-border-color);
+	box-shadow: var(--lscg-shadow);
 	font-size: var(--lscg-font-small);
 	text-align: left;
 	pointer-events: none;
@@ -368,7 +363,7 @@
 	flex-direction: column;
 	gap: var(--gap);
 	padding-top: var(--gap);
-	border-top: min(0.3dvh, 0.15dvw) solid var(--lscg-border-color);
+	border-top: var(--lscg-border-width) solid var(--lscg-border-color);
 	min-height: calc(2 * var(--height));
 
 	.lscg-lock-note {
@@ -393,7 +388,7 @@
 			box-sizing: border-box;
 			padding: 0 .5em;
 			font: inherit;
-			border: min(0.3dvh, 0.15dvw) solid var(--lscg-border-color);
+			border: var(--lscg-border-width) solid var(--lscg-border-color);
 
 			&[aria-invalid] {
 				border-color: #c00;
