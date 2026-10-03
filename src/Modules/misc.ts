@@ -3,6 +3,7 @@ import { MiscSettingsModel } from "Settings/Models/base";
 import { ModuleCategory } from "Settings/setting_definitions";
 import { getCharacter, GetItemNameAndDescriptionConcat, GetMetadata, getRandomInt, GetTargetCharacter, hookFunction, isPhraseInString, LSCG_SendLocal, OnAction, OnActivity, removeAllHooksByModule, SendAction, settingsSave, ICONS, GetCraftingNameAndDescriptionConcat } from "../utils";
 import { CureKeywords, getModule, HornyKeywords, MindControlKeywords, NetgunKeywords, SedativeKeywords } from "modules";
+import { extensionDrugs, type ExtensionDrug } from "api/drugs";
 import { StateModule } from "./states";
 import { SleepState } from "./States/SleepState";
 import { LeashingModule } from "./leashing";
@@ -14,7 +15,7 @@ import {
     CHLOROFORM_TIMING,
     CHECK_INTERVALS,
     RANDOM_EVENT_ODDS,
-    LSCG_EFFECTS_MENU
+    LSCG_EFFECTS_MENU,
 } from "../constants";
 import { SoulbindKeywords } from "./States/AstralProjectionState";
 
@@ -53,7 +54,7 @@ export class MiscModule extends BaseModule {
             infiniteChloroformPotency: false,
             handChokeEnabled: false,
             gagChokeEnabled: false,
-            chokeChainEnabled: false
+            chokeChainEnabled: false,
         };
     }
 
@@ -64,7 +65,7 @@ export class MiscModule extends BaseModule {
     load(): void {
         // Kneel on lap sit
         OnActivity(100, ModuleCategory.Misc, (data, sender, msg, metadata) => {
-            let target = GetTargetCharacter(data);
+            const target = GetTargetCharacter(data);
             if (!!target && 
                 sender?.MemberNumber == Player.MemberNumber && 
                 data.Content == "ChatOther-ItemLegs-Sit" &&
@@ -77,7 +78,7 @@ export class MiscModule extends BaseModule {
                 switch (data.Content) {
                     case "ChatOther-ItemMouth-HandGag":
                     case "ChatSelf-ItemMouth-HandGag":
-                        let senderItem = InventoryGet(sender, "ItemHandheld");
+                        const senderItem = InventoryGet(sender, "ItemHandheld");
                         if (isPhraseInString(GetItemNameAndDescriptionConcat(senderItem) ?? "", "chloroform")) {
                             this.AddChloroform();
                         }
@@ -114,8 +115,8 @@ export class MiscModule extends BaseModule {
             if (!this.settings.chloroformEnabled)
                 return;
 
-            let meta = GetMetadata(data);
-            var target = meta?.TargetMemberNumber;
+            const meta = GetMetadata(data);
+            const target = meta?.TargetMemberNumber;
             if (target != Player.MemberNumber)
                 return;
 
@@ -128,7 +129,7 @@ export class MiscModule extends BaseModule {
                 }
                 return;
             }
-            var isChloroformAction = data.Dictionary[3]?.AssetName == "ChloroformCloth";
+            const isChloroformAction = data.Dictionary[3]?.AssetName == "ChloroformCloth";
             if (isChloroformAction) {
                 if (msg == "ActionUse" && this.NumberChloroform() == 1) {
                     this.AddChloroform();
@@ -137,12 +138,12 @@ export class MiscModule extends BaseModule {
                     this.RemoveChloroform();
                 }
             }
-        })
+        });
 
         let lastChloroEvent = 0;
-        let chloroInterval = CHECK_INTERVALS.CHLOROFORM_CHECK;
-        hookFunction('TimerProcess', 1, (args, next) => {
-            let now = CommonTime();
+        const chloroInterval = CHECK_INTERVALS.CHLOROFORM_CHECK;
+        hookFunction("TimerProcess", 1, (args, next) => {
+            const now = CommonTime();
             if (!ActivityAllowed() || !this.Enabled)
                 return next(args);
 
@@ -170,7 +171,7 @@ export class MiscModule extends BaseModule {
         }, ModuleCategory.Misc);
 
         hookFunction("TimerProcess", 1, (args, next) => {
-            let now = CommonTime();
+            const now = CommonTime();
             if (!this.settings.infiniteChloroformPotency && this.lastChecked + CHECK_INTERVALS.CHLOROFORM_DOWNGRADE < now) {
                 this.lastChecked = now;
                 if (this.isChloroformed && this.settings.chloroformedAt + this.settings.chloroformPotencyTime < now && !this.chloroformWearingOff)
@@ -196,7 +197,7 @@ export class MiscModule extends BaseModule {
             if (!Player)
                 return;
 
-            let main = document.getElementById(this.LscgEffectCraftingId.main);
+            const main = document.getElementById(this.LscgEffectCraftingId.main);
             if (main) {
                 this.setMenuPositionFixed();
             }
@@ -217,7 +218,7 @@ export class MiscModule extends BaseModule {
         "%NAME%'s eyes move dreamily under %POSSESSIVE% closed eyelids...",
         "%NAME% takes another deep breath through %POSSESSIVE% gag...",
         "%NAME%'s muscles twitch weakly in %POSSESSIVE% sleep...",
-        "%NAME% moans softly and relaxes..."
+        "%NAME% moans softly and relaxes...",
     ];
     chloroEventInterval: number = 0;
     eyesInterval: number = 0;
@@ -226,11 +227,11 @@ export class MiscModule extends BaseModule {
     _isChloroformed: boolean = false;
 
     set isChloroformed(value: boolean) {
-        clearInterval(this.chloroEventInterval)
+        clearInterval(this.chloroEventInterval);
         if (value) {
             this.chloroEventInterval = setInterval(() => {
                 this.ChloroEvent();
-            }, CHLOROFORM_TIMING.EVENT_INTERVAL)
+            }, CHLOROFORM_TIMING.EVENT_INTERVAL);
         }
         this._isChloroformed = value;
     }
@@ -240,11 +241,11 @@ export class MiscModule extends BaseModule {
     }
 
     get HandCloroMemberNumber(): number | undefined {
-        let grab = getModule<LeashingModule>("LeashingModule").Pairings.find(l => l.Type == "mouth" && (!l.IsSource || l.PairedMember == Player.MemberNumber));
-        if (!!grab) {
-            let grabbedBy = getCharacter(grab.PairedMember);
-            if (!!grabbedBy) {
-                let grabberItem = InventoryGet(grabbedBy, "ItemHandheld");
+        const grab = getModule<LeashingModule>("LeashingModule").Pairings.find(l => l.Type == "mouth" && (!l.IsSource || l.PairedMember == Player.MemberNumber));
+        if (grab) {
+            const grabbedBy = getCharacter(grab.PairedMember);
+            if (grabbedBy) {
+                const grabberItem = InventoryGet(grabbedBy, "ItemHandheld");
                 if (grabberItem?.Asset.Name == "Towel" && isPhraseInString(GetItemNameAndDescriptionConcat(grabberItem) ?? "", "chloroform")) {
                     return grabbedBy.MemberNumber;
                 }
@@ -256,11 +257,11 @@ export class MiscModule extends BaseModule {
     CheckForChloro() {
         if (!this.settings.chloroformEnabled)
             return;
-        let mouthItems = [InventoryGet(Player, "ItemMouth"),
+        const mouthItems = [InventoryGet(Player, "ItemMouth"),
                             InventoryGet(Player, "ItemMouth2"),
                             InventoryGet(Player, "ItemMouth3")];
 
-        let isHandChloroed = !!this.HandCloroMemberNumber;
+        const isHandChloroed = !!this.HandCloroMemberNumber;
 
         if (mouthItems.some(item => item?.Asset.Name == "ChloroformCloth") && (!this.isChloroformed && !this.passoutTimer)) {
             this.AddChloroform();
@@ -283,21 +284,22 @@ export class MiscModule extends BaseModule {
 
     unload(): void {
         removeAllHooksByModule(ModuleCategory.Misc);
+        clearInterval(this.chloroEventInterval);
     }
 
     IsWearingChloroform() {
         return [
             InventoryGet(Player, "ItemMouth")?.Asset.Name,
             InventoryGet(Player, "ItemMouth2")?.Asset.Name,
-            InventoryGet(Player, "ItemMouth3")?.Asset.Name
-        ].some(item => item == "ChloroformCloth")
+            InventoryGet(Player, "ItemMouth3")?.Asset.Name,
+        ].some(item => item == "ChloroformCloth");
     }
 
     NumberChloroform() {
         return [
             InventoryGet(Player, "ItemMouth")?.Asset.Name,
             InventoryGet(Player, "ItemMouth2")?.Asset.Name,
-            InventoryGet(Player, "ItemMouth3")?.Asset.Name
+            InventoryGet(Player, "ItemMouth3")?.Asset.Name,
         ].filter(item => item == "ChloroformCloth").length;
     }
 
@@ -450,7 +452,7 @@ export class MiscModule extends BaseModule {
         hornyButton: "crafting-lscg-effects-horny-checkbox",
         cureLabel: "crafting-lscg-effects-cure-label",
         cureButton: "crafting-lscg-effects-cure-checkbox",
-    }
+    };
 
     /*
      * Define all options of the screen into list/group (each group will have their own grid-area)
@@ -468,7 +470,7 @@ export class MiscModule extends BaseModule {
                 const evolv = document.getElementById(this.LscgEffectCraftingId.evolvingButton) as HTMLInputElement;
                 if (evolv.checked) return false; // Incompatible with Evolving
                 return true;
-            }
+            },
         },
         {
             type: "checkbox",
@@ -481,7 +483,7 @@ export class MiscModule extends BaseModule {
                 const chaotic = document.getElementById(this.LscgEffectCraftingId.chaoticButton) as HTMLInputElement;
                 if (chaotic.checked) return false; // Incompatible with Chaotic
                 return true;
-            }
+            },
         },
         {
             type: "checkbox",
@@ -498,7 +500,7 @@ export class MiscModule extends BaseModule {
                 const quick = document.getElementById(this.LscgEffectCraftingId.quickButton) as HTMLInputElement;
                 if (quick.checked) return false; // Incompatible with Quick
                 return true;
-            }
+            },
         },
         {
             type: "checkbox",
@@ -515,7 +517,7 @@ export class MiscModule extends BaseModule {
                 const slow = document.getElementById(this.LscgEffectCraftingId.slowButton) as HTMLInputElement;
                 if (slow.checked) return false; // Incompatible with Slow
                 return true;
-            }
+            },
         },
     ];
 
@@ -532,7 +534,7 @@ export class MiscModule extends BaseModule {
                     return false; // Incompatible with hand item
                 }
                 return true;
-            }
+            },
         },
         {
             type: "checkbox",
@@ -545,7 +547,7 @@ export class MiscModule extends BaseModule {
                 const tamperproof = document.getElementById(this.LscgEffectCraftingId.tamperproofButton) as HTMLInputElement;
                 if (tamperproof.checked) return true; // Need Tamperproof
                 return false;
-            }
+            },
         },
         {
             type: "checkbox",
@@ -558,7 +560,7 @@ export class MiscModule extends BaseModule {
                 const tamperproof = document.getElementById(this.LscgEffectCraftingId.tamperproofButton) as HTMLInputElement;
                 if (tamperproof.checked) return true; // Need Tamperproof
                 return false;
-            }
+            },
         },
         {
             type: "checkbox",
@@ -571,9 +573,9 @@ export class MiscModule extends BaseModule {
                 const tamperproof = document.getElementById(this.LscgEffectCraftingId.tamperproofButton) as HTMLInputElement;
                 if (tamperproof.checked) return true; // Need Tamperproof
                 return false;
-            }
+            },
         },
-    ]
+    ];
 
     // others that can't really be grouped together
     miscsOptionsList: ScreenElem[] = [
@@ -586,7 +588,7 @@ export class MiscModule extends BaseModule {
             keywords: CursedKeywords,
             condition: (): boolean => {
                 return true;
-            }
+            },
         },
         {
             type: "select",
@@ -597,7 +599,7 @@ export class MiscModule extends BaseModule {
             keywords: [],
             condition: (): boolean => {
                 return (document.getElementById(this.LscgEffectCraftingId.cursedButton) as HTMLInputElement)?.checked;
-            }
+            },
         },
         {
             type: "checkbox",
@@ -611,7 +613,7 @@ export class MiscModule extends BaseModule {
                     return true; // Need hand item
                 }
                 return false;
-            }
+            },
         },
         {
             type: "checkbox",
@@ -625,7 +627,7 @@ export class MiscModule extends BaseModule {
                     return true; // Need hand item
                 }
                 return false;
-            }
+            },
         },
         {
             type: "checkbox",
@@ -636,9 +638,9 @@ export class MiscModule extends BaseModule {
             keywords: SoulbindKeywords,
             condition: (): boolean => {
                 return true;
-            }
-        }
-    ]
+            },
+        },
+    ];
 
     drugOptionsList: ScreenElem[] = [
         {
@@ -649,17 +651,17 @@ export class MiscModule extends BaseModule {
             description: "Add Sedative effect to the item (Only for: Medical Injector, Latex Respirator, Filled Glass or Mug)",
             keywords: SedativeKeywords() ?? ["tranquilizer","sedative"],
             condition: (): boolean => {
-                let allowedDrugItem: string[] = [
+                const allowedDrugItem: string[] = [
                     "MedicalInjector",
                     "LatexRespirator",
                     "GlassFilled",
-                    "Mug"
+                    "Mug",
                 ];
                 if (CraftingSelectedItem && CraftingSelectedItem.Asset && allowedDrugItem.indexOf(CraftingSelectedItem.Asset.Name) != -1) {
                     return true;
                 }
                 return false;
-            }
+            },
         },
         {
             type: "checkbox",
@@ -669,17 +671,17 @@ export class MiscModule extends BaseModule {
             description: "Add aphrodisiac effect to the item (Only for: Medical Injector, Latex Respirator, Filled Glass or Mug)",
             keywords: HornyKeywords() ?? ["aphrodisiac", "horny", "arousing"],
             condition: (): boolean => {
-                let allowedDrugItem: string[] = [
+                const allowedDrugItem: string[] = [
                     "MedicalInjector",
                     "LatexRespirator",
                     "GlassFilled",
-                    "Mug"
+                    "Mug",
                 ];
                 if (CraftingSelectedItem && CraftingSelectedItem.Asset && allowedDrugItem.indexOf(CraftingSelectedItem.Asset.Name) != -1) {
                     return true;
                 }
                 return false;
-            }
+            },
         },
         {
             type: "checkbox",
@@ -689,17 +691,17 @@ export class MiscModule extends BaseModule {
             description: "Add mind control effect to the item (Only for: Medical Injector, Latex Respirator, Filled Glass or Mug)",
             keywords: MindControlKeywords() ?? ["mind control", "hypnotizing", "brainwashing"],
             condition: (): boolean => {
-                let allowedDrugItem: string[] = [
+                const allowedDrugItem: string[] = [
                     "MedicalInjector",
                     "LatexRespirator",
                     "GlassFilled",
-                    "Mug"
+                    "Mug",
                 ];
                 if (CraftingSelectedItem && CraftingSelectedItem.Asset && allowedDrugItem.indexOf(CraftingSelectedItem.Asset.Name) != -1) {
                     return true;
                 }
                 return false;
-            }
+            },
         },
         {
             type: "checkbox",
@@ -709,26 +711,46 @@ export class MiscModule extends BaseModule {
             description: "Add curing effect to the item (Only for: Medical Injector, Latex Respirator, Filled Glass or Mug)",
             keywords: CureKeywords() ?? ["antidote", "healing", "curing", "cure"],
             condition: (): boolean => {
-                let allowedDrugItem: string[] = [
+                const allowedDrugItem: string[] = [
                     "MedicalInjector",
                     "LatexRespirator",
                     "GlassFilled",
-                    "Mug"
+                    "Mug",
                 ];
                 if (CraftingSelectedItem && CraftingSelectedItem.Asset && allowedDrugItem.indexOf(CraftingSelectedItem.Asset.Name) != -1) {
                     return true;
                 }
                 return false;
-            }
+            },
         },
     ];
+
+    /** The built-in drugs, then any extensions have registered, which can appear after this module is built. */
+    get allDrugOptions(): ScreenElem[] {
+        return [...this.drugOptionsList, ...extensionDrugs.all().map(drug => this.extensionDrugOption(drug))];
+    }
+
+    extensionDrugOption(drug: ExtensionDrug): ScreenElem {
+        // Element ids can't carry the "." in a drug id (or whatever else an extension puts in a name) safely.
+        const safe = drug.id.replace(/[^a-z0-9_]/gi, c => `-${c.charCodeAt(0).toString(16)}-`);
+        const allowedItems = ["MedicalInjector", "LatexRespirator", "GlassFilled", "Mug"];
+        return {
+            type: "checkbox",
+            id_label: `crafting-lscg-effects-ext-${safe}-label`,
+            id_button: `crafting-lscg-effects-ext-${safe}-checkbox`,
+            label: drug.label,
+            description: `${drug.description || `Add the ${drug.label} effect to the item`} (Only for: Medical Injector, Latex Respirator, Filled Glass or Mug)`,
+            keywords: drug.keywords,
+            condition: (): boolean => !!CraftingSelectedItem?.Asset && allowedItems.includes(CraftingSelectedItem.Asset.Name),
+        };
+    }
 
     // concat all elem from OptionsList above
     getAllOptionsElem(): ScreenElem[] {
         let allElemList = this.chaoticEvolvingOptionList;
         allElemList = allElemList.concat(this.tamperproofOptionList);
         allElemList = allElemList.concat(this.miscsOptionsList);
-        allElemList = allElemList.concat(this.drugOptionsList);
+        allElemList = allElemList.concat(this.allDrugOptions);
         return allElemList;
     }
 
@@ -740,12 +762,12 @@ export class MiscModule extends BaseModule {
 		const label = document.createElement("label");
 		label.setAttribute("id", label_id);
 		label.classList = "crafting-label";
-		label.style.cssText = `grid-template-columns: min-content auto`;
+		label.style.cssText = "grid-template-columns: min-content auto";
 
-		let button = ElementButton.Create(button_id, MiscModule.LscgEffectMenuButtonListener);
-		button.style.setProperty('height', 'calc(0.75 * var(--menu-button-size))');
-		button.style.setProperty('width', 'calc(0.75 * var(--menu-button-size))');
-		button.style.setProperty('background-image', 'url("' + ICONS.BOUND_GIRL + '")');
+		const button = ElementButton.Create(button_id, MiscModule.LscgEffectMenuButtonListener);
+		button.style.setProperty("height", "calc(0.75 * var(--menu-button-size))");
+		button.style.setProperty("width", "calc(0.75 * var(--menu-button-size))");
+		button.style.setProperty("background-image", 'url("' + ICONS.BOUND_GIRL + '")');
 		label.appendChild(button);
 
 		const span = document.createElement("span");
@@ -778,11 +800,11 @@ export class MiscModule extends BaseModule {
         if (this._LscgEffectsScreen || force_off) {
             this._LscgEffectsScreen = false;
 
-            let main = document.getElementById(this.LscgEffectCraftingId.main);
+            const main = document.getElementById(this.LscgEffectCraftingId.main);
             main?.remove();
         }
         else {
-            let root = document.getElementById(CraftingID.root);
+            const root = document.getElementById(CraftingID.root);
 
             // Create main screen
             const parent = ElementCreate({
@@ -792,27 +814,27 @@ export class MiscModule extends BaseModule {
                 children: [],
                 style: {visibility: "visible"},
             });
-            parent.style.setProperty('background-color', 'var(--lscg-background-color)');
-            parent.style.setProperty('display', 'grid');
-            parent.style.setProperty('grid-template', `
+            parent.style.setProperty("background-color", "var(--lscg-background-color)");
+            parent.style.setProperty("display", "grid");
+            parent.style.setProperty("grid-template", `
                 "${this.LscgEffectCraftingId.topBar} ${this.LscgEffectCraftingId.topBar}" var(--menu-button-size)
                 "${this.LscgEffectCraftingId.chaoticEvolvingGrid} ${this.LscgEffectCraftingId.miscGrid}" auto
                 "${this.LscgEffectCraftingId.tamperproofGrid} ${this.LscgEffectCraftingId.drugGrid}" auto
                 "${this.LscgEffectCraftingId.toolTip} ${this.LscgEffectCraftingId.toolTip}" var(--menu-button-size)
                 / 3fr 3fr`);
-            parent.style.setProperty('gap', 'calc(var(--menu-button-size) / 15)');
-            parent.style.setProperty('border', 'min(0.2vh, 0.1vw) solid black');
-            parent.style.setProperty('box-shadow', '0 6px 10px black');
-            parent.style.setProperty('padding', '0.5rem');
+            parent.style.setProperty("gap", "calc(var(--menu-button-size) / 15)");
+            parent.style.setProperty("border", "min(0.2vh, 0.1vw) solid black");
+            parent.style.setProperty("box-shadow", "0 6px 10px black");
+            parent.style.setProperty("padding", "0.5rem");
 
             // Create top bar with Title and exit button
-            let exitButton = ElementButton.Create(this.LscgEffectCraftingId.mainExit, MiscModule.LscgEffectMenuButtonListener, { tooltip: TextGet("Exit") });
+            const exitButton = ElementButton.Create(this.LscgEffectCraftingId.mainExit, MiscModule.LscgEffectMenuButtonListener, { tooltip: TextGet("Exit") });
             exitButton.style.cssText = `
                 width: var(--menu-button-size);
 	            height: var(--menu-button-size);
                 background-image: url("Icons/Exit.png");
             `;
-            let menuBar = ElementMenu.Create("lscg-effect-menu-bar", [exitButton], { direction: "rtl" });
+            const menuBar = ElementMenu.Create("lscg-effect-menu-bar", [exitButton], { direction: "rtl" });
             menuBar.style.cssText = `
                 display: grid;
                 direction: rtl;
@@ -828,7 +850,7 @@ export class MiscModule extends BaseModule {
                     display: "grid",
                     "grid-template-columns": "auto min-content",
                     gap: "calc(var(--menu-button-size) / 6)",
-                    "grid-area": this.LscgEffectCraftingId.topBar
+                    "grid-area": this.LscgEffectCraftingId.topBar,
                 },
                 children: [
                     { tag: "h1", attributes: { id: this.LscgEffectCraftingId.mainTitle }, children: ["LSCG Effects"],
@@ -840,9 +862,9 @@ export class MiscModule extends BaseModule {
                         "justify-self": "center",
                         "align-self": "center",
                         //"padding-left": "calc((5 + (4 / 6)) * var(--menu-button-size))"
-                      }
+                      },
                     },
-                    menuBar
+                    menuBar,
                 ],
             });
 
@@ -856,7 +878,7 @@ export class MiscModule extends BaseModule {
             this.createGenericGridArea(this.LscgEffectCraftingId.miscGrid, parent, this.createHtmlElemList(this.miscsOptionsList));
 
             // drug grid
-            this.createGenericGridArea(this.LscgEffectCraftingId.drugGrid, parent, this.createHtmlElemList(this.drugOptionsList));
+            this.createGenericGridArea(this.LscgEffectCraftingId.drugGrid, parent, this.createHtmlElemList(this.allDrugOptions));
 
             // tooltip (bottom grid)
             ElementCreate({
@@ -871,7 +893,7 @@ export class MiscModule extends BaseModule {
                     "overflow-wrap": "word-break",
                     "text-wrap": "unset",
                     "font-size": "min(5vh, 1.4vw)",
-                }
+                },
             });
 
             root?.append(parent);
@@ -904,23 +926,23 @@ export class MiscModule extends BaseModule {
                 "grid-area": grid_id,
                 "padding-right": "calc(var(--menu-button-size) / 12)",
                 "border": "1px dotted var(--lscg-border-color)",
-                "padding": "0.5rem"
+                "padding": "0.5rem",
             },
-            children: children
+            children: children,
         });
     }
 
     // Create element from the lists ScreenElem (the results are used as the children of createGenericGridArea())
     createHtmlElemList(elemList: ScreenElem[]): HTMLOptionsUnion[] {
-        let htmlList: HTMLOptionsUnion[] = [];
-        for (let elem of elemList) {
+        const htmlList: HTMLOptionsUnion[] = [];
+        for (const elem of elemList) {
             let tag: keyof HTMLElementTagNameMap = "label";
             let child: (string | Node | HTMLOptionsUnion)[] = [];
 
             // setup depending of type
             if (elem.type == "checkbox") {
                 tag = "label";
-                let checkbox = ElementCheckbox.Create(elem.id_button, MiscModule.LscgEffectCheckBoxListener);
+                const checkbox = ElementCheckbox.Create(elem.id_button, MiscModule.LscgEffectCheckBoxListener);
                 checkbox.style.cssText = `{
                     width: min(5dvh, 2.5dvw);
                     height: min(5dvh, 2.5dvw);
@@ -933,7 +955,7 @@ export class MiscModule extends BaseModule {
                 child = (this.getSelectOptionsForId(elem.id_label));
             }
 
-            let htmlElem: HTMLOptionsUnion = {
+            const htmlElem: HTMLOptionsUnion = {
                         tag: tag,
                         attributes: { id: elem.id_label },
                         //classList: ["crafting-label"],
@@ -956,20 +978,20 @@ export class MiscModule extends BaseModule {
                         children: child,
                         eventListeners: {
                             mouseover: () => {
-                                let tooltip = document.getElementById(this.LscgEffectCraftingId.toolTip);
+                                const tooltip = document.getElementById(this.LscgEffectCraftingId.toolTip);
                                 if (tooltip) {
                                     tooltip.textContent = elem.description;
                                     tooltip.style.visibility = "visible";
                                 }
                             },
                             mouseout: () => {
-                                let tooltip = document.getElementById(this.LscgEffectCraftingId.toolTip);
+                                const tooltip = document.getElementById(this.LscgEffectCraftingId.toolTip);
                                 if (tooltip) {
                                     tooltip.style.visibility = "hidden";
                                     tooltip.textContent = "";
                                 }
                             },
-                        }
+                        },
                     };
 
             if (elem.type == "select" && htmlElem.eventListeners) {
@@ -1007,7 +1029,7 @@ export class MiscModule extends BaseModule {
     // Special value to be able to select nothing
     cursedSelectEmptyWord: string = "_none_";
     curseSelectChanged(id: string, selected: string) {
-        let curseNameList = getModule<CursedItemModule>("CursedItemModule")?.settings.CursedItems.map(item => item.Name);
+        const curseNameList = getModule<CursedItemModule>("CursedItemModule")?.settings.CursedItems.map(item => item.Name);
         if (!curseNameList || curseNameList.length <= 0) {
             console.warn("curseSelectChanged: no curse found.");
             return;
@@ -1021,7 +1043,7 @@ export class MiscModule extends BaseModule {
 		}
 
         // remove other
-        for (let curseName of curseNameList) {
+        for (const curseName of curseNameList) {
             if (curseName == selected) continue;
 
             nameInput.value = nameInput.value.replaceAll(curseName, "");
@@ -1040,10 +1062,9 @@ export class MiscModule extends BaseModule {
 
     // Populate the curse Select
     getSelectCurseOptions(): HTMLOptionsUnion[] {
-        let optionList: HTMLOptionsUnion[] = [];
+        const optionList: HTMLOptionsUnion[] = [];
         let curseNameList = getModule<CursedItemModule>("CursedItemModule")?.settings.CursedItems.map(item => item.Name);
         if (!curseNameList || curseNameList.length <= 0) {
-            //console.log("getSelectCurseOptions: no curse found.");
             curseNameList = [];
         }
         // Special value to be able to select nothing
@@ -1054,9 +1075,9 @@ export class MiscModule extends BaseModule {
         const nameInput = document.getElementById(CraftingID.nameInput) as HTMLInputElement;
 		const descriptionInput = document.getElementById(CraftingID.descriptionInput) as HTMLInputElement;
         if (nameInput && descriptionInput) {
-            for (let curse of curseNameList) {
+            for (const curse of curseNameList) {
                 if (nameInput.value.includes(curse) || descriptionInput.value.includes(curse)) {
-                    let idx = curseNameList.indexOf(curse);
+                    const idx = curseNameList.indexOf(curse);
                     if (idx != -1) {
                         curseNameList.splice(idx, 1);
                         curseNameList.unshift(curse);
@@ -1066,10 +1087,10 @@ export class MiscModule extends BaseModule {
             }
         }
 
-        for (let curse of curseNameList) {
-            let elem: HTMLOptionsUnion = {
-                tag: "option", children: [curse]
-            }
+        for (const curse of curseNameList) {
+            const elem: HTMLOptionsUnion = {
+                tag: "option", children: [curse],
+            };
             optionList.push(elem);
         }
 
@@ -1081,7 +1102,7 @@ export class MiscModule extends BaseModule {
      */
 
     checkBoxClicked(id: string, checked: boolean) {
-        let elem = this.getScreenElemFromId(id);
+        const elem = this.getScreenElemFromId(id);
         if (!elem) {
             console.warn("checkBoxClicked: cannot find elem: ", id);
             return;
@@ -1102,7 +1123,7 @@ export class MiscModule extends BaseModule {
         }
         else {
             // remove all keywords
-            for (let word of elem.keywords) {
+            for (const word of elem.keywords) {
                 nameInput.value = nameInput.value.replaceAll(word, "");
                 descriptionInput.value = descriptionInput.value.replaceAll(word, "");
                 // remove trailling space
@@ -1113,7 +1134,7 @@ export class MiscModule extends BaseModule {
 
         // Special for cursed: also add/remove Selected curse
         if (elem.id_label == this.LscgEffectCraftingId.cursedLabel) {
-            let cursedSelect = document.getElementById(this.LscgEffectCraftingId.cursedSelect) as HTMLSelectElement;
+            const cursedSelect = document.getElementById(this.LscgEffectCraftingId.cursedSelect) as HTMLSelectElement;
             if (cursedSelect) {
                 if (checked) {
                     // add selected
@@ -1133,10 +1154,10 @@ export class MiscModule extends BaseModule {
     nameOrDescChanged() {
         if (!this._LscgEffectsScreen) return;
 
-        let allElemList = this.getAllOptionsElem();
+        const allElemList = this.getAllOptionsElem();
 
         // check checkBox if desc have keywords
-        for (let elem of allElemList) {
+        for (const elem of allElemList) {
             let changed = false;
             const elem_checkbox = document.getElementById(elem.id_button) as HTMLInputElement;
             if (elem.keywords.some(key => isPhraseInString(GetCraftingNameAndDescriptionConcat(CraftingSelectedItem) ?? "", key))) {
@@ -1162,26 +1183,26 @@ export class MiscModule extends BaseModule {
 
     // Color the label in red if condition are not met (condition are defined in each elem of ScreenElem lists)
     checCheckBoxkCondition() {
-        let allElemList = this.getAllOptionsElem();
+        const allElemList = this.getAllOptionsElem();
 
-        for (let elem of allElemList) {
+        for (const elem of allElemList) {
             const elem_label = document.getElementById(elem.id_label) as HTMLInputElement;
-            const elem_button = document.getElementById(elem.id_button) as HTMLButtonElement
+            const elem_button = document.getElementById(elem.id_button) as HTMLButtonElement;
             if (elem.condition()) {
-                if (!!elem_label) {
-                    elem_label.style.setProperty('color', 'var(--lscg-text-color)');
+                if (elem_label) {
+                    elem_label.style.setProperty("color", "var(--lscg-text-color)");
                     elem_label.setAttribute("disabled", "true");
                     elem_label.disabled = false;
                 }
-                if (!!elem_button)
+                if (elem_button)
                     elem_button.disabled = false;
             }
             else {
-                if (!!elem_label) {
-                    elem_label.style.setProperty('color', 'red');
+                if (elem_label) {
+                    elem_label.style.setProperty("color", "red");
                     elem_label.disabled = true;
                 }
-                if (!!elem_button)
+                if (elem_button)
                     elem_button.disabled = true;
             }
         }
@@ -1192,9 +1213,9 @@ export class MiscModule extends BaseModule {
      */
 
     getScreenElemFromId(id: string) {
-        let allElemList = this.getAllOptionsElem();
+        const allElemList = this.getAllOptionsElem();
 
-        for (let elem of allElemList) {
+        for (const elem of allElemList) {
             if (elem.id_button == id) {
                 return elem;
             }

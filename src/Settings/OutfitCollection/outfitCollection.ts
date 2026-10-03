@@ -1,5 +1,5 @@
-import { GetDataSizeReport, parseFromBase64, settingsSave } from "utils";
-import { IOutfitCollection, OutfitRemoveResult, OutfitSaveResult, OutfitStorageStrategy } from "./IOutfitCollection";
+import { GetDataSizeReport, parseFromBase64 } from "utils";
+import { IOutfitCollection, OutfitSaveResult, OutfitStorageStrategy } from "./IOutfitCollection";
 
 export let LSCG_OUTFITS: OutfitCollection;
 
@@ -36,7 +36,7 @@ export class OutfitCollection implements IOutfitCollection {
     }
 
     SetStrategy(val: OutfitStorageStrategy) {
-        let prev = this.strategy;
+        const prev = this.strategy;
         if (prev == val) return;
 
         // Switch and save
@@ -50,7 +50,7 @@ export class OutfitCollection implements IOutfitCollection {
                 break;
             case OutfitStorageStrategy.SERVER:
                 Player.ExtensionSettings[OutfitCollection.STORAGE_KEY] = "";
-                ServerPlayerExtensionSettingsSync(OutfitCollection.STORAGE_KEY)
+                ServerPlayerExtensionSettingsSync(OutfitCollection.STORAGE_KEY);
                 break;
         }
     }
@@ -64,7 +64,7 @@ export class OutfitCollection implements IOutfitCollection {
     }
 
     SaveOutfits(): boolean {
-        let compressedSave = LZString.compressToBase64(JSON.stringify(this));
+        const compressedSave = LZString.compressToBase64(JSON.stringify(this));
 
         try {
             switch (this.strategy){
@@ -112,20 +112,19 @@ export class OutfitCollection implements IOutfitCollection {
     }
 
     ExpandOutfit(outfit: Outfit, seenKeys: string[] = []) {
-        console.debug(`expanding outfit: ${outfit.key} -- ${seenKeys.join()}`);
-        let bundle = this.ConvertToBundle(outfit.code);
+        const bundle = this.ConvertToBundle(outfit.code);
         return bundle.concat(
             (outfit.inherit ?? [])
                 .filter(o => seenKeys.indexOf(o.toLocaleLowerCase()) == -1)
                 .map(k => this._expandOutfit(k, seenKeys))
-                .reduce((a, b) => a.concat(b), [])
+                .reduce((a, b) => a.concat(b), []),
         ).filter((val, ix, arr) => arr.findIndex(x => x.Group == val.Group) == ix);
     }
 
     private _expandOutfit(key: string, seenKeys: string[] = []): ItemBundle[] {
         key = key.toLocaleLowerCase();
         seenKeys.push(key);
-        let outfit = this.outfits[key];
+        const outfit = this.outfits[key];
         if (!outfit) return [];
         return this.ExpandOutfit(outfit, seenKeys);
     }
@@ -137,21 +136,29 @@ export class OutfitCollection implements IOutfitCollection {
         return LZString.compressToBase64(JSON.stringify(this.GetOutfitBundle(key)));
     }
     GetOutfitBundle(key: string): ItemBundle[] {
-        let bundle = this._expandOutfit(key, []);
+        const bundle = this._expandOutfit(key, []);
         return bundle;
     }
     
-    RenameOutfit(oldKey: string, newKey: string, save: boolean = true) {
+    /** Renames an outfit and every inherit reference to it. False (and nothing changes) if there's no such outfit, or
+     *  another outfit already has the new name. */
+    RenameOutfit(oldKey: string, newKey: string, save: boolean = true): boolean {
         oldKey = oldKey.toLocaleLowerCase();
-        let outfit = this.outfits[oldKey];
-        if (!outfit) return;
+        const lowerNew = newKey.toLocaleLowerCase();
+        const outfit = this.outfits[oldKey];
+        if (!outfit || (lowerNew !== oldKey && this.outfits[lowerNew])) return false;
         outfit.key = newKey;
-        this.outfits[newKey.toLocaleLowerCase()] = outfit;
         delete this.outfits[oldKey];
+        this.outfits[lowerNew] = outfit;
+        for (const other of Object.values(this.outfits))
+            other.inherit = (other.inherit ?? []).map(k => k.toLocaleLowerCase() === oldKey ? newKey : k);
+        if (save)
+            this.SaveOutfits();
+        return true;
     }
 
     SetOutfitCode(name: string, code: string | undefined, inherits: string[] | undefined = undefined, save: boolean = true): OutfitSaveResult {
-        let key = name.toLocaleLowerCase();
+        const key = name.toLocaleLowerCase();
 
         if (this.GetOutfitCollectionBytes() > this.MaxBytes) {
             return OutfitSaveResult.SPACE_LOW;
@@ -162,7 +169,7 @@ export class OutfitCollection implements IOutfitCollection {
             let outfit: Outfit = this.outfits[key];
             if (!outfit) outfit = <Outfit>{key: name};
             outfit.code = code ?? outfit.code ?? "";
-            outfit.inherit = inherits ?? outfit.inherit ?? [];
+            outfit.inherit = (inherits ?? outfit.inherit ?? []).filter(k => k.toLocaleLowerCase() !== key);
             this.outfits[key] = outfit;
             if (save)
                 return this.SaveOutfits() ? OutfitSaveResult.SUCCESS : OutfitSaveResult.ERROR;
@@ -177,7 +184,8 @@ export class OutfitCollection implements IOutfitCollection {
     }
     
     ConvertToBundle(code: string): ItemBundle[] {
-        return parseFromBase64<ItemBundle[]>(code) ?? [];
+        const bundle = parseFromBase64<ItemBundle[]>(code);
+        return Array.isArray(bundle) ? bundle.filter(i => !!i && typeof i.Group === "string" && typeof i.Name === "string") : [];
     }
     EncodeBundle(bundle: ItemBundle[]): string {
         return LZString.compressToBase64(JSON.stringify(bundle));

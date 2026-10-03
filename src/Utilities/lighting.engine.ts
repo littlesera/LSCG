@@ -1,6 +1,6 @@
 import { JobType, Light, OpaqueObstacle, PendingJob, Point, RenderOptions, Segment, Viewpoint } from "./lighting.types";
 import { generateSegments, getVisibilityPolygon, optimizeSegments } from "./lighting.math";
-import WorkerFactory from './lighting.worker?worker&inline';
+import WorkerFactory from "./lighting.worker?worker&inline";
 
 export class LightingEngine {
     public debug: boolean = false;
@@ -59,7 +59,7 @@ export class LightingEngine {
                             nextJob.type, 
                             targetLights, 
                             nextJob.obstacles, 
-                            nextJob.viewpoint
+                            nextJob.viewpoint,
                         );
                     } else {
                         this.isWorkerBusy = false;
@@ -94,7 +94,7 @@ export class LightingEngine {
                 light._animState = {
                     baseX: light.x, baseY: light.y, baseRadius: light.radius,
                     baseR: light.color[0], baseG: light.color[1], baseB: light.color[2], baseIntensity: light.color[3],
-                    seed: Math.random() * 2000
+                    seed: Math.random() * 2000,
                 };
             }
 
@@ -109,7 +109,7 @@ export class LightingEngine {
 
             switch (light.animType) {
                 case "flashlight":
-                    if (!!focus) {
+                    if (focus) {
                         light.angle = Math.atan2(focus.y - light.y, focus.x - light.x) * (180 / Math.PI);
                     }
                     break;
@@ -173,21 +173,21 @@ export class LightingEngine {
         type: JobType, 
         lights: Light[], 
         obstacles?: OpaqueObstacle[], 
-        viewpoint?: Viewpoint
+        viewpoint?: Viewpoint,
     ) {
         const start = performance.now();
-        let payload: any = { viewpoint, suppressOptimization: this.suppressOptimization };
+        const payload: any = { viewpoint, suppressOptimization: this.suppressOptimization };
 
         if (type === "COMPUTE") {
             payload.obstacles = obstacles;
             // Send full array with IDs
             payload.lights = lights.map(l => ({ 
-                id: this.getLightId(l), x: l.x, y: l.y, radius: l.radius 
+                id: this.getLightId(l), x: l.x, y: l.y, radius: l.radius, 
             }));
         } else if (type === "UPDATE_LIGHTS") {
             // Send just the updates with IDs
             payload.updates = lights.map(l => ({
-                id: this.getLightId(l), x: l.x, y: l.y, radius: l.radius 
+                id: this.getLightId(l), x: l.x, y: l.y, radius: l.radius, 
             }));
         }
 
@@ -251,7 +251,7 @@ export class LightingEngine {
                 this.pendingJob.viewpoint = viewpoint;
             } else {
                 this.pendingJob = { 
-                    type: "UPDATE_LIGHTS", lights: [], movingLights: [...movingLights], viewpoint 
+                    type: "UPDATE_LIGHTS", lights: [], movingLights: [...movingLights], viewpoint, 
                 };
             }
             return;
@@ -266,7 +266,7 @@ export class LightingEngine {
         const {
             mainCtx, width, height, lights, viewpoint,
             ambientColor = "rgb(60, 60, 60)",
-            camera = { x: 0, y: 0 }
+            camera = { x: 0, y: 0 },
         } = options;
 
         this.syncCanvasSizes(width, height);
@@ -276,8 +276,8 @@ export class LightingEngine {
         this.lightCtx.fillStyle = ambientColor;
         this.lightCtx.fillRect(0, 0, width, height);
 
-        let normalLights: Light[] = [];
-        let darkLights: Light[] = [];
+        const normalLights: Light[] = [];
+        const darkLights: Light[] = [];
 
         for (const light of lights) {
             const [r, g, b, a] = light.color;
@@ -291,7 +291,7 @@ export class LightingEngine {
         this.drawLights(this.lightCtx, normalLights, "lighten", options);
 
         // --- 2. RENDER VISION MASK LAYER ---
-        if (!!viewpoint) {
+        if (viewpoint) {
             this.visionCtx.globalCompositeOperation = "source-over";
             this.visionCtx.fillStyle = "black";
             this.visionCtx.fillRect(0, 0, width, height);
@@ -319,7 +319,7 @@ export class LightingEngine {
         mainCtx.globalCompositeOperation = "multiply";
         mainCtx.drawImage(this.lightCanvas, 0, 0);
 
-        if (!!viewpoint) {
+        if (viewpoint) {
             mainCtx.globalCompositeOperation = "source-over";
             mainCtx.globalAlpha = 0.5; 
             mainCtx.drawImage(this.visionCanvas, 0, 0);
@@ -446,8 +446,8 @@ export class LightingEngine {
         ctx.closePath();
         ctx.clip();
 
-        if (!!light.fov) {
-            const angleDegrees = light.angle ?? 0
+        if (light.fov) {
+            const angleDegrees = light.angle ?? 0;
             const angleRadians = angleDegrees * (Math.PI / 180);
             const fovDegrees = light.fov ?? 60; 
             const fovRadians = fovDegrees * (Math.PI / 180); 
@@ -461,7 +461,7 @@ export class LightingEngine {
 
         const gradient = ctx.createRadialGradient(
             light.x, light.y, 0,
-            light.x, light.y, light.radius
+            light.x, light.y, light.radius,
         );
 
         const [r, g, b, intensity] = light.color;
@@ -476,7 +476,7 @@ export class LightingEngine {
             light.x - light.radius,
             light.y - light.radius,
             light.radius * 2,
-            light.radius * 2
+            light.radius * 2,
         );
 
         ctx.restore();

@@ -6,6 +6,7 @@ import { SETTING_NAME_PREFIX, Subscreen, setSubscreen } from "./setting_definiti
 import { modules } from "modules";
 import { GlobalSettingsModel } from "./Models/base";
 import { ICONS } from "utils";
+import { GuiExtensions } from "./extensions";
 
 export class GUI extends BaseModule {
 	static instance: GUI | null = null;
@@ -30,7 +31,7 @@ export class GUI extends BaseModule {
 		}
 		if (typeof subscreen === "string") {
 			const scr = this._subscreens?.find(s => s.name === subscreen);
-			if (!scr) throw `Failed to find screen name ${subscreen}`;
+			if (!scr) throw new Error(`Failed to find screen name ${subscreen}`);
 			this._currentSubscreen = scr;
 		} else {
 			this._currentSubscreen = subscreen;
@@ -69,7 +70,7 @@ export class GUI extends BaseModule {
 
 		this._mainMenu = new MainMenu(this);
 		this._subscreens = [
-			this._mainMenu
+			this._mainMenu,
 		];
 
 		GUI.instance = this;
@@ -87,7 +88,7 @@ export class GUI extends BaseModule {
 			erectionDetection: true,
 			tamperproofEnabled: true,
 			tamperproofElectricityEnabled: true,
-			blockDOGS: false
+			blockDOGS: false,
 		};
     }
 
@@ -99,20 +100,23 @@ export class GUI extends BaseModule {
 			this._subscreens.push(new module.settingsScreen(module));
 		}
 
+		// One page for every extension's screens; it hides itself until some extension has one.
+		this._subscreens.push(new GuiExtensions(this));
+
 		this._mainMenu.subscreens = this._subscreens;
 
 		PreferenceRegisterExtensionSetting({
-			Identifier: 'LSCG',
-			ButtonText: 'LSCG Settings',
+			Identifier: "LSCG",
+			ButtonText: "LSCG Settings",
 			Image: ICONS.BOUND_GIRL,
 			load: () => {
 				setSubscreen(new MainMenu(this));
 			},
 			run: () => {
 				if (this._currentSubscreen) {
-					MainCanvas.textAlign = 'left';
+					MainCanvas.textAlign = "left";
 					this._currentSubscreen.Run();
-					MainCanvas.textAlign = 'center';
+					MainCanvas.textAlign = "center";
 				}
 			},
 			click: () => {
@@ -124,12 +128,15 @@ export class GUI extends BaseModule {
 				if (this._currentSubscreen) {
 					this._currentSubscreen.Exit();
 				}
+				// Exit steps back one level (the main menu clears the extension itself). Returning false keeps BC from
+				// also dropping out of LSCG, which Escape did from every screen.
+				return false;
 			},
 			unload: () => {
 				if (this._currentSubscreen) {
 					this._currentSubscreen.Unload();
 				}
-			}
+			},
     	});
 	}
 }
@@ -145,7 +152,7 @@ export function drawTooltip(x: number, y: number, width: number, text: string, a
 		align === "left" ? x + 3 : x + width / 2,
 		y + 33,
 		width - 6,
-		"black"
+		"black",
 	);
 	canvas.textAlign = bak;
 }

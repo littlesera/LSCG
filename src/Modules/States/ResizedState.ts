@@ -14,11 +14,11 @@ export class ResizedState extends BaseState {
     }
 
     Icon(C: OtherCharacter): string {
-        let isEnlarge = C.LSCG?.StateModule.states.find(s => s.type == "resized")?.extensions["enlarged"] as boolean ?? false;
+        const isEnlarge = C.LSCG?.StateModule.states.find(s => s.type == "resized")?.extensions["enlarged"] as boolean ?? false;
         return isEnlarge ? ICONS.EXPAND : "";//ICONS.SHRINK;
     }
     Label(C: OtherCharacter): string {
-        let isEnlarge = C.LSCG?.StateModule.states.find(s => s.type == "resized")?.extensions["enlarged"] as boolean ?? false;
+        const isEnlarge = C.LSCG?.StateModule.states.find(s => s.type == "resized")?.extensions["enlarged"] as boolean ?? false;
         return isEnlarge ? "Enlarged" : "";//"Shrunk";
     }
 
@@ -31,7 +31,7 @@ export class ResizedState extends BaseState {
             this.Recover(true);
         else {
             this.enlarged = true;
-            if (emote) SendAction(`%NAME%'s body reshapes and grows to twice its size.`);
+            if (emote) SendAction("%NAME%'s body reshapes and grows to twice its size.");
             this.Activate(MemberNumber, duration, emote);
         }
         return this;
@@ -54,7 +54,7 @@ export class ResizedState extends BaseState {
     }
 
     Recover(emote?: boolean | undefined): BaseState | undefined {
-        if (emote && this.Active) SendAction(`%NAME%'s body returns to its normal size.`);
+        if (emote && this.Active) SendAction("%NAME%'s body returns to its normal size.");
         return super.Recover(false);
     }
 
@@ -66,7 +66,7 @@ export class ResizedState extends BaseState {
 
         hookFunction("CharacterAppearanceGetCurrentValue", 1, (args, next) => {
             const [C, Group, Type] = args as [C: OtherCharacter, Group: AssetGroupName, Type: keyof CharacterAppearanceValues];
-            let ret = next(args);
+            const ret = next(args);
             if (Player.LSCG?.GlobalModule?.hideResizing || Group !== "Height" || Type !== "Zoom")
                 return ret;
 
@@ -74,16 +74,16 @@ export class ResizedState extends BaseState {
                 return ret;
 
             let zoom: number = ret === "None" ? 1 : ret as number;
-            let stateModule = C.LSCG.StateModule;
+            const stateModule = C.LSCG.StateModule;
             if (stateModule.states.find(s => s.type == "resized")?.active) {
-                let enlarge = stateModule.states.find(s => s.type == "resized")?.extensions["enlarged"] ?? false;
+                const enlarge = stateModule.states.find(s => s.type == "resized")?.extensions["enlarged"] ?? false;
                 zoom *= enlarge ? 1.5 : 1;//.75;
             }
             return zoom;
         }, ModuleCategory.States);
 
         hookFunction("CommonDrawAppearanceBuild", 1, (args, next) => {
-            let C = args[0] as OtherCharacter;
+            const C = args[0] as OtherCharacter;
             const height = CharacterAppearanceGetCurrentValue(C, "Height", "Zoom");
             if (height !== "None") C.HeightRatio = height;
             // Hack fix in case the body style was actually removed
@@ -94,9 +94,9 @@ export class ResizedState extends BaseState {
         }, ModuleCategory.States);
 
         hookFunction("DrawCharacter", 1, (args, next) => {
-            let C = args[0] as OtherCharacter;
+            const C = args[0] as OtherCharacter;
             const height = CharacterAppearanceGetCurrentValue(C, "Height", "Zoom");
-            if (height !== "None") C.HeightRatio = height
+            if (height !== "None") C.HeightRatio = height;
             return next(args);
         }, ModuleCategory.States);
     }

@@ -3,7 +3,7 @@ import { BaseModule } from "base";
 import { getModule } from "modules";
 import { OpacitySettingsModel } from "Settings/Models/base";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { hookFunction, isDrawingOverridable, patchFunction } from "../utils";
+import { hookFunction, isDrawingOverridable, isOutfitEditorCharacter, onCanvasResize, patchFunction } from "../utils";
 import { StateModule } from "./states";
 import { endsWith, kebabCase, replace } from "lodash-es";
 import styles from "./opacity.scss?inline";
@@ -44,13 +44,13 @@ const ID = Object.freeze({
     translateToolbar: `${root}-translate-toolbar`,
     translateButtons: `${root}-translate-buttons`,
     translateX: `${root}-translate-x`,
-    translateY: `${root}-translate-y`
+    translateY: `${root}-translate-y`,
 });
 
 export class OpacityModule extends BaseModule {
     OpacityMainSlider: OpacitySlider = {
         ElementId: ID.opacityMain,
-        Value: 100
+        Value: 100,
     };
     OpacityLayerSliders: OpacitySlider[] = [];
 
@@ -117,7 +117,7 @@ export class OpacityModule extends BaseModule {
                     <div id={ID.translateButtons} class="lscg-layers-listing scroll-box"></div>
                 </div>
             </div>
-        </div>
+        </div>,
     });
 
     get settings(): OpacitySettingsModel {
@@ -127,7 +127,7 @@ export class OpacityModule extends BaseModule {
     get defaultSettings() {
         return {
             enabled: true,
-            preventExternalMod: false
+            preventExternalMod: false,
         } as OpacitySettingsModel;
     }
 
@@ -143,8 +143,8 @@ export class OpacityModule extends BaseModule {
     }
 
     HideDomUI() {
-        let domEle = document.getElementById(ID.root);
-        if (!!domEle) {
+        const domEle = document.getElementById(ID.root);
+        if (domEle) {
             domEle.remove();
         }
     }
@@ -171,7 +171,7 @@ export class OpacityModule extends BaseModule {
         }
 
         const elem = document.getElementById(ID.root) as HTMLElement;
-        if (!!elem)
+        if (elem)
             Object.assign(elem.style, style);
     }
 
@@ -179,73 +179,76 @@ export class OpacityModule extends BaseModule {
         if (!this.OpacityItem || !this.OpacityItem.Asset || !this.OpacityItem.Asset.Layer || !Array.isArray(this.OpacityItem.Asset.Layer))
             return;
 
-        let layerCount = this.OpacityItem.Asset.Layer.length;
 
         document.getElementById(ID.opacityLayers)?.replaceChildren(...[]);
         document.getElementById(ID.translateButtons)?.replaceChildren(...[]);
-        let leadLined = document.getElementById(ID.leadLined) as HTMLInputElement;
-        if (!!leadLined)
+        const leadLined = document.getElementById(ID.leadLined) as HTMLInputElement;
+        if (leadLined)
             leadLined.checked = this.OpacityItem.Property?.LSCGLeadLined ?? false;
+        // BC's property whitelist drops LSCGLeadLined from every bundle, so on an outfit item the box would do nothing
+        const leadLinedLabel = leadLined?.closest("label");
+        if (leadLinedLabel)
+            leadLinedLabel.style.display = isOutfitEditorCharacter(this.OpacityCharacter) ? "none" : "";
 
         const opacityArr = this.getOpacity();
         let opacityValue = 100;
         if (opacityArr.length >= 1) {
             opacityValue = Math.round(100 * Math.max(...opacityArr));
         }
-        let mainOpacitySlider = this.createOpacitySlider("Opacity %", ID.opacityMain + "-main", opacityValue, (evt) => this.onOpacityChange(evt), 0, 100);
+        const mainOpacitySlider = this.createOpacitySlider("Opacity %", ID.opacityMain + "-main", opacityValue, (evt) => this.onOpacityChange(evt), 0, 100);
         document.getElementById(ID.opacityMain)?.replaceChildren(mainOpacitySlider);
         this.OpacityMainSlider = {
             ElementId: ID.opacityMain + "-main",
-            Value: opacityValue
-        }
+            Value: opacityValue,
+        };
         this.OpacityLayerSliders = [];
         this.TranslationButtons = [];
 
-        let translateAllButton = this.createTranslateButton("All Layers", (evt) => this.onClickTranslate(evt));
+        const translateAllButton = this.createTranslateButton("All Layers", (evt) => this.onClickTranslate(evt));
         translateAllButton.classList.add("selected");
         document.getElementById(ID.translateButtons)?.appendChild(translateAllButton);
 
         if (this.OpacityItem.Asset.Layer.length <= 1) {
-            let allLayersCheck = document.getElementById(ID.allLayersCheck) as HTMLInputElement;
-            if (!!allLayersCheck) {
+            const allLayersCheck = document.getElementById(ID.allLayersCheck) as HTMLInputElement;
+            if (allLayersCheck) {
                 allLayersCheck.checked = false;
                 this.onToggleAllLayers();
             }
         }
 
         this.OpacityItem.Asset.Layer.forEach((layer: AssetLayer, ix, arr) => {
-            let layerName = layer.Name;
-            if (!!layerName) {
+            const layerName = layer.Name;
+            if (layerName) {
                 // Create and add layer dom elements
-                let opacityVal = Math.round(opacityArr[ix] * 100);
+                const opacityVal = Math.round(opacityArr[ix] * 100);
 
-                let opacityId = ID.opacityLayers + "_" + kebabCase(layerName);
-                let opacitySlider = this.createOpacitySlider(
+                const opacityId = ID.opacityLayers + "_" + kebabCase(layerName);
+                const opacitySlider = this.createOpacitySlider(
                     layerName,
                     opacityId,
                     opacityVal,
                     (evt) => this.onOpacityChange(evt, layer),
-                    Math.round(layer.MinOpacity * 100),
+                    0,//Math.round(layer.MinOpacity * 100),
                     Math.round(layer.MaxOpacity * 100),
                 );
-                let translateButton = this.createTranslateButton(layerName, (evt) => this.onClickTranslate(evt, layer));
+                const translateButton = this.createTranslateButton(layerName, (evt) => this.onClickTranslate(evt, layer));
 
                 document.getElementById(ID.opacityLayers)?.appendChild(opacitySlider);
                 document.getElementById(ID.translateButtons)?.appendChild(translateButton);
                 this.OpacityLayerSliders.push({
                     ElementId: opacityId,
-                    Value: (layer.Opacity ?? 1) * 100
-                } as OpacitySlider)
+                    Value: (layer.Opacity ?? 1) * 100,
+                } as OpacitySlider);
                 this.TranslationButtons.push({
                     layerName: layerName,
                     xValue: layer.DrawingLeft[PoseType.DEFAULT],
-                    yValue: layer.DrawingTop[PoseType.DEFAULT]
+                    yValue: layer.DrawingTop[PoseType.DEFAULT],
                 } as TranslationValue);
             }
         });
 
         this.SelectedTranslationLayer = -1;
-        this.SetTranslationElementValues()
+        this.SetTranslationElementValues();
     }
 
     createOpacitySlider(label: string, id: string, val: number, onChange: (evt: Event) => void, min: number, max: number) {
@@ -255,7 +258,7 @@ export class OpacityModule extends BaseModule {
                         <input id={id + "_Range"} type="range" min={min} max={max} step="1" onInput={onChange} class="range-input" value={val}></input>
                         <input id={id + "_Number"} type="number" min={min} max={max} step="1" onInput={onChange} value={val} inputMode="numeric"></input>
                     </div>
-                </fieldset>
+                </fieldset>;
     }
 
     createTranslateButton(label: string | undefined, onClick: (evt: Event) => void) {
@@ -263,29 +266,29 @@ export class OpacityModule extends BaseModule {
                         id={ID.translateButtons + "_" + kebabCase(label)}
                         onClick={onClick}>
                     {label}
-                </button>
+                </button>;
     }
 
     onOpacityChange(evt: Event, layer?: AssetLayer | undefined) {
         // If layer is undefined, consider it the main slider
-        let input = evt.target as HTMLInputElement;
-        let value = input.value;
+        const input = evt.target as HTMLInputElement;
+        const value = input.value;
         this._updateOpacityValue(input.id);
         if (endsWith(input.id, "_Range")) {
-            let targetId = replace(input.id, "_Range", "_Number");
-            let targetEle = document.getElementById(targetId) as HTMLInputElement;
-            if (!!targetEle) targetEle.value = value;
+            const targetId = replace(input.id, "_Range", "_Number");
+            const targetEle = document.getElementById(targetId) as HTMLInputElement;
+            if (targetEle) targetEle.value = value;
         } else {
-            let targetId = replace(input.id, "_Number", "_Range");
-            let targetEle = document.getElementById(targetId) as HTMLInputElement;
-            if (!!targetEle) targetEle.value = value;
+            const targetId = replace(input.id, "_Number", "_Range");
+            const targetEle = document.getElementById(targetId) as HTMLInputElement;
+            if (targetEle) targetEle.value = value;
         }
         if (!layer) {
             this.OpacityLayerSliders.forEach(s => {
-                let rangeSlider = document.getElementById(s.ElementId + "_Range") as HTMLInputElement;
-                let numericSlider = document.getElementById(s.ElementId + "_Number") as HTMLInputElement;
-                if (!!rangeSlider) rangeSlider.value = value;
-                if (!!numericSlider) numericSlider.value = value;
+                const rangeSlider = document.getElementById(s.ElementId + "_Range") as HTMLInputElement;
+                const numericSlider = document.getElementById(s.ElementId + "_Number") as HTMLInputElement;
+                if (rangeSlider) rangeSlider.value = value;
+                if (numericSlider) numericSlider.value = value;
             });
         }
 
@@ -320,8 +323,8 @@ export class OpacityModule extends BaseModule {
     }
 
     onToggleAllLayers(evt?: Event) {
-        let main = document.getElementById(ID.opacityMain);
-        let layers = document.getElementById(ID.opacityLayers);
+        const main = document.getElementById(ID.opacityMain);
+        const layers = document.getElementById(ID.opacityLayers);
         if (!main || !layers) return;
 
         if (this.ShowAllOpacityLayers) {
@@ -334,9 +337,9 @@ export class OpacityModule extends BaseModule {
     }
 
     onToggleTranslate(evt?: Event) {
-        let opacity = document.getElementById(ID.opacity);
-        let translate = document.getElementById(ID.translate);
-        let allLayerCheck = document.getElementById(ID.allLayersCheck) as HTMLInputElement;
+        const opacity = document.getElementById(ID.opacity);
+        const translate = document.getElementById(ID.translate);
+        const allLayerCheck = document.getElementById(ID.allLayersCheck) as HTMLInputElement;
 
         if (!opacity || !translate || !allLayerCheck) return;
 
@@ -361,8 +364,8 @@ export class OpacityModule extends BaseModule {
         if (!this.OpacityItem || !this.OpacityItem.Asset || !this.OpacityItem.Asset.Layer)
             return;
 
-        let allButtons = document.getElementsByClassName("lscg-translate-button");
-        if (!!allButtons) {
+        const allButtons = document.getElementsByClassName("lscg-translate-button");
+        if (allButtons) {
             Array.from(allButtons).forEach(b => b.classList.remove("selected"));
         }
 
@@ -375,27 +378,23 @@ export class OpacityModule extends BaseModule {
         this.SetTranslationElementValues();
     }
 
-    /** Function for removing destroying the {@link CurrentScreenFunctions.Resize} coloring hook */
+    /** Cleanup for the color-picker DOM's canvas resize listener. */
     _unhookResize: null | (() => void) = null;
 
     load(): void {
         hookFunction("ItemColorLoad", 1, async (args, next) => {
             const ret = next(args);
             await ret;
-            let C = args[0] as OtherCharacter;
-            let Item = ItemColorItem;
+            const C = args[0] as OtherCharacter;
+            const Item = ItemColorItem;
             if (Item && this.CanChangeOpacityOnCharacter(C) && isDrawingOverridable(Item)) {
                 this.OpacityCharacter = C;
                 this.OpacityItem = Item;
 
                 this.ShowDomUI();
 
-                this._unhookResize = hookFunction("CurrentScreenFunctions.Resize", 0, (args2, next) => {
-                    const [load] = args2;
-                    this.ResizeDomUI(load);
-                    return next(args2);
-                });
-                CurrentScreenFunctions.Resize(true);
+                this._unhookResize?.();
+                this._unhookResize = onCanvasResize(load => this.ResizeDomUI(load));
 
                 this.TranslateRemoveEventListener();
                 this.TranslateAttachEventListener();
@@ -444,7 +443,7 @@ export class OpacityModule extends BaseModule {
                 return next(args);
             }
 
-            const params = funcArgs as Parameters<PatchHook<GetDotedPathType<typeof globalThis, "AssetsItemArmsHempRopeBeforeDraw">>>[0][0]
+            const params = funcArgs as Parameters<PatchHook<GetDotedPathType<typeof globalThis, "AssetsItemArmsHempRopeBeforeDraw">>>[0][0];
             const { C: origC, CA, GroupName: groupName, Property: origProp, L } = params;
             const C = origC as OtherCharacter;
             const Property = origProp as PropertiesWithLayerOverrides;
@@ -452,9 +451,9 @@ export class OpacityModule extends BaseModule {
 
             if (this.Enabled && !!CA && isDrawingOverridable(CA) && !!Property) {
                 let layerName = L.trim();
-                if (layerName[0] == '_')
+                if (layerName[0] == "_")
                     layerName = layerName.slice(1);
-                let layerIx = CA.Asset.Layer.findIndex(l => (l.Name ?? "") == layerName);
+                const layerIx = CA.Asset.Layer.findIndex(l => (l.Name ?? "") == layerName);
 
                 let xOverride = Property?.LayerOverrides?.[layerIx]?.DrawingLeft?.[PoseType.DEFAULT] ?? undefined;
                 let yOverride = Property?.LayerOverrides?.[layerIx]?.DrawingTop?.[PoseType.DEFAULT] ?? undefined;
@@ -466,15 +465,15 @@ export class OpacityModule extends BaseModule {
                         if (PoseDef && PoseDef.MovePosition) {
                             const MovePosition = PoseDef.MovePosition.find(MP => MP.Group === groupName);
                             if (MovePosition) {
-                                if (!!xOverride) xOverride += MovePosition.X;
-                                if (!!yOverride) yOverride += MovePosition.Y;
+                                if (xOverride) xOverride += MovePosition.X;
+                                if (yOverride) yOverride += MovePosition.Y;
                             }
                         }
                     }
                 }
 
-                if (!!xOverride) ret.X = xOverride;
-                if (!!yOverride) ret.Y = yOverride + CanvasUpperOverflow;
+                if (xOverride) ret.X = xOverride;
+                if (yOverride) ret.Y = yOverride + CanvasUpperOverflow;
             }
             return ret;
         }, ModuleCategory.Opacity);
@@ -482,15 +481,14 @@ export class OpacityModule extends BaseModule {
 
     run() {
         hookFunction("CommonDrawAppearanceBuild", 1, (args, next) => {
-            let C = args[0] as OtherCharacter;
-            let callbacks = args[1];
+            const C = args[0] as OtherCharacter;
             if (this.Enabled) {
                 C.Appearance?.forEach(item => {
                     const A = item.Asset;
                     if (isDrawingOverridable(A) || IsSoulBind(item)) {
                         (A as any).DynamicBeforeDraw = true;
                     }
-                })
+                });
             }
             // Hack fix in case the body style was actually removed
             if (InventoryGet(C, "BodyStyle") == null) {
@@ -500,15 +498,15 @@ export class OpacityModule extends BaseModule {
         }, ModuleCategory.Opacity);
 
         patchFunction("CharacterAppearanceVisible", {
-            "const Excluded = HideItemExclude?.includes(GroupName + AssetName);" : 
-            "const Excluded = !((item.Property != null) && (item.Property.Hide != null) && (item.Property.Hide.indexOf(GroupName) >= 0)) && HideItemExclude?.includes('*') || HideItemExclude?.includes(GroupName + AssetName);"
+            "const Excluded = HideItemExclude?.includes(GroupName + AssetName);" :
+            "const Excluded = !((item.Property != null) && (item.Property.Hide != null) && (item.Property.Hide.indexOf(GroupName) >= 0)) && HideItemExclude?.includes('*') || HideItemExclude?.includes(GroupName + AssetName);",
         });
 
         // Prevent see-through items from contributing cross-group alpha masks (GroupAlpha) to other layers.
         // The CharacterAppearanceSortLayers hook sets HideItemExclude=["*"] before next() runs, so the flag
         // is already present when BC accumulates groupAlphas inside CharacterAppearanceSortLayers.
         patchFunction("CharacterAppearanceSortLayers", {
-            "drawLayer.Alpha.forEach(alpha => {": "if (!item.Property?.HideItemExclude?.includes('*')) drawLayer.Alpha.forEach(alpha => {"
+            "drawLayer.Alpha.forEach(alpha => {": "if (!item.Property?.HideItemExclude?.includes('*')) drawLayer.Alpha.forEach(alpha => {",
         });
 
         hookFunction("CommonDrawApplyLayerAlphaMasks", 1, (args, next) => {
@@ -523,7 +521,7 @@ export class OpacityModule extends BaseModule {
         }, ModuleCategory.Opacity);
 
         hookFunction("AssetLayerSort", 1, (args, next) => {
-            var ret = next(args);
+            const ret = next(args);
             if (this.Enabled) {
                 ret.forEach((layer: AssetLayer) => {
                     (layer.MinOpacity as any) = 0;
@@ -533,7 +531,7 @@ export class OpacityModule extends BaseModule {
         }, ModuleCategory.Opacity);
 
         hookFunction("CharacterAppearanceSortLayers", 1, (args, next) => {
-            let C = args[0] as OtherCharacter;
+            const C = args[0] as OtherCharacter;
             if (!C || !this.Enabled)
                 return next(args);
 
@@ -541,13 +539,14 @@ export class OpacityModule extends BaseModule {
                 if (this.isSeeThrough(item, C)) {
                     if (!item.Property)
                         item.Property = {};
-                    item.Property.HideItemExclude = ["*"]; // Exclude from BC's HideItem system to prevent it from overriding the LSCG opacity changes
+                    // @ts-expect-error: Exclude from BC's HideItem system to prevent it from overriding the LSCG opacity changes
+                    item.Property.HideItemExclude = ["*"];
                 }
 
                 if (item.Asset.Name == "Penis") {
-                    let xrayActive = getModule<StateModule>("StateModule")?.XRayState?.Active && getModule<StateModule>("StateModule")?.XRayState?.CanViewXRay(C);
-                    let transpPants = !!this.getOpacity(InventoryGet(C, "ClothLower"));
-                    let transpUnderwear = !!this.getOpacity(InventoryGet(C, "Panties"));
+                    const xrayActive = getModule<StateModule>("StateModule")?.XRayState?.Active && getModule<StateModule>("StateModule")?.XRayState?.CanViewXRay(C);
+                    const transpPants = !!this.getOpacity(InventoryGet(C, "ClothLower"));
+                    const transpUnderwear = !!this.getOpacity(InventoryGet(C, "Panties"));
                     if ((xrayActive || transpPants || transpUnderwear) && (!item.Property || !item.Property?.OverridePriority)) {
                         if (!item.Property)
                             item.Property = {};
@@ -606,7 +605,7 @@ export class OpacityModule extends BaseModule {
 
     getOpacityFromProperties(item?: null | Item): number | number[] | undefined {
         if (item?.Property?.LSCGOpacity != null) {
-            const sanitizedProps = Object.assign(item.Property, ItemColorSanitizeProperty(item))
+            const sanitizedProps = Object.assign(item.Property, ItemColorSanitizeProperty(item));
             this.setOpacityInProperty(item.Asset, sanitizedProps, item.Property.LSCGOpacity);
         }
         return item?.Property?.Opacity ?? 1;
@@ -626,7 +625,7 @@ export class OpacityModule extends BaseModule {
             }
             props.Opacity[i] = CommonClamp(value[i], 0, layer.MaxOpacity);
         }
-        if (!!props.LSCGOpacity)
+        if (props.LSCGOpacity)
             delete props.LSCGOpacity;
     }
 
@@ -639,8 +638,8 @@ export class OpacityModule extends BaseModule {
             this.lastY = MouseY;
         }
         elem.setPointerCapture(evt.pointerId);
-        let ui = document.getElementById(ID.root);
-        if (!!ui) {
+        const ui = document.getElementById(ID.root);
+        if (ui) {
             ui.classList.add("lscg-translate-dragging");
         }
     }
@@ -648,12 +647,12 @@ export class OpacityModule extends BaseModule {
     TranslateMove(elem: HTMLElement, evt: PointerEvent) {
         if (!this.isDragging || !this.TranslationMode) return;
 
-        let mX = Math.min(Math.max(MouseX, 700), 1200);
-        let mY = Math.min(Math.max(MouseY, 0), 1000);
-        let dX = mX - this.lastX;
-        let dY = mY - this.lastY;
-        let curX = Math.round(parseFloat(ElementValue(this.TranslateXElementId)));
-        let curY = Math.round(parseFloat(ElementValue(this.TranslateYElementId)));
+        const mX = Math.min(Math.max(MouseX, 700), 1200);
+        const mY = Math.min(Math.max(MouseY, 0), 1000);
+        const dX = mX - this.lastX;
+        const dY = mY - this.lastY;
+        const curX = Math.round(parseFloat(ElementValue(this.TranslateXElementId)));
+        const curY = Math.round(parseFloat(ElementValue(this.TranslateYElementId)));
         ElementValue(this.TranslateXElementId, curX + dX + "");
         ElementValue(this.TranslateYElementId, curY + dY + "");
         this._updateTranslationValue(this.TranslateXElementId);
@@ -666,28 +665,28 @@ export class OpacityModule extends BaseModule {
     TranslateEnd(elem: HTMLElement, evt: PointerEvent) {
         elem.releasePointerCapture(evt.pointerId);
         this.isDragging = false;
-        let ui = document.getElementById(ID.root);
-        if (!!ui) {
+        const ui = document.getElementById(ID.root);
+        if (ui) {
             ui.classList.remove("lscg-translate-dragging");
         }
     }
 
     OpacityChange(slider: OpacitySlider) {
-        let value = Math.round(this._updateOpacityValue(slider.ElementId) * 100);
+        const value = Math.round(this._updateOpacityValue(slider.ElementId) * 100);
         slider.Value = value;
         document.getElementById(slider.ElementId + "_Text")?.setAttribute("value", value);
         this.UpdatePreview();
     }
 
     OpacityTextChange(slider: OpacitySlider) {
-        let value = Math.round(this._updateOpacityValue(slider.ElementId + "_Text") * 100);
+        const value = Math.round(this._updateOpacityValue(slider.ElementId + "_Text") * 100);
         slider.Value = value;
         document.getElementById(slider.ElementId)?.setAttribute("value", value);
         this.UpdatePreview();
     }
 
     TranslationTextChange(elementId: string) {
-        let value = Math.round(this._updateTranslationValue(elementId));
+        const value = Math.round(this._updateTranslationValue(elementId));
         document.getElementById(elementId)?.setAttribute("value", value);
         this.UpdatePreview();
     }
@@ -695,16 +694,16 @@ export class OpacityModule extends BaseModule {
     SetTranslationElementValues() {
         if (!this.OpacityItem)
             return;
-        let asset = this.OpacityItem.Asset;
+        const asset = this.OpacityItem.Asset;
         let origAsset = Object.assign({}, AssetGet("Female3DCG", this.OpacityItem.Asset.Group.Name, this.OpacityItem.Asset.Name));
         if (!origAsset)
             origAsset = Object.assign({}, asset);
-        let assetLayer = origAsset.Layer[Math.max(this.SelectedTranslationLayer, 0)];
+        const assetLayer = origAsset.Layer[Math.max(this.SelectedTranslationLayer, 0)];
         let layer: any = (this.OpacityItem?.Property as PropertiesWithLayerOverrides)?.LayerOverrides?.[Math.max(this.SelectedTranslationLayer, 0)] ?? undefined;
         if (!layer)
             layer = assetLayer;
-        let x = (layer["DrawingLeft"] ? layer["DrawingLeft"][PoseType.DEFAULT] : assetLayer["DrawingLeft"][PoseType.DEFAULT]) ?? assetLayer["DrawingLeft"][PoseType.DEFAULT];
-        let y = (layer["DrawingTop"] ? layer["DrawingTop"][PoseType.DEFAULT] : assetLayer["DrawingTop"][PoseType.DEFAULT]) ?? assetLayer["DrawingTop"][PoseType.DEFAULT];
+        const x = (layer["DrawingLeft"] ? layer["DrawingLeft"][PoseType.DEFAULT] : assetLayer["DrawingLeft"][PoseType.DEFAULT]) ?? assetLayer["DrawingLeft"][PoseType.DEFAULT];
+        const y = (layer["DrawingTop"] ? layer["DrawingTop"][PoseType.DEFAULT] : assetLayer["DrawingTop"][PoseType.DEFAULT]) ?? assetLayer["DrawingTop"][PoseType.DEFAULT];
         ElementValue(this.TranslateXElementId, x + "");
         ElementValue(this.TranslateYElementId, y + "");
     }
@@ -712,20 +711,20 @@ export class OpacityModule extends BaseModule {
     _updateTranslationValue(fromElementId: string): number {
         if (!this.OpacityItem)
             return 0;
-        let value = Math.round(parseFloat(ElementValue(fromElementId)));
-        let properties = (this.OpacityItem.Property as PropertiesWithLayerOverrides);
-        let layerCount = this.OpacityItem.Asset.Layer.length;
+        const value = Math.round(parseFloat(ElementValue(fromElementId)));
+        const properties = (this.OpacityItem.Property as PropertiesWithLayerOverrides);
+        const layerCount = this.OpacityItem.Asset.Layer.length;
         if (!properties.LayerOverrides || properties.LayerOverrides.length != layerCount) {
-            let previous = Object.assign({}, properties.LayerOverrides);
+            const previous = Object.assign({}, properties.LayerOverrides);
             properties.LayerOverrides = [];
-            for (var i = 0; i < layerCount; i++) {
-                if (!!previous[i])
+            for (let i = 0; i < layerCount; i++) {
+                if (previous[i])
                     properties.LayerOverrides.push(previous[i]);
                 else {
-                    let defaultLayer = this.OpacityItem?.Asset.Layer[i];
+                    const defaultLayer = this.OpacityItem?.Asset.Layer[i];
                     properties.LayerOverrides.push({
                         DrawingLeft: defaultLayer.DrawingLeft,
-                        DrawingTop: defaultLayer.DrawingTop
+                        DrawingTop: defaultLayer.DrawingTop,
                     });
                 }
             };
@@ -748,9 +747,8 @@ export class OpacityModule extends BaseModule {
         if (!this.OpacityItem)
             return 1;
 
-        let value = Math.round(parseFloat(ElementValue(fromElementId))) / 100;
-        let mainValue = Math.round(parseFloat(ElementValue(this.OpacityMainSlider.ElementId + "_Number"))) / 100;
-        let C = Player;
+        const value = Math.round(parseFloat(ElementValue(fromElementId))) / 100;
+        const mainValue = Math.round(parseFloat(ElementValue(this.OpacityMainSlider.ElementId + "_Number"))) / 100;
         if (fromElementId == this.OpacityMainSlider.ElementId + "_Range" || fromElementId == this.OpacityMainSlider.ElementId + "_Number") {
             // Closing the color picker will automatically shrink the array to a number/undefined if appropriate (see `ItemColorFireExit()`)
             this.setOpacity(this.OpacityItem, value);
@@ -762,7 +760,7 @@ export class OpacityModule extends BaseModule {
             let opacityArr = this.getOpacity();
             if (!Array.isArray(opacityArr))
                 opacityArr = new Array(this.OpacityLayerSliders.length).fill(mainValue);
-            let ix = this.OpacityLayerSliders.findIndex(s => s.ElementId + "_Range" == fromElementId || s.ElementId + "_Number" == fromElementId);
+            const ix = this.OpacityLayerSliders.findIndex(s => s.ElementId + "_Range" == fromElementId || s.ElementId + "_Number" == fromElementId);
             opacityArr[ix] = value;
             this.setOpacity(this.OpacityItem, opacityArr);
         }
@@ -771,12 +769,12 @@ export class OpacityModule extends BaseModule {
     }
 
     UpdatePreview = CommonLimitFunction(() => {
-        if (!!this.OpacityCharacter)
+        if (this.OpacityCharacter)
             CharacterLoadCanvas(this.OpacityCharacter);
     }, 10, 99);
 
     TranslateAttachEventListener() {
-        let CanvasElement = document.getElementById("MainCanvas");
+        const CanvasElement = document.getElementById("MainCanvas");
         if (!CanvasElement)
             return;
 
@@ -810,12 +808,12 @@ export class OpacityModule extends BaseModule {
                 }
                 const inputs: NodeListOf<HTMLInputElement> = document.querySelectorAll(selectors.join(", "));
                 inputs.forEach(lscgInput => lscgInput.valueAsNumber = Math.round(this.valueAsNumber * (100 / 255)));
-            }
+            },
         );
     }
 
     TranslateRemoveEventListener() {
-        let CanvasElement = document.getElementById("MainCanvas");
+        const CanvasElement = document.getElementById("MainCanvas");
         if (!CanvasElement)
             return;
 
@@ -829,8 +827,8 @@ export class OpacityModule extends BaseModule {
         if (!this.OpacityItem || !this.OpacityItem.Property || !properties.LayerOverrides)
             return;
         properties.LayerOverrides.forEach((layer, i) => {
-            layer.DrawingLeft = this.OpacityItem?.Asset.Layer[i]?.DrawingLeft ?? { [PoseType.DEFAULT]: 1, };
-            layer.DrawingTop = this.OpacityItem?.Asset.Layer[i]?.DrawingTop ?? { [PoseType.DEFAULT]: 1, };
+            layer.DrawingLeft = this.OpacityItem?.Asset.Layer[i]?.DrawingLeft ?? { [PoseType.DEFAULT]: 1 };
+            layer.DrawingTop = this.OpacityItem?.Asset.Layer[i]?.DrawingTop ?? { [PoseType.DEFAULT]: 1 };
             this.SelectedTranslationLayer = -1;
         });
         this.SetTranslationElementValues();

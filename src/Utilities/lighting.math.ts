@@ -33,7 +33,7 @@ export function generateSegments(obstacles: OpaqueObstacle[]): Segment[] {
                     const angle = ((i / res) * Math.PI * 2) + rotationOffset;
                     pts.push({
                         x: obs.center.x + Math.cos(angle) * obs.radiusX,
-                        y: obs.center.y + Math.sin(angle) * obs.radiusY
+                        y: obs.center.y + Math.sin(angle) * obs.radiusY,
                     });
                 }
                 for (let i = 0; i < pts.length; i++) {
@@ -127,7 +127,7 @@ export function getVisibilityPolygon(origin: { x: number, y: number, radius: num
         { p1: { x: minX, y: minY }, p2: { x: maxX, y: minY } },
         { p1: { x: maxX, y: minY }, p2: { x: maxX, y: maxY } },
         { p1: { x: maxX, y: maxY }, p2: { x: minX, y: maxY } },
-        { p1: { x: minX, y: maxY }, p2: { x: minX, y: minY } }
+        { p1: { x: minX, y: maxY }, p2: { x: minX, y: minY } },
     ];
 
     const allSegments = [...localSegments, ...bounds];
@@ -168,7 +168,7 @@ export function getVisibilityPolygon(origin: { x: number, y: number, radius: num
 }
 
 export function getIntersection(
-    origin: Point, dx: number, dy: number, seg: Segment, result: { x: number; y: number; t1: number }
+    origin: Point, dx: number, dy: number, seg: Segment, result: { x: number; y: number; t1: number },
 ): boolean {
     const r_px = origin.x, r_py = origin.y;
     const s_px = seg.p1.x, s_py = seg.p1.y;

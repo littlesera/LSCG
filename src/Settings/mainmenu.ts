@@ -1,8 +1,7 @@
 import { getModule } from "modules";
-import { MiscModule } from "Modules/misc";
 import { GuiSubscreen } from "./settingBase";
 import { GUI } from "./settingUtils";
-import { ExportSettings, ImportSettings, LSCG_CHANGES, sleep } from "utils";
+import { ExportSettings, ImportSettings, LSCG_CHANGES } from "utils";
 import { GuiReset } from "./reset";
 import { CoreModule } from "Modules/core";
 import { StateModule } from "Modules/states";
@@ -24,10 +23,10 @@ export class MainMenu extends GuiSubscreen {
 	}
 
 	get immersiveBlock(): boolean {
-		let states = getModule<StateModule>("StateModule");
-		let immersive = states.settings.immersive;
-		let hypnoBlock = states.HypnoState.Active;
-		let sleepBlock = states.SleepState.Active;
+		const states = getModule<StateModule>("StateModule");
+		const immersive = states.settings.immersive;
+		const hypnoBlock = states.HypnoState.Active;
+		const sleepBlock = states.SleepState.Active;
 		return immersive && (hypnoBlock || sleepBlock);
 	}
 
@@ -60,7 +59,7 @@ export class MainMenu extends GuiSubscreen {
 	}
 
 	Run() {
-		var prev = MainCanvas.textAlign;
+		const prev = MainCanvas.textAlign;
 		MainCanvas.textAlign = "left";
 		DrawText(`- Little Sera's Club Games ${LSCG_VERSION} -`, GuiSubscreen.START_X, GuiSubscreen.START_Y - GuiSubscreen.Y_MOD, "Black", "#D7F6E9");
 		DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png");
@@ -118,7 +117,7 @@ export class MainMenu extends GuiSubscreen {
 		if (MouseIn(1815, 75, 90, 90)) return this.Exit();
 
 		if (!this.immersiveBlock && !this.restrainedBlock) {
-			let i = 0
+			let i = 0;
 			for (const screen of this.subscreens) {
 				const PX = Math.floor(i / 6);
 				const PY = i % 6;
@@ -145,17 +144,17 @@ export class MainMenu extends GuiSubscreen {
 			if (confirm("Importing settings will overwrite existing settings. \nAre you sure?")) {
 				setTimeout(() => {
 					ImportSettings().then(() => {
-						alert(`LSCG settings imported`);
+						alert("LSCG settings imported");
 					});
 				}, 500);
 			}
 		}
 
 		if (MouseIn(1500, 720, 400, 80))
-            window.open(LSCG_CHANGES, '_blank');
+            window.open(LSCG_CHANGES, "_blank");
 
 		if (MouseIn(1500, 820, 400, 80))
-            window.open('https://github.com/littlesera/LSCG/wiki', '_blank');
+            window.open("https://github.com/littlesera/LSCG/wiki", "_blank");
 	}
 
 	Exit(): void {

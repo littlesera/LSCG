@@ -17,6 +17,12 @@ export const DRUG_BAR_DIMENSIONS = {
     BAR_WIDTH: 40,
     /** Bar height base */
     BAR_HEIGHT: 400,
+    /** Bars across before wrapping to another row. Eight fit in the character's width at normal spacing. */
+    BARS_PER_ROW: 8,
+    /** Vertical distance between rows: a bar's height plus a small gap. Extra rows stack upward. */
+    ROW_SPACING: 90,
+    /** Rows drawn; any bars beyond BARS_PER_ROW * MAX_ROWS are not shown. */
+    MAX_ROWS: 2,
 } as const;
 
 // LSCG Effects Menu (Crafting)

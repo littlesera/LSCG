@@ -1,12 +1,12 @@
 import { ModuleCategory } from "Settings/setting_definitions";
 import { PairedBaseState, Pairing } from "./PairedBaseState";
-import { ICONS, hookFunction, sendLSCGCommandBeep } from "utils";
+import { hookFunction, sendLSCGCommandBeep } from "utils";
 
 export class OrgasmSiphonedState extends PairedBaseState {
     Type: LSCGState = "orgasm-siphoned";
 
     Icon(C: OtherCharacter): string {
-        let pairings = C.LSCG?.StateModule.states.find(s => s.type == "orgasm-siphoned")?.extensions["pairings"] as Pairing[] ?? [];
+        const pairings = C.LSCG?.StateModule.states.find(s => s.type == "orgasm-siphoned")?.extensions["pairings"] as Pairing[] ?? [];
         if (pairings.some(p => p.IsSource))
             return "Assets/Female3DCG/Emoticon/Annoyed/Icon.png";
         else
@@ -17,27 +17,27 @@ export class OrgasmSiphonedState extends PairedBaseState {
     }
 
     Update(source: number, args: {name: string, value: any}[]): void {
-        if (!!Player.ArousalSettings) Player.ArousalSettings.Progress = 100;
+        if (Player.ArousalSettings) Player.ArousalSettings.Progress = 100;
         ActivityOrgasmPrepare(Player);
     }
 
     Init(): void {
         hookFunction("ActivityOrgasmStart", 100, (args, next) => { // high high priority
             // Intercept an orgasm, force it to ruin and send command to paired target
-            let C = args[0] as Character;
+            const C = args[0] as Character;
             if (!C.IsPlayer())
                 return next(args);
 
-            let siphonTargets = this.Pairings.filter(p => p.IsSource);
+            const siphonTargets = this.Pairings.filter(p => p.IsSource);
             if (siphonTargets.length > 0) {
                 siphonTargets.forEach(p => {
                     sendLSCGCommandBeep(p.PairedMember, "pairing-update", [
                         {
                             name: "type",
-                            value: this.Type
-                        }
-                    ])
-                })
+                            value: this.Type,
+                        },
+                    ]);
+                });
                 ActivityOrgasmRuined = true;
             }
             
