@@ -12,6 +12,7 @@
 // side effects need capturing there too. installBcLite() (everything, including
 // fake simple implementations of InventoryGet/CharacterNickname/etc.) is only for
 // the "unit" project.
+import { installBcElements } from "./bc-elements";
 import { vi } from "vitest";
 import * as LZStringLib from "lz-string";
 
@@ -182,6 +183,7 @@ export function installBcLite(): BcLite {
 	g.MainCanvas = { save: vi.fn(), restore: vi.fn(), translate: vi.fn(), scale: vi.fn() };
 
 	installHookTargetStubs(g);
+	installBcElements(g);
 	// GetItemNameAndDescriptionConcat (utils.ts) reads CraftingDescription.Decode directly
 	// (not a hookFunction target) once CraftingDescription exists at all -- ensureFn's
 	// DecodeToHTML stub above already makes it an object, so this needs adding separately.
