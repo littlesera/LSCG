@@ -183,9 +183,7 @@ test("Outfit Collection: the item panel sets, configures, colors and removes an 
         await wait(() => $("item-group")?.options.length > 0);
         $("item-group").value = "ItemMouth";
         $("item-group").dispatchEvent(new Event("change"));
-        $("item-asset").value = "BallGag";
-        $("item-asset").dispatchEvent(new Event("change"));
-        $("item-set").click();
+        [...$("item-cells").querySelectorAll(".lscg-item-cell")].find((c: any) => c.getAttribute("aria-label") === "Ball Gag").click();
         out.set = bundle()?.Name;
         out.configureEnabled = !$("item-configure").disabled;
 
@@ -199,7 +197,7 @@ test("Outfit Collection: the item panel sets, configures, colors and removes an 
         await wait(() => bundle()?.Property?.TypeRecord?.typed === 2);
         out.typed = bundle()?.Property?.TypeRecord?.typed;
         out.focusAfterExtended = w.DialogFocusItem;
-        out.editorShown = $("item-set").closest("#lscg-outfit-edit").style.visibility;
+        out.editorShown = $("item-open").closest("#lscg-outfit-edit").style.visibility;
 
         // Color: BC's color widget, closed with its own save
         $("item-color").click();
@@ -244,8 +242,7 @@ test("Outfit Collection: a modular item's module screens work with real clicks, 
         w.LSCG.getModule("GUI").currentSubscreen.NewOutfit();
         await wait(1200);
         $("item-group").value = "ItemLegs"; $("item-group").dispatchEvent(new Event("change"));
-        $("item-asset").value = "BarrelCorset"; $("item-asset").dispatchEvent(new Event("change"));
-        $("item-set").click();
+        [...$("item-cells").querySelectorAll(".lscg-item-cell")].find((c: any) => c.getAttribute("aria-label") === "Barrel Corset").click();
         await wait(800);
         $("item-configure").click();
         await wait(1200);
@@ -345,6 +342,7 @@ test("Outfit Collection: clicking a zone on the character picks its group, empty
         await new Promise(r => setTimeout(r, 1500)); // BC loads the preview images
         const canvas = gag?.querySelector("canvas") as HTMLCanvasElement;
         out.previewDrawn = !!canvas && [...canvas.getContext("2d")!.getImageData(0, 0, canvas.width, canvas.height).data].some((v, i) => i % 4 === 0 && v < 200);
+        out.previewTransparent = canvas.getContext("2d")!.getImageData(2, 2, 1, 1).data[3] === 0; // so a cell's highlight shows behind the picture
         gag?.dispatchEvent(new MouseEvent("mouseenter"));
         const tip = document.getElementById("lscg-outfit-edit-item-tip") as HTMLElement;
         out.tip = tip.hidden ? "hidden" : tip.innerText;
@@ -363,7 +361,7 @@ test("Outfit Collection: clicking a zone on the character picks its group, empty
         return out;
     });
     expect(picked).toEqual({
-        group: "ItemMouth", gridOpen: true, cells: true, previewDrawn: true,
+        group: "ItemMouth", gridOpen: true, cells: true, previewDrawn: true, previewTransparent: true,
         tip: "Ball Gag", tipHides: true, title: "Mouth", closedByButton: true, reopened: true, gridClosed: true, inCode: true,
     });
 });
@@ -400,8 +398,7 @@ test("Escape backs out one layer at a time and only the main menu leaves LSCG", 
         (window as any).LSCG.getModule("GUI").currentSubscreen.NewOutfit();
         await new Promise(r => setTimeout(r, 1200));
         $("item-group").value = "ItemMouth"; $("item-group").dispatchEvent(new Event("change"));
-        $("item-asset").value = "BallGag"; $("item-asset").dispatchEvent(new Event("change"));
-        $("item-set").click();
+        [...$("item-cells").querySelectorAll(".lscg-item-cell")].find((c: any) => c.getAttribute("aria-label") === "Ball Gag").click();
         await new Promise(r => setTimeout(r, 500));
         $("item-configure").click();
         await new Promise(r => setTimeout(r, 800));
@@ -440,8 +437,7 @@ test("Outfit Collection: colouring draws the character at centre, so dragging to
         w.LSCG.getModule("GUI").currentSubscreen.NewOutfit();
         await new Promise(r => setTimeout(r, 1200));
         $("item-group").value = "ItemMouth"; $("item-group").dispatchEvent(new Event("change"));
-        $("item-asset").value = "BallGag"; $("item-asset").dispatchEvent(new Event("change"));
-        $("item-set").click();
+        [...$("item-cells").querySelectorAll(".lscg-item-cell")].find((c: any) => c.getAttribute("aria-label") === "Ball Gag").click();
         await new Promise(r => setTimeout(r, 500));
         $("item-color").click();
         await new Promise(r => setTimeout(r, 1500));
@@ -460,4 +456,149 @@ test("Outfit Collection: colouring draws the character at centre, so dragging to
     expect(moved).not.toBeNull();
     expect(moved![0]).toBeGreaterThan(0); // dragged right and down
     expect(moved![1]).toBeGreaterThan(0);
+});
+
+test("Outfit Collection: the item grid has a Crafted tab with the player's crafted items for the group", async ({ bc }) => {
+    await bc.openSettings("Outfit Collection");
+    const result = await bc.run(async () => {
+        const w = window as any;
+        const wait = (ms: number) => new Promise(r => setTimeout(r, ms));
+        const $ = (id: string) => document.getElementById("lscg-outfit-edit-" + id) as any;
+        w.Player.Crafting = [
+            null,
+            { Name: "Red Gag", Description: "", Color: "#ff0000", Lock: "", Item: "BallGag", Private: false, Property: "Normal", Effects: {}, Type: null, TypeRecord: null, ItemProperty: null, MemberName: "Tester", MemberNumber: w.Player.MemberNumber, Partial: false },
+            { Name: "Wild Gag [chaotic]", Description: "Soaked in a mild sedative", Color: "#00ff00", Lock: "", Item: "BallGag", Private: false, Property: "Normal", Effects: {}, Type: null, TypeRecord: null, ItemProperty: null, MemberName: "Tester", MemberNumber: w.Player.MemberNumber, Partial: false },
+        ];
+        const out: any = {};
+        w.LSCG.getModule("GUI").currentSubscreen.NewOutfit();
+        await wait(1200);
+        const pick = async (group: string) => { $("item-group").value = group; $("item-group").dispatchEvent(new Event("change")); await wait(300); };
+
+        await pick("ItemArms");
+        out.armsCrafted = [$("item-tab-crafted").innerText, $("item-tab-crafted").disabled];
+        await pick("ItemMouth");
+        out.mouthCrafted = [$("item-tab-crafted").innerText, $("item-tab-crafted").disabled];
+        out.startsOnItems = $("item-tab-items").getAttribute("aria-selected");
+
+        $("item-tab-crafted").click();
+        await wait(300);
+        const cells = [...$("item-cells").querySelectorAll(".lscg-item-cell")];
+        out.craftedCells = cells.map(c => c.textContent.trim());
+        // Hovering a crafted item explains it: name, base item, description and what LSCG does with its text
+        const tip = $("item-tip");
+        cells[1].dispatchEvent(new MouseEvent("mouseenter"));
+        const cell = cells[1].getBoundingClientRect();
+        out.tip = { text: tip.innerText.replace(/\s+/g, " ").trim(), belowCell: tip.getBoundingClientRect().top >= cell.bottom };
+        cells[1].dispatchEvent(new MouseEvent("mouseleave"));
+        cells[0].click();
+        await wait(500);
+        const code = $("outfit-input").value;
+        const bundle = JSON.parse(w.LZString.decompressFromBase64(code)).find((b: any) => b.Group === "ItemMouth");
+        out.worn = [bundle?.Name, bundle?.Craft?.Name, bundle?.Color];
+        out.listUntouched = w.Player.Crafting[1].MemberNumber === w.Player.MemberNumber && !("Craft" in w.Player.Crafting[1]);
+        return out;
+    });
+    expect(result).toEqual({
+        armsCrafted: ["Crafted (0)", true], mouthCrafted: ["Crafted (2)", false], startsOnItems: "true",
+        craftedCells: ["Red Gag", "Wild Gag [chaotic]"],
+        tip: { text: "Wild Gag [chaotic] Ball Gag Soaked in a mild sedative LSCG: chaotic, sedative drug", belowCell: true }, worn: ["BallGag", "Red Gag", "#ff0000"], listUntouched: true,
+    });
+});
+
+test("Outfit Collection: picking a group that already has an item leaves the grid closed until the item box is clicked", async ({ bc }) => {
+    await bc.openSettings("Outfit Collection");
+    const result = await bc.run(async () => {
+        const wait = (ms: number) => new Promise(r => setTimeout(r, ms));
+        const $ = (id: string) => document.getElementById("lscg-outfit-edit-" + id) as any;
+        const group = async (name: string) => { $("item-group").value = name; $("item-group").dispatchEvent(new Event("change")); await wait(300); };
+        const out: any = {};
+        (window as any).LSCG.getModule("GUI").currentSubscreen.NewOutfit();
+        await wait(1200);
+
+        await group("ItemMouth");
+        out.emptyOpens = !$("item-grid").hidden;
+        out.emptyLabel = $("item-open").innerText;
+        [...$("item-cells").querySelectorAll(".lscg-item-cell")].find((c: any) => c.getAttribute("aria-label") === "Ball Gag").click();
+        await wait(500);
+        out.closedAfterPick = $("item-grid").hidden;
+
+        await group("ItemMouth");
+        out.occupiedStaysClosed = $("item-grid").hidden;
+        out.loadedLabel = $("item-open").innerText;
+        $("item-open").click();
+        out.itemBoxOpens = !$("item-grid").hidden;
+        return out;
+    });
+    expect(result).toEqual({ emptyOpens: true, emptyLabel: "Choose item", closedAfterPick: true, occupiedStaysClosed: true, loadedLabel: "Ball Gag", itemBoxOpens: true });
+});
+
+test("Outfit Collection: the lock button opens a lock modal where a lock is chosen and its settings are fields", async ({ bc }) => {
+    await bc.openSettings("Outfit Collection");
+    const result = await bc.run(async () => {
+        const w = window as any;
+        const wait = (ms: number) => new Promise(r => setTimeout(r, ms));
+        const $ = (id: string) => document.getElementById("lscg-outfit-edit-" + id) as any;
+        const bundle = () => JSON.parse(w.LZString.decompressFromBase64($("outfit-input").value)).find((b: any) => b.Group === "ItemMouth")?.Property ?? {};
+        const labels = () => [...$("lock-cells").querySelectorAll(".lscg-item-cell")].map((c: any) => c.getAttribute("aria-label"));
+        const pick = async (label: string) => {
+            const cell = [...$("lock-cells").querySelectorAll(".lscg-item-cell")].find((c: any) => c.getAttribute("aria-label") === label);
+            if (!cell) throw new Error(`no "${label}" in: ${labels().join(", ")}`);
+            cell.click();
+            await wait(500);
+        };
+        const field = (prop: string) => $("lock-settings-" + prop);
+        const type = async (prop: string, value: string) => { field(prop).value = value; field(prop).dispatchEvent(new Event("change")); await wait(500); };
+        const out: any = {};
+
+        w.LSCG.getModule("GUI").currentSubscreen.NewOutfit();
+        await wait(1200);
+        $("item-group").value = "ItemMouth"; $("item-group").dispatchEvent(new Event("change"));
+        await wait(300);
+        out.disabledWithoutItem = $("item-lock").disabled;
+        [...$("item-cells").querySelectorAll(".lscg-item-cell")].find((c: any) => c.getAttribute("aria-label") === "Ball Gag").click();
+        await wait(600);
+
+        $("item-lock").click();
+        await wait(1200);
+        out.opens = { modal: !$("lock-modal").hidden, itemGridClosed: $("item-grid").hidden, title: $("lock-title").innerText };
+        out.noRemoveCellYet = !labels().some((l: string) => l.startsWith("No lock"));
+        out.noTimerLocks = labels().filter((l: string) => /timer|five minutes/i.test(l)).length === 0;
+
+        await pick("Combination Padlock");
+        out.combination = { stillOpen: !$("lock-modal").hidden, saved: [bundle().LockedBy, bundle().CombinationNumber], field: field("CombinationNumber").value };
+        await type("CombinationNumber", "12");
+        out.badCombination = { invalid: field("CombinationNumber").hasAttribute("aria-invalid"), kept: bundle().CombinationNumber };
+        await type("CombinationNumber", "1234");
+        out.goodCombination = { saved: bundle().CombinationNumber, field: field("CombinationNumber").value, invalid: field("CombinationNumber").hasAttribute("aria-invalid") };
+
+        await pick("Password Lock");
+        await type("Password", "secret");
+        await type("Hint", "the usual");
+        out.password = [bundle().LockedBy, bundle().Password, bundle().Hint, bundle().CombinationNumber];
+        await type("Password", "no spaces 1");
+        out.badPassword = { invalid: field("Password").hasAttribute("aria-invalid"), kept: bundle().Password };
+
+        await pick("Metal Padlock");
+        out.metal = { lockedBy: bundle().LockedBy, note: $("lock-settings").innerText.trim(), password: bundle().Password };
+
+        await pick("No lock (Take the lock off)");
+        out.removed = [bundle().LockedBy, labels().some((l: string) => l.startsWith("No lock"))];
+
+        w.LSCG.getModule("GUI").currentSubscreen.Exit(); // Escape closes the modal before anything else
+        out.escape = { modalClosed: $("lock-modal").hidden, editorStillOpen: !!w.LSCG.getModule("GUI").currentSubscreen.SelectedOutfit };
+        return out;
+    });
+    expect(result).toEqual({
+        disabledWithoutItem: true,
+        opens: { modal: true, itemGridClosed: true, title: "Mouth: Ball Gag" },
+        noRemoveCellYet: true, noTimerLocks: true,
+        combination: { stillOpen: true, saved: ["CombinationPadlock", "0000"], field: "0000" },
+        badCombination: { invalid: true, kept: "0000" },
+        goodCombination: { saved: "1234", field: "1234", invalid: false },
+        password: ["PasswordPadlock", "SECRET", "the usual", undefined],
+        badPassword: { invalid: true, kept: "SECRET" },
+        metal: { lockedBy: "MetalPadlock", note: "Metal Padlock has no settings.", password: undefined },
+        removed: [undefined, false],
+        escape: { modalClosed: true, editorStillOpen: true },
+    });
 });

@@ -49,6 +49,13 @@ function italicizeKeywords(string: string): (string | HTMLElement)[] {
     });
 }
 
+/** LSCG's bracketed keywords (e.g. "[chaotic]") that appear in a craft's name or description. */
+export function craftKeywords(craft: CraftingPartialItem): string[] {
+    const name = craft.Name.toLocaleLowerCase();
+    const description = craft.Description.toLocaleLowerCase();
+    return bracketedKeywords.filter(i => name.includes(i) || description.includes(i));
+}
+
 export const DEFAULT_TRIGGER_TIME_MS = 10 * 60 * 1000; // 10min
 export const QUICK_TRIGGER_TIME_MS = 3 * 60 * 1000; // 3min
 export const SLOW_TRIGGER_TIME_MS = 30 * 60 * 1000; // 30min
@@ -460,9 +467,7 @@ export class ChaoticItemModule extends BaseModule {
                 return next([idPrefix, asset, C, onClick, options, ...args]);
             }
 
-            const craftName = craft.Name.toLocaleLowerCase();
-            const craftDescription = craft.Description.toLocaleLowerCase();
-            const keywords = bracketedKeywords.filter(i => craftName.includes(i) || craftDescription.includes(i));
+            const keywords = craftKeywords(craft);
             options ??= {};
             options.icons = [
                 ...(options.icons ?? []),

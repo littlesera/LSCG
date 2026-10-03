@@ -3,6 +3,9 @@ import { ApplyItem, BC_ItemsToItemBundles, CopyCharacter, OUTFIT_CREATOR_ID, OUT
 import { GuiSubscreen, HelpInfo } from "./settingBase";
 import { OutfitSettings } from "./Models/base";
 import { OutfitCollectionModule } from "Modules/outfitCollection";
+import { craftKeywords } from "Modules/chaotic-item";
+import { InjectorModule } from "Modules/injector";
+import { getModule } from "modules";
 import styles from "./outfits.scss?inline";
 import editorStyles from "./outfitEditor.scss?inline";
 import { clamp, entries, toArray } from "lodash-es";
@@ -78,6 +81,49 @@ let appearanceHook: (() => void) | undefined;
 /** Where BC's own item and colour widgets draw: the right half of the screen, as in its item dialog. */
 /** Pixel size of an item cell's preview canvas; BC's own item previews are 225 wide. */
 const ITEM_PREVIEW_SIZE = 225;
+/** An item grid cell's tooltip: the name, then optional base item, description and LSCG attribute lines. */
+type GridTab = "items" | "crafted";
+
+/** One cell of a popup's item grid. `icon` stands in for an asset's preview (e.g. "No lock"). */
+interface GridEntry {
+    asset?: Asset;
+    icon?: string;
+    label: string;
+    tip: ItemTip;
+    worn: boolean;
+    pick: () => void;
+}
+
+/** A lock setting the modal edits directly, validated like BC's own lock screens. */
+interface LockField {
+    label: string;
+    prop: string;
+    max: number;
+    valid: RegExp;
+    rule: string;
+    upper?: boolean;
+}
+
+const PASSWORD_FIELDS: LockField[] = [
+    { label: "Password", prop: "Password", max: 8, valid: /^[A-Z]{1,8}$/, rule: "1 to 8 letters, A to Z", upper: true },
+    { label: "Hint", prop: "Hint", max: 140, valid: /^.{0,140}$/, rule: "Up to 140 characters" },
+];
+
+/** The locks that have settings, by asset name; the others (metal, owner, family...) have nothing to set. */
+const LOCK_SETTINGS: Record<string, LockField[] | undefined> = {
+    CombinationPadlock: [{ label: "Combination", prop: "CombinationNumber", max: 4, valid: /^\d{4}$/, rule: "4 digits" }],
+    PasswordPadlock: PASSWORD_FIELDS,
+    SafewordPadlock: PASSWORD_FIELDS,
+    HighSecurityPadlock: [{ label: "Keys (member numbers, comma separated)", prop: "MemberNumberListKeys", max: 250, valid: /^\d+(,\d+)*$/, rule: "Member numbers separated by commas" }],
+};
+
+interface ItemTip {
+    title: string;
+    sub?: string;
+    body?: string;
+    attrs?: string[];
+}
+
 const COLOR_RECT = [1090, 15, 885, 970] as const;
 /** Where BC's Appearance screen draws the player while a colour picker is open: x, y, zoom. */
 const COLOR_CHARACTER = [660, 90, 0.95] as const;
@@ -112,10 +158,18 @@ const EDITOR_ID = Object.freeze({
     itemOpen: `${editorRoot}-item-open`,
     itemGrid: `${editorRoot}-item-grid`,
     itemGridTitle: `${editorRoot}-item-grid-title`,
+    itemTabItems: `${editorRoot}-item-tab-items`,
+    itemTabCrafted: `${editorRoot}-item-tab-crafted`,
+    itemLock: `${editorRoot}-item-lock`,
+    lockModal: `${editorRoot}-lock-modal`,
+    lockTitle: `${editorRoot}-lock-title`,
+    lockCells: `${editorRoot}-lock-cells`,
+    lockSettings: `${editorRoot}-lock-settings`,
+    lockClose: `${editorRoot}-lock-close`,
+    lockTip: `${editorRoot}-lock-tip`,
     itemCells: `${editorRoot}-item-cells`,
     itemClose: `${editorRoot}-item-close`,
     itemTip: `${editorRoot}-item-tip`,
-    itemSet: `${editorRoot}-item-set`,
     itemConfigure: `${editorRoot}-item-configure`,
     itemColor: `${editorRoot}-item-color`,
     itemRemove: `${editorRoot}-item-remove`,
@@ -244,7 +298,7 @@ export class GuiOutfits extends GuiSubscreen {
                             ElementButton.Create(
                                 EDITOR_ID.build,
                                 () => this.#startCreator(),
-                                { image: "./Icons/Dress.png", tooltip: "Edit clothes and body in BC's appearance editor", tooltipPosition: "right" },
+                                { image: "./Icons/Dress.png", tooltip: "Edit in Wardrobe", tooltipPosition: "right" },
                                 { button: { attributes: { "screen-generated": undefined } } },
                             ),
                             ElementButton.Create(
@@ -269,13 +323,26 @@ export class GuiOutfits extends GuiSubscreen {
                         { direction: "ltr" },
                     )
                 }
-                <div id={EDITOR_ID.itemGrid} role="dialog" aria-label="Items" hidden>
+                <div id={EDITOR_ID.itemGrid} class="lscg-popup" role="dialog" aria-label="Items" hidden>
                     <div class="lscg-item-head">
                         <h2 id={EDITOR_ID.itemGridTitle}>Items</h2>
-                        <button id={EDITOR_ID.itemClose} aria-label="Close" title="Close" onClick={() => this.#closeGrid()}>×</button>
+                        <div class="lscg-item-tabs" role="tablist">
+                            <button id={EDITOR_ID.itemTabItems} role="tab" aria-selected="true" onClick={() => this.#setGridTab("items")}>Items</button>
+                            <button id={EDITOR_ID.itemTabCrafted} role="tab" aria-selected="false" onClick={() => this.#setGridTab("crafted")}>Crafted</button>
+                        </div>
+                        <button id={EDITOR_ID.itemClose} class="lscg-popup-close" aria-label="Close" title="Close" onClick={() => this.#closeGrid()}>×</button>
                     </div>
-                    <div id={EDITOR_ID.itemCells} class="scroll-box" role="listbox" onScroll={() => this.#hideItemTip()}/>
-                    <div id={EDITOR_ID.itemTip} role="tooltip" hidden/>
+                    <div id={EDITOR_ID.itemCells} class="lscg-item-cells scroll-box" role="listbox" onScroll={() => this.#hideItemTips()}/>
+                    <div id={EDITOR_ID.itemTip} class="lscg-item-tip" role="tooltip" hidden/>
+                </div>
+                <div id={EDITOR_ID.lockModal} class="lscg-popup" role="dialog" aria-label="Lock" hidden>
+                    <div class="lscg-item-head">
+                        <h2 id={EDITOR_ID.lockTitle}>Lock</h2>
+                        <button id={EDITOR_ID.lockClose} class="lscg-popup-close" aria-label="Close" title="Close" onClick={() => this.#closeLockModal()}>×</button>
+                    </div>
+                    <div id={EDITOR_ID.lockCells} class="lscg-item-cells scroll-box" role="listbox" onScroll={() => this.#hideItemTips()}/>
+                    <div id={EDITOR_ID.lockSettings} class="lscg-lock-settings"/>
+                    <div id={EDITOR_ID.lockTip} class="lscg-item-tip" role="tooltip" hidden/>
                 </div>
                 <div id="lscg-outfit-edit-form" role="form" class="scroll-box" aria-labelledby={EDITOR_ID.header}>
                     <input
@@ -341,15 +408,9 @@ export class GuiOutfits extends GuiSubscreen {
                         {this.createCheckboxes()}
                     </div>
                     <div id={EDITOR_ID.items}>
-                        <select id={EDITOR_ID.itemGroup} aria-label="Item group" onChange={() => { this.#fillAssets(); this.#openGrid(); }}/>
+                        <select id={EDITOR_ID.itemGroup} aria-label="Item group" onChange={() => this.#groupChosen()}/>
                         <select id={EDITOR_ID.itemAsset} aria-label="Item" hidden onChange={() => this.#updateItemPanel()}/>
                         <button class="lscg-button" id={EDITOR_ID.itemOpen} aria-label="Choose item" onClick={() => this.#gridOpen() ? this.#closeGrid() : this.#openGrid()}>Choose item</button>
-                        {ElementButton.Create(
-                            EDITOR_ID.itemSet,
-                            () => this.#setItem(),
-                            { image: "./Icons/Accept.png", tooltip: "Put the selected item on", tooltipPosition: "top" },
-                            { button: { attributes: { "screen-generated": undefined } } },
-                        )}
                         {ElementButton.Create(
                             EDITOR_ID.itemConfigure,
                             () => this.#focusItem("extended"),
@@ -360,6 +421,12 @@ export class GuiOutfits extends GuiSubscreen {
                             EDITOR_ID.itemColor,
                             () => this.#focusItem("color"),
                             { image: "./Icons/Color.png", tooltip: "Color", tooltipPosition: "top" },
+                            { button: { attributes: { "screen-generated": undefined } } },
+                        )}
+                        {ElementButton.Create(
+                            EDITOR_ID.itemLock,
+                            () => this.#openLockModal(),
+                            { image: "./Icons/Security.png", tooltip: "Lock", tooltipPosition: "top" },
                             { button: { attributes: { "screen-generated": undefined } } },
                         )}
                         {ElementButton.Create(
@@ -518,6 +585,10 @@ export class GuiOutfits extends GuiSubscreen {
             else DialogLeaveFocusItem();
             return;
         }
+        if (this.#lockModalOpen()) {
+            this.#closeLockModal();
+            return;
+        }
         if (this.#gridOpen()) {
             this.#closeGrid();
             return;
@@ -674,8 +745,15 @@ export class GuiOutfits extends GuiSubscreen {
         const sel = document.getElementById(EDITOR_ID.itemGroup) as HTMLSelectElement | null;
         if (!sel) return;
         sel.value = name;
+        this.#groupChosen();
+    }
+
+    /** A group was picked. An empty one opens the item grid; one that already has an item waits for a click on the item box. */
+    #groupChosen() {
         this.#fillAssets();
-        this.#openGrid();
+        const group = this.#itemGroup();
+        const occupied = !!group && !!this.preview && !!InventoryGet(this.preview, group.Name);
+        if (!occupied || this.#gridOpen()) this.#openGrid();
     }
 
     setFilteredIncoming() {
@@ -749,71 +827,247 @@ export class GuiOutfits extends GuiSubscreen {
     #closeGrid() {
         const grid = document.getElementById(EDITOR_ID.itemGrid);
         if (grid) grid.hidden = true;
-        this.#hideItemTip();
+        this.#hideItemTips();
     }
 
-    /** Full item name over a hovered cell, whose own label is truncated. Above the cell, or below it on the top row. */
-    #showItemTip(cell: HTMLElement, text: string) {
-        const tip = document.getElementById(EDITOR_ID.itemTip);
-        const popup = document.getElementById(EDITOR_ID.itemGrid);
-        if (!tip || !popup) return;
-        tip.innerText = text;
+    /** The hovered cell's tooltip, whose own label is truncated. Below the cell, or above it when there's no room below. */
+    #showItemTip(cell: HTMLElement, content: ItemTip, tip: HTMLElement, popup: HTMLElement) {
+        tip.replaceChildren(
+            <b>{content.title}</b>,
+            ...(content.sub ? [<div class="lscg-tip-sub">{content.sub}</div>] : []),
+            ...(content.body ? [<div class="lscg-tip-body">{content.body}</div>] : []),
+            ...(content.attrs?.length ? [<div class="lscg-tip-attrs">LSCG: {content.attrs.join(", ")}</div>] : []),
+        );
         tip.hidden = false;
         const root = popup.getBoundingClientRect();
         const at = cell.getBoundingClientRect();
-        const above = at.top - root.top - tip.offsetHeight - 4;
-        tip.style.top = `${above >= 0 ? above : at.bottom - root.top + 4}px`;
+        const below = at.bottom - root.top + 4;
+        const top = below + tip.offsetHeight <= root.height ? below : at.top - root.top - tip.offsetHeight - 4;
+        tip.style.top = `${Math.max(0, top)}px`;
         const left = at.left - root.left + (at.width - tip.offsetWidth) / 2;
         tip.style.left = `${Math.max(0, Math.min(left, root.width - tip.offsetWidth))}px`;
     }
 
-    #hideItemTip() {
-        const tip = document.getElementById(EDITOR_ID.itemTip);
-        if (tip) tip.hidden = true;
+    #hideItemTips() {
+        for (const id of [EDITOR_ID.itemTip, EDITOR_ID.lockTip]) {
+            const tip = document.getElementById(id);
+            if (tip) tip.hidden = true;
+        }
     }
 
-    /** BC-style scrollable grid of the group's items, using BC's own preview images; picking one puts it on. */
+    /** Which tab the item grid shows: BC's items for the group, or the player's own crafted items that fit it. */
+    #gridTab: GridTab = "items";
+
+    /** The player's crafted items (from their crafting lists) whose item belongs to `group`. */
+    #craftsFor(group: AssetGroup): { craft: CraftingItem, asset: Asset }[] {
+        return (Player.Crafting ?? []).flatMap(craft => {
+            const asset = craft && (CraftingAssets[craft.Item] ?? []).find(a => a.Group.Name === group.Name && a.Enable);
+            return craft && asset ? [{ craft, asset }] : [];
+        });
+    }
+
+    /** What a crafted item's tooltip says: its name, base item and description, plus any LSCG behavior its text gives it. */
+    #craftTip(craft: CraftingItem, asset: Asset): ItemTip {
+        const description = (typeof CraftingDescription === "undefined" ? craft.Description : CraftingDescription.Decode(craft.Description)).trim();
+        const drugs = getModule<InjectorModule>("InjectorModule")?.GetDrugTypes(craft) ?? [];
+        return {
+            title: craft.Name,
+            sub: asset.Description,
+            body: description,
+            attrs: [...craftKeywords(craft).map(k => k.slice(1, -1)), ...drugs.map(d => `${d} drug`)],
+        };
+    }
+
+    #setGridTab(tab: GridTab) {
+        this.#gridTab = tab;
+        this.#openGrid();
+    }
+
+    /** BC-style scrollable grid of the group's items or crafted items, using BC's own preview images; picking one puts it on. */
     #openGrid() {
         const grid = document.getElementById(EDITOR_ID.itemGrid);
         const cells = document.getElementById(EDITOR_ID.itemCells);
+        const tip = document.getElementById(EDITOR_ID.itemTip);
         const group = this.#itemGroup();
-        if (!grid || !cells || !group || !this.preview) return;
-        const worn = InventoryGet(this.preview, group.Name)?.Asset.Name;
+        if (!grid || !cells || !tip || !group || !this.preview) return;
+        this.#closeLockModal();
+        const wornItem = InventoryGet(this.preview, group.Name);
+        const crafts = this.#craftsFor(group);
+        if (!crafts.length) this.#gridTab = "items";
+
         (document.getElementById(EDITOR_ID.itemGridTitle) as HTMLElement).innerText = group.Description;
+        const tabs: [string, GridTab, string, string | undefined][] = [
+            [EDITOR_ID.itemTabItems, "items", "Items", undefined],
+            [EDITOR_ID.itemTabCrafted, "crafted", `Crafted (${crafts.length})`, crafts.length ? undefined : "None of your crafted items fit this group"],
+        ];
+        for (const [id, tab, label, disabledReason] of tabs) {
+            const button = document.getElementById(id) as HTMLButtonElement;
+            button.innerText = label;
+            button.setAttribute("aria-selected", String(this.#gridTab === tab));
+            button.disabled = !!disabledReason;
+            button.title = disabledReason ?? "";
+        }
+
+        const entries: GridEntry[] = this.#gridTab === "crafted"
+            ? crafts.map(({ craft, asset }) => ({
+                asset, label: craft.Name, tip: this.#craftTip(craft, asset),
+                worn: wornItem?.Asset.Name === asset.Name && wornItem.Craft?.Name === craft.Name,
+                pick: () => this.#wearCraft(group, asset, craft),
+            }))
+            : group.Asset.filter(a => a.Enable && a.Visible).map(a => ({
+                asset: a, label: a.Description, tip: { title: a.Description },
+                worn: wornItem?.Asset.Name === a.Name && !wornItem.Craft,
+                pick: () => this.#pickAsset(a.Name),
+            }));
+
+        grid.hidden = false;
+        this.#renderCells(grid, cells, tip, entries);
+    }
+
+    /**
+     * Fills a popup's scrolling cell grid. Previews are drawn by BC's own item preview, so images come through the same loader
+     * (and any mod hooks on it) as in its dialogs, and then scrolls to the selected cell.
+     */
+    #renderCells(popup: HTMLElement, cells: HTMLElement, tip: HTMLElement, entries: GridEntry[]) {
         const preview = this.preview;
-        const gen = ++this.#gridGen;
-        const previews: [Asset, CanvasRenderingContext2D][] = [];
-        cells.replaceChildren(...group.Asset.filter(a => a.Enable && a.Visible).map(a => {
+        const gen = String(++this.#gridGen);
+        cells.dataset.gen = gen;
+        const previews: [Asset | string, CanvasRenderingContext2D][] = [];
+        cells.replaceChildren(...entries.map(e => {
             const canvas = <canvas width={ITEM_PREVIEW_SIZE} height={ITEM_PREVIEW_SIZE} aria-hidden="true"/> as HTMLCanvasElement;
-            previews.push([a, canvas.getContext("2d")!]);
+            previews.push([(e.asset ?? e.icon)!, canvas.getContext("2d")!]);
             return (
-                <button class={`lscg-item-cell${a.Name === worn ? " worn" : ""}`} role="option" aria-selected={a.Name === worn} aria-label={a.Description} onClick={() => this.#pickAsset(a.Name)} onMouseEnter={e => this.#showItemTip(e.currentTarget, a.Description)} onMouseLeave={() => this.#hideItemTip()}>
+                <button class={`lscg-item-cell${e.worn ? " worn" : ""}`} role="option" aria-selected={e.worn} aria-label={e.tip.sub ? `${e.tip.title} (${e.tip.sub})` : e.tip.title} onClick={e.pick} onMouseEnter={ev => this.#showItemTip(ev.currentTarget, e.tip, tip, popup)} onMouseLeave={() => this.#hideItemTips()}>
                     {canvas}
-                    <span>{a.Description}</span>
+                    <span>{e.label}</span>
                 </button>
             );
         }));
-        // Drawn by BC's own item preview so images come through the same loader (and any mod hooks on it) as in its dialogs.
-        // ponytail: images arrive asynchronously, so redraw every 250ms for ~10s while the grid stays open
         const drawAll = () => {
             const main = MainCanvas;
             try {
                 for (const [asset, ctx] of previews) {
                     MainCanvas = ctx;
-                    DrawAssetPreview(0, 0, asset, { C: preview, Description: "", Width: ITEM_PREVIEW_SIZE, Height: ITEM_PREVIEW_SIZE });
+                    // Transparent, so the cell's own color (white, the selected teal, hover) shows behind the image and its label
+                    ctx.clearRect(0, 0, ITEM_PREVIEW_SIZE, ITEM_PREVIEW_SIZE);
+                    if (typeof asset === "string")
+                        DrawImageResize(asset, ITEM_PREVIEW_SIZE * 0.2, ITEM_PREVIEW_SIZE * 0.2, ITEM_PREVIEW_SIZE * 0.6, ITEM_PREVIEW_SIZE * 0.6);
+                    else
+                        DrawAssetPreview(0, 0, asset, { C: preview, Description: "", Background: "transparent", Width: ITEM_PREVIEW_SIZE, Height: ITEM_PREVIEW_SIZE });
                 }
             } finally {
                 MainCanvas = main;
             }
         };
         drawAll();
+        // ponytail: images arrive asynchronously, so redraw every 250ms for ~10s while the popup stays open
         let ticks = 0;
         const timer = setInterval(() => {
-            if (gen !== this.#gridGen || !cells.isConnected || grid.hidden || ++ticks > 40) clearInterval(timer);
+            if (cells.dataset.gen !== gen || !cells.isConnected || popup.hidden || ++ticks > 40) clearInterval(timer);
             else drawAll();
         }, 250);
-        grid.hidden = false;
-        cells.scrollTop = 0;
+        // Land on what's selected, so it isn't off-screen below the first rows
+        const selected = cells.querySelector<HTMLElement>(".worn");
+        cells.scrollTop = selected ? Math.max(0, selected.offsetTop - cells.offsetTop - cells.clientHeight / 2 + selected.offsetHeight / 2) : 0;
+    }
+
+    /********************* LOCK MODAL *****************************/
+
+    #lockModalOpen(): boolean {
+        const modal = document.getElementById(EDITOR_ID.lockModal);
+        return !!modal && !modal.hidden;
+    }
+
+    #closeLockModal() {
+        const modal = document.getElementById(EDITOR_ID.lockModal);
+        if (modal) modal.hidden = true;
+        this.#hideItemTips();
+    }
+
+    /** The lock chooser, with the chosen lock's own settings (combination, password...) as plain fields underneath. */
+    #openLockModal() {
+        const modal = document.getElementById(EDITOR_ID.lockModal);
+        const cells = document.getElementById(EDITOR_ID.lockCells);
+        const tip = document.getElementById(EDITOR_ID.lockTip);
+        const group = this.#itemGroup();
+        const item = group && this.preview ? InventoryGet(this.preview, group.Name) : null;
+        if (!modal || !cells || !tip || !group || !item || !InventoryDoesItemAllowLock(item)) return;
+        this.#closeGrid();
+
+        (document.getElementById(EDITOR_ID.lockTitle) as HTMLElement).innerText = `${group.Description}: ${item.Craft?.Name ?? item.Asset.Description}`;
+        const wornLock = item.Property?.LockedBy;
+        const entries: GridEntry[] = [
+            ...(wornLock ? [{ icon: "Icons/Cancel.png", label: "No lock", tip: { title: "No lock", sub: "Take the lock off" }, worn: false, pick: () => this.#chooseLock(group, null) }] : []),
+            // Timer locks keep an absolute expiry time, which would already have passed whenever the outfit is applied
+            ...Asset.filter(a => a.IsLock && a.Enable && a.RemoveTimer <= 0 && !/Timer/.test(a.Name)).map(a => ({
+                asset: a, label: a.Description, tip: { title: a.Description }, worn: a.Name === wornLock, pick: () => this.#chooseLock(group, a),
+            })),
+        ];
+        modal.hidden = false;
+        this.#renderCells(modal, cells, tip, entries);
+        this.#renderLockSettings(group, item);
+    }
+
+    /** Puts a lock on the group's item, or takes it off. The modal stays open so the lock's settings are right there. */
+    #chooseLock(group: AssetGroup, lock: Asset | null) {
+        if (!this.preview) return;
+        const item = InventoryGet(this.preview, group.Name);
+        if (!item) return;
+        if (!lock) {
+            InventoryUnlock(this.preview, item, false);
+        } else if (item.Property?.LockedBy !== lock.Name) {
+            InventoryLock(this.preview, item, lock.Name as AssetLockType, Player, false);
+            if (item.Property?.LockedBy !== lock.Name) {
+                ToastManager.info(`${lock.Description} doesn't fit that item.`);
+                return;
+            }
+        }
+        this.#commitGroup(group.Name, true);
+        this.#openLockModal();
+    }
+
+    /** The settings fields of the lock on `item`, written straight into its properties (no old code needed: this is the editor). */
+    #renderLockSettings(group: AssetGroup, item: Item) {
+        const box = document.getElementById(EDITOR_ID.lockSettings);
+        if (!box) return;
+        const lockName = item.Property?.LockedBy;
+        const fields = lockName ? LOCK_SETTINGS[lockName] : undefined;
+        if (!lockName) {
+            box.replaceChildren(<p class="lscg-lock-note">Pick a lock. It goes on the {item.Craft?.Name ?? item.Asset.Description}.</p>);
+        } else if (!fields) {
+            box.replaceChildren(<p class="lscg-lock-note">{InventoryGetLock(item)?.Asset.Description ?? lockName} has no settings.</p>);
+        } else {
+            box.replaceChildren(...fields.map(f => {
+                const id = `${EDITOR_ID.lockSettings}-${f.prop}`;
+                const input = <input
+                    id={id} type="text" maxLength={f.max} value={String(item.Property?.[f.prop as keyof ItemProperties] ?? "")}
+                    onChange={() => this.#setLockField(group, f, input)}
+                /> as HTMLInputElement;
+                return <label class="lscg-lock-field" for={id}><span>{f.label}</span>{input}</label>;
+            }));
+        }
+    }
+
+    #setLockField(group: AssetGroup, field: LockField, input: HTMLInputElement) {
+        const item = this.preview && InventoryGet(this.preview, group.Name);
+        if (!item?.Property) return;
+        const value = field.upper ? input.value.toUpperCase() : input.value;
+        const valid = field.valid.test(value);
+        input.toggleAttribute("aria-invalid", !valid);
+        input.title = valid ? "" : field.rule;
+        if (!valid) return; // keep the old value in the item; the field shows what's wrong
+        input.value = value;
+        (item.Property as Record<string, unknown>)[field.prop] = value;
+        this.#commitGroup(group.Name, true);
+        this.#openLockModal();
+    }
+
+    /** Wears a crafted item: BC applies the craft's color, type and lock. A copy, so the player's own list isn't touched. */
+    #wearCraft(group: AssetGroup, asset: Asset, craft: CraftingItem) {
+        if (!this.preview) return;
+        this.#closeGrid();
+        InventoryWear(this.preview, asset.Name, group.Name, undefined, 0, Player.MemberNumber, structuredClone(craft));
+        this.#commitGroup(group.Name, true);
     }
 
     #pickAsset(name: string) {
@@ -828,11 +1082,10 @@ export class GuiOutfits extends GuiSubscreen {
         const worn = group && this.preview ? InventoryGet(this.preview, group.Name) : null;
         const set = (id: string, disabled: boolean) => { (document.getElementById(id) as HTMLButtonElement | null)?.toggleAttribute("disabled", disabled); };
         const open = document.getElementById(EDITOR_ID.itemOpen);
-        const chosen = document.getElementById(EDITOR_ID.itemAsset) as HTMLSelectElement | null;
-        if (open) open.innerText = chosen?.selectedOptions[0]?.text ?? "Choose item";
-        set(EDITOR_ID.itemSet, !this.preview || !(document.getElementById(EDITOR_ID.itemAsset) as HTMLSelectElement | null)?.value);
+        if (open) open.innerText = worn ? (worn.Craft?.Name ?? worn.Asset.Description) : "Choose item";
         set(EDITOR_ID.itemConfigure, !worn?.Asset.Extended);
         set(EDITOR_ID.itemColor, !worn || worn.Asset.ColorableLayerCount < 1);
+        set(EDITOR_ID.itemLock, !worn || !InventoryDoesItemAllowLock(worn));
         set(EDITOR_ID.itemRemove, !worn);
     }
 
@@ -875,6 +1128,7 @@ export class GuiOutfits extends GuiSubscreen {
         if (!group || !item || !this.preview) return;
         this.#focus = { kind, group: group.Name };
         this.#closeGrid();
+        this.#closeLockModal();
         this.#setChrome(false);
         if (kind === "color") {
             ItemColorLoad(this.preview, item, ...COLOR_RECT, true).then(() => ItemColorOnExit(() => setTimeout(() => this.#endFocus()))).catch(() => this.#endFocus());
@@ -1145,6 +1399,7 @@ export class GuiOutfits extends GuiSubscreen {
 
     #closeEditor() {
         this.#closeGrid();
+        this.#closeLockModal();
         this.SelectedKey = undefined;
         this.SelectedOutfit = undefined;
         this.#dropPreview();
