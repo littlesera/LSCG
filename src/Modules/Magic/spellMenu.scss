@@ -7,7 +7,7 @@
 		height: 100%;
 		padding: min(1.5dvh, 0.75dvw);
 		background-color: var(--lscg-background-color);
-		border: min(0.4dvh, 0.2dvw) solid var(--lscg-border-color);
+		border: var(--lscg-border-width) solid var(--lscg-border-color);
 	}
 
 	.lscg-spellmenu-header {
