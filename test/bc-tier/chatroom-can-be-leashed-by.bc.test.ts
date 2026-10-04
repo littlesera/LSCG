@@ -69,6 +69,7 @@ describe("ChatRoomCanBeLeashedBy (real BC data)", () => {
 		g.ChatRoomData = undefined; // RoomAllowsLeashing's "!ChatRoomData" branch: leashing allowed by default
 		g.Player.LSCG.GlobalModule = { enabled: true }; // required for LeashingModule.Enabled (BaseModule.Enabled)
 		g.ServerPlayerIsInChatRoom = () => true;
+		g.CurrentScreen = "ChatRoom"; // Enabled checks the screen before ServerPlayerIsInChatRoom
 		g.Player.Appearance = [];
 		g.Player.Ownership = undefined;
 		g.Player.Lovership = [];

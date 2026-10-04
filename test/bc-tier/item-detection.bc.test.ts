@@ -95,6 +95,7 @@ describe("item-detection functions needing real BC prerequisite/permission logic
 			// fake tier).
 			g.Player.LSCG.GlobalModule = { enabled: true };
 			g.ServerPlayerIsInChatRoom = () => true;
+			g.CurrentScreen = "ChatRoom"; // Enabled checks the screen before ServerPlayerIsInChatRoom
 			g.Player.AllowedInteractions = 0; // Everyone
 			g.Player.WhiteList = [];
 			g.Player.Ownership = undefined;

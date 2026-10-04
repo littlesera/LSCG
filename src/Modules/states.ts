@@ -86,8 +86,9 @@ export class StateModule extends BaseModule {
     AstralProjectionState: AstralProjectionState;
 
     GetRestriction(state: BaseState, restriction: LSCGImmersiveOption): boolean {
-        return state.Active &&
-               (restriction == "whenImmersive" ? this.settings.immersive : restriction == "true");
+        // Restriction first, it's cheap: Active looks the state's config up every time
+        return (restriction === "whenImmersive" ? this.settings.immersive : restriction === "true") &&
+               state.Active;
     }
 
     GetRestrictions(getter: (r: StateRestrictions) => LSCGImmersiveOption): BaseState[] {
