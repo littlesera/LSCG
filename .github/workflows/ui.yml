@@ -7,12 +7,12 @@
 name: UI tests
 on:
   pull_request:
-    branches: [ "main", "dev" ]
-  # Also on pushes to the branches PRs target: GitHub only lets a PR restore caches made on its own branch, its base
-  # branch or the default branch, so without these every new PR would start with a cold BC cache (slow, and it
-  # fails when gitgud rate-limits the downloads).
+    branches: [ "main" ]
+  # Also on pushes to main: GitHub only lets a PR restore caches made on its own branch, its base branch or the
+  # default branch, so this keeps the BC cache warm for new PRs (slow cold, and it fails when gitgud rate-limits).
+  # Dev pushes and PRs into dev skip the (7-8 minute) UI tests; they run when dev is promoted to main.
   push:
-    branches: [ "main", "dev" ]
+    branches: [ "main" ]
   workflow_dispatch: {}
 
 jobs:

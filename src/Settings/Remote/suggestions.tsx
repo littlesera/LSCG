@@ -8,7 +8,7 @@ import { HypnoInstruction, HypnoModule, HypnoSuggestion } from "Modules/hypno";
 import { getModule } from "modules";
 import { CommandListener, CoreModule } from "Modules/core";
 import { DomSettingsHost } from "Settings/domSettingsHost";
-import { ButtonRow, CheckboxRow, KitContext, Notice, openDialog, Panel, RuleTable, SectionLabel, SelectOption, SelectRow, TextRow, ZonePicker } from "Dom/kit";
+import { Button, ButtonRow, CheckboxRow, KitContext, Notice, openDialog, Panel, RuleTable, SectionLabel, SelectOption, SelectRow, TextRow, ZonePicker } from "Dom/kit";
 
 export interface PoseSelection {
 	upper: AssetPoseName | undefined | "";
@@ -194,7 +194,7 @@ export class RemoteSuggestions extends RemoteHypnoBase {
 					{
 						header: "Instructions", kind: "custom",
 						render: sg => {
-							const edit = <button class="lscg-button lscg-kit-edit" onClick={() => this.openSuggestionDialog(edit, ctx, sg)}>Edit…</button> as HTMLButtonElement;
+							const edit = Button("Edit…", () => this.openSuggestionDialog(edit, ctx, sg), { class: "lscg-kit-edit" });
 							const summary = (sg.instructions ?? []).map(i => i.type).join(" → ") || "No instructions yet";
 							return <div class="lscg-kit-details">
 								<small class="lscg-kit-desc lscg-kit-summary" title={`Installed by: ${sg.installedByName} [${sg.installedBy}]`}>{summary}</small>

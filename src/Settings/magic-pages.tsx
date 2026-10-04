@@ -2,7 +2,7 @@ import { h } from "tsx-dom";
 import { getModule } from "modules";
 import { OutfitCollectionModule } from "Modules/outfitCollection";
 import { allEffectIds, effectDescription, effectLabel, effectTooltip, isExtensionEffect, getSpellEffect, isPairedEffect, spellHasPairedEffect } from "Modules/Magic/spellEffects";
-import { Chip, CheckboxRow, Expando, Icon, KitContext, KitTab, Notice, NumberRow, openDialog, RuleTable, SectionLabel, SelectOption, SelectRow, TextRow } from "Dom/kit";
+import { Button, Chip, CheckboxRow, Expando, Icon, KitContext, KitTab, Notice, NumberRow, openDialog, RuleTable, SectionLabel, SelectOption, SelectRow, TextRow } from "Dom/kit";
 import { KNOWN_SPELLS_LIMIT, MagicPublicSettingsModel, MagicSettingsModel, OutfitOption, PolymorphConfig, SpellDefinition, SpellEffectId, maxSpellEffects } from "./Models/magic";
 import type { SpiritTextType } from "./magic";
 
@@ -25,6 +25,10 @@ function toggle<T>(list: T[], item: T, on: boolean): T[] {
     return on ? [...without, item] : without;
 }
 
+/** Built-in effects first, then extensions', then ones no longer installed; alphabetical within each. */
+const effectRank = (id: SpellEffectId) => !getSpellEffect(id) ? 2 : isExtensionEffect(id) ? 1 : 0;
+const byLabel = (a: SpellEffectId, b: SpellEffectId) => effectRank(a) - effectRank(b) || effectLabel(a).localeCompare(effectLabel(b));
+
 function effectChip(id: SpellEffectId): HTMLElement {
     const def = getSpellEffect(id);
     return Chip(effectLabel(id), { tone: def ? "muted" : "warn", tooltip: effectTooltip(id), icon: isExtensionEffect(id) ? "extension" : undefined });
@@ -41,7 +45,7 @@ function effectNameCell(id: SpellEffectId): HTMLElement {
 
 function blockedEffectsTable(ctx: KitContext, s: MagicPublicSettingsModel, opts: MagicPagesOptions): HTMLElement {
     // Keep blocks on effects that aren't listed (e.g. an uninstalled extension's) visible so they can be removed.
-    const ids = () => [...opts.effects, ...(s.blockedSpellEffects ?? []).filter(id => opts.effects.indexOf(id) < 0)].map(id => ({ id }));
+    const ids = () => [...opts.effects, ...(s.blockedSpellEffects ?? []).filter(id => opts.effects.indexOf(id) < 0)].sort(byLabel).map(id => ({ id }));
     return RuleTable(ctx, {
         fixed: true,
         rows: ids,
@@ -171,7 +175,7 @@ function effectSlots(dctx: KitContext, tableCtx: KitContext, spell: SpellDefinit
             const taken = new Set(spell.Effects.filter((_, j) => j !== i));
             const options: SelectOption[] = [
                 { value: "", label: current ? "— remove this effect —" : have === 0 ? "— choose an effect —" : "— add another effect —" },
-                ...allEffectIds().filter(id => !taken.has(id)).map(id => ({ value: id as string, label: effectLabel(id), ...(isExtensionEffect(id) ? { group: "From extensions", icon: "extension" as const } : {}) })),
+                ...allEffectIds().filter(id => !taken.has(id)).sort(byLabel).map(id => ({ value: id as string, label: effectLabel(id), ...(isExtensionEffect(id) ? { group: "From extensions", icon: "extension" as const } : {}) })),
                 // An effect from an extension that isn't installed stays selectable so it can be kept or replaced.
                 ...(current && !getSpellEffect(current) ? [{ value: current as string, label: effectLabel(current) }] : []),
             ];
@@ -263,7 +267,7 @@ function spellsTable(ctx: KitContext, s: MagicSettingsModel): HTMLElement {
             {
                 header: "Effects", kind: "custom",
                 render: (sp, readOnly) => {
-                    const edit = <button class="lscg-button lscg-kit-edit" disabled={readOnly} onClick={() => openSpellDialog(edit, ctx, sp, maxSpellEffects(s))}>Edit…</button> as HTMLButtonElement;
+                    const edit = Button("Edit…", () => openSpellDialog(edit, ctx, sp, maxSpellEffects(s)), { class: "lscg-kit-edit", disabled: readOnly });
                     return <div class="lscg-kit-details">
                         <div class="lscg-kit-chips lscg-kit-summary">
                             {sp.Effects.length > 0 ? sp.Effects.map(effectChip) : <small class="lscg-kit-desc">No effects yet</small>}

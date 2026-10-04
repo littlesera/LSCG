@@ -5,7 +5,7 @@ import { GuiSubscreen, HelpInfo } from "./settingBase";
 import { CursedItemModel, CursedItemSettingsModel, SpreadSpeed, StripLevel } from "./Models/cursed-item";
 import { OutfitCollectionModule } from "Modules/outfitCollection";
 import { DomSettingsHost } from "./domSettingsHost";
-import { CheckboxRow, KitContext, NumberRow, openDialog, RuleTable, SectionLabel, SelectOption, SelectRow, Tabs } from "Dom/kit";
+import { Button, CheckboxRow, KitContext, NumberRow, openDialog, RuleTable, SectionLabel, SelectOption, SelectRow, Tabs } from "Dom/kit";
 
 export const CURSED_ITEM_LIMIT: number = 100;
 
@@ -175,7 +175,7 @@ export class GuiCursedItems extends GuiSubscreen {
 							{
 								header: "Speed", kind: "custom", width: "25%",
 								render: it => {
-									const edit = <button class="lscg-button lscg-kit-edit" onClick={() => openCursedItemDialog(edit, ctx, it)}>Edit…</button> as HTMLButtonElement;
+									const edit = Button("Edit…", () => openCursedItemDialog(edit, ctx, it), { class: "lscg-kit-edit" });
 									const speed = speedOf(it) === "custom" ? formatSeconds(it.CustomSpeed || 300) : speedOf(it)[0].toUpperCase() + speedOf(it).slice(1);
 									return <div class="lscg-kit-details"><small class="lscg-kit-desc lscg-kit-summary">{speed}</small>{edit}</div> as HTMLElement;
 								},
