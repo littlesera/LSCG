@@ -10,9 +10,10 @@ export default defineConfig({
     globalSetup: "./test/ui/global-setup.ts",
     timeout: 120_000,
     expect: { timeout: 10_000 },
-    // One browser at a time: every test logs in as the same fake account, and the server is a single process.
-    workers: 1,
-    fullyParallel: false,
+    // Each test gets its own page and its own in-browser fake account; the playground server only serves static files,
+    // so tests can run side by side. CI runners are small and the tests are timing-sensitive, so it gets fewer.
+    workers: process.env.CI ? 2 : 4,
+    fullyParallel: true,
     retries: process.env.CI ? 1 : 0,
     reporter: process.env.CI ? [["github"], ["html", { open: "never", outputFolder: "test/.out/ui-report" }]] : "list",
     outputDir: "test/.out/ui-results",
