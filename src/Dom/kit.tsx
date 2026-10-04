@@ -174,6 +174,15 @@ export function ButtonRow(ctx: KitContext, props: {
     return row(ctx, props, id, button);
 }
 
+/** A BC button (ElementButton) with a centred text label, for kit buttons outside a row. */
+export function Button(label: string, onClick: (button: HTMLButtonElement) => void, opts: { class?: string; disabled?: boolean; ariaLabel?: string } = {}): HTMLButtonElement {
+    const button: HTMLButtonElement = ElementButton.Create(uid("btn"), () => onClick(button),
+        { label, labelPosition: "center" },
+        { button: { classList: ["lscg-button", ...(opts.class ? [opts.class] : [])], attributes: opts.ariaLabel ? { "aria-label": opts.ariaLabel } : {} } });
+    button.disabled = !!opts.disabled;
+    return button;
+}
+
 export function SectionLabel(text: string, description?: string): HTMLElement {
     return (
         <div class="lscg-kit-section">
@@ -360,7 +369,7 @@ export function openDialog(anchor: HTMLElement, parent: KitContext, title: strin
             <h2>{title}</h2>
             <div class="lscg-kit-dialog-body">{body(ctx)}</div>
             <div class="lscg-kit-dialog-actions">
-                <button class="lscg-button" onClick={() => dialog.close()}>Done</button>
+                {Button("Done", () => dialog.close())}
             </div>
         </dialog>
     ) as HTMLDialogElement;
@@ -377,8 +386,8 @@ export function confirmDialog(anchor: HTMLElement, title: string, message: strin
             <h2>{title}</h2>
             <p class="lscg-kit-desc">{message}</p>
             <div class="lscg-kit-dialog-actions">
-                <button class="lscg-button" onClick={() => dialog.close()}>Cancel</button>
-                <button class="lscg-button lscg-kit-danger" onClick={() => { dialog.close(); onConfirm(); }}>{confirmLabel}</button>
+                {Button("Cancel", () => dialog.close())}
+                {Button(confirmLabel, () => { dialog.close(); onConfirm(); }, { class: "lscg-kit-danger" })}
             </div>
         </dialog>
     ) as HTMLDialogElement;
@@ -397,7 +406,9 @@ export interface KitTab {
 export function Tabs(tabs: KitTab[]): HTMLElement {
     const visible = tabs.filter(t => !t.hidden);
     const panels = visible.map(t => <div class="lscg-kit-panel" role="tabpanel">{t.render()}</div> as HTMLElement);
-    const buttons = visible.map((t, i) => <button class="lscg-button lscg-kit-tab" role="tab" onClick={() => select(i)}>{t.label}</button> as HTMLButtonElement);
+    const buttons = visible.map((t, i) => ElementButton.Create(uid("tab"), () => select(i),
+        { label: t.label, labelPosition: "center" },
+        { button: { classList: ["lscg-button", "lscg-kit-tab"], attributes: { role: "tab" } } }) as HTMLButtonElement);
     const select = (index: number) => {
         panels.forEach((p, i) => { p.hidden = i !== index; });
         buttons.forEach((b, i) => b.setAttribute("aria-selected", String(i === index)));
@@ -493,11 +504,11 @@ export function RuleTable<R>(ctx: KitContext, props: RuleTableProps<R>): HTMLEle
         const rows = props.rows();
         const readOnly = props.readOnly?.() ?? false;
         const max = props.max ?? Infinity;
-        const add = <button class="lscg-button lscg-kit-add" disabled={readOnly || rows.length >= max} onClick={() => {
+        const add = Button(props.addLabel ?? "+ Add rule", () => {
             if (!props.create) return;
             rows.push(props.create());
             ctx.changed();
-        }}>{props.addLabel ?? "+ Add rule"}</button> as HTMLButtonElement;
+        }, { class: "lscg-kit-add", disabled: readOnly || rows.length >= max });
 
         container.replaceChildren(
             <table class="lscg-kit-table">
@@ -509,11 +520,11 @@ export function RuleTable<R>(ctx: KitContext, props: RuleTableProps<R>): HTMLEle
                         <tr>
                             {props.columns.map(c => cell(r, c, readOnly))}
                             {props.fixed ? null : <td>
-                                <button class="lscg-button lscg-kit-delete" aria-label={props.deleteLabel ?? "Delete rule"} disabled={readOnly || props.canDelete?.(r) === false} onClick={() => {
+                                {Button("✕", () => {
                                     rows.splice(i, 1);
                                     props.onDelete?.(r);
                                     ctx.changed();
-                                }}>✕</button>
+                                }, { class: "lscg-kit-delete", ariaLabel: props.deleteLabel ?? "Delete rule", disabled: readOnly || props.canDelete?.(r) === false })}
                             </td>}
                         </tr>
                     ))}
