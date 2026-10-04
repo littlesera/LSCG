@@ -8,6 +8,7 @@
 	// Smaller than a settings screen's text: this is a narrow strip beside BC's own color picker
 	font-size: min(2.6dvh, 1.3dvw);
 	grid-template-rows: auto minmax(0, 1fr);
+	row-gap: 0;
 	align-content: start;
 	text-align: left;
 
@@ -24,7 +25,7 @@
     overflow: hidden;
     display: flex;
     flex-direction: column;
-	padding-top: 1rem;
+	padding-top: 0.4rem;
 	user-select: none;
 
 	.lscg-layers-body {
@@ -72,6 +73,11 @@
 			display: grid;
 
 			.lscg-opacity-slider-inputs {
+				input[type="number"] {
+					flex: none;
+					width: 5em;
+				}
+
 				display: flex;
 				align-items: center;
 				gap: 0.5rem;
@@ -92,7 +98,7 @@
 }
 
 #lscg-layers-toolbar {
-	flex: 1 0 auto;
+	flex: none;
 	display: flex;
 	justify-content: space-between;
 	user-select: none;
@@ -120,31 +126,72 @@
 	}
 }
 
-#lscg-layers-translate-toolbar {
+// Number boxes never truncate with an ellipsis: a smaller font, no spinner arrows (the buttons and sliders step them),
+// and values are already rounded when shown (whole numbers for opacity, translation and degrees, hundredths for scale)
+#lscg-layers input[type="number"] {
+	text-overflow: clip;
+	font-size: 0.85em;
+	padding: 0 0.3em;
+	min-width: 0;
+	appearance: textfield;
+	-moz-appearance: textfield;
+
+	&::-webkit-inner-spin-button, &::-webkit-outer-spin-button {
+		appearance: none;
+		margin: 0;
+	}
+}
+
+// BC puts a translucent hover colour behind a button's label, which shows as a bright box on the button's own colour
+#lscg-layers .button-label {
+	background: transparent !important;
+}
+
+#lscg-layers-tabs {
+	display: flex;
+	gap: 0.25rem;
+
+	.lscg-layers-tab {
+		flex: 1;
+		height: min(5dvh, 2.5dvw);
+		padding: 0;
+		color: var(--lscg-text-color);
+		font-weight: bold;
+
+		&.selected {
+			background-color: teal;
+			color: white;
+			text-shadow: 1px 1px 0px black;
+		}
+	}
+}
+
+#lscg-layers-transform-fields {
 	display: flex;
 	justify-content: space-evenly;
+	align-items: flex-end;
+	flex: none;
 
-	.lscg-translate-direction {
+	.lscg-transform-axis {
 		display: flex;
 		flex-direction: column;
 		align-items: center;
 		gap: 0.25rem;
+		font-weight: bold;
 
 		div {
 			display: flex;
 			align-items: center;
-			gap: 0.5rem;
-			font-weight: bold;
-			user-select: none;
+			gap: 0.25rem;
 		}
 	}
 
 	input {
-		width: 5rem;
+		width: 5.5rem;
 		height: min(4.5dvh, 2.25dvw);
 	}
 
-	// Arrow and reset buttons are the kit's, just smaller than a settings screen's
+	// Step and reset buttons are the kit's, just smaller than a settings screen's
 	.lscg-button {
 		color: var(--lscg-text-color);
 		text-shadow: none;
@@ -153,4 +200,11 @@
 		height: min(4.5dvh, 2.25dvw);
 		padding: 0;
 	}
+}
+
+#lscg-layers-transform-hint {
+	flex: none;
+	font-size: 0.8em;
+	line-height: 1.2;
+	padding: 0 0.5rem;
 }

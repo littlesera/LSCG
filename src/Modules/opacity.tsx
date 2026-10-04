@@ -16,12 +16,6 @@ interface OpacitySlider {
     Value: number;
 }
 
-interface TranslationValue {
-    layerName: string;
-    xValue: number;
-    yValue: number;
-}
-
 interface PropertiesWithLayerOverrides extends ItemProperties {
     LayerOverrides: { DrawingLeft: TopLeft.Data; DrawingTop: TopLeft.Data; }[];
 }
@@ -32,21 +26,51 @@ const ID = Object.freeze({
     container: `${root}-container`,
     styles: `${root}-style`,
     exit: `${root}-exit`,
+    tabs: `${root}-tabs`,
     mainToolbar: `${root}-toolbar`,
     allLayersCheck: `${root}-all-layers-check`,
     leadLined: `${root}-lead-lined-check`,
-    translateCheck: `${root}-translate-check`,
 
     opacity: `${root}-opacity`,
     opacityMain: `${root}-opacity-main`,
     opacityLayers: `${root}-opacity-layers`,
 
-    translate: `${root}-translate`,
-    translateToolbar: `${root}-translate-toolbar`,
-    translateButtons: `${root}-translate-buttons`,
-    translateX: `${root}-translate-x`,
-    translateY: `${root}-translate-y`,
+    transform: `${root}-transform`,
+    transformFields: `${root}-transform-fields`,
+    transformHint: `${root}-transform-hint`,
+    layerButtons: `${root}-layer-buttons`,
 });
+
+type Tab = "opacity" | "translate" | "rotate" | "scale";
+const TAB_LABELS: Record<Tab, string> = { opacity: "Opacity", translate: "Translate", rotate: "Rotate", scale: "Scale" };
+
+/** One number a transform tab edits, e.g. the X of a translation. `layer` is -1 for the whole item, else a layer index. */
+interface TransformAxis {
+    label: string;
+    min: number;
+    max: number;
+    step: number;
+    /** Arrow-key step, and the step of the on-screen buttons with shift (keys) / always (buttons). */
+    fine: number;
+    big: number;
+    decLabel: string;
+    incLabel: string;
+    read(layer: number): number;
+    write(layer: number, value: number): void;
+}
+
+interface TransformTab {
+    axes: TransformAxis[];
+    hint: string;
+    /** Which axis an arrow key changes, and in which direction. */
+    keys: Partial<Record<string, [axis: number, sign: 1 | -1]>>;
+    /** With Alt held, an arrow key changes every axis together by this sign (tabs with linked axes only). */
+    syncKeys?: Partial<Record<string, 1 | -1>>;
+    /** What a canvas drag of (dx, dy) canvas pixels changes, with the axes linked (Shift or Alt) or not: pairs of axis and delta. */
+    drag(dx: number, dy: number, linked: boolean): [axis: number, delta: number][];
+}
+
+type NativeTransform = "Rotation" | "ScaleX" | "ScaleY";
 
 export class OpacityModule extends BaseModule {
     OpacityMainSlider: OpacitySlider = {
@@ -61,15 +85,14 @@ export class OpacityModule extends BaseModule {
         return (document.getElementById(ID.allLayersCheck) as HTMLInputElement)?.checked;
     };
 
-    get TranslationMode(): boolean {
-        return (document.getElementById(ID.translateCheck) as HTMLInputElement)?.checked;
+    ActiveTab: Tab = "opacity";
+    /** Whether the active tab is one of the transforms, which the character can be dragged for. */
+    get TransformMode(): boolean {
+        return this.ActiveTab !== "opacity";
     }
-    TranslationButtons: TranslationValue[] = [];
-    SelectedTranslationLayer: number = -1;
-    TranslateXElementId: string = ID.translateX;// "LSCG_TranslateX";
-    TranslateYElementId: string = ID.translateY;// "LSCG_TranslateY";
-    TranslateXElement: HTMLInputElement | undefined;
-    TranslateYElement: HTMLInputElement | undefined;
+    /** The layer the transform tabs edit: an index into the item's layers, or -1 for the whole item. */
+    SelectedLayer: number = -1;
+    private axisInputs: HTMLInputElement[] = [];
     lastX: number = 0;
     lastY: number = 0;
     /** An abort controller for removing the canvas-attached translation listeners */
@@ -80,42 +103,29 @@ export class OpacityModule extends BaseModule {
         visibility: "visible",
         dom: <div id={ID.root} class="lscg-screen lscg-layers-root HideOnPopup">
             <style id={ID.styles}>{styles}</style>
-            <div id={ID.mainToolbar}>
-                    <label class="lscg-layers-check">
-                        {ElementCheckbox.Create(ID.allLayersCheck, (evt) => this.onToggleAllLayers(evt))}
-                        All Layers
-                    </label>
-                    <label class="lscg-layers-check">
-                        {ElementCheckbox.Create(ID.leadLined, (evt) => this.onToggleLeadLined(evt), { checked: !!this.OpacityItem?.Property?.LSCGLeadLined })}
-                        Lead-Lined
-                    </label>
-                    <label class="lscg-layers-check">
-                        {ElementCheckbox.Create(ID.translateCheck, (evt) => this.onToggleTranslate(evt))}
-                        Translate
-                    </label>
-                </div>
+            <div id={ID.tabs} role="tablist">
+                {(Object.keys(TAB_LABELS) as Tab[]).map(tab =>
+                    Button(TAB_LABELS[tab], () => this.setTab(tab), { class: "lscg-layers-tab" }))}
+            </div>
             <div id={ID.container}>
                 <div id={ID.opacity} class="lscg-layers-body">
+                    <div id={ID.mainToolbar}>
+                        <label class="lscg-layers-check">
+                            {ElementCheckbox.Create(ID.allLayersCheck, (evt) => this.onToggleAllLayers(evt))}
+                            All Layers
+                        </label>
+                        <label class="lscg-layers-check">
+                            {ElementCheckbox.Create(ID.leadLined, (evt) => this.onToggleLeadLined(evt), { checked: !!this.OpacityItem?.Property?.LSCGLeadLined })}
+                            Lead-Lined
+                        </label>
+                    </div>
                     <div id={ID.opacityMain}></div>
                     <div id={ID.opacityLayers} class="lscg-layers-listing scroll-box" style="display:none"></div>
                 </div>
-                <div id={ID.translate} class="lscg-layers-body" style="display:none">
-                    <div id={ID.translateToolbar}>
-                        <div class="lscg-translate-direction">
-                            <input id={ID.translateX} type="number" />
-                            <div>
-                                {Button("◀", () => this.nudge("x", -10), { ariaLabel: "Left" })} X {Button("▶", () => this.nudge("x", 10), { ariaLabel: "Right" })}
-                            </div>
-                        </div>
-                        <div class="lscg-translate-direction">
-                            <input id={ID.translateY} type="number" />
-                            <div>
-                                {Button("▼", () => this.nudge("y", 10), { ariaLabel: "Down" })} Y {Button("▲", () => this.nudge("y", -10), { ariaLabel: "Up" })}
-                            </div>
-                        </div>
-                        {ElementButton.Create(`${root}-translate-reset`, () => this.ResetTranslation(), { image: "./Icons/Reset.png", tooltip: "Reset", tooltipPosition: "bottom" }, { button: { classList: ["lscg-button"] } })}
-                    </div>
-                    <div id={ID.translateButtons} class="lscg-layers-listing scroll-box"></div>
+                <div id={ID.transform} class="lscg-layers-body" style="display:none">
+                    <div id={ID.transformFields}></div>
+                    <small id={ID.transformHint}></small>
+                    <div id={ID.layerButtons} class="lscg-layers-listing scroll-box"></div>
                 </div>
             </div>
         </div>,
@@ -182,7 +192,7 @@ export class OpacityModule extends BaseModule {
 
 
         document.getElementById(ID.opacityLayers)?.replaceChildren(...[]);
-        document.getElementById(ID.translateButtons)?.replaceChildren(...[]);
+        document.getElementById(ID.layerButtons)?.replaceChildren(...[]);
         const leadLined = document.getElementById(ID.leadLined) as HTMLInputElement;
         if (leadLined)
             leadLined.checked = this.OpacityItem.Property?.LSCGLeadLined ?? false;
@@ -203,11 +213,10 @@ export class OpacityModule extends BaseModule {
             Value: opacityValue,
         };
         this.OpacityLayerSliders = [];
-        this.TranslationButtons = [];
 
-        const translateAllButton = this.createTranslateButton("All Layers", b => this.onClickTranslate(b));
-        translateAllButton.classList.add("selected");
-        document.getElementById(ID.translateButtons)?.appendChild(translateAllButton);
+        const allLayersButton = this.createLayerButton("All Layers", b => this.onClickLayer(b));
+        allLayersButton.classList.add("selected");
+        document.getElementById(ID.layerButtons)?.appendChild(allLayersButton);
 
         if (this.OpacityItem.Asset.Layer.length <= 1) {
             const allLayersCheck = document.getElementById(ID.allLayersCheck) as HTMLInputElement;
@@ -232,24 +241,19 @@ export class OpacityModule extends BaseModule {
                     0,//Math.round(layer.MinOpacity * 100),
                     Math.round(layer.MaxOpacity * 100),
                 );
-                const translateButton = this.createTranslateButton(layerName, b => this.onClickTranslate(b, layer));
+                const layerButton = this.createLayerButton(layerName, b => this.onClickLayer(b, layer));
 
                 document.getElementById(ID.opacityLayers)?.appendChild(opacitySlider);
-                document.getElementById(ID.translateButtons)?.appendChild(translateButton);
+                document.getElementById(ID.layerButtons)?.appendChild(layerButton);
                 this.OpacityLayerSliders.push({
                     ElementId: opacityId,
                     Value: (layer.Opacity ?? 1) * 100,
                 } as OpacitySlider);
-                this.TranslationButtons.push({
-                    layerName: layerName,
-                    xValue: layer.DrawingLeft[PoseType.DEFAULT],
-                    yValue: layer.DrawingTop[PoseType.DEFAULT],
-                } as TranslationValue);
             }
         });
 
-        this.SelectedTranslationLayer = -1;
-        this.SetTranslationElementValues();
+        this.SelectedLayer = -1;
+        this.setTab("opacity");
     }
 
     createOpacitySlider(label: string, id: string, val: number, onChange: (evt: Event) => void, min: number, max: number) {
@@ -262,9 +266,9 @@ export class OpacityModule extends BaseModule {
                 </fieldset>;
     }
 
-    createTranslateButton(label: string | undefined, onClick: (button: HTMLButtonElement) => void) {
-        const button = Button(label ?? "", b => onClick(b), { class: "lscg-translate-button" });
-        button.id = ID.translateButtons + "_" + kebabCase(label);
+    createLayerButton(label: string | undefined, onClick: (button: HTMLButtonElement) => void) {
+        const button = Button(label ?? "", b => onClick(b), { class: "lscg-layer-button" });
+        button.id = ID.layerButtons + "_" + kebabCase(label);
         return button;
     }
 
@@ -335,22 +339,20 @@ export class OpacityModule extends BaseModule {
         }
     }
 
-    onToggleTranslate(evt?: Event) {
+    setTab(tab: Tab) {
+        this.ActiveTab = tab;
         const opacity = document.getElementById(ID.opacity);
-        const translate = document.getElementById(ID.translate);
-        const allLayerCheck = document.getElementById(ID.allLayersCheck) as HTMLInputElement;
-
-        if (!opacity || !translate || !allLayerCheck) return;
-
-        if (this.TranslationMode) {
-            opacity.style.display = "none";
-            translate.style.display = "";
-            allLayerCheck.disabled = true;
-        } else {
-            opacity.style.display = "";
-            translate.style.display = "none";
-            allLayerCheck.disabled = false;
-        }
+        const transform = document.getElementById(ID.transform);
+        if (!opacity || !transform) return;
+        opacity.style.display = tab === "opacity" ? "" : "none";
+        transform.style.display = tab === "opacity" ? "none" : "";
+        document.querySelectorAll(`#${ID.tabs} .lscg-layers-tab`).forEach((b, i) => {
+            const active = (Object.keys(TAB_LABELS) as Tab[])[i] === tab;
+            b.classList.toggle("selected", active);
+            b.setAttribute("role", "tab");
+            b.setAttribute("aria-selected", String(active));
+        });
+        if (tab !== "opacity") this.buildTransformFields();
     }
 
     onToggleLeadLined(evt?: Event) {
@@ -359,22 +361,14 @@ export class OpacityModule extends BaseModule {
         this.OpacityItem.Property.LSCGLeadLined = (evt?.target as HTMLInputElement)?.checked ?? false;
     }
 
-    onClickTranslate(button: HTMLButtonElement, layer?: AssetLayer) {
+    onClickLayer(button: HTMLButtonElement, layer?: AssetLayer) {
         if (!this.OpacityItem || !this.OpacityItem.Asset || !this.OpacityItem.Asset.Layer)
             return;
 
-        const allButtons = document.getElementsByClassName("lscg-translate-button");
-        if (allButtons) {
-            Array.from(allButtons).forEach(b => b.classList.remove("selected"));
-        }
-
-        if (!layer)
-            this.SelectedTranslationLayer = -1;
-        else
-            this.SelectedTranslationLayer = this.OpacityItem.Asset.Layer.indexOf(layer);
-
+        document.querySelectorAll(`#${ID.layerButtons} .lscg-layer-button`).forEach(b => b.classList.remove("selected"));
+        this.SelectedLayer = layer ? this.OpacityItem.Asset.Layer.indexOf(layer) : -1;
         button.classList.add("selected");
-        this.SetTranslationElementValues();
+        this.refreshTransformFields();
     }
 
     /** Cleanup for the color-picker DOM's canvas resize listener. */
@@ -570,13 +564,6 @@ export class OpacityModule extends BaseModule {
         return (hasOpacitySettings || !!xrayActive || IsSoulBind(item)) && !item.Property?.LSCGLeadLined;
     }
 
-    nudge(axis: "x" | "y", delta: number) {
-        const id = axis === "x" ? this.TranslateXElementId : this.TranslateYElementId;
-        ElementValue(id, Math.round(parseFloat(ElementValue(id))) + delta + "");
-        this._updateTranslationValue(id);
-        this.UpdatePreview();
-    }
-
     getOpacity(item?: null): number[];
     getOpacity(item?: Item | null): number | number[] | undefined;
     getOpacity(item?: Item | null): number | number[] | undefined {
@@ -614,7 +601,7 @@ export class OpacityModule extends BaseModule {
     isDragging: boolean = false;
 
     TranslateStart(elem: HTMLElement, evt: PointerEvent) {
-        if (this.TranslationMode && MouseIn(700, 0, 500, 1000)) {
+        if (this.TransformMode && MouseIn(700, 0, 500, 1000)) {
             this.isDragging = true;
             this.lastX = MouseX;
             this.lastY = MouseY;
@@ -627,18 +614,12 @@ export class OpacityModule extends BaseModule {
     }
 
     TranslateMove(elem: HTMLElement, evt: PointerEvent) {
-        if (!this.isDragging || !this.TranslationMode) return;
+        if (!this.isDragging || !this.TransformMode) return;
 
         const mX = Math.min(Math.max(MouseX, 700), 1200);
         const mY = Math.min(Math.max(MouseY, 0), 1000);
-        const dX = mX - this.lastX;
-        const dY = mY - this.lastY;
-        const curX = Math.round(parseFloat(ElementValue(this.TranslateXElementId)));
-        const curY = Math.round(parseFloat(ElementValue(this.TranslateYElementId)));
-        ElementValue(this.TranslateXElementId, curX + dX + "");
-        ElementValue(this.TranslateYElementId, curY + dY + "");
-        this._updateTranslationValue(this.TranslateXElementId);
-        this._updateTranslationValue(this.TranslateYElementId);
+        const changes = this.activeTransform().drag(mX - this.lastX, mY - this.lastY, evt.shiftKey || evt.altKey);
+        changes.forEach(([axis, delta]) => this.applyDelta(axis, delta));
         this.lastX = mX;
         this.lastY = mY;
         this.UpdatePreview();
@@ -667,35 +648,25 @@ export class OpacityModule extends BaseModule {
         this.UpdatePreview();
     }
 
-    TranslationTextChange(elementId: string) {
-        const value = Math.round(this._updateTranslationValue(elementId));
-        document.getElementById(elementId)?.setAttribute("value", value);
-        this.UpdatePreview();
+    private get itemProperty(): Record<string, any> {
+        return (this.OpacityItem!.Property ??= {} as ItemColorProperties) as Record<string, any>;
     }
 
-    SetTranslationElementValues() {
-        if (!this.OpacityItem)
-            return;
-        const asset = this.OpacityItem.Asset;
-        let origAsset = Object.assign({}, AssetGet("Female3DCG", this.OpacityItem.Asset.Group.Name, this.OpacityItem.Asset.Name));
-        if (!origAsset)
-            origAsset = Object.assign({}, asset);
-        const assetLayer = origAsset.Layer[Math.max(this.SelectedTranslationLayer, 0)];
-        let layer: any = (this.OpacityItem?.Property as PropertiesWithLayerOverrides)?.LayerOverrides?.[Math.max(this.SelectedTranslationLayer, 0)] ?? undefined;
-        if (!layer)
-            layer = assetLayer;
-        const x = (layer["DrawingLeft"] ? layer["DrawingLeft"][PoseType.DEFAULT] : assetLayer["DrawingLeft"][PoseType.DEFAULT]) ?? assetLayer["DrawingLeft"][PoseType.DEFAULT];
-        const y = (layer["DrawingTop"] ? layer["DrawingTop"][PoseType.DEFAULT] : assetLayer["DrawingTop"][PoseType.DEFAULT]) ?? assetLayer["DrawingTop"][PoseType.DEFAULT];
-        ElementValue(this.TranslateXElementId, x + "");
-        ElementValue(this.TranslateYElementId, y + "");
+    private layerName(layer: number): string {
+        return this.OpacityItem!.Asset.Layer[layer]?.Name ?? "";
     }
 
-    _updateTranslationValue(fromElementId: string): number {
-        if (!this.OpacityItem)
-            return 0;
-        const value = Math.round(parseFloat(ElementValue(fromElementId)));
-        const properties = (this.OpacityItem.Property as PropertiesWithLayerOverrides);
-        const layerCount = this.OpacityItem.Asset.Layer.length;
+    /** Translation is LSCG's own per-layer `LayerOverrides` (absolute draw positions); asset layer defaults fill the gaps. */
+    private readTranslation(prop: "DrawingLeft" | "DrawingTop", layer: number): number {
+        const ix = Math.max(layer, 0);
+        const assetLayer = AssetGet("Female3DCG", this.OpacityItem!.Asset.Group.Name, this.OpacityItem!.Asset.Name)?.Layer[ix] ?? this.OpacityItem!.Asset.Layer[ix];
+        const override = (this.itemProperty as PropertiesWithLayerOverrides).LayerOverrides?.[ix]?.[prop];
+        return (override ?? assetLayer[prop])?.[PoseType.DEFAULT] ?? assetLayer[prop][PoseType.DEFAULT];
+    }
+
+    private writeTranslation(prop: "DrawingLeft" | "DrawingTop", layer: number, value: number) {
+        const properties = this.itemProperty as PropertiesWithLayerOverrides;
+        const layerCount = this.OpacityItem!.Asset.Layer.length;
         if (!properties.LayerOverrides || properties.LayerOverrides.length != layerCount) {
             const previous = Object.assign({}, properties.LayerOverrides);
             properties.LayerOverrides = [];
@@ -703,26 +674,147 @@ export class OpacityModule extends BaseModule {
                 if (previous[i])
                     properties.LayerOverrides.push(previous[i]);
                 else {
-                    const defaultLayer = this.OpacityItem?.Asset.Layer[i];
+                    const defaultLayer = this.OpacityItem!.Asset.Layer[i];
                     properties.LayerOverrides.push({
                         DrawingLeft: defaultLayer.DrawingLeft,
                         DrawingTop: defaultLayer.DrawingTop,
                     });
                 }
-            };
+            }
         }
-        if (fromElementId == this.TranslateXElementId) {
-            if (this.SelectedTranslationLayer < 0)
-                properties.LayerOverrides.forEach(lo => lo.DrawingLeft = {"": value});
-            else
-                properties.LayerOverrides[this.SelectedTranslationLayer].DrawingLeft = {"": value};
+        const targets = layer < 0 ? properties.LayerOverrides : [properties.LayerOverrides[layer]];
+        targets.forEach(lo => lo[prop] = { "": value });
+    }
+
+    /** Rotation and scale are BC's own: item-wide `Rotation`/`ScaleX`/`ScaleY`, with `Layer*` records by layer name on top
+     *  (rotation adds, scale multiplies). Values at their default are removed rather than saved. */
+    private readNative(prop: NativeTransform, layer: number): number {
+        const p = this.itemProperty;
+        return (layer < 0 ? p[prop] : p[`Layer${prop}`]?.[this.layerName(layer)]) ?? (prop === "Rotation" ? 0 : 1);
+    }
+
+    private writeNative(prop: NativeTransform, layer: number, value: number) {
+        const p = this.itemProperty;
+        const isDefault = value === (prop === "Rotation" ? 0 : 1);
+        if (layer < 0) {
+            if (isDefault) delete p[prop];
+            else p[prop] = value;
+            return;
+        }
+        const key = `Layer${prop}`;
+        const record = p[key] ??= {};
+        if (isDefault) delete record[this.layerName(layer)];
+        else record[this.layerName(layer)] = value;
+        if (!Object.keys(record).length) delete p[key];
+    }
+
+    private nativeAxis(prop: NativeTransform, label: string, min: number, max: number, step: number, fine: number, big: number, dec: string, inc: string): TransformAxis {
+        const round = (v: number) => CommonClamp(Math.round(v / step) * step, min, max);
+        return {
+            label, min, max, step, fine, big, decLabel: dec, incLabel: inc,
+            read: layer => this.readNative(prop, layer),
+            write: (layer, value) => this.writeNative(prop, layer, Math.round(round(value) * 100) / 100),
+        };
+    }
+
+    private _transforms: Record<Exclude<Tab, "opacity">, TransformTab> | undefined;
+    private get transforms(): Record<Exclude<Tab, "opacity">, TransformTab> {
+        return this._transforms ??= {
+            translate: {
+                axes: [
+                    { label: "X", min: -2000, max: 2000, step: 1, fine: 1, big: 10, decLabel: "◀", incLabel: "▶",
+                        read: l => this.readTranslation("DrawingLeft", l), write: (l, v) => this.writeTranslation("DrawingLeft", l, Math.round(v)) },
+                    { label: "Y", min: -2000, max: 2000, step: 1, fine: 1, big: 10, decLabel: "▲", incLabel: "▼",
+                        read: l => this.readTranslation("DrawingTop", l), write: (l, v) => this.writeTranslation("DrawingTop", l, Math.round(v)) },
+                ],
+                hint: "Drag the character, or use the arrow keys (shift for bigger steps).",
+                keys: { ArrowLeft: [0, -1], ArrowRight: [0, 1], ArrowUp: [1, -1], ArrowDown: [1, 1] },
+                drag: (dx, dy) => [[0, dx], [1, dy]],
+            },
+            rotate: {
+                axes: [this.nativeAxis("Rotation", "Angle", -180, 180, 1, 1, 10, "↺", "↻")],
+                hint: "Drag the character left or right, or use the arrow keys (shift for bigger steps). A layer's angle adds to All Layers.",
+                keys: { ArrowLeft: [0, -1], ArrowDown: [0, -1], ArrowRight: [0, 1], ArrowUp: [0, 1] },
+                drag: dx => [[0, dx / 2]],
+            },
+            scale: {
+                axes: [
+                    this.nativeAxis("ScaleX", "Width", 0.01, 3, 0.01, 0.01, 0.1, "−", "+"),
+                    this.nativeAxis("ScaleY", "Height", 0.01, 3, 0.01, 0.01, 0.1, "−", "+"),
+                ],
+                hint: "Drag the character: sideways for width, up and down for height, or both together while holding Shift (right or up for bigger). Arrow keys work too: shift for bigger steps, Alt to change both. A layer's scale multiplies All Layers.",
+                keys: { ArrowLeft: [0, -1], ArrowRight: [0, 1], ArrowDown: [1, -1], ArrowUp: [1, 1] },
+                syncKeys: { ArrowLeft: -1, ArrowDown: -1, ArrowRight: 1, ArrowUp: 1 },
+                drag: (dx, dy, linked) => linked ? [[0, (dx - dy) / 200], [1, (dx - dy) / 200]] : [[0, dx / 200], [1, -dy / 200]],
+            },
+        };
+    }
+
+    activeTransform(): TransformTab {
+        return this.transforms[this.ActiveTab as Exclude<Tab, "opacity">];
+    }
+
+    /** Rebuilds the number boxes and buttons for the active transform tab. */
+    buildTransformFields() {
+        const fields = document.getElementById(ID.transformFields);
+        const hint = document.getElementById(ID.transformHint);
+        if (!fields || !this.OpacityItem) return;
+        const tab = this.activeTransform();
+        if (hint) hint.textContent = tab.hint;
+        this.axisInputs = tab.axes.map((axis, i) => <input type="number" aria-label={axis.label} min={axis.min} max={axis.max} step={axis.step}
+            onChange={(evt: Event) => this.onAxisInput(i, evt.target as HTMLInputElement)} /> as HTMLInputElement);
+        fields.replaceChildren(...tab.axes.map((axis, i) => <div class="lscg-transform-axis">
+            <span class="lscg-transform-label">{axis.label}</span>
+            <div>
+                {Button(axis.decLabel, () => this.applyDelta(i, -axis.big, true), { ariaLabel: `${axis.label} down` })}
+                {this.axisInputs[i]}
+                {Button(axis.incLabel, () => this.applyDelta(i, axis.big, true), { ariaLabel: `${axis.label} up` })}
+            </div>
+        </div>), ElementButton.Create(`${root}-transform-reset`, () => this.resetTransform(), { image: "./Icons/Reset.png", tooltip: "Reset", tooltipPosition: "bottom" }, { button: { classList: ["lscg-button"] } }));
+        this.refreshTransformFields();
+    }
+
+    refreshTransformFields() {
+        if (!this.OpacityItem || !this.TransformMode) return;
+        const axes = this.activeTransform().axes;
+        this.axisInputs.forEach((input, i) => {
+            if (document.activeElement !== input) input.value = String(Math.round(axes[i].read(this.SelectedLayer) * 100) / 100);
+        });
+    }
+
+    onAxisInput(axis: number, input: HTMLInputElement) {
+        const a = this.activeTransform().axes[axis];
+        const value = parseFloat(input.value);
+        if (Number.isFinite(value)) a.write(this.SelectedLayer, CommonClamp(value, a.min, a.max));
+        this.refreshTransformFields();
+        this.UpdatePreview();
+    }
+
+    /** Changes one axis of the selected layer (or every layer) by `delta`. */
+    applyDelta(axis: number, delta: number, preview: boolean = false) {
+        if (!this.OpacityItem) return;
+        const a = this.activeTransform().axes[axis];
+        a.write(this.SelectedLayer, CommonClamp(a.read(this.SelectedLayer) + delta, a.min, a.max));
+        this.refreshTransformFields();
+        if (preview) this.UpdatePreview();
+    }
+
+    resetTransform() {
+        if (!this.OpacityItem?.Property) return;
+        const layers = this.SelectedLayer < 0 ? [-1, ...this.OpacityItem.Asset.Layer.keys()] : [this.SelectedLayer];
+        if (this.ActiveTab === "translate") {
+            const overrides = (this.itemProperty as PropertiesWithLayerOverrides).LayerOverrides;
+            this.OpacityItem.Asset.Layer.forEach((layer, i) => {
+                if (!overrides?.[i] || !layers.includes(i)) return;
+                overrides[i].DrawingLeft = layer.DrawingLeft ?? { [PoseType.DEFAULT]: 1 };
+                overrides[i].DrawingTop = layer.DrawingTop ?? { [PoseType.DEFAULT]: 1 };
+            });
         } else {
-            if (this.SelectedTranslationLayer < 0)
-                properties.LayerOverrides.forEach(lo => lo.DrawingTop = {"": value});
-            else
-                properties.LayerOverrides[this.SelectedTranslationLayer].DrawingTop = {"": value};
+            const reset = (this.ActiveTab === "rotate" ? ["Rotation"] : ["ScaleX", "ScaleY"]) as NativeTransform[];
+            layers.forEach(l => reset.forEach(prop => this.writeNative(prop, l, prop === "Rotation" ? 0 : 1)));
         }
-        return value;
+        this.refreshTransformFields();
+        this.UpdatePreview();
     }
 
     _updateOpacityValue(fromElementId: string): number {
@@ -766,15 +858,23 @@ export class OpacityModule extends BaseModule {
         CanvasElement.addEventListener("pointerup", evt => this.TranslateEnd(CanvasElement, evt), { signal: controller.signal });
         CanvasElement.addEventListener("pointercancel", evt => this.TranslateEnd(CanvasElement, evt), { signal: controller.signal });
 
-        // Arrow keys nudge the translation by 1 (10 with Shift) while translating, unless typing in a field
+        // Arrow keys nudge the active transform (shift for the bigger step, Alt to change linked axes together), unless typing in a field.
+        // Not Ctrl or Cmd: with arrows those are system shortcuts on a Mac (spaces, Mission Control).
         window.addEventListener("keydown", evt => {
-            if (!this.TranslationMode || evt.altKey || evt.ctrlKey || evt.metaKey) return;
+            if (!this.TransformMode || evt.ctrlKey || evt.metaKey) return;
             if (evt.target instanceof HTMLInputElement || evt.target instanceof HTMLTextAreaElement || evt.target instanceof HTMLSelectElement) return;
-            const step = evt.shiftKey ? 10 : 1;
-            const nudge = { ArrowLeft: () => this.nudge("x", -step), ArrowRight: () => this.nudge("x", step), ArrowUp: () => this.nudge("y", -step), ArrowDown: () => this.nudge("y", step) }[evt.key];
-            if (!nudge) return;
-            evt.preventDefault();
-            nudge();
+            const tab = this.activeTransform();
+            const sync = evt.altKey ? tab.syncKeys?.[evt.key] : undefined;
+            const key = tab.keys[evt.key];
+            if (evt.altKey ? !sync : !key) return;
+            evt.preventDefault(); // also keeps Alt+arrow from navigating the browser back or forward
+            if (sync) {
+                tab.axes.forEach((axis, i) => this.applyDelta(i, sync * (evt.shiftKey ? axis.big : axis.fine)));
+                this.UpdatePreview();
+                return;
+            }
+            const axis = tab.axes[key![0]];
+            this.applyDelta(key![0], key![1] * (evt.shiftKey ? axis.big : axis.fine), true);
         }, { signal: controller.signal });
 
         // Propagate the vanilla BC opacity slider changes to LSCG
@@ -813,18 +913,5 @@ export class OpacityModule extends BaseModule {
         // Remove the translation listeners
         this.listenerRemover?.abort();
         this.listenerRemover = null;
-    }
-
-    ResetTranslation() {
-        const properties = this.OpacityItem?.Property as PropertiesWithLayerOverrides;
-        if (!this.OpacityItem || !this.OpacityItem.Property || !properties.LayerOverrides)
-            return;
-        properties.LayerOverrides.forEach((layer, i) => {
-            layer.DrawingLeft = this.OpacityItem?.Asset.Layer[i]?.DrawingLeft ?? { [PoseType.DEFAULT]: 1 };
-            layer.DrawingTop = this.OpacityItem?.Asset.Layer[i]?.DrawingTop ?? { [PoseType.DEFAULT]: 1 };
-            this.SelectedTranslationLayer = -1;
-        });
-        this.SetTranslationElementValues();
-        this.UpdatePreview();
     }
 }

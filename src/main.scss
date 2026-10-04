@@ -473,7 +473,7 @@
 }
 
 // Every plain <button> of ours shows the pointer (disabled ones keep the default arrow).
-.lscg-overlay, .lscg-kit, #lscg-outfit-edit, .lscg-popup-close, .lscg-chat-tune, .lscg-chat-tune-action, .lscg-word, .lscg-translate-button {
+.lscg-overlay, .lscg-kit, #lscg-outfit-edit, .lscg-popup-close, .lscg-chat-tune, .lscg-chat-tune-action, .lscg-word, .lscg-layers-tab, .lscg-layer-button {
 	&:is(button):not(:disabled), button:not(:disabled), [role="tab"]:not(:disabled) {
 		cursor: pointer;
 	}
