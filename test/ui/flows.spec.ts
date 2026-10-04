@@ -441,7 +441,7 @@ test("Outfit Collection: colouring draws the character at centre, so dragging to
         await new Promise(r => setTimeout(r, 500));
         $("item-color").click();
         await new Promise(r => setTimeout(r, 1500));
-        (document.getElementById("lscg-layers-translate-check") as HTMLInputElement).click();
+        ([...document.querySelectorAll("#lscg-layers-tabs .lscg-layers-tab")].find(b => b.textContent === "Translate") as HTMLElement).click();
     });
     const from = await bc.run(() => (window as any).Playground.toPage(930, 400));
     const to = await bc.run(() => (window as any).Playground.toPage(980, 440));
