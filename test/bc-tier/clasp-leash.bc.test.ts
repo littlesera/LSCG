@@ -62,6 +62,7 @@ describe("clasped leashes with real BC items", () => {
 		g.Player.LSCG.GlobalModule = { enabled: true };
 		g.Player.LSCG.LeashingModule = { enabled: true };
 		g.ServerPlayerIsInChatRoom = () => true;
+		g.CurrentScreen = "ChatRoom"; // Enabled checks the screen before ServerPlayerIsInChatRoom
 		g.Player.Appearance = [];
 		g.Player.Effect = [];
 		g.Player.Ownership = undefined;
