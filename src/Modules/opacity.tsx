@@ -4,6 +4,7 @@ import { getModule } from "modules";
 import { OpacitySettingsModel } from "Settings/Models/base";
 import { ModuleCategory } from "Settings/setting_definitions";
 import { hookFunction, isDrawingOverridable, isOutfitEditorCharacter, onCanvasResize, patchFunction } from "../utils";
+import { Button } from "Dom/kit";
 import { StateModule } from "./states";
 import { endsWith, kebabCase, replace } from "lodash-es";
 import styles from "./opacity.scss?inline";
@@ -77,18 +78,18 @@ export class OpacityModule extends BaseModule {
     domUI = Object.freeze({
         shape: [40, 80, 650, 740] as RectTuple,
         visibility: "visible",
-        dom: <div id={ID.root} class="lscg-layers-root HideOnPopup">
+        dom: <div id={ID.root} class="lscg-screen lscg-layers-root HideOnPopup">
             <style id={ID.styles}>{styles}</style>
             <div id={ID.mainToolbar}>
-                    <label class="lscg-checkbox">
+                    <label class="lscg-layers-check">
                         {ElementCheckbox.Create(ID.allLayersCheck, (evt) => this.onToggleAllLayers(evt))}
                         All Layers
                     </label>
-                    <label class="lscg-checkbox">
+                    <label class="lscg-layers-check">
                         {ElementCheckbox.Create(ID.leadLined, (evt) => this.onToggleLeadLined(evt), { checked: !!this.OpacityItem?.Property?.LSCGLeadLined })}
                         Lead-Lined
                     </label>
-                    <label class="lscg-checkbox">
+                    <label class="lscg-layers-check">
                         {ElementCheckbox.Create(ID.translateCheck, (evt) => this.onToggleTranslate(evt))}
                         Translate
                     </label>
@@ -103,16 +104,16 @@ export class OpacityModule extends BaseModule {
                         <div class="lscg-translate-direction">
                             <input id={ID.translateX} type="number" />
                             <div>
-                                <span onClick={() => this.minusX()}>⬅️</span> X <span onClick={() => this.plusX()}>➡️</span>
+                                {Button("◀", () => this.nudge("x", -10), { ariaLabel: "Left" })} X {Button("▶", () => this.nudge("x", 10), { ariaLabel: "Right" })}
                             </div>
                         </div>
                         <div class="lscg-translate-direction">
                             <input id={ID.translateY} type="number" />
                             <div>
-                                <span onClick={() => this.plusY()}>⬇️</span> Y <span onClick={() => this.minusY()}>⬆️</span>
+                                {Button("▼", () => this.nudge("y", 10), { ariaLabel: "Down" })} Y {Button("▲", () => this.nudge("y", -10), { ariaLabel: "Up" })}
                             </div>
                         </div>
-                        <button type="button" onClick={() => this.ResetTranslation()} title="Reset"></button>
+                        {ElementButton.Create(`${root}-translate-reset`, () => this.ResetTranslation(), { image: "./Icons/Reset.png", tooltip: "Reset", tooltipPosition: "bottom" }, { button: { classList: ["lscg-button"] } })}
                     </div>
                     <div id={ID.translateButtons} class="lscg-layers-listing scroll-box"></div>
                 </div>
@@ -204,7 +205,7 @@ export class OpacityModule extends BaseModule {
         this.OpacityLayerSliders = [];
         this.TranslationButtons = [];
 
-        const translateAllButton = this.createTranslateButton("All Layers", (evt) => this.onClickTranslate(evt));
+        const translateAllButton = this.createTranslateButton("All Layers", b => this.onClickTranslate(b));
         translateAllButton.classList.add("selected");
         document.getElementById(ID.translateButtons)?.appendChild(translateAllButton);
 
@@ -231,7 +232,7 @@ export class OpacityModule extends BaseModule {
                     0,//Math.round(layer.MinOpacity * 100),
                     Math.round(layer.MaxOpacity * 100),
                 );
-                const translateButton = this.createTranslateButton(layerName, (evt) => this.onClickTranslate(evt, layer));
+                const translateButton = this.createTranslateButton(layerName, b => this.onClickTranslate(b, layer));
 
                 document.getElementById(ID.opacityLayers)?.appendChild(opacitySlider);
                 document.getElementById(ID.translateButtons)?.appendChild(translateButton);
@@ -261,12 +262,10 @@ export class OpacityModule extends BaseModule {
                 </fieldset>;
     }
 
-    createTranslateButton(label: string | undefined, onClick: (evt: Event) => void) {
-        return  <button class="lscg-button lscg-translate-button"
-                        id={ID.translateButtons + "_" + kebabCase(label)}
-                        onClick={onClick}>
-                    {label}
-                </button>;
+    createTranslateButton(label: string | undefined, onClick: (button: HTMLButtonElement) => void) {
+        const button = Button(label ?? "", b => onClick(b), { class: "lscg-translate-button" });
+        button.id = ID.translateButtons + "_" + kebabCase(label);
+        return button;
     }
 
     onOpacityChange(evt: Event, layer?: AssetLayer | undefined) {
@@ -360,7 +359,7 @@ export class OpacityModule extends BaseModule {
         this.OpacityItem.Property.LSCGLeadLined = (evt?.target as HTMLInputElement)?.checked ?? false;
     }
 
-    onClickTranslate(evt: Event, layer?: AssetLayer) {
+    onClickTranslate(button: HTMLButtonElement, layer?: AssetLayer) {
         if (!this.OpacityItem || !this.OpacityItem.Asset || !this.OpacityItem.Asset.Layer)
             return;
 
@@ -374,7 +373,7 @@ export class OpacityModule extends BaseModule {
         else
             this.SelectedTranslationLayer = this.OpacityItem.Asset.Layer.indexOf(layer);
 
-        (evt?.target as HTMLButtonElement).classList.add("selected");
+        button.classList.add("selected");
         this.SetTranslationElementValues();
     }
 
@@ -571,27 +570,10 @@ export class OpacityModule extends BaseModule {
         return (hasOpacitySettings || !!xrayActive || IsSoulBind(item)) && !item.Property?.LSCGLeadLined;
     }
 
-    minusX() {
-        ElementValue(this.TranslateXElementId, Math.round(parseFloat(ElementValue(this.TranslateXElementId))) - 10 + "");
-        this._updateTranslationValue(this.TranslateXElementId);
-        this.UpdatePreview();
-    }
-
-    minusY() {
-        ElementValue(this.TranslateYElementId, Math.round(parseFloat(ElementValue(this.TranslateYElementId))) - 10 + "");
-        this._updateTranslationValue(this.TranslateYElementId);
-        this.UpdatePreview();
-    }
-
-    plusX() {
-        ElementValue(this.TranslateXElementId, Math.round(parseFloat(ElementValue(this.TranslateXElementId))) + 10 + "");
-        this._updateTranslationValue(this.TranslateXElementId);
-        this.UpdatePreview();
-    }
-
-    plusY() {
-        ElementValue(this.TranslateYElementId, Math.round(parseFloat(ElementValue(this.TranslateYElementId))) + 10 + "");
-        this._updateTranslationValue(this.TranslateYElementId);
+    nudge(axis: "x" | "y", delta: number) {
+        const id = axis === "x" ? this.TranslateXElementId : this.TranslateYElementId;
+        ElementValue(id, Math.round(parseFloat(ElementValue(id))) + delta + "");
+        this._updateTranslationValue(id);
         this.UpdatePreview();
     }
 
@@ -783,6 +765,17 @@ export class OpacityModule extends BaseModule {
         CanvasElement.addEventListener("pointermove", evt => this.TranslateMove(CanvasElement, evt), { signal: controller.signal });
         CanvasElement.addEventListener("pointerup", evt => this.TranslateEnd(CanvasElement, evt), { signal: controller.signal });
         CanvasElement.addEventListener("pointercancel", evt => this.TranslateEnd(CanvasElement, evt), { signal: controller.signal });
+
+        // Arrow keys nudge the translation by 1 (10 with Shift) while translating, unless typing in a field
+        window.addEventListener("keydown", evt => {
+            if (!this.TranslationMode || evt.altKey || evt.ctrlKey || evt.metaKey) return;
+            if (evt.target instanceof HTMLInputElement || evt.target instanceof HTMLTextAreaElement || evt.target instanceof HTMLSelectElement) return;
+            const step = evt.shiftKey ? 10 : 1;
+            const nudge = { ArrowLeft: () => this.nudge("x", -step), ArrowRight: () => this.nudge("x", step), ArrowUp: () => this.nudge("y", -step), ArrowDown: () => this.nudge("y", step) }[evt.key];
+            if (!nudge) return;
+            evt.preventDefault();
+            nudge();
+        }, { signal: controller.signal });
 
         // Propagate the vanilla BC opacity slider changes to LSCG
         const rootID: string = ColorPicker.ids.root;

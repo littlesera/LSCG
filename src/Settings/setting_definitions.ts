@@ -31,6 +31,7 @@ export enum ModuleCategory {
 	CursedItem = 14,
 	Map = 15,
 	SpeechAnalysis = 16,
+	Outfits = 17,
 	RemoteUI = 98,
 	Misc = 99,
 	Commands = 100

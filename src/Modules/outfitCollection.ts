@@ -5,7 +5,11 @@ import { GuiOutfits } from "Settings/outfits";
 import { Subscreen } from "Settings/setting_definitions";
 import { BaseModule } from "base";
 import { Outfits } from "modules";
-import { LSCG_SendLocal, settingsSave } from "utils";
+import { OpenApplyOutfitDialog } from "Settings/applyOutfitDialog";
+import { ModuleCategory } from "Settings/setting_definitions";
+import { ICONS, LSCG_SendLocal, WearOutfit, hookFunction, isOutfitEditorCharacter, removeAllHooksByModule, settingsSave } from "utils";
+import { OutfitOption } from "Settings/Models/magic";
+import { StripLevel } from "Settings/Models/cursed-item";
 
 export class OutfitCollectionModule extends BaseModule {
     data: OutfitCollection;
@@ -17,6 +21,23 @@ export class OutfitCollectionModule extends BaseModule {
 
     load() {
         this.data.LoadOutfits();
+
+        // A button at the free left end of the Appearance editor's toolbar row: BC's menu is right-aligned and its header text
+        // runs right up to the menu, so there is no room beside the menu's own buttons
+        const buttonShown = () => this.Enabled && CharacterAppearanceMode === "" && !DialogFocusItem && !Layering.IsActive() && !!CharacterAppearanceSelection?.IsPlayer() && !isOutfitEditorCharacter(CharacterAppearanceSelection);
+        const buttonX = () => 20;
+        hookFunction("AppearanceRun", 10, (args, next) => {
+            next(args);
+            if (buttonShown()) DrawButton(buttonX(), 25, 90, 90, "", "White", ICONS.BOUND_GIRL, "Apply LSCG Outfit");
+        }, ModuleCategory.Outfits);
+        hookFunction("AppearanceClick", 10, (args, next) => {
+            if (buttonShown() && MouseXIn(buttonX(), 90) && MouseYIn(25, 90)) return OpenApplyOutfitDialog();
+            return next(args);
+        }, ModuleCategory.Outfits);
+    }
+
+    unload() {
+        removeAllHooksByModule(ModuleCategory.Outfits);
     }
 
     get defaultSettings() {
@@ -61,6 +82,20 @@ export class OutfitCollectionModule extends BaseModule {
     get commands(): ICommand[] {
 		// Empty
 		return [{
+			Tag: "apply-outfit",
+			Description: "[key?] : Wear an outfit from the collection. Without a key, opens a dialog to preview and choose one.",
+			Action: (args) => {
+				if (!this.Enabled)
+					return;
+				const key = args?.trim();
+				if (!key) return OpenApplyOutfitDialog();
+				const outfit = Outfits().GetOutfit(key);
+				if (!outfit) return LSCG_SendLocal(`Outfit ${key} not found.`);
+				WearOutfit(Player, Outfits().GetOutfitBundle(key), OutfitOption.both, StripLevel.NONE);
+				CharacterRefresh(Player, CurrentScreen !== "Appearance");
+				LSCG_SendLocal(`Wearing outfit ${outfit.key}.`);
+			},
+		}, {
 			Tag: "list-outfits",
 			Description: ": List all available outfit keys",
 			Action: () => {

@@ -5,6 +5,7 @@ import { getModule } from "modules";
 import { CoreModule } from "Modules/core";
 import { ActivityEntryModel } from "Settings/Models/activities";
 import { StripLevel } from "Settings/Models/cursed-item";
+import { OutfitOption } from "Settings/Models/magic";
 import { ModuleCategory } from "Settings/setting_definitions";
 import { debounce, includes, trim } from "lodash-es";
 import { SettingsModel } from "Settings/Models/settings";
@@ -1244,6 +1245,24 @@ function migrateLegacyCraft<T extends object>(craft: T | undefined): T | undefin
 	return rest as T;
 }
 
+/** Puts an outfit on `C`: first strips what `strip` asks for, then wears the outfit's clothes and/or restraints
+ *  (per `option`) over whatever is in their slots. What the player may not remove, or may not wear, is left alone, so a
+ *  preview copy of the player ends up exactly as the real thing would. */
+export function WearOutfit(C: Character, items: ItemBundle[], option: OutfitOption, strip: StripLevel) {
+	const me = Player.MemberNumber;
+	const permit = (group: AssetGroupName) => { const worn = InventoryGet(Player, group); return !worn || CanRemoveItem(worn, me, Player); };
+	const wanted = (asset: Asset) => (option !== OutfitOption.binds_only && isCloth(asset)) || (option !== OutfitOption.clothes_only && isBind(asset));
+
+	C.Appearance.filter(item => matchesStripLevel(item, strip) && permit(item.Asset.Group.Name))
+		.forEach(item => InventoryRemove(C, item.Asset.Group.Name, false));
+	for (const bundle of items) {
+		const asset = AssetGet(C.AssetFamily, bundle.Group, bundle.Name);
+		if (!asset || !wanted(asset) || !permit(bundle.Group)) continue;
+		if (InventoryBlockedOrLimited(Player, AppearanceItem.fromAsset(asset)) || !InventoryChatRoomAllow(asset.Category ?? [])) continue;
+		ApplyItem(bundle, me, true, true, C);
+	}
+}
+
 export function ApplyItem(item: ItemBundle, acting: number | undefined, replace: boolean = true, locksafe: boolean = true, C?: Character): Item | undefined {
 	if (!C) C = Player;
 	const existing = InventoryGet(C, item.Group);
@@ -1294,10 +1313,11 @@ export function StripCharacterNoRedraw(C: Character) {
 /** Ids (before CopyCharacter's "LSCG-" prefix) of the temporary characters the outfit editor previews and edits. */
 export const OUTFIT_PREVIEW_ID = "LSCGOutfitsCollection";
 export const OUTFIT_CREATOR_ID = "OutfitCreator";
+export const OUTFIT_APPLY_ID = "OutfitApply";
 
 /** Whether `C` is one of the outfit editor's temporary characters rather than someone in the room. */
 export function isOutfitEditorCharacter(C: Character | null | undefined): boolean {
-    return [OUTFIT_PREVIEW_ID, OUTFIT_CREATOR_ID].some(id => String(C?.CharacterID).startsWith(`LSCG-${id}-`));
+    return [OUTFIT_PREVIEW_ID, OUTFIT_CREATOR_ID, OUTFIT_APPLY_ID].some(id => String(C?.CharacterID).startsWith(`LSCG-${id}-`));
 }
 
 export function CopyCharacter(C: Character, id: string, strip: boolean = true, removeItems: boolean = true): Character {

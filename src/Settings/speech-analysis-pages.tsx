@@ -85,7 +85,7 @@ const usesState = (r: SpeechReactionRule) => r.action === "applyState" || r.acti
 const outfitPartOptions: SelectOption[] = SPEECH_OUTFIT_OPTIONS.map(o => ({ value: o, label: o }));
 
 /** Same strip levels and wording as cursed items. */
-const STRIP_LABELS: [StripLevel, string][] = [
+export const STRIP_LABELS: [StripLevel, string][] = [
     [StripLevel.NONE, "Nothing (add only)"],
     [StripLevel.CLOTHES, "Clothing"],
     [StripLevel.UNDERWEAR, "Underwear"],
