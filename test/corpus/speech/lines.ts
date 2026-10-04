@@ -31,7 +31,7 @@ export const CATEGORIES: Category[] = [
 	category("neutral statements", [
 		...neu(
 			"hello everyone", "how are you all", "I am tired", "i'm going to sit over here", "I like cake",
-			"I'm at the door", "i am here", "what time is it", "brb", "I'm ready",
+			"I'm at the door", "i am here", "what time is it", "brb", "I'm ready", "I miss Sera",
 			"the weather is nice", "let's go to the lounge", "I need a drink", "i'm back", "thanks for having me",
 		),
 	]),

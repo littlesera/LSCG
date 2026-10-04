@@ -96,7 +96,7 @@ const DOMAIN_LEXICON: Record<string, number> = {
     // laughter is a tone marker, not praise ("im so dumb lol" must not cancel out)
     oops: 0, whoops: 0, ouch: 0, ugh: 0, argh: 0, yikes: 0, lol: 0, lmao: 0, rofl: 0, haha: 0, hehe: 0, lmfao: 0, careful: 0, mercy: 0,
     // ordinary states, not a verdict on the speaker
-    tired: 0, sleepy: 0, bored: 0, angry: 0, sorry: 0, hungry: 0, thirsty: 0, excited: 0, stuck: 0,
+    miss: 0, missed: 0, misses: 0, missing: 0, tired: 0, sleepy: 0, bored: 0, angry: 0, sorry: 0, hungry: 0, thirsty: 0, excited: 0, stuck: 0,
 };
 
 const FIRST_PERSON_RE = /\b(i'm|i've|i'll|i'd|im|i|me|my|myself|mine)\b/i;
