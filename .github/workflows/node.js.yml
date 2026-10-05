@@ -21,7 +21,7 @@ jobs:
       with:
         node-version: '24.x'
         cache: 'npm'
-        registry-url: 'https://registry.npmjs.org' # lets npm publish read NODE_AUTH_TOKEN below
+        registry-url: 'https://registry.npmjs.org' # points npm publish at the npm registry
     - run: npm ci
     - run: npm run build --if-present
     #- run: npm test
@@ -37,10 +37,11 @@ jobs:
 
     # After the deploy, so a publishing problem never holds up a release. `npm run build` has already emitted the
     # typings; this assembles the package (versioned to match LSCG) and publishes it unless that version exists.
+    # Authenticates through npm trusted publishing (OIDC via `id-token: write`), so there is no token to store; the
+    # trusted publisher on npmjs.com must name this workflow and the `release` environment. It needs npm >= 11.5.1.
     - name: Publish @lscg/types to npm
-      env:
-        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       run: |
+        npm install -g npm@latest
         node scripts/pack-types.mjs
         VERSION=$(node -p "require('./build/types-package/package.json').version")
         if npm view "@lscg/types@$VERSION" version >/dev/null 2>&1; then
