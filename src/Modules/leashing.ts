@@ -1055,10 +1055,11 @@ export class LeashingModule extends BaseModule {
     }
 
     // A clasp that can't pull breaks at both ends, and both leashes stay where they are. Of one slot, when given
-    BreakClasps(member?: number, slot?: string) {
-        const matching = this.Clasps.filter(p => (member === undefined || p.PairedMember === member) && (slot === undefined || (p.Slot ?? DefaultZone) === slot));
+    BreakClasps(member?: number, slot?: string, pairedSlot?: string) {
+        const matching = this.Clasps.filter(p => (member === undefined || p.PairedMember === member) &&
+            (slot === undefined || (p.Slot ?? DefaultZone) === slot) && (pairedSlot === undefined || (p.PairedSlot ?? DefaultZone) === pairedSlot));
         this.NotifyUnleashings(matching);
-        if (member === undefined && slot === undefined)
+        if (member === undefined && slot === undefined && pairedSlot === undefined)
             this.RemoveAllLeashingsOfType("leash");
         else
             for (const p of matching)
@@ -1079,9 +1080,14 @@ export class LeashingModule extends BaseModule {
                 { name: "type", value: "leash" },
                 ...(zone !== undefined ? [{ name: "slot", value: zone }] : []),
             ]);
-        // Our own side, when it's us they're unclasped from
-        if (other === Player.MemberNumber)
-            this.RemoveLeashings(at, false, "leash", undefined, zone);
+        // Our own side, when it's us they're unclasped from. A shared end of the line on our collar goes with it
+        if (other === Player.MemberNumber) {
+            const leaving = this.Clasps.filter(p => p.PairedMember === at && (zone === undefined || ZoneOf(p.PairedSlot ?? DefaultZone) === zone));
+            for (const p of leaving)
+                this.RemoveLeashings(at, false, "leash", p.Slot, p.PairedSlot);
+            if (leaving.some(p => p.SharedLeash) && !this.Clasps.some(p => p.SharedLeash))
+                this.DropSharedLeash();
+        }
     }
 
     // Lets go of our end of a clasp, and of a shared leash with it. The other end hears it from us
@@ -1089,7 +1095,7 @@ export class LeashingModule extends BaseModule {
         const leaving = this.Clasps.filter(p => p.PairedMember === other && (slot === undefined || ZoneOf(p.Slot ?? DefaultZone) === ZoneOf(slot)));
         const shared = leaving.some(p => p.SharedLeash);
         for (const p of leaving)
-            this.BreakClasps(p.PairedMember, p.Slot);
+            this.BreakClasps(p.PairedMember, p.Slot, p.PairedSlot);
         // Another clasp can still be using that end of the line
         if (shared && !this.Clasps.some(p => p.SharedLeash))
             this.DropSharedLeash();
@@ -1105,11 +1111,12 @@ export class LeashingModule extends BaseModule {
         }
     }
 
-    // Tells each end its half of the clasp: its own zone, and the other's
+    // Tells each end its half of the clasp: its own zone, and the other's. Only b's end, the anchor, can have been given
+    // the end of the line
     SendClasp(a: number, b: number, shared: boolean, aZone: string, bZone: string) {
         for (const [end, other, slot, pairedSlot] of [[a, b, aZone, bZone], [b, a, bZone, aZone]] as [number, number, string, string][]) {
             if (end === Player.MemberNumber) {
-                this.AcceptClasp(other, end, shared, slot, pairedSlot);
+                this.AcceptClasp(other, end, shared && end === b, slot, pairedSlot);
                 continue;
             }
             const C = getCharacter(end);
@@ -1118,7 +1125,7 @@ export class LeashingModule extends BaseModule {
                     { name: "pairedMember", value: other },
                     { name: "type", value: "leash" },
                     { name: "isSource", value: false },
-                    { name: "shared", value: shared },
+                    { name: "shared", value: shared && end === b },
                     { name: "slot", value: slot },
                     { name: "pairedSlot", value: pairedSlot },
                 ]);

@@ -274,7 +274,7 @@ describe("LeashingModule clasped leashes", () => {
 			const firstClasp = serverSend.calls.findIndex(([, data]) => data?.Dictionary?.[0]?.message?.command?.name === "add-leashing");
 			expect(g.InventoryWear.mock.invocationCallOrder[0]).toBeLessThan(serverSend.invocationCallOrder[firstClasp]);
 			expect(commands("add-leashing").map(([target, , args]) => [target, (args as { name: string; value: unknown }[]).find(a => a.name === "shared")?.value]))
-				.toEqual([[2, true], [3, true]]);
+				.toEqual([[2, false], [3, true]]);
 		});
 
 		it("the end copies the held leash and its colour", () => {
@@ -627,6 +627,35 @@ describe("LeashingModule clasped leashes", () => {
 			player().Appearance = player().Appearance.filter(item => item.Asset.Group.Name !== "ItemVulvaPiercings");
 			g.CharacterRefresh(g.Player);
 			expect(leashing.Clasps.map(p => p.Slot)).toEqual(["ItemNeck"]);
+		});
+
+		it("unclasping at their ring takes the end of the line off our own collar", () => {
+			const b = join(2, { leash: false });
+			b.Appearance = [];
+			wear(b, makeItem(makeAsset(makeGroup({ Name: "ItemVulvaPiercings" }), { Name: "ClitRing" }), { Property: { Effect: ["Leash"] } }));
+			// Our collar had no leash; the clasp put the end of theirs on it
+			player().Appearance = [];
+			wear(player(), makeItem(collar));
+			wearLeash(player());
+			leashing.Pairings = [new Leashing(2, 1, false, "leash", true, "ItemNeck", "ItemVulvaPiercings")];
+			listClasps(b, [1]);
+			leashing.UnclaspLeash(2, 1, "ItemVulvaPiercings");
+			expect(leashing.Clasps).toEqual([]);
+			expect(g.InventoryRemove).toHaveBeenCalledWith(g.Player, "ItemNeckRestraints");
+		});
+
+		it("only the collar end of a clasp is told it's shared, so the other end keeps its own leash", () => {
+			const b = join(2, { leash: false });
+			b.Appearance = [];
+			wear(b, makeItem(makeAsset(makeGroup({ Name: "ItemVulvaPiercings" }), { Name: "ClitRing" }), { Property: { Effect: ["Leash"] } }));
+			g.Asset.push(makeAsset(makeGroup({ Name: "ItemNeckRestraints" }), { Name: "CollarLeash" }));
+			player().Appearance = [];
+			wear(player(), makeItem(collar));
+			g.ChatRoomLeashList = [2];
+			leashing.HoldLeash(b as never, "ItemVulvaPiercings");
+			expect(leashing.ClaspLeash(b as never, g.Player, "ItemNeck")).toBe(true);
+			expect(commands("add-leashing")).toEqual([[2, "add-leashing", expect.arrayContaining([{ name: "shared", value: false }])]]);
+			expect(clasps()).toEqual([{ with: 2, by: 1, shared: true }]);
 		});
 
 		it("remembers where a held line was grabbed", () => {
