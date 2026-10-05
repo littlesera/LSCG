@@ -1,4 +1,5 @@
 export type Styles = {
+  'button': string;
   'lscg-outfits': string;
   'lscg-outfits-button-grid-inner0': string;
   'lscg-outfits-button-grid-inner1': string;
