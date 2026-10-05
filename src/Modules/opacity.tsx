@@ -70,7 +70,8 @@ interface TransformTab {
     drag(dx: number, dy: number, linked: boolean): [axis: number, delta: number][];
 }
 
-type NativeTransform = "Rotation" | "ScaleX" | "ScaleY";
+type NativeTransform = "Rotation" | "ScaleX" | "ScaleY" | "TranslationX" | "TranslationY";
+const NATIVE_DEFAULT = (prop: NativeTransform) => prop.startsWith("Scale") ? 1 : 0;
 
 export class OpacityModule extends BaseModule {
     OpacityMainSlider: OpacitySlider = {
@@ -383,6 +384,7 @@ export class OpacityModule extends BaseModule {
             if (Item && this.CanChangeOpacityOnCharacter(C) && isDrawingOverridable(Item)) {
                 this.OpacityCharacter = C;
                 this.OpacityItem = Item;
+                this.migrateLegacyTranslation(Item);
 
                 this.ShowDomUI();
 
@@ -656,46 +658,37 @@ export class OpacityModule extends BaseModule {
         return this.OpacityItem!.Asset.Layer[layer]?.Name ?? "";
     }
 
-    /** Translation is LSCG's own per-layer `LayerOverrides` (absolute draw positions); asset layer defaults fill the gaps. */
-    private readTranslation(prop: "DrawingLeft" | "DrawingTop", layer: number): number {
-        const ix = Math.max(layer, 0);
-        const assetLayer = AssetGet("Female3DCG", this.OpacityItem!.Asset.Group.Name, this.OpacityItem!.Asset.Name)?.Layer[ix] ?? this.OpacityItem!.Asset.Layer[ix];
-        const override = (this.itemProperty as PropertiesWithLayerOverrides).LayerOverrides?.[ix]?.[prop];
-        return (override ?? assetLayer[prop])?.[PoseType.DEFAULT] ?? assetLayer[prop][PoseType.DEFAULT];
-    }
-
-    private writeTranslation(prop: "DrawingLeft" | "DrawingTop", layer: number, value: number) {
-        const properties = this.itemProperty as PropertiesWithLayerOverrides;
-        const layerCount = this.OpacityItem!.Asset.Layer.length;
-        if (!properties.LayerOverrides || properties.LayerOverrides.length != layerCount) {
-            const previous = Object.assign({}, properties.LayerOverrides);
-            properties.LayerOverrides = [];
-            for (let i = 0; i < layerCount; i++) {
-                if (previous[i])
-                    properties.LayerOverrides.push(previous[i]);
-                else {
-                    const defaultLayer = this.OpacityItem!.Asset.Layer[i];
-                    properties.LayerOverrides.push({
-                        DrawingLeft: defaultLayer.DrawingLeft,
-                        DrawingTop: defaultLayer.DrawingTop,
-                    });
-                }
-            }
+    /** Moves any translation saved the old LSCG way (absolute `LayerOverrides` draw positions) into BC's own
+     *  `LayerTranslationX/Y` offsets, so the sidebar and BC's layering screen share one value. */
+    private migrateLegacyTranslation(item: ItemColorItem) {
+        const props = item.Property as PropertiesWithLayerOverrides & Record<string, any> | undefined;
+        const overrides = props?.LayerOverrides;
+        if (!props || !overrides) return;
+        const family = AssetGet("Female3DCG", item.Asset.Group.Name, item.Asset.Name)?.Layer ?? item.Asset.Layer;
+        for (const [prop, key] of [["DrawingLeft", "LayerTranslationX"], ["DrawingTop", "LayerTranslationY"]] as const) {
+            overrides.forEach((override, i) => {
+                const absolute = override?.[prop]?.[PoseType.DEFAULT];
+                const name = item.Asset.Layer[i]?.Name ?? "";
+                if (absolute === undefined) return;
+                const offset = absolute - (family[i]?.[prop]?.[PoseType.DEFAULT] ?? absolute);
+                if (!offset) return;
+                const record = props[key] ??= {};
+                record[name] = (record[name] ?? 0) + offset;
+            });
         }
-        const targets = layer < 0 ? properties.LayerOverrides : [properties.LayerOverrides[layer]];
-        targets.forEach(lo => lo[prop] = { "": value });
+        delete (props as Partial<typeof props>).LayerOverrides;
     }
 
-    /** Rotation and scale are BC's own: item-wide `Rotation`/`ScaleX`/`ScaleY`, with `Layer*` records by layer name on top
-     *  (rotation adds, scale multiplies). Values at their default are removed rather than saved. */
+    /** Rotation, scale and translation are BC's own: item-wide `Rotation`/`ScaleX`/`ScaleY`/`TranslationX`/`TranslationY`, with
+     *  `Layer*` records by layer name on top (rotation and translation add, scale multiplies). Values at their default are removed rather than saved. */
     private readNative(prop: NativeTransform, layer: number): number {
         const p = this.itemProperty;
-        return (layer < 0 ? p[prop] : p[`Layer${prop}`]?.[this.layerName(layer)]) ?? (prop === "Rotation" ? 0 : 1);
+        return (layer < 0 ? p[prop] : p[`Layer${prop}`]?.[this.layerName(layer)]) ?? NATIVE_DEFAULT(prop);
     }
 
     private writeNative(prop: NativeTransform, layer: number, value: number) {
         const p = this.itemProperty;
-        const isDefault = value === (prop === "Rotation" ? 0 : 1);
+        const isDefault = value === NATIVE_DEFAULT(prop);
         if (layer < 0) {
             if (isDefault) delete p[prop];
             else p[prop] = value;
@@ -722,12 +715,10 @@ export class OpacityModule extends BaseModule {
         return this._transforms ??= {
             translate: {
                 axes: [
-                    { label: "X", min: -2000, max: 2000, step: 1, fine: 1, big: 10, decLabel: "◀", incLabel: "▶",
-                        read: l => this.readTranslation("DrawingLeft", l), write: (l, v) => this.writeTranslation("DrawingLeft", l, Math.round(v)) },
-                    { label: "Y", min: -2000, max: 2000, step: 1, fine: 1, big: 10, decLabel: "▲", incLabel: "▼",
-                        read: l => this.readTranslation("DrawingTop", l), write: (l, v) => this.writeTranslation("DrawingTop", l, Math.round(v)) },
+                    this.nativeAxis("TranslationX", "X", -2000, 2000, 1, 1, 10, "◀", "▶"),
+                    this.nativeAxis("TranslationY", "Y", -2000, 2000, 1, 1, 10, "▲", "▼"),
                 ],
-                hint: "Drag the character, or use the arrow keys (shift for bigger steps).",
+                hint: "Drag the character, or use the arrow keys (shift for bigger steps). A layer's offset adds to All Layers.",
                 keys: { ArrowLeft: [0, -1], ArrowRight: [0, 1], ArrowUp: [1, -1], ArrowDown: [1, 1] },
                 drag: (dx, dy) => [[0, dx], [1, dy]],
             },
@@ -802,17 +793,8 @@ export class OpacityModule extends BaseModule {
     resetTransform() {
         if (!this.OpacityItem?.Property) return;
         const layers = this.SelectedLayer < 0 ? [-1, ...this.OpacityItem.Asset.Layer.keys()] : [this.SelectedLayer];
-        if (this.ActiveTab === "translate") {
-            const overrides = (this.itemProperty as PropertiesWithLayerOverrides).LayerOverrides;
-            this.OpacityItem.Asset.Layer.forEach((layer, i) => {
-                if (!overrides?.[i] || !layers.includes(i)) return;
-                overrides[i].DrawingLeft = layer.DrawingLeft ?? { [PoseType.DEFAULT]: 1 };
-                overrides[i].DrawingTop = layer.DrawingTop ?? { [PoseType.DEFAULT]: 1 };
-            });
-        } else {
-            const reset = (this.ActiveTab === "rotate" ? ["Rotation"] : ["ScaleX", "ScaleY"]) as NativeTransform[];
-            layers.forEach(l => reset.forEach(prop => this.writeNative(prop, l, prop === "Rotation" ? 0 : 1)));
-        }
+        const reset = (this.ActiveTab === "translate" ? ["TranslationX", "TranslationY"] : this.ActiveTab === "rotate" ? ["Rotation"] : ["ScaleX", "ScaleY"]) as NativeTransform[];
+        layers.forEach(l => reset.forEach(prop => this.writeNative(prop, l, NATIVE_DEFAULT(prop))));
         this.refreshTransformFields();
         this.UpdatePreview();
     }
