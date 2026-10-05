@@ -355,8 +355,10 @@ export class LeashingModule extends BaseModule {
                         if (MouseIn(CharX + 400 * Zoom, CharY + 40 * Zoom + yOffset, 40 * Zoom, 40 * Zoom)) {
                             const def = LeashDefinitions.get(p.Type);
                             tooltip = replace_template((p.IsSource ? def?.LabelSource ?? def?.LabelTarget : def?.LabelTarget ?? def?.LabelSource) ?? "", getCharacter(p.PairedMember), p.PairedMember + "");
-                            if (p.Type === "leash")
+                            if (p.Type === "leash") {
                                 tooltip = this.ClaspLabel(p.PairedMember, p.PairedSlot);
+                                this.DrawZoneGlow(C, p.Slot ?? DefaultZone, CharX, CharY, Zoom);
+                            }
                             if (this.IsLocked(p))
                                 tooltip = `${tooltip} (locked)`;
                         }
@@ -372,21 +374,18 @@ export class LeashingModule extends BaseModule {
                 typeof Zoom === "number" &&
                 links.length > 0
             ) {
-                const placed = new Map<string, number>();
+                // In the usual LSCG spot, so they don't mess with anyone's outfit; hovering shows where each is anchored
                 let tooltip: string | undefined;
-                for (const link of links) {
-                    const zone = ZoneOf(link.slot ?? DefaultZone);
-                    // Stacked down from the corner when the zone's unknown, else on the zone, side by side if shared
-                    const rect = AssetGroupGet(C.AssetFamily, zone as AssetGroupName)?.Zone?.[0];
-                    const n = placed.get(zone) ?? 0;
-                    placed.set(zone, n + 1);
-                    const x = rect ? CharX + (rect[0] + rect[2] / 2 - 15) * Zoom + n * 34 * Zoom : CharX + 405 * Zoom;
-                    const y = rect ? CharY + (rect[1] + rect[3] / 2 - 15) * Zoom : CharY + (45 + n * 40) * Zoom;
-                    DrawCircle(x + 15 * Zoom, y + 15 * Zoom, 17 * Zoom, 1, "Black", "White");
+                links.forEach((link, ix) => {
+                    const x = CharX + 405 * Zoom;
+                    const y = CharY + (45 + ix * 40) * Zoom;
+                    DrawCircle(CharX + 420 * Zoom, y + 15 * Zoom, 20 * Zoom, 1, "Black", "White");
                     DrawImageResize(ICONS.LEASH, x, y, 30 * Zoom, 30 * Zoom);
-                    if (MouseIn(x - 3 * Zoom, y - 3 * Zoom, 36 * Zoom, 36 * Zoom))
+                    if (MouseIn(CharX + 400 * Zoom, y - 5 * Zoom, 40 * Zoom, 40 * Zoom)) {
                         tooltip = this.ClaspLabel(link.member, link.pairedSlot);
-                }
+                        this.DrawZoneGlow(C, link.slot ?? DefaultZone, CharX, CharY, Zoom);
+                    }
+                });
                 if (tooltip)
                     mouseTooltip(this.LeashLocked(C) ? `${tooltip} (locked)` : tooltip);
             }
@@ -1022,6 +1021,24 @@ export class LeashingModule extends BaseModule {
 
     ClaspPartners(C: Character): number[] {
         return [...new Set(this.ClaspLinks(C).map(link => link.member))];
+    }
+
+    // A soft pulsing glow over the zone a clasp is anchored in, for as long as its icon is hovered
+    DrawZoneGlow(C: Character, zone: string, CharX: number, CharY: number, Zoom: number) {
+        const rect = AssetGroupGet(C.AssetFamily, ZoneOf(zone) as AssetGroupName)?.Zone?.[0];
+        if (!rect)
+            return;
+        const cx = CharX + (rect[0] + rect[2] / 2) * Zoom;
+        const cy = CharY + (rect[1] + rect[3] / 2) * Zoom;
+        const radius = Math.max(rect[2], rect[3]) * 0.9 * Zoom;
+        const pulse = 0.5 + 0.5 * Math.sin(CommonTime() / 250);
+        const glow = MainCanvas.createRadialGradient(cx, cy, radius * 0.1, cx, cy, radius * (0.8 + 0.2 * pulse));
+        glow.addColorStop(0, `rgba(144, 228, 193, ${0.45 + 0.35 * pulse})`);
+        glow.addColorStop(1, "rgba(144, 228, 193, 0)");
+        MainCanvas.save();
+        MainCanvas.fillStyle = glow;
+        MainCanvas.fillRect(cx - radius, cy - radius, radius * 2, radius * 2);
+        MainCanvas.restore();
     }
 
     // How a clasp to member reads: who, and what it's on at their end
