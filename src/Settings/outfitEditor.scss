@@ -110,7 +110,8 @@
 	grid-area: menubar;
 	grid-template-columns: subgrid;
 	grid-template-rows: subgrid;
-	padding: 3px;
+	// No top padding: the screen starts at the same height as Preferences' exit door, which these buttons line up with
+	padding: 0 3px 3px;
 
 	h1 {
 		margin-right: auto;

@@ -10,6 +10,11 @@
 	height: min(9dvh, 4.5dvw);
 	justify-self: end;
 	width: min(9dvh, 4.5dvw);
+
+	.button {
+		height: 100%;
+		width: 100%;
+	}
 }
 
 #lscg-outfits-new-outfit {
