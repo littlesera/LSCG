@@ -286,17 +286,24 @@ describe("LeashingModule clasped leashes", () => {
 			expect(g.InventoryWear).toHaveBeenCalledWith(c, "ChainLeash", "ItemNeckRestraints", "#AA0000", null, null, expect.anything());
 		});
 
-		it("nothing to clasp when the leash we hold isn't on their collar, like a pelvis leash held through the dialog", () => {
+		it("a leash we hold that isn't on their collar can't give a collar-less target its end, like a pelvis leash held through the dialog", () => {
 			const b = join(2, { leash: false });
 			wearPelvisLeash(b);
 			const c = join(3, { leash: false });
 			g.ChatRoomLeashList = [2];
-			expect(leashing.HeldLeash(c as never)).toBeNull();
-			activities.CustomActionCallbacks.get("LSCG_ClaspLeash")?.(c as never, {} as never, undefined);
+			expect(leashing.HeldLeash(c as never)).toBe(b);
+			expect(leashing.CanClaspTo(b as never, c as never)).toBe(false);
 			expect(g.InventoryWear).not.toHaveBeenCalled();
-			expect(commands("add-leashing")).toEqual([]);
 			// Still held, so they can let go of it through the dialog
 			expect(g.ChatRoomLeashList).toEqual([2]);
+		});
+
+		it("clasps onto a target whose only leash isn't on their collar", () => {
+			const b = join(2);
+			const c = join(3, { leash: false });
+			wearPelvisLeash(c);
+			g.ChatRoomLeashList = [2];
+			expect(leashing.CanClaspTo(b as never, c as never)).toBe(true);
 		});
 
 		it("the end's name fits BC's 30 characters and leaves out the craft separators", () => {
@@ -562,17 +569,18 @@ describe("LeashingModule clasped leashes", () => {
 			expect(releaseBeeps().map(([target]) => target)).toEqual([2, 3]);
 		});
 
-		it("only our collar leash is our end: a pelvis leash doesn't take a clasp, or keep one when the collar leash comes off", () => {
+		it("any leash we wear is our end: a pelvis leash takes a clasp, and the clasp goes when the last leash comes off", () => {
 			player().Appearance = [];
 			wear(player(), makeItem(collar));
 			wearPelvisLeash(player());
 			join(2);
 			claspedBy(join(3), 2);
-			expect(clasps()).toEqual([]);
+			expect(clasps()).toEqual([{ with: 2, by: 3, shared: false }]);
 
 			wearLeash(player());
-			claspedBy(join(4), 2);
-			expect(clasps()).toEqual([{ with: 2, by: 4, shared: false }]);
+			player().Appearance = player().Appearance.filter(item => item.Asset.Group.Name !== "ItemPelvis");
+			g.CharacterRefresh(g.Player);
+			expect(clasps()).toEqual([{ with: 2, by: 3, shared: false }]);
 			player().Appearance = player().Appearance.filter(item => item.Asset.Group.Name !== "ItemNeckRestraints");
 			g.CharacterRefresh(g.Player);
 			expect(clasps()).toEqual([]);

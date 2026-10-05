@@ -120,14 +120,13 @@ describe("Hold Leash and Let Go Of Leash match vanilla's dialog options (real BC
 		expect(offers(C)).toEqual({ game: [false, false, false], ours: [false, false, false] });
 	});
 
-	it("nothing for a leash that isn't on the collar, though the dialog would hold it", () => {
+	it("a leash that isn't on the collar is offered like the dialog does", () => {
 		const C = makeCharacter(2);
 		wear(C, "ItemNeck", "LeatherCollar");
 		wear(C, "ItemPelvis", "PelvisChainLeash");
-		expect(offers(C)).toEqual({ game: [true, false, false], ours: [false, false, false] });
-		// Held through the dialog: let go of it there too, and it stays on the list until then
+		expect(offers(C)).toEqual({ game: [true, false, false], ours: [true, false, false] });
 		held(2);
-		expect(offers(C)).toEqual({ game: [false, true, true], ours: [false, false, true] });
+		expect(offers(C)).toEqual({ game: [false, true, true], ours: [false, true, true] });
 	});
 
 	it("nothing in a room that blocks leashing", () => {
