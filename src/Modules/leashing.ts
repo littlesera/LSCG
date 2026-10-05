@@ -370,6 +370,18 @@ export class LeashingModule extends BaseModule {
                                 tooltip = `${tooltip} (locked)`;
                         }
                     });
+                // Someone holding our leash, not clasped to anything yet: vanilla tells us who, and we know where ours are
+                const holder = ChatRoomLeashPlayer === null ? null : getCharacter(ChatRoomLeashPlayer);
+                if (holder !== null && !this.Clasps.some(p => p.PairedMember === holder.MemberNumber)) {
+                    const zone = LineZones(Player)[0] ?? DefaultZone;
+                    const y = CharY + (45 + this.Pairings.length * 40) * Zoom;
+                    DrawCircle(CharX + 420 * Zoom, y + 15 * Zoom, 20 * Zoom, 1, "Black", "White");
+                    DrawImageResize(ICONS.LEASH_HANDLE, CharX + 405 * Zoom, y, 30 * Zoom, 30 * Zoom);
+                    if (MouseIn(CharX + 400 * Zoom, y - 5 * Zoom, 40 * Zoom, 40 * Zoom)) {
+                        tooltip = `${CharacterNickname(holder)} is holding your leash (${AnchorLabel(Player, zone)})`;
+                        this.DrawZoneGlow(C, zone, CharX, CharY, Zoom);
+                    }
+                }
                 if (tooltip)
                     mouseTooltip(tooltip);
             }
@@ -386,7 +398,7 @@ export class LeashingModule extends BaseModule {
                 // In the usual LSCG spot, so they don't mess with anyone's outfit; hovering shows where each is anchored
                 let tooltip: string | undefined;
                 const icons: { icon: string, fill: string, zone: string, label: string }[] = [
-                    ...(heldZone === undefined ? [] : [{ icon: ICONS.LEASH_HANDLE, fill: "#90E4C1", zone: heldZone, label: `Holding your line (${AnchorLabel(C, heldZone)})` }]),
+                    ...(heldZone === undefined ? [] : [{ icon: ICONS.LEASH_HANDLE, fill: "#90E4C1", zone: heldZone, label: `Holding ${CharacterNickname(C)}'s leash (${AnchorLabel(C, heldZone)})` }]),
                     ...links.map(link => ({ icon: this.ClaspIcon(link.role), fill: "White", zone: link.slot ?? DefaultZone, label: this.ClaspLabel(link.member, link.pairedSlot, link.role) })),
                 ];
                 icons.forEach((entry, ix) => {
@@ -1060,9 +1072,9 @@ export class LeashingModule extends BaseModule {
         const name = other === null ? "someone" : CharacterNickname(other);
         const where = other !== null && pairedSlot !== undefined ? ` (${AnchorLabel(other, ZoneOf(pairedSlot))})` : "";
         if (role === "line")
-            return `Line clasped to ${name}${where}`;
+            return `Leash clasped to ${name}${where}`;
         if (role === "anchor")
-            return `Anchoring ${name}'s line${where}`;
+            return `Anchoring ${name}'s leash${where}`;
         return (LeashDefinitions.get("leash")?.LabelTarget ?? "").replace("%OPP_NAME%", name + where);
     }
 

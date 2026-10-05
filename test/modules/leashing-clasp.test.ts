@@ -665,8 +665,8 @@ describe("LeashingModule clasped leashes", () => {
 			receive.command(g.ChatRoomCharacter.find((C: FixtureCharacter) => C.MemberNumber === 3), "add-leashing", leashArgs(2, [{ name: "role", value: "anchor" }]));
 			expect(leashing.Clasps.map(p => [p.PairedMember, p.Role])).toEqual([[3, "line"], [2, "anchor"]]);
 			expect(leashing.ClaspLinks(g.Player).map(l => l.role)).toEqual(["line", "anchor"]);
-			expect(leashing.ClaspLabel(3, "ItemNeck", "line")).toBe("Line clasped to PlayerC (leathercollar)");
-			expect(leashing.ClaspLabel(2, undefined, "anchor")).toBe("Anchoring PlayerB's line");
+			expect(leashing.ClaspLabel(3, "ItemNeck", "line")).toBe("Leash clasped to PlayerC (leathercollar)");
+			expect(leashing.ClaspLabel(2, undefined, "anchor")).toBe("Anchoring PlayerB's leash");
 			expect(leashing.ClaspIcon("line")).not.toBe(leashing.ClaspIcon("anchor"));
 			expect(leashing.ClaspIcon(undefined)).toBe(leashing.ClaspIcon("anchor"));
 		});
