@@ -13,6 +13,8 @@ export interface SpellEffectContext {
     /** This effect's duration in ms; 0 or undefined means no expiry. */
     duration?: number;
     magic: MagicModule;
+    /** The target rolled a save against this spell. Only the effects that still do something on a save (damage) are applied after a full resist. */
+    saved?: boolean;
 }
 
 export interface SpellEffectDefinition {
@@ -30,7 +32,7 @@ export interface SpellEffectDefinition {
     /** Blocked by default the first time a player sees it. */
     defaultBlocked?: boolean;
     /** Has a "Configure" action in the spell editor. Built-in only. */
-    configurable?: "outfit" | "polymorph";
+    configurable?: "outfit" | "polymorph" | "damage";
     /** Display name of the extension that registered it; undefined for built-ins. */
     source?: string;
     apply(ctx: SpellEffectContext): void;

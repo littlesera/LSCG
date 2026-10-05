@@ -10,7 +10,7 @@ import { InjectorModule } from "Modules/injector";
 import { MagicModule } from "Modules/magic";
 import { StateModule } from "Modules/states";
 import { OutfitCollectionModule } from "Modules/outfitCollection";
-import { ABSOLUTE_MAX_SPELL_EFFECTS, DEFAULT_MAX_SPELL_EFFECTS, LSCGSpellEffect, maxSpellEffects, sanitizeIncomingEffects, type SpellDefinition, type SpellEffectId } from "Settings/Models/magic";
+import { ABSOLUTE_MAX_SPELL_EFFECTS, DEFAULT_MAX_SPELL_EFFECTS, DamageSave, DamageType, LSCGSpellEffect, maxSpellEffects, sanitizeIncomingDamage, sanitizeIncomingEffects, type SpellDefinition, type SpellEffectId } from "Settings/Models/magic";
 import { builtInEffectIds, effectDescription, effectLabel, extensionEffectIds, getSpellEffect, spellEffects, spellIsBeneficial } from "Modules/Magic/spellEffects";
 import { registerExtension, type ModApiHandle } from "api/extensions";
 import { boot, resetWorld, player, addToRoom } from "../harness/world";
@@ -262,6 +262,54 @@ describe("extension spell effects", () => {
             expect(cloth.Difficulty).toBeUndefined();
             expect(fixed.Difficulty).toBeUndefined();
             expect(sent.actions().some(a => a.includes("finds nothing it can tighten"))).toBe(true);
+        });
+    });
+
+    describe("Damaging", () => {
+        const damageSpell = (damage?: unknown) => ({ ...spell("zap", [LSCGSpellEffect.damage]), Damage: damage } as SpellDefinition);
+        const cast = (s: SpellDefinition) => {
+            magic.IncomingSpell(alice as never, s, null, 1);
+            vi.advanceTimersByTime(2500);
+            return sent.actions().filter(a => a.includes("damage"));
+        };
+
+        afterEach(() => {
+            vi.restoreAllMocks();
+        });
+
+        it("is a harmful, configurable effect", () => {
+            const def = getSpellEffect(LSCGSpellEffect.damage);
+            expect(def?.configurable).toBe("damage");
+            expect(spellIsBeneficial(damageSpell())).toBe(false);
+        });
+
+        it("rolls the dice and shows the type, total and the dice rolled", () => {
+            vi.spyOn(Math, "random").mockReturnValue(0.5); // every d6 comes up 4
+            const out = cast(damageSpell({ Type: "Fire", Roll: "2d6 + 2" }));
+            expect(out).toHaveLength(1);
+            expect(out[0]).toContain("takes 10 fire damage");
+            expect(out[0]).toContain("zap");
+            expect(out[0]).toContain("2d6 + 2 = [4, 4] + 2");
+        });
+
+        it("is an emote with no number when there's no roll, using Force when no type was chosen", () => {
+            const out = cast(damageSpell({ Type: "Psychic", Roll: "" }));
+            expect(out[0]).toContain("psychic damage");
+            expect(out[0]).not.toMatch(/\d/);
+            expect(cast(damageSpell()).at(-1)).toContain("force damage");
+        });
+
+        it("ignores a roll or type it can't use rather than failing", () => {
+            const out = cast(damageSpell({ Type: "Mind Flayer", Roll: "9999d9999" }));
+            expect(out[0]).toContain("force damage");
+            expect(out[0]).not.toMatch(/\d/);
+        });
+
+        it("sanitizeIncomingDamage keeps a known type and a valid roll, tidied", () => {
+            expect(sanitizeIncomingDamage({ Type: "Cold", Roll: "1d8+3" })).toEqual({ Type: DamageType.cold, Roll: "1d8 + 3", Save: DamageSave.half });
+            expect(sanitizeIncomingDamage({ Type: 5, Roll: { x: 1 } })).toEqual({ Type: DamageType.force, Roll: "", Save: DamageSave.half });
+            expect(sanitizeIncomingDamage("nope")).toBeUndefined();
+            expect(sanitizeIncomingDamage(null)).toBeUndefined();
         });
     });
 

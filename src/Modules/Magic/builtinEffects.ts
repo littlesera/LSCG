@@ -1,4 +1,5 @@
-import { LSCGSpellEffect } from "Settings/Models/magic";
+import { DamageSave, DEFAULT_DAMAGE_TYPE, LSCGSpellEffect, sanitizeIncomingDamage } from "Settings/Models/magic";
+import { parseDiceRoll, rollDice } from "./dice";
 import { SendAction, forceOrgasm } from "utils";
 // Type-only: spellEffects.ts imports this file to register the built-ins.
 import type { SpellEffectDefinition } from "./spellEffects";
@@ -311,6 +312,33 @@ export const BUILTIN_SPELL_EFFECTS: SpellEffectDefinition[] = [
                 TightenLoosenFacialExpression(Player, "ShortBreath", "Closed", "Soft");
             } else
                 SendAction("The spell brushes over %NAME%, but finds nothing it can loosen.");
+        },
+    },
+    {
+        id: LSCGSpellEffect.damage,
+        label: LSCGSpellEffect.damage,
+        description: "Hurts the target with a chosen type of damage, rolled from an optional dice expression. Only shown in chat for now.",
+        configurable: "damage",
+        apply: ({ spell, senderName, saved }) => {
+            const damage = sanitizeIncomingDamage(spell.Damage);
+            const type = (damage?.Type ?? DEFAULT_DAMAGE_TYPE).toLowerCase();
+            const roll = parseDiceRoll(damage?.Roll);
+            const halved = !!saved && damage?.Save !== DamageSave.none;
+            if (saved && !halved) {
+                SendAction(`%NAME% saves against the ${type} damage of ${senderName}'s ${spell.Name} and takes none of it.`);
+                return;
+            }
+            if (!roll) {
+                SendAction(halved
+                    ? `%NAME% saves against ${senderName}'s ${spell.Name} and is only grazed by its ${type} damage.`
+                    : `%NAME% is struck by the ${type} damage of ${senderName}'s ${spell.Name}.`);
+                return;
+            }
+            const result = rollDice(roll);
+            const total = halved ? Math.floor(result.total / 2) : result.total;
+            SendAction(halved
+                ? `%NAME% saves against ${senderName}'s ${spell.Name} and takes only ${total} ${type} damage, half of ${result.total}. (${result.breakdown})`
+                : `%NAME% takes ${total} ${type} damage from ${senderName}'s ${spell.Name}! (${result.breakdown})`);
         },
     },
 ];

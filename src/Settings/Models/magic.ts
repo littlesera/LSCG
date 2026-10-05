@@ -1,5 +1,6 @@
 import { SpiritTextType } from "Settings/magic";
 import { BaseSettingsModel } from "./base";
+import { parseDiceRoll } from "Modules/Magic/dice";
 
 export const KNOWN_SPELLS_LIMIT: number = 48;
 
@@ -60,7 +61,8 @@ export enum LSCGSpellEffect {
     orgasm = "Forced Orgasm",
     project = "Astral Projection",
     tighten = "Tightening",
-    loosen = "Loosening"
+    loosen = "Loosening",
+    damage = "Damaging"
 }
 
 export enum OutfitOption {
@@ -93,6 +95,50 @@ export interface PolymorphConfig extends ItemBundleConfig {
     IncludeAllBody: boolean;    
 }
 
+/** The classic damage types. Only flavour for now: they name what hit the target. */
+export enum DamageType {
+    acid = "Acid",
+    bludgeoning = "Bludgeoning",
+    cold = "Cold",
+    fire = "Fire",
+    force = "Force",
+    lightning = "Lightning",
+    necrotic = "Necrotic",
+    piercing = "Piercing",
+    poison = "Poison",
+    psychic = "Psychic",
+    radiant = "Radiant",
+    slashing = "Slashing",
+    thunder = "Thunder",
+}
+
+/** What a successful save does to a spell's damage. */
+export enum DamageSave {
+    half = "Half damage",
+    none = "No damage",
+}
+
+export interface DamageConfig {
+    Type: DamageType;
+    /** What the target's save does to the damage. Half damage when missing. */
+    Save?: DamageSave;
+    /** A dice expression such as "2d6 + 2"; empty for damage with no number. */
+    Roll: string;
+}
+
+export const DEFAULT_DAMAGE_TYPE = DamageType.force;
+
+/** Damage settings as they should be stored when they come from another player: a known type and a roll that parses. */
+export function sanitizeIncomingDamage(damage: unknown): DamageConfig | undefined {
+    if (!damage || typeof damage !== "object")
+        return undefined;
+    const { Type, Roll, Save } = damage as Partial<DamageConfig>;
+    const type = Object.values(DamageType).find(t => t === Type) ?? DEFAULT_DAMAGE_TYPE;
+    const save = Object.values(DamageSave).find(s => s === Save) ?? DamageSave.half;
+    const roll = typeof Roll === "string" ? parseDiceRoll(Roll)?.text ?? "" : "";
+    return { Type: type, Roll: roll, Save: save };
+}
+
 export interface SpellDefinition {
     Name: string;
     CastingPhrase?: string;
@@ -102,6 +148,7 @@ export interface SpellDefinition {
     AllowVoiceCast: boolean;
     Outfit?: OutfitConfig;
     Polymorph?: PolymorphConfig;
+    Damage?: DamageConfig;
 }
 
 export interface MagicSettingsModel extends MagicPublicSettingsModel {
