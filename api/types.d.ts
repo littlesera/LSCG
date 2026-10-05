@@ -4,6 +4,7 @@ export interface LSCGExtensionInfo {
     id: string;
     /** Human readable name, shown in the LSCG login badge. */
     name: string;
+    /** Your extension's own version string. */
     version: string;
 }
 /** Per-extension handle returned by `LSCG.getModApi`. Members are added as API features ship; check `LSCG.capabilities`. */
