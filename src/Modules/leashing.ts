@@ -8,6 +8,7 @@ import { ItemUseModule } from "./item-use";
 import { CollarModule } from "./collar";
 import { CommandListener, CoreModule } from "./core";
 import { emit, emitBefore } from "api/events";
+import { AnchorLabel, Anchors, DefaultZone, IsLineSource, LineSources, LineZones, ZoneOf } from "./leashing-anchors";
 
 export type GrabType = "hand"  | "ear" | "tongue" | "arm" | "neck" | "mouth" | "horn" | "mouth-with-foot" | "chomp" | "eyes" | "compulsion" | "tail" | "hair" | "nose" | "nipples" | "collar" | "leash"
 
@@ -76,12 +77,15 @@ export const LeashDefinitions = new Map<GrabType, LeashDefinition>([
 ]);
 
 export class Leashing implements Pairing {
-    constructor(pairedMember: number, pairedBy: number, isSource: boolean, type: GrabType, sharedLeash?: boolean) {
+    constructor(pairedMember: number, pairedBy: number, isSource: boolean, type: GrabType, sharedLeash?: boolean, slot?: string, pairedSlot?: string, role?: ClaspRole) {
         this.PairedMember = pairedMember;
         this.PairedBy = pairedBy;
         this.IsSource = isSource;
         this.Type = type;
         this.SharedLeash = sharedLeash;
+        this.Slot = slot;
+        this.PairedSlot = pairedSlot;
+        this.Role = role;
     }
     PairedMember: number;
     PairedBy: number;
@@ -89,6 +93,22 @@ export class Leashing implements Pairing {
     Type: GrabType;
     // A leash clasped to a collar: both ends wear one leash, and whichever end lets go loses it
     SharedLeash?: boolean;
+    // A clasp's two ends: the zone it is on here and on their side (see leashing-anchors.ts). Older versions send none
+    Slot?: string;
+    PairedSlot?: string;
+    // Which end of the line we are: the leash that was grabbed, or the anchor it was clasped to. Older versions send none
+    Role?: ClaspRole;
+}
+
+/** The two ends of a clasp: the line that was grabbed, and the anchor it was clasped to */
+export type ClaspRole = "line" | "anchor";
+
+/** One end-to-end clasp, as published in a room: with whom, and the zone on each side */
+export interface ClaspLink {
+    member: number;
+    slot?: string;
+    pairedSlot?: string;
+    role?: ClaspRole;
 }
 
 type LeashingRemovalReason =
@@ -112,6 +132,8 @@ export class LeashingModule extends BaseModule {
     claspingFrom: number | undefined;
     // How our leash looked when we last put it right, so a refresh only checks again once that's changed
     leashLook: boolean | undefined;
+    // The line we hold, and the zone we grabbed it from. Vanilla only keeps who (ChatRoomLeashList)
+    heldLine: { wearer: number, zone: string } | undefined;
 
     get defaultSettings() {
         return <BaseSettingsModel>{
@@ -292,11 +314,12 @@ export class LeashingModule extends BaseModule {
         hookFunction("CharacterRefresh", 1, (args, next) => {
             const ret = next(args);
             if (args[0]?.IsPlayer() && this.Clasps.length > 0) {
-                if (this.NeckLeash(Player) === null)
-                    this.BreakClasps();
+                // A clasp lives as long as the anchor it's on
+                for (const clasp of this.Clasps.filter(p => Anchors(Player, p.Slot).length === 0))
+                    this.BreakClasps(clasp.PairedMember, clasp.Slot);
                 // Not every refresh, only once its look has changed (say a leash swapped in): checking asks every mod
                 // whether whoever we're clasped to may leash us, and BCX says so in chat each time it says no
-                else if (this.LeashLook() !== this.leashLook)
+                if (this.Clasps.length > 0 && this.LeashLook() !== this.leashLook)
                     this.RefreshLeashLook();
             }
             return ret;
@@ -330,7 +353,7 @@ export class LeashingModule extends BaseModule {
                     .forEach((p, ix, arr) => {                    
                         const targetIsGrabbed = !p.IsSource;
                         const yOffset = ix * 40 * Zoom;
-                        const icon = this.GetIconForGrabType(p.Type);
+                        const icon = p.Type === "leash" ? this.ClaspIcon(p.Role) : this.GetIconForGrabType(p.Type);
                         DrawCircle(CharX + 420 * Zoom, CharY + 60 * Zoom + yOffset, 20 * Zoom, 1, "Black", targetIsGrabbed ? "White" : "#90E4C1");
                         DrawImageResize(
                             icon,
@@ -339,30 +362,57 @@ export class LeashingModule extends BaseModule {
                         if (MouseIn(CharX + 400 * Zoom, CharY + 40 * Zoom + yOffset, 40 * Zoom, 40 * Zoom)) {
                             const def = LeashDefinitions.get(p.Type);
                             tooltip = replace_template((p.IsSource ? def?.LabelSource ?? def?.LabelTarget : def?.LabelTarget ?? def?.LabelSource) ?? "", getCharacter(p.PairedMember), p.PairedMember + "");
+                            if (p.Type === "leash") {
+                                tooltip = this.ClaspLabel(p.PairedMember, p.PairedSlot, p.Role);
+                                this.DrawZoneGlow(C, p.Slot ?? DefaultZone, CharX, CharY, Zoom);
+                            }
                             if (this.IsLocked(p))
                                 tooltip = `${tooltip} (locked)`;
                         }
                     });
+                // Someone holding our leash, not clasped to anything yet: vanilla tells us who, and we know where ours are
+                const holder = ChatRoomLeashPlayer === null ? null : getCharacter(ChatRoomLeashPlayer);
+                if (holder !== null && !this.Clasps.some(p => p.PairedMember === holder.MemberNumber)) {
+                    const zone = LineZones(Player)[0] ?? DefaultZone;
+                    const y = CharY + (45 + this.Pairings.length * 40) * Zoom;
+                    DrawCircle(CharX + 420 * Zoom, y + 15 * Zoom, 20 * Zoom, 1, "Black", "White");
+                    DrawImageResize(ICONS.LEASH_HANDLE, CharX + 405 * Zoom, y, 30 * Zoom, 30 * Zoom);
+                    if (MouseIn(CharX + 400 * Zoom, y - 5 * Zoom, 40 * Zoom, 40 * Zoom)) {
+                        tooltip = `${CharacterNickname(holder)} is holding your leash (${AnchorLabel(Player, zone)})`;
+                        this.DrawZoneGlow(C, zone, CharX, CharY, Zoom);
+                    }
+                }
                 if (tooltip)
                     mouseTooltip(tooltip);
             }
-            // Everyone else's clasps, from their room settings
-            const claspedTo = typeof CharX === "number" && ChatRoomHideIconState === 0 && !C.IsPlayer() ? this.ClaspPartners(C) : [];
+            // Everyone else's clasps, from their room settings, each where it's anchored
+            const links = typeof CharX === "number" && ChatRoomHideIconState === 0 && !C.IsPlayer() ? this.ClaspLinks(C) : [];
+            // Their leash, in our hand and not clasped to anything yet
+            const heldZone = typeof CharX === "number" && ChatRoomHideIconState === 0 && !C.IsPlayer() ? this.GrabbedFrom(C) : undefined;
             if (
                 typeof CharX === "number" &&
                 typeof CharY === "number" &&
                 typeof Zoom === "number" &&
-                claspedTo.length > 0
+                (links.length > 0 || heldZone !== undefined)
             ) {
-                DrawCircle(CharX + 420 * Zoom, CharY + 60 * Zoom, 20 * Zoom, 1, "Black", "White");
-                DrawImageResize(ICONS.LEASH, CharX + 405 * Zoom, CharY + 45 * Zoom, 30 * Zoom, 30 * Zoom);
-                if (MouseIn(CharX + 400 * Zoom, CharY + 40 * Zoom, 40 * Zoom, 40 * Zoom)) {
-                    const names = claspedTo.map(n => getCharacter(n)).filter(P => P !== null).map(P => CharacterNickname(P));
-                    // CommonArrayJoinPretty doesn't cope with a single name
-                    const nameStr = names.length > 1 ? CommonArrayJoinPretty(names) : (names[0] ?? "");
-                    const label = (LeashDefinitions.get("leash")?.LabelTarget ?? "").replace("%OPP_NAME%", nameStr);
-                    mouseTooltip(this.LeashLocked(C) ? `${label} (locked)` : label);
-                }
+                // In the usual LSCG spot, so they don't mess with anyone's outfit; hovering shows where each is anchored
+                let tooltip: string | undefined;
+                const icons: { icon: string, fill: string, zone: string, label: string }[] = [
+                    ...(heldZone === undefined ? [] : [{ icon: ICONS.LEASH_HANDLE, fill: "#90E4C1", zone: heldZone, label: `Holding ${CharacterNickname(C)}'s leash (${AnchorLabel(C, heldZone)})` }]),
+                    ...links.map(link => ({ icon: this.ClaspIcon(link.role), fill: "White", zone: link.slot ?? DefaultZone, label: this.ClaspLabel(link.member, link.pairedSlot, link.role) })),
+                ];
+                icons.forEach((entry, ix) => {
+                    const x = CharX + 405 * Zoom;
+                    const y = CharY + (45 + ix * 40) * Zoom;
+                    DrawCircle(CharX + 420 * Zoom, y + 15 * Zoom, 20 * Zoom, 1, "Black", entry.fill);
+                    DrawImageResize(entry.icon, x, y, 30 * Zoom, 30 * Zoom);
+                    if (MouseIn(CharX + 400 * Zoom, y - 5 * Zoom, 40 * Zoom, 40 * Zoom)) {
+                        tooltip = entry.label;
+                        this.DrawZoneGlow(C, entry.zone, CharX, CharY, Zoom);
+                    }
+                });
+                if (tooltip)
+                    mouseTooltip(this.LeashLocked(C) ? `${tooltip} (locked)` : tooltip);
             }
             return ret;
         }, ModuleCategory.Leashed);
@@ -661,7 +711,7 @@ export class LeashingModule extends BaseModule {
     }
 
     AddLeashing(pairing: Leashing) {
-        const exists = this.Pairings.find(p => p.PairedMember == pairing.PairedMember && p.Type == pairing.Type && p.IsSource == pairing.IsSource);
+        const exists = this.Pairings.find(p => p.PairedMember == pairing.PairedMember && p.Type == pairing.Type && p.IsSource == pairing.IsSource && p.Slot === pairing.Slot && p.PairedSlot === pairing.PairedSlot);
         if (!exists)
             this.Pairings.push(pairing);
         else // Update if existing pairing to member of matching type
@@ -679,11 +729,13 @@ export class LeashingModule extends BaseModule {
         });
     }
 
-    RemoveLeashings(pairedMember: number, isSource?: boolean, type?: GrabType) {
+    RemoveLeashings(pairedMember: number, isSource?: boolean, type?: GrabType, slot?: string, pairedSlot?: string) {
         this.Pairings = this.Pairings.filter(p => {
             if (p.PairedMember === pairedMember
                 && (type === undefined || p.Type === type)
-                && (isSource === undefined || p.IsSource === isSource)) {
+                && (isSource === undefined || p.IsSource === isSource)
+                && (slot === undefined || (p.Slot ?? DefaultZone) === slot)
+                && (pairedSlot === undefined || (p.PairedSlot ?? DefaultZone) === pairedSlot)) {
                     this.RemoveCallback(p);
                     return false;
                 }
@@ -716,6 +768,11 @@ export class LeashingModule extends BaseModule {
             sendLSCGCommandBeep(l.PairedMember, "release", [
                 { name: "type", value: l.Type },
                 { name: "isSource", value: l.IsSource },
+                // Their end of a clasp is the one that's on our other zone
+                ...(l.Slot !== undefined || l.PairedSlot !== undefined ? [
+                    { name: "slot", value: l.PairedSlot },
+                    { name: "pairedSlot", value: l.Slot },
+                ] : []),
             ]);
         });
     }
@@ -747,27 +804,32 @@ export class LeashingModule extends BaseModule {
         return this.Pairings.some(p => this.PlayerCanDrag(p, true) && p.Type == type && p.PairedMember == target);
     }
 
-    // Same checks as vanilla's Hold Leash dialog option, but only for a leash on the collar, since this one's on the neck
-    CanHoldLeash(C: Character) {
-        return C.MemberNumber !== undefined && ServerChatRoomGetAllowItem(Player, C) && Player.CanInteract() &&
+    // Same checks as vanilla's Hold Leash dialog option, for a leash in the zone group is in
+    CanHoldLeash(C: Character, group?: AssetGroup) {
+        return LineSources(C, group && ZoneOf(group.Name)).length > 0 && C.MemberNumber !== undefined && ServerChatRoomGetAllowItem(Player, C) && Player.CanInteract() &&
             !!C.OnlineSharedSettings && C.OnlineSharedSettings.AllowPlayerLeashing !== false &&
-            !ChatRoomLeashList.includes(C.MemberNumber) && ChatRoomCanBeLeashed(C) && this.NeckLeash(C) !== null;
+            !ChatRoomLeashList.includes(C.MemberNumber) && ChatRoomCanBeLeashed(C);
     }
 
-    // Same checks as vanilla's Let Go Of Leash dialog option, again only for a leash on the collar. Like vanilla, it
-    // forgets a leash that can't be held any more
-    CanLetGoOfLeash(C: Character) {
+    // Same checks as vanilla's Let Go Of Leash dialog option, again for a leash in group's zone: the one we grabbed it
+    // from when we know, else wherever they wear one. Like vanilla, it forgets a leash that can't be held any more
+    CanLetGoOfLeash(C: Character, group?: AssetGroup) {
         if (C.MemberNumber === undefined || !ServerChatRoomGetAllowItem(Player, C) || !Player.CanInteract() ||
             !C.OnlineSharedSettings || C.OnlineSharedSettings.AllowPlayerLeashing === false || !ChatRoomLeashList.includes(C.MemberNumber))
             return false;
-        if (ChatRoomCanBeLeashed(C))
-            return this.NeckLeash(C) !== null;
-        ChatRoomLeashList = ChatRoomLeashList.filter(n => n !== C.MemberNumber);
-        return false;
+        if (!ChatRoomCanBeLeashed(C)) {
+            ChatRoomLeashList = ChatRoomLeashList.filter(n => n !== C.MemberNumber);
+            return false;
+        }
+        if (group === undefined)
+            return LineSources(C).length > 0;
+        const zone = ZoneOf(group.Name);
+        const grabbedFrom = this.GrabbedFrom(C);
+        return grabbedFrom !== undefined ? grabbedFrom === zone : LineSources(C, zone).length > 0;
     }
 
-    // The game's own leash, minus leaving the dialog (the activity menu closes itself)
-    HoldLeash(C: Character) {
+    // The game's own leash, minus leaving the dialog (the activity menu closes itself). zone is where we grabbed it
+    HoldLeash(C: Character, groupName?: string) {
         if (C.MemberNumber === undefined)
             return;
         const Dictionary = new DictionaryBuilder().sourceCharacter(Player).targetCharacter(C).build();
@@ -775,6 +837,7 @@ export class LeashingModule extends BaseModule {
         ServerSend("ChatRoomChat", { Content: "HoldLeash", Type: "Hidden", Target: C.MemberNumber });
         if (!ChatRoomLeashList.includes(C.MemberNumber))
             ChatRoomLeashList.push(C.MemberNumber);
+        this.heldLine = { wearer: C.MemberNumber, zone: groupName !== undefined ? ZoneOf(groupName) : (LineZones(C)[0] ?? DefaultZone) };
     }
 
     LetGoOfLeash(C: Character, announce: boolean = true) {
@@ -786,6 +849,20 @@ export class LeashingModule extends BaseModule {
         }
         ServerSend("ChatRoomChat", { Content: "StopHoldLeash", Type: "Hidden", Target: C.MemberNumber });
         ChatRoomLeashList = ChatRoomLeashList.filter(n => n !== C.MemberNumber);
+        if (this.heldLine?.wearer === C.MemberNumber)
+            this.heldLine = undefined;
+    }
+
+    // The zone we grabbed C's leash from, if we did it here and still hold it
+    GrabbedFrom(C: Character): string | undefined {
+        return this.heldLine !== undefined && this.heldLine.wearer === C.MemberNumber && ChatRoomLeashList.includes(C.MemberNumber)
+            ? this.heldLine.zone
+            : undefined;
+    }
+
+    // Where C's held line was grabbed, or where it would be from a leash they wear when it was held the vanilla way
+    HeldZone(C: Character): string {
+        return this.GrabbedFrom(C) ?? LineZones(C)[0] ?? DefaultZone;
     }
 
     // The leash Clasp Leash would use. Only while we hold just the one, so it's never a guess which, and could still
@@ -808,57 +885,83 @@ export class LeashingModule extends BaseModule {
         return !!lscg?.GlobalModule?.enabled && !!lscg?.LeashingModule?.enabled && Array.isArray(lscg.LeashingModule.clasps);
     }
 
-    // Clasp to B's leash if they wear one we could hold, or put the end of A's leash on B's collar if their leash slot is free
-    CanClaspTo(A: Character, B: Character) {
+    // Whether the line we hold (A's) can be clasped to B's anchor in zone. A leash on that anchor answers to vanilla's
+    // check, which every mod hooks, as holding it would; a collar or ring with no leash needs only a room that allows
+    // leashing and someone free to be pulled. Being held in place by a clasp is no reason not to clasp onto them
+    CanClaspAt(A: Character, B: Character, zone: string = DefaultZone) {
         if (B.OnlineSharedSettings?.AllowPlayerLeashing === false || !this.CanClaspWith(A) || !this.CanClaspWith(B))
             return false;
-        // Vanilla's check, as being held in place by a clasp is no reason not to clasp onto them
-        if (InventoryGet(B, "ItemNeckRestraints") !== null)
-            return this.NeckLeash(B) !== null && callOriginal("ChatRoomCanBeLeashedBy", [Player.MemberNumber ?? -1, B]);
-        const leash = this.NeckLeash(A);
-        return leash !== null && ServerChatRoomGetAllowItem(Player, B) &&
-            InventoryAllow(B, leash.Asset, leash.Asset.Prerequisite, false) && !InventoryBlockedOrLimited(B, { Asset: leash.Asset } as Item);
+        const anchors = Anchors(B, zone);
+        if (anchors.length === 0)
+            return false;
+        if (anchors.some(IsLineSource))
+            return callOriginal("ChatRoomCanBeLeashedBy", [Player.MemberNumber ?? -1, B]);
+        if (!this.RoomAllowsLeashing || this.IsTrapped(B))
+            return false;
+        if (!this.NeedsLeashEnd(B, zone))
+            return true;
+        const end = this.LeashEnd(A);
+        return end !== null && ServerChatRoomGetAllowItem(Player, B) &&
+            InventoryAllow(B, end.asset, end.asset.Prerequisite, false) && !InventoryBlockedOrLimited(B, { Asset: end.asset } as Item);
+    }
+
+    // A collar with nothing on its leash slot is the one anchor that gets an end of the line put on it
+    NeedsLeashEnd(B: Character, zone: string) {
+        return zone === DefaultZone && InventoryGet(B, "ItemNeckRestraints") === null && !Anchors(B, zone).some(IsLineSource);
+    }
+
+    // What goes on B's neck when A's line is clasped to a collar: a copy of A's collar leash or, when the line is
+    // somewhere else (a clitoris ring, say), a plain collar leash standing in for it
+    LeashEnd(A: Character): { asset: Asset, color?: ItemColor } | null {
+        const source = LineSources(A, this.HeldZone(A))[0] ?? LineSources(A)[0];
+        if (source === undefined)
+            return null;
+        if (source.Asset.Group.Name === "ItemNeckRestraints")
+            return { asset: source.Asset, color: source.Color };
+        const asset = AssetGet(A.AssetFamily ?? "Female3DCG", "ItemNeckRestraints", "CollarLeash");
+        return asset === null ? null : { asset };
     }
 
     // Puts a copy of A's leash on B's collar the vanilla way, so B's client, BCX and co. get their usual say
     GiveLeashEnd(A: Character, B: Character) {
-        const leash = this.NeckLeash(A);
-        if (leash === null)
+        const end = this.LeashEnd(A);
+        if (end === null)
             return;
         // Crafted names are at most 30 characters, and § and ¶ separate crafts when they're bundled
         const name = `End of ${CharacterNickname(A).replace(/[\xA7\xB6]/g, "").slice(0, 15)}'s leash`;
         const craft: CraftingPartialItem = { Name: name, Description: "", Effects: {}, Private: false };
         // Our bc-stubs only type a full craft here, but BC takes a partial one
-        InventoryWear(B, leash.Asset.Name, "ItemNeckRestraints", leash.Color, null, null, craft as CraftingItem);
+        InventoryWear(B, end.asset.Name, "ItemNeckRestraints", end.color, null, null, craft as CraftingItem);
         if (B.IsPlayer())
             ChatRoomCharacterUpdate(Player);
         else
             ChatRoomCharacterItemUpdate(B, "ItemNeckRestraints");
     }
 
-    // Clasps the leash we're holding (A's) to B. True when B's leash slot was empty, so B got the end of A's leash
-    ClaspLeash(A: Character, B: Character): boolean {
+    // Clasps the line we're holding (A's) to B's anchor in zone. True when that put the end of A's leash on B's collar
+    ClaspLeash(A: Character, B: Character, zone: string = DefaultZone): boolean {
         const [a, b] = [A.MemberNumber ?? -1, B.MemberNumber ?? -1];
+        const heldZone = this.HeldZone(A);
         // Sent before the clasp, so B already wears it when the clasp arrives
-        const shared = InventoryGet(B, "ItemNeckRestraints") === null;
+        const shared = Anchors(B, zone).length > 0 && this.NeedsLeashEnd(B, zone);
         if (shared)
             this.GiveLeashEnd(A, B);
         this.LetGoOfLeash(A, false);
-        this.SendClasp(a, b, shared);
+        this.SendClasp(a, b, shared, heldZone, zone);
         return shared;
     }
 
-    // Our end of a clasp to other, made by by. Refusing it tells the other end to let go, as if we had. With no leash
-    // on our end (say the end of a shared one was refused), there's nothing to clasp
-    AcceptClasp(other: number, by: number, shared?: boolean) {
-        const was = this.Clasps.find(p => p.PairedMember === other);
+    // Our end of a clasp to other, made by by, on our slot. Refusing it tells the other end to let go, as if we had.
+    // With nothing on our end to clasp to (say the end of a shared leash was refused), there's nothing to clasp
+    AcceptClasp(other: number, by: number, shared?: boolean, slot?: string, pairedSlot?: string, role?: ClaspRole) {
+        const was = this.Clasps.find(p => p.PairedMember === other && p.Slot === slot && p.PairedSlot === pairedSlot);
         const fromSomeoneElse = by !== Player.MemberNumber;
         // Someone may have seen our leashing as on from settings we've since changed. And the clasper checked the rest
         // on their side, but nothing makes them: we hold our own line here
-        const refused = !this.Enabled || this.NeckLeash(Player) === null || (fromSomeoneElse && (
+        const refused = !this.Enabled || Anchors(Player, slot === undefined ? undefined : ZoneOf(slot)).length === 0 || (fromSomeoneElse && (
             Player.OnlineSharedSettings?.AllowPlayerLeashing === false ||
             !this.CanBeChangedBy(by, other) ||
-            !this.CanBeClaspedBy(by)
+            !this.CanBeClaspedBy(by, slot)
         ));
         const vetoed = !refused && fromSomeoneElse && emitBefore("grab.beforeIncoming", { type: "leash", sender: by }).cancelled;
         if (refused || vetoed) {
@@ -867,16 +970,19 @@ export class LeashingModule extends BaseModule {
                 return;
             if (vetoed)
                 SendAction("%NAME% slips out of the clasp.");
-            this.NotifyUnleashings([new Leashing(other, by, false, "leash")]);
+            this.NotifyUnleashings([new Leashing(other, by, false, "leash", undefined, slot, pairedSlot, role)]);
             return;
         }
         // Clasping the same two again doesn't make it any less shared
-        this.AddLeashing(new Leashing(other, by, false, "leash", shared || was?.SharedLeash));
+        this.AddLeashing(new Leashing(other, by, false, "leash", shared || was?.SharedLeash, slot, pairedSlot, role));
     }
 
-    // Whoever clasps us has to be someone who could leash us, the same as to hold our leash. Being held in place
+    // Whoever clasps us has to be someone who could leash us, the same as to hold our leash: through vanilla's check
+    // when it's a leash they clasp to, else only that the room allows it and we can be pulled. Being held in place
     // doesn't count against them: clasping onto someone held in place is fine
-    CanBeClaspedBy(member: number) {
+    CanBeClaspedBy(member: number, slot?: string) {
+        if (!Anchors(Player, slot === undefined ? undefined : ZoneOf(slot)).some(IsLineSource))
+            return this.RoomAllowsLeashing && !this.IsTrapped(Player);
         this.claspingFrom = member;
         try {
             return ChatRoomCanBeLeashedBy(member, Player);
@@ -923,15 +1029,58 @@ export class LeashingModule extends BaseModule {
         this.leashLook = this.LeashLook();
     }
 
-    // Who C is clasped to. Ours we know, anyone else's comes from their room settings and only counts when the
+    // Who C is clasped to, and where. Ours we know, anyone else's comes from their room settings and only counts when the
     // other end lists them back, so nobody can claim to be clasped to us
-    ClaspPartners(C: Character): number[] {
+    ClaspLinks(C: Character): ClaspLink[] {
         if (C.IsPlayer())
-            return this.Clasps.map(p => p.PairedMember);
-        const listed = (D: Character | null) => (D as OtherCharacter | null)?.LSCG?.LeashingModule?.clasps ?? [];
-        return listed(C).filter(n => n === Player.MemberNumber
+            return this.Clasps.map(p => ({ member: p.PairedMember, slot: p.Slot, pairedSlot: p.PairedSlot, role: p.Role }));
+        const published = (D: Character | null) => (D as OtherCharacter | null)?.LSCG?.LeashingModule;
+        const listed = (D: Character | null): number[] => published(D)?.clasps ?? [];
+        const confirmed = new Set(listed(C).filter(n => n === Player.MemberNumber
             ? this.Clasps.some(p => p.PairedMember === C.MemberNumber)
-            : listed(getCharacter(n)).includes(C.MemberNumber ?? -1));
+            : listed(getCharacter(n)).includes(C.MemberNumber ?? -1)));
+        // Older versions only send who, not where
+        const links: ClaspLink[] = published(C)?.claspSlots ?? listed(C).map(member => ({ member }));
+        return links.filter(link => confirmed.has(link.member));
+    }
+
+    ClaspPartners(C: Character): number[] {
+        return [...new Set(this.ClaspLinks(C).map(link => link.member))];
+    }
+
+    // A soft pulsing glow over the zone a clasp is anchored in, for as long as its icon is hovered
+    DrawZoneGlow(C: Character, zone: string, CharX: number, CharY: number, Zoom: number) {
+        const rect = AssetGroupGet(C.AssetFamily, ZoneOf(zone) as AssetGroupName)?.Zone?.[0];
+        if (!rect)
+            return;
+        const cx = CharX + (rect[0] + rect[2] / 2) * Zoom;
+        const cy = CharY + (rect[1] + rect[3] / 2) * Zoom;
+        const radius = Math.max(rect[2], rect[3]) * 0.9 * Zoom;
+        const pulse = 0.5 + 0.5 * Math.sin(CommonTime() / 350);
+        const glow = MainCanvas.createRadialGradient(cx, cy, radius * 0.1, cx, cy, radius * (0.85 + 0.1 * pulse));
+        glow.addColorStop(0, `rgba(144, 228, 193, ${0.5 + 0.2 * pulse})`);
+        glow.addColorStop(1, "rgba(144, 228, 193, 0)");
+        MainCanvas.save();
+        MainCanvas.fillStyle = glow;
+        MainCanvas.fillRect(cx - radius, cy - radius, radius * 2, radius * 2);
+        MainCanvas.restore();
+    }
+
+    // How a clasp to member reads: who, and what it's on at their end. role is which end we're describing
+    ClaspLabel(member: number, pairedSlot?: string, role?: ClaspRole) {
+        const other = getCharacter(member);
+        const name = other === null ? "someone" : CharacterNickname(other);
+        const where = other !== null && pairedSlot !== undefined ? ` (${AnchorLabel(other, ZoneOf(pairedSlot))})` : "";
+        if (role === "line")
+            return `Leash clasped to ${name}${where}`;
+        if (role === "anchor")
+            return `Anchoring ${name}'s leash${where}`;
+        return (LeashDefinitions.get("leash")?.LabelTarget ?? "").replace("%OPP_NAME%", name + where);
+    }
+
+    // The leash handle for the end that is the line, the plain leash for the anchor it's clasped to
+    ClaspIcon(role?: ClaspRole) {
+        return role === "line" ? ICONS.LEASH_HANDLE : ICONS.LEASH;
     }
 
     // Anyone stuck in C's clasped group, however far along, holds everyone in it in place
@@ -946,26 +1095,33 @@ export class LeashingModule extends BaseModule {
         return group.length > 1 && group.some(D => this.CantBePulled(D));
     }
 
-    // Who member is clasped to, that we could unclasp at member's end. Not while that end's locked
-    ClaspsOn(member: number): number[] {
+    // Who member is clasped to in zone (anywhere, if not given), that we could unclasp at member's end. Not while that
+    // end's locked
+    ClaspsOn(member: number, zone?: string): number[] {
         const C = getCharacter(member);
-        return C === null || this.LeashLocked(C) ? [] : this.ClaspPartners(C);
+        if (C === null || this.LeashLocked(C, zone))
+            return [];
+        const links = this.ClaspLinks(C).filter(link => zone === undefined || ZoneOf(link.slot ?? DefaultZone) === zone);
+        return [...new Set(links.map(link => link.member))];
     }
 
-    // A clasp that can't pull breaks at both ends, and both leashes stay where they are
-    BreakClasps(member?: number) {
-        this.NotifyUnleashings(this.Clasps.filter(p => member === undefined || p.PairedMember === member));
-        if (member === undefined)
+    // A clasp that can't pull breaks at both ends, and both leashes stay where they are. Of one slot, when given
+    BreakClasps(member?: number, slot?: string, pairedSlot?: string) {
+        const matching = this.Clasps.filter(p => (member === undefined || p.PairedMember === member) &&
+            (slot === undefined || (p.Slot ?? DefaultZone) === slot) && (pairedSlot === undefined || (p.PairedSlot ?? DefaultZone) === pairedSlot));
+        this.NotifyUnleashings(matching);
+        if (member === undefined && slot === undefined && pairedSlot === undefined)
             this.RemoveAllLeashingsOfType("leash");
         else
-            this.RemoveLeashings(member, false, "leash");
+            for (const p of matching)
+                this.RemoveLeashings(p.PairedMember, false, "leash", p.Slot, p.PairedSlot);
     }
 
     // Unclasps at one end, which only that end has to let us do. It lets go there, and of a shared leash with it, and
     // tells the other end, who keeps their side of the leash, attached to nobody
-    UnclaspLeash(at: number, other: number) {
+    UnclaspLeash(at: number, other: number, zone?: string) {
         if (at === Player.MemberNumber) {
-            this.UnclaspFrom(other);
+            this.UnclaspFrom(other, zone);
             return;
         }
         const C = getCharacter(at);
@@ -973,34 +1129,46 @@ export class LeashingModule extends BaseModule {
             sendLSCGCommand(C, "remove-leashing", [
                 { name: "pairedMember", value: other },
                 { name: "type", value: "leash" },
+                ...(zone !== undefined ? [{ name: "slot", value: zone }] : []),
             ]);
-        // Our own side, when it's us they're unclasped from
-        if (other === Player.MemberNumber)
-            this.RemoveLeashings(at, false, "leash");
+        // Our own side, when it's us they're unclasped from. A shared end of the line on our collar goes with it
+        if (other === Player.MemberNumber) {
+            const leaving = this.Clasps.filter(p => p.PairedMember === at && (zone === undefined || ZoneOf(p.PairedSlot ?? DefaultZone) === zone));
+            for (const p of leaving)
+                this.RemoveLeashings(at, false, "leash", p.Slot, p.PairedSlot);
+            if (leaving.some(p => p.SharedLeash) && !this.Clasps.some(p => p.SharedLeash))
+                this.DropSharedLeash();
+        }
     }
 
     // Lets go of our end of a clasp, and of a shared leash with it. The other end hears it from us
-    UnclaspFrom(other: number) {
-        const shared = this.Clasps.some(p => p.PairedMember === other && p.SharedLeash);
-        this.BreakClasps(other);
-        if (shared)
+    UnclaspFrom(other: number, slot?: string) {
+        const leaving = this.Clasps.filter(p => p.PairedMember === other && (slot === undefined || ZoneOf(p.Slot ?? DefaultZone) === ZoneOf(slot)));
+        const shared = leaving.some(p => p.SharedLeash);
+        for (const p of leaving)
+            this.BreakClasps(p.PairedMember, p.Slot, p.PairedSlot);
+        // Another clasp can still be using that end of the line
+        if (shared && !this.Clasps.some(p => p.SharedLeash))
             this.DropSharedLeash();
     }
 
     // A shared leash goes with the end that let go of it, unless it's padlocked there. Only one in the leash slot: a
     // pelvis leash or a pony gag's reins stay on
     DropSharedLeash() {
-        const leash = this.NeckLeash(Player);
-        if (leash !== null && InventoryGetLock(leash) === null) {
+        const leash = InventoryGet(Player, "ItemNeckRestraints");
+        if (leash !== null && IsLineSource(leash) && InventoryGetLock(leash) === null) {
             InventoryRemove(Player, "ItemNeckRestraints");
             ChatRoomCharacterUpdate(Player);
         }
     }
 
-    SendClasp(a: number, b: number, shared: boolean) {
-        for (const [end, other] of [[a, b], [b, a]]) {
+    // Tells each end its half of the clasp: its own zone, and the other's. Only b's end, the anchor, can have been given
+    // the end of the line
+    SendClasp(a: number, b: number, shared: boolean, aZone: string, bZone: string) {
+        for (const [end, other, slot, pairedSlot] of [[a, b, aZone, bZone], [b, a, bZone, aZone]] as [number, number, string, string][]) {
+            const role: ClaspRole = end === a ? "line" : "anchor";
             if (end === Player.MemberNumber) {
-                this.AcceptClasp(other, end, shared);
+                this.AcceptClasp(other, end, shared && end === b, slot, pairedSlot, role);
                 continue;
             }
             const C = getCharacter(end);
@@ -1009,7 +1177,10 @@ export class LeashingModule extends BaseModule {
                     { name: "pairedMember", value: other },
                     { name: "type", value: "leash" },
                     { name: "isSource", value: false },
-                    { name: "shared", value: shared },
+                    { name: "shared", value: shared && end === b },
+                    { name: "slot", value: slot },
+                    { name: "pairedSlot", value: pairedSlot },
+                    { name: "role", value: role },
                 ]);
         }
     }
@@ -1023,19 +1194,20 @@ export class LeashingModule extends BaseModule {
         return C !== null && (["Freeze", "Tethered", "Mounted", "Enclose", "OneWayEnclose"] as EffectName[]).some(e => C.HasEffect(e));
     }
 
-    NeckLeash(C: Character) {
-        const item = InventoryGet(C, "ItemNeckRestraints");
-        return item !== null && InventoryItemHasEffect(item, "Leash", true) ? item : null;
+    // Shut in somewhere vanilla's leash can't pull them from: the effects its ChatRoomCanBeLeashedBy goes by
+    IsTrapped(C: Character) {
+        return C.Appearance.some(item => !IsLineSource(item) &&
+            (["Tethered", "Mounted", "Enclose", "OneWayEnclose"] as EffectName[]).some(e => InventoryItemHasEffect(item, e, true)));
     }
 
-    LeashLocked(C: Character | null) {
-        const leash = C === null ? null : this.NeckLeash(C);
-        return leash !== null && InventoryGetLock(leash) !== null;
+    // Whether the leash C wears in zone (any, if not given) is padlocked
+    LeashLocked(C: Character | null, zone?: string) {
+        return C !== null && LineSources(C, zone).some(item => InventoryGetLock(item) !== null);
     }
 
     // Each end of a clasp is only locked by its own padlock
     IsLocked(leashing: Leashing) {
-        return leashing.Type === "leash" && this.LeashLocked(Player);
+        return leashing.Type === "leash" && this.LeashLocked(Player, ZoneOf(leashing.Slot ?? DefaultZone));
     }
 
     IsBidirectionalType(type: GrabType) {
@@ -1091,7 +1263,9 @@ export class LeashingModule extends BaseModule {
         const type = args.find(a => a.name == "type")?.value as GrabType;
         const isSource = args.find(a => a.name == "isSource")?.value as boolean;
         if (type === "leash") {
-            this.AcceptClasp(pairedMember, sender, args.find(a => a.name === "shared")?.value as boolean | undefined);
+            this.AcceptClasp(pairedMember, sender, args.find(a => a.name === "shared")?.value as boolean | undefined,
+                args.find(a => a.name === "slot")?.value as string | undefined, args.find(a => a.name === "pairedSlot")?.value as string | undefined,
+                args.find(a => a.name === "role")?.value as ClaspRole | undefined);
             return;
         }
         if (!this.CanBeChangedBy(sender, pairedMember))
@@ -1109,7 +1283,7 @@ export class LeashingModule extends BaseModule {
         if (!this.CanBeChangedBy(sender, pairedMember))
             return;
         if (type === "leash")
-            this.UnclaspFrom(pairedMember);
+            this.UnclaspFrom(pairedMember, args.find(a => a.name === "slot")?.value as string | undefined);
         else
             this.RemoveLeashings(pairedMember, isSource, type);
     }
@@ -1189,10 +1363,10 @@ export class LeashingModule extends BaseModule {
 
     // By member number, as a release often comes from another room, where getCharacter finds nobody.
     // Usually the grabber lets go, but a safeword sends it from the one grabbed
-    IncomingRelease(sender: number, grabType: GrabType, senderIsSource?: boolean) {
-        this.RemoveLeashings(sender, senderIsSource === false, grabType);
+    IncomingRelease(sender: number, grabType: GrabType, senderIsSource?: boolean, slot?: string, pairedSlot?: string) {
+        this.RemoveLeashings(sender, senderIsSource === false, grabType, slot, pairedSlot);
         if (LeashDefinitions.get(grabType)?.Bidirectional)
-            this.RemoveLeashings(sender, senderIsSource !== false, grabType);
+            this.RemoveLeashings(sender, senderIsSource !== false, grabType, slot, pairedSlot);
     }
 
     IncomingEscape(sender: OtherCharacter | null, escapeFromMemberNumber: number) {
@@ -1246,7 +1420,7 @@ export class LeashingModule extends BaseModule {
                 SendAction(`${CharacterNickname(Player)} ${check.AttackerRoll.TotalStr}successfully breaks free from ${CharacterNickname(grabber)}'s ${check.DefenderRoll.TotalStr}grasp!`);
                 // Slipping a clasp lets go of our end of it
                 if (pairing.Type === "leash")
-                    this.UnclaspFrom(grabber.MemberNumber);
+                    this.UnclaspFrom(grabber.MemberNumber, pairing.Slot);
                 else
                     this.DoEscape(grabber);
             } else {

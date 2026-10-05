@@ -7,6 +7,7 @@ import { CollarModule } from "./collar";
 import { ActivitySettingsModel } from "Settings/Models/activities";
 import { GuiActivities } from "Settings/activities";
 import { GrabType, LeashingModule } from "./leashing";
+import { AnchorLabel, AnchorZones, Anchors, DefaultZone, IsLineSource, ZoneOf } from "./leashing-anchors";
 import { HypnoModule } from "./hypno";
 import { StateModule } from "./states";
 import { SplatterModule } from "./splatter";
@@ -63,6 +64,11 @@ export interface ActivityPatch extends ActivityBundleBase {
 export interface ActivityBundle extends ActivityBundleBase {
     Activity: LSCGActivity;
     Targets?: ActivityTarget[];
+}
+
+/** The leash activities are offered on every zone that can hold a line or an anchor (see leashing-anchors.ts) */
+function leashTargets(selfAllowed: boolean, TargetLabel: string, TargetAction: string, TargetSelfAction?: string): ActivityTarget[] {
+    return AnchorZones.map(Name => ({ Name, SelfAllowed: selfAllowed, TargetLabel, TargetAction, TargetSelfAction }) as ActivityTarget);
 }
 
 export class ActivityModule extends BaseModule {
@@ -1332,25 +1338,18 @@ export class ActivityModule extends BaseModule {
                 MaxProgress: 30,
                 Prerequisite: ["ZoneAccessible"],
             },
-            Targets: [
-                {
-                    Name: "ItemNeck",
-                    SelfAllowed: false,
-                    TargetLabel: "Hold Leash",
-                    TargetAction: "SourceCharacter picks up TargetCharacter's leash.",
-                },
-            ],
+            Targets: leashTargets(false, "Hold Leash", "SourceCharacter picks up TargetCharacter's leash."),
             CustomPrereqs: [
                 {
                     Name: "CanHoldLeash",
-                    Func: (_acting, acted) => this.leashingModule.CanHoldLeash(acted),
+                    Func: (_acting, acted, group) => this.leashingModule.CanHoldLeash(acted, group),
                 },
             ],
             CustomAction: {
                 // The game's own leash message stands in for ours
-                Func: (target) => {
+                Func: (target, _data, meta) => {
                     if (target)
-                        this.leashingModule.HoldLeash(target);
+                        this.leashingModule.HoldLeash(target, meta?.GroupName);
                     return false;
                 },
             },
@@ -1364,18 +1363,11 @@ export class ActivityModule extends BaseModule {
                 MaxProgress: 30,
                 Prerequisite: ["ZoneAccessible"],
             },
-            Targets: [
-                {
-                    Name: "ItemNeck",
-                    SelfAllowed: false,
-                    TargetLabel: "Let Go Of Leash",
-                    TargetAction: "SourceCharacter lets go of TargetCharacter's leash.",
-                },
-            ],
+            Targets: leashTargets(false, "Let Go Of Leash", "SourceCharacter lets go of TargetCharacter's leash."),
             CustomPrereqs: [
                 {
                     Name: "CanLetGoOfLeash",
-                    Func: (_acting, acted) => this.leashingModule.CanLetGoOfLeash(acted),
+                    Func: (_acting, acted, group) => this.leashingModule.CanLetGoOfLeash(acted, group),
                 },
             ],
             CustomAction: {
@@ -1395,31 +1387,25 @@ export class ActivityModule extends BaseModule {
                 MaxProgress: 30,
                 Prerequisite: ["ZoneAccessible", "UseHands"],
             },
-            Targets: [
-                {
-                    Name: "ItemNeck",
-                    SelfAllowed: true,
-                    TargetLabel: "Clasp Leash",
-                    TargetAction: "SourceCharacter clasps the leash in PronounPossessive hand to TargetCharacter's leash.",
-                    TargetSelfAction: "SourceCharacter clasps the leash in PronounPossessive hand to PronounPossessive own leash.",
-                },
-            ],
+            Targets: leashTargets(true, "Clasp Leash", "SourceCharacter clasps the leash in PronounPossessive hand to TargetCharacter's leash.", "SourceCharacter clasps the leash in PronounPossessive hand to PronounPossessive own leash."),
             CustomPrereqs: [
                 {
                     Name: "CanClaspLeash",
-                    Func: (_acting, acted) => {
+                    Func: (_acting, acted, group) => {
                         const held = this.leashingModule.HeldLeash(acted);
-                        return held !== null && this.leashingModule.CanClaspTo(held, acted);
+                        return held !== null && this.leashingModule.CanClaspAt(held, acted, ZoneOf(group.Name));
                     },
                 },
             ],
             CustomAction: {
-                // Says whether it went on their leash or their collar, in place of the activity's own line
-                Func: (target) => {
+                // Says what it went on, in place of the activity's own line
+                Func: (target, _data, meta) => {
                     const held = target ? this.leashingModule.HeldLeash(target) : null;
                     if (!target || held === null)
                         return false;
-                    const onto = this.leashingModule.ClaspLeash(held, target) ? "collar" : "leash";
+                    const zone = ZoneOf(meta?.GroupName ?? DefaultZone);
+                    const shared = this.leashingModule.ClaspLeash(held, target, zone);
+                    const onto = shared ? "collar" : Anchors(target, zone).some(IsLineSource) ? "leash" : AnchorLabel(target, zone);
                     const whose = target.IsPlayer() ? "%POSSESSIVE% own" : "%OPP_NAME_POSSESSIVE%";
                     SendAction(`%NAME% clasps the leash in %POSSESSIVE% hand to ${whose} ${onto}.`, target);
                     return false;
@@ -1435,30 +1421,23 @@ export class ActivityModule extends BaseModule {
                 MaxProgress: 30,
                 Prerequisite: ["ZoneAccessible", "UseHands"],
             },
-            Targets: [
-                {
-                    Name: "ItemNeck",
-                    SelfAllowed: true,
-                    TargetLabel: "Unclasp Leash",
-                    TargetAction: "SourceCharacter unclasps TargetCharacter's leash.",
-                    TargetSelfAction: "SourceCharacter unclasps PronounPossessive own leash.",
-                },
-            ],
+            Targets: leashTargets(true, "Unclasp Leash", "SourceCharacter unclasps TargetCharacter's leash.", "SourceCharacter unclasps PronounPossessive own leash."),
             CustomPrereqs: [
                 {
                     Name: "TargetHasClaspedLeash",
-                    Func: (_acting, acted) => this.leashingModule.ClaspsOn(acted.MemberNumber ?? -1).length > 0,
+                    Func: (_acting, acted, group) => this.leashingModule.ClaspsOn(acted.MemberNumber ?? -1, ZoneOf(group.Name)).length > 0,
                 },
             ],
             CustomAction: {
-                Func: (target) => {
+                Func: (target, _data, meta) => {
                     const at = target?.MemberNumber ?? -1;
                     const me = Player.MemberNumber ?? -1;
-                    const partners = this.leashingModule.ClaspsOn(at);
+                    const zone = ZoneOf(meta?.GroupName ?? DefaultZone);
+                    const partners = this.leashingModule.ClaspsOn(at, zone);
                     // On a partner, only our own clasp with them. On ourselves, or anyone else, all of theirs
                     const undo = at !== me && partners.includes(me) ? [me] : partners;
                     for (const other of undo)
-                        this.leashingModule.UnclaspLeash(at, other);
+                        this.leashingModule.UnclaspLeash(at, other, zone);
                 },
             },
             CustomImage: ICONS.LEASH,

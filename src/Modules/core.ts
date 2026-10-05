@@ -66,8 +66,11 @@ export class CoreModule extends BaseModule {
         if (settings.MagicModule)
             settings.MagicModule.knownEffects = advertisedEffectIds();
         // Likewise who we're clasped to.
-        if (settings.LeashingModule)
-            settings.LeashingModule.clasps = getModule<LeashingModule>("LeashingModule")?.ClaspPartners(Player) ?? [];
+        if (settings.LeashingModule) {
+            const leashing = getModule<LeashingModule>("LeashingModule");
+            settings.LeashingModule.clasps = leashing?.ClaspPartners(Player) ?? [];
+            settings.LeashingModule.claspSlots = leashing?.ClaspLinks(Player) ?? [];
+        }
         // Likewise the data extensions share with the room.
         settings.ExtensionData = publishedExtensionData();
         // Likewise the extension drug bars: derived from the registry and current levels, never stored.
@@ -340,7 +343,7 @@ export class CoreModule extends BaseModule {
                 getModule<LeashingModule>("LeashingModule")?.IncomingGrab(Sender, msg.command.args.find(a => a.name == "type")?.value as GrabType);
                 break;
             case "release":
-                getModule<LeashingModule>("LeashingModule")?.IncomingRelease(senderNumber, msg.command.args.find(a => a.name === "type")?.value as GrabType, msg.command.args.find(a => a.name === "isSource")?.value as boolean | undefined);
+                getModule<LeashingModule>("LeashingModule")?.IncomingRelease(senderNumber, msg.command.args.find(a => a.name === "type")?.value as GrabType, msg.command.args.find(a => a.name === "isSource")?.value as boolean | undefined, msg.command.args.find(a => a.name === "slot")?.value as string | undefined, msg.command.args.find(a => a.name === "pairedSlot")?.value as string | undefined);
                 break;
             case "escape":
                 getModule<LeashingModule>("LeashingModule")?.IncomingEscape(Sender, msg.target);

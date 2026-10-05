@@ -4,7 +4,7 @@
 // Player (member 1) is one end of a clasp, or the one who made it. Clasps arrive like any LSCG command, so most of
 // these go through CoreModule's real routing with receive.command(). Who everyone else is clasped to comes from their
 // room settings, set with listClasps().
-import { afterEach, beforeAll, beforeEach, describe, expect, it, type Mock } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 import bcModSDK from "bondage-club-mod-sdk";
 import { ActivityModule } from "Modules/activities";
 import { ConsentModule } from "Modules/consent";
@@ -254,8 +254,8 @@ describe("LeashingModule clasped leashes", () => {
 			expect(sent.raw().some(([, data]) => data?.Type === "Action" && data?.Content === "StopHoldLeash")).toBe(false);
 			expect(g.ChatRoomLeashList).toEqual([]);
 			expect(commands("add-leashing")).toEqual([
-				[2, "add-leashing", leashArgs(3, [{ name: "shared", value: false }])],
-				[3, "add-leashing", leashArgs(2, [{ name: "shared", value: false }])],
+				[2, "add-leashing", leashArgs(3, [{ name: "shared", value: false }, { name: "slot", value: "ItemNeck" }, { name: "pairedSlot", value: "ItemNeck" }, { name: "role", value: "line" }])],
+				[3, "add-leashing", leashArgs(2, [{ name: "shared", value: false }, { name: "slot", value: "ItemNeck" }, { name: "pairedSlot", value: "ItemNeck" }, { name: "role", value: "anchor" }])],
 			]);
 			expect(clasps()).toEqual([]);
 		});
@@ -274,7 +274,7 @@ describe("LeashingModule clasped leashes", () => {
 			const firstClasp = serverSend.calls.findIndex(([, data]) => data?.Dictionary?.[0]?.message?.command?.name === "add-leashing");
 			expect(g.InventoryWear.mock.invocationCallOrder[0]).toBeLessThan(serverSend.invocationCallOrder[firstClasp]);
 			expect(commands("add-leashing").map(([target, , args]) => [target, (args as { name: string; value: unknown }[]).find(a => a.name === "shared")?.value]))
-				.toEqual([[2, true], [3, true]]);
+				.toEqual([[2, false], [3, true]]);
 		});
 
 		it("the end copies the held leash and its colour", () => {
@@ -286,17 +286,41 @@ describe("LeashingModule clasped leashes", () => {
 			expect(g.InventoryWear).toHaveBeenCalledWith(c, "ChainLeash", "ItemNeckRestraints", "#AA0000", null, null, expect.anything());
 		});
 
-		it("nothing to clasp when the leash we hold isn't on their collar, like a pelvis leash held through the dialog", () => {
+		it("a leash we hold that isn't on a collar gives a collar-less target a plain collar leash, like a pelvis leash held through the dialog", () => {
 			const b = join(2, { leash: false });
+			b.Appearance = [];
 			wearPelvisLeash(b);
 			const c = join(3, { leash: false });
+			g.Asset.push(makeAsset(makeGroup({ Name: "ItemNeckRestraints" }), { Name: "CollarLeash" }));
 			g.ChatRoomLeashList = [2];
-			expect(leashing.HeldLeash(c as never)).toBeNull();
-			activities.CustomActionCallbacks.get("LSCG_ClaspLeash")?.(c as never, {} as never, undefined);
-			expect(g.InventoryWear).not.toHaveBeenCalled();
-			expect(commands("add-leashing")).toEqual([]);
-			// Still held, so they can let go of it through the dialog
-			expect(g.ChatRoomLeashList).toEqual([2]);
+			expect(leashing.HeldLeash(c as never)).toBe(b);
+			leashing.ClaspLeash(b as never, c as never);
+			expect(g.InventoryWear).toHaveBeenCalledWith(c, "CollarLeash", "ItemNeckRestraints", undefined, null, null, expect.anything());
+		});
+
+		it("clasps onto a target's leash wherever it is, and onto its collar too", () => {
+			const b = join(2);
+			const c = join(3, { leash: false });
+			wearPelvisLeash(c);
+			g.ChatRoomLeashList = [2];
+			g.InventoryAllow = vi.fn(() => true);
+			g.InventoryBlockedOrLimited = vi.fn(() => false);
+			expect(leashing.CanClaspAt(b as never, c as never, "ItemPelvis")).toBe(true);
+			expect(leashing.CanClaspAt(b as never, c as never, "ItemNeck")).toBe(true);
+			expect(leashing.CanClaspAt(b as never, c as never, "ItemMouth")).toBe(false);
+		});
+
+		it("two clasps from different zones between the same two people are two clasps", () => {
+			const b = join(2);
+			wearPelvisLeash(b);
+			const c = join(3);
+			g.ChatRoomLeashList = [2];
+			leashing.HoldLeash(b as never, "ItemPelvis");
+			leashing.ClaspLeash(b as never, c as never, "ItemNeck");
+			leashing.HoldLeash(b as never, "ItemNeck");
+			leashing.ClaspLeash(b as never, c as never, "ItemNeck");
+			expect(commands("add-leashing").map(([, , args]) => (args as { name: string; value: unknown }[]).find(a => a.name === "slot")?.value))
+				.toEqual(["ItemPelvis", "ItemNeck", "ItemNeck", "ItemNeck"]);
 		});
 
 		it("the end's name fits BC's 30 characters and leaves out the craft separators", () => {
@@ -314,7 +338,7 @@ describe("LeashingModule clasped leashes", () => {
 			g.ChatRoomLeashList = [2];
 			leashing.ClaspLeash(b as never, g.Player);
 			expect(clasps()).toEqual([{ with: 2, by: 1, shared: false }]);
-			expect(commands("add-leashing")).toEqual([[2, "add-leashing", leashArgs(1, [{ name: "shared", value: false }])]]);
+			expect(commands("add-leashing")).toEqual([[2, "add-leashing", leashArgs(1, [{ name: "shared", value: false }, { name: "slot", value: "ItemNeck" }, { name: "pairedSlot", value: "ItemNeck" }, { name: "role", value: "line" }])]]);
 		});
 	});
 
@@ -562,20 +586,98 @@ describe("LeashingModule clasped leashes", () => {
 			expect(releaseBeeps().map(([target]) => target)).toEqual([2, 3]);
 		});
 
-		it("only our collar leash is our end: a pelvis leash doesn't take a clasp, or keep one when the collar leash comes off", () => {
+		it("any anchor we wear is our end, and a clasp lasts as long as there's one", () => {
 			player().Appearance = [];
 			wear(player(), makeItem(collar));
 			wearPelvisLeash(player());
 			join(2);
 			claspedBy(join(3), 2);
-			expect(clasps()).toEqual([]);
+			expect(clasps()).toEqual([{ with: 2, by: 3, shared: false }]);
 
-			wearLeash(player());
-			claspedBy(join(4), 2);
-			expect(clasps()).toEqual([{ with: 2, by: 4, shared: false }]);
-			player().Appearance = player().Appearance.filter(item => item.Asset.Group.Name !== "ItemNeckRestraints");
+			player().Appearance = player().Appearance.filter(item => item.Asset.Group.Name !== "ItemPelvis");
+			g.CharacterRefresh(g.Player);
+			expect(clasps()).toEqual([{ with: 2, by: 3, shared: false }]);
+			player().Appearance = [];
 			g.CharacterRefresh(g.Player);
 			expect(clasps()).toEqual([]);
+		});
+
+		it("clasps on different zones are separate: letting go of one keeps the other", () => {
+			join(2);
+			wear(player(), makeItem(makeAsset(makeGroup({ Name: "ItemVulvaPiercings" }), { Name: "ClitRing" })));
+			leashing.Pairings = [
+				new Leashing(2, 1, false, "leash", false, "ItemNeck", "ItemNeck"),
+				new Leashing(2, 1, false, "leash", false, "ItemVulvaPiercings", "ItemNeck"),
+			];
+			leashing.UnclaspFrom(2, "ItemVulvaPiercings");
+			expect(leashing.Clasps.map(p => p.Slot)).toEqual(["ItemNeck"]);
+			// What they tell us about their end of it names the zone, so only that clasp goes
+			leashing.Pairings.push(new Leashing(2, 1, false, "leash", false, "ItemVulvaPiercings", "ItemNeck"));
+			leashing.IncomingRelease(2, "leash", undefined, "ItemVulvaPiercings", "ItemNeck");
+			expect(leashing.Clasps.map(p => p.Slot)).toEqual(["ItemNeck"]);
+		});
+
+		it("a clasp on a zone ends when that zone's anchor is gone, not the others", () => {
+			join(2);
+			wear(player(), makeItem(makeAsset(makeGroup({ Name: "ItemVulvaPiercings" }), { Name: "ClitRing" })));
+			leashing.Pairings = [
+				new Leashing(2, 1, false, "leash", false, "ItemNeck", "ItemNeck"),
+				new Leashing(2, 1, false, "leash", false, "ItemVulvaPiercings", "ItemNeck"),
+			];
+			player().Appearance = player().Appearance.filter(item => item.Asset.Group.Name !== "ItemVulvaPiercings");
+			g.CharacterRefresh(g.Player);
+			expect(leashing.Clasps.map(p => p.Slot)).toEqual(["ItemNeck"]);
+		});
+
+		it("unclasping at their ring takes the end of the line off our own collar", () => {
+			const b = join(2, { leash: false });
+			b.Appearance = [];
+			wear(b, makeItem(makeAsset(makeGroup({ Name: "ItemVulvaPiercings" }), { Name: "ClitRing" }), { Property: { Effect: ["Leash"] } }));
+			// Our collar had no leash; the clasp put the end of theirs on it
+			player().Appearance = [];
+			wear(player(), makeItem(collar));
+			wearLeash(player());
+			leashing.Pairings = [new Leashing(2, 1, false, "leash", true, "ItemNeck", "ItemVulvaPiercings")];
+			listClasps(b, [1]);
+			leashing.UnclaspLeash(2, 1, "ItemVulvaPiercings");
+			expect(leashing.Clasps).toEqual([]);
+			expect(g.InventoryRemove).toHaveBeenCalledWith(g.Player, "ItemNeckRestraints");
+		});
+
+		it("only the collar end of a clasp is told it's shared, so the other end keeps its own leash", () => {
+			const b = join(2, { leash: false });
+			b.Appearance = [];
+			wear(b, makeItem(makeAsset(makeGroup({ Name: "ItemVulvaPiercings" }), { Name: "ClitRing" }), { Property: { Effect: ["Leash"] } }));
+			g.Asset.push(makeAsset(makeGroup({ Name: "ItemNeckRestraints" }), { Name: "CollarLeash" }));
+			player().Appearance = [];
+			wear(player(), makeItem(collar));
+			g.ChatRoomLeashList = [2];
+			leashing.HoldLeash(b as never, "ItemVulvaPiercings");
+			expect(leashing.ClaspLeash(b as never, g.Player, "ItemNeck")).toBe(true);
+			expect(commands("add-leashing")).toEqual([[2, "add-leashing", expect.arrayContaining([{ name: "shared", value: false }])]]);
+			expect(clasps()).toEqual([{ with: 2, by: 1, shared: true }]);
+		});
+
+		it("each end of a clasp knows whether it's the line or the anchor, and says so", () => {
+			join(2);
+			join(3);
+			receive.command(g.ChatRoomCharacter.find((C: FixtureCharacter) => C.MemberNumber === 2), "add-leashing", leashArgs(3, [{ name: "role", value: "line" }]));
+			receive.command(g.ChatRoomCharacter.find((C: FixtureCharacter) => C.MemberNumber === 3), "add-leashing", leashArgs(2, [{ name: "role", value: "anchor" }]));
+			expect(leashing.Clasps.map(p => [p.PairedMember, p.Role])).toEqual([[3, "line"], [2, "anchor"]]);
+			expect(leashing.ClaspLinks(g.Player).map(l => l.role)).toEqual(["line", "anchor"]);
+			expect(leashing.ClaspLabel(3, "ItemNeck", "line")).toBe("Leash clasped to PlayerC (leathercollar)");
+			expect(leashing.ClaspLabel(2, undefined, "anchor")).toBe("Anchoring PlayerB's leash");
+			expect(leashing.ClaspIcon("line")).not.toBe(leashing.ClaspIcon("anchor"));
+			expect(leashing.ClaspIcon(undefined)).toBe(leashing.ClaspIcon("anchor"));
+		});
+
+		it("remembers where a held line was grabbed", () => {
+			const b = join(2);
+			wearPelvisLeash(b);
+			leashing.HoldLeash(b as never, "ItemPelvis");
+			expect(leashing.HeldZone(b as never)).toBe("ItemPelvis");
+			leashing.LetGoOfLeash(b as never, false);
+			expect(leashing.HeldZone(b as never)).toBe("ItemNeck");
 		});
 
 		it("taking our leash off unclasps us", () => {
@@ -589,6 +691,8 @@ describe("LeashingModule clasped leashes", () => {
 	});
 
 	describe("the Clasp Leash and Unclasp Leash activities", () => {
+		const neck = { Name: "ItemNeck" };
+		const pelvis = { Name: "ItemPelvis" };
 		function prereq(name: string) {
 			const found = activities.CustomPrerequisiteFuncs.get(name);
 			if (!found) throw new Error(`Expected a registered "${name}" custom prerequisite -- has activities.ts renamed it?`);
@@ -604,7 +708,7 @@ describe("LeashingModule clasped leashes", () => {
 			join(2);
 			const c = join(3);
 			const noLSCG = join(4, { lscg: false });
-			const canClasp = (C: FixtureCharacter) => prereq("CanClaspLeash")(g.Player, C as never, null as never);
+			const canClasp = (C: FixtureCharacter) => prereq("CanClaspLeash")(g.Player, C as never, neck as never);
 			original("ChatRoomCanBeLeashedBy").mockReturnValue(true);
 			expect(canClasp(c)).toBe(false);
 			g.ChatRoomLeashList = [2];
@@ -614,12 +718,27 @@ describe("LeashingModule clasped leashes", () => {
 			expect(canClasp(join(5))).toBe(false);
 		});
 
-		it("Clasp Leash can't reach a leash slot holding something else", () => {
+		it("Hold is offered on the zone the leash is worn in, Clasp on every anchor", () => {
+			join(2);
+			const c = join(3, { leash: false });
+			wearPelvisLeash(c);
+			g.ChatRoomLeashList = [2];
+			g.InventoryAllow = vi.fn(() => true);
+			g.InventoryBlockedOrLimited = vi.fn(() => false);
+			original("ChatRoomCanBeLeashedBy").mockReturnValue(true);
+			expect(leashing.CanHoldLeash(c as never, pelvis as never)).toBe(true);
+			expect(leashing.CanHoldLeash(c as never, neck as never)).toBe(false);
+			expect(prereq("CanClaspLeash")(g.Player, c as never, pelvis as never)).toBe(true);
+			expect(prereq("CanClaspLeash")(g.Player, c as never, neck as never)).toBe(true);
+			expect(prereq("CanClaspLeash")(g.Player, c as never, { Name: "ItemNose" } as never)).toBe(false);
+		});
+
+		it("Clasp Leash clasps to the collar when its leash slot holds something else", () => {
 			join(2);
 			const c = join(3);
 			wear(c, makeItem(makeAsset(makeGroup({ Name: "ItemNeckRestraints" }), { Name: "CollarChainShort" })));
 			g.ChatRoomLeashList = [2];
-			expect(prereq("CanClaspLeash")(g.Player, c as never, null as never)).toBe(false);
+			expect(prereq("CanClaspLeash")(g.Player, c as never, neck as never)).toBe(true);
 		});
 
 		it("Clasp Leash says what it clasped onto, in place of the activity's own line", () => {
@@ -646,7 +765,7 @@ describe("LeashingModule clasped leashes", () => {
 			listClasps(b, [1, 3]);
 			listClasps(join(3), [2]);
 			claspedTo(2, 4);
-			expect(prereq("TargetHasClaspedLeash")(g.Player, b as never, null as never)).toBe(true);
+			expect(prereq("TargetHasClaspedLeash")(g.Player, b as never, neck as never)).toBe(true);
 			action("UnclaspLeash")(b as never, {} as never, undefined);
 			expect(clasps().map(c => c.with)).toEqual([4]);
 			expect(unclasps()).toEqual([2]);
@@ -675,8 +794,8 @@ describe("LeashingModule clasped leashes", () => {
 			listClasps(b, [3]);
 			listClasps(join(3), []);
 			listClasps(join(4), [1]);
-			expect(prereq("TargetHasClaspedLeash")(g.Player, b as never, null as never)).toBe(false);
-			expect(prereq("TargetHasClaspedLeash")(g.Player, g.ChatRoomCharacter.find((C: FixtureCharacter) => C.MemberNumber === 4), null as never)).toBe(false);
+			expect(prereq("TargetHasClaspedLeash")(g.Player, b as never, neck as never)).toBe(false);
+			expect(prereq("TargetHasClaspedLeash")(g.Player, g.ChatRoomCharacter.find((C: FixtureCharacter) => C.MemberNumber === 4), neck as never)).toBe(false);
 		});
 
 		it("Unclasp Leash only needs us to be allowed to touch the end it's used on", () => {
@@ -685,7 +804,7 @@ describe("LeashingModule clasped leashes", () => {
 			listClasps(b, [3]);
 			listClasps(c, [2]);
 			g.ServerChatRoomGetAllowItem.mockImplementation((_: unknown, C: FixtureCharacter) => C.MemberNumber !== 3);
-			expect(prereq("TargetHasClaspedLeash")(g.Player, b as never, null as never)).toBe(true);
+			expect(prereq("TargetHasClaspedLeash")(g.Player, b as never, neck as never)).toBe(true);
 		});
 
 		it("Unclasp Leash isn't offered on someone not clasped, or whose end is padlocked", () => {
@@ -694,8 +813,8 @@ describe("LeashingModule clasped leashes", () => {
 			wearLeash(locked, { lock: true });
 			listClasps(locked, [4]);
 			listClasps(join(4), [3]);
-			expect(prereq("TargetHasClaspedLeash")(g.Player, stranger as never, null as never)).toBe(false);
-			expect(prereq("TargetHasClaspedLeash")(g.Player, locked as never, null as never)).toBe(false);
+			expect(prereq("TargetHasClaspedLeash")(g.Player, stranger as never, neck as never)).toBe(false);
+			expect(prereq("TargetHasClaspedLeash")(g.Player, locked as never, neck as never)).toBe(false);
 		});
 
 		it("with our own end padlocked we can't unclasp it, but can still reach the other end", () => {
@@ -703,8 +822,8 @@ describe("LeashingModule clasped leashes", () => {
 			const b = join(2);
 			listClasps(b, [1]);
 			claspedTo(2);
-			expect(prereq("TargetHasClaspedLeash")(g.Player, g.Player, null as never)).toBe(false);
-			expect(prereq("TargetHasClaspedLeash")(g.Player, b as never, null as never)).toBe(true);
+			expect(prereq("TargetHasClaspedLeash")(g.Player, g.Player, neck as never)).toBe(false);
+			expect(prereq("TargetHasClaspedLeash")(g.Player, b as never, neck as never)).toBe(true);
 		});
 	});
 
@@ -722,6 +841,7 @@ describe("LeashingModule clasped leashes", () => {
 		it("a padlock on a leash that isn't on our collar doesn't lock our end", () => {
 			wearPelvisLeash(player()).Property = { Effect: ["Leash"], LockedBy: "MetalPadlock" };
 			expect(leashing.IsLocked(new Leashing(2, 1, false, "leash"))).toBe(false);
+			expect(leashing.IsLocked(new Leashing(2, 1, false, "leash", undefined, "ItemPelvis"))).toBe(true);
 		});
 
 		it("a padlock on the other end's leash doesn't lock ours", () => {
@@ -877,7 +997,7 @@ describe("LeashingModule clasped leashes", () => {
 			stuck(c);
 			original("ChatRoomCanBeLeashedBy").mockReturnValue(true);
 			g.ChatRoomCanBeLeashed.mockImplementation((C: FixtureCharacter) => g.ChatRoomCanBeLeashedBy(1, C));
-			expect(leashing.CanClaspTo(join(4) as never, b as never)).toBe(true);
+			expect(leashing.CanClaspAt(join(4) as never, b as never)).toBe(true);
 		});
 
 		it("a clasp doesn't stop us walking, like holding hands, while a collar grab does", () => {

@@ -76,28 +76,27 @@ describe("clasped leashes with real BC items", () => {
 			const B = makeCharacter(3);
 			leashed(A);
 			leashed(B);
-			expect(leashing.CanClaspTo(A, B)).toBe(true);
+			expect(leashing.CanClaspAt(A, B)).toBe(true);
 		});
 
-		it("not a leash slot holding something other than a leash, like a short collar chain", () => {
+		it("the collar, when its leash slot holds something other than a leash, like a short collar chain", () => {
 			const A = makeCharacter(2);
 			const B = makeCharacter(3);
 			leashed(A);
 			collared(B);
 			wear(B, "ItemNeckRestraints", "CollarChainShort");
-			expect(leashing.CanClaspTo(A, B)).toBe(false);
+			expect(leashing.CanClaspAt(A, B)).toBe(true);
 		});
 
-		it("not even when they're leashable some other way, like a bed chain on the collar and a pelvis leash", () => {
+		it("also when it isn't on the collar, like a pelvis leash next to a bed chain on the collar", () => {
 			const A = makeCharacter(2);
 			const B = makeCharacter(3);
 			leashed(A);
 			collared(B);
 			wear(B, "ItemNeckRestraints", "Bedchain");
 			wear(B, "ItemPelvis", "PelvisChainLeash");
-			// Vanilla would let anyone hold them, but there's no leash on the collar to clasp to
 			expect(g.ChatRoomCanBeLeashed(B)).toBe(true);
-			expect(leashing.CanClaspTo(A, B)).toBe(false);
+			expect(leashing.CanClaspAt(A, B)).toBe(true);
 		});
 
 		it("not a leash vanilla wouldn't let anyone pull, like someone shut in a box", () => {
@@ -106,7 +105,7 @@ describe("clasped leashes with real BC items", () => {
 			leashed(A);
 			leashed(B);
 			wear(B, "ItemDevices", "WoodenBox");
-			expect(leashing.CanClaspTo(A, B)).toBe(false);
+			expect(leashing.CanClaspAt(A, B)).toBe(false);
 		});
 
 		it("a collar with a free leash slot, for the end of the leash", () => {
@@ -114,7 +113,7 @@ describe("clasped leashes with real BC items", () => {
 			const B = makeCharacter(3);
 			leashed(A);
 			collared(B);
-			expect(leashing.CanClaspTo(A, B)).toBe(true);
+			expect(leashing.CanClaspAt(A, B)).toBe(true);
 		});
 
 		it("not a free leash slot when the end's leash is blocked or limited on them", () => {
@@ -123,7 +122,7 @@ describe("clasped leashes with real BC items", () => {
 			leashed(A);
 			collared(B);
 			(B as never as { PermissionItems: object }).PermissionItems = { "ItemNeckRestraints/CollarLeash": { Permission: "Block", TypePermissions: {} } };
-			expect(leashing.CanClaspTo(A, B)).toBe(false);
+			expect(leashing.CanClaspAt(A, B)).toBe(false);
 		});
 
 		it("not a free leash slot without item permission on them", () => {
@@ -132,7 +131,7 @@ describe("clasped leashes with real BC items", () => {
 			leashed(A);
 			collared(B);
 			B.AllowedInteractions = g.AllowedInteractions.OwnerOnly;
-			expect(leashing.CanClaspTo(A, B)).toBe(false);
+			expect(leashing.CanClaspAt(A, B)).toBe(false);
 		});
 
 		it("not someone who's turned leashing off, nor either end without LSCG leashing", () => {
@@ -141,12 +140,12 @@ describe("clasped leashes with real BC items", () => {
 			leashed(A);
 			leashed(B);
 			B.OnlineSharedSettings = { AllowPlayerLeashing: false } as never;
-			expect(leashing.CanClaspTo(A, B)).toBe(false);
+			expect(leashing.CanClaspAt(A, B)).toBe(false);
 
 			const C = makeCharacter(4, false);
 			leashed(C);
-			expect(leashing.CanClaspTo(A, C)).toBe(false);
-			expect(leashing.CanClaspTo(C, makeCharacter(5))).toBe(false);
+			expect(leashing.CanClaspAt(A, C)).toBe(false);
+			expect(leashing.CanClaspAt(C, makeCharacter(5))).toBe(false);
 		});
 	});
 
@@ -157,17 +156,18 @@ describe("clasped leashes with real BC items", () => {
 			collared(A);
 			wear(A, "ItemNeckRestraints", "ChainLeash");
 			collared(B);
-			expect(leashing.CanClaspTo(A, B)).toBe(true);
+			expect(leashing.CanClaspAt(A, B)).toBe(true);
 		});
 
-		it("isn't given by a player held by something that isn't on their collar, like a pelvis leash", () => {
+		it("is a plain collar leash from a player held by something that isn't on their collar, like a pelvis leash", () => {
 			const A = makeCharacter(2);
 			const B = makeCharacter(3);
 			collared(A);
 			wear(A, "ItemPelvis", "PelvisChainLeash");
 			collared(B);
 			expect(g.ChatRoomCanBeLeashed(A)).toBe(true);
-			expect(leashing.CanClaspTo(A, B)).toBe(false);
+			expect(leashing.LeashEnd(A)?.asset.Name).toBe("CollarLeash");
+			expect(leashing.CanClaspAt(A, B)).toBe(true);
 		});
 	});
 
@@ -186,7 +186,8 @@ describe("clasped leashes with real BC items", () => {
 			const B = makeCharacter(3);
 			leashed(B);
 			wear(B, "ItemPelvis", "PelvisChainLeash", { LockedBy: "MetalPadlock" });
-			expect(leashing.LeashLocked(B)).toBe(false);
+			expect(leashing.LeashLocked(B, "ItemNeck")).toBe(false);
+			expect(leashing.LeashLocked(B, "ItemPelvis")).toBe(true);
 		});
 
 		it("an owner's padlock on our leash doesn't stop the player we're clasped to from pulling us", () => {
