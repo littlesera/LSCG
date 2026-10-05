@@ -773,17 +773,33 @@ export class MagicModule extends BaseModule {
             if (!s.AllowVoiceCast)
                 continue;
             const searchPhrase = (!!s.CastingPhrase && s.CastingPhrase.length > 0) ? s.CastingPhrase : s.Name;
-            const re = new RegExp(`\\b${escapeRegExp(searchPhrase)}\\b (${characterNames.map(c => escapeRegExp(c!)).join("|")})`, "i");
-            const matches = re.exec(oocParsedString);
+            const matches = this.findCastingMatch(oocParsedString, searchPhrase, characterNames as string[]);
             if (!matches)
                 continue;
-            const characterPhrase = matches?.[1] ?? "";
+            const characterPhrase = matches[2] ?? "";
             const character = getCharacterByNicknameOrMemberNumber(characterPhrase);
             if (character)
                 return [structuredClone(s), character]; // UnpackSpellCodes mutates; keep stored spells key-only (#680)
         }
         return undefined;
     }
+    /** Finds `phrase` followed by one of `names`. Word edges and the space between are required only where the characters either side
+     *  are in a script that uses spaces (\b can't tell, e.g. for accents or Chinese); unspaced scripts have neither (#877). */
+    private findCastingMatch(text: string, phrase: string, names: string[]): RegExpExecArray | null {
+        const unspaced = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Thai}\p{Script=Lao}\p{Script=Khmer}\p{Script=Myanmar}]/u;
+        const isWord = (c: string | undefined) => !!c && /[\p{L}\p{N}_]/u.test(c) && !unspaced.test(c);
+        const re = new RegExp(`${escapeRegExp(phrase)}(\\s*)(${names.map(escapeRegExp).join("|")})`, "gi");
+        let m: RegExpExecArray | null;
+        while ((m = re.exec(text))) {
+            const phraseLength = m[0].length - m[1].length - m[2].length;
+            const edgeOk = !isWord(phrase[0]) || !isWord(text[m.index - 1]);
+            const separated = m[1].length > 0 || !isWord(m[0][phraseLength - 1]) || !isWord(m[2][0]);
+            if (edgeOk && separated) return m;
+            re.lastIndex = m.index + 1;
+        }
+        return null;
+    }
+
 
     // ***************** Potions *******************
     /**

@@ -240,6 +240,63 @@ describe("MagicModule", () => {
 			magic.IncomingSpellCommand(alice as never, { command: { name: "spell", args: [{ name: "spell", value: spell("blind", [LSCGSpellEffect.blindness]) }] } } as never);
 			expect(sent.actions()[0]).toContain("fizzles");
 		});
+
+		describe("damage on a save", () => {
+			const zap = (save?: string, extra: LSCGSpellEffect[] = []) => ({
+				...spell("zap", [LSCGSpellEffect.damage, ...extra]),
+				Damage: { Type: "Fire", Roll: "2d6 + 2", ...(save ? { Save: save } : {}) },
+			}) as SpellDefinition;
+			const cast = (s: SpellDefinition) => {
+				magic.IncomingSpellCommand(alice as never, { command: { name: "spell", args: [{ name: "spell", value: s }] } } as never);
+				vi.advanceTimersByTime(1000 + 2500);
+				return sent.actions();
+			};
+			// Attacker d20=1, defender d20=20, then every later die comes up at the top: 2d6 + 2 = 14
+			const SAVES = [0.0, 0.99];
+
+			it("a successful save halves the damage, and nothing else of the spell applies", () => {
+				seedRandom(SAVES);
+				const out = cast(zap(undefined, [LSCGSpellEffect.blindness]));
+				expect(out.some(a => a.includes("takes only 7 fire damage, half of 14"))).toBe(true);
+				expect(states.BlindState.Active).toBe(false);
+			});
+
+			it("'No damage' on a save avoids the damage entirely", () => {
+				seedRandom(SAVES);
+				const out = cast(zap("No damage"));
+				expect(out.some(a => a.includes("successfully saves"))).toBe(true);
+				expect(out.some(a => a.includes("damage"))).toBe(false);
+			});
+
+			it("a failed save takes the full damage", () => {
+				seedRandom([0.99, 0.0]);
+				const out = cast(zap());
+				expect(out.some(a => a.includes("takes 4 fire damage"))).toBe(true); // d20s 20 and 1, then both d6 land on 1: 1 + 1 + 2
+				expect(out.some(a => a.includes("saves"))).toBe(false);
+			});
+
+			it("someone who never defends still saves against the damage, while the rest of the spell lands", () => {
+				magic.settings.neverDefend = true;
+				seedRandom(SAVES);
+				const out = cast(zap(undefined, [LSCGSpellEffect.blindness]));
+				expect(out.some(a => a.includes("takes only 7 fire damage"))).toBe(true);
+				expect(states.BlindState.Active).toBe(true);
+			});
+
+			it("a barrier bounce takes the whole spell, with no half damage for the target", () => {
+				states.BarrierState.Barrier(1, false);
+				seedRandom(SAVES);
+				const out = cast(zap());
+				expect(out.some(a => a.includes("bounce back"))).toBe(true);
+				expect(out.some(a => a.includes("damage"))).toBe(false);
+			});
+
+			it("blocking the Damaging effect blocks the half damage too", () => {
+				magic.settings.blockedSpellEffects = [LSCGSpellEffect.damage];
+				seedRandom(SAVES);
+				expect(cast(zap()).some(a => a.includes("takes only"))).toBe(false);
+			});
+		});
 	});
 
 	describe("magic item detection", () => {
