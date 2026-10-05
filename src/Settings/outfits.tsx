@@ -710,7 +710,7 @@ export class GuiOutfits extends GuiSubscreen {
             for (const Group of this.#zoneGroups()) {
                 const picked = Group.Name === selected;
                 const occupied = !!InventoryGet(preview, Group.Name);
-                DrawAssetGroupZone(Player, Group.Zone!, this.coords.zoom, this.coords.x, this.coords.y, 1, picked ? "#00d5d5" : "#808080", 3, picked ? "#00d5d533" : occupied ? "#00FF0022" : "#80808011");
+                DrawAssetGroupZone(preview, Group.Zone!, this.coords.zoom, this.coords.x, this.coords.y, 1, picked ? "#00d5d5" : "#808080", 3, picked ? "#00d5d533" : occupied ? "#00FF0022" : "#80808011");
                 if (!hover && this.#inZone(Group)) hover = Group;
             }
             if (hover) {
@@ -740,8 +740,9 @@ export class GuiOutfits extends GuiSubscreen {
         return AssetGroup.filter(g => g.IsItem() && g.Zone?.length);
     }
 
+    /** Zones follow the character that's drawn: the player's own pose (kneeling, say) would shift them off the preview. */
     #inZone(group: AssetGroup): boolean {
-        return !!group.Zone?.some(z => DialogClickedInZone(Player, z, this.coords.zoom, this.coords.x, this.coords.y, 1));
+        return !!this.preview && !!group.Zone?.some(z => DialogClickedInZone(this.preview!, z, this.coords.zoom, this.coords.x, this.coords.y, 1));
     }
 
     #pickGroup(name: AssetGroupName) {
