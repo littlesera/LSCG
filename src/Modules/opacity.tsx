@@ -469,6 +469,16 @@ export class OpacityModule extends BaseModule {
 
                 if (xOverride) ret.X = xOverride;
                 if (yOverride) ret.Y = yOverride + CanvasUpperOverflow;
+
+                // BC only adds its translation offsets to layers it draws as images. Layers without an image (e.g. text
+                // drawn in an AfterDraw hook) get X/Y without them, so fold the offsets into the coordinates we hand on.
+                if (layerIx >= 0 && !CA.Asset.Layer[layerIx].HasImage) {
+                    const props = Property as Record<string, any>;
+                    const offsetX = (props.TranslationX ?? 0) + (props.LayerTranslationX?.[layerName] ?? 0);
+                    const offsetY = (props.TranslationY ?? 0) + (props.LayerTranslationY?.[layerName] ?? 0);
+                    if (offsetX) ret.X = (ret.X ?? params.X) + offsetX;
+                    if (offsetY) ret.Y = (ret.Y ?? params.Y) + offsetY;
+                }
             }
             return ret;
         }, ModuleCategory.Opacity);
