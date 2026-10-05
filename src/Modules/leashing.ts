@@ -1056,9 +1056,9 @@ export class LeashingModule extends BaseModule {
         const cx = CharX + (rect[0] + rect[2] / 2) * Zoom;
         const cy = CharY + (rect[1] + rect[3] / 2) * Zoom;
         const radius = Math.max(rect[2], rect[3]) * 0.9 * Zoom;
-        const pulse = 0.5 + 0.5 * Math.sin(CommonTime() / 250);
-        const glow = MainCanvas.createRadialGradient(cx, cy, radius * 0.1, cx, cy, radius * (0.8 + 0.2 * pulse));
-        glow.addColorStop(0, `rgba(144, 228, 193, ${0.45 + 0.35 * pulse})`);
+        const pulse = 0.5 + 0.5 * Math.sin(CommonTime() / 350);
+        const glow = MainCanvas.createRadialGradient(cx, cy, radius * 0.1, cx, cy, radius * (0.85 + 0.1 * pulse));
+        glow.addColorStop(0, `rgba(144, 228, 193, ${0.5 + 0.2 * pulse})`);
         glow.addColorStop(1, "rgba(144, 228, 193, 0)");
         MainCanvas.save();
         MainCanvas.fillStyle = glow;
