@@ -36,18 +36,31 @@
 			margin-right: auto;
 		}
 
-		label {
+		// The kit's rows: label beside the box. The box keeps BC's checkbox look; its size and its tick are
+		// scaled together (sizing only the box leaves the tick spilling out of it).
+		.lscg-kit-row {
 			display: flex;
+			flex-direction: row-reverse;
+			justify-content: flex-end;
 			align-items: center;
-			input {
-				margin-right: 1rem;
+			gap: 1rem;
+			padding: 0;
+			background: none;
+
+			.lscg-kit-control {
+				flex: none;
+			}
+
+			input.checkbox {
+				height: min(3.5dvh, 1.75dvw);
+				width: min(3.5dvh, 1.75dvw);
+
+				&::before {
+					height: min(2.3dvh, 1.15dvw);
+					width: min(2.3dvh, 1.15dvw);
+				}
 			}
 		}
-	}
-
-	input[type="checkbox"] {
-		height: min(3dvh, 1.5dvw);
-		width: min(3dvh, 1.5dvw);
 	}
 }
 
