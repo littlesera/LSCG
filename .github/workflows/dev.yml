@@ -25,7 +25,7 @@ jobs:
       with:
         node-version: '24.x'
         cache: 'npm'
-        registry-url: 'https://registry.npmjs.org' # lets npm publish read NODE_AUTH_TOKEN below
+        registry-url: 'https://registry.npmjs.org' # points npm publish at the npm registry
     - run: npm ci
     - run: npm run build --if-present
     #- run: npm test
@@ -42,10 +42,11 @@ jobs:
     # Beta typings for extension authors testing against dev: published as e.g. 0.9.3-beta.<run> under npm's
     # "beta" tag (`npm i -D @lscg/types@beta`), so `npm i @lscg/types` still gets the last release. Skipped when
     # the types haven't changed since the last beta, so ordinary dev pushes don't publish anything.
+    # Authenticates through npm trusted publishing (OIDC via `id-token: write`), so there is no token to store; the
+    # trusted publisher on npmjs.com must name this workflow and the `development` environment. Needs npm >= 11.5.1.
     - name: Publish @lscg/types beta to npm
-      env:
-        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       run: |
+        npm install -g npm@latest
         node scripts/pack-types.mjs --prerelease "beta.${{ github.run_number }}"
         HASH=$(node -p "require('./build/types-package/package.json').lscgTypesHash")
         PUBLISHED=$(npm view @lscg/types@beta lscgTypesHash 2>/dev/null || true)
