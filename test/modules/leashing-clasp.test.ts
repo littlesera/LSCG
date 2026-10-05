@@ -286,16 +286,17 @@ describe("LeashingModule clasped leashes", () => {
 			expect(g.InventoryWear).toHaveBeenCalledWith(c, "ChainLeash", "ItemNeckRestraints", "#AA0000", null, null, expect.anything());
 		});
 
-		it("a leash we hold that isn't on their collar can't give a collar-less target its end, like a pelvis leash held through the dialog", () => {
+		it("a leash we hold that isn't on a collar gives a collar-less target a plain collar leash, like a pelvis leash held through the dialog", () => {
 			const b = join(2, { leash: false });
+			b.Appearance = [];
 			wearPelvisLeash(b);
 			const c = join(3, { leash: false });
+			c.Appearance = [];
+			g.Asset.push(makeAsset(makeGroup({ Name: "ItemNeckRestraints" }), { Name: "CollarLeash" }));
 			g.ChatRoomLeashList = [2];
 			expect(leashing.HeldLeash(c as never)).toBe(b);
-			expect(leashing.CanClaspTo(b as never, c as never)).toBe(false);
-			expect(g.InventoryWear).not.toHaveBeenCalled();
-			// Still held, so they can let go of it through the dialog
-			expect(g.ChatRoomLeashList).toEqual([2]);
+			leashing.ClaspLeash(b as never, c as never);
+			expect(g.InventoryWear).toHaveBeenCalledWith(c, "CollarLeash", "ItemNeckRestraints", undefined, null, null, expect.anything());
 		});
 
 		it("clasps onto a target whose only leash isn't on their collar", () => {
@@ -597,6 +598,8 @@ describe("LeashingModule clasped leashes", () => {
 	});
 
 	describe("the Clasp Leash and Unclasp Leash activities", () => {
+		const neck = { Name: "ItemNeck" };
+		const pelvis = { Name: "ItemPelvis" };
 		function prereq(name: string) {
 			const found = activities.CustomPrerequisiteFuncs.get(name);
 			if (!found) throw new Error(`Expected a registered "${name}" custom prerequisite -- has activities.ts renamed it?`);
@@ -612,7 +615,7 @@ describe("LeashingModule clasped leashes", () => {
 			join(2);
 			const c = join(3);
 			const noLSCG = join(4, { lscg: false });
-			const canClasp = (C: FixtureCharacter) => prereq("CanClaspLeash")(g.Player, C as never, null as never);
+			const canClasp = (C: FixtureCharacter) => prereq("CanClaspLeash")(g.Player, C as never, neck as never);
 			original("ChatRoomCanBeLeashedBy").mockReturnValue(true);
 			expect(canClasp(c)).toBe(false);
 			g.ChatRoomLeashList = [2];
@@ -622,12 +625,36 @@ describe("LeashingModule clasped leashes", () => {
 			expect(canClasp(join(5))).toBe(false);
 		});
 
+		it("Clasp and Unclasp are offered on the slot the leash is worn in, collar or not", () => {
+			join(2);
+			const c = join(3, { leash: false });
+			c.Appearance = [];
+			wearPelvisLeash(c);
+			g.ChatRoomLeashList = [2];
+			original("ChatRoomCanBeLeashedBy").mockReturnValue(true);
+			expect(prereq("CanClaspLeash")(g.Player, c as never, pelvis as never)).toBe(true);
+			expect(prereq("CanClaspLeash")(g.Player, c as never, neck as never)).toBe(false);
+			expect(leashing.LeashOnGroup(c as never, pelvis as never)).toBe(true);
+			expect(leashing.LeashOnGroup(c as never, neck as never)).toBe(false);
+		});
+
+		it("with a collar on, a leash elsewhere is offered on the neck too", () => {
+			join(2);
+			const c = join(3, { leash: false });
+			c.Appearance = [];
+			wear(c, makeItem(makeAsset(makeGroup({ Name: "ItemNeck" }), { Name: "LeatherCollar" })));
+			wearPelvisLeash(c);
+			expect(leashing.LeashOnGroup(c as never, neck as never)).toBe(true);
+			expect(leashing.LeashOnGroup(c as never, pelvis as never)).toBe(true);
+			expect(leashing.LeashOnGroup(c as never, { Name: "ItemMouth" } as never)).toBe(false);
+		});
+
 		it("Clasp Leash can't reach a leash slot holding something else", () => {
 			join(2);
 			const c = join(3);
 			wear(c, makeItem(makeAsset(makeGroup({ Name: "ItemNeckRestraints" }), { Name: "CollarChainShort" })));
 			g.ChatRoomLeashList = [2];
-			expect(prereq("CanClaspLeash")(g.Player, c as never, null as never)).toBe(false);
+			expect(prereq("CanClaspLeash")(g.Player, c as never, neck as never)).toBe(false);
 		});
 
 		it("Clasp Leash says what it clasped onto, in place of the activity's own line", () => {
@@ -654,7 +681,7 @@ describe("LeashingModule clasped leashes", () => {
 			listClasps(b, [1, 3]);
 			listClasps(join(3), [2]);
 			claspedTo(2, 4);
-			expect(prereq("TargetHasClaspedLeash")(g.Player, b as never, null as never)).toBe(true);
+			expect(prereq("TargetHasClaspedLeash")(g.Player, b as never, neck as never)).toBe(true);
 			action("UnclaspLeash")(b as never, {} as never, undefined);
 			expect(clasps().map(c => c.with)).toEqual([4]);
 			expect(unclasps()).toEqual([2]);
@@ -683,8 +710,8 @@ describe("LeashingModule clasped leashes", () => {
 			listClasps(b, [3]);
 			listClasps(join(3), []);
 			listClasps(join(4), [1]);
-			expect(prereq("TargetHasClaspedLeash")(g.Player, b as never, null as never)).toBe(false);
-			expect(prereq("TargetHasClaspedLeash")(g.Player, g.ChatRoomCharacter.find((C: FixtureCharacter) => C.MemberNumber === 4), null as never)).toBe(false);
+			expect(prereq("TargetHasClaspedLeash")(g.Player, b as never, neck as never)).toBe(false);
+			expect(prereq("TargetHasClaspedLeash")(g.Player, g.ChatRoomCharacter.find((C: FixtureCharacter) => C.MemberNumber === 4), neck as never)).toBe(false);
 		});
 
 		it("Unclasp Leash only needs us to be allowed to touch the end it's used on", () => {
@@ -693,7 +720,7 @@ describe("LeashingModule clasped leashes", () => {
 			listClasps(b, [3]);
 			listClasps(c, [2]);
 			g.ServerChatRoomGetAllowItem.mockImplementation((_: unknown, C: FixtureCharacter) => C.MemberNumber !== 3);
-			expect(prereq("TargetHasClaspedLeash")(g.Player, b as never, null as never)).toBe(true);
+			expect(prereq("TargetHasClaspedLeash")(g.Player, b as never, neck as never)).toBe(true);
 		});
 
 		it("Unclasp Leash isn't offered on someone not clasped, or whose end is padlocked", () => {
@@ -702,8 +729,8 @@ describe("LeashingModule clasped leashes", () => {
 			wearLeash(locked, { lock: true });
 			listClasps(locked, [4]);
 			listClasps(join(4), [3]);
-			expect(prereq("TargetHasClaspedLeash")(g.Player, stranger as never, null as never)).toBe(false);
-			expect(prereq("TargetHasClaspedLeash")(g.Player, locked as never, null as never)).toBe(false);
+			expect(prereq("TargetHasClaspedLeash")(g.Player, stranger as never, neck as never)).toBe(false);
+			expect(prereq("TargetHasClaspedLeash")(g.Player, locked as never, neck as never)).toBe(false);
 		});
 
 		it("with our own end padlocked we can't unclasp it, but can still reach the other end", () => {
@@ -711,8 +738,8 @@ describe("LeashingModule clasped leashes", () => {
 			const b = join(2);
 			listClasps(b, [1]);
 			claspedTo(2);
-			expect(prereq("TargetHasClaspedLeash")(g.Player, g.Player, null as never)).toBe(false);
-			expect(prereq("TargetHasClaspedLeash")(g.Player, b as never, null as never)).toBe(true);
+			expect(prereq("TargetHasClaspedLeash")(g.Player, g.Player, neck as never)).toBe(false);
+			expect(prereq("TargetHasClaspedLeash")(g.Player, b as never, neck as never)).toBe(true);
 		});
 	});
 

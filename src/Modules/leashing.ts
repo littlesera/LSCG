@@ -75,6 +75,12 @@ export const LeashDefinitions = new Map<GrabType, LeashDefinition>([
     ["compulsion", {Type: "compulsion", LabelTarget: "Compelled to follow %OPP_NAME%", LabelSource: "Followed by %OPP_NAME%", Icon: ICONS.PENDANT}],
 ]);
 
+// Where Hold Leash is offered, for the slots that can be clicked on: the collar's, and wherever else a leash can be worn
+export const LeashActivityGroups: string[] = ["ItemNeck", "ItemNeckAccessories", "ItemNeckRestraints", "ItemVulvaPiercings", "ItemPelvis", "ItemMouth", "ItemNose", "ItemArms"];
+
+// The zones that offer the leash activities (the neck's mirror to the others)
+export const LeashActivityTargets: string[] = ["ItemNeck", "ItemVulvaPiercings", "ItemPelvis", "ItemMouth", "ItemNose", "ItemArms"];
+
 export class Leashing implements Pairing {
     constructor(pairedMember: number, pairedBy: number, isSource: boolean, type: GrabType, sharedLeash?: boolean) {
         this.PairedMember = pairedMember;
@@ -748,16 +754,16 @@ export class LeashingModule extends BaseModule {
     }
 
     // Same checks as vanilla's Hold Leash dialog option, for any leash they wear
-    CanHoldLeash(C: Character) {
-        return C.MemberNumber !== undefined && ServerChatRoomGetAllowItem(Player, C) && Player.CanInteract() &&
+    CanHoldLeash(C: Character, group?: AssetGroup) {
+        return (group === undefined || this.LeashOnGroup(C, group)) && C.MemberNumber !== undefined && ServerChatRoomGetAllowItem(Player, C) && Player.CanInteract() &&
             !!C.OnlineSharedSettings && C.OnlineSharedSettings.AllowPlayerLeashing !== false &&
             !ChatRoomLeashList.includes(C.MemberNumber) && ChatRoomCanBeLeashed(C) && this.WornLeash(C) !== null;
     }
 
     // Same checks as vanilla's Let Go Of Leash dialog option, again for any leash they wear. Like vanilla, it
     // forgets a leash that can't be held any more
-    CanLetGoOfLeash(C: Character) {
-        if (C.MemberNumber === undefined || !ServerChatRoomGetAllowItem(Player, C) || !Player.CanInteract() ||
+    CanLetGoOfLeash(C: Character, group?: AssetGroup) {
+        if ((group !== undefined && !this.LeashOnGroup(C, group)) || C.MemberNumber === undefined || !ServerChatRoomGetAllowItem(Player, C) || !Player.CanInteract() ||
             !C.OnlineSharedSettings || C.OnlineSharedSettings.AllowPlayerLeashing === false || !ChatRoomLeashList.includes(C.MemberNumber))
             return false;
         if (ChatRoomCanBeLeashed(C))
@@ -817,21 +823,33 @@ export class LeashingModule extends BaseModule {
             return callOriginal("ChatRoomCanBeLeashedBy", [Player.MemberNumber ?? -1, B]);
         if (InventoryGet(B, "ItemNeckRestraints") !== null)
             return false;
+        const end = this.LeashEnd(A);
+        return end !== null && ServerChatRoomGetAllowItem(Player, B) &&
+            InventoryAllow(B, end.asset, end.asset.Prerequisite, false) && !InventoryBlockedOrLimited(B, { Asset: end.asset } as Item);
+    }
+
+    // What goes on a B's neck when A's leash is clasped to it: a copy of A's collar leash or, when A's
+    // leash is somewhere else (a clitoris ring, say), a plain collar leash standing in for it
+    LeashEnd(A: Character): { asset: Asset, color?: ItemColor } | null {
+        if (this.WornLeash(A) === null)
+            return null;
         const leash = this.NeckLeash(A);
-        return leash !== null && ServerChatRoomGetAllowItem(Player, B) &&
-            InventoryAllow(B, leash.Asset, leash.Asset.Prerequisite, false) && !InventoryBlockedOrLimited(B, { Asset: leash.Asset } as Item);
+        if (leash !== null)
+            return { asset: leash.Asset, color: leash.Color };
+        const asset = AssetGet(A.AssetFamily ?? "Female3DCG", "ItemNeckRestraints", "CollarLeash");
+        return asset === null ? null : { asset };
     }
 
     // Puts a copy of A's leash on B's collar the vanilla way, so B's client, BCX and co. get their usual say
     GiveLeashEnd(A: Character, B: Character) {
-        const leash = this.NeckLeash(A);
-        if (leash === null)
+        const end = this.LeashEnd(A);
+        if (end === null)
             return;
         // Crafted names are at most 30 characters, and § and ¶ separate crafts when they're bundled
         const name = `End of ${CharacterNickname(A).replace(/[\xA7\xB6]/g, "").slice(0, 15)}'s leash`;
         const craft: CraftingPartialItem = { Name: name, Description: "", Effects: {}, Private: false };
         // Our bc-stubs only type a full craft here, but BC takes a partial one
-        InventoryWear(B, leash.Asset.Name, "ItemNeckRestraints", leash.Color, null, null, craft as CraftingItem);
+        InventoryWear(B, end.asset.Name, "ItemNeckRestraints", end.color, null, null, craft as CraftingItem);
         if (B.IsPlayer())
             ChatRoomCharacterUpdate(Player);
         else
@@ -1033,7 +1051,32 @@ export class LeashingModule extends BaseModule {
     // Whichever leash C wears: the one on the collar if there is one, else anything else with the leash effect (a
     // clitoris ring, pelvis chain, rope cuffs, pony reins, nose ring...), as vanilla counts them all
     WornLeash(C: Character) {
-        return this.NeckLeash(C) ?? C.Appearance.find(item => InventoryItemHasEffect(item, "Leash", true)) ?? null;
+        return this.NeckLeash(C) ?? this.WornLeashes(C)[0] ?? null;
+    }
+
+    WornLeashes(C: Character) {
+        return C.Appearance.filter(item => InventoryItemHasEffect(item, "Leash", true));
+    }
+
+    // Whether group is where C's leash is, for offering the leash activities there. The neck slots share their
+    // activities, so any of them is the collar's. A leash in a slot with nothing to click (a doll handle, a device)
+    // goes on the neck, and so does any leash on someone wearing a collar, as that's where most people are grabbed
+    LeashOnGroup(C: Character, group: AssetGroup) {
+        const neck = ["ItemNeck", "ItemNeckAccessories", "ItemNeckRestraints"];
+        const leashes = this.WornLeashes(C);
+        if (neck.includes(group.Name) && leashes.length > 0 && InventoryGet(C, "ItemNeck") !== null)
+            return true;
+        return leashes.some(item => {
+            const slot = LeashActivityGroups.includes(item.Asset.Group.Name) ? item.Asset.Group.Name : "ItemNeck";
+            return neck.includes(slot) ? neck.includes(group.Name) : slot === group.Name;
+        });
+    }
+
+    // Where Clasp Leash goes on C: with their leash, or on the collar when they've none and are getting the end of ours
+    ClaspOnGroup(C: Character, group: AssetGroup) {
+        return this.WornLeash(C) !== null
+            ? this.LeashOnGroup(C, group)
+            : ["ItemNeck", "ItemNeckAccessories", "ItemNeckRestraints"].includes(group.Name);
     }
 
     LeashLocked(C: Character | null) {
