@@ -1,7 +1,9 @@
 import { StateModule } from "Modules/states";
 import { StateConfig } from "Settings/Models/states";
 import { getModule } from "modules";
-import { ICONS, SendAction, getRandomInt, settingsSave } from "utils";
+import { SendAction, settingsSave } from "utils";
+import { emit } from "api/events";
+import type { LSCGStateRecoverReason } from "api/types";
 
 
 
@@ -29,7 +31,7 @@ export abstract class BaseState {
         Sight: "false",
         Wardrobe: "false",
         Move: "false",
-        Speech: "false"
+        Speech: "false",
     };
 
     _state : StateModule | undefined;
@@ -68,7 +70,22 @@ export abstract class BaseState {
         this._state = stateModule;
     }
 
+    /** Why the next Recover() happens, for the "state.recovered" event. Set by callers right before Recover(),
+     *  since subclasses override Recover(emote) and wouldn't pass an extra argument through. */
+    recoverReason: LSCGStateRecoverReason | undefined;
+
+    /** Recover with a reason for event listeners. */
+    RecoverFor(reason: LSCGStateRecoverReason, emote?: boolean): BaseState | undefined {
+        this.recoverReason = reason;
+        try {
+            return this.Recover(emote);
+        } finally {
+            this.recoverReason = undefined;
+        }
+    }
+
     Activate(memberNumber?: number, duration?: number, emote?: boolean): BaseState | undefined {
+        const wasActive = this.config.active;
         this.config.active = true;
         this.config.activatedAt = new Date().getTime();
         this.config.activatedBy = memberNumber ?? -1;
@@ -76,27 +93,32 @@ export abstract class BaseState {
         this.config.duration = duration;
 
         settingsSave(true);
+        if (!wasActive)
+            emit("state.activated", { type: this.Type, activatedBy: memberNumber, duration });
         return this;
      }
 
     Recover(emote?: boolean): BaseState | undefined {
-        if (emote) SendAction(`%NAME%'s ${this.Type} state wears off.`)
+        const wasActive = this.config.active;
+        if (emote) SendAction(`%NAME%'s ${this.Type} state wears off.`);
         this.config.active = false;
         this.config.recoveredAt = new Date().getTime();
         settingsSave(true);
+        if (wasActive)
+            emit("state.recovered", { type: this.Type, reason: this.recoverReason ?? "manual" });
         return this;
     }
 
     Tick(now: number): void {
         if (!!this.config.duration && this.config.duration > 0) {
-            let isExpired = this.config.active && this.config.activatedAt + this.config.duration < now;
+            const isExpired = this.config.active && this.config.activatedAt + this.config.duration < now;
             if (isExpired)
-                this.Recover(true);
+                this.RecoverFor("expired", true);
         }
     }
 
     Safeword(): void {
-        this.Recover(false);
+        this.RecoverFor("safeword", false);
     }
 
     abstract Icon(C: OtherCharacter): string;

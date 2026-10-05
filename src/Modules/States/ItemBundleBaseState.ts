@@ -5,7 +5,7 @@ import { SpellDefinition } from "Settings/Models/magic";
 export abstract class ItemBundleBaseState extends BaseState {
     storedOutfitKey: string = "stored-outfit";
     get StoredOutfit(): ItemBundle[] | undefined {
-        let ext = this.config.extensions[this.storedOutfitKey];
+        const ext = this.config.extensions[this.storedOutfitKey];
         if (!ext) return undefined;
         return parseFromBase64<ItemBundle[]>(ext);
     }
@@ -30,7 +30,7 @@ export abstract class ItemBundleBaseState extends BaseState {
 
     Recover(emote?: boolean | undefined): BaseState {
         super.Recover();
-        if (!!this.StoredOutfit) {
+        if (this.StoredOutfit) {
             this.StripCharacter(true, null, []);
             this.WearMany(this.StoredOutfit, null, true, undefined);
             this.ClearStoredOutfit();
@@ -57,8 +57,8 @@ export abstract class ItemBundleBaseState extends BaseState {
 
     // Check if an item is limited or blocked when applied by Sender
     InventoryBlockedOrLimited(Sender: Character | null, Item: Item, ItemType?: string) {
-        let Blocked = InventoryIsPermissionBlocked(Player, Item.Asset.DynamicName(Player), Item.Asset.Group.Name, ItemType);
-        let Limited = !this.InventoryCheckLimitedPermission(Sender, Item, ItemType);
+        const Blocked = InventoryIsPermissionBlocked(Player, Item.Asset.DynamicName(Player), Item.Asset.Group.Name, ItemType);
+        const Limited = !this.InventoryCheckLimitedPermission(Sender, Item, ItemType);
         return Blocked || Limited;
     }
     

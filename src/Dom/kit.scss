@@ -1,0 +1,617 @@
+.lscg-kit {
+	// minmax(0, …): a plain 1fr row grows to its content, so nothing inside would ever scroll.
+	grid-template-rows: minmax(0, 1fr);
+	text-align: left;
+	user-select: text;
+
+	// Our display rules (e.g. panels' grid) would otherwise override the hidden attribute.
+	[hidden] {
+		display: none !important;
+	}
+
+	// A settings screen's frame (DomSettingsHost): title and exit button on top, content, help button bottom right.
+	// Sizes match the canvas buttons they replace (90 of the canvas's 1000 units).
+	.lscg-kit-screen {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) auto;
+		grid-template-rows: auto minmax(0, 1fr) auto;
+		grid-template-areas: "title exit" "body ." "body help";
+		column-gap: min(2dvh, 1dvw);
+		row-gap: min(1dvh, 0.5dvw);
+		min-height: 0;
+	}
+
+	.lscg-kit-screen-title {
+		grid-area: title;
+		align-self: center;
+		margin: 0;
+		font-size: min(3.6dvh, 1.8dvw);
+		font-weight: normal;
+		text-align: left;
+	}
+
+	.lscg-kit-screen-exit,
+	.lscg-kit-screen-help {
+		width: min(9dvh, 4.5dvw);
+		height: min(9dvh, 4.5dvw);
+		padding: 0;
+		background-position: center;
+		background-repeat: no-repeat;
+		background-size: 85%;
+	}
+
+	.lscg-kit-screen-exit {
+		grid-area: exit;
+		background-image: url("Icons/Exit.png");
+	}
+
+	.lscg-kit-screen-help {
+		grid-area: help;
+		align-self: end;
+		background-image: url("Icons/Introduction.png");
+	}
+
+	.lscg-kit-screen-body {
+		grid-area: body;
+		display: grid;
+		grid-template-rows: minmax(0, 1fr);
+		min-height: 0;
+	}
+
+	// BC buttons position their label absolutely, so the text gives neither width nor height. Put it in flow.
+	.lscg-button {
+		cursor: pointer;
+		// overflow: clip lets a flex item shrink below its text; keep it at least as wide as its label.
+		min-width: max-content;
+		flex-shrink: 0;
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+
+		// BC's hover tint on the label would box the text.
+		.button-label {
+			position: static;
+			inset: auto;
+			transform: none;
+			width: auto;
+			max-width: none;
+			background: transparent !important;
+		}
+
+		&:disabled {
+			cursor: not-allowed;
+		}
+	}
+
+	.lscg-kit-tabs {
+		display: grid;
+		grid-template-rows: auto 1fr;
+		gap: min(1.5dvh, 0.75dvw);
+		min-height: 0;
+		height: 100%;
+	}
+
+	.lscg-kit-tabbar {
+		display: flex;
+		gap: min(1dvh, 0.5dvw);
+	}
+
+	.lscg-kit-tab {
+		width: auto;
+		height: min(7dvh, 3.5dvw);
+
+		&[aria-selected="true"] {
+			background-color: var(--lscg-tooltip-color);
+		}
+	}
+
+	.lscg-kit-body {
+		background-color: color-mix(in srgb, var(--lscg-background-color) 85%, transparent);
+		border: var(--lscg-border-width) solid var(--lscg-border-color);
+		min-height: 0;
+		overflow-y: auto;
+		padding: min(2dvh, 1dvw);
+	}
+
+	.lscg-kit-panel {
+		display: grid;
+		gap: min(1.5dvh, 0.75dvw);
+		align-content: start;
+	}
+
+	.lscg-kit-row {
+		display: grid;
+		grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+		grid-template-areas: "label control" "desc desc";
+		align-items: center;
+		column-gap: min(2dvh, 1dvw);
+
+		padding: min(1dvh, 0.5dvw) min(1.5dvh, 0.75dvw);
+
+		&[hidden] {
+			display: none;
+		}
+
+		// Alternate shading so each setting reads as its own row.
+		&:nth-child(even of .lscg-kit-row:not([hidden])) {
+			background-color: var(--lscg-stripe-color);
+		}
+
+		// A little smaller than the global checkbox, still centred in its box.
+		input[type="checkbox"] {
+			height: min(5.5dvh, 2.75dvw);
+			width: min(5.5dvh, 2.75dvw);
+
+			&::before {
+				height: min(3.6dvh, 1.8dvw);
+				width: min(3.6dvh, 1.8dvw);
+			}
+		}
+	}
+
+	// BC styles every <canvas> as its full-screen main canvas (absolute, 100% wide); undo that here.
+	.lscg-kit-zones {
+		position: sticky; // stays in view while a long options column beside it scrolls
+		top: 0;
+		display: block;
+		margin: min(0.5dvh, 0.25dvw) 0 0;
+		width: auto;
+		height: min(55dvh, 27.5dvw);
+		cursor: pointer;
+	}
+
+	// A ZonePicker beside the rows it fills in.
+	.lscg-kit-zone-layout {
+		display: grid;
+		grid-template-columns: auto minmax(0, 1fr);
+		align-items: start;
+		gap: min(2dvh, 1dvw);
+	}
+
+	.lscg-kit-label {
+		grid-area: label;
+	}
+
+	.lscg-kit-control {
+		grid-area: control;
+		display: flex;
+		align-items: center;
+
+		input[type="text"], input[type="number"], select, textarea {
+			width: 100%;
+			min-height: min(6dvh, 3dvw);
+		}
+
+		.lscg-button {
+			min-height: min(6dvh, 3dvw);
+		}
+
+		textarea {
+			box-sizing: border-box;
+			font: inherit;
+			resize: vertical;
+		}
+
+		input:disabled, select:disabled, textarea:disabled, button:disabled {
+			opacity: 0.5;
+			cursor: not-allowed;
+		}
+
+		// A slider with its number box beside it (NumberRow's `slider`).
+		.lscg-kit-slider {
+			display: flex;
+			flex: 1;
+			align-items: center;
+			gap: min(1.5dvh, 0.75dvw);
+
+			input[type="range"] {
+				flex: 1;
+				min-width: 0;
+			}
+
+			input[type="number"] {
+				width: 6em;
+				flex: none;
+			}
+		}
+	}
+
+	// Only a row has a "desc" area; elsewhere (a panel or dialog grid) the name would add an implicit column.
+	.lscg-kit-row > .lscg-kit-desc {
+		grid-area: desc;
+	}
+
+	.lscg-kit-desc {
+		font-size: calc(var(--lscg-font-small) * 0.7);
+		opacity: 0.75;
+		margin: 0;
+	}
+
+	.lscg-kit-section h2 {
+		margin: min(1dvh, 0.5dvw) 0 0;
+		font-size: calc(var(--lscg-font-small) * 1.15);
+	}
+
+	.lscg-kit-notice {
+		font-size: var(--lscg-font-large);
+		text-align: center;
+		align-self: center;
+	}
+
+	.lscg-kit-table {
+		border-collapse: collapse;
+		width: 100%;
+		// Fixed layout: column widths come from the header, so a long cell (like a rule summary) truncates
+		// instead of stretching its column and squeezing the dropdowns. Columns without a width share the rest.
+		table-layout: fixed;
+
+		.lscg-kit-delete-col {
+			width: 3em;
+		}
+
+		th {
+			text-align: left;
+			font-size: calc(var(--lscg-font-small) * 0.8);
+			padding: 0 min(0.5dvh, 0.25dvw);
+			white-space: nowrap;
+
+			&.lscg-kit-has-tip {
+				cursor: help;
+				text-decoration: underline dotted;
+			}
+		}
+
+		td {
+			padding: min(0.5dvh, 0.25dvw);
+		}
+
+		select, input[type="number"], input[type="text"] {
+			width: 100%;
+			min-height: min(5dvh, 2.5dvw);
+			box-sizing: border-box;
+		}
+
+		td:has(> input[type="checkbox"]) {
+			text-align: center;
+		}
+
+		input[type="checkbox"] {
+			height: min(4.5dvh, 2.25dvw);
+			width: min(4.5dvh, 2.25dvw);
+
+			&::before {
+				height: min(3dvh, 1.5dvw);
+				width: min(3dvh, 1.5dvw);
+			}
+		}
+
+		tbody tr:nth-child(even) {
+			background-color: var(--lscg-stripe-color);
+		}
+	}
+
+	.lscg-kit-delete {
+		width: min(5dvh, 2.5dvw);
+		height: min(5dvh, 2.5dvw);
+		padding: 0;
+	}
+
+	.lscg-kit-table-footer {
+		display: flex;
+		align-items: center;
+		gap: min(2dvh, 1dvw);
+		margin-top: min(1dvh, 0.5dvw);
+	}
+
+	.lscg-kit-add {
+		width: auto;
+		height: min(6dvh, 3dvw);
+	}
+
+	.lscg-kit-details {
+		display: flex;
+		align-items: center;
+		gap: min(1dvh, 0.5dvw);
+		min-width: 0;
+
+		.lscg-kit-summary {
+			flex: 1;
+			min-width: 0;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			white-space: nowrap;
+			font-size: calc(var(--lscg-font-small) * 0.85);
+		}
+
+		.lscg-kit-summary.lscg-kit-warning {
+			color: #b00020;
+		}
+	}
+
+	.lscg-kit-edit {
+		width: auto;
+		height: min(5dvh, 2.5dvw);
+		flex: none;
+	}
+
+	.lscg-kit-dialog {
+		background-color: var(--lscg-background-color);
+		border: var(--lscg-border-width) solid var(--lscg-border-color);
+		box-shadow: var(--lscg-shadow);
+		color: var(--lscg-text-color);
+		font-family: var(--lscg-font-family);
+		font-size: var(--lscg-font-small);
+		min-width: min(90dvh, 45dvw);
+		max-width: min(150dvh, 75dvw);
+		padding: min(3dvh, 1.5dvw);
+		text-align: left;
+
+		&::backdrop {
+			background-color: rgb(0 0 0 / 40%);
+		}
+
+		// Long bodies (e.g. the spell editor's effect list) scroll while the title and buttons stay in view.
+		// Only when open: a display on the dialog itself would override the closed state.
+		&[open] {
+			display: flex;
+			flex-direction: column;
+			max-height: 85dvh;
+			box-sizing: border-box;
+		}
+
+		h2 {
+			margin: 0 0 min(2dvh, 1dvw);
+		}
+
+		// Fixed width, so the dialog doesn't resize with each zone's activity names.
+		.lscg-kit-zone-layout {
+			width: min(130dvh, 65dvw);
+		}
+
+		.lscg-kit-dialog-body {
+			display: grid;
+			gap: min(1.5dvh, 0.75dvw);
+			min-height: 0;
+			overflow-y: auto;
+		}
+
+		.lscg-kit-dialog-actions {
+			display: flex;
+			justify-content: flex-end;
+			gap: min(1.5dvh, 0.75dvw);
+			margin-top: min(2dvh, 1dvw);
+
+			.lscg-button {
+				width: auto;
+				height: min(6dvh, 3dvw);
+			}
+		}
+	}
+
+	// A collapsible section for settings that belong to the row above it, e.g. an effect's own options under its
+	// dropdown. Tinted so it reads as set apart from the surrounding (white) panel or dialog.
+	.lscg-kit-expando {
+		margin: min(0.8dvh, 0.4dvw) 0 min(1.5dvh, 0.75dvw) min(3dvh, 1.5dvw);
+		border: var(--lscg-border-width) solid var(--lscg-hover-color);
+		border-left-width: min(0.8dvh, 0.4dvw);
+		border-radius: min(0.8dvh, 0.4dvw);
+		background-color: color-mix(in srgb, var(--lscg-hover-color) 16%, var(--lscg-background-color));
+
+		.lscg-kit-expando-summary {
+			padding: min(1dvh, 0.5dvw) min(1.5dvh, 0.75dvw);
+			font-weight: bold;
+			cursor: pointer;
+			user-select: none;
+
+			&:hover {
+				background-color: color-mix(in srgb, var(--lscg-hover-color) 28%, transparent);
+			}
+		}
+
+		.lscg-kit-expando-body {
+			display: grid;
+			gap: min(1.2dvh, 0.6dvw);
+			padding: min(1dvh, 0.5dvw) min(1.5dvh, 0.75dvw) min(1.5dvh, 0.75dvw);
+			border-top: min(0.2dvh, 0.1dvw) solid color-mix(in srgb, var(--lscg-hover-color) 50%, transparent);
+		}
+	}
+
+	.lscg-kit-search {
+		width: 100%;
+		min-height: min(5dvh, 2.5dvw);
+		box-sizing: border-box;
+	}
+
+	.lscg-kit-cardgrid {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(min(40dvh, 20dvw), 1fr));
+		align-content: start;
+		gap: min(1.2dvh, 0.6dvw);
+		min-height: 0;
+		overflow-y: auto;
+		padding: min(1dvh, 0.5dvw);
+
+		> .lscg-kit-notice {
+			grid-column: 1 / -1;
+		}
+	}
+
+	.lscg-kit-chips {
+		display: flex;
+		flex-wrap: wrap;
+		gap: min(0.5dvh, 0.25dvw);
+		min-width: 0;
+	}
+
+	.lscg-kit-chip {
+		--accent: #8a8a8a;
+		display: inline-block;
+		padding: 0 0.6em;
+		border: 1px solid var(--accent);
+		border-radius: 1em;
+		background-color: color-mix(in srgb, var(--accent) 15%, transparent);
+		font-size: calc(var(--lscg-font-small) * 0.8);
+		white-space: nowrap;
+
+		&[title]:not([title=""]) {
+			cursor: help;
+		}
+	}
+
+	// A vector icon as a mask, so it takes the text colour. Sized to the text it sits in.
+	.lscg-kit-icon {
+		display: inline-block;
+		width: 1em;
+		height: 1em;
+		margin-right: 0.3em;
+		vertical-align: -0.125em;
+		background-color: currentColor;
+		mask: var(--icon) center / contain no-repeat;
+	}
+
+	// A four-pointed star, for things added by an extension. Matches the ✦ text character used where only text can go.
+	.lscg-kit-icon-extension {
+		--icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2C12.6 7.5 16.5 11.4 22 12C16.5 12.6 12.6 16.5 12 22C11.4 16.5 7.5 12.6 2 12C7.5 11.4 11.4 7.5 12 2Z'/%3E%3C/svg%3E");
+	}
+
+	// Dropdowns whose options have icons, in browsers with customizable selects (Chromium 135+). Elsewhere options
+	// get the icon's text character instead (see ICON_GLYPHS in kit.tsx).
+	.lscg-kit-select-rich,
+	.lscg-kit-select-rich::picker(select) {
+		appearance: base-select;
+		border-radius: 0;
+	}
+
+	.lscg-kit-select-rich option,
+	.lscg-kit-select-rich selectedcontent {
+		display: flex;
+		align-items: center;
+	}
+
+	.lscg-kit-chip-ok { --accent: #2ca58d; }
+	.lscg-kit-chip-warn { --accent: #d98a1f; }
+	.lscg-kit-chip-blocked { --accent: #b00020; }
+	.lscg-kit-chip-info { --accent: #4a90d9; }
+
+	.lscg-kit-danger {
+		background-color: color-mix(in srgb, #b00020 85%, var(--button-color, var(--lscg-button-color)));
+		color: white;
+
+		&:hover {
+			background-color: #b00020;
+		}
+	}
+
+	.lscg-kit-results {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: min(0.75dvh, 0.4dvw);
+		text-align: left;
+
+		.lscg-kit-head {
+			flex-basis: 100%;
+		}
+	}
+
+	.lscg-kit-detail {
+		font-size: calc(var(--lscg-font-small) * 0.7);
+		opacity: 0.75;
+	}
+
+	.lscg-kit-tune-grid {
+		display: grid;
+		grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+		gap: min(2dvh, 1dvw);
+		align-items: start;
+	}
+
+	.lscg-kit-tune-results {
+		display: grid;
+		gap: min(1.5dvh, 0.75dvw);
+		min-height: min(28dvh, 14dvw);
+	}
+
+	.lscg-kit-group {
+		display: grid;
+		gap: min(0.75dvh, 0.4dvw);
+		padding: min(1dvh, 0.5dvw) min(1.5dvh, 0.75dvw);
+		border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
+		border-left: min(0.8dvh, 0.4dvw) solid var(--accent, #8a8a8a);
+		background-color: color-mix(in srgb, var(--accent, #8a8a8a) 7%, transparent);
+
+		h3 {
+			margin: 0;
+			font-size: var(--lscg-font-small);
+			color: var(--accent, inherit);
+		}
+	}
+
+	.lscg-kit-group-tone { --accent: #9065d6; }
+	.lscg-kit-group-profanity { --accent: #d98a1f; }
+	.lscg-kit-group-level { --accent: #4a90d9; }
+
+	.lscg-kit-group-off {
+		opacity: 0.5;
+	}
+
+	.lscg-kit-chatlog {
+		display: flex;
+		flex-direction: column;
+		max-height: min(28dvh, 14dvw);
+		overflow-y: auto;
+		padding: min(0.75dvh, 0.4dvw);
+		border: var(--lscg-border-width) solid var(--lscg-border-color);
+		background-color: color-mix(in srgb, var(--lscg-background-color) 60%, transparent);
+	}
+
+	.lscg-kit-chatline {
+		padding: var(--lscg-border-width) min(1dvh, 0.5dvw);
+		font: inherit;
+		font-size: calc(var(--lscg-font-small) * 0.85);
+		text-align: left;
+		color: inherit;
+		cursor: pointer;
+		background: transparent;
+		border: 0;
+		border-bottom: 1px solid color-mix(in srgb, currentColor 12%, transparent);
+
+		&:hover {
+			background-color: color-mix(in srgb, currentColor 10%, transparent);
+		}
+	}
+
+	// A sales pitch for a module you unlock on its screen (e.g. the collar control module).
+	.lscg-kit-promo {
+		display: grid;
+		justify-items: center;
+		gap: min(1dvh, 0.5dvw);
+		text-align: center;
+
+		p, h2 {
+			margin: 0;
+		}
+
+		.lscg-button {
+			width: auto;
+			min-width: 12em;
+			height: min(8dvh, 4dvw);
+			margin: min(2dvh, 1dvw) 0;
+		}
+	}
+
+	.lscg-kit-blink {
+		color: red;
+		animation: lscg-kit-blink 1.5s steps(1) infinite;
+	}
+
+	.lscg-kit-activity-icon {
+		width: min(12dvh, 6dvw);
+		height: min(12dvh, 6dvw);
+		border: 2px solid black;
+	}
+}
+
+@keyframes lscg-kit-blink {
+	50% { color: gray; }
+}

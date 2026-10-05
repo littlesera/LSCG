@@ -1,0 +1,18 @@
+{
+	// Separate from tsconfig.json (which governs the production bundle) because
+	// "vitest"'s own types transitively reference Vite's `#types/*` subpath
+	// imports, which tsconfig.json's `moduleResolution: "Node"` (classic Node10
+	// resolution, needed for the app's existing bare/legacy-style imports) cannot
+	// resolve. "bundler" resolution handles those fine and is what Vite/Vitest
+	// projects normally use.
+	"extends": "./tsconfig.json",
+	"compilerOptions": {
+		"moduleResolution": "bundler"
+	},
+	"include": [
+		"node_modules/bc-stubs/bc/**/*.d.ts",
+		"./src/**/*",
+		"./test/**/*"
+	],
+	"exclude": ["./test/ui"]
+}

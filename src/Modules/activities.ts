@@ -1,16 +1,16 @@
 import { BaseModule } from "base";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
-import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, hookFunction, ICONS, getCharacter, OnAction, callOriginal, LSCG_SendLocal, GetTargetCharacter, GetActivityName, GetMetadata, GetActivityEntryFromContent, IsActivityAllowed, sendLSCGCommand, replace_template, escapeHtml, sendLSCGMessage } from "../utils";
-import { Core, getModule } from "modules";
-import { ItemUseModule } from "./item-use";
+import { emit, hasListeners } from "api/events";
+import { OnActivity, SendAction, removeAllHooksByModule, hookFunction, ICONS, getCharacter, LSCG_SendLocal, GetTargetCharacter, GetActivityName, GetMetadata, GetActivityEntryFromContent, IsActivityAllowed, replace_template, sendLSCGMessage } from "../utils";
+import { Consent, Core, getModule } from "modules";
 import { CollarModule } from "./collar";
 import { ActivitySettingsModel } from "Settings/Models/activities";
 import { GuiActivities } from "Settings/activities";
 import { GrabType, LeashingModule } from "./leashing";
 import { HypnoModule } from "./hypno";
-import { StateMigrator } from "./Migrators/StateMigrator";
 import { StateModule } from "./states";
-import { SplatterMapping, SplatterModule } from "./splatter";
+import { SplatterModule } from "./splatter";
+import { extensionActivities, extensionPrerequisites } from "api/activities";
 import { CommandListener } from "./core";
 
 export interface ActivityTarget {
@@ -34,7 +34,7 @@ export interface CustomReaction {
 
 export interface CustomAction {
     /**
-     * @param target 
+     * @param target
      * @returns false means skip processing the sent message hook, true or undefined means pass it down
      */
     Func(target: Character | null, data: ServerChatRoomMessage, meta: IChatRoomMessageMetadata | undefined): boolean | void;
@@ -65,9 +65,6 @@ export interface ActivityBundle extends ActivityBundleBase {
     Targets?: ActivityTarget[];
 }
 
-// >= R111
-declare var DialogMenuMapping: { activities: ScreenFunctions & { ids: { grid: string } } };
-
 export class ActivityModule extends BaseModule {
     get settings(): ActivitySettingsModel {
 		return super.settings as ActivitySettingsModel;
@@ -91,17 +88,17 @@ export class ActivityModule extends BaseModule {
                     hypnoThreshold: 50,
                     orgasm: false,
                     orgasmThreshold: 75,
-                }
+                },
             ],
-            stats: {}
+            stats: {},
         };
     }
-    
+
     collarModule: CollarModule = getModule<CollarModule>("CollarModule");
 
     load(): void {
         hookFunction("ServerSend", 100, (args, next) => {
-            let data = args[1] as ServerChatRoomMessage;
+            const data = args[1] as ServerChatRoomMessage;
             if (args[0] !== "ChatRoomChat" || data?.Type !== "Activity")
                 return next(args);
 
@@ -110,17 +107,17 @@ export class ActivityModule extends BaseModule {
             if (!actName.startsWith("LSCG_") && !isPatched) {
                 return next(args);
             }
-            let preParse = this.CustomPreparseCallbacks.get(actName);
+            const preParse = this.CustomPreparseCallbacks.get(actName);
             if (preParse) preParse(args);
 
             const target = GetTargetCharacter(data);
             const targetChar = getCharacter(target!);
-            let { metadata, substitutions } = ChatRoomMessageRunExtractors(data, Player)
+            const { metadata, substitutions } = ChatRoomMessageRunExtractors(data, Player);
             let msg = ActivityDictionaryText(data.Content);
-            msg = CommonStringSubstitute(msg, substitutions ?? [])
+            msg = CommonStringSubstitute(msg, substitutions ?? []);
             data.Dictionary?.push({
                 Tag: `${TEXT_NOT_FOUND_PREFIX} "ActivityDictionary.csv": ${data.Content}`,
-                Text: msg
+                Text: msg,
             });
 
             // If action name has a custom action, run it as part of the chain
@@ -135,13 +132,29 @@ export class ActivityModule extends BaseModule {
             return next(args);
         }, ModuleCategory.Activities);
 
+        // Low priority: only runs for activities the hook above actually let through.
+        hookFunction("ServerSend", -100, (args, next) => {
+            const data = args[1] as ServerChatRoomMessage;
+            if (args[0] === "ChatRoomChat" && data?.Type === "Activity" && hasListeners("activity.sent")) {
+                const meta = GetMetadata(data);
+                const name = meta?.ActivityName ?? "";
+                emit("activity.sent", {
+                    name,
+                    group: meta?.GroupName,
+                    target: meta?.TargetMemberNumber,
+                    isLSCG: name.startsWith("LSCG_") || this.PatchedActivities.indexOf(name) > -1,
+                });
+            }
+            return next(args);
+        }, ModuleCategory.Activities);
+
         hookFunction("ActivityCheckPrerequisite", 100, (args, next) => {
-            var prereqName = <string>args[0];
+            const prereqName = <string>args[0];
             if (this.CustomPrerequisiteFuncs.has(prereqName)) {
-                var acting = args[1];
-                var acted = args[2];
-                var targetGrp = args[3];
-                var customPrereqFunc = this.CustomPrerequisiteFuncs.get(prereqName);
+                const acting = args[1];
+                const acted = args[2];
+                const targetGrp = args[3];
+                const customPrereqFunc = this.CustomPrerequisiteFuncs.get(prereqName);
                 if (!customPrereqFunc)
                     return next(args);
                 else {
@@ -154,19 +167,30 @@ export class ActivityModule extends BaseModule {
                 }
             }
             return next(args);
-        }, ModuleCategory.Activities)
+        }, ModuleCategory.Activities);
 
         OnActivity(1, ModuleCategory.Activities, (data, sender, msg, metadata) => {
-            let target = GetTargetCharacter(data);
-            let activityName = GetActivityName(data);
+            if (hasListeners("activity.received")) {
+                const meta = GetMetadata(data);
+                const name = meta?.ActivityName ?? "";
+                if (!!name && meta?.TargetMemberNumber === Player.MemberNumber)
+                    emit("activity.received", {
+                        name,
+                        group: meta?.GroupName,
+                        source: sender?.MemberNumber,
+                        isLSCG: name.startsWith("LSCG_") || this.PatchedActivities.indexOf(name) > -1,
+                    });
+            }
+            const target = GetTargetCharacter(data);
+            const activityName = GetActivityName(data);
             if (!this.Enabled)
                 return;
             if (target == Player.MemberNumber && !!activityName && this.CustomIncomingActivityReactions.has(activityName)) {
-                var reactionFunc = this.CustomIncomingActivityReactions.get(activityName);
-                if (!!reactionFunc)
+                const reactionFunc = this.CustomIncomingActivityReactions.get(activityName);
+                if (reactionFunc)
                     reactionFunc(sender);
             } else if (target == Player.MemberNumber) {
-                let activityEntry = GetActivityEntryFromContent(data.Content);
+                const activityEntry = GetActivityEntryFromContent(data.Content);
                 if (!activityEntry || !sender || !IsActivityAllowed(activityEntry, sender))
                     return;
                 if (activityEntry?.orgasm && (Player.ArousalSettings?.Progress ?? 0) >= activityEntry?.orgasmThreshold) {
@@ -175,7 +199,7 @@ export class ActivityModule extends BaseModule {
                         ActivitySetArousal(Player, 99);
                     }
                     else {
-                        if (!!Player.ArousalSettings) Player.ArousalSettings.Progress = 100;
+                        if (Player.ArousalSettings) Player.ArousalSettings.Progress = 100;
                         ActivityOrgasmPrepare(Player);
                     }
                 }
@@ -183,13 +207,14 @@ export class ActivityModule extends BaseModule {
                     getModule<HypnoModule>("HypnoModule")?.DelayedTrigger(activityEntry, sender?.MemberNumber, true);
                 }
             }
-        })
+        });
 
+        this.ProbeIconPath();
         hookFunction("ElementButton.CreateForActivity", 0, (args, next) => {
             const activity: ItemActivity = args[1];
             if (activity.Activity.Name.includes("LSCG")) {
                 args[4] ??= {};
-                args[4].image = this.CustomImages.get(activity.Activity.Name);
+                args[4].image = this.ResolveImage(this.CustomImages.get(activity.Activity.Name));
                 args[4].icons = [
                     ...(args[4].icons ?? []),
                     { name: "lscg", tooltipText: "LSCG activity", iconSrc: ICONS.BOUND_GIRL },
@@ -199,14 +224,13 @@ export class ActivityModule extends BaseModule {
         });
 
         hookFunction("CharacterItemsForActivity", 1, (args, next) => {
-			let C = args[0];
-			let itemType = args[1];
-			let results = next(args);
-			var focusGroup = C?.FocusGroup?.Name ?? undefined;
+			const C = args[0];
+			const itemType = args[1];
+			const results = next(args);
 
 			if (itemType == "RubItem") {
-				let item = InventoryGet(C, "Pussy");
-                let canUsePenis = C.HasPenis() && InventoryPrerequisiteMessage(C, "AccessVulva") === "";
+				const item = InventoryGet(C, "Pussy");
+                const canUsePenis = C.HasPenis() && InventoryPrerequisiteMessage(C, "AccessVulva") === "";
 				if (item && canUsePenis) results.push(item);
 			}
 
@@ -225,6 +249,10 @@ export class ActivityModule extends BaseModule {
         this.AddCommandListeners();
         this.InitTongueGrabHooks();
         this.RegisterActivities();
+
+        // Extensions may have registered before this module loaded, or may register later.
+        this.SyncExtensionActivities();
+        this.ListenForExtensions();
     }
 
     run(): void {
@@ -243,111 +271,50 @@ export class ActivityModule extends BaseModule {
         // })
 
 
-        Core().RegisterCommandListener(<CommandListener>{
-            id: "h5_ask_listener",
-            command: "h5-ask",
-            func: (sender: number, msg: LSCGMessageModel) => {
-                let c = getCharacter(sender);
-                if (!c)
-                    return;
-                
-                let str = escapeHtml(`${CharacterNickname(c)} would like to high five you.`);
-                let promptHtml = `<span>${str}</span><button style="background-color:green;border-radius:5px;margin:5px" id="h5-accept">Slap it!</button><button style="background-color:red;border-radius:5px;margin:5px" id="h5-deny">Ignore</button>`;
-                if (!(Player.CanInteract() && !Player.Effect.includes("MergedFingers"))) {
-                    promptHtml = `<span>${str}</span><button style="background-color:green;border-radius:5px;margin:5px" id="h5-apologize">Can't...</button><button style="background-color:red;border-radius:5px;margin:5px" id="h5-deny">Ignore</button>`;
-                }
-                LSCG_SendLocal(promptHtml, false, 10000);
-                
-                let timeout = setTimeout(() => {
-                    if (!c)
-                        return;
-                    sendLSCGCommand(c, "h5-respond");
-                    acceptEle?.remove();
-                    denyEle?.remove();
-                }, 12000);
-                
-                var acceptEle = document.getElementById("h5-accept");
-                var denyEle = document.getElementById("h5-deny");
-                var apologizeEle = document.getElementById("h5-apologize");
-
-                if (!!acceptEle) {
-                    acceptEle.addEventListener("click", (evt) => {
-                        clearTimeout(timeout);
-                        SendAction(`%NAME% raises %POSSESSIVE% hand and executes a perfect high five with %OPP_NAME%!`, c);
-                        this.ExecuteHighFive(c);
-                        acceptEle?.remove();
-                        denyEle?.remove();
-                        apologizeEle?.remove();
-                    });
-                }
-                
-                if (!!apologizeEle) {  
-                    apologizeEle.addEventListener("click", (evt) => {
-                        clearTimeout(timeout);
-                        SendAction(`%NAME% shrugs towards %OPP_NAME% apologetically, unable to high five.`, c);
-                        acceptEle?.remove();
-                        denyEle?.remove();
-                        apologizeEle?.remove();
-                    });
-                }
-
-                if (!!denyEle) {
-                    denyEle.addEventListener("click", (evt) => {
-                        clearTimeout(timeout);
-                        SendAction(`${CharacterNickname(Player)} ignores ${CharacterNickname(c!)}.`);
-                        sendLSCGCommand(c!, "h5-respond");
-                        acceptEle?.remove();
-                        denyEle?.remove();
-                        apologizeEle?.remove();
-                    });
-                }
-            }
+        Consent().RegisterFlow({
+            id: "high-five",
+            prompt: (sender) => ({
+                text: `${CharacterNickname(sender)} would like to high five you.`,
+                accept: "Slap it!",
+                refuse: "Ignore",
+            }),
+            canAccept: () => Player.CanInteract() && !Player.Effect.includes("MergedFingers"),
+            unableLabel: "Can't...",
+            onAccepted: (sender) => {
+                SendAction("%NAME% raises %POSSESSIVE% hand and executes a perfect high five with %OPP_NAME%!", sender);
+                this.ExecuteHighFive(sender);
+            },
+            onRefused: (sender, _, answer, timedOut) => {
+                if (answer == "unable")
+                    SendAction("%NAME% shrugs towards %OPP_NAME% apologetically, unable to high five.", sender);
+                else if (!timedOut)
+                    SendAction(`${CharacterNickname(Player)} ignores ${CharacterNickname(sender)}.`);
+            },
+            // Someone who physically can't high five isn't asked to be grabbed for it
+            forcePrompt: (target, answer) => answer == "unable" ? undefined : {
+                text: `${CharacterNickname(target)} refuses to high five you. Grab them?`,
+                force: "Grab!",
+                backOff: "Nah",
+            },
+            forceLocally: (target) => {
+                SendAction("%NAME% grabs %OPP_NAME% by the wrist.", target);
+                this.leashingModule.DoGrab(target, "arm");
+            },
         });
 
-        Core().RegisterCommandListener(<CommandListener>{
-            id: "h5_resp_listener",
-            command: "h5-respond",
-            func: (sender: number, msg: LSCGMessageModel) => {
-                let c = getCharacter(sender);
-                if (!c)
-                    return;
-                
-                let str = escapeHtml(`${CharacterNickname(c)} refuses to high five you. Grab them?`);
-                LSCG_SendLocal(`<span>${str}</span><button style="background-color:orange;border-radius:5px;margin:5px" id="h5-grab">Grab!</button><button style="background-color:green;border-radius:5px;margin:5px" id="h5-nah">Nah</button>`, false, 10000);
-
-                var grabEle = document.getElementById("h5-grab");
-                if (!!grabEle) {
-                    grabEle.addEventListener("click", (evt) => {
-                        SendAction(`%NAME% grabs %OPP_NAME% by the wrist.`, c);
-                        this.leashingModule.DoGrab(c, "arm");
-                        grabEle?.remove();
-                        leaveEle?.remove();
-                    });
-                }
-
-                var leaveEle = document.getElementById("h5-nah");
-                if (!!leaveEle) {
-                    leaveEle.addEventListener("click", (evt) => {
-                        grabEle?.remove();
-                        leaveEle?.remove();
-                    });
-                }
-            }
-        });
-        
         Core().RegisterCommandListener(<CommandListener>{
             id: "h5_exec_listener",
             command: "h5-execute",
             func: (sender: number, msg: LSCGMessageModel) => {
-                let c = getCharacter(sender);
+                const c = getCharacter(sender);
                 if (!c)
                     return;
-                
-                let targetNum = msg?.command?.args?.find(a => a.name == "target")?.value ?? -1;
+
+                const targetNum = msg?.command?.args?.find(a => a.name == "target")?.value ?? -1;
 
                 if (!AudioShouldSilenceSound(c.IsPlayer() || targetNum == Player.MemberNumber))
                     AudioPlaySoundEffect("SpankSkin");
-            }
+            },
         });
     }
 
@@ -358,16 +325,16 @@ export class ActivityModule extends BaseModule {
                 Name: "Bap",
                 MaxProgress: 70,
                 MaxProgressSelf: 70,
-                Prerequisite: ["UseArms"]
+                Prerequisite: ["UseArms"],
             },
             Targets: [
                 <ActivityTarget>{
                     Name: "ItemHead",
                     SelfAllowed: false,
-                    TargetAction: "SourceCharacter baps TargetCharacter."
-                }
+                    TargetAction: "SourceCharacter baps TargetCharacter.",
+                },
             ],
-            CustomImage: "Assets/Female3DCG/Activity/Slap.png"
+            CustomImage: "Icons/Activity/Slap.png",
         });
 
         // Headbutt
@@ -376,20 +343,20 @@ export class ActivityModule extends BaseModule {
                 Name: "Headbutt",
                 MaxProgress: 70,
                 MaxProgressSelf: 70,
-                Prerequisite: ["CanHeadbutt"]
+                Prerequisite: ["CanHeadbutt"],
             },
             Targets: [
                 <ActivityTarget>{
                     Name: "ItemArms",
                     SelfAllowed: false,
-                    TargetAction: "SourceCharacter headbutts TargetCharacter."
-                }
+                    TargetAction: "SourceCharacter headbutts TargetCharacter.",
+                },
             ],
             CustomPrereqs: [{
                 Name: "CanHeadbutt",
-                Func: (acting, acted, group) => !acting.IsFixedHead()
+                Func: (acting, acted, group) => !acting.IsFixedHead(),
             }],
-            CustomImage: "Assets/Female3DCG/Activity/Nod.png"
+            CustomImage: "Icons/Activity/Nod.png",
         });
 
         // Nuzzle
@@ -398,52 +365,52 @@ export class ActivityModule extends BaseModule {
                 Name: "Nuzzle",
                 MaxProgress: 70,
                 MaxProgressSelf: 70,
-                Prerequisite: ["ZoneAccessible"]
+                Prerequisite: ["ZoneAccessible"],
             },
             Targets: [
                 <ActivityTarget>{
                     Name: "ItemHead",
                     SelfAllowed: false,
-                    TargetAction: "SourceCharacter nuzzles against the side of TargetCharacter's head."
+                    TargetAction: "SourceCharacter nuzzles against the side of TargetCharacter's head.",
                 },<ActivityTarget>{
                     Name: "ItemNeck",
                     SelfAllowed: false,
-                    TargetAction: "SourceCharacter nuzzles into TargetCharacter's neck."
+                    TargetAction: "SourceCharacter nuzzles into TargetCharacter's neck.",
                 },<ActivityTarget>{
                     Name: "ItemArms",
                     SelfAllowed: false,
-                    TargetAction: "SourceCharacter nuzzles into TargetCharacter's arms."
+                    TargetAction: "SourceCharacter nuzzles into TargetCharacter's arms.",
                 },<ActivityTarget>{
                     Name: "ItemHands",
                     SelfAllowed: false,
-                    TargetAction: "SourceCharacter nuzzles underneath TargetCharacter's hand."
+                    TargetAction: "SourceCharacter nuzzles underneath TargetCharacter's hand.",
                 },<ActivityTarget>{
                     Name: "ItemBreast",
                     SelfAllowed: false,
-                    TargetAction: "SourceCharacter nuzzles into TargetCharacter's breasts."
+                    TargetAction: "SourceCharacter nuzzles into TargetCharacter's breasts.",
                 },<ActivityTarget>{
                     Name: "ItemTorso",
                     SelfAllowed: false,
-                    TargetAction: "SourceCharacter nuzzles snugly into TargetCharacter."
+                    TargetAction: "SourceCharacter nuzzles snugly into TargetCharacter.",
                 },<ActivityTarget>{
                     Name: "ItemPelvis",
                     SelfAllowed: false,
-                    TargetAction: "SourceCharacter nuzzles snugly into TargetCharacter."
+                    TargetAction: "SourceCharacter nuzzles snugly into TargetCharacter.",
                 },<ActivityTarget>{
                     Name: "ItemLegs",
                     SelfAllowed: false,
-                    TargetAction: "SourceCharacter nuzzles against TargetCharacter's thigh."
+                    TargetAction: "SourceCharacter nuzzles against TargetCharacter's thigh.",
                 },<ActivityTarget>{
                     Name: "ItemFeet",
                     SelfAllowed: false,
-                    TargetAction: "SourceCharacter nuzzles along TargetCharacter's leg."
+                    TargetAction: "SourceCharacter nuzzles along TargetCharacter's leg.",
                 },<ActivityTarget>{
                     Name: "ItemBoots",
                     SelfAllowed: false,
-                    TargetAction: "SourceCharacter nuzzles under TargetCharacter's feet."
-                }
+                    TargetAction: "SourceCharacter nuzzles under TargetCharacter's feet.",
+                },
             ],
-            CustomImage: "Assets/Female3DCG/Activity/Kiss.png"
+            CustomImage: "Icons/Activity/Kiss.png",
         });
 
         // Hug
@@ -452,17 +419,17 @@ export class ActivityModule extends BaseModule {
                 Name: "Hug",
                 MaxProgress: 70,
                 MaxProgressSelf: 70,
-                Prerequisite: ["UseArms"]
+                Prerequisite: ["UseArms"],
             },
             Targets: [
                 <ActivityTarget>{
                     Name: "ItemArms",
                     SelfAllowed: true,
                     TargetAction: "SourceCharacter wraps PronounPossessive arms around TargetCharacter in a big warm hug.",
-                    TargetSelfAction: "SourceCharacter wraps TargetCharacter in a therapeutic self-hug."
-                }
+                    TargetSelfAction: "SourceCharacter wraps TargetCharacter in a therapeutic self-hug.",
+                },
             ],
-            CustomImage: ICONS.HUG
+            CustomImage: ICONS.HUG,
         });
 
         // Tackle
@@ -471,16 +438,16 @@ export class ActivityModule extends BaseModule {
                 Name: "Tackle",
                 MaxProgress: 50,
                 MaxProgressSelf: 50,
-                Prerequisite: ["UseArms"]
+                Prerequisite: ["UseArms"],
             },
             Targets: [
                 <ActivityTarget>{
                     Name: "ItemArms",
                     SelfAllowed: false,
-                    TargetAction: "SourceCharacter full body tackles TargetCharacter!"
-                }
+                    TargetAction: "SourceCharacter full body tackles TargetCharacter!",
+                },
             ],
-            CustomImage: "Assets/Female3DCG/Activity/Grope.png"
+            CustomImage: "Icons/Activity/Grope.png",
         });
 
         // Flop
@@ -489,16 +456,16 @@ export class ActivityModule extends BaseModule {
                 Name: "Flop",
                 MaxProgress: 50,
                 MaxProgressSelf: 50,
-                Prerequisite: ["UseLegs"]
+                Prerequisite: ["UseLegs"],
             },
             Targets: [
                 <ActivityTarget>{
                     Name: "ItemArms",
                     SelfAllowed: false,
-                    TargetAction: "SourceCharacter flops on top of TargetCharacter."
-                }
+                    TargetAction: "SourceCharacter flops on top of TargetCharacter.",
+                },
             ],
-            CustomImage: "Assets/Female3DCG/Activity/Cuddle.png"
+            CustomImage: "Icons/Activity/Cuddle.png",
         });
 
         // KissEyes
@@ -507,17 +474,17 @@ export class ActivityModule extends BaseModule {
                 Name: "KissEyes",
                 MaxProgress: 75,
                 MaxProgressSelf: 50,
-                Prerequisite: ["ZoneAccessible"]
+                Prerequisite: ["ZoneAccessible"],
             },
             Targets: [
                 <ActivityTarget>{
                     Name: "ItemHead",
                     SelfAllowed: false,
                     TargetLabel: "Kiss Eyes",
-                    TargetAction: "SourceCharacter gently kisses over TargetCharacter's eyes."
-                }
+                    TargetAction: "SourceCharacter gently kisses over TargetCharacter's eyes.",
+                },
             ],
-            CustomImage: "Assets/Female3DCG/Activity/Kiss.png"
+            CustomImage: "Icons/Activity/Kiss.png",
         });
 
         // RubPussy
@@ -526,17 +493,17 @@ export class ActivityModule extends BaseModule {
                 Name: "RubPussy",
                 MaxProgress: 100,
                 MaxProgressSelf: 100,
-                Prerequisite: ["ZoneAccessible", "ZoneNaked", "HasVagina"]
+                Prerequisite: ["ZoneAccessible", "ZoneNaked", "HasVagina"],
             },
             Targets: [
                 <ActivityTarget>{
                     Name: "ItemPenis",
                     SelfAllowed: false,
                     TargetLabel: "Rub Pussy",
-                    TargetAction: "SourceCharacter grinds PronounPossessive pussy against TargetCharacter's penis."
-                }
+                    TargetAction: "SourceCharacter grinds PronounPossessive pussy against TargetCharacter's penis.",
+                },
             ],
-            CustomImage: "Assets/Female3DCG/Activity/MasturbateHand.png"
+            CustomImage: "Icons/Activity/MasturbateHand.png",
         });
 
         // SlapPenis
@@ -545,60 +512,60 @@ export class ActivityModule extends BaseModule {
                 Name: "SlapPenis",
                 MaxProgress: 100,
                 MaxProgressSelf: 100,
-                Prerequisite: ["ZoneAccessible", "ZoneNaked", "CanUsePenis", "HasPenis", "Needs-PenetrateItem"]
+                Prerequisite: ["ZoneAccessible", "ZoneNaked", "CanUsePenis", "HasPenis", "Needs-PenetrateItem"],
             },
             Targets: [
                 <ActivityTarget>{
                     Name: "ItemHead",
                     TargetLabel: "Slap Face",
-                    TargetAction: "SourceCharacter slaps PronounPossessive ActivityAsset against TargetCharacter's face."
+                    TargetAction: "SourceCharacter slaps PronounPossessive ActivityAsset against TargetCharacter's face.",
                 }, <ActivityTarget>{
                     Name: "ItemMouth",
                     TargetLabel: "Slap Mouth",
-                    TargetAction: "SourceCharacter slaps PronounPossessive ActivityAsset against TargetCharacter's mouth."
+                    TargetAction: "SourceCharacter slaps PronounPossessive ActivityAsset against TargetCharacter's mouth.",
                 }, <ActivityTarget>{
                     Name: "ItemVulva",
                     TargetLabel: "Slap against Pussy",
-                    TargetAction: "SourceCharacter slaps PronounPossessive ActivityAsset against TargetCharacter's pussy."
+                    TargetAction: "SourceCharacter slaps PronounPossessive ActivityAsset against TargetCharacter's pussy.",
                 }, <ActivityTarget>{
                     Name: "ItemBreast",
                     TargetLabel: "Slap Breast",
-                    TargetAction: "SourceCharacter slaps PronounPossessive ActivityAsset against TargetCharacter's breast."
+                    TargetAction: "SourceCharacter slaps PronounPossessive ActivityAsset against TargetCharacter's breast.",
                 }, <ActivityTarget>{
                     Name: "ItemLegs",
                     TargetLabel: "Slap Thigh",
-                    TargetAction: "SourceCharacter slaps PronounPossessive ActivityAsset against TargetCharacter's thigh."
+                    TargetAction: "SourceCharacter slaps PronounPossessive ActivityAsset against TargetCharacter's thigh.",
                 }, <ActivityTarget>{
                     Name: "ItemFeet",
                     TargetLabel: "Slap Calf",
-                    TargetAction: "SourceCharacter slaps PronounPossessive ActivityAsset against TargetCharacter's calf."
+                    TargetAction: "SourceCharacter slaps PronounPossessive ActivityAsset against TargetCharacter's calf.",
                 }, <ActivityTarget>{
                     Name: "ItemBoots",
                     TargetLabel: "Slap Feet",
-                    TargetAction: "SourceCharacter slaps PronounPossessive ActivityAsset against TargetCharacter's feet."
+                    TargetAction: "SourceCharacter slaps PronounPossessive ActivityAsset against TargetCharacter's feet.",
                 }, <ActivityTarget>{
                     Name: "ItemButt",
                     TargetLabel: "Slap Butt",
-                    TargetAction: "SourceCharacter slaps PronounPossessive ActivityAsset against TargetCharacter's butt."
+                    TargetAction: "SourceCharacter slaps PronounPossessive ActivityAsset against TargetCharacter's butt.",
                 }, <ActivityTarget>{
                     Name: "ItemNeck",
                     TargetLabel: "Slap Neck",
-                    TargetAction: "SourceCharacter slaps PronounPossessive ActivityAsset against TargetCharacter's neck."
+                    TargetAction: "SourceCharacter slaps PronounPossessive ActivityAsset against TargetCharacter's neck.",
                 }, <ActivityTarget>{
                     Name: "ItemArms",
                     TargetLabel: "Slap Arms",
-                    TargetAction: "SourceCharacter slaps PronounPossessive ActivityAsset against TargetCharacter's arm."
+                    TargetAction: "SourceCharacter slaps PronounPossessive ActivityAsset against TargetCharacter's arm.",
                 }, <ActivityTarget>{
                     Name: "ItemHands",
                     TargetLabel: "Slap Hand",
-                    TargetAction: "SourceCharacter slaps PronounPossessive ActivityAsset against TargetCharacter's hand."
+                    TargetAction: "SourceCharacter slaps PronounPossessive ActivityAsset against TargetCharacter's hand.",
                 }, <ActivityTarget>{
                     Name: "ItemPenis",
                     TargetLabel: "Slap Penis",
-                    TargetAction: "SourceCharacter slaps PronounPossessive ActivityAsset against TargetCharacter's penis."
-                }
+                    TargetAction: "SourceCharacter slaps PronounPossessive ActivityAsset against TargetCharacter's penis.",
+                },
             ],
-            CustomImage: "Assets/Female3DCG/Activity/PenetrateSlow.png"
+            CustomImage: "Icons/Activity/PenetrateSlow.png",
         });
 
         // NibbleTail
@@ -609,18 +576,18 @@ export class ActivityModule extends BaseModule {
                 SelfAllowed: true,
                 TargetLabel: "Nibble Tail",
                 TargetAction: "SourceCharacter nibbles on TargetCharacter's tail.",
-                TargetSelfAction: "SourceCharacter nibbles on PronounPossessive own tail."
+                TargetSelfAction: "SourceCharacter nibbles on PronounPossessive own tail.",
             },{
                 Name: "ItemHead",
                 SelfAllowed: false,
                 TargetLabel: "Nibble Halo",
-                TargetAction: "SourceCharacter nibbles on TargetCharacter's halo."
+                TargetAction: "SourceCharacter nibbles on TargetCharacter's halo.",
             },{
                 Name: "ItemHood",
                 SelfAllowed: true,
                 TargetLabel: "Nibble Wing",
                 TargetAction: "SourceCharacter nibbles on TargetCharacter's wing.",
-                TargetSelfAction: "SourceCharacter nibbles on PronounPossessive own wing."
+                TargetSelfAction: "SourceCharacter nibbles on PronounPossessive own wing.",
             }],
             RemovedPrerequisites: ["ZoneNaked", "ZoneAccessible"],
             AddedPrerequisites: ["CanCustomNibble"],
@@ -630,9 +597,9 @@ export class ActivityModule extends BaseModule {
                         if (group.Name == "ItemButt")
                             return !!InventoryGet(acted, "TailStraps");
                         else if (group.Name == "ItemHood")
-                            return !!InventoryGet(acted, "Wings")
-                        else if (group.Name == "ItemHead") 
-                            return (InventoryGet(acted, "HairAccessory1")?.Asset.Name == "Halo" || InventoryGet(acted, "HairAccessory3")?.Asset.Name == "Halo")
+                            return !!InventoryGet(acted, "Wings");
+                        else if (group.Name == "ItemHead")
+                            return (InventoryGet(acted, "HairAccessory1")?.Asset.Name == "Halo" || InventoryGet(acted, "HairAccessory3")?.Asset.Name == "Halo");
                         else if (group.Name === "ItemVulva")
                             return (InventoryPrerequisiteMessage(acted, "AccessCrotch") === "") && !acted.IsVulvaChaste();
                         else if (group.Name === "ItemVulvaPiercings")
@@ -643,22 +610,22 @@ export class ActivityModule extends BaseModule {
 				            return InventoryPrerequisiteMessage(acted, "NakedHands") === "";
                         else
                             return true;
-                    }
+                    },
                 }, {
                     Name: "CustomNibbleAccessible",
                     Func: (acting, acted, group) => {
                         if (group.Name == "ItemButt")
                             return true;
                         else
-                            return ActivityGetAllMirrorGroups(acted.AssetFamily, group.Name).some((g) => g.IsItem() ? !InventoryGroupIsBlocked(acted, g.Name, true) : true)
-                    }
+                            return ActivityGetAllMirrorGroups(acted.AssetFamily, group.Name).some((g) => g.IsItem() ? !InventoryGroupIsBlocked(acted, g.Name, true) : true);
+                    },
                 }, {
                     Name: "HasWings",
-                    Func: (acting, acted, group) => group.Name == "ItemHood" ? !!InventoryGet(acted, "Wings") : true
+                    Func: (acting, acted, group) => group.Name == "ItemHood" ? !!InventoryGet(acted, "Wings") : true,
                 }, {
                     Name: "HasHalo",
-                    Func: (acting, acted, group) => group.Name == "ItemHead" ? (InventoryGet(acted, "HairAccessory1")?.Asset.Name == "Halo" || InventoryGet(acted, "HairAccessory3")?.Asset.Name == "Halo") : true
-                }]
+                    Func: (acting, acted, group) => group.Name == "ItemHead" ? (InventoryGet(acted, "HairAccessory1")?.Asset.Name == "Halo" || InventoryGet(acted, "HairAccessory3")?.Asset.Name == "Halo") : true,
+                }],
         });
 
         // FuckWithPussy
@@ -667,25 +634,25 @@ export class ActivityModule extends BaseModule {
                 Name: "FuckWithPussy",
                 MaxProgress: 100,
                 MaxProgressSelf: 100,
-                Prerequisite: ["ZoneAccessible", "ZoneNaked", "HasVagina"]
+                Prerequisite: ["ZoneAccessible", "ZoneNaked", "HasVagina"],
             },
             Targets: [
                 {
                     Name: "ItemVulva",
                     SelfAllowed: false,
                     TargetLabel: "Grind with Pussy",
-                    TargetAction: "SourceCharacter grinds PronounPossessive pussy against TargetCharacter's."
+                    TargetAction: "SourceCharacter grinds PronounPossessive pussy against TargetCharacter's.",
                 }, {
                     Name: "ItemPenis",
                     SelfAllowed: false,
                     TargetLabel: "Ride with Pussy",
-                    TargetAction: "SourceCharacter fucks TargetCharacter's penis with PronounPossessive pussy, grinding up and down."
+                    TargetAction: "SourceCharacter fucks TargetCharacter's penis with PronounPossessive pussy, grinding up and down.",
                 }, {
                     Name: "ItemHead",
                     SelfAllowed: false,
                     TargetLabel: "Sit on Face",
-                    TargetAction: "SourceCharacter grinds PronounPossessive pussy against TargetCharacter's face."
-                }
+                    TargetAction: "SourceCharacter grinds PronounPossessive pussy against TargetCharacter's face.",
+                },
             ],
             CustomPrereqs: [
                 {
@@ -695,17 +662,17 @@ export class ActivityModule extends BaseModule {
                             return !acting.IsVulvaFull();
                         }
                         else {
-                            return acted.Pose?.indexOf("Kneel") > -1 || 
+                            return acted.Pose?.indexOf("Kneel") > -1 ||
                                 acted.Pose?.indexOf("KneelingSpread") > -1 ||
                                 acted.Pose?.indexOf("Hogtied") > -1 ||
                                 acted.Pose?.indexOf("KneelingSpread") > -1 ||
                                 acted.Pose?.indexOf("Hogtied") > -1 ||
                                 acted.Pose?.indexOf("AllFours") > -1;
                         }
-                    }
-                }
+                    },
+                },
             ],
-            CustomImage: ICONS.PUSSY
+            CustomImage: ICONS.PUSSY,
         });
 
         // FuckWithAss
@@ -714,30 +681,30 @@ export class ActivityModule extends BaseModule {
                 Name: "FuckWithAss",
                 MaxProgress: 100,
                 MaxProgressSelf: 100,
-                Prerequisite: ["ZoneAccessible", "ZoneNaked", "TargetHasPenis"]
+                Prerequisite: ["ZoneAccessible", "ZoneNaked", "TargetHasPenis"],
             },
             Targets: [
                 {
                     Name: "ItemVulva",
                     SelfAllowed: false,
                     TargetLabel: "Grind with Ass",
-                    TargetAction: "SourceCharacter grinds PronounPossessive ass against TargetCharacter's vulva."
+                    TargetAction: "SourceCharacter grinds PronounPossessive ass against TargetCharacter's vulva.",
                 },{
                     Name: "ItemPenis",
                     SelfAllowed: false,
                     TargetLabel: "Ride with Ass",
-                    TargetAction: "SourceCharacter fucks TargetCharacter's penis with PronounPossessive ass."
-                }
+                    TargetAction: "SourceCharacter fucks TargetCharacter's penis with PronounPossessive ass.",
+                },
             ],
             CustomPrereqs: [
                 {
                     Name: "SourceAssEmpty",
-                    Func: (acting, acted, group) => InventoryPrerequisiteMessage(acting, "AccessButt") === "" && 
+                    Func: (acting, acted, group) => InventoryPrerequisiteMessage(acting, "AccessButt") === "" &&
                         !(acting.IsPlugged() || acting.IsButtChaste() &&
-                        !InventoryGroupIsBlocked(acting, "ItemButt", true))
-                }
+                        !InventoryGroupIsBlocked(acting, "ItemButt", true)),
+                },
             ],
-            CustomImage: ICONS.ASS
+            CustomImage: ICONS.ASS,
         });
 
         // Eat
@@ -746,7 +713,7 @@ export class ActivityModule extends BaseModule {
                 Name: "Eat",
                 MaxProgress: 50,
                 MaxProgressSelf: 50,
-                Prerequisite: ["ZoneAccessible", "UseMouth", "TargetNeeds-EdibleItem"]
+                Prerequisite: ["ZoneAccessible", "UseMouth", "TargetNeeds-EdibleItem"],
             },
             Targets: [
                 {
@@ -754,36 +721,9 @@ export class ActivityModule extends BaseModule {
                     SelfAllowed: true,
                     TargetLabel: "Eat",
                     TargetAction: "SourceCharacter takes a big bite out of TargetCharacter's ActivityAsset.",
-                    TargetSelfAction: "SourceCharacter takes a big bite out of PronounPossessive ActivityAsset."
-                }
-            ]
-        });
-
-        // Chew Item
-        this.AddActivity({
-            Activity: {
-                Name: "Chew",
-                MaxProgress: 50,
-                MaxProgressSelf: 50,
-                Prerequisite: ["ZoneAccessible", "TargetNeeds-ChewableItem"]
-            },
-            Targets: [
-                {
-                    Name: "ItemHands",
-                    SelfAllowed: true,
-                    TargetLabel: "Chew On",
-                    TargetAction: "SourceCharacter chews on TargetCharacter's ActivityAsset.",
-                    TargetSelfAction: "SourceCharacter chews on PronounPossessive ActivityAsset."
+                    TargetSelfAction: "SourceCharacter takes a big bite out of PronounPossessive ActivityAsset.",
                 },
-                {
-                    Name: "ItemMouth",
-                    SelfAllowed: true,
-                    SelfOnly: true,
-                    TargetLabel: "Chew On",
-                    TargetAction: "SourceCharacter chews on TargetCharacter's ActivityAsset.",
-                    TargetSelfAction: "SourceCharacter chews on PronounPossessive ActivityAsset."
-                }
-            ]
+            ],
         });
 
         // GrabTongue
@@ -792,31 +732,31 @@ export class ActivityModule extends BaseModule {
                 Name: "GrabTongue",
                 MaxProgress: 75,
                 MaxProgressSelf: 30,
-                Prerequisite: ["ZoneAccessible", "UseHands", "TargetCanUseTongue"]
+                Prerequisite: ["ZoneAccessible", "UseHands", "TargetCanUseTongue"],
             },
             Targets: [
                 {
                     Name: "ItemMouth",
                     SelfAllowed: false,
                     TargetLabel: "Grab Tongue",
-                    TargetAction: "SourceCharacter reaches in and grabs hold of TargetCharacter's tongue with PronounPossessive fingers."
-                }
+                    TargetAction: "SourceCharacter reaches in and grabs hold of TargetCharacter's tongue with PronounPossessive fingers.",
+                },
             ],
             CustomPrereqs: [
                 {
                     Name: "TargetTongueIsNotGrabbed",
                     Func: (acting, acted, group) => {
                         return !this.leashingModule.ContainsLeashing(acted.MemberNumber!, "tongue");
-                    }
-                }
+                    },
+                },
             ],
             CustomAction: {
                 Func: (target) => {
-                    if (!!target)
+                    if (target)
                         this.leashingModule.DoGrab(target, "tongue");
-                }
+                },
             },
-            CustomImage: "Assets/Female3DCG/Activity/Pinch.png"
+            CustomImage: "Icons/Activity/Pinch.png",
         });
 
         // ReleaseTongue
@@ -825,31 +765,31 @@ export class ActivityModule extends BaseModule {
                 Name: "ReleaseTongue",
                 MaxProgress: 20,
                 MaxProgressSelf: 20,
-                Prerequisite: ["ZoneAccessible", "UseHands"]
+                Prerequisite: ["ZoneAccessible", "UseHands"],
             },
             Targets: [
                 {
                     Name: "ItemMouth",
                     SelfAllowed: false,
                     TargetLabel: "Release Tongue",
-                    TargetAction: "SourceCharacter lets go of TargetCharacter's tongue."
-                }
+                    TargetAction: "SourceCharacter lets go of TargetCharacter's tongue.",
+                },
             ],
             CustomPrereqs: [
                 {
                     Name: "TargetTongueIsGrabbed",
                     Func: (acting, acted, group) => {
                         return this.leashingModule.ContainsLeashing(acted.MemberNumber!, "tongue");
-                    }
-                }
+                    },
+                },
             ],
             CustomAction: {
                 Func: (target) => {
-                    if (!!target)
+                    if (target)
                         this.leashingModule.DoRelease(target, "tongue");
-                }
+                },
             },
-            CustomImage: "Assets/Female3DCG/Activity/Pinch.png"
+            CustomImage: "Icons/Activity/Pinch.png",
         });
 
         // HoldHand
@@ -857,31 +797,31 @@ export class ActivityModule extends BaseModule {
             Activity: {
                 Name: "HoldHand",
                 MaxProgress: 75,
-                Prerequisite: ["ZoneAccessible", "TargetZoneAccessible", "UseHands"]
+                Prerequisite: ["ZoneAccessible", "TargetZoneAccessible", "UseHands"],
             },
             Targets: [
                 {
                     Name: "ItemHands",
                     SelfAllowed: false,
                     TargetLabel: "Hold Hands",
-                    TargetAction: "SourceCharacter takes TargetCharacter's hand."
-                }
+                    TargetAction: "SourceCharacter takes TargetCharacter's hand.",
+                },
             ],
             CustomPrereqs: [
                 {
                     Name: "TargetIsHandUnleashed",
                     Func: (acting, acted, group) => {
                         return !this.isHandLeashed(acted) && InventoryGet(acted, "ItemHands") == null && this.leashingModule.usingHandsCount < 2;
-                    }
-                }
+                    },
+                },
             ],
             CustomAction: {
                 Func: (target) => {
-                    if (!!target)
+                    if (target)
                         this.leashingModule.DoGrab(target, "hand");
-                }
+                },
             },
-            CustomImage: ICONS.HOLD_HANDS
+            CustomImage: ICONS.HOLD_HANDS,
         });
 
         // ReleaseHand
@@ -889,31 +829,31 @@ export class ActivityModule extends BaseModule {
             Activity: {
                 Name: "ReleaseHand",
                 MaxProgress: 20,
-                Prerequisite: ["ZoneAccessible", "UseHands"]
+                Prerequisite: ["ZoneAccessible", "UseHands"],
             },
             Targets: [
                 {
                     Name: "ItemHands",
                     SelfAllowed: false,
                     TargetLabel: "Release Hand",
-                    TargetAction: "SourceCharacter lets go of TargetCharacter's hand."
-                }
+                    TargetAction: "SourceCharacter lets go of TargetCharacter's hand.",
+                },
             ],
             CustomPrereqs: [
                 {
                     Name: "TargetIsHandLeashed",
                     Func: (acting, acted, group) => {
                         return this.isHandLeashed(acted);
-                    }
-                }
+                    },
+                },
             ],
             CustomAction: <CustomAction>{
                 Func: (target) => {
-                    if (!!target)
+                    if (target)
                         this.leashingModule.DoRelease(target, "hand");
-                }
+                },
             },
-            CustomImage: ICONS.HOLD_HANDS
+            CustomImage: ICONS.HOLD_HANDS,
         });
 
         // Patch Pinch
@@ -926,35 +866,35 @@ export class ActivityModule extends BaseModule {
                     SelfAllowed: true,
                     TargetLabel: "Pinch Butt",
                     TargetAction: "SourceCharacter pinches TargetCharacter's butt.",
-                    TargetSelfAction: "SourceCharacter pinches PronounPossessive own butt."
+                    TargetSelfAction: "SourceCharacter pinches PronounPossessive own butt.",
                 }, {
                     Name: "ItemMouth",
                     SelfAllowed: true,
                     TargetLabel: "Pinch Cheek",
                     TargetAction: "SourceCharacter pinches TargetCharacter's cheek.",
-                    TargetSelfAction: "SourceCharacter pinches PronounPossessive own cheek."
-                }
+                    TargetSelfAction: "SourceCharacter pinches PronounPossessive own cheek.",
+                },
             ],
             CustomPrereqs: [
                 {
                     Name: "TargetCanBePinched",
                     Func: (acting, acted, group) => {
-                        let zoneAccessible = ActivityGetAllMirrorGroups(acted.AssetFamily, group.Name).some((g) => g.IsItem() ? !InventoryGroupIsBlocked(acted, g.Name, true) : true);
+                        const zoneAccessible = ActivityGetAllMirrorGroups(acted.AssetFamily, group.Name).some((g) => g.IsItem() ? !InventoryGroupIsBlocked(acted, g.Name, true) : true);
                         if (group.Name == "ItemEars")
                             return zoneAccessible && !this.isPlayerPinching(acted.MemberNumber ?? 0) && this.leashingModule.usingHandsCount < 2;
                         else if (group.Name == "ItemButt")
                             return true;
                         else
                             return zoneAccessible;
-                    }
-                }
+                    },
+                },
             ],
             CustomAction: {
                 Func: (target, data, meta) => {
                     if (!target || !meta?.GroupName) return;
                     if (meta.GroupName === "ItemEars")
                         this.leashingModule.DoGrab(target, "ear");
-                }
+                },
             },
         });
 
@@ -964,10 +904,11 @@ export class ActivityModule extends BaseModule {
             AddedTargets: [{
                     Name: "ItemMouth",
                     SelfAllowed: true,
+                    TargetLabel: "Fast Penetration",
                     TargetSelfLabel: "Fast Penetration",
-                    TargetSelfAction: "SourceCharacter roughly penetrates PronounPossessive own mouth with PronounPossessive ActivityAsset."
-                }
-            ]
+                    TargetSelfAction: "SourceCharacter roughly penetrates PronounPossessive own mouth with PronounPossessive ActivityAsset.",
+                },
+            ],
         });
 
         // Patch PenetrateFast
@@ -976,10 +917,11 @@ export class ActivityModule extends BaseModule {
             AddedTargets: [{
                     Name: "ItemMouth",
                     SelfAllowed: true,
+                    TargetLabel: "Slow Penetration",
                     TargetSelfLabel: "Slow Penetration",
-                    TargetSelfAction: "SourceCharacter penetrates PronounPossessive own mouth with PronounPossessive ActivityAsset."
-                }
-            ]
+                    TargetSelfAction: "SourceCharacter slowly penetrates PronounPossessive own mouth with PronounPossessive ActivityAsset.",
+                },
+            ],
         });
 
         // ReleaseEar
@@ -987,15 +929,15 @@ export class ActivityModule extends BaseModule {
             Activity: {
                 Name: "ReleaseEar",
                 MaxProgress: 30,
-                Prerequisite: ["ZoneAccessible", "UseHands"]
+                Prerequisite: ["ZoneAccessible", "UseHands"],
             },
             Targets: [
                 {
                     Name: "ItemEars",
                     SelfAllowed: true,
                     TargetLabel: "Release Ear",
-                    TargetAction: "SourceCharacter releases TargetCharacter's ear."
-                }
+                    TargetAction: "SourceCharacter releases TargetCharacter's ear.",
+                },
             ],
             CustomPrereqs: [
                 {
@@ -1004,16 +946,16 @@ export class ActivityModule extends BaseModule {
                         if (group.Name == "ItemEars")
                             return this.isPlayerPinching(acted.MemberNumber ?? 0);
                         return false;
-                    }
-                }
+                    },
+                },
             ],
             CustomAction: {
                 Func: (target) => {
-                    if (!!target)
+                    if (target)
                         this.leashingModule.DoRelease(target, "ear");
-                }
+                },
             },
-            CustomImage: "Assets/Female3DCG/Activity/Pinch.png"
+            CustomImage: "Icons/Activity/Pinch.png",
         });
 
         // Patch Grab Arm
@@ -1026,17 +968,17 @@ export class ActivityModule extends BaseModule {
                         if (group.Name == "ItemArms")
                             return !this.isPlayerGrabbing(acted.MemberNumber ?? 0);
                         return true;
-                    }
-                }
+                    },
+                },
             ],
             CustomAction: {
                 Func: (target, data, meta) => {
-                    if (!target || meta?.GroupName) return;
+                    if (!target || !meta?.GroupName) return;
                     if (meta?.GroupName === "ItemArms")
                         this.leashingModule.DoGrab(target, "arm");
-                }
+                },
             },
-        });        
+        });
 
         // Grab Tail
         this.AddActivity({
@@ -1050,36 +992,36 @@ export class ActivityModule extends BaseModule {
                     Name: "ItemHood",
                     SelfAllowed: false,
                     TargetLabel: "Grab Horn",
-                    TargetAction: "SourceCharacter grabs TargetCharacter's horn."
+                    TargetAction: "SourceCharacter grabs TargetCharacter's horn.",
                 },{
                     Name: "ItemButt",
                     SelfAllowed: false,
                     TargetLabel: "Grab Tail",
-                    TargetAction: "SourceCharacter grabs TargetCharacter's tail."
-                }
+                    TargetAction: "SourceCharacter grabs TargetCharacter's tail.",
+                },
             ],
             CustomPrereqs: [
                 {
                     Name: "TargetHornAvailable",
                     Func: (acting, acted, group) => {
                         if (group.Name == "ItemHood") {
-                            let accSlots = [
+                            const accSlots = [
                                 InventoryGet(acted, "HairAccessory1"),
                                 InventoryGet(acted, "HairAccessory2"),
-                                InventoryGet(acted, "HairAccessory3")
+                                InventoryGet(acted, "HairAccessory3"),
                             ];
                             return accSlots.some(item => (item?.Asset.Name ?? "").toLocaleLowerCase().indexOf("horn") > -1) && !this.leashingModule.ContainsLeashing(acted.MemberNumber ?? -1, "horn");
                         }
                         return true;
-                    }
+                    },
                 },{
                     Name: "TargetTailAvailable",
                     Func: (acting, acted, group) => {
                         if (group.Name == "ItemButt")
                             return (InventoryGet(acted, "TailStraps")?.Asset.Name ?? "").toLocaleLowerCase().indexOf("tail") > -1 && !this.leashingModule.ContainsLeashing(acted.MemberNumber ?? -1, "tail");
                         return true;
-                    }
-                }
+                    },
+                },
             ],
             CustomAction: {
                 Func: (target, data, meta) => {
@@ -1088,9 +1030,9 @@ export class ActivityModule extends BaseModule {
                         this.leashingModule.DoGrab(target, "horn");
                     else if (meta.GroupName === "ItemButt")
                         this.leashingModule.DoGrab(target, "tail");
-                }
+                },
             },
-            CustomImage: "Assets/Female3DCG/Activity/Grope.png"
+            CustomImage: "Icons/Activity/Grope.png",
         });
 
         this.PatchActivity(<ActivityPatch>{
@@ -1106,8 +1048,8 @@ export class ActivityModule extends BaseModule {
                         else if (group.Name == "ItemNipples")
                             return !this.leashingModule.ContainsLeashing(acted.MemberNumber!, "nipples");
                         return false;
-                    }
-                }
+                    },
+                },
             ],
             CustomAction: {
                 Func: (target, data, meta) => {
@@ -1118,8 +1060,8 @@ export class ActivityModule extends BaseModule {
                         this.leashingModule.DoGrab(target, "nose");
                     else if (meta.GroupName === "ItemNipples")
                         this.leashingModule.DoGrab(target, "nipples");
-                }
-            }
+                },
+            },
         });
 
         // Release Arm/Horn/Tail
@@ -1127,40 +1069,40 @@ export class ActivityModule extends BaseModule {
             Activity: {
                 Name: "Release",
                 MaxProgress: 30,
-                Prerequisite: []
+                Prerequisite: [],
             },
             Targets: [
                 {
                     Name: "ItemArms",
                     SelfAllowed: false,
                     TargetLabel: "Release Arm",
-                    TargetAction: "SourceCharacter releases TargetCharacter's arm."
+                    TargetAction: "SourceCharacter releases TargetCharacter's arm.",
                 },{
                     Name: "ItemHood",
                     SelfAllowed: false,
                     TargetLabel: "Release Horn",
-                    TargetAction: "SourceCharacter releases TargetCharacter's horn."
+                    TargetAction: "SourceCharacter releases TargetCharacter's horn.",
                 },{
                     Name: "ItemButt",
                     SelfAllowed: false,
                     TargetLabel: "Release Tail",
-                    TargetAction: "SourceCharacter releases TargetCharacter's tail."
+                    TargetAction: "SourceCharacter releases TargetCharacter's tail.",
                 },{
                     Name: "ItemHead",
                     SelfAllowed: false,
                     TargetLabel: "Release Hair",
-                    TargetAction: "SourceCharacter lets go of TargetCharacter's hair."
+                    TargetAction: "SourceCharacter lets go of TargetCharacter's hair.",
                 },{
                     Name: "ItemNose",
                     SelfAllowed: false,
                     TargetLabel: "Release Nose",
-                    TargetAction: "SourceCharacter releases TargetCharacter's nose."
+                    TargetAction: "SourceCharacter releases TargetCharacter's nose.",
                 },{
                     Name: "ItemNipples",
                     SelfAllowed: false,
                     TargetLabel: "Release Nipples",
-                    TargetAction: "SourceCharacter releases TargetCharacter's nipples."
-                }
+                    TargetAction: "SourceCharacter releases TargetCharacter's nipples.",
+                },
             ],
             CustomPrereqs: [
                 {
@@ -1179,8 +1121,8 @@ export class ActivityModule extends BaseModule {
                         else if (group.Name == "ItemNipples")
                             return this.leashingModule.ContainsLeashing(acted.MemberNumber!, "nipples");
                         return false;
-                    }
-                }
+                    },
+                },
             ],
             CustomAction: {
                 Func: (target, data, meta) => {
@@ -1193,13 +1135,13 @@ export class ActivityModule extends BaseModule {
                         "ItemHead": "hair",
                         "ItemNose": "nose",
                         "ItemNipples": "nipples",
-                    }
+                    };
                     const area = locationToAreaMap[meta.GroupName];
                     if (!area) return;
                     this.leashingModule.DoRelease(target, area);
-                }
+                },
             },
-            CustomImage: "Assets/Female3DCG/Activity/Slap.png"
+            CustomImage: "Icons/Activity/Slap.png",
         });
 
         // PatchChoke Neck
@@ -1209,7 +1151,7 @@ export class ActivityModule extends BaseModule {
                 Func: (target, data, meta) => {
                     if (!target || meta?.GroupName !== "ItemNeck") return;
                     this.leashingModule.DoGrab(target, "neck");
-                }
+                },
             },
         });
 
@@ -1218,7 +1160,7 @@ export class ActivityModule extends BaseModule {
             Activity: {
                 Name: "ReleaseNeck",
                 MaxProgress: 30,
-                Prerequisite: ["ZoneAccessible", "UseHands"]
+                Prerequisite: ["ZoneAccessible", "UseHands"],
             },
             Targets: [
                 {
@@ -1226,8 +1168,8 @@ export class ActivityModule extends BaseModule {
                     SelfAllowed: true,
                     TargetLabel: "Release Neck",
                     TargetAction: "SourceCharacter releases TargetCharacter's neck.",
-                    TargetSelfAction: "SourceCharacter releases PronounPossessive own neck."
-                }
+                    TargetSelfAction: "SourceCharacter releases PronounPossessive own neck.",
+                },
             ],
             CustomPrereqs: [
                 {
@@ -1236,16 +1178,16 @@ export class ActivityModule extends BaseModule {
                         if (group.Name == "ItemNeck")
                             return this.leashingModule.ContainsLeashing(acted.MemberNumber!, "neck");
                         return false;
-                    }
-                }
+                    },
+                },
             ],
             CustomAction: {
                 Func: (target) => {
-                    if (!!target)
+                    if (target)
                         this.leashingModule.DoRelease(target, "neck");
-                }
+                },
             },
-            CustomImage: "Assets/Female3DCG/Activity/Choke.png"
+            CustomImage: "Icons/Activity/Choke.png",
         });
 
         // Patch Collar Grab
@@ -1255,7 +1197,7 @@ export class ActivityModule extends BaseModule {
                 Name: "TargetNotAlreadyCollarGrabbed",
                 Func: (acting, acted, group) => {
                     return !this.leashingModule.ContainsLeashing(acted.MemberNumber!, "collar");
-                }
+                },
             }],
             CustomAction: <CustomAction>{
                 Func: (target) => {
@@ -1270,7 +1212,7 @@ export class ActivityModule extends BaseModule {
                                     ServerSend("ChatRoomAdmin", {
                                         MemberNumber: target.MemberNumber,
                                         Action: "MoveLeft",
-                                        Publish: i === 0
+                                        Publish: i === 0,
                                     });
                                 }
                             } else {
@@ -1278,13 +1220,13 @@ export class ActivityModule extends BaseModule {
                                     ServerSend("ChatRoomAdmin", {
                                         MemberNumber: target.MemberNumber,
                                         Action: "MoveRight",
-                                        Publish: i === 0
+                                        Publish: i === 0,
                                     });
                                 }
                             }
                         }
                     }
-                }
+                },
             },
         });
 
@@ -1293,7 +1235,7 @@ export class ActivityModule extends BaseModule {
             Activity: {
                 Name: "ReleaseCollar",
                 MaxProgress: 30,
-                Prerequisite: ["ZoneAccessible", "UseHands"]
+                Prerequisite: ["ZoneAccessible", "UseHands"],
             },
             Targets: [
                 {
@@ -1301,24 +1243,163 @@ export class ActivityModule extends BaseModule {
                     SelfAllowed: true,
                     TargetLabel: "Release Collar",
                     TargetAction: "SourceCharacter releases TargetCharacter's collar.",
-                    TargetSelfAction: "SourceCharacter releases PronounPossessive own collar."
-                }
+                    TargetSelfAction: "SourceCharacter releases PronounPossessive own collar.",
+                },
             ],
             CustomPrereqs: [
                 {
                     Name: "TargetIsCollarGrabbed",
                     Func: (acting, acted, group) => {
                         return this.leashingModule.ContainsLeashing(acted.MemberNumber!, "collar");
-                    }
-                }
+                    },
+                },
             ],
             CustomAction: {
                 Func: (target) => {
-                    if (!!target)
+                    if (target)
                         this.leashingModule.DoRelease(target, "collar");
-                }
+                },
             },
-            CustomImage: "Assets/Female3DCG/Activity/Slap.png"
+            CustomImage: "Icons/Activity/Slap.png",
+        });
+
+        // HoldLeash
+        this.AddActivity({
+            Activity: {
+                Name: "HoldLeash",
+                MaxProgress: 30,
+                Prerequisite: ["ZoneAccessible"],
+            },
+            Targets: [
+                {
+                    Name: "ItemNeck",
+                    SelfAllowed: false,
+                    TargetLabel: "Hold Leash",
+                    TargetAction: "SourceCharacter picks up TargetCharacter's leash.",
+                },
+            ],
+            CustomPrereqs: [
+                {
+                    Name: "CanHoldLeash",
+                    Func: (_acting, acted) => this.leashingModule.CanHoldLeash(acted),
+                },
+            ],
+            CustomAction: {
+                // The game's own leash message stands in for ours
+                Func: (target) => {
+                    if (target)
+                        this.leashingModule.HoldLeash(target);
+                    return false;
+                },
+            },
+            CustomImage: ICONS.LEASH_HANDLE,
+        });
+
+        // LetGoOfLeash
+        this.AddActivity({
+            Activity: {
+                Name: "LetGoOfLeash",
+                MaxProgress: 30,
+                Prerequisite: ["ZoneAccessible"],
+            },
+            Targets: [
+                {
+                    Name: "ItemNeck",
+                    SelfAllowed: false,
+                    TargetLabel: "Let Go Of Leash",
+                    TargetAction: "SourceCharacter lets go of TargetCharacter's leash.",
+                },
+            ],
+            CustomPrereqs: [
+                {
+                    Name: "CanLetGoOfLeash",
+                    Func: (_acting, acted) => this.leashingModule.CanLetGoOfLeash(acted),
+                },
+            ],
+            CustomAction: {
+                Func: (target) => {
+                    if (target)
+                        this.leashingModule.LetGoOfLeash(target);
+                    return false;
+                },
+            },
+            CustomImage: ICONS.LEASH_HANDLE,
+        });
+
+        // ClaspLeash
+        this.AddActivity({
+            Activity: {
+                Name: "ClaspLeash",
+                MaxProgress: 30,
+                Prerequisite: ["ZoneAccessible", "UseHands"],
+            },
+            Targets: [
+                {
+                    Name: "ItemNeck",
+                    SelfAllowed: true,
+                    TargetLabel: "Clasp Leash",
+                    TargetAction: "SourceCharacter clasps the leash in PronounPossessive hand to TargetCharacter's leash.",
+                    TargetSelfAction: "SourceCharacter clasps the leash in PronounPossessive hand to PronounPossessive own leash.",
+                },
+            ],
+            CustomPrereqs: [
+                {
+                    Name: "CanClaspLeash",
+                    Func: (_acting, acted) => {
+                        const held = this.leashingModule.HeldLeash(acted);
+                        return held !== null && this.leashingModule.CanClaspTo(held, acted);
+                    },
+                },
+            ],
+            CustomAction: {
+                // Says whether it went on their leash or their collar, in place of the activity's own line
+                Func: (target) => {
+                    const held = target ? this.leashingModule.HeldLeash(target) : null;
+                    if (!target || held === null)
+                        return false;
+                    const onto = this.leashingModule.ClaspLeash(held, target) ? "collar" : "leash";
+                    const whose = target.IsPlayer() ? "%POSSESSIVE% own" : "%OPP_NAME_POSSESSIVE%";
+                    SendAction(`%NAME% clasps the leash in %POSSESSIVE% hand to ${whose} ${onto}.`, target);
+                    return false;
+                },
+            },
+            CustomImage: ICONS.LEASH,
+        });
+
+        // UnclaspLeash
+        this.AddActivity({
+            Activity: {
+                Name: "UnclaspLeash",
+                MaxProgress: 30,
+                Prerequisite: ["ZoneAccessible", "UseHands"],
+            },
+            Targets: [
+                {
+                    Name: "ItemNeck",
+                    SelfAllowed: true,
+                    TargetLabel: "Unclasp Leash",
+                    TargetAction: "SourceCharacter unclasps TargetCharacter's leash.",
+                    TargetSelfAction: "SourceCharacter unclasps PronounPossessive own leash.",
+                },
+            ],
+            CustomPrereqs: [
+                {
+                    Name: "TargetHasClaspedLeash",
+                    Func: (_acting, acted) => this.leashingModule.ClaspsOn(acted.MemberNumber ?? -1).length > 0,
+                },
+            ],
+            CustomAction: {
+                Func: (target) => {
+                    const at = target?.MemberNumber ?? -1;
+                    const me = Player.MemberNumber ?? -1;
+                    const partners = this.leashingModule.ClaspsOn(at);
+                    // On a partner, only our own clasp with them. On ourselves, or anyone else, all of theirs
+                    const undo = at !== me && partners.includes(me) ? [me] : partners;
+                    for (const other of undo)
+                        this.leashingModule.UnclaspLeash(at, other);
+                },
+            },
+            CustomImage: ICONS.LEASH,
         });
 
         // Patch HandGag
@@ -1330,8 +1411,8 @@ export class ActivityModule extends BaseModule {
                     SelfAllowed: true,
                     TargetLabel: "Clamp Hand over Eyes",
                     TargetAction: "SourceCharacter clamps PronounPossessive hand over TargetCharacter's eyes.",
-                    TargetSelfAction: "SourceCharacter clamps PronounPossessive hand over PronounPossessive own eyes."
-                }
+                    TargetSelfAction: "SourceCharacter clamps PronounPossessive hand over PronounPossessive own eyes.",
+                },
             ],
             CustomPrereqs: [
                 {
@@ -1342,8 +1423,8 @@ export class ActivityModule extends BaseModule {
                         else if (group.Name == "ItemHead")
                             return !this.leashingModule.ContainsLeashing(acted.MemberNumber!, "eyes");
                         return true;
-                    }
-                }
+                    },
+                },
             ],
             CustomAction: {
                 Func: (target, data, meta) => {
@@ -1353,7 +1434,7 @@ export class ActivityModule extends BaseModule {
                         this.leashingModule.DoGrab(target, "mouth");
                     if (meta.GroupName == "ItemHead")
                         this.leashingModule.DoGrab(target, "eyes");
-                }
+                },
             },
         });
 
@@ -1362,7 +1443,7 @@ export class ActivityModule extends BaseModule {
             Activity: {
                 Name: "ReleaseMouth",
                 MaxProgress: 30,
-                Prerequisite: ["ZoneAccessible", "UseHands"]
+                Prerequisite: ["ZoneAccessible", "UseHands"],
             },
             Targets: [
                 {
@@ -1370,14 +1451,14 @@ export class ActivityModule extends BaseModule {
                     SelfAllowed: true,
                     TargetLabel: "Release Mouth",
                     TargetAction: "SourceCharacter releases TargetCharacter's mouth.",
-                    TargetSelfAction: "SourceCharacter releases PronounPossessive own mouth."
+                    TargetSelfAction: "SourceCharacter releases PronounPossessive own mouth.",
                 }, {
                     Name: "ItemHead",
                     SelfAllowed: true,
                     TargetLabel: "Release Eyes",
                     TargetAction: "SourceCharacter removes their hand from TargetCharacter's eyes.",
-                    TargetSelfAction: "SourceCharacter pulls their hand away from PronounPossessive eyes."
-                }
+                    TargetSelfAction: "SourceCharacter pulls their hand away from PronounPossessive eyes.",
+                },
             ],
             CustomPrereqs: [
                 {
@@ -1388,8 +1469,8 @@ export class ActivityModule extends BaseModule {
                         if (group.Name == "ItemHead")
                             return this.leashingModule.ContainsLeashing(acted.MemberNumber!, "eyes");
                         return false;
-                    }
-                }
+                    },
+                },
             ],
             CustomAction: {
                 Func: (target, data, meta) => {
@@ -1398,9 +1479,9 @@ export class ActivityModule extends BaseModule {
                         this.leashingModule.DoRelease(target, "mouth");
                     if (meta?.GroupName === "ItemHead")
                         this.leashingModule.DoRelease(target, "eyes");
-                }
+                },
             },
-            CustomImage: "Assets/Female3DCG/Activity/HandGag.png"
+            CustomImage: "Icons/Activity/HandGag.png",
         });
 
         // GrabTongueWithFoot
@@ -1409,31 +1490,31 @@ export class ActivityModule extends BaseModule {
                 Name: "GrabTongueWithFoot",
                 MaxProgress: 75,
                 MaxProgressSelf: 30,
-                Prerequisite: ["ZoneAccessible", "UseFeet", "TargetCanUseTongue"]
+                Prerequisite: ["ZoneAccessible", "UseFeet", "TargetCanUseTongue"],
             },
             Targets: [
                 {
                     Name: "ItemMouth",
                     SelfAllowed: false,
                     TargetLabel: "Stuff with Foot",
-                    TargetAction: "SourceCharacter shoves PronounPossessive foot into TargetCharacter's mouth, playing with and grabbing their tongue with PronounPossessive toes."
-                }
+                    TargetAction: "SourceCharacter shoves PronounPossessive foot into TargetCharacter's mouth, playing with and grabbing their tongue with PronounPossessive toes.",
+                },
             ],
             CustomPrereqs: [
                 {
                     Name: "TargetCanToeTongueGrab",
                     Func: (acting, acted, group) => {
                         return InventoryPrerequisiteMessage(acting, "NakedFeet") === "" && !this.leashingModule.ContainsLeashing(acted.MemberNumber!, "mouth-with-foot");
-                    }
-                }
+                    },
+                },
             ],
             CustomAction: {
                 Func: (target) => {
-                    if (!!target)
+                    if (target)
                         this.leashingModule.DoGrab(target, "mouth-with-foot");
-                }
+                },
             },
-            CustomImage: "Assets/Female3DCG/Activity/MassageFeet.png"
+            CustomImage: "Icons/Activity/MassageFeet.png",
         });
 
         // ReleaseFootGrabbedTongue
@@ -1442,31 +1523,31 @@ export class ActivityModule extends BaseModule {
                 Name: "ReleaseFootGrabbedTongue",
                 MaxProgress: 20,
                 MaxProgressSelf: 20,
-                Prerequisite: ["ZoneAccessible", "UseFeet"]
+                Prerequisite: ["ZoneAccessible", "UseFeet"],
             },
             Targets: [
                 {
                     Name: "ItemMouth",
                     SelfAllowed: false,
                     TargetLabel: "Remove Foot",
-                    TargetAction: "SourceCharacter removes PronounPossessive foot from TargetCharacter's mouth."
-                }
+                    TargetAction: "SourceCharacter removes PronounPossessive foot from TargetCharacter's mouth.",
+                },
             ],
             CustomPrereqs: [
                 {
                     Name: "TargetTongueIsToeGrabbed",
                     Func: (acting, acted, group) => {
                         return this.leashingModule.ContainsLeashing(acted.MemberNumber!, "mouth-with-foot");
-                    }
-                }
+                    },
+                },
             ],
             CustomAction: {
                 Func: (target) => {
-                    if (!!target)
+                    if (target)
                         this.leashingModule.DoRelease(target, "mouth-with-foot");
-                }
+                },
             },
-            CustomImage: "Assets/Female3DCG/Activity/MassageFeet.png"
+            CustomImage: "Icons/Activity/MassageFeet.png",
         });
 
         // Tug Crotch Rope
@@ -1475,25 +1556,25 @@ export class ActivityModule extends BaseModule {
                 Name: "Tug",
                 MaxProgress: 99,
                 MaxProgressSelf: 99,
-                Prerequisite: ["UseHands", "ZoneAccessible", "ZoneNaked"]
+                Prerequisite: ["UseHands", "ZoneAccessible", "ZoneNaked"],
             },
             Targets: [
                 <ActivityTarget>{
                     Name: "ItemPelvis",
                     SelfAllowed: true,
                     TargetAction: "SourceCharacter tugs on TargetCharacter's crotch rope.",
-                    TargetSelfAction: "SourceCharacter tugs lewdly on PronounPossessive own crotch rope."
-                }
+                    TargetSelfAction: "SourceCharacter tugs lewdly on PronounPossessive own crotch rope.",
+                },
             ],
             CustomPrereqs: [
                 <CustomPrerequisite>{
                     Name: "HasCrotchRope",
                     Func: (acting, acted, group) => {
                         return acted.HasEffect("CrotchRope");
-                    }
-                }
+                    },
+                },
             ],
-            CustomImage: "Assets/Female3DCG/ItemPelvis/HempRope_Normal_typed1.png"
+            CustomImage: "Assets/Female3DCG/ItemPelvis/HempRope_Normal_typed1.png",
         });
 
         // Flick
@@ -1502,7 +1583,7 @@ export class ActivityModule extends BaseModule {
                 Name: "Flick",
                 MaxProgress: 50,
                 MaxProgressSelf: 50,
-                Prerequisite: ["UseHands", "ZoneAccessible"]
+                Prerequisite: ["UseHands", "ZoneAccessible"],
             },
             Targets: [
                 <ActivityTarget>{
@@ -1510,80 +1591,80 @@ export class ActivityModule extends BaseModule {
                     TargetLabel: "Flick Ear",
                     SelfAllowed: true,
                     TargetAction: "SourceCharacter flicks TargetCharacter's ear.",
-                    TargetSelfAction: "SourceCharacter flicks PronounPossessive own ear."
+                    TargetSelfAction: "SourceCharacter flicks PronounPossessive own ear.",
                 }, <ActivityTarget>{
                     Name: "ItemNose",
                     TargetLabel: "Flick Nose",
                     SelfAllowed: true,
                     TargetAction: "SourceCharacter flicks TargetCharacter's nose.",
-                    TargetSelfAction: "SourceCharacter flicks PronounPossessive own nose."
+                    TargetSelfAction: "SourceCharacter flicks PronounPossessive own nose.",
                 }, <ActivityTarget>{
                     Name: "ItemNipples",
                     TargetLabel: "Flick Nipple",
                     SelfAllowed: true,
                     TargetAction: "SourceCharacter flicks TargetCharacter's nipple.",
-                    TargetSelfAction: "SourceCharacter flicks PronounPossessive own nipple."
+                    TargetSelfAction: "SourceCharacter flicks PronounPossessive own nipple.",
                 }, <ActivityTarget>{
                     Name: "ItemButt",
                     TargetLabel: "Flick Butt",
                     SelfAllowed: true,
                     TargetAction: "SourceCharacter flicks TargetCharacter's butt.",
-                    TargetSelfAction: "SourceCharacter flicks PronounPossessive own butt."
+                    TargetSelfAction: "SourceCharacter flicks PronounPossessive own butt.",
                 }, <ActivityTarget>{
                     Name: "ItemBoots",
                     TargetLabel: "Flick Foot",
                     SelfAllowed: true,
                     TargetAction: "SourceCharacter flicks the bottom of TargetCharacter's feet.",
-                    TargetSelfAction: "SourceCharacter flicks the bottom of PronounPossessive feet."
+                    TargetSelfAction: "SourceCharacter flicks the bottom of PronounPossessive feet.",
                 }, <ActivityTarget>{
                     Name: "ItemHead",
                     TargetLabel: "Flick Forehead",
                     SelfAllowed: true,
                     TargetAction: "SourceCharacter flicks TargetCharacter's forehead.",
-                    TargetSelfAction: "SourceCharacter flicks PronounPossessive own forehead."
+                    TargetSelfAction: "SourceCharacter flicks PronounPossessive own forehead.",
                 }, <ActivityTarget>{
                     Name: "ItemNeck",
                     TargetLabel: "Flick Neck",
                     SelfAllowed: true,
                     TargetAction: "SourceCharacter flicks TargetCharacter's neck.",
-                    TargetSelfAction: "SourceCharacter flicks PronounPossessive own neck."
+                    TargetSelfAction: "SourceCharacter flicks PronounPossessive own neck.",
                 }, <ActivityTarget>{
                     Name: "ItemLegs",
                     TargetLabel: "Flick Thigh",
                     SelfAllowed: true,
                     TargetAction: "SourceCharacter flicks TargetCharacter's thigh.",
-                    TargetSelfAction: "SourceCharacter flicks PronounPossessive own thigh."
+                    TargetSelfAction: "SourceCharacter flicks PronounPossessive own thigh.",
                 }, <ActivityTarget>{
                     Name: "ItemFeet",
                     TargetLabel: "Flick Leg",
                     SelfAllowed: true,
                     TargetAction: "SourceCharacter flicks TargetCharacter's leg.",
-                    TargetSelfAction: "SourceCharacter flicks PronounPossessive own leg."
+                    TargetSelfAction: "SourceCharacter flicks PronounPossessive own leg.",
                 }, <ActivityTarget>{
                     Name: "ItemVulvaPiercings",
                     TargetLabel: "Flick Clitoris",
                     SelfAllowed: true,
                     TargetAction: "SourceCharacter flicks TargetCharacter's clitoris.",
-                    TargetSelfAction: "SourceCharacter flicks PronounPossessive own clitoris."
+                    TargetSelfAction: "SourceCharacter flicks PronounPossessive own clitoris.",
                 }, <ActivityTarget>{
                     Name: "ItemGlans",
                     TargetLabel: "Flick Balls",
                     SelfAllowed: true,
                     TargetAction: "SourceCharacter flicks TargetCharacter's balls.",
-                    TargetSelfAction: "SourceCharacter flicks PronounPossessive own balls."
+                    TargetSelfAction: "SourceCharacter flicks PronounPossessive own balls.",
                 }, <ActivityTarget>{
                     Name: "ItemVulva",
                     TargetLabel: "Flick Pussy",
                     SelfAllowed: true,
                     TargetAction: "SourceCharacter flicks TargetCharacter's pussy.",
-                    TargetSelfAction: "SourceCharacter flicks PronounPossessive own pussy."
+                    TargetSelfAction: "SourceCharacter flicks PronounPossessive own pussy.",
                 }, <ActivityTarget>{
                     Name: "ItemPenis",
                     TargetLabel: "Flick Penis",
                     SelfAllowed: true,
                     TargetAction: "SourceCharacter flicks TargetCharacter's penis.",
-                    TargetSelfAction: "SourceCharacter flicks PronounPossessive own penis."
-                }
+                    TargetSelfAction: "SourceCharacter flicks PronounPossessive own penis.",
+                },
             ],
             CustomPrereqs: [{
                 Name: "CanCustomFlick",
@@ -1596,9 +1677,9 @@ export class ActivityModule extends BaseModule {
                             return (InventoryPrerequisiteMessage(acted, "AccessCrotch") === "") && !acted.IsVulvaChaste();
                     else
                         return true;
-                }
+                },
             }],
-            CustomImage: "Assets/Female3DCG/Activity/Pinch.png"
+            CustomImage: "Icons/Activity/Pinch.png",
         });
 
         // Chomp
@@ -1607,46 +1688,46 @@ export class ActivityModule extends BaseModule {
                 Name: "Chomp",
                 MaxProgress: 60,
                 MaxProgressSelf: 60,
-                Prerequisite: ["ZoneAccessible", "UseMouth"]
+                Prerequisite: ["ZoneAccessible", "UseMouth"],
             },
             Targets: [
                 {
                     Name: "ItemArms",
                     SelfAllowed: false,
                     TargetLabel: "Chomp on Arm",
-                    TargetAction: "SourceCharacter chomps down on TargetCharacter's arm and doesn't let go."
+                    TargetAction: "SourceCharacter chomps down on TargetCharacter's arm and doesn't let go.",
                 }, {
                     Name: "ItemFeet",
                     SelfAllowed: false,
                     TargetLabel: "Chomp on Leg",
-                    TargetAction: "SourceCharacter chomps down on TargetCharacter's leg and doesn't let go."
+                    TargetAction: "SourceCharacter chomps down on TargetCharacter's leg and doesn't let go.",
                 }, {
                     Name: "ItemButt",
                     SelfAllowed: false,
                     TargetLabel: "Chomp on Butt",
-                    TargetAction: "SourceCharacter chomps down on TargetCharacter's butt and doesn't let go."
+                    TargetAction: "SourceCharacter chomps down on TargetCharacter's butt and doesn't let go.",
                 }, {
                     Name: "ItemNeck",
                     SelfAllowed: false,
                     TargetLabel: "Chomp on Neck",
-                    TargetAction: "SourceCharacter chomps down on TargetCharacter's neck and doesn't let go."
-                }
+                    TargetAction: "SourceCharacter chomps down on TargetCharacter's neck and doesn't let go.",
+                },
             ],
             CustomPrereqs: [
                 {
                     Name: "CanChomp",
                     Func: (acting, acted, group) => {
                         return !this.leashingModule.ContainsLeashing(acted.MemberNumber!, "chomp");
-                    }
-                }
+                    },
+                },
             ],
             CustomAction: {
                 Func: (target) => {
-                    if (!!target) 
+                    if (target)
                         this.leashingModule.DoGrab(target, "chomp");
-                }
+                },
             },
-            CustomImage: "Assets/Female3DCG/Activity/Bite.png"
+            CustomImage: "Icons/Activity/Bite.png",
         });
 
         // ReleaseChomp
@@ -1662,39 +1743,39 @@ export class ActivityModule extends BaseModule {
                     Name: "ItemArms",
                     SelfAllowed: false,
                     TargetLabel: "Release Chomp",
-                    TargetAction: "SourceCharacter releases PronounPossessive chomp on TargetCharacter."
+                    TargetAction: "SourceCharacter releases PronounPossessive chomp on TargetCharacter.",
                 }, {
                     Name: "ItemFeet",
                     SelfAllowed: false,
                     TargetLabel: "Release Chomp",
-                    TargetAction: "SourceCharacter releases PronounPossessive chomp on TargetCharacter."
+                    TargetAction: "SourceCharacter releases PronounPossessive chomp on TargetCharacter.",
                 }, {
                     Name: "ItemButt",
                     SelfAllowed: false,
                     TargetLabel: "Release Chomp",
-                    TargetAction: "SourceCharacter releases PronounPossessive chomp on TargetCharacter."
+                    TargetAction: "SourceCharacter releases PronounPossessive chomp on TargetCharacter.",
                 }, {
                     Name: "ItemNeck",
                     SelfAllowed: false,
                     TargetLabel: "Release Chomp",
-                    TargetAction: "SourceCharacter releases PronounPossessive chomp on TargetCharacter."
-                }
+                    TargetAction: "SourceCharacter releases PronounPossessive chomp on TargetCharacter.",
+                },
             ],
             CustomPrereqs: [
                 {
                     Name: "IsChomping",
                     Func: (acting, acted, group) => {
                         return getModule<LeashingModule>("LeashingModule")?.Pairings.find(p => p.IsSource && p.Type == "chomp")?.PairedMember == acted.MemberNumber;
-                    }
-                }
+                    },
+                },
             ],
             CustomAction: {
                 Func: (target) => {
-                    if (!!target) 
+                    if (target)
                         this.leashingModule.DoRelease(target, "chomp");
-                }
+                },
             },
-            CustomImage: "Assets/Female3DCG/Activity/Kiss.png"
+            CustomImage: "Icons/Activity/Kiss.png",
         });
 
         // SwallowLoad
@@ -1703,7 +1784,7 @@ export class ActivityModule extends BaseModule {
                 Name: "SwallowLoad",
                 MaxProgress: 75,
                 MaxProgressSelf: 30,
-                Prerequisite: ["ZoneAccessible", "TargetCanUseTongue"]
+                Prerequisite: ["ZoneAccessible", "TargetCanUseTongue"],
             },
             Targets: [
                 {
@@ -1711,8 +1792,8 @@ export class ActivityModule extends BaseModule {
                     SelfAllowed: true,
                     SelfOnly: true,
                     TargetLabel: "Swallow",
-                    TargetAction: "SourceCharacter gulps and swallows."
-                }
+                    TargetAction: "SourceCharacter gulps and swallows.",
+                },
             ],
             CustomPrereqs: [
                 {
@@ -1721,16 +1802,16 @@ export class ActivityModule extends BaseModule {
                         if (acting.MemberNumber != acted.MemberNumber)
                             return false;
                         return true;
-                    }
-                }
+                    },
+                },
             ],
             CustomAction: {
                 Func: (target) => {
-                    if (!!target)
+                    if (target)
                         getModule<SplatterModule>("SplatterModule")?.ClearSplatInMouth(Player);
-                }
+                },
             },
-            CustomImage: "Assets/Female3DCG/Activity/Kiss.png"
+            CustomImage: "Icons/Activity/Kiss.png",
         });
 
         this.PatchActivity(<ActivityPatch>{
@@ -1740,13 +1821,13 @@ export class ActivityModule extends BaseModule {
                     Name: "ItemHead",
                     SelfAllowed: false,
                     TargetLabel: "Lick Forehead",
-                    TargetAction: "SourceCharacter licks TargetCharacter's forehead."
-                }
+                    TargetAction: "SourceCharacter licks TargetCharacter's forehead.",
+                },
             ],
             CustomAction: {
                 Func: (target, data, meta) => {
                     const splatter = getModule<SplatterModule>("SplatterModule");
-                    if (!!splatter) {
+                    if (splatter) {
                         switch (meta?.GroupName) {
                             case "ItemMouth":
                                 splatter.AddSplatInMouth(Player, target, "mouth");
@@ -1775,7 +1856,7 @@ export class ActivityModule extends BaseModule {
                                 break;
                         }
                     }
-                }
+                },
             },
         });
 
@@ -1785,7 +1866,7 @@ export class ActivityModule extends BaseModule {
 				Name: "HighFive" as ActivityName,
 				MaxProgress: 50,
 				MaxProgressSelf: 50,
-				Prerequisite: ["UseHands"]
+				Prerequisite: ["UseHands"],
 			},
 			Targets: [
 				<ActivityTarget>{
@@ -1793,16 +1874,16 @@ export class ActivityModule extends BaseModule {
 					TargetLabel: "High Five!",
 					TargetAction: "SourceCharacter holds PronounPossessive hand up towards TargetCharacter expectantly...",
                     TargetSelfAction: "SourceCharacter holds PronounPossessive hand in the air, slapping it with the other.",
-					SelfAllowed: true
-				}
+					SelfAllowed: true,
+				},
 			],
             CustomPrereqs: [
                 {
                     Name: "CanHighFive",
                     Func: (acting, acted, group): boolean => {
-                        return (acted.CanInteract() && !acted.Effect.includes("MergedFingers"))
-                    }
-                }
+                        return (acted.CanInteract() && !acted.Effect.includes("MergedFingers"));
+                    },
+                },
             ],
 			CustomAction: {
 				Func: (target) => {
@@ -1812,16 +1893,16 @@ export class ActivityModule extends BaseModule {
                         this.ExecuteHighFive(null);
                         return true;
                     } else if (this.isPlayerGrabbing(target.MemberNumber ?? -1)) {
-                        SendAction(`%NAME% holds %OPP_NAME_POSSESSIVE_DIRECT% arm up and slaps it in a forced high five!`, target);
+                        SendAction("%NAME% holds %OPP_NAME_POSSESSIVE_DIRECT% arm up and slaps it in a forced high five!", target);
                         this.ExecuteHighFive(target);
                         return false;
                     } else {
-                        this.TryHighFive(target);
+                        Consent().Offer("high-five", target);
                         return true;
                     }
-				}
+				},
 			},
-			CustomImage: "Assets/Female3DCG/Activity/Spank.png"
+			CustomImage: "Icons/Activity/Spank.png",
 		});
 
         // Erect Penis Detection...
@@ -1829,11 +1910,16 @@ export class ActivityModule extends BaseModule {
     }
 
     get customGagged(): boolean {
-        return this.leashingModule.IsCustomGagged
+        return this.leashingModule.IsCustomGagged;
     };
     prevMouth: ExpressionName | null = null;
 
     unload(): void {
+        this.StopListeningForExtensions();
+        this._appliedExtActivities.forEach(name => this.RemoveActivity(name));
+        this._appliedExtActivities.clear();
+        this._appliedExtPrereqs.forEach(id => this.CustomPrerequisiteFuncs.delete(id));
+        this._appliedExtPrereqs.clear();
         removeAllHooksByModule(ModuleCategory.Activities);
     }
 
@@ -1846,11 +1932,23 @@ export class ActivityModule extends BaseModule {
     CustomActionCallbacks: Map<string, CustomAction["Func"]> = new Map<string, CustomAction["Func"]>();
     CustomPreparseCallbacks: Map<string, (args: any[]) => void> = new Map<string, (args: any[]) => void>();
     CustomImages: Map<string, string> = new Map<string, string>;
+
+    // Newer BC moved activity icons to Icons/Activity; fall back to the old path until the new one is confirmed to exist.
+    private newIconPathExists = false;
+    private ProbeIconPath() {
+        fetch("Icons/Activity/Slap.png", { method: "HEAD" })
+            .then(r => this.newIconPathExists = r.ok && !!r.headers.get("content-type")?.startsWith("image/"))
+            .catch(() => { });
+    }
+    private ResolveImage(img?: string): string | undefined {
+        if (!img || this.newIconPathExists) return img;
+        return img.replace(/^Icons\/Activity\//, "Assets/Female3DCG/Activity/");
+    }
     PatchedActivities: string[] = [];
 
     AddCustomPrereq(prereq: CustomPrerequisite) {
         if (!this.CustomPrerequisiteFuncs.get(prereq.Name))
-            this.CustomPrerequisiteFuncs.set(prereq.Name, prereq.Func)
+            this.CustomPrerequisiteFuncs.set(prereq.Name, prereq.Func);
     }
 
     RegisterCustomFuncs(bundle: ActivityBundleBase, activity: LSCGActivity) {
@@ -1858,10 +1956,10 @@ export class ActivityModule extends BaseModule {
             if (activity!.Prerequisite.indexOf(prereq.Name) == -1)
                 activity!.Prerequisite.push(prereq.Name);
             this.AddCustomPrereq(prereq);
-        })
+        });
 
         if (!!bundle.CustomReaction && !this.CustomIncomingActivityReactions.get(activity.Name))
-            this.CustomIncomingActivityReactions.set(activity.Name, bundle.CustomReaction.Func)
+            this.CustomIncomingActivityReactions.set(activity.Name, bundle.CustomReaction.Func);
 
         if (!!bundle.CustomImage && !this.CustomImages.get(activity.Name))
             this.CustomImages.set(activity.Name, bundle.CustomImage);
@@ -1882,24 +1980,31 @@ export class ActivityModule extends BaseModule {
         if (!activity)
             return;
 
-        if (!!patch.AddedTargets) {
+        if (patch.AddedTargets) {
             patch.AddedTargets.forEach(tgt => {
                 this.AddTargetToActivity(activity, tgt);
             });
         }
 
-        if (!!patch.RemovedTargets) {
+        if (patch.RemovedTargets) {
             patch.RemovedTargets.forEach(tgt => {
                 if (Array.isArray(activity.Target))
                     activity.Target = activity.Target.filter(t => t != tgt);
                 if (Array.isArray(activity.TargetSelf))
                     activity.TargetSelf = activity.TargetSelf.filter(t => t != tgt);
-            })
+            });
         }
 
-        if (!!patch.RemovedPrerequisites) {
+        if (patch.RemovedPrerequisites) {
             patch.RemovedPrerequisites.forEach(prereq => {
                 activity.Prerequisite = activity!.Prerequisite.filter(p => p != prereq);
+            });
+        }
+
+        if (patch.AddedPrerequisites) {
+            patch.AddedPrerequisites.forEach(prereq => {
+                if (activity!.Prerequisite.indexOf(prereq as LSCGActivityPrerequisite) == -1)
+                    activity!.Prerequisite.push(prereq as LSCGActivityPrerequisite);
             });
         }
 
@@ -1908,14 +2013,16 @@ export class ActivityModule extends BaseModule {
         this.PatchedActivities.push(patch.ActivityName);
     }
 
+    /**
+     * Registers a standalone activity dictionary entry, e.g. an alternate chat line
+     * that a CustomPreparse can swap into data.Content.
+     */
+    RegisterActivityText(key: string, text: string) {
+        ActivityDictionaryLoad().cache[key] = text;
+    }
+
     AddTargetToActivity(activity: LSCGActivity, tgt: ActivityTarget) {
-        let textCachePush: (key: string, value: string) => void;
-        if (GameVersion === "R129") {
-            textCachePush = (key, value) => ActivityDictionary?.push([key, value]);
-        } else { // >= R130Beta1
-            const textCache = ActivityDictionaryLoad();
-            textCachePush = (key, value) => textCache.cache[key] = value;
-        }
+        const textCachePush = (key: string, value: string) => this.RegisterActivityText(key, value);
         tgt.TargetLabel = tgt.TargetLabel ?? activity.Name.substring(5);
 
         if (tgt.SelfAllowed) {
@@ -1932,17 +2039,17 @@ export class ActivityModule extends BaseModule {
 
             if (activity.Target.indexOf(tgt.Name) == -1) {
                 activity.Target.push(tgt.Name);
-            }            
+            }
         }
 
-        if (!!tgt.TargetLabel) {
+        if (tgt.TargetLabel) {
             textCachePush(
                 "Label-ChatOther-" + tgt.Name + "-" + activity.Name,
-                tgt.TargetLabel
+                tgt.TargetLabel,
             );
         }
 
-        if (!!tgt.TargetAction) {
+        if (tgt.TargetAction) {
             textCachePush(
                 "ChatOther-" + tgt.Name + "-" + activity.Name,
                 tgt.TargetAction,
@@ -1966,7 +2073,7 @@ export class ActivityModule extends BaseModule {
         if (!bundle.Targets || bundle.Targets.length <= 0)
             return;
 
-        let activity = bundle.Activity;
+        const activity = bundle.Activity;
         activity.Target = activity.Target ?? [];
         activity.Prerequisite = activity.Prerequisite ?? [];
         activity.Name = "LSCG_" + activity.Name as ActivityName;
@@ -1975,8 +2082,8 @@ export class ActivityModule extends BaseModule {
 
         ActivityDictionary?.push([
             "Activity"+activity.Name,
-            bundle.Targets[0].TargetLabel ?? activity.Name.substring(5)
-        ])
+            bundle.Targets[0].TargetLabel ?? activity.Name.substring(5),
+        ]);
 
         bundle.Targets.forEach(tgt => {
             this.AddTargetToActivity(activity, tgt);
@@ -1984,6 +2091,93 @@ export class ActivityModule extends BaseModule {
 
         ActivityFemale3DCG.push(activity as Activity);
         ActivityFemale3DCGOrdering.push(activity.Name);
+    }
+
+    /** Extension registry id -> the activity's name in BC, for what is currently applied. */
+    private _appliedExtActivities = new Map<string, string>();
+    private _appliedExtPrereqs = new Set<string>();
+    private _unhookExtensions: (() => void)[] = [];
+
+    /** Keeps BC's activity list in step as extensions register and unregister after load. */
+    ListenForExtensions() {
+        this.StopListeningForExtensions();
+        this._unhookExtensions = [
+            extensionActivities.onChange(() => this.SyncExtensionActivities()),
+            extensionPrerequisites.onChange(() => this.SyncExtensionActivities()),
+        ];
+    }
+
+    StopListeningForExtensions() {
+        this._unhookExtensions.forEach(unhook => unhook());
+        this._unhookExtensions = [];
+    }
+
+    /** Makes BC's activity list match what extensions have registered: adds new activities and prerequisites, removes gone ones. */
+    SyncExtensionActivities() {
+        const prereqs = extensionPrerequisites.all();
+        const livePrereqs = new Set(prereqs.map(p => p.id));
+        for (const id of [...this._appliedExtPrereqs]) {
+            if (livePrereqs.has(id)) continue;
+            this.CustomPrerequisiteFuncs.delete(id);
+            this._appliedExtPrereqs.delete(id);
+        }
+        // Before activities, so an activity's own prerequisites exist as soon as it can be offered.
+        for (const p of prereqs) {
+            if (this._appliedExtPrereqs.has(p.id)) continue;
+            this.CustomPrerequisiteFuncs.set(p.id, p.check);
+            this._appliedExtPrereqs.add(p.id);
+        }
+
+        const live = extensionActivities.all();
+        const liveIds = new Set(live.map(a => a.id));
+        for (const [id, name] of [...this._appliedExtActivities]) {
+            if (liveIds.has(id)) continue;
+            this.RemoveActivity(name);
+            this._appliedExtActivities.delete(id);
+        }
+        for (const a of live) {
+            if (this._appliedExtActivities.has(a.id)) continue;
+            const bundle = a.build();
+            // A typo'd group would leave the activity silently unreachable; say so while it's easy to spot.
+            for (const target of bundle.Targets ?? []) {
+                const known = (AssetGroup ?? []) as AssetGroup[];
+                if (known.length > 0 && !known.some(g => g.Name === target.Name && g.Category === "Item"))
+                    console.warn(`LSCG: extension activity "${a.id}" targets "${target.Name}", which isn't a BC item group, so it can't be offered there.`);
+            }
+            this.AddActivity(bundle);
+            this._appliedExtActivities.set(a.id, bundle.Activity.Name);
+        }
+    }
+
+    /** Undoes AddActivity: the activity, its menu text, and every callback registered for it. */
+    RemoveActivity(name: string) {
+        const activity = ActivityFemale3DCG.find(a => (a.Name as string) === name);
+        if (activity) {
+            const groups = new Set<string>([
+                ...(Array.isArray(activity.Target) ? activity.Target : []),
+                ...(Array.isArray(activity.TargetSelf) ? activity.TargetSelf : []),
+            ]);
+            const cache = ActivityDictionaryLoad().cache as Record<string, string>;
+            for (const group of groups)
+                for (const prefix of ["Label-ChatOther-", "ChatOther-", "Label-ChatSelf-", "ChatSelf-"])
+                    delete cache[`${prefix}${group}-${name}`];
+            ActivityFemale3DCG.splice(ActivityFemale3DCG.indexOf(activity), 1);
+        }
+
+        const ordering = ActivityFemale3DCGOrdering.indexOf(name as ActivityName);
+        if (ordering > -1)
+            ActivityFemale3DCGOrdering.splice(ordering, 1);
+
+        if (ActivityDictionary) {
+            for (let i = ActivityDictionary.length - 1; i >= 0; i--)
+                if (ActivityDictionary[i][0] === "Activity" + name)
+                    ActivityDictionary.splice(i, 1);
+        }
+
+        this.CustomIncomingActivityReactions.delete(name);
+        this.CustomImages.delete(name);
+        this.CustomActionCallbacks.delete(name);
+        this.CustomPreparseCallbacks.delete(name);
     }
 
     InitTongueGrabHooks(): void {
@@ -1996,9 +2190,9 @@ export class ActivityModule extends BaseModule {
                         if (this.customGagged && group?.Name == "ItemHands")
                             return this.leashingModule.IsLeashedByType(acted.MemberNumber!, "tongue") || this.leashingModule.IsLeashedByType(acted.MemberNumber!, "mouth");
                         else return true;
-                    }
-                }
-            ]
+                    },
+                },
+            ],
         });
     }
 
@@ -2009,7 +2203,7 @@ export class ActivityModule extends BaseModule {
     isPlayerHoldingHandsWith(holdingMemberNumber: number) {
         return this.leashingModule.ContainsLeashing(holdingMemberNumber, "hand");
     }
-    
+
     isPlayerPinchedBy(member: number) {
         return this.leashingModule.IsLeashedByType(member, "ear");
     }
@@ -2037,12 +2231,12 @@ export class ActivityModule extends BaseModule {
                 ["Slap", ["ItemVulva", "ItemVulvaPiercings"]],
                 ["Scratch", ["ItemVulva", "ItemVulvaPiercings"]],
                 ["Kick", ["ItemVulva", "ItemVulvaPiercings"]],
-            ]
+            ],
         ).forEach((locations, activityName, map) => {
             this.PatchActivity(<ActivityPatch>{
                 ActivityName: activityName,
                 CustomAction: {
-                    Func: (target, data, meta) => this.CheckForErectionCustomAction(target, meta?.GroupName, locations ?? ["ItemPenis"])
+                    Func: (target, data, meta) => this.CheckForErectionCustomAction(target, meta?.GroupName, locations ?? ["ItemPenis"]),
                 },
             });
         });
@@ -2056,9 +2250,9 @@ export class ActivityModule extends BaseModule {
     }
 
     CheckForErection(target: Character) {
-        let isChastity = target.IsVulvaChaste();
-        let isClothed = InventoryPrerequisiteMessage(target, "AccessCrotch") === "RemoveClothesForItem";
-        if (target.HasPenis() && 
+        const isChastity = target.IsVulvaChaste();
+        const isClothed = InventoryPrerequisiteMessage(target, "AccessCrotch") === "RemoveClothesForItem";
+        if (target.HasPenis() &&
         isClothed &&
         (WardrobeGetExpression(target)?.Pussy ?? "") == "Hard") {
             if (!isChastity) {
@@ -2069,12 +2263,8 @@ export class ActivityModule extends BaseModule {
         }
     }
 
-    TryHighFive(target: Character) {
-		sendLSCGCommand(target, "h5-ask");
-	}
-
     ExecuteHighFive(target: Character | null) {
-        if (!!target)
+        if (target)
             sendLSCGMessage(<LSCGMessageModel>{
                 reply: false,
                 type: "broadcast",
@@ -2083,10 +2273,10 @@ export class ActivityModule extends BaseModule {
                     args: [
                         {
                             name: "target",
-                            value: target.MemberNumber
-                        }
-                    ]
-                }
+                            value: target.MemberNumber,
+                        },
+                    ],
+                },
             });
     }
 }

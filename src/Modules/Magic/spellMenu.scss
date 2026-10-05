@@ -1,0 +1,90 @@
+.lscg-spellmenu {
+	.lscg-spellmenu-box {
+		display: grid;
+		grid-template-rows: auto minmax(0, 1fr);
+		gap: min(1.2dvh, 0.6dvw);
+		box-sizing: border-box;
+		height: 100%;
+		padding: min(1.5dvh, 0.75dvw);
+		background-color: var(--lscg-background-color);
+		border: var(--lscg-border-width) solid var(--lscg-border-color);
+	}
+
+	.lscg-spellmenu-header {
+		display: grid;
+		// Title and close button on top, search on its own full-width row below.
+		grid-template-columns: minmax(0, 1fr) auto;
+		align-items: center;
+		gap: min(1.5dvh, 0.75dvw);
+
+		.lscg-kit-search {
+			grid-column: 1 / -1;
+			grid-row: 2;
+		}
+
+		h2 {
+			margin: 0;
+			align-self: center;
+			font-size: var(--lscg-font-large);
+			text-align: left;
+		}
+	}
+
+	.lscg-spellmenu-close {
+		width: min(6dvh, 3dvw);
+		height: min(6dvh, 3dvw);
+		padding: 0;
+	}
+
+	// Cards and person buttons are .lscg-button for the look; undo its fixed-size, single-line layout.
+	.lscg-spellmenu-card,
+	.lscg-spellmenu-person {
+		width: auto;
+		height: auto;
+		white-space: normal;
+		text-align: left;
+	}
+
+	.lscg-spellmenu-card {
+		display: grid;
+		align-content: start;
+		gap: min(0.8dvh, 0.4dvw);
+		padding: min(1.2dvh, 0.6dvw) min(1.5dvh, 0.75dvw);
+
+		.lscg-spellmenu-name {
+			overflow: hidden;
+			text-overflow: ellipsis;
+		}
+
+		&.lscg-spellmenu-card-disabled {
+			opacity: 0.55;
+			cursor: not-allowed;
+		}
+	}
+
+	.lscg-spellmenu-pick {
+		display: grid;
+		align-content: start;
+		gap: min(1.2dvh, 0.6dvw);
+		min-height: 0;
+		overflow-y: auto;
+		padding: min(1dvh, 0.5dvw);
+
+		.lscg-spellmenu-people {
+			display: grid;
+			grid-template-columns: repeat(auto-fill, minmax(min(36dvh, 18dvw), 1fr));
+			gap: min(1.2dvh, 0.6dvw);
+		}
+
+		.lscg-spellmenu-person {
+			text-align: center;
+			padding: min(1.5dvh, 0.75dvw);
+		}
+
+		.lscg-spellmenu-back {
+			justify-self: start;
+			width: auto;
+			height: min(6dvh, 3dvw);
+		}
+	}
+}

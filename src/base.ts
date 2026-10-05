@@ -1,6 +1,6 @@
 import { BaseSettingsModel } from "Settings/Models/base";
 import { SettingsModel } from "Settings/Models/settings";
-import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
+import { Subscreen } from "Settings/setting_definitions";
 
 export abstract class BaseModule {
 	get settingsScreen() : Subscreen | null {
@@ -13,24 +13,27 @@ export abstract class BaseModule {
 	}
 
 	get settings(): BaseSettingsModel {
-		if (!this.settingsStorage) return {} as BaseSettingsModel;
+		const storage = this.settingsStorage as keyof SettingsModel | null;
+		if (!storage) return {} as BaseSettingsModel;
 		if (!Player.LSCG) {
 			Player.LSCG = <SettingsModel>{};
 			this.registerDefaultSettings();
 		}
-		else if (!(<any>Player.LSCG)[this.settingsStorage])
+		else if (!Player.LSCG[storage])
 			this.registerDefaultSettings();
-		return (<any>Player.LSCG)[this.settingsStorage];
+		return Player.LSCG[storage] as BaseSettingsModel;
 	}
 
 	get Enabled(): boolean {
-		if (!Player.LSCG || !Player.LSCG.GlobalModule)
+		if (!Player.LSCG?.GlobalModule?.enabled)
 			return false;
-		return Player.LSCG.GlobalModule.enabled && (!this.settings ? true : this.settings.enabled) && 
-			(ServerPlayerIsInChatRoom() || 
-			(CurrentModule == "Room" && CurrentScreen == "Crafting") ||
-			(CurrentModule == "Room" && CurrentScreen == "MainHall") ||
-			(CurrentModule == "Character" && CurrentScreen == "Appearance"));
+		const settings = this.settings;
+		return (!settings ? true : settings.enabled) &&
+			// ChatRoom first: this runs hundreds of times a frame, and the full check walks every registered screen
+			(CurrentScreen === "ChatRoom" || ServerPlayerIsInChatRoom() ||
+			(CurrentModule === "Room" && CurrentScreen === "Crafting") ||
+			(CurrentModule === "Room" && CurrentScreen === "MainHall") ||
+			(CurrentModule === "Character" && CurrentScreen === "Appearance"));
 	}
 
 	init() {

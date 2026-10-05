@@ -7,7 +7,7 @@ export class DeniedState extends BaseState {
     Type: LSCGState = "denied";
 
     Icon(C: OtherCharacter): string {
-        return "Icons/Small/Admin.png";
+        return "Icons/Admin.png";
     }
     Label(C: OtherCharacter): string {
         return "Denied";
@@ -20,7 +20,7 @@ export class DeniedState extends BaseState {
     Init(): void {
         hookFunction("ActivityOrgasmStart", 100, (args, next) => { // high high priority
             // Intercept an orgasm, force it to ruin and send command to paired target
-            let C = args[0] as Character;
+            const C = args[0] as Character;
             if (!C.IsPlayer())
                 return next(args);
 

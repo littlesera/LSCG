@@ -5,6 +5,12 @@
 
 #lscg-layers {
 	position: absolute;
+	// Smaller than a settings screen's text: this is a narrow strip beside BC's own color picker
+	font-size: min(2.6dvh, 1.3dvw);
+	grid-template-rows: auto minmax(0, 1fr);
+	row-gap: 0;
+	align-content: start;
+	text-align: left;
 
 	&.lscg-translate-dragging {
 		opacity: 0.2;
@@ -19,7 +25,7 @@
     overflow: hidden;
     display: flex;
     flex-direction: column;
-	padding-top: 1rem;
+	padding-top: 0.4rem;
 	user-select: none;
 
 	.lscg-layers-body {
@@ -40,8 +46,12 @@
 			padding: 0 .5rem;
 
 			.lscg-button {
+				flex: none;
 				padding: 0.5rem 0;
 				height: unset;
+				min-height: min(5dvh, 2.5dvw);
+				color: var(--lscg-text-color);
+				text-shadow: none;
 				font-weight: bold;
 				cursor: pointer;
 				transition: all 0.1s linear;
@@ -50,14 +60,11 @@
 					background-color: teal;
 					color: white;
 					text-shadow: 1px 1px 0px black;
-				}
 
-				&:hover {
-					box-shadow: 0.2rem 0.2rem 0rem black;
-				}
-
-				&:active {
-					box-shadow: 1px 1px 0rem black;
+					// Keep the selection readable under the pointer instead of flipping to the plain hover colour
+					&:hover {
+						background-color: color-mix(in srgb, teal 75%, white 25%);
+					}
 				}
 			}
 		}
@@ -66,8 +73,21 @@
 			display: grid;
 
 			.lscg-opacity-slider-inputs {
+				input[type="number"] {
+					flex: none;
+					width: 5em;
+				}
+
 				display: flex;
+				align-items: center;
 				gap: 0.5rem;
+
+				// The screen's input background would put a white bar behind the slider track
+				input[type="range"] {
+					flex: 1;
+					min-width: 0;
+					background: transparent;
+				}
 			}
 			
 			legend {
@@ -78,126 +98,113 @@
 }
 
 #lscg-layers-toolbar {
-	flex: 1 0 auto;
+	flex: none;
 	display: flex;
 	justify-content: space-between;
 	user-select: none;
+	white-space: nowrap;
+
+	.lscg-layers-check {
+		display: flex;
+		align-items: center;
+		gap: 0.4rem;
+		color: white;
+		text-shadow: 1px 1px 0px black;
+		font-weight: bold;
+		cursor: pointer;
+	}
+
+	// BC's checkbox keeps its own look; only its size changes, to sit with the label text
+	input.checkbox {
+		height: min(4.5dvh, 2.25dvw);
+		width: min(4.5dvh, 2.25dvw);
+
+		&::before {
+			height: min(3dvh, 1.5dvw);
+			width: min(3dvh, 1.5dvw);
+		}
+	}
 }
 
-#lscg-layers-translate-toolbar {
+// Number boxes never truncate with an ellipsis: a smaller font, no spinner arrows (the buttons and sliders step them),
+// and values are already rounded when shown (whole numbers for opacity, translation and degrees, hundredths for scale)
+#lscg-layers input[type="number"] {
+	text-overflow: clip;
+	font-size: 0.85em;
+	padding: 0 0.3em;
+	min-width: 0;
+	appearance: textfield;
+	-moz-appearance: textfield;
+
+	&::-webkit-inner-spin-button, &::-webkit-outer-spin-button {
+		appearance: none;
+		margin: 0;
+	}
+}
+
+// BC puts a translucent hover colour behind a button's label, which shows as a bright box on the button's own colour
+#lscg-layers .button-label {
+	background: transparent !important;
+}
+
+#lscg-layers-tabs {
+	display: flex;
+	gap: 0.25rem;
+
+	.lscg-layers-tab {
+		flex: 1;
+		height: min(5dvh, 2.5dvw);
+		padding: 0;
+		color: var(--lscg-text-color);
+		font-weight: bold;
+
+		&.selected {
+			background-color: teal;
+			color: white;
+			text-shadow: 1px 1px 0px black;
+		}
+	}
+}
+
+#lscg-layers-transform-fields {
 	display: flex;
 	justify-content: space-evenly;
+	align-items: flex-end;
+	flex: none;
 
-	.lscg-translate-direction {
+	.lscg-transform-axis {
 		display: flex;
 		flex-direction: column;
-    	align-items: center;
+		align-items: center;
+		gap: 0.25rem;
+		font-weight: bold;
 
 		div {
-			user-select: none;
-			-webkit-user-select: none;
-			-moz-user-select: none;
-			
-			span {
-				cursor: pointer;
-				transition: text-shadow 0.1s linear;
-				&:hover {
-					text-shadow: 2px 2px 2px black;
-				}
-			}
+			display: flex;
+			align-items: center;
+			gap: 0.25rem;
 		}
 	}
 
 	input {
-		width: 5rem;
+		width: 5.5rem;
+		height: min(4.5dvh, 2.25dvw);
 	}
 
-	button {
-		background: white url("Icons/Reset.png");
-		background-size: cover;
-		width: 2rem;
-		height: 2rem;
-		border: 0.2rem black;
-		cursor: pointer;
-		transition: all 0.1s linear;
-
-		&:hover {
-			background: #00d5d5 url("Icons/Reset.png");
-			background-size: cover;
-			box-shadow: 0.2rem 0.2rem 0rem black;
-		}
-
-		&:active {
-			box-shadow: 1px 1px 0rem black;
-		}
+	// Step and reset buttons are the kit's, just smaller than a settings screen's
+	.lscg-button {
+		color: var(--lscg-text-color);
+		text-shadow: none;
+		flex: none;
+		width: min(4.5dvh, 2.25dvw);
+		height: min(4.5dvh, 2.25dvw);
+		padding: 0;
 	}
 }
 
-.lscg-checkbox {
-	font-family: system-ui, sans-serif;
-	font-size: 1.3rem;
-	color: white;
-	text-shadow: 1px 1px 0px black;
-	font-weight: bold;
-	line-height: 1.1;
-	display: grid;
-	grid-template-columns: 1em auto;
-	gap: 0.5rem;
-	cursor: pointer;
-
-	input[type="checkbox"] {
-		/* Add if not using autoprefixer */
-		-webkit-appearance: none;
-		/* Remove most all native input styles */
-		appearance: none;
-		/* For iOS < 15 */
-		background-color: var(--form-background);
-		/* Not removed via appearance */
-		margin: 0;
-
-		font: inherit;
-		color: currentColor;
-		width: 1.1em;
-		height: 1.1em;
-		border: 0.1em solid black;
-		background-color: white;
-		transform: translateY(-0.075em);
-
-		display: grid;
-		place-content: center;
-	}
-
-	input[type="checkbox"]::before {
-		content: "";
-		width: 0.65em;
-		height: 0.65em;
-		clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
-		transform: scale(0);
-		transform-origin: bottom left;
-		transition: 120ms transform ease-in-out;
-		box-shadow: inset 1em 1em var(--form-control-color);
-		/* Windows High Contrast Mode */
-		background-color: CanvasText;
-	}
-
-	input[type="checkbox"]:checked::before {
-		transform: scale(1);
-	}
-
-	input[type="checkbox"]:disabled {
-		--form-control-color: var(--form-control-disabled);
-
-		color: var(--form-control-disabled);
-		background-color: lightgrey;
-		cursor: not-allowed;
-	}
-}
-
-.lscg-checkbox + .lscg-checkbox {
-	margin-left: 0.5rem;
-}
-
-.lscg-checkbox--disabled {
-	color: var(--form-control-disabled);
-	cursor: not-allowed;
+#lscg-layers-transform-hint {
+	flex: none;
+	font-size: 0.8em;
+	line-height: 1.2;
+	padding: 0 0.5rem;
 }

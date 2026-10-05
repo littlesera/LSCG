@@ -9,7 +9,7 @@ export const SETTING_FUNC_NAMES: string[] = [
     "Unload",
     "Run",
     "Click",
-    "Exit"
+    "Exit",
 ];
 
 export enum ModuleCategory {
@@ -30,6 +30,8 @@ export enum ModuleCategory {
 	Splatter = 13,
 	CursedItem = 14,
 	Map = 15,
+	SpeechAnalysis = 16,
+	Outfits = 17,
 	RemoteUI = 98,
 	Misc = 99,
 	Commands = 100

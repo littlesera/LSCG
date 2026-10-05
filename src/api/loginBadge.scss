@@ -1,0 +1,242 @@
+// Self-contained: the login screen runs before LSCG's main stylesheet is injected, so the LSCG teal palette
+// (see :root in main.scss) is repeated here.
+#lscg-login-badge {
+	--lscg-teal: #00d5d5;
+	--lscg-teal-light: #aaf7f7;
+	--lscg-teal-dark: #007f7f;
+	--lscg-cream: #fff6e0;
+	// The colour the badge pulses, as "r, g, b". Amber replaces teal if an extension has thrown.
+	--lscg-pulse: 0, 213, 213;
+
+	position: fixed;
+	visibility: hidden;
+	pointer-events: none;
+	display: flex;
+	align-items: flex-end;
+	justify-content: flex-end;
+	font-size: clamp(10px, 1.6dvh, 18px);
+	// The badge's text sizes off the host's width (cqw), which follows the canvas, so it never overflows its box.
+	container-type: inline-size;
+	color: #1d2b2b;
+
+	// Styled like BC's own login buttons (white, black border, square), sitting under the Login button.
+	.lscg-badge {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		box-sizing: border-box;
+		width: 100%;
+		height: 100%;
+		padding: 0 0.8em;
+		border: 2px solid black;
+		border-radius: 0;
+		color: black;
+		font: inherit;
+		font-size: min(2.2em, 7.5cqw);
+		white-space: nowrap;
+		background: white;
+		cursor: pointer;
+		pointer-events: auto;
+
+		&:hover {
+			background: cyan;
+		}
+
+		&.lscg-badge-warn {
+			--lscg-pulse: 255, 152, 0;
+		}
+
+		// With extensions installed: a soft glow that swells and fades.
+		&.lscg-badge-pulse {
+			animation: lscg-badge-pulse 2.4s infinite ease-in-out;
+		}
+	}
+
+	// A modal (top layer, centred, over a dimmed backdrop), styled like BC's own white panels.
+	.lscg-badge-flyout {
+		// As wide as its longest row, so a name, version and repository link stay on one line.
+		width: max-content;
+		min-width: 22em;
+		// A mod with an enormous name can't stretch it past this; the name is cut short instead (see .lscg-badge-clip).
+		max-width: min(80dvw, 36em);
+		max-height: 80dvh;
+		overflow-y: auto;
+		margin: auto;
+		// The host ignores the pointer outside the badge, and the dialog inherits that.
+		pointer-events: auto;
+		padding: 0.8em 1em;
+		border: 2px solid black;
+		border-radius: 0;
+		background: white;
+		color: black;
+		font-size: 1.6em;
+		text-align: left;
+
+		&::backdrop {
+			background: rgba(0, 0, 0, 0.55);
+		}
+
+		.lscg-badge-close {
+			display: block;
+			margin: 0.8em 0 0 auto;
+			padding: 0.2em 1.4em;
+			border: 2px solid black;
+			border-radius: 0;
+			background: white;
+			color: black;
+			font: inherit;
+			cursor: pointer;
+
+			&:hover {
+				background: cyan;
+			}
+		}
+
+		h2 {
+			margin: 0 0 0.4em;
+			font-size: 1.1em;
+		}
+
+		ul {
+			margin: 0;
+			padding: 0;
+			list-style: none;
+		}
+
+		li {
+			padding: 0.25em 0;
+			border-top: 1px solid #999;
+		}
+
+		small {
+			color: #555;
+		}
+
+		.lscg-badge-mods > li {
+			border-top: 1px solid #999;
+		}
+
+		.lscg-badge-mods > li:first-child {
+			border-top: 0;
+		}
+
+		// Floated to the right edge of the row; it comes first in the markup so it stays on the row's first line.
+		.lscg-badge-star {
+			float: right;
+			margin-left: 0.6em;
+			color: var(--lscg-teal-dark);
+		}
+
+		details.lscg-badge-mod > summary {
+			cursor: pointer;
+		}
+
+		.lscg-badge-extensions {
+			margin: 0.3em 0 0.2em 0.6em;
+			overflow-wrap: anywhere;
+		}
+
+		// Text from other mods: one line, cut off with an ellipsis (its full text is in the tooltip).
+		.lscg-badge-clip {
+			min-width: 0;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			white-space: nowrap;
+		}
+
+		li.lscg-badge-mod {
+			display: flex;
+			align-items: baseline;
+			gap: 0.4em;
+
+			> b {
+				flex: 0 1 auto;
+			}
+
+			> small, > a {
+				flex: none;
+			}
+
+			> small.lscg-badge-version {
+				flex: 0 100 auto;
+				min-width: 2.5em;
+				max-width: 8em;
+			}
+		}
+
+		details.lscg-badge-mod > summary a,
+		li.lscg-badge-mod a {
+			margin-left: 0.5em;
+			font-size: 0.8em;
+			color: #555;
+		}
+
+		.lscg-badge-error {
+			color: #b3261e;
+		}
+
+		.lscg-badge-toggle {
+			min-width: 0;
+			display: flex;
+			align-items: center;
+			gap: 0.4em;
+			cursor: pointer;
+
+			input[type="checkbox"] {
+				flex: none;
+				margin: 0;
+				width: 1em;
+				height: 1em;
+				border-width: 1px;
+				cursor: pointer;
+
+				&::before {
+					width: 0.6em;
+					height: 0.6em;
+				}
+			}
+		}
+
+		.lscg-badge-off .lscg-badge-toggle span {
+			opacity: 0.55;
+			text-decoration: line-through;
+		}
+
+		.lscg-badge-note {
+			font-size: 0.85em;
+			font-style: italic;
+		}
+
+		.lscg-badge-reload {
+			margin-left: 0.4em;
+			padding: 0 0.6em;
+			border: 1px solid black;
+			border-radius: 0;
+			background: white;
+			color: black;
+			font: inherit;
+			font-style: normal;
+			cursor: pointer;
+
+			&:hover {
+				background: cyan;
+			}
+		}
+	}
+}
+
+@keyframes lscg-badge-pulse {
+	0%, 100% {
+		box-shadow: 0 0.1em 0.3em rgba(0, 0, 0, 0.3), 0 0 0 0 rgba(var(--lscg-pulse), 0);
+	}
+	50% {
+		box-shadow: 0 0.1em 0.3em rgba(0, 0, 0, 0.3), 0 0 0 0.15em rgba(var(--lscg-pulse), 0.25), 0 0 0.5em rgba(var(--lscg-pulse), 0.35);
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	#lscg-login-badge .lscg-badge.lscg-badge-pulse {
+		animation: none;
+		box-shadow: 0 0.1em 0.3em rgba(0, 0, 0, 0.3), 0 0 0 0.15em rgba(var(--lscg-pulse), 0.25);
+	}
+}

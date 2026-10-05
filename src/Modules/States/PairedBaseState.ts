@@ -1,4 +1,4 @@
-import { SendAction, sendLSCGCommandBeep, settingsSave } from "utils";
+import { sendLSCGCommandBeep, settingsSave } from "utils";
 import { BaseState } from "./BaseState";
 
 export interface Pairing {
@@ -21,30 +21,30 @@ export abstract class PairedBaseState extends BaseState {
     abstract Update(source: number, args: {name: string, value: any}[]): void;
 
     DoPair(target: Character, matchmaker: Character | null, duration?: number) {
-        let newPairing = <Pairing>{
+        const newPairing = <Pairing>{
             PairedMember: target.MemberNumber,
             PairedBy: matchmaker?.MemberNumber,
-            IsSource: true
+            IsSource: true,
         };
         this.AddPairing(newPairing);
         return this.Activate(matchmaker?.MemberNumber, duration);
     }
 
     RespondToPairing(source: Character, matchmaker: Character | null, duration?: number) {
-        let newPairing = <Pairing>{
+        const newPairing = <Pairing>{
             PairedMember: source.MemberNumber,
             PairedBy: matchmaker?.MemberNumber,
-            IsSource: false
+            IsSource: false,
         };
         this.AddPairing(newPairing);
         this.Activate(matchmaker?.MemberNumber, duration);
-        return newPairing
+        return newPairing;
     }
 
     NotifyUnpair(member: number) {
         sendLSCGCommandBeep(member, "unpair", [{
             name: "type",
-            value: this.Type
+            value: this.Type,
         }]);
     }
 
@@ -52,8 +52,8 @@ export abstract class PairedBaseState extends BaseState {
         this.Pairings.forEach(pair => {
             sendLSCGCommandBeep(pair.PairedMember, "unpair", [{
                 name: "type",
-                value: this.Type
-            }])
+                value: this.Type,
+            }]);
         });
         this.Pairings = [];
         return super.Recover(false);
@@ -68,7 +68,7 @@ export abstract class PairedBaseState extends BaseState {
     // ******* Pairing Manipulations *********
 
     AddPairing(pairing: Pairing) {
-        let exists = this.Pairings.find(p => p.PairedMember == pairing.PairedMember);
+        const exists = this.Pairings.find(p => p.PairedMember == pairing.PairedMember);
         if (!exists)
             this.Pairings.push(pairing);
         else // Update if existing pairing to member of matching type
@@ -77,7 +77,7 @@ export abstract class PairedBaseState extends BaseState {
     }
 
     RemovePairing(pairedMember: number) {
-        this.Pairings = this.Pairings.filter(p => p.PairedMember != pairedMember)
+        this.Pairings = this.Pairings.filter(p => p.PairedMember != pairedMember);
         this.CheckIfPairingsEmpty();
     }
 

@@ -10,6 +10,8 @@ import { CollarModule } from "Modules/collar";
 import { MagicModule } from "Modules/magic";
 import { RemoteMagic } from "./magic";
 import { RemoteSuggestions } from "./suggestions";
+import { RemoteSpeechAnalysis } from "./speech-analysis";
+import { SpeechAnalysisModule } from "Modules/speech-analysis";
 
 export class RemoteMainMenu extends RemoteGuiSubscreen {
 	subscreens: RemoteGuiSubscreen[] = [];
@@ -41,7 +43,8 @@ export class RemoteMainMenu extends RemoteGuiSubscreen {
 			new RemoteHypno(getModule<HypnoModule>("HypnoModule"), this.Character),
 			new RemoteSuggestions(getModule<HypnoModule>("HypnoModule"), this.Character),
 			new RemoteCollar(getModule<CollarModule>("CollarModule"), this.Character),
-			new RemoteMagic(getModule<MagicModule>("MagicModule"), this.Character)
+			new RemoteMagic(getModule<MagicModule>("MagicModule"), this.Character),
+			new RemoteSpeechAnalysis(getModule<SpeechAnalysisModule>("SpeechAnalysisModule"), this.Character),
 		];
 	}
 
@@ -51,7 +54,7 @@ export class RemoteMainMenu extends RemoteGuiSubscreen {
 	}
 
 	Run() {
-		var prev = MainCanvas.textAlign;
+		const prev = MainCanvas.textAlign;
 		MainCanvas.textAlign = "left";
 		DrawText(`- Little Sera's Club Games ${(this.Character as OtherCharacter).LSCG?.Version ?? "?.?.?"} -`, GuiSubscreen.START_X, GuiSubscreen.START_Y - GuiSubscreen.Y_MOD, "Black", "#D7F6E9");
 		DrawButton(1815, 75, 90, 90, "", "White", "Icons/Exit.png");
@@ -93,7 +96,7 @@ export class RemoteMainMenu extends RemoteGuiSubscreen {
 	Click() {
 		if (MouseIn(1815, 75, 90, 90)) return this.Exit();
 
-		let i = 0
+		let i = 0;
 		for (const screen of this.subscreens) {
 			const PX = Math.floor(i / 6);
 			const PY = i % 6;
@@ -108,10 +111,10 @@ export class RemoteMainMenu extends RemoteGuiSubscreen {
 		}
 
 		if (MouseIn(1500, 720, 400, 80))
-            window.open(LSCG_CHANGES, '_blank');
+            window.open(LSCG_CHANGES, "_blank");
 
 		if (MouseIn(1500, 820, 400, 80))
-            window.open('https://github.com/littlesera/LSCG/wiki', '_blank');
+            window.open("https://github.com/littlesera/LSCG/wiki", "_blank");
 	}
 
 	Exit(): void {

@@ -1,10 +1,8 @@
 import { BaseModule } from "base";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
-import { GetMetadata, GetTargetCharacter, ICONS, OnActivity, SendAction, capitalizeFirstLetter, getCharacter, getCharacterByNicknameOrMemberNumber, getRandomInt, hookFunction, removeAllHooksByModule, sendLSCGCommand } from "../utils";
+import { GetTargetCharacter, ICONS, OnActivity, getCharacter, getRandomInt, hookFunction, removeAllHooksByModule } from "../utils";
 import { SplatterSettingsModel } from "Settings/Models/base";
-import { Activities, Core, getModule } from "modules";
-import { CommandListener } from "./core";
-import { ActivityBundle } from "./activities";
+import { Activities } from "modules";
 import { GuiSplatter } from "Settings/splatter";
 
 export type SplatterLocation = "mouth" | "forehead" | "chest" | "tummy" | "crotch" | "ass" | "nipples" | "all";
@@ -35,24 +33,24 @@ const bcSplats: RecordObject = {
     o: 0,
     p: 0,
     q: 0,
-    r: 0
+    r: 0,
 };
 
 const locations: { [key: string]: string[] } = {
-    forehead: ['a', 'b', 'c'],    // 'forehead' covers flags a, b, c
-    mouth: ['d', 'e', 'f', 'o'],       // 'mouth' covers flags d, e, f ['o' is in]
-    chest: ['g', 'h', 'i', 'j'],       // 'mouth' covers flags d, e, f
-    tummy: ['k', 'l', 'm', 'n'],       // 'mouth' covers flags d, e, f
-    crotch: ['p'],
-    ass: ['q'],
-    nipples: ['r']
+    forehead: ["a", "b", "c"],    // 'forehead' covers flags a, b, c
+    mouth: ["d", "e", "f", "o"],       // 'mouth' covers flags d, e, f ['o' is in]
+    chest: ["g", "h", "i", "j"],       // 'mouth' covers flags d, e, f
+    tummy: ["k", "l", "m", "n"],       // 'mouth' covers flags d, e, f
+    crotch: ["p"],
+    ass: ["q"],
+    nipples: ["r"],
 };
 
 const PossibleSplatterGroups: LSCGAssetGroupBodyName[] = [
     "BodyMarkings",
     "FaceMarkings",
-    "Mask"
-]
+    "Mask",
+];
 
 export class SplatterMapping {
     C: Character;
@@ -70,8 +68,8 @@ export class SplatterMapping {
     }
 
     getMergedProperty(): RecordObject {
-        let items = this.getSplatItems().map(item => item?.Property?.TypeRecord);
-        let blank = Object.assign({}, bcSplats);
+        const items = this.getSplatItems().map(item => item?.Property?.TypeRecord);
+        const blank = Object.assign({}, bcSplats);
         Object.keys(blank).forEach(key => {
             blank[key as keyof typeof blank] = items.some(item => item?.[key]) ? 1 : 0;
         });
@@ -79,8 +77,8 @@ export class SplatterMapping {
     }
 
     getCurrentSplatTier(loc: SplatterLocation): number {
-        let record = this.getMergedProperty();
-        let group = locations[loc];
+        const record = this.getMergedProperty();
+        const group = locations[loc];
         return group.map(key => record[key]).reduce((sum, x) => sum + x, 0);
     }
 
@@ -90,8 +88,8 @@ export class SplatterMapping {
             return;
         }
 
-        let record = this.getMergedProperty();
-        let group = locations[loc];
+        const record = this.getMergedProperty();
+        const group = locations[loc];
         let flagToFlip: string | undefined = undefined;
 
         for (let i = 0; i < group.length; i++) {
@@ -109,8 +107,8 @@ export class SplatterMapping {
         if (this.getCurrentSplatTier(loc) <= 0)
             return;
 
-        let record = this.getMergedProperty();
-        let group = locations[loc];
+        const record = this.getMergedProperty();
+        const group = locations[loc];
         let flagToFlip: string | undefined = undefined;
 
         for (let i = group.length - 1; i >= 0; i--) {
@@ -133,22 +131,22 @@ export class SplatterMapping {
         if (loc == "all") {
             flags = Object.keys(bcSplats);
         }
-        let items = this.getSplatItems();
+        const items = this.getSplatItems();
         items.forEach(item => {
             flags.forEach(key => {
                 if (!!item && !!item.Property && !!item.Property.TypeRecord) {
                     item.Property.TypeRecord[key] = 0;
                 }
             });
-        })
+        });
     }
 
     splatAtFlag(flagToFlip: string | undefined, colorOverride: BCColor = "Default", opacityOverride: number | null = 70) {
-        if (!!flagToFlip) {
-            let items = this.getSplatItems();
+        if (flagToFlip) {
+            const items = this.getSplatItems();
             let targetItem;
             if (!items || items.length == 0) {
-                let openSlot = this.getOpenSplatSlot();
+                const openSlot = this.getOpenSplatSlot();
                 if (!openSlot)
                     return;
                 targetItem = InventoryWear(this.C, "Splatters", openSlot, undefined, undefined, this.C.MemberNumber, undefined, true);
@@ -157,7 +155,7 @@ export class SplatterMapping {
             }
             if (!!targetItem && !!targetItem.Property && !!targetItem.Property.TypeRecord) {
                 targetItem.Property.TypeRecord[flagToFlip] = 1;
-                let recKeys = Object.keys(targetItem.Property.TypeRecord);
+                const recKeys = Object.keys(targetItem.Property.TypeRecord);
                 if (!targetItem.Color) {
                     targetItem.Color = recKeys.map(k => "Default");
                 }
@@ -168,8 +166,8 @@ export class SplatterMapping {
                     targetItem.Property.Opacity = recKeys.map(k => 1);
                 }
                 if (Array.isArray(targetItem.Property.Opacity)) {
-                    let calcOpacity = (opacityOverride ?? 70) / 100;
-                    let scopedPpacity = Math.min(Math.max(calcOpacity, 0), 100);
+                    const calcOpacity = (opacityOverride ?? 70) / 100;
+                    const scopedPpacity = Math.min(Math.max(calcOpacity, 0), 100);
                     targetItem.Property.Opacity = targetItem.Property.Opacity.map((op, ix, arr) => (ix == recKeys.indexOf(flagToFlip!)) ? scopedPpacity : op);
                 }
             }
@@ -177,8 +175,8 @@ export class SplatterMapping {
     }
 
     findHighestFlagFromLocation(location: SplatterLocation): string | null | undefined {
-        let record = this.getMergedProperty();
-        let group = locations[location];
+        const record = this.getMergedProperty();
+        const group = locations[location];
         let foundFlag: string | undefined;
         for (let i = group.length - 1; i >= 0; i--) {
             const flag = group[i];
@@ -191,8 +189,8 @@ export class SplatterMapping {
     }
 
     findItemFromLocation(location: SplatterLocation): Item | null | undefined {
-        let foundFlag = this.findHighestFlagFromLocation(location);
-        if (!!foundFlag) {
+        const foundFlag = this.findHighestFlagFromLocation(location);
+        if (foundFlag) {
             return this.getSplatItems().find(item => item?.Property?.TypeRecord?.[foundFlag!] == 1);
         }
 
@@ -200,24 +198,24 @@ export class SplatterMapping {
     }
 
     getColorAtLocation(location: SplatterLocation): BCColor | undefined {
-        let foundFlag = this.findHighestFlagFromLocation(location);
-        let item = this.findItemFromLocation(location);
-        let allFlags = Object.keys(bcSplats);
-        if (!!item) {
+        const foundFlag = this.findHighestFlagFromLocation(location);
+        const item = this.findItemFromLocation(location);
+        const allFlags = Object.keys(bcSplats);
+        if (item) {
             if (Array.isArray(item.Color))
                 return item.Color[allFlags.indexOf(foundFlag!)];
             else
-                return item.Color
+                return item.Color;
         }
 
         return;
     }
 
     getOpacityAtLocation(location: SplatterLocation): number | number[] | undefined {
-        let foundFlag = this.findHighestFlagFromLocation(location);
-        let item = this.findItemFromLocation(location);
-        let allFlags = Object.keys(bcSplats);
-        if (!!item) {
+        const foundFlag = this.findHighestFlagFromLocation(location);
+        const item = this.findItemFromLocation(location);
+        const allFlags = Object.keys(bcSplats);
+        if (item) {
             if (Array.isArray(item.Property?.Opacity))
                 return item.Property?.Opacity[allFlags.indexOf(foundFlag!)];
             else
@@ -228,18 +226,18 @@ export class SplatterMapping {
     }
 
     splatInMouth(colorOverride: BCColor = "Default", opacityOverride: number | null = 70) {
-        this.splatAtFlag('o', colorOverride, opacityOverride);
+        this.splatAtFlag("o", colorOverride, opacityOverride);
     }
 
     hasInMouth(): boolean {
-        return (this.getMergedProperty()?.['o'] || 0) > 0;
+        return (this.getMergedProperty()?.["o"] || 0) > 0;
     }
 
     cleanInMouth() {
-        let items = this.getSplatItems();
+        const items = this.getSplatItems();
         items.forEach(item => {
             if (!!item && !!item.Property && !!item.Property.TypeRecord) {
-                item.Property.TypeRecord['o'] = 0;
+                item.Property.TypeRecord["o"] = 0;
             }
         });
     }
@@ -265,7 +263,7 @@ export class SplatterModule extends BaseModule {
             whitelist: null,
             blacklist: null,
             requireLover: false,
-            minArousal: 90
+            minArousal: 90,
         };
     }
 
@@ -277,7 +275,7 @@ export class SplatterModule extends BaseModule {
 
     AutoSplatPrompt: boolean = false;
     AutoSplatTarget: number | null = null;
-    AutoSplatCallback: () => any = () => {console.warn("No AutoSplat callback set...")};
+    AutoSplatCallback: () => any = () => {console.warn("No AutoSplat callback set...");};
 
     safeword(): void {
         this.CleanSplatter("all");
@@ -286,7 +284,7 @@ export class SplatterModule extends BaseModule {
     getColorOverride(colorOverride: string | null): BCColor {
         if (!colorOverride)
             return "Default";
-        let colorOverrideArr = colorOverride?.split(",").map(s => s.trim()).filter(color => CommonIsColor(color));
+        const colorOverrideArr = colorOverride?.split(",").map(s => s.trim()).filter(color => CommonIsColor(color));
         return (!!colorOverrideArr && colorOverrideArr?.length > 0) ? colorOverrideArr[getRandomInt(colorOverrideArr?.length)] : "Default";
     }
 
@@ -294,13 +292,13 @@ export class SplatterModule extends BaseModule {
         if (!opacityOverride)
             return 70;
         try {
-            let opRE = /^(\d+)-?(\d+)?$/;
-            let opacityOptionArr = opacityOverride?.split(",").map(s => s.trim()).filter(op => opRE.test(op));
-            let opSelect = opacityOptionArr[getRandomInt(opacityOptionArr.length)];
+            const opRE = /^(\d+)-?(\d+)?$/;
+            const opacityOptionArr = opacityOverride?.split(",").map(s => s.trim()).filter(op => opRE.test(op));
+            const opSelect = opacityOptionArr[getRandomInt(opacityOptionArr.length)];
             if (opSelect.indexOf("-") >= 0) {
-                let bounds = [parseInt(opSelect.match(opRE)?.[1] ?? "0"), parseInt(opSelect.match(opRE)?.[2] ?? "70")];
-                let min = Math.max(Math.min(...bounds), 0);
-                let max = Math.min(Math.max(...bounds), 100);
+                const bounds = [parseInt(opSelect.match(opRE)?.[1] ?? "0"), parseInt(opSelect.match(opRE)?.[2] ?? "70")];
+                const min = Math.max(Math.min(...bounds), 0);
+                const max = Math.min(Math.max(...bounds), 100);
                 return getRandomInt(max - min) + min;
             } else {
                 return parseInt(opSelect ?? 70);
@@ -315,13 +313,13 @@ export class SplatterModule extends BaseModule {
         OnActivity(1, ModuleCategory.Splatter, (data, sender, msg, metadata) => {
             if (!this.Enabled)
                 return;
-            let target = GetTargetCharacter(data);
+            const target = GetTargetCharacter(data);
             if (!!target &&
                 !!sender &&
                 target == Player.MemberNumber) {
                     if (this.splatAllowed(sender, <OtherCharacter><Character>Player)) {
-                        let colorOverride = this.getColorOverride((<OtherCharacter>sender)?.LSCG?.SplatterModule?.colorOverride);
-                        let opacityOverride = this.getOpacityOverride((<OtherCharacter>sender)?.LSCG?.SplatterModule?.opacityOverride);
+                        const colorOverride = this.getColorOverride((<OtherCharacter>sender)?.LSCG?.SplatterModule?.colorOverride);
+                        const opacityOverride = this.getOpacityOverride((<OtherCharacter>sender)?.LSCG?.SplatterModule?.opacityOverride);
 
                         switch (data.Content) {
                             case "ChatOther-ItemMouth-LSCG_Splat":
@@ -356,6 +354,7 @@ export class SplatterModule extends BaseModule {
                             case "ChatOther-ItemMouth-Lick":
                             case "ChatSelf-ItemMouth-Lick":
                                 this.CleanSingleSplatter("mouth");
+                                break;
                             case "ChatOther-ItemHead-Lick":
                             case "ChatSelf-ItemHead-Lick":
                                 this.CleanSingleSplatter("forehead");
@@ -389,7 +388,7 @@ export class SplatterModule extends BaseModule {
                         }
                     }
 
-                    var item = data.Dictionary?.find((d: any) => d.Tag == "ActivityAsset");
+                    const item = data.Dictionary?.find((d: any) => d.Tag == "ActivityAsset");
                     if (!!item && item.AssetName == "Towel") {
                         switch (data.Content) {
                             case "ChatOther-ItemMouth-RubItem":
@@ -439,68 +438,68 @@ export class SplatterModule extends BaseModule {
                     SelfAllowed: true,
                     TargetLabel: "Spray",
                     TargetAction: "SourceCharacter sprays all over TargetCharacter's mouth.",
-                    TargetSelfAction: "SourceCharacter sprays all over TargetCharacter."
+                    TargetSelfAction: "SourceCharacter sprays all over TargetCharacter.",
                 }, {
                     Name: "ItemHead",
                     SelfAllowed: true,
                     TargetLabel: "Spray",
                     TargetAction: "SourceCharacter sprays all over TargetCharacter's face.",
-                    TargetSelfAction: "SourceCharacter sprays all over TargetCharacter."
+                    TargetSelfAction: "SourceCharacter sprays all over TargetCharacter.",
                 }, {
                     Name: "ItemBreast",
                     SelfAllowed: true,
                     TargetLabel: "Spray",
                     TargetAction: "SourceCharacter sprays all over TargetCharacter's chest.",
-                    TargetSelfAction: "SourceCharacter sprays all over TargetCharacter."
+                    TargetSelfAction: "SourceCharacter sprays all over TargetCharacter.",
                 }, {
                     Name: "ItemPelvis",
                     SelfAllowed: true,
                     TargetLabel: "Spray",
                     TargetAction: "SourceCharacter sprays all over TargetCharacter's tummy.",
-                    TargetSelfAction: "SourceCharacter sprays all over TargetCharacter."
+                    TargetSelfAction: "SourceCharacter sprays all over TargetCharacter.",
                 }, {
                     Name: "ItemVulva",
                     SelfAllowed: true,
                     TargetLabel: "Spray",
                     TargetAction: "SourceCharacter sprays all over TargetCharacter's crotch.",
-                    TargetSelfAction: "SourceCharacter sprays all over TargetCharacter."
+                    TargetSelfAction: "SourceCharacter sprays all over TargetCharacter.",
                 }, {
                     Name: "ItemPenis",
                     SelfAllowed: true,
                     TargetLabel: "Spray",
                     TargetAction: "SourceCharacter sprays all over TargetCharacter's crotch.",
-                    TargetSelfAction: "SourceCharacter sprays all over TargetCharacter."
+                    TargetSelfAction: "SourceCharacter sprays all over TargetCharacter.",
                 }, {
                     Name: "ItemButt",
                     SelfAllowed: true,
                     TargetLabel: "Spray",
                     TargetAction: "SourceCharacter sprays all over TargetCharacter's ass.",
-                    TargetSelfAction: "SourceCharacter sprays all over TargetCharacter."
+                    TargetSelfAction: "SourceCharacter sprays all over TargetCharacter.",
                 }, {
                     Name: "ItemNipples",
                     SelfAllowed: true,
                     TargetLabel: "Spray",
                     TargetAction: "SourceCharacter sprays all over TargetCharacter's nipples.",
-                    TargetSelfAction: "SourceCharacter sprays all over TargetCharacter."
-                }
+                    TargetSelfAction: "SourceCharacter sprays all over TargetCharacter.",
+                },
             ],
             CustomPrereqs: [
                 {
                     Name: "CanSquirt",
                     Func: (acting, acted, group) => {
-                        let controllable = !this.settings.uncontrollableWhenBound || !acting.IsRestrained();
-                        let giverAllowed = this.canGiveSplat(acting);
-                        let takerAllowed = this.canReceiveSplat(<OtherCharacter>acted);
-                        let permAllowed = this.splatAllowed(acting, <OtherCharacter>acted);
+                        const controllable = !this.settings.uncontrollableWhenBound || !acting.IsRestrained();
+                        const giverAllowed = this.canGiveSplat(acting);
+                        const takerAllowed = this.canReceiveSplat(<OtherCharacter>acted);
+                        const permAllowed = this.splatAllowed(acting, <OtherCharacter>acted);
                         return controllable && giverAllowed && takerAllowed && permAllowed;
-                    }
-                }
+                    },
+                },
             ],
-            CustomImage: ICONS.SPLAT
+            CustomImage: ICONS.SPLAT,
         });
 
         hookFunction("ActivityOrgasmStart", 1, (args, next) => {
-            let C = args[0];
+            const C = args[0];
             if (C.IsPlayer() &&
                 CurrentScreen == "ChatRoom" &&
                 this.Enabled &&
@@ -527,21 +526,21 @@ export class SplatterModule extends BaseModule {
 
                         if (!this.settings.uncontrollableWhenBound || !Player.IsRestrained()) { // If bound, remove control of where to cum if setting is true
                             this.getTargetSelectAreas().forEach(pair => {
-                                let rect = pair[0];
-                                let char = pair[1];
+                                const rect = pair[0];
+                                const char = pair[1];
                                 if (!rect || !char) return;
                                 DrawButton(this.START_X + rect[0], this.START_Y + rect[1], rect[2], rect[3], CharacterNickname(char), "White", undefined, undefined, false);
                             });
                         }
                         return true;
                     } else {
-                        let target = getCharacter(this.AutoSplatTarget);
-                        if (!!target) {
-                            let name = target.IsPlayer() ? "yourself" : CharacterNickname(target);
+                        const target = getCharacter(this.AutoSplatTarget);
+                        if (target) {
+                            const name = target.IsPlayer() ? "yourself" : CharacterNickname(target);
                             DrawText(`Where on ${name} do you want to cum?`, 500, 400, "White", "Black");
                             this.getLocationSelectAreas().forEach(pair => {
-                                let rect = pair[0];
-                                let location = pair[1];
+                                const rect = pair[0];
+                                const location = pair[1];
                                 if (!rect || !location) return;
                                 DrawButton(this.START_X + rect[0], this.START_Y + rect[1], rect[2], rect[3], `${this.getLocationLabel(location, target)}`, "White", undefined, undefined, false);
                             });
@@ -564,18 +563,18 @@ export class SplatterModule extends BaseModule {
 
                     if (!Player.IsRestrained() || Player.CanWalk()) { // If bound, remove control of where to cum
                         this.getTargetSelectAreas().forEach(pair => {
-                            let rect = pair[0];
-                            let char = pair[1];
+                            const rect = pair[0];
+                            const char = pair[1];
                             if (!rect || !char) return;
                             if (MouseIn(this.START_X + rect[0], this.START_Y + rect[1], rect[2], rect[3])) this.AutoSplatTarget = char.MemberNumber ?? -1;
                         });
                     }
                 } else {
-                    let target = getCharacter(this.AutoSplatTarget);
-                    if (!!target) {
+                    const target = getCharacter(this.AutoSplatTarget);
+                    if (target) {
                         this.getLocationSelectAreas().forEach(pair => {
-                            let rect = pair[0];
-                            let location = pair[1];
+                            const rect = pair[0];
+                            const location = pair[1];
                             if (!rect || !location) return;
                             if (MouseIn(this.START_X + rect[0], this.START_Y + rect[1], rect[2], rect[3])) this.SendSplatter(<OtherCharacter>target, location);
                         });
@@ -588,39 +587,39 @@ export class SplatterModule extends BaseModule {
     }
 
     getTargetSelectAreas(): [RectTuple, Character][] {
-        let targets = this.FindSplatterTargets();
-        let x = 0;
-        let y = 0;
-        let w = 240;
-        let h = 60;
+        const targets = this.FindSplatterTargets();
+        const x = 0;
+        const y = 0;
+        const w = 240;
+        const h = 60;
         return targets.map((c, ix, arr) => [
             <RectTuple>[x + ((ix%4) * 250), y + (Math.floor(ix / 4) * 65), w, h],
-            c
+            c,
         ]);
     }
 
     getLocationSelectAreas(): [RectTuple, SplatterLocation][] {
-        let targets: SplatterLocation[] = [
+        const targets: SplatterLocation[] = [
             "mouth",
             "forehead",
             "chest",
             "tummy",
             "crotch",
             "ass",
-            "nipples"
+            "nipples",
         ];
-        let x = 0;
-        let y = -40;
-        let w = 240;
-        let h = 60;
+        const x = 0;
+        const y = -40;
+        const w = 240;
+        const h = 60;
         return targets.map((l, ix, arr) => [
             <RectTuple>[x + ((ix%3) * 250), y + (Math.floor(ix / 3) * 65), w, h],
-            l
+            l,
         ]);
     }
 
     getLocationLabel(loc: SplatterLocation, target: Character | null) {
-        let isMale = target?.GetPronouns() == "HeHim";
+        const isMale = target?.GetPronouns() == "HeHim";
         switch(loc) {
             case "mouth": return "Mouth";
             case "forehead": return "Face";
@@ -640,18 +639,18 @@ export class SplatterModule extends BaseModule {
     splatAllowed(acting: Character, acted: OtherCharacter) {
         if (acted.MemberNumber == acting.MemberNumber)
             return true;
-        let whitelist = acted?.LSCG?.SplatterModule?.whitelist?.filter((x: any) => !!x && x !== '') ?? [];
-        let blacklist = acted?.LSCG?.SplatterModule?.blacklist?.filter((x: any) => !!x && x !== '') ?? [];
-        let whiteListAllowed = !!whitelist && whitelist.length > 0 && whitelist.indexOf(acting.MemberNumber ?? -1) >=0;
-        let blackListBlocked = !!blacklist && blacklist.length > 0 && blacklist.indexOf(acting.MemberNumber ?? -1) >=0;
-        let loverAllowed = !acted?.LSCG?.SplatterModule?.requireLover || acting.IsLoverOfCharacter(acted);
+        const whitelist = acted?.LSCG?.SplatterModule?.whitelist?.filter((x: any) => !!x && x !== "") ?? [];
+        const blacklist = acted?.LSCG?.SplatterModule?.blacklist?.filter((x: any) => !!x && x !== "") ?? [];
+        const whiteListAllowed = !!whitelist && whitelist.length > 0 && whitelist.indexOf(acting.MemberNumber ?? -1) >=0;
+        const blackListBlocked = !!blacklist && blacklist.length > 0 && blacklist.indexOf(acting.MemberNumber ?? -1) >=0;
+        const loverAllowed = !acted?.LSCG?.SplatterModule?.requireLover || acting.IsLoverOfCharacter(acted);
         return (loverAllowed || whiteListAllowed) && !blackListBlocked;
     }
 
     canGiveSplat(acting: Character) {
-        let naked = (InventoryPrerequisiteMessage(acting, "AccessCrotch") === "") && !acting.IsVulvaChaste() && !acting.IsEnclose();
-        let arousalAllowed = (acting.ArousalSettings?.Progress ?? 0) >= this.settings.minArousal && !acting.IsEdged();
-        let giverAllowed = (<OtherCharacter>acting).LSCG.SplatterModule.enabled && (<OtherCharacter>acting).LSCG.SplatterModule.giver;
+        const naked = (InventoryPrerequisiteMessage(acting, "AccessCrotch") === "") && !acting.IsVulvaChaste() && !acting.IsEnclose();
+        const arousalAllowed = (acting.ArousalSettings?.Progress ?? 0) >= this.settings.minArousal && !acting.IsEdged();
+        const giverAllowed = (<OtherCharacter>acting).LSCG.SplatterModule.enabled && (<OtherCharacter>acting).LSCG.SplatterModule.giver;
         return naked && arousalAllowed && giverAllowed;
     }
 
@@ -669,9 +668,9 @@ export class SplatterModule extends BaseModule {
     }
 
     FindSplatterTargets(): Character[] {
-        let partners = this.recentPartners.map(p => getCharacter(p)).filter(c => !!c) as Character[];
-        let mySpot = ChatRoomCharacter.findIndex(c => c.MemberNumber == Player.MemberNumber);
-        let nearby = [ChatRoomCharacter[mySpot-1], ChatRoomCharacter[mySpot+1]].filter(c => !!c);
+        const partners = this.recentPartners.map(p => getCharacter(p)).filter(c => !!c) as Character[];
+        const mySpot = ChatRoomCharacter.findIndex(c => c.MemberNumber == Player.MemberNumber);
+        const nearby = [ChatRoomCharacter[mySpot-1], ChatRoomCharacter[mySpot+1]].filter(c => !!c);
         return partners.concat(nearby).filter(c => !!c && this.canReceiveSplat(<OtherCharacter>c) && this.splatAllowed(Player, <OtherCharacter>c));
     }
 
@@ -679,7 +678,7 @@ export class SplatterModule extends BaseModule {
         this.AutoSplatTarget = 0;
         this.AutoSplatPrompt = true;
         this.AutoSplatCallback = callback;
-        if (!!Player.ArousalSettings) {
+        if (Player.ArousalSettings) {
             Player.ArousalSettings.OrgasmTimer = CurrentTime + 20000;
             ActivityOrgasmGameTimer = Player.ArousalSettings.OrgasmTimer - CurrentTime;
             Player.ArousalSettings.OrgasmStage = 2;
@@ -697,18 +696,18 @@ export class SplatterModule extends BaseModule {
     }
 
     RandomSplat() {
-        let targets = this.FindSplatterTargets();
-        let locationArr: SplatterLocation[] = [
+        const targets = this.FindSplatterTargets();
+        const locationArr: SplatterLocation[] = [
             "chest",
             "forehead",
-            "tummy"
+            "tummy",
         ];
-        let location = locationArr[getRandomInt(locationArr.length)];
-        let roll = getRandomInt(100);
+        const location = locationArr[getRandomInt(locationArr.length)];
+        const roll = getRandomInt(100);
         if (roll > 50) {
             this.SendSplatter(<OtherCharacter><Character>Player, "tummy");
         } else if (targets.length > 0 && roll > 20) {
-            let target = targets[getRandomInt(targets.length)];
+            const target = targets[getRandomInt(targets.length)];
             this.SendSplatter(<OtherCharacter>target, location);
         } else {
             this.ResetPrompt();
@@ -729,10 +728,10 @@ export class SplatterModule extends BaseModule {
                 case "nipples": targetGroupName = "ItemNipples"; break;
                 case "all": (<string>targetGroupName) = ""; break;
             }
-            let group = ActivityGetGroupOrMirror(target.AssetFamily, targetGroupName);
-            let tmp = target.FocusGroup; // haaack
+            const group = ActivityGetGroupOrMirror(target.AssetFamily, targetGroupName);
+            const tmp = target.FocusGroup; // haaack
             target.FocusGroup = group;
-            let activity = ActivityAllowedForGroup(target, targetGroupName).find(a => (a.Activity as LSCGActivity).Name == "LSCG_Splat");
+            const activity = ActivityAllowedForGroup(target, targetGroupName).find(a => (a.Activity as LSCGActivity).Name == "LSCG_Splat");
             target.FocusGroup = tmp;
             if (group != null && activity != null) {
                 ActivityRun(Player, target, group, activity, true);
@@ -741,7 +740,6 @@ export class SplatterModule extends BaseModule {
     }
 
     CleanSplatter(location: SplatterLocation) {
-        console.info(`Cleaning splatter from ${location}`);
         new SplatterMapping(Player).cleanSplatLocation(location);
         ChatRoomCharacterUpdate(Player);
     }
@@ -752,7 +750,6 @@ export class SplatterModule extends BaseModule {
     }
 
     AddSplatter(sender: Character, location: SplatterLocation, colorOverride: BCColor, opacityOverride: number | null) {
-        console.info(`Adding splatter to ${location}`);
         new SplatterMapping(Player).incrementSplat(location, colorOverride, opacityOverride);
         ChatRoomCharacterUpdate(Player);
     }
@@ -770,8 +767,8 @@ export class SplatterModule extends BaseModule {
 
     AddSplatInMouth(C: Character, source: Character | undefined | null, sourceLocation: SplatterLocation | undefined | null) {
         if (this.HasSplatAt(source, sourceLocation)) {
-            let colorOverride = this.getColorSource(source, sourceLocation) ?? this.getColorOverride((<OtherCharacter>source)?.LSCG?.SplatterModule?.colorOverride ?? null);
-            let opacityOverride = this.getOpacitySource(source, sourceLocation) ?? this.getOpacityOverride((<OtherCharacter>source)?.LSCG?.SplatterModule?.opacityOverride ?? null);
+            const colorOverride = this.getColorSource(source, sourceLocation) ?? this.getColorOverride((<OtherCharacter>source)?.LSCG?.SplatterModule?.colorOverride ?? null);
+            const opacityOverride = this.getOpacitySource(source, sourceLocation) ?? this.getOpacityOverride((<OtherCharacter>source)?.LSCG?.SplatterModule?.opacityOverride ?? null);
             new SplatterMapping(C).splatInMouth(colorOverride, opacityOverride);
             ChatRoomCharacterUpdate(C);
         }
@@ -794,7 +791,7 @@ export class SplatterModule extends BaseModule {
         if (!source || !sourceLocation)
             return;
 
-        let opacity = new SplatterMapping(source).getOpacityAtLocation(sourceLocation);
+        const opacity = new SplatterMapping(source).getOpacityAtLocation(sourceLocation);
         if (Array.isArray(opacity)) // Extract just the in mouth opacity
             return ((opacity[14] ?? 1) * 100);
 

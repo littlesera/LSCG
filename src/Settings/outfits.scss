@@ -21,7 +21,7 @@
 
 #lscg-outfits-storage {
 	background-image: linear-gradient(180deg, #d80000, #d80000 10%, #00d800 60%, #00d800) !important;
-	border: min(0.3dvh, 0.15dvw) solid var(--lscg-border-color);
+	border: var(--lscg-border-width) solid var(--lscg-border-color);
 	display: grid;
 	grid-area: storage;
 	height: 100%;

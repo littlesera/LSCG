@@ -1,6 +1,8 @@
 import { OutfitMigrator } from "Modules/Migrators/OutfitMigrator";
+import { SpeechAnalysisModule } from "Modules/speech-analysis";
 import { ActivityModule } from "Modules/activities";
 import { CoreModule } from "Modules/core";
+import { ConsentModule } from "Modules/consent";
 import { HypnoModule } from "Modules/hypno";
 import { InjectorModule } from "Modules/injector";
 import { MagicModule } from "Modules/magic";
@@ -28,12 +30,16 @@ export function Core(): CoreModule {
 	return getModule<CoreModule>("CoreModule");
 }
 
+export function Consent(): ConsentModule {
+	return getModule<ConsentModule>("ConsentModule");
+}
+
 export function Activities(): ActivityModule {
 	return getModule<ActivityModule>("ActivityModule");
 }
 
 export function DrugKeywords(): string[] {
-	let settings = getModule<InjectorModule>("InjectorModule")?.settings;
+	const settings = getModule<InjectorModule>("InjectorModule")?.settings;
 	if (!settings)
 		return [];
 	return settings?.hornyKeywords.concat(settings?.sedativeKeywords).concat(settings?.mindControlKeywords).concat(settings?.cureKeywords);
@@ -81,4 +87,8 @@ export function Outfits(): OutfitCollection {
 
 export function TestOutfitMigration() {
 	new OutfitMigrator().Migrate("");
+}
+
+export function SpeechAnalysis(): SpeechAnalysisModule {
+	return getModule<SpeechAnalysisModule>("SpeechAnalysisModule");
 }
