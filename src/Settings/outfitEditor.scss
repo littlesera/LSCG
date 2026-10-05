@@ -16,6 +16,13 @@
 	}
 }
 
+// BC shows a ticked checkbox's tick with its own visibility: visible, which beats the visibility: hidden we put on a
+// screen that isn't showing (leaving the editor, or BC's item widgets taking over), and (being positioned) isn't clipped by the closed filter panel either. So hide it ourselves.
+#lscg-outfit-edit[style*="visibility: hidden"] input.checkbox::before,
+#lscg-outfit-edit-checkboxes:not(.show) input.checkbox::before {
+	visibility: hidden !important;
+}
+
 #lscg-outfit-edit-checkboxes {
 	grid-area: outfit-checks;
 	height: 0px;

@@ -445,6 +445,7 @@ export class GuiOutfits extends GuiSubscreen {
 
     charHook: (() => void) | undefined;
     #leaveHook: (() => void) | undefined;
+    #focusHooks: (() => void)[] = [];
     /** BC's own extended-item or colour widget is open on the preview; it takes over Run/Click until it exits. */
     #focus: { kind: "extended" | "color", group: AssetGroupName } | undefined;
 
@@ -461,6 +462,13 @@ export class GuiOutfits extends GuiSubscreen {
             if (DialogTightenLoosenItem) TightenLoosenItemExit();
             else ExtendedItemExit();
         });
+
+        // The preview is a scratch copy, so the wearer's own restraints and the item's lock don't apply to editing it: BC
+        // would otherwise refuse (locked, or the real player unable to interact) what the editor is allowed to change
+        this.#focusHooks = [
+            hookFunction("DialogCanUnlock", 1, (args, next) => this.#focus && args[0] === this.preview ? true : next(args)),
+            hookFunction("Player.CanInteract", 1, (args, next) => this.#focus ? true : next(args)),
+        ];
 
         this.SelectedKey = undefined;
         this.SelectedOutfit = undefined;
@@ -613,6 +621,8 @@ export class GuiOutfits extends GuiSubscreen {
         this.charHook = undefined;
         this.#leaveHook?.();
         this.#leaveHook = undefined;
+        this.#focusHooks.forEach(unhook => unhook());
+        this.#focusHooks = [];
         CommonPhotoMode = false;
         this._unhookResize?.();
         this._unhookResize = undefined;
