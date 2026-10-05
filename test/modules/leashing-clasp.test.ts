@@ -254,8 +254,8 @@ describe("LeashingModule clasped leashes", () => {
 			expect(sent.raw().some(([, data]) => data?.Type === "Action" && data?.Content === "StopHoldLeash")).toBe(false);
 			expect(g.ChatRoomLeashList).toEqual([]);
 			expect(commands("add-leashing")).toEqual([
-				[2, "add-leashing", leashArgs(3, [{ name: "shared", value: false }, { name: "slot", value: "ItemNeck" }, { name: "pairedSlot", value: "ItemNeck" }])],
-				[3, "add-leashing", leashArgs(2, [{ name: "shared", value: false }, { name: "slot", value: "ItemNeck" }, { name: "pairedSlot", value: "ItemNeck" }])],
+				[2, "add-leashing", leashArgs(3, [{ name: "shared", value: false }, { name: "slot", value: "ItemNeck" }, { name: "pairedSlot", value: "ItemNeck" }, { name: "role", value: "line" }])],
+				[3, "add-leashing", leashArgs(2, [{ name: "shared", value: false }, { name: "slot", value: "ItemNeck" }, { name: "pairedSlot", value: "ItemNeck" }, { name: "role", value: "anchor" }])],
 			]);
 			expect(clasps()).toEqual([]);
 		});
@@ -338,7 +338,7 @@ describe("LeashingModule clasped leashes", () => {
 			g.ChatRoomLeashList = [2];
 			leashing.ClaspLeash(b as never, g.Player);
 			expect(clasps()).toEqual([{ with: 2, by: 1, shared: false }]);
-			expect(commands("add-leashing")).toEqual([[2, "add-leashing", leashArgs(1, [{ name: "shared", value: false }, { name: "slot", value: "ItemNeck" }, { name: "pairedSlot", value: "ItemNeck" }])]]);
+			expect(commands("add-leashing")).toEqual([[2, "add-leashing", leashArgs(1, [{ name: "shared", value: false }, { name: "slot", value: "ItemNeck" }, { name: "pairedSlot", value: "ItemNeck" }, { name: "role", value: "line" }])]]);
 		});
 	});
 
@@ -656,6 +656,19 @@ describe("LeashingModule clasped leashes", () => {
 			expect(leashing.ClaspLeash(b as never, g.Player, "ItemNeck")).toBe(true);
 			expect(commands("add-leashing")).toEqual([[2, "add-leashing", expect.arrayContaining([{ name: "shared", value: false }])]]);
 			expect(clasps()).toEqual([{ with: 2, by: 1, shared: true }]);
+		});
+
+		it("each end of a clasp knows whether it's the line or the anchor, and says so", () => {
+			join(2);
+			join(3);
+			receive.command(g.ChatRoomCharacter.find((C: FixtureCharacter) => C.MemberNumber === 2), "add-leashing", leashArgs(3, [{ name: "role", value: "line" }]));
+			receive.command(g.ChatRoomCharacter.find((C: FixtureCharacter) => C.MemberNumber === 3), "add-leashing", leashArgs(2, [{ name: "role", value: "anchor" }]));
+			expect(leashing.Clasps.map(p => [p.PairedMember, p.Role])).toEqual([[3, "line"], [2, "anchor"]]);
+			expect(leashing.ClaspLinks(g.Player).map(l => l.role)).toEqual(["line", "anchor"]);
+			expect(leashing.ClaspLabel(3, "ItemNeck", "line")).toBe("Line clasped to PlayerC (leathercollar)");
+			expect(leashing.ClaspLabel(2, undefined, "anchor")).toBe("Anchoring PlayerB's line");
+			expect(leashing.ClaspIcon("line")).not.toBe(leashing.ClaspIcon("anchor"));
+			expect(leashing.ClaspIcon(undefined)).toBe(leashing.ClaspIcon("anchor"));
 		});
 
 		it("remembers where a held line was grabbed", () => {

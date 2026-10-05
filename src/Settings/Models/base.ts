@@ -69,7 +69,7 @@ export interface LeashingPublicSettingsModel extends BaseSettingsModel {
     /** Who we're clasped to, so everyone can tell who's held in place. Older versions don't send it */
     clasps?: number[];
     /** Where each of those clasps is anchored, on their side and the other's. Older versions don't send it */
-    claspSlots?: { member: number; slot?: string; pairedSlot?: string }[];
+    claspSlots?: { member: number; slot?: string; pairedSlot?: string; role?: "line" | "anchor" }[];
 }
 
 export interface OpacityPublicSettingsModel extends BaseSettingsModel {
