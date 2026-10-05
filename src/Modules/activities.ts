@@ -506,13 +506,75 @@ export class ActivityModule extends BaseModule {
             CustomImage: "Icons/Activity/MasturbateHand.png",
         });
 
-        // SlapPenis
+        // SlapPenis, with the penis itself
         this.AddActivity({
             Activity:  {
                 Name: "SlapPenis",
                 MaxProgress: 100,
                 MaxProgressSelf: 100,
-                Prerequisite: ["ZoneAccessible", "ZoneNaked", "CanUsePenis", "HasPenis", "Needs-PenetrateItem"],
+                Prerequisite: ["ZoneAccessible", "ZoneNaked", "CanUsePenis", "HasPenis"],
+            },
+            Targets: [
+                <ActivityTarget>{
+                    Name: "ItemHead",
+                    TargetLabel: "Slap Face",
+                    TargetAction: "SourceCharacter slaps PronounPossessive penis against TargetCharacter's face.",
+                }, <ActivityTarget>{
+                    Name: "ItemMouth",
+                    TargetLabel: "Slap Mouth",
+                    TargetAction: "SourceCharacter slaps PronounPossessive penis against TargetCharacter's mouth.",
+                }, <ActivityTarget>{
+                    Name: "ItemVulva",
+                    TargetLabel: "Slap against Pussy",
+                    TargetAction: "SourceCharacter slaps PronounPossessive penis against TargetCharacter's pussy.",
+                }, <ActivityTarget>{
+                    Name: "ItemBreast",
+                    TargetLabel: "Slap Breast",
+                    TargetAction: "SourceCharacter slaps PronounPossessive penis against TargetCharacter's breast.",
+                }, <ActivityTarget>{
+                    Name: "ItemLegs",
+                    TargetLabel: "Slap Thigh",
+                    TargetAction: "SourceCharacter slaps PronounPossessive penis against TargetCharacter's thigh.",
+                }, <ActivityTarget>{
+                    Name: "ItemFeet",
+                    TargetLabel: "Slap Calf",
+                    TargetAction: "SourceCharacter slaps PronounPossessive penis against TargetCharacter's calf.",
+                }, <ActivityTarget>{
+                    Name: "ItemBoots",
+                    TargetLabel: "Slap Feet",
+                    TargetAction: "SourceCharacter slaps PronounPossessive penis against TargetCharacter's feet.",
+                }, <ActivityTarget>{
+                    Name: "ItemButt",
+                    TargetLabel: "Slap Butt",
+                    TargetAction: "SourceCharacter slaps PronounPossessive penis against TargetCharacter's butt.",
+                }, <ActivityTarget>{
+                    Name: "ItemNeck",
+                    TargetLabel: "Slap Neck",
+                    TargetAction: "SourceCharacter slaps PronounPossessive penis against TargetCharacter's neck.",
+                }, <ActivityTarget>{
+                    Name: "ItemArms",
+                    TargetLabel: "Slap Arms",
+                    TargetAction: "SourceCharacter slaps PronounPossessive penis against TargetCharacter's arm.",
+                }, <ActivityTarget>{
+                    Name: "ItemHands",
+                    TargetLabel: "Slap Hand",
+                    TargetAction: "SourceCharacter slaps PronounPossessive penis against TargetCharacter's hand.",
+                }, <ActivityTarget>{
+                    Name: "ItemPenis",
+                    TargetLabel: "Slap Penis",
+                    TargetAction: "SourceCharacter slaps PronounPossessive penis against TargetCharacter's penis.",
+                },
+            ],
+            CustomImage: "Icons/Activity/PenetrateSlow.png",
+        });
+
+        // SlapPenisItem, with a held item standing in
+        this.AddActivity({
+            Activity:  {
+                Name: "SlapPenisItem" as ActivityName,
+                MaxProgress: 100,
+                MaxProgressSelf: 100,
+                Prerequisite: ["ZoneAccessible", "ZoneNaked", "UseHands", "Needs-PenetrateItem" as ActivityPrerequisite],
             },
             Targets: [
                 <ActivityTarget>{

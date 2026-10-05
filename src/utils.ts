@@ -1272,6 +1272,10 @@ export function ApplyItem(item: ItemBundle, acting: number | undefined, replace:
 	}
 	const newItem = InventoryWear(C, item.Name, item.Group, item.Color, item.Difficulty, acting, migrateLegacyCraft(item.Craft), false);
 	if (newItem) {
+		// A bundle's Difficulty is the finished value, but wearing adds the asset's own difficulty (and a craft's factor and
+		// Secure/Loose effects) on top again, so it would grow every time the bundle is applied
+		if (item.Difficulty !== undefined)
+			newItem.Difficulty = item.Difficulty;
 		newItem.Property = ItemPropertiesDecompress(newItem, item.Property);
 		if ((<any>C).LSCG?.GlobalModule?.blockDOGS && (<any>newItem.Property)?.["Name"] == "DeviousPadlock") // REMOVE DOGS LOCKS ON APPLY
 			delete (<any>newItem.Property)["Name"];

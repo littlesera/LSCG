@@ -12,7 +12,8 @@ import { clamp, entries, toArray } from "lodash-es";
 import { Outfit } from "./OutfitCollection/outfitCollection";
 import { drawTooltip } from "./settingUtils";
 import { setSubscreen } from "./setting_definitions";
-import { drawUnaffected } from "Dom/kit";
+import { CheckboxRow, drawUnaffected, IconButton, KitContext } from "Dom/kit";
+import { DomSettingsHost } from "./domSettingsHost";
 import { OutfitStorageStrategy } from "./OutfitCollection/IOutfitCollection";
 
 function createButton(screen: GuiOutfits, key: string, i: number, onClick: (key: string) => void) {
@@ -48,7 +49,6 @@ const ID = Object.freeze({
 
     newOutfit: `${root}-new-outfit`,
     newOutfitButton: `${root}-new-outfit-button`,
-    newOutfitTooltip: `${root}-new-outfit-tooltip`,
 
     buttonOuterGrid: `${root}-button-grid-outer`,
     buttonInnerGrid0: `${root}-button-grid-inner0`,
@@ -175,13 +175,6 @@ const EDITOR_ID = Object.freeze({
     itemRemove: `${editorRoot}-item-remove`,
 
     checkboxes: `${editorRoot}-checkboxes`,
-    clothesCheck: `${editorRoot}-clothes-check`,
-    itemsCheck: `${editorRoot}-items-check`,
-    cosplayCheck: `${editorRoot}-cosplay-check`,
-    hairCheck: `${editorRoot}-hair-check`,
-    skinCheck: `${editorRoot}-skin-check`,
-    bodyCheck: `${editorRoot}-body-check`,
-    genderCheck: `${editorRoot}-gender-check`,
 });
 
 export class GuiOutfits extends GuiSubscreen {
@@ -255,15 +248,7 @@ export class GuiOutfits extends GuiSubscreen {
                 </div>
                 <div id={ID.storageFooter}/>
                 <div id={ID.newOutfit}>
-                    <button
-                        class="lscg-button"
-                        id={ID.newOutfitButton}
-                        onClick={this.NewOutfit.bind(this)}
-                        style={{ backgroundImage: "url('./Icons/Plus.png')" }}
-                    />
-                    <span class="lscg-button-tooltip" id={ID.newOutfitTooltip} style={{ right: "100%" }}>
-                        New Outfit
-                    </span>
+                    {IconButton("./Icons/Plus.png", "New Outfit", () => this.NewOutfit(), { id: ID.newOutfitButton, tooltipPosition: "left" })}
                 </div>
                 <div id={ID.storageType}>
                     <label>
@@ -452,6 +437,8 @@ export class GuiOutfits extends GuiSubscreen {
 
     charHook: (() => void) | undefined;
     #leaveHook: (() => void) | undefined;
+    #focusHooks: (() => void)[] = [];
+    #chrome = new DomSettingsHost("lscg-outfit-chrome", this, () => []);
     /** BC's own extended-item or colour widget is open on the preview; it takes over Run/Click until it exits. */
     #focus: { kind: "extended" | "color", group: AssetGroupName } | undefined;
 
@@ -469,6 +456,13 @@ export class GuiOutfits extends GuiSubscreen {
             else ExtendedItemExit();
         });
 
+        // The preview is a scratch copy, so the wearer's own restraints and the item's lock don't apply to editing it: BC
+        // would otherwise refuse (locked, or the real player unable to interact) what the editor is allowed to change
+        this.#focusHooks = [
+            hookFunction("DialogCanUnlock", 1, (args, next) => this.#focus && args[0] === this.preview ? true : next(args)),
+            hookFunction("Player.CanInteract", 1, (args, next) => this.#focus ? true : next(args)),
+        ];
+
         this.SelectedKey = undefined;
         this.SelectedOutfit = undefined;
         this.preview = undefined;
@@ -476,6 +470,8 @@ export class GuiOutfits extends GuiSubscreen {
         for (const [, { dom }] of entries(this.screens)) {
             document.body.appendChild(dom);
         }
+        // Title, exit and help, like the other settings pages (mounted last, so over the screens)
+        this.#chrome.mount();
         
         this.#refreshListing();
         
@@ -620,6 +616,9 @@ export class GuiOutfits extends GuiSubscreen {
         this.charHook = undefined;
         this.#leaveHook?.();
         this.#leaveHook = undefined;
+        this.#chrome.unmount();
+        this.#focusHooks.forEach(unhook => unhook());
+        this.#focusHooks = [];
         CommonPhotoMode = false;
         this._unhookResize?.();
         this._unhookResize = undefined;
@@ -669,11 +668,18 @@ export class GuiOutfits extends GuiSubscreen {
 
     /********************* EDITOR *****************************/
 
-    coords = {
-        x: 200,
-        y: 175,
-        zoom: 0.78,
-    };
+    /** Where the preview is drawn. Lifted just enough that the lowest item zone still fits on the screen, as a character
+     *  who's kneeling or posed puts zones further down than a standing one. */
+    get coords() {
+        const base = { x: 200, y: 175, zoom: 0.78 };
+        const bottomLimit = base.y + 1000 * base.zoom;
+        if (!this.preview) return base;
+        const bottom = Math.max(0, ...this.#zoneGroups().flatMap(g => g.Zone!.map(z => {
+            const [, y, , h] = DialogGetCharacterZone(this.preview!, z, base.x, base.y, base.zoom, 1);
+            return y + h;
+        })));
+        return { ...base, y: base.y - Math.max(0, bottom - bottomLimit) };
+    }
 
     Run(): void {
         super.Run();
@@ -707,7 +713,7 @@ export class GuiOutfits extends GuiSubscreen {
             for (const Group of this.#zoneGroups()) {
                 const picked = Group.Name === selected;
                 const occupied = !!InventoryGet(preview, Group.Name);
-                DrawAssetGroupZone(Player, Group.Zone!, this.coords.zoom, this.coords.x, this.coords.y, 1, picked ? "#00d5d5" : "#808080", 3, picked ? "#00d5d533" : occupied ? "#00FF0022" : "#80808011");
+                DrawAssetGroupZone(preview, Group.Zone!, this.coords.zoom, this.coords.x, this.coords.y, 1, picked ? "#00d5d5" : "#808080", 3, picked ? "#00d5d533" : occupied ? "#00FF0022" : "#80808011");
                 if (!hover && this.#inZone(Group)) hover = Group;
             }
             if (hover) {
@@ -726,6 +732,11 @@ export class GuiOutfits extends GuiSubscreen {
             this.#clickFocus(this.preview, this.#focus);
             return;
         }
+        // A click outside the item picker only closes it, rather than also picking the zone under the mouse
+        if (this.#gridOpen()) {
+            this.#closeGrid();
+            return;
+        }
         if (this.preview) {
             const group = this.#zoneGroups().find(g => this.#inZone(g));
             if (group) this.#pickGroup(group.Name);
@@ -737,8 +748,9 @@ export class GuiOutfits extends GuiSubscreen {
         return AssetGroup.filter(g => g.IsItem() && g.Zone?.length);
     }
 
+    /** Zones follow the character that's drawn: the player's own pose (kneeling, say) would shift them off the preview. */
     #inZone(group: AssetGroup): boolean {
-        return !!group.Zone?.some(z => DialogClickedInZone(Player, z, this.coords.zoom, this.coords.x, this.coords.y, 1));
+        return !!this.preview && !!group.Zone?.some(z => DialogClickedInZone(this.preview!, z, this.coords.zoom, this.coords.x, this.coords.y, 1));
     }
 
     #pickGroup(name: AssetGroupName) {
@@ -1164,6 +1176,7 @@ export class GuiOutfits extends GuiSubscreen {
     #setChrome(visible: boolean) {
         document.getElementById(editorRoot)?.style.setProperty("visibility", visible ? "visible" : "hidden");
         document.getElementById("preference-exit")?.style.setProperty("visibility", visible ? "visible" : "hidden");
+        this.#chrome.root?.style.setProperty("visibility", visible ? "visible" : "hidden");
     }
 
     #drawFocus(preview: Character, focus: { kind: "extended" | "color", group: AssetGroupName }) {
@@ -1298,6 +1311,7 @@ export class GuiOutfits extends GuiSubscreen {
         this.preview.OnlineSharedSettings = this.character.OnlineSharedSettings;
         if (itemList === null) {
             this.#previewUpdate = false;
+            this.#stand(this.preview);
             CharacterRefresh(this.preview, false, false);
             return;
         }
@@ -1326,35 +1340,33 @@ export class GuiOutfits extends GuiSubscreen {
         }
     }
 
+    /** The filter checkboxes, built from the DOM kit; the kit context keeps them in step with the filter
+     *  (including the body box locking and ticking the three below it), so they're never rebuilt after a click. */
     createCheckboxes() {
+        const ctx = new KitContext();
+        const f = this._outfitFilter;
+        const box = (key: keyof typeof f, label: string, underBody = false) => CheckboxRow(ctx, {
+            label,
+            get: () => underBody ? (f[key] || f.body) : f[key],
+            set: v => { f[key] = v; this.setFilteredIncoming(); },
+            disabled: underBody ? () => f.body : undefined,
+        });
         return <fieldset>
-                    {this.createCheckbox(EDITOR_ID.clothesCheck, this._outfitFilter.clothes, "Clothing", false)}
-                    {this.createCheckbox(EDITOR_ID.itemsCheck, this._outfitFilter.items, "Restraints/Items", false)}
-                    {this.createCheckbox(EDITOR_ID.cosplayCheck, this._outfitFilter.cosplay, "Cosplay Items", false)}
+                    {box("clothes", "Clothing")}
+                    {box("items", "Restraints/Items")}
+                    {box("cosplay", "Cosplay Items")}
                     <fieldset>
-                        <legend>
-                            {this.createCheckbox(EDITOR_ID.bodyCheck, this._outfitFilter.body, "All Body Items", false)}
-                        </legend>
-                        {this.createCheckbox(EDITOR_ID.hairCheck, this._outfitFilter.hair || this._outfitFilter.body, "Hair/Eyebrows", this._outfitFilter.body)}
-                        {this.createCheckbox(EDITOR_ID.skinCheck, this._outfitFilter.skin || this._outfitFilter.body, "Skin/Body", this._outfitFilter.body)}
-                        {this.createCheckbox(EDITOR_ID.genderCheck, this._outfitFilter.gender || this._outfitFilter.body, "Genitals/Pronouns", this._outfitFilter.body)}
+                        <legend>{box("body", "All Body Items")}</legend>
+                        {box("hair", "Hair/Eyebrows", true)}
+                        {box("skin", "Skin/Body", true)}
+                        {box("gender", "Genitals/Pronouns", true)}
                     </fieldset>
                 </fieldset>;
     }
 
-    /** Empties the old checkboxes first: BC refuses to create an element whose id is still in the page. */
+    /** Rebuilds the checkboxes from the current filter (the filter is replaced when the editor opens). */
     rebuildCheckboxes() {
-        const host = document.getElementById(EDITOR_ID.checkboxes);
-        host?.replaceChildren();
-        host?.append(this.createCheckboxes());
-    }
-
-    createCheckbox(id: string, value: boolean, label: string, disabled: boolean = false) {
-        const self = this;
-        return <label>
-                {ElementCheckbox.Create(id, function() { self.toggleCheckbox(this); }, { checked: value, disabled })}
-                {label}
-            </label>;
+        document.getElementById(EDITOR_ID.checkboxes)?.replaceChildren(this.createCheckboxes());
     }
 
     createOption(key: string) {
@@ -1482,7 +1494,14 @@ export class GuiOutfits extends GuiSubscreen {
             ApplyItem(item, Player.MemberNumber, true, false, this.preview);
         });
 
+        this.#stand(this.preview);
         CharacterRefresh(this.preview, false, false);
+    }
+
+    /** The preview always stands, whatever the player is doing: kneeling would push the item zones off the bottom of the screen. */
+    #stand(C: Character) {
+        PoseSetActive(C, "BaseUpper", true);
+        PoseSetActive(C, "BaseLower", true);
     }
 
     clickCombination(evt: MouseEvent | null) {
@@ -1497,25 +1516,6 @@ export class GuiOutfits extends GuiSubscreen {
         }
         this.SelectedOutfit.inherit = toArray(opt.parentElement?.children).filter(o => (o as HTMLOptionElement).selected).map(o => (o as HTMLOptionElement).value);
         this.reloadPreviewAppearance();
-    }
-
-    toggleCheckbox(input: HTMLInputElement) {
-        const id = input.id;
-        const checked = input.checked;
-        switch (id) {
-            case EDITOR_ID.clothesCheck: this._outfitFilter.clothes = checked; break;
-            case EDITOR_ID.itemsCheck: this._outfitFilter.items = checked; break;
-            case EDITOR_ID.cosplayCheck: this._outfitFilter.cosplay = checked; break;
-            case EDITOR_ID.bodyCheck: 
-                this._outfitFilter.body = checked;
-                this.rebuildCheckboxes();
-                break;
-            case EDITOR_ID.hairCheck: this._outfitFilter.hair = checked; break;
-            case EDITOR_ID.skinCheck: this._outfitFilter.skin = checked; break;
-            case EDITOR_ID.genderCheck: this._outfitFilter.gender = checked; break;
-        }
-
-        this.setFilteredIncoming();
     }
 
     SelectStorageStrategy(ele: HTMLSelectElement) {
