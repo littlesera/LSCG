@@ -450,8 +450,11 @@ test("Outfit Collection: colouring draws the character at centre, so dragging to
     await bc.page.mouse.move(to.x, to.y, { steps: 5 });
     await bc.page.mouse.up();
     const moved = await bc.run(() => {
-        const o = ItemColorItem.Property.LayerOverrides?.[0];
-        return o ? [o.DrawingLeft[""], o.DrawingTop[""]] : null;
+        // Translation is BC's own: item-wide TranslationX/Y plus per-layer LayerTranslationX/Y records
+        const p = ItemColorItem.Property as any;
+        if (p.TranslationX === undefined && !p.LayerTranslationX && p.TranslationY === undefined && !p.LayerTranslationY) return null;
+        const sum = (axis: string) => (p[`Translation${axis}`] ?? 0) + Object.values<number>(p[`LayerTranslation${axis}`] ?? {}).reduce((a, b) => a + b, 0);
+        return [sum("X"), sum("Y")];
     });
     expect(moved).not.toBeNull();
     expect(moved![0]).toBeGreaterThan(0); // dragged right and down
