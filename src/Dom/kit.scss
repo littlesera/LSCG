@@ -25,6 +25,8 @@
 		grid-area: title;
 		align-self: center;
 		margin: 0;
+		// It spans the whole row: clicks go to whatever is under it
+		pointer-events: none;
 		font-size: min(3.6dvh, 1.8dvw);
 		font-weight: normal;
 		text-align: left;
@@ -35,20 +37,21 @@
 		width: min(9dvh, 4.5dvw);
 		height: min(9dvh, 4.5dvw);
 		padding: 0;
-		background-position: center;
-		background-repeat: no-repeat;
-		background-size: 85%;
 	}
 
 	.lscg-kit-screen-exit {
 		grid-area: exit;
-		background-image: url("Icons/Exit.png");
 	}
 
 	.lscg-kit-screen-help {
 		grid-area: help;
 		align-self: end;
-		background-image: url("Icons/Introduction.png");
+	}
+
+	// A frame with nothing in it (just the title and buttons over another screen) lets clicks through to what's under it
+	.lscg-kit-screen:has(> .lscg-kit-screen-body:empty),
+	.lscg-kit-screen-body:empty {
+		pointer-events: none;
 	}
 
 	.lscg-kit-screen-body {

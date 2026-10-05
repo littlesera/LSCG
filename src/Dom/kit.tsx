@@ -183,6 +183,14 @@ export function Button(label: string, onClick: (button: HTMLButtonElement) => vo
     return button;
 }
 
+/** A BC icon button (ElementButton), with BC's tooltip, for kit buttons that are just a picture. Not an lscg-button: its
+ *  overflow: clip would cut the tooltip off. */
+export function IconButton(icon: string, tooltip: string, onClick: () => void, opts: { id?: string; class?: string; tooltipPosition?: "top" | "bottom" | "left" | "right" } = {}): HTMLButtonElement {
+    return ElementButton.Create(opts.id ?? uid("btn"), onClick,
+        { image: icon, tooltip, tooltipPosition: opts.tooltipPosition ?? "bottom" },
+        { button: { classList: opts.class ? [opts.class] : [], attributes: { "aria-label": tooltip } } });
+}
+
 export function SectionLabel(text: string, description?: string): HTMLElement {
     return (
         <div class="lscg-kit-section">

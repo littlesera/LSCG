@@ -12,7 +12,8 @@ import { clamp, entries, toArray } from "lodash-es";
 import { Outfit } from "./OutfitCollection/outfitCollection";
 import { drawTooltip } from "./settingUtils";
 import { setSubscreen } from "./setting_definitions";
-import { CheckboxRow, drawUnaffected, KitContext } from "Dom/kit";
+import { CheckboxRow, drawUnaffected, IconButton, KitContext } from "Dom/kit";
+import { DomSettingsHost } from "./domSettingsHost";
 import { OutfitStorageStrategy } from "./OutfitCollection/IOutfitCollection";
 
 function createButton(screen: GuiOutfits, key: string, i: number, onClick: (key: string) => void) {
@@ -48,7 +49,6 @@ const ID = Object.freeze({
 
     newOutfit: `${root}-new-outfit`,
     newOutfitButton: `${root}-new-outfit-button`,
-    newOutfitTooltip: `${root}-new-outfit-tooltip`,
 
     buttonOuterGrid: `${root}-button-grid-outer`,
     buttonInnerGrid0: `${root}-button-grid-inner0`,
@@ -248,15 +248,7 @@ export class GuiOutfits extends GuiSubscreen {
                 </div>
                 <div id={ID.storageFooter}/>
                 <div id={ID.newOutfit}>
-                    <button
-                        class="lscg-button"
-                        id={ID.newOutfitButton}
-                        onClick={this.NewOutfit.bind(this)}
-                        style={{ backgroundImage: "url('./Icons/Plus.png')" }}
-                    />
-                    <span class="lscg-button-tooltip" id={ID.newOutfitTooltip} style={{ right: "100%" }}>
-                        New Outfit
-                    </span>
+                    {IconButton("./Icons/Plus.png", "New Outfit", () => this.NewOutfit(), { id: ID.newOutfitButton, tooltipPosition: "left" })}
                 </div>
                 <div id={ID.storageType}>
                     <label>
@@ -446,6 +438,7 @@ export class GuiOutfits extends GuiSubscreen {
     charHook: (() => void) | undefined;
     #leaveHook: (() => void) | undefined;
     #focusHooks: (() => void)[] = [];
+    #chrome = new DomSettingsHost("lscg-outfit-chrome", this, () => []);
     /** BC's own extended-item or colour widget is open on the preview; it takes over Run/Click until it exits. */
     #focus: { kind: "extended" | "color", group: AssetGroupName } | undefined;
 
@@ -477,6 +470,8 @@ export class GuiOutfits extends GuiSubscreen {
         for (const [, { dom }] of entries(this.screens)) {
             document.body.appendChild(dom);
         }
+        // Title, exit and help, like the other settings pages (mounted last, so over the screens)
+        this.#chrome.mount();
         
         this.#refreshListing();
         
@@ -621,6 +616,7 @@ export class GuiOutfits extends GuiSubscreen {
         this.charHook = undefined;
         this.#leaveHook?.();
         this.#leaveHook = undefined;
+        this.#chrome.unmount();
         this.#focusHooks.forEach(unhook => unhook());
         this.#focusHooks = [];
         CommonPhotoMode = false;
@@ -672,11 +668,18 @@ export class GuiOutfits extends GuiSubscreen {
 
     /********************* EDITOR *****************************/
 
-    coords = {
-        x: 200,
-        y: 175,
-        zoom: 0.78,
-    };
+    /** Where the preview is drawn. Lifted just enough that the lowest item zone still fits on the screen, as a character
+     *  who's kneeling or posed puts zones further down than a standing one. */
+    get coords() {
+        const base = { x: 200, y: 175, zoom: 0.78 };
+        const bottomLimit = base.y + 1000 * base.zoom;
+        if (!this.preview) return base;
+        const bottom = Math.max(0, ...this.#zoneGroups().flatMap(g => g.Zone!.map(z => {
+            const [, y, , h] = DialogGetCharacterZone(this.preview!, z, base.x, base.y, base.zoom, 1);
+            return y + h;
+        })));
+        return { ...base, y: base.y - Math.max(0, bottom - bottomLimit) };
+    }
 
     Run(): void {
         super.Run();
@@ -727,6 +730,11 @@ export class GuiOutfits extends GuiSubscreen {
     Click(): void {
         if (this.#focus && this.preview) {
             this.#clickFocus(this.preview, this.#focus);
+            return;
+        }
+        // A click outside the item picker only closes it, rather than also picking the zone under the mouse
+        if (this.#gridOpen()) {
+            this.#closeGrid();
             return;
         }
         if (this.preview) {
@@ -1168,6 +1176,7 @@ export class GuiOutfits extends GuiSubscreen {
     #setChrome(visible: boolean) {
         document.getElementById(editorRoot)?.style.setProperty("visibility", visible ? "visible" : "hidden");
         document.getElementById("preference-exit")?.style.setProperty("visibility", visible ? "visible" : "hidden");
+        this.#chrome.root?.style.setProperty("visibility", visible ? "visible" : "hidden");
     }
 
     #drawFocus(preview: Character, focus: { kind: "extended" | "color", group: AssetGroupName }) {
@@ -1302,6 +1311,7 @@ export class GuiOutfits extends GuiSubscreen {
         this.preview.OnlineSharedSettings = this.character.OnlineSharedSettings;
         if (itemList === null) {
             this.#previewUpdate = false;
+            this.#stand(this.preview);
             CharacterRefresh(this.preview, false, false);
             return;
         }
@@ -1484,7 +1494,14 @@ export class GuiOutfits extends GuiSubscreen {
             ApplyItem(item, Player.MemberNumber, true, false, this.preview);
         });
 
+        this.#stand(this.preview);
         CharacterRefresh(this.preview, false, false);
+    }
+
+    /** The preview always stands, whatever the player is doing: kneeling would push the item zones off the bottom of the screen. */
+    #stand(C: Character) {
+        PoseSetActive(C, "BaseUpper", true);
+        PoseSetActive(C, "BaseLower", true);
     }
 
     clickCombination(evt: MouseEvent | null) {

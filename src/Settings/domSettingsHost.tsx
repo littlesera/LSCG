@@ -1,6 +1,7 @@
 import { h } from "tsx-dom";
 import { DomOverlayHost } from "Dom/host";
 import { GuiSubscreen } from "./settingBase";
+import { IconButton } from "Dom/kit";
 
 /** Area a settings screen's DOM covers: its title and exit button at the top, its content, and the help button. */
 export const SETTINGS_SCREEN_SHAPE: RectTuple = [GuiSubscreen.START_X, 75, 1905 - GuiSubscreen.START_X, 835];
@@ -12,9 +13,9 @@ function chrome(screen: GuiSubscreen, content: Node | Node[]): HTMLElement {
     body.append(...(Array.isArray(content) ? content : [content]));
     return <div class="lscg-kit-screen">
         <h1 class="lscg-kit-screen-title">{`- LSCG ${screen.name} -`}</h1>
-        <button class="lscg-button lscg-kit-screen-exit" title="Back" aria-label="Back" onClick={() => screen.Exit()} />
+        {IconButton("./Icons/Exit.png", "Back", () => screen.Exit(), { class: "lscg-kit-screen-exit", tooltipPosition: "left" })}
         {body}
-        <button class="lscg-button lscg-kit-screen-help" title={help.label} aria-label={help.label} onClick={() => window.open(help.link, "_blank")} />
+        {IconButton("./Icons/Introduction.png", help.label, () => window.open(help.link, "_blank"), { class: "lscg-kit-screen-help", tooltipPosition: "left" })}
     </div> as HTMLElement;
 }
 
