@@ -358,7 +358,9 @@ export class LeashingModule extends BaseModule {
                 DrawImageResize(ICONS.LEASH, CharX + 405 * Zoom, CharY + 45 * Zoom, 30 * Zoom, 30 * Zoom);
                 if (MouseIn(CharX + 400 * Zoom, CharY + 40 * Zoom, 40 * Zoom, 40 * Zoom)) {
                     const names = claspedTo.map(n => getCharacter(n)).filter(P => P !== null).map(P => CharacterNickname(P));
-                    const label = (LeashDefinitions.get("leash")?.LabelTarget ?? "").replace("%OPP_NAME%", CommonArrayJoinPretty(names));
+                    // CommonArrayJoinPretty doesn't cope with a single name
+                    const nameStr = names.length > 1 ? CommonArrayJoinPretty(names) : (names[0] ?? "");
+                    const label = (LeashDefinitions.get("leash")?.LabelTarget ?? "").replace("%OPP_NAME%", nameStr);
                     mouseTooltip(this.LeashLocked(C) ? `${label} (locked)` : label);
                 }
             }
