@@ -292,7 +292,7 @@ export class LeashingModule extends BaseModule {
         hookFunction("CharacterRefresh", 1, (args, next) => {
             const ret = next(args);
             if (args[0]?.IsPlayer() && this.Clasps.length > 0) {
-                if (this.NeckLeash(Player) === null)
+                if (this.WornLeash(Player) === null)
                     this.BreakClasps();
                 // Not every refresh, only once its look has changed (say a leash swapped in): checking asks every mod
                 // whether whoever we're clasped to may leash us, and BCX says so in chat each time it says no
@@ -747,21 +747,21 @@ export class LeashingModule extends BaseModule {
         return this.Pairings.some(p => this.PlayerCanDrag(p, true) && p.Type == type && p.PairedMember == target);
     }
 
-    // Same checks as vanilla's Hold Leash dialog option, but only for a leash on the collar, since this one's on the neck
+    // Same checks as vanilla's Hold Leash dialog option, for any leash they wear
     CanHoldLeash(C: Character) {
         return C.MemberNumber !== undefined && ServerChatRoomGetAllowItem(Player, C) && Player.CanInteract() &&
             !!C.OnlineSharedSettings && C.OnlineSharedSettings.AllowPlayerLeashing !== false &&
-            !ChatRoomLeashList.includes(C.MemberNumber) && ChatRoomCanBeLeashed(C) && this.NeckLeash(C) !== null;
+            !ChatRoomLeashList.includes(C.MemberNumber) && ChatRoomCanBeLeashed(C) && this.WornLeash(C) !== null;
     }
 
-    // Same checks as vanilla's Let Go Of Leash dialog option, again only for a leash on the collar. Like vanilla, it
+    // Same checks as vanilla's Let Go Of Leash dialog option, again for any leash they wear. Like vanilla, it
     // forgets a leash that can't be held any more
     CanLetGoOfLeash(C: Character) {
         if (C.MemberNumber === undefined || !ServerChatRoomGetAllowItem(Player, C) || !Player.CanInteract() ||
             !C.OnlineSharedSettings || C.OnlineSharedSettings.AllowPlayerLeashing === false || !ChatRoomLeashList.includes(C.MemberNumber))
             return false;
         if (ChatRoomCanBeLeashed(C))
-            return this.NeckLeash(C) !== null;
+            return this.WornLeash(C) !== null;
         ChatRoomLeashList = ChatRoomLeashList.filter(n => n !== C.MemberNumber);
         return false;
     }
@@ -813,8 +813,10 @@ export class LeashingModule extends BaseModule {
         if (B.OnlineSharedSettings?.AllowPlayerLeashing === false || !this.CanClaspWith(A) || !this.CanClaspWith(B))
             return false;
         // Vanilla's check, as being held in place by a clasp is no reason not to clasp onto them
+        if (this.WornLeash(B) !== null)
+            return callOriginal("ChatRoomCanBeLeashedBy", [Player.MemberNumber ?? -1, B]);
         if (InventoryGet(B, "ItemNeckRestraints") !== null)
-            return this.NeckLeash(B) !== null && callOriginal("ChatRoomCanBeLeashedBy", [Player.MemberNumber ?? -1, B]);
+            return false;
         const leash = this.NeckLeash(A);
         return leash !== null && ServerChatRoomGetAllowItem(Player, B) &&
             InventoryAllow(B, leash.Asset, leash.Asset.Prerequisite, false) && !InventoryBlockedOrLimited(B, { Asset: leash.Asset } as Item);
@@ -840,7 +842,7 @@ export class LeashingModule extends BaseModule {
     ClaspLeash(A: Character, B: Character): boolean {
         const [a, b] = [A.MemberNumber ?? -1, B.MemberNumber ?? -1];
         // Sent before the clasp, so B already wears it when the clasp arrives
-        const shared = InventoryGet(B, "ItemNeckRestraints") === null;
+        const shared = this.WornLeash(B) === null && InventoryGet(B, "ItemNeckRestraints") === null;
         if (shared)
             this.GiveLeashEnd(A, B);
         this.LetGoOfLeash(A, false);
@@ -855,7 +857,7 @@ export class LeashingModule extends BaseModule {
         const fromSomeoneElse = by !== Player.MemberNumber;
         // Someone may have seen our leashing as on from settings we've since changed. And the clasper checked the rest
         // on their side, but nothing makes them: we hold our own line here
-        const refused = !this.Enabled || this.NeckLeash(Player) === null || (fromSomeoneElse && (
+        const refused = !this.Enabled || this.WornLeash(Player) === null || (fromSomeoneElse && (
             Player.OnlineSharedSettings?.AllowPlayerLeashing === false ||
             !this.CanBeChangedBy(by, other) ||
             !this.CanBeClaspedBy(by)
@@ -1028,8 +1030,14 @@ export class LeashingModule extends BaseModule {
         return item !== null && InventoryItemHasEffect(item, "Leash", true) ? item : null;
     }
 
+    // Whichever leash C wears: the one on the collar if there is one, else anything else with the leash effect (a
+    // clitoris ring, pelvis chain, rope cuffs, pony reins, nose ring...), as vanilla counts them all
+    WornLeash(C: Character) {
+        return this.NeckLeash(C) ?? C.Appearance.find(item => InventoryItemHasEffect(item, "Leash", true)) ?? null;
+    }
+
     LeashLocked(C: Character | null) {
-        const leash = C === null ? null : this.NeckLeash(C);
+        const leash = C === null ? null : this.WornLeash(C);
         return leash !== null && InventoryGetLock(leash) !== null;
     }
 

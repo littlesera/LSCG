@@ -88,16 +88,15 @@ describe("clasped leashes with real BC items", () => {
 			expect(leashing.CanClaspTo(A, B)).toBe(false);
 		});
 
-		it("not even when they're leashable some other way, like a bed chain on the collar and a pelvis leash", () => {
+		it("also when it isn't on the collar, like a pelvis leash next to a bed chain on the collar", () => {
 			const A = makeCharacter(2);
 			const B = makeCharacter(3);
 			leashed(A);
 			collared(B);
 			wear(B, "ItemNeckRestraints", "Bedchain");
 			wear(B, "ItemPelvis", "PelvisChainLeash");
-			// Vanilla would let anyone hold them, but there's no leash on the collar to clasp to
 			expect(g.ChatRoomCanBeLeashed(B)).toBe(true);
-			expect(leashing.CanClaspTo(A, B)).toBe(false);
+			expect(leashing.CanClaspTo(A, B)).toBe(true);
 		});
 
 		it("not a leash vanilla wouldn't let anyone pull, like someone shut in a box", () => {
