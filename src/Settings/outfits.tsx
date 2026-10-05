@@ -12,7 +12,7 @@ import { clamp, entries, toArray } from "lodash-es";
 import { Outfit } from "./OutfitCollection/outfitCollection";
 import { drawTooltip } from "./settingUtils";
 import { setSubscreen } from "./setting_definitions";
-import { drawUnaffected } from "Dom/kit";
+import { CheckboxRow, drawUnaffected, KitContext } from "Dom/kit";
 import { OutfitStorageStrategy } from "./OutfitCollection/IOutfitCollection";
 
 function createButton(screen: GuiOutfits, key: string, i: number, onClick: (key: string) => void) {
@@ -175,13 +175,6 @@ const EDITOR_ID = Object.freeze({
     itemRemove: `${editorRoot}-item-remove`,
 
     checkboxes: `${editorRoot}-checkboxes`,
-    clothesCheck: `${editorRoot}-clothes-check`,
-    itemsCheck: `${editorRoot}-items-check`,
-    cosplayCheck: `${editorRoot}-cosplay-check`,
-    hairCheck: `${editorRoot}-hair-check`,
-    skinCheck: `${editorRoot}-skin-check`,
-    bodyCheck: `${editorRoot}-body-check`,
-    genderCheck: `${editorRoot}-gender-check`,
 });
 
 export class GuiOutfits extends GuiSubscreen {
@@ -1326,35 +1319,33 @@ export class GuiOutfits extends GuiSubscreen {
         }
     }
 
+    /** The filter checkboxes, built from the DOM kit; the kit context keeps them in step with the filter
+     *  (including the body box locking and ticking the three below it), so they're never rebuilt after a click. */
     createCheckboxes() {
+        const ctx = new KitContext();
+        const f = this._outfitFilter;
+        const box = (key: keyof typeof f, label: string, underBody = false) => CheckboxRow(ctx, {
+            label,
+            get: () => underBody ? (f[key] || f.body) : f[key],
+            set: v => { f[key] = v; this.setFilteredIncoming(); },
+            disabled: underBody ? () => f.body : undefined,
+        });
         return <fieldset>
-                    {this.createCheckbox(EDITOR_ID.clothesCheck, this._outfitFilter.clothes, "Clothing", false)}
-                    {this.createCheckbox(EDITOR_ID.itemsCheck, this._outfitFilter.items, "Restraints/Items", false)}
-                    {this.createCheckbox(EDITOR_ID.cosplayCheck, this._outfitFilter.cosplay, "Cosplay Items", false)}
+                    {box("clothes", "Clothing")}
+                    {box("items", "Restraints/Items")}
+                    {box("cosplay", "Cosplay Items")}
                     <fieldset>
-                        <legend>
-                            {this.createCheckbox(EDITOR_ID.bodyCheck, this._outfitFilter.body, "All Body Items", false)}
-                        </legend>
-                        {this.createCheckbox(EDITOR_ID.hairCheck, this._outfitFilter.hair || this._outfitFilter.body, "Hair/Eyebrows", this._outfitFilter.body)}
-                        {this.createCheckbox(EDITOR_ID.skinCheck, this._outfitFilter.skin || this._outfitFilter.body, "Skin/Body", this._outfitFilter.body)}
-                        {this.createCheckbox(EDITOR_ID.genderCheck, this._outfitFilter.gender || this._outfitFilter.body, "Genitals/Pronouns", this._outfitFilter.body)}
+                        <legend>{box("body", "All Body Items")}</legend>
+                        {box("hair", "Hair/Eyebrows", true)}
+                        {box("skin", "Skin/Body", true)}
+                        {box("gender", "Genitals/Pronouns", true)}
                     </fieldset>
                 </fieldset>;
     }
 
-    /** Empties the old checkboxes first: BC refuses to create an element whose id is still in the page. */
+    /** Rebuilds the checkboxes from the current filter (the filter is replaced when the editor opens). */
     rebuildCheckboxes() {
-        const host = document.getElementById(EDITOR_ID.checkboxes);
-        host?.replaceChildren();
-        host?.append(this.createCheckboxes());
-    }
-
-    createCheckbox(id: string, value: boolean, label: string, disabled: boolean = false) {
-        const self = this;
-        return <label>
-                {ElementCheckbox.Create(id, function() { self.toggleCheckbox(this); }, { checked: value, disabled })}
-                {label}
-            </label>;
+        document.getElementById(EDITOR_ID.checkboxes)?.replaceChildren(this.createCheckboxes());
     }
 
     createOption(key: string) {
@@ -1497,25 +1488,6 @@ export class GuiOutfits extends GuiSubscreen {
         }
         this.SelectedOutfit.inherit = toArray(opt.parentElement?.children).filter(o => (o as HTMLOptionElement).selected).map(o => (o as HTMLOptionElement).value);
         this.reloadPreviewAppearance();
-    }
-
-    toggleCheckbox(input: HTMLInputElement) {
-        const id = input.id;
-        const checked = input.checked;
-        switch (id) {
-            case EDITOR_ID.clothesCheck: this._outfitFilter.clothes = checked; break;
-            case EDITOR_ID.itemsCheck: this._outfitFilter.items = checked; break;
-            case EDITOR_ID.cosplayCheck: this._outfitFilter.cosplay = checked; break;
-            case EDITOR_ID.bodyCheck: 
-                this._outfitFilter.body = checked;
-                this.rebuildCheckboxes();
-                break;
-            case EDITOR_ID.hairCheck: this._outfitFilter.hair = checked; break;
-            case EDITOR_ID.skinCheck: this._outfitFilter.skin = checked; break;
-            case EDITOR_ID.genderCheck: this._outfitFilter.gender = checked; break;
-        }
-
-        this.setFilteredIncoming();
     }
 
     SelectStorageStrategy(ele: HTMLSelectElement) {
