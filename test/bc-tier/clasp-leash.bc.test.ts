@@ -159,14 +159,15 @@ describe("clasped leashes with real BC items", () => {
 			expect(leashing.CanClaspTo(A, B)).toBe(true);
 		});
 
-		it("isn't given by a player held by something that isn't on their collar, like a pelvis leash", () => {
+		it("is a plain collar leash from a player held by something that isn't on their collar, like a pelvis leash", () => {
 			const A = makeCharacter(2);
 			const B = makeCharacter(3);
 			collared(A);
 			wear(A, "ItemPelvis", "PelvisChainLeash");
 			collared(B);
 			expect(g.ChatRoomCanBeLeashed(A)).toBe(true);
-			expect(leashing.CanClaspTo(A, B)).toBe(false);
+			expect(leashing.LeashEnd(A)?.asset.Name).toBe("CollarLeash");
+			expect(leashing.CanClaspTo(A, B)).toBe(true);
 		});
 	});
 

@@ -6,7 +6,7 @@ import { Consent, Core, getModule } from "modules";
 import { CollarModule } from "./collar";
 import { ActivitySettingsModel } from "Settings/Models/activities";
 import { GuiActivities } from "Settings/activities";
-import { GrabType, LeashingModule } from "./leashing";
+import { GrabType, LeashActivityTargets, LeashingModule } from "./leashing";
 import { HypnoModule } from "./hypno";
 import { StateModule } from "./states";
 import { SplatterModule } from "./splatter";
@@ -1270,18 +1270,16 @@ export class ActivityModule extends BaseModule {
                 MaxProgress: 30,
                 Prerequisite: ["ZoneAccessible"],
             },
-            Targets: [
-                {
-                    Name: "ItemNeck",
-                    SelfAllowed: false,
-                    TargetLabel: "Hold Leash",
-                    TargetAction: "SourceCharacter picks up TargetCharacter's leash.",
-                },
-            ],
+            Targets: LeashActivityTargets.map(Name => ({
+                Name,
+                SelfAllowed: false,
+                TargetLabel: "Hold Leash",
+                TargetAction: "SourceCharacter picks up TargetCharacter's leash.",
+            }) as ActivityTarget),
             CustomPrereqs: [
                 {
                     Name: "CanHoldLeash",
-                    Func: (_acting, acted) => this.leashingModule.CanHoldLeash(acted),
+                    Func: (_acting, acted, group) => this.leashingModule.CanHoldLeash(acted, group),
                 },
             ],
             CustomAction: {
@@ -1302,18 +1300,16 @@ export class ActivityModule extends BaseModule {
                 MaxProgress: 30,
                 Prerequisite: ["ZoneAccessible"],
             },
-            Targets: [
-                {
-                    Name: "ItemNeck",
-                    SelfAllowed: false,
-                    TargetLabel: "Let Go Of Leash",
-                    TargetAction: "SourceCharacter lets go of TargetCharacter's leash.",
-                },
-            ],
+            Targets: LeashActivityTargets.map(Name => ({
+                Name,
+                SelfAllowed: false,
+                TargetLabel: "Let Go Of Leash",
+                TargetAction: "SourceCharacter lets go of TargetCharacter's leash.",
+            }) as ActivityTarget),
             CustomPrereqs: [
                 {
                     Name: "CanLetGoOfLeash",
-                    Func: (_acting, acted) => this.leashingModule.CanLetGoOfLeash(acted),
+                    Func: (_acting, acted, group) => this.leashingModule.CanLetGoOfLeash(acted, group),
                 },
             ],
             CustomAction: {
@@ -1333,21 +1329,19 @@ export class ActivityModule extends BaseModule {
                 MaxProgress: 30,
                 Prerequisite: ["ZoneAccessible", "UseHands"],
             },
-            Targets: [
-                {
-                    Name: "ItemNeck",
-                    SelfAllowed: true,
-                    TargetLabel: "Clasp Leash",
-                    TargetAction: "SourceCharacter clasps the leash in PronounPossessive hand to TargetCharacter's leash.",
-                    TargetSelfAction: "SourceCharacter clasps the leash in PronounPossessive hand to PronounPossessive own leash.",
-                },
-            ],
+            Targets: LeashActivityTargets.map(Name => ({
+                Name,
+                SelfAllowed: true,
+                TargetLabel: "Clasp Leash",
+                TargetAction: "SourceCharacter clasps the leash in PronounPossessive hand to TargetCharacter's leash.",
+                TargetSelfAction: "SourceCharacter clasps the leash in PronounPossessive hand to PronounPossessive own leash.",
+            }) as ActivityTarget),
             CustomPrereqs: [
                 {
                     Name: "CanClaspLeash",
-                    Func: (_acting, acted) => {
+                    Func: (_acting, acted, group) => {
                         const held = this.leashingModule.HeldLeash(acted);
-                        return held !== null && this.leashingModule.CanClaspTo(held, acted);
+                        return held !== null && this.leashingModule.CanClaspTo(held, acted) && this.leashingModule.ClaspOnGroup(acted, group);
                     },
                 },
             ],
@@ -1373,19 +1367,17 @@ export class ActivityModule extends BaseModule {
                 MaxProgress: 30,
                 Prerequisite: ["ZoneAccessible", "UseHands"],
             },
-            Targets: [
-                {
-                    Name: "ItemNeck",
-                    SelfAllowed: true,
-                    TargetLabel: "Unclasp Leash",
-                    TargetAction: "SourceCharacter unclasps TargetCharacter's leash.",
-                    TargetSelfAction: "SourceCharacter unclasps PronounPossessive own leash.",
-                },
-            ],
+            Targets: LeashActivityTargets.map(Name => ({
+                Name,
+                SelfAllowed: true,
+                TargetLabel: "Unclasp Leash",
+                TargetAction: "SourceCharacter unclasps TargetCharacter's leash.",
+                TargetSelfAction: "SourceCharacter unclasps PronounPossessive own leash.",
+            }) as ActivityTarget),
             CustomPrereqs: [
                 {
                     Name: "TargetHasClaspedLeash",
-                    Func: (_acting, acted) => this.leashingModule.ClaspsOn(acted.MemberNumber ?? -1).length > 0,
+                    Func: (_acting, acted, group) => this.leashingModule.ClaspsOn(acted.MemberNumber ?? -1).length > 0 && this.leashingModule.LeashOnGroup(acted, group),
                 },
             ],
             CustomAction: {
