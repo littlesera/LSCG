@@ -604,6 +604,9 @@ export class ItemUseModule extends BaseModule {
 				res = this.ManualGenerateItemActivitiesForNecklaceActivity(acting, acted, needsItem, activity, targetGroup as AssetGroup);
 			} else {
 				res = next(args);
+				// On our own mouth, only what we hold: vanilla also offers the penis, a strap-on, and a dildo gag in that very mouth
+				if (["PenetrateFast", "PenetrateSlow"].includes(activity.Name) && targetGroup.Name === "ItemMouth" && acting.MemberNumber === acted.MemberNumber)
+					res = (res as ItemActivity[]).filter(a => a.Item?.Asset.Group.Name === "ItemHandheld");
 			}
 			return res;
 		}, ModuleCategory.ItemUse);
@@ -758,6 +761,31 @@ export class ItemUseModule extends BaseModule {
 		});
     }
 
+	/** Everything C could slap with right now: the penis, a penetrate item in hand, or anything worn that allows it (dildo gag, strap-on panties, horns...). Each has
+	 *  its own conditions, which is why this isn't a plain activity prerequisite. */
+	SlapItems(C: Character): Item[] {
+		const isPenetrate = (item: Item | null): item is Item =>
+			!!item && (AdditionalPenetrateItems.includes(item.Asset.Name) || !!InventoryGetItemProperty(item, "AllowActivity")?.includes("PenetrateItem"));
+		const items: Item[] = [];
+
+		// The penis is an item in BC, which is where its preview comes from. Like CanUsePenis, it needs the vulva reachable
+		const penis = C.Appearance.find(i => i.Asset.Name === "Penis");
+		if (penis && C.HasPenis() && !C.HasEffect("Chaste") && !C.IsVulvaChaste() && InventoryPrerequisiteMessage(C, "AccessVulva") === "")
+			items.push(penis);
+
+		// Anything else that allows it, wherever it is: a dildo gag, strap-on panties, a horn and so on. Only the hand needs a
+		// free hand to swing it. The penis was looked at above, with its own conditions
+		for (const item of C.Appearance) {
+			const group = item.Asset.Group.Name;
+			if (item === penis || item.Asset.Name === "Penis" || !isPenetrate(item))
+				continue;
+			if (group === "ItemHandheld" && (!C.CanInteract() || C.Effect.includes("MergedFingers")))
+				continue;
+			items.push(item);
+		}
+		return items;
+	}
+
 	/** The `CharacterItemsForActivity` hook's own logic, extracted unchanged so it can be
 	 *  exercised directly by a test without going through the real, hooked global. `results`
 	 *  is whatever the real BC implementation (or an earlier-priority hook) already
@@ -834,6 +862,13 @@ export class ItemUseModule extends BaseModule {
 			const item = InventoryGet(C, focusGroup);
 			if (item && (AdditionalPenetrateItems.includes(item.Asset.Name) || InventoryGetItemProperty(item, "AllowActivity")?.includes("PenetrateItem")))
 				results.push(item);
+		} else if (itemType == "HeldPenetrateItem") {
+			// Only what's in the hand: vanilla's own PenetrateItem also counts a dildo that's stuck in the mouth
+			const item = InventoryGet(C, "ItemHandheld");
+			if (item && (AdditionalPenetrateItems.includes(item.Asset.Name) || InventoryGetItemProperty(item, "AllowActivity")?.includes("PenetrateItem")))
+				results.push(item);
+		} else if (itemType == "SlapItem") {
+			results.push(...this.SlapItems(C));
 		} else if (itemType == "EdibleItem") {
 			const item = InventoryGet(C, "ItemHandheld");
 			if (item && EdibleItems.includes(item.Asset.Name))

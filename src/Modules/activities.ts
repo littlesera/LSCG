@@ -10,6 +10,7 @@ import { GrabType, LeashingModule } from "./leashing";
 import { AnchorLabel, AnchorZones, Anchors, DefaultZone, IsLineSource, ZoneOf } from "./leashing-anchors";
 import { HypnoModule } from "./hypno";
 import { StateModule } from "./states";
+import { ItemUseModule } from "./item-use";
 import { SplatterModule } from "./splatter";
 import { extensionActivities, extensionPrerequisites } from "api/activities";
 import { CommandListener } from "./core";
@@ -220,7 +221,9 @@ export class ActivityModule extends BaseModule {
             const activity: ItemActivity = args[1];
             if (activity.Activity.Name.includes("LSCG")) {
                 args[4] ??= {};
-                args[4].image = this.ResolveImage(this.CustomImages.get(activity.Activity.Name));
+                // An item in use has BC's own preview of it, which a custom image would cover
+                if (!activity.Item)
+                    args[4].image = this.ResolveImage(this.CustomImages.get(activity.Activity.Name));
                 args[4].icons = [
                     ...(args[4].icons ?? []),
                     { name: "lscg", tooltipText: "LSCG activity", iconSrc: ICONS.BOUND_GIRL },
@@ -512,75 +515,13 @@ export class ActivityModule extends BaseModule {
             CustomImage: "Icons/Activity/MasturbateHand.png",
         });
 
-        // SlapPenis, with the penis itself
+        // SlapPenis: with the penis, a held item, or a dildo gag (see SlapItems). A slap lands over chastity or a plug too, so no zone checks
         this.AddActivity({
             Activity:  {
                 Name: "SlapPenis",
                 MaxProgress: 100,
                 MaxProgressSelf: 100,
-                Prerequisite: ["ZoneAccessible", "ZoneNaked", "CanUsePenis", "HasPenis"],
-            },
-            Targets: [
-                <ActivityTarget>{
-                    Name: "ItemHead",
-                    TargetLabel: "Slap Face",
-                    TargetAction: "SourceCharacter slaps PronounPossessive penis against TargetCharacter's face.",
-                }, <ActivityTarget>{
-                    Name: "ItemMouth",
-                    TargetLabel: "Slap Mouth",
-                    TargetAction: "SourceCharacter slaps PronounPossessive penis against TargetCharacter's mouth.",
-                }, <ActivityTarget>{
-                    Name: "ItemVulva",
-                    TargetLabel: "Slap against Pussy",
-                    TargetAction: "SourceCharacter slaps PronounPossessive penis against TargetCharacter's pussy.",
-                }, <ActivityTarget>{
-                    Name: "ItemBreast",
-                    TargetLabel: "Slap Breast",
-                    TargetAction: "SourceCharacter slaps PronounPossessive penis against TargetCharacter's breast.",
-                }, <ActivityTarget>{
-                    Name: "ItemLegs",
-                    TargetLabel: "Slap Thigh",
-                    TargetAction: "SourceCharacter slaps PronounPossessive penis against TargetCharacter's thigh.",
-                }, <ActivityTarget>{
-                    Name: "ItemFeet",
-                    TargetLabel: "Slap Calf",
-                    TargetAction: "SourceCharacter slaps PronounPossessive penis against TargetCharacter's calf.",
-                }, <ActivityTarget>{
-                    Name: "ItemBoots",
-                    TargetLabel: "Slap Feet",
-                    TargetAction: "SourceCharacter slaps PronounPossessive penis against TargetCharacter's feet.",
-                }, <ActivityTarget>{
-                    Name: "ItemButt",
-                    TargetLabel: "Slap Butt",
-                    TargetAction: "SourceCharacter slaps PronounPossessive penis against TargetCharacter's butt.",
-                }, <ActivityTarget>{
-                    Name: "ItemNeck",
-                    TargetLabel: "Slap Neck",
-                    TargetAction: "SourceCharacter slaps PronounPossessive penis against TargetCharacter's neck.",
-                }, <ActivityTarget>{
-                    Name: "ItemArms",
-                    TargetLabel: "Slap Arms",
-                    TargetAction: "SourceCharacter slaps PronounPossessive penis against TargetCharacter's arm.",
-                }, <ActivityTarget>{
-                    Name: "ItemHands",
-                    TargetLabel: "Slap Hand",
-                    TargetAction: "SourceCharacter slaps PronounPossessive penis against TargetCharacter's hand.",
-                }, <ActivityTarget>{
-                    Name: "ItemPenis",
-                    TargetLabel: "Slap Penis",
-                    TargetAction: "SourceCharacter slaps PronounPossessive penis against TargetCharacter's penis.",
-                },
-            ],
-            CustomImage: "Icons/Activity/PenetrateSlow.png",
-        });
-
-        // SlapPenisItem, with a held item standing in
-        this.AddActivity({
-            Activity:  {
-                Name: "SlapPenisItem" as ActivityName,
-                MaxProgress: 100,
-                MaxProgressSelf: 100,
-                Prerequisite: ["ZoneAccessible", "ZoneNaked", "UseHands", "Needs-PenetrateItem" as ActivityPrerequisite],
+                Prerequisite: ["CanSlapWithItem", "Needs-SlapItem"],
             },
             Targets: [
                 <ActivityTarget>{
@@ -633,6 +574,10 @@ export class ActivityModule extends BaseModule {
                     TargetAction: "SourceCharacter slaps PronounPossessive ActivityAsset against TargetCharacter's penis.",
                 },
             ],
+            CustomPrereqs: [{
+                Name: "CanSlapWithItem",
+                Func: (acting) => (getModule<ItemUseModule>("ItemUseModule")?.SlapItems(acting).length ?? 0) > 0,
+            }],
             CustomImage: "Icons/Activity/PenetrateSlow.png",
         });
 
@@ -977,9 +922,17 @@ export class ActivityModule extends BaseModule {
                     TargetSelfAction: "SourceCharacter roughly penetrates PronounPossessive own mouth with PronounPossessive ActivityAsset.",
                 },
             ],
+            // On our own mouth it takes a held item and a free hand. Which items it offers is cut down in ItemUseModule
+            CustomPrereqs: [{
+                Name: "CanSelfPenetrateMouth",
+                Func: (acting, acted, group) =>
+                    group?.Name !== "ItemMouth" || acting.MemberNumber !== acted.MemberNumber ||
+                    (acting.CanInteract() && !acting.Effect.includes("MergedFingers") &&
+                        (getModule<ItemUseModule>("ItemUseModule")?.getItemsForActivityNeed(acting, "HeldPenetrateItem", []).length ?? 0) > 0),
+            }],
         });
 
-        // Patch PenetrateFast
+        // Patch PenetrateSlow
         this.PatchActivity(<ActivityPatch>{
             ActivityName: "PenetrateSlow",
             AddedTargets: [{
@@ -990,6 +943,14 @@ export class ActivityModule extends BaseModule {
                     TargetSelfAction: "SourceCharacter slowly penetrates PronounPossessive own mouth with PronounPossessive ActivityAsset.",
                 },
             ],
+            // On our own mouth it takes a held item and a free hand. Which items it offers is cut down in ItemUseModule
+            CustomPrereqs: [{
+                Name: "CanSelfPenetrateMouth",
+                Func: (acting, acted, group) =>
+                    group?.Name !== "ItemMouth" || acting.MemberNumber !== acted.MemberNumber ||
+                    (acting.CanInteract() && !acting.Effect.includes("MergedFingers") &&
+                        (getModule<ItemUseModule>("ItemUseModule")?.getItemsForActivityNeed(acting, "HeldPenetrateItem", []).length ?? 0) > 0),
+            }],
         });
 
         // ReleaseEar
@@ -1405,7 +1366,8 @@ export class ActivityModule extends BaseModule {
                         return false;
                     const zone = ZoneOf(meta?.GroupName ?? DefaultZone);
                     const shared = this.leashingModule.ClaspLeash(held, target, zone);
-                    const onto = shared ? "collar" : Anchors(target, zone).some(IsLineSource) ? "leash" : AnchorLabel(target, zone);
+                    // A leash on the neck is just "the leash", but on a ring or such it's still that item that took it
+                    const onto = shared ? "collar" : zone === DefaultZone && Anchors(target, zone).some(IsLineSource) ? "leash" : AnchorLabel(target, zone);
                     const whose = target.IsPlayer() ? "%POSSESSIVE% own" : "%OPP_NAME_POSSESSIVE%";
                     SendAction(`%NAME% clasps the leash in %POSSESSIVE% hand to ${whose} ${onto}.`, target);
                     return false;
