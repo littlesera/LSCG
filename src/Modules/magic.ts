@@ -2,7 +2,7 @@ import { BaseModule } from "base";
 import { getModule } from "modules";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
 import { GetConfiguredItemBundlesFromOutfitKey, GetDelimitedList, OnChat, GetItemNameAndDescriptionConcat, GetMetadata, LSCG_SendLocal, LSCG_TEAL, OnActivity, SendAction, getCharacter, getRandomInt, hookFunction, isPhraseInString, removeAllHooksByModule, sendLSCGCommand, sendLSCGCommandBeep, settingsSave, getCharacterByNicknameOrMemberNumber, excludeParentheticalContent, escapeRegExp } from "../utils";
-import { ABSOLUTE_MAX_SPELL_EFFECTS, DEFAULT_MAX_SPELL_EFFECTS, KNOWN_SPELLS_LIMIT, LSCGSpellEffect, MagicSettingsModel, OutfitOption, SpellDefinition, SpellEffectId, sanitizeIncomingEffects } from "Settings/Models/magic";
+import { ABSOLUTE_MAX_SPELL_EFFECTS, DamageSave, DEFAULT_MAX_SPELL_EFFECTS, KNOWN_SPELLS_LIMIT, LSCGSpellEffect, MagicSettingsModel, OutfitOption, SpellDefinition, SpellEffectId, sanitizeIncomingDamage, sanitizeIncomingEffects } from "Settings/Models/magic";
 import { GuiMagic } from "Settings/magic";
 import { StateModule } from "./states";
 import { IsActivityEnhanced, ItemUseModule, MagicWandItems } from "./item-use";
@@ -567,8 +567,10 @@ export class MagicModule extends BaseModule {
                 if (!spell || !sender)
                     return;
                 const check = getModule<ItemUseModule>("ItemUseModule")?.MakeActivityCheck(sender, Player);
-                if (!this.SpellIsBeneficial(spell) && this.DefendAgainst(sender.MemberNumber ?? -1)) {
-                    if (check.AttackerRoll.Total < check.DefenderRoll.Total) {
+                const harmful = !this.SpellIsBeneficial(spell);
+                const savedRoll = check.AttackerRoll.Total < check.DefenderRoll.Total;
+                if (harmful && this.DefendAgainst(sender.MemberNumber ?? -1)) {
+                    if (savedRoll) {
                         SendAction(`${CharacterNickname(Player)} ${check.DefenderRoll.TotalStr}successfully saves against ${CharacterNickname(sender)}'s ${check.AttackerRoll.TotalStr}${spell.Name}.`);
                         emit("spell.resisted", { spell: spellInfo(spell), sender: sender.MemberNumber ?? -1, bounced: !!magicBarrier?.active });
                         if (magicBarrier?.active) {
@@ -586,6 +588,8 @@ export class MagicModule extends BaseModule {
                             this.stateModule.BarrierState.Recover(false);
                             SendAction(`The magical barrier around ${CharacterNickname(Player)} disappear, drained of all its magical power.`);
                         }
+                        else
+                            this.ApplySavedDamage(sender, spell);
                         return;
                     }
                 }
@@ -593,7 +597,9 @@ export class MagicModule extends BaseModule {
                     this.stateModule.BarrierState.Recover(false);
                     SendAction(`The magical barrier around ${CharacterNickname(Player)} shatters, pierced by ${CharacterNickname(sender)}'s spell!`);
                 }
-                this.IncomingSpell(sender, spell, paired, Math.max(1, check.AttackerRoll.Total - check.DefenderRoll.Total));
+                // Someone who never resists spells (or doesn't resist this caster) still rolls to save against damage
+                const savesAgainstDamage = harmful && savedRoll && !this.DefendAgainst(sender.MemberNumber ?? -1);
+                this.IncomingSpell(sender, spell, paired, Math.max(1, check.AttackerRoll.Total - check.DefenderRoll.Total), savesAgainstDamage);
             }
             else if (msg.command?.name == "pair") {
                 const origin = getCharacter(msg.command?.args.find(arg => arg.name == "paired")?.value as number);
@@ -608,6 +614,15 @@ export class MagicModule extends BaseModule {
         }, 1000); // Slight delay on responding to spell commands, builds anticipation.
     }
 
+    /** A save that resisted a spell still halves its damage, unless the caster made the damage "No damage on a save". Only the
+     *  damage is applied; everything else was resisted. */
+    ApplySavedDamage(sender: Character, spell: SpellDefinition) {
+        const damage = sanitizeIncomingDamage(spell.Damage);
+        if (!spell.Effects.includes(LSCGSpellEffect.damage) || damage?.Save === DamageSave.none)
+            return;
+        this.IncomingSpell(sender, { ...spell, Effects: [LSCGSpellEffect.damage] }, null, 1, true);
+    }
+
     filterAllowedSpellEffects(spell: SpellDefinition, caster: Character | null): SpellEffectId[] {
         return spell.Effects.filter(effect => this.effectIsAllowed(effect, caster));
     }
@@ -618,7 +633,8 @@ export class MagicModule extends BaseModule {
         return (!isBlocked || isBypassed);
     }
 
-    IncomingSpell(sender: Character | null, spell: SpellDefinition, paired?: Character | null, saveDiff: number = 1) {
+    /** `saved`: the target's roll beat the caster's, so damage is halved (or negated) while the rest of the spell applies as given. */
+    IncomingSpell(sender: Character | null, spell: SpellDefinition, paired?: Character | null, saveDiff: number = 1, saved: boolean = false) {
         const senderName = !sender ? "Someone" : CharacterNickname(sender);
         // However many a caster's spell claims, only so many are applied: each one is a timer on this client.
         let allowedSpellEffects = this.filterAllowedSpellEffects(spell, sender).slice(0, ABSOLUTE_MAX_SPELL_EFFECTS);
@@ -665,7 +681,7 @@ export class MagicModule extends BaseModule {
                 else if (!definition)
                     SendAction(`Part of ${senderName}'s ${spell.Name} washes over %NAME% without effect, its magic unfamiliar.`);
                 else {
-                    definition.apply({ effect, sender, senderName, spell, paired, duration, magic: this });
+                    definition.apply({ effect, sender, senderName, spell, paired, duration, magic: this, saved });
                     emit("spell.effectApplied", { effect, spell: info, sender: sender?.MemberNumber, duration });
                 }
                 if (ix == arr.length - 1)
@@ -721,8 +737,10 @@ export class MagicModule extends BaseModule {
             return;
         const spell = msg.command?.args?.find(arg => arg.name == "spell")?.value as SpellDefinition;
         // It is saved with this player's settings, so keep what a sender can make it carry within limits.
-        if (spell && typeof spell === "object")
+        if (spell && typeof spell === "object") {
             spell.Effects = sanitizeIncomingEffects(spell.Effects);
+            spell.Damage = sanitizeIncomingDamage(spell.Damage);
+        }
         if (this.AvailableSpells.length >= KNOWN_SPELLS_LIMIT)
             SendAction(`%NAME%'s mind is already full of spells. %INTENSIVE% must forget one before %INTENSIVE% can learn ${spell.Name}.`);
         if (this.AvailableSpells.find(s => s.Name == spell.Name)) {
@@ -766,23 +784,6 @@ export class MagicModule extends BaseModule {
         this.CastSpellActual(foundSpell, target, true, pairTgt);
     }
 
-    getSpellTargetTupleFromMsg(msg: string): [SpellDefinition | null, Character | null] | undefined {
-        const oocParsedString = excludeParentheticalContent(msg); // Don't allow voice casting in OOC chat   
-        const characterNames = ChatRoomCharacter.map(c => [c.Name, c.Nickname, c.Nickname?.normalize("NFKC"), c.MemberNumber + ""]).reduce((a, b) => a.concat(b)).filter(c => !!c);
-        for (const s of this.AvailableSpells.filter(s => s.AllowVoiceCast)) { // Only look at spells which allow voice cast
-            if (!s.AllowVoiceCast)
-                continue;
-            const searchPhrase = (!!s.CastingPhrase && s.CastingPhrase.length > 0) ? s.CastingPhrase : s.Name;
-            const matches = this.findCastingMatch(oocParsedString, searchPhrase, characterNames as string[]);
-            if (!matches)
-                continue;
-            const characterPhrase = matches[2] ?? "";
-            const character = getCharacterByNicknameOrMemberNumber(characterPhrase);
-            if (character)
-                return [structuredClone(s), character]; // UnpackSpellCodes mutates; keep stored spells key-only (#680)
-        }
-        return undefined;
-    }
     /** Finds `phrase` followed by one of `names`. Word edges and the space between are required only where the characters either side
      *  are in a script that uses spaces (\b can't tell, e.g. for accents or Chinese); unspaced scripts have neither (#877). */
     private findCastingMatch(text: string, phrase: string, names: string[]): RegExpExecArray | null {
@@ -800,6 +801,23 @@ export class MagicModule extends BaseModule {
         return null;
     }
 
+    getSpellTargetTupleFromMsg(msg: string): [SpellDefinition | null, Character | null] | undefined {
+        const oocParsedString = excludeParentheticalContent(msg); // Don't allow voice casting in OOC chat   
+        const characterNames = ChatRoomCharacter.map(c => [c.Name, c.Nickname, c.Nickname?.normalize("NFKC"), c.MemberNumber + ""]).reduce((a, b) => a.concat(b)).filter(c => !!c);
+        for (const s of this.AvailableSpells.filter(s => s.AllowVoiceCast)) { // Only look at spells which allow voice cast
+            if (!s.AllowVoiceCast)
+                continue;
+            const searchPhrase = (!!s.CastingPhrase && s.CastingPhrase.length > 0) ? s.CastingPhrase : s.Name;
+            const matches = this.findCastingMatch(oocParsedString, searchPhrase, characterNames as string[]);
+            if (!matches)
+                continue;
+            const characterPhrase = matches[2] ?? "";
+            const character = getCharacterByNicknameOrMemberNumber(characterPhrase);
+            if (character)
+                return [structuredClone(s), character]; // UnpackSpellCodes mutates; keep stored spells key-only (#680)
+        }
+        return undefined;
+    }
 
     // ***************** Potions *******************
     /**

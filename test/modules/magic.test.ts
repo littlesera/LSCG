@@ -368,6 +368,54 @@ describe("MagicModule", () => {
 			vi.advanceTimersByTime(2500);
 			expect(states.BlindState.Active).toBe(false);
 		});
+
+		describe("Chinese (#877)", () => {
+			const cast = (phrase: string, line: string) => {
+				magic.settings.knownSpells = [spell(phrase, [LSCGSpellEffect.blindness], { AllowVoiceCast: true, CastingPhrase: phrase })];
+				magic.CheckForSpellVoiceCasting(line);
+				vi.advanceTimersByTime(1000 + 2500);
+				return states.BlindState.Active;
+			};
+
+			it("casts a Chinese incantation followed by a space and the target", () => {
+				expect(cast("冰冻术", "冰冻术 Sera")).toBe(true);
+			});
+
+			it("casts a Chinese incantation with no space before the target", () => {
+				expect(cast("冰冻术", "冰冻术Sera")).toBe(true);
+			});
+
+			it("casts when the incantation sits inside a longer Chinese sentence", () => {
+				expect(cast("冰冻术", "我施放冰冻术 Sera 快跑")).toBe(true);
+			});
+
+			it("casts on a target with a Chinese nickname", () => {
+				globalThis.Player.Nickname = "小塞拉";
+				expect(cast("冰冻术", "冰冻术 小塞拉")).toBe(true);
+			});
+
+			it("casts a mixed English/Chinese incantation", () => {
+				expect(cast("frost 冰", "frost 冰 Sera")).toBe(true);
+			});
+
+			it("still requires word edges and a space for latin incantations", () => {
+				expect(cast("frost bolt", "frost bolts Sera")).toBe(false);
+				expect(cast("frost bolt", "frost boltSera")).toBe(false);
+				expect(cast("frost bolt", "superfrost bolt Sera")).toBe(false);
+			});
+
+			it("casts an accented latin incantation as a whole phrase with a space before the name", () => {
+				expect(cast("écoute", "écoute Sera")).toBe(true);
+			});
+
+			it("does not cast an accented latin incantation with no space before the name", () => {
+				expect(cast("café", "caféSera")).toBe(false);
+			});
+
+			it("does not cast an accented latin incantation inside a longer word", () => {
+				expect(cast("café", "descafé Sera")).toBe(false);
+			});
+		});
 	});
 
 	describe("potions", () => {
