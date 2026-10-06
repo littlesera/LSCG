@@ -11,7 +11,11 @@ export interface CastPrompt {
     /** Where the answer goes in the effect's cast answers. */
     key: string;
     label: string;
+    /** The choices shown. Empty when asked without a target to look at. */
     options: { value: string; label: string }[];
+    /** The right answer depends on the target (which of their effects), which only the target's own client can check. Any short plain value is
+     *  accepted off the wire, and the effect must check it against what is really there. */
+    open?: boolean;
     /** The option used when the cast can't ask (voice, potion, wild magic) and nothing in the words picked one. */
     default: string;
 }
@@ -54,7 +58,7 @@ export interface EffectConfigSchema<T = any> {
     /** The settings still need the player's attention (the section opens by itself). */
     needsAttention?(config: T): boolean;
     /** Questions to ask the caster when casting a spell with these settings. Only a menu cast can ask; others use each prompt's default. */
-    castPrompts?(config: T): CastPrompt[];
+    castPrompts?(config: T, target?: Character): CastPrompt[];
     /** Answers picked out of the words of a voice cast (the text after the target's name), or undefined when none were. */
     fromVoice?(config: T, text: string): Record<string, string> | undefined;
 }

@@ -698,3 +698,53 @@ test("spell menu: a spell that asks for a command word shows the choices first, 
     expect(result.castBeforeConfirm).toBe(0);
     expect(result.cast).toEqual([[false, { 0: { word: "stay" } }]]);
 });
+
+test("spell menu: Remove Curse offers what the target has on them, and casts with the one picked", async ({ bc }) => {
+    const result = await bc.run(async () => {
+        const w = window as any;
+        const wait = (ms: number) => new Promise(r => setTimeout(r, ms));
+        w.Player.LSCG.MagicModule.knownSpells = [
+            { Name: "Lift", Creator: w.Player.MemberNumber, Effects: ["Remove Curse"], AllowPotion: false, AllowVoiceCast: false },
+        ];
+        // The target has published a blindness and a web on them
+        const target = w.Playground.addCharacter({
+            lscg: {
+                MagicModule: { enabled: true, knownEffects: ["Remove Curse"] },
+                StateModule: { states: [
+                    { type: "blind", active: true, activationCount: 1, extensions: {} },
+                    { type: "spell-effects", active: true, activationCount: 1, extensions: { "active-effects": [{ id: "w1", effect: "Web" }] } },
+                ] },
+            },
+        });
+        await w.CommonSetScreen("Room", "MainHall");
+        await wait(800);
+        w.CharacterSetCurrent(target);
+        await wait(400);
+        const magic = w.LSCG.getModule("MagicModule");
+        const cast: any[] = [];
+        magic.CastSpellActual = (...args: any[]) => { cast.push(args.slice(2).filter((_: unknown, i: number) => i !== 1)); };
+        magic.OpenSpellMenu(target);
+        await wait(500);
+        const out: any = {};
+        (document.querySelector(".lscg-spellmenu-card") as HTMLElement).click();
+        await wait(300);
+        const choices = () => [...document.querySelectorAll<HTMLElement>(".lscg-spellmenu-choice")];
+        out.title = document.querySelector(".lscg-spellmenu-header h2")?.textContent;
+        out.prompt = document.querySelector(".lscg-spellmenu-prompt b")?.textContent;
+        out.choices = choices().map(c => c.textContent);
+        out.chosenAtFirst = choices().filter(c => c.classList.contains("lscg-spellmenu-chosen")).map(c => c.textContent);
+        choices().find(c => c.textContent === "Web")!.click();
+        await wait(150);
+        (document.querySelector(".lscg-spellmenu-cast") as HTMLElement).click();
+        await wait(200);
+        out.cast = cast;
+        return out;
+    });
+    expect(result.title).toBe("Choose how to cast…");
+    expect(result.prompt).toBe("Effect to lift");
+    expect(result.choices).toHaveLength(3);
+    expect(result.choices[0]).toBe("A random one");
+    expect(result.choices[2]).toBe("Web");
+    expect(result.chosenAtFirst).toEqual(["A random one"]);
+    expect(result.cast).toEqual([[false, { 0: { target: "entry:w1" } }]]);
+});

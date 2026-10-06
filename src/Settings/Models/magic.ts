@@ -60,7 +60,8 @@ export enum LSCGSpellEffect {
     slime = "Slime",
     ropes = "Conjured Ropes",
     command = "Commanding",
-    grasp = "Grasping"
+    grasp = "Grasping",
+    removeCurse = "Remove Curse"
 }
 
 export enum OutfitOption {
