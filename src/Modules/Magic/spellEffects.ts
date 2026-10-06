@@ -5,6 +5,23 @@ import type { SpellEffectEndReason, SpellEffectEntry } from "Modules/States/Spel
 import { BUILTIN_SPELL_EFFECTS } from "./builtinEffects";
 import { BUILTIN_TAXONOMY, SPELL_TIERS, SpellDomain, SpellSchool, SpellTier, domainDescription, domainOrder } from "./taxonomy";
 
+/** One question the caster is asked when casting a spell with this effect (which command word, say). */
+export interface CastPrompt {
+    /** Where the answer goes in the effect's cast answers. */
+    key: string;
+    label: string;
+    options: { value: string; label: string }[];
+    /** The option used when the cast can't ask (voice, potion, wild magic) and nothing in the words picked one. */
+    default: string;
+}
+
+/** The caster's answers to a spell's cast-time questions: `castArgs[index][key] = value`, per effect copy (its position in the spell). */
+export type CastArgs = Record<string, Record<string, string>>;
+
+/** What a successful save does to an effect. "half" effects use the saved flag to take less and still apply when the spell is otherwise
+ *  resisted outright; "negate" effects simply don't apply to someone who saves. */
+export type SaveBehavior = "half" | "negate";
+
 /** Everything an effect's apply needs. Built-in effects use the module directly; extension effects get a narrower public context. */
 export interface SpellEffectContext {
     effect: SpellEffectId;
@@ -19,8 +36,10 @@ export interface SpellEffectContext {
     index: number;
     /** This effect's settings for this copy, already sanitized by its schema; undefined for effects without one. */
     config?: unknown;
-    /** The target rolled a save against this spell. Only the effects that still do something on a save (damage) are applied after a full resist. */
+    /** The target rolled a save against this spell. Only set for effects that declare an `onSave` behaviour of "half". */
     saved?: boolean;
+    /** The caster's answers to this effect's cast-time questions, already checked against its options; missing keys mean "use the default". */
+    castArgs?: Record<string, string>;
 }
 
 /** What an effect with settings of its own needs besides how it looks in the editor (that lives in Settings/magic-effect-editors.tsx,
@@ -33,6 +52,10 @@ export interface EffectConfigSchema<T = any> {
     summary(config: T): string;
     /** The settings still need the player's attention (the section opens by itself). */
     needsAttention?(config: T): boolean;
+    /** Questions to ask the caster when casting a spell with these settings. Only a menu cast can ask; others use each prompt's default. */
+    castPrompts?(config: T): CastPrompt[];
+    /** Answers picked out of the words of a voice cast (the text after the target's name), or undefined when none were. */
+    fromVoice?(config: T, text: string): Record<string, string> | undefined;
 }
 
 export interface SpellEffectDefinition {
@@ -59,6 +82,9 @@ export interface SpellEffectDefinition {
     school?: SpellSchool;
     /** How powerful it is, 1-5. A function when the effect's own settings change that (damage by its roll), given the sanitized settings. */
     tier?: SpellTier | ((config: any) => SpellTier);
+    /** What a save does to this effect (see SaveBehavior). Without it, a full resist stops the effect and a save does nothing else. May depend on the
+     *  effect's settings. */
+    onSave?: SaveBehavior | ((config: any) => SaveBehavior);
     /** The most copies of this effect one spell may hold. Unique (1) when missing. */
     stackable?: number;
     /** Display name of the extension that registered it; undefined for built-ins. */

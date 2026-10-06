@@ -1,5 +1,5 @@
 import { ABSOLUTE_MAX_SPELL_EFFECTS, SpellDefinition, SpellEffectId } from "Settings/Models/magic";
-import { effectTier, getSpellEffect } from "./spellEffects";
+import { CastArgs, CastPrompt, effectTier, getSpellEffect, SaveBehavior } from "./spellEffects";
 
 /** The most a single effect's settings may weigh once serialised, whoever sent them. */
 export const MAX_EFFECT_CONFIG_SIZE = 1024;
@@ -94,4 +94,59 @@ export function sanitizeSpell(spell: SpellDefinition): SpellDefinition {
         delete spell.Configs;
     retier(spell);
     return spell;
+}
+
+/** What a save does to the effect at `index`, or undefined when it doesn't declare one. */
+export function saveBehaviorFor(spell: SpellDefinition, index: number): SaveBehavior | undefined {
+    const onSave = getSpellEffect(spell.Effects[index])?.onSave;
+    return typeof onSave === "function" ? onSave(effectConfigFor(spell, index)) : onSave;
+}
+
+/** The questions a menu cast of this spell asks the caster, with which effect copy each belongs to. */
+export function spellCastPrompts(spell: SpellDefinition): { index: number; effect: SpellEffectId; prompts: CastPrompt[] }[] {
+    return spell.Effects.flatMap((effect, index) => {
+        const schema = getSpellEffect(effect)?.config;
+        const config = effectConfigFor(spell, index);
+        const prompts = schema?.castPrompts?.(config) ?? [];
+        return prompts.length > 0 ? [{ index, effect, prompts }] : [];
+    });
+}
+
+/** Cast answers from another player, kept only where they answer a real question with one of its options. Edits nothing; call it on a
+ *  spell that has already been through sanitizeSpell. */
+export function sanitizeCastArgs(raw: unknown, spell: SpellDefinition): CastArgs | undefined {
+    if (!raw || typeof raw !== "object")
+        return undefined;
+    const clean: CastArgs = {};
+    for (const { index, prompts } of spellCastPrompts(spell)) {
+        const answers = (raw as CastArgs)[index];
+        if (!answers || typeof answers !== "object")
+            continue;
+        for (const prompt of prompts) {
+            const value = answers[prompt.key];
+            if (typeof value === "string" && prompt.options.some(o => o.value === value))
+                (clean[index] ??= {})[prompt.key] = value;
+        }
+    }
+    return Object.keys(clean).length > 0 ? clean : undefined;
+}
+
+/** Answers picked out of the words of a voice cast, from whichever effects can read them. */
+export function voiceCastArgs(spell: SpellDefinition, text: string): CastArgs | undefined {
+    const args: CastArgs = {};
+    spell.Effects.forEach((effect, index) => {
+        const answers = getSpellEffect(effect)?.config?.fromVoice?.(effectConfigFor(spell, index), text);
+        const picked = answers ? Object.fromEntries(Object.entries(answers).filter(([, v]) => typeof v === "string")) : {};
+        if (Object.keys(picked).length > 0)
+            args[index] = picked;
+    });
+    return sanitizeCastArgs(args, spell);
+}
+
+/** A copy of the spell with only some of its effects, and the cast answers moved to their new positions. */
+export function pickEffects(spell: SpellDefinition, castArgs: CastArgs | undefined, indexes: number[]): { spell: SpellDefinition; castArgs: CastArgs | undefined } {
+    const picked: SpellDefinition = { ...spell, Effects: indexes.map(i => spell.Effects[i]), Configs: indexes.map(i => spell.Configs?.[i] ?? null) };
+    const moved: CastArgs = {};
+    indexes.forEach((from, to) => { if (castArgs?.[from]) moved[to] = castArgs[from]; });
+    return { spell: picked, castArgs: Object.keys(moved).length > 0 ? moved : undefined };
 }
