@@ -4,6 +4,7 @@ import { damageRoll, MAX_DAMAGE_ROLL } from "Modules/Magic/effects/damage";
 import { DISSOLVE_LAYERS, DissolveConfig, DissolveLayers } from "Modules/Magic/effects/dissolve";
 import { CONJURE_CRAFTABLE } from "Modules/Magic/effects/restraints";
 import { COMMAND_WORDS, COMMANDS, CommandConfig, CommandWord, sanitizeCommandConfig } from "Modules/Magic/effects/command";
+import { GRASPS, GraspConfig, GraspLocation, sanitizeGraspConfig } from "Modules/Magic/effects/grasp";
 import { ConjureConfig, MAX_CONJURE_PIECES, sanitizeConjureConfig } from "Modules/Magic/conjure";
 import { DamageConfig, DamageSave, DamageType, LSCGSpellEffect } from "./Models/magic";
 
@@ -103,6 +104,13 @@ const commandEditor: EffectEditor<CommandConfig> = (ctx, config, update) => [
     })),
 ];
 
+const graspEditor: EffectEditor<GraspConfig> = (ctx, config, update) => GRASPS.map(grasp => CheckboxRow(ctx, {
+    label: grasp.label,
+    description: grasp.location === "neck" ? "A choke. It does nothing unless the target has allowed hand chokes in their settings." : grasp.teases ? "Squeezes now and then, raising arousal a little." : grasp.restricts === "Move" ? "Pins the arms." : grasp.restricts === "Walk" ? "Holds the legs still." : undefined,
+    get: () => config().Locations.includes(grasp.location),
+    set: v => update(sanitizeGraspConfig({ Locations: v ? [...config().Locations, grasp.location] : config().Locations.filter((l: GraspLocation) => l !== grasp.location) })),
+}));
+
 /** Editors for effects that keep their settings in `SpellDefinition.Configs`, by effect id. */
 export const EFFECT_EDITORS: Partial<Record<string, EffectEditor>> = {
     [LSCGSpellEffect.damage]: damageEditor,
@@ -111,4 +119,5 @@ export const EFFECT_EDITORS: Partial<Record<string, EffectEditor>> = {
     [LSCGSpellEffect.slime]: conjureEditor(LSCGSpellEffect.slime),
     [LSCGSpellEffect.ropes]: conjureEditor(LSCGSpellEffect.ropes),
     [LSCGSpellEffect.command]: commandEditor,
+    [LSCGSpellEffect.grasp]: graspEditor,
 };

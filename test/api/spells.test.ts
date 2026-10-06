@@ -41,7 +41,7 @@ describe("effect domains, schools and tiers", () => {
         expect(group(SpellDomain.mind)).toEqual(ids(L.hypnotizing, L.slumber, L.command));
         expect(group(SpellDomain.senses)).toEqual(ids(L.blindness, L.deafened, L.xRay, L.project));
         expect(group(SpellDomain.form)).toEqual(ids(L.enlarge, L.polymorph, L.outfit, L.dissolve));
-        expect(group(SpellDomain.binding)).toEqual(ids(L.muted, L.frozen, L.tighten, L.loosen, L.disarm, L.web, L.slime, L.ropes));
+        expect(group(SpellDomain.binding)).toEqual(ids(L.muted, L.frozen, L.tighten, L.loosen, L.disarm, L.web, L.slime, L.ropes, L.grasp));
         expect(group(SpellDomain.desire)).toEqual(ids(L.horny, L.denial, L.orgasm, L.orgasm_siphon, L.paired_arousal));
         expect(group(SpellDomain.harm)).toEqual(ids(L.damage));
         expect(group(SpellDomain.fortune)).toEqual(ids(L.bless, L.bane));
@@ -51,7 +51,7 @@ describe("effect domains, schools and tiers", () => {
     it("lists each school's effects", () => {
         const group = (d: SpellSchool) => effectsInSchool(d).sort();
         expect(group(SpellSchool.abjuration)).toEqual(ids(L.barrier, L.dispel));
-        expect(group(SpellSchool.conjuration)).toEqual(ids(L.project, L.web, L.slime, L.ropes));
+        expect(group(SpellSchool.conjuration)).toEqual(ids(L.project, L.web, L.slime, L.ropes, L.grasp));
         expect(group(SpellSchool.divination)).toEqual(ids(L.xRay));
         expect(group(SpellSchool.enchantment)).toEqual(ids(L.hypnotizing, L.slumber, L.horny, L.bless, L.bane, L.paired_arousal, L.denial, L.orgasm, L.command));
         expect(group(SpellSchool.evocation)).toEqual(ids(L.damage));
@@ -64,7 +64,7 @@ describe("effect domains, schools and tiers", () => {
         const tier = (t: 1 | 2 | 3 | 4 | 5) => effectsInTier(t).sort();
         expect(tier(1)).toEqual(ids(L.loosen, L.tighten, L.disarm, L.horny, L.muted, L.bless, L.bane, L.damage, L.dissolve));
         expect(tier(2)).toEqual(ids(L.blindness, L.deafened, L.xRay, L.enlarge, L.outfit, L.denial, L.orgasm, L.web, L.ropes, L.command));
-        expect(tier(3)).toEqual(ids(L.slumber, L.hypnotizing, L.frozen, L.paired_arousal, L.orgasm_siphon, L.barrier, L.slime));
+        expect(tier(3)).toEqual(ids(L.slumber, L.hypnotizing, L.frozen, L.paired_arousal, L.orgasm_siphon, L.barrier, L.slime, L.grasp));
         expect(tier(4)).toEqual(ids(L.polymorph, L.project, L.dispel));
         expect(tier(5)).toEqual([]);
     });

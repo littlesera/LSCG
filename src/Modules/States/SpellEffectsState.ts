@@ -1,6 +1,6 @@
 import { ICONS, hookFunction, LSCG_SendLocal, settingsSave } from "utils";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { BaseState } from "./BaseState";
+import { BaseState, StateRestrictions } from "./BaseState";
 import { StateModule } from "Modules/states";
 import { effectTier, getSpellEffect, type SpellEffectContext } from "Modules/Magic/spellEffects";
 import { getModule } from "modules";
@@ -65,6 +65,7 @@ export class SpellEffectsState extends BaseState {
             data: data ?? null,
         };
         this.entries.push(entry);
+        this.RefreshRestrictions();
         if (!this.Active)
             this.Activate(entry.by);
         else
@@ -84,6 +85,7 @@ export class SpellEffectsState extends BaseState {
         if (index < 0)
             return;
         this.entries.splice(index, 1);
+        this.RefreshRestrictions();
         this.RunEnd(entry, reason);
         if (this.entries.length === 0)
             this.Deactivate(reason);
@@ -110,13 +112,26 @@ export class SpellEffectsState extends BaseState {
         }
     }
 
+    /** What the entries stop the player doing, worked out from them: the state's restrictions are whatever its effects ask for right now. */
+    RefreshRestrictions(): void {
+        const merged = { Walk: "false", Stand: "false", Hearing: "false", Sight: "false", Wardrobe: "false", Move: "false", Speech: "false" } as StateRestrictions;
+        for (const entry of this.entries)
+            for (const [key, value] of Object.entries(getSpellEffect(entry.effect)?.restrictions?.(entry) ?? {}))
+                if (value === "true")
+                    merged[key as keyof StateRestrictions] = "true";
+        this.Restrictions = merged;
+    }
+
     Tick(now: number): void {
         if (!this.Active)
             return;
+        const magic = getModule<MagicModule>("MagicModule");
         // Copy first: ending an entry changes the list
         for (const entry of [...this.entries]) {
             if (entry.duration > 0 && entry.activatedAt + entry.duration < now)
                 this.End(entry, "expired");
+            else
+                getSpellEffect(entry.effect)?.onTick?.(entry, now, magic);
         }
     }
 
@@ -125,6 +140,7 @@ export class SpellEffectsState extends BaseState {
         const reason: SpellEffectEndReason = this.recoverReason === "dispel" ? "dispel" : this.recoverReason === "safeword" ? "safeword" : "manual";
         const all = [...this.entries];
         this.entries.length = 0;
+        this.RefreshRestrictions();
         all.forEach(entry => this.RunEnd(entry, reason));
         this.Deactivate(reason);
         return this;
@@ -136,6 +152,7 @@ export class SpellEffectsState extends BaseState {
     }
 
     Init(): void {
+        this.RefreshRestrictions(); // entries saved before a relog still count
         // Same hook the vanilla leash and LSCG's clasps use to keep someone from leaving
         hookFunction("ChatRoomCanLeave", 1, (args, next) => {
             if (this.HoldsInPlace) {
