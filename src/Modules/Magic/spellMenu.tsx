@@ -107,7 +107,7 @@ export class SpellMenuView {
 
         const card = <button type="button" disabled={!status.castable}
             class={status.castable ? "lscg-button lscg-spellmenu-card" : "lscg-button lscg-spellmenu-card lscg-spellmenu-card-disabled"}
-            title={status.castable ? "" : `None of this spell's effects would affect ${name}.`}
+            title={[spell.Name, ...status.effects.map(e => effectLabel(e.id) + STATUS_SUFFIX[e.status]), ...(status.castable ? [] : [`None of this spell's effects would affect ${name}.`])].join("\n")}
             onClick={() => this.magic.ChooseSpell(spell)}>
             <b class="lscg-spellmenu-name">{spell.Name}</b>
             <span class="lscg-kit-chips">{chips.length > 0 ? chips : <small class="lscg-kit-desc">No effects</small>}</span>
