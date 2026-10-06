@@ -3,6 +3,7 @@ import { ModuleCategory } from "Settings/setting_definitions";
 import { BaseState, StateRestrictions } from "./BaseState";
 import { StateModule } from "Modules/states";
 import { effectTier, getSpellEffect, type SpellEffectContext } from "Modules/Magic/spellEffects";
+import { ACTIVE_EFFECTS_KEY } from "Modules/Magic/activeEffects";
 import { getModule } from "modules";
 import type { MagicModule } from "Modules/magic";
 
@@ -120,6 +121,10 @@ export class SpellEffectsState extends BaseState {
                 if (value === "true")
                     merged[key as keyof StateRestrictions] = "true";
         this.Restrictions = merged;
+        if (this.entries.length > 0)
+            this.extensions[ACTIVE_EFFECTS_KEY] = this.entries.map(entry => ({ id: entry.id, effect: entry.effect }));
+        else
+            delete this.extensions[ACTIVE_EFFECTS_KEY];
     }
 
     Tick(now: number): void {

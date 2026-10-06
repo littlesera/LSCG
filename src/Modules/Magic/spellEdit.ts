@@ -102,15 +102,19 @@ export function saveBehaviorFor(spell: SpellDefinition, index: number): SaveBeha
     return typeof onSave === "function" ? onSave(effectConfigFor(spell, index)) : onSave;
 }
 
-/** The questions a menu cast of this spell asks the caster, with which effect copy each belongs to. */
-export function spellCastPrompts(spell: SpellDefinition): { index: number; effect: SpellEffectId; prompts: CastPrompt[] }[] {
+/** The questions a menu cast of this spell asks the caster, with which effect copy each belongs to. With the target, a question can offer choices
+ *  drawn from them (which of their effects to lift). */
+export function spellCastPrompts(spell: SpellDefinition, target?: Character): { index: number; effect: SpellEffectId; prompts: CastPrompt[] }[] {
     return spell.Effects.flatMap((effect, index) => {
         const schema = getSpellEffect(effect)?.config;
         const config = effectConfigFor(spell, index);
-        const prompts = schema?.castPrompts?.(config) ?? [];
+        const prompts = schema?.castPrompts?.(config, target) ?? [];
         return prompts.length > 0 ? [{ index, effect, prompts }] : [];
     });
 }
+
+/** What an open answer may look like: short and plain, like a state name or an id. The effect checks it against what is really there. */
+const OPEN_ANSWER = /^[A-Za-z0-9:_. -]{1,64}$/;
 
 /** Cast answers from another player, kept only where they answer a real question with one of its options. Edits nothing; call it on a
  *  spell that has already been through sanitizeSpell. */
@@ -124,7 +128,7 @@ export function sanitizeCastArgs(raw: unknown, spell: SpellDefinition): CastArgs
             continue;
         for (const prompt of prompts) {
             const value = answers[prompt.key];
-            if (typeof value === "string" && prompt.options.some(o => o.value === value))
+            if (typeof value === "string" && (prompt.open ? OPEN_ANSWER.test(value) : prompt.options.some(o => o.value === value)))
                 (clean[index] ??= {})[prompt.key] = value;
         }
     }

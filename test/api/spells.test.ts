@@ -45,12 +45,12 @@ describe("effect domains, schools and tiers", () => {
         expect(group(SpellDomain.desire)).toEqual(ids(L.horny, L.denial, L.orgasm, L.orgasm_siphon, L.paired_arousal));
         expect(group(SpellDomain.harm)).toEqual(ids(L.damage));
         expect(group(SpellDomain.fortune)).toEqual(ids(L.bless, L.bane));
-        expect(group(SpellDomain.warding)).toEqual(ids(L.barrier, L.dispel));
+        expect(group(SpellDomain.warding)).toEqual(ids(L.barrier, L.dispel, L.removeCurse));
     });
 
     it("lists each school's effects", () => {
         const group = (d: SpellSchool) => effectsInSchool(d).sort();
-        expect(group(SpellSchool.abjuration)).toEqual(ids(L.barrier, L.dispel));
+        expect(group(SpellSchool.abjuration)).toEqual(ids(L.barrier, L.dispel, L.removeCurse));
         expect(group(SpellSchool.conjuration)).toEqual(ids(L.project, L.web, L.slime, L.ropes, L.grasp));
         expect(group(SpellSchool.divination)).toEqual(ids(L.xRay));
         expect(group(SpellSchool.enchantment)).toEqual(ids(L.hypnotizing, L.slumber, L.horny, L.bless, L.bane, L.paired_arousal, L.denial, L.orgasm, L.command));
@@ -62,7 +62,7 @@ describe("effect domains, schools and tiers", () => {
 
     it("lists each tier's effects (an effect whose tier depends on its settings by its lowest)", () => {
         const tier = (t: 1 | 2 | 3 | 4 | 5) => effectsInTier(t).sort();
-        expect(tier(1)).toEqual(ids(L.loosen, L.tighten, L.disarm, L.horny, L.muted, L.bless, L.bane, L.damage, L.dissolve));
+        expect(tier(1)).toEqual(ids(L.loosen, L.tighten, L.disarm, L.horny, L.muted, L.bless, L.bane, L.damage, L.dissolve, L.removeCurse));
         expect(tier(2)).toEqual(ids(L.blindness, L.deafened, L.xRay, L.enlarge, L.outfit, L.denial, L.orgasm, L.web, L.ropes, L.command));
         expect(tier(3)).toEqual(ids(L.slumber, L.hypnotizing, L.frozen, L.paired_arousal, L.orgasm_siphon, L.barrier, L.slime, L.grasp));
         expect(tier(4)).toEqual(ids(L.polymorph, L.project, L.dispel));
@@ -134,7 +134,7 @@ describe("built-in spell effects", () => {
 
     it("keeps the flags of the old hardcoded lists", () => {
         const flagged = (flag: "beneficial" | "paired" | "forcesDuration") => spellEffects.all().filter(d => d[flag]).map(d => d.id).sort();
-        expect(flagged("beneficial")).toEqual([LSCGSpellEffect.barrier, LSCGSpellEffect.bless, LSCGSpellEffect.dispel, LSCGSpellEffect.loosen, LSCGSpellEffect.xRay].sort());
+        expect(flagged("beneficial")).toEqual([LSCGSpellEffect.barrier, LSCGSpellEffect.bless, LSCGSpellEffect.dispel, LSCGSpellEffect.loosen, LSCGSpellEffect.removeCurse, LSCGSpellEffect.xRay].sort());
         expect(flagged("paired")).toEqual([LSCGSpellEffect.orgasm_siphon, LSCGSpellEffect.paired_arousal].sort());
         expect(flagged("forcesDuration")).toEqual([LSCGSpellEffect.bane]);
         expect(getSpellEffect(LSCGSpellEffect.outfit)?.configurable).toBe("outfit");

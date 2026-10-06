@@ -83,6 +83,7 @@ export const BUILTIN_TAXONOMY: Record<Exclude<LSCGSpellEffect, LSCGSpellEffect.n
     [LSCGSpellEffect.ropes]: { domain: binding, school: conjuration, tier: 2 },
     [LSCGSpellEffect.command]: { domain: mind, school: enchantment, tier: 2 },
     [LSCGSpellEffect.grasp]: { domain: binding, school: conjuration, tier: 3 },
+    [LSCGSpellEffect.removeCurse]: { domain: warding, school: abjuration, tier: 1 },
 };
 
 export function domainDescription(domain: SpellDomain): string {

@@ -442,7 +442,7 @@ export class MagicModule extends BaseModule {
                 this.TeachSpellActual(spell, C as OtherCharacter);
             }
             else {
-                const prompts = spellCastPrompts(spell);
+                const prompts = spellCastPrompts(spell, C);
                 if (prompts.length > 0) {
                     // Ask first; the answers are confirmed in the menu and the cast carries on from ConfirmCastPrompts
                     this.SpellCastOptions = {
