@@ -1,9 +1,9 @@
 import { h } from "tsx-dom";
 import { getModule } from "modules";
 import { OutfitCollectionModule } from "Modules/outfitCollection";
-import { allEffectIds, effectDescription, effectLabel, effectTooltip, isExtensionEffect, getSpellEffect, isPairedEffect, spellHasPairedEffect } from "Modules/Magic/spellEffects";
+import { allEffectIds, domainDescription, domainOrder, effectDescription, effectDomain, effectLabel, effectTooltip, isExtensionEffect, getSpellEffect, isPairedEffect, spellHasPairedEffect } from "Modules/Magic/spellEffects";
 import { Button, Chip, CheckboxRow, Expando, Icon, KitContext, KitTab, Notice, NumberRow, openDialog, RuleTable, SectionLabel, SelectOption, SelectRow, TextRow } from "Dom/kit";
-import { addEffect, canHaveEffect, editableConfig, removeEffect, setEffect, writeConfig } from "Modules/Magic/spellEdit";
+import { addEffect, canHaveEffect, editableConfig, removeEffect, setEffect, spellTier, writeConfig } from "Modules/Magic/spellEdit";
 import { EFFECT_EDITORS } from "./magic-effect-editors";
 import { KNOWN_SPELLS_LIMIT, MagicPublicSettingsModel, MagicSettingsModel, OutfitOption, PolymorphConfig, SpellDefinition, SpellEffectId, maxSpellEffects } from "./Models/magic";
 import type { SpiritTextType } from "./magic";
@@ -27,8 +27,11 @@ function toggle<T>(list: T[], item: T, on: boolean): T[] {
     return on ? [...without, item] : without;
 }
 
-/** Built-in effects first, then extensions', then ones no longer installed; alphabetical within each. */
-const effectRank = (id: SpellEffectId) => !getSpellEffect(id) ? 2 : isExtensionEffect(id) ? 1 : 0;
+/** Built-in effects first, by domain in its display order, then extensions', then ones no longer installed; alphabetical within each. */
+const effectRank = (id: SpellEffectId) => {
+    const domain = effectDomain(id);
+    return !getSpellEffect(id) ? 200 : domain ? domainOrder(domain) : 100;
+};
 const byLabel = (a: SpellEffectId, b: SpellEffectId) => effectRank(a) - effectRank(b) || effectLabel(a).localeCompare(effectLabel(b));
 
 function effectChip(id: SpellEffectId): HTMLElement {
@@ -41,7 +44,8 @@ function effectNameCell(id: SpellEffectId): HTMLElement {
     return <div class="lscg-kit-chips">
         <span>{isExtensionEffect(id) ? Icon("extension", "Added by an extension") : null}{effectLabel(id)}</span>
         {!def ? Chip("not installed", { tone: "warn", tooltip: "Comes from an extension this client doesn't have." })
-            : def.source ? Chip(def.source, { tone: "info", tooltip: "Added by an extension." }) : null}
+            : def.source ? Chip(def.source, { tone: "info", tooltip: "Added by an extension." })
+            : def.domain ? Chip(def.domain, { tone: "muted", tooltip: domainDescription(def.domain) }) : null}
     </div> as HTMLElement;
 }
 
@@ -188,7 +192,7 @@ function effectSlots(dctx: KitContext, tableCtx: KitContext, spell: SpellDefinit
             const current = i < have ? spell.Effects[i] : undefined;
             const options: SelectOption[] = [
                 { value: "", label: current ? "— remove this effect —" : have === 0 ? "— choose an effect —" : "— add another effect —" },
-                ...allEffectIds().filter(id => canHaveEffect(spell, id, i)).sort(byLabel).map(id => ({ value: id as string, label: effectLabel(id), ...(isExtensionEffect(id) ? { group: "From extensions", icon: "extension" as const } : {}) })),
+                ...allEffectIds().filter(id => canHaveEffect(spell, id, i)).sort(byLabel).map(id => ({ value: id as string, label: effectLabel(id), ...(isExtensionEffect(id) ? { group: "From extensions", icon: "extension" as const } : effectDomain(id) ? { group: effectDomain(id) } : {}) })),
                 // An effect from an extension that isn't installed stays selectable so it can be kept or replaced.
                 ...(current && !getSpellEffect(current) ? [{ value: current as string, label: effectLabel(current) }] : []),
             ];
@@ -238,6 +242,15 @@ function effectSlots(dctx: KitContext, tableCtx: KitContext, spell: SpellDefinit
     return container;
 }
 
+/** The spell's total power, kept current as effects and their settings change. Nothing uses it yet. */
+function spellPower(dctx: KitContext, tableCtx: KitContext, spell: SpellDefinition): HTMLElement {
+    const label = <small class="lscg-kit-desc" title="Every effect's tier added up, counting each copy." /> as HTMLElement;
+    const show = () => { label.textContent = `Spell power: ${spellTier(spell)}`; };
+    dctx.watch(show);
+    tableCtx.watch(show);
+    return label;
+}
+
 /** The spell editor dialog: casting options, then the ordered effects with each one's own settings. */
 function openSpellDialog(anchor: HTMLElement, ctx: KitContext, spell: SpellDefinition, limit: number) {
     openDialog(anchor, ctx, spell.Name || "Spell", dctx => [
@@ -260,6 +273,7 @@ function openSpellDialog(anchor: HTMLElement, ctx: KitContext, spell: SpellDefin
         }),
         SectionLabel("Effects", `What the spell does to its target, one after another in this order. Up to ${limit}.`),
         effectSlots(dctx, ctx, spell, limit),
+        spellPower(dctx, ctx, spell),
     ]);
 }
 

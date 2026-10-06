@@ -1,5 +1,6 @@
 import { KitContext, SelectOption, SelectRow, TextRow } from "Dom/kit";
-import { MAX_ROLL_LENGTH, parseDiceRoll } from "Modules/Magic/dice";
+import { MAX_ROLL_LENGTH } from "Modules/Magic/dice";
+import { damageRoll, MAX_DAMAGE_ROLL } from "Modules/Magic/effects/damage";
 import { DamageConfig, DamageSave, DamageType, LSCGSpellEffect } from "./Models/magic";
 
 /** The rows for an effect's own settings. `config` reads the stored settings (defaults filled in); `update` merges a change into them. */
@@ -23,9 +24,9 @@ const damageEditor: EffectEditor<DamageConfig> = (ctx, config, update) => [
     }),
     TextRow(ctx, {
         label: "Damage roll", placeholder: "e.g. 2d6 + 2", maxLength: MAX_ROLL_LENGTH,
-        description: "Optional dice for how much damage, such as 2d6 + 2 or 1d8. Rolled when the spell lands. Leave empty for damage with no number.",
+        description: `Optional dice for how much damage, such as 2d6 + 2 or 1d8, totalling at most ${MAX_DAMAGE_ROLL}. Bigger rolls make the effect a higher tier. Rolled when the spell lands. Leave empty for damage with no number.`,
         get: () => config().Roll,
-        set: v => update({ Roll: parseDiceRoll(v)?.text ?? v.trim() }),
+        set: v => update({ Roll: damageRoll(v)?.text ?? v.trim() }),
     }),
 ];
 

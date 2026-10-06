@@ -3,7 +3,7 @@ import { getModule } from "modules";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
 import { GetConfiguredItemBundlesFromOutfitKey, GetDelimitedList, OnChat, GetItemNameAndDescriptionConcat, GetMetadata, LSCG_SendLocal, LSCG_TEAL, OnActivity, SendAction, getCharacter, getRandomInt, hookFunction, isPhraseInString, removeAllHooksByModule, sendLSCGCommand, sendLSCGCommandBeep, settingsSave, getCharacterByNicknameOrMemberNumber, excludeParentheticalContent, escapeRegExp } from "../utils";
 import { ABSOLUTE_MAX_SPELL_EFFECTS, DamageConfig, DamageSave, DEFAULT_MAX_SPELL_EFFECTS, KNOWN_SPELLS_LIMIT, LSCGSpellEffect, MagicSettingsModel, OutfitOption, SpellDefinition, SpellEffectId } from "Settings/Models/magic";
-import { effectConfigFor, sanitizeSpell } from "./Magic/spellEdit";
+import { effectConfigFor, retier, sanitizeSpell } from "./Magic/spellEdit";
 import { GuiMagic } from "Settings/magic";
 import { StateModule } from "./states";
 import { IsActivityEnhanced, ItemUseModule, MagicWandItems } from "./item-use";
@@ -223,6 +223,8 @@ export class MagicModule extends BaseModule {
 
     run(): void {
         this.StripStoredSpellCodes();
+        // Spells saved before total power existed, or edited elsewhere, get theirs worked out
+        this.AvailableSpells.forEach(spell => { if (Array.isArray(spell?.Effects)) retier(spell); });
     }
 
     /** Older builds wrote expanded outfit codes back into known spells on voice/potion casts, bloating the saved profile (#680).

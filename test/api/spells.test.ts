@@ -11,13 +11,116 @@ import { MagicModule } from "Modules/magic";
 import { StateModule } from "Modules/states";
 import { OutfitCollectionModule } from "Modules/outfitCollection";
 import { ABSOLUTE_MAX_SPELL_EFFECTS, DEFAULT_MAX_SPELL_EFFECTS, DamageSave, DamageType, LSCGSpellEffect, maxSpellEffects,  type SpellDefinition, type SpellEffectId } from "Settings/Models/magic";
-import { builtInEffectIds, effectDescription, effectLabel, extensionEffectIds, getSpellEffect, spellEffects, spellIsBeneficial } from "Modules/Magic/spellEffects";
-import { addEffect, canHaveEffect, effectConfigFor, removeEffect, sanitizeSpell, setEffect, stackLimit } from "Modules/Magic/spellEdit";
+import { builtInEffectIds, effectDescription, effectDomain, effectLabel, effectSchool, effectsInDomain, effectsInSchool, effectsInTier, effectTier, effectTooltip, extensionEffectIds, getSpellEffect, spellEffects, spellIsBeneficial } from "Modules/Magic/spellEffects";
+import { SPELL_DOMAINS, SPELL_TIERS, SpellDomain, SpellSchool } from "Modules/Magic/taxonomy";
+import { damageTier, MAX_DAMAGE_ROLL } from "Modules/Magic/effects/damage";
+import { retier, spellTier } from "Modules/Magic/spellEdit";
+import { addEffect, canHaveEffect, effectConfigFor, removeEffect, sanitizeSpell, setEffect, stackLimit, writeConfig } from "Modules/Magic/spellEdit";
 import { sanitizeDamageConfig } from "Modules/Magic/effects/damage";
 import { registerExtension, type ModApiHandle } from "api/extensions";
 import { boot, resetWorld, player, addToRoom } from "../harness/world";
 import { makeAsset, makeCharacter, makeGroup, makeItem, wear, type FixtureCharacter } from "../harness/fixtures";
 import { sent } from "../harness/room";
+
+describe("effect domains, schools and tiers", () => {
+    const L = LSCGSpellEffect;
+    const spell = (name: string, effects: SpellEffectId[]) => ({ Name: name, Creator: 2, Effects: effects, AllowPotion: false, AllowVoiceCast: false }) as SpellDefinition;
+    const ids = (...e: LSCGSpellEffect[]) => e.sort();
+
+    it("every built-in has a domain, a school and a tier from 1 to 5", () => {
+        for (const id of builtInEffectIds()) {
+            expect(SPELL_DOMAINS.map(d => d.id), id).toContain(effectDomain(id));
+            expect(Object.values(SpellSchool), id).toContain(effectSchool(id));
+            expect(SPELL_TIERS, id).toContain(effectTier(id));
+        }
+    });
+
+    it("lists each domain's effects", () => {
+        const group = (d: SpellDomain) => effectsInDomain(d).sort();
+        expect(group(SpellDomain.mind)).toEqual(ids(L.hypnotizing, L.slumber));
+        expect(group(SpellDomain.senses)).toEqual(ids(L.blindness, L.deafened, L.xRay, L.project));
+        expect(group(SpellDomain.form)).toEqual(ids(L.enlarge, L.polymorph, L.outfit));
+        expect(group(SpellDomain.binding)).toEqual(ids(L.muted, L.frozen, L.tighten, L.loosen, L.disarm));
+        expect(group(SpellDomain.desire)).toEqual(ids(L.horny, L.denial, L.orgasm, L.orgasm_siphon, L.paired_arousal));
+        expect(group(SpellDomain.harm)).toEqual(ids(L.damage));
+        expect(group(SpellDomain.fortune)).toEqual(ids(L.bless, L.bane));
+        expect(group(SpellDomain.warding)).toEqual(ids(L.barrier, L.dispel));
+    });
+
+    it("lists each school's effects", () => {
+        const group = (d: SpellSchool) => effectsInSchool(d).sort();
+        expect(group(SpellSchool.abjuration)).toEqual(ids(L.barrier, L.dispel));
+        expect(group(SpellSchool.conjuration)).toEqual(ids(L.project));
+        expect(group(SpellSchool.divination)).toEqual(ids(L.xRay));
+        expect(group(SpellSchool.enchantment)).toEqual(ids(L.hypnotizing, L.slumber, L.horny, L.bless, L.bane, L.paired_arousal, L.denial, L.orgasm));
+        expect(group(SpellSchool.evocation)).toEqual(ids(L.damage));
+        expect(group(SpellSchool.illusion)).toEqual(ids(L.muted, L.outfit));
+        expect(group(SpellSchool.necromancy)).toEqual(ids(L.blindness, L.deafened, L.orgasm_siphon));
+        expect(group(SpellSchool.transmutation)).toEqual(ids(L.frozen, L.enlarge, L.polymorph, L.disarm, L.tighten, L.loosen));
+    });
+
+    it("lists each tier's effects (an effect whose tier depends on its settings by its lowest)", () => {
+        const tier = (t: 1 | 2 | 3 | 4 | 5) => effectsInTier(t).sort();
+        expect(tier(1)).toEqual(ids(L.loosen, L.tighten, L.disarm, L.horny, L.muted, L.bless, L.bane, L.damage));
+        expect(tier(2)).toEqual(ids(L.blindness, L.deafened, L.xRay, L.enlarge, L.outfit, L.denial, L.orgasm));
+        expect(tier(3)).toEqual(ids(L.slumber, L.hypnotizing, L.frozen, L.paired_arousal, L.orgasm_siphon, L.barrier));
+        expect(tier(4)).toEqual(ids(L.polymorph, L.project, L.dispel));
+        expect(tier(5)).toEqual([]);
+    });
+
+    it("extension effects have none of them, and count for nothing in a spell's power", () => {
+        const id = "ext.shrink" as SpellEffectId;
+        expect(effectDomain(id)).toBeUndefined();
+        expect(effectTier(id)).toBe(0);
+        expect(effectTier("nobody.knows")).toBe(0);
+    });
+
+    it("the tooltip names the school and tier", () => {
+        expect(effectTooltip(L.hypnotizing)).toContain("Enchantment, tier 3");
+    });
+
+    describe("Damaging's tier comes from its roll", () => {
+        it.each([
+            ["", 1], ["1d8", 1], ["2d4", 1], ["2d8", 2], ["3d6+2", 2], ["4d10", 3], ["8d6", 3], ["10d10+12", 4], ["20d12", 5], [`1d${MAX_DAMAGE_ROLL}`, 5],
+        ])("%j is tier %i", (Roll, tier) => {
+            expect(damageTier({ Roll })).toBe(tier);
+            expect(effectTier(L.damage, { Roll })).toBe(tier);
+        });
+
+        it("negative modifiers don't lower it, and a roll above the top tier is rejected", () => {
+            expect(damageTier({ Roll: "4d10 - 30" })).toBe(3);
+            expect(sanitizeDamageConfig({ Type: "Fire", Roll: "22d12" }).Roll).toBe("");
+            expect(sanitizeDamageConfig({ Type: "Fire", Roll: "20d12" }).Roll).toBe("20d12");
+        });
+    });
+
+    describe("a spell's total power", () => {
+        const withDamage = (...rolls: string[]) => ({ ...spell("x", rolls.map(() => LSCGSpellEffect.damage)), Configs: rolls.map(Roll => ({ Type: "Fire", Roll })) }) as SpellDefinition;
+
+        it("adds every effect's tier, counting each copy and each copy's own roll", () => {
+            expect(spellTier(spell("x", [L.hypnotizing, L.blindness]))).toBe(5);
+            expect(spellTier(withDamage("", "2d8", "4d10"))).toBe(1 + 2 + 3);
+            expect(spellTier(spell("x", [L.horny, "ext.shrink" as SpellEffectId]))).toBe(1);
+        });
+
+        it("is stored on the spell and recomputed whenever its effects or their settings change", () => {
+            const s = spell("x", [L.damage]);
+            retier(s);
+            expect(s.Tier).toBe(1);
+            addEffect(s, L.hypnotizing);
+            expect(s.Tier).toBe(4);
+            writeConfig(s, 0, { Type: "Fire", Roll: "4d10" });
+            expect(s.Tier).toBe(6);
+            removeEffect(s, 1);
+            expect(s.Tier).toBe(3);
+        });
+
+        it("is worked out again for a spell from another player, whatever it claims", () => {
+            const s = sanitizeSpell({ ...spell("x", [L.horny]), Tier: 99 });
+            expect(s.Tier).toBe(1);
+        });
+    });
+});
 
 describe("built-in spell effects", () => {
     const real = Object.values(LSCGSpellEffect).filter(e => e !== LSCGSpellEffect.none);

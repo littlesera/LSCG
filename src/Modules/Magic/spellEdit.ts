@@ -1,5 +1,5 @@
 import { ABSOLUTE_MAX_SPELL_EFFECTS, SpellDefinition, SpellEffectId } from "Settings/Models/magic";
-import { getSpellEffect } from "./spellEffects";
+import { effectTier, getSpellEffect } from "./spellEffects";
 
 /** The most a single effect's settings may weigh once serialised, whoever sent them. */
 export const MAX_EFFECT_CONFIG_SIZE = 1024;
@@ -18,11 +18,13 @@ export function canHaveEffect(spell: SpellDefinition, effect: SpellEffectId, ign
 /** Every change to a spell's list of effects goes through here, so `Effects` and `Configs` stay lined up. */
 export function addEffect(spell: SpellDefinition, effect: SpellEffectId) {
     spell.Effects.push(effect);
+    retier(spell);
 }
 
 export function setEffect(spell: SpellDefinition, index: number, effect: SpellEffectId) {
     spell.Effects[index] = effect;
     if (spell.Configs) spell.Configs[index] = null;
+    retier(spell);
 }
 
 export function removeEffect(spell: SpellDefinition, index: number) {
@@ -30,6 +32,7 @@ export function removeEffect(spell: SpellDefinition, index: number) {
     spell.Effects.splice(index, 1);
     spell.Configs?.splice(index, 1);
     if (spell.Configs && spell.Configs.every(c => c == null)) delete spell.Configs;
+    retier(spell);
 }
 
 /** The stored settings of one effect slot with its schema's defaults filled in, for the editor. Not sanitized:
@@ -44,6 +47,18 @@ export function editableConfig(spell: SpellDefinition, index: number): any {
 export function writeConfig(spell: SpellDefinition, index: number, config: unknown) {
     const configs = spell.Configs ??= [];
     configs[index] = config;
+    retier(spell);
+}
+
+/** A spell's total power: each effect's tier (for ones that depend on their settings, the tier of the sanitized settings),
+ *  every copy counted. Effects with no tier (an extension's, or one not installed) count for nothing. */
+export function spellTier(spell: SpellDefinition): number {
+    return spell.Effects.reduce((total, effect, index) => total + effectTier(effect, effectConfigFor(spell, index)), 0);
+}
+
+/** Stores the spell's current total power on it. */
+export function retier(spell: SpellDefinition) {
+    spell.Tier = spellTier(spell);
 }
 
 /** The settings an effect applies with: sanitized by its schema, so remote input never reaches `apply` as sent. */
@@ -77,5 +92,6 @@ export function sanitizeSpell(spell: SpellDefinition): SpellDefinition {
         spell.Configs = configs;
     else
         delete spell.Configs;
+    retier(spell);
     return spell;
 }

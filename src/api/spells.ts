@@ -2,7 +2,7 @@ import { LSCGSpellEffectContext, LSCGSpellEffectDefinition, LSCGSpellsApi } from
 import { builtInStates } from "./builtInStates";
 import { ErrorOwner, safeInvoke } from "./safeInvoke";
 import { spellInfo } from "./events";
-import { isBuiltInEffect, spellEffects, type SpellEffectContext } from "Modules/Magic/spellEffects";
+import { effectTier, isBuiltInEffect, spellEffects, type SpellEffectContext } from "Modules/Magic/spellEffects";
 import { SendAction } from "utils";
 
 function publicContext(ctx: SpellEffectContext): LSCGSpellEffectContext {
@@ -49,7 +49,10 @@ export function createSpellsApi(owner: ErrorOwner & { readonly info: { name: str
             return true;
         },
         listEffects() {
-            return spellEffects.all().map(d => ({ id: d.id, label: d.label, description: d.description, builtIn: isBuiltInEffect(d.id) }));
+            return spellEffects.all().map(d => ({
+                id: d.id, label: d.label, description: d.description, builtIn: isBuiltInEffect(d.id),
+                ...(d.domain ? { domain: d.domain, school: d.school, tier: effectTier(d.id) } : {}),
+            }));
         },
     };
 }
