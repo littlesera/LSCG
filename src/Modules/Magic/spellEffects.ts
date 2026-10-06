@@ -179,7 +179,7 @@ export function isExtensionEffect(id: SpellEffectId | string | undefined): boole
 /** Description plus, for built-ins, its school and tier and, for extension effects, which extension added it. */
 export function effectTooltip(id: SpellEffectId | string | undefined): string {
     const def = getSpellEffect(id);
-    const classification = def?.school ? `${def.school}, tier ${effectTier(id)}` : "";
+    const classification = def?.school ?? "";
     return [effectDescription(id), classification, def?.source ? `Added by extension: ${def.source}` : ""].filter(t => !!t).join("\n");
 }
 

@@ -36,7 +36,7 @@ export function sanitizeDamageConfig(raw: unknown): DamageConfig {
 export const DAMAGE_EFFECT: SpellEffectDefinition = {
     id: LSCGSpellEffect.damage,
     label: LSCGSpellEffect.damage,
-    description: "Hurts the target with a chosen type of damage, rolled from an optional dice expression. Only shown in chat for now.",
+    description: "Hurts the target with a chosen type of damage, with an optional dice roll.",
     stackable: 3,
     tier: damageTier,
     onSave: (c: DamageConfig) => c.Save === DamageSave.none ? "negate" : "half",
@@ -48,26 +48,24 @@ export const DAMAGE_EFFECT: SpellEffectDefinition = {
                 return `Damage settings: ${c.Type} ${c.Roll} (not a valid roll, so no number is rolled)`;
             if (c.Roll && !damageRoll(c.Roll))
                 return `Damage settings: ${c.Type} ${c.Roll} (too big, rolls can total at most ${MAX_DAMAGE_ROLL}; no number is rolled)`;
-            return `Damage settings: ${c.Type}${c.Roll ? ` ${c.Roll}` : ""} (tier ${damageTier(c)})`;
+            return `Damage settings: ${c.Type}${c.Roll ? ` ${c.Roll}` : ""}`;
         },
         needsAttention: (c: DamageConfig) => !!c.Roll && !damageRoll(c.Roll),
     },
     // A save that negates the damage never gets here: the spell's save handling skips the effect. Only a halving save does.
-    apply: ({ spell, senderName, saved, config }) => {
+    apply: ({ saved, config }) => {
         const damage = (config as DamageConfig | undefined) ?? sanitizeDamageConfig(undefined);
         const type = damage.Type.toLowerCase();
         const roll = damageRoll(damage.Roll);
         const halved = !!saved;
         if (!roll) {
-            SendAction(halved
-                ? `%NAME% saves against ${senderName}'s ${spell.Name} and is only grazed by its ${type} damage.`
-                : `%NAME% is struck by the ${type} damage of ${senderName}'s ${spell.Name}.`);
+            SendAction(halved ? `%NAME% is grazed by ${type} damage.` : `%NAME% takes ${type} damage.`);
             return;
         }
         const result = rollDice(roll);
         const total = halved ? Math.floor(result.total / 2) : result.total;
         SendAction(halved
-            ? `%NAME% saves against ${senderName}'s ${spell.Name} and takes only ${total} ${type} damage, half of ${result.total}. (${result.breakdown})`
-            : `%NAME% takes ${total} ${type} damage from ${senderName}'s ${spell.Name}! (${result.breakdown})`);
+            ? `%NAME% takes ${total} ${type} damage, halved from ${result.total}. (${result.breakdown})`
+            : `%NAME% takes ${total} ${type} damage. (${result.breakdown})`);
     },
 };

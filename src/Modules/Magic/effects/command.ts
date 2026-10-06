@@ -105,7 +105,7 @@ function stopFollowing(leader: number): void {
 export const COMMAND_EFFECT: SpellEffectDefinition = {
     id: LSCGSpellEffect.command,
     label: LSCGSpellEffect.command,
-    description: "Compels the target with a one-word command: kneel, follow the caster, stay in the room, strip, or cum.",
+    description: "Compels the target: kneel, follow, stay, strip or cum.",
     config: {
         defaults: (): CommandConfig => ({ Word: "kneel", Ask: false, Allowed: [...COMMAND_WORDS] }),
         sanitize: sanitizeCommandConfig,

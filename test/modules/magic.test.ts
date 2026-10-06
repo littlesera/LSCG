@@ -244,7 +244,7 @@ describe("MagicModule", () => {
 		});
 
 		describe("the save readout", () => {
-			const readout = () => sent.actions().filter(a => a.startsWith("Save against"));
+			const readout = () => sent.actions().filter(a => a.startsWith("Save vs"));
 			const send = (s: SpellDefinition) => {
 				magic.IncomingSpellCommand(alice as never, { command: { name: "spell", args: [{ name: "spell", value: s }] } } as never);
 				vi.advanceTimersByTime(1000 + 2500);
@@ -254,7 +254,7 @@ describe("MagicModule", () => {
 				seedRandom([0.0, 0.99]); // attacker d20=1, defender d20=20
 				send(spell("blind", [LSCGSpellEffect.blindness]));
 				expect(readout()).toHaveLength(1);
-				expect(readout()[0]).toMatch(/^Save against Alice's blind: Sera rolls \d+ \(20[+-]?\+?-?\d+\) to \d+ \(1[+-]?\+?-?\d+\), saved!$/);
+				expect(readout()[0]).toMatch(/^Save vs blind: \d+ \(20[+-]?\+?-?\d+\) vs \d+ \(1[+-]?\+?-?\d+\), saved!$/);
 			});
 
 			it("shows a failed result too, which used to say nothing", () => {
@@ -310,7 +310,7 @@ describe("MagicModule", () => {
 			it("a successful save halves the damage, and nothing else of the spell applies", () => {
 				seedRandom(SAVES);
 				const out = cast(zap(undefined, [LSCGSpellEffect.blindness]));
-				expect(out.some(a => a.includes("takes only 7 fire damage, half of 14"))).toBe(true);
+				expect(out.some(a => a.includes("takes 7 fire damage, halved from 14"))).toBe(true);
 				expect(states.BlindState.Active).toBe(false);
 			});
 
@@ -320,9 +320,9 @@ describe("MagicModule", () => {
 					...spell("storm", [LSCGSpellEffect.damage, LSCGSpellEffect.damage, LSCGSpellEffect.damage]),
 					Configs: [{ Type: "Fire", Roll: "2d6 + 2" }, { Type: "Cold", Roll: "1d8", Save: "No damage" }, { Type: "Acid", Roll: "1d4" }],
 				} as SpellDefinition);
-				expect(out.some(a => a.includes("takes only 7 fire damage, half of 14"))).toBe(true);
+				expect(out.some(a => a.includes("takes 7 fire damage, halved from 14"))).toBe(true);
 				expect(out.some(a => a.includes("cold"))).toBe(false);
-				expect(out.some(a => a.includes("takes only 2 acid damage, half of 4"))).toBe(true);
+				expect(out.some(a => a.includes("takes 2 acid damage, halved from 4"))).toBe(true);
 			});
 
 			it("'No damage' on a save avoids the damage entirely", () => {
@@ -343,7 +343,7 @@ describe("MagicModule", () => {
 				magic.settings.neverDefend = true;
 				seedRandom(SAVES);
 				const out = cast(zap(undefined, [LSCGSpellEffect.blindness]));
-				expect(out.some(a => a.includes("takes only 7 fire damage"))).toBe(true);
+				expect(out.some(a => a.includes("takes 7 fire damage, halved from 14"))).toBe(true);
 				expect(states.BlindState.Active).toBe(true);
 			});
 
@@ -358,7 +358,7 @@ describe("MagicModule", () => {
 			it("blocking the Damaging effect blocks the half damage too", () => {
 				magic.settings.blockedSpellEffects = [LSCGSpellEffect.damage];
 				seedRandom(SAVES);
-				expect(cast(zap()).some(a => a.includes("takes only"))).toBe(false);
+				expect(cast(zap()).some(a => a.includes("halved from"))).toBe(false);
 			});
 		});
 	});

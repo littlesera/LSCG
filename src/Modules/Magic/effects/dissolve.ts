@@ -37,7 +37,7 @@ export function dissolveClothing(layers: DissolveLayers, acting: number | undefi
 export const DISSOLVE_EFFECT: SpellEffectDefinition = {
     id: LSCGSpellEffect.dissolve,
     label: LSCGSpellEffect.dissolve,
-    description: "Dissolves the target's clothing, underwear or both. Cosplay, the body and restraints are left alone.",
+    description: "Dissolves the target's clothing, underwear or both.",
     stackable: 2,
     config: {
         defaults: (): DissolveConfig => ({ Layers: "clothing" }),

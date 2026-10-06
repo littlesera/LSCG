@@ -99,7 +99,7 @@ function stopChoke(): void {
 export const GRASP_EFFECT: SpellEffectDefinition = {
     id: LSCGSpellEffect.grasp,
     label: LSCGSpellEffect.grasp,
-    description: "Spectral hands seize the target: by the neck (a choke), arms, legs, ass or breasts, as chosen. They use Echo's Ghost Hand where it is installed, and let go when the spell ends.",
+    description: "Spectral hands seize the target's neck, arms, legs, ass or breasts.",
     config: {
         defaults: (): GraspConfig => ({ Locations: ["arms"] }),
         sanitize: sanitizeGraspConfig,
