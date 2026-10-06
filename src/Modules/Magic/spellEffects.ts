@@ -2,6 +2,7 @@ import { Registry } from "api/registry";
 import { cleanEffect, LSCGSpellEffect, SpellDefinition, SpellEffectId } from "Settings/Models/magic";
 import type { MagicModule } from "Modules/magic";
 import type { SpellEffectEndReason, SpellEffectEntry } from "Modules/States/SpellEffectsState";
+import type { StateRestrictions } from "Modules/States/BaseState";
 import { BUILTIN_SPELL_EFFECTS } from "./builtinEffects";
 import { BUILTIN_TAXONOMY, SPELL_TIERS, SpellDomain, SpellSchool, SpellTier, domainDescription, domainOrder } from "./taxonomy";
 
@@ -93,6 +94,10 @@ export interface SpellEffectDefinition {
     /** For effects that recorded entries in the spell effects state (SpellEffectsState.Add): undo one when it ends. It has already been
      *  removed from the list. `reason` is why: it ran out, the player was dispelled or used safeword. */
     onEnd?(entry: SpellEffectEntry, reason: SpellEffectEndReason, magic: MagicModule | undefined): void;
+    /** For effects that recorded entries: what this entry stops the player doing (walking, using their arms, ...), only ever "true". */
+    restrictions?(entry: SpellEffectEntry): Partial<Record<keyof StateRestrictions, "true">>;
+    /** For effects that recorded entries: called about once a second while the entry lasts, for things that happen over time. */
+    onTick?(entry: SpellEffectEntry, now: number, magic: MagicModule | undefined): void;
     /** For effects that recorded entries: whether this entry keeps the player from leaving the room. */
     holdsInPlace?(entry: SpellEffectEntry): boolean;
     /** Re-apply an entry that doesn't survive a room change by itself. Called for each of this effect's entries on every room sync. */

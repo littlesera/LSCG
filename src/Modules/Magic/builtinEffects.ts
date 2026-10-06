@@ -3,6 +3,7 @@ import { DAMAGE_EFFECT } from "./effects/damage";
 import { DISSOLVE_EFFECT } from "./effects/dissolve";
 import { ROPES_EFFECT, SLIME_EFFECT, WEB_EFFECT } from "./effects/restraints";
 import { COMMAND_EFFECT } from "./effects/command";
+import { GRASP_EFFECT } from "./effects/grasp";
 import { SendAction, forceOrgasm } from "utils";
 // Type-only: spellEffects.ts imports this file to register the built-ins.
 import type { SpellEffectDefinition } from "./spellEffects";
@@ -323,4 +324,5 @@ export const BUILTIN_SPELL_EFFECTS: SpellEffectDefinition[] = [
     SLIME_EFFECT,
     ROPES_EFFECT,
     COMMAND_EFFECT,
+    GRASP_EFFECT,
 ];

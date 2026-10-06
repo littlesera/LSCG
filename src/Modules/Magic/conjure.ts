@@ -113,6 +113,24 @@ function allowedRung(ctx: SpellEffectContext, option: ConjureOption, rung: numbe
     return -1;
 }
 
+/** Puts one piece on a free slot at (up to) the given rung, if its prerequisites and the player's item permissions allow, using the crafted
+ *  version when it fits. Never replaces what is worn. Does not refresh or announce; the caller does, once, after all of its pieces. */
+export function placePiece(ctx: SpellEffectContext, option: ConjureOption, rung: number, craft?: CraftingItem): ConjurePiece | undefined {
+    if (InventoryGet(Player, option.group as AssetGroupName))
+        return undefined;
+    const allowedAt = allowedRung(ctx, option, rung);
+    if (allowedAt < 0)
+        return undefined;
+    const useCraft = craft && craft.Item === option.asset ? structuredClone(craft) : undefined;
+    const skill = ctx.sender ? SkillGetWithRatio(ctx.sender, "Bondage") : 0;
+    const item = InventoryWear(Player, option.asset, option.group as AssetGroupName, (useCraft?.Color as ItemColor | undefined) ?? undefined, skill, ctx.sender?.MemberNumber, useCraft, false);
+    if (!item)
+        return undefined;
+    if (option.ladder)
+        setRung(option, item, allowedAt, ctx);
+    return { group: option.group, asset: option.asset, ...(option.ladder ? { rung: allowedAt } : {}) };
+}
+
 /** Puts a conjuring spell's pieces on the player: a repeat cast moves the pieces already on up a rung first, then new ones go on free slots. Everything
  *  put on is recorded in the spell effects state, so it comes off again when the spell ends. Never replaces anything the player is wearing. */
 export function conjure(ctx: SpellEffectContext, set: ConjureSet, config: ConjureConfig): { placed: number; escalated: number } {
@@ -152,17 +170,10 @@ export function conjure(ctx: SpellEffectContext, set: ConjureSet, config: Conjur
     for (const option of order) {
         if (budget <= 0)
             break;
-        const rung = option.ladder ? allowedRung(ctx, option, getRandomInt(option.ladder.length)) : allowedRung(ctx, option, 0);
-        if (rung < 0)
+        const piece = placePiece(ctx, option, option.ladder ? getRandomInt(option.ladder.length) : 0, craft);
+        if (!piece)
             continue;
-        const useCraft = craft && craft.Item === option.asset ? structuredClone(craft) : undefined;
-        const skill = ctx.sender ? SkillGetWithRatio(ctx.sender, "Bondage") : 0;
-        const item = InventoryWear(Player, option.asset, option.group as AssetGroupName, (useCraft?.Color as ItemColor | undefined) ?? undefined, skill, ctx.sender?.MemberNumber, useCraft, false);
-        if (!item)
-            continue;
-        if (option.ladder)
-            setRung(option, item, rung, ctx);
-        placed.push({ group: option.group, asset: option.asset, ...(option.ladder ? { rung } : {}) });
+        placed.push(piece);
         budget--;
     }
 
@@ -195,6 +206,7 @@ export function unconjure(entry: SpellEffectEntry, reason: string, set: ConjureS
     if (removed > 0) {
         CharacterRefresh(Player, true, false);
         ChatRoomCharacterUpdate(Player);
-        SendAction(set.messages.end);
+        if (set.messages.end)
+            SendAction(set.messages.end);
     }
 }
