@@ -38,7 +38,7 @@ describe("effect domains, schools and tiers", () => {
 
     it("lists each domain's effects", () => {
         const group = (d: SpellDomain) => effectsInDomain(d).sort();
-        expect(group(SpellDomain.mind)).toEqual(ids(L.hypnotizing, L.slumber));
+        expect(group(SpellDomain.mind)).toEqual(ids(L.hypnotizing, L.slumber, L.command));
         expect(group(SpellDomain.senses)).toEqual(ids(L.blindness, L.deafened, L.xRay, L.project));
         expect(group(SpellDomain.form)).toEqual(ids(L.enlarge, L.polymorph, L.outfit, L.dissolve));
         expect(group(SpellDomain.binding)).toEqual(ids(L.muted, L.frozen, L.tighten, L.loosen, L.disarm, L.web, L.slime, L.ropes));
@@ -53,7 +53,7 @@ describe("effect domains, schools and tiers", () => {
         expect(group(SpellSchool.abjuration)).toEqual(ids(L.barrier, L.dispel));
         expect(group(SpellSchool.conjuration)).toEqual(ids(L.project, L.web, L.slime, L.ropes));
         expect(group(SpellSchool.divination)).toEqual(ids(L.xRay));
-        expect(group(SpellSchool.enchantment)).toEqual(ids(L.hypnotizing, L.slumber, L.horny, L.bless, L.bane, L.paired_arousal, L.denial, L.orgasm));
+        expect(group(SpellSchool.enchantment)).toEqual(ids(L.hypnotizing, L.slumber, L.horny, L.bless, L.bane, L.paired_arousal, L.denial, L.orgasm, L.command));
         expect(group(SpellSchool.evocation)).toEqual(ids(L.damage));
         expect(group(SpellSchool.illusion)).toEqual(ids(L.muted, L.outfit));
         expect(group(SpellSchool.necromancy)).toEqual(ids(L.blindness, L.deafened, L.orgasm_siphon));
@@ -63,7 +63,7 @@ describe("effect domains, schools and tiers", () => {
     it("lists each tier's effects (an effect whose tier depends on its settings by its lowest)", () => {
         const tier = (t: 1 | 2 | 3 | 4 | 5) => effectsInTier(t).sort();
         expect(tier(1)).toEqual(ids(L.loosen, L.tighten, L.disarm, L.horny, L.muted, L.bless, L.bane, L.damage, L.dissolve));
-        expect(tier(2)).toEqual(ids(L.blindness, L.deafened, L.xRay, L.enlarge, L.outfit, L.denial, L.orgasm, L.web, L.ropes));
+        expect(tier(2)).toEqual(ids(L.blindness, L.deafened, L.xRay, L.enlarge, L.outfit, L.denial, L.orgasm, L.web, L.ropes, L.command));
         expect(tier(3)).toEqual(ids(L.slumber, L.hypnotizing, L.frozen, L.paired_arousal, L.orgasm_siphon, L.barrier, L.slime));
         expect(tier(4)).toEqual(ids(L.polymorph, L.project, L.dispel));
         expect(tier(5)).toEqual([]);

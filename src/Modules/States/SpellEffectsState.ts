@@ -1,4 +1,5 @@
-import { ICONS, settingsSave } from "utils";
+import { ICONS, hookFunction, LSCG_SendLocal, settingsSave } from "utils";
+import { ModuleCategory } from "Settings/setting_definitions";
 import { BaseState } from "./BaseState";
 import { StateModule } from "Modules/states";
 import { effectTier, getSpellEffect, type SpellEffectContext } from "Modules/Magic/spellEffects";
@@ -129,7 +130,21 @@ export class SpellEffectsState extends BaseState {
         return this;
     }
 
-    Init(): void {}
+    /** Whether any spell effect is keeping the player in the room (a "stay" command). */
+    get HoldsInPlace(): boolean {
+        return this.Active && this.entries.some(entry => getSpellEffect(entry.effect)?.holdsInPlace?.(entry));
+    }
+
+    Init(): void {
+        // Same hook the vanilla leash and LSCG's clasps use to keep someone from leaving
+        hookFunction("ChatRoomCanLeave", 1, (args, next) => {
+            if (this.HoldsInPlace) {
+                LSCG_SendLocal("A spell's command holds you where you are.");
+                return false;
+            }
+            return next(args);
+        }, ModuleCategory.States);
+    }
 
     RoomSync(): void {
         // Effects that need re-applying when the player enters a room (they get their entries to find out)

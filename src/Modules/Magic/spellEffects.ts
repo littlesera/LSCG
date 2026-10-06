@@ -93,6 +93,8 @@ export interface SpellEffectDefinition {
     /** For effects that recorded entries in the spell effects state (SpellEffectsState.Add): undo one when it ends. It has already been
      *  removed from the list. `reason` is why: it ran out, the player was dispelled or used safeword. */
     onEnd?(entry: SpellEffectEntry, reason: SpellEffectEndReason, magic: MagicModule | undefined): void;
+    /** For effects that recorded entries: whether this entry keeps the player from leaving the room. */
+    holdsInPlace?(entry: SpellEffectEntry): boolean;
     /** Re-apply an entry that doesn't survive a room change by itself. Called for each of this effect's entries on every room sync. */
     onRoomSync?(entry: SpellEffectEntry, magic: MagicModule | undefined): void;
     /** Paired effects: runs on the second target once the first has been hit. */

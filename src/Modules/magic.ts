@@ -3,6 +3,7 @@ import { getModule } from "modules";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
 import { GetConfiguredItemBundlesFromOutfitKey, GetDelimitedList, OnChat, GetItemNameAndDescriptionConcat, GetMetadata, LSCG_SendLocal, LSCG_TEAL, OnActivity, SendAction, getCharacter, getRandomInt, hookFunction, isPhraseInString, removeAllHooksByModule, sendLSCGCommand, sendLSCGCommandBeep, settingsSave, getCharacterByNicknameOrMemberNumber, excludeParentheticalContent, escapeRegExp } from "../utils";
 import { ABSOLUTE_MAX_SPELL_EFFECTS, DEFAULT_MAX_SPELL_EFFECTS, KNOWN_SPELLS_LIMIT, LSCGSpellEffect, MagicSettingsModel, OutfitOption, SpellDefinition, SpellEffectId } from "Settings/Models/magic";
+import { isSpacedWordChar } from "./Magic/phrase";
 import { effectConfigFor, pickEffects, retier, sanitizeCastArgs, sanitizeSpell, saveBehaviorFor, spellCastPrompts, voiceCastArgs } from "./Magic/spellEdit";
 import { GuiMagic } from "Settings/magic";
 import { StateModule } from "./states";
@@ -854,14 +855,12 @@ export class MagicModule extends BaseModule {
     /** Finds `phrase` followed by one of `names`. Word edges and the space between are required only where the characters either side
      *  are in a script that uses spaces (\b can't tell, e.g. for accents or Chinese); unspaced scripts have neither (#877). */
     private findCastingMatch(text: string, phrase: string, names: string[]): RegExpExecArray | null {
-        const unspaced = /[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\p{Script=Thai}\p{Script=Lao}\p{Script=Khmer}\p{Script=Myanmar}]/u;
-        const isWord = (c: string | undefined) => !!c && /[\p{L}\p{N}_]/u.test(c) && !unspaced.test(c);
         const re = new RegExp(`${escapeRegExp(phrase)}(\\s*)(${names.map(escapeRegExp).join("|")})`, "gi");
         let m: RegExpExecArray | null;
         while ((m = re.exec(text))) {
             const phraseLength = m[0].length - m[1].length - m[2].length;
-            const edgeOk = !isWord(phrase[0]) || !isWord(text[m.index - 1]);
-            const separated = m[1].length > 0 || !isWord(m[0][phraseLength - 1]) || !isWord(m[2][0]);
+            const edgeOk = !isSpacedWordChar(phrase[0]) || !isSpacedWordChar(text[m.index - 1]);
+            const separated = m[1].length > 0 || !isSpacedWordChar(m[0][phraseLength - 1]) || !isSpacedWordChar(m[2][0]);
             if (edgeOk && separated) return m;
             re.lastIndex = m.index + 1;
         }
