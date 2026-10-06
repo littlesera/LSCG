@@ -105,7 +105,7 @@ function stopFollowing(leader: number): void {
 export const COMMAND_EFFECT: SpellEffectDefinition = {
     id: LSCGSpellEffect.command,
     label: LSCGSpellEffect.command,
-    description: "Compels the target: kneel, follow, stay, strip or cum.",
+    description: "Compels the target to kneel, follow, stay, strip or cum.",
     config: {
         defaults: (): CommandConfig => ({ Word: "kneel", Ask: false, Allowed: [...COMMAND_WORDS] }),
         sanitize: sanitizeCommandConfig,
@@ -138,13 +138,13 @@ export const COMMAND_EFFECT: SpellEffectDefinition = {
                 if (Player.CanKneel())
                     PoseSetActive(Player, "Kneel", true);
                 addCustomEffect(Player, "ForceKneel");
-                SendAction("%NAME% is compelled to kneel, sinking to the floor at the command.");
+                SendAction("%NAME% is compelled to kneel, sinking to the floor at the spell's command.");
                 state.Add(ctx, { word } satisfies CommandData);
                 break;
             case "follow": {
                 const leader = ctx.sender?.MemberNumber;
                 if (!leader || ctx.sender?.IsPlayer()) {
-                    SendAction("The command to follow finds no one for %NAME% to follow.");
+                    SendAction("The spell finds no one for %NAME% to follow.");
                     return;
                 }
                 startFollowing(leader);
@@ -158,11 +158,11 @@ export const COMMAND_EFFECT: SpellEffectDefinition = {
                 break;
             case "strip": {
                 const { removed } = dissolveClothing("both", ctx.sender?.MemberNumber);
-                SendAction(removed > 0 ? "%NAME% obeys the command and strips off every stitch, unable to stop %POSSESSIVE% hands." : "%NAME% is commanded to strip, but has nothing left to take off.");
+                SendAction(removed > 0 ? "%NAME% strips off every stitch, unable to stop %POSSESSIVE% hands." : "The spell commands %NAME% to strip, but %PRONOUN% has nothing left to take off.");
                 break;
             }
             case "cum":
-                SendAction("%NAME% gasps as the command forces %POSSESSIVE% release!");
+                SendAction("%NAME% gasps as the spell forces %POSSESSIVE% release.");
                 forceOrgasm();
                 break;
         }

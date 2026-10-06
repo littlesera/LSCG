@@ -36,7 +36,7 @@ export function sanitizeDamageConfig(raw: unknown): DamageConfig {
 export const DAMAGE_EFFECT: SpellEffectDefinition = {
     id: LSCGSpellEffect.damage,
     label: LSCGSpellEffect.damage,
-    description: "Hurts the target with a chosen type of damage, with an optional dice roll.",
+    description: "Damages the target with a chosen damage type and an optional dice roll.",
     stackable: 3,
     tier: damageTier,
     onSave: (c: DamageConfig) => c.Save === DamageSave.none ? "negate" : "half",

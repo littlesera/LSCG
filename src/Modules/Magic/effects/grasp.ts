@@ -34,11 +34,11 @@ interface GraspDefinition {
 }
 
 export const GRASPS: GraspDefinition[] = [
-    { location: "neck", label: "Neck", ghost: [{ group: "ItemNeckRestraints", asset: GHOST_HAND }], grab: "A spectral hand closes around %NAME%'s throat!" },
-    { location: "arms", label: "Arms", ghost: [{ group: "ItemArms", asset: GHOST_HAND, ladder: ["P1", "P2", "P3", "P4"] }], ghostRung: 2, restricts: "Move", grab: "Spectral hands seize %NAME%'s arms and pin them!" },
-    { location: "legs", label: "Legs", ghost: [{ group: "ItemLegs", asset: GHOST_HAND }, { group: "ItemFeet", asset: GHOST_HAND }], restricts: "Walk", grab: "Spectral hands clamp around %NAME%'s legs, holding them still!" },
-    { location: "ass", label: "Ass", ghost: [], teases: true, grab: "A spectral hand takes a firm grip of %NAME%'s ass!", squeeze: "%NAME% shivers as the spectral hand squeezes and kneads %POSSESSIVE% ass." },
-    { location: "breast", label: "Breasts", ghost: [{ group: "ItemBreast", asset: GHOST_HAND }], teases: true, grab: "Spectral hands cup and squeeze %NAME%'s breasts!", squeeze: "%NAME% gasps as the spectral hands knead and squeeze %POSSESSIVE% breasts." },
+    { location: "neck", label: "Neck", ghost: [{ group: "ItemNeckRestraints", asset: GHOST_HAND }], grab: "A spectral hand closes around %NAME%'s throat." },
+    { location: "arms", label: "Arms", ghost: [{ group: "ItemArms", asset: GHOST_HAND, ladder: ["P1", "P2", "P3", "P4"] }], ghostRung: 2, restricts: "Move", grab: "Spectral hands seize %NAME%'s arms and pin them." },
+    { location: "legs", label: "Legs", ghost: [{ group: "ItemLegs", asset: GHOST_HAND }, { group: "ItemFeet", asset: GHOST_HAND }], restricts: "Walk", grab: "Spectral hands clamp around %NAME%'s legs, holding them still." },
+    { location: "ass", label: "Ass", ghost: [], teases: true, grab: "A spectral hand takes a firm grip of %NAME%'s ass.", squeeze: "%NAME% shivers as the spectral hand squeezes and kneads %POSSESSIVE% ass." },
+    { location: "breast", label: "Breasts", ghost: [{ group: "ItemBreast", asset: GHOST_HAND }], teases: true, grab: "Spectral hands cup and squeeze %NAME%'s breasts.", squeeze: "%NAME% gasps as the spectral hands knead and squeeze %POSSESSIVE% breasts." },
 ];
 
 export const GRASP_LOCATIONS: GraspLocation[] = GRASPS.map(g => g.location);
@@ -99,7 +99,7 @@ function stopChoke(): void {
 export const GRASP_EFFECT: SpellEffectDefinition = {
     id: LSCGSpellEffect.grasp,
     label: LSCGSpellEffect.grasp,
-    description: "Spectral hands seize the target's neck, arms, legs, ass or breasts.",
+    description: "Seizes the target's neck, arms, legs, ass or breasts with spectral hands.",
     config: {
         defaults: (): GraspConfig => ({ Locations: ["arms"] }),
         sanitize: sanitizeGraspConfig,
