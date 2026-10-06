@@ -73,7 +73,7 @@ export const REMOVE_CURSE_EFFECT: SpellEffectDefinition = {
                 return [];
             return [{
                 key: "target", label: "Effect to lift", open: true, default: RANDOM_EFFECT,
-                options: [{ value: RANDOM_EFFECT, label: "A random one" }, ...choices.map(c => ({ value: c.key, label: c.label }))],
+                options: [{ value: RANDOM_EFFECT, label: "- Random -" }, ...choices.map(c => ({ value: c.key, label: c.label }))],
             }];
         },
     },
