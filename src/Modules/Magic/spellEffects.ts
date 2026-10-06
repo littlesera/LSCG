@@ -13,8 +13,24 @@ export interface SpellEffectContext {
     /** This effect's duration in ms; 0 or undefined means no expiry. */
     duration?: number;
     magic: MagicModule;
+    /** Which of the spell's effects this is, since the same effect can appear more than once. */
+    index: number;
+    /** This effect's settings for this copy, already sanitized by its schema; undefined for effects without one. */
+    config?: unknown;
     /** The target rolled a save against this spell. Only the effects that still do something on a save (damage) are applied after a full resist. */
     saved?: boolean;
+}
+
+/** What an effect with settings of its own needs besides how it looks in the editor (that lives in Settings/magic-effect-editors.tsx,
+ *  so effect logic never imports UI). Settings are stored per copy in `SpellDefinition.Configs`. */
+export interface EffectConfigSchema<T = any> {
+    defaults(): T;
+    /** Strict: anything not valid is replaced by a safe value. Used on everything that arrives from another player and before apply. */
+    sanitize(raw: unknown): T;
+    /** The line shown when the settings section is closed. Receives the stored settings with defaults filled in, not sanitized. */
+    summary(config: T): string;
+    /** The settings still need the player's attention (the section opens by itself). */
+    needsAttention?(config: T): boolean;
 }
 
 export interface SpellEffectDefinition {
@@ -32,7 +48,11 @@ export interface SpellEffectDefinition {
     /** Blocked by default the first time a player sees it. */
     defaultBlocked?: boolean;
     /** Has a "Configure" action in the spell editor. Built-in only. */
-    configurable?: "outfit" | "polymorph" | "damage";
+    configurable?: "outfit" | "polymorph";
+    /** Settings of its own, one set per copy of the effect in a spell. */
+    config?: EffectConfigSchema;
+    /** The most copies of this effect one spell may hold. Unique (1) when missing. */
+    stackable?: number;
     /** Display name of the extension that registered it; undefined for built-ins. */
     source?: string;
     apply(ctx: SpellEffectContext): void;

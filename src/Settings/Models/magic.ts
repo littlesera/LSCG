@@ -1,6 +1,5 @@
 import { SpiritTextType } from "Settings/magic";
 import { BaseSettingsModel } from "./base";
-import { parseDiceRoll } from "Modules/Magic/dice";
 
 export const KNOWN_SPELLS_LIMIT: number = 48;
 
@@ -20,13 +19,6 @@ export function maxSpellEffects(settings?: { maxSpellEffects?: number }): number
         : DEFAULT_MAX_SPELL_EFFECTS;
 }
 
-/** A spell's effects as they should be stored when it comes from another player: strings only, no repeats,
- *  within the ceiling. Order is kept, since it is the order the effects are applied in. */
-export function sanitizeIncomingEffects(effects: unknown): SpellEffectId[] {
-    if (!Array.isArray(effects))
-        return [];
-    return [...new Set(effects.filter((e): e is SpellEffectId => typeof e === "string" && e !== ""))].slice(0, ABSOLUTE_MAX_SPELL_EFFECTS);
-}
 /** A spell effect id: a built-in effect, or an extension's namespaced "<extension id>.<name>". */
 export type SpellEffectId = LSCGSpellEffect | `${string}.${string}`;
 
@@ -128,17 +120,6 @@ export interface DamageConfig {
 
 export const DEFAULT_DAMAGE_TYPE = DamageType.force;
 
-/** Damage settings as they should be stored when they come from another player: a known type and a roll that parses. */
-export function sanitizeIncomingDamage(damage: unknown): DamageConfig | undefined {
-    if (!damage || typeof damage !== "object")
-        return undefined;
-    const { Type, Roll, Save } = damage as Partial<DamageConfig>;
-    const type = Object.values(DamageType).find(t => t === Type) ?? DEFAULT_DAMAGE_TYPE;
-    const save = Object.values(DamageSave).find(s => s === Save) ?? DamageSave.half;
-    const roll = typeof Roll === "string" ? parseDiceRoll(Roll)?.text ?? "" : "";
-    return { Type: type, Roll: roll, Save: save };
-}
-
 export interface SpellDefinition {
     Name: string;
     CastingPhrase?: string;
@@ -148,7 +129,9 @@ export interface SpellDefinition {
     AllowVoiceCast: boolean;
     Outfit?: OutfitConfig;
     Polymorph?: PolymorphConfig;
-    Damage?: DamageConfig;
+    /** Each effect's own settings, by position: `Configs[i]` belongs to `Effects[i]`, since the same effect may appear more
+     *  than once with different settings. Entries are missing or null for effects with none. Kept aligned by spellEdit.ts. */
+    Configs?: unknown[];
 }
 
 export interface MagicSettingsModel extends MagicPublicSettingsModel {

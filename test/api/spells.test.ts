@@ -10,8 +10,10 @@ import { InjectorModule } from "Modules/injector";
 import { MagicModule } from "Modules/magic";
 import { StateModule } from "Modules/states";
 import { OutfitCollectionModule } from "Modules/outfitCollection";
-import { ABSOLUTE_MAX_SPELL_EFFECTS, DEFAULT_MAX_SPELL_EFFECTS, DamageSave, DamageType, LSCGSpellEffect, maxSpellEffects, sanitizeIncomingDamage, sanitizeIncomingEffects, type SpellDefinition, type SpellEffectId } from "Settings/Models/magic";
+import { ABSOLUTE_MAX_SPELL_EFFECTS, DEFAULT_MAX_SPELL_EFFECTS, DamageSave, DamageType, LSCGSpellEffect, maxSpellEffects,  type SpellDefinition, type SpellEffectId } from "Settings/Models/magic";
 import { builtInEffectIds, effectDescription, effectLabel, extensionEffectIds, getSpellEffect, spellEffects, spellIsBeneficial } from "Modules/Magic/spellEffects";
+import { addEffect, canHaveEffect, effectConfigFor, removeEffect, sanitizeSpell, setEffect, stackLimit } from "Modules/Magic/spellEdit";
+import { sanitizeDamageConfig } from "Modules/Magic/effects/damage";
 import { registerExtension, type ModApiHandle } from "api/extensions";
 import { boot, resetWorld, player, addToRoom } from "../harness/world";
 import { makeAsset, makeCharacter, makeGroup, makeItem, wear, type FixtureCharacter } from "../harness/fixtures";
@@ -266,7 +268,7 @@ describe("extension spell effects", () => {
     });
 
     describe("Damaging", () => {
-        const damageSpell = (damage?: unknown) => ({ ...spell("zap", [LSCGSpellEffect.damage]), Damage: damage } as SpellDefinition);
+        const damageSpell = (damage?: unknown) => ({ ...spell("zap", [LSCGSpellEffect.damage]), Configs: damage === undefined ? undefined : [damage] } as SpellDefinition);
         const cast = (s: SpellDefinition) => {
             magic.IncomingSpell(alice as never, s, null, 1);
             vi.advanceTimersByTime(2500);
@@ -279,7 +281,8 @@ describe("extension spell effects", () => {
 
         it("is a harmful, configurable effect", () => {
             const def = getSpellEffect(LSCGSpellEffect.damage);
-            expect(def?.configurable).toBe("damage");
+            expect(def?.config).toBeDefined();
+            expect(def?.stackable).toBe(3);
             expect(spellIsBeneficial(damageSpell())).toBe(false);
         });
 
@@ -305,11 +308,85 @@ describe("extension spell effects", () => {
             expect(out[0]).not.toMatch(/\d/);
         });
 
-        it("sanitizeIncomingDamage keeps a known type and a valid roll, tidied", () => {
-            expect(sanitizeIncomingDamage({ Type: "Cold", Roll: "1d8+3" })).toEqual({ Type: DamageType.cold, Roll: "1d8 + 3", Save: DamageSave.half });
-            expect(sanitizeIncomingDamage({ Type: 5, Roll: { x: 1 } })).toEqual({ Type: DamageType.force, Roll: "", Save: DamageSave.half });
-            expect(sanitizeIncomingDamage("nope")).toBeUndefined();
-            expect(sanitizeIncomingDamage(null)).toBeUndefined();
+        it("sanitizeDamageConfig keeps a known type and a valid roll, tidied, and falls back to safe defaults", () => {
+            expect(sanitizeDamageConfig({ Type: "Cold", Roll: "1d8+3" })).toEqual({ Type: DamageType.cold, Roll: "1d8 + 3", Save: DamageSave.half });
+            expect(sanitizeDamageConfig({ Type: 5, Roll: { x: 1 } })).toEqual({ Type: DamageType.force, Roll: "", Save: DamageSave.half });
+            expect(sanitizeDamageConfig("nope")).toEqual({ Type: DamageType.force, Roll: "", Save: DamageSave.half });
+            expect(sanitizeDamageConfig(null)).toEqual({ Type: DamageType.force, Roll: "", Save: DamageSave.half });
+        });
+    });
+
+    describe("stacking effects and per-copy settings", () => {
+        const dmg = (Type: string, Roll = "") => ({ Type, Roll });
+        const stacked = (): SpellDefinition => ({
+            ...spell("storm", [LSCGSpellEffect.damage, LSCGSpellEffect.blindness, LSCGSpellEffect.damage]),
+            Configs: [dmg("Fire", "1d4"), null, dmg("Cold", "1d6")],
+        });
+
+        afterEach(() => {
+            vi.restoreAllMocks();
+        });
+
+        it("most effects are unique; Damaging stacks up to its limit", () => {
+            expect(stackLimit(LSCGSpellEffect.blindness)).toBe(1);
+            expect(stackLimit("someone.unknown")).toBe(1);
+            expect(stackLimit(LSCGSpellEffect.damage)).toBe(3);
+            const s = spell("x", [LSCGSpellEffect.damage, LSCGSpellEffect.damage, LSCGSpellEffect.blindness]);
+            expect(canHaveEffect(s, LSCGSpellEffect.damage)).toBe(true);
+            addEffect(s, LSCGSpellEffect.damage);
+            expect(canHaveEffect(s, LSCGSpellEffect.damage)).toBe(false);
+            expect(canHaveEffect(s, LSCGSpellEffect.damage, 0)).toBe(true); // changing one of the copies is fine
+            expect(canHaveEffect(s, LSCGSpellEffect.blindness)).toBe(false);
+        });
+
+        it("removing or replacing an effect keeps each copy's settings with it", () => {
+            const s = stacked();
+            removeEffect(s, 0);
+            expect(s.Effects).toEqual([LSCGSpellEffect.blindness, LSCGSpellEffect.damage]);
+            expect(s.Configs).toEqual([null, dmg("Cold", "1d6")]);
+            expect(effectConfigFor(s, 1)).toMatchObject({ Type: DamageType.cold, Roll: "1d6" });
+            setEffect(s, 1, LSCGSpellEffect.deafened);
+            expect(s.Configs).toEqual([null, null]); // the replacement starts with no settings of its own
+            removeEffect(s, 1);
+            expect(s.Configs).toBeUndefined(); // nothing left to keep
+        });
+
+        it("incoming spells keep stackable copies with their own settings and drop the rest", () => {
+            const lots = [dmg("Fire"), dmg("Cold"), dmg("Acid"), dmg("Poison")];
+            const s = sanitizeSpell({
+                ...spell("storm", [LSCGSpellEffect.damage, LSCGSpellEffect.damage, LSCGSpellEffect.damage, LSCGSpellEffect.damage, LSCGSpellEffect.blindness, LSCGSpellEffect.blindness]),
+                Configs: [...lots, { not: "used" }, { Also: "dropped" }],
+            });
+            expect(s.Effects).toEqual([LSCGSpellEffect.damage, LSCGSpellEffect.damage, LSCGSpellEffect.damage, LSCGSpellEffect.blindness]);
+            expect(s.Configs).toHaveLength(4);
+            expect((s.Configs as any[]).slice(0, 3).map(c => c.Type)).toEqual(["Fire", "Cold", "Acid"]);
+            expect((s.Configs as any[])[3]).toBeNull(); // no settings for an effect that has none
+        });
+
+        it("settings are sanitized, oversized ones dropped, and the whole list removed when nothing is left", () => {
+            const s = sanitizeSpell({
+                ...spell("x", [LSCGSpellEffect.damage, LSCGSpellEffect.damage]),
+                Configs: [dmg("Mind Flayer", "9999d9999"), { Type: "Fire", Roll: "1d4", Junk: "x".repeat(5000) }],
+            });
+            expect((s.Configs as any[])[0]).toEqual({ Type: DamageType.force, Roll: "", Save: DamageSave.half });
+            expect((s.Configs as any[])[1]).toMatchObject({ Type: DamageType.fire, Roll: "1d4" });
+            expect(JSON.stringify(s.Configs).length).toBeLessThan(300);
+            expect(sanitizeSpell({ ...spell("y", [LSCGSpellEffect.blindness]), Configs: [{ anything: 1 }] }).Configs).toBeUndefined();
+        });
+
+        it("each copy applies with its own settings and announces its own result", () => {
+            vi.spyOn(Math, "random").mockReturnValue(0.99); // every die at its top face
+            magic.IncomingSpell(alice as never, stacked(), null, 1);
+            vi.advanceTimersByTime(2000 * 3 + 500);
+            const out = sent.actions();
+            expect(out.some(a => a.includes("takes 4 fire damage"))).toBe(true);
+            expect(out.some(a => a.includes("takes 6 cold damage"))).toBe(true);
+            expect(states.BlindState.Active).toBe(true);
+        });
+
+        it("a blocked effect blocks every copy of it", () => {
+            magic.settings.blockedSpellEffects = [LSCGSpellEffect.damage];
+            expect(magic.filterAllowedSpellEffects(stacked(), alice as never)).toEqual([LSCGSpellEffect.blindness]);
         });
     });
 
@@ -328,13 +405,13 @@ describe("extension spell effects", () => {
             expect(maxSpellEffects({ maxSpellEffects: 999 })).toBe(ABSOLUTE_MAX_SPELL_EFFECTS);
         });
 
-        it("effects from another player are strings only, without repeats, within the ceiling, in order", () => {
+        it("effects from another player are strings only, each unique one once, within the ceiling, in order", () => {
             const lots = Array.from({ length: 30 }, (_, i) => `x.e${i}`);
-            const cleaned = sanitizeIncomingEffects(["Blinding", 5, null, "", "Blinding", { a: 1 }, "Deafening", ...lots]);
+            const cleaned = sanitizeSpell({ Name: "x", Creator: 2, Effects: ["Blinding", 5, null, "", "Blinding", { a: 1 }, "Deafening", ...lots], AllowPotion: false, AllowVoiceCast: false } as never).Effects;
             expect(cleaned.slice(0, 2)).toEqual(["Blinding", "Deafening"]);
             expect(cleaned).toHaveLength(ABSOLUTE_MAX_SPELL_EFFECTS);
-            expect(sanitizeIncomingEffects("nope")).toEqual([]);
-            expect(sanitizeIncomingEffects(undefined)).toEqual([]);
+            expect(sanitizeSpell({ Name: "x", Effects: "nope" } as never).Effects).toEqual([]);
+            expect(sanitizeSpell({ Name: "x" } as never).Effects).toEqual([]);
         });
 
         it("a spell taught by another player is stored within those limits", () => {
