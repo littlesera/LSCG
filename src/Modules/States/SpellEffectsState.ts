@@ -73,7 +73,7 @@ export class SpellEffectsState extends BaseState {
         return entry;
     }
 
-    /** Changes what an entry will undo, e.g. after a repeat cast made a piece stronger. */
+    /** Changes what an entry will undo, when the effect has changed what it holds. */
     Update(entry: SpellEffectEntry, data: unknown): void {
         entry.data = data;
         settingsSave(true);
