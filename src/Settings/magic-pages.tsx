@@ -1,8 +1,10 @@
 import { h } from "tsx-dom";
 import { getModule } from "modules";
 import { OutfitCollectionModule } from "Modules/outfitCollection";
-import { allEffectIds, effectDescription, effectLabel, effectTooltip, isExtensionEffect, getSpellEffect, isPairedEffect, spellHasPairedEffect } from "Modules/Magic/spellEffects";
+import { allEffectIds, domainDescription, domainOrder, effectDescription, effectDomain, effectLabel, effectTooltip, isExtensionEffect, getSpellEffect, isPairedEffect, spellHasPairedEffect } from "Modules/Magic/spellEffects";
 import { Button, Chip, CheckboxRow, Expando, Icon, KitContext, KitTab, Notice, NumberRow, openDialog, RuleTable, SectionLabel, SelectOption, SelectRow, TextRow } from "Dom/kit";
+import { addEffect, canHaveEffect, editableConfig, removeEffect, setEffect, writeConfig } from "Modules/Magic/spellEdit";
+import { EFFECT_EDITORS } from "./magic-effect-editors";
 import { KNOWN_SPELLS_LIMIT, MagicPublicSettingsModel, MagicSettingsModel, OutfitOption, PolymorphConfig, SpellDefinition, SpellEffectId, maxSpellEffects } from "./Models/magic";
 import type { SpiritTextType } from "./magic";
 
@@ -25,8 +27,11 @@ function toggle<T>(list: T[], item: T, on: boolean): T[] {
     return on ? [...without, item] : without;
 }
 
-/** Built-in effects first, then extensions', then ones no longer installed; alphabetical within each. */
-const effectRank = (id: SpellEffectId) => !getSpellEffect(id) ? 2 : isExtensionEffect(id) ? 1 : 0;
+/** Built-in effects first, by domain in its display order, then extensions', then ones no longer installed; alphabetical within each. */
+const effectRank = (id: SpellEffectId) => {
+    const domain = effectDomain(id);
+    return !getSpellEffect(id) ? 200 : domain ? domainOrder(domain) : 100;
+};
 const byLabel = (a: SpellEffectId, b: SpellEffectId) => effectRank(a) - effectRank(b) || effectLabel(a).localeCompare(effectLabel(b));
 
 function effectChip(id: SpellEffectId): HTMLElement {
@@ -39,7 +44,8 @@ function effectNameCell(id: SpellEffectId): HTMLElement {
     return <div class="lscg-kit-chips">
         <span>{isExtensionEffect(id) ? Icon("extension", "Added by an extension") : null}{effectLabel(id)}</span>
         {!def ? Chip("not installed", { tone: "warn", tooltip: "Comes from an extension this client doesn't have." })
-            : def.source ? Chip(def.source, { tone: "info", tooltip: "Added by an extension." }) : null}
+            : def.source ? Chip(def.source, { tone: "info", tooltip: "Added by an extension." })
+            : def.domain ? Chip(def.domain, { tone: "muted", tooltip: domainDescription(def.domain) }) : null}
     </div> as HTMLElement;
 }
 
@@ -133,9 +139,11 @@ function polymorphEffectConfig(ctx: KitContext, spell: SpellDefinition): HTMLEle
 }
 
 /** An effect's own settings: the rows, a one-line summary for when the section is closed, and whether it still
- *  needs the player's attention (no outfit chosen yet). Only the effects that have any (outfit, polymorph). */
-function effectConfig(ctx: KitContext, spell: SpellDefinition, effect: SpellEffectId):
+ *  needs the player's attention (no outfit chosen yet). Only the effects that have any. Outfit and Polymorph keep theirs on the
+ *  spell itself; the rest keep theirs per copy in `spell.Configs` and describe themselves through their schema. */
+function effectConfig(ctx: KitContext, spell: SpellDefinition, index: number):
         { rows: HTMLElement[]; summary: () => string; needsAttention: () => boolean } | undefined {
+    const effect = spell.Effects[index];
     switch (getSpellEffect(effect)?.configurable) {
         case "outfit":
             return {
@@ -149,8 +157,18 @@ function effectConfig(ctx: KitContext, spell: SpellDefinition, effect: SpellEffe
                 summary: () => `Polymorph settings: ${spell.Polymorph?.Key || "no outfit chosen yet"}`,
                 needsAttention: () => !spell.Polymorph?.Key,
             };
-        default:
-            return undefined;
+        default: {
+            const schema = getSpellEffect(effect)?.config;
+            const editor = EFFECT_EDITORS[effect];
+            if (!schema || !editor)
+                return undefined;
+            const config = () => editableConfig(spell, index);
+            return {
+                rows: editor(ctx, config, patch => writeConfig(spell, index, { ...config(), ...patch })),
+                summary: () => schema.summary(config()),
+                needsAttention: () => !!schema.needsAttention?.(config()),
+            };
+        }
     }
 }
 
@@ -172,10 +190,9 @@ function effectSlots(dctx: KitContext, tableCtx: KitContext, spell: SpellDefinit
 
         const row = (i: number): HTMLElement => {
             const current = i < have ? spell.Effects[i] : undefined;
-            const taken = new Set(spell.Effects.filter((_, j) => j !== i));
             const options: SelectOption[] = [
                 { value: "", label: current ? "— remove this effect —" : have === 0 ? "— choose an effect —" : "— add another effect —" },
-                ...allEffectIds().filter(id => !taken.has(id)).sort(byLabel).map(id => ({ value: id as string, label: effectLabel(id), ...(isExtensionEffect(id) ? { group: "From extensions", icon: "extension" as const } : {}) })),
+                ...allEffectIds().filter(id => canHaveEffect(spell, id, i)).sort(byLabel).map(id => ({ value: id as string, label: effectLabel(id), ...(isExtensionEffect(id) ? { group: "From extensions", icon: "extension" as const } : effectDomain(id) ? { group: effectDomain(id) } : {}) })),
                 // An effect from an extension that isn't installed stays selectable so it can be kept or replaced.
                 ...(current && !getSpellEffect(current) ? [{ value: current as string, label: effectLabel(current) }] : []),
             ];
@@ -187,9 +204,10 @@ function effectSlots(dctx: KitContext, tableCtx: KitContext, spell: SpellDefinit
                 set: value => {
                     focusSlot = i;
                     if (value === "") {
-                        if (i < spell.Effects.length) spell.Effects.splice(i, 1);
+                        removeEffect(spell, i);
                     } else {
-                        spell.Effects[i] = value as SpellEffectId;
+                        if (i < spell.Effects.length) setEffect(spell, i, value as SpellEffectId);
+                        else addEffect(spell, value as SpellEffectId);
                         if (isPairedEffect(value)) spell.AllowPotion = false;
                     }
                 },
@@ -197,15 +215,15 @@ function effectSlots(dctx: KitContext, tableCtx: KitContext, spell: SpellDefinit
             // The settings edit the spell directly. They don't change which effects there are, so they don't rebuild this
             // list (which would drop keyboard focus mid-way through filling them in); they only update the spell table.
             const gctx = new KitContext(() => tableCtx.changed());
-            const config = current ? effectConfig(gctx, spell, current) : undefined;
+            const config = current ? effectConfig(gctx, spell, i) : undefined;
             if (!current || !config)
                 return picker;
             // Open until the player has chosen what the effect needs; after that, tucked away behind its summary.
             const section = Expando(gctx, {
                 summary: config.summary,
                 content: config.rows,
-                open: expanded.get(current) ?? config.needsAttention(),
-                onToggle: open => expanded.set(current, open),
+                open: expanded.get(`${i}:${current}`) ?? config.needsAttention(),
+                onToggle: open => expanded.set(`${i}:${current}`, open),
             });
             return <div class="lscg-spell-effect">{picker}{section}</div> as HTMLElement;
         };

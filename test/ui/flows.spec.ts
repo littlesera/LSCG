@@ -605,3 +605,146 @@ test("Outfit Collection: the lock button opens a lock modal where a lock is chos
         escape: { modalClosed: true, editorStillOpen: true },
     });
 });
+
+test("Magic spell editor: effects are grouped by domain, stack up to their limit, and each copy keeps its own settings", async ({ bc }) => {
+    await bc.openSettings("Magic™");
+    await bc.page.locator(".lscg-kit-tab", { hasText: "Spells" }).click();
+    await bc.page.getByRole("button", { name: "+ New spell" }).click();
+    await bc.page.locator(".lscg-kit-edit").first().click();
+    const result = await bc.run(async () => {
+        const w = window as any;
+        const wait = (ms = 150) => new Promise(r => setTimeout(r, ms));
+        const slots = () => [...document.querySelectorAll<HTMLSelectElement>(".lscg-spell-effect > .lscg-kit-row select, .lscg-spell-effects > .lscg-kit-row select")];
+        const choose = async (index: number, value: string) => {
+            const select = slots()[index];
+            select.value = value;
+            select.dispatchEvent(new Event("change", { bubbles: true }));
+            await wait();
+        };
+        const summaries = () => [...document.querySelectorAll(".lscg-spell-effect .lscg-kit-expando-summary")].map(e => e.textContent);
+
+
+        const out: any = {};
+        out.groups = [...slots()[0].querySelectorAll("optgroup")].map(g => g.label);
+        const optionsOf = (i: number) => [...slots()[i].options].map(o => o.value);
+
+        await choose(0, "Damaging");
+        out.afterFirst = { slots: slots().length, again: optionsOf(1).includes("Damaging") };
+        await choose(1, "Damaging");
+        await choose(2, "Blinding");
+        out.slots = slots().length;
+        out.summaries = summaries();
+
+        // The first copy's roll, and only that copy
+        const rollInput = () => document.querySelectorAll<HTMLInputElement>(".lscg-spell-effect input[type=text]")[0];
+        rollInput().value = "4d10";
+        rollInput().dispatchEvent(new Event("change", { bubbles: true }));
+        await wait();
+        out.afterRoll = { summaries: summaries() };
+
+        const stored = w.Player.LSCG.MagicModule.knownSpells[0];
+        out.stored = { effects: stored.Effects, configs: stored.Configs, tier: stored.Tier };
+        return out;
+    });
+    expect(result.groups).toEqual(["Mind", "Senses", "Form", "Binding", "Desire", "Harm", "Fortune", "Warding"]);
+    expect(result.afterFirst).toEqual({ slots: 2, again: true }); // Damaging stacks, so it is still offered for the next slot
+    expect(result.slots).toBe(3);
+    expect(result.summaries[0]).toContain("Damage settings: Force");
+    expect(result.afterRoll.summaries[0]).toContain("Damage settings: Force 4d10");
+    expect(result.afterRoll.summaries[1]).toContain("Damage settings: Force"); // the other copy keeps its own
+    expect(result.stored.effects).toEqual(["Damaging", "Damaging", "Blinding"]);
+    expect(result.stored.configs[0]).toMatchObject({ Type: "Force", Roll: "4d10" });
+    expect(result.stored.tier).toBe(6);
+});
+
+test("spell menu: a spell that asks for a command word shows the choices first, then casts with the answer", async ({ bc }) => {
+    const result = await bc.run(async () => {
+        const w = window as any;
+        const wait = (ms: number) => new Promise(r => setTimeout(r, ms));
+        w.Player.LSCG.MagicModule.knownSpells = [
+            { Name: "Obey", Creator: w.Player.MemberNumber, Effects: ["Commanding"], AllowPotion: false, AllowVoiceCast: false, Configs: [{ Word: "kneel", Ask: true, Allowed: ["kneel", "stay", "cum"] }] },
+        ];
+        // A client that has the effect says so, or the menu treats it as unsupported
+        const target = w.Playground.addCharacter({ lscg: { MagicModule: { enabled: true, knownEffects: ["Commanding"] } } });
+        await w.CommonSetScreen("Room", "MainHall");
+        await wait(800);
+        w.CharacterSetCurrent(target);
+        await wait(400);
+        const magic = w.LSCG.getModule("MagicModule");
+        const cast: any[] = [];
+        magic.CastSpellActual = (...args: any[]) => { cast.push(args.slice(2).filter((_: unknown, i: number) => i !== 1)); };
+        magic.OpenSpellMenu(target);
+        await wait(500);
+        const out: any = {};
+        (document.querySelector(".lscg-spellmenu-card") as HTMLElement).click();
+        await wait(300);
+        const choices = () => [...document.querySelectorAll<HTMLElement>(".lscg-spellmenu-choice")];
+        out.title = document.querySelector(".lscg-spellmenu-header h2")?.textContent;
+        out.choices = choices().map(c => c.textContent);
+        out.chosenAtFirst = choices().filter(c => c.classList.contains("lscg-spellmenu-chosen")).map(c => c.textContent);
+        choices().find(c => c.textContent === "Stay")!.click();
+        await wait(150);
+        out.chosenAfter = choices().filter(c => c.classList.contains("lscg-spellmenu-chosen")).map(c => c.textContent);
+        out.castBeforeConfirm = cast.length;
+        (document.querySelector(".lscg-spellmenu-cast") as HTMLElement).click();
+        await wait(200);
+        out.cast = cast;
+        return out;
+    });
+    expect(result.title).toBe("Choose how to cast…");
+    expect(result.choices).toEqual(["Kneel", "Stay", "Cum"]);
+    expect(result.chosenAtFirst).toEqual(["Kneel"]); // the spell's own word
+    expect(result.chosenAfter).toEqual(["Stay"]);
+    expect(result.castBeforeConfirm).toBe(0);
+    expect(result.cast).toEqual([[false, { 0: { word: "stay" } }]]);
+});
+
+test("spell menu: Remove Curse offers what the target has on them, and casts with the one picked", async ({ bc }) => {
+    const result = await bc.run(async () => {
+        const w = window as any;
+        const wait = (ms: number) => new Promise(r => setTimeout(r, ms));
+        w.Player.LSCG.MagicModule.knownSpells = [
+            { Name: "Lift", Creator: w.Player.MemberNumber, Effects: ["Remove Curse"], AllowPotion: false, AllowVoiceCast: false },
+        ];
+        // The target has published a blindness and a web on them
+        const target = w.Playground.addCharacter({
+            lscg: {
+                MagicModule: { enabled: true, knownEffects: ["Remove Curse"] },
+                StateModule: { states: [
+                    { type: "blind", active: true, activationCount: 1, extensions: {} },
+                    { type: "spell-effects", active: true, activationCount: 1, extensions: { "active-effects": [{ id: "w1", effect: "Web" }] } },
+                ] },
+            },
+        });
+        await w.CommonSetScreen("Room", "MainHall");
+        await wait(800);
+        w.CharacterSetCurrent(target);
+        await wait(400);
+        const magic = w.LSCG.getModule("MagicModule");
+        const cast: any[] = [];
+        magic.CastSpellActual = (...args: any[]) => { cast.push(args.slice(2).filter((_: unknown, i: number) => i !== 1)); };
+        magic.OpenSpellMenu(target);
+        await wait(500);
+        const out: any = {};
+        (document.querySelector(".lscg-spellmenu-card") as HTMLElement).click();
+        await wait(300);
+        const choices = () => [...document.querySelectorAll<HTMLElement>(".lscg-spellmenu-choice")];
+        out.title = document.querySelector(".lscg-spellmenu-header h2")?.textContent;
+        out.prompt = document.querySelector(".lscg-spellmenu-prompt b")?.textContent;
+        out.choices = choices().map(c => c.textContent);
+        out.chosenAtFirst = choices().filter(c => c.classList.contains("lscg-spellmenu-chosen")).map(c => c.textContent);
+        choices().find(c => c.textContent === "Web")!.click();
+        await wait(150);
+        (document.querySelector(".lscg-spellmenu-cast") as HTMLElement).click();
+        await wait(200);
+        out.cast = cast;
+        return out;
+    });
+    expect(result.title).toBe("Choose how to cast…");
+    expect(result.prompt).toBe("Effect to lift");
+    expect(result.choices).toHaveLength(3);
+    expect(result.choices[0]).toBe("A random one");
+    expect(result.choices[2]).toBe("Web");
+    expect(result.chosenAtFirst).toEqual(["A random one"]);
+    expect(result.cast).toEqual([[false, { 0: { target: "entry:w1" } }]]);
+});

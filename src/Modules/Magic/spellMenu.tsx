@@ -14,7 +14,7 @@ type EffectStatus = "ok" | "blocked" | "unsupported";
 const STATUS_TONE: Record<EffectStatus, ChipTone> = { ok: "muted", blocked: "blocked", unsupported: "warn" };
 const STATUS_SUFFIX: Record<EffectStatus, string> = { ok: "", blocked: " (blocked)", unsupported: " (unsupported)" };
 
-/** The DOM spell menu: pick a spell to cast (or teach), then, for paired spells, a second target.
+/** The DOM spell menu: pick a spell to cast (or teach), answer any questions its effects ask, then, for paired spells, a second target.
  *  The module owns the game-side state (which spell, which target); this only draws it and forwards clicks. */
 export class SpellMenuView {
     private _host: DomOverlayHost;
@@ -54,11 +54,12 @@ export class SpellMenuView {
 
     private build(): Node[] {
         const magic = this.magic;
+        const asking = magic.SpellCastOptions.Open;
         const picking = magic.SpellPairOption.SelectOpen;
         const ctx = this._ctx = new KitContext();
-        const title = picking ? "Select a paired target…" : magic.TeachingSpell ? "Select a spell to teach…" : "Select a spell to cast…";
+        const title = asking ? "Choose how to cast…" : picking ? "Select a paired target…" : magic.TeachingSpell ? "Select a spell to teach…" : "Select a spell to cast…";
 
-        const search = picking ? null : SearchBox(text => { this._search = text; ctx.refresh(); }, { value: this._search, placeholder: "Search spells…" });
+        const search = picking || asking ? null : SearchBox(text => { this._search = text; ctx.refresh(); }, { value: this._search, placeholder: "Search spells…" });
         const close = <button type="button" class="lscg-button lscg-spellmenu-close" title="Cancel" aria-label="Cancel" onClick={() => magic.CloseSpellMenu()}>✕</button>;
         const header = <div class="lscg-spellmenu-header">
             <h2>{title}</h2>
@@ -68,7 +69,7 @@ export class SpellMenuView {
 
         const box = <div class="lscg-spellmenu-box" onKeyDown={(e: KeyboardEvent) => { if (e.key === "Escape") magic.CloseSpellMenu(); }}>
             {header}
-            {picking ? this.buildPairPicker() : this.buildSpellGrid(ctx)}
+            {asking ? this.buildCastPrompts() : picking ? this.buildPairPicker() : this.buildSpellGrid(ctx)}
         </div> as HTMLElement;
 
         const style = document.createElement("style");
@@ -106,12 +107,42 @@ export class SpellMenuView {
 
         const card = <button type="button" disabled={!status.castable}
             class={status.castable ? "lscg-button lscg-spellmenu-card" : "lscg-button lscg-spellmenu-card lscg-spellmenu-card-disabled"}
-            title={status.castable ? "" : `None of this spell's effects would affect ${name}.`}
+            title={[spell.Name, ...status.effects.map(e => effectLabel(e.id) + STATUS_SUFFIX[e.status]), ...(status.castable ? [] : [`None of this spell's effects would affect ${name}.`])].join("\n")}
             onClick={() => this.magic.ChooseSpell(spell)}>
             <b class="lscg-spellmenu-name">{spell.Name}</b>
             <span class="lscg-kit-chips">{chips.length > 0 ? chips : <small class="lscg-kit-desc">No effects</small>}</span>
         </button> as HTMLElement;
         return card;
+    }
+
+    /** The questions the spell's effects ask the caster, each a row of choices, then Cast. */
+    private buildCastPrompts(): HTMLElement {
+        const magic = this.magic;
+        const options = magic.SpellCastOptions;
+        const rows = options.Prompts.flatMap(({ index, effect, prompts }) => prompts.map(prompt => {
+            const buttons = prompt.options.map(option => {
+                const button = <button type="button" class="lscg-button lscg-spellmenu-choice" onClick={() => {
+                    (options.Answers[index] ??= {})[prompt.key] = option.value;
+                    row.querySelectorAll(".lscg-spellmenu-choice").forEach(b => b.classList.toggle("lscg-spellmenu-chosen", b === button));
+                }}>{option.label}</button> as HTMLElement;
+                button.classList.toggle("lscg-spellmenu-chosen", options.Answers[index]?.[prompt.key] === option.value);
+                return button;
+            });
+            const row = <div class="lscg-spellmenu-prompt">
+                <b title={effectTooltip(effect)}>{prompt.label}</b>
+                <div class="lscg-spellmenu-people">{buttons}</div>
+            </div> as HTMLElement;
+            return row;
+        }));
+        const cancel = <button type="button" class="lscg-button lscg-spellmenu-back" onClick={() => {
+            magic.SpellCastOptions = { ...options, Open: false };
+            this.refreshView();
+        }}>← Back</button>;
+        const cast = <button type="button" class="lscg-button lscg-spellmenu-cast" onClick={() => magic.ConfirmCastPrompts()}>Cast {options.Spell?.Name ?? ""}</button>;
+        return <div class="lscg-spellmenu-pick scroll-box">
+            {rows}
+            <div class="lscg-spellmenu-actions">{cancel}{cast}</div>
+        </div> as HTMLElement;
     }
 
     private buildPairPicker(): HTMLElement {
@@ -127,7 +158,7 @@ export class SpellMenuView {
                 ? Notice("No one else in the room can be paired.")
                 : <div class="lscg-spellmenu-people">
                     {people.map(char => <button type="button" class="lscg-button lscg-spellmenu-person" onClick={() => {
-                        if (pair.Source) magic.CastSpellActual(pair.Spell, pair.Source, false, char);
+                        if (pair.Source) magic.CastSpellActual(pair.Spell, pair.Source, false, char, pair.CastArgs);
                     }}>{CharacterNickname(char)}</button>)}
                 </div>}
             {back}
