@@ -162,7 +162,7 @@ export const COMMAND_EFFECT: SpellEffectDefinition = {
                 break;
             }
             case "cum":
-                SendAction("%NAME% gasps as the spell forces %POSSESSIVE% release.");
+                SendAction("%NAME% cries out as the spell's command pushes %INTENSIVE% over the edge, %POSSESSIVE% body shuddering through a forced orgasm.");
                 forceOrgasm();
                 break;
         }
