@@ -1,8 +1,9 @@
-import { KitContext, NumberRow, SelectOption, SelectRow, TextRow } from "Dom/kit";
+import { CheckboxRow, KitContext, NumberRow, SelectOption, SelectRow, TextRow } from "Dom/kit";
 import { MAX_ROLL_LENGTH } from "Modules/Magic/dice";
 import { damageRoll, MAX_DAMAGE_ROLL } from "Modules/Magic/effects/damage";
 import { DISSOLVE_LAYERS, DissolveConfig, DissolveLayers } from "Modules/Magic/effects/dissolve";
 import { CONJURE_CRAFTABLE } from "Modules/Magic/effects/restraints";
+import { COMMAND_WORDS, COMMANDS, CommandConfig, CommandWord, sanitizeCommandConfig } from "Modules/Magic/effects/command";
 import { ConjureConfig, MAX_CONJURE_PIECES, sanitizeConjureConfig } from "Modules/Magic/conjure";
 import { DamageConfig, DamageSave, DamageType, LSCGSpellEffect } from "./Models/magic";
 
@@ -80,6 +81,28 @@ const conjureEditor = (effect: string): EffectEditor<ConjureConfig> => (ctx, con
     }),
 ];
 
+const COMMAND_OPTIONS: SelectOption[] = COMMANDS.map(c => ({ value: c.word, label: c.label }));
+
+const commandEditor: EffectEditor<CommandConfig> = (ctx, config, update) => [
+    SelectRow(ctx, {
+        label: "Command", options: COMMAND_OPTIONS,
+        description: "The word the spell commands. When the caster is asked, this is the one used if they can't be: a voice cast that doesn't say one, a potion, wild magic.",
+        get: () => config().Word,
+        set: v => update(sanitizeCommandConfig({ ...config(), Word: v })),
+    }),
+    CheckboxRow(ctx, {
+        label: "Ask the caster",
+        description: "Cast from the menu, the caster picks the word from the choices below. A voice cast can name it after the target (\"spell Alice kneel\").",
+        get: () => config().Ask, set: v => update({ Ask: v }),
+    }),
+    ...COMMAND_WORDS.map(word => CheckboxRow(ctx, {
+        label: `Choose: ${COMMANDS.find(c => c.word === word)!.label}`,
+        get: () => config().Allowed.includes(word),
+        set: v => update(sanitizeCommandConfig({ ...config(), Allowed: v ? [...config().Allowed, word] : config().Allowed.filter((w: CommandWord) => w !== word) })),
+        disabled: () => !config().Ask || (config().Word === word),
+    })),
+];
+
 /** Editors for effects that keep their settings in `SpellDefinition.Configs`, by effect id. */
 export const EFFECT_EDITORS: Partial<Record<string, EffectEditor>> = {
     [LSCGSpellEffect.damage]: damageEditor,
@@ -87,4 +110,5 @@ export const EFFECT_EDITORS: Partial<Record<string, EffectEditor>> = {
     [LSCGSpellEffect.web]: conjureEditor(LSCGSpellEffect.web),
     [LSCGSpellEffect.slime]: conjureEditor(LSCGSpellEffect.slime),
     [LSCGSpellEffect.ropes]: conjureEditor(LSCGSpellEffect.ropes),
+    [LSCGSpellEffect.command]: commandEditor,
 };
