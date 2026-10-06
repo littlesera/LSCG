@@ -1,7 +1,9 @@
-import { KitContext, SelectOption, SelectRow, TextRow } from "Dom/kit";
+import { KitContext, NumberRow, SelectOption, SelectRow, TextRow } from "Dom/kit";
 import { MAX_ROLL_LENGTH } from "Modules/Magic/dice";
 import { damageRoll, MAX_DAMAGE_ROLL } from "Modules/Magic/effects/damage";
 import { DISSOLVE_LAYERS, DissolveConfig, DissolveLayers } from "Modules/Magic/effects/dissolve";
+import { CONJURE_CRAFTABLE } from "Modules/Magic/effects/restraints";
+import { ConjureConfig, MAX_CONJURE_PIECES, sanitizeConjureConfig } from "Modules/Magic/conjure";
 import { DamageConfig, DamageSave, DamageType, LSCGSpellEffect } from "./Models/magic";
 
 /** The rows for an effect's own settings. `config` reads the stored settings (defaults filled in); `update` merges a change into them. */
@@ -42,8 +44,47 @@ const dissolveEditor: EffectEditor<DissolveConfig> = (ctx, config, update) => [
     }),
 ];
 
+const NO_CRAFT = "";
+
+/** The player's crafted versions of the items an effect can wear. */
+function craftsFor(effect: string): CraftingItem[] {
+    const assets = CONJURE_CRAFTABLE[effect] ?? [];
+    return (Player.Crafting ?? []).filter((c): c is CraftingItem => !!c && assets.includes(c.Item));
+}
+
+const craftKey = (c: { Item?: unknown; Name?: unknown }) => `${c.Item}|${c.Name}`;
+
+/** Settings of an effect that conjures restraints: how many pieces, and optionally one of the player's crafted items to use. */
+const conjureEditor = (effect: string): EffectEditor<ConjureConfig> => (ctx, config, update) => [
+    NumberRow(ctx, {
+        label: "Fewest pieces", min: 1, max: MAX_CONJURE_PIECES,
+        description: "Each casting puts on at least this many pieces, on different slots.",
+        get: () => config().Min,
+        set: v => update({ Min: v, Max: Math.max(config().Max, v) }),
+    }),
+    NumberRow(ctx, {
+        label: "Most pieces", min: 1, max: MAX_CONJURE_PIECES,
+        description: "...and at most this many. How many is rolled each casting.",
+        get: () => config().Max,
+        set: v => update({ Max: v, Min: Math.min(config().Min, v) }),
+    }),
+    SelectRow(ctx, {
+        label: "Crafted item",
+        description: "Use one of your own crafted items instead of the plain one, for the slot it fits. Locks are never part of it.",
+        options: [{ value: NO_CRAFT, label: "— the plain item —" }, ...craftsFor(effect).map(c => ({ value: craftKey(c), label: c.Name || c.Item }))],
+        get: () => config().Craft ? craftKey(config().Craft as { Item?: unknown; Name?: unknown }) : NO_CRAFT,
+        set: v => {
+            const craft = craftsFor(effect).find(c => craftKey(c) === v);
+            update({ Craft: craft ? sanitizeConjureConfig({ Craft: craft }).Craft : undefined });
+        },
+    }),
+];
+
 /** Editors for effects that keep their settings in `SpellDefinition.Configs`, by effect id. */
 export const EFFECT_EDITORS: Partial<Record<string, EffectEditor>> = {
     [LSCGSpellEffect.damage]: damageEditor,
     [LSCGSpellEffect.dissolve]: dissolveEditor,
+    [LSCGSpellEffect.web]: conjureEditor(LSCGSpellEffect.web),
+    [LSCGSpellEffect.slime]: conjureEditor(LSCGSpellEffect.slime),
+    [LSCGSpellEffect.ropes]: conjureEditor(LSCGSpellEffect.ropes),
 };

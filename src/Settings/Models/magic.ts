@@ -55,7 +55,10 @@ export enum LSCGSpellEffect {
     tighten = "Tightening",
     loosen = "Loosening",
     damage = "Damaging",
-    dissolve = "Dissolving Clothes"
+    dissolve = "Dissolving Clothes",
+    web = "Web",
+    slime = "Slime",
+    ropes = "Conjured Ropes"
 }
 
 export enum OutfitOption {
