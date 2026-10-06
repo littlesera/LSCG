@@ -77,6 +77,7 @@ export const BUILTIN_TAXONOMY: Record<Exclude<LSCGSpellEffect, LSCGSpellEffect.n
     [LSCGSpellEffect.tighten]: { domain: binding, school: transmutation, tier: 1 },
     [LSCGSpellEffect.loosen]: { domain: binding, school: transmutation, tier: 1 },
     [LSCGSpellEffect.damage]: { domain: harm, school: evocation, tier: 1 },
+    [LSCGSpellEffect.dissolve]: { domain: form, school: transmutation, tier: 1 },
 };
 
 export function domainDescription(domain: SpellDomain): string {

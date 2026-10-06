@@ -1,5 +1,6 @@
 import { LSCGSpellEffect } from "Settings/Models/magic";
 import { DAMAGE_EFFECT } from "./effects/damage";
+import { DISSOLVE_EFFECT } from "./effects/dissolve";
 import { SendAction, forceOrgasm } from "utils";
 // Type-only: spellEffects.ts imports this file to register the built-ins.
 import type { SpellEffectDefinition } from "./spellEffects";
@@ -315,4 +316,5 @@ export const BUILTIN_SPELL_EFFECTS: SpellEffectDefinition[] = [
         },
     },
     DAMAGE_EFFECT,
+    DISSOLVE_EFFECT,
 ];
