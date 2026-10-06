@@ -743,8 +743,8 @@ test("spell menu: Remove Curse offers what the target has on them, and casts wit
     expect(result.title).toBe("Choose how to cast…");
     expect(result.prompt).toBe("Effect to lift");
     expect(result.choices).toHaveLength(3);
-    expect(result.choices[0]).toBe("A random one");
+    expect(result.choices[0]).toBe("- Random -");
     expect(result.choices[2]).toBe("Web");
-    expect(result.chosenAtFirst).toEqual(["A random one"]);
+    expect(result.chosenAtFirst).toEqual(["- Random -"]);
     expect(result.cast).toEqual([[false, { 0: { target: "entry:w1" } }]]);
 });
