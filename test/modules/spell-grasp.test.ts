@@ -125,9 +125,56 @@ describe("Grasping", () => {
 			const choke = vi.spyOn(collar, "HandChoke");
 			const release = vi.spyOn(collar, "ReleaseHandChoke");
 			cast(grasp("neck"));
-			expect(choke).toHaveBeenCalledWith(alice);
+			expect(choke).toHaveBeenCalledWith(alice, true);
 			expire();
 			expect(release).toHaveBeenCalledWith(null, false);
+		});
+
+		describe("the choke's wording", () => {
+			const said = () => sent.actions().join("\n");
+
+			it("is the spell's spectral hand, never the caster's own hand, at every stage", () => {
+				cast(grasp("neck"));
+				expect(said()).toContain("a spectral hand wraps around");
+				collar.HandChoke(alice as never, true);
+				expect(said()).toContain("the spectral hand tightens its grip");
+				collar.HandChoke(alice as never, true);
+				expect(said()).toContain("the spectral hand presses firmly");
+				collar.HandChoke(alice as never, true);
+				expect(said()).toContain("the spectral hand completely closes");
+				vi.advanceTimersByTime(60_000);
+				expect(said()).toContain("the spectral hand gripping");
+				vi.advanceTimersByTime(60_000);
+				expect(said()).toContain("the spectral hand clenches");
+				expect(said()).not.toMatch(/Alice (wraps|tightens|presses|completely|gripping|clenches)/);
+				expect(said()).not.toContain("hand around her neck");
+			});
+
+			it("a player's own hand still reads as theirs", () => {
+				collar.HandChoke(alice as never);
+				expect(said()).toContain("wraps");
+				expect(said()).not.toContain("spectral");
+			});
+
+			it("when it chokes them out, the hand lets go and nothing between them and the caster is escaped", () => {
+				leashing.AddLeashing(new Leashing(2, 2, false, "compulsion"));
+				const escape = vi.spyOn(leashing, "DoEscape");
+				cast(grasp("neck"));
+				for (let i = 0; i < 3; i++) collar.HandChoke(alice as never, true);
+				vi.advanceTimersByTime(200_000);
+				expect(said()).toContain("the spectral hand lets go of");
+				expect(escape).not.toHaveBeenCalled();
+				expect(leashing.Pairings.some(p => p.Type === "compulsion")).toBe(true);
+				expect(collar.handChokeModifier).toBe(0);
+				expect(collar.handChokeMagic).toBe(false);
+			});
+
+			it("a player's own hand choking someone out still escapes the leash, as before", () => {
+				const escape = vi.spyOn(leashing, "DoEscape").mockImplementation(() => {});
+				for (let i = 0; i < 4; i++) collar.HandChoke(alice as never);
+				vi.advanceTimersByTime(200_000);
+				expect(escape).toHaveBeenCalledWith(alice);
+			});
 		});
 
 		it("can't squeeze a throat that hasn't allowed hand chokes, and says so", () => {
@@ -152,7 +199,7 @@ describe("Grasping", () => {
 			states.SpellEffectsState.RoomSync();
 			expect(choke).not.toHaveBeenCalled();
 			vi.advanceTimersByTime(600);
-			expect(choke).toHaveBeenCalledWith(alice);
+			expect(choke).toHaveBeenCalledWith(alice, true);
 		});
 
 		it("the ass and breasts squeeze now and then, raising arousal a little each time", () => {
