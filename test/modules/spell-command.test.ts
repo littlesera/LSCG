@@ -11,7 +11,7 @@ import { MagicModule } from "Modules/magic";
 import { StateModule } from "Modules/states";
 import { Leashing, LeashingModule } from "Modules/leashing";
 import { LSCGSpellEffect, type SpellDefinition } from "Settings/Models/magic";
-import { COMMAND_WORDS, commandFromVoice, pickCommand, sanitizeCommandConfig, type CommandConfig } from "Modules/Magic/effects/command";
+import { COMMAND_WORDS, commandFromVoice, orgasmOutlook, pickCommand, sanitizeCommandConfig, type CommandConfig } from "Modules/Magic/effects/command";
 import { getSpellEffect } from "Modules/Magic/spellEffects";
 import { boot, resetWorld, player, addToRoom } from "../harness/world";
 import { makeAsset, makeCharacter, makeGroup, makeItem, wear, type FixtureCharacter } from "../harness/fixtures";
@@ -255,11 +255,45 @@ describe("Commanding", () => {
 			vi.unstubAllGlobals();
 		});
 
-		it("cum forces an orgasm", () => {
-			cast(command({ Word: "cum" }));
+		it("cum forces an orgasm, announcing the push to the edge and leaving BC to say how it ends", () => {
+			const out = cast(command({ Word: "cum" }));
 			expect(player().ArousalSettings.Progress).toBe(100);
 			expect((globalThis as any).ActivityOrgasmPrepare).toHaveBeenCalledWith(player());
 			expect(entries()).toHaveLength(0);
+			expect(out.some(a => a.includes("forced to the very edge by the spell's command") && a.includes("brink of orgasm"))).toBe(true);
+			expect(out.some(a => a.includes("forced over") || a.includes("through"))).toBe(false); // it doesn't claim the orgasm, which they may resist
+		});
+
+		describe("when the target is held at the edge", () => {
+			it("denial: BC's denial mode, or the spell's denied state", () => {
+				player().Effect = ["DenialMode"];
+				expect(orgasmOutlook(magic)).toBe("denied");
+				player().Effect = [];
+				expect(orgasmOutlook(magic)).toBe("open");
+				states.DeniedState.Activate(2);
+				expect(orgasmOutlook(magic)).toBe("denied");
+				const out = cast(command({ Word: "cum" }));
+				expect(out.some(a => a.includes("denial keeps release just out of reach"))).toBe(true);
+			});
+
+			it("edging: an edged player, or a crafted item with the Edging property", () => {
+				player().IsEdged = () => true;
+				expect(orgasmOutlook(magic)).toBe("edged");
+				const out = cast(command({ Word: "cum" }));
+				expect(out.some(a => a.includes("held there, trembling and unable to tip over"))).toBe(true);
+				player().IsEdged = () => false;
+				vi.stubGlobal("InventoryCraftCount", vi.fn((_C: unknown, property: string) => property === "Edging" ? 1 : 0));
+				expect(orgasmOutlook(magic)).toBe("edged");
+				vi.unstubAllGlobals();
+			});
+
+			it("denial wins over edging, and either way the orgasm is still started so BC does what it does", () => {
+				player().Effect = ["DenialMode"];
+				player().IsEdged = () => true;
+				expect(orgasmOutlook(magic)).toBe("denied");
+				cast(command({ Word: "cum" }));
+				expect((globalThis as any).ActivityOrgasmPrepare).toHaveBeenCalledWith(player());
+			});
 		});
 	});
 
