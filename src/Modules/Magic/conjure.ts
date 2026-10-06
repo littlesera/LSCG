@@ -6,7 +6,7 @@ import type { SpellEffectEntry } from "Modules/States/SpellEffectsState";
 export interface ConjureOption {
     group: string;
     asset: string;
-    /** Names of the item's type options, mildest first. A new piece takes one at random; a repeat cast moves it up. */
+    /** Names of the item's type options, mildest first. A new piece takes one at random. */
     ladder?: string[];
     /** Filled first, so a one-piece spell always does the main thing (the arms for webs and ropes). */
     primary?: boolean;
@@ -16,8 +16,8 @@ export interface ConjureSet {
     options: ConjureOption[];
     /** What the spell makes, for messages: "webs", "slime", "ropes". */
     noun: string;
-    /** What it does on the way in, whole sentences with %NAME%: first cast, repeat cast, nothing to bind, and when it ends. */
-    messages: { bind: string; tighten: string; nothing: string; end: string };
+    /** What it says, whole sentences with %NAME%: when it binds, when there is nothing left to bind, and when it ends. */
+    messages: { bind: string; nothing: string; end: string };
 }
 
 /** Settings of a conjuring effect: how many pieces it makes, and an optional crafted version of its main item. */
@@ -33,7 +33,7 @@ export const MAX_CONJURE_PIECES = 6;
 export interface ConjurePiece {
     group: string;
     asset: string;
-    /** The rung of the option's ladder it is on, if it has one. */
+    /** The rung of the option's ladder it was put on at, if it has one. */
     rung?: number;
 }
 
@@ -131,39 +131,13 @@ export function placePiece(ctx: SpellEffectContext, option: ConjureOption, rung:
     return { group: option.group, asset: option.asset, ...(option.ladder ? { rung: allowedAt } : {}) };
 }
 
-/** Puts a conjuring spell's pieces on the player: a repeat cast moves the pieces already on up a rung first, then new ones go on free slots. Everything
- *  put on is recorded in the spell effects state, so it comes off again when the spell ends. Never replaces anything the player is wearing. */
-export function conjure(ctx: SpellEffectContext, set: ConjureSet, config: ConjureConfig): { placed: number; escalated: number } {
+/** Puts a conjuring spell's pieces on free slots of the player, the main one first. Casting again does the same thing: it just adds pieces to whatever
+ *  slots are still free. Everything put on is recorded in the spell effects state, so it comes off again when the spell ends. Never replaces anything worn. */
+export function conjure(ctx: SpellEffectContext, set: ConjureSet, config: ConjureConfig): { placed: number } {
     const state = ctx.magic.stateModule.SpellEffectsState;
     let budget = config.Min + getRandomInt(config.Max - config.Min + 1);
-    let escalated = 0;
     const placed: ConjurePiece[] = [];
 
-    // Pieces an earlier cast left that can still be made tighter
-    const tighter: { entry: SpellEffectEntry; piece: ConjurePiece; option: ConjureOption }[] = [];
-    for (const entry of state.EntriesFor(ctx.effect)) {
-        for (const piece of (entry.data as ConjureData | null)?.pieces ?? []) {
-            const option = set.options.find(o => o.group === piece.group && o.asset === piece.asset);
-            const item = InventoryGet(Player, piece.group as AssetGroupName);
-            if (option?.ladder && piece.rung !== undefined && piece.rung < option.ladder.length - 1 && item?.Asset.Name === piece.asset)
-                tighter.push({ entry, piece, option });
-        }
-    }
-    for (const { entry, piece, option } of shuffled(tighter)) {
-        if (budget <= 0)
-            break;
-        const item = InventoryGet(Player, piece.group as AssetGroupName);
-        const next = piece.rung! + 1;
-        if (!item || !allowed(ctx, option, option.ladder![next]))
-            continue;
-        setRung(option, item, next, ctx);
-        piece.rung = next;
-        state.Update(entry, entry.data);
-        budget--;
-        escalated++;
-    }
-
-    // New pieces on free slots
     const free = set.options.filter(o => !InventoryGet(Player, o.group as AssetGroupName));
     const order = [...free.filter(o => o.primary), ...shuffled(free.filter(o => !o.primary))];
     const craft = config.Craft as unknown as CraftingItem | undefined;
@@ -177,16 +151,15 @@ export function conjure(ctx: SpellEffectContext, set: ConjureSet, config: Conjur
         budget--;
     }
 
-    if (placed.length > 0)
+    if (placed.length > 0) {
         state.Add(ctx, { pieces: placed } satisfies ConjureData);
-    if (placed.length + escalated > 0) {
         CharacterRefresh(Player, true, false);
         ChatRoomCharacterUpdate(Player);
-        SendAction(placed.length > 0 ? set.messages.bind : set.messages.tighten);
+        SendAction(set.messages.bind);
     } else {
         SendAction(set.messages.nothing);
     }
-    return { placed: placed.length, escalated };
+    return { placed: placed.length };
 }
 
 /** Takes a conjured effect's pieces off again, but only those still the same item in the same slot. Something locked on since by someone else is

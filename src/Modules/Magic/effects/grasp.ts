@@ -49,7 +49,7 @@ const graspOf = (location: GraspLocation) => GRASPS.find(g => g.location === loc
 const GRASP_SET: ConjureSet = {
     noun: "hands",
     options: [],
-    messages: { bind: "", tighten: "", nothing: "", end: "" },
+    messages: { bind: "", nothing: "", end: "" },
 };
 
 /** How often a teasing hand squeezes, and by how much it raises arousal. */

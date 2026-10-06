@@ -99,20 +99,16 @@ describe("conjured restraints", () => {
 			expect(worn()).toEqual(["ItemArms:Web", "ItemHead:WebBlindfold", "ItemMouth:BallGag"]);
 		});
 
-		it("a repeat casting pulls the web a rung tighter instead of adding anything, up to the top", () => {
+		it("casting again does the same as the first time: it adds pieces on the slots still free, and leaves the ones already on alone", () => {
 			vi.spyOn(Math, "random").mockReturnValue(0.1);
 			cast(web(1));
+			expect(worn()).toEqual(["ItemArms:Web"]);
 			expect(arms().Property.TypeRecord).toEqual({ typed: 0 });
 			const out = cast(web(1));
-			expect(arms().Property.TypeRecord).toEqual({ typed: 1 });
-			expect(out.some(a => a.includes("pull tighter"))).toBe(true);
-			cast(web(1));
-			expect(arms().Property.TypeRecord).toEqual({ typed: 2 });
-			expect(states.SpellEffectsState.entries).toHaveLength(1); // still the one entry from the first cast
-			cast(web(1));
-			expect(arms().Property.TypeRecord).toEqual({ typed: 2 }); // at the top, so the next piece goes on another slot
+			expect(arms().Property.TypeRecord).toEqual({ typed: 0 }); // not pulled tighter
 			expect(worn()).toHaveLength(2);
-			expect(states.SpellEffectsState.entries).toHaveLength(2);
+			expect(out.some(a => a.includes("pull tighter"))).toBe(false);
+			expect(states.SpellEffectsState.entries).toHaveLength(2); // each casting is its own entry, so each ends on its own clock
 		});
 
 		it("says so when every slot it could use is already taken", () => {
@@ -124,10 +120,10 @@ describe("conjured restraints", () => {
 			expect(states.SpellEffectsState.Active).toBe(false);
 		});
 
-		it("three stacked copies in one spell make a more complete web than one", () => {
+		it("three stacked copies in one spell add up to three castings' worth of pieces", () => {
 			vi.spyOn(Math, "random").mockReturnValue(0.1);
 			cast(spell([LSCGSpellEffect.web, LSCGSpellEffect.web, LSCGSpellEffect.web], [{ Min: 1, Max: 1 }, { Min: 1, Max: 1 }, { Min: 1, Max: 1 }]));
-			expect(arms().Property.TypeRecord).toEqual({ typed: 2 });
+			expect(worn()).toEqual(["ItemArms:Web", "ItemHead:WebBlindfold", "ItemMouth:WebGag"]);
 		});
 
 		it("comes off again when the spell runs out, but only what is still the web", () => {
