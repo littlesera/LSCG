@@ -3,7 +3,7 @@ import { getModule } from "modules";
 import { OutfitCollectionModule } from "Modules/outfitCollection";
 import { allEffectIds, domainDescription, domainOrder, effectDescription, effectDomain, effectLabel, effectTooltip, isExtensionEffect, getSpellEffect, isPairedEffect, spellHasPairedEffect } from "Modules/Magic/spellEffects";
 import { Button, Chip, CheckboxRow, Expando, Icon, KitContext, KitTab, Notice, NumberRow, openDialog, RuleTable, SectionLabel, SelectOption, SelectRow, TextRow } from "Dom/kit";
-import { addEffect, canHaveEffect, editableConfig, removeEffect, setEffect, spellTier, writeConfig } from "Modules/Magic/spellEdit";
+import { addEffect, canHaveEffect, editableConfig, removeEffect, setEffect, writeConfig } from "Modules/Magic/spellEdit";
 import { EFFECT_EDITORS } from "./magic-effect-editors";
 import { KNOWN_SPELLS_LIMIT, MagicPublicSettingsModel, MagicSettingsModel, OutfitOption, PolymorphConfig, SpellDefinition, SpellEffectId, maxSpellEffects } from "./Models/magic";
 import type { SpiritTextType } from "./magic";
@@ -242,15 +242,6 @@ function effectSlots(dctx: KitContext, tableCtx: KitContext, spell: SpellDefinit
     return container;
 }
 
-/** The spell's total power, kept current as effects and their settings change. Nothing uses it yet. */
-function spellPower(dctx: KitContext, tableCtx: KitContext, spell: SpellDefinition): HTMLElement {
-    const label = <small class="lscg-kit-desc" title="Every effect's tier added up, counting each copy." /> as HTMLElement;
-    const show = () => { label.textContent = `Spell power: ${spellTier(spell)}`; };
-    dctx.watch(show);
-    tableCtx.watch(show);
-    return label;
-}
-
 /** The spell editor dialog: casting options, then the ordered effects with each one's own settings. */
 function openSpellDialog(anchor: HTMLElement, ctx: KitContext, spell: SpellDefinition, limit: number) {
     openDialog(anchor, ctx, spell.Name || "Spell", dctx => [
@@ -273,7 +264,6 @@ function openSpellDialog(anchor: HTMLElement, ctx: KitContext, spell: SpellDefin
         }),
         SectionLabel("Effects", `What the spell does to its target, one after another in this order. Up to ${limit}.`),
         effectSlots(dctx, ctx, spell, limit),
-        spellPower(dctx, ctx, spell),
     ]);
 }
 

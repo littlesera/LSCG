@@ -625,7 +625,7 @@ export class MagicModule extends BaseModule {
                 const defends = this.DefendAgainst(sender.MemberNumber ?? -1);
                 // The roll only matters when the whole spell can be resisted, or an effect in it takes a save
                 if (harmful && (defends || spell.Effects.some((_, index) => !!saveBehaviorFor(spell, index))))
-                    SendAction(this.saveReadout(sender, spell, check, savedRoll));
+                    SendAction(this.saveReadout(spell, check, savedRoll));
                 if (harmful && defends) {
                     if (savedRoll) {
                         SendAction(`${CharacterNickname(Player)} successfully saves against ${CharacterNickname(sender)}'s ${spell.Name}.`);
@@ -673,9 +673,9 @@ export class MagicModule extends BaseModule {
     }
 
     /** The save roll in chat, both rolls with their dice and modifiers, whichever way it went. */
-    saveReadout(sender: Character, spell: SpellDefinition, check: ActivityCheck, saved: boolean): string {
+    saveReadout(spell: SpellDefinition, check: ActivityCheck, saved: boolean): string {
         const show = (roll: ActivityRoll) => `${roll.Total} (${roll.Raw}${roll.Modifier < 0 ? "" : "+"}${roll.Modifier})`;
-        return `Save against ${CharacterNickname(sender)}'s ${spell.Name}: ${CharacterNickname(Player)} rolls ${show(check.DefenderRoll)} to ${show(check.AttackerRoll)}, ${saved ? "saved!" : "failed."}`;
+        return `Save vs ${spell.Name}: ${show(check.DefenderRoll)} vs ${show(check.AttackerRoll)}, ${saved ? "saved!" : "failed."}`;
     }
 
     /** A save that resisted a spell outright still lets its "half" effects (damage) through at half strength, unless the caster made them

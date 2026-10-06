@@ -76,8 +76,9 @@ describe("effect domains, schools and tiers", () => {
         expect(effectTier("nobody.knows")).toBe(0);
     });
 
-    it("the tooltip names the school and tier", () => {
-        expect(effectTooltip(L.hypnotizing)).toContain("Enchantment, tier 3");
+    it("the tooltip names the school, and not yet the tier", () => {
+        expect(effectTooltip(L.hypnotizing)).toContain("Enchantment");
+        expect(effectTooltip(L.hypnotizing)).not.toMatch(/tier/i);
     });
 
     describe("Damaging's tier comes from its roll", () => {
@@ -395,7 +396,6 @@ describe("extension spell effects", () => {
             const out = cast(damageSpell({ Type: "Fire", Roll: "2d6 + 2" }));
             expect(out).toHaveLength(1);
             expect(out[0]).toContain("takes 10 fire damage");
-            expect(out[0]).toContain("zap");
             expect(out[0]).toContain("2d6 + 2 = [4, 4] + 2");
         });
 

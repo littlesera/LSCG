@@ -86,9 +86,9 @@ function conjureEffect(id: SpellEffectId, description: string, set: ConjureSet, 
     };
 }
 
-export const WEB_EFFECT = conjureEffect(LSCGSpellEffect.web, "Binds the target in sticky webs on a few slots: the arms, and sometimes the mouth and eyes. A repeat casting pulls them tighter. They fade when the spell ends.", WEB_SET, ["Web"]);
-export const SLIME_EFFECT = conjureEffect(LSCGSpellEffect.slime, "Coats the target in hardening slime on a few slots. A repeat casting covers more of them. It melts away when the spell ends.", SLIME_SET, ["Slime"]);
-export const ROPES_EFFECT = conjureEffect(LSCGSpellEffect.ropes, "Ties the target with conjured hemp rope on a few slots. A repeat casting ties them tighter. The ropes vanish when the spell ends.", ROPES_SET, ["HempRope"]);
+export const WEB_EFFECT = conjureEffect(LSCGSpellEffect.web, "Binds the target in sticky webs. A repeat casting pulls them tighter.", WEB_SET, ["Web"]);
+export const SLIME_EFFECT = conjureEffect(LSCGSpellEffect.slime, "Coats the target in hardening slime. A repeat casting covers more.", SLIME_SET, ["Slime"]);
+export const ROPES_EFFECT = conjureEffect(LSCGSpellEffect.ropes, "Ties the target with conjured rope. A repeat casting ties tighter.", ROPES_SET, ["HempRope"]);
 
 /** The assets a crafted item may be chosen from in each effect's settings, for the editor. */
 export const CONJURE_CRAFTABLE: Partial<Record<string, string[]>> = {

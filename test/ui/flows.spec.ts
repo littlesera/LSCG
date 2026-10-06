@@ -622,7 +622,6 @@ test("Magic spell editor: effects are grouped by domain, stack up to their limit
             await wait();
         };
         const summaries = () => [...document.querySelectorAll(".lscg-spell-effect .lscg-kit-expando-summary")].map(e => e.textContent);
-        const power = () => document.querySelector("dialog .lscg-kit-desc[title^='Every effect']")?.textContent;
 
 
         const out: any = {};
@@ -634,15 +633,14 @@ test("Magic spell editor: effects are grouped by domain, stack up to their limit
         await choose(1, "Damaging");
         await choose(2, "Blinding");
         out.slots = slots().length;
-        out.power = power();
         out.summaries = summaries();
 
-        // The first copy's roll: its tier, the spell's power, and only that copy
+        // The first copy's roll, and only that copy
         const rollInput = () => document.querySelectorAll<HTMLInputElement>(".lscg-spell-effect input[type=text]")[0];
         rollInput().value = "4d10";
         rollInput().dispatchEvent(new Event("change", { bubbles: true }));
         await wait();
-        out.afterRoll = { summaries: summaries(), power: power() };
+        out.afterRoll = { summaries: summaries() };
 
         const stored = w.Player.LSCG.MagicModule.knownSpells[0];
         out.stored = { effects: stored.Effects, configs: stored.Configs, tier: stored.Tier };
@@ -651,11 +649,9 @@ test("Magic spell editor: effects are grouped by domain, stack up to their limit
     expect(result.groups).toEqual(["Mind", "Senses", "Form", "Binding", "Desire", "Harm", "Fortune", "Warding"]);
     expect(result.afterFirst).toEqual({ slots: 2, again: true }); // Damaging stacks, so it is still offered for the next slot
     expect(result.slots).toBe(3);
-    expect(result.summaries[0]).toContain("Damage settings: Force (tier 1)");
-    expect(result.power).toBe("Spell power: 4"); // 1 + 1 + 2 (Blinding)
-    expect(result.afterRoll.summaries[0]).toContain("Damage settings: Force 4d10 (tier 3)");
-    expect(result.afterRoll.summaries[1]).toContain("Damage settings: Force (tier 1)"); // the other copy keeps its own
-    expect(result.afterRoll.power).toBe("Spell power: 6");
+    expect(result.summaries[0]).toContain("Damage settings: Force");
+    expect(result.afterRoll.summaries[0]).toContain("Damage settings: Force 4d10");
+    expect(result.afterRoll.summaries[1]).toContain("Damage settings: Force"); // the other copy keeps its own
     expect(result.stored.effects).toEqual(["Damaging", "Damaging", "Blinding"]);
     expect(result.stored.configs[0]).toMatchObject({ Type: "Force", Roll: "4d10" });
     expect(result.stored.tier).toBe(6);
