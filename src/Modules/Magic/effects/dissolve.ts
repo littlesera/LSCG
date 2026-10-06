@@ -48,7 +48,7 @@ export const DISSOLVE_EFFECT: SpellEffectDefinition = {
         const { Layers } = (config as DissolveConfig | undefined) ?? sanitizeDissolveConfig(undefined);
         const { removed, what } = dissolveClothing(Layers, sender?.MemberNumber);
         if (removed > 0)
-            SendAction(`%NAME%'s ${what} dissolve into glittering dust!`);
+            SendAction(`%NAME%'s ${what} dissolve into glittering dust.`);
         else
             SendAction(`The spell washes over %NAME%, but finds no ${what} to dissolve.`);
     },

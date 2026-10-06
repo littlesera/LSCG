@@ -11,7 +11,7 @@ export const WEB_SET: ConjureSet = {
         { group: "ItemHead", asset: "WebBlindfold" },
     ],
     messages: {
-        bind: "Sticky strands of web burst from the spell and wrap around %NAME%!",
+        bind: "Sticky strands of web burst from the spell and wrap around %NAME%.",
         nothing: "Webs reach for %NAME%, but there is nothing left for them to hold.",
         end: "The webs binding %NAME% crumble away to dust.",
     },
@@ -29,7 +29,7 @@ export const SLIME_SET: ConjureSet = {
         { group: "ItemBoots", asset: "Slime" },
     ],
     messages: {
-        bind: "Thick slime oozes out of the spell and spreads over %NAME%, hardening as it goes!",
+        bind: "Thick slime oozes out of the spell and spreads over %NAME%, hardening as it goes.",
         nothing: "Slime creeps toward %NAME%, but finds nowhere to cling.",
         end: "The slime clinging to %NAME% melts away.",
     },
@@ -48,7 +48,7 @@ export const ROPES_SET: ConjureSet = {
         { group: "ItemHands", asset: "HempRopeCuffs" },
     ],
     messages: {
-        bind: "Ropes snake out of the spell and bind %NAME%, knotting themselves tight!",
+        bind: "Ropes snake out of the spell and bind %NAME%, knotting themselves tight.",
         nothing: "Ropes coil around %NAME%, but find nothing left to tie.",
         end: "The conjured ropes binding %NAME% fray into nothing.",
     },
