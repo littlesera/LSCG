@@ -365,6 +365,12 @@ export interface LSCGSpellEffectInfo {
     label: string;
     description: string;
     builtIn: boolean;
+    /** Built-in effects only: our grouping ("Mind", "Senses", "Form", "Binding", "Desire", "Harm", "Fortune", "Warding"). */
+    domain?: string;
+    /** Built-in effects only: the classic school of magic ("Abjuration", "Enchantment" and so on). */
+    school?: string;
+    /** Built-in effects only: 1 (cantrip) to 5. For an effect whose power depends on its settings, its lowest. */
+    tier?: number;
 }
 export interface LSCGSpellsApi {
     /** Registers a spell effect; players can then add it to their spells. Returns a function that unregisters it. */
