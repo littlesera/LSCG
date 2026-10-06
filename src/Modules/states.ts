@@ -23,6 +23,7 @@ import { DeniedState } from "./States/DeniedState";
 import { parseInt } from "lodash-es";
 import { CursedItemState } from "./States/CursedItemState";
 import { AstralProjectionState } from "./States/AstralProjectionState";
+import { SpellEffectsState } from "./States/SpellEffectsState";
 
 interface StateIcon {
     Label: string;
@@ -84,6 +85,7 @@ export class StateModule extends BaseModule {
     XRayState: XRayVisionState;
     CursedItemState: CursedItemState;
     AstralProjectionState: AstralProjectionState;
+    SpellEffectsState: SpellEffectsState;
 
     GetRestriction(state: BaseState, restriction: LSCGImmersiveOption): boolean {
         // Restriction first, it's cheap: Active looks the state's config up every time
@@ -119,6 +121,7 @@ export class StateModule extends BaseModule {
         this.XRayState = new XRayVisionState(this);
         this.CursedItemState = new CursedItemState(this);
         this.AstralProjectionState = new AstralProjectionState(this);
+        this.SpellEffectsState = new SpellEffectsState(this);
 
         this.States = [
             this.SleepState, 
@@ -139,6 +142,7 @@ export class StateModule extends BaseModule {
             this.XRayState,
             this.CursedItemState,
             this.AstralProjectionState,
+            this.SpellEffectsState,
         ];
         
         // States module in general is always enabled. Toggling is done on each specific state.
