@@ -54,7 +54,8 @@ export enum LSCGSpellEffect {
     project = "Astral Projection",
     tighten = "Tightening",
     loosen = "Loosening",
-    damage = "Damaging"
+    damage = "Damaging",
+    dissolve = "Dissolving Clothes"
 }
 
 export enum OutfitOption {

@@ -21,6 +21,7 @@ import { registerExtension, type ModApiHandle } from "api/extensions";
 import { boot, resetWorld, player, addToRoom } from "../harness/world";
 import { makeAsset, makeCharacter, makeGroup, makeItem, wear, type FixtureCharacter } from "../harness/fixtures";
 import { sent } from "../harness/room";
+import { restoreRandom, seedRandom } from "../harness/time";
 
 describe("effect domains, schools and tiers", () => {
     const L = LSCGSpellEffect;
@@ -39,7 +40,7 @@ describe("effect domains, schools and tiers", () => {
         const group = (d: SpellDomain) => effectsInDomain(d).sort();
         expect(group(SpellDomain.mind)).toEqual(ids(L.hypnotizing, L.slumber));
         expect(group(SpellDomain.senses)).toEqual(ids(L.blindness, L.deafened, L.xRay, L.project));
-        expect(group(SpellDomain.form)).toEqual(ids(L.enlarge, L.polymorph, L.outfit));
+        expect(group(SpellDomain.form)).toEqual(ids(L.enlarge, L.polymorph, L.outfit, L.dissolve));
         expect(group(SpellDomain.binding)).toEqual(ids(L.muted, L.frozen, L.tighten, L.loosen, L.disarm));
         expect(group(SpellDomain.desire)).toEqual(ids(L.horny, L.denial, L.orgasm, L.orgasm_siphon, L.paired_arousal));
         expect(group(SpellDomain.harm)).toEqual(ids(L.damage));
@@ -56,12 +57,12 @@ describe("effect domains, schools and tiers", () => {
         expect(group(SpellSchool.evocation)).toEqual(ids(L.damage));
         expect(group(SpellSchool.illusion)).toEqual(ids(L.muted, L.outfit));
         expect(group(SpellSchool.necromancy)).toEqual(ids(L.blindness, L.deafened, L.orgasm_siphon));
-        expect(group(SpellSchool.transmutation)).toEqual(ids(L.frozen, L.enlarge, L.polymorph, L.disarm, L.tighten, L.loosen));
+        expect(group(SpellSchool.transmutation)).toEqual(ids(L.frozen, L.enlarge, L.polymorph, L.disarm, L.tighten, L.loosen, L.dissolve));
     });
 
     it("lists each tier's effects (an effect whose tier depends on its settings by its lowest)", () => {
         const tier = (t: 1 | 2 | 3 | 4 | 5) => effectsInTier(t).sort();
-        expect(tier(1)).toEqual(ids(L.loosen, L.tighten, L.disarm, L.horny, L.muted, L.bless, L.bane, L.damage));
+        expect(tier(1)).toEqual(ids(L.loosen, L.tighten, L.disarm, L.horny, L.muted, L.bless, L.bane, L.damage, L.dissolve));
         expect(tier(2)).toEqual(ids(L.blindness, L.deafened, L.xRay, L.enlarge, L.outfit, L.denial, L.orgasm));
         expect(tier(3)).toEqual(ids(L.slumber, L.hypnotizing, L.frozen, L.paired_arousal, L.orgasm_siphon, L.barrier));
         expect(tier(4)).toEqual(ids(L.polymorph, L.project, L.dispel));
@@ -490,6 +491,84 @@ describe("extension spell effects", () => {
         it("a blocked effect blocks every copy of it", () => {
             magic.settings.blockedSpellEffects = [LSCGSpellEffect.damage];
             expect(magic.filterAllowedSpellEffects(stacked(), alice as never)).toEqual([LSCGSpellEffect.blindness]);
+        });
+    });
+
+    describe("Dissolving Clothes", () => {
+        const cloth = (name: string, over: Record<string, unknown> = {}, groupOver: Record<string, unknown> = {}) => {
+            const group = makeGroup({ Name: name, Category: "Appearance", Clothing: true, ...groupOver } as never);
+            return wear(player(), makeItem(makeAsset(group, { Name: `${name}Thing`, ...over } as never))) as any;
+        };
+        const dissolve = (layers?: string) => ({ ...spell("poof", [LSCGSpellEffect.dissolve]), Configs: layers ? [{ Layers: layers }] : undefined }) as SpellDefinition;
+        const cast = (s: SpellDefinition) => {
+            magic.IncomingSpell(alice as never, s, null, 1);
+            vi.advanceTimersByTime(2500);
+            return sent.actions();
+        };
+        const worn = () => player().Appearance.map((i: any) => i.Asset.Group.Name).sort();
+
+        beforeEach(() => {
+            vi.stubGlobal("CharacterRefresh", vi.fn());
+        });
+
+        afterEach(() => {
+            vi.unstubAllGlobals();
+        });
+
+        it("dissolves clothing by default and leaves underwear, cosplay, body and restraints alone", () => {
+            cloth("Cloth");
+            cloth("Bra", {}, { Underwear: true });
+            cloth("Hat", {}, { BodyCosplay: true });
+            cloth("Eyes", {}, { Clothing: false });
+            const cuffs = wear(player(), makeItem(makeAsset(makeGroup({ Name: "ItemArms" }), { Name: "Cuffs" } as never))) as any;
+            const out = cast(dissolve());
+            expect(worn()).toEqual(["Bra", "Eyes", "Hat", "ItemArms"]);
+            expect(player().Appearance).toContain(cuffs);
+            expect(out.some(a => a.includes("clothes dissolve into glittering dust"))).toBe(true);
+        });
+
+        it("can take underwear only, or both", () => {
+            cloth("Cloth");
+            cloth("Bra", {}, { Underwear: true });
+            cast(dissolve("underwear"));
+            expect(worn()).toEqual(["Cloth"]);
+            cloth("Bra", {}, { Underwear: true });
+            cast(dissolve("both"));
+            expect(worn()).toEqual([]);
+        });
+
+        it("says so when there is nothing to dissolve", () => {
+            cloth("Eyes", {}, { Clothing: false });
+            const out = cast(dissolve());
+            expect(out.some(a => a.includes("finds no clothes to dissolve"))).toBe(true);
+            expect(worn()).toEqual(["Eyes"]);
+        });
+
+        it("an unknown layer from another player falls back to clothing", () => {
+            cloth("Cloth");
+            cloth("Bra", {}, { Underwear: true });
+            cast(dissolve("everything"));
+            expect(worn()).toEqual(["Bra"]);
+        });
+
+        it("two copies can take different layers", () => {
+            cloth("Cloth");
+            cloth("Bra", {}, { Underwear: true });
+            const s = { ...spell("poof", [LSCGSpellEffect.dissolve, LSCGSpellEffect.dissolve]), Configs: [{ Layers: "clothing" }, { Layers: "underwear" }] } as SpellDefinition;
+            cast(s);
+            vi.advanceTimersByTime(2000);
+            expect(worn()).toEqual([]);
+        });
+
+        it("a save resists it, even for someone who never defends", () => {
+            cloth("Cloth");
+            magic.settings.neverDefend = true;
+            seedRandom([0.0, 0.99]);
+            magic.IncomingSpellCommand(alice as never, { command: { name: "spell", args: [{ name: "spell", value: dissolve() }] } } as never);
+            vi.advanceTimersByTime(1000 + 2500);
+            restoreRandom();
+            expect(worn()).toEqual(["Cloth"]);
+            expect(sent.actions().some(a => a.includes("resists the Dissolving Clothes magic"))).toBe(true);
         });
     });
 

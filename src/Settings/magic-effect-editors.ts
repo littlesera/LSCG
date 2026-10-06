@@ -1,6 +1,7 @@
 import { KitContext, SelectOption, SelectRow, TextRow } from "Dom/kit";
 import { MAX_ROLL_LENGTH } from "Modules/Magic/dice";
 import { damageRoll, MAX_DAMAGE_ROLL } from "Modules/Magic/effects/damage";
+import { DISSOLVE_LAYERS, DissolveConfig, DissolveLayers } from "Modules/Magic/effects/dissolve";
 import { DamageConfig, DamageSave, DamageType, LSCGSpellEffect } from "./Models/magic";
 
 /** The rows for an effect's own settings. `config` reads the stored settings (defaults filled in); `update` merges a change into them. */
@@ -30,7 +31,19 @@ const damageEditor: EffectEditor<DamageConfig> = (ctx, config, update) => [
     }),
 ];
 
+const DISSOLVE_LAYER_OPTIONS: SelectOption[] = DISSOLVE_LAYERS.map(l => ({ value: l.value, label: l.label }));
+
+const dissolveEditor: EffectEditor<DissolveConfig> = (ctx, config, update) => [
+    SelectRow(ctx, {
+        label: "Dissolves", options: DISSOLVE_LAYER_OPTIONS,
+        description: "Which of the target's layers the spell takes off. Cosplay, the body and restraints are never touched.",
+        get: () => config().Layers,
+        set: v => update({ Layers: v as DissolveLayers }),
+    }),
+];
+
 /** Editors for effects that keep their settings in `SpellDefinition.Configs`, by effect id. */
 export const EFFECT_EDITORS: Partial<Record<string, EffectEditor>> = {
     [LSCGSpellEffect.damage]: damageEditor,
+    [LSCGSpellEffect.dissolve]: dissolveEditor,
 };
