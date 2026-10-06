@@ -184,13 +184,13 @@ describe("conjured restraints", () => {
 			expect(cast(web(2)).some(a => a.includes("nothing left"))).toBe(true);
 		});
 
-		it("is resisted by a save, even from someone who never defends", () => {
+		it("takes no save of its own: someone who never defends is bound however the dice fall", () => {
 			magic.settings.neverDefend = true;
 			seedRandom([0.0, 0.99]);
 			magic.IncomingSpellCommand(alice as never, { command: { name: "spell", args: [{ name: "spell", value: web(1) }] } } as never);
 			vi.advanceTimersByTime(1000 + 2500);
-			expect(worn()).toEqual([]);
-			expect(sent.actions().some(a => a.includes("resists the Web magic"))).toBe(true);
+			expect(worn()).toEqual(["ItemArms:Web"]);
+			expect(sent.actions().some(a => a.includes("resists"))).toBe(false);
 		});
 
 		it("is not left behind after a relog: the entry is plain data on absolute time", () => {
@@ -253,10 +253,10 @@ describe("conjured restraints", () => {
 			expect(effectConfigFor(spell([LSCGSpellEffect.web], [{ Min: 2, Max: 5 }]), 0)).toEqual({ Min: 2, Max: 5 });
 		});
 
-		it("all three stack, and are resisted on a save", () => {
+		it("all three stack, and have no save of their own", () => {
 			for (const id of [LSCGSpellEffect.web, LSCGSpellEffect.slime, LSCGSpellEffect.ropes]) {
 				expect(getSpellEffect(id)?.stackable).toBe(3);
-				expect(getSpellEffect(id)?.onSave).toBe("negate");
+				expect(getSpellEffect(id)?.onSave).toBeUndefined();
 			}
 		});
 	});

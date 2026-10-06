@@ -7,7 +7,7 @@ import { isSpacedWordChar } from "./Magic/phrase";
 import { effectConfigFor, pickEffects, retier, sanitizeCastArgs, sanitizeSpell, saveBehaviorFor, spellCastPrompts, voiceCastArgs } from "./Magic/spellEdit";
 import { GuiMagic } from "Settings/magic";
 import { StateModule } from "./states";
-import { IsActivityEnhanced, ItemUseModule, MagicWandItems } from "./item-use";
+import { ActivityCheck, ActivityRoll, IsActivityEnhanced, ItemUseModule, MagicWandItems } from "./item-use";
 import { InjectorModule } from "./injector";
 import { RedressedState } from "./States/RedressedState";
 import { PolymorphedState } from "./States/PolymorphedState";
@@ -622,9 +622,13 @@ export class MagicModule extends BaseModule {
                 const check = getModule<ItemUseModule>("ItemUseModule")?.MakeActivityCheck(sender, Player);
                 const harmful = !this.SpellIsBeneficial(spell);
                 const savedRoll = check.AttackerRoll.Total < check.DefenderRoll.Total;
-                if (harmful && this.DefendAgainst(sender.MemberNumber ?? -1)) {
+                const defends = this.DefendAgainst(sender.MemberNumber ?? -1);
+                // The roll only matters when the whole spell can be resisted, or an effect in it takes a save
+                if (harmful && (defends || spell.Effects.some((_, index) => !!saveBehaviorFor(spell, index))))
+                    SendAction(this.saveReadout(sender, spell, check, savedRoll));
+                if (harmful && defends) {
                     if (savedRoll) {
-                        SendAction(`${CharacterNickname(Player)} ${check.DefenderRoll.TotalStr}successfully saves against ${CharacterNickname(sender)}'s ${check.AttackerRoll.TotalStr}${spell.Name}.`);
+                        SendAction(`${CharacterNickname(Player)} successfully saves against ${CharacterNickname(sender)}'s ${spell.Name}.`);
                         emit("spell.resisted", { spell: spellInfo(spell), sender: sender.MemberNumber ?? -1, bounced: !!magicBarrier?.active });
                         if (magicBarrier?.active) {
                             // if saved with a protected barrier, the spell will bounce back to sender
@@ -666,6 +670,12 @@ export class MagicModule extends BaseModule {
                 }
             }
         }, 1000); // Slight delay on responding to spell commands, builds anticipation.
+    }
+
+    /** The save roll in chat, both rolls with their dice and modifiers, whichever way it went. */
+    saveReadout(sender: Character, spell: SpellDefinition, check: ActivityCheck, saved: boolean): string {
+        const show = (roll: ActivityRoll) => `${roll.Total} (${roll.Raw}${roll.Modifier < 0 ? "" : "+"}${roll.Modifier})`;
+        return `Save against ${CharacterNickname(sender)}'s ${spell.Name}: ${CharacterNickname(Player)} rolls ${show(check.DefenderRoll)} to ${show(check.AttackerRoll)}, ${saved ? "saved!" : "failed."}`;
     }
 
     /** A save that resisted a spell outright still lets its "half" effects (damage) through at half strength, unless the caster made them

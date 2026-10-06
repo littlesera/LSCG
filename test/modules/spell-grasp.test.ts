@@ -87,10 +87,10 @@ describe("Grasping", () => {
 			expect(sanitizeGraspConfig({ Locations: "neck" })).toEqual({ Locations: ["arms"] });
 		});
 
-		it("is unique per spell and resisted by a save", () => {
+		it("is unique per spell and has no save of its own", () => {
 			const def = getSpellEffect(LSCGSpellEffect.grasp)!;
 			expect(def.stackable).toBeUndefined();
-			expect(def.onSave).toBe("negate");
+			expect(def.onSave).toBeUndefined();
 		});
 	});
 
@@ -187,13 +187,13 @@ describe("Grasping", () => {
 			expect(states.AnyRestrictions(r => r.Walk)).toBe(true);
 		});
 
-		it("is resisted by a save, even for someone who never defends", () => {
+		it("takes no save of its own: someone who never defends is held however the dice fall", () => {
 			magic.settings.neverDefend = true;
 			seedRandom([0.0, 0.99]);
-			magic.IncomingSpellCommand(alice as never, { command: { name: "spell", args: [{ name: "spell", value: grasp("arms", "neck") }] } } as never);
+			magic.IncomingSpellCommand(alice as never, { command: { name: "spell", args: [{ name: "spell", value: grasp("arms") }] } } as never);
 			vi.advanceTimersByTime(1000 + 2500);
-			expect(states.AnyRestrictions(r => r.Move)).toBe(false);
-			expect(sent.actions().some(a => a.includes("resists the Grasping magic"))).toBe(true);
+			expect(states.AnyRestrictions(r => r.Move)).toBe(true);
+			expect(sent.actions().some(a => a.includes("resists"))).toBe(false);
 		});
 
 		it("holds still after a relog: the entry is plain data", () => {

@@ -72,7 +72,6 @@ function conjureEffect(id: SpellEffectId, description: string, set: ConjureSet, 
         label: id,
         description,
         stackable: 3,
-        onSave: "negate",
         config: {
             defaults: (): ConjureConfig => ({ Min: 1, Max: 2 }),
             sanitize,
