@@ -3,8 +3,9 @@ import { getModule } from "modules";
 import { OutfitCollectionModule } from "Modules/outfitCollection";
 import { allEffectIds, effectDescription, effectLabel, effectTooltip, isExtensionEffect, getSpellEffect, isPairedEffect, spellHasPairedEffect } from "Modules/Magic/spellEffects";
 import { Button, Chip, CheckboxRow, Expando, Icon, KitContext, KitTab, Notice, NumberRow, openDialog, RuleTable, SectionLabel, SelectOption, SelectRow, TextRow } from "Dom/kit";
-import { parseDiceRoll, MAX_ROLL_LENGTH } from "Modules/Magic/dice";
-import { DamageConfig, DamageSave, DamageType, DEFAULT_DAMAGE_TYPE, KNOWN_SPELLS_LIMIT, MagicPublicSettingsModel, MagicSettingsModel, OutfitOption, PolymorphConfig, SpellDefinition, SpellEffectId, maxSpellEffects } from "./Models/magic";
+import { addEffect, canHaveEffect, editableConfig, removeEffect, setEffect, writeConfig } from "Modules/Magic/spellEdit";
+import { EFFECT_EDITORS } from "./magic-effect-editors";
+import { KNOWN_SPELLS_LIMIT, MagicPublicSettingsModel, MagicSettingsModel, OutfitOption, PolymorphConfig, SpellDefinition, SpellEffectId, maxSpellEffects } from "./Models/magic";
 import type { SpiritTextType } from "./magic";
 
 export interface MagicPagesOptions {
@@ -19,8 +20,6 @@ const OUTFIT_KEY_MAX = 10000; // keys may be pasted outfit codes
 const MAX_DURATION_MINUTES = 7 * 24 * 60;
 
 const OUTFIT_OPTIONS: SelectOption[] = Object.values(OutfitOption).map(o => ({ value: o, label: o }));
-const DAMAGE_TYPE_OPTIONS: SelectOption[] = Object.values(DamageType).map(t => ({ value: t, label: t }));
-const DAMAGE_SAVE_OPTIONS: SelectOption[] = Object.values(DamageSave).map(t => ({ value: t, label: t }));
 const SPIRIT_TEXT_OPTIONS: SelectOption[] = (["None", "Glow", "Float"] as SpiritTextType[]).map(o => ({ value: o, label: o }));
 
 function toggle<T>(list: T[], item: T, on: boolean): T[] {
@@ -135,35 +134,12 @@ function polymorphEffectConfig(ctx: KitContext, spell: SpellDefinition): HTMLEle
     ];
 }
 
-/** The Damaging effect's own settings: what type of damage, and an optional dice roll for how much. */
-function damageEffectConfig(ctx: KitContext, spell: SpellDefinition): HTMLElement[] {
-    const damage = (): DamageConfig => spell.Damage ??= { Type: DEFAULT_DAMAGE_TYPE, Roll: "" };
-    return [
-        SelectRow(ctx, {
-            label: "Damage type", options: DAMAGE_TYPE_OPTIONS,
-            description: "What kind of damage the spell does.",
-            get: () => spell.Damage?.Type ?? DEFAULT_DAMAGE_TYPE,
-            set: v => { damage().Type = v as DamageType; },
-        }),
-        SelectRow(ctx, {
-            label: "On a successful save", options: DAMAGE_SAVE_OPTIONS,
-            description: "The target rolls against the caster, even if they never resist other spells. A save halves the damage or avoids it entirely.",
-            get: () => spell.Damage?.Save ?? DamageSave.half,
-            set: v => { damage().Save = v as DamageSave; },
-        }),
-        TextRow(ctx, {
-            label: "Damage roll", placeholder: "e.g. 2d6 + 2", maxLength: MAX_ROLL_LENGTH,
-            description: "Optional dice for how much damage, such as 2d6 + 2 or 1d8. Rolled when the spell lands. Leave empty for damage with no number.",
-            get: () => spell.Damage?.Roll ?? "",
-            set: v => { damage().Roll = parseDiceRoll(v)?.text ?? v.trim(); },
-        }),
-    ];
-}
-
 /** An effect's own settings: the rows, a one-line summary for when the section is closed, and whether it still
- *  needs the player's attention (no outfit chosen yet). Only the effects that have any (outfit, polymorph, damage). */
-function effectConfig(ctx: KitContext, spell: SpellDefinition, effect: SpellEffectId):
+ *  needs the player's attention (no outfit chosen yet). Only the effects that have any. Outfit and Polymorph keep theirs on the
+ *  spell itself; the rest keep theirs per copy in `spell.Configs` and describe themselves through their schema. */
+function effectConfig(ctx: KitContext, spell: SpellDefinition, index: number):
         { rows: HTMLElement[]; summary: () => string; needsAttention: () => boolean } | undefined {
+    const effect = spell.Effects[index];
     switch (getSpellEffect(effect)?.configurable) {
         case "outfit":
             return {
@@ -177,14 +153,18 @@ function effectConfig(ctx: KitContext, spell: SpellDefinition, effect: SpellEffe
                 summary: () => `Polymorph settings: ${spell.Polymorph?.Key || "no outfit chosen yet"}`,
                 needsAttention: () => !spell.Polymorph?.Key,
             };
-        case "damage":
+        default: {
+            const schema = getSpellEffect(effect)?.config;
+            const editor = EFFECT_EDITORS[effect];
+            if (!schema || !editor)
+                return undefined;
+            const config = () => editableConfig(spell, index);
             return {
-                rows: damageEffectConfig(ctx, spell),
-                summary: () => `Damage settings: ${spell.Damage?.Type ?? DEFAULT_DAMAGE_TYPE}${spell.Damage?.Roll ? ` ${spell.Damage.Roll}${parseDiceRoll(spell.Damage.Roll) ? "" : " (not a valid roll, so no number is rolled)"}` : ""}`,
-                needsAttention: () => !!spell.Damage?.Roll && !parseDiceRoll(spell.Damage.Roll),
+                rows: editor(ctx, config, patch => writeConfig(spell, index, { ...config(), ...patch })),
+                summary: () => schema.summary(config()),
+                needsAttention: () => !!schema.needsAttention?.(config()),
             };
-        default:
-            return undefined;
+        }
     }
 }
 
@@ -206,10 +186,9 @@ function effectSlots(dctx: KitContext, tableCtx: KitContext, spell: SpellDefinit
 
         const row = (i: number): HTMLElement => {
             const current = i < have ? spell.Effects[i] : undefined;
-            const taken = new Set(spell.Effects.filter((_, j) => j !== i));
             const options: SelectOption[] = [
                 { value: "", label: current ? "— remove this effect —" : have === 0 ? "— choose an effect —" : "— add another effect —" },
-                ...allEffectIds().filter(id => !taken.has(id)).sort(byLabel).map(id => ({ value: id as string, label: effectLabel(id), ...(isExtensionEffect(id) ? { group: "From extensions", icon: "extension" as const } : {}) })),
+                ...allEffectIds().filter(id => canHaveEffect(spell, id, i)).sort(byLabel).map(id => ({ value: id as string, label: effectLabel(id), ...(isExtensionEffect(id) ? { group: "From extensions", icon: "extension" as const } : {}) })),
                 // An effect from an extension that isn't installed stays selectable so it can be kept or replaced.
                 ...(current && !getSpellEffect(current) ? [{ value: current as string, label: effectLabel(current) }] : []),
             ];
@@ -221,9 +200,10 @@ function effectSlots(dctx: KitContext, tableCtx: KitContext, spell: SpellDefinit
                 set: value => {
                     focusSlot = i;
                     if (value === "") {
-                        if (i < spell.Effects.length) spell.Effects.splice(i, 1);
+                        removeEffect(spell, i);
                     } else {
-                        spell.Effects[i] = value as SpellEffectId;
+                        if (i < spell.Effects.length) setEffect(spell, i, value as SpellEffectId);
+                        else addEffect(spell, value as SpellEffectId);
                         if (isPairedEffect(value)) spell.AllowPotion = false;
                     }
                 },
@@ -231,15 +211,15 @@ function effectSlots(dctx: KitContext, tableCtx: KitContext, spell: SpellDefinit
             // The settings edit the spell directly. They don't change which effects there are, so they don't rebuild this
             // list (which would drop keyboard focus mid-way through filling them in); they only update the spell table.
             const gctx = new KitContext(() => tableCtx.changed());
-            const config = current ? effectConfig(gctx, spell, current) : undefined;
+            const config = current ? effectConfig(gctx, spell, i) : undefined;
             if (!current || !config)
                 return picker;
             // Open until the player has chosen what the effect needs; after that, tucked away behind its summary.
             const section = Expando(gctx, {
                 summary: config.summary,
                 content: config.rows,
-                open: expanded.get(current) ?? config.needsAttention(),
-                onToggle: open => expanded.set(current, open),
+                open: expanded.get(`${i}:${current}`) ?? config.needsAttention(),
+                onToggle: open => expanded.set(`${i}:${current}`, open),
             });
             return <div class="lscg-spell-effect">{picker}{section}</div> as HTMLElement;
         };

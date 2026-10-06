@@ -244,7 +244,7 @@ describe("MagicModule", () => {
 		describe("damage on a save", () => {
 			const zap = (save?: string, extra: LSCGSpellEffect[] = []) => ({
 				...spell("zap", [LSCGSpellEffect.damage, ...extra]),
-				Damage: { Type: "Fire", Roll: "2d6 + 2", ...(save ? { Save: save } : {}) },
+				Configs: [{ Type: "Fire", Roll: "2d6 + 2", ...(save ? { Save: save } : {}) }],
 			}) as SpellDefinition;
 			const cast = (s: SpellDefinition) => {
 				magic.IncomingSpellCommand(alice as never, { command: { name: "spell", args: [{ name: "spell", value: s }] } } as never);
@@ -259,6 +259,17 @@ describe("MagicModule", () => {
 				const out = cast(zap(undefined, [LSCGSpellEffect.blindness]));
 				expect(out.some(a => a.includes("takes only 7 fire damage, half of 14"))).toBe(true);
 				expect(states.BlindState.Active).toBe(false);
+			});
+
+			it("one save halves every Damaging copy, each by its own roll, and 'No damage' copies take none", () => {
+				seedRandom(SAVES);
+				const out = cast({
+					...spell("storm", [LSCGSpellEffect.damage, LSCGSpellEffect.damage, LSCGSpellEffect.damage]),
+					Configs: [{ Type: "Fire", Roll: "2d6 + 2" }, { Type: "Cold", Roll: "1d8", Save: "No damage" }, { Type: "Acid", Roll: "1d4" }],
+				} as SpellDefinition);
+				expect(out.some(a => a.includes("takes only 7 fire damage, half of 14"))).toBe(true);
+				expect(out.some(a => a.includes("cold"))).toBe(false);
+				expect(out.some(a => a.includes("takes only 2 acid damage, half of 4"))).toBe(true);
 			});
 
 			it("'No damage' on a save avoids the damage entirely", () => {

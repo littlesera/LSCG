@@ -2,7 +2,8 @@ import { BaseModule } from "base";
 import { getModule } from "modules";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
 import { GetConfiguredItemBundlesFromOutfitKey, GetDelimitedList, OnChat, GetItemNameAndDescriptionConcat, GetMetadata, LSCG_SendLocal, LSCG_TEAL, OnActivity, SendAction, getCharacter, getRandomInt, hookFunction, isPhraseInString, removeAllHooksByModule, sendLSCGCommand, sendLSCGCommandBeep, settingsSave, getCharacterByNicknameOrMemberNumber, excludeParentheticalContent, escapeRegExp } from "../utils";
-import { ABSOLUTE_MAX_SPELL_EFFECTS, DamageSave, DEFAULT_MAX_SPELL_EFFECTS, KNOWN_SPELLS_LIMIT, LSCGSpellEffect, MagicSettingsModel, OutfitOption, SpellDefinition, SpellEffectId, sanitizeIncomingDamage, sanitizeIncomingEffects } from "Settings/Models/magic";
+import { ABSOLUTE_MAX_SPELL_EFFECTS, DamageConfig, DamageSave, DEFAULT_MAX_SPELL_EFFECTS, KNOWN_SPELLS_LIMIT, LSCGSpellEffect, MagicSettingsModel, OutfitOption, SpellDefinition, SpellEffectId } from "Settings/Models/magic";
+import { effectConfigFor, sanitizeSpell } from "./Magic/spellEdit";
 import { GuiMagic } from "Settings/magic";
 import { StateModule } from "./states";
 import { IsActivityEnhanced, ItemUseModule, MagicWandItems } from "./item-use";
@@ -566,6 +567,8 @@ export class MagicModule extends BaseModule {
                 const spell = msg.command?.args?.find(arg => arg.name == "spell")?.value as SpellDefinition;
                 if (!spell || !sender)
                     return;
+                if (typeof spell === "object")
+                    sanitizeSpell(spell);
                 const check = getModule<ItemUseModule>("ItemUseModule")?.MakeActivityCheck(sender, Player);
                 const harmful = !this.SpellIsBeneficial(spell);
                 const savedRoll = check.AttackerRoll.Total < check.DefenderRoll.Total;
@@ -617,14 +620,22 @@ export class MagicModule extends BaseModule {
     /** A save that resisted a spell still halves its damage, unless the caster made the damage "No damage on a save". Only the
      *  damage is applied; everything else was resisted. */
     ApplySavedDamage(sender: Character, spell: SpellDefinition) {
-        const damage = sanitizeIncomingDamage(spell.Damage);
-        if (!spell.Effects.includes(LSCGSpellEffect.damage) || damage?.Save === DamageSave.none)
+        // Each Damaging copy keeps its own settings, so keep the effect/settings pairs together.
+        const copies = spell.Effects.map((effect, index) => ({ effect, index })).filter(e => e.effect === LSCGSpellEffect.damage);
+        const hurting = copies.filter(e => (effectConfigFor(spell, e.index) as DamageConfig | undefined)?.Save !== DamageSave.none);
+        if (hurting.length <= 0)
             return;
-        this.IncomingSpell(sender, { ...spell, Effects: [LSCGSpellEffect.damage] }, null, 1, true);
+        const damageOnly: SpellDefinition = { ...spell, Effects: hurting.map(e => e.effect), Configs: hurting.map(e => spell.Configs?.[e.index] ?? null) };
+        this.IncomingSpell(sender, damageOnly, null, 1, true);
+    }
+
+    /** The spell's effects the target allows, each with its position so it applies with its own settings. */
+    allowedEffectEntries(spell: SpellDefinition, caster: Character | null): { effect: SpellEffectId; index: number }[] {
+        return spell.Effects.map((effect, index) => ({ effect, index })).filter(e => this.effectIsAllowed(e.effect, caster));
     }
 
     filterAllowedSpellEffects(spell: SpellDefinition, caster: Character | null): SpellEffectId[] {
-        return spell.Effects.filter(effect => this.effectIsAllowed(effect, caster));
+        return this.allowedEffectEntries(spell, caster).map(e => e.effect);
     }
 
     effectIsAllowed(effect: SpellEffectId, caster: Character | null): boolean {
@@ -637,8 +648,8 @@ export class MagicModule extends BaseModule {
     IncomingSpell(sender: Character | null, spell: SpellDefinition, paired?: Character | null, saveDiff: number = 1, saved: boolean = false) {
         const senderName = !sender ? "Someone" : CharacterNickname(sender);
         // However many a caster's spell claims, only so many are applied: each one is a timer on this client.
-        let allowedSpellEffects = this.filterAllowedSpellEffects(spell, sender).slice(0, ABSOLUTE_MAX_SPELL_EFFECTS);
-        if (allowedSpellEffects.length <= 0) {
+        let allowedEntries = this.allowedEffectEntries(spell, sender).slice(0, ABSOLUTE_MAX_SPELL_EFFECTS);
+        if (allowedEntries.length <= 0) {
             SendAction(`${senderName}'s ${spell.Name} fizzles when cast on %NAME%, none of its effects allowed to take hold.`);
             return;
         }
@@ -653,24 +664,24 @@ export class MagicModule extends BaseModule {
         }
 
         const info = spellInfo(spell);
-        const spellHook = emitBefore("spell.beforeReceive", { spell: info, sender: sender?.MemberNumber, effects: [...allowedSpellEffects], duration });
+        const spellHook = emitBefore("spell.beforeReceive", { spell: info, sender: sender?.MemberNumber, effects: allowedEntries.map(e => e.effect), duration });
         if (spellHook.cancelled) {
             SendAction(`${senderName}'s ${spell.Name} fizzles when cast on %NAME%${spellHook.reason ? ` (${spellHook.reason})` : ""}.`);
             return;
         }
         // Extensions may only remove effects, never add them.
-        allowedSpellEffects = allowedSpellEffects.filter(e => spellHook.payload.effects.includes(e));
+        allowedEntries = allowedEntries.filter(e => spellHook.payload.effects.includes(e.effect));
         duration = sanitizeDuration(spellHook.payload.duration, duration);
-        if (allowedSpellEffects.length <= 0) {
+        if (allowedEntries.length <= 0) {
             SendAction(`${senderName}'s ${spell.Name} fizzles when cast on %NAME%, none of its effects allowed to take hold.`);
             return;
         }
         if (!!duration && duration > 0 && this.settings.maxDuration > 0)
             LSCG_SendLocal(`${sender?.IsPlayer() ? "Your" : senderName + "'s"} ${spell.Name} spell will last ${duration / (60 * 1000)} minutes.`);
-        emit("spell.received", { spell: info, sender: sender?.MemberNumber, effects: allowedSpellEffects, duration });
+        emit("spell.received", { spell: info, sender: sender?.MemberNumber, effects: allowedEntries.map(e => e.effect), duration });
 
         const spellDuration = duration;
-        allowedSpellEffects.forEach((effect, ix, arr) => {
+        allowedEntries.forEach(({ effect, index }, ix, arr) => {
             setTimeout(() => {
                 const effectHook = emitBefore("spell.beforeEffect", { effect, spell: info, sender: sender?.MemberNumber, duration: spellDuration });
                 // Shadows the spell-wide duration: the cases below use this effect's (possibly adjusted) duration.
@@ -681,7 +692,7 @@ export class MagicModule extends BaseModule {
                 else if (!definition)
                     SendAction(`Part of ${senderName}'s ${spell.Name} washes over %NAME% without effect, its magic unfamiliar.`);
                 else {
-                    definition.apply({ effect, sender, senderName, spell, paired, duration, magic: this, saved });
+                    definition.apply({ effect, sender, senderName, spell, paired, duration, magic: this, saved, index, config: effectConfigFor(spell, index) });
                     emit("spell.effectApplied", { effect, spell: info, sender: sender?.MemberNumber, duration });
                 }
                 if (ix == arr.length - 1)
@@ -722,7 +733,7 @@ export class MagicModule extends BaseModule {
                 value: pairType,
             }]);
         } else {
-            getSpellEffect(spellEffect)?.applyPaired?.({ effect: spellEffect, sender, senderName, spell: { Name: "", Creator: -1, Effects: [spellEffect], AllowPotion: false, AllowVoiceCast: false }, magic: this }, originalTarget);
+            getSpellEffect(spellEffect)?.applyPaired?.({ effect: spellEffect, sender, senderName, spell: { Name: "", Creator: -1, Effects: [spellEffect], AllowPotion: false, AllowVoiceCast: false }, magic: this, index: 0 }, originalTarget);
         }
 
         settingsSave(true);
@@ -738,8 +749,7 @@ export class MagicModule extends BaseModule {
         const spell = msg.command?.args?.find(arg => arg.name == "spell")?.value as SpellDefinition;
         // It is saved with this player's settings, so keep what a sender can make it carry within limits.
         if (spell && typeof spell === "object") {
-            spell.Effects = sanitizeIncomingEffects(spell.Effects);
-            spell.Damage = sanitizeIncomingDamage(spell.Damage);
+            sanitizeSpell(spell);
         }
         if (this.AvailableSpells.length >= KNOWN_SPELLS_LIMIT)
             SendAction(`%NAME%'s mind is already full of spells. %INTENSIVE% must forget one before %INTENSIVE% can learn ${spell.Name}.`);
