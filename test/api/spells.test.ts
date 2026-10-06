@@ -560,15 +560,15 @@ describe("extension spell effects", () => {
             expect(worn()).toEqual([]);
         });
 
-        it("a save resists it, even for someone who never defends", () => {
+        it("takes no save of its own: someone who never defends loses the clothes however the dice fall", () => {
             cloth("Cloth");
             magic.settings.neverDefend = true;
             seedRandom([0.0, 0.99]);
             magic.IncomingSpellCommand(alice as never, { command: { name: "spell", args: [{ name: "spell", value: dissolve() }] } } as never);
             vi.advanceTimersByTime(1000 + 2500);
             restoreRandom();
-            expect(worn()).toEqual(["Cloth"]);
-            expect(sent.actions().some(a => a.includes("resists the Dissolving Clothes magic"))).toBe(true);
+            expect(worn()).toEqual([]);
+            expect(sent.actions().some(a => a.includes("resists"))).toBe(false);
         });
     });
 

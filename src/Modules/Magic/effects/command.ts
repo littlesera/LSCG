@@ -106,7 +106,6 @@ export const COMMAND_EFFECT: SpellEffectDefinition = {
     id: LSCGSpellEffect.command,
     label: LSCGSpellEffect.command,
     description: "Compels the target with a one-word command: kneel, follow the caster, stay in the room, strip, or cum.",
-    onSave: "negate",
     config: {
         defaults: (): CommandConfig => ({ Word: "kneel", Ask: false, Allowed: [...COMMAND_WORDS] }),
         sanitize: sanitizeCommandConfig,

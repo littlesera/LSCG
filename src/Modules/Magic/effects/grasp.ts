@@ -100,7 +100,6 @@ export const GRASP_EFFECT: SpellEffectDefinition = {
     id: LSCGSpellEffect.grasp,
     label: LSCGSpellEffect.grasp,
     description: "Spectral hands seize the target: by the neck (a choke), arms, legs, ass or breasts, as chosen. They use Echo's Ghost Hand where it is installed, and let go when the spell ends.",
-    onSave: "negate",
     config: {
         defaults: (): GraspConfig => ({ Locations: ["arms"] }),
         sanitize: sanitizeGraspConfig,

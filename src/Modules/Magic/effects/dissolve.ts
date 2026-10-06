@@ -39,7 +39,6 @@ export const DISSOLVE_EFFECT: SpellEffectDefinition = {
     label: LSCGSpellEffect.dissolve,
     description: "Dissolves the target's clothing, underwear or both. Cosplay, the body and restraints are left alone.",
     stackable: 2,
-    onSave: "negate",
     config: {
         defaults: (): DissolveConfig => ({ Layers: "clothing" }),
         sanitize: sanitizeDissolveConfig,

@@ -95,10 +95,10 @@ describe("Commanding", () => {
 			expect(pickCommand(config({ Ask: true }), undefined)).toBe("kneel");
 		});
 
-		it("is unique per spell, resisted by a save, and asks nothing unless set to", () => {
+		it("is unique per spell, takes no save of its own for now, and asks nothing unless set to", () => {
 			const def = getSpellEffect(LSCGSpellEffect.command)!;
 			expect(def.stackable).toBeUndefined();
-			expect(def.onSave).toBe("negate");
+			expect(def.onSave).toBeUndefined();
 			expect(def.config!.castPrompts!(config())).toEqual([]);
 			expect(def.config!.castPrompts!(config({ Ask: true, Allowed: ["stay", "cum"], Word: "stay" }))).toEqual([
 				{ key: "word", label: "Command", default: "stay", options: [{ value: "stay", label: "Stay" }, { value: "cum", label: "Cum" }] },
@@ -294,12 +294,12 @@ describe("Commanding", () => {
 	});
 
 	describe("saves", () => {
-		it("a save resists any command, even for someone who never defends", () => {
+		it("a target who never defends takes the command with no save, even when the dice would have saved them", () => {
 			magic.settings.neverDefend = true;
 			const out = castViaCommand(command({ Word: "cum" }), undefined, [0.0, 0.99]);
-			expect(out.some(a => a.includes("resists the Commanding magic"))).toBe(true);
-			expect((globalThis as any).ActivityOrgasmPrepare).not.toHaveBeenCalled();
-			expect(player().ArousalSettings.Progress).toBe(0);
+			expect(out.some(a => a.includes("resists"))).toBe(false);
+			expect(out.some(a => a.includes("Save against"))).toBe(false);
+			expect((globalThis as any).ActivityOrgasmPrepare).toHaveBeenCalled();
 		});
 	});
 });

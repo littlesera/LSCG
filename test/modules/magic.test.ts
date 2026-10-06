@@ -243,6 +243,57 @@ describe("MagicModule", () => {
 			expect(sent.actions()[0]).toContain("fizzles");
 		});
 
+		describe("the save readout", () => {
+			const readout = () => sent.actions().filter(a => a.startsWith("Save against"));
+			const send = (s: SpellDefinition) => {
+				magic.IncomingSpellCommand(alice as never, { command: { name: "spell", args: [{ name: "spell", value: s }] } } as never);
+				vi.advanceTimersByTime(1000 + 2500);
+			};
+
+			it("shows both rolls and a saved result when the target wins", () => {
+				seedRandom([0.0, 0.99]); // attacker d20=1, defender d20=20
+				send(spell("blind", [LSCGSpellEffect.blindness]));
+				expect(readout()).toHaveLength(1);
+				expect(readout()[0]).toMatch(/^Save against Alice's blind: Sera rolls \d+ \(20[+-]?\+?-?\d+\) to \d+ \(1[+-]?\+?-?\d+\), saved!$/);
+			});
+
+			it("shows a failed result too, which used to say nothing", () => {
+				seedRandom([0.99, 0.0]);
+				send(spell("blind", [LSCGSpellEffect.blindness]));
+				expect(readout()).toHaveLength(1);
+				expect(readout()[0]).toMatch(/, failed\.$/);
+			});
+
+			it("is shown whether or not the check-roll setting is on, and the old saved line no longer repeats the numbers", () => {
+				Player.LSCG.GlobalModule.showCheckRolls = true;
+				seedRandom([0.0, 0.99]);
+				send(spell("blind", [LSCGSpellEffect.blindness]));
+				expect(readout()).toHaveLength(1);
+				expect(sent.actions().find(a => a.includes("successfully saves"))).not.toMatch(/\[/);
+			});
+
+			it("a target who never defends still sees one when the spell has damage, since that save counts", () => {
+				magic.settings.neverDefend = true;
+				seedRandom([0.0, 0.99]);
+				send({ ...spell("zap", [LSCGSpellEffect.damage]), Configs: [{ Type: "Fire", Roll: "1d4" }] } as SpellDefinition);
+				expect(readout()).toHaveLength(1);
+				expect(readout()[0]).toMatch(/saved!$/);
+			});
+
+			it("and sees none when no roll was used: never defending against a spell with no save", () => {
+				magic.settings.neverDefend = true;
+				seedRandom([0.0, 0.99]);
+				send(spell("blind", [LSCGSpellEffect.blindness]));
+				expect(readout()).toHaveLength(0);
+			});
+
+			it("and none for a beneficial spell, which is never saved against", () => {
+				seedRandom([0.0, 0.99]);
+				send(spell("bless", [LSCGSpellEffect.bless]));
+				expect(readout()).toHaveLength(0);
+			});
+		});
+
 		describe("damage on a save", () => {
 			const zap = (save?: string, extra: LSCGSpellEffect[] = []) => ({
 				...spell("zap", [LSCGSpellEffect.damage, ...extra]),
