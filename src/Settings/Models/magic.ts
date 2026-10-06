@@ -132,6 +132,9 @@ export interface SpellDefinition {
     /** Each effect's own settings, by position: `Configs[i]` belongs to `Effects[i]`, since the same effect may appear more
      *  than once with different settings. Entries are missing or null for effects with none. Kept aligned by spellEdit.ts. */
     Configs?: unknown[];
+    /** The spell's total power: every effect's tier added up, counting each copy. Always worked out from the effects (never taken from
+     *  another player's spell); stored so it can later set a spell's cost. */
+    Tier?: number;
 }
 
 export interface MagicSettingsModel extends MagicPublicSettingsModel {

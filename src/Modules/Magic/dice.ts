@@ -70,3 +70,8 @@ export function rollDice(roll: DiceRoll, random: () => number = Math.random): Di
     total = Math.max(0, total);
     return { total, breakdown: `${roll.text} = ${shown}` };
 }
+
+/** The largest total a roll could produce: every die at its top face, every added modifier, nothing taken off. */
+export function maxRoll(roll: DiceRoll): number {
+    return roll.terms.reduce((sum, t) => t.sign < 0 ? sum : sum + (t.kind === "dice" ? t.count * t.sides : t.value), 0);
+}
