@@ -273,14 +273,14 @@ describe("Commanding", () => {
 				states.DeniedState.Activate(2);
 				expect(orgasmOutlook(magic)).toBe("denied");
 				const out = cast(command({ Word: "cum" }));
-				expect(out.some(a => a.includes("denial keeps release just out of reach"))).toBe(true);
+				expect(out.some(a => a.includes("leaving release just out of reach"))).toBe(true);
 			});
 
 			it("edging: an edged player, or a crafted item with the Edging property", () => {
 				player().IsEdged = () => true;
 				expect(orgasmOutlook(magic)).toBe("edged");
 				const out = cast(command({ Word: "cum" }));
-				expect(out.some(a => a.includes("held there, trembling and unable to tip over"))).toBe(true);
+				expect(out.some(a => a.includes("and held there"))).toBe(true);
 				player().IsEdged = () => false;
 				vi.stubGlobal("InventoryCraftCount", vi.fn((_C: unknown, property: string) => property === "Edging" ? 1 : 0));
 				expect(orgasmOutlook(magic)).toBe("edged");
