@@ -1,6 +1,7 @@
 import { Registry } from "api/registry";
 import { cleanEffect, LSCGSpellEffect, SpellDefinition, SpellEffectId } from "Settings/Models/magic";
 import type { MagicModule } from "Modules/magic";
+import type { SpellEffectEndReason, SpellEffectEntry } from "Modules/States/SpellEffectsState";
 import { BUILTIN_SPELL_EFFECTS } from "./builtinEffects";
 import { BUILTIN_TAXONOMY, SPELL_TIERS, SpellDomain, SpellSchool, SpellTier, domainDescription, domainOrder } from "./taxonomy";
 
@@ -63,6 +64,11 @@ export interface SpellEffectDefinition {
     /** Display name of the extension that registered it; undefined for built-ins. */
     source?: string;
     apply(ctx: SpellEffectContext): void;
+    /** For effects that recorded entries in the spell effects state (SpellEffectsState.Add): undo one when it ends. It has already been
+     *  removed from the list. `reason` is why: it ran out, the player was dispelled or used safeword. */
+    onEnd?(entry: SpellEffectEntry, reason: SpellEffectEndReason, magic: MagicModule | undefined): void;
+    /** Re-apply an entry that doesn't survive a room change by itself. Called for each of this effect's entries on every room sync. */
+    onRoomSync?(entry: SpellEffectEntry, magic: MagicModule | undefined): void;
     /** Paired effects: runs on the second target once the first has been hit. */
     applyPaired?(ctx: SpellEffectContext, originalTarget: Character): void;
 }

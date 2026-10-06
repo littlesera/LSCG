@@ -25,7 +25,7 @@ import { publishedExtensionData } from "api/publish";
 import { dispatchExtensionCommand } from "api/network";
 
 /** State extension keys holding compressed outfit snapshots (cursed outfits, redress slots, polymorph/redress originals). */
-const PRIVATE_STATE_EXTENSIONS = ["outfits", "slot-snapshot", "stored", "stored-outfit"];
+const PRIVATE_STATE_EXTENSIONS = ["outfits", "slot-snapshot", "stored", "stored-outfit", "spell-effects"];
 
 declare let DialogMenuMapping: { items: ScreenFunctions & { C: null | Character } };
 
