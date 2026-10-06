@@ -392,30 +392,33 @@
 	}
 
 	// A collapsible section for settings that belong to the row above it, e.g. an effect's own options under its
-	// dropdown. Tinted so it reads as set apart from the surrounding (white) panel or dialog.
+	// dropdown. A faded LSCG teal and compact, so it reads as set apart without shouting over the rows around it.
 	.lscg-kit-expando {
-		margin: min(0.8dvh, 0.4dvw) 0 min(1.5dvh, 0.75dvw) min(3dvh, 1.5dvw);
-		border: var(--lscg-border-width) solid var(--lscg-hover-color);
-		border-left-width: min(0.8dvh, 0.4dvw);
-		border-radius: min(0.8dvh, 0.4dvw);
-		background-color: color-mix(in srgb, var(--lscg-hover-color) 16%, var(--lscg-background-color));
+		--lscg-expando-tint: #00d5d5;
+		margin: min(0.4dvh, 0.2dvw) 0 min(0.8dvh, 0.4dvw) min(2.5dvh, 1.25dvw);
+		border: min(0.2dvh, 0.1dvw) solid color-mix(in srgb, var(--lscg-expando-tint) 35%, transparent);
+		border-left: min(0.5dvh, 0.25dvw) solid color-mix(in srgb, var(--lscg-expando-tint) 55%, transparent);
+		border-radius: min(0.6dvh, 0.3dvw);
+		background-color: color-mix(in srgb, var(--lscg-expando-tint) 6%, var(--lscg-background-color));
+		font-size: calc(var(--lscg-font-small) * 0.85);
 
 		.lscg-kit-expando-summary {
-			padding: min(1dvh, 0.5dvw) min(1.5dvh, 0.75dvw);
-			font-weight: bold;
+			padding: min(0.5dvh, 0.25dvw) min(1dvh, 0.5dvw);
+			font-weight: normal;
 			cursor: pointer;
 			user-select: none;
+			color: color-mix(in srgb, var(--lscg-text-color) 80%, transparent);
 
 			&:hover {
-				background-color: color-mix(in srgb, var(--lscg-hover-color) 28%, transparent);
+				background-color: color-mix(in srgb, var(--lscg-expando-tint) 14%, transparent);
 			}
 		}
 
 		.lscg-kit-expando-body {
 			display: grid;
-			gap: min(1.2dvh, 0.6dvw);
-			padding: min(1dvh, 0.5dvw) min(1.5dvh, 0.75dvw) min(1.5dvh, 0.75dvw);
-			border-top: min(0.2dvh, 0.1dvw) solid color-mix(in srgb, var(--lscg-hover-color) 50%, transparent);
+			gap: min(0.6dvh, 0.3dvw);
+			padding: min(0.5dvh, 0.25dvw) min(1dvh, 0.5dvw) min(0.8dvh, 0.4dvw);
+			border-top: min(0.2dvh, 0.1dvw) solid color-mix(in srgb, var(--lscg-expando-tint) 25%, transparent);
 		}
 	}
 
