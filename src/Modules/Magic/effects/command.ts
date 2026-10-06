@@ -80,8 +80,8 @@ export function orgasmOutlook(magic: { stateModule: { DeniedState: { Active: boo
 
 const CUM_LINES: Record<OrgasmOutlook, string> = {
     open: "%NAME% is forced to the very edge by the spell's command, %POSSESSIVE% body shuddering on the brink of orgasm.",
-    edged: "%NAME% is forced to the very edge by the spell's command, but is held there, trembling and unable to tip over.",
-    denied: "%NAME% is forced to the very edge by the spell's command, but denial keeps release just out of reach.",
+    edged: "%NAME% is forced to the very edge by the spell's command and held there.",
+    denied: "%NAME% is forced to the very edge by the spell's command, leaving release just out of reach.",
 };
 
 interface CommandData {
