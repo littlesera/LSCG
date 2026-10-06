@@ -86,7 +86,7 @@ function startChoke(sender: Character | null): void {
         SendAction("The spectral hand rests on %NAME%'s throat, but cannot squeeze.");
         return;
     }
-    collar()?.HandChoke(sender);
+    collar()?.HandChoke(sender, true);
 }
 
 /** Lets the throat go, unless a player's own hand is still on it. */

@@ -502,6 +502,8 @@ export class CollarModule extends BaseModule {
     eventInterval: number = 0;
     handChokeModifier: number = 0;
     handChokingMember: number = 0;
+    /** The hand choke is a spell's spectral hand, not a player's: the messages say so and nothing is released from the caster's side. */
+    handChokeMagic: boolean = false;
     chainChokeModifier: number = 0;
     isPluggedUp: boolean = false;
 
@@ -663,10 +665,11 @@ export class CollarModule extends BaseModule {
         }
     }
 
-    HandChoke(chokingMember: Character | undefined | null) {
+    HandChoke(chokingMember: Character | undefined | null, magical: boolean = false) {
         if (this.handChokeModifier >= 4 || !Player.LSCG.MiscModule.handChokeEnabled || !chokingMember)
             return;
 
+        this.handChokeMagic = magical;
         this.handChokingMember = chokingMember.MemberNumber ?? 0;
         this.handChokeModifier = Math.min(this.handChokeModifier + 1, 4);
 
@@ -674,19 +677,22 @@ export class CollarModule extends BaseModule {
         switch (this.totalChokeLevel) {
             case 1:
                 clearTimeout(this.chokeTimeout);
-                SendAction("%NAME%'s eyes flutter as %OPP_NAME_OR_SELF_PRONOUN% wraps %OPP_POSSESSIVE% hand around %POSSESSIVE% neck.", chokingMember);
+                if (magical) SendAction("%NAME%'s eyes flutter as a spectral hand wraps around %POSSESSIVE% neck.");
+                else SendAction("%NAME%'s eyes flutter as %OPP_NAME_OR_SELF_PRONOUN% wraps %OPP_POSSESSIVE% hand around %POSSESSIVE% neck.", chokingMember);
                 setOrIgnoreBlush("Low");
                 CharacterSetFacialExpression(Player, "Eyes", "Sad");
                 break;
             case 2:
                 clearTimeout(this.chokeTimeout);
-                SendAction("%NAME% gasps for air as %OPP_NAME_OR_SELF_PRONOUN% tightens %OPP_POSSESSIVE% grip on %POSSESSIVE% neck.", chokingMember);
+                if (magical) SendAction("%NAME% gasps for air as the spectral hand tightens its grip on %POSSESSIVE% neck.");
+                else SendAction("%NAME% gasps for air as %OPP_NAME_OR_SELF_PRONOUN% tightens %OPP_POSSESSIVE% grip on %POSSESSIVE% neck.", chokingMember);
                 setOrIgnoreBlush("Medium");
                 CharacterSetFacialExpression(Player, "Eyes", "Surprised");
                 break;
             case 3:
                 clearTimeout(this.chokeTimeout);
-                SendAction("%NAME%'s face runs flush, choking as %OPP_NAME_OR_SELF_PRONOUN% presses firmly against %POSSESSIVE% neck, barely allowing any air to %POSSESSIVE% lungs.", chokingMember);
+                if (magical) SendAction("%NAME%'s face runs flush, choking as the spectral hand presses firmly against %POSSESSIVE% neck, barely allowing any air to %POSSESSIVE% lungs.");
+                else SendAction("%NAME%'s face runs flush, choking as %OPP_NAME_OR_SELF_PRONOUN% presses firmly against %POSSESSIVE% neck, barely allowing any air to %POSSESSIVE% lungs.", chokingMember);
                 setOrIgnoreBlush("High");
                 CharacterSetFacialExpression(Player, "Eyes", "Scared");
                 break;
@@ -700,6 +706,7 @@ export class CollarModule extends BaseModule {
 
     ReleaseHandChoke(chokingMember: Character | null, showEmote: boolean = true) {
         if (this.handChokeModifier > 0) {
+            this.handChokeMagic = false;
             if (!!chokingMember && showEmote)
                 SendAction("%NAME% gasps in relief as %OPP_NAME% releases %OPP_POSSESSIVE% pressure on %POSSESSIVE% neck.", chokingMember);
             this.handChokeModifier = 0;
@@ -885,6 +892,8 @@ export class CollarModule extends BaseModule {
 
         if (reason == PassoutReason.COLLAR)
             SendAction("%NAME%'s eyes start to roll back, gasping and choking as %POSSESSIVE% collar presses in tightly and completely with a menacing hiss.");
+        else if (reason == PassoutReason.HAND && this.handChokeMagic)
+            SendAction("%NAME%'s eyes start to roll back with a groan as the spectral hand completely closes %POSSESSIVE% airway.");
         else if (reason == PassoutReason.HAND)
             SendAction("%NAME%'s eyes start to roll back with a groan as %OPP_NAME% completely closes %POSSESSIVE% airway with %OPP_POSSESSIVE% hand.", chokingMember);
         else if (reason == PassoutReason.PLUGS || reason == PassoutReason.CHAIN)
@@ -901,6 +910,8 @@ export class CollarModule extends BaseModule {
 
         if (reason == PassoutReason.COLLAR)
             SendAction("%NAME% chokes and spasms, %POSSESSIVE% collar holding tight.");
+        else if (reason == PassoutReason.HAND && this.handChokeMagic)
+            SendAction("%NAME% chokes and spasms, the spectral hand gripping %POSSESSIVE% throat relentlessly.");
         else if (reason == PassoutReason.HAND)
             SendAction("%NAME% chokes and spasms, %OPP_NAME% gripping %POSSESSIVE% throat relentlessly.", chokingMember);
         else if (reason == PassoutReason.PLUGS)
@@ -922,6 +933,8 @@ export class CollarModule extends BaseModule {
             if (!AudioShouldSilenceSound(true))
                 AudioPlaySoundEffect("HydraulicLock");
         }
+        else if (reason == PassoutReason.HAND && this.handChokeMagic)
+            SendAction("%NAME% convulses weakly with a moan, %POSSESSIVE% eyes rolling back as the spectral hand clenches around %POSSESSIVE% throat even tighter.");
         else if (reason == PassoutReason.HAND)
             SendAction("%NAME% convulses weakly with a moan, %POSSESSIVE% eyes rolling back as %OPP_NAME% clenches around %POSSESSIVE% throat even tighter.", chokingMember);
         else if (reason == PassoutReason.PLUGS || reason == PassoutReason.CHAIN)
@@ -940,6 +953,12 @@ export class CollarModule extends BaseModule {
                 AudioPlaySoundEffect("Deflation");
             this.ResetChoke();
             this.settings.stats.collarPassoutCount++;
+        }
+        else if (reason == PassoutReason.HAND && this.handChokeMagic) {
+            // The hand is the spell's: it lets go, but the caster isn't someone holding on, so there is no leash to escape
+            SendAction("As %NAME% collapses unconscious, the spectral hand lets go of %POSSESSIVE% neck.");
+            this.ReleaseHandChoke(null, false);
+            this.settings.stats.handPassoutCount++;
         }
         else if (reason == PassoutReason.HAND) {
             SendAction("As %NAME% collapses unconscious, %OPP_NAME% releases %POSSESSIVE% neck.", chokingMember);
