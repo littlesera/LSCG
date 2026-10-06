@@ -330,16 +330,19 @@ describe("Magic™ settings pages", () => {
                     expect(dialog.textContent).not.toContain("Which outfit the Outfit effect puts on");
                 });
 
-                it("are a collapsible section, set apart from the dialog with its own background", () => {
+                it("are a collapsible section, set apart from the dialog by a teal border, with no shadow", () => {
                     const dialog = openEditor(spell("expando", [LSCGSpellEffect.outfit]));
                     const section = nested(dialog, 0)!;
                     expect(section.tagName).toBe("DETAILS");
                     expect(section.querySelector("summary")).not.toBeNull();
                     expect(section.className).toContain("lscg-kit-expando");
-                    // The tint lives with the kit's styles (rendered here without the overlay host, so read the source).
+                    // The look lives with the kit's styles (rendered here without the overlay host, so read the source).
                     const scss = readFileSync("src/Dom/kit.scss", "utf-8");
                     const block = scss.slice(scss.indexOf(".lscg-kit-expando {"), scss.indexOf(".lscg-kit-expando-summary"));
-                    expect(block).toMatch(/background-color:\s*color-mix\(/);
+                    expect(block).toMatch(/--lscg-expando-tint:\s*#00d5d5/);
+                    expect(block).toMatch(/border:[^;]*var\(--lscg-expando-tint\)/);
+                    expect(block).not.toMatch(/box-shadow/);
+                    expect(block).toMatch(/background-color:\s*var\(--lscg-background-color\)/); // the panel's own, so the row stripes look the same
                 });
 
                 it("open when the effect still needs something chosen, closed once it has been", () => {

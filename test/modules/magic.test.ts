@@ -14,7 +14,9 @@ import { CollarModule } from "Modules/collar";
 import { InjectorModule } from "Modules/injector";
 import { MagicModule } from "Modules/magic";
 import { StateModule } from "Modules/states";
-import { LSCGSpellEffect, type SpellDefinition } from "Settings/Models/magic";
+import { LSCGSpellEffect, type SpellDefinition, type SpellEffectId } from "Settings/Models/magic";
+import { spellEffects, type CastArgs, type SpellEffectContext } from "Modules/Magic/spellEffects";
+import { sanitizeCastArgs, voiceCastArgs } from "Modules/Magic/spellEdit";
 import { boot, resetWorld, player, addToRoom } from "../harness/world";
 import { makeCharacter, makeGroup, makeAsset, wear, makeItem, type FixtureCharacter } from "../harness/fixtures";
 import { seedRandom, restoreRandom } from "../harness/time";
@@ -240,6 +242,263 @@ describe("MagicModule", () => {
 			magic.IncomingSpellCommand(alice as never, { command: { name: "spell", args: [{ name: "spell", value: spell("blind", [LSCGSpellEffect.blindness]) }] } } as never);
 			expect(sent.actions()[0]).toContain("fizzles");
 		});
+
+		describe("the save readout", () => {
+			const readout = () => sent.actions().filter(a => a.startsWith("Save vs"));
+			const send = (s: SpellDefinition) => {
+				magic.IncomingSpellCommand(alice as never, { command: { name: "spell", args: [{ name: "spell", value: s }] } } as never);
+				vi.advanceTimersByTime(1000 + 2500);
+			};
+
+			it("shows both rolls and a saved result when the target wins", () => {
+				seedRandom([0.0, 0.99]); // attacker d20=1, defender d20=20
+				send(spell("blind", [LSCGSpellEffect.blindness]));
+				expect(readout()).toHaveLength(1);
+				expect(readout()[0]).toMatch(/^Save vs blind: \d+ \(20[+-]?\+?-?\d+\) vs \d+ \(1[+-]?\+?-?\d+\), saved!$/);
+			});
+
+			it("shows a failed result too, which used to say nothing", () => {
+				seedRandom([0.99, 0.0]);
+				send(spell("blind", [LSCGSpellEffect.blindness]));
+				expect(readout()).toHaveLength(1);
+				expect(readout()[0]).toMatch(/, failed\.$/);
+			});
+
+			it("is shown whether or not the check-roll setting is on, and the old saved line no longer repeats the numbers", () => {
+				Player.LSCG.GlobalModule.showCheckRolls = true;
+				seedRandom([0.0, 0.99]);
+				send(spell("blind", [LSCGSpellEffect.blindness]));
+				expect(readout()).toHaveLength(1);
+				expect(sent.actions().find(a => a.includes("successfully saves"))).not.toMatch(/\[/);
+			});
+
+			it("a target who never defends still sees one when the spell has damage, since that save counts", () => {
+				magic.settings.neverDefend = true;
+				seedRandom([0.0, 0.99]);
+				send({ ...spell("zap", [LSCGSpellEffect.damage]), Configs: [{ Type: "Fire", Roll: "1d4" }] } as SpellDefinition);
+				expect(readout()).toHaveLength(1);
+				expect(readout()[0]).toMatch(/saved!$/);
+			});
+
+			it("and sees none when no roll was used: never defending against a spell with no save", () => {
+				magic.settings.neverDefend = true;
+				seedRandom([0.0, 0.99]);
+				send(spell("blind", [LSCGSpellEffect.blindness]));
+				expect(readout()).toHaveLength(0);
+			});
+
+			it("and none for a beneficial spell, which is never saved against", () => {
+				seedRandom([0.0, 0.99]);
+				send(spell("bless", [LSCGSpellEffect.bless]));
+				expect(readout()).toHaveLength(0);
+			});
+		});
+
+		describe("damage on a save", () => {
+			const zap = (save?: string, extra: LSCGSpellEffect[] = []) => ({
+				...spell("zap", [LSCGSpellEffect.damage, ...extra]),
+				Configs: [{ Type: "Fire", Roll: "2d6 + 2", ...(save ? { Save: save } : {}) }],
+			}) as SpellDefinition;
+			const cast = (s: SpellDefinition) => {
+				magic.IncomingSpellCommand(alice as never, { command: { name: "spell", args: [{ name: "spell", value: s }] } } as never);
+				vi.advanceTimersByTime(1000 + 2500);
+				return sent.actions();
+			};
+			// Attacker d20=1, defender d20=20, then every later die comes up at the top: 2d6 + 2 = 14
+			const SAVES = [0.0, 0.99];
+
+			it("a successful save halves the damage, and nothing else of the spell applies", () => {
+				seedRandom(SAVES);
+				const out = cast(zap(undefined, [LSCGSpellEffect.blindness]));
+				expect(out.some(a => a.includes("takes 7 fire damage, halved from 14"))).toBe(true);
+				expect(states.BlindState.Active).toBe(false);
+			});
+
+			it("one save halves every Damaging copy, each by its own roll, and 'No damage' copies take none", () => {
+				seedRandom(SAVES);
+				const out = cast({
+					...spell("storm", [LSCGSpellEffect.damage, LSCGSpellEffect.damage, LSCGSpellEffect.damage]),
+					Configs: [{ Type: "Fire", Roll: "2d6 + 2" }, { Type: "Cold", Roll: "1d8", Save: "No damage" }, { Type: "Acid", Roll: "1d4" }],
+				} as SpellDefinition);
+				expect(out.some(a => a.includes("takes 7 fire damage, halved from 14"))).toBe(true);
+				expect(out.some(a => a.includes("cold"))).toBe(false);
+				expect(out.some(a => a.includes("takes 2 acid damage, halved from 4"))).toBe(true);
+			});
+
+			it("'No damage' on a save avoids the damage entirely", () => {
+				seedRandom(SAVES);
+				const out = cast(zap("No damage"));
+				expect(out.some(a => a.includes("successfully saves"))).toBe(true);
+				expect(out.some(a => a.includes("damage"))).toBe(false);
+			});
+
+			it("a failed save takes the full damage", () => {
+				seedRandom([0.99, 0.0]);
+				const out = cast(zap());
+				expect(out.some(a => a.includes("takes 4 fire damage"))).toBe(true); // d20s 20 and 1, then both d6 land on 1: 1 + 1 + 2
+				expect(out.some(a => a.includes("saves"))).toBe(false);
+			});
+
+			it("someone who never defends still saves against the damage, while the rest of the spell lands", () => {
+				magic.settings.neverDefend = true;
+				seedRandom(SAVES);
+				const out = cast(zap(undefined, [LSCGSpellEffect.blindness]));
+				expect(out.some(a => a.includes("takes 7 fire damage, halved from 14"))).toBe(true);
+				expect(states.BlindState.Active).toBe(true);
+			});
+
+			it("a barrier bounce takes the whole spell, with no half damage for the target", () => {
+				states.BarrierState.Barrier(1, false);
+				seedRandom(SAVES);
+				const out = cast(zap());
+				expect(out.some(a => a.includes("bounce back"))).toBe(true);
+				expect(out.some(a => a.includes("damage"))).toBe(false);
+			});
+
+			it("blocking the Damaging effect blocks the half damage too", () => {
+				magic.settings.blockedSpellEffects = [LSCGSpellEffect.damage];
+				seedRandom(SAVES);
+				expect(cast(zap()).some(a => a.includes("halved from"))).toBe(false);
+			});
+		});
+	});
+
+	describe("saves on any effect and cast-time questions", () => {
+		const ASK = "test.ask" as SpellEffectId;
+		const NEG = "test.neg" as SpellEffectId;
+		const calls: Partial<SpellEffectContext>[] = [];
+		const record = (ctx: SpellEffectContext) => calls.push({ effect: ctx.effect, index: ctx.index, saved: ctx.saved, castArgs: ctx.castArgs, config: ctx.config });
+		const unregister: (() => void)[] = [];
+		// A command-like effect: asks which word, reads the word from a voice cast, and takes half on a save
+		const askConfig = {
+			defaults: () => ({ Word: "a" }),
+			sanitize: (raw: unknown) => ({ Word: (raw as { Word?: string })?.Word === "b" ? "b" : "a" }),
+			summary: () => "ask",
+			castPrompts: (c: { Word: string }) => [{ key: "word", label: "Word", default: c.Word, options: [{ value: "a", label: "Alpha" }, { value: "b", label: "Beta" }, { value: "c", label: "Gamma" }] }],
+			fromVoice: (_c: unknown, text: string) => /beta|乙/i.test(text) ? { word: "b" } : undefined,
+		};
+		const SAVES = [0.0, 0.99]; // attacker d20=1, defender d20=20
+		const cast = (s: SpellDefinition, args?: CastArgs) => {
+			magic.IncomingSpellCommand(alice as never, { command: { name: "spell", args: [{ name: "spell", value: s }, ...(args ? [{ name: "args", value: args }] : [])] } } as never);
+			vi.advanceTimersByTime(1000 + 2000 * 4 + 500);
+			return sent.actions();
+		};
+
+		beforeEach(() => {
+			calls.length = 0;
+			unregister.push(
+				spellEffects.register({ id: ASK, label: "Ask", description: "t", stackable: 2, tier: 1, config: askConfig, onSave: "half", apply: record }),
+				spellEffects.register({ id: NEG, label: "Negatable", description: "t", tier: 1, onSave: "negate", apply: record }),
+			);
+		});
+
+		afterEach(() => {
+			unregister.splice(0).forEach(u => u());
+			restoreRandom();
+		});
+
+		describe("saves", () => {
+			it("a target who never defends still saves: 'negate' effects are resisted by name, 'half' ones get the saved flag, the rest land as given", () => {
+				magic.settings.neverDefend = true;
+				seedRandom(SAVES);
+				const out = cast(spell("mix", [NEG, ASK, LSCGSpellEffect.blindness]));
+				expect(out.some(a => a.includes("resists the Negatable magic"))).toBe(true);
+				expect(calls.map(c => [c.effect, c.saved])).toEqual([[ASK, true]]);
+				expect(states.BlindState.Active).toBe(true);
+			});
+
+			it("without a save nothing is flagged or resisted", () => {
+				magic.settings.neverDefend = true;
+				seedRandom([0.99, 0.0]);
+				const out = cast(spell("mix", [NEG, ASK]));
+				expect(out.some(a => a.includes("resists"))).toBe(false);
+				expect(calls.map(c => [c.effect, c.saved])).toEqual([[NEG, false], [ASK, false]]);
+			});
+
+			it("a full resist still lets the 'half' effects through, each with its own answers, and drops the rest", () => {
+				seedRandom(SAVES);
+				cast(spell("mix", [NEG, ASK, LSCGSpellEffect.blindness, ASK]), { 1: { word: "b" }, 3: { word: "c" } });
+				expect(calls.map(c => [c.effect, c.index, c.saved, c.castArgs])).toEqual([[ASK, 0, true, { word: "b" }], [ASK, 1, true, { word: "c" }]]);
+				expect(states.BlindState.Active).toBe(false);
+			});
+		});
+
+		describe("cast answers", () => {
+			it("only answers to a real question with one of its options are kept", () => {
+				const s = spell("q", [ASK, LSCGSpellEffect.blindness, ASK]);
+				expect(sanitizeCastArgs({ 0: { word: "c" }, 1: { word: "x" }, 2: { word: "nope", extra: "y" }, 9: { word: "a" } }, s)).toEqual({ 0: { word: "c" } });
+				expect(sanitizeCastArgs("nope", s)).toBeUndefined();
+				expect(sanitizeCastArgs({ 0: { word: 5 } }, s)).toBeUndefined();
+			});
+
+			it("answers sent with a spell reach the effect, and junk ones are dropped", () => {
+				cast(spell("q", [ASK]), { 0: { word: "c", other: "x" }, 4: { word: "a" } });
+				expect(calls[0].castArgs).toEqual({ word: "c" });
+				calls.length = 0;
+				cast(spell("q", [ASK]), { 0: { word: "zzz" } });
+				expect(calls[0].castArgs).toBeUndefined();
+			});
+
+			it("a spell sent to another player carries the answers, and a barrier bounce sends them back", () => {
+				magic.CastSpellActual(spell("q", [ASK]), alice as never, false, undefined, { 0: { word: "b" } });
+				expect(sent.hidden().find(m => m.command?.name === "spell")?.command?.args).toContainEqual({ name: "args", value: { 0: { word: "b" } } });
+				sent.hidden().length = 0;
+				states.BarrierState.Barrier(1, false);
+				seedRandom(SAVES);
+				cast(spell("q", [ASK]), { 0: { word: "b" } });
+				expect(sent.hidden().find(m => m.command?.name === "spell")?.command?.args).toContainEqual({ name: "args", value: { 0: { word: "b" } } });
+			});
+
+			it("casting on yourself passes the answers straight to the effect", () => {
+				magic.CastSpellActual(spell("q", [ASK]), player() as never, false, undefined, { 0: { word: "b" } });
+				vi.advanceTimersByTime(1000 + 2500);
+				expect(calls[0].castArgs).toEqual({ word: "b" });
+			});
+		});
+
+		describe("the cast menu's questions", () => {
+			it("a spell with questions opens them first, with each effect's default chosen, and casts with the answers on confirm", () => {
+				const s = spell("q", [ASK]);
+				s.Configs = [{ Word: "b" }];
+				magic.CastSpellInitial(s, alice as never);
+				expect(magic.SpellCastOptions.Open).toBe(true);
+				expect(magic.SpellCastOptions.Answers).toEqual({ 0: { word: "b" } });
+				expect(sent.hidden().some(m => m.command?.name === "spell")).toBe(false); // nothing cast yet
+				magic.SpellCastOptions.Answers[0].word = "c";
+				magic.ConfirmCastPrompts();
+				expect(magic.SpellCastOptions.Open).toBe(false);
+				expect(sent.hidden().find(m => m.command?.name === "spell")?.command?.args).toContainEqual({ name: "args", value: { 0: { word: "c" } } });
+			});
+
+			it("a spell with no questions casts straight away", () => {
+				magic.CastSpellInitial(spell("plain", [LSCGSpellEffect.blindness]), alice as never);
+				expect(magic.SpellCastOptions.Open).toBe(false);
+				expect(sent.hidden().some(m => m.command?.name === "spell")).toBe(true);
+			});
+		});
+
+		describe("voice casting", () => {
+			it("reads the answer from the words after the target's name, and falls back to the default when there are none", () => {
+				const s = { ...spell("q", [ASK]), AllowVoiceCast: true };
+				expect(voiceCastArgs(s, " beta please")).toEqual({ 0: { word: "b" } });
+				expect(voiceCastArgs(s, " 乙")).toEqual({ 0: { word: "b" } });
+				expect(voiceCastArgs(s, " nothing useful")).toBeUndefined();
+			});
+
+			it("a voice cast passes what it heard after the target to the cast", () => {
+				magic.settings.knownSpells = [{ ...spell("zap", [ASK]), AllowVoiceCast: true, CastingPhrase: "zap" }];
+				magic.CheckForSpellVoiceCasting("zap Alice beta");
+				expect(sent.hidden().find(m => m.command?.name === "spell")?.command?.args).toContainEqual({ name: "args", value: { 0: { word: "b" } } });
+			});
+
+			it("words before the target don't count, and nothing heard means no answers are sent", () => {
+				magic.settings.knownSpells = [{ ...spell("zap", [ASK]), AllowVoiceCast: true, CastingPhrase: "zap" }];
+				magic.CheckForSpellVoiceCasting("beta zap Alice");
+				const message = sent.hidden().find(m => m.command?.name === "spell");
+				expect(message).toBeDefined();
+				expect(message?.command?.args.some((arg: { name: string }) => arg.name === "args")).toBe(false);
+			});
+		});
 	});
 
 	describe("magic item detection", () => {
@@ -310,6 +569,54 @@ describe("MagicModule", () => {
 			magic.CheckForSpellVoiceCasting("(frost bolt Sera");
 			vi.advanceTimersByTime(2500);
 			expect(states.BlindState.Active).toBe(false);
+		});
+
+		describe("Chinese (#877)", () => {
+			const cast = (phrase: string, line: string) => {
+				magic.settings.knownSpells = [spell(phrase, [LSCGSpellEffect.blindness], { AllowVoiceCast: true, CastingPhrase: phrase })];
+				magic.CheckForSpellVoiceCasting(line);
+				vi.advanceTimersByTime(1000 + 2500);
+				return states.BlindState.Active;
+			};
+
+			it("casts a Chinese incantation followed by a space and the target", () => {
+				expect(cast("冰冻术", "冰冻术 Sera")).toBe(true);
+			});
+
+			it("casts a Chinese incantation with no space before the target", () => {
+				expect(cast("冰冻术", "冰冻术Sera")).toBe(true);
+			});
+
+			it("casts when the incantation sits inside a longer Chinese sentence", () => {
+				expect(cast("冰冻术", "我施放冰冻术 Sera 快跑")).toBe(true);
+			});
+
+			it("casts on a target with a Chinese nickname", () => {
+				globalThis.Player.Nickname = "小塞拉";
+				expect(cast("冰冻术", "冰冻术 小塞拉")).toBe(true);
+			});
+
+			it("casts a mixed English/Chinese incantation", () => {
+				expect(cast("frost 冰", "frost 冰 Sera")).toBe(true);
+			});
+
+			it("still requires word edges and a space for latin incantations", () => {
+				expect(cast("frost bolt", "frost bolts Sera")).toBe(false);
+				expect(cast("frost bolt", "frost boltSera")).toBe(false);
+				expect(cast("frost bolt", "superfrost bolt Sera")).toBe(false);
+			});
+
+			it("casts an accented latin incantation as a whole phrase with a space before the name", () => {
+				expect(cast("écoute", "écoute Sera")).toBe(true);
+			});
+
+			it("does not cast an accented latin incantation with no space before the name", () => {
+				expect(cast("café", "caféSera")).toBe(false);
+			});
+
+			it("does not cast an accented latin incantation inside a longer word", () => {
+				expect(cast("café", "descafé Sera")).toBe(false);
+			});
 		});
 	});
 

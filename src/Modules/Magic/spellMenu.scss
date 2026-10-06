@@ -37,7 +37,6 @@
 	}
 
 	// Cards and person buttons are .lscg-button for the look; undo its fixed-size, single-line layout.
-	.lscg-spellmenu-card,
 	.lscg-spellmenu-person {
 		width: auto;
 		height: auto;
@@ -45,13 +44,41 @@
 		text-align: left;
 	}
 
+	// Every card is the same size, whatever its spell has: the name on one line, then room for a couple of lines of effect chips, clipped
+	// rather than growing or spilling over the next card. The full list is in the card's tooltip.
 	.lscg-spellmenu-card {
 		display: grid;
-		align-content: start;
+		grid-template-columns: minmax(0, 1fr);
+		grid-template-rows: auto minmax(0, 1fr);
+		align-content: stretch;
+		justify-items: stretch;
 		gap: min(0.8dvh, 0.4dvw);
+		box-sizing: border-box;
+		width: 100%;
+		min-width: 0;
+		height: min(15dvh, 7.5dvw);
 		padding: min(1.2dvh, 0.6dvw) min(1.5dvh, 0.75dvw);
+		overflow: hidden;
+		white-space: normal;
+		text-align: left;
 
 		.lscg-spellmenu-name {
+			display: block;
+			min-width: 0;
+			overflow: hidden;
+			text-overflow: ellipsis;
+			white-space: nowrap;
+			text-align: left;
+		}
+
+		.lscg-kit-chips {
+			align-content: flex-start;
+			min-height: 0;
+			overflow: hidden;
+		}
+
+		.lscg-kit-chip {
+			max-width: 100%;
 			overflow: hidden;
 			text-overflow: ellipsis;
 		}
@@ -86,5 +113,38 @@
 			width: auto;
 			height: min(6dvh, 3dvw);
 		}
+	}
+
+	// Questions asked before casting: a label over a row of choices, the chosen one marked.
+	.lscg-spellmenu-prompt {
+		display: grid;
+		gap: min(0.8dvh, 0.4dvw);
+		margin-bottom: min(1.5dvh, 0.75dvw);
+
+		b {
+			text-align: left;
+		}
+	}
+
+	.lscg-spellmenu-choice {
+		width: auto;
+		height: auto;
+		white-space: normal;
+
+		&.lscg-spellmenu-chosen {
+			background-color: var(--lscg-accent-color, #00d5d5);
+			color: #000;
+		}
+	}
+
+	.lscg-spellmenu-actions {
+		display: flex;
+		gap: min(1.5dvh, 0.75dvw);
+		margin-top: min(1.5dvh, 0.75dvw);
+	}
+
+	.lscg-spellmenu-cast {
+		width: auto;
+		height: auto;
 	}
 }

@@ -10,12 +10,119 @@ import { InjectorModule } from "Modules/injector";
 import { MagicModule } from "Modules/magic";
 import { StateModule } from "Modules/states";
 import { OutfitCollectionModule } from "Modules/outfitCollection";
-import { ABSOLUTE_MAX_SPELL_EFFECTS, DEFAULT_MAX_SPELL_EFFECTS, LSCGSpellEffect, maxSpellEffects, sanitizeIncomingEffects, type SpellDefinition, type SpellEffectId } from "Settings/Models/magic";
-import { builtInEffectIds, effectDescription, effectLabel, extensionEffectIds, getSpellEffect, spellEffects, spellIsBeneficial } from "Modules/Magic/spellEffects";
+import { ABSOLUTE_MAX_SPELL_EFFECTS, DEFAULT_MAX_SPELL_EFFECTS, DamageSave, DamageType, LSCGSpellEffect, maxSpellEffects,  type SpellDefinition, type SpellEffectId } from "Settings/Models/magic";
+import { builtInEffectIds, effectDescription, effectDomain, effectLabel, effectSchool, effectsInDomain, effectsInSchool, effectsInTier, effectTier, effectTooltip, extensionEffectIds, getSpellEffect, spellEffects, spellIsBeneficial } from "Modules/Magic/spellEffects";
+import { SPELL_DOMAINS, SPELL_TIERS, SpellDomain, SpellSchool } from "Modules/Magic/taxonomy";
+import { damageTier, MAX_DAMAGE_ROLL } from "Modules/Magic/effects/damage";
+import { retier, spellTier } from "Modules/Magic/spellEdit";
+import { addEffect, canHaveEffect, effectConfigFor, removeEffect, sanitizeSpell, setEffect, stackLimit, writeConfig } from "Modules/Magic/spellEdit";
+import { sanitizeDamageConfig } from "Modules/Magic/effects/damage";
 import { registerExtension, type ModApiHandle } from "api/extensions";
 import { boot, resetWorld, player, addToRoom } from "../harness/world";
 import { makeAsset, makeCharacter, makeGroup, makeItem, wear, type FixtureCharacter } from "../harness/fixtures";
 import { sent } from "../harness/room";
+import { restoreRandom, seedRandom } from "../harness/time";
+
+describe("effect domains, schools and tiers", () => {
+    const L = LSCGSpellEffect;
+    const spell = (name: string, effects: SpellEffectId[]) => ({ Name: name, Creator: 2, Effects: effects, AllowPotion: false, AllowVoiceCast: false }) as SpellDefinition;
+    const ids = (...e: LSCGSpellEffect[]) => e.sort();
+
+    it("every built-in has a domain, a school and a tier from 1 to 5", () => {
+        for (const id of builtInEffectIds()) {
+            expect(SPELL_DOMAINS.map(d => d.id), id).toContain(effectDomain(id));
+            expect(Object.values(SpellSchool), id).toContain(effectSchool(id));
+            expect(SPELL_TIERS, id).toContain(effectTier(id));
+        }
+    });
+
+    it("lists each domain's effects", () => {
+        const group = (d: SpellDomain) => effectsInDomain(d).sort();
+        expect(group(SpellDomain.mind)).toEqual(ids(L.hypnotizing, L.slumber, L.command));
+        expect(group(SpellDomain.senses)).toEqual(ids(L.blindness, L.deafened, L.xRay, L.project));
+        expect(group(SpellDomain.form)).toEqual(ids(L.enlarge, L.polymorph, L.outfit, L.dissolve));
+        expect(group(SpellDomain.binding)).toEqual(ids(L.muted, L.frozen, L.tighten, L.loosen, L.disarm, L.web, L.slime, L.ropes, L.grasp));
+        expect(group(SpellDomain.desire)).toEqual(ids(L.horny, L.denial, L.orgasm, L.orgasm_siphon, L.paired_arousal));
+        expect(group(SpellDomain.harm)).toEqual(ids(L.damage));
+        expect(group(SpellDomain.fortune)).toEqual(ids(L.bless, L.bane));
+        expect(group(SpellDomain.warding)).toEqual(ids(L.barrier, L.dispel, L.removeCurse));
+    });
+
+    it("lists each school's effects", () => {
+        const group = (d: SpellSchool) => effectsInSchool(d).sort();
+        expect(group(SpellSchool.abjuration)).toEqual(ids(L.barrier, L.dispel, L.removeCurse));
+        expect(group(SpellSchool.conjuration)).toEqual(ids(L.project, L.web, L.slime, L.ropes, L.grasp));
+        expect(group(SpellSchool.divination)).toEqual(ids(L.xRay));
+        expect(group(SpellSchool.enchantment)).toEqual(ids(L.hypnotizing, L.slumber, L.horny, L.bless, L.bane, L.paired_arousal, L.denial, L.orgasm, L.command));
+        expect(group(SpellSchool.evocation)).toEqual(ids(L.damage));
+        expect(group(SpellSchool.illusion)).toEqual(ids(L.muted, L.outfit));
+        expect(group(SpellSchool.necromancy)).toEqual(ids(L.blindness, L.deafened, L.orgasm_siphon));
+        expect(group(SpellSchool.transmutation)).toEqual(ids(L.frozen, L.enlarge, L.polymorph, L.disarm, L.tighten, L.loosen, L.dissolve));
+    });
+
+    it("lists each tier's effects (an effect whose tier depends on its settings by its lowest)", () => {
+        const tier = (t: 1 | 2 | 3 | 4 | 5) => effectsInTier(t).sort();
+        expect(tier(1)).toEqual(ids(L.loosen, L.tighten, L.disarm, L.horny, L.muted, L.bless, L.bane, L.damage, L.dissolve, L.removeCurse));
+        expect(tier(2)).toEqual(ids(L.blindness, L.deafened, L.xRay, L.enlarge, L.outfit, L.denial, L.orgasm, L.web, L.ropes, L.command));
+        expect(tier(3)).toEqual(ids(L.slumber, L.hypnotizing, L.frozen, L.paired_arousal, L.orgasm_siphon, L.barrier, L.slime, L.grasp));
+        expect(tier(4)).toEqual(ids(L.polymorph, L.project, L.dispel));
+        expect(tier(5)).toEqual([]);
+    });
+
+    it("extension effects have none of them, and count for nothing in a spell's power", () => {
+        const id = "ext.shrink" as SpellEffectId;
+        expect(effectDomain(id)).toBeUndefined();
+        expect(effectTier(id)).toBe(0);
+        expect(effectTier("nobody.knows")).toBe(0);
+    });
+
+    it("the tooltip names the school, and not yet the tier", () => {
+        expect(effectTooltip(L.hypnotizing)).toContain("Enchantment");
+        expect(effectTooltip(L.hypnotizing)).not.toMatch(/tier/i);
+    });
+
+    describe("Damaging's tier comes from its roll", () => {
+        it.each([
+            ["", 1], ["1d8", 1], ["2d4", 1], ["2d8", 2], ["3d6+2", 2], ["4d10", 3], ["8d6", 3], ["10d10+12", 4], ["20d12", 5], [`1d${MAX_DAMAGE_ROLL}`, 5],
+        ])("%j is tier %i", (Roll, tier) => {
+            expect(damageTier({ Roll })).toBe(tier);
+            expect(effectTier(L.damage, { Roll })).toBe(tier);
+        });
+
+        it("negative modifiers don't lower it, and a roll above the top tier is rejected", () => {
+            expect(damageTier({ Roll: "4d10 - 30" })).toBe(3);
+            expect(sanitizeDamageConfig({ Type: "Fire", Roll: "22d12" }).Roll).toBe("");
+            expect(sanitizeDamageConfig({ Type: "Fire", Roll: "20d12" }).Roll).toBe("20d12");
+        });
+    });
+
+    describe("a spell's total power", () => {
+        const withDamage = (...rolls: string[]) => ({ ...spell("x", rolls.map(() => LSCGSpellEffect.damage)), Configs: rolls.map(Roll => ({ Type: "Fire", Roll })) }) as SpellDefinition;
+
+        it("adds every effect's tier, counting each copy and each copy's own roll", () => {
+            expect(spellTier(spell("x", [L.hypnotizing, L.blindness]))).toBe(5);
+            expect(spellTier(withDamage("", "2d8", "4d10"))).toBe(1 + 2 + 3);
+            expect(spellTier(spell("x", [L.horny, "ext.shrink" as SpellEffectId]))).toBe(1);
+        });
+
+        it("is stored on the spell and recomputed whenever its effects or their settings change", () => {
+            const s = spell("x", [L.damage]);
+            retier(s);
+            expect(s.Tier).toBe(1);
+            addEffect(s, L.hypnotizing);
+            expect(s.Tier).toBe(4);
+            writeConfig(s, 0, { Type: "Fire", Roll: "4d10" });
+            expect(s.Tier).toBe(6);
+            removeEffect(s, 1);
+            expect(s.Tier).toBe(3);
+        });
+
+        it("is worked out again for a spell from another player, whatever it claims", () => {
+            const s = sanitizeSpell({ ...spell("x", [L.horny]), Tier: 99 });
+            expect(s.Tier).toBe(1);
+        });
+    });
+});
 
 describe("built-in spell effects", () => {
     const real = Object.values(LSCGSpellEffect).filter(e => e !== LSCGSpellEffect.none);
@@ -27,7 +134,7 @@ describe("built-in spell effects", () => {
 
     it("keeps the flags of the old hardcoded lists", () => {
         const flagged = (flag: "beneficial" | "paired" | "forcesDuration") => spellEffects.all().filter(d => d[flag]).map(d => d.id).sort();
-        expect(flagged("beneficial")).toEqual([LSCGSpellEffect.barrier, LSCGSpellEffect.bless, LSCGSpellEffect.dispel, LSCGSpellEffect.loosen, LSCGSpellEffect.xRay].sort());
+        expect(flagged("beneficial")).toEqual([LSCGSpellEffect.barrier, LSCGSpellEffect.bless, LSCGSpellEffect.dispel, LSCGSpellEffect.loosen, LSCGSpellEffect.removeCurse, LSCGSpellEffect.xRay].sort());
         expect(flagged("paired")).toEqual([LSCGSpellEffect.orgasm_siphon, LSCGSpellEffect.paired_arousal].sort());
         expect(flagged("forcesDuration")).toEqual([LSCGSpellEffect.bane]);
         expect(getSpellEffect(LSCGSpellEffect.outfit)?.configurable).toBe("outfit");
@@ -265,6 +372,206 @@ describe("extension spell effects", () => {
         });
     });
 
+    describe("Damaging", () => {
+        const damageSpell = (damage?: unknown) => ({ ...spell("zap", [LSCGSpellEffect.damage]), Configs: damage === undefined ? undefined : [damage] } as SpellDefinition);
+        const cast = (s: SpellDefinition) => {
+            magic.IncomingSpell(alice as never, s, null, 1);
+            vi.advanceTimersByTime(2500);
+            return sent.actions().filter(a => a.includes("damage"));
+        };
+
+        afterEach(() => {
+            vi.restoreAllMocks();
+        });
+
+        it("is a harmful, configurable effect", () => {
+            const def = getSpellEffect(LSCGSpellEffect.damage);
+            expect(def?.config).toBeDefined();
+            expect(def?.stackable).toBe(3);
+            expect(spellIsBeneficial(damageSpell())).toBe(false);
+        });
+
+        it("rolls the dice and shows the type, total and the dice rolled", () => {
+            vi.spyOn(Math, "random").mockReturnValue(0.5); // every d6 comes up 4
+            const out = cast(damageSpell({ Type: "Fire", Roll: "2d6 + 2" }));
+            expect(out).toHaveLength(1);
+            expect(out[0]).toContain("takes 10 fire damage");
+            expect(out[0]).toContain("2d6 + 2 = [4, 4] + 2");
+        });
+
+        it("is an emote with no number when there's no roll, using Force when no type was chosen", () => {
+            const out = cast(damageSpell({ Type: "Psychic", Roll: "" }));
+            expect(out[0]).toContain("psychic damage");
+            expect(out[0]).not.toMatch(/\d/);
+            expect(cast(damageSpell()).at(-1)).toContain("force damage");
+        });
+
+        it("ignores a roll or type it can't use rather than failing", () => {
+            const out = cast(damageSpell({ Type: "Mind Flayer", Roll: "9999d9999" }));
+            expect(out[0]).toContain("force damage");
+            expect(out[0]).not.toMatch(/\d/);
+        });
+
+        it("sanitizeDamageConfig keeps a known type and a valid roll, tidied, and falls back to safe defaults", () => {
+            expect(sanitizeDamageConfig({ Type: "Cold", Roll: "1d8+3" })).toEqual({ Type: DamageType.cold, Roll: "1d8 + 3", Save: DamageSave.half });
+            expect(sanitizeDamageConfig({ Type: 5, Roll: { x: 1 } })).toEqual({ Type: DamageType.force, Roll: "", Save: DamageSave.half });
+            expect(sanitizeDamageConfig("nope")).toEqual({ Type: DamageType.force, Roll: "", Save: DamageSave.half });
+            expect(sanitizeDamageConfig(null)).toEqual({ Type: DamageType.force, Roll: "", Save: DamageSave.half });
+        });
+    });
+
+    describe("stacking effects and per-copy settings", () => {
+        const dmg = (Type: string, Roll = "") => ({ Type, Roll });
+        const stacked = (): SpellDefinition => ({
+            ...spell("storm", [LSCGSpellEffect.damage, LSCGSpellEffect.blindness, LSCGSpellEffect.damage]),
+            Configs: [dmg("Fire", "1d4"), null, dmg("Cold", "1d6")],
+        });
+
+        afterEach(() => {
+            vi.restoreAllMocks();
+        });
+
+        it("most effects are unique; Damaging stacks up to its limit", () => {
+            expect(stackLimit(LSCGSpellEffect.blindness)).toBe(1);
+            expect(stackLimit("someone.unknown")).toBe(1);
+            expect(stackLimit(LSCGSpellEffect.damage)).toBe(3);
+            const s = spell("x", [LSCGSpellEffect.damage, LSCGSpellEffect.damage, LSCGSpellEffect.blindness]);
+            expect(canHaveEffect(s, LSCGSpellEffect.damage)).toBe(true);
+            addEffect(s, LSCGSpellEffect.damage);
+            expect(canHaveEffect(s, LSCGSpellEffect.damage)).toBe(false);
+            expect(canHaveEffect(s, LSCGSpellEffect.damage, 0)).toBe(true); // changing one of the copies is fine
+            expect(canHaveEffect(s, LSCGSpellEffect.blindness)).toBe(false);
+        });
+
+        it("removing or replacing an effect keeps each copy's settings with it", () => {
+            const s = stacked();
+            removeEffect(s, 0);
+            expect(s.Effects).toEqual([LSCGSpellEffect.blindness, LSCGSpellEffect.damage]);
+            expect(s.Configs).toEqual([null, dmg("Cold", "1d6")]);
+            expect(effectConfigFor(s, 1)).toMatchObject({ Type: DamageType.cold, Roll: "1d6" });
+            setEffect(s, 1, LSCGSpellEffect.deafened);
+            expect(s.Configs).toEqual([null, null]); // the replacement starts with no settings of its own
+            removeEffect(s, 1);
+            expect(s.Configs).toBeUndefined(); // nothing left to keep
+        });
+
+        it("incoming spells keep stackable copies with their own settings and drop the rest", () => {
+            const lots = [dmg("Fire"), dmg("Cold"), dmg("Acid"), dmg("Poison")];
+            const s = sanitizeSpell({
+                ...spell("storm", [LSCGSpellEffect.damage, LSCGSpellEffect.damage, LSCGSpellEffect.damage, LSCGSpellEffect.damage, LSCGSpellEffect.blindness, LSCGSpellEffect.blindness]),
+                Configs: [...lots, { not: "used" }, { Also: "dropped" }],
+            });
+            expect(s.Effects).toEqual([LSCGSpellEffect.damage, LSCGSpellEffect.damage, LSCGSpellEffect.damage, LSCGSpellEffect.blindness]);
+            expect(s.Configs).toHaveLength(4);
+            expect((s.Configs as any[]).slice(0, 3).map(c => c.Type)).toEqual(["Fire", "Cold", "Acid"]);
+            expect((s.Configs as any[])[3]).toBeNull(); // no settings for an effect that has none
+        });
+
+        it("settings are sanitized, oversized ones dropped, and the whole list removed when nothing is left", () => {
+            const s = sanitizeSpell({
+                ...spell("x", [LSCGSpellEffect.damage, LSCGSpellEffect.damage]),
+                Configs: [dmg("Mind Flayer", "9999d9999"), { Type: "Fire", Roll: "1d4", Junk: "x".repeat(5000) }],
+            });
+            expect((s.Configs as any[])[0]).toEqual({ Type: DamageType.force, Roll: "", Save: DamageSave.half });
+            expect((s.Configs as any[])[1]).toMatchObject({ Type: DamageType.fire, Roll: "1d4" });
+            expect(JSON.stringify(s.Configs).length).toBeLessThan(300);
+            expect(sanitizeSpell({ ...spell("y", [LSCGSpellEffect.blindness]), Configs: [{ anything: 1 }] }).Configs).toBeUndefined();
+        });
+
+        it("each copy applies with its own settings and announces its own result", () => {
+            vi.spyOn(Math, "random").mockReturnValue(0.99); // every die at its top face
+            magic.IncomingSpell(alice as never, stacked(), null, 1);
+            vi.advanceTimersByTime(2000 * 3 + 500);
+            const out = sent.actions();
+            expect(out.some(a => a.includes("takes 4 fire damage"))).toBe(true);
+            expect(out.some(a => a.includes("takes 6 cold damage"))).toBe(true);
+            expect(states.BlindState.Active).toBe(true);
+        });
+
+        it("a blocked effect blocks every copy of it", () => {
+            magic.settings.blockedSpellEffects = [LSCGSpellEffect.damage];
+            expect(magic.filterAllowedSpellEffects(stacked(), alice as never)).toEqual([LSCGSpellEffect.blindness]);
+        });
+    });
+
+    describe("Dissolving Clothes", () => {
+        const cloth = (name: string, over: Record<string, unknown> = {}, groupOver: Record<string, unknown> = {}) => {
+            const group = makeGroup({ Name: name, Category: "Appearance", Clothing: true, ...groupOver } as never);
+            return wear(player(), makeItem(makeAsset(group, { Name: `${name}Thing`, ...over } as never))) as any;
+        };
+        const dissolve = (layers?: string) => ({ ...spell("poof", [LSCGSpellEffect.dissolve]), Configs: layers ? [{ Layers: layers }] : undefined }) as SpellDefinition;
+        const cast = (s: SpellDefinition) => {
+            magic.IncomingSpell(alice as never, s, null, 1);
+            vi.advanceTimersByTime(2500);
+            return sent.actions();
+        };
+        const worn = () => player().Appearance.map((i: any) => i.Asset.Group.Name).sort();
+
+        beforeEach(() => {
+            vi.stubGlobal("CharacterRefresh", vi.fn());
+        });
+
+        afterEach(() => {
+            vi.unstubAllGlobals();
+        });
+
+        it("dissolves clothing by default and leaves underwear, cosplay, body and restraints alone", () => {
+            cloth("Cloth");
+            cloth("Bra", {}, { Underwear: true });
+            cloth("Hat", {}, { BodyCosplay: true });
+            cloth("Eyes", {}, { Clothing: false });
+            const cuffs = wear(player(), makeItem(makeAsset(makeGroup({ Name: "ItemArms" }), { Name: "Cuffs" } as never))) as any;
+            const out = cast(dissolve());
+            expect(worn()).toEqual(["Bra", "Eyes", "Hat", "ItemArms"]);
+            expect(player().Appearance).toContain(cuffs);
+            expect(out.some(a => a.includes("clothes dissolve into glittering dust"))).toBe(true);
+        });
+
+        it("can take underwear only, or both", () => {
+            cloth("Cloth");
+            cloth("Bra", {}, { Underwear: true });
+            cast(dissolve("underwear"));
+            expect(worn()).toEqual(["Cloth"]);
+            cloth("Bra", {}, { Underwear: true });
+            cast(dissolve("both"));
+            expect(worn()).toEqual([]);
+        });
+
+        it("says so when there is nothing to dissolve", () => {
+            cloth("Eyes", {}, { Clothing: false });
+            const out = cast(dissolve());
+            expect(out.some(a => a.includes("finds no clothes to dissolve"))).toBe(true);
+            expect(worn()).toEqual(["Eyes"]);
+        });
+
+        it("an unknown layer from another player falls back to clothing", () => {
+            cloth("Cloth");
+            cloth("Bra", {}, { Underwear: true });
+            cast(dissolve("everything"));
+            expect(worn()).toEqual(["Bra"]);
+        });
+
+        it("two copies can take different layers", () => {
+            cloth("Cloth");
+            cloth("Bra", {}, { Underwear: true });
+            const s = { ...spell("poof", [LSCGSpellEffect.dissolve, LSCGSpellEffect.dissolve]), Configs: [{ Layers: "clothing" }, { Layers: "underwear" }] } as SpellDefinition;
+            cast(s);
+            vi.advanceTimersByTime(2000);
+            expect(worn()).toEqual([]);
+        });
+
+        it("takes no save of its own: someone who never defends loses the clothes however the dice fall", () => {
+            cloth("Cloth");
+            magic.settings.neverDefend = true;
+            seedRandom([0.0, 0.99]);
+            magic.IncomingSpellCommand(alice as never, { command: { name: "spell", args: [{ name: "spell", value: dissolve() }] } } as never);
+            vi.advanceTimersByTime(1000 + 2500);
+            restoreRandom();
+            expect(worn()).toEqual([]);
+            expect(sent.actions().some(a => a.includes("resists"))).toBe(false);
+        });
+    });
+
     describe("how many effects a spell can have", () => {
         it("a player's limit is 3 by default, and a bad saved value falls back to it", () => {
             expect(DEFAULT_MAX_SPELL_EFFECTS).toBe(3);
@@ -280,13 +587,13 @@ describe("extension spell effects", () => {
             expect(maxSpellEffects({ maxSpellEffects: 999 })).toBe(ABSOLUTE_MAX_SPELL_EFFECTS);
         });
 
-        it("effects from another player are strings only, without repeats, within the ceiling, in order", () => {
+        it("effects from another player are strings only, each unique one once, within the ceiling, in order", () => {
             const lots = Array.from({ length: 30 }, (_, i) => `x.e${i}`);
-            const cleaned = sanitizeIncomingEffects(["Blinding", 5, null, "", "Blinding", { a: 1 }, "Deafening", ...lots]);
+            const cleaned = sanitizeSpell({ Name: "x", Creator: 2, Effects: ["Blinding", 5, null, "", "Blinding", { a: 1 }, "Deafening", ...lots], AllowPotion: false, AllowVoiceCast: false } as never).Effects;
             expect(cleaned.slice(0, 2)).toEqual(["Blinding", "Deafening"]);
             expect(cleaned).toHaveLength(ABSOLUTE_MAX_SPELL_EFFECTS);
-            expect(sanitizeIncomingEffects("nope")).toEqual([]);
-            expect(sanitizeIncomingEffects(undefined)).toEqual([]);
+            expect(sanitizeSpell({ Name: "x", Effects: "nope" } as never).Effects).toEqual([]);
+            expect(sanitizeSpell({ Name: "x" } as never).Effects).toEqual([]);
         });
 
         it("a spell taught by another player is stored within those limits", () => {

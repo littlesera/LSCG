@@ -34,7 +34,8 @@
     /** Logs in as a test character and waits until LSCG has loaded. LSCG is opt-in on a new account; it's switched
      *  on here unless `enable: false`. */
     Playground.login = async (overrides = {}, { enable = true } = {}) => {
-        await Playground.until(() => typeof LoginResponse === "function" && CurrentScreen === "Login");
+        // LoginLoad builds its DOM after an awaited file read; logging in before then leaves those elements over the next screen
+        await Playground.until(() => typeof LoginResponse === "function" && CurrentScreen === "Login" && !!document.getElementById("login-cheats-button"));
         Playground.receive("LoginResponse", Playground.account(overrides));
         await Playground.until(() => window.LSCG?.isReady);
         if (enable) Player.LSCG.GlobalModule.enabled = true;

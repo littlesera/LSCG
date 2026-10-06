@@ -216,7 +216,11 @@ rest of the spell still applies.
 **If your extension is uninstalled,** spells that use your effects keep them, shown as "(unavailable)".
 
 In LSCG's menus, effects from extensions are marked with a star icon, and the spell editor lists them under
-"From extensions". `api.spells.listEffects()` lists every effect this client knows, built-in or not.
+"From extensions". `api.spells.listEffects()` lists every effect this client knows, built-in or not. Built-in entries also
+carry `domain` (LSCG's grouping: Mind, Senses, Form, Binding, Desire, Harm, Fortune, Warding), `school` (the classic school
+of magic) and `tier` (1 to 5, how powerful the effect is; for an effect whose power depends on its settings, its lowest).
+Extension effects have none of the three. A spell can hold the same effect more than once when that effect allows it, so an
+id may repeat in the `effects` of spell events.
 
 ---
 

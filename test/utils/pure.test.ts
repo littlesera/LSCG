@@ -154,3 +154,15 @@ describe("parseFromBase64 / parseFromUTF16 round trips", () => {
 		expect(parseFromBase64("")).toBeUndefined();
 	});
 });
+
+describe("isPhraseInString with Chinese (#877)", () => {
+	it("finds a Chinese phrase on its own, in a sentence, and next to latin text", () => {
+		expect(isPhraseInString("冰冻术", "冰冻术")).toBe(true);
+		expect(isPhraseInString("我施放冰冻术快跑", "冰冻术")).toBe(true);
+		expect(isPhraseInString("cast 冰冻术 now", "冰冻术")).toBe(true);
+	});
+
+	it("does not find a Chinese phrase that isn't there", () => {
+		expect(isPhraseInString("我施放火球术", "冰冻术")).toBe(false);
+	});
+});
