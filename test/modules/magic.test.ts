@@ -14,7 +14,9 @@ import { CollarModule } from "Modules/collar";
 import { InjectorModule } from "Modules/injector";
 import { MagicModule } from "Modules/magic";
 import { StateModule } from "Modules/states";
-import { LSCGSpellEffect, type SpellDefinition } from "Settings/Models/magic";
+import { LSCGSpellEffect, type SpellDefinition, type SpellEffectId } from "Settings/Models/magic";
+import { spellEffects, type CastArgs, type SpellEffectContext } from "Modules/Magic/spellEffects";
+import { sanitizeCastArgs, voiceCastArgs } from "Modules/Magic/spellEdit";
 import { boot, resetWorld, player, addToRoom } from "../harness/world";
 import { makeCharacter, makeGroup, makeAsset, wear, makeItem, type FixtureCharacter } from "../harness/fixtures";
 import { seedRandom, restoreRandom } from "../harness/time";
@@ -306,6 +308,144 @@ describe("MagicModule", () => {
 				magic.settings.blockedSpellEffects = [LSCGSpellEffect.damage];
 				seedRandom(SAVES);
 				expect(cast(zap()).some(a => a.includes("takes only"))).toBe(false);
+			});
+		});
+	});
+
+	describe("saves on any effect and cast-time questions", () => {
+		const ASK = "test.ask" as SpellEffectId;
+		const NEG = "test.neg" as SpellEffectId;
+		const calls: Partial<SpellEffectContext>[] = [];
+		const record = (ctx: SpellEffectContext) => calls.push({ effect: ctx.effect, index: ctx.index, saved: ctx.saved, castArgs: ctx.castArgs, config: ctx.config });
+		const unregister: (() => void)[] = [];
+		// A command-like effect: asks which word, reads the word from a voice cast, and takes half on a save
+		const askConfig = {
+			defaults: () => ({ Word: "a" }),
+			sanitize: (raw: unknown) => ({ Word: (raw as { Word?: string })?.Word === "b" ? "b" : "a" }),
+			summary: () => "ask",
+			castPrompts: (c: { Word: string }) => [{ key: "word", label: "Word", default: c.Word, options: [{ value: "a", label: "Alpha" }, { value: "b", label: "Beta" }, { value: "c", label: "Gamma" }] }],
+			fromVoice: (_c: unknown, text: string) => /beta|乙/i.test(text) ? { word: "b" } : undefined,
+		};
+		const SAVES = [0.0, 0.99]; // attacker d20=1, defender d20=20
+		const cast = (s: SpellDefinition, args?: CastArgs) => {
+			magic.IncomingSpellCommand(alice as never, { command: { name: "spell", args: [{ name: "spell", value: s }, ...(args ? [{ name: "args", value: args }] : [])] } } as never);
+			vi.advanceTimersByTime(1000 + 2000 * 4 + 500);
+			return sent.actions();
+		};
+
+		beforeEach(() => {
+			calls.length = 0;
+			unregister.push(
+				spellEffects.register({ id: ASK, label: "Ask", description: "t", stackable: 2, tier: 1, config: askConfig, onSave: "half", apply: record }),
+				spellEffects.register({ id: NEG, label: "Negatable", description: "t", tier: 1, onSave: "negate", apply: record }),
+			);
+		});
+
+		afterEach(() => {
+			unregister.splice(0).forEach(u => u());
+			restoreRandom();
+		});
+
+		describe("saves", () => {
+			it("a target who never defends still saves: 'negate' effects are resisted by name, 'half' ones get the saved flag, the rest land as given", () => {
+				magic.settings.neverDefend = true;
+				seedRandom(SAVES);
+				const out = cast(spell("mix", [NEG, ASK, LSCGSpellEffect.blindness]));
+				expect(out.some(a => a.includes("resists the Negatable magic"))).toBe(true);
+				expect(calls.map(c => [c.effect, c.saved])).toEqual([[ASK, true]]);
+				expect(states.BlindState.Active).toBe(true);
+			});
+
+			it("without a save nothing is flagged or resisted", () => {
+				magic.settings.neverDefend = true;
+				seedRandom([0.99, 0.0]);
+				const out = cast(spell("mix", [NEG, ASK]));
+				expect(out.some(a => a.includes("resists"))).toBe(false);
+				expect(calls.map(c => [c.effect, c.saved])).toEqual([[NEG, false], [ASK, false]]);
+			});
+
+			it("a full resist still lets the 'half' effects through, each with its own answers, and drops the rest", () => {
+				seedRandom(SAVES);
+				cast(spell("mix", [NEG, ASK, LSCGSpellEffect.blindness, ASK]), { 1: { word: "b" }, 3: { word: "c" } });
+				expect(calls.map(c => [c.effect, c.index, c.saved, c.castArgs])).toEqual([[ASK, 0, true, { word: "b" }], [ASK, 1, true, { word: "c" }]]);
+				expect(states.BlindState.Active).toBe(false);
+			});
+		});
+
+		describe("cast answers", () => {
+			it("only answers to a real question with one of its options are kept", () => {
+				const s = spell("q", [ASK, LSCGSpellEffect.blindness, ASK]);
+				expect(sanitizeCastArgs({ 0: { word: "c" }, 1: { word: "x" }, 2: { word: "nope", extra: "y" }, 9: { word: "a" } }, s)).toEqual({ 0: { word: "c" } });
+				expect(sanitizeCastArgs("nope", s)).toBeUndefined();
+				expect(sanitizeCastArgs({ 0: { word: 5 } }, s)).toBeUndefined();
+			});
+
+			it("answers sent with a spell reach the effect, and junk ones are dropped", () => {
+				cast(spell("q", [ASK]), { 0: { word: "c", other: "x" }, 4: { word: "a" } });
+				expect(calls[0].castArgs).toEqual({ word: "c" });
+				calls.length = 0;
+				cast(spell("q", [ASK]), { 0: { word: "zzz" } });
+				expect(calls[0].castArgs).toBeUndefined();
+			});
+
+			it("a spell sent to another player carries the answers, and a barrier bounce sends them back", () => {
+				magic.CastSpellActual(spell("q", [ASK]), alice as never, false, undefined, { 0: { word: "b" } });
+				expect(sent.hidden().find(m => m.command?.name === "spell")?.command?.args).toContainEqual({ name: "args", value: { 0: { word: "b" } } });
+				sent.hidden().length = 0;
+				states.BarrierState.Barrier(1, false);
+				seedRandom(SAVES);
+				cast(spell("q", [ASK]), { 0: { word: "b" } });
+				expect(sent.hidden().find(m => m.command?.name === "spell")?.command?.args).toContainEqual({ name: "args", value: { 0: { word: "b" } } });
+			});
+
+			it("casting on yourself passes the answers straight to the effect", () => {
+				magic.CastSpellActual(spell("q", [ASK]), player() as never, false, undefined, { 0: { word: "b" } });
+				vi.advanceTimersByTime(1000 + 2500);
+				expect(calls[0].castArgs).toEqual({ word: "b" });
+			});
+		});
+
+		describe("the cast menu's questions", () => {
+			it("a spell with questions opens them first, with each effect's default chosen, and casts with the answers on confirm", () => {
+				const s = spell("q", [ASK]);
+				s.Configs = [{ Word: "b" }];
+				magic.CastSpellInitial(s, alice as never);
+				expect(magic.SpellCastOptions.Open).toBe(true);
+				expect(magic.SpellCastOptions.Answers).toEqual({ 0: { word: "b" } });
+				expect(sent.hidden().some(m => m.command?.name === "spell")).toBe(false); // nothing cast yet
+				magic.SpellCastOptions.Answers[0].word = "c";
+				magic.ConfirmCastPrompts();
+				expect(magic.SpellCastOptions.Open).toBe(false);
+				expect(sent.hidden().find(m => m.command?.name === "spell")?.command?.args).toContainEqual({ name: "args", value: { 0: { word: "c" } } });
+			});
+
+			it("a spell with no questions casts straight away", () => {
+				magic.CastSpellInitial(spell("plain", [LSCGSpellEffect.blindness]), alice as never);
+				expect(magic.SpellCastOptions.Open).toBe(false);
+				expect(sent.hidden().some(m => m.command?.name === "spell")).toBe(true);
+			});
+		});
+
+		describe("voice casting", () => {
+			it("reads the answer from the words after the target's name, and falls back to the default when there are none", () => {
+				const s = { ...spell("q", [ASK]), AllowVoiceCast: true };
+				expect(voiceCastArgs(s, " beta please")).toEqual({ 0: { word: "b" } });
+				expect(voiceCastArgs(s, " 乙")).toEqual({ 0: { word: "b" } });
+				expect(voiceCastArgs(s, " nothing useful")).toBeUndefined();
+			});
+
+			it("a voice cast passes what it heard after the target to the cast", () => {
+				magic.settings.knownSpells = [{ ...spell("zap", [ASK]), AllowVoiceCast: true, CastingPhrase: "zap" }];
+				magic.CheckForSpellVoiceCasting("zap Alice beta");
+				expect(sent.hidden().find(m => m.command?.name === "spell")?.command?.args).toContainEqual({ name: "args", value: { 0: { word: "b" } } });
+			});
+
+			it("words before the target don't count, and nothing heard means no answers are sent", () => {
+				magic.settings.knownSpells = [{ ...spell("zap", [ASK]), AllowVoiceCast: true, CastingPhrase: "zap" }];
+				magic.CheckForSpellVoiceCasting("beta zap Alice");
+				const message = sent.hidden().find(m => m.command?.name === "spell");
+				expect(message).toBeDefined();
+				expect(message?.command?.args.some((arg: { name: string }) => arg.name === "args")).toBe(false);
 			});
 		});
 	});

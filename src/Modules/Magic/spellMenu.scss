@@ -87,4 +87,37 @@
 			height: min(6dvh, 3dvw);
 		}
 	}
+
+	// Questions asked before casting: a label over a row of choices, the chosen one marked.
+	.lscg-spellmenu-prompt {
+		display: grid;
+		gap: min(0.8dvh, 0.4dvw);
+		margin-bottom: min(1.5dvh, 0.75dvw);
+
+		b {
+			text-align: left;
+		}
+	}
+
+	.lscg-spellmenu-choice {
+		width: auto;
+		height: auto;
+		white-space: normal;
+
+		&.lscg-spellmenu-chosen {
+			background-color: var(--lscg-accent-color, #00d5d5);
+			color: #000;
+		}
+	}
+
+	.lscg-spellmenu-actions {
+		display: flex;
+		gap: min(1.5dvh, 0.75dvw);
+		margin-top: min(1.5dvh, 0.75dvw);
+	}
+
+	.lscg-spellmenu-cast {
+		width: auto;
+		height: auto;
+	}
 }

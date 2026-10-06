@@ -39,6 +39,7 @@ export const DAMAGE_EFFECT: SpellEffectDefinition = {
     description: "Hurts the target with a chosen type of damage, rolled from an optional dice expression. Only shown in chat for now.",
     stackable: 3,
     tier: damageTier,
+    onSave: (c: DamageConfig) => c.Save === DamageSave.none ? "negate" : "half",
     config: {
         defaults: (): DamageConfig => ({ Type: DEFAULT_DAMAGE_TYPE, Save: DamageSave.half, Roll: "" }),
         sanitize: sanitizeDamageConfig,
@@ -51,15 +52,12 @@ export const DAMAGE_EFFECT: SpellEffectDefinition = {
         },
         needsAttention: (c: DamageConfig) => !!c.Roll && !damageRoll(c.Roll),
     },
+    // A save that negates the damage never gets here: the spell's save handling skips the effect. Only a halving save does.
     apply: ({ spell, senderName, saved, config }) => {
         const damage = (config as DamageConfig | undefined) ?? sanitizeDamageConfig(undefined);
         const type = damage.Type.toLowerCase();
         const roll = damageRoll(damage.Roll);
-        const halved = !!saved && damage.Save !== DamageSave.none;
-        if (saved && !halved) {
-            SendAction(`%NAME% saves against the ${type} damage of ${senderName}'s ${spell.Name} and takes none of it.`);
-            return;
-        }
+        const halved = !!saved;
         if (!roll) {
             SendAction(halved
                 ? `%NAME% saves against ${senderName}'s ${spell.Name} and is only grazed by its ${type} damage.`

@@ -2,8 +2,8 @@ import { BaseModule } from "base";
 import { getModule } from "modules";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
 import { GetConfiguredItemBundlesFromOutfitKey, GetDelimitedList, OnChat, GetItemNameAndDescriptionConcat, GetMetadata, LSCG_SendLocal, LSCG_TEAL, OnActivity, SendAction, getCharacter, getRandomInt, hookFunction, isPhraseInString, removeAllHooksByModule, sendLSCGCommand, sendLSCGCommandBeep, settingsSave, getCharacterByNicknameOrMemberNumber, excludeParentheticalContent, escapeRegExp } from "../utils";
-import { ABSOLUTE_MAX_SPELL_EFFECTS, DamageConfig, DamageSave, DEFAULT_MAX_SPELL_EFFECTS, KNOWN_SPELLS_LIMIT, LSCGSpellEffect, MagicSettingsModel, OutfitOption, SpellDefinition, SpellEffectId } from "Settings/Models/magic";
-import { effectConfigFor, retier, sanitizeSpell } from "./Magic/spellEdit";
+import { ABSOLUTE_MAX_SPELL_EFFECTS, DEFAULT_MAX_SPELL_EFFECTS, KNOWN_SPELLS_LIMIT, LSCGSpellEffect, MagicSettingsModel, OutfitOption, SpellDefinition, SpellEffectId } from "Settings/Models/magic";
+import { effectConfigFor, pickEffects, retier, sanitizeCastArgs, sanitizeSpell, saveBehaviorFor, spellCastPrompts, voiceCastArgs } from "./Magic/spellEdit";
 import { GuiMagic } from "Settings/magic";
 import { StateModule } from "./states";
 import { IsActivityEnhanced, ItemUseModule, MagicWandItems } from "./item-use";
@@ -14,7 +14,7 @@ import { OutfitCollectionModule } from "./outfitCollection";
 import { hasMagicModule, hasMBSSettings, hasLSCGData, safeGetLSCGProp } from "../types/guards";
 import { emit, emitBefore, spellInfo } from "api/events";
 import { SPELL_MENU_SHAPE, SpellMenuView } from "./Magic/spellMenu";
-import { advertisedEffectIds, allEffectIds, effectLabel, extensionEffectIds, getSpellEffect, isLegacyEffect, spellEffects, spellForcesDuration, spellHasPairedEffect, spellIsBeneficial } from "./Magic/spellEffects";
+import { CastArgs, CastPrompt, advertisedEffectIds, allEffectIds, effectLabel, extensionEffectIds, getSpellEffect, isLegacyEffect, spellEffects, spellForcesDuration, spellHasPairedEffect, spellIsBeneficial } from "./Magic/spellEffects";
 
 const dialogButtonInfo = [965, 10, 100, 40, 5];
 const dialogButtonCoords: [number,number,number,number] = [dialogButtonInfo[0], dialogButtonInfo[1], 40, 40];
@@ -32,11 +32,28 @@ export class MagicModule extends BaseModule {
     SpellPairOption: {
         SelectOpen: boolean,
         Spell: SpellDefinition | undefined,
-        Source: Character | undefined
+        Source: Character | undefined,
+        CastArgs: CastArgs | undefined,
     } = {
         SelectOpen: false,
         Spell: undefined,
         Source: undefined,
+        CastArgs: undefined,
+    };
+
+    /** The questions a spell asks when cast from the menu (which command word, say), before the paired target if it needs one. */
+    SpellCastOptions: {
+        Open: boolean,
+        Spell: SpellDefinition | undefined,
+        Source: Character | undefined,
+        Prompts: { index: number, effect: SpellEffectId, prompts: CastPrompt[] }[],
+        Answers: CastArgs,
+    } = {
+        Open: false,
+        Spell: undefined,
+        Source: undefined,
+        Prompts: [],
+        Answers: {},
     };
 
     get Enabled(): boolean {
@@ -347,6 +364,7 @@ export class MagicModule extends BaseModule {
             this.SpellMenuOpen = false;
             this.TeachingSpell = false;
             this.SpellPairOption.SelectOpen = false;
+            this.SpellCastOptions.Open = false;
             if ((CurrentScreen as string) == "LSCG_SPELLS_DIALOG")
                 (CurrentScreen as string) = this.PrevScreen ?? "ChatRoom";
             DialogMenuMapping.dialog.Load();
@@ -422,14 +440,41 @@ export class MagicModule extends BaseModule {
             if (this.TeachingSpell) {
                 this.TeachSpellActual(spell, C as OtherCharacter);
             }
-            else if (this.SpellNeedsPair(spell)) {
-                this.SpellPairOption.Spell = spell;
-                this.SpellPairOption.Source = C;
-                this.SpellPairOption.SelectOpen = true;
-                this.spellMenu.refreshView();
-            } else {
-                this.CastSpellActual(spell, C, false);
+            else {
+                const prompts = spellCastPrompts(spell);
+                if (prompts.length > 0) {
+                    // Ask first; the answers are confirmed in the menu and the cast carries on from ConfirmCastPrompts
+                    this.SpellCastOptions = {
+                        Open: true, Spell: spell, Source: C, Prompts: prompts,
+                        Answers: Object.fromEntries(prompts.map(p => [p.index, Object.fromEntries(p.prompts.map(q => [q.key, q.default]))])),
+                    };
+                    this.spellMenu.refreshView();
+                } else
+                    this.CastSpellWithAnswers(spell, C, undefined);
             }
+        }
+    }
+
+    /** The caster confirmed the cast-time questions. */
+    ConfirmCastPrompts() {
+        const options = this.SpellCastOptions;
+        if (!options.Spell || !options.Source)
+            return;
+        const { Spell, Source, Answers } = options;
+        this.SpellCastOptions = { ...options, Open: false };
+        this.CastSpellWithAnswers(Spell, Source, Answers);
+    }
+
+    /** On to a paired target if the spell needs one, otherwise cast. */
+    CastSpellWithAnswers(spell: SpellDefinition, C: Character, castArgs: CastArgs | undefined) {
+        if (this.SpellNeedsPair(spell)) {
+            this.SpellPairOption.Spell = spell;
+            this.SpellPairOption.Source = C;
+            this.SpellPairOption.CastArgs = castArgs;
+            this.SpellPairOption.SelectOpen = true;
+            this.spellMenu.refreshView();
+        } else {
+            this.CastSpellActual(spell, C, false, undefined, castArgs);
         }
     }
 
@@ -471,7 +516,7 @@ export class MagicModule extends BaseModule {
         return castingActionStrings[getRandomInt(castingActionStrings.length)];
     }
 
-    CastSpellActual(spell: SpellDefinition | undefined, spellTarget: Character, voiceCast: boolean, pairedTarget?: Character) {
+    CastSpellActual(spell: SpellDefinition | undefined, spellTarget: Character, voiceCast: boolean, pairedTarget?: Character, castArgs?: CastArgs) {
         if (!!spell && !!spellTarget) {
             const wand = InventoryGet(Player, "ItemHandheld");
             if (!!wand && !!wand.Craft && wand.Craft.MemberNumber != Player.MemberNumber && getRandomInt(2) == 0) { // 50% chance of backfire when using someone else's wand
@@ -501,7 +546,7 @@ export class MagicModule extends BaseModule {
 
             if (spellTarget.IsPlayer()) {
                 const check = getModule<ItemUseModule>("ItemUseModule").UnopposedActivityRoll(spellTarget);
-                setTimeout(() => this.IncomingSpell(Player, spell, pairedTarget, Math.max(1, check.Total / 2)), 1000);
+                setTimeout(() => this.IncomingSpell(Player, spell, pairedTarget, Math.max(1, check.Total / 2), false, castArgs), 1000);
             }
             else
                 sendLSCGCommand(spellTarget, "spell", [
@@ -512,6 +557,7 @@ export class MagicModule extends BaseModule {
                         name: "paired",
                         value: pairedTarget?.MemberNumber,
                     },
+                    ...(castArgs ? [{ name: "args", value: castArgs }] : []),
                 ]);
         }
         this.CloseSpellMenu();
@@ -571,6 +617,7 @@ export class MagicModule extends BaseModule {
                     return;
                 if (typeof spell === "object")
                     sanitizeSpell(spell);
+                const castArgs = typeof spell === "object" ? sanitizeCastArgs(msg.command?.args?.find(arg => arg.name == "args")?.value, spell) : undefined;
                 const check = getModule<ItemUseModule>("ItemUseModule")?.MakeActivityCheck(sender, Player);
                 const harmful = !this.SpellIsBeneficial(spell);
                 const savedRoll = check.AttackerRoll.Total < check.DefenderRoll.Total;
@@ -589,12 +636,13 @@ export class MagicModule extends BaseModule {
                                     name: "paired",
                                     value: undefined,
                                 },
+                                ...(castArgs ? [{ name: "args", value: castArgs }] : []),
                             ]);
                             this.stateModule.BarrierState.Recover(false);
                             SendAction(`The magical barrier around ${CharacterNickname(Player)} disappear, drained of all its magical power.`);
                         }
                         else
-                            this.ApplySavedDamage(sender, spell);
+                            this.ApplySavedEffects(sender, spell, castArgs);
                         return;
                     }
                 }
@@ -602,9 +650,9 @@ export class MagicModule extends BaseModule {
                     this.stateModule.BarrierState.Recover(false);
                     SendAction(`The magical barrier around ${CharacterNickname(Player)} shatters, pierced by ${CharacterNickname(sender)}'s spell!`);
                 }
-                // Someone who never resists spells (or doesn't resist this caster) still rolls to save against damage
-                const savesAgainstDamage = harmful && savedRoll && !this.DefendAgainst(sender.MemberNumber ?? -1);
-                this.IncomingSpell(sender, spell, paired, Math.max(1, check.AttackerRoll.Total - check.DefenderRoll.Total), savesAgainstDamage);
+                // Someone who never resists spells (or doesn't resist this caster) still rolls to save against the effects that allow one
+                const savedWithoutResisting = harmful && savedRoll && !this.DefendAgainst(sender.MemberNumber ?? -1);
+                this.IncomingSpell(sender, spell, paired, Math.max(1, check.AttackerRoll.Total - check.DefenderRoll.Total), savedWithoutResisting, castArgs);
             }
             else if (msg.command?.name == "pair") {
                 const origin = getCharacter(msg.command?.args.find(arg => arg.name == "paired")?.value as number);
@@ -619,16 +667,15 @@ export class MagicModule extends BaseModule {
         }, 1000); // Slight delay on responding to spell commands, builds anticipation.
     }
 
-    /** A save that resisted a spell still halves its damage, unless the caster made the damage "No damage on a save". Only the
-     *  damage is applied; everything else was resisted. */
-    ApplySavedDamage(sender: Character, spell: SpellDefinition) {
-        // Each Damaging copy keeps its own settings, so keep the effect/settings pairs together.
-        const copies = spell.Effects.map((effect, index) => ({ effect, index })).filter(e => e.effect === LSCGSpellEffect.damage);
-        const hurting = copies.filter(e => (effectConfigFor(spell, e.index) as DamageConfig | undefined)?.Save !== DamageSave.none);
-        if (hurting.length <= 0)
+    /** A save that resisted a spell outright still lets its "half" effects (damage) through at half strength, unless the caster made them
+     *  "negate" on a save. Only those are applied; everything else was resisted. */
+    ApplySavedEffects(sender: Character, spell: SpellDefinition, castArgs?: CastArgs) {
+        // Each copy keeps its own settings and answers, so pick them as pairs.
+        const halving = spell.Effects.map((_, index) => index).filter(index => saveBehaviorFor(spell, index) === "half");
+        if (halving.length <= 0)
             return;
-        const damageOnly: SpellDefinition = { ...spell, Effects: hurting.map(e => e.effect), Configs: hurting.map(e => spell.Configs?.[e.index] ?? null) };
-        this.IncomingSpell(sender, damageOnly, null, 1, true);
+        const picked = pickEffects(spell, castArgs, halving);
+        this.IncomingSpell(sender, picked.spell, null, 1, true, picked.castArgs);
     }
 
     /** The spell's effects the target allows, each with its position so it applies with its own settings. */
@@ -646,8 +693,9 @@ export class MagicModule extends BaseModule {
         return (!isBlocked || isBypassed);
     }
 
-    /** `saved`: the target's roll beat the caster's, so damage is halved (or negated) while the rest of the spell applies as given. */
-    IncomingSpell(sender: Character | null, spell: SpellDefinition, paired?: Character | null, saveDiff: number = 1, saved: boolean = false) {
+    /** `saved`: the target's roll beat the caster's. Effects that allow a save take half or don't apply; the rest of the spell applies as given.
+     *  `castArgs`: the caster's answers to the spell's cast-time questions, already checked. */
+    IncomingSpell(sender: Character | null, spell: SpellDefinition, paired?: Character | null, saveDiff: number = 1, saved: boolean = false, castArgs?: CastArgs) {
         const senderName = !sender ? "Someone" : CharacterNickname(sender);
         // However many a caster's spell claims, only so many are applied: each one is a timer on this client.
         let allowedEntries = this.allowedEffectEntries(spell, sender).slice(0, ABSOLUTE_MAX_SPELL_EFFECTS);
@@ -685,6 +733,13 @@ export class MagicModule extends BaseModule {
         const spellDuration = duration;
         allowedEntries.forEach(({ effect, index }, ix, arr) => {
             setTimeout(() => {
+                const behavior = saved ? saveBehaviorFor(spell, index) : undefined;
+                if (behavior === "negate") {
+                    SendAction(`%NAME% resists the ${effectLabel(effect)} magic of ${senderName}'s ${spell.Name}.`);
+                    if (ix == arr.length - 1)
+                        settingsSave(true);
+                    return;
+                }
                 const effectHook = emitBefore("spell.beforeEffect", { effect, spell: info, sender: sender?.MemberNumber, duration: spellDuration });
                 // Shadows the spell-wide duration: the cases below use this effect's (possibly adjusted) duration.
                 const duration = sanitizeDuration(effectHook.payload.duration, spellDuration);
@@ -694,7 +749,7 @@ export class MagicModule extends BaseModule {
                 else if (!definition)
                     SendAction(`Part of ${senderName}'s ${spell.Name} washes over %NAME% without effect, its magic unfamiliar.`);
                 else {
-                    definition.apply({ effect, sender, senderName, spell, paired, duration, magic: this, saved, index, config: effectConfigFor(spell, index) });
+                    definition.apply({ effect, sender, senderName, spell, paired, duration, magic: this, saved: !!behavior, index, config: effectConfigFor(spell, index), castArgs: castArgs?.[index] });
                     emit("spell.effectApplied", { effect, spell: info, sender: sender?.MemberNumber, duration });
                 }
                 if (ix == arr.length - 1)
@@ -780,7 +835,7 @@ export class MagicModule extends BaseModule {
     // ***************** Voice Casting *******************
 
     CheckForSpellVoiceCasting(msg: string): void {
-        const spellTargetPair: [SpellDefinition | null, Character | null] | undefined = this.getSpellTargetTupleFromMsg(msg);
+        const spellTargetPair = this.getSpellTargetTupleFromMsg(msg);
         if (!spellTargetPair || !spellTargetPair[0] || !spellTargetPair[1]) // Skip if no or invalid tuple result
             return;
 
@@ -793,7 +848,7 @@ export class MagicModule extends BaseModule {
         if (this.SpellNeedsPair(foundSpell)) {
             pairTgt = this.PairedCharacterOptions(target)[getRandomInt(this.PairedCharacterOptions(target).length)];
         }
-        this.CastSpellActual(foundSpell, target, true, pairTgt);
+        this.CastSpellActual(foundSpell, target, true, pairTgt, spellTargetPair[2]);
     }
 
     /** Finds `phrase` followed by one of `names`. Word edges and the space between are required only where the characters either side
@@ -813,7 +868,8 @@ export class MagicModule extends BaseModule {
         return null;
     }
 
-    getSpellTargetTupleFromMsg(msg: string): [SpellDefinition | null, Character | null] | undefined {
+    /** The spell and target named in a chat line, and the answers any of the spell's cast-time questions get from the words after the target's name. */
+    getSpellTargetTupleFromMsg(msg: string): [SpellDefinition | null, Character | null, CastArgs | undefined] | undefined {
         const oocParsedString = excludeParentheticalContent(msg); // Don't allow voice casting in OOC chat   
         const characterNames = ChatRoomCharacter.map(c => [c.Name, c.Nickname, c.Nickname?.normalize("NFKC"), c.MemberNumber + ""]).reduce((a, b) => a.concat(b)).filter(c => !!c);
         for (const s of this.AvailableSpells.filter(s => s.AllowVoiceCast)) { // Only look at spells which allow voice cast
@@ -825,8 +881,11 @@ export class MagicModule extends BaseModule {
                 continue;
             const characterPhrase = matches[2] ?? "";
             const character = getCharacterByNicknameOrMemberNumber(characterPhrase);
-            if (character)
-                return [structuredClone(s), character]; // UnpackSpellCodes mutates; keep stored spells key-only (#680)
+            if (character) {
+                const spell = structuredClone(s); // UnpackSpellCodes mutates; keep stored spells key-only (#680)
+                const afterTarget = oocParsedString.slice(matches.index + matches[0].length);
+                return [spell, character, voiceCastArgs(spell, afterTarget)];
+            }
         }
         return undefined;
     }
