@@ -66,6 +66,24 @@ export function commandFromVoice(config: CommandConfig, text: string): CommandWo
     return best?.word;
 }
 
+/** What the command's push to the edge will come to for this player. BC itself announces an orgasm, a resist or a ruin once it starts, but denial and
+ *  edging hold the player at the edge before it ever does, so nothing else would say so. */
+export type OrgasmOutlook = "denied" | "edged" | "open";
+
+export function orgasmOutlook(magic: { stateModule: { DeniedState: { Active: boolean } } } | undefined): OrgasmOutlook {
+    if (Player.Effect?.includes("DenialMode") || magic?.stateModule.DeniedState.Active)
+        return "denied";
+    if (Player.IsEdged?.() || (typeof InventoryCraftCount === "function" && InventoryCraftCount(Player, "Edging") > 0))
+        return "edged";
+    return "open";
+}
+
+const CUM_LINES: Record<OrgasmOutlook, string> = {
+    open: "%NAME% is forced to the very edge by the spell's command, %POSSESSIVE% body shuddering on the brink of orgasm.",
+    edged: "%NAME% is forced to the very edge by the spell's command, but is held there, trembling and unable to tip over.",
+    denied: "%NAME% is forced to the very edge by the spell's command, but denial keeps release just out of reach.",
+};
+
 interface CommandData {
     word: CommandWord;
     /** For "follow", who is being followed. */
@@ -162,7 +180,7 @@ export const COMMAND_EFFECT: SpellEffectDefinition = {
                 break;
             }
             case "cum":
-                SendAction("%NAME% is forced right over the edge by the spell's command, %POSSESSIVE% body shuddering helplessly through %POSSESSIVE% orgasm.");
+                SendAction(CUM_LINES[orgasmOutlook(ctx.magic)]);
                 forceOrgasm();
                 break;
         }
