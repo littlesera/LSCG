@@ -392,15 +392,20 @@
 	}
 
 	// A collapsible section for settings that belong to the row above it, e.g. an effect's own options under its
-	// dropdown. A faded LSCG teal and compact, so it reads as set apart without shouting over the rows around it.
+	// dropdown. The panel's own background, so the striped rows inside look like the rest of the screen; set apart by a faded LSCG teal
+	// border instead, and lifted with a shadow while it is open.
 	.lscg-kit-expando {
 		--lscg-expando-tint: #00d5d5;
 		margin: min(0.4dvh, 0.2dvw) 0 min(0.8dvh, 0.4dvw) min(2.5dvh, 1.25dvw);
 		border: min(0.2dvh, 0.1dvw) solid color-mix(in srgb, var(--lscg-expando-tint) 35%, transparent);
 		border-left: min(0.5dvh, 0.25dvw) solid color-mix(in srgb, var(--lscg-expando-tint) 55%, transparent);
 		border-radius: min(0.6dvh, 0.3dvw);
-		background-color: color-mix(in srgb, var(--lscg-expando-tint) 6%, var(--lscg-background-color));
+		background-color: var(--lscg-background-color);
 		font-size: calc(var(--lscg-font-small) * 0.85);
+
+		&[open] {
+			box-shadow: 0 min(0.4dvh, 0.2dvw) min(1.2dvh, 0.6dvw) color-mix(in srgb, var(--lscg-expando-tint) 30%, rgba(0, 0, 0, 0.35));
+		}
 
 		.lscg-kit-expando-summary {
 			padding: min(0.5dvh, 0.25dvw) min(1dvh, 0.5dvw);
@@ -410,7 +415,7 @@
 			color: color-mix(in srgb, var(--lscg-text-color) 80%, transparent);
 
 			&:hover {
-				background-color: color-mix(in srgb, var(--lscg-expando-tint) 14%, transparent);
+				background-color: color-mix(in srgb, var(--lscg-expando-tint) 12%, var(--lscg-background-color));
 			}
 		}
 
