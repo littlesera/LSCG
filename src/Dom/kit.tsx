@@ -37,6 +37,9 @@ export interface SelectOption {
     label: string;
     /** Options with the same group, next to each other, are listed under that heading. */
     group?: string;
+    /** A smaller grey italic note after the label (an internal name, say). Needs the hand-built select; where the browser can't
+     *  style part of an option it is appended as " [detail]". */
+    detail?: string;
     /** Drawn before the label where the browser supports rich dropdowns (customizable select, Chromium 135+). */
     icon?: KitIcon;
 }
@@ -134,13 +137,14 @@ function groupOptions(options: SelectOption[]): [string | undefined, SelectOptio
 
 function createSelect(options: SelectOption[], id: string, onChange: (value: string) => void): HTMLSelectElement {
     // BC's dropdown for plain lists; icons and groups (optgroup) need the hand-built select below.
-    if (!options.some(o => o.icon || o.group))
+    if (!options.some(o => o.icon || o.group || o.detail))
         return ElementDropdown.Create(id, options.map(o => ({ tag: "option" as const, attributes: { value: o.value }, children: [o.label] })), function () { onChange(this.value); });
-    const rich = richSelects && options.some(o => !!o.icon);
+    const rich = richSelects && options.some(o => !!o.icon || !!o.detail);
     const select = <select id={id} class={rich ? "lscg-kit-select-rich" : ""} onChange={() => onChange(select.value)}>
         {groupOptions(options).map(([group, opts]) => {
             const items = opts.map(o => <option value={o.value}>
                 {o.icon ? (richSelects ? Icon(o.icon) : `${ICON_GLYPHS[o.icon]} `) : null}{o.label}
+                {o.detail ? (richSelects ? <span class="lscg-kit-option-detail">{`[${o.detail}]`}</span> : ` [${o.detail}]`) : null}
             </option>);
             return group ? <optgroup label={group}>{items}</optgroup> : items;
         })}

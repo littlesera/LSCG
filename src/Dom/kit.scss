@@ -495,6 +495,13 @@
 		align-items: center;
 	}
 
+	.lscg-kit-option-detail {
+		color: color-mix(in srgb, currentColor 45%, gray);
+		font-size: 0.8em;
+		font-style: italic;
+		margin-left: 0.5em;
+	}
+
 	.lscg-kit-chip-ok { --accent: #2ca58d; }
 	.lscg-kit-chip-warn { --accent: #d98a1f; }
 	.lscg-kit-chip-blocked { --accent: #b00020; }
