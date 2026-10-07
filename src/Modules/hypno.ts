@@ -98,6 +98,9 @@ export class HypnoModule extends BaseModule {
             awakeners: "",
             limitRemoteAccessToHypnotizer: false,
             suggestionRequireHypnotizer: true,
+            blockedInstructions: <LSCGHypnoInstruction[]>[],
+            alwaysSubmit: false,
+            alwaysSubmitMemberIds: "",
             hypnoEyeColor: "#A2A2A2",
             hypnoEyeType: 9,
             speakTriggers: "",
@@ -453,9 +456,9 @@ export class HypnoModule extends BaseModule {
                         }
                         else Object.assign(existing, incoming);
                     });
-                    removedSuggestions.forEach(removed => {
+                    (removedSuggestions ?? []).forEach(removed => {
                         const ix = this.settings.suggestions.findIndex(s => s.id == removed.id);
-                        this.settings.suggestions.splice(ix, 1);
+                        if (ix > -1) this.settings.suggestions.splice(ix, 1);
                     });
                     if (!AudioShouldSilenceSound(true))
                         AudioPlaySoundEffect("BellSmall");
@@ -741,7 +744,7 @@ export class HypnoModule extends BaseModule {
         if (!AudioShouldSilenceSound(true))
             AudioPlaySoundEffect("BellMedium");
 
-        const bypassResistance = this.settings.alwaysSubmit || (this.settings.alwaysSubmitMemberIds.split(",").map(id => id.trim()).indexOf(sender.MemberNumber + "") > -1);
+        const bypassResistance = this.settings.alwaysSubmit || ((this.settings.alwaysSubmitMemberIds ?? "").split(",").map(id => id.trim()).indexOf(sender.MemberNumber + "") > -1);
         const totalInfluence = this.GetSuggestionInfluence(suggestion, sender);
         const playerDomRepMod = 0;//getDominance(Player) / 2;
         // Calculate chance to resist suggestion, if 0 force activate
@@ -820,7 +823,7 @@ export class HypnoModule extends BaseModule {
         
         suggestion.instructions.forEach((instruction, ix, arr) => {
             setTimeout(() => {
-                if (this.settings.blockedInstructions.indexOf(instruction.type) > -1) {
+                if ((this.settings.blockedInstructions ?? []).indexOf(instruction.type) > -1) {
                     return this.BlockedInstruction(opts, instruction);
                 }
                 switch (instruction.type) {
@@ -1056,22 +1059,63 @@ export class HypnoModule extends BaseModule {
                 Speech: "false",
             };
             const hasItemPermission = ServerChatRoomGetAllowItem(Player, target);
-            const isAllowed = hasItemPermission && ActivityAllowedForGroup(target, activityGroup?.Name as AssetGroupItemName).filter(a => !a.Blocked).findIndex(a => a.Activity.Name == activity?.Name) > -1;
+            const allowedForGroup = hasItemPermission ? ActivityAllowedForGroup(target, activityGroup?.Name as AssetGroupItemName) : [];
+            const isAllowed = hasItemPermission && allowedForGroup.filter(a => !a.Blocked).findIndex(a => a.Activity.Name == activity?.Name) > -1;
             if (isAllowed) ActivityRun(Player, target, activityGroup as AssetItemGroup, <ItemActivity>{
                 Activity: activity,
                 Group: activityGroup.Name,
-                Item: InventoryGet(Player, "ItemHandheld"),
+                Item: allowedForGroup.find(a => a.Activity.Name == activity.Name && !a.Blocked)?.Item ?? InventoryGet(Player, "ItemHandheld"),
             }, true);
             else {
                 SendAction("%NAME% struggles to perform some action.");
                 LSCG_SendLocal(`Something beyond your control is preventing you from following your activity instruction... You shake a little bit of ${opts.senderName}'s influence.`);
+                this.ExplainActivityFailure(activity, activityGroup, target, hasItemPermission, allowedForGroup);
                 this.ReduceSpeakerInfluence(opts.sender.MemberNumber ?? -1);
             }
             this.StateModule.HypnoState.Restrictions = tmp;
         } else {
             LSCG_SendLocal(`You are unable to interpret your activity instruction and shake a little bit of ${opts.senderName}'s influence.`);
+            const missing = !target ? "no target could be found (check the instruction's target, or whether they are in the room)"
+                : !activityGroup ? `the zone '${activitySelection?.group || "none"}' is not set or does not exist`
+                : `the activity '${activitySelection?.name || "none"}' is not set or is not available on ${activityGroup.Name}`;
+            this.ReportActivityFailure(`Activity instruction could not run: ${missing}.`);
             this.ReduceSpeakerInfluence(opts.sender.MemberNumber ?? -1);
         }
+    }
+
+    /** Logs to the console why an activity instruction was refused. */
+    ReportActivityFailure(reason: string) {
+        console.log(`[LSCG Suggestion] ${reason}`);
+    }
+
+    /** Walks BC's own checks for an activity one at a time (the same ones ActivityAllowedForGroup applies) to name the one that fails. */
+    ExplainActivityFailure(activity: Activity, group: AssetGroup, target: Character, hasItemPermission: boolean, allowedForGroup: ItemActivity[]) {
+        const targetName = CharacterNickname(target);
+        const where = `${targetName}'s ${group.Name}`;
+        const groupName = group.Name as AssetGroupItemName;
+        const prerequisites = (activity.Prerequisite ?? []) as ActivityPrerequisite[];
+        let reason: string;
+        if (!hasItemPermission)
+            reason = `your item permissions do not allow ${targetName} to be touched by you`;
+        else if (InventoryIsBlockedByDistance(target))
+            reason = `${targetName} is out of reach`;
+        else if (!ActivityAllowed() || !CharacterHasArousalEnabled(target))
+            reason = `activities are disabled, or ${targetName} has arousal turned off`;
+        else if (!ActivityPossibleOnGroup(target, groupName))
+            reason = `${where} is not an enabled arousal zone, or one of you is enclosed`;
+        else if (!ActivityHasValidTarget(target, activity, group))
+            reason = `${activity.Name} is not a valid ${target.IsPlayer() ? "self" : "other"} activity for ${group.Name}`;
+        else if (prerequisites.some(p => !ActivityCheckPrerequisite(p, Player, target, group)))
+            reason = `unmet requirement ${prerequisites.filter(p => !ActivityCheckPrerequisite(p, Player, target, group)).join(", ")}`;
+        else if (!ActivityCheckPermissions(activity, Player, true) || !ActivityCheckPermissions(activity, target, false))
+            reason = `${!ActivityCheckPermissions(activity, Player, true) ? "your" : `${targetName}'s`} activity permissions do not allow ${activity.Name}`;
+        else {
+            const entries = allowedForGroup.filter(a => a.Activity.Name == activity.Name);
+            reason = entries.length
+                ? `${activity.Name} on ${where} is blocked (${entries.map(e => String(e.Blocked ?? "unknown")).join(", ")}) by the item that would perform it`
+                : `no item was found to perform ${activity.Name} on ${where}`;
+        }
+        this.ReportActivityFailure(`Activity instruction refused: ${reason}.`);
     }
 
     ForceStrip(opts: SuggestionMiniGameOptions, instruction: HypnoInstruction) {

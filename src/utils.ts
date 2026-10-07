@@ -694,7 +694,7 @@ export function escapeHtml(html: string){
 export function LSCG_SendLocal(msg: string, escapeText: boolean = true, timeout?: number | undefined) {
 	const bgColor = (Player.ChatSettings!.ColorTheme!.indexOf("Light") > -1) ? "#D7F6E9" : "#23523E";
 	const escapedMsg = escapeText ? escapeHtml(msg) : msg;
-	const text = `<div style='background-color:${bgColor};'>${escapedMsg}</div>`;
+	const text = `<div style='background-color:${bgColor};border:1px solid rgba(127,127,127,0.35);border-radius:3px;padding:1px 4px;font-size:0.85em;font-style:italic;opacity:0.75;'>${escapedMsg}</div>`;
 	ChatRoomSendLocal(text, timeout);
 }
 
