@@ -13,7 +13,8 @@
 	--lscg-border-width: var(--border-width, min(0.2dvh, 0.1dvw));
 	--lscg-shadow: calc(2 * var(--lscg-border-width)) calc(2 * var(--lscg-border-width)) min(2dvh, 1dvw) 0 rgb(0 0 0 / 50%);
 	// The shading on every second row of a list, table or row set.
-	--lscg-stripe-color: color-mix(in srgb, var(--lscg-background-color) 92%, black 8%);
+	// Translucent, so it darkens whatever is behind it and stays visible on a transparent surface too.
+	--lscg-stripe-color: rgb(0 0 0 / 8%);
 	// BC's "checked" colour: the button colour mixed with the hover colour (a selected tab, the item currently worn).
 	--lscg-checked-color: color-mix(in srgb, var(--lscg-button-color) 66%, var(--lscg-hover-color) 34%);
 	--lscg-text-color: var(--tmd-text, black);
