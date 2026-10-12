@@ -109,7 +109,7 @@
 	}
 
 	.lscg-kit-body {
-		background-color: color-mix(in srgb, var(--lscg-background-color) 85%, transparent);
+		background-color: transparent;
 		border: var(--lscg-border-width) solid var(--lscg-border-color);
 		min-height: 0;
 		overflow-y: auto;
