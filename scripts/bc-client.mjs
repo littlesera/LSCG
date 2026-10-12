@@ -146,10 +146,29 @@ export function rawUrl(repo, sha, path) {
 	return `${base}/-/raw/${sha}/BondageClub/${path}`;
 }
 
+const FETCH_ATTEMPTS = 5;
+
+// gitgud.io intermittently returns 5xx/429, so retry those (and network
+// errors) with exponential backoff; other 4xx fail immediately.
 async function fetchText(url) {
-	const res = await fetch(url);
-	if (!res.ok) throw new Error(`Failed to fetch ${url}: HTTP ${res.status}`);
-	return res.text();
+	let lastError;
+	for (let attempt = 1; attempt <= FETCH_ATTEMPTS; attempt++) {
+		try {
+			const res = await fetch(url);
+			if (res.ok) return await res.text();
+			lastError = new Error(`Failed to fetch ${url}: HTTP ${res.status}`);
+			if (res.status < 500 && res.status !== 429) throw lastError;
+		} catch (err) {
+			if (err === lastError && !(/HTTP (5\d\d|429)/.test(err.message))) throw err;
+			lastError = err;
+		}
+		if (attempt < FETCH_ATTEMPTS) {
+			const delay = 1000 * 2 ** (attempt - 1);
+			console.warn(`bc-client: ${lastError.message}; retrying in ${delay}ms (${attempt}/${FETCH_ATTEMPTS})`);
+			await new Promise(r => setTimeout(r, delay));
+		}
+	}
+	throw lastError;
 }
 
 function cacheDirFor(gameVersion, sha) {
