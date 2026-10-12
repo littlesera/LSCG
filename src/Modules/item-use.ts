@@ -1342,7 +1342,6 @@ export class ItemUseModule extends BaseModule {
 					// Sends its own message; suppress the generic activity text (#812)
 					if (target)
 						this.GiveItem(target, Player);
-					return false;
 				},
 			},
 			CustomImage: "Icons/Dress.png",
@@ -1746,7 +1745,6 @@ export class ItemUseModule extends BaseModule {
 		const item = InventoryGet(source, "ItemHandheld");
 		if (!item)
 			return;
-		//SendAction(`${CharacterNickname(source)} gives %POSSESSIVE% ${this.getItemName(item)} to ${CharacterNickname(target)}.`);
 		InventoryRemove(source, "ItemHandheld", false);
 		const newItem = InventoryWear(target, item?.Asset.Name!, "ItemHandheld", item?.Color, item?.Difficulty, source.MemberNumber, item?.Craft, false);
 		if (newItem) newItem.Property = item.Property;
