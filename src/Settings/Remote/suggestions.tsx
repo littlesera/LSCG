@@ -314,7 +314,7 @@ export class RemoteSuggestions extends RemoteHypnoBase {
 				const groups = AssetGroup.filter(g => g.IsItem() && !g.MirrorActivitiesFrom && AssetActivitiesForGroup("Female3DCG", g.Name).length);
 				const group = () => groups.find(g => g.Name == sel.group);
 				const activityOptions = (g: AssetGroup): SelectOption[] => getActivities(g, isSelf())
-					.map(a => ({ value: a.Name, label: getActivityLabel(a, g, isSelf()) }))
+					.map(a => ({ value: a.Name, label: getActivityLabel(a, g, isSelf()), detail: a.Name }))
 					.sort((a, b) => a.label.localeCompare(b.label));
 				// The activity list depends on the zone, so it's rebuilt when the zone changes.
 				const activityRow = <div /> as HTMLElement;
