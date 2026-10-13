@@ -123,6 +123,14 @@ export const test = base.extend<{ pair: Pair }>({
         for (const c of [caster, target])
             await c.run(() => (window as any).LSCG.getModule("CoreModule").SendPublicPacket(true));
         await settle();
+        // A slow runner can leave a client part-way through joining the room when the relay goes quiet; a spell that arrives then fizzles
+        // ("Someone's spell fizzles"). Wait until each client has the other in its room and its own magic enabled before the test casts.
+        for (const [me, other] of [[caster, target], [target, caster]] as const)
+            await me.run(([number]) => {
+                const w = window as any;
+                return w.Playground.until(() => w.ChatRoomCharacter?.some((c: any) => c.MemberNumber === number) && w.LSCG?.getModule("MagicModule")?.Enabled, 30000);
+            }, [other.memberNumber] as const);
+        await settle();
 
         await use({ caster, target, log, settle });
 

@@ -273,7 +273,7 @@ test("Outfit Collection: Build edits the outfit as it is, so a new one starts as
     await bc.openSettings("Outfit Collection");
     const result = await bc.run(async () => {
         const w = window as any;
-        const wait = async (cond: () => boolean) => { for (let i = 0; i < 120 && !cond(); i++) await new Promise(r => setTimeout(r, 100)); };
+        const wait = async (cond: () => boolean) => { for (let i = 0; i < 300 && !cond(); i++) await new Promise(r => setTimeout(r, 100)); };
         const $ = (id: string) => document.getElementById("lscg-outfit-edit-" + id) as any;
         const gui = () => w.LSCG.getModule("GUI").currentSubscreen;
         const out: any = {};
@@ -370,16 +370,18 @@ test("Outfit Collection: the creator's appearance screen still shows the charact
     await bc.openSettings("Outfit Collection");
     const skin = await bc.run(async () => {
         const w = window as any;
-        const wait = async (cond: () => boolean) => { for (let i = 0; i < 120 && !cond(); i++) await new Promise(r => setTimeout(r, 100)); };
+        const wait = async (cond: () => boolean) => { for (let i = 0; i < 300 && !cond(); i++) await new Promise(r => setTimeout(r, 100)); };
         w.LSCG.getModule("GUI").currentSubscreen.NewOutfit();
         await wait(() => !!document.getElementById("lscg-outfit-edit-build"));
         Object.assign(w.Player, { IsBlind: () => true, GetBlindLevel: () => 3, HasTints: () => true, GetTints: () => [{ r: 148, g: 0, b: 211, a: 0.6 }], GetBlurLevel: () => 4 });
         (document.getElementById("lscg-outfit-edit-build") as HTMLButtonElement).click();
         await wait(() => w.CurrentScreen === "Appearance");
+        // The character's torso. BC hides other characters from a blind viewer, and tints and blurs the rest. Its images load asynchronously, so
+        // look until the skin shows rather than after a fixed delay.
+        const read = () => { const px = (MainCanvas.canvas as HTMLCanvasElement).getContext("2d")!.getImageData(915, 375, 1, 1).data; return [px[0], px[1], px[2]]; };
         await new Promise(r => setTimeout(r, 2500));
-        // The character's torso. BC hides other characters from a blind viewer, and tints and blurs the rest.
-        const px = (MainCanvas.canvas as HTMLCanvasElement).getContext("2d")!.getImageData(915, 375, 1, 1).data;
-        return [px[0], px[1], px[2]];
+        await wait(() => read()[0] > 190);
+        return read();
     });
     // Light skin, not the dark dressing-room background that shows when the character isn't drawn
     expect(skin[0]).toBeGreaterThan(190);
@@ -433,10 +435,12 @@ test("Outfit Collection: colouring draws the character at centre, so dragging to
     await bc.openSettings("Outfit Collection");
     await bc.run(async () => {
         const w = window as any;
+        const wait = async (cond: () => boolean) => { for (let i = 0; i < 300 && !cond(); i++) await new Promise(r => setTimeout(r, 100)); };
         const $ = (id: string) => document.getElementById("lscg-outfit-edit-" + id) as any;
         w.LSCG.getModule("GUI").currentSubscreen.NewOutfit();
         await new Promise(r => setTimeout(r, 1200));
         $("item-group").value = "ItemMouth"; $("item-group").dispatchEvent(new Event("change"));
+        await wait(() => !![...$("item-cells").querySelectorAll(".lscg-item-cell")].find((c: any) => c.getAttribute("aria-label") === "Ball Gag"));
         [...$("item-cells").querySelectorAll(".lscg-item-cell")].find((c: any) => c.getAttribute("aria-label") === "Ball Gag").click();
         await new Promise(r => setTimeout(r, 500));
         $("item-color").click();
