@@ -3,6 +3,7 @@ import { MAX_ROLL_LENGTH } from "Modules/Magic/dice";
 import { damageRoll, MAX_DAMAGE_ROLL } from "Modules/Magic/effects/damage";
 import { DISSOLVE_LAYERS, DissolveConfig, DissolveLayers } from "Modules/Magic/effects/dissolve";
 import { CONJURE_CRAFTABLE } from "Modules/Magic/effects/restraints";
+import { limitableOptions, RemoveCurseConfig } from "Modules/Magic/effects/removeCurse";
 import { COMMAND_WORDS, COMMANDS, CommandConfig, CommandWord, sanitizeCommandConfig } from "Modules/Magic/effects/command";
 import { GRASPS, GraspConfig, GraspLocation, sanitizeGraspConfig } from "Modules/Magic/effects/grasp";
 import { ConjureConfig, MAX_CONJURE_PIECES, sanitizeConjureConfig } from "Modules/Magic/conjure";
@@ -111,6 +112,15 @@ const graspEditor: EffectEditor<GraspConfig> = (ctx, config, update) => GRASPS.m
     set: v => update(sanitizeGraspConfig({ Locations: v ? [...config().Locations, grasp.location] : config().Locations.filter((l: GraspLocation) => l !== grasp.location) })),
 }));
 
+const removeCurseEditor: EffectEditor<RemoveCurseConfig> = (ctx, config, update) => [
+    SelectRow(ctx, {
+        label: "Lifts", options: [{ value: "", label: "- Any effect -" }, ...limitableOptions()],
+        description: "Any effect, picked by the caster or at random, or only this one.",
+        get: () => config().Only ?? "",
+        set: v => update({ Only: v }),
+    }),
+];
+
 /** Editors for effects that keep their settings in `SpellDefinition.Configs`, by effect id. */
 export const EFFECT_EDITORS: Partial<Record<string, EffectEditor>> = {
     [LSCGSpellEffect.damage]: damageEditor,
@@ -120,4 +130,5 @@ export const EFFECT_EDITORS: Partial<Record<string, EffectEditor>> = {
     [LSCGSpellEffect.ropes]: conjureEditor(LSCGSpellEffect.ropes),
     [LSCGSpellEffect.command]: commandEditor,
     [LSCGSpellEffect.grasp]: graspEditor,
+    [LSCGSpellEffect.removeCurse]: removeCurseEditor,
 };
