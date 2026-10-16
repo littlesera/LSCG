@@ -3,10 +3,10 @@ import { BoopsModule } from "Modules/boops";
 import { LipstickModule } from "Modules/lipstick";
 import { MiscModule } from "Modules/misc";
 import { ICONS } from "utils";
-import { GlobalSettingsModel } from "./Models/base";
+import { GlobalSettingsModel, OutfitCopyLevel } from "./Models/base";
 import { GuiSubscreen } from "./settingBase";
 import { DomSettingsHost } from "./domSettingsHost";
-import { CheckboxRow, KitContext, Tabs } from "Dom/kit";
+import { CheckboxRow, KitContext, SelectRow, Tabs } from "Dom/kit";
 import { OpacityModule } from "Modules/opacity";
 import { LeashingModule } from "Modules/leashing";
 import { ChaoticItemModule } from "Modules/chaotic-item";
@@ -77,6 +77,16 @@ export class GuiGlobal extends GuiSubscreen {
 						() => L.ChaoticItemModule.enabled ?? true, v => L.ChaoticItemModule.enabled = v),
 					row("Block DOGS devious padlocks", "If checked, LSCG item applier (magic, cursed item, etc) will turn Devious Padlocks into regular Exclusive Padlocks on apply.",
 						() => s.blockDOGS ?? false, v => s.blockDOGS = v),
+					SelectRow(ctx, {
+						label: "Who can copy my outfit",
+						description: "Who may copy your outfit with /lscg get-outfit-code. They also need permission to use items on you.",
+						options: [
+							{ value: "Public", label: "Everyone" },
+							{ value: "Whitelist", label: "Whitelist, lovers and owner" },
+							{ value: "Nobody", label: "Nobody" },
+						],
+						get: () => s.outfitCopy ?? "Public", set: v => s.outfitCopy = v as OutfitCopyLevel, disabled: off,
+					}),
 				],
 			},
 			{

@@ -120,6 +120,7 @@ export class PublicSettingsModel implements IPublicSettingsModel {
     GlobalModule: GlobalPublicSettingsModel = <GlobalPublicSettingsModel>{
         enabled: false,
         sharePublicCrafting: false,
+        outfitCopy: "Public",
     };
     MiscModule: BaseSettingsModel = <BaseSettingsModel>{enabled: false};
     InjectorModule: InjectorPublicSettingsModel = <InjectorPublicSettingsModel>{
