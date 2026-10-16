@@ -262,30 +262,39 @@ export class MagicModule extends BaseModule {
 
     get commands(): ICommand[] {
         return [{
-            Tag: "voice-spell-list",
-            Description: ": List your spells that can be cast by voice, and the phrase that casts each.",
-            Action: () => this.ListVoiceSpells(),
+            Tag: "spellbook",
+            Description: " [voice/potion/all] : List the spells you know, the phrase that voice-casts each, and which can be brewed into potions.",
+            Action: (args, msg, parsed) => this.ListSpellbook(parsed[0]),
         }];
     }
 
-    /** Shows the voice-castable spells in local chat: what to say (the casting phrase, or else the name) before a target's name. */
-    ListVoiceSpells(): void {
+    /** Shows the known spells in local chat: all of them, only the voice-castable ones (with the phrase that casts each, the
+     *  casting phrase or else the name), or only the ones that can be potions. */
+    ListSpellbook(filter: string = "all"): void {
+        const kind = filter.toLocaleLowerCase();
+        if (kind !== "all" && kind !== "voice" && kind !== "potion") {
+            LSCG_SendLocal("Usage: /lscg spellbook [voice/potion/all]");
+            return;
+        }
         if (!this.Enabled) {
             LSCG_SendLocal("Magic is not enabled.");
             return;
         }
-        const spells = this.AvailableSpells.filter(s => s.AllowVoiceCast);
+        const spells = this.AvailableSpells.filter(s => kind === "all" || (kind === "voice" ? s.AllowVoiceCast : s.AllowPotion));
         if (spells.length === 0) {
-            LSCG_SendLocal("You know no spells that can be cast by voice.");
+            LSCG_SendLocal(kind === "voice" ? "You know no spells that can be cast by voice." : kind === "potion" ? "You know no spells that can be made into potions." : "You know no spells.");
             return;
         }
         const keywordColor = (Player.ChatSettings?.ColorTheme ?? "").indexOf("Light") > -1 ? "midnightblue" : "gold";
         const items = spells.map(s => {
-            const phrase = s.CastingPhrase?.trim() ? s.CastingPhrase : s.Name;
             const effects = (s.Effects ?? []).filter(e => e !== LSCGSpellEffect.none).map(effectLabel).join(", ");
-            return `<li>${escapeHtml(s.Name)}${effects ? ` (${escapeHtml(effects)})` : ""}: <b style="color:${keywordColor};font-style:normal;">${escapeHtml(phrase)}</b></li>`;
+            const phrase = s.CastingPhrase?.trim() ? s.CastingPhrase : s.Name;
+            const keyword = s.AllowVoiceCast && kind !== "potion" ? `: <b style="color:${keywordColor};font-style:normal;">${escapeHtml(phrase)}</b>` : "";
+            const potion = s.AllowPotion && kind === "all" ? " <small>[potion]</small>" : "";
+            return `<li>${escapeHtml(s.Name)}${effects ? ` (${escapeHtml(effects)})` : ""}${keyword}${potion}</li>`;
         });
-        LSCG_SendLocal(`<div><b>Voice-castable spells:</b><ul>${items.join("")}</ul></div>`, false);
+        const title = kind === "voice" ? "Voice-castable spells" : kind === "potion" ? "Potion spells" : "Spellbook";
+        LSCG_SendLocal(`<div><b>${title}:</b><ul>${items.join("")}</ul></div>`, false);
     }
 
     safeword(): void {
