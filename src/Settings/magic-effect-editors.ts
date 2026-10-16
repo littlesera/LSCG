@@ -1,4 +1,4 @@
-import { CheckboxRow, KitContext, NumberRow, SelectOption, SelectRow, TextRow } from "Dom/kit";
+import { CheckboxRow, InlineCheckbox, KitContext, NumberRow, SelectOption, SelectRow, TextRow } from "Dom/kit";
 import { MAX_ROLL_LENGTH } from "Modules/Magic/dice";
 import { damageRoll, MAX_DAMAGE_ROLL } from "Modules/Magic/effects/damage";
 import { DISSOLVE_LAYERS, DissolveConfig, DissolveLayers } from "Modules/Magic/effects/dissolve";
@@ -109,7 +109,18 @@ const graspEditor: EffectEditor<GraspConfig> = (ctx, config, update) => GRASPS.m
     label: grasp.label,
     description: grasp.location === "neck" ? "A choke, if the target allows hand chokes." : grasp.teases ? "Squeezes now and then, raising arousal a little." : grasp.restricts === "Move" ? "Pins the arms." : grasp.restricts === "Walk" ? "Holds the legs still." : undefined,
     get: () => config().Locations.includes(grasp.location),
-    set: v => update(sanitizeGraspConfig({ Locations: v ? [...config().Locations, grasp.location] : config().Locations.filter((l: GraspLocation) => l !== grasp.location) })),
+    // `update` merges, so Tightens is always given: the sanitized settings leave it out when it is off
+    set: v => {
+        const next = sanitizeGraspConfig({ ...config(), Locations: v ? [...config().Locations, grasp.location] : config().Locations.filter((l: GraspLocation) => l !== grasp.location) });
+        update({ ...next, Tightens: !!next.Tightens });
+    },
+    inline: grasp.location === "neck" ? [InlineCheckbox(ctx, {
+        label: "Tightens over time",
+        description: "The hand squeezes harder every minute until the target passes out, then takes hold again once they recover.",
+        hidden: () => !config().Locations.includes("neck"),
+        get: () => !!config().Tightens,
+        set: v => update({ Tightens: v }),
+    })] : undefined,
 }));
 
 const removeCurseEditor: EffectEditor<RemoveCurseConfig> = (ctx, config, update) => [

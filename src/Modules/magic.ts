@@ -1,7 +1,7 @@
 import { BaseModule } from "base";
 import { getModule } from "modules";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
-import { GetConfiguredItemBundlesFromOutfitKey, GetDelimitedList, OnChat, GetItemNameAndDescriptionConcat, GetMetadata, LSCG_SendLocal, LSCG_TEAL, OnActivity, SendAction, getCharacter, getRandomInt, hookFunction, isPhraseInString, removeAllHooksByModule, sendLSCGCommand, sendLSCGCommandBeep, settingsSave, getCharacterByNicknameOrMemberNumber, excludeParentheticalContent, escapeRegExp, IsBlockedSender } from "../utils";
+import { GetConfiguredItemBundlesFromOutfitKey, GetDelimitedList, OnChat, GetItemNameAndDescriptionConcat, GetMetadata, LSCG_SendLocal, LSCG_TEAL, OnActivity, SendAction, getCharacter, getRandomInt, hookFunction, isPhraseInString, removeAllHooksByModule, sendLSCGCommand, sendLSCGCommandBeep, settingsSave, getCharacterByNicknameOrMemberNumber, excludeParentheticalContent, escapeRegExp, escapeHtml, IsBlockedSender } from "../utils";
 import { ABSOLUTE_MAX_SPELL_EFFECTS, DEFAULT_MAX_SPELL_EFFECTS, KNOWN_SPELLS_LIMIT, LSCGSpellEffect, MagicSettingsModel, OutfitOption, SpellDefinition, SpellEffectId } from "Settings/Models/magic";
 import { isSpacedWordChar } from "./Magic/phrase";
 import { effectConfigFor, pickEffects, retier, sanitizeCastArgs, sanitizeSpell, saveBehaviorFor, spellCastPrompts, voiceCastArgs } from "./Magic/spellEdit";
@@ -258,6 +258,34 @@ export class MagicModule extends BaseModule {
             }
         }
         if (changed) settingsSave();
+    }
+
+    get commands(): ICommand[] {
+        return [{
+            Tag: "voice-spell-list",
+            Description: ": List your spells that can be cast by voice, and the phrase that casts each.",
+            Action: () => this.ListVoiceSpells(),
+        }];
+    }
+
+    /** Shows the voice-castable spells in local chat: what to say (the casting phrase, or else the name) before a target's name. */
+    ListVoiceSpells(): void {
+        if (!this.Enabled) {
+            LSCG_SendLocal("Magic is not enabled.");
+            return;
+        }
+        const spells = this.AvailableSpells.filter(s => s.AllowVoiceCast);
+        if (spells.length === 0) {
+            LSCG_SendLocal("You know no spells that can be cast by voice.");
+            return;
+        }
+        const keywordColor = (Player.ChatSettings?.ColorTheme ?? "").indexOf("Light") > -1 ? "midnightblue" : "gold";
+        const items = spells.map(s => {
+            const phrase = s.CastingPhrase?.trim() ? s.CastingPhrase : s.Name;
+            const effects = (s.Effects ?? []).filter(e => e !== LSCGSpellEffect.none).map(effectLabel).join(", ");
+            return `<li>${escapeHtml(s.Name)}${effects ? ` (${escapeHtml(effects)})` : ""}: <b style="color:${keywordColor};font-style:normal;">${escapeHtml(phrase)}</b></li>`;
+        });
+        LSCG_SendLocal(`<div><b>Voice-castable spells:</b><ul>${items.join("")}</ul></div>`, false);
     }
 
     safeword(): void {

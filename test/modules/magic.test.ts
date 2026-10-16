@@ -676,4 +676,38 @@ describe("MagicModule", () => {
 			expect(sent.actions()[0]).toContain("forcing");
 		});
 	});
+
+	describe("/lscg voice-spell-list", () => {
+		const run = () => magic.commands.find(c => c.Tag === "voice-spell-list")!.Action!("", "", []);
+		const shown = () => sent.local().join(" ");
+
+		it("lists only the voice-castable spells, with the phrase that casts each and its effects", () => {
+			magic.settings.knownSpells = [
+				spell("Slumber", [LSCGSpellEffect.slumber], { AllowVoiceCast: true }),
+				spell("Bind", [LSCGSpellEffect.tighten, LSCGSpellEffect.none], { AllowVoiceCast: true, CastingPhrase: "be still" }),
+				spell("Quiet", [LSCGSpellEffect.slumber]),
+			];
+			run();
+			expect(shown()).toContain(`<li>Slumber (${LSCGSpellEffect.slumber}): <b style="color:gold;font-style:normal;">Slumber</b></li>`);
+			expect(shown()).toContain(`<li>Bind (${LSCGSpellEffect.tighten}): <b style="color:gold;font-style:normal;">be still</b></li>`);
+			expect(shown()).not.toContain("Quiet");
+		});
+
+		it("escapes what the player typed", () => {
+			magic.settings.knownSpells = [spell("<img src=x>", [LSCGSpellEffect.slumber], { AllowVoiceCast: true })];
+			run();
+			expect(shown()).toContain("&lt;img src=x&gt;");
+			expect(shown()).not.toContain("<img");
+		});
+
+		it("says so when there are none", () => {
+			magic.settings.knownSpells = [spell("Quiet", [LSCGSpellEffect.slumber])];
+			run();
+			expect(shown()).toContain("no spells that can be cast by voice");
+		});
+
+		it("is listed in /lscg help's commands", () => {
+			expect(magic.commands.map(c => c.Tag)).toContain("voice-spell-list");
+		});
+	});
 });
