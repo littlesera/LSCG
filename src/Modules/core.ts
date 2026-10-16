@@ -99,6 +99,7 @@ export class CoreModule extends BaseModule {
             sharePublicCrafting: false,
             showCheckRolls: true,
             blockDOGS: false,
+            outfitCopy: "Public",
         };
 	}
 
