@@ -8,6 +8,7 @@ import { getModule } from "modules";
 import { InjectorModule } from "./injector";
 import { LeashingModule } from "./leashing";
 import { emit } from "api/events";
+import { releaseNeckGrasp } from "./Magic/effects/grasp";
 import type { LSCGPassoutReason } from "api/types";
 
 enum PassoutReason {
@@ -720,6 +721,18 @@ export class CollarModule extends BaseModule {
         }
     }
 
+    /** Eases a hand choke by one step, never letting go entirely, and stops a passout it was causing. Returns whether it did. */
+    LoosenHandChoke(): boolean {
+        if (this.handChokeModifier <= 1)
+            return false;
+        this.handChokeModifier--;
+        if (this.isPassingOut && this.totalChokeLevel < 4) {
+            clearTimeout(this.chokeTimeout);
+            this.isPassingOut = false;
+        }
+        return true;
+    }
+
     ForceReleasePlugs() {
         InventoryRemove(Player, "ItemNose");
         this.isPluggedUp = false;
@@ -958,6 +971,7 @@ export class CollarModule extends BaseModule {
             // The hand is the spell's: it lets go, but the caster isn't someone holding on, so there is no leash to escape
             SendAction("As %NAME% collapses unconscious, the spectral hand lets go of %POSSESSIVE% neck.");
             this.ReleaseHandChoke(null, false);
+            releaseNeckGrasp();
             this.settings.stats.handPassoutCount++;
         }
         else if (reason == PassoutReason.HAND) {

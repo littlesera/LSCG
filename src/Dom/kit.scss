@@ -218,6 +218,40 @@
 		}
 	}
 
+	// A row's own checkbox with sub-options beside it (CheckboxRow's `inline`).
+	.lscg-kit-inline-group {
+		display: flex;
+		align-items: center;
+		flex-wrap: wrap;
+		gap: min(2dvh, 1dvw);
+	}
+
+	// A sub-option: smaller than the row's checkbox, its label in small text.
+	.lscg-kit-row .lscg-kit-inline-check {
+		display: inline-flex;
+		align-items: center;
+		gap: min(0.8dvh, 0.4dvw);
+		font-size: calc(var(--lscg-font-small) * 0.8);
+
+		&[hidden] {
+			display: none;
+		}
+
+		input[type="checkbox"] {
+			height: min(3.6dvh, 1.8dvw);
+			width: min(3.6dvh, 1.8dvw);
+
+			&::before {
+				height: min(2.4dvh, 1.2dvw);
+				width: min(2.4dvh, 1.2dvw);
+			}
+		}
+
+		label {
+			cursor: pointer;
+		}
+	}
+
 	// Only a row has a "desc" area; elsewhere (a panel or dialog grid) the name would add an implicit column.
 	.lscg-kit-row > .lscg-kit-desc {
 		grid-area: desc;
