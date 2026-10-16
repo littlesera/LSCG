@@ -78,12 +78,31 @@ function bindDisabled(ctx: KitContext, el: HTMLInputElement | HTMLSelectElement 
     if (disabled) ctx.watch(() => { el.disabled = disabled(); });
 }
 
-export function CheckboxRow(ctx: KitContext, props: RowProps<boolean>): HTMLElement {
+/** A checkbox row; `inline` adds controls (such as InlineCheckbox) beside its checkbox. */
+export function CheckboxRow(ctx: KitContext, props: RowProps<boolean> & { inline?: HTMLElement[] }): HTMLElement {
     const id = uid("cb");
     const input = ElementCheckbox.Create(id, () => { props.set(input.checked); ctx.changed(); });
     ctx.watch(() => { input.checked = !!props.get(); });
     bindDisabled(ctx, input, props.disabled);
-    return row(ctx, props, id, input);
+    if (!props.inline?.length)
+        return row(ctx, props, id, input);
+    return row(ctx, props, id, <div class="lscg-kit-inline-group">{input}{props.inline}</div> as HTMLElement);
+}
+
+/** A smaller labelled checkbox for a sub-option, to sit inside another row's control. `description` is its tooltip. */
+export function InlineCheckbox(ctx: KitContext, props: RowProps<boolean>): HTMLElement {
+    const id = uid("cb");
+    const input = ElementCheckbox.Create(id, () => { props.set(input.checked); ctx.changed(); });
+    ctx.watch(() => { input.checked = !!props.get(); });
+    bindDisabled(ctx, input, props.disabled);
+    const el = (
+        <span class="lscg-kit-inline-check" title={props.description ?? ""}>
+            {input}
+            <label for={id}>{props.label}</label>
+        </span>
+    ) as HTMLElement;
+    if (props.hidden) ctx.watch(() => { el.hidden = props.hidden!(); });
+    return el;
 }
 
 export function TextRow(ctx: KitContext, props: RowProps<string> & { placeholder?: string; maxLength?: number; multiline?: boolean }): HTMLElement {
