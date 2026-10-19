@@ -8,9 +8,9 @@ export class OrgasmSiphonedState extends PairedBaseState {
     Icon(C: OtherCharacter): string {
         const pairings = C.LSCG?.StateModule.states.find(s => s.type == "orgasm-siphoned")?.extensions["pairings"] as Pairing[] ?? [];
         if (pairings.some(p => p.IsSource))
-            return "Assets/Female3DCG/Emoticon/Annoyed/Icon.png";
+            return "Icons/Expressions/Emoticon/Annoyed.png";
         else
-            return "Assets/Female3DCG/Emoticon/Tear/Icon.png";
+            return "Icons/Expressions/Emoticon/Tear.png";
     }
     Label(C: OtherCharacter): string {
         return "Orgasms Siphoned";

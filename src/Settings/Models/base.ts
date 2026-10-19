@@ -65,6 +65,15 @@ export interface MiscSettingsModel extends BaseSettingsModel {
     handChokeEnabled: boolean;
     gagChokeEnabled: boolean;
     chokeChainEnabled: boolean;
+    netgunEnabled: boolean;
+    netgunIsChaotic: boolean;
+    netgunKeywords: string[];
+    stats: MiscModuleStats;
+}
+
+export interface MiscModuleStats extends ModuleStats {
+    successfulNettingsCount: number;
+    totalNettingsCount: number;
 }
 
 export interface OpacitySettingsModel extends OpacityPublicSettingsModel {

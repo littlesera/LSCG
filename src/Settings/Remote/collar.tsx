@@ -4,7 +4,7 @@ import { GetDelimitedList, ICONS, replace_template } from "utils";
 import { CollarPublicSettingsModel } from "Settings/Models/collar";
 import { DomSettingsHost } from "Settings/domSettingsHost";
 import { CheckboxRow, KitContext, Panel } from "Dom/kit";
-import { collarPromo, collarRows } from "Settings/collar";
+import { collarRows } from "Settings/collar";
 
 export class RemoteCollar extends RemoteGuiSubscreen {
 	subscreens: RemoteGuiSubscreen[] = [];
@@ -29,8 +29,8 @@ export class RemoteCollar extends RemoteGuiSubscreen {
 	}
 
 	get disabledReason(): string {
-		if (!this.settings.collarPurchased && !this.Character.IsOwnedByPlayer())
-			return replace_template("You must be the owner to purchase this module for %OPP_NAME%...", this.Character);
+		if (this.settings.breathplayEnabled === false)
+			return replace_template("%OPP_NAME% has not enabled breathplay...", this.Character);
 
 		let memberIdIsAllowed = ServerChatRoomGetAllowItem(Player, this.Character);
 		if (this.allowedMemberIds.length > 0)
@@ -43,8 +43,8 @@ export class RemoteCollar extends RemoteGuiSubscreen {
 	}
 
 	get enabled(): boolean {
-		if (!this.settings.collarPurchased)
-			return this.Character.IsOwnedByPlayer();
+		if (this.settings.breathplayEnabled === false)
+			return false;
 
 		let memberIdIsAllowed = ServerChatRoomGetAllowItem(Player, this.Character);
 		if (this.allowedMemberIds.length > 0)
@@ -66,29 +66,13 @@ export class RemoteCollar extends RemoteGuiSubscreen {
 	private build(): Node[] {
 		const s = this.settings;
 		const ctx = new KitContext(() => this.dirty = true);
-		const promo = collarPromo([
-			"Does your sub need a more 'gripping' approach to training?",
-			"Are you looking for some extra motivation for good behavior?",
-			"Act now and secure your Control Module now for the owner-discounted price of $200!",
-			"Attach this revolutionary new device to your sub's existing collar and it will",
-			"enhance it with the ability to 'tighten' and 'loosen' on command!",
-			"Quiet down those bratty moments and reward good behavior!",
-		], 200, () => this.CanAffordCollar(), "Cannot afford...", () => {
-			this.PurchaseCollar();
-			ctx.changed();
-		});
-		const rows = Panel(collarRows(ctx, s, this.Character, [
+		return [Panel(collarRows(ctx, s, this.Character, [
 			CheckboxRow(ctx, {
 				label: "Locked", description: "Locks the user out of these settings.",
 				get: () => s.locked ?? false, set: v => s.locked = v,
 				disabled: () => !s.lockable,
 			}),
-		]));
-		ctx.watch(() => {
-			promo.hidden = !!s.collarPurchased;
-			rows.hidden = !s.collarPurchased;
-		});
-		return [promo, rows];
+		]))];
 	}
 
 	Load(): void {
@@ -110,24 +94,5 @@ export class RemoteCollar extends RemoteGuiSubscreen {
 
 	Unload(): void {
 		this._host.unmount();
-	}
-
-	CanAffordCollar() {
-		return Player.Money >= 200;
-	}
-
-	PurchaseCollar() {
-		if (!this.CanAffordCollar())
-			return;
-		Player.Money -= 200;
-		this.settings.collarPurchased = true;
-		this.settings.enabled = true;
-		this.settings.remoteAccess = true;
-		this.settings.allowedMembers = `${Player.MemberNumber}`;
-		this.settings.tightTrigger = "tighten";
-		this.settings.looseTrigger = "loosen";
-		this.dirty = true;
-		this.settingsSave();
-		ServerPlayerSync();
 	}
 }

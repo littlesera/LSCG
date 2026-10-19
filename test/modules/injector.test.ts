@@ -1,7 +1,7 @@
 // InjectorModule: GetDrugTypes keyword matrix, IsDrugAllowed permission gate,
 // GetGagDrinkAccess (FunnelGag/RingGag typed records vs mouth-blocked/mouth-open),
 // the Drink*/Inject* apply flows (level movement, caps, DoCure reset), the sedative
-// -> sleep state transition, cooldown decay, HasNetgun, HoldingDruggedDrink and
+// -> sleep state transition, cooldown decay, HoldingDruggedDrink and
 // IsSipOffer.
 //
 // MiniGameStart is a canvas/GUI minigame launcher that bc-lite.ts deliberately does
@@ -415,44 +415,6 @@ describe("InjectorModule", () => {
 			expect(injector.hornyLevel).toBe(100);
 			for (let i = 0; i < 50; i++) injector.HornyCooldown();
 			expect(injector.hornyLevel).toBe(0);
-		});
-	});
-
-	describe("HasNetgun", () => {
-		it("returns false for a null character", () => {
-			expect(injector.HasNetgun(null)).toBe(false);
-		});
-
-		it("reflects the queried character's OWN handheld inventory, not Player's", () => {
-			// Regression test for the flagged bug: HasNetgun(C) previously read
-			// InventoryGet(Player, ...) and GetHandheldItemNameAndDescriptionConcat()
-			// (which itself defaults to Player) instead of C, so it answered about
-			// whoever's inventory Player happened to be holding, never the passed-in C.
-			const other = addToRoom({ ...player(), MemberNumber: 5, IsPlayer: () => false, Appearance: [] as never[] } as FixtureCharacter);
-			const asset = makeAsset(handheldGroup, { Name: "MedicalInjector" });
-			wear(other, makeItem(asset, { Craft: { Name: "Net Gun", Description: "a net gun" } }));
-			// Player is holding nothing.
-			expect(player().Appearance.find(i => i.Asset.Group.Name === "ItemHandheld")).toBeUndefined();
-			expect(injector.HasNetgun(other as never)).toBe(true);
-		});
-
-		it("false when the character's handheld asset isn't in AllowedNetGuns", () => {
-			const other = addToRoom({ ...player(), MemberNumber: 5, IsPlayer: () => false, Appearance: [] as never[] } as FixtureCharacter);
-			const asset = makeAsset(handheldGroup, { Name: "GlassFilled" });
-			wear(other, makeItem(asset, { Craft: { Name: "Net Gun", Description: "a net gun" } }));
-			expect(injector.HasNetgun(other as never)).toBe(false);
-		});
-
-		it("false when the character's crafted item text doesn't match a netgun keyword", () => {
-			const other = addToRoom({ ...player(), MemberNumber: 5, IsPlayer: () => false, Appearance: [] as never[] } as FixtureCharacter);
-			const asset = makeAsset(handheldGroup, { Name: "MedicalInjector" });
-			wear(other, makeItem(asset, { Craft: { Name: "Sedative Shot", Description: "" } }));
-			expect(injector.HasNetgun(other as never)).toBe(false);
-		});
-
-		it("false when the character isn't holding anything crafted at all", () => {
-			const other = addToRoom({ ...player(), MemberNumber: 5, IsPlayer: () => false, Appearance: [] as never[] } as FixtureCharacter);
-			expect(injector.HasNetgun(other as never)).toBe(false);
 		});
 	});
 

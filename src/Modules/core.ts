@@ -350,21 +350,19 @@ export class CoreModule extends BaseModule {
                 getModule<LeashingModule>("LeashingModule")?.IncomingEscape(Sender, msg.target);
                 break;
             case "remote":
-                const prevCollarPurchase = Player.LSCG?.CollarModule?.collarPurchased;
                 if (Player.LSCG.HypnoModule.enabled && Player.LSCG.HypnoModule.remoteAccess) {
                     Object.assign(Player.LSCG.HypnoModule, msg.settings?.HypnoModule);
                     getModule<HypnoModule>("HypnoModule")?.initializeTriggerWord();
                 }
-                if ((!!Sender.MemberNumber && Player.IsOwnedByMemberNumber(Sender.MemberNumber)) || (Player.LSCG.CollarModule.enabled && Player.LSCG.CollarModule.remoteAccess))
-                    Object.assign(Player.LSCG.CollarModule, msg.settings?.CollarModule);
+                if ((!!Sender.MemberNumber && Player.IsOwnedByMemberNumber(Sender.MemberNumber)) || (Player.LSCG.CollarModule.enabled && Player.LSCG.CollarModule.remoteAccess)) {
+                    // Opting into breathplay is only ever the wearer's own choice
+                    const { breathplayEnabled: _ignored, ...collarSettings } = msg.settings?.CollarModule ?? {};
+                    Object.assign(Player.LSCG.CollarModule, collarSettings);
+                }
                 if (Player.LSCG.MagicModule.enabled && Player.LSCG.MagicModule.remoteAccess)
                     Object.assign(Player.LSCG.MagicModule, msg.settings?.MagicModule);
                 settingsSave(true);
-                const currentCollarPurchase = Player.LSCG?.CollarModule?.collarPurchased;
-                if (!prevCollarPurchase && currentCollarPurchase)
-                    LSCG_SendLocal(`${!Sender ? "Someone" : CharacterNickname(Sender)} has purchased the Collar Module for you!`);
-                else
-                    LSCG_SendLocal(`${!Sender ? "Someone" : CharacterNickname(Sender)} has accessed your remote settings!`);
+                LSCG_SendLocal(`${!Sender ? "Someone" : CharacterNickname(Sender)} has accessed your remote settings!`);
                 break;
             case "collar-tighten":
                 if (Sender) getModule<CollarModule>("CollarModule")?.TightenButtonPress(Sender);

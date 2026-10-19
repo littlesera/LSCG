@@ -1845,10 +1845,10 @@ export class ItemUseModule extends BaseModule {
 				} else if (types.some((type) => InventoryBlockedOrLimited(targetOwner, targetItem, type ?? ""))) {
 					blocked = "blocked";
 				} else if (InventoryGroupIsBlocked(targetOwner, /** @type {AssetGroupItemName} */(targetItem.Asset.Group.Name) as AssetGroupItemName)) {
-					blocked = "unavail";
+					continue;
 				}
 			} else {
-				blocked = "unavail";
+				continue;
 			}
 
 			if (blocked) {

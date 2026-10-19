@@ -72,7 +72,7 @@
                     label: "Pat head",
                     action: "SourceCharacter gently pats TargetCharacter's head.",
                 }],
-                image: "Assets/Female3DCG/Activity/Slap.png",
+                image: "Icons/Activity/Slap.png",
             });
         }
 

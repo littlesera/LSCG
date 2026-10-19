@@ -61,8 +61,8 @@ export class PublicSettingsModel implements IPublicSettingsModel {
     ExtensionData: Record<string, unknown> = {};
     CollarModule: CollarPublicSettingsModel = <CollarPublicSettingsModel>{
         enabled: false,
+        breathplayEnabled: false,
         chokeLevel: 0,
-        collarPurchased: false,
         allowedMembers: "",
         remoteAccess: false,
         lockable: false,
