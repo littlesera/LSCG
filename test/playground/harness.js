@@ -55,7 +55,7 @@
         L.SplatterModule.enabled = true;
         L.InjectorModule.enabled = true;
         L.MagicModule.enabled = true;
-        Object.assign(L.CollarModule, { collarPurchased: true, enabled: true, knockout: true });
+        Object.assign(L.CollarModule, { enabled: true, knockout: true });
         L.SpeechAnalysisModule.enabled = true;
         L.MapModule.enhancedLighting = true;
     };

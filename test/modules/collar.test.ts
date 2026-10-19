@@ -14,7 +14,7 @@ import { LeashingModule } from "Modules/leashing";
 import { StateModule } from "Modules/states";
 import { replace_template } from "utils";
 import { boot, resetWorld, player, addToRoom } from "../harness/world";
-import { makeGroup, makeAsset, wear, makeItem, type FixtureCharacter } from "../harness/fixtures";
+import { makeGroup, makeAsset, makeCharacter, wear, makeItem, type FixtureCharacter } from "../harness/fixtures";
 import { sent } from "../harness/room";
 
 describe("CollarModule", () => {
@@ -42,6 +42,7 @@ describe("CollarModule", () => {
 		neckGroup = makeGroup({ Name: "ItemNeck" });
 		makeAsset(neckGroup, { Name: "PlainCollar" });
 		collar.settings.enabled = true;
+		collar.settings.breathplayEnabled = true;
 	});
 
 	function emote(raw: string): string {
@@ -53,6 +54,45 @@ describe("CollarModule", () => {
 		wear(player(), makeItem(asset, overrides.crafterName ? { Craft: { Name: overrides.crafterName, MemberNumber: overrides.crafterMember ?? 2 } } : {}));
 	}
 
+	describe("breathplay opt-in", () => {
+		function freshInit(setup: () => void) {
+			delete (collar.settings as Partial<typeof collar.settings>).breathplayEnabled;
+			collar.settings.enabled = false;
+			setup();
+			collar.init();
+		}
+
+		it("stays on for someone who already uses any part of breathplay", () => {
+			freshInit(() => player().LSCG.MiscModule.handChokeEnabled = true);
+			expect(collar.settings.breathplayEnabled).toBe(true);
+			freshInit(() => collar.settings.enabled = true);
+			expect(collar.settings.breathplayEnabled).toBe(true);
+		});
+
+		it("starts off for someone who uses none of it", () => {
+			freshInit(() => {});
+			expect(collar.settings.breathplayEnabled).toBe(false);
+		});
+
+		it("never overrides a choice already made", () => {
+			collar.settings.breathplayEnabled = false;
+			player().LSCG.MiscModule.handChokeEnabled = true;
+			collar.init();
+			expect(collar.settings.breathplayEnabled).toBe(false);
+		});
+
+		it("turns every kind of choking off while it's off, whatever their own toggles say", () => {
+			Object.assign(player().LSCG.MiscModule, { handChokeEnabled: true, gagChokeEnabled: true, chokeChainEnabled: true });
+			collar.settings.breathplayEnabled = false;
+			expect([collar.handChokeEnabled, collar.gagChokeEnabled, collar.chokeChainEnabled]).toEqual([false, false, false]);
+			collar.HandChoke(addToRoom(makeCharacter({ MemberNumber: 2 })) as never);
+			expect(collar.handChokeModifier).toBe(0);
+
+			collar.settings.breathplayEnabled = true;
+			expect([collar.handChokeEnabled, collar.gagChokeEnabled, collar.chokeChainEnabled]).toEqual([true, true, true]);
+		});
+	});
+
 	describe("WearingCorrectCollar", () => {
 		it("false with no collar worn", () => {
 			expect(collar.WearingCorrectCollar(player() as never)).toBe(false);
@@ -62,6 +102,22 @@ describe("CollarModule", () => {
 			collar.settings.enabled = false;
 			wearCollar();
 			expect(collar.WearingCorrectCollar(player() as never)).toBe(false);
+		});
+
+		it("false when breathplay itself isn't enabled", () => {
+			collar.settings.breathplayEnabled = false;
+			collar.settings.anyCollar = true;
+			wearCollar();
+			expect(collar.WearingCorrectCollar(player() as never)).toBe(false);
+		});
+
+		it("another player on an older LSCG, which doesn't send breathplayEnabled, still counts", () => {
+			const other = addToRoom(makeCharacter({
+				MemberNumber: 2,
+				LSCG: { CollarModule: { enabled: true, anyCollar: true, collar: {} } } as never,
+			}));
+			wear(other, makeItem(makeAsset(neckGroup, { Name: "PlainCollar" })));
+			expect(collar.WearingCorrectCollar(other as never)).toBe(true);
 		});
 
 		it("anyCollar accepts whatever is worn", () => {

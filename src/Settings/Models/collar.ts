@@ -12,8 +12,9 @@ export interface CollarModuleStats extends ModuleStats {
 }
 
 export interface CollarPublicSettingsModel extends BaseSettingsModel {
+    /** Opts into breathplay as a whole: choking by hand, gag or chain, and the control collar. */
+    breathplayEnabled: boolean;
     chokeLevel: number;
-    collarPurchased: boolean;
     allowedMembers: string;
     remoteAccess: boolean;
     lockable: boolean;

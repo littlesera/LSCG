@@ -42,6 +42,7 @@ describe("Grasping", () => {
 		});
 		states.init();
 		magic.init();
+		collar.settings.breathplayEnabled = true;
 		leashing.Pairings = [];
 		addToRoom(player());
 		alice = addToRoom(makeCharacter({
