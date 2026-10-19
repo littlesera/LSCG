@@ -12,6 +12,7 @@ import { LeashingModule } from "Modules/leashing";
 import { ChaoticItemModule } from "Modules/chaotic-item";
 import { SplatterModule } from "Modules/splatter";
 import { MapModule } from "Modules/map";
+import { InjectorModule } from "Modules/injector";
 
 export class GuiGlobal extends GuiSubscreen {
 	private _host = new DomSettingsHost("lscg-global-settings", this, () => this.build());
@@ -75,6 +76,8 @@ export class GuiGlobal extends GuiSubscreen {
 						() => s.tamperproofEnabled ?? true, v => s.tamperproofEnabled = v),
 					row("Enable chaotic/evolving items", "Enable chaotic/evolving features on crafted items you wear.",
 						() => L.ChaoticItemModule.enabled ?? true, v => L.ChaoticItemModule.enabled = v),
+					row("Chaotic net gun", "Your net gun fires wildly and has a 50/50 chance to net a random character instead of your target.",
+						() => L.InjectorModule.netgunIsChaotic ?? false, v => L.InjectorModule.netgunIsChaotic = v),
 					row("Block DOGS devious padlocks", "If checked, LSCG item applier (magic, cursed item, etc) will turn Devious Padlocks into regular Exclusive Padlocks on apply.",
 						() => s.blockDOGS ?? false, v => s.blockDOGS = v),
 					SelectRow(ctx, {
@@ -115,6 +118,7 @@ export class GuiGlobal extends GuiSubscreen {
 		void getModule<ChaoticItemModule>("ChaoticItemModule")?.settings;
 		void getModule<SplatterModule>("SplatterModule")?.settings;
 		void getModule<MapModule>("MapModule")?.settings;
+		void getModule<InjectorModule>("InjectorModule")?.settings;
 		super.Load();
 		this._host.mount();
 	}
