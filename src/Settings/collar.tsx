@@ -79,12 +79,22 @@ export function collarRows(ctx: KitContext, s: CollarPublicSettingsModel, wearer
 /** What breathplay covers, shown until it's enabled. */
 function breathplayLanding(enable: () => void): HTMLElement {
 	return <div class="lscg-kit-promo">
-		<h2>Breathplay</h2>
-		<p>Lets others choke you in roleplay: by hand with the "Choke Neck" activity, with a heavy gag and nose plugs, or with a choke chain.</p>
-		<p>The control collar turns the collar you wear into one that tightens and loosens on command, by trigger words, buttons or commands.</p>
-		<p>Choked long enough, you pass out. You choose which of these are on, who can use them, and whether others can change these settings.</p>
-		<p><b>(Breathplay is extremely dangerous and can cause serious injury or death. This feature is for imaginative roleplay only, do not try at home.)</b></p>
-		<button class="lscg-button" onClick={enable}>Enable</button>
+		<header>
+			<h2 class="lscg-kit-promo-title">Breathplay Mechanics</h2>
+		</header>
+		<div>
+			<ul class="lscg-kit-promo-list">
+				<li>Hands around the throat...</li>
+				<li>Thick gags and a plugged nose...</li>
+				<li>A collar that hisses tight on command...</li>
+			</ul>
+			<small class="lscg-kit-promo-fine">Breathe in... breathe out... good. Now don't.</small>
+		</div>
+		<footer>
+			<button class="lscg-button" onClick={enable}>~Take a Deep Breath~</button>
+			<small class="lscg-kit-promo-warning">⚠ Real breathplay is extremely dangerous and can cause serious injury or death. ⚠</small>
+			<small class="lscg-kit-promo-warning">⚠ This is for imaginative roleplay only, do not try at home. ⚠</small>
+		</footer>
 	</div> as HTMLElement;
 }
 
@@ -175,7 +185,7 @@ export class GuiCollar extends GuiSubscreen {
 			landing.hidden = !!s.breathplayEnabled;
 			tabs.hidden = !s.breathplayEnabled;
 		});
-		return <div>{landing}{tabs}</div>;
+		return <div class="lscg-kit-fill">{landing}{tabs}</div>;
 	}
 
 	Load(): void {

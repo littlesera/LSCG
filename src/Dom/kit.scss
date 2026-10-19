@@ -628,12 +628,29 @@
 		}
 	}
 
-	// A module's introduction, shown on its screen until it's enabled (e.g. the control collar).
-	.lscg-kit-promo {
+	// Passes the screen body's full height on to its one visible child.
+	.lscg-kit-fill {
 		display: grid;
-		justify-items: center;
-		gap: min(1dvh, 0.5dvw);
+		grid-template-rows: minmax(0, 1fr);
+		min-height: 0;
+	}
+
+	// A module's introduction, shown on its screen until it's enabled (e.g. breathplay): fills the screen, with its
+	// header at the top, flavor in the middle and the enable button (and any fine print) at the bottom.
+	.lscg-kit-promo {
+		display: flex;
+		flex-direction: column;
+		justify-content: space-between;
+		align-items: center;
+		min-height: 0;
+		padding: min(2dvh, 1dvw) 0;
 		text-align: center;
+
+		> * {
+			display: grid;
+			justify-items: center;
+			gap: min(1dvh, 0.5dvw);
+		}
 
 		p, h2 {
 			margin: 0;
@@ -643,9 +660,32 @@
 			width: auto;
 			min-width: 12em;
 			height: min(8dvh, 4dvw);
-			margin: min(2dvh, 1dvw) 0;
 		}
 	}
+
+	.lscg-kit-promo-title {
+		color: #c2185b;
+	}
+
+	.lscg-kit-promo-list {
+		margin: min(1dvh, 0.5dvw) 0;
+		padding: 0;
+		list-style: none;
+		text-align: center;
+		color: color-mix(in srgb, currentColor 65%, gray);
+	}
+
+	.lscg-kit-promo-fine {
+		font-size: 0.7em;
+		font-style: italic;
+		color: color-mix(in srgb, currentColor 55%, gray);
+	}
+
+	.lscg-kit-promo-warning {
+		font-size: 0.65em;
+		color: #d98a1f;
+	}
+
 
 	.lscg-kit-activity-icon {
 		width: min(12dvh, 6dvw);
