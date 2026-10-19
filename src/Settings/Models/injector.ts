@@ -10,8 +10,6 @@ export interface InjectorModuleStats extends ModuleStats {
     sedatedCount: number;
     brainwashedCount: number;
     curedCount: number;
-    successfulNettingsCount: number;
-    totalNettingsCount: number;
 }
 
 /** One extension drug's level bar, as published to other players. */
@@ -32,14 +30,12 @@ export interface InjectorSettingsModel extends InjectorPublicSettingsModel {
     sedativeKeywords: string[];
     mindControlKeywords: string[];
     hornyKeywords: string[];
-    netgunKeywords: string[];
     cureKeywords: string[];
     hornyTickTime: number;
     heartbeat: boolean;
     sedativeCooldown: number;
     mindControlCooldown: number;
     hornyCooldown: number;
-    netgunIsChaotic: boolean;
     showDrugLevels: boolean;
     enableContinuousDelivery: boolean;
     continuousDeliveryActivatedAt: number;

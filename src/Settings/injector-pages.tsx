@@ -52,7 +52,7 @@ export function buildInjectorTabs(ctx: KitContext, s: InjectorSettingsModel, mis
             label: "General",
             render: () => [
                 CheckboxRow(ctx, {
-                    label: "Enabled", description: "Enable Enhanced Drinks, Injectors and Net Gun.",
+                    label: "Enabled", description: "Enable Enhanced Drinks and Injectors.",
                     get: () => s.enabled ?? false, set: v => s.enabled = v,
                 }),
                 NumberRow(ctx, {

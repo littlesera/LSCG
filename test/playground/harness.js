@@ -42,10 +42,10 @@
         return Player.MemberNumber;
     };
 
-    /** Switches on every LSCG module, with a little sample data (a cursed item, a purchased collar), so settings
+    /** Switches on every LSCG module, with a little sample data (a cursed item, a control collar), so settings
      *  screens show all their inputs instead of mostly disabled ones. */
     Playground.enableAll = () => {
-        for (const m of ["HypnoModule", "CursedItemModule", "SplatterModule", "InjectorModule", "MagicModule", "CollarModule", "SpeechAnalysisModule", "MapModule"])
+        for (const m of ["HypnoModule", "CursedItemModule", "SplatterModule", "InjectorModule", "MagicModule", "CollarModule", "SpeechAnalysisModule", "MapModule", "MiscModule"])
             LSCG.getModule(m)?.settings; // fills in defaults
         const L = Player.LSCG;
         Object.assign(L.HypnoModule, { enabled: true, remoteAccess: true });
@@ -55,7 +55,8 @@
         L.SplatterModule.enabled = true;
         L.InjectorModule.enabled = true;
         L.MagicModule.enabled = true;
-        Object.assign(L.CollarModule, { enabled: true, knockout: true });
+        Object.assign(L.CollarModule, { enabled: true, breathplayEnabled: true, knockout: true });
+        L.MiscModule.netgunEnabled = true;
         L.SpeechAnalysisModule.enabled = true;
         L.MapModule.enhancedLighting = true;
     };

@@ -6,6 +6,7 @@ import { ConsentModule } from "Modules/consent";
 import { HypnoModule } from "Modules/hypno";
 import { InjectorModule } from "Modules/injector";
 import { MagicModule } from "Modules/magic";
+import type { MiscModule } from "Modules/misc";
 import { OutfitCollectionModule } from "Modules/outfitCollection";
 import { ActivityEntryModel } from "Settings/Models/activities";
 import { OutfitCollection } from "Settings/OutfitCollection/outfitCollection";
@@ -46,7 +47,7 @@ export function DrugKeywords(): string[] {
 }
 
 export function NetgunKeywords(): string[] {
-	return getModule<InjectorModule>("InjectorModule")?.settings.netgunKeywords;
+	return getModule<MiscModule>("MiscModule")?.settings.netgunKeywords;
 }
 
 export function SedativeKeywords(): string[] {
