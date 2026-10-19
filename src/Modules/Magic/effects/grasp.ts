@@ -93,7 +93,7 @@ const collar = () => getModule<CollarModule>("CollarModule");
 function startChoke(sender: Character | null, tightened = 0): void {
     if (!sender)
         return;
-    if (!Player.LSCG?.MiscModule?.handChokeEnabled) {
+    if (!collar()?.handChokeEnabled) {
         SendAction("The spectral hand rests on %NAME%'s throat, but cannot squeeze.");
         return;
     }
@@ -105,7 +105,7 @@ function startChoke(sender: Character | null, tightened = 0): void {
  *  Returns whether it did. */
 export function tightenGrasp(state: SpellEffectsState): boolean {
     const collarModule = collar();
-    if (!collarModule || !Player.LSCG?.MiscModule?.handChokeEnabled || collarModule.handChokeModifier >= 4)
+    if (!collarModule || !collarModule.handChokeEnabled || collarModule.handChokeModifier >= 4)
         return false;
     for (const entry of state.EntriesFor(LSCGSpellEffect.grasp)) {
         const neck = asData(entry)?.holds.find(h => h.location === "neck");
@@ -162,7 +162,7 @@ function stopChoke(): void {
  *  (releaseNeckGrasp). If something else made it let go, it takes hold again. */
 function tightenOverTime(entry: { by: number }, hold: GraspHold, now: number): void {
     const collarModule = collar();
-    if (!collarModule || !Player.LSCG?.MiscModule?.handChokeEnabled)
+    if (!collarModule || !collarModule.handChokeEnabled)
         return;
     // Not while they are passing out, whatever is choking them
     if (collarModule.isPassingOut) {

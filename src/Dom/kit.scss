@@ -628,7 +628,7 @@
 		}
 	}
 
-	// A sales pitch for a module you unlock on its screen (e.g. the collar control module).
+	// A module's introduction, shown on its screen until it's enabled (e.g. the control collar).
 	.lscg-kit-promo {
 		display: grid;
 		justify-items: center;
@@ -647,18 +647,9 @@
 		}
 	}
 
-	.lscg-kit-blink {
-		color: red;
-		animation: lscg-kit-blink 1.5s steps(1) infinite;
-	}
-
 	.lscg-kit-activity-icon {
 		width: min(12dvh, 6dvw);
 		height: min(12dvh, 6dvw);
 		border: 2px solid black;
 	}
-}
-
-@keyframes lscg-kit-blink {
-	50% { color: gray; }
 }

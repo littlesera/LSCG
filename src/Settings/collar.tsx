@@ -1,5 +1,5 @@
 import { h } from "tsx-dom";
-import { ICONS, settingsSave } from "utils";
+import { ICONS } from "utils";
 import { CollarModel, CollarPublicSettingsModel, CollarSettingsModel } from "./Models/collar";
 import { GuiSubscreen, HelpInfo } from "./settingBase";
 import { getModule } from "modules";
@@ -76,17 +76,15 @@ export function collarRows(ctx: KitContext, s: CollarPublicSettingsModel, wearer
 	];
 }
 
-/** Andrew co.'s sales pitch, shown until the control module is bought. */
-export function collarPromo(lines: string[], price: number, canAfford: () => boolean, cannotAfford: string, purchase: () => void): HTMLElement {
-	const button = <button class="lscg-button" onClick={() => { if (canAfford()) purchase(); }}>{`Purchase - $${price}`}</button> as HTMLButtonElement;
-	button.disabled = !canAfford();
-	button.title = canAfford() ? "Unlock Andrew's Collar Module" : cannotAfford;
+/** What breathplay covers, shown until it's enabled. */
+function breathplayLanding(enable: () => void): HTMLElement {
 	return <div class="lscg-kit-promo">
-		<p><b>Now available:</b></p>
-		<h2 class="lscg-kit-blink">Andrew's Collar Control Module!!</h2>
-		{lines.map(l => <p>{l}</p>)}
-		{button}
-		<small class="lscg-kit-desc">- Andrew co.® makes no guarantees as to the behavior of the wearer -</small>
+		<h2>Breathplay</h2>
+		<p>Lets others choke you in roleplay: by hand with the "Choke Neck" activity, with a heavy gag and nose plugs, or with a choke chain.</p>
+		<p>The control collar turns the collar you wear into one that tightens and loosens on command, by trigger words, buttons or commands.</p>
+		<p>Choked long enough, you pass out. You choose which of these are on, who can use them, and whether others can change these settings.</p>
+		<p><b>(Breathplay is extremely dangerous and can cause serious injury or death. This feature is for imaginative roleplay only, do not try at home.)</b></p>
+		<button class="lscg-button" onClick={enable}>Enable</button>
 	</div> as HTMLElement;
 }
 
@@ -116,10 +114,18 @@ export class GuiCollar extends GuiSubscreen {
 		const s = this.settings;
 		const misc = Player.LSCG.MiscModule;
 		const ctx = new KitContext();
-		return Tabs([
+		const landing = breathplayLanding(() => {
+			s.breathplayEnabled = true;
+			ctx.changed();
+		});
+		const tabs = Tabs([
 			{
 				label: "Breathplay",
 				render: () => [
+					CheckboxRow(ctx, {
+						label: "Enabled", description: "Enables breathplay. Turning it off goes back to the introduction.",
+						get: () => !!s.breathplayEnabled, set: v => s.breathplayEnabled = v,
+					}),
 					CheckboxRow(ctx, {
 						label: "Enable hand choking", description: "Enables breathplay using \"Choke Neck\" activity. If done repeatedly will cause blackout.",
 						get: () => misc.handChokeEnabled ?? false, set: v => misc.handChokeEnabled = v,
@@ -146,17 +152,6 @@ export class GuiCollar extends GuiSubscreen {
 			{
 				label: "Control collar",
 				render: () => {
-					const promo = collarPromo([
-						"Has your owner sent you shopping for a more controlling collar?",
-						"Are you looking for some extra motivation for good behavior?",
-						"Act now and secure your Control Module now for the low low price of $500!",
-						"Attach this revolutionary new device to your existing collar and it will",
-						"enhance it with the ability to tighten and loosen on command!",
-						"Let your dom quiet down those bratty moments and reward good behavior!",
-					], 500, () => this.CanAffordCollar(), !Player.Ownership ? "Cannot afford..." : "Too expensive? Ask your owner for help!", () => {
-						this.PurchaseCollar();
-						ctx.changed();
-					});
 					const locked = Notice("** Collar Settings Locked **");
 					const rows = <div class="lscg-kit-panel">{collarRows(ctx, s, Player, [
 						CheckboxRow(ctx, {
@@ -169,14 +164,18 @@ export class GuiCollar extends GuiSubscreen {
 						}),
 					])}</div> as HTMLElement;
 					ctx.watch(() => {
-						promo.hidden = !!s.collarPurchased;
-						locked.hidden = !s.collarPurchased || !s.locked;
-						rows.hidden = !s.collarPurchased || !!s.locked;
+						locked.hidden = !s.locked;
+						rows.hidden = !!s.locked;
 					});
-					return [promo, locked, rows];
+					return [locked, rows];
 				},
 			},
 		]);
+		ctx.watch(() => {
+			landing.hidden = !!s.breathplayEnabled;
+			tabs.hidden = !s.breathplayEnabled;
+		});
+		return <div>{landing}{tabs}</div>;
 	}
 
 	Load(): void {
@@ -195,18 +194,5 @@ export class GuiCollar extends GuiSubscreen {
 
 	Unload(): void {
 		this._host.unmount();
-	}
-
-	CanAffordCollar() {
-		return Player.Money >= 500;
-	}
-
-	PurchaseCollar() {
-		if (!this.CanAffordCollar())
-			return;
-		Player.Money -= 500;
-		this.settings.collarPurchased = true;
-		ServerPlayerSync();
-		settingsSave();
 	}
 }
