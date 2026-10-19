@@ -243,7 +243,7 @@ api.activities.register({
         label: "Pat head",
         action: "SourceCharacter gently pats TargetCharacter's head.",
     }],
-    image: "Assets/Female3DCG/Activity/Slap.png",
+    image: "Icons/Activity/Slap.png",
     onSend: ({ target }) => { /* runs for the player doing it; return false to cancel */ },
     onReceive: ({ sender }) => { /* runs for the player it's done to */ },
 });
