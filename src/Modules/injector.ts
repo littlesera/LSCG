@@ -6,7 +6,7 @@ import { Consent, getModule } from "modules";
 import { GuiInjector } from "Settings/injector";
 import { InjectorSettingsModel } from "Settings/Models/injector";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
-import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, isPhraseInString, settingsSave, hookFunction, getCharacter, AUDIO, getPlayerVolume, OnAction, hookBCXCurse, GetTargetCharacter, GetActivityName, GetMetadata, GetActivityEntryFromContent, IsActivityAllowed, GetHandheldItemNameAndDescriptionConcat, GetItemName, LSCG_SendLocal } from "../utils";
+import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, isPhraseInString, settingsSave, hookFunction, getCharacter, AUDIO, getPlayerVolume, OnAction, hookBCXCurse, GetTargetCharacter, GetActivityName, GetMetadata, GetActivityEntryFromContent, IsActivityAllowed, GetItemName, LSCG_SendLocal } from "../utils";
 import { ActivityModule, ActivityPatch } from "./activities";
 import { HypnoModule } from "./hypno";
 import { MiscModule } from "./misc";
@@ -60,12 +60,6 @@ const locationObj = {
     "ItemFeet": INJECTION_MULTIPLIERS.FEET,
 };
 
-export const AllowedNetGuns = [
-    "MedicalInjector",
-    "RainbowWand",
-    "Baguette",
-];
-
 type GagDrinkAccess = "nothing" | "blocked" | "open";
 
 interface ContinuousDevice {
@@ -101,7 +95,6 @@ export class InjectorModule extends BaseModule {
             enableSedative: false,
             enableMindControl: false,
             enableHorny: false,
-            netgunIsChaotic: false,
             showDrugLevels: true,
             sedativeLevel: 0,
             mindControlLevel: 0,
@@ -111,7 +104,6 @@ export class InjectorModule extends BaseModule {
             mindControlKeywords: ["mind control", "hypnotizing", "brainwashing"],
             hornyKeywords: ["horny", "aphrodisiac", "arousing"],
             cureKeywords: ["antidote", "healing", "curing", "cure"],
-            netgunKeywords: ["net gun", "netgun"],
             hornyTickTime: CHECK_INTERVALS.HORNY_TICK,
             sedativeCooldown: COOLDOWNS.SEDATIVE,
             mindControlCooldown: COOLDOWNS.MIND_CONTROL,
@@ -188,7 +180,6 @@ export class InjectorModule extends BaseModule {
         this.settings.mindControlKeywords = d.mindControlKeywords;
         this.settings.hornyKeywords = d.hornyKeywords;
         this.settings.cureKeywords = d.cureKeywords;
-        this.settings.netgunKeywords = d.netgunKeywords;
         this.settings.hornyTickTime = d.hornyTickTime;
         // Decay rates follow the defaults unless the player set their own in the Drugs settings.
         this.ApplyDecayOverrides();
@@ -356,53 +347,6 @@ export class InjectorModule extends BaseModule {
         this.miscModule = getModule<MiscModule>("MiscModule");
 
         if (this.activityModule) {
-            // Netgun
-            this.activityModule.AddActivity({
-                Activity: {
-                    Name: "NetGun",
-                    MaxProgress: ACTIVITY_VALUES.NETGUN_MAX_PROGRESS,
-                    MaxProgressSelf: ACTIVITY_VALUES.NETGUN_MAX_PROGRESS,
-                    Prerequisite: ["UseHands"],
-                },
-                Targets: [
-                    {
-                        Name: "ItemArms",
-                        SelfAllowed: true,
-                        TargetLabel: "Shoot Netgun",
-                        TargetAction: "SourceCharacter takes aim at TargetCharacter with PronounPossessive net gun.",
-                        TargetSelfAction: "SourceCharacter turns PronounPossessive net gun on PronounSelf.",
-                    },
-                ],
-                CustomPrereqs: [
-                    {
-                        Name: "HasNetgun",
-                        Func: (acting, acted, group) => {
-                            return this.Enabled && this.HasNetgun(acting);
-                        },
-                    }, {
-                        Name: "DevicesSlotIsFree",
-                        Func: (acting, acted, group) => {
-                            return !InventoryGet(acted, "ItemDevices");
-                        },
-                    },
-                ],
-                CustomAction: {
-                    Func: (target) => {
-                        if (target) {
-                            // if (target.MemberName != Player.MemberNumber) {
-                            // 	SendAction("%NAME% takes aim at %OPP_NAME% with %POSSESSIVE% net gun.", target);
-                            // 	setTimeout(() => this.ShootNetgun(target), 5000);
-                            // } else {
-                            // 	SendAction("%NAME% turns %POSSESSIVE% netgun on themselves!", target);
-                            // 	this.ShootNetgun(target)
-                            // }
-                            setTimeout(() => this.ShootNetgun(target), EFFECT_DURATIONS.ACTION_DELAY);
-                        }
-                    },
-                },
-                CustomImage: "Assets/Female3DCG/ItemDevices/Preview/Net.png",
-            });
-
             // Pour drink into funnel
             this.activityModule?.AddActivity({
                 Activity: {
@@ -485,13 +429,6 @@ export class InjectorModule extends BaseModule {
                     this.ConsumeSip(false);
             },
         });
-
-        this.activityModule.AddCustomPrereq({
-            Name: "InjectorIsNotNetgun",
-            Func: (acting, acted, group) => !this.HasNetgun(acting),
-        });
-        const injectActivity = ActivityFemale3DCG.find(act => act.Name == "Inject") as LSCGActivity;
-        injectActivity?.Prerequisite.push("InjectorIsNotNetgun");
     }
 
     unload(): void {
@@ -1065,107 +1002,6 @@ export class InjectorModule extends BaseModule {
 
     ActivateSleepEvent() {
         SendAction(this.sleepBlockStrings[getRandomInt(this.sleepBlockStrings.length)]);
-    }
-
-    HasNetgun(C: Character | null): boolean {
-        if (!C)
-            return false;
-
-        const item = InventoryGet(C, "ItemHandheld");
-        if (!item || !item.Asset || AllowedNetGuns.indexOf(item.Asset.Name) == -1)
-            return false;
-
-        const totalString = GetHandheldItemNameAndDescriptionConcat(C);
-        if (!totalString)
-            return false;
-
-        const isNetgun = this.settings.netgunKeywords?.some(ph => isPhraseInString(totalString ?? "", ph, true));
-        return isNetgun;
-    }
-
-    ShootNetgun(target: Character) {
-        if (!target)
-            return;
-
-        if (this.settings.netgunIsChaotic) {
-            SendAction("%NAME% fires a net wildly.");
-            setTimeout(() => this.ResolveNetting(target, true), EFFECT_DURATIONS.NETGUN_RESOLVE_DELAY);
-        } else if (target.MemberNumber == Player.MemberNumber) {
-            SendAction("%NAME% fires at themselves point blank.", target);
-            setTimeout(() => this.ResolveNetting(target), EFFECT_DURATIONS.NETGUN_RESOLVE_DELAY);
-        }
-        else {
-            SendAction("%NAME% fires a net at %OPP_NAME%.", target);
-            setTimeout(() => this.ResolveNetting(target), EFFECT_DURATIONS.NETGUN_RESOLVE_DELAY);
-        }
-    }
-
-    ResolveNetting(intendedTarget: Character, chaotic: boolean = false) {
-        this.settings.stats.totalNettingsCount++;
-        let actualTarget = intendedTarget;
-        if (chaotic)
-            actualTarget = this.GetChaoticNetTarget(intendedTarget);
-        if (actualTarget.MemberNumber == intendedTarget.MemberNumber)
-            this.settings.stats.successfulNettingsCount++;
-        this.ApplyNet(actualTarget);
-        settingsSave();
-    }
-
-    GetChaoticNetTarget(intendedTarget: Character) {
-        // 50/50 chance to hit intended target..
-        const val = getRandomInt(100);
-        if (val > RANDOM_EVENT_ODDS.CHAOTIC_NET_HIT_CHANCE)
-            return intendedTarget;
-        const filteredList = ChatRoomCharacterDrawlist.filter(c => !InventoryGet(c, "ItemDevices"));
-        if (filteredList.length <= 0)
-            return intendedTarget; // Also hit the intended target if they're the _only_ one who has no devices already equipped
-
-        return filteredList[getRandomInt(filteredList.length)];
-    }
-
-    GetCraftedNet(): CraftingItem | undefined {
-        const netgun = InventoryGet(Player, "ItemHandheld");
-        const netgunCraft = netgun?.Craft;
-        const netgunStr = GetHandheldItemNameAndDescriptionConcat() ?? "";
-        if (!netgunCraft || !netgunStr)
-            return;
-
-        let craftedNets: CraftingItem[] = Player.Crafting?.filter(x => !!x && x.Item == "Net").map(x => <CraftingItem>x) ?? [];
-
-        const craftingMember = netgunCraft.MemberNumber;
-        if (!!craftingMember && craftingMember >= 0 && craftingMember != Player.MemberNumber) {
-            const craftingChar = getCharacter(craftingMember);
-            if (craftingChar) {
-                craftedNets = craftedNets?.concat(craftingChar.Crafting?.filter((x): x is CraftingItem => x?.Item == "Net") ?? "");
-            }
-        }
-
-        const craftedNet = craftedNets?.filter(x => !!x)?.find(x => !!x && !!x.Name && isPhraseInString(netgunStr, x.Name));
-        return craftedNet;
-    }
-
-    ApplyNet(target: Character) {
-        let isDefaultNet = false;
-        let craftedNet = this.GetCraftedNet();
-
-        if (!craftedNet) {
-            isDefaultNet = true;
-            craftedNet = <CraftingItem>{
-                MemberNumber: Player.MemberNumber,
-                MemberName: CharacterNickname(Player),
-                Name: "Net Gun Net",
-                Description: "A lightweight net designed to be shot from a handheld launcher.",
-                Color: "Default",
-            };
-        }
-        const net = InventoryWear(target, "Net", "ItemDevices", null, isDefaultNet ? 0 : craftedNet.DifficultyFactor, Player.MemberNumber, craftedNet, false);
-        InventoryCraft(Player, target, "ItemDevices", craftedNet, true);
-        if (!!net && !!net.Property && isDefaultNet) {
-            net.Difficulty = ACTIVITY_VALUES.DEFAULT_NET_DIFFICULTY;
-            net.Property.Difficulty = ACTIVITY_VALUES.DEFAULT_NET_DIFFICULTY;
-        }
-        ChatRoomCharacterUpdate(target);
-        SendAction(`%NAME%'s ${isDefaultNet ? "net" : craftedNet.Name} engulfs %OPP_NAME%.`, target);
     }
 
     // ---- Extension drugs ----

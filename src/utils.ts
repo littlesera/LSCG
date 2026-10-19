@@ -459,6 +459,8 @@ export function handleImportString(val: string): boolean {
 			Player.LSCG.CollarModule.stats = Object.assign({}, oldSettings.CollarModule.stats);
 			Player.LSCG.HypnoModule.stats = Object.assign({}, oldSettings.HypnoModule.stats);
 			Player.LSCG.InjectorModule.stats = Object.assign({}, oldSettings.InjectorModule.stats);
+			if (Player.LSCG.MiscModule)
+				Player.LSCG.MiscModule.stats = Object.assign({}, oldSettings.MiscModule?.stats);
 			settingsSave(true);
 			return true;
 		} else
