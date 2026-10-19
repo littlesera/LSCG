@@ -291,7 +291,7 @@ export interface LSCGActivityDefinition {
     prerequisites?: string[];
     /** Where it can be done. At least one. */
     targets: LSCGActivityTarget[];
-    /** Icon shown in the activity menu: a BC asset path such as "Assets/Female3DCG/Activity/Slap.png". */
+    /** Icon shown in the activity menu: a BC asset path such as "Icons/Activity/Slap.png". */
     image?: string;
     /** Runs on the actor's client as the activity is sent. Return `false` to stop it being sent. */
     onSend?(ctx: LSCGActivitySendContext): boolean | void;
