@@ -578,7 +578,7 @@ export class GuiOutfits extends GuiSubscreen {
         // Escape and the exit door back out one layer at a time: item widget, item grid, editor, then the screen
         if (this.#focus) {
             if (this.#focus.kind === "color") ItemColorExitClick();
-            else DialogLeaveFocusItem();
+            else this.#backOutOfItem();
             return;
         }
         if (this.#lockModalOpen()) {
@@ -1206,8 +1206,16 @@ export class GuiOutfits extends GuiSubscreen {
         if (focus.kind === "color") ItemColorClick(preview, focus.group, ...COLOR_RECT);
         else if (DialogTightenLoosenItem) TightenLoosenItemClick(preview, DialogTightenLoosenItem);
         else if (MouseIn(...PERMISSIONS_BUTTON)) return;
-        else if (MouseIn(...BACK_BUTTON)) DialogLeaveFocusItem();
+        // The back button is the item's own to handle, like in BC's dialog: from a module or subscreen it goes back to the
+        // item's main screen, and only from there does it leave
         else if (DialogFocusItem) CommonDynamicFunction(`Inventory${DialogFocusItemName}Click()`);
+    }
+
+    /** Escape or the exit door with an item's screens open: back out of a modular item's module first, like its back button. */
+    #backOutOfItem() {
+        const modular = !DialogTightenLoosenItem && !ExtendedItemSubscreen && DialogFocusItemName ? ModularItemDataLookup[DialogFocusItemName] : undefined;
+        if (modular && modular.currentModule !== ModularItemBase) ModularItemModuleTransition(ModularItemBase, modular);
+        else DialogLeaveFocusItem();
     }
 
     #nameTaken() {

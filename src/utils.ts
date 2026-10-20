@@ -1278,6 +1278,10 @@ export function ApplyItem(item: ItemBundle, acting: number | undefined, replace:
 		// Secure/Loose effects) on top again, so it would grow every time the bundle is applied
 		if (item.Difficulty !== undefined)
 			newItem.Difficulty = item.Difficulty;
+		// ItemPropertiesDecompress merges into the item's own Property with those values winning, and wearing has already
+		// filled that with the asset's defaults (and the craft's), which would override the bundle's options. So decompress
+		// onto a clean item like BC's own ServerBundledItemToAppearanceItem does, when the bundle has properties to restore
+		if (item.Property) newItem.Property = {};
 		newItem.Property = ItemPropertiesDecompress(newItem, item.Property);
 		if ((<any>C).LSCG?.GlobalModule?.blockDOGS && (<any>newItem.Property)?.["Name"] == "DeviousPadlock") // REMOVE DOGS LOCKS ON APPLY
 			delete (<any>newItem.Property)["Name"];

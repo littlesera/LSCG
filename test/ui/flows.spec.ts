@@ -1,4 +1,4 @@
-import { expect, test } from "./fixtures";
+import { expect, test, type Bc } from "./fixtures";
 
 test("Activities: clicking a zone on the character picks it, and settings for it save", async ({ bc }) => {
     await bc.openSettings("Activities");
@@ -751,4 +751,63 @@ test("spell menu: Remove Curse offers what the target has on them, and casts wit
     expect(result.choices[2]).toBe("Web");
     expect(result.chosenAtFirst).toEqual(["- Random -"]);
     expect(result.cast).toEqual([[false, { 0: { target: "entry:w1" } }]]);
+});
+
+/** Opens BC's configuration screen for a new outfit's item in `group`, and returns a real-click helper. */
+async function configureItem(bc: Bc, group: string, label: string) {
+    await bc.openSettings("Outfit Collection");
+    await bc.run(async ([group, label]) => {
+        const w = window as any;
+        const $ = (id: string) => document.getElementById("lscg-outfit-edit-" + id) as any;
+        const wait = (ms: number) => new Promise(r => setTimeout(r, ms));
+        w.LSCG.getModule("GUI").currentSubscreen.NewOutfit();
+        await wait(1200);
+        $("item-group").value = group; $("item-group").dispatchEvent(new Event("change"));
+        [...$("item-cells").querySelectorAll(".lscg-item-cell")].find((c: any) => c.getAttribute("aria-label") === label).click();
+        await wait(800);
+        $("item-configure").click();
+        await wait(1200);
+    }, [group, label]);
+    return async (x: number, y: number) => {
+        const pt = await bc.run(([x, y]) => (window as any).Playground.toPage(x, y), [x, y]);
+        await bc.page.mouse.click(pt.x, pt.y);
+        await bc.page.waitForTimeout(500);
+    };
+}
+
+test("Outfit Collection: back from a modular item's module returns to its modules, and only then leaves", async ({ bc }) => {
+    const click = await configureItem(bc, "ItemHead", "Hypnotic Visor");
+    const where = () => bc.run(() => ({
+        focus: (window as any).DialogFocusItemName as string | null,
+        module: (0, eval)("ModularItemDataLookup")["ItemHeadHypnoticVisor"].currentModule as string,
+    }));
+    const text = await bc.run(() => (0, eval)("ModularItemDataLookup")["ItemHeadHypnoticVisor"].drawData.elementData[3].position);
+    await click(text[0] + 10, text[1] + 10); // the "Text" module
+    expect(await where()).toEqual({ focus: "ItemHeadHypnoticVisor", module: "Text" });
+    await click(1930, 70); // back
+    expect(await where()).toEqual({ focus: "ItemHeadHypnoticVisor", module: "Base" });
+    await click(text[0] + 10, text[1] + 10);
+    await bc.run(() => (window as any).LSCG.getModule("GUI").currentSubscreen.Exit()); // Escape / the exit door backs out the same way
+    expect(await where()).toEqual({ focus: "ItemHeadHypnoticVisor", module: "Base" });
+    await click(1930, 70);
+    expect((await where()).focus).toBeNull();
+});
+
+test("Outfit Collection: an option picked in the item's screen is still on the preview and in the outfit afterwards", async ({ bc }) => {
+    const click = await configureItem(bc, "ItemArms", "Leather Cuffs");
+    const wrist = await bc.run(() => (0, eval)("TypedItemDataLookup")["ItemArmsLeatherCuffs"].drawData.elementData[1].position);
+    await click(wrist[0] + 10, wrist[1] + 10);
+    await click(1930, 70);
+    const result = await bc.run(() => {
+        const w = window as any;
+        const code = (document.getElementById("lscg-outfit-edit-outfit-input") as any).value;
+        const bundle = JSON.parse(w.LZString.decompressFromBase64(code)).find((b: any) => b.Group === "ItemArms");
+        const preview = w.LSCG.getModule("GUI").currentSubscreen.preview;
+        return {
+            focus: w.DialogFocusItemName,
+            outfit: bundle?.Property?.TypeRecord,
+            preview: preview.Appearance.find((a: any) => a.Asset.Group.Name === "ItemArms")?.Property?.TypeRecord,
+        };
+    });
+    expect(result).toEqual({ focus: null, outfit: { typed: 1 }, preview: { typed: 1 } });
 });

@@ -51,8 +51,18 @@ export default defineConfig({
 		],
 		coverage: {
 			provider: 'v8',
-			reporter: ['text', 'html'],
+			// json-summary feeds the coverage table in CI's job summary (.github/workflows/validate.yml)
+			reporter: ['text', 'html', 'json-summary'],
 			include: ['src/**/*.{ts,tsx}'],
+			// A floor, not a target: set just under what the unit project alone reaches, so both
+			// `npm run coverage` and CI's unit+bc run fail if coverage drops. Raise these when
+			// coverage goes up.
+			thresholds: {
+				statements: 50,
+				branches: 45,
+				functions: 48,
+				lines: 51,
+			},
 		},
 	},
 });
