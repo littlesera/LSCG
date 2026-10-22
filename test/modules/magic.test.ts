@@ -118,6 +118,31 @@ describe("MagicModule", () => {
 		});
 	});
 
+	describe("paired spells and ghosted players", () => {
+		it("a ghosted paired target is dropped from IncomingSpell, so no pairing or notification happens", () => {
+			player().GhostList = [3];
+			const ghost = addToRoom(makeCharacter({ MemberNumber: 3, Nickname: "Ghost" }));
+			magic.IncomingSpell(alice as never, spell("pair", [LSCGSpellEffect.paired_arousal]), ghost as never, 1);
+			vi.advanceTimersByTime(2500);
+			expect(states.ArousalPairedState.Pairings).toEqual([]);
+			expect(sent.hidden().some(m => m.command?.name === "pair")).toBe(false);
+		});
+
+		it("a pair command whose origin is ghosted is ignored", () => {
+			player().GhostList = [3];
+			const ghost = addToRoom(makeCharacter({ MemberNumber: 3, Nickname: "Ghost" }));
+			magic.IncomingSpellPair(alice as never, LSCGSpellEffect.paired_arousal, ghost as never, states.ArousalPairedState.Type);
+			expect(states.ArousalPairedState.Pairings).toEqual([]);
+		});
+
+		it("control: a non-ghosted paired target is paired", () => {
+			const bob = addToRoom(makeCharacter({ MemberNumber: 3, Nickname: "Bob" }));
+			magic.IncomingSpell(alice as never, spell("pair", [LSCGSpellEffect.paired_arousal]), bob as never, 1);
+			vi.advanceTimersByTime(2500);
+			expect(states.ArousalPairedState.Pairings.map(p => p.PairedMember)).toEqual([3]);
+		});
+	});
+
 	describe("IncomingSpell: duration formula", () => {
 		it("a beneficial spell (e.g. bless) skips the duration formula entirely, falling back to the state's own default", () => {
 			// IncomingSpell's duration computation only runs `if (!this.SpellIsBeneficial(spell))`
