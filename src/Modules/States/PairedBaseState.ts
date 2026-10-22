@@ -1,4 +1,4 @@
-import { sendLSCGCommandBeep, settingsSave } from "utils";
+import { sendLSCGCommandBeep, settingsSave, IsBlockedSender } from "utils";
 import { BaseState } from "./BaseState";
 
 export interface Pairing {
@@ -21,6 +21,8 @@ export abstract class PairedBaseState extends BaseState {
     abstract Update(source: number, args: {name: string, value: any}[]): void;
 
     DoPair(target: Character, matchmaker: Character | null, duration?: number) {
+        if (IsBlockedSender(target.MemberNumber))
+            return;
         const newPairing = <Pairing>{
             PairedMember: target.MemberNumber,
             PairedBy: matchmaker?.MemberNumber,
@@ -31,6 +33,8 @@ export abstract class PairedBaseState extends BaseState {
     }
 
     RespondToPairing(source: Character, matchmaker: Character | null, duration?: number) {
+        if (IsBlockedSender(source.MemberNumber))
+            return;
         const newPairing = <Pairing>{
             PairedMember: source.MemberNumber,
             PairedBy: matchmaker?.MemberNumber,

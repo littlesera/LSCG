@@ -1,7 +1,7 @@
 import { BaseModule } from "base";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
 import { GuiSpeechAnalysis } from "Settings/speech-analysis";
-import { GetDelimitedList, LSCG_SendLocal, excludeParentheticalContent, getCharacter, hasRemotePermission, hookFunction, isPhraseInString, removeAllHooksByModule, sendLSCGCommand, settingsSave } from "../utils";
+import { GetDelimitedList, LSCG_SendLocal, excludeParentheticalContent, getCharacter, hasRemotePermission, hookFunction, isPhraseInString, removeAllHooksByModule, sendLSCGCommand, settingsSave, IsBlockedSender } from "../utils";
 import { getModule } from "modules";
 import type { CoreModule } from "./core";
 import type { StateModule } from "./states";
@@ -342,6 +342,8 @@ export class SpeechAnalysisModule extends BaseModule {
             Priority: 109,
             Description: INCOMING_HANDLER_DESC,
             Callback: (data: ServerChatRoomMessage, sender: Character, msg: string, metadata?: IChatRoomMessageMetadata) => {
+                if (IsBlockedSender(data.Sender))
+                    return false;
                 if (this.Enabled && sender && !sender.IsPlayer() && (data.Type === "Chat" || data.Type === "Whisper"))
                     this._recordIncoming(data, sender, msg, metadata);
                 if (this.Enabled && (data.Type === "Chat" || data.Type === "Whisper") && data.Sender !== undefined)
