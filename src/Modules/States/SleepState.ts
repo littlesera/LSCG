@@ -8,7 +8,7 @@ export class SleepState extends BaseState {
     Type: LSCGState = "asleep";
 
     Icon(C: OtherCharacter): string {
-        return "Assets/Female3DCG/Eyes/Closed/Icon.png";
+        return "Icons/Expressions/Eyes/Closed.png";
     }
     Label(C: OtherCharacter): string {
         return "Asleep";

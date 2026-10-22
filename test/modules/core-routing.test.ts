@@ -78,19 +78,30 @@ describe("CoreModule incoming routing", () => {
 		});
 
 		it("routes type=broadcast to Broadcast(), which fans out regardless of target", () => {
-			const func = listen("swap-ask");
+			const func = listen("craft-share");
 			resetWorld({ MemberNumber: 1 });
 			const sender = addToRoom(makeCharacter({ MemberNumber: 111 }));
 			receive.hidden(sender, {
 				IsLSCG: true, type: "broadcast", reply: false, settings: null,
 				target: 999, // Broadcast() never checks target
-				version: "v0", command: { name: "swap-ask", args: [] },
+				version: "v0", command: { name: "craft-share", args: [] },
 			} as LSCGMessageModel);
 			expect(func).toHaveBeenCalledWith(111, expect.objectContaining({ type: "broadcast" }));
 		});
 
-		it("Broadcast() ignores a packet with no command payload", () => {
+		it("Broadcast() refuses commands that aren't room-wide, even if a listener exists", () => {
 			const func = listen("swap-ask");
+			resetWorld({ MemberNumber: 1 });
+			const sender = addToRoom(makeCharacter({ MemberNumber: 111 }));
+			receive.hidden(sender, {
+				IsLSCG: true, type: "broadcast", reply: false, settings: null, target: null,
+				version: "v0", command: { name: "swap-ask", args: [] },
+			} as LSCGMessageModel);
+			expect(func).not.toHaveBeenCalled();
+		});
+
+		it("Broadcast() ignores a packet with no command payload", () => {
+			const func = listen("craft-share");
 			resetWorld({ MemberNumber: 1 });
 			const sender = addToRoom(makeCharacter({ MemberNumber: 111 }));
 			receive.hidden(sender, { IsLSCG: true, type: "broadcast", reply: false, settings: null, target: null, version: "v0" } as LSCGMessageModel);
@@ -128,13 +139,13 @@ describe("CoreModule incoming routing", () => {
 
 	describe("self-sent packets", () => {
 		it("only type=broadcast is processed from ourself; init/sync/command are ignored", () => {
-			const func = listen("swap-ask");
+			const func = listen("craft-share");
 			const self = snapshotCharacter(resetWorld({ MemberNumber: 1 }));
 
-			receive.hidden(self, { IsLSCG: true, type: "command", reply: false, settings: null, target: 1, version: "v0", command: { name: "swap-ask", args: [] } } as LSCGMessageModel);
+			receive.hidden(self, { IsLSCG: true, type: "command", reply: false, settings: null, target: 1, version: "v0", command: { name: "craft-share", args: [] } } as LSCGMessageModel);
 			expect(func).not.toHaveBeenCalled();
 
-			receive.hidden(self, { IsLSCG: true, type: "broadcast", reply: false, settings: null, target: null, version: "v0", command: { name: "swap-ask", args: [] } } as LSCGMessageModel);
+			receive.hidden(self, { IsLSCG: true, type: "broadcast", reply: false, settings: null, target: null, version: "v0", command: { name: "craft-share", args: [] } } as LSCGMessageModel);
 			expect(func).toHaveBeenCalledTimes(1);
 		});
 	});

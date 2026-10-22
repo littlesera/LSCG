@@ -176,8 +176,8 @@ export class MapModule extends BaseModule {
             const viewName = args[0] as "Character" | "Map";
             if (ChatRoomActiveView == ChatRoomViews[viewName])
                 return;
-            else
-                next(args);
+            next(args);
+            if (viewName === ChatRoomMapViewName) this.ParseMapForObjects();
         }, ModuleCategory.Map);
 
         hookFunction("RgbaArrayToHTMLColor", 1, (args, next) => { // Hack for effect overlay rectangles, since we're overriding them as lighting 'indicators'
@@ -188,7 +188,7 @@ export class MapModule extends BaseModule {
         }, ModuleCategory.Map);
 
         hookFunction("DrawImageResize", 1, (args, next) => {
-            if (this.EnhancedLightingEnabled && this.drawingMapFlag && this.settings.hideVanillaFog && args[0] === "Screens/Online/ChatRoom/MapTile/Fog/Half.png") {
+            if (this.EnhancedLightingEnabled && this.drawingMapFlag && this.settings.hideVanillaFog && args[0] === "Assets/Map/Tiles/Fog/Half.png") {
                 return true; // Hack to prevent half fog squares
             }
             return next(args);
@@ -439,6 +439,7 @@ export class MapModule extends BaseModule {
         if (!Player.MapData) return;
         if (!ChatRoomData || !ChatRoomData.MapData) return;
         if (!this.EnhancedLightingEnabled) return;
+        if (!this.MapLoaded) return;
 
         const objects: OpaqueObstacle[] = [];
         this.mapLights = [];
@@ -540,9 +541,18 @@ export class MapModule extends BaseModule {
         this.lightingEngine.compute(this.allLights, objects, this.viewpoint);
     }
 
+    get MapLoaded(): boolean {
+        try {
+            MapManager.Map.getTileId(0);
+            return true;
+        } catch {
+            return false;
+        }
+    }
+
     ParseMapEffectsForLighting(X: number, Y: number, ScreenX: number, ScreenY: number): Light[] {
-        if (!ChatRoomMapManager || !ChatRoomMapManager.Map || ChatRoomMapViewEditMode == "Effect") return [];
-        const effects = ChatRoomMapManager.Map.getEffectsByXY(X, Y);
+        if (ChatRoomMapViewEditMode == "Effect") return [];
+        const effects = MapManager.Map.getEffects(X, Y);
         const lights: Light[] = [];
         for (const effect of effects) {
             if (effect.Type == "StaticLighting") {

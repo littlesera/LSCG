@@ -6,7 +6,7 @@ export class ArousalPairedState extends PairedBaseState {
     Type: LSCGState = "arousal-paired";
     
     Icon(C: OtherCharacter): string {
-        return "Assets/Female3DCG/Emoticon/Hearts/Icon.png";
+        return "Icons/Expressions/Emoticon/Hearts.png";
     }
     Label(C: OtherCharacter): string {
         return "Arousal Paired";

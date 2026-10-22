@@ -676,9 +676,8 @@ describe("extension drugs", () => {
                 const sips2 = row(root, "Filled glass sip limit").querySelector("input") as HTMLInputElement;
                 sips2.value = "4"; change(sips2);
                 expect(injector.settings.sipLimit).toBe(4);
-                const chaotic = row(root, "Chaotic net gun").querySelector("input") as HTMLInputElement;
-                chaotic.checked = true; change(chaotic);
-                expect(injector.settings.netgunIsChaotic).toBe(true);
+                // The net gun isn't a drug: its option is on the General settings screen
+                expect(root.textContent).not.toContain("Chaotic net gun");
             });
 
             it("LSCG's own drugs have their opt-in toggles", () => {

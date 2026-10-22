@@ -3,7 +3,7 @@ import { getModule, modules } from "modules";
 import { BaseSettingsModel, GlobalSettingsModel } from "Settings/Models/base";
 import { IPublicSettingsModel, PublicSettingsModel, SettingsModel } from "Settings/Models/settings";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { removeAllHooksByModule, hookFunction, getCharacter, drawSvg, SVG_ICONS, sendLSCGMessage, settingsSave, LSCG_CHANGES, LSCG_SendLocal, mouseTooltip } from "../utils";
+import { removeAllHooksByModule, hookFunction, getCharacter, drawSvg, SVG_ICONS, sendLSCGMessage, settingsSave, LSCG_CHANGES, LSCG_SendLocal, mouseTooltip, IsBlockedSender, isAllowedMember } from "../utils";
 import { HypnoModule } from "./hypno";
 import { CollarModule } from "./collar";
 
@@ -99,6 +99,7 @@ export class CoreModule extends BaseModule {
             sharePublicCrafting: false,
             showCheckRolls: true,
             blockDOGS: false,
+            outfitCopy: "Public",
         };
 	}
 
@@ -109,6 +110,8 @@ export class CoreModule extends BaseModule {
         }, ModuleCategory.Core);
 
         hookFunction("ChatRoomMessage", 1, (args, next) => {
+            if (IsBlockedSender(args[0].Sender) && args[0].Content == "LSCGMsg")
+                return next(args);
             this.CheckForPublicPacket(args[0]);
             return next(args);
         }, ModuleCategory.Core);
@@ -118,7 +121,7 @@ export class CoreModule extends BaseModule {
             // Intercept LSCG beeps directly
             const msg = data.Message as unknown as LSCGMessageModel;
             if (data.BeepType === "Leash" && msg && msg.IsLSCG === true) {
-                if (msg.type == "command")
+                if (msg.type == "command" && !IsBlockedSender(data.MemberNumber))
                     this.Command(data.MemberNumber, msg);
             }
             else
@@ -331,8 +334,40 @@ export class CoreModule extends BaseModule {
         }
     }
 
+    // Commands that act on the Player. A hand-built packet can claim any of them, so each is held to the
+    // same item permissions as the real interaction would have been.
+    static readonly InteractionCommands: LSCGCommandName[] = [
+        "grab", "collar-tighten", "collar-loosen", "collar-stats", "photo", "spell", "pair", "spell-teach",
+        "swap-ask", "set-suggestions", "splat",
+    ];
+
+    // Broadcasts carry no target, so only the commands that are genuinely room-wide may arrive that way.
+    static readonly BroadcastCommands: LSCGCommandName[] = ["craft-share", "h5-execute"];
+
+    // The vanilla activity a grab type comes from, so the Player's own BC activity preferences apply to it.
+    static readonly GrabActivities: Partial<Record<string, string>> = {
+        ear: "Pinch", arm: "Grope", neck: "Choke", collar: "CollarGrab",
+        hair: "Pull", nose: "Pull", nipples: "Pull", mouth: "HandGag", eyes: "HandGag",
+    };
+
+    InteractionPermitted(senderNumber: number, msg: LSCGMessageModel): boolean {
+        const name = msg.command?.name;
+        if (!name || !CoreModule.InteractionCommands.includes(name))
+            return true;
+        if (!isAllowedMember(getCharacter(senderNumber) ?? undefined))
+            return false;
+        if (name == "grab" && Player.ArousalSettings?.Activity) {
+            const activity = CoreModule.GrabActivities[msg.command?.args?.find(a => a.name == "type")?.value as string];
+            if (activity && PreferenceGetActivityFactor(Player, activity as ActivityName, true) == 0)
+                return false;
+        }
+        return true;
+    }
+
     Command(senderNumber: number, msg: LSCGMessageModel) {
         if (!msg.command || msg.target != Player.MemberNumber)
+            return;
+        if (!this.InteractionPermitted(senderNumber, msg))
             return;
         const Sender = getCharacter(senderNumber) as OtherCharacter;
         switch (msg.command!.name) {
@@ -349,21 +384,19 @@ export class CoreModule extends BaseModule {
                 getModule<LeashingModule>("LeashingModule")?.IncomingEscape(Sender, msg.target);
                 break;
             case "remote":
-                const prevCollarPurchase = Player.LSCG?.CollarModule?.collarPurchased;
                 if (Player.LSCG.HypnoModule.enabled && Player.LSCG.HypnoModule.remoteAccess) {
                     Object.assign(Player.LSCG.HypnoModule, msg.settings?.HypnoModule);
                     getModule<HypnoModule>("HypnoModule")?.initializeTriggerWord();
                 }
-                if ((!!Sender.MemberNumber && Player.IsOwnedByMemberNumber(Sender.MemberNumber)) || (Player.LSCG.CollarModule.enabled && Player.LSCG.CollarModule.remoteAccess))
-                    Object.assign(Player.LSCG.CollarModule, msg.settings?.CollarModule);
+                if ((!!Sender.MemberNumber && Player.IsOwnedByMemberNumber(Sender.MemberNumber)) || (Player.LSCG.CollarModule.enabled && Player.LSCG.CollarModule.remoteAccess)) {
+                    // Opting into breathplay is only ever the wearer's own choice
+                    const { breathplayEnabled: _ignored, ...collarSettings } = msg.settings?.CollarModule ?? {};
+                    Object.assign(Player.LSCG.CollarModule, collarSettings);
+                }
                 if (Player.LSCG.MagicModule.enabled && Player.LSCG.MagicModule.remoteAccess)
                     Object.assign(Player.LSCG.MagicModule, msg.settings?.MagicModule);
                 settingsSave(true);
-                const currentCollarPurchase = Player.LSCG?.CollarModule?.collarPurchased;
-                if (!prevCollarPurchase && currentCollarPurchase)
-                    LSCG_SendLocal(`${!Sender ? "Someone" : CharacterNickname(Sender)} has purchased the Collar Module for you!`);
-                else
-                    LSCG_SendLocal(`${!Sender ? "Someone" : CharacterNickname(Sender)} has accessed your remote settings!`);
+                LSCG_SendLocal(`${!Sender ? "Someone" : CharacterNickname(Sender)} has accessed your remote settings!`);
                 break;
             case "collar-tighten":
                 if (Sender) getModule<CollarModule>("CollarModule")?.TightenButtonPress(Sender);
@@ -403,7 +436,7 @@ export class CoreModule extends BaseModule {
     }
 
     Broadcast(senderNumber: number, msg: LSCGMessageModel) {
-        if (!msg.command)
+        if (!msg.command || !CoreModule.BroadcastCommands.includes(msg.command.name))
             return;
         this.CommandListeners.filter(com => com.command == msg.command!.name).forEach(command => command.func(senderNumber, msg));
     }

@@ -52,7 +52,7 @@ export function buildInjectorTabs(ctx: KitContext, s: InjectorSettingsModel, mis
             label: "General",
             render: () => [
                 CheckboxRow(ctx, {
-                    label: "Enabled", description: "Enable Enhanced Drinks, Injectors and Net Gun.",
+                    label: "Enabled", description: "Enable Enhanced Drinks and Injectors.",
                     get: () => s.enabled ?? false, set: v => s.enabled = v,
                 }),
                 NumberRow(ctx, {
@@ -66,10 +66,6 @@ export function buildInjectorTabs(ctx: KitContext, s: InjectorSettingsModel, mis
                 CheckboxRow(ctx, {
                     label: "Heartbeat sound", description: "An occasional heartbeat sound while under the influence of aphrodisiac.",
                     get: () => s.heartbeat ?? true, set: v => s.heartbeat = v,
-                }),
-                CheckboxRow(ctx, {
-                    label: "Chaotic net gun", description: "Your net gun fires wildly and has a 50/50 chance to net a random character instead of your target.",
-                    get: () => s.netgunIsChaotic ?? true, set: v => s.netgunIsChaotic = v,
                 }),
             ],
         },

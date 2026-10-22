@@ -1944,7 +1944,8 @@ export class ActivityModule extends BaseModule {
             .catch(() => { });
     }
     private ResolveImage(img?: string): string | undefined {
-        if (!img || this.newIconPathExists) return img;
+        if (!img) return img;
+        if (this.newIconPathExists) return img.replace(/^Assets\/Female3DCG\/Activity\//, "Icons/Activity/");
         return img.replace(/^Icons\/Activity\//, "Assets/Female3DCG/Activity/");
     }
     PatchedActivities: string[] = [];

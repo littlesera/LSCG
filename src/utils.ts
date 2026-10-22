@@ -109,11 +109,17 @@ export function setOrIgnoreBlush(blushLevel: ExpressionName | null) {
 	}
 }
 
+export function IsBlockedSender(memberNumber: number | undefined | null): boolean {
+	if (memberNumber == null || memberNumber === Player.MemberNumber)
+		return false;
+	return !!(Player.GhostList?.includes(memberNumber) || Player.BlackList?.includes(memberNumber));
+}
+
 export function OnWhisper(priority: number, module: ModuleCategory, callback: (data: any, sender: Character | null, msg: string, metadata: any) => void) {
 	hookFunction("ChatRoomMessage", priority, (args, next) => {
         const data = args[0];
 		const sender = getCharacter(data.Sender);
-        if (data.Type == "Whisper")
+        if (!IsBlockedSender(data.Sender) && data.Type == "Whisper")
             callback(data, sender, data.Content, data.Dictionary);
 		next(args);
     }, module);
@@ -123,7 +129,7 @@ export function OnChat(priority: any, module: ModuleCategory, callback: (data: a
     hookFunction("ChatRoomMessage", priority, (args, next) => {
         const data = args[0];
 		const sender = getCharacter(data.Sender);
-        if (data.Type == "Chat" || data.Type == "Whisper")
+        if (!IsBlockedSender(data.Sender) && (data.Type == "Chat" || data.Type == "Whisper"))
             callback(data, sender, data.Content, data.Dictionary);
 		next(args);
     }, module);
@@ -133,7 +139,7 @@ export function OnAction(priority: any, module: ModuleCategory, callback: (data:
     hookFunction("ChatRoomMessage", priority, (args, next) => {
         const data = args[0];
 		const sender = getCharacter(data.Sender);
-        if (data.Type == "Action" || data.Type == "Emote")
+        if (!IsBlockedSender(data.Sender) && (data.Type == "Action" || data.Type == "Emote"))
 			callback(data, sender, data.Content, data.Dictionary);
 		next(args);
     }, module);
@@ -143,7 +149,7 @@ export function OnActivity(priority: any, module: ModuleCategory, callback: (dat
     hookFunction("ChatRoomMessage", priority, (args, next) => {
         const data = args[0];
 		const sender = getCharacter(data.Sender);
-        if (data.Type == "Activity")
+        if (!IsBlockedSender(data.Sender) && data.Type == "Activity")
 			callback(data, sender, data.Content, data.Dictionary);
 		next(args);
     }, module);
@@ -453,6 +459,8 @@ export function handleImportString(val: string): boolean {
 			Player.LSCG.CollarModule.stats = Object.assign({}, oldSettings.CollarModule.stats);
 			Player.LSCG.HypnoModule.stats = Object.assign({}, oldSettings.HypnoModule.stats);
 			Player.LSCG.InjectorModule.stats = Object.assign({}, oldSettings.InjectorModule.stats);
+			if (Player.LSCG.MiscModule)
+				Player.LSCG.MiscModule.stats = Object.assign({}, oldSettings.MiscModule?.stats);
 			settingsSave(true);
 			return true;
 		} else

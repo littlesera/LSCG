@@ -1,7 +1,7 @@
 import { BaseModule } from "base";
 import { getModule } from "modules";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
-import { GetConfiguredItemBundlesFromOutfitKey, GetDelimitedList, OnChat, GetItemNameAndDescriptionConcat, GetMetadata, LSCG_SendLocal, LSCG_TEAL, OnActivity, SendAction, getCharacter, getRandomInt, hookFunction, isPhraseInString, removeAllHooksByModule, sendLSCGCommand, sendLSCGCommandBeep, settingsSave, getCharacterByNicknameOrMemberNumber, excludeParentheticalContent, escapeRegExp } from "../utils";
+import { GetConfiguredItemBundlesFromOutfitKey, GetDelimitedList, OnChat, GetItemNameAndDescriptionConcat, GetMetadata, LSCG_SendLocal, LSCG_TEAL, OnActivity, SendAction, getCharacter, getRandomInt, hookFunction, isPhraseInString, removeAllHooksByModule, sendLSCGCommand, sendLSCGCommandBeep, settingsSave, getCharacterByNicknameOrMemberNumber, excludeParentheticalContent, escapeRegExp, escapeHtml, IsBlockedSender } from "../utils";
 import { ABSOLUTE_MAX_SPELL_EFFECTS, DEFAULT_MAX_SPELL_EFFECTS, KNOWN_SPELLS_LIMIT, LSCGSpellEffect, MagicSettingsModel, OutfitOption, SpellDefinition, SpellEffectId } from "Settings/Models/magic";
 import { isSpacedWordChar } from "./Magic/phrase";
 import { effectConfigFor, pickEffects, retier, sanitizeCastArgs, sanitizeSpell, saveBehaviorFor, spellCastPrompts, voiceCastArgs } from "./Magic/spellEdit";
@@ -258,6 +258,43 @@ export class MagicModule extends BaseModule {
             }
         }
         if (changed) settingsSave();
+    }
+
+    get commands(): ICommand[] {
+        return [{
+            Tag: "spellbook",
+            Description: " [voice/potion/all] : List the spells you know, the phrase that voice-casts each, and which can be brewed into potions.",
+            Action: (args, msg, parsed) => this.ListSpellbook(parsed[0]),
+        }];
+    }
+
+    /** Shows the known spells in local chat: all of them, only the voice-castable ones (with the phrase that casts each, the
+     *  casting phrase or else the name), or only the ones that can be potions. */
+    ListSpellbook(filter: string = "all"): void {
+        const kind = filter.toLocaleLowerCase();
+        if (kind !== "all" && kind !== "voice" && kind !== "potion") {
+            LSCG_SendLocal("Usage: /lscg spellbook [voice/potion/all]");
+            return;
+        }
+        if (!this.Enabled) {
+            LSCG_SendLocal("Magic is not enabled.");
+            return;
+        }
+        const spells = this.AvailableSpells.filter(s => kind === "all" || (kind === "voice" ? s.AllowVoiceCast : s.AllowPotion));
+        if (spells.length === 0) {
+            LSCG_SendLocal(kind === "voice" ? "You know no spells that can be cast by voice." : kind === "potion" ? "You know no spells that can be made into potions." : "You know no spells.");
+            return;
+        }
+        const keywordColor = (Player.ChatSettings?.ColorTheme ?? "").indexOf("Light") > -1 ? "midnightblue" : "gold";
+        const items = spells.map(s => {
+            const effects = (s.Effects ?? []).filter(e => e !== LSCGSpellEffect.none).map(effectLabel).join(", ");
+            const phrase = s.CastingPhrase?.trim() ? s.CastingPhrase : s.Name;
+            const keyword = s.AllowVoiceCast && kind !== "potion" ? `: <b style="color:${keywordColor};font-style:normal;">${escapeHtml(phrase)}</b>` : "";
+            const potion = s.AllowPotion && kind === "all" ? " <small>[potion]</small>" : "";
+            return `<li>${escapeHtml(s.Name)}${effects ? ` (${escapeHtml(effects)})` : ""}${keyword}${potion}</li>`;
+        });
+        const title = kind === "voice" ? "Voice-castable spells" : kind === "potion" ? "Potion spells" : "Spellbook";
+        LSCG_SendLocal(`<div><b>${title}:</b><ul>${items.join("")}</ul></div>`, false);
     }
 
     safeword(): void {
@@ -708,6 +745,9 @@ export class MagicModule extends BaseModule {
      *  `castArgs`: the caster's answers to the spell's cast-time questions, already checked. */
     IncomingSpell(sender: Character | null, spell: SpellDefinition, paired?: Character | null, saveDiff: number = 1, saved: boolean = false, castArgs?: CastArgs) {
         const senderName = !sender ? "Someone" : CharacterNickname(sender);
+        // A ghosted/blacklisted player can't be paired with us, whoever cast the spell.
+        if (paired && IsBlockedSender(paired.MemberNumber))
+            paired = null;
         // However many a caster's spell claims, only so many are applied: each one is a timer on this client.
         let allowedEntries = this.allowedEffectEntries(spell, sender).slice(0, ABSOLUTE_MAX_SPELL_EFFECTS);
         if (allowedEntries.length <= 0) {
@@ -791,6 +831,8 @@ export class MagicModule extends BaseModule {
     }
 
     IncomingSpellPair(sender: Character | null, spellEffect: SpellEffectId, originalTarget: Character, pairType: LSCGState) {
+        if (IsBlockedSender(originalTarget.MemberNumber))
+            return;
         const senderName = !sender ? "Someone" : CharacterNickname(sender);
         const isAllowed = this.effectIsAllowed(spellEffect, sender);
 

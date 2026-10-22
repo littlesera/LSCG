@@ -15,7 +15,7 @@ describe("real BC client load", () => {
 	it("loads real Asset/AssetGroup data", () => {
 		expect(g.Asset.length).toBeGreaterThan(1000);
 		expect(g.AssetGroup.length).toBeGreaterThan(20);
-		expect(g.GameVersion).toBe("R132");
+		expect(g.GameVersion).toBe("R133");
 	});
 
 	it("wearing a real gag blocks the mouth via real Character/Asset logic", () => {

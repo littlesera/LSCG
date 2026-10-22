@@ -4,6 +4,8 @@
 import { sent, receive } from "./room";
 import { resetWorld, addToRoom, player } from "./world";
 import { makeCharacter, type FixtureCharacter } from "./fixtures";
+import { getModule } from "modules";
+import type { CollarModule } from "Modules/collar";
 
 export interface Packets {
 	hidden: LSCGMessageModel[];
@@ -40,6 +42,9 @@ export function becomePlayer(me: PlayerSetup, other: PlayerSetup): { me: Fixture
 		LSCG: { GlobalModule: { enabled: true }, MiscModule: { chokeChainEnabled: false, gagChokeEnabled: false, handChokeEnabled: true }, ...(me.lscg ?? {}) },
 		...(me.character ?? {}),
 	});
+	// A player set up to hand choke has opted into breathplay too
+	const collar = getModule<CollarModule>("CollarModule");
+	if (collar) collar.settings.breathplayEnabled = true;
 	addToRoom(player());
 	const there = addToRoom(makeCharacter({
 		MemberNumber: other.memberNumber, Nickname: other.nickname,

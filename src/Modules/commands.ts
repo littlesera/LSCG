@@ -1,12 +1,23 @@
 import { BaseModule } from "base";
 import { getModule, modules } from "modules";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { ExportSettings, getCharacterByNicknameOrMemberNumber, GetDelimitedList, ImportSettings, LSCG_SendLocal, parseFromBase64, removeAllHooksByModule, SendAction, settingsSave, toItemBundle } from "../utils";
+import { ExportSettings, getCharacterByNicknameOrMemberNumber, GetDelimitedList, hasRemotePermission, ImportSettings, LSCG_SendLocal, parseFromBase64, removeAllHooksByModule, SendAction, settingsSave, toItemBundle } from "../utils";
 import { HypnoModule } from "./hypno";
 import { ItemUseModule } from "./item-use";
 import { CollarModule } from "./collar";
 import { StateModule } from "./states";
 import { LeashingModule } from "./leashing";
+
+/** Whether you may copy `target`'s outfit: BC's item permission (which takes in their blacklist, owner and lovers), then
+ *  their own LSCG setting for it. Without LSCG, or on a version without the setting, only the item permission counts. */
+export function canCopyOutfit(target: OtherCharacter): boolean {
+	if (!ServerChatRoomGetAllowItem(Player, target))
+		return false;
+	const level = target.LSCG?.GlobalModule?.outfitCopy ?? "Public";
+	if (level === "Nobody")
+		return false;
+	return hasRemotePermission(target, level, Player.MemberNumber!);
+}
 
 // Remote UI Module to handle configuration on other characters
 // Can be used to "program" another character's hypnosis, collar, etc.
@@ -126,6 +137,10 @@ export class CommandModule extends BaseModule {
 				if (!target)
 					return;
 				const targetName = CharacterNickname(target);
+				if (!target.IsPlayer() && !canCopyOutfit(target as OtherCharacter)) {
+					LSCG_SendLocal(`${targetName} does not allow you to copy their outfit.`);
+					return;
+				}
 				const items = target.Appearance.map(item => toItemBundle(item, target));
 				const str = LZString.compressToBase64(JSON.stringify(items));
 				navigator.clipboard.writeText(str);

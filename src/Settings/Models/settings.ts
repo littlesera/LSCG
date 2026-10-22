@@ -61,8 +61,8 @@ export class PublicSettingsModel implements IPublicSettingsModel {
     ExtensionData: Record<string, unknown> = {};
     CollarModule: CollarPublicSettingsModel = <CollarPublicSettingsModel>{
         enabled: false,
+        breathplayEnabled: false,
         chokeLevel: 0,
-        collarPurchased: false,
         allowedMembers: "",
         remoteAccess: false,
         lockable: false,
@@ -120,6 +120,7 @@ export class PublicSettingsModel implements IPublicSettingsModel {
     GlobalModule: GlobalPublicSettingsModel = <GlobalPublicSettingsModel>{
         enabled: false,
         sharePublicCrafting: false,
+        outfitCopy: "Public",
     };
     MiscModule: BaseSettingsModel = <BaseSettingsModel>{enabled: false};
     InjectorModule: InjectorPublicSettingsModel = <InjectorPublicSettingsModel>{

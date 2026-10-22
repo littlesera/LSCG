@@ -218,6 +218,40 @@
 		}
 	}
 
+	// A row's own checkbox with sub-options beside it (CheckboxRow's `inline`).
+	.lscg-kit-inline-group {
+		display: flex;
+		align-items: center;
+		flex-wrap: wrap;
+		gap: min(2dvh, 1dvw);
+	}
+
+	// A sub-option: smaller than the row's checkbox, its label in small text.
+	.lscg-kit-row .lscg-kit-inline-check {
+		display: inline-flex;
+		align-items: center;
+		gap: min(0.8dvh, 0.4dvw);
+		font-size: calc(var(--lscg-font-small) * 0.8);
+
+		&[hidden] {
+			display: none;
+		}
+
+		input[type="checkbox"] {
+			height: min(3.6dvh, 1.8dvw);
+			width: min(3.6dvh, 1.8dvw);
+
+			&::before {
+				height: min(2.4dvh, 1.2dvw);
+				width: min(2.4dvh, 1.2dvw);
+			}
+		}
+
+		label {
+			cursor: pointer;
+		}
+	}
+
 	// Only a row has a "desc" area; elsewhere (a panel or dialog grid) the name would add an implicit column.
 	.lscg-kit-row > .lscg-kit-desc {
 		grid-area: desc;
@@ -594,12 +628,29 @@
 		}
 	}
 
-	// A sales pitch for a module you unlock on its screen (e.g. the collar control module).
-	.lscg-kit-promo {
+	// Passes the screen body's full height on to its one visible child.
+	.lscg-kit-fill {
 		display: grid;
-		justify-items: center;
-		gap: min(1dvh, 0.5dvw);
+		grid-template-rows: minmax(0, 1fr);
+		min-height: 0;
+	}
+
+	// A module's introduction, shown on its screen until it's enabled (e.g. breathplay): fills the screen, with its
+	// header at the top, flavor in the middle and the enable button (and any fine print) at the bottom.
+	.lscg-kit-promo {
+		display: flex;
+		flex-direction: column;
+		justify-content: space-between;
+		align-items: center;
+		min-height: 0;
+		padding: min(2dvh, 1dvw) 0;
 		text-align: center;
+
+		> * {
+			display: grid;
+			justify-items: center;
+			gap: min(1dvh, 0.5dvw);
+		}
 
 		p, h2 {
 			margin: 0;
@@ -609,22 +660,36 @@
 			width: auto;
 			min-width: 12em;
 			height: min(8dvh, 4dvw);
-			margin: min(2dvh, 1dvw) 0;
 		}
 	}
 
-	.lscg-kit-blink {
-		color: red;
-		animation: lscg-kit-blink 1.5s steps(1) infinite;
+	.lscg-kit-promo-title {
+		color: #c2185b;
 	}
+
+	.lscg-kit-promo-list {
+		margin: min(1dvh, 0.5dvw) 0;
+		padding: 0;
+		list-style: none;
+		text-align: center;
+		color: color-mix(in srgb, currentColor 65%, gray);
+	}
+
+	.lscg-kit-promo-fine {
+		font-size: 0.7em;
+		font-style: italic;
+		color: color-mix(in srgb, currentColor 55%, gray);
+	}
+
+	.lscg-kit-promo-warning {
+		font-size: 0.65em;
+		color: #d98a1f;
+	}
+
 
 	.lscg-kit-activity-icon {
 		width: min(12dvh, 6dvw);
 		height: min(12dvh, 6dvw);
 		border: 2px solid black;
 	}
-}
-
-@keyframes lscg-kit-blink {
-	50% { color: gray; }
 }

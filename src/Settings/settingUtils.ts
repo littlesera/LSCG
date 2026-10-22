@@ -89,6 +89,7 @@ export class GUI extends BaseModule {
 			tamperproofEnabled: true,
 			tamperproofElectricityEnabled: true,
 			blockDOGS: false,
+			outfitCopy: "Public",
 		};
     }
 

@@ -82,9 +82,20 @@ describe("CoreModule remote-settings receiver (Command() \"remote\")", () => {
 
 		collar.settings.enabled = true;
 		collar.settings.remoteAccess = false;
-		sendRemote(owner, { CollarModule: { collarPurchased: true } } as never);
+		sendRemote(owner, { CollarModule: { tightTrigger: "squeeze" } } as never);
 
-		expect(collar.settings.collarPurchased).toBe(true);
+		expect(collar.settings.tightTrigger).toBe("squeeze");
+	});
+
+	it("never lets remote settings opt this player into breathplay, even from their owner", () => {
+		player().OwnerMemberNumber = 111;
+		const owner = addToRoom(makeCharacter({ MemberNumber: 111 }));
+
+		collar.settings.breathplayEnabled = false;
+		sendRemote(owner, { CollarModule: { breathplayEnabled: true, tightTrigger: "squeeze" } } as never);
+
+		expect(collar.settings.breathplayEnabled).toBe(false);
+		expect(collar.settings.tightTrigger).toBe("squeeze");
 	});
 
 	it("applies CollarModule settings from a non-owner when the collar's own enabled+remoteAccess flags allow it", () => {
@@ -92,9 +103,9 @@ describe("CoreModule remote-settings receiver (Command() \"remote\")", () => {
 
 		collar.settings.enabled = true;
 		collar.settings.remoteAccess = true;
-		sendRemote(stranger, { CollarModule: { collarPurchased: true } } as never);
+		sendRemote(stranger, { CollarModule: { tightTrigger: "squeeze" } } as never);
 
-		expect(collar.settings.collarPurchased).toBe(true);
+		expect(collar.settings.tightTrigger).toBe("squeeze");
 	});
 
 	it("does not apply CollarModule settings from a non-owner when remoteAccess is off (the receiver-side gate)", () => {
@@ -102,20 +113,19 @@ describe("CoreModule remote-settings receiver (Command() \"remote\")", () => {
 
 		collar.settings.enabled = true;
 		collar.settings.remoteAccess = false;
-		sendRemote(stranger, { CollarModule: { collarPurchased: true } } as never);
+		sendRemote(stranger, { CollarModule: { tightTrigger: "squeeze" } } as never);
 
-		expect(collar.settings.collarPurchased).toBe(false);
+		expect(collar.settings.tightTrigger).not.toBe("squeeze");
 	});
 
-	it("sends a distinct local message the first time the collar module is purchased via remote", () => {
+	it("tells the player who accessed their remote settings", () => {
 		const owner = addToRoom(makeCharacter({ MemberNumber: 111, Nickname: "Kai" }));
 		player().OwnerMemberNumber = 111;
 		collar.settings.enabled = true;
-		collar.settings.collarPurchased = false;
 
-		sendRemote(owner, { CollarModule: { collarPurchased: true } } as never);
+		sendRemote(owner, { CollarModule: { tightTrigger: "squeeze" } } as never);
 
-		expect(sent.local().at(-1)).toContain("purchased the Collar Module");
+		expect(sent.local().at(-1)).toContain("accessed your remote settings");
 		expect(sent.local().at(-1)).toContain("Kai");
 	});
 

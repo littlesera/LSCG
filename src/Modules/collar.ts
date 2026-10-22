@@ -8,6 +8,7 @@ import { getModule } from "modules";
 import { InjectorModule } from "./injector";
 import { LeashingModule } from "./leashing";
 import { emit } from "api/events";
+import { releaseNeckGrasp } from "./Magic/effects/grasp";
 import type { LSCGPassoutReason } from "api/types";
 
 enum PassoutReason {
@@ -35,10 +36,36 @@ export class CollarModule extends BaseModule {
 		return super.Enabled && this.wearingCorrectCollar;
 	}
 
+    get breathplayEnabled(): boolean {
+        return !!this.settings.breathplayEnabled;
+    }
+
+    get handChokeEnabled(): boolean {
+        return this.breathplayEnabled && !!Player.LSCG.MiscModule?.handChokeEnabled;
+    }
+
+    get gagChokeEnabled(): boolean {
+        return this.breathplayEnabled && !!Player.LSCG.MiscModule?.gagChokeEnabled;
+    }
+
+    get chokeChainEnabled(): boolean {
+        return this.breathplayEnabled && !!Player.LSCG.MiscModule?.chokeChainEnabled;
+    }
+
+    init(): void {
+        super.init();
+        // Breathplay had no switch of its own before, so whoever already uses any part of it keeps it on
+        const s = this.settings;
+        if (s.breathplayEnabled === undefined) {
+            const misc = Player.LSCG.MiscModule;
+            s.breathplayEnabled = !!(s.enabled || misc?.handChokeEnabled || misc?.gagChokeEnabled || misc?.chokeChainEnabled);
+        }
+    }
+
     WearingCorrectCollar(C: OtherCharacter | PlayerCharacter) {
         const collar = InventoryGet(C, "ItemNeck");
         const collarSettings = C.LSCG?.CollarModule;
-        if (!collar || !collarSettings || !collarSettings.enabled)
+        if (!collar || !collarSettings || !collarSettings.enabled || collarSettings.breathplayEnabled === false)
             return false;
 
         if (!collarSettings || !collarSettings.collar.name || collarSettings.anyCollar)
@@ -69,7 +96,6 @@ export class CollarModule extends BaseModule {
             chokeLevel: 0,
             tightTrigger: "tighten",
             looseTrigger: "loosen",
-            collarPurchased: false,
             limitToCrafted: false,
             remoteAccess: false,
             allowSelfLoosening: false,
@@ -101,11 +127,6 @@ export class CollarModule extends BaseModule {
 			Tag: "collar",
 			Description: " [tight/loose/stat] : Use to self-tighten, self-loosen, or read out information about your collar if allowed. Must be unrestrained to use.",
 			Action: (args, msg, parsed) => {
-				if (!this.settings.collarPurchased) {
-					LSCG_SendLocal("Collar module not purchased.");
-					return;
-				}
-
 				if (!this.wearingCorrectCollar) {
 					LSCG_SendLocal("You are not wearing a properly configured collar.");
 					return;
@@ -165,7 +186,7 @@ export class CollarModule extends BaseModule {
         }, ModuleCategory.Collar);
 
         hookFunction("ChatRoomDoHoldLeash", 1, (args, next) => {
-            if (super.Enabled && Player.LSCG.MiscModule.chokeChainEnabled) {
+            if (super.Enabled && this.chokeChainEnabled) {
                 const chainItem = InventoryGet(Player, "ItemNeckRestraints");
                 if (!!chainItem && chainItem.Asset.Name == "ChokeChain") {
                     const sender = args[0];
@@ -176,7 +197,7 @@ export class CollarModule extends BaseModule {
         }, ModuleCategory.Misc);
 
         hookFunction("ChatRoomDoStopHoldLeash", 1, (args, next) => {
-            if (super.Enabled && Player.LSCG.MiscModule.chokeChainEnabled) {
+            if (super.Enabled && this.chokeChainEnabled) {
                 const chainItem = InventoryGet(Player, "ItemNeckRestraints");
                 if (!!chainItem && chainItem.Asset.Name == "ChokeChain") {
                     const sender = getCharacter(ChatRoomLeashPlayer ?? 0);
@@ -217,7 +238,7 @@ export class CollarModule extends BaseModule {
 
         // Check for Neck choker tighten/loosen
         OnAction(1, ModuleCategory.Misc, (data, sender, msg, metadata) => {
-            if (!super.Enabled || !Player.LSCG.MiscModule.chokeChainEnabled)
+            if (!super.Enabled || !this.chokeChainEnabled)
                 return;
 
             const messagesToCheck = [
@@ -264,7 +285,7 @@ export class CollarModule extends BaseModule {
 
         // Check for heavy gag + nose plugs
         OnAction(100, ModuleCategory.Misc, (data, sender, msg, metadata) => {
-            if (!super.Enabled || !Player.LSCG.MiscModule.gagChokeEnabled)
+            if (!super.Enabled || !this.gagChokeEnabled)
                 return;
 
             const airwaySlots = ["ItemMouth", "ItemMouth2", "ItemMouth3", "ItemNose"];
@@ -525,7 +546,7 @@ export class CollarModule extends BaseModule {
     }
 
     CheckGagSuffocate(msg: string, sender: Character | null) {
-        if (!Player.LSCG.MiscModule.gagChokeEnabled)
+        if (!this.gagChokeEnabled)
             return;
 
         let chokeThreshold = 8;
@@ -591,7 +612,7 @@ export class CollarModule extends BaseModule {
     }
 
     ChainChoke(chokingMember: Character | undefined | null, modifier: number, itemName: string = "choke chain") {
-        if (!Player.LSCG.MiscModule.chokeChainEnabled || !chokingMember || (this.chainChokeModifier <= 0 && modifier <= 0) || (this.chainChokeModifier >= 4 && modifier >= 0))
+        if (!this.chokeChainEnabled || !chokingMember || (this.chainChokeModifier <= 0 && modifier <= 0) || (this.chainChokeModifier >= 4 && modifier >= 0))
             return;
         const origChokeMod = this.chainChokeModifier;
         this.chainChokeModifier = Math.max(Math.min(this.chainChokeModifier + modifier, 4), 0);
@@ -666,7 +687,7 @@ export class CollarModule extends BaseModule {
     }
 
     HandChoke(chokingMember: Character | undefined | null, magical: boolean = false) {
-        if (this.handChokeModifier >= 4 || !Player.LSCG.MiscModule.handChokeEnabled || !chokingMember)
+        if (this.handChokeModifier >= 4 || !this.handChokeEnabled || !chokingMember)
             return;
 
         this.handChokeMagic = magical;
@@ -718,6 +739,18 @@ export class CollarModule extends BaseModule {
             if (this.settings.chokeLevel > 0 && showEmote)
                 setTimeout(() => this.ChokeEvent(), 2000);
         }
+    }
+
+    /** Eases a hand choke by one step, never letting go entirely, and stops a passout it was causing. Returns whether it did. */
+    LoosenHandChoke(): boolean {
+        if (this.handChokeModifier <= 1)
+            return false;
+        this.handChokeModifier--;
+        if (this.isPassingOut && this.totalChokeLevel < 4) {
+            clearTimeout(this.chokeTimeout);
+            this.isPassingOut = false;
+        }
+        return true;
     }
 
     ForceReleasePlugs() {
@@ -958,6 +991,7 @@ export class CollarModule extends BaseModule {
             // The hand is the spell's: it lets go, but the caster isn't someone holding on, so there is no leash to escape
             SendAction("As %NAME% collapses unconscious, the spectral hand lets go of %POSSESSIVE% neck.");
             this.ReleaseHandChoke(null, false);
+            releaseNeckGrasp();
             this.settings.stats.handPassoutCount++;
         }
         else if (reason == PassoutReason.HAND) {
