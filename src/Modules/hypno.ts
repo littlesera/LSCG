@@ -1,7 +1,7 @@
 import { BaseModule } from "base";
 import { HypnoInfluence, HypnoSettingsModel, LSCGHypnoInstruction } from "Settings/Models/hypno";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
-import { settingsSave, parseMsgWords, OnAction, OnActivity, SendAction, getRandomInt, hookFunction, removeAllHooksByModule, isAllowedMember, isPhraseInString, GetTargetCharacter, GetDelimitedList, GetActivityEntryFromContent, escapeRegExp, IsActivityAllowed, LSCG_SendLocal, getCharacter, sendLSCGCommandBeep, htmlToElement, getCharacterByNicknameOrMemberNumber, getActivities, isCloth, replace_template, hookBCXVoice, parseFromBase64 } from "../utils";
+import { settingsSave, parseMsgWords, OnAction, OnActivity, SendAction, getRandomInt, hookFunction, removeAllHooksByModule, isAllowedMember, isPhraseInString, GetTargetCharacter, GetDelimitedList, GetActivityEntryFromContent, escapeRegExp, IsActivityAllowed, LSCG_SendLocal, getCharacter, sendLSCGCommandBeep, htmlToElement, getCharacterByNicknameOrMemberNumber, getActivities, isCloth, replace_template, hookBCXVoice, parseFromBase64, IsBlockedSender } from "../utils";
 import { GuiHypno } from "Settings/hypno";
 import { getModule } from "modules";
 import { ActivityEntryModel } from "Settings/Models/activities";
@@ -273,6 +273,8 @@ export class HypnoModule extends BaseModule {
             Priority: handlerPriority, // Try to make sure we run last. Other mods could potentially add handlers after this depending on arbitrary load order.
             Description: "LSCG Hypnosis Trigger Checks",
             Callback: (data: ServerChatRoomMessage, sender: Character, msg: string, metadata?: IChatRoomMessageMetadata) => {
+                if (IsBlockedSender(data.Sender))
+                    return false;
                 if (data.Type == "Chat" || data.Type == "Whisper") {
                     const newMsg = this.BlankOutTriggers(msg, sender);
                     if (!this.TopLevelCheckTriggers(msg, sender))
