@@ -106,6 +106,11 @@ describe("CursedItemModule", () => {
 			cursedItem.settings.Vulnerable = true;
 		});
 
+		/** The player wears a cursed item `crafter` made: a response is only taken for one of those. */
+		function wearCursedBy(crafter: number) {
+			wear(player(), craftedItem({ name: "Cursed Dress", crafter }));
+		}
+
 		function respond(sender: number, overrides: Partial<{ Crafter: number; CurseName: string; Allowed: string }> = {}) {
 			cursedItem.settings.Allowed = (overrides.Allowed ?? "Public") as never;
 			receive.command({ MemberNumber: sender } as never, "cursed-item-response", [{
@@ -119,8 +124,16 @@ describe("CursedItemModule", () => {
 		}
 
 		it("activates the spreading state for a legitimate sender", () => {
+			wearCursedBy(5);
 			respond(5, { Allowed: "Public" });
 			expect(states.CursedItemState.Active).toBe(true);
+		});
+
+		it("ignores a response about a cursed item the player isn't wearing from that sender", () => {
+			respond(5, { Allowed: "Public" });
+			wearCursedBy(7);
+			respond(5, { Allowed: "Public" });
+			expect(states.CursedItemState.Active).toBe(false);
 		});
 
 		it("gates on the Allowed permission level using the item's own claimed Crafter (current behavior)", () => {
@@ -137,6 +150,7 @@ describe("CursedItemModule", () => {
 		});
 
 		it("the actual owner (verified sender) is still accepted at the Owner permission level", () => {
+			wearCursedBy(99);
 			respond(99, { Allowed: "Owner" });
 			expect(states.CursedItemState.Active).toBe(true);
 		});

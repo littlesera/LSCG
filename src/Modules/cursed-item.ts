@@ -207,6 +207,8 @@ export class CursedItemModule extends BaseModule {
         // owner/lover/family checks) keys off item.Crafter -- trust the verified packet sender,
         // not this sender-controlled field, or a stranger could claim to be the owner.
         item.Crafter = sender;
+        // Only an answer about a cursed item we're wearing, that they made: we asked them about it
+        if (this.spreadingState.findWornItems(item).length <= 0) return;
         this.spreadingState.AddCursedItem(item, sender);
     }
 }

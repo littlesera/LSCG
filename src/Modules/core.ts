@@ -23,6 +23,7 @@ import { advertisedEffectIds } from "./Magic/spellEffects";
 import type { InjectorModule } from "./injector";
 import { publishedExtensionData } from "api/publish";
 import { dispatchExtensionCommand } from "api/network";
+import { canRemoteCollar, canRemoteHypno, canRemoteMagic, remoteCollarChanges, remoteHypnoChanges, remoteMagicChanges } from "./remoteAccess";
 
 /** State extension keys holding compressed outfit snapshots (cursed outfits, redress slots, polymorph/redress originals). */
 const PRIVATE_STATE_EXTENSIONS = ["outfits", "slot-snapshot", "stored", "stored-outfit", "spell-effects"];
@@ -336,10 +337,8 @@ export class CoreModule extends BaseModule {
         if (!msg.command || msg.target != Player.MemberNumber)
             return;
         const Sender = getCharacter(senderNumber) as OtherCharacter;
+        // Every command here comes from another player, who could send anything: each handler checks the sender may do it
         switch (msg.command!.name) {
-            case "debug":
-                LSCG_SendLocal(msg.command.args[0].value as string);
-                break;
             case "grab":
                 getModule<LeashingModule>("LeashingModule")?.IncomingGrab(Sender, msg.command.args.find(a => a.name == "type")?.value as GrabType);
                 break;
@@ -350,19 +349,7 @@ export class CoreModule extends BaseModule {
                 getModule<LeashingModule>("LeashingModule")?.IncomingEscape(Sender, msg.target);
                 break;
             case "remote":
-                if (Player.LSCG.HypnoModule.enabled && Player.LSCG.HypnoModule.remoteAccess) {
-                    Object.assign(Player.LSCG.HypnoModule, msg.settings?.HypnoModule);
-                    getModule<HypnoModule>("HypnoModule")?.initializeTriggerWord();
-                }
-                if ((!!Sender.MemberNumber && Player.IsOwnedByMemberNumber(Sender.MemberNumber)) || (Player.LSCG.CollarModule.enabled && Player.LSCG.CollarModule.remoteAccess)) {
-                    // Opting into breathplay is only ever the wearer's own choice
-                    const { breathplayEnabled: _ignored, ...collarSettings } = msg.settings?.CollarModule ?? {};
-                    Object.assign(Player.LSCG.CollarModule, collarSettings);
-                }
-                if (Player.LSCG.MagicModule.enabled && Player.LSCG.MagicModule.remoteAccess)
-                    Object.assign(Player.LSCG.MagicModule, msg.settings?.MagicModule);
-                settingsSave(true);
-                LSCG_SendLocal(`${!Sender ? "Someone" : CharacterNickname(Sender)} has accessed your remote settings!`);
+                if (Sender) this.IncomingRemote(Sender, msg);
                 break;
             case "collar-tighten":
                 if (Sender) getModule<CollarModule>("CollarModule")?.TightenButtonPress(Sender);
@@ -374,7 +361,7 @@ export class CoreModule extends BaseModule {
                 if (Sender) getModule<CollarModule>("CollarModule")?.StatsButtonPress(Sender);
                 break;
             case "photo":
-                DrawFlashScreen("#FFFFFF", 500, 1500);
+                if (Sender) DrawFlashScreen("#FFFFFF", 500, 1500);
                 break;
             case "spell":
             case "pair":
@@ -399,6 +386,26 @@ export class CoreModule extends BaseModule {
         this.CommandListeners.filter(com => com.command == msg.command!.name).forEach(command => command.func(senderNumber, msg));
         dispatchExtensionCommand(senderNumber, msg);
         emit("command.received", { sender: senderNumber, name: msg.command.name });
+    }
+
+    /** Settings sent from the remote screens: each module only from someone those screens would let in, and only the
+     *  settings they show. */
+    IncomingRemote(Sender: OtherCharacter, msg: LSCGMessageModel) {
+        const apply = (allowed: boolean, target: object, changes: () => Record<string, unknown>) => {
+            if (!allowed) return false;
+            const changed = changes();
+            Object.assign(target, changed);
+            return Object.keys(changed).length > 0;
+        };
+        const hypnoChanged = apply(canRemoteHypno(Player, Sender), Player.LSCG.HypnoModule, () => remoteHypnoChanges(Player, Sender, msg.settings?.HypnoModule));
+        if (hypnoChanged)
+            getModule<HypnoModule>("HypnoModule")?.initializeTriggerWord();
+        const collarChanged = apply(canRemoteCollar(Player, Sender), Player.LSCG.CollarModule, () => remoteCollarChanges(Player, msg.settings?.CollarModule));
+        const magicChanged = apply(canRemoteMagic(Player, Sender), Player.LSCG.MagicModule, () => remoteMagicChanges(Player, msg.settings?.MagicModule));
+        if (!hypnoChanged && !collarChanged && !magicChanged)
+            return;
+        settingsSave(true);
+        LSCG_SendLocal(`${CharacterNickname(Sender)} has accessed your remote settings!`);
     }
 
     Broadcast(senderNumber: number, msg: LSCGMessageModel) {

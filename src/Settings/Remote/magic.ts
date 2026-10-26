@@ -6,6 +6,7 @@ import { legacyEffectIds } from "Modules/Magic/spellEffects";
 import { DomSettingsHost } from "Settings/domSettingsHost";
 import { KitContext, Tabs } from "Dom/kit";
 import { buildMagicTabs } from "Settings/magic-pages";
+import { canRemoteMagic } from "Modules/remoteAccess";
 
 export class RemoteMagic extends RemoteGuiSubscreen {
 	subscreens: RemoteGuiSubscreen[] = [];
@@ -49,20 +50,7 @@ export class RemoteMagic extends RemoteGuiSubscreen {
 	}
 
 	get enabled(): boolean {
-		let memberIdIsAllowed = ServerChatRoomGetAllowItem(Player, this.Character);
-		if (this.overrideMemberIds.length > 0)
-			memberIdIsAllowed = this.overrideMemberIds.indexOf(Player.MemberNumber!) > -1;
-
-		const isTrance = this.Character.LSCG.StateModule.states.find(s => s.type == "hypnotized")?.active ?? false;
-		const passTranceReq = (this.settings.remoteAccessRequiredTrance && isTrance) || !this.settings.remoteAccessRequiredTrance;
-		const passHypnotizerReq = (this.settings.limitRemoteAccessToHypnotizer && this.Character.LSCG.StateModule.states.find(s => s.type == "hypnotized")?.activatedBy == Player.MemberNumber) || 
-								!this.settings.limitRemoteAccessToHypnotizer;
-
-		return this.settings.remoteAccess && 
-				this.settings.enabled &&
-				memberIdIsAllowed &&
-				passTranceReq &&
-				passHypnotizerReq;
+		return canRemoteMagic(this.Character, Player);
 	}
 
 	get icon(): string {

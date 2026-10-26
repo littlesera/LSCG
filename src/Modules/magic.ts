@@ -988,7 +988,8 @@ export class MagicModule extends BaseModule {
     }
 
     /** Outstanding spell lookups from other crafters, mapped to whether the potion was consented to. */
-    itemSpellRequests: Map<number, boolean> = new Map<number, boolean>();
+    /** Spell requests sent to a potion's crafter: whether the drinker consented, and who was asked. */
+    itemSpellRequests: Map<number, { consented: boolean, crafter: number }> = new Map();
 
     GetSpellFromItem(item: Item | null, itemUser: Character, consented: boolean = false): SpellDefinition | undefined {
         const itemCraft = item?.Craft;
@@ -1009,7 +1010,7 @@ export class MagicModule extends BaseModule {
                 return foundSpell;
             } else {
                 const reqId = Date.now();
-                this.itemSpellRequests.set(reqId, consented);
+                this.itemSpellRequests.set(reqId, { consented, crafter: craftingMember });
                 sendLSCGCommandBeep(craftingMember, "get-spell", [{
                     name: "itemStr",
                     value: itemStr,
@@ -1062,8 +1063,10 @@ export class MagicModule extends BaseModule {
         const originator = response.command?.args.find(a => a.name == "originator")?.value as number;
         const sender = getCharacter(originator);
 
-        if (this.itemSpellRequests.has(reqId)) {
-            const consented = this.itemSpellRequests.get(reqId);
+        const request = this.itemSpellRequests.get(reqId);
+        // Only the crafter we asked answers for their potion
+        if (request && request.crafter === senderNum) {
+            const consented = request.consented;
             this.itemSpellRequests.delete(reqId);
             setTimeout(() => {
                 this.HandleQuaffWithSpell(sender, itemName, spell, consented);

@@ -617,8 +617,17 @@ describe("ItemUseModule actions", () => {
 			expect(sent.local()[0]).toContain("ItemNeck/Preview/Charm.png");
 			expect(sent.local()[0]).not.toContain("ItemMisc");
 
+			makeAsset(makeGroup({ Name: "ItemMisc" }), { Name: "MetalPadlock" });
 			itemUse.ShowCraftImage(asChar(C), { Item: "Charm", Lock: "MetalPadlock" } as never);
 			expect(sent.local()[1]).toContain("ItemMisc/Preview/MetalPadlock.png");
+		});
+
+		it("ShowCraftImage ignores a lock that isn't a real one, so a shared craft can't put markup in the chat", () => {
+			const C = makeCharacter();
+			asChar(C).Inventory = [{ Asset: { Name: "Charm", DynamicGroupName: "ItemNeck" } }];
+			itemUse.ShowCraftImage(asChar(C), { Item: "Charm", Lock: `x.png" onerror="alert(1)` } as never);
+			expect(sent.local()[0]).toContain("ItemNeck/Preview/Charm.png");
+			expect(sent.local()[0]).not.toContain("onerror");
 		});
 
 		it("ShowCraftImage shows nothing for an asset the viewer doesn't own", () => {

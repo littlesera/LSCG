@@ -1270,7 +1270,15 @@ export class LeashingModule extends BaseModule {
         }
         if (!this.CanBeChangedBy(sender, pairedMember))
             return;
+        // Holding someone who asks is up to them, but being held by them needs their item permission on us, like a grab
+        if (!isSource && !this.CanGrabUs(sender))
+            return;
         this.AddLeashing(new Leashing(pairedMember, sender, isSource, type));
+    }
+
+    /** Whether `sender` may grab us: someone our item permissions let touch us, while leashing is on. */
+    CanGrabUs(sender: number) {
+        return this.Enabled && isAllowedMember(getCharacter(sender) ?? undefined);
     }
 
     HandleLeashRemovalRequest(sender: number, msg: LSCGMessageModel) {
@@ -1343,7 +1351,7 @@ export class LeashingModule extends BaseModule {
 
     IncomingGrab(sender: Character | null, grabType: GrabType) {
         if (!!sender && !!sender.MemberNumber) {
-            if (emitBefore("grab.beforeIncoming", { type: grabType, sender: sender.MemberNumber }).cancelled) {
+            if (!this.CanGrabUs(sender.MemberNumber) || emitBefore("grab.beforeIncoming", { type: grabType, sender: sender.MemberNumber }).cancelled) {
                 // Refused: tell the grabber to drop their side, as if we had released.
                 SendAction("%NAME% slips out of %OPP_NAME%'s grab.", sender);
                 sendLSCGCommandBeep(sender.MemberNumber, "release", [
