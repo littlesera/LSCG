@@ -58,10 +58,10 @@ export default defineConfig({
 			// `npm run coverage` and CI's unit+bc run fail if coverage drops. Raise these when
 			// coverage goes up.
 			thresholds: {
-				statements: 50,
-				branches: 45,
-				functions: 48,
-				lines: 51,
+				statements: 59,
+				branches: 53,
+				functions: 55,
+				lines: 60,
 			},
 		},
 	},

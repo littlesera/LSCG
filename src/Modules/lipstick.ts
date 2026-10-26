@@ -157,9 +157,15 @@ export class LipstickModule extends BaseModule {
     }
 
     RemoveKissMark(location: "cheek" | "forehead" | "neck" | "all") {
+        // Before the face marks: a kissed gag can be the only mark there is
+        if (location == "cheek" || location == "all")
+            this.removeGagKissMark();
+
         const marks = [InventoryGet(Player, "Mask"), InventoryGet(Player, "ClothAccessory")].filter(m => !!m && m.Asset.Name == "Kissmark");
-        if (!marks || marks.length <= 0)
+        if (!marks || marks.length <= 0) {
+            ChatRoomCharacterUpdate(Player);
             return;
+        }
 
         marks.forEach(mark => {
             const status = this.getKissMarkStatus(mark?.Property?.TypeRecord ?? this.baseKissTypeRecord);
@@ -190,9 +196,6 @@ export class LipstickModule extends BaseModule {
             if (!!mark && !!mark.Property)
                 mark.Property.TypeRecord = this.getKissMarkTypeRecord(status);
         });
-
-        if (location == "cheek" || location == "all")
-            this.removeGagKissMark();
 
         ChatRoomCharacterUpdate(Player);
     }
