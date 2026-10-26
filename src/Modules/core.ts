@@ -368,9 +368,13 @@ export class CoreModule extends BaseModule {
     Command(senderNumber: number, msg: LSCGMessageModel) {
         if (!msg.command || msg.target != Player.MemberNumber)
             return;
-        if (!this.InteractionPermitted(senderNumber, msg))
-            return;
         const Sender = getCharacter(senderNumber) as OtherCharacter;
+        if (!this.InteractionPermitted(senderNumber, msg)) {
+            // The grabber's side already holds us: a silent drop would leave them holding nothing
+            if (msg.command.name == "grab" && !!Sender?.MemberNumber)
+                getModule<LeashingModule>("LeashingModule")?.RefuseGrab(Sender, msg.command.args.find(a => a.name == "type")?.value as GrabType);
+            return;
+        }
         // Every command here comes from another player, who could send anything: each handler checks the sender may do it
         switch (msg.command!.name) {
             case "grab":

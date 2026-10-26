@@ -1370,12 +1370,7 @@ export class LeashingModule extends BaseModule {
     IncomingGrab(sender: Character | null, grabType: GrabType) {
         if (!!sender && !!sender.MemberNumber) {
             if (!this.CanGrabUs(sender.MemberNumber) || emitBefore("grab.beforeIncoming", { type: grabType, sender: sender.MemberNumber }).cancelled) {
-                // Refused: tell the grabber to drop their side, as if we had released.
-                SendAction("%NAME% slips out of %OPP_NAME%'s grab.", sender);
-                sendLSCGCommandBeep(sender.MemberNumber, "release", [
-                    { name: "type", value: grabType },
-                    { name: "isSource", value: false },
-                ]);
+                this.RefuseGrab(sender, grabType);
                 return;
             }
             this.AddLeashing(new Leashing(sender.MemberNumber,
@@ -1385,6 +1380,15 @@ export class LeashingModule extends BaseModule {
             if (grabType != "hand")
                 this.NotifyAboutEscapeCommand(sender, grabType);
         }
+    }
+
+    /** Tell a refused grabber to drop their side, as if we had released: they already think they're holding us. */
+    RefuseGrab(sender: Character, grabType: GrabType) {
+        SendAction("%NAME% slips out of %OPP_NAME%'s grab.", sender);
+        sendLSCGCommandBeep(sender.MemberNumber!, "release", [
+            { name: "type", value: grabType },
+            { name: "isSource", value: false },
+        ]);
     }
 
     // By member number, as a release often comes from another room, where getCharacter finds nobody.
