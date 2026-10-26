@@ -4,6 +4,7 @@ import { GetDelimitedList, ICONS, replace_template } from "utils";
 import { DomSettingsHost } from "Settings/domSettingsHost";
 import { CheckboxRow, KitContext, NumberRow, Tabs, TextRow } from "Dom/kit";
 import { HYPNO_TIME_MAX } from "Settings/hypno";
+import { canRemoteHypno } from "Modules/remoteAccess";
 
 /** Who may open the target's hypnosis screens; shared by the settings screen and Suggestions. */
 export abstract class RemoteHypnoBase extends RemoteGuiSubscreen {
@@ -38,21 +39,7 @@ export abstract class RemoteHypnoBase extends RemoteGuiSubscreen {
 	}
 
 	get enabled(): boolean {
-		let memberIdIsAllowed = ServerChatRoomGetAllowItem(Player, this.Character);
-		if (this.overrideMemberIds.length > 0)
-			memberIdIsAllowed = this.overrideMemberIds.indexOf(Player.MemberNumber!) > -1;
-
-		const isTrance = this.Character.LSCG.StateModule.states.find(s => s.type == "hypnotized")?.active ?? false;
-		const passTranceReq = (this.settings.remoteAccessRequiredTrance && isTrance) || !this.settings.remoteAccessRequiredTrance;
-		const passHypnotizerReq = (this.settings.limitRemoteAccessToHypnotizer && this.Character.LSCG.StateModule.states.find(s => s.type == "hypnotized")?.activatedBy == Player.MemberNumber) || 
-								!this.settings.limitRemoteAccessToHypnotizer;
-
-		return this.settings.remoteAccess && 
-				(this.Character.IsOwnedByPlayer() ||
-					(this.settings.enabled &&
-					memberIdIsAllowed &&
-					passTranceReq &&
-					passHypnotizerReq));
+		return canRemoteHypno(this.Character, Player);
 	}
 
 	get icon(): string {

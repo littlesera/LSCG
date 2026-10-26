@@ -91,3 +91,29 @@ describe("a crafted item's lock through an outfit (real BC data)", () => {
 		expect(unsafe?.Property?.LockedBy).toBe("OwnerPadlock");
 	});
 });
+
+// R133's ItemPropertiesDecompress merges into the item's existing Property with the existing values winning, and
+// InventoryWear has already given a fresh item its default options -- so an outfit's chosen options have to survive that.
+describe("an item's options through an outfit (real BC data)", () => {
+	function configuredBundle(group: string, name: string, option: string): ItemBundle {
+		g.Player.Inventory = [{ Group: group, Name: name }];
+		const preview = makeCharacter(80);
+		const worn = g.InventoryWear(preview, name, group, undefined, 0, g.Player.MemberNumber, undefined, false) as Item;
+		g.TypedItemSetOptionByName(preview, worn, option, false);
+		return BC_ItemsToItemBundles([worn])[0];
+	}
+
+	it("a typed item's option (cuffs connected at the wrist) is kept when the bundle is applied", () => {
+		const bundle = configuredBundle("ItemArms", "LeatherCuffs", "Wrist");
+		expect(bundle.Property?.TypeRecord).toEqual({ typed: 1 });
+		const item = ApplyItem(bundle, g.Player.MemberNumber, true, true, makeCharacter(81));
+		expect(item?.Property?.TypeRecord).toEqual({ typed: 1 });
+		expect(item?.Property?.SetPose).toEqual(["BackBoxTie"]);
+		expect(item?.Property?.Effect).toContain("Block");
+	});
+
+	it("a bundle with no properties still gets the asset's defaults", () => {
+		const item = ApplyItem({ Group: "ItemArms", Name: "LeatherCuffs" } as ItemBundle, g.Player.MemberNumber, true, true, makeCharacter(82));
+		expect(item?.Property?.TypeRecord).toEqual({ typed: 0 });
+	});
+});

@@ -69,7 +69,9 @@ export class AstralProjectionState extends BaseState {
 
     SetGhostConfig(C: OtherCharacter | PlayerCharacter, ghostChar: GhostConfig) {
         if (!C.LSCG) return;
-        const stateConfig = C.LSCG.StateModule?.states?.find(state => state.type === "astral-projection");
+        // The player's own entry is only created when first read through `config`, which Activate hasn't done yet the
+        // first time anyone projects, so the ghost would be lost
+        const stateConfig = C.IsPlayer() ? this.config : C.LSCG.StateModule?.states?.find(state => state.type === "astral-projection");
         if (!stateConfig) return;
         stateConfig.extensions["ghost"] = ghostChar;
     }
@@ -112,8 +114,8 @@ export class AstralProjectionState extends BaseState {
         char.PoseMapping = ghostConfig?.p ?? C.PoseMapping;
         char.ActivePoseMapping = char.PoseMapping;
         char.ArousalSettings = C.ArousalSettings;
-        this.SetExpression(char, "Eyes", ghostConfig.ge);
-        this.SetExpression(char, "Mouth", ghostConfig.gm);
+        this.SetExpression(char, "Eyes", ghostConfig?.ge);
+        this.SetExpression(char, "Mouth", ghostConfig?.gm);
 
         return char;
     }

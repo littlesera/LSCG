@@ -5,6 +5,7 @@ import { CollarPublicSettingsModel } from "Settings/Models/collar";
 import { DomSettingsHost } from "Settings/domSettingsHost";
 import { CheckboxRow, KitContext, Panel } from "Dom/kit";
 import { collarRows } from "Settings/collar";
+import { canRemoteCollar } from "Modules/remoteAccess";
 
 export class RemoteCollar extends RemoteGuiSubscreen {
 	subscreens: RemoteGuiSubscreen[] = [];
@@ -43,16 +44,7 @@ export class RemoteCollar extends RemoteGuiSubscreen {
 	}
 
 	get enabled(): boolean {
-		if (this.settings.breathplayEnabled === false)
-			return false;
-
-		let memberIdIsAllowed = ServerChatRoomGetAllowItem(Player, this.Character);
-		if (this.allowedMemberIds.length > 0)
-			memberIdIsAllowed = this.allowedMemberIds.indexOf(Player.MemberNumber!) > -1;
-
-		return this.settings.remoteAccess && 
-				(this.Character.IsOwnedByPlayer() ||
-					(this.settings.enabled && memberIdIsAllowed));
+		return canRemoteCollar(this.Character, Player);
 	}
 
 	get icon(): string {

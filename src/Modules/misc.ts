@@ -691,7 +691,7 @@ export class MiscModule extends BaseModule {
             id_label: this.LscgEffectCraftingId.cursedSelect,
             id_button: "",
             label: "",
-            description: "Selection for the curse to apply",
+            description: "The curse to apply, shown with its outfit. Curses and their outfits are set up in LSCG's Cursed Items settings",
             keywords: [],
             condition: (): boolean => {
                 return (document.getElementById(this.LscgEffectCraftingId.cursedButton) as HTMLInputElement)?.checked;
@@ -1138,9 +1138,9 @@ export class MiscModule extends BaseModule {
 			return;
 		}
 
-        // remove other
-        for (const curseName of curseNameList) {
-            if (curseName == selected) continue;
+        // remove other, longest first, leaving alone any that are part of the selected name ("Maid" in "Maid Uniform")
+        for (const curseName of [...curseNameList].sort((a, b) => b.length - a.length)) {
+            if (!curseName || curseName == selected || selected.includes(curseName)) continue;
 
             nameInput.value = nameInput.value.replaceAll(curseName, "");
             descriptionInput.value = descriptionInput.value.replaceAll(curseName, "");
@@ -1156,10 +1156,12 @@ export class MiscModule extends BaseModule {
         }
     }
 
-    // Populate the curse Select
+    // Populate the curse Select: the player's curses (from the Cursed Items settings), each showing the outfit it applies.
+    // The option values stay the bare curse names (and the empty word), which is what curseSelectChanged writes into the craft
     getSelectCurseOptions(): HTMLOptionsUnion[] {
         const optionList: HTMLOptionsUnion[] = [];
-        let curseNameList = getModule<CursedItemModule>("CursedItemModule")?.settings.CursedItems.map(item => item.Name);
+        const curses = getModule<CursedItemModule>("CursedItemModule")?.settings.CursedItems ?? [];
+        let curseNameList = curses.map(item => item.Name);
         if (!curseNameList || curseNameList.length <= 0) {
             curseNameList = [];
         }
@@ -1184,10 +1186,18 @@ export class MiscModule extends BaseModule {
         }
 
         for (const curse of curseNameList) {
-            const elem: HTMLOptionsUnion = {
-                tag: "option", children: [curse],
-            };
-            optionList.push(elem);
+            let label: string;
+            let title: string;
+            if (curse == this.cursedSelectEmptyWord) {
+                label = curses.length > 0 ? "No curse" : "No curses yet: add one under LSCG > Cursed Items";
+                title = "Curses, and the outfit each one applies, are set up in LSCG's Cursed Items settings";
+            } else {
+                const model = curses.find(c => c.Name == curse);
+                const outfit = model?.OutfitKey || "no outfit set";
+                label = `${curse} (${outfit})${model?.Enabled ? "" : " [disabled]"}`;
+                title = model?.Enabled ? `Applies the outfit "${outfit}"` : "This curse is disabled in the Cursed Items settings, so it won't apply";
+            }
+            optionList.push({ tag: "option", attributes: { value: curse, title }, children: [label] });
         }
 
         return optionList;

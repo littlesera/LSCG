@@ -8,6 +8,13 @@ Two Vitest projects:
   downloads and caches them (`npm run fetch-bc` to do that ahead of time).
 - `npm run test:all` runs both.
 
+## Coverage
+
+`npm run coverage` (unit only) and `npm run coverage:all` (both projects, what CI runs on pull requests) write a
+report to `coverage/` (open `coverage/index.html` for the per-line view). Both fail if coverage drops below the
+`thresholds` in `vitest.config.ts`. Those are a floor set just under what the unit project alone reaches, so raise
+them when a change adds coverage.
+
 ## Layout
 
 - `test/setup/globals.ts` — Vitest `setupFiles` entry for the `unit` project. Runs

@@ -24,6 +24,7 @@
     "test:all": "vitest run",
     "report:speech": "node scripts/speech-report.mjs",
     "coverage": "vitest run --project unit --coverage",
+    "coverage:all": "vitest run --coverage",
     "fetch-bc": "node scripts/fetch-bc.mjs"
   },
   "keywords": [],
