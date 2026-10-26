@@ -2,7 +2,7 @@ import { BaseModule } from "base";
 import { getModule } from "modules";
 import { BaseSettingsModel } from "Settings/Models/base";
 import { ModuleCategory } from "Settings/setting_definitions";
-import { GetActivityName, ICONS, LSCG_SendLocal, OnAction, SendAction, callOriginal, getCharacter, isAllowedMember, getRandomInt, hookFunction, mouseTooltip, removeAllHooksByModule, replace_template, sendLSCGCommand, sendLSCGCommandBeep } from "../utils";
+import { GetActivityName, ICONS, LSCG_SendLocal, OnAction, SendAction, callOriginal, getCharacter, isAllowedMember, getRandomInt, hookFunction, mouseTooltip, removeAllHooksByModule, replace_template, sendLSCGCommand, sendLSCGCommandBeep, IsBlockedSender } from "../utils";
 import { Pairing } from "./States/PairedBaseState";
 import { ItemUseModule } from "./item-use";
 import { CollarModule } from "./collar";
@@ -448,6 +448,16 @@ export class LeashingModule extends BaseModule {
             const sourceMemberNumber = args[0];
             const C = args[1];
 
+            // Vanilla's HoldLeash/PingHoldLeash/leash beeps are all gated on this, and a forged one skips the sender's own
+            // permission checks, so ghosted/blacklisted players and anyone without item permission on us can't leash us
+            if (C.IsPlayer() && sourceMemberNumber !== Player.MemberNumber) {
+                if (IsBlockedSender(sourceMemberNumber))
+                    return false;
+                const source = getCharacter(sourceMemberNumber);
+                if (source && !isAllowedMember(source))
+                    return false;
+            }
+
             // Someone stuck in a clasped group holds everyone in it in place, like being tethered: nothing but the
             // clasps themselves still leash them
             if (this.Enabled && sourceMemberNumber !== this.claspingFrom && !this.ClaspPartners(C).includes(sourceMemberNumber) && this.HeldInPlace(C))
@@ -514,6 +524,11 @@ export class LeashingModule extends BaseModule {
             // so stand our leasher in for that and put theirs straight back
             const vanillaLeashPlayer = ChatRoomLeashPlayer;
             const isOurLeasher = vanillaLeashPlayer !== data.MemberNumber && this.LeashedByMemberNumbers.indexOf(data.MemberNumber) > -1;
+            // A leasher we've since ghosted or blacklisted doesn't get to pull us around
+            if (isOurLeasher && IsBlockedSender(data.MemberNumber)) {
+                this.BreakLeashingsWith(data.MemberNumber);
+                return;
+            }
             // With leashing turned off the game won't pull us, so the grab breaks instead of stretching across rooms. Same
             // when someone in our clasped group is stuck: whoever got out anyway (kicked, say) lets go of us instead
             if (isOurLeasher && (Player.OnlineSharedSettings?.AllowPlayerLeashing === false || this.HeldInPlace(Player))) {
@@ -958,7 +973,7 @@ export class LeashingModule extends BaseModule {
         const fromSomeoneElse = by !== Player.MemberNumber;
         // Someone may have seen our leashing as on from settings we've since changed. And the clasper checked the rest
         // on their side, but nothing makes them: we hold our own line here
-        const refused = !this.Enabled || Anchors(Player, slot === undefined ? undefined : ZoneOf(slot)).length === 0 || (fromSomeoneElse && (
+        const refused = !this.Enabled || IsBlockedSender(other) || Anchors(Player, slot === undefined ? undefined : ZoneOf(slot)).length === 0 || (fromSomeoneElse && (
             Player.OnlineSharedSettings?.AllowPlayerLeashing === false ||
             !this.CanBeChangedBy(by, other) ||
             !this.CanBeClaspedBy(by, slot)
@@ -1262,6 +1277,9 @@ export class LeashingModule extends BaseModule {
         const pairedMember = args.find(a => a.name == "pairedMember")?.value as number;
         const type = args.find(a => a.name == "type")?.value as GrabType;
         const isSource = args.find(a => a.name == "isSource")?.value as boolean;
+        // Whoever sent it, we don't get paired with someone we've ghosted or blacklisted
+        if (IsBlockedSender(pairedMember))
+            return;
         if (type === "leash") {
             this.AcceptClasp(pairedMember, sender, args.find(a => a.name === "shared")?.value as boolean | undefined,
                 args.find(a => a.name === "slot")?.value as string | undefined, args.find(a => a.name === "pairedSlot")?.value as string | undefined,

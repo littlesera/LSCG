@@ -1,7 +1,7 @@
 import { BaseModule } from "base";
 import { getModule } from "modules";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
-import { GetConfiguredItemBundlesFromOutfitKey, GetDelimitedList, OnChat, GetItemNameAndDescriptionConcat, GetMetadata, LSCG_SendLocal, LSCG_TEAL, OnActivity, SendAction, getCharacter, getRandomInt, hookFunction, isPhraseInString, removeAllHooksByModule, sendLSCGCommand, sendLSCGCommandBeep, settingsSave, getCharacterByNicknameOrMemberNumber, excludeParentheticalContent, escapeRegExp, escapeHtml } from "../utils";
+import { GetConfiguredItemBundlesFromOutfitKey, GetDelimitedList, OnChat, GetItemNameAndDescriptionConcat, GetMetadata, LSCG_SendLocal, LSCG_TEAL, OnActivity, SendAction, getCharacter, getRandomInt, hookFunction, isPhraseInString, removeAllHooksByModule, sendLSCGCommand, sendLSCGCommandBeep, settingsSave, getCharacterByNicknameOrMemberNumber, excludeParentheticalContent, escapeRegExp, escapeHtml, IsBlockedSender } from "../utils";
 import { ABSOLUTE_MAX_SPELL_EFFECTS, DEFAULT_MAX_SPELL_EFFECTS, KNOWN_SPELLS_LIMIT, LSCGSpellEffect, MagicSettingsModel, OutfitOption, SpellDefinition, SpellEffectId } from "Settings/Models/magic";
 import { isSpacedWordChar } from "./Magic/phrase";
 import { effectConfigFor, pickEffects, retier, sanitizeCastArgs, sanitizeSpell, saveBehaviorFor, spellCastPrompts, voiceCastArgs } from "./Magic/spellEdit";
@@ -745,6 +745,9 @@ export class MagicModule extends BaseModule {
      *  `castArgs`: the caster's answers to the spell's cast-time questions, already checked. */
     IncomingSpell(sender: Character | null, spell: SpellDefinition, paired?: Character | null, saveDiff: number = 1, saved: boolean = false, castArgs?: CastArgs) {
         const senderName = !sender ? "Someone" : CharacterNickname(sender);
+        // A ghosted/blacklisted player can't be paired with us, whoever cast the spell.
+        if (paired && IsBlockedSender(paired.MemberNumber))
+            paired = null;
         // However many a caster's spell claims, only so many are applied: each one is a timer on this client.
         let allowedEntries = this.allowedEffectEntries(spell, sender).slice(0, ABSOLUTE_MAX_SPELL_EFFECTS);
         if (allowedEntries.length <= 0) {
@@ -828,6 +831,8 @@ export class MagicModule extends BaseModule {
     }
 
     IncomingSpellPair(sender: Character | null, spellEffect: SpellEffectId, originalTarget: Character, pairType: LSCGState) {
+        if (IsBlockedSender(originalTarget.MemberNumber))
+            return;
         const senderName = !sender ? "Someone" : CharacterNickname(sender);
         const isAllowed = this.effectIsAllowed(spellEffect, sender);
 
