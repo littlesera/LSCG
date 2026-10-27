@@ -437,7 +437,7 @@ export interface LSCGSpellEffectDefinition {
     beneficial?: boolean;
     /** Always give this effect a duration, even when the target allows unlimited-duration spells. */
     forcesDuration?: boolean;
-    /** Milliseconds this effect waits after the previous effect of the same spell before taking hold (default 2000, at most 30000; 0 for at once).
+    /** Milliseconds this effect waits after the previous effect of the same spell before taking hold (default 2000, from 1000 to 30000; lower values are raised to 1000).
      *  Ignored when it is the first effect, which always applies immediately. */
     delay?: number;
     /** May be picked by wild magic (default false). */

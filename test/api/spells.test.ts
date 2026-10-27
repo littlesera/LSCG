@@ -234,7 +234,8 @@ describe("extension spell effects", () => {
             api.spells.registerEffect({ name, label: name, description: "", delay, apply: () => { order.push(name); } });
         const cast = (...names: string[]) =>
             magic.IncomingSpell(alice as never, spell("seq", names.map(n => `${api.id}.${n}` as SpellEffectId)), null, 2);
-        beforeEach(() => { order.length = 0; });
+        // A spell cast without letting its timers run would otherwise still be pending for the next test.
+        beforeEach(() => { order.length = 0; magic.CancelPendingSpells("unload"); });
 
         it("applies the first effect at once and spaces the rest 2 seconds apart by default", () => {
             reg("a"); reg("b"); reg("c");
@@ -248,23 +249,38 @@ describe("extension spell effects", () => {
         });
 
         it("uses an effect's own delay, counted from the effect before it", () => {
-            reg("a"); reg("b", 500); reg("c", 0);
+            reg("a"); reg("b", 3000); reg("c", 1000);
             cast("a", "b", "c");
             vi.advanceTimersByTime(1);
             expect(order).toEqual(["a"]);
-            vi.advanceTimersByTime(500);
+            vi.advanceTimersByTime(2998);
+            expect(order).toEqual(["a"]);
+            vi.advanceTimersByTime(2);
+            expect(order).toEqual(["a", "b"]);
+            vi.advanceTimersByTime(1000);
+            expect(order).toEqual(["a", "b", "c"]);
+        });
+
+        it("never waits less than a second, however small the delay asked for", () => {
+            reg("a"); reg("b", 500); reg("c", 0);
+            cast("a", "b", "c");
+            vi.advanceTimersByTime(999);
+            expect(order).toEqual(["a"]);
+            vi.advanceTimersByTime(1);
+            expect(order).toEqual(["a", "b"]);
+            vi.advanceTimersByTime(1000);
             expect(order).toEqual(["a", "b", "c"]);
         });
 
         it("lets spell.beforeReceive set the gap for effects without their own, clamped to 30 seconds", () => {
-            reg("a"); reg("b"); reg("c", 100);
+            reg("a"); reg("b"); reg("c", 1500);
             const off = api.events.before("spell.beforeReceive", ctx => { ctx.payload.delay = 99_999_999; });
             cast("a", "b", "c");
             vi.advanceTimersByTime(29_999);
             expect(order).toEqual(["a"]);
             vi.advanceTimersByTime(1);
             expect(order).toEqual(["a", "b", "c"].slice(0, 2));
-            vi.advanceTimersByTime(100);
+            vi.advanceTimersByTime(1500);
             expect(order).toEqual(["a", "b", "c"]);
             off();
         });
@@ -272,12 +288,16 @@ describe("extension spell effects", () => {
         it("uses the delay the spell's author set, over the effect's own and the gap", () => {
             reg("a"); reg("b", 5000); reg("c");
             const s = spell("seq", ["a", "b", "c"].map(n => `${api.id}.${n}` as SpellEffectId));
-            writeDelay(s, 1, 300);
+            writeDelay(s, 1, 1200);
             writeDelay(s, 2, 0);
             sanitizeSpell(s);
-            expect(s.Delays).toEqual([null, 300, 0]);
+            expect(s.Delays).toEqual([null, 1200, 1000]);
             magic.IncomingSpell(alice as never, s, null, 2);
-            vi.advanceTimersByTime(300);
+            vi.advanceTimersByTime(1199);
+            expect(order).toEqual(["a"]);
+            vi.advanceTimersByTime(1);
+            expect(order).toEqual(["a", "b"]);
+            vi.advanceTimersByTime(1000);
             expect(order).toEqual(["a", "b", "c"]);
         });
 
@@ -299,11 +319,11 @@ describe("extension spell effects", () => {
         });
 
         it("tells listeners when each effect will take hold", () => {
-            reg("a"); reg("b"); reg("c", 100);
+            reg("a"); reg("b"); reg("c", 1500);
             let seen: any;
             api.events.on("spell.received", p => { seen = p; });
             cast("a", "b", "c");
-            expect(seen.delays).toEqual([0, 2000, 2100]);
+            expect(seen.delays).toEqual([0, 2000, 3500]);
         });
 
         describe("interruption", () => {

@@ -691,8 +691,9 @@ describe("extension drugs", () => {
             const change = (el: HTMLInputElement) => el.dispatchEvent(new Event("change"));
             afterEach(() => document.body.replaceChildren());
 
-            it("has a tab each for general options, drugs, and gases & chloroform", () => {
-                expect(tabs().map(t => t.label)).toEqual(["General", "Drugs", "Gases & chloroform"]);
+            it("has a tab each for general options, LSCG's drugs, extension drugs, and gases & chloroform", () => {
+                api.drugs.register(euphoria());
+                expect(tabs().filter(t => !t.hidden).map(t => t.label)).toEqual(["General", "Drugs", "Extension drugs", "Gases & chloroform"]);
             });
 
             it("general options read and write the injector settings, and the sip limit is off while disabled", () => {
@@ -722,14 +723,18 @@ describe("extension drugs", () => {
                 expect(row(root, "Aphrodisiac")).toBeDefined();
             });
 
-            it("says so when no extension adds a drug", () => {
-                expect(render("Drugs").textContent).toContain("No installed extension adds a drug.");
+            it("hides the extension drugs tab when no extension adds a drug, and shows it once one does", () => {
+                expect(tabs().filter(t => !t.hidden).map(t => t.label)).toEqual(["General", "Drugs", "Gases & chloroform"]);
+                // LSCG's own drugs aren't cluttered by extensions either way
+                expect(render("Drugs").textContent).not.toContain("Extension drugs");
+                api.drugs.register(euphoria());
+                expect(tabs().filter(t => !t.hidden).map(t => t.label)).toContain("Extension drugs");
             });
 
             it("lists each extension drug with its source and keywords, and opts in per drug, with no page limit", () => {
                 for (let i = 0; i < 25; i++)
                     api.drugs.register(euphoria({ name: `d${i}`, label: `Drug ${i}`, keywords: [`d${i}`, `alt ${i}`], description: "Odd." }));
-                const root = render("Drugs");
+                const root = render("Extension drugs");
                 const rows = Array.from(root.querySelectorAll("tbody tr"));
                 expect(rows).toHaveLength(25);
                 const first = rows[0];

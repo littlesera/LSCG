@@ -4,7 +4,7 @@ import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
 import { GetConfiguredItemBundlesFromOutfitKey, GetDelimitedList, OnChat, GetItemNameAndDescriptionConcat, GetMetadata, LSCG_SendLocal, LSCG_TEAL, OnActivity, SendAction, getCharacter, getRandomInt, hookFunction, isPhraseInString, removeAllHooksByModule, sendLSCGCommand, sendLSCGCommandBeep, settingsSave, getCharacterByNicknameOrMemberNumber, excludeParentheticalContent, escapeRegExp, escapeHtml, IsBlockedSender } from "../utils";
 import { ABSOLUTE_MAX_SPELL_EFFECTS, DEFAULT_MAX_SPELL_EFFECTS, KNOWN_SPELLS_LIMIT, LSCGSpellEffect, MagicSettingsModel, OutfitOption, SpellDefinition, SpellEffectId } from "Settings/Models/magic";
 import { isSpacedWordChar } from "./Magic/phrase";
-import { effectConfigFor, DEFAULT_EFFECT_DELAY, effectDelayFor, MAX_EFFECT_DELAY, pickEffects, retier, sanitizeCastArgs, sanitizeSpell, saveBehaviorFor, spellCastPrompts, voiceCastArgs } from "./Magic/spellEdit";
+import { effectConfigFor, DEFAULT_EFFECT_DELAY, cleanDelay, effectDelayFor, pickEffects, retier, sanitizeCastArgs, sanitizeSpell, saveBehaviorFor, spellCastPrompts, voiceCastArgs } from "./Magic/spellEdit";
 import { GuiMagic } from "Settings/magic";
 import { StateModule } from "./states";
 import { ActivityCheck, ActivityRoll, IsActivityEnhanced, ItemUseModule, MagicWandItems } from "./item-use";
@@ -1144,9 +1144,9 @@ export class MagicModule extends BaseModule {
 }
 
 
-/** Accepts an extension-adjusted delay (ms) only if it's sane, clamped to a maximum; otherwise keeps the fallback. */
+/** Accepts an extension-adjusted delay (ms) only if it's sane, kept within the minimum and maximum; otherwise keeps the fallback. */
 function sanitizeDelay(delay: unknown, fallback: number): number {
-    return typeof delay === "number" && Number.isFinite(delay) && delay >= 0 ? Math.min(delay, MAX_EFFECT_DELAY) : fallback;
+    return cleanDelay(delay) ?? fallback;
 }
 
 /** Accepts an extension-adjusted duration (ms) only if it's sane; otherwise keeps LSCG's own. `undefined` stays allowed. */

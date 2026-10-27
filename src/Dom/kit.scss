@@ -456,6 +456,55 @@
 		}
 	}
 
+	// The spell editor's effect list: each effect is one dropdown with a gear beside it (its settings open in a dialog), and the delay
+	// before it is a small collapsed line tucked between it and the effect above.
+	.lscg-spell-effect-head {
+		.lscg-kit-control {
+			gap: min(1dvh, 0.5dvw);
+		}
+
+		// The cog is square, the height of the dropdown beside it; an effect with no settings holds the same room.
+		.lscg-spell-gear,
+		.lscg-spell-gear-spacer {
+			flex: none;
+			width: min(6dvh, 3dvw);
+			height: min(6dvh, 3dvw);
+		}
+
+		.lscg-spell-gear {
+			padding: 0;
+
+			&.lscg-kit-warning {
+				background-color: color-mix(in srgb, #d98a00 80%, var(--button-color, var(--lscg-button-color)));
+			}
+		}
+	}
+
+	// The delay between two effects: a thin line in the gutter between two effects, with no box when closed so it reads as the link between
+	// them, and the dashed rule makes it clearly not part of either effect.
+	.lscg-spell-delay {
+		margin: 0 0 0 min(3dvh, 1.5dvw);
+		border: none;
+		border-left: min(0.3dvh, 0.15dvw) dashed color-mix(in srgb, var(--lscg-expando-tint) 70%, transparent);
+		border-radius: 0;
+		background: transparent;
+		font-size: calc(var(--lscg-font-small) * 0.75);
+
+		.lscg-kit-expando-summary {
+			padding: 0 min(1dvh, 0.5dvw);
+			list-style: none;
+			opacity: 0.8;
+
+			&::-webkit-details-marker {
+				display: none;
+			}
+		}
+
+		&[open] .lscg-kit-expando-body {
+			background-color: var(--lscg-background-color);
+		}
+	}
+
 	.lscg-kit-search {
 		width: 100%;
 		min-height: min(5dvh, 2.5dvw);

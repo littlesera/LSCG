@@ -60,7 +60,7 @@ function extensionDrugOptions(ctx: KitContext, injector: InjectorModule | undefi
     });
 }
 
-/** The Drug Enhancements settings: general options, the drugs (LSCG's own and extensions'), and gases/chloroform. */
+/** The Drug Enhancements settings: general options, LSCG's own drugs, the drugs extensions add, and gases/chloroform. */
 export function buildInjectorTabs(ctx: KitContext, s: InjectorSettingsModel, misc: MiscSettingsModel, injector: InjectorModule | undefined): KitTab[] {
     return [
         {
@@ -109,8 +109,15 @@ export function buildInjectorTabs(ctx: KitContext, s: InjectorSettingsModel, mis
                     set: v => injector?.SetDecayOverride(type, v),
                     disabled: () => !injector,
                 })),
+            ],
+        },
+        {
+            label: "Extension drugs",
+            // Only there when an installed extension adds a drug.
+            hidden: extensionDrugs.all().length === 0,
+            render: () => [
                 SectionLabel("Extension drugs", "Drugs added by extensions. Each one only affects you once you enable it."),
-                extensionDrugs.all().length > 0 ? extensionDrugTable(ctx, injector) : <p class="lscg-kit-notice">No installed extension adds a drug.</p> as HTMLElement,
+                extensionDrugTable(ctx, injector),
                 ...extensionDrugOptions(ctx, injector),
             ],
         },

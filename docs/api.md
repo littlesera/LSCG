@@ -206,7 +206,7 @@ apply(ctx) {
 | `beneficial` | A spell made only of beneficial effects gets no save roll and no duration. |
 | `forcesDuration` | Always expires, even for players who allow unlimited-duration spells. |
 | `allowRandom` | Wild magic may pick it. |
-| `delay` | Milliseconds it waits after the spell's previous effect before taking hold (default 2000, at most 30000, `0` for at once). The first effect of a spell always applies immediately. A spell's author can override it per effect in the spell editor. |
+| `delay` | Milliseconds it waits after the spell's previous effect before taking hold (default 2000, from 1000 to 30000; anything lower is raised to 1000). The first effect of a spell always applies immediately. A spell's author can override it per effect in the spell editor. |
 | `defaultBlocked` | Blocked the first time a player sees it, until they unblock it. |
 
 **Settings the caster can change.** Declare `options` and LSCG shows them in the spell editor under your effect,
@@ -299,7 +299,7 @@ Add a drug that works like LSCG's own sedative, brainwashing drug and aphrodisia
 Latex Respirator, Filled Glass or Mug whose name or description contains one of your keywords is a dose of it, and
 the crafting screen offers it as a checkbox.
 
-**Players must opt in.** A drug does nothing to a player until they enable it in their Drug Enhancements
+**Players must opt in.** A drug does nothing to a player until they enable it on the Extension drugs tab of their Drug Enhancements
 settings, which lists it with your extension's name and keywords.
 
 ```js
@@ -319,7 +319,7 @@ api.drugs.register({
 });
 ```
 
-Add `options` to a drug and each player can change its settings under Drug Enhancements, right below the drug's
+Add `options` to a drug and each player can change its settings on the Extension drugs tab of Drug Enhancements, right below the drug's
 opt-in. Your callbacks read the player's values from `ctx.options`.
 
 ### Levels
@@ -619,7 +619,7 @@ A `spell` is `{ name, effects, creator? }`.
 
 | Event | You may change | If you cancel |
 |---|---|---|
-| `spell.beforeReceive` | `duration`, `delay` (ms between effects, default 2000, at most 30000), and remove entries from `effects` | The spell fizzles, with your reason in the emote |
+| `spell.beforeReceive` | `duration`, `delay` (ms between effects, default 2000, from 1000 to 30000), and remove entries from `effects` | The spell fizzles, with your reason in the emote |
 | `spell.beforeEffect` | `duration` | That one effect fails to take hold |
 | `grab.beforeIncoming` | Nothing | The grab is refused, and released on the grabber's side too |
 | `drug.beforeApply` | Remove entries from `types` | Nothing is applied |

@@ -16,6 +16,7 @@ import { extensionDrugs } from "api/drugs";
 import { extensionScreens } from "api/settings";
 import { spellEffects } from "Modules/Magic/spellEffects";
 import { boot, resetWorld } from "../harness/world";
+import { sent } from "../harness/room";
 
 const source = readFileSync("examples/sample-extension.js", "utf8"); // tests run from the repo root
 /** Runs the example the way pasting it into the console would. */
@@ -75,6 +76,42 @@ describe("examples/sample-extension.js", () => {
         expect(sample()).not.toBe(first);
         expect(spellEffects.get("sample.bark")).toBeDefined();
         expect((g.Commands as { Tag: string }[]).filter(c => c.Tag === "sample-dose").length).toBe(1);
+    });
+
+    describe("settings UI", () => {
+        it("the bark effect's options are controls in the spell editor, and arrive checked in apply", () => {
+            paste();
+            const bark = spellEffects.get("sample.bark")!;
+            expect(bark.options!.map(o => [o.key, o.type])).toEqual([["mood", "select"], ["barks", "number"], ["loud", "toggle"]]);
+            expect(bark.config!.defaults()).toEqual({ mood: "any", barks: 1, loud: false });
+            // a hand-built spell can't push a value outside what the controls allow
+            expect(bark.config!.sanitize({ mood: "sneaky", barks: 99, loud: "yes" })).toEqual({ mood: "any", barks: 3, loud: false });
+
+            // apply gets what the spell machinery would hand it: the spell's stored settings, sanitized, as ctx.config
+            const spell = { Name: "woof", Creator: 2, Effects: ["sample.bark"], AllowPotion: false, AllowVoiceCast: false };
+            bark.apply({ effect: "sample.bark", sender: null, senderName: "Kai", spell, magic: { stateModule: states }, index: 0, config: { mood: "happy", barks: 2, loud: true } } as never);
+            const actions = sent.actions();
+            expect(actions).toHaveLength(3);
+            expect(actions.slice(0, 2).every(a => /happily|delight/.test(a))).toBe(true);
+            expect(actions[2]).toContain("echoes around the room");
+        });
+
+        it("the giggle drug's options are the drinker's settings, and shape each dose", () => {
+            paste();
+            injector.settings.enabledExtensionDrugs = ["sample.giggle"];
+            const drug = extensionDrugs.get("sample.giggle")!;
+            expect(drug.options.map(o => [o.key, o.type])).toEqual([["potency", "number"], ["laugh", "text"], ["snorts", "toggle"]]);
+            expect(injector.GetExtensionOptions("sample.giggle")).toEqual({ potency: 1, laugh: "hee hee", snorts: true });
+
+            injector.ApplyExtensionDrug("sample.giggle", "drink", { multiplier: 2 });
+            expect(injector.GetExtensionLevel("sample.giggle")).toBe(2);
+
+            injector.SetExtensionOptions("sample.giggle", { potency: 2, laugh: "ha ha", snorts: false });
+            injector.ApplyExtensionDrug("sample.giggle", "drink", { multiplier: 1 });
+            expect(injector.GetExtensionLevel("sample.giggle")).toBe(4);
+            expect(injector.GetExtensionOptions("sample.giggle").laugh).toBe("ha ha");
+            injector.SetExtensionLevel("sample.giggle", 0);
+        });
     });
 
     it("narrates the sedative's stages as the bar fills and empties", () => {

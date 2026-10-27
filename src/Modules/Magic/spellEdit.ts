@@ -4,7 +4,8 @@ import { CastArgs, CastPrompt, effectTier, getSpellEffect, SaveBehavior } from "
 /** The most a single effect's settings may weigh once serialised, whoever sent them. */
 export const MAX_EFFECT_CONFIG_SIZE = 1024;
 
-/** The longest an effect may wait for the one before it, whoever asks (a spell's author, an extension, a listener). */
+/** The shortest and longest an effect may wait for the one before it, whoever asks (a spell's author, an extension, a listener). */
+export const MIN_EFFECT_DELAY = 1000;
 export const MAX_EFFECT_DELAY = 30_000;
 
 /** How long an effect waits for the one before it unless the spell, the effect or a listener says otherwise. */
@@ -77,9 +78,9 @@ export function writeDelay(spell: SpellDefinition, index: number, delay: number 
     delays[index] = clean;
 }
 
-/** A delay from anywhere: a finite, non-negative number of ms within the maximum, else undefined. */
+/** A delay from anywhere: a finite, non-negative number of ms, raised to the minimum or cut to the maximum; anything else is undefined. */
 export function cleanDelay(delay: unknown): number | undefined {
-    return typeof delay === "number" && Number.isFinite(delay) && delay >= 0 ? Math.min(Math.round(delay), MAX_EFFECT_DELAY) : undefined;
+    return typeof delay === "number" && Number.isFinite(delay) && delay >= 0 ? Math.min(Math.max(Math.round(delay), MIN_EFFECT_DELAY), MAX_EFFECT_DELAY) : undefined;
 }
 
 /** A spell's total power: each effect's tier (for ones that depend on their settings, the tier of the sanitized settings),

@@ -44,20 +44,37 @@
             api.events.on(name, payload => console.log(`[sample] ${name}`, payload));
         }
 
-        // A custom spell effect: the target can't help but bark like a dog.
+        // A custom spell effect: the target can't help but bark like a dog. `options` become controls in the spell editor (behind the
+        // effect's gear), set by whoever writes the spell; LSCG checks them again on the target's client and gives them to apply as ctx.options.
         if (LSCG.capabilities.has("spells.effects")) {
-            const barks = [
-                "%NAME% lets out a startled \"Woof!\"",
-                "%NAME% barks happily at %OPP_NAME%, tail very nearly wagging.",
-                "%NAME% claps a hand over %POSSESSIVE% mouth, but a loud \"Arf! Arf!\" escapes anyway.",
-            ];
+            const barks = {
+                startled: [
+                    "%NAME% lets out a startled \"Woof!\"",
+                    "%NAME% claps a hand over %POSSESSIVE% mouth, but a loud \"Arf! Arf!\" escapes anyway.",
+                ],
+                happy: [
+                    "%NAME% barks happily at %OPP_NAME%, tail very nearly wagging.",
+                    "%NAME% yips with delight.",
+                ],
+            };
             api.spells.registerEffect({
                 name: "bark",
                 label: "Barking",
                 description: "Makes the target bark like a dog.",
                 allowRandom: true,
+                options: [
+                    { type: "select", key: "mood", label: "Mood", description: "How the barking sounds.",
+                      choices: [{ value: "any", label: "Either" }, { value: "startled", label: "Startled" }, { value: "happy", label: "Happy" }] },
+                    { type: "number", key: "barks", label: "Barks", description: "How many times they bark.", min: 1, max: 3, default: 1 },
+                    { type: "toggle", key: "loud", label: "Loud", description: "The whole room hears it." },
+                ],
                 apply(ctx) {
-                    ctx.sendAction(barks[Math.floor(Math.random() * barks.length)]);
+                    const { mood, barks: count, loud } = ctx.options;
+                    const pool = mood === "any" ? [...barks.startled, ...barks.happy] : barks[mood];
+                    for (let i = 0; i < count; i++)
+                        ctx.sendAction(pool[Math.floor(Math.random() * pool.length)]);
+                    if (loud)
+                        ctx.sendAction("%NAME%'s barking echoes around the room.");
                 },
             });
         }
@@ -76,7 +93,8 @@
             });
         }
 
-        // A custom drug: a craftable "giggle juice" that makes the drinker giddy.
+        // A custom drug: a craftable "giggle juice" that makes the drinker giddy. Its `options` are the drinker's own settings, shown under
+        // Drug Enhancements (Extension drugs tab) next to the drug's opt-in and read from ctx.options in every callback.
         if (LSCG.capabilities.has("drugs")) {
             api.drugs.register({
                 name: "giggle",
@@ -84,9 +102,14 @@
                 description: "Makes the drinker giddy.",
                 keywords: ["giggle juice"],
                 color: "#ff9ff3",
+                options: [
+                    { type: "number", key: "potency", label: "Potency", description: "How strongly each dose hits.", min: 0.5, max: 2, step: 0.5, default: 1 },
+                    { type: "text", key: "laugh", label: "Laugh", description: "The sound of the giggling.", default: "hee hee", maxLength: 20 },
+                    { type: "toggle", key: "snorts", label: "Snorting", description: "Now and then, laughter escapes as a snort.", default: true },
+                ],
                 onDose(ctx) {
-                    ctx.addLevel(ctx.multiplier);
-                    ctx.sendAction("%NAME% giggles uncontrollably.");
+                    ctx.addLevel(ctx.multiplier * ctx.options.potency);
+                    ctx.sendAction(`%NAME% giggles uncontrollably: "${ctx.options.laugh}"`);
                 },
                 // A dose that overflows the bar always triggers onFull: the drug's big moment.
                 onFull(ctx) {
@@ -95,7 +118,8 @@
                 // On each tick, onSpike fires at random: spikeChance at a full bar, less as the bar empties.
                 spikeChance: 0.1,
                 onSpike(ctx) {
-                    ctx.sendAction("%NAME% snorts with sudden laughter.");
+                    if (ctx.options.snorts)
+                        ctx.sendAction("%NAME% snorts with sudden laughter.");
                 },
                 onWearOff(ctx) {
                     ctx.sendAction("%NAME% finally stops giggling.");
