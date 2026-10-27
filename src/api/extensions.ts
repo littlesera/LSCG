@@ -1,11 +1,13 @@
-import { LSCGActivitiesApi, LSCGDrugsApi, LSCGEventsApi, LSCGExtensionInfo, LSCGModApi, LSCGNetworkApi, LSCGSettingsApi, LSCGSpellsApi, LSCGStorageApi } from "./types";
+import { LSCGActivitiesApi, LSCGDrugsApi, LSCGEventsApi, LSCGExtensionInfo, LSCGHypnoApi, LSCGModApi, LSCGNetworkApi, LSCGSettingsApi, LSCGSpellsApi, LSCGStorageApi } from "./types";
 import { Registry } from "./registry";
-import { whenReady } from "./ready";
+import { isLSCGReady, whenReady } from "./ready";
+import { settingsSave } from "utils";
 import { safeInvoke } from "./safeInvoke";
 import { createEventsApi } from "./events";
 import { createSpellsApi } from "./spells";
 import { createActivitiesApi } from "./activities";
 import { createDrugsApi } from "./drugs";
+import { createHypnoApi } from "./hypno";
 import { createNetworkApi } from "./network";
 import { createStorageApi } from "./storage";
 import { createSettingsApi } from "./settings";
@@ -26,6 +28,7 @@ export class ModApiHandle implements LSCGModApi {
     private _spells: LSCGSpellsApi | undefined;
     private _activities: LSCGActivitiesApi | undefined;
     private _drugs: LSCGDrugsApi | undefined;
+    private _hypno: LSCGHypnoApi | undefined;
     private _network: LSCGNetworkApi | undefined;
     private _storage: LSCGStorageApi | undefined;
     private _settings: LSCGSettingsApi | undefined;
@@ -55,6 +58,10 @@ export class ModApiHandle implements LSCGModApi {
         return this._drugs ??= createDrugsApi(this, name => this.scopedId(name), disposer => this.track(disposer));
     }
 
+    get hypno(): LSCGHypnoApi {
+        return this._hypno ??= createHypnoApi(this, name => this.scopedId(name), disposer => this.track(disposer));
+    }
+
     get network(): LSCGNetworkApi {
         return this._network ??= createNetworkApi(this, name => this.scopedId(name), disposer => this.track(disposer));
     }
@@ -65,6 +72,13 @@ export class ModApiHandle implements LSCGModApi {
 
     get settings(): LSCGSettingsApi {
         return this._settings ??= createSettingsApi(this, name => this.scopedId(name), disposer => this.track(disposer));
+    }
+
+    sync(): void {
+        this.assertActive();
+        if (!isLSCGReady() || !Player?.LSCG)
+            throw new Error("LSCG: sync isn't available until LSCG is ready (use onReady).");
+        settingsSave(true);
     }
 
     onReady(cb: () => void): void {

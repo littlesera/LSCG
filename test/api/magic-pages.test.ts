@@ -405,7 +405,7 @@ describe("Magic™ settings pages", () => {
                 });
 
                 describe("the delay between effects", () => {
-                    const connectorOf = (dialog: HTMLElement, slot: number) => group(dialog, slot)?.querySelector(".lscg-spell-delay") as HTMLDetailsElement | null;
+                    const connectorOf = (dialog: HTMLElement, slot: number) => group(dialog, slot)?.querySelector(".lscg-delay-connector") as HTMLDetailsElement | null;
                     const text = (dialog: HTMLElement, slot: number) => connectorOf(dialog, slot)!.querySelector("summary")!.textContent;
 
                     it("is a thin connector above every effect except the first", () => {
@@ -418,7 +418,7 @@ describe("Magic™ settings pages", () => {
                         // the empty "add another" slot (when there's room) has none
                         document.body.replaceChildren();
                         const room = openEditor(spell("room", [LSCGSpellEffect.blindness]));
-                        expect(room.querySelectorAll(".lscg-spell-delay")).toHaveLength(0);
+                        expect(room.querySelectorAll(".lscg-delay-connector")).toHaveLength(0);
                     });
 
                     it("sits between the two effects, outside either one's dropdown row", () => {

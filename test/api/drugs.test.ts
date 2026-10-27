@@ -18,7 +18,7 @@ import { extensionDrugs, DEFAULT_DRUG_COLOR, MAX_EXTENSION_BARS } from "api/drug
 import { apiCapabilities } from "api";
 import type { LSCGDrugDefinition, LSCGDrugDoseContext } from "api/types";
 import { boot, resetWorld, player, addToRoom } from "../harness/world";
-import { makeGroup, makeAsset, wear, makeItem, type FixtureCharacter } from "../harness/fixtures";
+import { makeGroup, makeAsset, makeCharacter, wear, makeItem, type FixtureCharacter } from "../harness/fixtures";
 
 describe("extension drugs", () => {
     let injector: InjectorModule;
@@ -543,6 +543,56 @@ describe("extension drugs", () => {
             reloaded.load();
             expect(reloaded.settings.sedativeCooldown).toBe(600_000);
             reloaded.unload();
+        });
+    });
+
+    describe("levels of other players", () => {
+        const stranger = (injectorSettings: Record<string, unknown> | undefined, memberNumber = 7) =>
+            addToRoom(makeCharacter({ MemberNumber: memberNumber, Nickname: "Kai", LSCG: injectorSettings ? { InjectorModule: injectorSettings } : undefined } as never));
+        const published = (extra: Record<string, unknown> = {}) => ({
+            sedativeLevel: 6, sedativeMax: 10, mindControlLevel: 0, mindControlMax: 10, hornyLevel: 0, hornyLevelMax: 10, drugLevelMultiplier: 1,
+            drugDecay: { sedative: 1, mindcontrol: 1, horny: 1 }, receivedAt: Date.now() - 2000,
+            drugLevels: [{ id: "a.good", level: 5, max: 10, decayPerSec: 0.5 }], ...extra,
+        });
+
+        it("estimates theirs from what they last broadcast, decayed since it arrived at the rate they broadcast", () => {
+            stranger(published());
+            expect(api.drugs.getLevel("sedative", 7)).toBeCloseTo(4, 5);
+            expect(api.drugs.getLevel("a.good", 7)).toBeCloseTo(4, 5);
+            expect(api.drugs.getLevel("horny", 7)).toBe(0);
+            expect(api.drugs.getLevel("nothing", 7)).toBe(0);
+            vi.advanceTimersByTime(10_000);
+            expect(api.drugs.getLevel("sedative", 7)).toBe(0); // worn off by now, and never negative
+        });
+
+        it("lists every level above zero with its max, marked as an estimate", () => {
+            stranger(published({ hornyLevel: 5, hornyLevelMax: 4, drugLevelMultiplier: 2 }));
+            const bars = api.drugs.getLevels(7);
+            expect(bars.map(b => b.type)).toEqual(["sedative", "horny", "a.good"]);
+            expect(bars.every(b => b.estimated)).toBe(true);
+            expect(bars.find(b => b.type === "horny")).toMatchObject({ max: 8 });
+            expect(Object.isFrozen(bars[0])).toBe(true);
+        });
+
+        it("is empty for someone without LSCG or not in the room, and 0 for their levels", () => {
+            stranger(undefined, 8);
+            expect(api.drugs.getLevels(8)).toEqual([]);
+            expect(api.drugs.getLevels(404)).toEqual([]);
+            expect(api.drugs.getLevel("sedative", 404)).toBe(0);
+        });
+
+        it("a number without a member number, or your own, is your exact level", () => {
+            api.drugs.register(euphoria());
+            injector.SetExtensionLevel(id("euphoria"), 3);
+            expect(api.drugs.getLevel(id("euphoria"))).toBe(3);
+            expect(api.drugs.getLevel(id("euphoria"), player().MemberNumber)).toBe(3);
+            const own = api.drugs.getLevels().find(b => b.type === id("euphoria"));
+            expect(own).toMatchObject({ level: 3, max: 10, estimated: false });
+        });
+
+        it("ignores nonsense in what another player broadcast", () => {
+            stranger(published({ drugLevels: [{ id: "a.bad", level: Number.NaN, max: 5 }, "junk", null] }));
+            expect(api.drugs.getLevels(7).map(b => b.type)).toEqual(["sedative"]);
         });
     });
 

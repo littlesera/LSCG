@@ -19,6 +19,9 @@ export interface LSCGModApi {
     readonly disposed: boolean;
     /** Runs `cb` once LSCG has fully initialized with the player's settings (immediately if it already has). */
     onReady(cb: () => void): void;
+    /** Saves the player's LSCG settings and syncs LSCG's public data (drug levels, states, your `storage.setPublic`
+     *  data) to the room now. Saves are batched to about one per second. Only available once LSCG is ready. */
+    sync(): void;
     /** Removes everything this extension registered and frees its id for re-registration. */
     dispose(): void;
     /** LSCG event hooks (capability "events"). */
@@ -29,6 +32,8 @@ export interface LSCGModApi {
     readonly activities: LSCGActivitiesApi;
     /** Custom drugs (capability "drugs"). */
     readonly drugs: LSCGDrugsApi;
+    /** Custom hypnosis suggestion instructions (capability "hypno.instructions"). */
+    readonly hypno: LSCGHypnoApi;
     /** Messages between players running your extension (capability "network"). */
     readonly network: LSCGNetworkApi;
     /** Data saved with the player's LSCG settings (capability "storage"). */
@@ -301,6 +306,16 @@ export interface LSCGDoseOptions {
     minigame?: boolean;
 }
 
+export interface LSCGDrugLevelInfo {
+    /** "sedative", "mindcontrol", "horny", or an extension drug's id. */
+    readonly type: string;
+    readonly level: number;
+    /** The level that fills the bar. */
+    readonly max: number;
+    /** True when worked out from another player's last broadcast rather than read from your own settings. */
+    readonly estimated: boolean;
+}
+
 export interface LSCGDrugsApi {
     /** Registers a drug. Returns a function that unregisters it. */
     register(definition: LSCGDrugDefinition): () => void;
@@ -311,9 +326,14 @@ export interface LSCGDrugsApi {
      *  `drug.beforeApply` vetoes, and emits `drug.applied`. Returns false if nothing was applied (not enabled,
      *  vetoed, unknown drug, or Drug Enhancements turned off). An "antidote" clears every drug and ignores `multiplier`. */
     dose(type: LSCGDrugType, options?: LSCGDoseOptions): boolean;
-    /** The player's current level of a drug, from 0 to its max (0 for an unknown drug). Built-in levels are on LSCG's
-     *  internal scale, multiplied by the player's drug level multiplier. */
-    getLevel(type: LSCGDrugType): number;
+    /** A player's current level of a drug, from 0 to its max (0 for an unknown drug, or someone without LSCG). Built-in levels are on LSCG's
+     *  internal scale, multiplied by the player's drug level multiplier. With no `memberNumber` (or your own) it is exact. For someone
+     *  else it is an estimate: what their client last broadcast, decayed forward at the rate it broadcast since it arrived. It misses
+     *  anything that happened since their last broadcast. */
+    getLevel(type: LSCGDrugType, memberNumber?: number): number;
+    /** Every drug level above 0 for a player (yours with no `memberNumber`), built-in drugs first, then extensions'. `level / max` is
+     *  how full the bar is. `estimated` is true for anyone but you, with the same caveats as `getLevel`. */
+    getLevels(memberNumber?: number): LSCGDrugLevelInfo[];
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -407,6 +427,50 @@ export interface LSCGStateHandle {
 
 export interface LSCGBuiltInStatesApi {
     get(type: LSCGBuiltInStateType): LSCGStateHandle | undefined;
+}
+
+/** What a custom suggestion instruction's `perform` receives. Runs on the client of the hypnotized player, when a suggestion holding the
+ *  instruction fires and they don't resist it. */
+export interface LSCGHypnoInstructionContext {
+    /** This instruction's namespaced id ("<extension id>.<name>"). */
+    readonly instruction: string;
+    /** The name of the suggestion it belongs to. */
+    readonly suggestion: string;
+    /** The values chosen for this instruction when the suggestion was written, validated against your `options` (their defaults if you declare none). */
+    readonly options: LSCGOptions;
+    /** Member number of whoever spoke the trigger. */
+    readonly sender?: number;
+    /** Member number of whoever installed the suggestion. */
+    readonly installedBy?: number;
+    /** Sends an emote about the player. Supports %NAME%, %POSSESSIVE% and %OPP_NAME% (whoever spoke the trigger). */
+    sendAction(text: string): void;
+    /** Built-in states the instruction may activate or recover. */
+    readonly states: LSCGBuiltInStatesApi;
+}
+
+export interface LSCGHypnoInstructionDefinition {
+    /** Name within your extension; the instruction id becomes "<extension id>.<name>". No ".". */
+    name: string;
+    /** Shown in the suggestion editor and in the player's list of instructions they can block. */
+    label: string;
+    /** One line, shown in the editor and the block list. */
+    description?: string;
+    /** Settings whoever writes the suggestion can change, behind a "Configure..." button. Read them from `ctx.options`. */
+    options?: LSCGOptionField[];
+    /** A suggestion can hold it only once (default false). */
+    unrepeatable?: boolean;
+    /** Nothing can follow it in a suggestion (default false). */
+    terminating?: boolean;
+    /** Carries out the instruction on the player. Errors are contained and counted against your extension. Players can block any
+     *  instruction on themselves, in which case this never runs. */
+    perform(ctx: LSCGHypnoInstructionContext): void;
+}
+
+export interface LSCGHypnoApi {
+    /** Registers an instruction that suggestions can hold, next to LSCG's own. Returns a function that unregisters it. */
+    registerInstruction(definition: LSCGHypnoInstructionDefinition): () => void;
+    /** Unregisters one of this extension's instructions by name. */
+    unregisterInstruction(name: string): boolean;
 }
 
 /** What a custom spell effect's `apply` receives. Runs on the client of the player the spell hit. */
@@ -589,7 +653,8 @@ export interface LSCGGlobal {
     readonly isReady: boolean;
     /** Runs `cb` once LSCG is ready (immediately if it already is). */
     onReady(cb: () => void): void;
-    /** Registers an extension and returns its handle. Throws if the id is invalid or already registered. */
+    /** Registers an extension and returns its handle. Calling it again with an id that is already registered returns the same handle; it
+     *  throws if the id is invalid, or the player turned the extension off. */
     getModApi(info: LSCGExtensionInfo): LSCGModApi;
 }
 

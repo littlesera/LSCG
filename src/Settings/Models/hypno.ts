@@ -1,4 +1,5 @@
 import { HypnoSuggestion } from "Modules/hypno";
+import { extensionInstructions } from "api/hypno";
 import { BaseSettingsModel, ModuleStats } from "./base";
 
 export const SUGGESTION_LIMIT: number = 100;
@@ -65,12 +66,13 @@ export interface HypnoPublicSettingsModel extends BaseSettingsModel {
     limitSuggestionMod: boolean;
     suggestionRequireHypnotizer: boolean;
     allowSuggestionRemoval: boolean;
-    blockedInstructions: LSCGHypnoInstruction[];
+    /** Instruction types the player refuses: LSCG's own (by name) and extensions' (by namespaced id). */
+    blockedInstructions: string[];
     alwaysSubmit: boolean;
     alwaysSubmitMemberIds: string;
 }
 
-export function InstructionDescription(instruction: LSCGHypnoInstruction): string {
+export function InstructionDescription(instruction: string): string {
     switch (instruction) {
         case LSCGHypnoInstruction.activity:
             return "Compel the subject to perform an activity.";
@@ -95,6 +97,7 @@ export function InstructionDescription(instruction: LSCGHypnoInstruction): strin
         case LSCGHypnoInstruction.none:
             return "None";
         default:
-            return "";
+            // An extension's instruction describes itself.
+            return extensionInstructions.get(instruction)?.description ?? "";
     }
 }

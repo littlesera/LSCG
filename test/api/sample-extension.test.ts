@@ -13,6 +13,7 @@ import { announceReady, installLoadQueue } from "api";
 import { extensions } from "api/extensions";
 import { extensionActivities, extensionPrerequisites } from "api/activities";
 import { extensionDrugs } from "api/drugs";
+import { extensionInstructions } from "api/hypno";
 import { extensionScreens } from "api/settings";
 import { spellEffects } from "Modules/Magic/spellEffects";
 import { boot, resetWorld } from "../harness/world";
@@ -62,6 +63,7 @@ describe("examples/sample-extension.js", () => {
         expect(spellEffects.get("sample.bark")).toBeDefined();
         expect(extensionActivities.get("sample.headpat")).toBeDefined();
         expect(extensionDrugs.get("sample.giggle")).toBeDefined();
+        expect(extensionInstructions.get("sample.purr")).toBeDefined();
         expect(extensionScreens.get("sample.greeting")).toBeDefined();
         expect(command()).toBeDefined();
         expect(sample().errorCount).toBe(0);
@@ -76,6 +78,15 @@ describe("examples/sample-extension.js", () => {
         expect(sample()).not.toBe(first);
         expect(spellEffects.get("sample.bark")).toBeDefined();
         expect((g.Commands as { Tag: string }[]).filter(c => c.Tag === "sample-dose").length).toBe(1);
+    });
+
+    it("its purr instruction takes its options from the suggestion, checked", () => {
+        paste();
+        const purr = extensionInstructions.get("sample.purr")!;
+        expect(purr.options.map(o => [o.key, o.type])).toEqual([["volume", "select"], ["nuzzle", "toggle"]]);
+        const actions: string[] = [];
+        purr.perform({ instruction: "sample.purr", suggestion: "Kitty", options: { volume: "loudly", nuzzle: true }, sendAction: t => actions.push(t), states: {} as never });
+        expect(actions).toEqual(["%NAME% purrs loudly.", "%NAME% nuzzles up against %OPP_NAME%."]);
     });
 
     describe("settings UI", () => {

@@ -79,6 +79,25 @@
             });
         }
 
+        // A custom hypnosis instruction: a suggestion can hold it next to LSCG's own ("Perform Activity", "Strip", ...). Whoever writes the
+        // suggestion picks it from the list and sets its `options` behind a "Configure..." button. The player can block it like any other.
+        if (LSCG.capabilities.has("hypno.instructions")) {
+            api.hypno.registerInstruction({
+                name: "purr",
+                label: "Purr",
+                description: "Compel the subject to purr.",
+                options: [
+                    { type: "select", key: "volume", label: "Volume", choices: [{ value: "softly", label: "Softly" }, { value: "loudly", label: "Loudly" }] },
+                    { type: "toggle", key: "nuzzle", label: "Nuzzle the speaker", description: "Rub up against whoever spoke the trigger." },
+                ],
+                perform(ctx) {
+                    ctx.sendAction(`%NAME% purrs ${ctx.options.volume}.`);
+                    if (ctx.options.nuzzle)
+                        ctx.sendAction("%NAME% nuzzles up against %OPP_NAME%.");
+                },
+            });
+        }
+
         // A custom activity: pat someone's head.
         if (LSCG.capabilities.has("activities")) {
             api.activities.register({

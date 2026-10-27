@@ -5,6 +5,7 @@ import { ICONS } from "utils";
 import { HypnoSettingsModel, InstructionDescription, LSCGHypnoInstruction } from "./Models/hypno";
 import { GuiSubscreen, HelpInfo } from "./settingBase";
 import { DomSettingsHost } from "./domSettingsHost";
+import { extensionInstructionIds, instructionLabel } from "api/hypno";
 import { CheckboxRow, KitContext, Notice, NumberRow, RuleTable, SectionLabel, Tabs, TextRow } from "Dom/kit";
 
 /** Upper bound for the hypnosis timing inputs; the old screen had none. */
@@ -38,8 +39,9 @@ export class GuiHypno extends GuiSubscreen {
 		};
 	}
 
-	get ActualInstructions(): LSCGHypnoInstruction[] {
-		return Object.values(LSCGHypnoInstruction).filter(e => e != LSCGHypnoInstruction.none);
+	/** Every instruction a suggestion can hold: LSCG's own, then those installed extensions add. */
+	get ActualInstructions(): string[] {
+		return [...Object.values(LSCGHypnoInstruction).filter(e => e != LSCGHypnoInstruction.none), ...extensionInstructionIds()];
 	}
 
 	private build(): Node {
@@ -187,7 +189,7 @@ export class GuiHypno extends GuiSubscreen {
 						fixed: true,
 						rows: () => this.ActualInstructions,
 						columns: [
-							{ header: "Instruction", kind: "custom", width: "25%", render: i => <span>{i}</span> as HTMLElement, get: () => "", set: () => {} },
+							{ header: "Instruction", kind: "custom", width: "25%", render: i => <span>{instructionLabel(i)}</span> as HTMLElement, get: () => "", set: () => {} },
 							{ header: "Description", kind: "custom", render: i => <small class="lscg-kit-desc">{InstructionDescription(i)}</small> as HTMLElement, get: () => "", set: () => {} },
 							{
 								header: "Block", kind: "checkbox", width: "4.5em", tooltip: "Suggestions can't give you this instruction.",

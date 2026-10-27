@@ -6,6 +6,7 @@ import { Button, Chip, IconButton, CheckboxRow, Expando, Icon, KitContext, KitTa
 import { addEffect, canHaveEffect, DEFAULT_EFFECT_DELAY, editableConfig, effectDelayFor, MAX_EFFECT_DELAY, MIN_EFFECT_DELAY, removeEffect, setEffect, writeConfig, writeDelay } from "Modules/Magic/spellEdit";
 import { EFFECT_EDITORS } from "./magic-effect-editors";
 import { optionRows } from "./optionRows";
+import { DelayConnector } from "./delayConnector";
 import { KNOWN_SPELLS_LIMIT, MagicPublicSettingsModel, MagicSettingsModel, OutfitOption, PolymorphConfig, SpellDefinition, SpellEffectId, maxSpellEffects } from "./Models/magic";
 import type { SpiritTextType } from "./magic";
 
@@ -175,37 +176,13 @@ function effectConfig(spell: SpellDefinition, index: number):
     }
 }
 
-const delayNormal = (spell: SpellDefinition, index: number) => getSpellEffect(spell.Effects[index])?.delay ?? DEFAULT_EFFECT_DELAY;
-const delayText = (ms: number) => `wait ${ms / 1000}s`;
-
-/** The thin connector between two effects: how long the effect at `index` waits after the one above it (its default, or a delay the
- *  author chose). Closed it is one short line in the gutter, so it reads as the link between the two effects; open it edits in place.
- *  Only for effects after the first, which always take hold at once. */
+/** The connector above the effect at `index`: how long it waits after the one above it (see DelayConnector). */
 function effectDelay(ctx: KitContext, spell: SpellDefinition, index: number): HTMLElement {
-    const normal = () => delayNormal(spell, index);
-    const section = Expando(ctx, {
-        summary: () => {
-            const custom = effectDelayFor(spell, index);
-            return `\u21b3 ${delayText(custom ?? normal())}${custom !== undefined ? " (custom)" : ""}`;
-        },
-        content: [
-            CheckboxRow(ctx, {
-                label: "Custom delay",
-                description: `Default: ${delayText(normal())}.`,
-                get: () => effectDelayFor(spell, index) !== undefined,
-                set: v => writeDelay(spell, index, v ? normal() : undefined),
-            }),
-            NumberRow(ctx, {
-                label: "Wait (seconds)",
-                min: MIN_EFFECT_DELAY / 1000, max: MAX_EFFECT_DELAY / 1000, step: 0.5,
-                get: () => (effectDelayFor(spell, index) ?? normal()) / 1000,
-                set: v => writeDelay(spell, index, v * 1000),
-                hidden: () => effectDelayFor(spell, index) === undefined,
-            }),
-        ],
+    return DelayConnector(ctx, {
+        custom: () => effectDelayFor(spell, index),
+        normal: () => getSpellEffect(spell.Effects[index])?.delay ?? DEFAULT_EFFECT_DELAY,
+        set: ms => writeDelay(spell, index, ms),
     });
-    section.classList.add("lscg-spell-delay");
-    return section;
 }
 
 /** The gear beside an effect that has settings of its own: opens them in a dialog of their own, so the effect list stays short. It flags

@@ -1,12 +1,14 @@
 import { ABSOLUTE_MAX_SPELL_EFFECTS, SpellDefinition, SpellEffectId } from "Settings/Models/magic";
 import { CastArgs, CastPrompt, effectTier, getSpellEffect, SaveBehavior } from "./spellEffects";
+import { cleanDelay, MAX_STEP_DELAY, MIN_STEP_DELAY } from "stepDelay";
 
 /** The most a single effect's settings may weigh once serialised, whoever sent them. */
 export const MAX_EFFECT_CONFIG_SIZE = 1024;
 
 /** The shortest and longest an effect may wait for the one before it, whoever asks (a spell's author, an extension, a listener). */
-export const MIN_EFFECT_DELAY = 1000;
-export const MAX_EFFECT_DELAY = 30_000;
+export const MIN_EFFECT_DELAY = MIN_STEP_DELAY;
+export const MAX_EFFECT_DELAY = MAX_STEP_DELAY;
+export { cleanDelay };
 
 /** How long an effect waits for the one before it unless the spell, the effect or a listener says otherwise. */
 export const DEFAULT_EFFECT_DELAY = 2000;
@@ -76,11 +78,6 @@ export function writeDelay(spell: SpellDefinition, index: number, delay: number 
     const delays = spell.Delays ??= [];
     while (delays.length < spell.Effects.length) delays.push(null);
     delays[index] = clean;
-}
-
-/** A delay from anywhere: a finite, non-negative number of ms, raised to the minimum or cut to the maximum; anything else is undefined. */
-export function cleanDelay(delay: unknown): number | undefined {
-    return typeof delay === "number" && Number.isFinite(delay) && delay >= 0 ? Math.min(Math.max(Math.round(delay), MIN_EFFECT_DELAY), MAX_EFFECT_DELAY) : undefined;
 }
 
 /** A spell's total power: each effect's tier (for ones that depend on their settings, the tier of the sanitized settings),

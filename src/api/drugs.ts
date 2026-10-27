@@ -1,6 +1,7 @@
 import { getModule } from "modules";
+import { getCharacter } from "utils";
 import type { InjectorModule } from "Modules/injector";
-import { LSCGDoseOptions, LSCGDrugType, LSCGDrugContext, LSCGDrugThreshold, LSCGDrugDefinition, LSCGDrugDoseContext, LSCGDrugsApi } from "./types";
+import { LSCGDrugLevelInfo, LSCGDoseOptions, LSCGDrugType, LSCGDrugContext, LSCGDrugThreshold, LSCGDrugDefinition, LSCGDrugDoseContext, LSCGDrugsApi } from "./types";
 import { Registry } from "./registry";
 import { ErrorOwner, safeInvoke } from "./safeInvoke";
 import { validateOptionFields, type OptionField } from "./options";
@@ -118,8 +119,20 @@ export function createDrugsApi(owner: ErrorOwner & { readonly info: { name: stri
             return !!injector?.DoseDrug(type, { ...options, multiplier });
         },
 
-        getLevel(type: LSCGDrugType): number {
-            return getModule<InjectorModule>("InjectorModule")?.GetDrugLevel(type) ?? 0;
+        getLevel(type: LSCGDrugType, memberNumber?: number): number {
+            const injector = getModule<InjectorModule>("InjectorModule");
+            if (memberNumber === undefined || memberNumber === Player.MemberNumber)
+                return injector?.GetDrugLevel(type) ?? 0;
+            return this.getLevels(memberNumber).find(bar => bar.type === type)?.level ?? 0;
+        },
+
+        getLevels(memberNumber?: number): LSCGDrugLevelInfo[] {
+            const injector = getModule<InjectorModule>("InjectorModule");
+            const mine = memberNumber === undefined || memberNumber === Player.MemberNumber;
+            const character = mine ? Player : getCharacter(memberNumber);
+            if (!injector || !character)
+                return [];
+            return injector.EstimatedBars(character as Character).map(bar => Object.freeze({ type: bar.type, level: bar.level, max: bar.max, estimated: !mine }));
         },
 
         unregister(name: string): boolean {
