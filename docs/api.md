@@ -189,6 +189,7 @@ been applied. Its `ctx` has:
 | `duration` | How long the effect should last, in ms. `0` or `undefined` means no expiry. |
 | `sendAction(text)` | Sends an emote. `%NAME%`, `%POSSESSIVE%` and `%OPP_NAME%` (the caster) are filled in. |
 | `states` | LSCG's [built-in states](#built-in-states), to make the effect last |
+| `options` | The values the caster chose for this copy of your effect (see [Options players can change](#options-players-can-change)); `{}` if you declare none |
 
 **Making it last.** Extensions can't add their own states yet. To give an effect a duration, switch one of LSCG's
 built-in states for `ctx.duration`:
@@ -208,10 +209,12 @@ apply(ctx) {
 | `allowRandom` | Wild magic may pick it. |
 | `delay` | Milliseconds it waits after the spell's previous effect before taking hold (default 2000, from 1000 to 30000; anything lower is raised to 1000). The first effect of a spell always applies immediately. A spell's author can override it per effect in the spell editor. |
 | `defaultBlocked` | Blocked the first time a player sees it, until they unblock it. |
+| `options` | Settings the spell's author can change; see below. |
 
-**Settings the caster can change.** Declare `options` and LSCG shows them in the spell editor under your effect,
-stores them with each copy of the effect in the spell, and passes them to `apply` as `ctx.options`. See
-[Options players can change](#options-players-can-change).
+**Settings the caster can change.** Declare `options` and LSCG shows them in the spell editor, stores them with each
+copy of the effect in the spell, and passes them to `apply` as `ctx.options`. In the editor your effect gets a gear
+button beside its dropdown, which opens the settings in a dialog of their own (the gear turns amber only for LSCG's own
+effects that still need something chosen). See [Options players can change](#options-players-can-change).
 
 ```js
 api.spells.registerEffect({
@@ -229,9 +232,11 @@ api.spells.registerEffect({
 });
 ```
 
-**Timing.** A spell's effects take hold one after another, each waiting after the one before it. The wait is, in order of
-priority: the delay the spell's author set for that effect in the spell editor, your effect's `delay`, then the spell-wide
-gap (2 seconds, which a `spell.beforeReceive` listener can change). If the target is dispelled or uses safeword while effects
+**Timing.** A spell's effects take hold one after another, each waiting after the one before it, between 1 and 30
+seconds. The wait is, in order of priority: the delay the spell's author set for that effect (in the spell editor, a
+thin "↳ wait 2s" line between two effects opens to change it), your effect's `delay`, then the spell-wide gap
+(2 seconds, which a `spell.beforeReceive` listener can change). `spell.received` tells listeners when each effect will
+land. If the target is dispelled or uses safeword while effects
 are still waiting, those effects are cancelled and never run `apply`; `spell.interrupted` tells listeners which ones. A dispel
 leaves the later effects of its own spell alone, so `[Dispel, Yours]` still applies yours.
 
@@ -319,8 +324,10 @@ api.drugs.register({
 });
 ```
 
-Add `options` to a drug and each player can change its settings on the Extension drugs tab of Drug Enhancements, right below the drug's
-opt-in. Your callbacks read the player's values from `ctx.options`.
+Drugs from extensions are listed on their own **Extension drugs** tab of Drug Enhancements, which only appears when an
+installed extension adds one. Add `options` to a drug and each player can change its settings there, in a collapsed
+section below the opt-in table. Your callbacks read the player's values from `ctx.options`. See
+[Options players can change](#options-players-can-change).
 
 ### Levels
 
@@ -335,8 +342,8 @@ Each drug has a level from 0 to `max`, which LSCG keeps and saves for you.
 
 ### Callbacks
 
-Every callback gets a `ctx` with `drug`, `level`, `max`, `addLevel`, `setLevel`, `sendAction` and
-[`states`](#built-in-states).
+Every callback gets a `ctx` with `drug`, `level`, `max`, `addLevel`, `setLevel`, `sendAction`, the player's
+[`options`](#options-players-can-change) and [`states`](#built-in-states).
 
 | Callback | When it runs |
 |---|---|
@@ -435,7 +442,21 @@ values, checks them and gives them to your callbacks as `ctx.options`. You never
 | `"text"` | Text box | `maxLength` (200, at most 1000), `multiline`, `default` | `string` |
 
 Every field has a `key` (a plain identifier, unique in the list, and the name in `ctx.options`), an optional
-`label` (defaults to the key) and an optional `description`.
+`label` (defaults to the key) and an optional `description`. A list holds up to 12 fields, and a select up to 24 choices.
+
+**Where players find them.** A spell effect's options are behind the gear beside the effect in the spell editor. A
+drug's options are on the Extension drugs tab of Drug Enhancements.
+
+```js
+options: [
+    { type: "toggle", key: "loud", label: "Loud", description: "The whole room hears it." },
+    { type: "number", key: "barks", label: "Barks", min: 1, max: 3, default: 1 },
+    { type: "select", key: "mood", label: "Mood", choices: [{ value: "happy", label: "Happy" }, { value: "startled", label: "Startled" }] },
+    { type: "text", key: "laugh", label: "Laugh", default: "hee hee", maxLength: 20 },
+],
+// ...and in apply / onDose / any drug callback:
+const { loud, barks, mood, laugh } = ctx.options;
+```
 
 - **Always valid.** `ctx.options` has every declared key with a legal value. Anything missing, out of range or of the
   wrong type is replaced by its default, so you never need to check it.
@@ -665,7 +686,7 @@ in `build/types-package/`.
 
 ### Examples
 
-- [`examples/sample-extension.js`](../examples/sample-extension.js) uses every feature. Paste it into the console
-  or load it with a script tag, as its header explains.
+- [`examples/sample-extension.js`](../examples/sample-extension.js) uses every feature, including settings controls
+  on its spell effect and drug. Paste it into the console or load it with a script tag, as its header explains.
 - [`examples/lscgLoader-local.user.js`](../examples/lscgLoader-local.user.js) is for working on LSCG itself. It
   loads your local build and the example together.
