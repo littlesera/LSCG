@@ -4,7 +4,7 @@ import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
 import { GetConfiguredItemBundlesFromOutfitKey, GetDelimitedList, OnChat, GetItemNameAndDescriptionConcat, GetMetadata, LSCG_SendLocal, LSCG_TEAL, OnActivity, SendAction, getCharacter, getRandomInt, hookFunction, isPhraseInString, removeAllHooksByModule, sendLSCGCommand, sendLSCGCommandBeep, settingsSave, getCharacterByNicknameOrMemberNumber, excludeParentheticalContent, escapeRegExp, escapeHtml, IsBlockedSender } from "../utils";
 import { ABSOLUTE_MAX_SPELL_EFFECTS, DEFAULT_MAX_SPELL_EFFECTS, KNOWN_SPELLS_LIMIT, LSCGSpellEffect, MagicSettingsModel, OutfitOption, SpellDefinition, SpellEffectId } from "Settings/Models/magic";
 import { isSpacedWordChar } from "./Magic/phrase";
-import { effectConfigFor, pickEffects, retier, sanitizeCastArgs, sanitizeSpell, saveBehaviorFor, spellCastPrompts, voiceCastArgs } from "./Magic/spellEdit";
+import { effectConfigFor, DEFAULT_EFFECT_DELAY, effectDelayFor, MAX_EFFECT_DELAY, pickEffects, retier, sanitizeCastArgs, sanitizeSpell, saveBehaviorFor, spellCastPrompts, voiceCastArgs } from "./Magic/spellEdit";
 import { GuiMagic } from "Settings/magic";
 import { StateModule } from "./states";
 import { ActivityCheck, ActivityRoll, IsActivityEnhanced, ItemUseModule, MagicWandItems } from "./item-use";
@@ -13,6 +13,7 @@ import { RedressedState } from "./States/RedressedState";
 import { PolymorphedState } from "./States/PolymorphedState";
 import { OutfitCollectionModule } from "./outfitCollection";
 import { hasMagicModule, hasMBSSettings, hasLSCGData, safeGetLSCGProp } from "../types/guards";
+import type { LSCGSpellInfo } from "api/types";
 import { emit, emitBefore, spellInfo } from "api/events";
 import { SPELL_MENU_SHAPE, SpellMenuView } from "./Magic/spellMenu";
 import { CastArgs, CastPrompt, advertisedEffectIds, allEffectIds, effectLabel, extensionEffectIds, getSpellEffect, isLegacyEffect, spellEffects, spellForcesDuration, spellHasPairedEffect, spellIsBeneficial } from "./Magic/spellEffects";
@@ -22,6 +23,16 @@ const dialogButtonCoords: [number,number,number,number] = [dialogButtonInfo[0], 
 const dialogCastButtonCoords: [number,number,number,number] = [dialogButtonInfo[0] - (dialogButtonInfo[2] + dialogButtonInfo[4]), dialogButtonInfo[1], dialogButtonInfo[2], dialogButtonInfo[3]];
 const dialogWildButtonCoords: [number,number,number,number] = [dialogButtonInfo[0] - (dialogButtonInfo[2] + dialogButtonInfo[4]), dialogButtonInfo[1]  + (dialogButtonInfo[3] + dialogButtonInfo[4]), dialogButtonInfo[2], dialogButtonInfo[3]];
 const dialogTeachButtonCoords: [number,number,number,number] = [dialogButtonInfo[0] - (dialogButtonInfo[2] + dialogButtonInfo[4]), dialogButtonInfo[1]  + (dialogButtonInfo[3] + dialogButtonInfo[4]) * 2, dialogButtonInfo[2], dialogButtonInfo[3]];
+
+/** An incoming spell with effects still waiting to take hold: one timer per effect, by its position among the effects being applied. */
+export interface PendingSpell {
+    spell: LSCGSpellInfo;
+    sender?: number;
+    senderName: string;
+    /** The effects being applied, in order; `timers` is keyed by position in this list. */
+    effects: string[];
+    timers: Map<number, ReturnType<typeof setTimeout>>;
+}
 
 export class MagicModule extends BaseModule {
     DialogMenuOpen: boolean = false;
@@ -298,10 +309,12 @@ export class MagicModule extends BaseModule {
     }
 
     safeword(): void {
+        this.CancelPendingSpells("safeword");
         this.CloseSpellMenu();
     }
 
     unload(): void {
+        this.CancelPendingSpells("unload");
         this.CloseSpellMenu();
         this._unhookEffectChanges?.();
         removeAllHooksByModule(ModuleCategory.Magic);
@@ -780,14 +793,24 @@ export class MagicModule extends BaseModule {
         }
         if (!!duration && duration > 0 && this.settings.maxDuration > 0)
             LSCG_SendLocal(`${sender?.IsPlayer() ? "Your" : senderName + "'s"} ${spell.Name} spell will last ${duration / (60 * 1000)} minutes.`);
-        emit("spell.received", { spell: info, sender: sender?.MemberNumber, effects: allowedEntries.map(e => e.effect), duration });
+        // Each effect waits after the one before it: what the spell's author chose for it, else the effect's own default, else the spell-wide
+        // gap. The first takes hold at once. `waits` is when each takes hold, counted from now.
+        let wait = 0;
+        const waits = allowedEntries.map(({ effect, index }, ix) => {
+            if (ix > 0) wait += effectDelayFor(spell, index) ?? sanitizeDelay(getSpellEffect(effect)?.delay, gap);
+            return wait;
+        });
+        emit("spell.received", { spell: info, sender: sender?.MemberNumber, effects: allowedEntries.map(e => e.effect), duration, delays: waits });
 
         const spellDuration = duration;
-        // Each effect waits its own delay (or the spell-wide gap) after the one before it; the first takes hold at once.
-        let wait = 0;
+        // Tracked until its last effect has taken hold, so a dispel or safeword in between can stop the rest.
+        const run: PendingSpell = { spell: info, sender: sender?.MemberNumber, senderName, effects: allowedEntries.map(e => e.effect), timers: new Map() };
+        this.pendingSpells.add(run);
         allowedEntries.forEach(({ effect, index }, ix, arr) => {
-            if (ix > 0) wait += sanitizeDelay(getSpellEffect(effect)?.delay, gap);
-            setTimeout(() => {
+            run.timers.set(ix, setTimeout(() => {
+                run.timers.delete(ix);
+                if (run.timers.size === 0)
+                    this.pendingSpells.delete(run);
                 const behavior = saved ? saveBehaviorFor(spell, index) : undefined;
                 if (behavior === "negate") {
                     SendAction(`%NAME% resists the ${effectLabel(effect)} magic of ${senderName}'s ${spell.Name}.`);
@@ -804,13 +827,37 @@ export class MagicModule extends BaseModule {
                 else if (!definition)
                     SendAction(`Part of ${senderName}'s ${spell.Name} washes over %NAME% without effect, its magic unfamiliar.`);
                 else {
-                    definition.apply({ effect, sender, senderName, spell, paired, duration, magic: this, saved: !!behavior, index, config: effectConfigFor(spell, index), castArgs: castArgs?.[index] });
+                    definition.apply({ effect, sender, senderName, spell, paired, duration, magic: this, run, saved: !!behavior, index, config: effectConfigFor(spell, index), castArgs: castArgs?.[index] });
                     emit("spell.effectApplied", { effect, spell: info, sender: sender?.MemberNumber, duration });
                 }
                 if (ix == arr.length - 1)
                     settingsSave(true);
-            }, wait);
+            }, waits[ix]));
         });
+    }
+
+    /** Spells whose effects are still waiting to take hold on this player. */
+    pendingSpells = new Set<PendingSpell>();
+
+    /** Stops every spell's effects that haven't taken hold yet (all but `except`, the spell doing the cancelling), so nothing lands after the
+     *  player was dispelled or used safeword. Effects that already took hold are not touched. Returns how many spells were cut short. */
+    CancelPendingSpells(reason: "dispel" | "safeword" | "unload", except?: PendingSpell): number {
+        let cut = 0;
+        for (const run of [...this.pendingSpells]) {
+            if (run === except || run.timers.size === 0)
+                continue;
+            const waiting = [...run.timers.keys()].sort((a, b) => a - b);
+            run.timers.forEach(timer => clearTimeout(timer));
+            run.timers.clear();
+            this.pendingSpells.delete(run);
+            cut++;
+            if (reason === "dispel")
+                SendAction(`The rest of ${run.senderName}'s ${run.spell.name} dissipates before it can take hold on %NAME%.`);
+            emit("spell.interrupted", { spell: run.spell, sender: run.sender, reason, effects: waiting.map(ix => run.effects[ix]) });
+        }
+        if (cut > 0 && reason !== "unload")
+            settingsSave(true);
+        return cut;
     }
 
     NotifyPair(caster: Character | null, pairedTarget: Character | undefined, spellEffect: SpellEffectId, pairType: LSCGState) {
@@ -1096,9 +1143,6 @@ export class MagicModule extends BaseModule {
     }
 }
 
-/** Time between one effect of a spell taking hold and the next, unless the spell or the effect says otherwise. */
-const DEFAULT_EFFECT_DELAY = 2000;
-const MAX_EFFECT_DELAY = 30_000;
 
 /** Accepts an extension-adjusted delay (ms) only if it's sane, clamped to a maximum; otherwise keeps the fallback. */
 function sanitizeDelay(delay: unknown, fallback: number): number {

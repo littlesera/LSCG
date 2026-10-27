@@ -14,7 +14,7 @@ import { ABSOLUTE_MAX_SPELL_EFFECTS, DEFAULT_MAX_SPELL_EFFECTS, DamageSave, Dama
 import { builtInEffectIds, effectDescription, effectDomain, effectLabel, effectSchool, effectsInDomain, effectsInSchool, effectsInTier, effectTier, effectTooltip, extensionEffectIds, getSpellEffect, spellEffects, spellIsBeneficial } from "Modules/Magic/spellEffects";
 import { SPELL_DOMAINS, SPELL_TIERS, SpellDomain, SpellSchool } from "Modules/Magic/taxonomy";
 import { damageTier, MAX_DAMAGE_ROLL } from "Modules/Magic/effects/damage";
-import { retier, spellTier } from "Modules/Magic/spellEdit";
+import { retier, spellTier, writeDelay } from "Modules/Magic/spellEdit";
 import { addEffect, canHaveEffect, effectConfigFor, removeEffect, sanitizeSpell, setEffect, stackLimit, writeConfig } from "Modules/Magic/spellEdit";
 import { sanitizeDamageConfig } from "Modules/Magic/effects/damage";
 import { registerExtension, type ModApiHandle } from "api/extensions";
@@ -267,6 +267,88 @@ describe("extension spell effects", () => {
             vi.advanceTimersByTime(100);
             expect(order).toEqual(["a", "b", "c"]);
             off();
+        });
+
+        it("uses the delay the spell's author set, over the effect's own and the gap", () => {
+            reg("a"); reg("b", 5000); reg("c");
+            const s = spell("seq", ["a", "b", "c"].map(n => `${api.id}.${n}` as SpellEffectId));
+            writeDelay(s, 1, 300);
+            writeDelay(s, 2, 0);
+            sanitizeSpell(s);
+            expect(s.Delays).toEqual([null, 300, 0]);
+            magic.IncomingSpell(alice as never, s, null, 2);
+            vi.advanceTimersByTime(300);
+            expect(order).toEqual(["a", "b", "c"]);
+        });
+
+        it("keeps delays lined up with their effects and cleans them", () => {
+            const [a, b, c] = ["a", "b", "c"].map(n => `${api.id}.${n}` as SpellEffectId);
+            const s = spell("seq", [a, b, c]);
+            s.Delays = [null, 1000, -4];
+            sanitizeSpell(s);
+            expect(s.Delays).toEqual([null, 1000, null]);
+            writeDelay(s, 2, 99_999_999);
+            expect(s.Delays![2]).toBe(30_000);
+            removeEffect(s, 1);
+            expect(s.Delays).toEqual([null, 30_000]);
+            writeDelay(s, 1, undefined);
+            expect(s.Delays).toBeUndefined();
+            s.Delays = ["x" as never, 1e9, 5, 6];
+            sanitizeSpell(s);
+            expect(s.Delays).toEqual([null, 30_000]);
+        });
+
+        it("tells listeners when each effect will take hold", () => {
+            reg("a"); reg("b"); reg("c", 100);
+            let seen: any;
+            api.events.on("spell.received", p => { seen = p; });
+            cast("a", "b", "c");
+            expect(seen.delays).toEqual([0, 2000, 2100]);
+        });
+
+        describe("interruption", () => {
+            const dispel = () => magic.IncomingSpell(alice as never, spell("clear", [LSCGSpellEffect.dispel]), null, 2);
+
+            it("a dispel stops a spell's effects that haven't taken hold", () => {
+                reg("a"); reg("b"); reg("c");
+                const interrupted: any[] = [];
+                api.events.on("spell.interrupted", p => { interrupted.push(p); });
+                cast("a", "b", "c");
+                vi.advanceTimersByTime(2500);
+                expect(order).toEqual(["a", "b"]);
+                dispel();
+                vi.advanceTimersByTime(10_000);
+                expect(order).toEqual(["a", "b"]);
+                expect(interrupted).toEqual([expect.objectContaining({ reason: "dispel", effects: [`${api.id}.c`], sender: 2 })]);
+                expect(sent.actions().some(a => a.includes("dissipates"))).toBe(true);
+                expect(magic.pendingSpells.size).toBe(0);
+            });
+
+            it("a dispel doesn't stop the later effects of its own spell", () => {
+                reg("a"); reg("b");
+                magic.IncomingSpell(alice as never, spell("both", [LSCGSpellEffect.dispel, `${api.id}.a` as SpellEffectId, `${api.id}.b` as SpellEffectId]), null, 2);
+                vi.advanceTimersByTime(10_000);
+                expect(order).toEqual(["a", "b"]);
+            });
+
+            it("safeword stops pending effects too, without a dispel message", () => {
+                reg("a"); reg("b");
+                cast("a", "b");
+                vi.advanceTimersByTime(1);
+                magic.safeword();
+                vi.advanceTimersByTime(10_000);
+                expect(order).toEqual(["a"]);
+                expect(magic.pendingSpells.size).toBe(0);
+            });
+
+            it("a spell that has fully taken hold is no longer pending", () => {
+                reg("a"); reg("b");
+                cast("a", "b");
+                expect(magic.pendingSpells.size).toBe(1);
+                vi.advanceTimersByTime(2500);
+                expect(magic.pendingSpells.size).toBe(0);
+                expect(magic.CancelPendingSpells("dispel")).toBe(0);
+            });
         });
 
         it("ignores a nonsensical delay", () => {

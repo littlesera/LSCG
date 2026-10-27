@@ -212,8 +212,9 @@ export const BUILTIN_SPELL_EFFECTS: SpellEffectDefinition[] = [
         description: "Dispels any existing effects on the target (including anything drug induced).",
         beneficial: true,
         allowRandom: true,
-        apply: ({ magic }) => {
+        apply: ({ magic, run }) => {
             SendAction("%NAME% gasps, blinking as any magic affecting %INTENSIVE% is removed.");
+            magic.CancelPendingSpells("dispel", run);
             magic.stateModule.Clear(false, true);
         },
     },

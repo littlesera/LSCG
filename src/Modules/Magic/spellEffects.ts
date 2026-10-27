@@ -1,7 +1,7 @@
 import { Registry } from "api/registry";
 import type { OptionField } from "api/options";
 import { cleanEffect, LSCGSpellEffect, SpellDefinition, SpellEffectId } from "Settings/Models/magic";
-import type { MagicModule } from "Modules/magic";
+import type { MagicModule, PendingSpell } from "Modules/magic";
 import type { SpellEffectEndReason, SpellEffectEntry } from "Modules/States/SpellEffectsState";
 import type { StateRestrictions } from "Modules/States/BaseState";
 import { BUILTIN_SPELL_EFFECTS } from "./builtinEffects";
@@ -44,6 +44,8 @@ export interface SpellEffectContext {
     config?: unknown;
     /** The target rolled a save against this spell. Only set for effects that declare an `onSave` behaviour of "half". */
     saved?: boolean;
+    /** The spell run this effect belongs to, so an effect that cancels pending spells (dispel) leaves its own spell's later effects alone. */
+    run?: PendingSpell;
     /** The caster's answers to this effect's cast-time questions, already checked against its options; missing keys mean "use the default". */
     castArgs?: Record<string, string>;
 }

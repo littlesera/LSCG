@@ -505,7 +505,11 @@ export interface LSCGEventMap {
     /** The player saved against an incoming spell. `bounced` is true if a magic barrier sent it back to the caster. */
     "spell.resisted": { spell: LSCGSpellInfo; sender: number; bounced: boolean };
     /** A spell took hold on the player; `effects` are the ones that will be applied. */
-    "spell.received": { spell: LSCGSpellInfo; sender?: number; effects: string[]; duration?: number; delay?: number };
+    "spell.received": { spell: LSCGSpellInfo; sender?: number; effects: string[]; duration?: number;
+        /** For each of `effects`, how long (ms) after the spell arrived it takes hold. The first is 0. */
+        delays: number[] };
+    /** A spell's remaining effects were cancelled before they took hold. `reason`: the target was dispelled, used safeword, or LSCG unloaded. */
+    "spell.interrupted": { spell: LSCGSpellInfo; sender?: number; reason: "dispel" | "safeword" | "unload"; effects: string[] };
     /** One effect of a spell was applied to the player. */
     "spell.effectApplied": { effect: string; spell: LSCGSpellInfo; sender?: number; duration?: number };
     /** The player was hypnotized by a trigger. `byWord` is false when triggered some other way (e.g. an activity). */

@@ -3,7 +3,7 @@ import { getModule } from "modules";
 import { OutfitCollectionModule } from "Modules/outfitCollection";
 import { allEffectIds, domainDescription, domainOrder, effectDescription, effectDomain, effectLabel, effectTooltip, isExtensionEffect, getSpellEffect, isPairedEffect, spellHasPairedEffect } from "Modules/Magic/spellEffects";
 import { Button, Chip, CheckboxRow, Expando, Icon, KitContext, KitTab, Notice, NumberRow, openDialog, RuleTable, SectionLabel, SelectOption, SelectRow, TextRow } from "Dom/kit";
-import { addEffect, canHaveEffect, editableConfig, removeEffect, setEffect, writeConfig } from "Modules/Magic/spellEdit";
+import { addEffect, canHaveEffect, DEFAULT_EFFECT_DELAY, editableConfig, effectDelayFor, MAX_EFFECT_DELAY, removeEffect, setEffect, writeConfig, writeDelay } from "Modules/Magic/spellEdit";
 import { EFFECT_EDITORS } from "./magic-effect-editors";
 import { optionRows } from "./optionRows";
 import { KNOWN_SPELLS_LIMIT, MagicPublicSettingsModel, MagicSettingsModel, OutfitOption, PolymorphConfig, SpellDefinition, SpellEffectId, maxSpellEffects } from "./Models/magic";
@@ -175,6 +175,27 @@ function effectConfig(ctx: KitContext, spell: SpellDefinition, index: number):
     }
 }
 
+/** How long the effect at `index` waits after the one before it: its default, or a delay the author chose. Only for effects after the
+ *  first, which always take hold at once. */
+function effectDelayRows(ctx: KitContext, spell: SpellDefinition, index: number): HTMLElement[] {
+    const normal = () => (getSpellEffect(spell.Effects[index])?.delay ?? DEFAULT_EFFECT_DELAY) / 1000;
+    return [
+        CheckboxRow(ctx, {
+            label: "Custom delay",
+            description: `Normally this takes hold ${normal()} seconds after the effect above it. Pick your own, or 0 to take hold together.`,
+            get: () => effectDelayFor(spell, index) !== undefined,
+            set: v => writeDelay(spell, index, v ? normal() * 1000 : undefined),
+        }),
+        NumberRow(ctx, {
+            label: "Seconds after the effect above",
+            min: 0, max: MAX_EFFECT_DELAY / 1000, step: 0.5,
+            get: () => (effectDelayFor(spell, index) ?? normal() * 1000) / 1000,
+            set: v => writeDelay(spell, index, v * 1000),
+            hidden: () => effectDelayFor(spell, index) === undefined,
+        }),
+    ];
+}
+
 /** The ordered effect pickers: a dropdown for each effect the spell has, plus one to add the next while there is room
  *  under `limit`. Order matters, since a spell applies its effects one after another in this order. Picking
  *  "remove" in a dropdown takes that effect out and moves the later ones up. An effect with settings of its own
@@ -219,16 +240,17 @@ function effectSlots(dctx: KitContext, tableCtx: KitContext, spell: SpellDefinit
             // list (which would drop keyboard focus mid-way through filling them in); they only update the spell table.
             const gctx = new KitContext(() => tableCtx.changed());
             const config = current ? effectConfig(gctx, spell, i) : undefined;
-            if (!current || !config)
+            const delay = current && i > 0 ? effectDelayRows(gctx, spell, i) : [];
+            if (!current || (!config && delay.length === 0))
                 return picker;
             // Open until the player has chosen what the effect needs; after that, tucked away behind its summary.
-            const section = Expando(gctx, {
+            const section = config ? Expando(gctx, {
                 summary: config.summary,
                 content: config.rows,
                 open: expanded.get(`${i}:${current}`) ?? config.needsAttention(),
                 onToggle: open => expanded.set(`${i}:${current}`, open),
-            });
-            return <div class="lscg-spell-effect">{picker}{section}</div> as HTMLElement;
+            }) : null;
+            return <div class="lscg-spell-effect">{picker}{section}{delay}</div> as HTMLElement;
         };
 
         const rows: HTMLElement[] = Array.from({ length: slots }, (_, i) => row(i));

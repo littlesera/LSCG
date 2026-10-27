@@ -206,7 +206,7 @@ apply(ctx) {
 | `beneficial` | A spell made only of beneficial effects gets no save roll and no duration. |
 | `forcesDuration` | Always expires, even for players who allow unlimited-duration spells. |
 | `allowRandom` | Wild magic may pick it. |
-| `delay` | Milliseconds it waits after the spell's previous effect before taking hold (default 2000, at most 30000, `0` for at once). The first effect of a spell always applies immediately. |
+| `delay` | Milliseconds it waits after the spell's previous effect before taking hold (default 2000, at most 30000, `0` for at once). The first effect of a spell always applies immediately. A spell's author can override it per effect in the spell editor. |
 | `defaultBlocked` | Blocked the first time a player sees it, until they unblock it. |
 
 **Settings the caster can change.** Declare `options` and LSCG shows them in the spell editor under your effect,
@@ -228,6 +228,12 @@ api.spells.registerEffect({
     },
 });
 ```
+
+**Timing.** A spell's effects take hold one after another, each waiting after the one before it. The wait is, in order of
+priority: the delay the spell's author set for that effect in the spell editor, your effect's `delay`, then the spell-wide
+gap (2 seconds, which a `spell.beforeReceive` listener can change). If the target is dispelled or uses safeword while effects
+are still waiting, those effects are cancelled and never run `apply`; `spell.interrupted` tells listeners which ones. A dispel
+leaves the later effects of its own spell alone, so `[Dispel, Yours]` still applies yours.
 
 **Players without your extension.** Every client tells the room which effects it can apply. When a spell holds
 effects the target doesn't have, the caster's spell menu lists them as "(unsupported)". A spell whose effects are
@@ -591,7 +597,8 @@ A `lscg:ready` event is also dispatched on `window` when LSCG becomes ready, wit
 | `state.recovered` | `{ type, reason }`: a state ended. `reason` is `"expired"`, `"safeword"`, `"dispel"` or `"manual"`. |
 | `spell.cast` | `{ spell, target, paired? }`: the player cast a spell. |
 | `spell.resisted` | `{ spell, sender, bounced }`: the player saved against a spell. `bounced` means a barrier sent it back. |
-| `spell.received` | `{ spell, sender?, effects, duration? }`: a spell took hold. `effects` are the ones being applied. |
+| `spell.received` | `{ spell, sender?, effects, duration?, delays }`: a spell took hold. `effects` are the ones being applied, and `delays[i]` is how long (ms) after now `effects[i]` takes hold. |
+| `spell.interrupted` | `{ spell, sender?, reason, effects }`: effects that hadn't taken hold yet were cancelled. `reason` is `"dispel"`, `"safeword"` or `"unload"`, and `effects` are the ones that never applied. |
 | `spell.effectApplied` | `{ effect, spell, sender?, duration? }`: one effect was applied. |
 | `hypno.triggered` | `{ by?, byWord }`: the player was hypnotized by a trigger. `byWord` is false for other routes. |
 | `hypno.awakened` | `{ method, by? }`: brought out of hypnosis. `method` is `"word"`, `"boop"`, `"snap"`, `"timeout"` or `"other"`. |
