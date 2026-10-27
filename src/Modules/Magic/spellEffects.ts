@@ -1,4 +1,5 @@
 import { Registry } from "api/registry";
+import type { OptionField } from "api/options";
 import { cleanEffect, LSCGSpellEffect, SpellDefinition, SpellEffectId } from "Settings/Models/magic";
 import type { MagicModule } from "Modules/magic";
 import type { SpellEffectEndReason, SpellEffectEntry } from "Modules/States/SpellEffectsState";
@@ -73,6 +74,8 @@ export interface SpellEffectDefinition {
     paired?: boolean;
     /** Gets a duration even when the target allows unlimited-duration spells. */
     forcesDuration?: boolean;
+    /** Ms between the effect before this one in a spell taking hold and this one doing so (default: the spell's gap, 2000). Not used when it is a spell's first effect. */
+    delay?: number;
     /** Eligible for wild magic. */
     allowRandom?: boolean;
     /** Blocked by default the first time a player sees it. */
@@ -81,6 +84,8 @@ export interface SpellEffectDefinition {
     configurable?: "outfit" | "polymorph";
     /** Settings of its own, one set per copy of the effect in a spell. */
     config?: EffectConfigSchema;
+    /** Extension effects: the fields the extension declared for its settings, drawn generically in the spell editor (`config` is built from them). */
+    options?: OptionField[];
     /** What it does, in our terms; set for every built-in from BUILTIN_TAXONOMY, missing for extension effects. */
     domain?: SpellDomain;
     /** The classic school of magic it belongs to; flavour only for now. */

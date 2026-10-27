@@ -1,7 +1,9 @@
 import { h } from "tsx-dom";
-import { Chip, CheckboxRow, KitContext, KitTab, NumberRow, RuleTable, SectionLabel } from "Dom/kit";
+import { Chip, CheckboxRow, Expando, KitContext, KitTab, NumberRow, RuleTable, SectionLabel } from "Dom/kit";
 import { COOLDOWNS } from "constants/timing";
 import { extensionDrugs, type ExtensionDrug } from "api/drugs";
+import { optionRows } from "./optionRows";
+import { summarizeOptions } from "api/options";
 import type { InjectorModule } from "Modules/injector";
 import type { InjectorSettingsModel } from "./Models/injector";
 import type { MiscSettingsModel } from "./Models/base";
@@ -42,6 +44,19 @@ function extensionDrugTable(ctx: KitContext, injector: InjectorModule | undefine
                 set: (drug, enabled) => injector?.SetExtensionDrugEnabled(drug.id, enabled),
             },
         ],
+    });
+}
+
+/** The settings each extension drug declared, one closed section per drug under the table. */
+function extensionDrugOptions(ctx: KitContext, injector: InjectorModule | undefined): HTMLElement[] {
+    if (!injector)
+        return [];
+    return extensionDrugs.all().filter(drug => drug.options.length > 0).map(drug => {
+        const current = () => injector.EditableExtensionOptions(drug.id);
+        return Expando(ctx, {
+            summary: () => `${drug.label} settings: ${summarizeOptions(drug.options, current())}`,
+            content: optionRows(ctx, drug.options, current, patch => injector.SetExtensionOptions(drug.id, patch)),
+        });
     });
 }
 
@@ -96,6 +111,7 @@ export function buildInjectorTabs(ctx: KitContext, s: InjectorSettingsModel, mis
                 })),
                 SectionLabel("Extension drugs", "Drugs added by extensions. Each one only affects you once you enable it."),
                 extensionDrugs.all().length > 0 ? extensionDrugTable(ctx, injector) : <p class="lscg-kit-notice">No installed extension adds a drug.</p> as HTMLElement,
+                ...extensionDrugOptions(ctx, injector),
             ],
         },
         {

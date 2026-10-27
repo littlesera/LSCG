@@ -765,7 +765,7 @@ export class MagicModule extends BaseModule {
         }
 
         const info = spellInfo(spell);
-        const spellHook = emitBefore("spell.beforeReceive", { spell: info, sender: sender?.MemberNumber, effects: allowedEntries.map(e => e.effect), duration });
+        const spellHook = emitBefore("spell.beforeReceive", { spell: info, sender: sender?.MemberNumber, effects: allowedEntries.map(e => e.effect), duration, delay: DEFAULT_EFFECT_DELAY });
         if (spellHook.cancelled) {
             SendAction(`${senderName}'s ${spell.Name} fizzles when cast on %NAME%${spellHook.reason ? ` (${spellHook.reason})` : ""}.`);
             return;
@@ -773,6 +773,7 @@ export class MagicModule extends BaseModule {
         // Extensions may only remove effects, never add them.
         allowedEntries = allowedEntries.filter(e => spellHook.payload.effects.includes(e.effect));
         duration = sanitizeDuration(spellHook.payload.duration, duration);
+        const gap = sanitizeDelay(spellHook.payload.delay, DEFAULT_EFFECT_DELAY);
         if (allowedEntries.length <= 0) {
             SendAction(`${senderName}'s ${spell.Name} fizzles when cast on %NAME%, none of its effects allowed to take hold.`);
             return;
@@ -782,7 +783,10 @@ export class MagicModule extends BaseModule {
         emit("spell.received", { spell: info, sender: sender?.MemberNumber, effects: allowedEntries.map(e => e.effect), duration });
 
         const spellDuration = duration;
+        // Each effect waits its own delay (or the spell-wide gap) after the one before it; the first takes hold at once.
+        let wait = 0;
         allowedEntries.forEach(({ effect, index }, ix, arr) => {
+            if (ix > 0) wait += sanitizeDelay(getSpellEffect(effect)?.delay, gap);
             setTimeout(() => {
                 const behavior = saved ? saveBehaviorFor(spell, index) : undefined;
                 if (behavior === "negate") {
@@ -805,7 +809,7 @@ export class MagicModule extends BaseModule {
                 }
                 if (ix == arr.length - 1)
                     settingsSave(true);
-            }, 2000 * ix);
+            }, wait);
         });
     }
 
@@ -1090,6 +1094,15 @@ export class MagicModule extends BaseModule {
             spell.Polymorph.Code = LZString.compressToBase64(JSON.stringify(GetConfiguredItemBundlesFromOutfitKey(spell.Polymorph.Key, item => skipFilter || PolymorphedState.ItemIsAllowed(item))));
         }
     }
+}
+
+/** Time between one effect of a spell taking hold and the next, unless the spell or the effect says otherwise. */
+const DEFAULT_EFFECT_DELAY = 2000;
+const MAX_EFFECT_DELAY = 30_000;
+
+/** Accepts an extension-adjusted delay (ms) only if it's sane, clamped to a maximum; otherwise keeps the fallback. */
+function sanitizeDelay(delay: unknown, fallback: number): number {
+    return typeof delay === "number" && Number.isFinite(delay) && delay >= 0 ? Math.min(delay, MAX_EFFECT_DELAY) : fallback;
 }
 
 /** Accepts an extension-adjusted duration (ms) only if it's sane; otherwise keeps LSCG's own. `undefined` stays allowed. */

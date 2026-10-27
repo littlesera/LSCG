@@ -143,6 +143,61 @@ export interface LSCGStorageApi {
 }
 
 // ---------------------------------------------------------------------------------------------------------------
+// Options
+// ---------------------------------------------------------------------------------------------------------------
+
+/** A value an option holds. */
+export type LSCGOptionValue = boolean | number | string;
+
+/** The current values of an effect's or drug's options, by field key. Always complete and valid when your code receives them. */
+export type LSCGOptions = Record<string, LSCGOptionValue>;
+
+interface LSCGOptionFieldBase {
+    /** Plain identifier (letters, digits, underscore); the name of the value in `ctx.options`. Unique within the declaration. */
+    key: string;
+    /** Shown beside the control. Defaults to `key`. */
+    label?: string;
+    /** Smaller text under the label. */
+    description?: string;
+}
+
+export interface LSCGToggleOption extends LSCGOptionFieldBase {
+    type: "toggle";
+    /** Default false. */
+    default?: boolean;
+}
+
+export interface LSCGNumberOption extends LSCGOptionFieldBase {
+    type: "number";
+    /** Default 0. */
+    min?: number;
+    /** Default `min` + 10. */
+    max?: number;
+    step?: number;
+    /** Default `min`. */
+    default?: number;
+}
+
+export interface LSCGSelectOption extends LSCGOptionFieldBase {
+    type: "select";
+    choices: LSCGKitOption[];
+    /** Default the first choice. */
+    default?: string;
+}
+
+export interface LSCGTextOption extends LSCGOptionFieldBase {
+    type: "text";
+    /** Default 200, at most 1000. */
+    maxLength?: number;
+    multiline?: boolean;
+    default?: string;
+}
+
+/** One setting players can change. Declare a list as `options` on a spell effect or a drug and LSCG draws the controls,
+ *  stores the values, validates them (also when they come from another player) and hands them to your callbacks as `ctx.options`. */
+export type LSCGOptionField = LSCGToggleOption | LSCGNumberOption | LSCGSelectOption | LSCGTextOption;
+
+// ---------------------------------------------------------------------------------------------------------------
 // Drugs
 // ---------------------------------------------------------------------------------------------------------------
 
@@ -162,6 +217,8 @@ export interface LSCGDrugContext {
     sendAction(text: string): void;
     /** Built-in states the drug may activate or recover, e.g. to put the player to sleep at a high level. */
     readonly states: LSCGBuiltInStatesApi;
+    /** The player's current values for the drug's `options` (their defaults if it declares none). */
+    readonly options: LSCGOptions;
 }
 
 export interface LSCGDrugDoseContext extends LSCGDrugContext {
@@ -201,6 +258,8 @@ export interface LSCGDrugDefinition {
     max?: number;
     /** How much the level falls each minute (default 1; 0 means it never wears off by itself). */
     decayPerMinute?: number;
+    /** Settings the player can change under Drug Enhancements, next to the drug's opt-in. Read them from `ctx.options`. */
+    options?: LSCGOptionField[];
     /** Runs on the player when they take a dose. Players have to opt in to each drug in LSCG's settings first. */
     onDose(ctx: LSCGDrugDoseContext): void;
     /** Seconds between ticks, at least 1 (default 6). Sets how often `onTick` and `onSpike` can run and how often
@@ -363,6 +422,8 @@ export interface LSCGSpellEffectContext {
     sendAction(text: string): void;
     /** Built-in states the effect may activate or recover. */
     readonly states: LSCGBuiltInStatesApi;
+    /** The values the caster set for this copy of the effect in their spell, validated against your `options` (their defaults if you declare none). */
+    readonly options: LSCGOptions;
 }
 
 export interface LSCGSpellEffectDefinition {
@@ -376,10 +437,16 @@ export interface LSCGSpellEffectDefinition {
     beneficial?: boolean;
     /** Always give this effect a duration, even when the target allows unlimited-duration spells. */
     forcesDuration?: boolean;
+    /** Milliseconds this effect waits after the previous effect of the same spell before taking hold (default 2000, at most 30000; 0 for at once).
+     *  Ignored when it is the first effect, which always applies immediately. */
+    delay?: number;
     /** May be picked by wild magic (default false). */
     allowRandom?: boolean;
     /** Block the effect by default the first time a player sees it (they can unblock it in LSCG's Magic™ settings). */
     defaultBlocked?: boolean;
+    /** Settings the spell's author can change in the spell editor, one set for each copy of the effect in a spell. They travel
+     *  with the spell, so the target's client validates them again before `apply` sees them as `ctx.options`. */
+    options?: LSCGOptionField[];
     /** Applies the effect to the player. Errors are contained and counted against your extension. */
     apply(ctx: LSCGSpellEffectContext): void;
 }
@@ -438,7 +505,7 @@ export interface LSCGEventMap {
     /** The player saved against an incoming spell. `bounced` is true if a magic barrier sent it back to the caster. */
     "spell.resisted": { spell: LSCGSpellInfo; sender: number; bounced: boolean };
     /** A spell took hold on the player; `effects` are the ones that will be applied. */
-    "spell.received": { spell: LSCGSpellInfo; sender?: number; effects: string[]; duration?: number };
+    "spell.received": { spell: LSCGSpellInfo; sender?: number; effects: string[]; duration?: number; delay?: number };
     /** One effect of a spell was applied to the player. */
     "spell.effectApplied": { effect: string; spell: LSCGSpellInfo; sender?: number; duration?: number };
     /** The player was hypnotized by a trigger. `byWord` is false when triggered some other way (e.g. an activity). */
@@ -473,7 +540,7 @@ export interface LSCGEventMap {
 /** Events with a "before" phase. Handlers may cancel the action or change the fields documented as mutable. */
 export interface LSCGBeforeEventMap {
     /** Before an incoming spell takes hold. Mutable: `duration`; `effects` may only have entries removed. Cancel: the spell fizzles. */
-    "spell.beforeReceive": { readonly spell: LSCGSpellInfo; readonly sender?: number; effects: string[]; duration?: number };
+    "spell.beforeReceive": { readonly spell: LSCGSpellInfo; readonly sender?: number; effects: string[]; duration?: number; delay?: number };
     /** Before one effect of a spell is applied. Mutable: `duration`. Cancel: that effect fizzles. */
     "spell.beforeEffect": { readonly effect: string; readonly spell: LSCGSpellInfo; readonly sender?: number; duration?: number };
     /** Before another player's grab on the player takes hold. Cancel: the grab is refused and released on both sides. */

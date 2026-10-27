@@ -47,6 +47,8 @@ export interface InjectorSettingsModel extends InjectorPublicSettingsModel {
     enabledExtensionDrugs: string[];
     /** Current level of each extension drug, by id. */
     extensionDrugLevels: Record<string, number>;
+    /** The player's values for each extension drug's declared options, by drug id then option key. Checked against the drug's fields when read. */
+    extensionDrugOptions?: Record<string, Record<string, unknown>>;
     /** Player overrides of the built-in drugs' decay: minutes for one dose to wear off. Missing means LSCG's default. */
     decayMinutes?: { sedative?: number; mindcontrol?: number; horny?: number };
 }

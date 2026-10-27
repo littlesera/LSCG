@@ -3,6 +3,7 @@ import type { InjectorModule } from "Modules/injector";
 import { LSCGDoseOptions, LSCGDrugType, LSCGDrugContext, LSCGDrugThreshold, LSCGDrugDefinition, LSCGDrugDoseContext, LSCGDrugsApi } from "./types";
 import { Registry } from "./registry";
 import { ErrorOwner, safeInvoke } from "./safeInvoke";
+import { validateOptionFields, type OptionField } from "./options";
 
 /** A drug an extension registered, with its callbacks already wrapped so errors stay contained. */
 export interface ExtensionDrug {
@@ -13,6 +14,8 @@ export interface ExtensionDrug {
     label: string;
     description: string;
     keywords: string[];
+    /** Settings the player can change, drawn under the drug in Drug Enhancements. */
+    options: OptionField[];
     color: string;
     max: number;
     tickMs: number;
@@ -86,6 +89,7 @@ export function createDrugsApi(owner: ErrorOwner & { readonly info: { name: stri
                 label: requireText(owner, `drug "${def.name}" label`, def.label),
                 description: typeof def.description === "string" ? def.description : "",
                 keywords,
+                options: validateOptionFields(owner, `drug "${def.name}"`, def.options),
                 color: typeof def.color === "string" && def.color.trim() !== "" ? def.color.trim() : DEFAULT_DRUG_COLOR,
                 max,
                 tickMs: Math.max(MIN_TICK_SECONDS, positive(owner, "tickSeconds", def.tickSeconds, DEFAULT_TICK_SECONDS, true)) * 1000,

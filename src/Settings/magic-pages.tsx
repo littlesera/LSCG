@@ -5,6 +5,7 @@ import { allEffectIds, domainDescription, domainOrder, effectDescription, effect
 import { Button, Chip, CheckboxRow, Expando, Icon, KitContext, KitTab, Notice, NumberRow, openDialog, RuleTable, SectionLabel, SelectOption, SelectRow, TextRow } from "Dom/kit";
 import { addEffect, canHaveEffect, editableConfig, removeEffect, setEffect, writeConfig } from "Modules/Magic/spellEdit";
 import { EFFECT_EDITORS } from "./magic-effect-editors";
+import { optionRows } from "./optionRows";
 import { KNOWN_SPELLS_LIMIT, MagicPublicSettingsModel, MagicSettingsModel, OutfitOption, PolymorphConfig, SpellDefinition, SpellEffectId, maxSpellEffects } from "./Models/magic";
 import type { SpiritTextType } from "./magic";
 
@@ -158,8 +159,10 @@ function effectConfig(ctx: KitContext, spell: SpellDefinition, index: number):
                 needsAttention: () => !spell.Polymorph?.Key,
             };
         default: {
-            const schema = getSpellEffect(effect)?.config;
-            const editor = EFFECT_EDITORS[effect];
+            const def = getSpellEffect(effect);
+            const schema = def?.config;
+            // Extension effects declare their settings as fields; built-ins have a hand-written editor.
+            const editor = EFFECT_EDITORS[effect] ?? (def?.options ? (c: KitContext, config: () => any, update: (patch: any) => void) => optionRows(c, def.options!, config, update) : undefined);
             if (!schema || !editor)
                 return undefined;
             const config = () => editableConfig(spell, index);

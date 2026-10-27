@@ -206,7 +206,28 @@ apply(ctx) {
 | `beneficial` | A spell made only of beneficial effects gets no save roll and no duration. |
 | `forcesDuration` | Always expires, even for players who allow unlimited-duration spells. |
 | `allowRandom` | Wild magic may pick it. |
+| `delay` | Milliseconds it waits after the spell's previous effect before taking hold (default 2000, at most 30000, `0` for at once). The first effect of a spell always applies immediately. |
 | `defaultBlocked` | Blocked the first time a player sees it, until they unblock it. |
+
+**Settings the caster can change.** Declare `options` and LSCG shows them in the spell editor under your effect,
+stores them with each copy of the effect in the spell, and passes them to `apply` as `ctx.options`. See
+[Options players can change](#options-players-can-change).
+
+```js
+api.spells.registerEffect({
+    name: "bark",
+    label: "Barking",
+    description: "Makes the target bark.",
+    options: [
+        { type: "toggle", key: "loud", label: "Loud", description: "Shouts instead of a yip." },
+        { type: "number", key: "times", label: "Barks", min: 1, max: 5, default: 2 },
+    ],
+    apply(ctx) {
+        const bark = ctx.options.loud ? "WOOF!" : "woof";
+        ctx.sendAction(`%NAME% barks: ${bark} `.repeat(ctx.options.times).trim());
+    },
+});
+```
 
 **Players without your extension.** Every client tells the room which effects it can apply. When a spell holds
 effects the target doesn't have, the caster's spell menu lists them as "(unsupported)". A spell whose effects are
@@ -291,6 +312,9 @@ api.drugs.register({
     },
 });
 ```
+
+Add `options` to a drug and each player can change its settings under Drug Enhancements, right below the drug's
+opt-in. Your callbacks read the player's values from `ctx.options`.
 
 ### Levels
 
@@ -391,6 +415,30 @@ api.events.on("drug.levelChanged", ({ type, previous, level, max }) => {
 You can only add drugs. LSCG's own can't be changed, but you can react to them, dose them, and veto them.
 
 ---
+
+## Options players can change
+
+Spell effects and drugs both take an `options` list. You describe each setting; LSCG draws the controls, saves the
+values, checks them and gives them to your callbacks as `ctx.options`. You never write UI code or handle storage.
+
+| `type` | Control | Extra fields | Value |
+|---|---|---|---|
+| `"toggle"` | Checkbox | `default` (false) | `boolean` |
+| `"number"` | Number box | `min` (0), `max` (`min` + 10), `step`, `default` (`min`) | `number` |
+| `"select"` | Dropdown | `choices: [{ value, label }]` (required), `default` (first) | `string` |
+| `"text"` | Text box | `maxLength` (200, at most 1000), `multiline`, `default` | `string` |
+
+Every field has a `key` (a plain identifier, unique in the list, and the name in `ctx.options`), an optional
+`label` (defaults to the key) and an optional `description`.
+
+- **Always valid.** `ctx.options` has every declared key with a legal value. Anything missing, out of range or of the
+  wrong type is replaced by its default, so you never need to check it.
+- **Spell effect options belong to the spell.** The spell's author sets them for each copy of your effect, and they
+  travel with the spell. The target's client checks them again against your declaration before `apply` runs, so a
+  tampered spell can't hand you an out-of-range value.
+- **Drug options belong to the wearer.** They are the player's own settings, shared by every dose.
+- **Changing your declaration.** Saved values are matched by `key`. A renamed or removed key falls back to its default.
+- A malformed declaration throws when you register, naming the field.
 
 ## Built-in states
 
@@ -564,7 +612,7 @@ A `spell` is `{ name, effects, creator? }`.
 
 | Event | You may change | If you cancel |
 |---|---|---|
-| `spell.beforeReceive` | `duration`, and remove entries from `effects` | The spell fizzles, with your reason in the emote |
+| `spell.beforeReceive` | `duration`, `delay` (ms between effects, default 2000, at most 30000), and remove entries from `effects` | The spell fizzles, with your reason in the emote |
 | `spell.beforeEffect` | `duration` | That one effect fails to take hold |
 | `grab.beforeIncoming` | Nothing | The grab is refused, and released on the grabber's side too |
 | `drug.beforeApply` | Remove entries from `types` | Nothing is applied |
@@ -581,6 +629,7 @@ These can't be intercepted: LSCG's settings saves, safewords, `/lscg` commands, 
 | Public storage | About 1 KB each, about 4 KB across all extensions |
 | Drug bars shown per player | 12 extension bars, after LSCG's own three |
 | Drug `tickSeconds` | At least 1 (default 6) |
+| `options` per effect or drug | 12 fields, 24 choices per select |
 
 ### Types
 

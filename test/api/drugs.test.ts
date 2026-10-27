@@ -61,6 +61,38 @@ describe("extension drugs", () => {
         wear(sender, makeItem(makeAsset(handheldGroup, { Name: asset }), { Craft: { Name: craftName, Description: description } }));
     const opt = (name: string, on = true) => injector.SetExtensionDrugEnabled(id(name), on);
 
+    describe("options", () => {
+        const withOptions = () => euphoria({
+            options: [
+                { type: "toggle", key: "gentle", label: "Gentle", default: true },
+                { type: "number", key: "boost", min: 0, max: 3, default: 1 },
+            ],
+        });
+
+        it("reads defaults, stored values and sanitizes bad ones", () => {
+            api.drugs.register(withOptions());
+            expect(injector.GetExtensionOptions(id("euphoria"))).toEqual({ gentle: true, boost: 1 });
+            injector.SetExtensionOptions(id("euphoria"), { gentle: false, boost: 2 });
+            expect(injector.GetExtensionOptions(id("euphoria"))).toEqual({ gentle: false, boost: 2 });
+            injector.settings.extensionDrugOptions![id("euphoria")] = { gentle: "x", boost: 50, other: 1 };
+            expect(injector.GetExtensionOptions(id("euphoria"))).toEqual({ gentle: true, boost: 3 });
+        });
+
+        it("passes them to the drug's callbacks as ctx.options", () => {
+            let seen: unknown;
+            api.drugs.register({ ...withOptions(), onDose: ctx => { seen = ctx.options; } });
+            injector.SetExtensionOptions(id("euphoria"), { boost: 3 });
+            injector.ApplyExtensionDrug(id("euphoria"), "drink", { multiplier: 1 });
+            expect(seen).toEqual({ gentle: true, boost: 3 });
+        });
+
+        it("is an empty object for a drug with no options, and rejects bad declarations", () => {
+            api.drugs.register(euphoria());
+            expect(injector.GetExtensionOptions(id("euphoria"))).toEqual({});
+            expect(() => api.drugs.register(euphoria({ name: "y", options: [{ type: "number", key: "1bad" }] }))).toThrow(/identifier/);
+        });
+    });
+
     it("is advertised as a capability", () => {
         expect(apiCapabilities.has("drugs")).toBe(true);
     });
