@@ -1,5 +1,5 @@
 import { h } from "tsx-dom";
-import { Chip, CheckboxRow, Expando, KitContext, KitTab, NumberRow, RuleTable, SectionLabel } from "Dom/kit";
+import { Chip, CheckboxRow, Expando, Icon, KitContext, KitTab, NumberRow, RuleTable, SectionLabel } from "Dom/kit";
 import { COOLDOWNS } from "constants/timing";
 import { extensionDrugs, type ExtensionDrug } from "api/drugs";
 import { optionRows } from "./optionRows";
@@ -21,9 +21,11 @@ function keywordChips(drug: ExtensionDrug): HTMLElement {
     return <div class="lscg-kit-chips">{drug.keywords.map(k => Chip(`"${k}"`, { tone: "muted" }))}</div> as HTMLElement;
 }
 
-function drugNameCell(drug: ExtensionDrug): HTMLElement {
+/** A drug's name, marked the way the spell effects and suggestion instructions tables mark an extension's: the extension icon before the
+ *  name and a chip naming the extension. */
+export function drugNameCell(drug: ExtensionDrug): HTMLElement {
     return <div class="lscg-kit-chips">
-        <b>{drug.label}</b>
+        <span>{Icon("extension", "Added by an extension")}{drug.label}</span>
         {Chip(drug.source, { tone: "info", tooltip: "Added by an extension." })}
         {drug.description ? <small class="lscg-kit-desc">{drug.description}</small> : null}
     </div> as HTMLElement;

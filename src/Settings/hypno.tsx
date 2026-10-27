@@ -5,8 +5,18 @@ import { ICONS } from "utils";
 import { HypnoSettingsModel, InstructionDescription, LSCGHypnoInstruction } from "./Models/hypno";
 import { GuiSubscreen, HelpInfo } from "./settingBase";
 import { DomSettingsHost } from "./domSettingsHost";
-import { extensionInstructionIds, instructionLabel } from "api/hypno";
-import { CheckboxRow, KitContext, Notice, NumberRow, RuleTable, SectionLabel, Tabs, TextRow } from "Dom/kit";
+import { extensionInstructionIds, extensionInstructions, instructionLabel } from "api/hypno";
+import { CheckboxRow, Chip, Icon, KitContext, Notice, NumberRow, RuleTable, SectionLabel, Tabs, TextRow } from "Dom/kit";
+
+/** An instruction's name in the block list: LSCG's own plain, an extension's marked the way the spell effects table marks one, with the
+ *  extension icon before the name and a chip naming the extension that added it. */
+export function instructionNameCell(instruction: string): HTMLElement {
+	const source = extensionInstructions.get(instruction)?.source;
+	return <div class="lscg-kit-chips">
+		<span>{source ? Icon("extension", "Added by an extension") : null}{instructionLabel(instruction)}</span>
+		{source ? Chip(source, { tone: "info", tooltip: "Added by an extension." }) : null}
+	</div> as HTMLElement;
+}
 
 /** Upper bound for the hypnosis timing inputs; the old screen had none. */
 export const HYPNO_TIME_MAX = 99999;
@@ -189,7 +199,7 @@ export class GuiHypno extends GuiSubscreen {
 						fixed: true,
 						rows: () => this.ActualInstructions,
 						columns: [
-							{ header: "Instruction", kind: "custom", width: "25%", render: i => <span>{instructionLabel(i)}</span> as HTMLElement, get: () => "", set: () => {} },
+							{ header: "Instruction", kind: "custom", width: "25%", render: i => instructionNameCell(i), get: () => "", set: () => {} },
 							{ header: "Description", kind: "custom", render: i => <small class="lscg-kit-desc">{InstructionDescription(i)}</small> as HTMLElement, get: () => "", set: () => {} },
 							{
 								header: "Block", kind: "checkbox", width: "4.5em", tooltip: "Suggestions can't give you this instruction.",

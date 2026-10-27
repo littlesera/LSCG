@@ -25,12 +25,14 @@ describe("extension hypno instructions", () => {
 	let ids = 0;
 	// Loaded after the modules, which the remote screens import in a cycle.
 	let RemoteSuggestions: typeof import("Settings/Remote/suggestions").RemoteSuggestions;
+	let instructionNameCell: typeof import("Settings/hypno").instructionNameCell;
 
 	beforeAll(async () => {
 		[, leashing, hypno, states] = boot(new CoreModule(), new LeashingModule(), new HypnoModule(), new StateModule());
 		vi.useFakeTimers();
 		await import("Settings/Remote/mainmenu"); // the entry the remote screens are meant to load from (they import each other)
 		({ RemoteSuggestions } = await import("Settings/Remote/suggestions"));
+		({ instructionNameCell } = await import("Settings/hypno"));
 	});
 
 	beforeEach(() => {
@@ -245,6 +247,22 @@ describe("extension hypno instructions", () => {
 			api.hypno.registerInstruction(purr());
 			const sg = suggestion("Kitty", [instruction(LSCGHypnoInstruction.strip), Object.assign(instruction(id("purr")), { delay: 99_999_999 })]);
 			expect(connector(rowsFor(sg, 1))!.querySelector("summary")!.textContent).toBe("\u21b3 wait 30s (custom)");
+		});
+	});
+
+	describe("in the block list", () => {
+		it("names LSCG's own instructions plainly, and marks an extension's with the extension that added it", () => {
+			api.hypno.registerInstruction(purr());
+			const own = instructionNameCell(LSCGHypnoInstruction.strip);
+			expect(own.textContent).toBe("Strip");
+			expect(own.querySelector(".lscg-kit-chip, .lscg-kit-icon-extension")).toBeNull();
+			const added = instructionNameCell(id("purr"));
+			expect(added.textContent).toContain("Purr");
+			// the same marks the spell effects table uses: the extension icon before the name, and a chip with the extension's name
+			expect(added.querySelector("span > .lscg-kit-icon-extension")?.getAttribute("title")).toBe("Added by an extension");
+			const chip = added.querySelector(".lscg-kit-chip")!;
+			expect(chip.textContent).toBe("Trance Pack");
+			expect(chip.getAttribute("title")).toBe("Added by an extension.");
 		});
 	});
 

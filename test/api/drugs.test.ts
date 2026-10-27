@@ -790,6 +790,9 @@ describe("extension drugs", () => {
                 const first = rows[0];
                 expect(first.textContent).toContain("Drug 0");
                 expect(first.textContent).toContain("Drug Pack");
+                // marked like the spell effects table: the extension icon before the name, then a chip naming the extension
+                expect(first.querySelector("span > .lscg-kit-icon-extension")?.getAttribute("title")).toBe("Added by an extension");
+                expect(first.querySelector(".lscg-kit-chip")?.textContent).toBe("Drug Pack");
                 expect(first.textContent).toContain('"d0"');
                 expect(first.textContent).toContain('"alt 0"');
                 const box = first.querySelector("input[type=checkbox]") as HTMLInputElement;
