@@ -14,7 +14,8 @@ import { ItemUseModule } from "./item-use";
 import { StateModule } from "./states";
 import type { MagicModule } from "./magic";
 import { emit, emitBefore } from "api/events";
-import type { LSCGDrugContext, LSCGDrugDoseContext, LSCGDrugMethod } from "api/types";
+import type { LSCGDrugContext, LSCGDrugDoseContext, LSCGDrugMethod, LSCGOptions } from "api/types";
+import { editableOptions, sanitizeOptions } from "api/options";
 import { DEFAULT_DRUG_COLOR, MAX_EXTENSION_BARS, extensionDrugs, isExtensionDrugId, type ExtensionDrug } from "api/drugs";
 import { builtInStates } from "api/builtInStates";
 import type { ExtensionDrugBar } from "Settings/Models/injector";
@@ -277,36 +278,7 @@ export class InjectorModule extends BaseModule {
                 return next(args);
 
             {
-                const bars: DrugLevel[] = [];
-                const rates = charSettings.drugDecay;
-                const at = charSettings.receivedAt; // only set for other players: our own levels are live
-                const estimate = (level: number, rate?: number) => InjectorModule.EstimateLevel(level, rate, at);
-                const sedative = estimate(charSettings.sedativeLevel, rates?.sedative);
-                const mindControl = estimate(charSettings.mindControlLevel, rates?.mindcontrol);
-                const horny = estimate(charSettings.hornyLevel, rates?.horny);
-                if (sedative > 0)
-                    bars.push({
-                        type: "sedative",
-                        level: sedative,
-                        max: charSettings.sedativeMax * charSettings.drugLevelMultiplier,
-                    });
-                if (mindControl > 0)
-                    bars.push({
-                        type: "mindcontrol",
-                        level: mindControl,
-                        max: charSettings.mindControlMax * charSettings.drugLevelMultiplier,
-                    });
-                if (horny > 0)
-                    bars.push({
-                        type: "horny",
-                        level: horny,
-                        max: charSettings.hornyLevelMax * charSettings.drugLevelMultiplier,
-                    });
-                for (const bar of this.ExtensionBarsFor(Char, charSettings.drugLevels)) {
-                    const level = InjectorModule.EstimateLevel(bar.level, bar.decayPerSec, at);
-                    if (level > 0)
-                        bars.push({ type: bar.id, level, max: bar.max, color: bar.color });
-                }
+                const bars = this.EstimatedBars(Char);
                 if (bars.length > 0)
                     this.DrawBars(Char, CharX, CharY, Zoom, bars);
             }
@@ -630,6 +602,34 @@ export class InjectorModule extends BaseModule {
             mindcontrol: perSec(this.settings.mindControlCooldown),
             horny: perSec(this.settings.hornyCooldown),
         };
+    }
+
+    /** Every drug bar above zero for `C` (LSCG's own, then extensions'), as best this client can tell. Your own are exact. Someone else's
+     *  are what they last broadcast, decayed forward at the rates they broadcast since it arrived; doses and decay since their next
+     *  broadcast aren't known until it comes. Empty for a player with no LSCG, or one who isn't carrying any. */
+    EstimatedBars(C: Character): DrugLevel[] {
+        const published = ((C.IsPlayer() ? Player : getCharacter(C.MemberNumber!)) as OtherCharacter | null)?.LSCG?.InjectorModule;
+        if (!published)
+            return [];
+        const bars: DrugLevel[] = [];
+        const rates = published.drugDecay;
+        const at = published.receivedAt; // only set for other players: our own levels are live
+        const estimate = (level: number, rate?: number) => InjectorModule.EstimateLevel(level, rate, at);
+        const sedative = estimate(published.sedativeLevel, rates?.sedative);
+        const mindControl = estimate(published.mindControlLevel, rates?.mindcontrol);
+        const horny = estimate(published.hornyLevel, rates?.horny);
+        if (sedative > 0)
+            bars.push({ type: "sedative", level: sedative, max: published.sedativeMax * published.drugLevelMultiplier });
+        if (mindControl > 0)
+            bars.push({ type: "mindcontrol", level: mindControl, max: published.mindControlMax * published.drugLevelMultiplier });
+        if (horny > 0)
+            bars.push({ type: "horny", level: horny, max: published.hornyLevelMax * published.drugLevelMultiplier });
+        for (const bar of this.ExtensionBarsFor(C, published.drugLevels)) {
+            const level = InjectorModule.EstimateLevel(bar.level, bar.decayPerSec, at);
+            if (level > 0)
+                bars.push({ type: bar.id, level, max: bar.max, color: bar.color });
+        }
+        return bars;
     }
 
     /** A level published by another client, decayed forward from when its packet arrived. */
@@ -1016,6 +1016,23 @@ export class InjectorModule extends BaseModule {
         settingsSave(true);
     }
 
+    /** The player's values for a drug's declared options: each one checked against its field, missing or invalid ones at their default. */
+    GetExtensionOptions(id: string): LSCGOptions {
+        const drug = extensionDrugs.get(id);
+        return sanitizeOptions(drug?.options ?? [], this.settings.extensionDrugOptions?.[id]);
+    }
+
+    /** What the options editor shows: stored values with defaults filled in, otherwise untouched so half-typed input survives. */
+    EditableExtensionOptions(id: string): LSCGOptions {
+        return editableOptions(extensionDrugs.get(id)?.options ?? [], this.settings.extensionDrugOptions?.[id]);
+    }
+
+    SetExtensionOptions(id: string, patch: LSCGOptions) {
+        const all = this.settings.extensionDrugOptions ??= {};
+        all[id] = { ...this.EditableExtensionOptions(id), ...patch };
+        settingsSave(true);
+    }
+
     GetExtensionLevel(id: string): number {
         const level = this.settings.extensionDrugLevels?.[id];
         return typeof level === "number" && Number.isFinite(level) ? level : 0;
@@ -1063,6 +1080,7 @@ export class InjectorModule extends BaseModule {
             drug: drug.id,
             get level() { return mod.GetExtensionLevel(drug.id); },
             max: drug.max,
+            get options() { return mod.GetExtensionOptions(drug.id); },
             addLevel: (amount: number) => {
                 const wanted = mod.GetExtensionLevel(drug.id) + (Number.isFinite(amount) ? amount : 0);
                 const next = mod.SetExtensionLevel(drug.id, wanted);

@@ -139,6 +139,9 @@ export interface SpellDefinition {
     /** Each effect's own settings, by position: `Configs[i]` belongs to `Effects[i]`, since the same effect may appear more
      *  than once with different settings. Entries are missing or null for effects with none. Kept aligned by spellEdit.ts. */
     Configs?: unknown[];
+    /** How long (ms) each effect waits after the one before it before taking hold, by position like `Configs`. Missing or null means the
+     *  effect's own default. Ignored for the first effect, which always applies at once. Kept aligned by spellEdit.ts. */
+    Delays?: (number | null)[];
     /** The spell's total power: every effect's tier added up, counting each copy. Always worked out from the effects (never taken from
      *  another player's spell); stored so it can later set a spell's cost. */
     Tier?: number;

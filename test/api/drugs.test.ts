@@ -18,7 +18,7 @@ import { extensionDrugs, DEFAULT_DRUG_COLOR, MAX_EXTENSION_BARS } from "api/drug
 import { apiCapabilities } from "api";
 import type { LSCGDrugDefinition, LSCGDrugDoseContext } from "api/types";
 import { boot, resetWorld, player, addToRoom } from "../harness/world";
-import { makeGroup, makeAsset, wear, makeItem, type FixtureCharacter } from "../harness/fixtures";
+import { makeGroup, makeAsset, makeCharacter, wear, makeItem, type FixtureCharacter } from "../harness/fixtures";
 
 describe("extension drugs", () => {
     let injector: InjectorModule;
@@ -60,6 +60,38 @@ describe("extension drugs", () => {
     const give = (craftName: string, asset = "GlassFilled", description = "") =>
         wear(sender, makeItem(makeAsset(handheldGroup, { Name: asset }), { Craft: { Name: craftName, Description: description } }));
     const opt = (name: string, on = true) => injector.SetExtensionDrugEnabled(id(name), on);
+
+    describe("options", () => {
+        const withOptions = () => euphoria({
+            options: [
+                { type: "toggle", key: "gentle", label: "Gentle", default: true },
+                { type: "number", key: "boost", min: 0, max: 3, default: 1 },
+            ],
+        });
+
+        it("reads defaults, stored values and sanitizes bad ones", () => {
+            api.drugs.register(withOptions());
+            expect(injector.GetExtensionOptions(id("euphoria"))).toEqual({ gentle: true, boost: 1 });
+            injector.SetExtensionOptions(id("euphoria"), { gentle: false, boost: 2 });
+            expect(injector.GetExtensionOptions(id("euphoria"))).toEqual({ gentle: false, boost: 2 });
+            injector.settings.extensionDrugOptions![id("euphoria")] = { gentle: "x", boost: 50, other: 1 };
+            expect(injector.GetExtensionOptions(id("euphoria"))).toEqual({ gentle: true, boost: 3 });
+        });
+
+        it("passes them to the drug's callbacks as ctx.options", () => {
+            let seen: unknown;
+            api.drugs.register({ ...withOptions(), onDose: ctx => { seen = ctx.options; } });
+            injector.SetExtensionOptions(id("euphoria"), { boost: 3 });
+            injector.ApplyExtensionDrug(id("euphoria"), "drink", { multiplier: 1 });
+            expect(seen).toEqual({ gentle: true, boost: 3 });
+        });
+
+        it("is an empty object for a drug with no options, and rejects bad declarations", () => {
+            api.drugs.register(euphoria());
+            expect(injector.GetExtensionOptions(id("euphoria"))).toEqual({});
+            expect(() => api.drugs.register(euphoria({ name: "y", options: [{ type: "number", key: "1bad" }] }))).toThrow(/identifier/);
+        });
+    });
 
     it("is advertised as a capability", () => {
         expect(apiCapabilities.has("drugs")).toBe(true);
@@ -514,6 +546,56 @@ describe("extension drugs", () => {
         });
     });
 
+    describe("levels of other players", () => {
+        const stranger = (injectorSettings: Record<string, unknown> | undefined, memberNumber = 7) =>
+            addToRoom(makeCharacter({ MemberNumber: memberNumber, Nickname: "Kai", LSCG: injectorSettings ? { InjectorModule: injectorSettings } : undefined } as never));
+        const published = (extra: Record<string, unknown> = {}) => ({
+            sedativeLevel: 6, sedativeMax: 10, mindControlLevel: 0, mindControlMax: 10, hornyLevel: 0, hornyLevelMax: 10, drugLevelMultiplier: 1,
+            drugDecay: { sedative: 1, mindcontrol: 1, horny: 1 }, receivedAt: Date.now() - 2000,
+            drugLevels: [{ id: "a.good", level: 5, max: 10, decayPerSec: 0.5 }], ...extra,
+        });
+
+        it("estimates theirs from what they last broadcast, decayed since it arrived at the rate they broadcast", () => {
+            stranger(published());
+            expect(api.drugs.getLevel("sedative", 7)).toBeCloseTo(4, 5);
+            expect(api.drugs.getLevel("a.good", 7)).toBeCloseTo(4, 5);
+            expect(api.drugs.getLevel("horny", 7)).toBe(0);
+            expect(api.drugs.getLevel("nothing", 7)).toBe(0);
+            vi.advanceTimersByTime(10_000);
+            expect(api.drugs.getLevel("sedative", 7)).toBe(0); // worn off by now, and never negative
+        });
+
+        it("lists every level above zero with its max, marked as an estimate", () => {
+            stranger(published({ hornyLevel: 5, hornyLevelMax: 4, drugLevelMultiplier: 2 }));
+            const bars = api.drugs.getLevels(7);
+            expect(bars.map(b => b.type)).toEqual(["sedative", "horny", "a.good"]);
+            expect(bars.every(b => b.estimated)).toBe(true);
+            expect(bars.find(b => b.type === "horny")).toMatchObject({ max: 8 });
+            expect(Object.isFrozen(bars[0])).toBe(true);
+        });
+
+        it("is empty for someone without LSCG or not in the room, and 0 for their levels", () => {
+            stranger(undefined, 8);
+            expect(api.drugs.getLevels(8)).toEqual([]);
+            expect(api.drugs.getLevels(404)).toEqual([]);
+            expect(api.drugs.getLevel("sedative", 404)).toBe(0);
+        });
+
+        it("a number without a member number, or your own, is your exact level", () => {
+            api.drugs.register(euphoria());
+            injector.SetExtensionLevel(id("euphoria"), 3);
+            expect(api.drugs.getLevel(id("euphoria"))).toBe(3);
+            expect(api.drugs.getLevel(id("euphoria"), player().MemberNumber)).toBe(3);
+            const own = api.drugs.getLevels().find(b => b.type === id("euphoria"));
+            expect(own).toMatchObject({ level: 3, max: 10, estimated: false });
+        });
+
+        it("ignores nonsense in what another player broadcast", () => {
+            stranger(published({ drugLevels: [{ id: "a.bad", level: Number.NaN, max: 5 }, "junk", null] }));
+            expect(api.drugs.getLevels(7).map(b => b.type)).toEqual(["sedative"]);
+        });
+    });
+
     describe("bars published to the room", () => {
         it("lists only drugs with a level, with their colour and max", () => {
             api.drugs.register(euphoria({ color: "#ff00ff", max: 8 }));
@@ -659,8 +741,9 @@ describe("extension drugs", () => {
             const change = (el: HTMLInputElement) => el.dispatchEvent(new Event("change"));
             afterEach(() => document.body.replaceChildren());
 
-            it("has a tab each for general options, drugs, and gases & chloroform", () => {
-                expect(tabs().map(t => t.label)).toEqual(["General", "Drugs", "Gases & chloroform"]);
+            it("has a tab each for general options, LSCG's drugs, extension drugs, and gases & chloroform", () => {
+                api.drugs.register(euphoria());
+                expect(tabs().filter(t => !t.hidden).map(t => t.label)).toEqual(["General", "Drugs", "Extension drugs", "Gases & chloroform"]);
             });
 
             it("general options read and write the injector settings, and the sip limit is off while disabled", () => {
@@ -690,19 +773,26 @@ describe("extension drugs", () => {
                 expect(row(root, "Aphrodisiac")).toBeDefined();
             });
 
-            it("says so when no extension adds a drug", () => {
-                expect(render("Drugs").textContent).toContain("No installed extension adds a drug.");
+            it("hides the extension drugs tab when no extension adds a drug, and shows it once one does", () => {
+                expect(tabs().filter(t => !t.hidden).map(t => t.label)).toEqual(["General", "Drugs", "Gases & chloroform"]);
+                // LSCG's own drugs aren't cluttered by extensions either way
+                expect(render("Drugs").textContent).not.toContain("Extension drugs");
+                api.drugs.register(euphoria());
+                expect(tabs().filter(t => !t.hidden).map(t => t.label)).toContain("Extension drugs");
             });
 
             it("lists each extension drug with its source and keywords, and opts in per drug, with no page limit", () => {
                 for (let i = 0; i < 25; i++)
                     api.drugs.register(euphoria({ name: `d${i}`, label: `Drug ${i}`, keywords: [`d${i}`, `alt ${i}`], description: "Odd." }));
-                const root = render("Drugs");
+                const root = render("Extension drugs");
                 const rows = Array.from(root.querySelectorAll("tbody tr"));
                 expect(rows).toHaveLength(25);
                 const first = rows[0];
                 expect(first.textContent).toContain("Drug 0");
                 expect(first.textContent).toContain("Drug Pack");
+                // marked like the spell effects table: the extension icon before the name, then a chip naming the extension
+                expect(first.querySelector("span > .lscg-kit-icon-extension")?.getAttribute("title")).toBe("Added by an extension");
+                expect(first.querySelector(".lscg-kit-chip")?.textContent).toBe("Drug Pack");
                 expect(first.textContent).toContain('"d0"');
                 expect(first.textContent).toContain('"alt 0"');
                 const box = first.querySelector("input[type=checkbox]") as HTMLInputElement;

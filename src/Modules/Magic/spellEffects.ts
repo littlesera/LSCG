@@ -1,6 +1,7 @@
 import { Registry } from "api/registry";
+import type { OptionField } from "api/options";
 import { cleanEffect, LSCGSpellEffect, SpellDefinition, SpellEffectId } from "Settings/Models/magic";
-import type { MagicModule } from "Modules/magic";
+import type { MagicModule, PendingSpell } from "Modules/magic";
 import type { SpellEffectEndReason, SpellEffectEntry } from "Modules/States/SpellEffectsState";
 import type { StateRestrictions } from "Modules/States/BaseState";
 import { BUILTIN_SPELL_EFFECTS } from "./builtinEffects";
@@ -43,6 +44,8 @@ export interface SpellEffectContext {
     config?: unknown;
     /** The target rolled a save against this spell. Only set for effects that declare an `onSave` behaviour of "half". */
     saved?: boolean;
+    /** The spell run this effect belongs to, so an effect that cancels pending spells (dispel) leaves its own spell's later effects alone. */
+    run?: PendingSpell;
     /** The caster's answers to this effect's cast-time questions, already checked against its options; missing keys mean "use the default". */
     castArgs?: Record<string, string>;
 }
@@ -73,6 +76,8 @@ export interface SpellEffectDefinition {
     paired?: boolean;
     /** Gets a duration even when the target allows unlimited-duration spells. */
     forcesDuration?: boolean;
+    /** Ms between the effect before this one in a spell taking hold and this one doing so (default: the spell's gap, 2000). Not used when it is a spell's first effect. */
+    delay?: number;
     /** Eligible for wild magic. */
     allowRandom?: boolean;
     /** Blocked by default the first time a player sees it. */
@@ -81,6 +86,8 @@ export interface SpellEffectDefinition {
     configurable?: "outfit" | "polymorph";
     /** Settings of its own, one set per copy of the effect in a spell. */
     config?: EffectConfigSchema;
+    /** Extension effects: the fields the extension declared for its settings, drawn generically in the spell editor (`config` is built from them). */
+    options?: OptionField[];
     /** What it does, in our terms; set for every built-in from BUILTIN_TAXONOMY, missing for extension effects. */
     domain?: SpellDomain;
     /** The classic school of magic it belongs to; flavour only for now. */

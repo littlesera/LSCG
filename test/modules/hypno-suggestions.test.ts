@@ -373,6 +373,89 @@ describe("HypnoModule suggestions", () => {
 			say.mockRestore();
 		});
 
+		describe("delays between instructions", () => {
+			const spies = () => ({
+				strip: vi.spyOn(hypno, "ForceStrip").mockImplementation(() => {}),
+				say: vi.spyOn(hypno, "ForceSay").mockImplementation(() => {}),
+				pose: vi.spyOn(hypno, "ForcePose").mockImplementation(() => {}),
+			});
+			const withDelay = (type: LSCGHypnoInstruction, delay?: number) => Object.assign(instruction(type), delay === undefined ? {} : { delay });
+			const run = (...instructions: HypnoInstruction[]) => hypno.DoSuggestion(opts("", suggestion("Test", instructions)));
+			// Instructions left waiting by an earlier test (its timers are cleared, but the module still lists them).
+			beforeEach(() => { hypno.CancelPendingInstructions(); });
+			afterEach(() => vi.restoreAllMocks());
+
+			it("counts each wait from the instruction before it, using the one the suggestion's writer chose", () => {
+				const { strip, say, pose } = spies();
+				run(withDelay(LSCGHypnoInstruction.strip), withDelay(LSCGHypnoInstruction.say, 2500), withDelay(LSCGHypnoInstruction.pose));
+				vi.advanceTimersByTime(0);
+				expect([strip, say, pose].map(s => s.mock.calls.length)).toEqual([1, 0, 0]);
+				vi.advanceTimersByTime(2499);
+				expect(say).not.toHaveBeenCalled();
+				vi.advanceTimersByTime(1);
+				expect(say).toHaveBeenCalledOnce();
+				vi.advanceTimersByTime(999);
+				expect(pose).not.toHaveBeenCalled();
+				vi.advanceTimersByTime(1);
+				expect(pose).toHaveBeenCalledOnce(); // the default second after the one before it
+			});
+
+			it("keeps a delay within one to thirty seconds, and ignores nonsense", () => {
+				const { say, pose } = spies();
+				run(withDelay(LSCGHypnoInstruction.strip), withDelay(LSCGHypnoInstruction.say, 200), withDelay(LSCGHypnoInstruction.pose, 99_999_999));
+				vi.advanceTimersByTime(999);
+				expect(say).not.toHaveBeenCalled();
+				vi.advanceTimersByTime(1);
+				expect(say).toHaveBeenCalledOnce(); // raised to one second
+				vi.advanceTimersByTime(29_999);
+				expect(pose).not.toHaveBeenCalled();
+				vi.advanceTimersByTime(1);
+				expect(pose).toHaveBeenCalledOnce(); // cut to thirty
+
+				const second = spies();
+				run(withDelay(LSCGHypnoInstruction.strip), withDelay(LSCGHypnoInstruction.say, -5 as number), withDelay(LSCGHypnoInstruction.pose, "soon" as never));
+				vi.advanceTimersByTime(1000);
+				expect(second.say).toHaveBeenCalledTimes(2);
+			});
+
+			it("ignores the first instruction's delay: it always happens at once", () => {
+				const { strip } = spies();
+				run(withDelay(LSCGHypnoInstruction.strip, 20_000));
+				vi.advanceTimersByTime(0);
+				expect(strip).toHaveBeenCalledOnce();
+			});
+
+			it("a safeword stops the instructions still waiting, and only those", () => {
+				const { strip, say, pose } = spies();
+				run(withDelay(LSCGHypnoInstruction.strip), withDelay(LSCGHypnoInstruction.say, 5000), withDelay(LSCGHypnoInstruction.pose, 5000));
+				vi.advanceTimersByTime(0);
+				expect(hypno.pendingInstructions.size).toBe(2);
+				hypno.safeword();
+				expect(hypno.pendingInstructions.size).toBe(0);
+				vi.advanceTimersByTime(60_000);
+				expect(strip).toHaveBeenCalledOnce();
+				expect([say, pose].map(s => s.mock.calls.length)).toEqual([0, 0]);
+			});
+
+			it("forgets an instruction once it has happened", () => {
+				spies();
+				run(withDelay(LSCGHypnoInstruction.strip), withDelay(LSCGHypnoInstruction.say));
+				expect(hypno.pendingInstructions.size).toBe(2);
+				vi.advanceTimersByTime(1000);
+				expect(hypno.pendingInstructions.size).toBe(0);
+				expect(hypno.CancelPendingInstructions()).toBe(0);
+			});
+
+			it("a suggestion pushed by another player keeps only sane delays", () => {
+				const owner = addToRoom(makeCharacter({ MemberNumber: 99, Nickname: "Boss" }));
+				const sg = suggestion("Pushed", [withDelay(LSCGHypnoInstruction.strip, 4000), withDelay(LSCGHypnoInstruction.say, 99_999_999), withDelay(LSCGHypnoInstruction.pose, -3), withDelay(LSCGHypnoInstruction.follow, "x" as never), withDelay(LSCGHypnoInstruction.maid, 200)], 99);
+				hypno.SuggestionsPushHandler(owner.MemberNumber, { command: { name: "set-suggestions", args: [{ name: "suggestions", value: [sg] }] } } as never);
+				const stored = hypno.settings.suggestions.find(s => s.name === "Pushed")!.instructions;
+				expect(stored.map(i => i.delay)).toEqual([4000, 30_000, undefined, undefined, 1000]);
+				expect(stored.map(i => "delay" in i)).toEqual([true, true, false, false, true]);
+			});
+		});
+
 		it("refuses blocked instructions", () => {
 			hypno.settings.blockedInstructions = [LSCGHypnoInstruction.orgasm];
 			hypno.IncreaseSpeakerInfluence(2, 5);

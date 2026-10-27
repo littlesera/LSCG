@@ -1,7 +1,9 @@
 import { h } from "tsx-dom";
-import { Chip, CheckboxRow, KitContext, KitTab, NumberRow, RuleTable, SectionLabel } from "Dom/kit";
+import { Chip, CheckboxRow, Expando, Icon, KitContext, KitTab, NumberRow, RuleTable, SectionLabel } from "Dom/kit";
 import { COOLDOWNS } from "constants/timing";
 import { extensionDrugs, type ExtensionDrug } from "api/drugs";
+import { optionRows } from "./optionRows";
+import { summarizeOptions } from "api/options";
 import type { InjectorModule } from "Modules/injector";
 import type { InjectorSettingsModel } from "./Models/injector";
 import type { MiscSettingsModel } from "./Models/base";
@@ -19,9 +21,11 @@ function keywordChips(drug: ExtensionDrug): HTMLElement {
     return <div class="lscg-kit-chips">{drug.keywords.map(k => Chip(`"${k}"`, { tone: "muted" }))}</div> as HTMLElement;
 }
 
-function drugNameCell(drug: ExtensionDrug): HTMLElement {
+/** A drug's name, marked the way the spell effects and suggestion instructions tables mark an extension's: the extension icon before the
+ *  name and a chip naming the extension. */
+export function drugNameCell(drug: ExtensionDrug): HTMLElement {
     return <div class="lscg-kit-chips">
-        <b>{drug.label}</b>
+        <span>{Icon("extension", "Added by an extension")}{drug.label}</span>
         {Chip(drug.source, { tone: "info", tooltip: "Added by an extension." })}
         {drug.description ? <small class="lscg-kit-desc">{drug.description}</small> : null}
     </div> as HTMLElement;
@@ -45,7 +49,20 @@ function extensionDrugTable(ctx: KitContext, injector: InjectorModule | undefine
     });
 }
 
-/** The Drug Enhancements settings: general options, the drugs (LSCG's own and extensions'), and gases/chloroform. */
+/** The settings each extension drug declared, one closed section per drug under the table. */
+function extensionDrugOptions(ctx: KitContext, injector: InjectorModule | undefined): HTMLElement[] {
+    if (!injector)
+        return [];
+    return extensionDrugs.all().filter(drug => drug.options.length > 0).map(drug => {
+        const current = () => injector.EditableExtensionOptions(drug.id);
+        return Expando(ctx, {
+            summary: () => `${drug.label} settings: ${summarizeOptions(drug.options, current())}`,
+            content: optionRows(ctx, drug.options, current, patch => injector.SetExtensionOptions(drug.id, patch)),
+        });
+    });
+}
+
+/** The Drug Enhancements settings: general options, LSCG's own drugs, the drugs extensions add, and gases/chloroform. */
 export function buildInjectorTabs(ctx: KitContext, s: InjectorSettingsModel, misc: MiscSettingsModel, injector: InjectorModule | undefined): KitTab[] {
     return [
         {
@@ -94,8 +111,16 @@ export function buildInjectorTabs(ctx: KitContext, s: InjectorSettingsModel, mis
                     set: v => injector?.SetDecayOverride(type, v),
                     disabled: () => !injector,
                 })),
+            ],
+        },
+        {
+            label: "Extension drugs",
+            // Only there when an installed extension adds a drug.
+            hidden: extensionDrugs.all().length === 0,
+            render: () => [
                 SectionLabel("Extension drugs", "Drugs added by extensions. Each one only affects you once you enable it."),
-                extensionDrugs.all().length > 0 ? extensionDrugTable(ctx, injector) : <p class="lscg-kit-notice">No installed extension adds a drug.</p> as HTMLElement,
+                extensionDrugTable(ctx, injector),
+                ...extensionDrugOptions(ctx, injector),
             ],
         },
         {

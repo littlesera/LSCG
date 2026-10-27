@@ -2,9 +2,11 @@ import { h } from "tsx-dom";
 import { getModule } from "modules";
 import { OutfitCollectionModule } from "Modules/outfitCollection";
 import { allEffectIds, domainDescription, domainOrder, effectDescription, effectDomain, effectLabel, effectTooltip, isExtensionEffect, getSpellEffect, isPairedEffect, spellHasPairedEffect } from "Modules/Magic/spellEffects";
-import { Button, Chip, CheckboxRow, Expando, Icon, KitContext, KitTab, Notice, NumberRow, openDialog, RuleTable, SectionLabel, SelectOption, SelectRow, TextRow } from "Dom/kit";
-import { addEffect, canHaveEffect, editableConfig, removeEffect, setEffect, writeConfig } from "Modules/Magic/spellEdit";
+import { Button, Chip, IconButton, CheckboxRow, Expando, Icon, KitContext, KitTab, Notice, NumberRow, openDialog, RuleTable, SectionLabel, SelectOption, SelectRow, TextRow } from "Dom/kit";
+import { addEffect, canHaveEffect, DEFAULT_EFFECT_DELAY, editableConfig, effectDelayFor, MAX_EFFECT_DELAY, MIN_EFFECT_DELAY, removeEffect, setEffect, writeConfig, writeDelay } from "Modules/Magic/spellEdit";
 import { EFFECT_EDITORS } from "./magic-effect-editors";
+import { optionRows } from "./optionRows";
+import { DelayConnector } from "./delayConnector";
 import { KNOWN_SPELLS_LIMIT, MagicPublicSettingsModel, MagicSettingsModel, OutfitOption, PolymorphConfig, SpellDefinition, SpellEffectId, maxSpellEffects } from "./Models/magic";
 import type { SpiritTextType } from "./magic";
 
@@ -141,35 +143,64 @@ function polymorphEffectConfig(ctx: KitContext, spell: SpellDefinition): HTMLEle
 /** An effect's own settings: the rows, a one-line summary for when the section is closed, and whether it still
  *  needs the player's attention (no outfit chosen yet). Only the effects that have any. Outfit and Polymorph keep theirs on the
  *  spell itself; the rest keep theirs per copy in `spell.Configs` and describe themselves through their schema. */
-function effectConfig(ctx: KitContext, spell: SpellDefinition, index: number):
-        { rows: HTMLElement[]; summary: () => string; needsAttention: () => boolean } | undefined {
+function effectConfig(spell: SpellDefinition, index: number):
+        { rows: (ctx: KitContext) => HTMLElement[]; summary: () => string; needsAttention: () => boolean } | undefined {
     const effect = spell.Effects[index];
     switch (getSpellEffect(effect)?.configurable) {
         case "outfit":
             return {
-                rows: outfitEffectConfig(ctx, spell),
+                rows: ctx => outfitEffectConfig(ctx, spell),
                 summary: () => `Outfit settings: ${spell.Outfit?.Key || "no outfit chosen yet"} (${spell.Outfit?.Option ?? OutfitOption.both})`,
                 needsAttention: () => !spell.Outfit?.Key,
             };
         case "polymorph":
             return {
-                rows: polymorphEffectConfig(ctx, spell),
+                rows: ctx => polymorphEffectConfig(ctx, spell),
                 summary: () => `Polymorph settings: ${spell.Polymorph?.Key || "no outfit chosen yet"}`,
                 needsAttention: () => !spell.Polymorph?.Key,
             };
         default: {
-            const schema = getSpellEffect(effect)?.config;
-            const editor = EFFECT_EDITORS[effect];
+            const def = getSpellEffect(effect);
+            const schema = def?.config;
+            // Extension effects declare their settings as fields; built-ins have a hand-written editor.
+            const editor = EFFECT_EDITORS[effect] ?? (def?.options ? (c: KitContext, config: () => any, update: (patch: any) => void) => optionRows(c, def.options!, config, update) : undefined);
             if (!schema || !editor)
                 return undefined;
             const config = () => editableConfig(spell, index);
             return {
-                rows: editor(ctx, config, patch => writeConfig(spell, index, { ...config(), ...patch })),
+                rows: ctx => editor(ctx, config, patch => writeConfig(spell, index, { ...config(), ...patch })),
                 summary: () => schema.summary(config()),
                 needsAttention: () => !!schema.needsAttention?.(config()),
             };
         }
     }
+}
+
+/** The connector above the effect at `index`: how long it waits after the one above it (see DelayConnector). */
+function effectDelay(ctx: KitContext, spell: SpellDefinition, index: number): HTMLElement {
+    return DelayConnector(ctx, {
+        custom: () => effectDelayFor(spell, index),
+        normal: () => getSpellEffect(spell.Effects[index])?.delay ?? DEFAULT_EFFECT_DELAY,
+        set: ms => writeDelay(spell, index, ms),
+    });
+}
+
+/** The gear beside an effect that has settings of its own: opens them in a dialog of their own, so the effect list stays short. It flags
+ *  itself while the effect still needs the player's attention (no outfit chosen yet), and its tooltip is the summary of the settings. */
+function effectGear(ctx: KitContext, spell: SpellDefinition, index: number, config: NonNullable<ReturnType<typeof effectConfig>>): HTMLElement {
+    const effect = spell.Effects[index];
+    // BC's own preferences cog, as a BC icon button with BC's tooltip.
+    const button: HTMLButtonElement = IconButton("./Icons/Preference.png", config.summary(), () => openDialog(button, ctx, `${effectLabel(effect)} settings`, dctx => config.rows(dctx)), {
+        class: "lscg-spell-gear", tooltipPosition: "left",
+    });
+    ctx.watch(() => {
+        button.classList.toggle("lscg-kit-warning", config.needsAttention());
+        const tip = config.summary();
+        const tooltip = button.querySelector(".button-tooltip");
+        if (tooltip) tooltip.textContent = tip;
+        button.setAttribute("aria-label", `Settings for ${effectLabel(effect)}: ${tip}`);
+    });
+    return button;
 }
 
 /** The ordered effect pickers: a dropdown for each effect the spell has, plus one to add the next while there is room
@@ -179,9 +210,6 @@ function effectConfig(ctx: KitContext, spell: SpellDefinition, index: number):
 function effectSlots(dctx: KitContext, tableCtx: KitContext, spell: SpellDefinition, limit: number): HTMLElement {
     const container = <div class="lscg-spell-effects" /> as HTMLElement;
     let focusSlot: number | undefined;
-    // Which settings sections the player has opened or closed, so a rebuild (adding another effect) keeps them.
-    const expanded = new Map<string, boolean>();
-
     dctx.watch(() => {
         // A context per render: rows register watchers that can't be removed, so don't let old ones pile up.
         const rctx = new KitContext(() => dctx.changed());
@@ -212,20 +240,17 @@ function effectSlots(dctx: KitContext, tableCtx: KitContext, spell: SpellDefinit
                     }
                 },
             });
-            // The settings edit the spell directly. They don't change which effects there are, so they don't rebuild this
+            // The settings and the delay edit the spell directly. They don't change which effects there are, so they don't rebuild this
             // list (which would drop keyboard focus mid-way through filling them in); they only update the spell table.
             const gctx = new KitContext(() => tableCtx.changed());
-            const config = current ? effectConfig(gctx, spell, i) : undefined;
-            if (!current || !config)
-                return picker;
-            // Open until the player has chosen what the effect needs; after that, tucked away behind its summary.
-            const section = Expando(gctx, {
-                summary: config.summary,
-                content: config.rows,
-                open: expanded.get(`${i}:${current}`) ?? config.needsAttention(),
-                onToggle: open => expanded.set(`${i}:${current}`, open),
-            });
-            return <div class="lscg-spell-effect">{picker}{section}</div> as HTMLElement;
+            const config = current ? effectConfig(spell, i) : undefined;
+            // A gear for the effect's own settings beside its dropdown, and the delay connector above it.
+            // The gear sits in the dropdown's own control cell, so it lines up with the dropdown; effects without one get a blank of the
+            // same size, which keeps every dropdown the same width.
+            const gear = config ? effectGear(gctx, spell, i, config) : <span class="lscg-spell-gear-spacer" /> as HTMLElement;
+            picker.querySelector(".lscg-kit-control")?.append(gear);
+            const delay = current && i > 0 ? effectDelay(gctx, spell, i) : null;
+            return <div class="lscg-spell-effect">{delay}<div class="lscg-spell-effect-head">{picker}</div></div> as HTMLElement;
         };
 
         const rows: HTMLElement[] = Array.from({ length: slots }, (_, i) => row(i));
@@ -235,7 +260,7 @@ function effectSlots(dctx: KitContext, tableCtx: KitContext, spell: SpellDefinit
 
         // The dropdown that was just used is gone; keep keyboard focus on its replacement.
         if (focusSlot !== undefined) {
-            (container.querySelectorAll(".lscg-spell-effect > .lscg-kit-row select, .lscg-spell-effects > .lscg-kit-row select")[focusSlot] as HTMLSelectElement | undefined)?.focus();
+            (container.querySelectorAll(".lscg-spell-effect-head select")[focusSlot] as HTMLSelectElement | undefined)?.focus();
             focusSlot = undefined;
         }
     });

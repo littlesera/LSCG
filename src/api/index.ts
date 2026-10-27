@@ -8,7 +8,7 @@ export type { LSCGExtensionInfo, LSCGGlobal, LSCGModApi } from "./types";
 /** LSCG version without the leading "v". */
 export const apiVersion: string = LSCG_VERSION.replace(/^v/, "");
 
-const _capabilities = new Set<string>(["core", "events", "spells.effects", "activities", "drugs", "network", "storage", "settings"]);
+const _capabilities = new Set<string>(["core", "events", "spells.effects", "activities", "drugs", "hypno.instructions", "network", "storage", "settings"]);
 export const apiCapabilities: ReadonlySet<string> = _capabilities;
 
 /** Internal: advertise an API feature once its implementation is wired up. */
@@ -27,6 +27,11 @@ function onReady(cb: () => void): void {
 }
 
 function getModApi(info: LSCGExtensionInfo): LSCGModApi {
+    // Asking again for an extension that's already registered (a second script of yours, a callback run twice) gives back
+    // the same handle rather than failing; a handle that was disposed is gone, so the id can be registered afresh.
+    const existing = typeof info?.id === "string" ? extensions.get(info.id) : undefined;
+    if (existing && !existing.disposed)
+        return existing;
     return registerExtension(info);
 }
 

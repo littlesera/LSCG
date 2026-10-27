@@ -19,6 +19,9 @@ export interface LSCGModApi {
     readonly disposed: boolean;
     /** Runs `cb` once LSCG has fully initialized with the player's settings (immediately if it already has). */
     onReady(cb: () => void): void;
+    /** Saves the player's LSCG settings and syncs LSCG's public data (drug levels, states, your `storage.setPublic`
+     *  data) to the room now. Saves are batched to about one per second. Only available once LSCG is ready. */
+    sync(): void;
     /** Removes everything this extension registered and frees its id for re-registration. */
     dispose(): void;
     /** LSCG event hooks (capability "events"). */
@@ -29,6 +32,8 @@ export interface LSCGModApi {
     readonly activities: LSCGActivitiesApi;
     /** Custom drugs (capability "drugs"). */
     readonly drugs: LSCGDrugsApi;
+    /** Custom hypnosis suggestion instructions (capability "hypno.instructions"). */
+    readonly hypno: LSCGHypnoApi;
     /** Messages between players running your extension (capability "network"). */
     readonly network: LSCGNetworkApi;
     /** Data saved with the player's LSCG settings (capability "storage"). */
@@ -143,6 +148,61 @@ export interface LSCGStorageApi {
 }
 
 // ---------------------------------------------------------------------------------------------------------------
+// Options
+// ---------------------------------------------------------------------------------------------------------------
+
+/** A value an option holds. */
+export type LSCGOptionValue = boolean | number | string;
+
+/** The current values of an effect's or drug's options, by field key. Always complete and valid when your code receives them. */
+export type LSCGOptions = Record<string, LSCGOptionValue>;
+
+interface LSCGOptionFieldBase {
+    /** Plain identifier (letters, digits, underscore); the name of the value in `ctx.options`. Unique within the declaration. */
+    key: string;
+    /** Shown beside the control. Defaults to `key`. */
+    label?: string;
+    /** Smaller text under the label. */
+    description?: string;
+}
+
+export interface LSCGToggleOption extends LSCGOptionFieldBase {
+    type: "toggle";
+    /** Default false. */
+    default?: boolean;
+}
+
+export interface LSCGNumberOption extends LSCGOptionFieldBase {
+    type: "number";
+    /** Default 0. */
+    min?: number;
+    /** Default `min` + 10. */
+    max?: number;
+    step?: number;
+    /** Default `min`. */
+    default?: number;
+}
+
+export interface LSCGSelectOption extends LSCGOptionFieldBase {
+    type: "select";
+    choices: LSCGKitOption[];
+    /** Default the first choice. */
+    default?: string;
+}
+
+export interface LSCGTextOption extends LSCGOptionFieldBase {
+    type: "text";
+    /** Default 200, at most 1000. */
+    maxLength?: number;
+    multiline?: boolean;
+    default?: string;
+}
+
+/** One setting players can change. Declare a list as `options` on a spell effect or a drug and LSCG draws the controls,
+ *  stores the values, validates them (also when they come from another player) and hands them to your callbacks as `ctx.options`. */
+export type LSCGOptionField = LSCGToggleOption | LSCGNumberOption | LSCGSelectOption | LSCGTextOption;
+
+// ---------------------------------------------------------------------------------------------------------------
 // Drugs
 // ---------------------------------------------------------------------------------------------------------------
 
@@ -162,6 +222,8 @@ export interface LSCGDrugContext {
     sendAction(text: string): void;
     /** Built-in states the drug may activate or recover, e.g. to put the player to sleep at a high level. */
     readonly states: LSCGBuiltInStatesApi;
+    /** The player's current values for the drug's `options` (their defaults if it declares none). */
+    readonly options: LSCGOptions;
 }
 
 export interface LSCGDrugDoseContext extends LSCGDrugContext {
@@ -201,6 +263,8 @@ export interface LSCGDrugDefinition {
     max?: number;
     /** How much the level falls each minute (default 1; 0 means it never wears off by itself). */
     decayPerMinute?: number;
+    /** Settings the player can change under Drug Enhancements, next to the drug's opt-in. Read them from `ctx.options`. */
+    options?: LSCGOptionField[];
     /** Runs on the player when they take a dose. Players have to opt in to each drug in LSCG's settings first. */
     onDose(ctx: LSCGDrugDoseContext): void;
     /** Seconds between ticks, at least 1 (default 6). Sets how often `onTick` and `onSpike` can run and how often
@@ -242,6 +306,16 @@ export interface LSCGDoseOptions {
     minigame?: boolean;
 }
 
+export interface LSCGDrugLevelInfo {
+    /** "sedative", "mindcontrol", "horny", or an extension drug's id. */
+    readonly type: string;
+    readonly level: number;
+    /** The level that fills the bar. */
+    readonly max: number;
+    /** True when worked out from another player's last broadcast rather than read from your own settings. */
+    readonly estimated: boolean;
+}
+
 export interface LSCGDrugsApi {
     /** Registers a drug. Returns a function that unregisters it. */
     register(definition: LSCGDrugDefinition): () => void;
@@ -252,9 +326,14 @@ export interface LSCGDrugsApi {
      *  `drug.beforeApply` vetoes, and emits `drug.applied`. Returns false if nothing was applied (not enabled,
      *  vetoed, unknown drug, or Drug Enhancements turned off). An "antidote" clears every drug and ignores `multiplier`. */
     dose(type: LSCGDrugType, options?: LSCGDoseOptions): boolean;
-    /** The player's current level of a drug, from 0 to its max (0 for an unknown drug). Built-in levels are on LSCG's
-     *  internal scale, multiplied by the player's drug level multiplier. */
-    getLevel(type: LSCGDrugType): number;
+    /** A player's current level of a drug, from 0 to its max (0 for an unknown drug, or someone without LSCG). Built-in levels are on LSCG's
+     *  internal scale, multiplied by the player's drug level multiplier. With no `memberNumber` (or your own) it is exact. For someone
+     *  else it is an estimate: what their client last broadcast, decayed forward at the rate it broadcast since it arrived. It misses
+     *  anything that happened since their last broadcast. */
+    getLevel(type: LSCGDrugType, memberNumber?: number): number;
+    /** Every drug level above 0 for a player (yours with no `memberNumber`), built-in drugs first, then extensions'. `level / max` is
+     *  how full the bar is. `estimated` is true for anyone but you, with the same caveats as `getLevel`. */
+    getLevels(memberNumber?: number): LSCGDrugLevelInfo[];
 }
 
 // ---------------------------------------------------------------------------------------------------------------
@@ -350,6 +429,50 @@ export interface LSCGBuiltInStatesApi {
     get(type: LSCGBuiltInStateType): LSCGStateHandle | undefined;
 }
 
+/** What a custom suggestion instruction's `perform` receives. Runs on the client of the hypnotized player, when a suggestion holding the
+ *  instruction fires and they don't resist it. */
+export interface LSCGHypnoInstructionContext {
+    /** This instruction's namespaced id ("<extension id>.<name>"). */
+    readonly instruction: string;
+    /** The name of the suggestion it belongs to. */
+    readonly suggestion: string;
+    /** The values chosen for this instruction when the suggestion was written, validated against your `options` (their defaults if you declare none). */
+    readonly options: LSCGOptions;
+    /** Member number of whoever spoke the trigger. */
+    readonly sender?: number;
+    /** Member number of whoever installed the suggestion. */
+    readonly installedBy?: number;
+    /** Sends an emote about the player. Supports %NAME%, %POSSESSIVE% and %OPP_NAME% (whoever spoke the trigger). */
+    sendAction(text: string): void;
+    /** Built-in states the instruction may activate or recover. */
+    readonly states: LSCGBuiltInStatesApi;
+}
+
+export interface LSCGHypnoInstructionDefinition {
+    /** Name within your extension; the instruction id becomes "<extension id>.<name>". No ".". */
+    name: string;
+    /** Shown in the suggestion editor and in the player's list of instructions they can block. */
+    label: string;
+    /** One line, shown in the editor and the block list. */
+    description?: string;
+    /** Settings whoever writes the suggestion can change, behind a "Configure..." button. Read them from `ctx.options`. */
+    options?: LSCGOptionField[];
+    /** A suggestion can hold it only once (default false). */
+    unrepeatable?: boolean;
+    /** Nothing can follow it in a suggestion (default false). */
+    terminating?: boolean;
+    /** Carries out the instruction on the player. Errors are contained and counted against your extension. Players can block any
+     *  instruction on themselves, in which case this never runs. */
+    perform(ctx: LSCGHypnoInstructionContext): void;
+}
+
+export interface LSCGHypnoApi {
+    /** Registers an instruction that suggestions can hold, next to LSCG's own. Returns a function that unregisters it. */
+    registerInstruction(definition: LSCGHypnoInstructionDefinition): () => void;
+    /** Unregisters one of this extension's instructions by name. */
+    unregisterInstruction(name: string): boolean;
+}
+
 /** What a custom spell effect's `apply` receives. Runs on the client of the player the spell hit. */
 export interface LSCGSpellEffectContext {
     /** This effect's namespaced id ("<extension id>.<name>"). */
@@ -363,6 +486,8 @@ export interface LSCGSpellEffectContext {
     sendAction(text: string): void;
     /** Built-in states the effect may activate or recover. */
     readonly states: LSCGBuiltInStatesApi;
+    /** The values the caster set for this copy of the effect in their spell, validated against your `options` (their defaults if you declare none). */
+    readonly options: LSCGOptions;
 }
 
 export interface LSCGSpellEffectDefinition {
@@ -376,10 +501,16 @@ export interface LSCGSpellEffectDefinition {
     beneficial?: boolean;
     /** Always give this effect a duration, even when the target allows unlimited-duration spells. */
     forcesDuration?: boolean;
+    /** Milliseconds this effect waits after the previous effect of the same spell before taking hold (default 2000, from 1000 to 30000; lower values are raised to 1000).
+     *  Ignored when it is the first effect, which always applies immediately. */
+    delay?: number;
     /** May be picked by wild magic (default false). */
     allowRandom?: boolean;
     /** Block the effect by default the first time a player sees it (they can unblock it in LSCG's Magic™ settings). */
     defaultBlocked?: boolean;
+    /** Settings the spell's author can change in the spell editor, one set for each copy of the effect in a spell. They travel
+     *  with the spell, so the target's client validates them again before `apply` sees them as `ctx.options`. */
+    options?: LSCGOptionField[];
     /** Applies the effect to the player. Errors are contained and counted against your extension. */
     apply(ctx: LSCGSpellEffectContext): void;
 }
@@ -438,7 +569,11 @@ export interface LSCGEventMap {
     /** The player saved against an incoming spell. `bounced` is true if a magic barrier sent it back to the caster. */
     "spell.resisted": { spell: LSCGSpellInfo; sender: number; bounced: boolean };
     /** A spell took hold on the player; `effects` are the ones that will be applied. */
-    "spell.received": { spell: LSCGSpellInfo; sender?: number; effects: string[]; duration?: number };
+    "spell.received": { spell: LSCGSpellInfo; sender?: number; effects: string[]; duration?: number;
+        /** For each of `effects`, how long (ms) after the spell arrived it takes hold. The first is 0. */
+        delays: number[] };
+    /** A spell's remaining effects were cancelled before they took hold. `reason`: the target was dispelled, used safeword, or LSCG unloaded. */
+    "spell.interrupted": { spell: LSCGSpellInfo; sender?: number; reason: "dispel" | "safeword" | "unload"; effects: string[] };
     /** One effect of a spell was applied to the player. */
     "spell.effectApplied": { effect: string; spell: LSCGSpellInfo; sender?: number; duration?: number };
     /** The player was hypnotized by a trigger. `byWord` is false when triggered some other way (e.g. an activity). */
@@ -473,7 +608,7 @@ export interface LSCGEventMap {
 /** Events with a "before" phase. Handlers may cancel the action or change the fields documented as mutable. */
 export interface LSCGBeforeEventMap {
     /** Before an incoming spell takes hold. Mutable: `duration`; `effects` may only have entries removed. Cancel: the spell fizzles. */
-    "spell.beforeReceive": { readonly spell: LSCGSpellInfo; readonly sender?: number; effects: string[]; duration?: number };
+    "spell.beforeReceive": { readonly spell: LSCGSpellInfo; readonly sender?: number; effects: string[]; duration?: number; delay?: number };
     /** Before one effect of a spell is applied. Mutable: `duration`. Cancel: that effect fizzles. */
     "spell.beforeEffect": { readonly effect: string; readonly spell: LSCGSpellInfo; readonly sender?: number; duration?: number };
     /** Before another player's grab on the player takes hold. Cancel: the grab is refused and released on both sides. */
@@ -518,7 +653,8 @@ export interface LSCGGlobal {
     readonly isReady: boolean;
     /** Runs `cb` once LSCG is ready (immediately if it already is). */
     onReady(cb: () => void): void;
-    /** Registers an extension and returns its handle. Throws if the id is invalid or already registered. */
+    /** Registers an extension and returns its handle. Calling it again with an id that is already registered returns the same handle; it
+     *  throws if the id is invalid, or the player turned the extension off. */
     getModApi(info: LSCGExtensionInfo): LSCGModApi;
 }
 
