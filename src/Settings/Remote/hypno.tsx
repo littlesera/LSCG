@@ -21,6 +21,7 @@ export abstract class RemoteHypnoBase extends RemoteGuiSubscreen {
 
 	get disabledReason(): string {
 		switch (remoteAccessDenial("HypnoModule", this.Character, Player)) {
+			case "module-off": return "Section is Disabled";
 			case "level": return replace_template("You do not have access to %OPP_POSSESSIVE% mind...", this.Character);
 			case "trance": return replace_template("%OPP_NAME% has too much willpower to let you in...", this.Character);
 			case "hypnotizer": return replace_template("%OPP_NAME% seems suggestable, but not to you...", this.Character);

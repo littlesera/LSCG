@@ -39,23 +39,36 @@ const effectRank = (id: SpellEffectId) => {
 const byLabel = (a: SpellEffectId, b: SpellEffectId) => effectRank(a) - effectRank(b) || effectLabel(a).localeCompare(effectLabel(b));
 const byName = (a: SpellEffectId, b: SpellEffectId) => effectLabel(a).localeCompare(effectLabel(b));
 
+/** The effect picker's groups: a built-in effect's domain, then those from extensions, then ones no longer installed. */
+const effectGroup = (id: SpellEffectId): string =>
+    !getSpellEffect(id) ? "Not installed" : isExtensionEffect(id) ? "From extensions" : effectDomain(id) ?? "Other";
+/** Alphabetical, but built-in effects first, then those from extensions, then ones no longer installed. */
+const effectKind = (id: SpellEffectId): number => !getSpellEffect(id) ? 2 : isExtensionEffect(id) ? 1 : 0;
+const byNameExtensionsLast = (a: SpellEffectId, b: SpellEffectId) => effectKind(a) - effectKind(b) || byName(a, b);
+const effectGroupRank = (id: SpellEffectId): number =>
+    !getSpellEffect(id) ? 300 : isExtensionEffect(id) ? 200 : effectDomain(id) ? domainOrder(effectDomain(id)!) : 100;
+const byGroup = (a: SpellEffectId, b: SpellEffectId) => effectGroupRank(a) - effectGroupRank(b) || byName(a, b);
+
 type EffectOrder = "type" | "name";
 const EFFECT_ORDER_OPTIONS: SelectOption[] = [{ value: "type", label: "By type" }, { value: "name", label: "Alphabetical" }];
 /** How the effects table is sorted. Kept across opening the tab, not saved. */
 let effectOrder: EffectOrder = "type";
+/** The effect groups folded away in the effects table. Kept like the sort order: across opening the tab, not saved. */
+const collapsedEffectGroups = new Set<string>();
 
 function effectChip(id: SpellEffectId): HTMLElement {
     const def = getSpellEffect(id);
     return Chip(effectLabel(id), { tone: def ? "muted" : "warn", tooltip: effectTooltip(id), icon: isExtensionEffect(id) ? "extension" : undefined });
 }
 
-function effectNameCell(id: SpellEffectId): HTMLElement {
+/** An effect's name, with where it comes from. A built-in effect's domain is a pill too, unless a heading above it already says so. */
+function effectNameCell(id: SpellEffectId, showDomain = true): HTMLElement {
     const def = getSpellEffect(id);
     return <div class="lscg-kit-chips">
         <span>{isExtensionEffect(id) ? Icon("extension", "Added by an extension") : null}{effectLabel(id)}</span>
         {!def ? Chip("not installed", { tone: "warn", tooltip: "Comes from an extension this client doesn't have." })
             : def.source ? Chip(def.source, { tone: "info", tooltip: "Added by an extension." })
-            : def.domain ? Chip(def.domain, { tone: "muted", tooltip: domainDescription(def.domain) }) : null}
+            : def.domain && showDomain ? Chip(def.domain, { tone: "muted", tooltip: domainDescription(def.domain) }) : null}
     </div> as HTMLElement;
 }
 
@@ -65,20 +78,22 @@ function effectsTable(ctx: KitContext, s: MagicSettingsModel, opts: MagicPagesOp
     const locked = () => s.lockedSpellEffects ?? [];
     // Keep blocks and locks on effects that aren't listed (e.g. an uninstalled extension's) visible so they can be removed.
     const ids = () => [...opts.effects, ...[...(s.blockedSpellEffects ?? []), ...locked()].filter(id => opts.effects.indexOf(id) < 0)]
-        .filter((id, i, all) => all.indexOf(id) === i).sort(effectOrder === "name" ? byName : byLabel).map(id => ({ id }));
+        .filter((id, i, all) => all.indexOf(id) === i).sort(effectOrder === "name" ? byNameExtensionsLast : byGroup).map(id => ({ id }));
     const sortRow = SelectRow(ctx, {
         label: "Sort effects", options: EFFECT_ORDER_OPTIONS,
-        description: "By type groups effects under their domain (mind, senses, binding...), alphabetical within each.",
+        description: "By type boxes effects into groups, like the effect picker (mind, senses, binding... then extensions), alphabetical within each. Alphabetical is one list, with extension effects last.",
         get: () => effectOrder, set: v => effectOrder = v as EffectOrder,
     });
     const table = RuleTable(ctx, {
         fixed: true,
         rows: ids,
+        groupOf: r => effectOrder === "type" ? effectGroup(r.id) : undefined,
+        collapsedGroups: collapsedEffectGroups,
         columns: [
-            { header: "Effect", kind: "custom", width: "30%", render: r => effectNameCell(r.id), get: () => "", set: () => {} },
+            { header: "Effect", kind: "custom", width: "30%", render: r => effectNameCell(r.id, effectOrder !== "type"), get: () => "", set: () => {} },
             { header: "Description", kind: "custom", render: r => <small class="lscg-kit-desc">{effectDescription(r.id)}</small> as HTMLElement, get: () => "", set: () => {} },
             {
-                header: "Block", kind: "checkbox", width: "4.5em",
+                header: "Block", kind: "checkbox", width: "5em",
                 tooltip: opts.remote ? "Spells can't apply this effect to them." : "Spells can't apply this effect to you.",
                 get: r => (s.blockedSpellEffects ?? []).includes(r.id),
                 set: (r, v) => {
@@ -87,15 +102,15 @@ function effectsTable(ctx: KitContext, s: MagicSettingsModel, opts: MagicPagesOp
                 },
             },
             {
-                header: "Allow self", kind: "checkbox", width: "6em",
+                header: "Allow self", kind: "checkbox", width: "5em",
                 tooltip: opts.remote ? "Their own spells still apply this blocked effect." : "Your own spells still apply this blocked effect.",
                 disabled: r => !(s.blockedSpellEffects ?? []).includes(r.id),
                 get: r => (s.bypassForSelfEffects ?? []).includes(r.id),
                 set: (r, v) => s.bypassForSelfEffects = toggle(s.bypassForSelfEffects ?? [], r.id, v),
             },
             {
-                header: "Lock", kind: "checkbox", width: "4.5em",
-                tooltip: opts.remote ? "Their spells with this effect fizzle on that step." : "Your spells with this effect fizzle on that step. Only someone with remote access can change this.",
+                header: "Forbidden", kind: "checkbox", width: "5em",
+                tooltip: opts.remote ? "Prevent them from casting this effect" : "Prevents you from casting this effect. Only someone with remote access can change this.",
                 disabled: () => !opts.remote,
                 get: r => locked().includes(r.id),
                 set: (r, v) => { if (opts.remote) s.lockedSpellEffects = toggle(locked(), r.id, v); },

@@ -62,7 +62,7 @@ describe("Magic™ settings pages", () => {
         it("lists every effect, including extension effects with their source", () => {
             api.spells.registerEffect({ name: "bark", label: "Barking", description: "Woof.", apply: () => {} });
             const root = render("Effects");
-            expect(root.querySelectorAll("tbody tr")).toHaveLength(allEffectIds().length);
+            expect(root.querySelectorAll("tbody tr:not(.lscg-kit-group-row)")).toHaveLength(allEffectIds().length);
             const row = rowFor(root, "Barking");
             expect(row.textContent).toContain("Page Pack");
             expect(row.textContent).toContain("Woof.");
@@ -119,7 +119,7 @@ describe("Magic™ settings pages", () => {
             const target = { enabled: true, blockedSpellEffects: [], bypassForSelfEffects: [] } as unknown as MagicPublicSettingsModel;
             const ctx = new KitContext(vi.fn());
             const root = render("Effects", true, target, legacyEffectIds(), ctx);
-            expect(root.querySelectorAll("tbody tr")).toHaveLength(legacyEffectIds().length);
+            expect(root.querySelectorAll("tbody tr:not(.lscg-kit-group-row)")).toHaveLength(legacyEffectIds().length);
             expect(rowFor(root, "Barking")).toBeUndefined();
 
             const block = rowFor(root, "Deafening").querySelector("input[type=checkbox]") as HTMLInputElement;
@@ -588,53 +588,208 @@ describe("Magic™ settings pages", () => {
         });
     });
 
-    describe("Effects tab: sorting", () => {
+    describe("Effects tab: sorting and groups", () => {
         const names = (root: HTMLElement) => Array.from(root.querySelectorAll("tbody tr")).map(tr => tr.querySelector("td")!.textContent!.trim());
         const sortSelect = (root: HTMLElement) => Array.from(root.querySelectorAll(".lscg-kit-row")).find(r => r.querySelector("label")?.textContent === "Sort effects")!.querySelector("select") as HTMLSelectElement;
         const choose = (root: HTMLElement, value: string) => { const s = sortSelect(root); s.value = value; s.dispatchEvent(new Event("change")); };
-        afterEach(() => { choose(render("Effects"), "type"); });
+        const groups = (root: HTMLElement) => Array.from(root.querySelectorAll<HTMLFieldSetElement>("fieldset.lscg-kit-fieldset"));
+        const nameOf = (fieldset: HTMLElement) => fieldset.querySelector(".lscg-kit-group-name")!.textContent;
+        const headings = (root: HTMLElement) => groups(root).map(nameOf);
+        const group = (root: HTMLElement, name: string) => groups(root).find(f => nameOf(f) === name)!;
+        const band = (root: HTMLElement, name: string) => group(root, name).querySelector<HTMLButtonElement>(".lscg-kit-group-toggle")!;
+        const rowNames = (fieldset: HTMLElement) => Array.from(fieldset.querySelectorAll("tbody tr")).map(tr => tr.querySelector("td")!.textContent!.trim());
+        // the table remembers which groups are folded, across opening the tab: open them all again after each test
+        afterEach(() => {
+            Array.from(render("Effects").querySelectorAll<HTMLButtonElement>('.lscg-kit-group-toggle[aria-expanded="false"]')).forEach(b => b.click());
+            choose(render("Effects"), "type");
+        });
 
-        it("groups by type by default, alphabetical within each", () => {
+        it("groups by type by default, in the effect picker's order", () => {
             const root = render("Effects");
             expect(sortSelect(root).value).toBe("type");
-            const domains = Array.from(root.querySelectorAll("tbody tr")).map(tr => tr.textContent);
-            // Deafening and Blinding share a domain (senses), so they sit together; the same-domain pair is in name order
-            const ordered = names(root);
-            expect(Math.abs(ordered.findIndex(n => n.startsWith("Deafening")) - ordered.findIndex(n => n.startsWith("Blinding")))).toBeLessThan(6);
-            expect(domains.length).toBe(allEffectIds().length);
+            expect(headings(root)).toEqual(["Mind", "Senses", "Form", "Binding", "Desire", "Harm", "Fortune", "Warding"]);
         });
 
-        it("switches to a plain A to Z list, and back", () => {
+        it("boxes each group in a fieldset that holds all of its effects, with its name as the legend", () => {
             const root = render("Effects");
-            choose(root, "name");
-            const alpha = names(root).map(n => n.replace(/\s.*/, ""));
-            expect(alpha).toEqual([...alpha].sort((a, b) => a.localeCompare(b)));
+            for (const fieldset of groups(root)) {
+                expect(fieldset.tagName).toBe("FIELDSET");
+                expect(fieldset.querySelector(":scope > legend .lscg-kit-group-name")).not.toBeNull();
+                expect(fieldset.querySelectorAll("table")).toHaveLength(1);
+            }
+            // every effect is inside some group's box, once, and none is left outside them
+            const inside = groups(root).flatMap(rowNames);
+            expect(inside).toHaveLength(allEffectIds().length);
             expect(root.querySelectorAll("tbody tr")).toHaveLength(allEffectIds().length);
-            choose(root, "type");
-            expect(names(root)).not.toEqual(names(root).slice().sort((a, b) => a.localeCompare(b)));
+            expect(Array.from(root.querySelectorAll("tbody tr")).every(tr => !!tr.closest("fieldset"))).toBe(true);
+            // ...each under its own group, A to Z
+            expect(rowNames(group(root, "Senses")).some(n => n.startsWith("Deafening"))).toBe(true);
+            expect(rowNames(group(root, "Binding")).some(n => n.startsWith("Gagged"))).toBe(true);
+            expect(rowNames(group(root, "Mind")).some(n => n.startsWith("Deafening"))).toBe(false);
+            for (const fieldset of groups(root)) {
+                const labels = rowNames(fieldset);
+                expect(labels).toEqual([...labels].sort((x, y) => x.localeCompare(y)));
+            }
         });
 
-        it("keeps the choice when the tab is opened again, and for a remote view too", () => {
+        it("shares one set of column headings, and every box lines its columns up with them", () => {
+            const root = render("Effects");
+            expect(root.querySelectorAll("thead")).toHaveLength(1);
+            // Sized by the same column definitions, not by widths on the headings (an em on a heading is its own, smaller font's em)
+            const widths = (table: Element) => Array.from(table.querySelectorAll("col")).map(c => (c as HTMLElement).style.width);
+            const headTable = root.querySelector("thead")!.closest("table")!;
+            expect(Array.from(headTable.querySelectorAll("th")).map(th => (th as HTMLElement).style.width)).toEqual(["", "", "", "", ""]);
+            const head = widths(headTable);
+            expect(head.filter(w => w !== "").length).toBeGreaterThan(0);
+            for (const fieldset of groups(root))
+                expect(widths(fieldset.querySelector("table")!)).toEqual(head);
+        });
+
+        it("extension effects get a group of their own after the built-in ones, and ones no longer installed come last", () => {
+            api.spells.registerEffect({ name: "bark", label: "Barking", description: "", domain: "Mind", apply: () => {} } as never);
+            const target = { ...magic.settings, blockedSpellEffects: ["gone.effect"] as SpellEffectId[] } as MagicPublicSettingsModel;
+            const root = render("Effects", true, target);
+            expect(headings(root).slice(0, 8)).toEqual(["Mind", "Senses", "Form", "Binding", "Desire", "Harm", "Fortune", "Warding"]);
+            expect(headings(root).slice(8)).toEqual(["From extensions", "Not installed"]);
+            expect(rowNames(group(root, "From extensions")).some(n => n.startsWith("Barking"))).toBe(true); // not filed under Mind, though it asked to be
+            expect(rowNames(group(root, "Mind")).some(n => n.startsWith("Barking"))).toBe(false);
+        });
+
+        it("each group's legend says how many effects are in it, and starts open", () => {
+            const root = render("Effects");
+            expect(band(root, "Mind").getAttribute("aria-expanded")).toBe("true");
+            expect(band(root, "Mind").querySelector(".lscg-kit-group-count")!.textContent).toBe("3");
+            expect(band(root, "Mind").querySelector(".lscg-kit-group-chevron")!.textContent).toBe("▾");
+        });
+
+        it("drops the domain pill from each effect while grouped, since the legend says it; the A to Z list keeps it", () => {
+            const root = render("Effects");
+            const pills = (r: HTMLElement) => Array.from(r.querySelectorAll("tbody tr td:first-child .lscg-kit-chip")).map(c => c.textContent);
+            expect(pills(root)).toEqual([]);
+            expect(rowFor(root, "Deafening").textContent).not.toContain("Senses");
+            choose(root, "name");
+            expect(rowFor(root, "Deafening").querySelector(".lscg-kit-chip")!.textContent).toBe("Senses");
+            expect(pills(root)).toHaveLength(allEffectIds().length);
+            choose(root, "type");
+            expect(pills(root)).toEqual([]);
+        });
+
+        it("still shows where an extension's effect comes from, and that an effect isn't installed", () => {
+            api.spells.registerEffect({ name: "bark", label: "Barking", description: "", apply: () => {} });
+            const target = { ...magic.settings, blockedSpellEffects: ["gone.effect"] as SpellEffectId[] } as MagicPublicSettingsModel;
+            const root = render("Effects", true, target);
+            expect(rowFor(root, "Barking").textContent).toContain("Page Pack");
+            expect(rowFor(root, "gone.effect").textContent).toContain("not installed");
+        });
+
+        it("clicking a legend folds its group's effects away, leaving the box and its legend, and clicking again brings them back", () => {
+            const root = render("Effects");
+            const before = names(root);
+            band(root, "Senses").click();
+            expect(band(root, "Senses").getAttribute("aria-expanded")).toBe("false");
+            expect(band(root, "Senses").querySelector(".lscg-kit-group-chevron")!.textContent).toBe("▸");
+            expect(group(root, "Senses").querySelector("table")).toBeNull();
+            expect(names(root)).toHaveLength(before.length - 4); // Senses has four effects
+            expect(names(root).some(n => n.startsWith("Deafening"))).toBe(false);
+            expect(names(root).some(n => n.startsWith("Gagged"))).toBe(true); // other groups are untouched
+            expect(headings(root)).toHaveLength(8);
+            band(root, "Senses").click();
+            expect(names(root)).toEqual(before);
+        });
+
+        it("folding is a view change: it doesn't mark the screen changed, and no setting moves", () => {
+            const changed = vi.fn();
+            magic.settings.blockedSpellEffects = [LSCGSpellEffect.deafened];
+            const root = render("Effects", false, magic.settings, undefined, new KitContext(changed));
+            band(root, "Senses").click();
+            band(root, "Senses").click();
+            expect(changed).not.toHaveBeenCalled();
+            expect(magic.settings.blockedSpellEffects).toEqual([LSCGSpellEffect.deafened]);
+        });
+
+        it("keeps groups folded when the tab is opened again", () => {
+            band(render("Effects"), "Harm").click();
+            const again = render("Effects");
+            expect(band(again, "Harm").getAttribute("aria-expanded")).toBe("false");
+            expect(names(again).some(n => n.startsWith("Damaging"))).toBe(false);
+        });
+
+        it("stripes alternate rows within each box", () => {
+            const root = render("Effects");
+            for (const fieldset of groups(root)) {
+                const rows = Array.from(fieldset.querySelectorAll("tbody tr"));
+                expect(rows.map(tr => tr.classList.contains("lscg-kit-stripe"))).toEqual(rows.map((_, i) => i % 2 === 1));
+            }
+        });
+
+        it("a folded group still keeps its blocks and forbids", () => {
+            const target = { ...magic.settings, blockedSpellEffects: [LSCGSpellEffect.deafened], lockedSpellEffects: [LSCGSpellEffect.deafened] } as MagicPublicSettingsModel;
+            const root = render("Effects", true, target);
+            band(root, "Senses").click();
+            band(root, "Senses").click();
+            const [block, , forbidden] = Array.from(rowFor(root, "Deafening").querySelectorAll("input[type=checkbox]")) as HTMLInputElement[];
+            expect(block.checked).toBe(true);
+            expect(forbidden.checked).toBe(true);
+        });
+
+        it("switches to one A to Z list with no boxes, and back", () => {
+            const root = render("Effects");
+            const grouped = names(root);
+            choose(root, "name");
+            expect(groups(root)).toEqual([]);
+            expect(root.querySelectorAll("table")).toHaveLength(1);
+            const alpha = names(root).map(n => n.replace(/\s.*/, ""));
+            expect(alpha).toHaveLength(allEffectIds().length);
+            expect(alpha).toEqual([...alpha].sort((a, b) => a.localeCompare(b)));
+            choose(root, "type");
+            expect(names(root)).toEqual(grouped);
+        });
+
+        it("in the A to Z list, extension effects still come last, then ones no longer installed", () => {
+            api.spells.registerEffect({ name: "aardvark", label: "Aardvark", description: "", apply: () => {} });
+            api.spells.registerEffect({ name: "zeal", label: "Zeal", description: "", apply: () => {} });
+            const target = { ...magic.settings, blockedSpellEffects: ["gone.effect"] as SpellEffectId[] } as MagicPublicSettingsModel;
+            const root = render("Effects", true, target);
+            choose(root, "name");
+            const list = names(root);
+            // built-in effects A to Z first (Aardvark would sort before them), then the extension's, then the uninstalled one
+            const builtIn = list.slice(0, allEffectIds().length - 2).map(n => n.replace(/\s.*/, ""));
+            expect(builtIn).toEqual([...builtIn].sort((a, b) => a.localeCompare(b)));
+            const tail = list.slice(-3);
+            expect(tail[0]).toMatch(/^Aardvark/);
+            expect(tail[1]).toMatch(/^Zeal/);
+            expect(tail[2]).toMatch(/gone\.effect/);
+            expect(list.findIndex(n => n.startsWith("Aardvark"))).toBeGreaterThan(list.findIndex(n => n.startsWith("Web")));
+        });
+
+        it("keeps the sort choice when the tab is opened again, and for a remote view too", () => {
             choose(render("Effects"), "name");
             expect(sortSelect(render("Effects")).value).toBe("name");
             expect(sortSelect(render("Effects", true, { enabled: true, blockedSpellEffects: [], bypassForSelfEffects: [] } as unknown as MagicPublicSettingsModel)).value).toBe("name");
         });
     });
 
-    describe("Effects tab: the Lock column", () => {
-        // Block, Allow self and Lock are the three checkbox columns of the one effects table.
+    describe("Effects tab: the Forbidden column", () => {
+        // Block, Allow self and Forbidden are the three checkbox columns of the one effects table.
         const lockBox = (root: HTMLElement, text: string) => rowFor(root, text)?.querySelectorAll("input[type=checkbox]")[2] as HTMLInputElement | undefined;
 
         beforeEach(() => { magic.settings.lockedSpellEffects = []; });
 
         it("sits next to Block and Allow self in the same table, with no second listing", () => {
             const root = render("Effects");
-            expect(root.querySelectorAll("table")).toHaveLength(1);
-            expect(Array.from(root.querySelectorAll("th")).map(th => th.textContent)).toEqual(["Effect", "Description", "Block", "Allow self", "Lock"]);
+            expect(root.querySelectorAll("thead")).toHaveLength(1);
+            expect(Array.from(root.querySelectorAll("th")).map(th => th.textContent)).toEqual(["Effect", "Description", "Block", "Allow self", "Forbidden"]);
             expect(root.querySelectorAll("tbody tr")).toHaveLength(allEffectIds().length);
         });
 
-        it("shows the wearer which effects are locked, read-only", () => {
+        it("the header explains it: a remote user prevents them from casting the effect; the wearer is told they can't", () => {
+            const tip = (root: HTMLElement) => Array.from(root.querySelectorAll("th")).find(th => th.textContent === "Forbidden")!.getAttribute("title");
+            const target = { ...magic.settings } as MagicPublicSettingsModel;
+            expect(tip(render("Effects", true, target))).toBe("Prevent them from casting this effect");
+            expect(tip(render("Effects"))).toBe("Prevents you from casting this effect. Only someone with remote access can change this.");
+        });
+
+                it("shows the wearer which effects are locked, read-only", () => {
             magic.settings.lockedSpellEffects = [LSCGSpellEffect.deafened];
             const root = render("Effects");
             const locked = lockBox(root, "Deafening")!;
@@ -666,7 +821,7 @@ describe("Magic™ settings pages", () => {
         it("a remote user locks and unlocks effects, and it is the target's list that changes", () => {
             const target = { ...magic.settings, lockedSpellEffects: [] as SpellEffectId[] } as MagicPublicSettingsModel;
             const root = render("Effects", true, target);
-            expect(root.querySelectorAll("tbody tr")).toHaveLength(allEffectIds().length);
+            expect(root.querySelectorAll("tbody tr:not(.lscg-kit-group-row)")).toHaveLength(allEffectIds().length);
             const box = lockBox(root, "Deafening")!;
             expect(box.disabled).toBe(false);
             box.checked = true;
@@ -697,7 +852,7 @@ describe("Magic™ settings pages", () => {
         it("keeps a lock on an effect that isn't installed visible, so it can be removed, once", () => {
             const target = { ...magic.settings, lockedSpellEffects: ["gone.effect"] as SpellEffectId[], blockedSpellEffects: ["gone.effect"] as SpellEffectId[] } as MagicPublicSettingsModel;
             const root = render("Effects", true, target);
-            const rows = Array.from(root.querySelectorAll("tbody tr")).filter(tr => tr.textContent?.includes("not installed"));
+            const rows = Array.from(root.querySelectorAll("tbody tr:not(.lscg-kit-group-row)")).filter(tr => tr.textContent?.includes("not installed"));
             expect(rows).toHaveLength(1);
             expect((rows[0].querySelectorAll("input[type=checkbox]")[2] as HTMLInputElement).checked).toBe(true);
         });

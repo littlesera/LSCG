@@ -8,7 +8,7 @@ const SCREENS = [
 ];
 
 /** Inputs that legitimately don't write settings ("tab/label"), and labels whose change closes their own screen. */
-const NOT_SAVED = new Set(["Tune/Line"]);
+const NOT_SAVED = new Set(["Tune/Line", "Effects/Sort effects"]); // the effects sort order is a view choice, kept in memory
 /** Changing these also rewrites other fields (a rule's "Do" picks different companion settings), so they don't go back. */
 const NOT_RESTORABLE = new Set(["Reactions/Do (row 1)"]);
 const SKIP: Record<string, string[]> = { "Magic™": ["Enabled"] };

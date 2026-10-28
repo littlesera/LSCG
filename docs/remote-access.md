@@ -9,10 +9,10 @@ offer, and again by the wearer's client on whatever arrives, since nothing makes
 For hypno, collar, magic and speech analysis, `remoteAccessDenial()` (and `canRemote*`, which is "no denial") allows a sender when:
 
 1. LSCG is on for the wearer (`GlobalModule.enabled`), the module's settings exist, the wearer turned **remote access** on for
-   that module, and the sender is not the wearer. Collar also needs breathplay on.
+   that module, the module itself is **enabled**, and the sender is not the wearer. Collar also needs breathplay on. A module that
+   is switched off lets nobody in, the owner included.
 2. If the sender is the wearer's **owner**, that is enough.
-3. Anyone else also needs all of:
-   - the module itself **enabled**;
+3. Anyone else also needs both of:
    - to be within the **access level** the wearer picked (below, for the section or from the global defaults), **or** on the **allowed member ids**
      (`remoteMemberIds`, a list of member numbers that gets in whatever the level says). BC's item permission plays no part. The
      collar's maker also gets in, past the level, when the collar is limited to its maker;
@@ -36,7 +36,7 @@ Every module offers the same dropdown (`remoteLevelRow`), from most open to most
 | `Owner` | Owner only. Also the floor for a missing or unknown level |
 
 The allowed member ids are a per-module allow-list on top of the level, for the same screens (every module has the field, next to the
-level dropdown). Listed members still need the module enabled and the trance rules; the owner needs nothing. The wearer sets both,
+level dropdown). Listed members still need the trance rules (and, like everyone, the module switched on); the owner needs nothing more. The wearer sets both,
 and a remote user can change neither.
 
 ### Global defaults
@@ -122,7 +122,7 @@ against every module.
 A remote user with magic access can lock spell effects the wearer may no longer cast. When the wearer casts a spell (from the menu,
 by voice, by wild magic, on themselves or others), each locked effect fizzles on its step with a message only the caster sees and the rest of the spell
 goes ahead; if every effect is locked the whole spell fizzles and nothing is sent. Only the caster's own client enforces this.
-The list is private (not broadcast). It is the **Lock** column of the magic Effects table, next to the wearer's own *Block* and *Allow self*
+The list is private (not broadcast). It is the **Forbidden** column of the magic Effects table, next to the wearer's own *Block* and *Allow self*
 (which stop spells landing on them); only a remote user can change it, and the wearer sees it read-only.
 
 ## Differences from before
@@ -135,7 +135,8 @@ Earlier, each module had its own rules. The unification changed:
   list moved to the allowed member ids and the level set to `Owner`, so only those members and the owner get in. (Hypno's and the
   collar's lists are copied, since they also still say who may trigger the hypnosis and use the collar.) Everyone else gets the level
   matching their own BC interaction permission, so who could get in doesn't change. Anything unknown ends up owner only.
-- Magic gives the owner the same bypass as hypno and collar.
+- Magic gives the owner the same bypass of the level and trance rules as hypno and collar.
+- A module that is switched off blocks remote access for everyone. The owner used to get past hypno's and the collar's switch.
 - Speech analysis gains *only the hypnotizer*; the owner passes without trance. Its level dropdown gains `Dominants`, and its labels change.
 - Collar gains the two trance options (both off, so nothing changes until a wearer turns them on).
 - The collar's module `enabled` is no longer remotely settable.

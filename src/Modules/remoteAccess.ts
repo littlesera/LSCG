@@ -63,7 +63,7 @@ export function remoteMemberIdsOf(s: ModuleSettings): number[] {
 export type RemoteDenial =
 	| "unavailable"   // no settings, LSCG off for the wearer, the sender is the wearer, or a module precondition (collar: breathplay off)
 	| "remote-off"    // the wearer hasn't turned remote access on
-	| "module-off"    // the module itself is off (owners get past this)
+	| "module-off"    // the module itself is switched off: nobody gets in, the owner included
 	| "level"         // the sender isn't within the level the wearer picked
 	| "trance"        // the wearer has to be hypnotized
 	| "hypnotizer";   // ... by this sender
@@ -80,10 +80,11 @@ interface GateSpec {
 
 /**
  * The one rule for remote access to a module's settings:
- *  1. the module's settings are there, LSCG is on for the wearer, the wearer turned remote access on, the sender isn't the
- *     wearer, and the module's own precondition holds;
+ *  1. the module's settings are there, LSCG is on for the wearer, the wearer turned remote access on, the module itself is
+ *     enabled (a module that is switched off lets nobody in), the sender isn't the wearer, and the module's own precondition
+ *     holds;
  *  2. the owner then always passes;
- *  3. anyone else needs the module enabled, to be within the access level the wearer picked (their own for the module, or the
+ *  3. anyone else needs to be within the access level the wearer picked (their own for the module, or the
  *     global default while the module uses it) (the same levels as BC's own
  *     interaction permission, plus friends) or on the wearer's list of allowed member ids for the module, and to meet the
  *     trance and hypnotizer options.
@@ -96,10 +97,10 @@ function remoteDenial(module: RemoteModule, wearer: Character, sender: Character
 		return "unavailable";
 	if (!s.remoteAccess)
 		return "remote-off";
-	if (ownedBy(wearer, sender))
-		return undefined;
 	if (!s.enabled)
 		return "module-off";
+	if (ownedBy(wearer, sender))
+		return undefined;
 	const access = effectiveRemoteAccess(module, wearer, s);
 	const listed = access.ids.includes(sender.MemberNumber ?? -1);
 	if (!listed && !spec.alsoAllow?.(sender, s) && !hasRemotePermission(wearer, access.level, sender.MemberNumber ?? -1))

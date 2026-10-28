@@ -93,14 +93,19 @@ describe("CoreModule remote-settings receiver (Command() \"remote\")", () => {
 			expect(hypno.settings.overrideWords).toBe("c");
 		});
 
-		it("an owner gets in past the other limits, but still needs remote access on", () => {
+		it("an owner gets in past the other limits, but still needs remote access on and hypnosis switched on", () => {
 			player().OwnerMemberNumber = 111;
-			hypno.settings.enabled = false;
+			hypno.settings.remoteLevel = "Owner";
 			hypno.settings.overrideMemberIds = "999";
+			hypno.settings.remoteAccessRequiredTrance = true; // not hypnotized, and they get in anyway
 			sendRemote(sender, { HypnoModule: { overrideWords: "owner" } });
 			expect(hypno.settings.overrideWords).toBe("owner");
 			hypno.settings.remoteAccess = false;
 			sendRemote(sender, { HypnoModule: { overrideWords: "again" } });
+			expect(hypno.settings.overrideWords).toBe("owner");
+			hypno.settings.remoteAccess = true;
+			hypno.settings.enabled = false;
+			sendRemote(sender, { HypnoModule: { overrideWords: "off" } });
 			expect(hypno.settings.overrideWords).toBe("owner");
 		});
 
@@ -180,12 +185,15 @@ describe("CoreModule remote-settings receiver (Command() \"remote\")", () => {
 			expect(magic.settings.knownSpells).toEqual([{ Name: "Mine" }]);
 		});
 
-		it("only within the access level, and not while magic is off (an owner still gets in)", () => {
+		it("only within the access level, and not while magic is off (not even for an owner)", () => {
 			magic.settings.remoteLevel = "Lovers";
 			sendRemote(sender, { MagicModule: { neverDefend: true } });
 			expect(magic.settings.neverDefend).not.toBe(true);
 			magic.settings.remoteLevel = "Public";
 			magic.settings.enabled = false;
+			sendRemote(sender, { MagicModule: { neverDefend: true } });
+			expect(magic.settings.neverDefend).not.toBe(true);
+			player().OwnerMemberNumber = 111;
 			sendRemote(sender, { MagicModule: { neverDefend: true } });
 			expect(magic.settings.neverDefend).not.toBe(true);
 		});

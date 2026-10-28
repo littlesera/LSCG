@@ -24,6 +24,7 @@ export class RemoteCollar extends RemoteGuiSubscreen {
 
 	get disabledReason(): string {
 		switch (remoteAccessDenial("CollarModule", this.Character, Player)) {
+			case "module-off": return "Section is Disabled";
 			case "unavailable": return this.settings.breathplayEnabled === false ? replace_template("%OPP_NAME% has not enabled breathplay...", this.Character) : "Section is Unavailable";
 			case "level": return replace_template("You do not have access to %OPP_POSSESSIVE% collar...", this.Character);
 			case "trance": return replace_template("%OPP_NAME% has too much willpower to let you in...", this.Character);

@@ -599,8 +599,9 @@ test("Outfit Collection: the lock button opens a lock modal where a lock is chos
         disabledWithoutItem: true,
         opens: { modal: true, itemGridClosed: true, title: "Mouth: Ball Gag" },
         noRemoveCellYet: true, noTimerLocks: true,
-        combination: { stillOpen: true, saved: ["CombinationPadlock", "0000"], field: "0000" },
-        badCombination: { invalid: true, kept: "0000" },
+        // R133 leaves a combination lock's default number (0000) out of the saved bundle and puts it back on load, so only the field shows it
+        combination: { stillOpen: true, saved: ["CombinationPadlock", undefined], field: "0000" },
+        badCombination: { invalid: true, kept: undefined },
         goodCombination: { saved: "1234", field: "1234", invalid: false },
         password: ["PasswordPadlock", "SECRET", "the usual", undefined],
         badPassword: { invalid: true, kept: "SECRET" },
@@ -618,14 +619,15 @@ test("Magic spell editor: effects are grouped by domain, stack up to their limit
     const result = await bc.run(async () => {
         const w = window as any;
         const wait = (ms = 150) => new Promise(r => setTimeout(r, ms));
-        const slots = () => [...document.querySelectorAll<HTMLSelectElement>(".lscg-spell-effect > .lscg-kit-row select, .lscg-spell-effects > .lscg-kit-row select")];
+        const slots = () => [...document.querySelectorAll<HTMLSelectElement>(".lscg-spell-effect-head select")];
         const choose = async (index: number, value: string) => {
             const select = slots()[index];
             select.value = value;
             select.dispatchEvent(new Event("change", { bubbles: true }));
             await wait();
         };
-        const summaries = () => [...document.querySelectorAll(".lscg-spell-effect .lscg-kit-expando-summary")].map(e => e.textContent);
+        // An effect's settings are behind a gear beside its dropdown, whose label summarises them; effects without settings have no gear.
+        const summaries = () => [...document.querySelectorAll(".lscg-spell-gear")].map(e => e.getAttribute("aria-label"));
 
 
         const out: any = {};
@@ -639,8 +641,10 @@ test("Magic spell editor: effects are grouped by domain, stack up to their limit
         out.slots = slots().length;
         out.summaries = summaries();
 
-        // The first copy's roll, and only that copy
-        const rollInput = () => document.querySelectorAll<HTMLInputElement>(".lscg-spell-effect input[type=text]")[0];
+        // The first copy's roll, and only that copy: its settings open in a dialog from its gear
+        document.querySelectorAll<HTMLButtonElement>(".lscg-spell-gear")[0].click();
+        await wait();
+        const rollInput = () => [...document.querySelectorAll<HTMLDialogElement>("dialog[open]")].at(-1)!.querySelector<HTMLInputElement>("input[type=text]")!;
         rollInput().value = "4d10";
         rollInput().dispatchEvent(new Event("change", { bubbles: true }));
         await wait();
