@@ -694,7 +694,7 @@ A `lscg:ready` event is also dispatched on `window` when LSCG becomes ready, wit
 | `ready` | `{}`: LSCG finished loading the player's settings. |
 | `state.activated` | `{ type, activatedBy?, duration? }`: a state such as `"asleep"`, `"hypnotized"` or `"blind"` began. |
 | `state.recovered` | `{ type, reason }`: a state ended. `reason` is `"expired"`, `"safeword"`, `"dispel"` or `"manual"`. |
-| `spell.cast` | `{ spell, target, paired? }`: the player cast a spell. |
+| `spell.cast` | `{ spell, target, paired? }`: the player cast a spell. Effects someone with remote access has locked on the player are already removed from `spell` (they fizzled), and the event does not fire if every effect was locked. |
 | `spell.resisted` | `{ spell, sender, bounced }`: the player saved against a spell. `bounced` means a barrier sent it back. |
 | `spell.received` | `{ spell, sender?, effects, duration?, delays }`: a spell took hold. `effects` are the ones being applied, and `delays[i]` is how long (ms) after now `effects[i]` takes hold. |
 | `spell.interrupted` | `{ spell, sender?, reason, effects }`: effects that hadn't taken hold yet were cancelled. `reason` is `"dispel"`, `"safeword"` or `"unload"`, and `effects` are the ones that never applied. |

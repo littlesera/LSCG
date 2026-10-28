@@ -1,3 +1,4 @@
+import { REMOTE_TRANCE_DEFAULTS } from "Modules/remoteAccess";
 import { h } from "tsx-dom";
 import { getModule } from "modules";
 import { HypnoModule } from "Modules/hypno";
@@ -124,11 +125,11 @@ export class GuiHypno extends GuiSubscreen {
 					}),
 					CheckboxRow(ctx, {
 						label: "Remote access requires trance", description: "If checked, remote access is only possible while actively hypnotized.",
-						get: () => s.remoteAccessRequiredTrance ?? true, set: v => s.remoteAccessRequiredTrance = v, disabled: noRemote,
+						get: () => s.remoteAccessRequiredTrance ?? REMOTE_TRANCE_DEFAULTS.HypnoModule.trance, set: v => s.remoteAccessRequiredTrance = v, disabled: noRemote,
 					}),
 					CheckboxRow(ctx, {
 						label: "Remote access limited to hypnotizer", description: "If checked, only the user who hypnotized you can access your settings (after matching other conditions).",
-						get: () => s.limitRemoteAccessToHypnotizer ?? true, set: v => s.limitRemoteAccessToHypnotizer = v, disabled: noRemote,
+						get: () => s.limitRemoteAccessToHypnotizer ?? REMOTE_TRANCE_DEFAULTS.HypnoModule.hypnotizerOnly, set: v => s.limitRemoteAccessToHypnotizer = v, disabled: noRemote,
 					}),
 					CheckboxRow(ctx, {
 						label: "Allow remote override member modification", description: "If checked, any remote users can change your Override Member Id list (otherwise, only owner can).",

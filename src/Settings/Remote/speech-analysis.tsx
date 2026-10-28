@@ -1,6 +1,7 @@
 import { RemoteGuiSubscreen } from "./remoteBase";
 import { HelpInfo } from "Settings/settingBase";
 import { hasRemotePermission, replace_template, sendLSCGCommand } from "utils";
+import { canRemoteSpeech, passesRemoteTrance } from "Modules/remoteAccess";
 import { getModule } from "modules";
 import type { CoreModule } from "Modules/core";
 import { DomSettingsHost } from "Settings/domSettingsHost";
@@ -36,17 +37,8 @@ export class RemoteSpeechAnalysis extends RemoteGuiSubscreen {
         return super.settings as SpeechAnalysisPublicSettingsModel;
     }
 
-    get isTranced(): boolean {
-        return this.Character.LSCG?.StateModule?.states?.find(s => s.type == "hypnotized")?.active ?? false;
-    }
-
-    get passesTrance(): boolean {
-        return !this.settings.remoteRequiresTrance || this.isTranced;
-    }
-
     get enabled(): boolean {
-        const s = this.settings;
-        return !!s.enabled && !!s.remoteAccess && hasRemotePermission(this.Character, s.remoteLevel, Player.MemberNumber!) && this.passesTrance;
+        return canRemoteSpeech(this.Character, Player);
     }
 
     get disabledReason(): string {
@@ -55,7 +47,7 @@ export class RemoteSpeechAnalysis extends RemoteGuiSubscreen {
         if (!s.remoteAccess) return replace_template("%OPP_NAME% does not allow remote configuration.", this.Character);
         if (!hasRemotePermission(this.Character, s.remoteLevel, Player.MemberNumber!))
             return replace_template("You do not have permission to configure %OPP_POSSESSIVE% speech.", this.Character);
-        if (!this.passesTrance) return replace_template("%OPP_NAME% has too much willpower to let you in...", this.Character);
+        if (!passesRemoteTrance("SpeechAnalysisModule", this.Character, Player)) return replace_template("%OPP_NAME% has too much willpower to let you in...", this.Character);
         return "Section is Unavailable";
     }
 

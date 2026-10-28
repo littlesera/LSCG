@@ -1,3 +1,4 @@
+import { REMOTE_TRANCE_DEFAULTS } from "Modules/remoteAccess";
 import { RemoteGuiSubscreen } from "./remoteBase";
 import { HypnoPublicSettingsModel } from "Settings/Models/hypno";
 import { GetDelimitedList, ICONS, replace_template } from "utils";
@@ -106,11 +107,11 @@ export class RemoteHypno extends RemoteHypnoBase {
 				render: () => [
 					CheckboxRow(ctx, {
 						label: "Remote access requires trance", description: "If checked, remote access is only possible while actively hypnotized.",
-						get: () => s.remoteAccessRequiredTrance ?? true, set: v => s.remoteAccessRequiredTrance = v,
+						get: () => s.remoteAccessRequiredTrance ?? REMOTE_TRANCE_DEFAULTS.HypnoModule.trance, set: v => s.remoteAccessRequiredTrance = v,
 					}),
 					CheckboxRow(ctx, {
 						label: "Remote access limited to hypnotizer", description: "If checked, only the user who hypnotized you can access your settings (after matching other conditions).",
-						get: () => s.limitRemoteAccessToHypnotizer ?? true, set: v => s.limitRemoteAccessToHypnotizer = v,
+						get: () => s.limitRemoteAccessToHypnotizer ?? REMOTE_TRANCE_DEFAULTS.HypnoModule.hypnotizerOnly, set: v => s.limitRemoteAccessToHypnotizer = v,
 					}),
 					CheckboxRow(ctx, {
 						label: "Programming limited to hypnotizer", description: "If checked, only your hypnotizer may induce hypnotic suggestions within you.",

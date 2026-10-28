@@ -295,7 +295,7 @@ export function buildSpeechTabs(ctx: KitContext, s: SpeechSettingsView, opts: Sp
             ? {
                 label: "Remote",
                 render: () => [
-                    Notice(`Remote access: ${REMOTE_LEVEL_LABELS[s.remoteLevel] ?? s.remoteLevel}${s.remoteRequiresTrance ? ", while hypnotized" : ""}`),
+                    Notice(`Remote access: ${REMOTE_LEVEL_LABELS[s.remoteLevel] ?? s.remoteLevel}${s.remoteRequiresTrance ? ", while hypnotized" : ""}${s.limitRemoteAccessToHypnotizer ? ", hypnotizer only" : ""}`),
                     CheckboxRow(ctx, { label: "Locked", description: "Prevent the wearer from changing these settings. Only available if they allowed lockout.", get: () => s.locked, set: v => s.locked = v, disabled: () => !s.lockable }),
                 ],
             }
@@ -306,6 +306,7 @@ export function buildSpeechTabs(ctx: KitContext, s: SpeechSettingsView, opts: Sp
                     CheckboxRow(ctx, { label: "Allow remote configuration", get: () => s.remoteAccess, set: v => s.remoteAccess = v }),
                     SelectRow(ctx, { label: "Who can configure", options: options(SPEECH_REMOTE_LEVELS, REMOTE_LEVEL_LABELS), get: () => s.remoteLevel, set: v => s.remoteLevel = v as SpeechRemoteLevel, disabled: () => !s.remoteAccess }),
                     CheckboxRow(ctx, { label: "Requires trance", description: "Remote configuration only works while you are hypnotized, in addition to the permission level above.", get: () => s.remoteRequiresTrance, set: v => s.remoteRequiresTrance = v, disabled: () => !s.remoteAccess }),
+                    CheckboxRow(ctx, { label: "Only the hypnotizer", description: "Remote configuration only works for whoever hypnotized you.", get: () => !!s.limitRemoteAccessToHypnotizer, set: v => s.limitRemoteAccessToHypnotizer = v, disabled: () => !s.remoteAccess }),
                     CheckboxRow(ctx, { label: "Allow lockout", description: "Remote configurers may lock you out of changing these settings. Safeword releases the lock.", get: () => s.lockable, set: v => s.lockable = v, disabled: () => !s.remoteAccess }),
                 ],
             },

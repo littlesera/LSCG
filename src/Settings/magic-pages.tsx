@@ -1,3 +1,4 @@
+import { REMOTE_TRANCE_DEFAULTS } from "Modules/remoteAccess";
 import { h } from "tsx-dom";
 import { getModule } from "modules";
 import { OutfitCollectionModule } from "Modules/outfitCollection";
@@ -75,6 +76,28 @@ function blockedEffectsTable(ctx: KitContext, s: MagicPublicSettingsModel, opts:
                 disabled: r => !(s.blockedSpellEffects ?? []).includes(r.id),
                 get: r => (s.bypassForSelfEffects ?? []).includes(r.id),
                 set: (r, v) => s.bypassForSelfEffects = toggle(s.bypassForSelfEffects ?? [], r.id, v),
+            },
+        ],
+    });
+}
+
+/** Effects the wearer can't cast. Only a remote user changes these; the wearer sees what is locked but can't edit it. */
+function lockedEffectsTable(ctx: KitContext, s: MagicSettingsModel, opts: MagicPagesOptions): HTMLElement {
+    const locked = () => s.lockedSpellEffects ?? [];
+    // Keep locks on effects that aren't listed (e.g. an uninstalled extension's) visible so they can be removed.
+    const ids = () => [...(opts.remote ? opts.effects : []), ...locked().filter(id => !opts.remote || opts.effects.indexOf(id) < 0)].sort(byLabel).map(id => ({ id }));
+    return RuleTable(ctx, {
+        fixed: true,
+        rows: ids,
+        columns: [
+            { header: "Effect", kind: "custom", width: "30%", render: r => effectNameCell(r.id), get: () => "", set: () => {} },
+            { header: "Description", kind: "custom", render: r => <small class="lscg-kit-desc">{effectDescription(r.id)}</small> as HTMLElement, get: () => "", set: () => {} },
+            {
+                header: "Lock", kind: "checkbox", width: "4.5em",
+                tooltip: opts.remote ? "Their spells with this effect fizzle on that step." : "Your spells with this effect fizzle on that step.",
+                disabled: () => !opts.remote,
+                get: r => locked().includes(r.id),
+                set: (r, v) => { if (opts.remote) s.lockedSpellEffects = toggle(locked(), r.id, v); },
             },
         ],
     });
@@ -365,6 +388,8 @@ export function buildMagicTabs(ctx: KitContext, s: MagicPublicSettingsModel, opt
             render: () => [
                 SectionLabel("Blocked effects", `Blocked effects never apply to ${opts.remote ? "them" : "you"}. "Allow self" still lets ${your} own spells apply them.`),
                 blockedEffectsTable(ctx, s, opts),
+                SectionLabel("Locked effects", `Locked effects fizzle on their step when ${you} cast a spell. Only someone with remote access can change this.`),
+                lockedEffectsTable(ctx, local, opts),
             ],
         },
     ];
@@ -431,12 +456,12 @@ export function buildMagicTabs(ctx: KitContext, s: MagicPublicSettingsModel, opt
                 ]),
             CheckboxRow(ctx, {
                 label: "Requires trance", description: `Remote access only works while ${you} are hypnotized.`,
-                get: () => s.remoteAccessRequiredTrance ?? true, set: v => s.remoteAccessRequiredTrance = v, disabled: () => !opts.remote && !s.remoteAccess,
+                get: () => s.remoteAccessRequiredTrance ?? REMOTE_TRANCE_DEFAULTS.MagicModule.trance, set: v => s.remoteAccessRequiredTrance = v, disabled: () => !opts.remote && !s.remoteAccess,
             }),
             CheckboxRow(ctx, {
                 label: "Only the hypnotizer", description: `Only whoever hypnotized ${opts.remote ? "them" : "you"} gets remote access.`,
-                get: () => s.limitRemoteAccessToHypnotizer ?? true, set: v => s.limitRemoteAccessToHypnotizer = v,
-                disabled: () => (!opts.remote && !s.remoteAccess) || !(s.remoteAccessRequiredTrance ?? true),
+                get: () => s.limitRemoteAccessToHypnotizer ?? REMOTE_TRANCE_DEFAULTS.MagicModule.hypnotizerOnly, set: v => s.limitRemoteAccessToHypnotizer = v,
+                disabled: () => (!opts.remote && !s.remoteAccess) || !(s.remoteAccessRequiredTrance ?? REMOTE_TRANCE_DEFAULTS.MagicModule.trance),
             }),
         ],
     });

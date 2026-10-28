@@ -17,6 +17,8 @@ export interface CollarPublicSettingsModel extends BaseSettingsModel {
     chokeLevel: number;
     allowedMembers: string;
     remoteAccess: boolean;
+    remoteAccessRequiredTrance: boolean;
+    limitRemoteAccessToHypnotizer: boolean;
     lockable: boolean;
     locked: boolean;
     immersive: boolean;

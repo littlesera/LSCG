@@ -98,6 +98,8 @@ export interface SpeechAnalysisPublicSettingsModel extends BaseSettingsModel {
     remoteLevel: SpeechRemoteLevel;
     /** On top of remoteLevel: remote access only works while the wearer is hypnotized. */
     remoteRequiresTrance: boolean;
+    /** On top of the trance option: only the one who hypnotized the wearer may configure. */
+    limitRemoteAccessToHypnotizer: boolean;
     lockable: boolean;
     locked: boolean;
 }
@@ -157,6 +159,7 @@ export function defaultSpeechPublicSettings(): SpeechAnalysisPublicSettingsModel
         remoteAccess: false,
         remoteLevel: "Owner",
         remoteRequiresTrance: true,
+        limitRemoteAccessToHypnotizer: false,
         lockable: false,
         locked: false,
     };
@@ -248,7 +251,7 @@ export type SanitizedRemoteSpeechSettings = Partial<Omit<SpeechEditableSettings,
 };
 
 /** Validates remotely-sent settings. Only editable keys with well-formed values survive; everything else is dropped.
- *  Never includes enabled, remoteAccess, remoteLevel, remoteRequiresTrance or lockable — those stay the wearer's choice. */
+ *  Never includes enabled, remoteAccess, remoteLevel, remoteRequiresTrance, limitRemoteAccessToHypnotizer or lockable — those stay the wearer's choice. */
 export function sanitizeRemoteSpeechSettings(input: any): SanitizedRemoteSpeechSettings {
     const out: SanitizedRemoteSpeechSettings = {};
     if (!input || typeof input !== "object") return out;

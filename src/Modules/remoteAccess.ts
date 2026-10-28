@@ -1,11 +1,11 @@
-import { GetDelimitedList } from "../utils";
+import { GetDelimitedList, hasRemotePermission, type RemoteAccessLevel } from "../utils";
 
-// Who may change a wearer's hypno, collar or magic settings through LSCG's remote screens, and which settings those
+// Who may change a wearer's hypno, collar, magic or speech settings through LSCG's remote screens, and which settings those
 // screens let them change. The screens use these to decide what to offer; the wearer's client uses them again on what
-// arrives, since nothing makes a sender go through the screens.
+// arrives, since nothing makes a sender go through the screens. See docs/remote-access.md for the rules in one place.
 
 type ModuleSettings = Record<string, unknown>;
-type RemoteModule = "HypnoModule" | "CollarModule" | "MagicModule";
+type RemoteModule = "HypnoModule" | "CollarModule" | "MagicModule" | "SpeechAnalysisModule";
 
 function settingsOf(wearer: Character, module: RemoteModule): ModuleSettings | undefined {
 	return (wearer as OtherCharacter).LSCG?.[module] as unknown as ModuleSettings | undefined;
@@ -20,25 +20,81 @@ function memberAllowed(wearer: Character, sender: Character, ids: number[]): boo
 	return ids.length > 0 ? ids.includes(sender.MemberNumber ?? -1) : ServerChatRoomGetAllowItem(sender, wearer);
 }
 
-/** The "requires trance" and "only the hypnotizer" options shared by the hypno and magic screens. */
-function passesTrance(wearer: Character, sender: Character, s: ModuleSettings): boolean {
+/** The "requires trance" and "only the hypnotizer" options every module's remote access offers. */
+export interface TranceOptions { trance: boolean; hypnotizerOnly: boolean }
+
+/** What each module's trance options are when the wearer never set them (an older save, or a published copy without them).
+ *  The settings screens fall back to these too, so what they show is what the gate enforces. */
+export const REMOTE_TRANCE_DEFAULTS: Record<RemoteModule, TranceOptions> = {
+	HypnoModule: { trance: true, hypnotizerOnly: false },
+	CollarModule: { trance: false, hypnotizerOnly: false },
+	MagicModule: { trance: false, hypnotizerOnly: false },
+	SpeechAnalysisModule: { trance: true, hypnotizerOnly: false },
+};
+
+export function tranceOptions(module: RemoteModule, s: ModuleSettings): TranceOptions {
+	const defaults = REMOTE_TRANCE_DEFAULTS[module];
+	// Speech kept its older name for the trance option.
+	const trance = module === "SpeechAnalysisModule" ? s.remoteRequiresTrance : s.remoteAccessRequiredTrance;
+	return {
+		trance: typeof trance === "boolean" ? trance : defaults.trance,
+		hypnotizerOnly: typeof s.limitRemoteAccessToHypnotizer === "boolean" ? s.limitRemoteAccessToHypnotizer : defaults.hypnotizerOnly,
+	};
+}
+
+function passesTrance(wearer: Character, sender: Character, options: TranceOptions): boolean {
 	const trance = (wearer as OtherCharacter).LSCG?.StateModule?.states?.find(st => st.type == "hypnotized");
 	const inTrance = trance?.active ?? false;
-	if (s.remoteAccessRequiredTrance && !inTrance)
+	if (options.trance && !inTrance)
 		return false;
-	if (s.limitRemoteAccessToHypnotizer && trance?.activatedBy != sender.MemberNumber)
+	if (options.hypnotizerOnly && trance?.activatedBy != sender.MemberNumber)
 		return false;
 	return true;
 }
 
+/** Whether the wearer's trance (and who put them there) lets `sender` in, by that module's options. Screens use it for their reasons. */
+export function passesRemoteTrance(module: RemoteModule, wearer: Character, sender: Character): boolean {
+	return passesTrance(wearer, sender, tranceOptions(module, settingsOf(wearer, module) ?? {}));
+}
+
 const ownedBy = (wearer: Character, sender: Character) => wearer.IsOwnedByMemberNumber(sender.MemberNumber ?? -1);
 
-export function canRemoteHypno(wearer: Character, sender: Character): boolean {
-	const s = settingsOf(wearer, "HypnoModule");
-	if (!s || !s.remoteAccess || sender.MemberNumber === wearer.MemberNumber)
+/** What a module adds to the shared rules. */
+interface GateSpec {
+	/** The members the wearer named, in place of item permission. */
+	ids?: (s: ModuleSettings) => number[];
+	/** Anything that must hold for everyone, the owner included. */
+	precondition?: (s: ModuleSettings) => boolean;
+	/** A narrowing check on top of item permission for everyone but the owner. */
+	narrow?: (wearer: Character, sender: Character, s: ModuleSettings) => boolean;
+}
+
+/**
+ * The one rule for remote access to a module's settings:
+ *  1. the module's settings are there, LSCG is on for the wearer, remote access is on, and the sender isn't the wearer;
+ *  2. the owner then always passes;
+ *  3. anyone else needs the module enabled, item permission (or being on the wearer's list), the module's own narrowing,
+ *     and the trance and hypnotizer options.
+ */
+function canRemote(module: RemoteModule, wearer: Character, sender: Character, spec: GateSpec = {}): boolean {
+	const s = settingsOf(wearer, module);
+	if (!s || !(wearer as OtherCharacter).LSCG?.GlobalModule?.enabled || !s.remoteAccess || sender.MemberNumber === wearer.MemberNumber)
 		return false;
-	return ownedBy(wearer, sender) ||
-		(!!s.enabled && memberAllowed(wearer, sender, memberIds(s.overrideMemberIds)) && passesTrance(wearer, sender, s));
+	if (spec.precondition && !spec.precondition(s))
+		return false;
+	if (ownedBy(wearer, sender))
+		return true;
+	return !!s.enabled &&
+		memberAllowed(wearer, sender, spec.ids?.(s) ?? []) &&
+		(spec.narrow?.(wearer, sender, s) ?? true) &&
+		passesTrance(wearer, sender, tranceOptions(module, s));
+}
+
+/** Whether the wearer allows locking a module's settings from afar. Hypno calls it `allowLocked`; the others `lockable`. */
+const lockAllowed = (s: ModuleSettings) => !!(s.lockable || s.allowLocked);
+
+export function canRemoteHypno(wearer: Character, sender: Character): boolean {
+	return canRemote("HypnoModule", wearer, sender, { ids: s => memberIds(s.overrideMemberIds) });
 }
 
 export function collarAllowedMemberIds(s: ModuleSettings): number[] {
@@ -50,18 +106,29 @@ export function collarAllowedMemberIds(s: ModuleSettings): number[] {
 }
 
 export function canRemoteCollar(wearer: Character, sender: Character): boolean {
-	const s = settingsOf(wearer, "CollarModule");
-	if (!s || s.breathplayEnabled === false || !s.remoteAccess || sender.MemberNumber === wearer.MemberNumber)
-		return false;
-	return ownedBy(wearer, sender) || (!!s.enabled && memberAllowed(wearer, sender, collarAllowedMemberIds(s)));
+	return canRemote("CollarModule", wearer, sender, { ids: collarAllowedMemberIds, precondition: s => s.breathplayEnabled !== false });
 }
 
 export function canRemoteMagic(wearer: Character, sender: Character): boolean {
-	const s = settingsOf(wearer, "MagicModule");
-	if (!s || !s.remoteAccess || !s.enabled || sender.MemberNumber === wearer.MemberNumber)
-		return false;
-	return memberAllowed(wearer, sender, memberIds(s.remoteMemberIds)) && passesTrance(wearer, sender, s);
+	return canRemote("MagicModule", wearer, sender, { ids: s => memberIds(s.remoteMemberIds) });
 }
+
+/** Speech keeps its access level ("Lovers", "Whitelist"...) as a narrowing on top of item permission. */
+export function canRemoteSpeech(wearer: Character, sender: Character): boolean {
+	return canRemote("SpeechAnalysisModule", wearer, sender, {
+		narrow: (w, snd, s) => hasRemotePermission(w, s.remoteLevel as RemoteAccessLevel, snd.MemberNumber ?? -1),
+	});
+}
+
+/** Every command another player can use to read or change a wearer's settings, and what guards it. A command that does
+ *  this must be listed here (test/modules/remote-access-gate.test.ts fails for one that isn't), so it can't skip the gate. */
+export const REMOTE_SETTINGS_COMMANDS: Record<string, string> = {
+	"remote": "canRemoteHypno, canRemoteCollar, canRemoteMagic (CoreModule.IncomingRemote)",
+	"speech-settings-get": "canRemoteSpeech (SpeechAnalysisModule._canRemoteConfigure)",
+	"speech-settings-set": "canRemoteSpeech (SpeechAnalysisModule._canRemoteConfigure)",
+	"get-suggestions": "HypnoModule.CanModifySuggestions",
+	"set-suggestions": "HypnoModule.CanModifySuggestions",
+};
 
 // What each remote screen edits. Anything else in an incoming settings blob (remote access itself, who may use it,
 // stats, spells...) stays the wearer's own.
@@ -71,11 +138,11 @@ const HYPNO_REMOTE_KEYS = [
 	"alwaysSubmit", "alwaysSubmitMemberIds",
 ];
 const COLLAR_REMOTE_KEYS = [
-	"enabled", "allowSelfTightening", "allowSelfLoosening", "allowedMembers", "limitToCrafted", "tightTrigger", "looseTrigger",
+	"allowSelfTightening", "allowSelfLoosening", "allowedMembers", "limitToCrafted", "tightTrigger", "looseTrigger",
 	"immersive", "allowButtons", "anyCollar", "collar",
 ];
 const MAGIC_REMOTE_KEYS = [
-	"enableWildMagic", "forceWildMagic", "trueWildMagic", "blockXRay", "blockedSpellEffects", "bypassForSelfEffects", "neverDefend",
+	"enableWildMagic", "forceWildMagic", "trueWildMagic", "blockXRay", "blockedSpellEffects", "bypassForSelfEffects", "lockedSpellEffects", "neverDefend",
 	"noDefenseMemberIds", "limitedDuration", "maxDuration", "allowOutfitToChangeNeckItems", "allowChangeGenitals",
 	"remoteAccessRequiredTrance", "limitRemoteAccessToHypnotizer",
 ];
@@ -109,16 +176,16 @@ export function remoteHypnoChanges(wearer: Character, sender: Character, incomin
 	const s = settingsOf(wearer, "HypnoModule") ?? {};
 	const keys = [...HYPNO_REMOTE_KEYS];
 	if (s.allowRemoteModificationOfMemberOverride || ownedBy(wearer, sender)) keys.push("overrideMemberIds");
-	if (s.allowLocked) keys.push("locked");
+	if (lockAllowed(s)) keys.push("locked");
 	return pick(keys, incoming, s);
 }
 
 export function remoteCollarChanges(wearer: Character, incoming: unknown): ModuleSettings {
 	const s = settingsOf(wearer, "CollarModule") ?? {};
-	return pick(s.lockable ? [...COLLAR_REMOTE_KEYS, "locked"] : COLLAR_REMOTE_KEYS, incoming, s);
+	return pick(lockAllowed(s) ? [...COLLAR_REMOTE_KEYS, "locked"] : COLLAR_REMOTE_KEYS, incoming, s);
 }
 
 export function remoteMagicChanges(wearer: Character, incoming: unknown): ModuleSettings {
 	const s = settingsOf(wearer, "MagicModule") ?? {};
-	return pick(s.lockable ? [...MAGIC_REMOTE_KEYS, "locked"] : MAGIC_REMOTE_KEYS, incoming, s);
+	return pick(lockAllowed(s) ? [...MAGIC_REMOTE_KEYS, "locked"] : MAGIC_REMOTE_KEYS, incoming, s);
 }

@@ -190,6 +190,41 @@ describe("CoreModule remote-settings receiver (Command() \"remote\")", () => {
 			sendRemote(sender, { MagicModule: { blockedSpellEffects: [{ evil: true }] } });
 			expect(magic.settings.blockedSpellEffects).not.toEqual([{ evil: true }]);
 		});
+
+		describe("locked spell effects", () => {
+			it("an allowed sender locks effects the player can then no longer cast", () => {
+				sendRemote(sender, { MagicModule: { lockedSpellEffects: ["Deafening"] } });
+				expect(magic.settings.lockedSpellEffects).toEqual(["Deafening"]);
+				sendRemote(sender, { MagicModule: { lockedSpellEffects: [] } });
+				expect(magic.settings.lockedSpellEffects).toEqual([]);
+			});
+
+			it("follows the same access rules as the other magic settings", () => {
+				magic.settings.remoteAccess = false;
+				sendRemote(sender, { MagicModule: { lockedSpellEffects: ["Deafening"] } });
+				magic.settings.remoteAccess = true;
+				magic.settings.remoteMemberIds = "999";
+				sendRemote(sender, { MagicModule: { lockedSpellEffects: ["Deafening"] } });
+				magic.settings.remoteMemberIds = "";
+				magic.settings.remoteAccessRequiredTrance = true;
+				sendRemote(sender, { MagicModule: { lockedSpellEffects: ["Deafening"] } });
+				expect(magic.settings.lockedSpellEffects).toEqual([]);
+				hypnotizedBy(111);
+				sendRemote(sender, { MagicModule: { lockedSpellEffects: ["Deafening"] } });
+				expect(magic.settings.lockedSpellEffects).toEqual(["Deafening"]);
+			});
+
+			it("a list of effects must be a list of names", () => {
+				sendRemote(sender, { MagicModule: { lockedSpellEffects: [{ evil: true }, 5] } });
+				sendRemote(sender, { MagicModule: { lockedSpellEffects: "Deafening" } });
+				expect(magic.settings.lockedSpellEffects).toEqual([]);
+			});
+
+			it("the player's own blocked list is a separate list", () => {
+				sendRemote(sender, { MagicModule: { lockedSpellEffects: ["Deafening"], blockedSpellEffects: ["Blinding"] } });
+				expect(magic.settings).toMatchObject({ lockedSpellEffects: ["Deafening"], blockedSpellEffects: ["Blinding"] });
+			});
+		});
 	});
 
 	it("does nothing for a sender who isn't in the room", () => {

@@ -1,3 +1,4 @@
+import { REMOTE_TRANCE_DEFAULTS } from "Modules/remoteAccess";
 import { h } from "tsx-dom";
 import { ICONS } from "utils";
 import { CollarModel, CollarPublicSettingsModel, CollarSettingsModel } from "./Models/collar";
@@ -167,6 +168,16 @@ export class GuiCollar extends GuiSubscreen {
 						CheckboxRow(ctx, {
 							label: "Allow remote access", description: "Enables Remote Access to Collar Settings.",
 							get: () => s.remoteAccess ?? false, set: v => s.remoteAccess = v,
+						}),
+						CheckboxRow(ctx, {
+							label: "Remote access requires trance", description: "If checked, remote access is only possible while actively hypnotized.",
+							get: () => s.remoteAccessRequiredTrance ?? REMOTE_TRANCE_DEFAULTS.CollarModule.trance, set: v => s.remoteAccessRequiredTrance = v,
+							disabled: () => !s.remoteAccess,
+						}),
+						CheckboxRow(ctx, {
+							label: "Remote access limited to hypnotizer", description: "If checked, only the user who hypnotized you can access these settings (after matching other conditions).",
+							get: () => s.limitRemoteAccessToHypnotizer ?? REMOTE_TRANCE_DEFAULTS.CollarModule.hypnotizerOnly, set: v => s.limitRemoteAccessToHypnotizer = v,
+							disabled: () => !s.remoteAccess,
 						}),
 						CheckboxRow(ctx, {
 							label: "Lockable", description: "Allowes Remote Access Users to lock you out of these settings.",

@@ -157,6 +157,9 @@ export interface MagicSettingsModel extends MagicPublicSettingsModel {
     maxSpellEffects: number;
     /** Extension spell effects this player has been shown, so `defaultBlocked` applies only once. */
     seenExtensionEffects: string[];
+    /** Effects this player can't cast: they fizzle on their step. Only a remote user with access changes this; kept private since
+     *  only the caster's own client enforces it. */
+    lockedSpellEffects: SpellEffectId[];
 }
 
 export interface MagicPublicSettingsModel extends BaseSettingsModel{

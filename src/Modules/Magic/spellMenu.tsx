@@ -9,10 +9,10 @@ import menuStyles from "./spellMenu.scss?inline";
 /** Where the menu sits on the 2000x1000 canvas; the canvas fills the same rectangle (see MagicModule.DrawSpellMenu). */
 export const SPELL_MENU_SHAPE: RectTuple = [500, 100, 1000, 850];
 
-type EffectStatus = "ok" | "blocked" | "unsupported";
+type EffectStatus = "ok" | "blocked" | "unsupported" | "locked";
 
-const STATUS_TONE: Record<EffectStatus, ChipTone> = { ok: "muted", blocked: "blocked", unsupported: "warn" };
-const STATUS_SUFFIX: Record<EffectStatus, string> = { ok: "", blocked: " (blocked)", unsupported: " (unsupported)" };
+const STATUS_TONE: Record<EffectStatus, ChipTone> = { ok: "muted", blocked: "blocked", unsupported: "warn", locked: "blocked" };
+const STATUS_SUFFIX: Record<EffectStatus, string> = { ok: "", blocked: " (blocked)", unsupported: " (unsupported)", locked: " (locked)" };
 
 /** The DOM spell menu: pick a spell to cast (or teach), answer any questions its effects ask, then, for paired spells, a second target.
  *  The module owns the game-side state (which spell, which target); this only draws it and forwards clicks. */
@@ -96,6 +96,7 @@ export class SpellMenuView {
         const status = this.magic.GetSpellStatus(spell, target);
         const name = target.IsPlayer() ? "you" : CharacterNickname(target);
         const reason = (s: EffectStatus) => s === "blocked" ? `${target.IsPlayer() ? "You have" : `${CharacterNickname(target)} has`} blocked this effect.`
+            : s === "locked" ? "You can't cast this effect; it has been locked."
             : s === "unsupported" ? `${target.IsPlayer() ? "Your" : `${CharacterNickname(target)}'s`} client doesn't have this effect.` : "";
         const chips = status.effects.map(e => Chip(effectLabel(e.id) + STATUS_SUFFIX[e.status], {
             icon: isExtensionEffect(e.id) ? "extension" : undefined,

@@ -32,7 +32,8 @@ describe("Magic™ settings pages", () => {
         magic.settings.knownSpells = [];
         magic.settings.blockedSpellEffects = [];
         magic.settings.bypassForSelfEffects = [];
-        api = registerExtension({ id: `pages-${++ids}`, name: "Page Pack", version: "1" });
+        magic.settings.lockedSpellEffects = [];
+        api =registerExtension({ id: `pages-${++ids}`, name: "Page Pack", version: "1" });
     });
 
     afterEach(() => {
@@ -117,7 +118,9 @@ describe("Magic™ settings pages", () => {
             const target = { enabled: true, blockedSpellEffects: [], bypassForSelfEffects: [] } as unknown as MagicPublicSettingsModel;
             const ctx = new KitContext(vi.fn());
             const root = render("Effects", true, target, legacyEffectIds(), ctx);
-            expect(root.querySelectorAll("tbody tr")).toHaveLength(legacyEffectIds().length);
+            // the blocked table and the locked table (a remote user edits both) each list the same effects
+            expect(root.querySelectorAll("table")).toHaveLength(2);
+            root.querySelectorAll("table").forEach(t => expect(t.querySelectorAll("tbody tr")).toHaveLength(legacyEffectIds().length));
             expect(rowFor(root, "Barking")).toBeUndefined();
 
             const block = rowFor(root, "Deafening").querySelector("input[type=checkbox]") as HTMLInputElement;
@@ -583,6 +586,64 @@ describe("Magic™ settings pages", () => {
                 const chips = Array.from(document.querySelectorAll("tbody .lscg-kit-chip")).map(c => c.textContent);
                 expect(chips).toEqual(["Gagged", "Blinding"]);
             });
+        });
+    });
+
+    describe("Effects tab: locked effects", () => {
+        const lockTables = (root: HTMLElement) => Array.from(root.querySelectorAll("table")).filter(t => Array.from(t.querySelectorAll("th")).some(th => th.textContent === "Lock"));
+        const lockBox = (root: HTMLElement, text: string) => {
+            const row = Array.from(lockTables(root)[0].querySelectorAll("tbody tr")).find(tr => tr.textContent?.includes(text));
+            return row?.querySelector("input[type=checkbox]") as HTMLInputElement | undefined;
+        };
+
+        beforeEach(() => { magic.settings.lockedSpellEffects = []; });
+
+        it("shows the wearer only what is locked, read-only", () => {
+            magic.settings.lockedSpellEffects = [LSCGSpellEffect.deafened];
+            const root = render("Effects");
+            expect(lockTables(root)).toHaveLength(1);
+            const rows = lockTables(root)[0].querySelectorAll("tbody tr");
+            expect(rows).toHaveLength(1);
+            expect(rows[0].textContent).toContain("Deafening");
+            const box = rows[0].querySelector("input[type=checkbox]") as HTMLInputElement;
+            expect(box.checked).toBe(true);
+            expect(box.disabled).toBe(true);
+        });
+
+        it("shows nothing for the wearer when nothing is locked", () => {
+            expect(lockTables(render("Effects"))[0].querySelectorAll("tbody tr")).toHaveLength(0);
+        });
+
+        it("a wearer can't unlock by poking the checkbox", () => {
+            magic.settings.lockedSpellEffects = [LSCGSpellEffect.deafened];
+            const box = lockBox(render("Effects"), "Deafening")!;
+            box.disabled = false;
+            box.checked = false;
+            box.dispatchEvent(new Event("change"));
+            expect(magic.settings.lockedSpellEffects).toEqual([LSCGSpellEffect.deafened]);
+        });
+
+        it("a remote user sees every effect and locks and unlocks them", () => {
+            const target = { ...magic.settings, lockedSpellEffects: [] as SpellEffectId[] } as MagicPublicSettingsModel;
+            const root = render("Effects", true, target);
+            const rows = lockTables(root)[0].querySelectorAll("tbody tr");
+            expect(rows).toHaveLength(allEffectIds().length);
+            const box = lockBox(root, "Deafening")!;
+            expect(box.disabled).toBe(false);
+            box.checked = true;
+            box.dispatchEvent(new Event("change"));
+            expect((target as unknown as { lockedSpellEffects: string[] }).lockedSpellEffects).toEqual([LSCGSpellEffect.deafened]);
+            expect(magic.settings.lockedSpellEffects).toEqual([]);
+            const again = lockBox(root, "Deafening")!;
+            again.checked = false;
+            again.dispatchEvent(new Event("change"));
+            expect((target as unknown as { lockedSpellEffects: string[] }).lockedSpellEffects).toEqual([]);
+        });
+
+        it("keeps a lock on an effect that isn't installed visible, so it can be removed", () => {
+            const target = { ...magic.settings, lockedSpellEffects: ["gone.effect"] as SpellEffectId[] } as MagicPublicSettingsModel;
+            const root = render("Effects", true, target);
+            expect(lockTables(root)[0].textContent).toContain("not installed");
         });
     });
 

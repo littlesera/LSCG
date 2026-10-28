@@ -65,10 +65,43 @@ describe("SpeechAnalysisModule remote configuration + hidden phrases", () => {
 			expect(speech.settings.remoteRequiresTrance).toBe(true);
 		});
 
-		it("requiring trance: ignored while not hypnotized, even from the owner", () => {
+		it("requiring trance: ignored while not hypnotized", () => {
+			states.HypnoState.Recover(false);
+			send(3, { eruditeGrade: 7 });
+			expect(speech.settings.eruditeGrade).not.toBe(7);
+		});
+
+		it("the owner gets in without trance, like hypno and collar, but still needs remote access on", () => {
 			states.HypnoState.Recover(false);
 			send(99, { eruditeGrade: 7 });
+			expect(speech.settings.eruditeGrade).toBe(7);
+			speech.settings.remoteAccess = false;
+			send(99, { eruditeGrade: 8 });
+			expect(speech.settings.eruditeGrade).toBe(7);
+		});
+
+		it("item permission applies on top of the access level", () => {
+			states.HypnoState.Activate(1);
+			(globalThis as unknown as { ServerChatRoomGetAllowItem: { mockReturnValueOnce(v: boolean): void } }).ServerChatRoomGetAllowItem.mockReturnValueOnce(false);
+			send(3, { eruditeGrade: 7 });
 			expect(speech.settings.eruditeGrade).not.toBe(7);
+		});
+
+		it("limited to the hypnotizer: only the one who hypnotized the wearer gets in (the owner still does)", () => {
+			speech.settings.limitRemoteAccessToHypnotizer = true;
+			states.HypnoState.Activate(3);
+			send(2, { eruditeGrade: 6 });
+			expect(speech.settings.eruditeGrade).not.toBe(6);
+			send(3, { eruditeGrade: 7 });
+			expect(speech.settings.eruditeGrade).toBe(7);
+			send(99, { eruditeGrade: 8 });
+			expect(speech.settings.eruditeGrade).toBe(8);
+		});
+
+		it("a remote sender cannot turn off the hypnotizer limit either", () => {
+			speech.settings.limitRemoteAccessToHypnotizer = true;
+			send(99, { limitRemoteAccessToHypnotizer: false });
+			expect(speech.settings.limitRemoteAccessToHypnotizer).toBe(true);
 		});
 
 		it("requiring trance: applied once hypnotized", () => {
@@ -228,7 +261,7 @@ describe("SpeechAnalysisModule remote configuration + hidden phrases", () => {
 		});
 
 		it("the public settings model only carries access-control fields", () => {
-			expect(Object.keys(defaultSpeechPublicSettings()).sort()).toEqual(["enabled", "lockable", "locked", "remoteAccess", "remoteLevel", "remoteRequiresTrance"]);
+			expect(Object.keys(defaultSpeechPublicSettings()).sort()).toEqual(["enabled", "limitRemoteAccessToHypnotizer", "lockable", "locked", "remoteAccess", "remoteLevel", "remoteRequiresTrance"]);
 		});
 
 		it("a stranger's get is answered, but they can't see the wearer's phrases", () => {
