@@ -364,6 +364,77 @@ describe("InjectorModule", () => {
 		});
 	});
 
+	describe("who counts as the hypnotizer when mind control takes hold", () => {
+		const hypnotizer = () => states.HypnoState.config.activatedBy;
+		let dealer: FixtureCharacter;
+
+		beforeEach(() => {
+			dealer = addToRoom({ ...player(), MemberNumber: 5, IsPlayer: () => false, Appearance: [] as never[] } as FixtureCharacter);
+		});
+
+		function wearHeadset(craft?: { MemberNumber?: number }) {
+			const asset = makeAsset(makeGroup({ Name: "ItemHead" }), { Name: "InteractiveVRHeadset" });
+			wear(player(), makeItem(asset, { Property: { TypeRecord: { b: 5 } }, ...(craft ? { Craft: { Name: "Spiral Visor", Description: "", MemberNumber: craft.MemberNumber } } : {}) } as never));
+			player().LSCG.HypnoModule.enableSpirals = true;
+		}
+
+		it("a drugged drink: whoever gave it", () => {
+			injector.DrinkMindControl(dealer as never);
+			injector.Brainwash();
+			expect(hypnotizer()).toBe(5);
+		});
+
+		it("an injection: whoever gave it", () => {
+			injector.InjectMindControl(dealer as never, "ItemArms" as never);
+			injector.Brainwash();
+			expect(hypnotizer()).toBe(5);
+		});
+
+		it("an extension's mindcontrol dose: the sender it names", () => {
+			expect(injector.DoseDrug("mindcontrol", { multiplier: 1, sender: 5, minigame: false })).toBe(true);
+			injector.Brainwash();
+			expect(hypnotizer()).toBe(5);
+		});
+
+		it("a worn hypno headset: the item's crafter", () => {
+			wearHeadset({ MemberNumber: 77 });
+			injector.CheckForHypnoHelmet();
+			injector.Brainwash();
+			expect(hypnotizer()).toBe(77);
+		});
+
+		it("a hypno headset nobody crafted has no hypnotizer to name", () => {
+			wearHeadset();
+			injector.CheckForHypnoHelmet();
+			expect(injector.mindControlLevel).toBeGreaterThan(0);
+			injector.Brainwash();
+			expect(hypnotizer()).toBe(-1);
+		});
+
+		it("the last dose is the one that counts", () => {
+			injector.DrinkMindControl(dealer as never);
+			injector.InjectMindControl({ ...dealer, MemberNumber: 6 } as never, "ItemArms" as never);
+			injector.Brainwash();
+			expect(hypnotizer()).toBe(6);
+		});
+
+		it("a dose with no one behind it doesn't erase who was", () => {
+			injector.DrinkMindControl(dealer as never);
+			injector.AddMindControl(1, false);
+			injector.Brainwash();
+			expect(hypnotizer()).toBe(5);
+		});
+
+		it("the next brainwashing doesn't inherit the last one's hypnotizer", () => {
+			injector.DrinkMindControl(dealer as never);
+			injector.Brainwash();
+			expect(hypnotizer()).toBe(5);
+			injector.SnapBack();
+			injector.Brainwash();
+			expect(hypnotizer()).toBe(-1);
+		});
+	});
+
 	describe("SedativeCooldown / MindControlCooldown / HornyCooldown", () => {
 		it("SedativeCooldown reduces sedativeLevel by drugLevelMultiplier / (cooldown/tick) per tick", () => {
 			injector.AddSedative(1, false);

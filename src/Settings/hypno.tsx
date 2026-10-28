@@ -1,3 +1,4 @@
+import { remoteAccessRows } from "./remoteAccessRows";
 import { h } from "tsx-dom";
 import { getModule } from "modules";
 import { HypnoModule } from "Modules/hypno";
@@ -93,7 +94,7 @@ export class GuiHypno extends GuiSubscreen {
 						get: () => s.speakTriggers ?? "", set: v => s.speakTriggers = v, disabled: off,
 					}),
 					TextRow(ctx, {
-						label: "Whitelist member IDs", description: "Comma separated list of member IDs exclusive allowed to access your hypno settings and triggers. If empty will use standard Item Permissions.",
+						label: "Whitelist member IDs", description: "Comma separated list of member IDs exclusively allowed to use your triggers and suggestions. If empty will use standard Item Permissions. Remote access to these settings has its own tab.",
 						get: () => s.overrideMemberIds ?? "", set: v => s.overrideMemberIds = v, disabled: off,
 					}),
 					NumberRow(ctx, {
@@ -115,21 +116,14 @@ export class GuiHypno extends GuiSubscreen {
 				],
 			},
 			{
-				label: "Trance & remote",
+				label: "Remote Access",
 				render: () => [
-					SectionLabel("Remote access"),
+					SectionLabel("Remote access", "Let other players change your hypnosis settings through LSCG's remote settings."),
 					CheckboxRow(ctx, {
 						label: "Allow remote access", description: "If checked, allowed users can modify these settings.",
 						get: () => s.remoteAccess ?? false, set: v => s.remoteAccess = v, disabled: off,
 					}),
-					CheckboxRow(ctx, {
-						label: "Remote access requires trance", description: "If checked, remote access is only possible while actively hypnotized.",
-						get: () => s.remoteAccessRequiredTrance ?? true, set: v => s.remoteAccessRequiredTrance = v, disabled: noRemote,
-					}),
-					CheckboxRow(ctx, {
-						label: "Remote access limited to hypnotizer", description: "If checked, only the user who hypnotized you can access your settings (after matching other conditions).",
-						get: () => s.limitRemoteAccessToHypnotizer ?? true, set: v => s.limitRemoteAccessToHypnotizer = v, disabled: noRemote,
-					}),
+					...remoteAccessRows(ctx, s, { module: "HypnoModule", disabled: noRemote }),
 					CheckboxRow(ctx, {
 						label: "Allow remote override member modification", description: "If checked, any remote users can change your Override Member Id list (otherwise, only owner can).",
 						get: () => s.allowRemoteModificationOfMemberOverride ?? false, set: v => s.allowRemoteModificationOfMemberOverride = v, disabled: noRemote,
@@ -138,6 +132,11 @@ export class GuiHypno extends GuiSubscreen {
 						label: "Lockable", description: "If checked, allowed users can lock you out of these settings.",
 						get: () => s.allowLocked ?? false, set: v => s.allowLocked = v, disabled: noRemote,
 					}),
+				],
+			},
+			{
+				label: "Trance",
+				render: () => [
 					SectionLabel("While hypnotized"),
 					CheckboxRow(ctx, {
 						label: "Build arousal while hypnotized", description: "If checked being hypnotized will increase arousal.",

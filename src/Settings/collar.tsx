@@ -1,11 +1,13 @@
+import { remoteAccessRows } from "./remoteAccessRows";
 import { h } from "tsx-dom";
 import { ICONS } from "utils";
+import { pulseScreen } from "Dom/pulse";
 import { CollarModel, CollarPublicSettingsModel, CollarSettingsModel } from "./Models/collar";
 import { GuiSubscreen, HelpInfo } from "./settingBase";
 import { getModule } from "modules";
 import { MiscModule } from "Modules/misc";
 import { DomSettingsHost } from "./domSettingsHost";
-import { ButtonRow, CheckboxRow, KitContext, Notice, NumberRow, Tabs, TextRow } from "Dom/kit";
+import { ButtonRow, CheckboxRow, KitContext, Notice, NumberRow, SectionLabel, Tabs, TextRow } from "Dom/kit";
 
 /** The collar settings both the wearer and remote users edit. `access` are the rows that differ between the two
  *  (remote access/lockable for the wearer, locked for a remote user); "Update" reads the collar `wearer` has on. */
@@ -76,6 +78,14 @@ export function collarRows(ctx: KitContext, s: CollarPublicSettingsModel, wearer
 	];
 }
 
+/** Switching breathplay on, like Magic's purple pulse and beeps: the screen pulses black to the collar's hydraulic tightening.
+ *  Sound only plays when the player hasn't silenced it. */
+export function breathplayEnabledEffect(): void {
+	pulseScreen("#000000", 500, 1500);
+	if (!AudioShouldSilenceSound(true))
+		AudioPlaySoundEffect("HydraulicLock");
+}
+
 /** What breathplay covers, shown until it's enabled. */
 function breathplayLanding(enable: () => void): HTMLElement {
 	return <div class="lscg-kit-promo">
@@ -126,6 +136,7 @@ export class GuiCollar extends GuiSubscreen {
 		const ctx = new KitContext();
 		const landing = breathplayLanding(() => {
 			s.breathplayEnabled = true;
+			breathplayEnabledEffect();
 			ctx.changed();
 		});
 		const tabs = Tabs([
@@ -163,16 +174,31 @@ export class GuiCollar extends GuiSubscreen {
 				label: "Control collar",
 				render: () => {
 					const locked = Notice("** Collar Settings Locked **");
-					const rows = <div class="lscg-kit-panel">{collarRows(ctx, s, Player, [
+					const rows = <div class="lscg-kit-panel">{collarRows(ctx, s, Player, [])}</div> as HTMLElement;
+					ctx.watch(() => {
+						locked.hidden = !s.locked;
+						rows.hidden = !!s.locked;
+					});
+					return [locked, rows];
+				},
+			},
+			{
+				label: "Remote Access",
+				render: () => {
+					const locked = Notice("** Collar Settings Locked **");
+					const none = () => false;
+					const rows = <div class="lscg-kit-panel">{[
+						SectionLabel("Remote access", "Let other players change your collar settings through LSCG's remote settings."),
 						CheckboxRow(ctx, {
 							label: "Allow remote access", description: "Enables Remote Access to Collar Settings.",
-							get: () => s.remoteAccess ?? false, set: v => s.remoteAccess = v,
+							get: () => s.remoteAccess ?? false, set: v => s.remoteAccess = v, disabled: none,
 						}),
+						...remoteAccessRows(ctx, s, { module: "CollarModule", disabled: () => !s.remoteAccess }),
 						CheckboxRow(ctx, {
 							label: "Lockable", description: "Allowes Remote Access Users to lock you out of these settings.",
-							get: () => s.lockable ?? false, set: v => s.lockable = v,
+							get: () => s.lockable ?? false, set: v => s.lockable = v, disabled: () => !s.remoteAccess,
 						}),
-					])}</div> as HTMLElement;
+					]}</div> as HTMLElement;
 					ctx.watch(() => {
 						locked.hidden = !s.locked;
 						rows.hidden = !!s.locked;

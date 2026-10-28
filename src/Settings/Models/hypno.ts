@@ -1,3 +1,4 @@
+import type { RemoteAccessLevel } from "utils";
 import { HypnoSuggestion } from "Modules/hypno";
 import { extensionInstructions } from "api/hypno";
 import { BaseSettingsModel, ModuleStats } from "./base";
@@ -53,6 +54,12 @@ export interface HypnoPublicSettingsModel extends BaseSettingsModel {
     overrideWords: string;
     overrideMemberIds: string;
     remoteAccess: boolean;
+    /** Who may get in: the owner always, and otherwise anyone within this level (see utils REMOTE_ACCESS_LEVELS). */
+    remoteLevel: RemoteAccessLevel;
+    /** Take who may get in, and when, from the General > Remote Access defaults instead of this section's own settings. */
+    useGlobalRemote: boolean;
+    /** Members let in whatever the level says (member numbers, comma separated). */
+    remoteMemberIds: string;
     remoteAccessRequiredTrance: boolean;
     limitRemoteAccessToHypnotizer: boolean;
     allowRemoteModificationOfMemberOverride: boolean;

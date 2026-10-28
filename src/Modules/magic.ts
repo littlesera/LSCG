@@ -1,3 +1,4 @@
+import { DEFAULT_REMOTE_LEVEL, REMOTE_TRANCE_DEFAULTS } from "./remoteAccess";
 import { BaseModule } from "base";
 import { getModule } from "modules";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
@@ -77,6 +78,7 @@ export class MagicModule extends BaseModule {
             enabled: false,
             blockedSpellEffects: [],
             bypassForSelfEffects: [],
+            lockedSpellEffects: [],
             enableWildMagic: false,
             forceWildMagic: false,
             trueWildMagic: false,
@@ -84,9 +86,11 @@ export class MagicModule extends BaseModule {
             lockable: false,
             locked: false,
             remoteAccess: false,
-            remoteAccessRequiredTrance: false,
-            limitRemoteAccessToHypnotizer: false,
+            remoteAccessRequiredTrance: REMOTE_TRANCE_DEFAULTS.MagicModule.trance,
+            limitRemoteAccessToHypnotizer: REMOTE_TRANCE_DEFAULTS.MagicModule.hypnotizerOnly,
+            remoteLevel: DEFAULT_REMOTE_LEVEL,
             remoteMemberIds: "",
+            useGlobalRemote: true,
             neverDefend: false,
             noDefenseMemberIds: "",
             limitedDuration: true,
@@ -358,6 +362,9 @@ export class MagicModule extends BaseModule {
         const rangedItemKeywords = [
             "wand",
         ];
+        // The Cosplay Girl Power Staff isn't called a wand, but is cast with like one.
+        if (item?.Asset?.Name === "AnimeGirlWand")
+            return true;
         const craftStr = GetItemNameAndDescriptionConcat(item) ?? "";
         return rangedItemKeywords.some(keyword => isPhraseInString(craftStr, keyword));
     }
@@ -473,7 +480,8 @@ export class MagicModule extends BaseModule {
 
     /** How each of a spell's effects would land on `target`: blocked by their settings, or unsupported by their client
      *  (an extension effect they don't have). A spell is castable if at least one effect would apply. */
-    GetSpellStatus(spell: SpellDefinition, target: Character): { effects: { id: SpellEffectId, status: "ok" | "blocked" | "unsupported" }[], castable: boolean } {
+    GetSpellStatus(spell: SpellDefinition, target: Character): { effects: { id: SpellEffectId, status: "ok" | "blocked" | "unsupported" | "locked" }[], castable: boolean } {
+        const locked: string[] = this.settings.lockedSpellEffects ?? [];
         const blocked: string[] = safeGetLSCGProp(target, "MagicModule", "blockedSpellEffects") ?? [];
         const bypassed: string[] = target.IsPlayer() ? (safeGetLSCGProp(target, "MagicModule", "bypassForSelfEffects") ?? []) : [];
         // Older clients don't send knownEffects: they support the legacy built-ins only.
@@ -481,7 +489,8 @@ export class MagicModule extends BaseModule {
         const effects = spell.Effects.map(id => {
             const supported = isLegacyEffect(id) || known.indexOf(id) > -1;
             const isBlocked = blocked.indexOf(id) > -1 && bypassed.indexOf(id) == -1;
-            return { id, status: !supported ? "unsupported" as const : isBlocked ? "blocked" as const : "ok" as const };
+            // Locked comes first: the caster can't cast it whatever the target thinks.
+            return { id, status: locked.indexOf(id) > -1 ? "locked" as const : !supported ? "unsupported" as const : isBlocked ? "blocked" as const : "ok" as const };
         });
         return { effects, castable: effects.some(e => e.status === "ok") };
     }
@@ -567,8 +576,33 @@ export class MagicModule extends BaseModule {
         return castingActionStrings[getRandomInt(castingActionStrings.length)];
     }
 
+    /** Positions of the spell's effects this player is locked out of casting. */
+    lockedEffectIndexes(spell: SpellDefinition): number[] {
+        const locked = this.settings.lockedSpellEffects ?? [];
+        return spell.Effects.map((effect, index) => locked.indexOf(effect) > -1 ? index : -1).filter(index => index > -1);
+    }
+
     CastSpellActual(spell: SpellDefinition | undefined, spellTarget: Character, voiceCast: boolean, pairedTarget?: Character, castArgs?: CastArgs) {
         if (!!spell && !!spellTarget) {
+            // Effects a remote user has locked fizzle on their step; the rest of the spell goes ahead.
+            const original = spell;
+            const lockedIndexes = this.lockedEffectIndexes(original);
+            const fizzled = lockedIndexes.map(i => `The ${effectLabel(original.Effects[i])} step of ${original.Name} fizzles, your magic bound.`);
+            if (lockedIndexes.length > 0) {
+                const kept = spell.Effects.map((_, index) => index).filter(index => lockedIndexes.indexOf(index) < 0);
+                if (kept.length <= 0) {
+                    LSCG_SendLocal(`${spell.Name} fizzles entirely, your magic bound.`);
+                    this.CloseSpellMenu();
+                    DialogLeave();
+                    return;
+                }
+                const picked = pickEffects(spell, castArgs, kept);
+                spell = picked.spell;
+                castArgs = picked.castArgs;
+                if (!spellHasPairedEffect(spell))
+                    pairedTarget = undefined;
+            }
+
             const wand = InventoryGet(Player, "ItemHandheld");
             if (!!wand && !!wand.Craft && wand.Craft.MemberNumber != Player.MemberNumber && getRandomInt(2) == 0) { // 50% chance of backfire when using someone else's wand
                 const crafter = getCharacter(wand.Craft.MemberNumber ?? -1);
@@ -592,12 +626,14 @@ export class MagicModule extends BaseModule {
                 SendAction(this.getCastingActionString(spell, InventoryGet(Player, "ItemHandheld"), voiceCast, spellTarget, pairedTarget), spellTarget);
             }
 
+            fizzled.forEach(message => LSCG_SendLocal(message)); // only the caster sees what their lock did
             this.UnpackSpellCodes(spell);
             emit("spell.cast", { spell: spellInfo(spell), target: spellTarget.MemberNumber ?? -1, paired: pairedTarget?.MemberNumber });
 
             if (spellTarget.IsPlayer()) {
                 const check = getModule<ItemUseModule>("ItemUseModule").UnopposedActivityRoll(spellTarget);
-                setTimeout(() => this.IncomingSpell(Player, spell, pairedTarget, Math.max(1, check.Total / 2), false, castArgs), 1000);
+                const castSpell = spell; // `spell` is reassigned above, which loses its narrowing inside the timer
+                setTimeout(() => this.IncomingSpell(Player, castSpell, pairedTarget, Math.max(1, check.Total / 2), false, castArgs), 1000);
             }
             else
                 sendLSCGCommand(spellTarget, "spell", [

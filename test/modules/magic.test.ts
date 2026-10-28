@@ -9,6 +9,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vite
 import { CoreModule } from "Modules/core";
 import { ConsentModule } from "Modules/consent";
 import { ActivityModule } from "Modules/activities";
+import { MagicWandItems } from "Modules/item-use";
 import { ItemUseModule } from "Modules/item-use";
 import { CollarModule } from "Modules/collar";
 import { InjectorModule } from "Modules/injector";
@@ -535,6 +536,15 @@ describe("MagicModule", () => {
 			expect(magic.IsMagicItem(makeItem(plainAsset, { Craft: { Name: "Enchanted Stick", Description: "" } }) as never)).toBe(true);
 			expect(magic.IsMagicItem(makeItem(plainAsset) as never)).toBe(false);
 			expect(magic.IsMagicItem(null)).toBe(false);
+		});
+
+		it("the Cosplay Girl Power Staff counts as a magic item, with no craft needed", () => {
+			const group = makeGroup({ Name: "ItemHandheld" });
+			const staff = makeAsset(group, { Name: "AnimeGirlWand", Description: "Cosplay Girl Power Staff" });
+			expect(magic.IsMagicItem(makeItem(staff) as never)).toBe(true);
+			expect(MagicWandItems).toContain("AnimeGirlWand");
+			// ...and is cast with from a distance, like a wand, though nothing in its name says so
+			expect(magic.IsRangedItem(makeItem(staff) as never)).toBe(true);
 		});
 
 		it("IsRangedItem matches only the 'wand' keyword", () => {

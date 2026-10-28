@@ -584,10 +584,25 @@ export function isAllowedMember(member: Character | undefined) {
 	return !!member && ServerChatRoomGetAllowItem(member, Player);
 }
 
-export type RemoteAccessLevel = "Public" | "PublicExceptBlacklist" | "Friends" | "Whitelist" | "Lovers" | "Owner";
+/** Who may reach a wearer's remote settings: BC's own interaction levels, plus friends. */
+export type RemoteAccessLevel = "Public" | "PublicExceptBlacklist" | "Friends" | "Dominants" | "Whitelist" | "Lovers" | "Owner";
 
-/** Whether `memberNumber` may configure `wearer` at `level`; each level includes the stricter ones.
- *  Friend lists aren't synced for other characters, so only the wearer's own client can enforce "Friends". */
+/** The levels, from the most open to the most closed, as the settings screens list them. */
+export const REMOTE_ACCESS_LEVELS: readonly RemoteAccessLevel[] = ["Public", "PublicExceptBlacklist", "Friends", "Dominants", "Whitelist", "Lovers", "Owner"];
+
+export const REMOTE_LEVEL_LABELS: Record<RemoteAccessLevel, string> = {
+	Public: "Everyone, no exceptions",
+	PublicExceptBlacklist: "Everyone, except blacklist",
+	Friends: "Friends, whitelist, lovers and owner",
+	Dominants: "Owner, lovers, whitelist and dominants",
+	Whitelist: "Owner, lovers and whitelist",
+	Lovers: "Owner and lovers",
+	Owner: "Owner only",
+};
+
+/** Whether `memberNumber` may configure `wearer` at `level`; each level but the open ones is a set of people that includes the owner.
+ *  Friend lists aren't synced for other characters, so only the wearer's own client can enforce "Friends". "Dominants" is BC's own
+ *  rule for its interaction level of the same name: not blacklisted, and dominant enough compared to the wearer (25 points allowed). */
 export function hasRemotePermission(wearer: Character, level: RemoteAccessLevel, memberNumber: number): boolean {
 	if (wearer.IsOwnedByMemberNumber(memberNumber)) return true;
 	const lover = wearer.IsLoverOfMemberNumber(memberNumber);
@@ -596,6 +611,12 @@ export function hasRemotePermission(wearer: Character, level: RemoteAccessLevel,
 		case "Owner": return false;
 		case "Lovers": return lover;
 		case "Whitelist": return lover || whitelisted;
+		case "Dominants": {
+			if (wearer.BlackList?.includes(memberNumber)) return false;
+			const sender = getCharacter(memberNumber);
+			const dominantEnough = !!sender && ReputationCharacterGet(sender, "Dominant") + 25 >= ReputationCharacterGet(wearer, "Dominant");
+			return lover || whitelisted || dominantEnough;
+		}
 		case "Friends": return lover || whitelisted || (wearer.IsPlayer() ? (Player.FriendList?.includes(memberNumber) ?? false) : true);
 		case "PublicExceptBlacklist": return !(wearer.BlackList?.includes(memberNumber) ?? false);
 		case "Public": return true;

@@ -32,6 +32,8 @@ describe("Magic™ settings pages", () => {
         magic.settings.knownSpells = [];
         magic.settings.blockedSpellEffects = [];
         magic.settings.bypassForSelfEffects = [];
+        magic.settings.lockedSpellEffects = [];
+        magic.settings.useGlobalRemote = false;
         api = registerExtension({ id: `pages-${++ids}`, name: "Page Pack", version: "1" });
     });
 
@@ -52,8 +54,8 @@ describe("Magic™ settings pages", () => {
         Array.from(root.querySelectorAll("tbody tr")).find(tr => tr.textContent?.includes(text)) as HTMLTableRowElement;
 
     it("offers every tab to the wearer, and no spell editing or astral projection remotely", () => {
-        expect(tabsFor(false).map(t => t.label)).toEqual(["General", "Effects", "Spells", "Defense", "Remote access", "Astral projection"]);
-        expect(tabsFor(true).map(t => t.label)).toEqual(["General", "Effects", "Defense", "Remote access"]);
+        expect(tabsFor(false).map(t => t.label)).toEqual(["General", "Effects", "Spells", "Defense", "Remote Access", "Astral projection"]);
+        expect(tabsFor(true).map(t => t.label)).toEqual(["General", "Effects", "Defense", "Remote Access"]);
     });
 
     describe("Effects tab", () => {
@@ -586,6 +588,121 @@ describe("Magic™ settings pages", () => {
         });
     });
 
+    describe("Effects tab: sorting", () => {
+        const names = (root: HTMLElement) => Array.from(root.querySelectorAll("tbody tr")).map(tr => tr.querySelector("td")!.textContent!.trim());
+        const sortSelect = (root: HTMLElement) => Array.from(root.querySelectorAll(".lscg-kit-row")).find(r => r.querySelector("label")?.textContent === "Sort effects")!.querySelector("select") as HTMLSelectElement;
+        const choose = (root: HTMLElement, value: string) => { const s = sortSelect(root); s.value = value; s.dispatchEvent(new Event("change")); };
+        afterEach(() => { choose(render("Effects"), "type"); });
+
+        it("groups by type by default, alphabetical within each", () => {
+            const root = render("Effects");
+            expect(sortSelect(root).value).toBe("type");
+            const domains = Array.from(root.querySelectorAll("tbody tr")).map(tr => tr.textContent);
+            // Deafening and Blinding share a domain (senses), so they sit together; the same-domain pair is in name order
+            const ordered = names(root);
+            expect(Math.abs(ordered.findIndex(n => n.startsWith("Deafening")) - ordered.findIndex(n => n.startsWith("Blinding")))).toBeLessThan(6);
+            expect(domains.length).toBe(allEffectIds().length);
+        });
+
+        it("switches to a plain A to Z list, and back", () => {
+            const root = render("Effects");
+            choose(root, "name");
+            const alpha = names(root).map(n => n.replace(/\s.*/, ""));
+            expect(alpha).toEqual([...alpha].sort((a, b) => a.localeCompare(b)));
+            expect(root.querySelectorAll("tbody tr")).toHaveLength(allEffectIds().length);
+            choose(root, "type");
+            expect(names(root)).not.toEqual(names(root).slice().sort((a, b) => a.localeCompare(b)));
+        });
+
+        it("keeps the choice when the tab is opened again, and for a remote view too", () => {
+            choose(render("Effects"), "name");
+            expect(sortSelect(render("Effects")).value).toBe("name");
+            expect(sortSelect(render("Effects", true, { enabled: true, blockedSpellEffects: [], bypassForSelfEffects: [] } as unknown as MagicPublicSettingsModel)).value).toBe("name");
+        });
+    });
+
+    describe("Effects tab: the Lock column", () => {
+        // Block, Allow self and Lock are the three checkbox columns of the one effects table.
+        const lockBox = (root: HTMLElement, text: string) => rowFor(root, text)?.querySelectorAll("input[type=checkbox]")[2] as HTMLInputElement | undefined;
+
+        beforeEach(() => { magic.settings.lockedSpellEffects = []; });
+
+        it("sits next to Block and Allow self in the same table, with no second listing", () => {
+            const root = render("Effects");
+            expect(root.querySelectorAll("table")).toHaveLength(1);
+            expect(Array.from(root.querySelectorAll("th")).map(th => th.textContent)).toEqual(["Effect", "Description", "Block", "Allow self", "Lock"]);
+            expect(root.querySelectorAll("tbody tr")).toHaveLength(allEffectIds().length);
+        });
+
+        it("shows the wearer which effects are locked, read-only", () => {
+            magic.settings.lockedSpellEffects = [LSCGSpellEffect.deafened];
+            const root = render("Effects");
+            const locked = lockBox(root, "Deafening")!;
+            expect(locked.checked).toBe(true);
+            expect(locked.disabled).toBe(true);
+            expect(lockBox(root, "Blinding")!.checked).toBe(false);
+            expect(lockBox(root, "Blinding")!.disabled).toBe(true);
+        });
+
+        it("a wearer can't unlock by poking the checkbox", () => {
+            magic.settings.lockedSpellEffects = [LSCGSpellEffect.deafened];
+            const box = lockBox(render("Effects"), "Deafening")!;
+            box.disabled = false;
+            box.checked = false;
+            box.dispatchEvent(new Event("change"));
+            expect(magic.settings.lockedSpellEffects).toEqual([LSCGSpellEffect.deafened]);
+        });
+
+        it("the wearer's own Block and Allow self still work beside it", () => {
+            magic.settings.lockedSpellEffects = [LSCGSpellEffect.deafened];
+            const [block] = Array.from(rowFor(render("Effects"), "Deafening").querySelectorAll("input[type=checkbox]")) as HTMLInputElement[];
+            expect(block.disabled).toBe(false);
+            block.checked = true;
+            block.dispatchEvent(new Event("change"));
+            expect(magic.settings.blockedSpellEffects).toContain(LSCGSpellEffect.deafened);
+            expect(magic.settings.lockedSpellEffects).toEqual([LSCGSpellEffect.deafened]);
+        });
+
+        it("a remote user locks and unlocks effects, and it is the target's list that changes", () => {
+            const target = { ...magic.settings, lockedSpellEffects: [] as SpellEffectId[] } as MagicPublicSettingsModel;
+            const root = render("Effects", true, target);
+            expect(root.querySelectorAll("tbody tr")).toHaveLength(allEffectIds().length);
+            const box = lockBox(root, "Deafening")!;
+            expect(box.disabled).toBe(false);
+            box.checked = true;
+            box.dispatchEvent(new Event("change"));
+            expect((target as unknown as { lockedSpellEffects: string[] }).lockedSpellEffects).toEqual([LSCGSpellEffect.deafened]);
+            expect(magic.settings.lockedSpellEffects).toEqual([]);
+            const again = lockBox(root, "Deafening")!;
+            again.checked = false;
+            again.dispatchEvent(new Event("change"));
+            expect((target as unknown as { lockedSpellEffects: string[] }).lockedSpellEffects).toEqual([]);
+        });
+
+        it("locking and blocking are independent", () => {
+            const target = { ...magic.settings, lockedSpellEffects: [] as SpellEffectId[], blockedSpellEffects: [] as SpellEffectId[], bypassForSelfEffects: [] as SpellEffectId[] } as MagicPublicSettingsModel;
+            const root = render("Effects", true, target);
+            const box = lockBox(root, "Deafening")!;
+            box.checked = true;
+            box.dispatchEvent(new Event("change"));
+            expect(target.blockedSpellEffects).toEqual([]);
+            const [block] = Array.from(rowFor(root, "Deafening").querySelectorAll("input[type=checkbox]")) as HTMLInputElement[];
+            block.checked = true;
+            block.dispatchEvent(new Event("change"));
+            block.checked = false;
+            block.dispatchEvent(new Event("change"));
+            expect((target as unknown as { lockedSpellEffects: string[] }).lockedSpellEffects).toEqual([LSCGSpellEffect.deafened]);
+        });
+
+        it("keeps a lock on an effect that isn't installed visible, so it can be removed, once", () => {
+            const target = { ...magic.settings, lockedSpellEffects: ["gone.effect"] as SpellEffectId[], blockedSpellEffects: ["gone.effect"] as SpellEffectId[] } as MagicPublicSettingsModel;
+            const root = render("Effects", true, target);
+            const rows = Array.from(root.querySelectorAll("tbody tr")).filter(tr => tr.textContent?.includes("not installed"));
+            expect(rows).toHaveLength(1);
+            expect((rows[0].querySelectorAll("input[type=checkbox]")[2] as HTMLInputElement).checked).toBe(true);
+        });
+    });
+
     describe("Defense tab", () => {
         const labels = (root: HTMLElement) => Array.from(root.querySelectorAll(".lscg-kit-row label")).map(l => l.textContent);
 
@@ -606,7 +723,7 @@ describe("Magic™ settings pages", () => {
             const defense = labels(render("Defense"));
             for (const remoteRow of ["Allow remote access", "Lockable", "Allowed members", "Requires trance", "Only the hypnotizer"])
                 expect(defense).not.toContain(remoteRow);
-            expect(render("Defense").textContent).not.toContain("Remote access");
+            expect(render("Defense").textContent).not.toContain("Remote Access");
         });
     });
 
@@ -615,38 +732,117 @@ describe("Magic™ settings pages", () => {
             Array.from(root.querySelectorAll(".lscg-kit-row")).find(r => r.querySelector("label")?.textContent === label) as HTMLElement;
         const input = (root: HTMLElement, label: string) => row(root, label).querySelector("input") as HTMLInputElement;
         const flip = (el: HTMLInputElement, checked: boolean) => { el.checked = checked; el.dispatchEvent(new Event("change")); };
+        const levelSelect = (root: HTMLElement) => row(root, "Who can access").querySelector("select") as HTMLSelectElement;
+        const idsInput = (root: HTMLElement) => input(root, "Allowed member ids");
 
         it("is its own tab, for the wearer and for a remote view", () => {
-            expect(tabsFor(false).map(t => t.label)).toContain("Remote access");
-            expect(tabsFor(true).map(t => t.label)).toContain("Remote access");
+            expect(tabsFor(false).map(t => t.label)).toContain("Remote Access");
+            expect(tabsFor(true).map(t => t.label)).toContain("Remote Access");
         });
 
         it("the wearer chooses who can change their settings, and the rest follow from allowing it", () => {
             magic.settings.remoteAccess = false;
-            const root = render("Remote access");
+            const root = render("Remote Access");
             expect(root.textContent).toContain("Let other players change your Magic™ settings");
             expect(input(root, "Lockable").disabled).toBe(true);
-            expect(input(root, "Allowed members").disabled).toBe(true);
+            expect(levelSelect(root).disabled).toBe(true);
+            expect(idsInput(root).disabled).toBe(true);
             expect(input(root, "Requires trance").disabled).toBe(true);
             expect(input(root, "Only the hypnotizer").disabled).toBe(true);
 
             flip(input(root, "Allow remote access"), true);
             expect(magic.settings.remoteAccess).toBe(true);
             expect(input(root, "Lockable").disabled).toBe(false);
-            expect(input(root, "Allowed members").disabled).toBe(false);
+            expect(levelSelect(root).disabled).toBe(false);
+            expect(idsInput(root).disabled).toBe(false);
             expect(input(root, "Requires trance").disabled).toBe(false);
 
             flip(input(root, "Lockable"), true);
             expect(magic.settings.lockable).toBe(true);
-            const members = input(root, "Allowed members");
-            members.value = "12, 34"; members.dispatchEvent(new Event("change"));
+            const level = levelSelect(root);
+            level.value = "Lovers"; level.dispatchEvent(new Event("change"));
+            expect(magic.settings.remoteLevel).toBe("Lovers");
+            const ids = idsInput(root);
+            ids.value = "12, 34"; ids.dispatchEvent(new Event("change"));
             expect(magic.settings.remoteMemberIds).toBe("12, 34");
+        });
+
+        it("offers BC's interaction levels plus friends, from most open to most closed, and shows the owner-only floor by default", () => {
+            magic.settings.remoteAccess = true;
+            const select = levelSelect(render("Remote Access"));
+            expect(Array.from(select.options).map(o => o.textContent)).toEqual([
+                "Everyone, no exceptions", "Everyone, except blacklist", "Friends, whitelist, lovers and owner",
+                "Owner, lovers, whitelist and dominants", "Owner, lovers and whitelist", "Owner and lovers", "Owner only",
+            ]);
+            expect(Array.from(select.options).map(o => o.value)).toEqual(["Public", "PublicExceptBlacklist", "Friends", "Dominants", "Whitelist", "Lovers", "Owner"]);
+            delete (magic.settings as unknown as Record<string, unknown>).remoteLevel;
+            expect(levelSelect(render("Remote Access")).value).toBe("Owner");
+        });
+
+        it("the tab has the same rows, in order, as the other modules' remote access", () => {
+            const labels = Array.from(render("Remote Access").querySelectorAll(".lscg-kit-row label")).map(l => l.textContent);
+            expect(labels).toEqual(["Allow remote access", "Lockable", "Use global defaults", "Who can access", "Allowed member ids", "Requires trance", "Only the hypnotizer"]);
+        });
+
+        describe("global defaults", () => {
+            const globalDefaults = () => Player.LSCG.GlobalModule as unknown as Record<string, unknown>;
+
+            beforeEach(() => {
+                magic.settings.remoteAccess = true;
+                Object.assign(globalDefaults(), { remoteLevel: "Lovers", remoteMemberIds: "7, 8" });
+            });
+
+            it("'Use global defaults' shows the global level and member ids, locked, and leaves the trance rules the section's own", () => {
+                magic.settings.remoteLevel = "Public";
+                magic.settings.remoteMemberIds = "1";
+                magic.settings.remoteAccessRequiredTrance = false;
+                const root = render("Remote Access");
+                expect(input(root, "Use global defaults").checked).toBe(false);
+                expect(levelSelect(root).value).toBe("Public");
+
+                flip(input(root, "Use global defaults"), true);
+                expect(magic.settings.useGlobalRemote).toBe(true);
+                expect(levelSelect(root).value).toBe("Lovers");
+                expect(idsInput(root).value).toBe("7, 8");
+                for (const locked of [levelSelect(root), idsInput(root)])
+                    expect(locked.disabled).toBe(true);
+                // the trance rules are never taken from the defaults, so they stay editable
+                expect(input(root, "Requires trance").checked).toBe(false);
+                expect(input(root, "Requires trance").disabled).toBe(false);
+                flip(input(root, "Requires trance"), true);
+                expect(magic.settings.remoteAccessRequiredTrance).toBe(true);
+                expect(input(root, "Only the hypnotizer").disabled).toBe(false);
+                // the section's own level and ids are kept for when it stops using the defaults
+                expect(magic.settings).toMatchObject({ remoteLevel: "Public", remoteMemberIds: "1" });
+
+                flip(input(root, "Use global defaults"), false);
+                expect(levelSelect(root).value).toBe("Public");
+                expect(idsInput(root).disabled).toBe(false);
+            });
+
+            it("the 'Use global defaults' checkbox itself only needs remote access on", () => {
+                magic.settings.remoteAccess = false;
+                expect(input(render("Remote Access"), "Use global defaults").disabled).toBe(true);
+                magic.settings.remoteAccess = true;
+                expect(input(render("Remote Access"), "Use global defaults").disabled).toBe(false);
+            });
+
+            it("a remote view can still set the trance rules while they use the defaults, with no warning about it", () => {
+                const target = { enabled: true, lockable: true, locked: false, useGlobalRemote: true, remoteAccessRequiredTrance: false } as unknown as MagicPublicSettingsModel;
+                const root = render("Remote Access", true, target);
+                expect(root.textContent).not.toContain("global remote access defaults");
+                const trance = input(root, "Requires trance");
+                expect(trance.disabled).toBe(false);
+                flip(trance, true);
+                expect(target.remoteAccessRequiredTrance).toBe(true);
+                expect(input(root, "Only the hypnotizer").disabled).toBe(false);
+            });
         });
 
         it("'Only the hypnotizer' needs the trance requirement", () => {
             magic.settings.remoteAccess = true;
             magic.settings.remoteAccessRequiredTrance = true;
-            const root = render("Remote access");
+            const root = render("Remote Access");
             expect(input(root, "Only the hypnotizer").disabled).toBe(false);
             flip(input(root, "Requires trance"), false);
             expect(magic.settings.remoteAccessRequiredTrance).toBe(false);
@@ -655,14 +851,14 @@ describe("Magic™ settings pages", () => {
 
         it("a remote view locks or unlocks the wearer, only if they allow it, and sets the trance rules", () => {
             const target = { enabled: true, lockable: false, locked: false, remoteAccessRequiredTrance: true, limitRemoteAccessToHypnotizer: true } as unknown as MagicPublicSettingsModel;
-            const root = render("Remote access", true, target);
+            const root = render("Remote Access", true, target);
             expect(root.textContent).toContain("How remote access to this player's Magic™ settings works.");
             expect(input(root, "Locked").disabled).toBe(true);
             expect(root.textContent).not.toContain("Allow remote access");
             expect(root.textContent).not.toContain("Allowed members");
 
             target.lockable = true;
-            const again = render("Remote access", true, target);
+            const again = render("Remote Access", true, target);
             flip(input(again, "Locked"), true);
             expect(target.locked).toBe(true);
 

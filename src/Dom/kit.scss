@@ -295,6 +295,11 @@
 				cursor: help;
 				text-decoration: underline dotted;
 			}
+
+			// Checkbox cells are centred, so their headers are too.
+			&.lscg-kit-center {
+				text-align: center;
+			}
 		}
 
 		td {

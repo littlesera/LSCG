@@ -1,3 +1,4 @@
+import { DEFAULT_REMOTE_LEVEL, REMOTE_TRANCE_DEFAULTS } from "./remoteAccess";
 import { BaseModule } from "base";
 import { HypnoInfluence, HypnoSettingsModel, LSCGHypnoInstruction } from "Settings/Models/hypno";
 import { extensionInstructions, isExtensionInstruction, sanitizeExtensionInstruction } from "api/hypno";
@@ -93,7 +94,10 @@ export class HypnoModule extends BaseModule {
             overrideWords: "",
             allowLocked: false,
             remoteAccess: false,
-            remoteAccessRequiredTrance: true,
+            remoteLevel: DEFAULT_REMOTE_LEVEL,
+            remoteMemberIds: "",
+            useGlobalRemote: true,
+            remoteAccessRequiredTrance: REMOTE_TRANCE_DEFAULTS.HypnoModule.trance,
             allowRemoteModificationOfMemberOverride: false,
             cooldownTime: 0,
             enableArousal: false,
@@ -104,7 +108,7 @@ export class HypnoModule extends BaseModule {
             triggerTime: TRIGGER_TIMES.DEFAULT_TRIGGER_TIME_MINUTES,
             locked: false,
             awakeners: "",
-            limitRemoteAccessToHypnotizer: false,
+            limitRemoteAccessToHypnotizer: REMOTE_TRANCE_DEFAULTS.HypnoModule.hypnotizerOnly,
             suggestionRequireHypnotizer: true,
             blockedInstructions: <string[]>[],
             alwaysSubmit: false,
@@ -428,12 +432,22 @@ export class HypnoModule extends BaseModule {
             Player.IsLoverOfMemberNumber(sender);
     }
 
+    /** Whether `sender` may see and change the player's suggestions: hypnosis on, and then the owner or a lover always, anyone
+     *  else only while the player is hypnotized, has allowed suggestions, is not limited to their hypnotizer (or it's them) and
+     *  item permission (or the override member list) lets them. */
+    CanModifySuggestions(sender: number): boolean {
+        if (!this.Enabled)
+            return false;
+        if (this._senderCanAlwaysModifySuggestions(sender))
+            return true;
+        const hypnotizer = this.StateModule.HypnoState.config.activatedBy;
+        const hypnotizerOk = !this.settings.suggestionRequireHypnotizer || hypnotizer == sender || hypnotizer == -1;
+        return this.hypnoActivated && !!this.settings.allowSuggestions && hypnotizerOk &&
+            this.allowedSpeaker(getCharacter(sender) ?? undefined);
+    }
+
     SuggestionsRequestHandler(sender: number, msg: LSCGMessageModel){
-        if (this.Enabled &&
-            this._senderCanAlwaysModifySuggestions(sender) ||
-                (this.hypnoActivated &&
-                this.settings.allowSuggestions &&
-                this.allowedSpeaker(getCharacter(sender) ?? undefined))) {
+        if (this.CanModifySuggestions(sender)) {
                 sendLSCGCommandBeep(sender, "get-suggestions-response", [{
                     name: "suggestions",
                     value: this.settings.suggestions?.filter(s => s.installedBy == sender || !s.exclusive || this._senderCanAlwaysModifySuggestions(sender)) ?? [],
@@ -446,11 +460,7 @@ export class HypnoModule extends BaseModule {
 
     SuggestionsPushHandler(sender: number, msg: LSCGMessageModel) {
         const senderChar = getCharacter(sender);
-        if (this.Enabled &&
-            this._senderCanAlwaysModifySuggestions(sender) ||
-                (this.hypnoActivated &&
-                this.settings.allowSuggestions &&
-                this.allowedSpeaker(senderChar ?? undefined))) {
+        if (this.CanModifySuggestions(sender)) {
                     if (!this.settings.suggestions)
                         this.settings.suggestions = [];
                     const incomingSuggestions = (msg.command?.args.find(a => a.name == "suggestions")?.value as HypnoSuggestion[]).filter(s => !!s.trigger) ?? [];

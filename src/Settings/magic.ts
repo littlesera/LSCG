@@ -1,3 +1,4 @@
+import { pulseScreen } from "Dom/pulse";
 import { GuiSubscreen, HelpInfo } from "./settingBase";
 import { MagicSettingsModel } from "./Models/magic";
 import { allEffectIds, spellHasPairedEffect } from "Modules/Magic/spellEffects";
@@ -79,9 +80,9 @@ export class GuiMagic extends GuiSubscreen {
 		if (!this.settings.enabled && MouseIn(800, 740, 400, 80)) {
 			this.settings.enabled = true;
 			this._host.mount();
-			DrawFlashScreen("#800080", 500, 1500);
+			pulseScreen("#800080", 500, 1500);
 			if (!AudioShouldSilenceSound(true))
-				AudioPlaySoundEffect("SciFiBeeps", 1);
+				AudioPlaySoundEffect("SciFiBeeps", 1); // any sufficiently advanced technology...
 		}
 	}
 

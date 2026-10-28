@@ -25,6 +25,7 @@ export const MagicWandItems: string[] = [
 	"SmallVibratingWand",
 	"ShockWand",
 	"Baguette",
+	"AnimeGirlWand", // the Cosplay Girl Power Staff
 ];
 
 /** Handheld items the base game doesn't allow SipItem on, but we do. */

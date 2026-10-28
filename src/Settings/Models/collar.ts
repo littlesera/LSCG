@@ -1,3 +1,4 @@
+import type { RemoteAccessLevel } from "utils";
 import { BaseSettingsModel, ModuleStats } from "./base";
 
 export interface CollarSettingsModel extends CollarPublicSettingsModel {        
@@ -17,6 +18,14 @@ export interface CollarPublicSettingsModel extends BaseSettingsModel {
     chokeLevel: number;
     allowedMembers: string;
     remoteAccess: boolean;
+    /** Who may get in: the owner always, and otherwise anyone within this level (see utils REMOTE_ACCESS_LEVELS). */
+    remoteLevel: RemoteAccessLevel;
+    /** Take who may get in, and when, from the General > Remote Access defaults instead of this section's own settings. */
+    useGlobalRemote: boolean;
+    /** Members let in whatever the level says (member numbers, comma separated). */
+    remoteMemberIds: string;
+    remoteAccessRequiredTrance: boolean;
+    limitRemoteAccessToHypnotizer: boolean;
     lockable: boolean;
     locked: boolean;
     immersive: boolean;

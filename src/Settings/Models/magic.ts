@@ -1,3 +1,4 @@
+import type { RemoteAccessLevel } from "utils";
 import { SpiritTextType } from "Settings/magic";
 import { BaseSettingsModel } from "./base";
 
@@ -157,6 +158,9 @@ export interface MagicSettingsModel extends MagicPublicSettingsModel {
     maxSpellEffects: number;
     /** Extension spell effects this player has been shown, so `defaultBlocked` applies only once. */
     seenExtensionEffects: string[];
+    /** Effects this player can't cast: they fizzle on their step. Only a remote user with access changes this; kept private since
+     *  only the caster's own client enforces it. */
+    lockedSpellEffects: SpellEffectId[];
 }
 
 export interface MagicPublicSettingsModel extends BaseSettingsModel{
@@ -176,6 +180,11 @@ export interface MagicPublicSettingsModel extends BaseSettingsModel{
     remoteAccess: boolean;
     remoteAccessRequiredTrance: boolean;
     limitRemoteAccessToHypnotizer: boolean;
+    /** Who may get in: the owner always, and otherwise anyone within this level (see utils REMOTE_ACCESS_LEVELS). */
+    remoteLevel: RemoteAccessLevel;
+    /** Take who may get in, and when, from the General > Remote Access defaults instead of this section's own settings. */
+    useGlobalRemote: boolean;
+    /** Members let in whatever the level says (member numbers, comma separated). */
     remoteMemberIds: string;
 
     // spell defense
