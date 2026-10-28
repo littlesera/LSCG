@@ -25,6 +25,7 @@ describe("extension storage before LSCG is ready", () => {
         const api = registerExtension({ id: "early-bird", name: "Early", version: "1" });
         expect(() => api.storage.get()).toThrow(/onReady/);
         expect(() => api.storage.set(1)).toThrow(/onReady/);
+        expect(() => api.sync()).toThrow(/onReady/);
         expect(publishedExtensionData()).toEqual({});
         api.dispose();
     });
@@ -276,6 +277,16 @@ describe("extension networking and storage", () => {
             api.dispose();
             expect(core.publicSettings.ExtensionData).toEqual({});
             expect(player().LSCG.Extensions[api.id]).toEqual({ public: { version: 2 } }); // still saved, just not shared
+        });
+
+        it("is re-sent on demand by api.sync()", () => {
+            const saved = vi.fn();
+            api.events.on("settings.saved", saved);
+            vi.advanceTimersByTime(2000); // let any earlier batched save finish
+            saved.mockClear();
+            api.sync();
+            vi.advanceTimersByTime(2000);
+            expect(saved).toHaveBeenCalledWith({ published: true });
         });
 
         it("keeps private and public data apart", () => {

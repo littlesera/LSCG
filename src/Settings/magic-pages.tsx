@@ -1,10 +1,14 @@
+import { REMOTE_TRANCE_DEFAULTS } from "Modules/remoteAccess";
 import { h } from "tsx-dom";
 import { getModule } from "modules";
 import { OutfitCollectionModule } from "Modules/outfitCollection";
 import { allEffectIds, domainDescription, domainOrder, effectDescription, effectDomain, effectLabel, effectTooltip, isExtensionEffect, getSpellEffect, isPairedEffect, spellHasPairedEffect } from "Modules/Magic/spellEffects";
-import { Button, Chip, CheckboxRow, Expando, Icon, KitContext, KitTab, Notice, NumberRow, openDialog, RuleTable, SectionLabel, SelectOption, SelectRow, TextRow } from "Dom/kit";
-import { addEffect, canHaveEffect, editableConfig, removeEffect, setEffect, writeConfig } from "Modules/Magic/spellEdit";
+import { Button, Chip, IconButton, CheckboxRow, Expando, Icon, KitContext, KitTab, Notice, NumberRow, openDialog, RuleTable, SectionLabel, SelectOption, SelectRow, TextRow } from "Dom/kit";
+import { addEffect, canHaveEffect, DEFAULT_EFFECT_DELAY, editableConfig, effectDelayFor, MAX_EFFECT_DELAY, MIN_EFFECT_DELAY, removeEffect, setEffect, writeConfig, writeDelay } from "Modules/Magic/spellEdit";
 import { EFFECT_EDITORS } from "./magic-effect-editors";
+import { optionRows } from "./optionRows";
+import { remoteAccessRows } from "./remoteAccessRows";
+import { DelayConnector } from "./delayConnector";
 import { KNOWN_SPELLS_LIMIT, MagicPublicSettingsModel, MagicSettingsModel, OutfitOption, PolymorphConfig, SpellDefinition, SpellEffectId, maxSpellEffects } from "./Models/magic";
 import type { SpiritTextType } from "./magic";
 
@@ -33,33 +37,63 @@ const effectRank = (id: SpellEffectId) => {
     return !getSpellEffect(id) ? 200 : domain ? domainOrder(domain) : 100;
 };
 const byLabel = (a: SpellEffectId, b: SpellEffectId) => effectRank(a) - effectRank(b) || effectLabel(a).localeCompare(effectLabel(b));
+const byName = (a: SpellEffectId, b: SpellEffectId) => effectLabel(a).localeCompare(effectLabel(b));
+
+/** The effect picker's groups: a built-in effect's domain, then those from extensions, then ones no longer installed. */
+const effectGroup = (id: SpellEffectId): string =>
+    !getSpellEffect(id) ? "Not installed" : isExtensionEffect(id) ? "From extensions" : effectDomain(id) ?? "Other";
+/** Alphabetical, but built-in effects first, then those from extensions, then ones no longer installed. */
+const effectKind = (id: SpellEffectId): number => !getSpellEffect(id) ? 2 : isExtensionEffect(id) ? 1 : 0;
+const byNameExtensionsLast = (a: SpellEffectId, b: SpellEffectId) => effectKind(a) - effectKind(b) || byName(a, b);
+const effectGroupRank = (id: SpellEffectId): number =>
+    !getSpellEffect(id) ? 300 : isExtensionEffect(id) ? 200 : effectDomain(id) ? domainOrder(effectDomain(id)!) : 100;
+const byGroup = (a: SpellEffectId, b: SpellEffectId) => effectGroupRank(a) - effectGroupRank(b) || byName(a, b);
+
+type EffectOrder = "type" | "name";
+const EFFECT_ORDER_OPTIONS: SelectOption[] = [{ value: "type", label: "By type" }, { value: "name", label: "Alphabetical" }];
+/** How the effects table is sorted. Kept across opening the tab, not saved. */
+let effectOrder: EffectOrder = "type";
+/** The effect groups folded away in the effects table. Kept like the sort order: across opening the tab, not saved. */
+const collapsedEffectGroups = new Set<string>();
 
 function effectChip(id: SpellEffectId): HTMLElement {
     const def = getSpellEffect(id);
     return Chip(effectLabel(id), { tone: def ? "muted" : "warn", tooltip: effectTooltip(id), icon: isExtensionEffect(id) ? "extension" : undefined });
 }
 
-function effectNameCell(id: SpellEffectId): HTMLElement {
+/** An effect's name, with where it comes from. A built-in effect's domain is a pill too, unless a heading above it already says so. */
+function effectNameCell(id: SpellEffectId, showDomain = true): HTMLElement {
     const def = getSpellEffect(id);
     return <div class="lscg-kit-chips">
         <span>{isExtensionEffect(id) ? Icon("extension", "Added by an extension") : null}{effectLabel(id)}</span>
         {!def ? Chip("not installed", { tone: "warn", tooltip: "Comes from an extension this client doesn't have." })
             : def.source ? Chip(def.source, { tone: "info", tooltip: "Added by an extension." })
-            : def.domain ? Chip(def.domain, { tone: "muted", tooltip: domainDescription(def.domain) }) : null}
+            : def.domain && showDomain ? Chip(def.domain, { tone: "muted", tooltip: domainDescription(def.domain) }) : null}
     </div> as HTMLElement;
 }
 
-function blockedEffectsTable(ctx: KitContext, s: MagicPublicSettingsModel, opts: MagicPagesOptions): HTMLElement {
-    // Keep blocks on effects that aren't listed (e.g. an uninstalled extension's) visible so they can be removed.
-    const ids = () => [...opts.effects, ...(s.blockedSpellEffects ?? []).filter(id => opts.effects.indexOf(id) < 0)].sort(byLabel).map(id => ({ id }));
-    return RuleTable(ctx, {
+/** One row per effect: whether spells can apply it to the wearer (Block, and Allow self), and whether the wearer can cast it (Lock).
+ *  Only a remote user changes Lock; the wearer sees what is locked but can't edit it. */
+function effectsTable(ctx: KitContext, s: MagicSettingsModel, opts: MagicPagesOptions): HTMLElement[] {
+    const locked = () => s.lockedSpellEffects ?? [];
+    // Keep blocks and locks on effects that aren't listed (e.g. an uninstalled extension's) visible so they can be removed.
+    const ids = () => [...opts.effects, ...[...(s.blockedSpellEffects ?? []), ...locked()].filter(id => opts.effects.indexOf(id) < 0)]
+        .filter((id, i, all) => all.indexOf(id) === i).sort(effectOrder === "name" ? byNameExtensionsLast : byGroup).map(id => ({ id }));
+    const sortRow = SelectRow(ctx, {
+        label: "Sort effects", options: EFFECT_ORDER_OPTIONS,
+        description: "By type boxes effects into groups, like the effect picker (mind, senses, binding... then extensions), alphabetical within each. Alphabetical is one list, with extension effects last.",
+        get: () => effectOrder, set: v => effectOrder = v as EffectOrder,
+    });
+    const table = RuleTable(ctx, {
         fixed: true,
         rows: ids,
+        groupOf: r => effectOrder === "type" ? effectGroup(r.id) : undefined,
+        collapsedGroups: collapsedEffectGroups,
         columns: [
-            { header: "Effect", kind: "custom", width: "30%", render: r => effectNameCell(r.id), get: () => "", set: () => {} },
+            { header: "Effect", kind: "custom", width: "30%", render: r => effectNameCell(r.id, effectOrder !== "type"), get: () => "", set: () => {} },
             { header: "Description", kind: "custom", render: r => <small class="lscg-kit-desc">{effectDescription(r.id)}</small> as HTMLElement, get: () => "", set: () => {} },
             {
-                header: "Block", kind: "checkbox", width: "4.5em",
+                header: "Block", kind: "checkbox", width: "5em",
                 tooltip: opts.remote ? "Spells can't apply this effect to them." : "Spells can't apply this effect to you.",
                 get: r => (s.blockedSpellEffects ?? []).includes(r.id),
                 set: (r, v) => {
@@ -68,14 +102,22 @@ function blockedEffectsTable(ctx: KitContext, s: MagicPublicSettingsModel, opts:
                 },
             },
             {
-                header: "Allow self", kind: "checkbox", width: "6em",
+                header: "Allow self", kind: "checkbox", width: "5em",
                 tooltip: opts.remote ? "Their own spells still apply this blocked effect." : "Your own spells still apply this blocked effect.",
                 disabled: r => !(s.blockedSpellEffects ?? []).includes(r.id),
                 get: r => (s.bypassForSelfEffects ?? []).includes(r.id),
                 set: (r, v) => s.bypassForSelfEffects = toggle(s.bypassForSelfEffects ?? [], r.id, v),
             },
+            {
+                header: "Forbidden", kind: "checkbox", width: "5em",
+                tooltip: opts.remote ? "Prevent them from casting this effect" : "Prevents you from casting this effect. Only someone with remote access can change this.",
+                disabled: () => !opts.remote,
+                get: r => locked().includes(r.id),
+                set: (r, v) => { if (opts.remote) s.lockedSpellEffects = toggle(locked(), r.id, v); },
+            },
         ],
     });
+    return [sortRow, table];
 }
 
 /** Picks which outfit an effect uses: from the player's saved outfits, or typed in for anything else the game accepts
@@ -141,35 +183,64 @@ function polymorphEffectConfig(ctx: KitContext, spell: SpellDefinition): HTMLEle
 /** An effect's own settings: the rows, a one-line summary for when the section is closed, and whether it still
  *  needs the player's attention (no outfit chosen yet). Only the effects that have any. Outfit and Polymorph keep theirs on the
  *  spell itself; the rest keep theirs per copy in `spell.Configs` and describe themselves through their schema. */
-function effectConfig(ctx: KitContext, spell: SpellDefinition, index: number):
-        { rows: HTMLElement[]; summary: () => string; needsAttention: () => boolean } | undefined {
+function effectConfig(spell: SpellDefinition, index: number):
+        { rows: (ctx: KitContext) => HTMLElement[]; summary: () => string; needsAttention: () => boolean } | undefined {
     const effect = spell.Effects[index];
     switch (getSpellEffect(effect)?.configurable) {
         case "outfit":
             return {
-                rows: outfitEffectConfig(ctx, spell),
+                rows: ctx => outfitEffectConfig(ctx, spell),
                 summary: () => `Outfit settings: ${spell.Outfit?.Key || "no outfit chosen yet"} (${spell.Outfit?.Option ?? OutfitOption.both})`,
                 needsAttention: () => !spell.Outfit?.Key,
             };
         case "polymorph":
             return {
-                rows: polymorphEffectConfig(ctx, spell),
+                rows: ctx => polymorphEffectConfig(ctx, spell),
                 summary: () => `Polymorph settings: ${spell.Polymorph?.Key || "no outfit chosen yet"}`,
                 needsAttention: () => !spell.Polymorph?.Key,
             };
         default: {
-            const schema = getSpellEffect(effect)?.config;
-            const editor = EFFECT_EDITORS[effect];
+            const def = getSpellEffect(effect);
+            const schema = def?.config;
+            // Extension effects declare their settings as fields; built-ins have a hand-written editor.
+            const editor = EFFECT_EDITORS[effect] ?? (def?.options ? (c: KitContext, config: () => any, update: (patch: any) => void) => optionRows(c, def.options!, config, update) : undefined);
             if (!schema || !editor)
                 return undefined;
             const config = () => editableConfig(spell, index);
             return {
-                rows: editor(ctx, config, patch => writeConfig(spell, index, { ...config(), ...patch })),
+                rows: ctx => editor(ctx, config, patch => writeConfig(spell, index, { ...config(), ...patch })),
                 summary: () => schema.summary(config()),
                 needsAttention: () => !!schema.needsAttention?.(config()),
             };
         }
     }
+}
+
+/** The connector above the effect at `index`: how long it waits after the one above it (see DelayConnector). */
+function effectDelay(ctx: KitContext, spell: SpellDefinition, index: number): HTMLElement {
+    return DelayConnector(ctx, {
+        custom: () => effectDelayFor(spell, index),
+        normal: () => getSpellEffect(spell.Effects[index])?.delay ?? DEFAULT_EFFECT_DELAY,
+        set: ms => writeDelay(spell, index, ms),
+    });
+}
+
+/** The gear beside an effect that has settings of its own: opens them in a dialog of their own, so the effect list stays short. It flags
+ *  itself while the effect still needs the player's attention (no outfit chosen yet), and its tooltip is the summary of the settings. */
+function effectGear(ctx: KitContext, spell: SpellDefinition, index: number, config: NonNullable<ReturnType<typeof effectConfig>>): HTMLElement {
+    const effect = spell.Effects[index];
+    // BC's own preferences cog, as a BC icon button with BC's tooltip.
+    const button: HTMLButtonElement = IconButton("./Icons/Preference.png", config.summary(), () => openDialog(button, ctx, `${effectLabel(effect)} settings`, dctx => config.rows(dctx)), {
+        class: "lscg-spell-gear", tooltipPosition: "left",
+    });
+    ctx.watch(() => {
+        button.classList.toggle("lscg-kit-warning", config.needsAttention());
+        const tip = config.summary();
+        const tooltip = button.querySelector(".button-tooltip");
+        if (tooltip) tooltip.textContent = tip;
+        button.setAttribute("aria-label", `Settings for ${effectLabel(effect)}: ${tip}`);
+    });
+    return button;
 }
 
 /** The ordered effect pickers: a dropdown for each effect the spell has, plus one to add the next while there is room
@@ -179,9 +250,6 @@ function effectConfig(ctx: KitContext, spell: SpellDefinition, index: number):
 function effectSlots(dctx: KitContext, tableCtx: KitContext, spell: SpellDefinition, limit: number): HTMLElement {
     const container = <div class="lscg-spell-effects" /> as HTMLElement;
     let focusSlot: number | undefined;
-    // Which settings sections the player has opened or closed, so a rebuild (adding another effect) keeps them.
-    const expanded = new Map<string, boolean>();
-
     dctx.watch(() => {
         // A context per render: rows register watchers that can't be removed, so don't let old ones pile up.
         const rctx = new KitContext(() => dctx.changed());
@@ -212,20 +280,17 @@ function effectSlots(dctx: KitContext, tableCtx: KitContext, spell: SpellDefinit
                     }
                 },
             });
-            // The settings edit the spell directly. They don't change which effects there are, so they don't rebuild this
+            // The settings and the delay edit the spell directly. They don't change which effects there are, so they don't rebuild this
             // list (which would drop keyboard focus mid-way through filling them in); they only update the spell table.
             const gctx = new KitContext(() => tableCtx.changed());
-            const config = current ? effectConfig(gctx, spell, i) : undefined;
-            if (!current || !config)
-                return picker;
-            // Open until the player has chosen what the effect needs; after that, tucked away behind its summary.
-            const section = Expando(gctx, {
-                summary: config.summary,
-                content: config.rows,
-                open: expanded.get(`${i}:${current}`) ?? config.needsAttention(),
-                onToggle: open => expanded.set(`${i}:${current}`, open),
-            });
-            return <div class="lscg-spell-effect">{picker}{section}</div> as HTMLElement;
+            const config = current ? effectConfig(spell, i) : undefined;
+            // A gear for the effect's own settings beside its dropdown, and the delay connector above it.
+            // The gear sits in the dropdown's own control cell, so it lines up with the dropdown; effects without one get a blank of the
+            // same size, which keeps every dropdown the same width.
+            const gear = config ? effectGear(gctx, spell, i, config) : <span class="lscg-spell-gear-spacer" /> as HTMLElement;
+            picker.querySelector(".lscg-kit-control")?.append(gear);
+            const delay = current && i > 0 ? effectDelay(gctx, spell, i) : null;
+            return <div class="lscg-spell-effect">{delay}<div class="lscg-spell-effect-head">{picker}</div></div> as HTMLElement;
         };
 
         const rows: HTMLElement[] = Array.from({ length: slots }, (_, i) => row(i));
@@ -235,7 +300,7 @@ function effectSlots(dctx: KitContext, tableCtx: KitContext, spell: SpellDefinit
 
         // The dropdown that was just used is gone; keep keyboard focus on its replacement.
         if (focusSlot !== undefined) {
-            (container.querySelectorAll(".lscg-spell-effect > .lscg-kit-row select, .lscg-spell-effects > .lscg-kit-row select")[focusSlot] as HTMLSelectElement | undefined)?.focus();
+            (container.querySelectorAll(".lscg-spell-effect-head select")[focusSlot] as HTMLSelectElement | undefined)?.focus();
             focusSlot = undefined;
         }
     });
@@ -338,8 +403,8 @@ export function buildMagicTabs(ctx: KitContext, s: MagicPublicSettingsModel, opt
         {
             label: "Effects",
             render: () => [
-                SectionLabel("Blocked effects", `Blocked effects never apply to ${opts.remote ? "them" : "you"}. "Allow self" still lets ${your} own spells apply them.`),
-                blockedEffectsTable(ctx, s, opts),
+                SectionLabel("Effects", `Blocked effects never apply to ${opts.remote ? "them" : "you"}; "Allow self" still lets ${your} own spells apply them. Locked effects fizzle on their step when ${you} cast a spell, and only someone with remote access can lock them.`),
+                ...effectsTable(ctx, local, opts),
             ],
         },
     ];
@@ -385,7 +450,7 @@ export function buildMagicTabs(ctx: KitContext, s: MagicPublicSettingsModel, opt
     });
 
     tabs.push({
-        label: "Remote access",
+        label: "Remote Access",
         render: () => [
             SectionLabel("Remote access", opts.remote ? "How remote access to this player's Magic™ settings works." : "Let other players change your Magic™ settings through LSCG's remote settings."),
             ...(opts.remote
@@ -394,25 +459,21 @@ export function buildMagicTabs(ctx: KitContext, s: MagicPublicSettingsModel, opt
                         label: "Locked", description: "Locks them out of their own Magic™ settings. Only possible if they allow it.",
                         get: () => !!s.locked, set: v => { if (s.lockable) s.locked = v; }, disabled: () => !s.lockable,
                     }),
+                    CheckboxRow(ctx, {
+                        label: "Requires trance", description: "Remote access only works while they are hypnotized.",
+                        get: () => s.remoteAccessRequiredTrance ?? REMOTE_TRANCE_DEFAULTS.MagicModule.trance, set: v => s.remoteAccessRequiredTrance = v,
+                    }),
+                    CheckboxRow(ctx, {
+                        label: "Only the hypnotizer", description: "Only whoever hypnotized them gets remote access.",
+                        get: () => s.limitRemoteAccessToHypnotizer ?? REMOTE_TRANCE_DEFAULTS.MagicModule.hypnotizerOnly, set: v => s.limitRemoteAccessToHypnotizer = v,
+                        disabled: () => !(s.remoteAccessRequiredTrance ?? REMOTE_TRANCE_DEFAULTS.MagicModule.trance),
+                    }),
                 ]
                 : [
                     CheckboxRow(ctx, { label: "Allow remote access", description: "Allowed players can change these settings.", get: () => !!s.remoteAccess, set: v => s.remoteAccess = v }),
                     CheckboxRow(ctx, { label: "Lockable", description: "Allowed players can lock you out of these settings.", get: () => !!s.lockable, set: v => s.lockable = v, disabled: () => !s.remoteAccess }),
-                    TextRow(ctx, {
-                        label: "Allowed members", placeholder: "Member numbers, comma separated",
-                        description: "If empty, normal item permissions decide.",
-                        get: () => s.remoteMemberIds ?? "", set: v => s.remoteMemberIds = v, disabled: () => !s.remoteAccess,
-                    }),
+                    ...remoteAccessRows(ctx, s, { module: "MagicModule", disabled: () => !s.remoteAccess }),
                 ]),
-            CheckboxRow(ctx, {
-                label: "Requires trance", description: `Remote access only works while ${you} are hypnotized.`,
-                get: () => s.remoteAccessRequiredTrance ?? true, set: v => s.remoteAccessRequiredTrance = v, disabled: () => !opts.remote && !s.remoteAccess,
-            }),
-            CheckboxRow(ctx, {
-                label: "Only the hypnotizer", description: `Only whoever hypnotized ${opts.remote ? "them" : "you"} gets remote access.`,
-                get: () => s.limitRemoteAccessToHypnotizer ?? true, set: v => s.limitRemoteAccessToHypnotizer = v,
-                disabled: () => (!opts.remote && !s.remoteAccess) || !(s.remoteAccessRequiredTrance ?? true),
-            }),
         ],
     });
 

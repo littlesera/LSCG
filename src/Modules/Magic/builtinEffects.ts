@@ -3,7 +3,7 @@ import { DAMAGE_EFFECT } from "./effects/damage";
 import { DISSOLVE_EFFECT } from "./effects/dissolve";
 import { ROPES_EFFECT, SLIME_EFFECT, WEB_EFFECT } from "./effects/restraints";
 import { COMMAND_EFFECT } from "./effects/command";
-import { GRASP_EFFECT } from "./effects/grasp";
+import { GRASP_EFFECT, loosenGrasp, tightenGrasp } from "./effects/grasp";
 import { REMOVE_CURSE_EFFECT } from "./effects/removeCurse";
 import { SendAction, forceOrgasm } from "utils";
 // Type-only: spellEffects.ts imports this file to register the built-ins.
@@ -212,8 +212,9 @@ export const BUILTIN_SPELL_EFFECTS: SpellEffectDefinition[] = [
         description: "Dispels any existing effects on the target (including anything drug induced).",
         beneficial: true,
         allowRandom: true,
-        apply: ({ magic }) => {
+        apply: ({ magic, run }) => {
             SendAction("%NAME% gasps, blinking as any magic affecting %INTENSIVE% is removed.");
+            magic.CancelPendingSpells("dispel", run);
             magic.stateModule.Clear(false, true);
         },
     },
@@ -297,11 +298,15 @@ export const BUILTIN_SPELL_EFFECTS: SpellEffectDefinition[] = [
         label: LSCGSpellEffect.tighten,
         description: "Tightens every unlocked restraint on the target.",
         allowRandom: true,
-        apply: ({ sender }) => {
-            if (adjustRestraints(TIGHTEN_STEP, sender) > 0) {
+        apply: ({ magic, sender }) => {
+            const tightened = adjustRestraints(TIGHTEN_STEP, sender) > 0;
+            if (tightened) {
                 SendAction("%NAME% gasps as every restraint on %INTENSIVE% cinches tighter, pulled taut by unseen hands.");
                 TightenLoosenFacialExpression(Player, "Medium", "Surprised", "Harsh");
-            } else
+            }
+            // A spectral hand on the neck squeezes harder too
+            const squeezed = tightenGrasp(magic.stateModule.SpellEffectsState);
+            if (!tightened && !squeezed)
                 SendAction("The spell tugs at %NAME%, but finds nothing it can tighten.");
         },
     },
@@ -311,11 +316,15 @@ export const BUILTIN_SPELL_EFFECTS: SpellEffectDefinition[] = [
         description: "Loosens every unlocked restraint on the target.",
         beneficial: true,
         allowRandom: true,
-        apply: ({ sender }) => {
-            if (adjustRestraints(-TIGHTEN_STEP, sender) > 0) {
+        apply: ({ magic, sender }) => {
+            const loosened = adjustRestraints(-TIGHTEN_STEP, sender) > 0;
+            if (loosened) {
                 SendAction("%NAME% lets out a relieved breath as %POSSESSIVE% restraints slacken.");
                 TightenLoosenFacialExpression(Player, "ShortBreath", "Closed", "Soft");
-            } else
+            }
+            // A spectral hand on the neck eases its grip too, but keeps hold
+            const eased = loosenGrasp(magic.stateModule.SpellEffectsState);
+            if (!loosened && !eased)
                 SendAction("The spell brushes over %NAME%, but finds nothing it can loosen.");
         },
     },

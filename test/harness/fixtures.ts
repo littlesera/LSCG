@@ -196,6 +196,7 @@ export interface FixtureAssetGroup {
 	Underwear: boolean;
 	BodyCosplay: boolean;
 	IsAppearance: () => boolean;
+	IsItem: () => boolean;
 }
 
 export interface FixtureAsset {
@@ -234,6 +235,7 @@ export function makeGroup(overrides: Partial<FixtureAssetGroup> & { Name: string
 		Underwear: false,
 		BodyCosplay: false,
 		IsAppearance: () => g.Category === "Appearance",
+		IsItem: () => g.Category === "Item",
 		...overrides,
 	};
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any

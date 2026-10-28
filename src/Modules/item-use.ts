@@ -25,6 +25,7 @@ export const MagicWandItems: string[] = [
 	"SmallVibratingWand",
 	"ShockWand",
 	"Baguette",
+	"AnimeGirlWand", // the Cosplay Girl Power Staff
 ];
 
 /** Handheld items the base game doesn't allow SipItem on, but we do. */
@@ -1568,7 +1569,7 @@ export class ItemUseModule extends BaseModule {
 		// -5 if we're incapacitated, automatic failure if we're also defending
 		const incapacitatedMod = IsIncapacitated(C.IsPlayer() ? C as PlayerCharacter : C as OtherCharacter) ? (isAggressor ? 5 : 100) * -1 : 0;
 		// -2 for each level of choking
-		const breathMod = (C.IsPlayer() ? getModule<CollarModule>("CollarModule").totalChokeLevel : (C as OtherCharacter).LSCG?.CollarModule.chokeLevel ?? 0) * -2;
+		const breathMod = (C.IsPlayer() ? getModule<CollarModule>("CollarModule").totalChokeLevel : (C as OtherCharacter).LSCG?.CollarModule?.chokeLevel ?? 0) * -2;
 		// +/- 5 for buff state
 		const buffMod = (!buffState || !buffState.active) ? 0 : ((buffState.extensions["negative"] ?? false) ? -5 : 5);
 		// +5 magic barrier
@@ -1845,10 +1846,10 @@ export class ItemUseModule extends BaseModule {
 				} else if (types.some((type) => InventoryBlockedOrLimited(targetOwner, targetItem, type ?? ""))) {
 					blocked = "blocked";
 				} else if (InventoryGroupIsBlocked(targetOwner, /** @type {AssetGroupItemName} */(targetItem.Asset.Group.Name) as AssetGroupItemName)) {
-					blocked = "unavail";
+					continue;
 				}
 			} else {
-				blocked = "unavail";
+				continue;
 			}
 
 			if (blocked) {
@@ -1960,10 +1961,11 @@ export class ItemUseModule extends BaseModule {
 		if (!!C && !!craft) {
 			let itemSrc = "";
 			let lockSrc = "";
-			for (const Item of C.Inventory) {
+			for (const Item of C.Inventory ?? []) {
 				if (Item.Asset.Name == craft.Item) {
 					itemSrc = "Assets/" + Player.AssetFamily + "/" + Item.Asset.DynamicGroupName + "/Preview/" + Item.Asset.Name + ".png";
-					if ((craft.Lock != null) && (craft.Lock != ""))
+					// Only a real lock: the name goes into the image's address, and comes from whoever shared the craft
+					if (typeof craft.Lock === "string" && craft.Lock != "" && AssetGet(Player.AssetFamily, "ItemMisc", craft.Lock))
 						lockSrc = "Assets/" + Player.AssetFamily + "/ItemMisc/Preview/" + craft.Lock + ".png";
 					break;
 				}

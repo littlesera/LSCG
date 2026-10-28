@@ -8,6 +8,12 @@ import { HypnoInstruction, HypnoModule, HypnoSuggestion } from "Modules/hypno";
 import { getModule } from "modules";
 import { CommandListener, CoreModule } from "Modules/core";
 import { DomSettingsHost } from "Settings/domSettingsHost";
+import { extensionInstructionIds, extensionInstructions, instructionLabel, isExtensionInstruction } from "api/hypno";
+import { editableOptions, summarizeOptions } from "api/options";
+import { optionRows } from "Settings/optionRows";
+import { cleanDelay } from "stepDelay";
+import { EFFECT_DURATIONS } from "constants/timing";
+import { DelayConnector } from "Settings/delayConnector";
 import { Button, ButtonRow, CheckboxRow, KitContext, Notice, openDialog, Panel, RuleTable, SectionLabel, SelectOption, SelectRow, TextRow, ZonePicker } from "Dom/kit";
 
 export interface PoseSelection {
@@ -41,12 +47,15 @@ const SELF_INSTRUCTIONS = [LSCGHypnoInstruction.activity];
 /** Instructions with a list of choices (Configure…). */
 const SELECTION_INSTRUCTIONS = [LSCGHypnoInstruction.activity, LSCGHypnoInstruction.strip, LSCGHypnoInstruction.pose, LSCGHypnoInstruction.forget];
 /** Instructions a suggestion can only hold once. */
-const UNREPEATABLE_INSTRUCTIONS = [LSCGHypnoInstruction.maid, LSCGHypnoInstruction.say, LSCGHypnoInstruction.denial, LSCGHypnoInstruction.insatiable];
+const UNREPEATABLE_INSTRUCTIONS: string[] = [LSCGHypnoInstruction.maid, LSCGHypnoInstruction.say, LSCGHypnoInstruction.denial, LSCGHypnoInstruction.insatiable];
 /** Nothing can follow these. */
-const TERMINATING_INSTRUCTIONS = [LSCGHypnoInstruction.maid];
+const TERMINATING_INSTRUCTIONS: string[] = [LSCGHypnoInstruction.maid];
+/** An extension's instruction says for itself whether it can be repeated or followed. */
+const isUnrepeatable = (type: string) => UNREPEATABLE_INSTRUCTIONS.includes(type) || !!extensionInstructions.get(type)?.unrepeatable;
+const isTerminating = (type: string) => TERMINATING_INSTRUCTIONS.includes(type) || !!extensionInstructions.get(type)?.terminating;
 const MAX_INSTRUCTIONS = 3;
 
-function configLabels(instruction: LSCGHypnoInstruction): [string, string] {
+function configLabels(instruction: string): [string, string] {
 	switch (instruction) {
 		case LSCGHypnoInstruction.activity:
 		case LSCGHypnoInstruction.follow:
@@ -216,18 +225,19 @@ export class RemoteSuggestions extends RemoteHypnoBase {
 		return this.settings.limitSuggestionMod || suggestion.installedBy == Player.MemberNumber || this.Character.IsOwnedByPlayer();
 	}
 
-	get ActualInstructions(): LSCGHypnoInstruction[] {
-		return Object.values(LSCGHypnoInstruction).filter(e => e != LSCGHypnoInstruction.none && (this.settings.blockedInstructions ?? []).indexOf(e) == -1);
+	get ActualInstructions(): string[] {
+		return [...Object.values<string>(LSCGHypnoInstruction), ...extensionInstructionIds()]
+			.filter(e => e != LSCGHypnoInstruction.none && (this.settings.blockedInstructions ?? []).indexOf(e) == -1);
 	}
 
 	/** Instructions slot `ix` may hold: anything not blocked, minus unrepeatable ones used in another slot. */
-	AvailableInstructions(suggestion: HypnoSuggestion, ix: number): LSCGHypnoInstruction[] {
-		const taken = suggestion.instructions.map(i => i.type).filter((t, i) => i != ix && UNREPEATABLE_INSTRUCTIONS.indexOf(t) > -1);
+	AvailableInstructions(suggestion: HypnoSuggestion, ix: number): string[] {
+		const taken = suggestion.instructions.map(i => i.type).filter((t, i) => i != ix && isUnrepeatable(t));
 		return this.ActualInstructions.filter(t => taken.indexOf(t) == -1);
 	}
 
 	PreviousInstructionIsTerminating(suggestion: HypnoSuggestion, ix: number): boolean {
-		return ix > 0 && TERMINATING_INSTRUCTIONS.indexOf(suggestion.instructions[ix - 1]?.type ?? LSCGHypnoInstruction.none) > -1;
+		return ix > 0 && isTerminating(suggestion.instructions[ix - 1]?.type ?? LSCGHypnoInstruction.none);
 	}
 
 	/** The suggestion's instructions, in order. A slot appears once the one before it is filled. */
@@ -238,14 +248,14 @@ export class RemoteSuggestions extends RemoteHypnoBase {
 			dctx.watch(() => {
 				const rows: HTMLElement[] = [<small class="lscg-kit-desc">{`Installed by: ${sg.installedByName} [${sg.installedBy}]`}</small> as HTMLElement];
 				for (let ix = 0; ix < MAX_INSTRUCTIONS && ix <= sg.instructions.length && !this.PreviousInstructionIsTerminating(sg, ix); ix++)
-					rows.push(...this.instructionRows(dctx, sg, ix));
+					rows.push(...this.instructionRows(dctx, sg, ix, ctx));
 				container.replaceChildren(...rows);
 			});
 			return [container];
 		});
 	}
 
-	private instructionRows(dctx: KitContext, sg: HypnoSuggestion, ix: number): HTMLElement[] {
+	private instructionRows(dctx: KitContext, sg: HypnoSuggestion, ix: number, screenCtx: KitContext): HTMLElement[] {
 		// Rows are rebuilt on every change, so each gets its own context that just forwards changes up.
 		const rctx = new KitContext(() => dctx.changed());
 		const instruction = sg.instructions[ix] as HypnoInstruction | undefined;
@@ -254,15 +264,27 @@ export class RemoteSuggestions extends RemoteHypnoBase {
 		if (type && available.indexOf(type) < 0) available.unshift(type);
 		// An empty slot can stay empty; the last of several can be removed. The first can't be once set.
 		const removable = !instruction || (ix > 0 && ix == sg.instructions.length - 1);
+		// How long this instruction waits after the one above it. It doesn't change which rows there are, so it forwards past the dialog's own
+		// rebuild (which would close it mid-edit) straight to the screen behind.
+		const delay = instruction && ix > 0 ? DelayConnector(new KitContext(() => screenCtx.changed()), {
+			custom: () => cleanDelay(instruction.delay),
+			normal: () => EFFECT_DURATIONS.SUGGESTION_INSTRUCTION_DELAY,
+			set: ms => { if (ms === undefined) delete instruction.delay; else instruction.delay = ms; },
+		}) : undefined;
 		const rows: HTMLElement[] = [
+			...(delay ? [delay] : []),
 			SectionLabel(`Instruction #${ix + 1}`),
 			SelectRow(rctx, {
 				label: "Instruction", description: type ? InstructionDescription(type) : "A suggested instruction.",
-				options: options(available, removable ? "None" : undefined),
+				options: [
+					...(removable ? [{ value: "", label: "None" }] : []),
+					// An extension's instructions are listed together under their own heading, like extension spell effects.
+					...available.map<SelectOption>(v => ({ value: v, label: instructionLabel(v), ...(isExtensionInstruction(v) ? { group: "From extensions", icon: "extension" as const } : {}) })),
+				],
 				get: () => type ?? "",
 				set: v => {
 					if (!v) sg.instructions.splice(ix, 1);
-					else sg.instructions[ix] = new HypnoInstruction(v as LSCGHypnoInstruction);
+					else sg.instructions[ix] = new HypnoInstruction(v);
 				},
 			}),
 		];
@@ -284,6 +306,15 @@ export class RemoteSuggestions extends RemoteHypnoBase {
 				label: "Self", description: "Subject will always target themselves",
 				get: self, set: v => instruction.arguments["self"] = v,
 			}));
+		// An extension's own settings, behind a button like LSCG's own choices.
+		const def = extensionInstructions.get(type);
+		if (def && def.options.length > 0) {
+			const current = () => editableOptions(def.options, instruction.arguments["options"]);
+			rows.push(ButtonRow(rctx, {
+				label: "Configure", description: summarizeOptions(def.options, current()), buttonLabel: "Configure…",
+				onClick: button => openDialog(button, dctx, `${def.label}: configure`, sctx => optionRows(sctx, def.options, current, patch => instruction.arguments["options"] = { ...current(), ...patch })),
+			}));
+		}
 		if (SELECTION_INSTRUCTIONS.indexOf(type) > -1)
 			rows.push(ButtonRow(rctx, {
 				label: "Configure", description: this.selectionSummary(instruction), buttonLabel: "Configure…",

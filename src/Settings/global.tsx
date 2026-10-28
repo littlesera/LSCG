@@ -3,10 +3,11 @@ import { BoopsModule } from "Modules/boops";
 import { LipstickModule } from "Modules/lipstick";
 import { MiscModule } from "Modules/misc";
 import { ICONS } from "utils";
-import { GlobalSettingsModel } from "./Models/base";
+import { GlobalSettingsModel, OutfitCopyLevel } from "./Models/base";
 import { GuiSubscreen } from "./settingBase";
 import { DomSettingsHost } from "./domSettingsHost";
-import { CheckboxRow, KitContext, Tabs } from "Dom/kit";
+import { CheckboxRow, KitContext, SectionLabel, SelectRow, Tabs } from "Dom/kit";
+import { remoteAccessRows } from "./remoteAccessRows";
 import { OpacityModule } from "Modules/opacity";
 import { LeashingModule } from "Modules/leashing";
 import { ChaoticItemModule } from "Modules/chaotic-item";
@@ -75,8 +76,32 @@ export class GuiGlobal extends GuiSubscreen {
 						() => s.tamperproofEnabled ?? true, v => s.tamperproofEnabled = v),
 					row("Enable chaotic/evolving items", "Enable chaotic/evolving features on crafted items you wear.",
 						() => L.ChaoticItemModule.enabled ?? true, v => L.ChaoticItemModule.enabled = v),
+					row("Enable net gun", "Lets you shoot nets from a crafted net gun (a medical injector, rainbow wand or baguette with \"net gun\" in its name or description).",
+						() => L.MiscModule.netgunEnabled ?? false, v => L.MiscModule.netgunEnabled = v),
+					CheckboxRow(ctx, {
+						label: "Chaotic net gun", description: "Your net gun fires wildly and has a 50/50 chance to net a random character instead of your target.",
+						get: () => L.MiscModule.netgunIsChaotic ?? false, set: v => L.MiscModule.netgunIsChaotic = v,
+						disabled: () => off() || !L.MiscModule.netgunEnabled,
+					}),
 					row("Block DOGS devious padlocks", "If checked, LSCG item applier (magic, cursed item, etc) will turn Devious Padlocks into regular Exclusive Padlocks on apply.",
 						() => s.blockDOGS ?? false, v => s.blockDOGS = v),
+					SelectRow(ctx, {
+						label: "Who can copy my outfit",
+						description: "Who may copy your outfit with /lscg get-outfit-code. They also need permission to use items on you.",
+						options: [
+							{ value: "Public", label: "Everyone" },
+							{ value: "Whitelist", label: "Whitelist, lovers and owner" },
+							{ value: "Nobody", label: "Nobody" },
+						],
+						get: () => s.outfitCopy ?? "Public", set: v => s.outfitCopy = v as OutfitCopyLevel, disabled: off,
+					}),
+				],
+			},
+			{
+				label: "Remote Access",
+				render: () => [
+					SectionLabel("Defaults for every section", "Hypnosis, collar, magic and speech analysis can use these instead of their own settings (each has a \"Use global defaults\" checkbox). Whether a section allows remote access at all, and whether it can be locked, stay set on the section."),
+					...remoteAccessRows(ctx, s, { disabled: off }),
 				],
 			},
 			{

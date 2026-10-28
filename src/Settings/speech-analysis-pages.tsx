@@ -1,3 +1,5 @@
+import { REMOTE_LEVEL_LABELS } from "utils";
+import { remoteAccessRows } from "./remoteAccessRows";
 import { Outfits } from "modules";
 import { StripLevel } from "./Models/cursed-item";
 import { OutfitOption } from "./Models/magic";
@@ -7,7 +9,7 @@ import { Button, ButtonRow, CheckboxRow, confirmDialog, openDialog, KitContext, 
 import {
     SPEECH_DETECTIONS, SPEECH_DETECTION_DETECTOR, SPEECH_DETECTORS, SPEECH_EDITABLE_KEYS, SpeechDetectorId, SPEECH_MAX_COOLDOWN_MS, SPEECH_MAX_DURATION_MS, SPEECH_MAX_RULES, SPEECH_MAX_TEXT_LENGTH, SPEECH_NUMBER_RANGES as R,
     SPEECH_MAX_PHRASE_GROUPS, SPEECH_PHRASE_GROUP_NAME_MAX, SpeechPhraseGroup, defaultSpeechSettings, newPhraseGroupId,
-    SpeechAnalysisSettingsModel, SPEECH_OUTFIT_KEY_MAX, SPEECH_OUTFIT_OPTIONS, SPEECH_REACTION_ACTIONS, SPEECH_REACTION_STATES, SPEECH_REMOTE_LEVELS, SPEECH_REMOVE_ONLY_STATES, SpeechSettingsView, SpeechDetection, SpeechReactionAction, SpeechReactionRule, SpeechRemoteLevel,
+    SpeechAnalysisSettingsModel, SPEECH_OUTFIT_KEY_MAX, SPEECH_OUTFIT_OPTIONS, SPEECH_REACTION_ACTIONS, SPEECH_REACTION_STATES, SPEECH_REMOVE_ONLY_STATES, SpeechSettingsView, SpeechDetection, SpeechReactionAction, SpeechReactionRule,
 } from "./Models/speech-analysis";
 
 const DETECTION_LABELS: Record<SpeechDetection, string> = {
@@ -26,22 +28,15 @@ const ACTION_LABELS: Record<SpeechReactionAction, string> = {
     orgasm: "Force orgasm",
 };
 
+const options = <T extends string>(values: readonly T[], labels: Record<T, string>): SelectOption[] =>
+    values.map(v => ({ value: v, label: labels[v] }));
+
 const STATE_LABELS: Partial<Record<LSCGState, string>> = {
     hypnotized: "Trance (hypnotized)",
     redressed: "Outfit (restore clothes)",
 };
 
-export const REMOTE_LEVEL_LABELS: Record<SpeechRemoteLevel, string> = {
-    Owner: "Owner only",
-    Lovers: "Owner and lovers",
-    Whitelist: "Whitelist, lovers and owner",
-    Friends: "Friends and above",
-    PublicExceptBlacklist: "Everyone except blacklist",
-    Public: "Everyone",
-};
 
-const options = <T extends string>(values: readonly T[], labels: Record<T, string>): SelectOption[] =>
-    values.map(v => ({ value: v, label: labels[v] }));
 
 const detectorOn = (s: SpeechSettingsView, id: SpeechDetectorId) =>
     s.detectors?.[id] ?? SPEECH_DETECTORS.find(d => d.id === id)?.defaultEnabled ?? false;
@@ -293,19 +288,18 @@ export function buildSpeechTabs(ctx: KitContext, s: SpeechSettingsView, opts: Sp
         },
         opts.remote
             ? {
-                label: "Remote",
+                label: "Remote Access",
                 render: () => [
-                    Notice(`Remote access: ${REMOTE_LEVEL_LABELS[s.remoteLevel] ?? s.remoteLevel}${s.remoteRequiresTrance ? ", while hypnotized" : ""}`),
+                    Notice(`Remote access: ${s.useGlobalRemote ? "wearer's global default" : REMOTE_LEVEL_LABELS[s.remoteLevel] ?? s.remoteLevel}${s.remoteRequiresTrance ? ", while hypnotized" : ""}${s.limitRemoteAccessToHypnotizer ? ", hypnotizer only" : ""}`),
                     CheckboxRow(ctx, { label: "Locked", description: "Prevent the wearer from changing these settings. Only available if they allowed lockout.", get: () => s.locked, set: v => s.locked = v, disabled: () => !s.lockable }),
                 ],
             }
             : {
-                label: "Remote",
+                label: "Remote Access",
                 render: () => [
                     SectionLabel("Remote configuration", "Let other players change these settings through LSCG remote settings."),
                     CheckboxRow(ctx, { label: "Allow remote configuration", get: () => s.remoteAccess, set: v => s.remoteAccess = v }),
-                    SelectRow(ctx, { label: "Who can configure", options: options(SPEECH_REMOTE_LEVELS, REMOTE_LEVEL_LABELS), get: () => s.remoteLevel, set: v => s.remoteLevel = v as SpeechRemoteLevel, disabled: () => !s.remoteAccess }),
-                    CheckboxRow(ctx, { label: "Requires trance", description: "Remote configuration only works while you are hypnotized, in addition to the permission level above.", get: () => s.remoteRequiresTrance, set: v => s.remoteRequiresTrance = v, disabled: () => !s.remoteAccess }),
+                    ...remoteAccessRows(ctx, s, { module: "SpeechAnalysisModule", disabled: () => !s.remoteAccess, levelLabel: "Who can configure" }),
                     CheckboxRow(ctx, { label: "Allow lockout", description: "Remote configurers may lock you out of changing these settings. Safeword releases the lock.", get: () => s.lockable, set: v => s.lockable = v, disabled: () => !s.remoteAccess }),
                 ],
             },

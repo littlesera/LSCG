@@ -1,8 +1,17 @@
 import { ABSOLUTE_MAX_SPELL_EFFECTS, SpellDefinition, SpellEffectId } from "Settings/Models/magic";
 import { CastArgs, CastPrompt, effectTier, getSpellEffect, SaveBehavior } from "./spellEffects";
+import { cleanDelay, MAX_STEP_DELAY, MIN_STEP_DELAY } from "stepDelay";
 
 /** The most a single effect's settings may weigh once serialised, whoever sent them. */
 export const MAX_EFFECT_CONFIG_SIZE = 1024;
+
+/** The shortest and longest an effect may wait for the one before it, whoever asks (a spell's author, an extension, a listener). */
+export const MIN_EFFECT_DELAY = MIN_STEP_DELAY;
+export const MAX_EFFECT_DELAY = MAX_STEP_DELAY;
+export { cleanDelay };
+
+/** How long an effect waits for the one before it unless the spell, the effect or a listener says otherwise. */
+export const DEFAULT_EFFECT_DELAY = 2000;
 
 /** How many copies of an effect one spell may hold. Unknown effects are unique. */
 export function stackLimit(effect: SpellEffectId | string): number {
@@ -32,6 +41,8 @@ export function removeEffect(spell: SpellDefinition, index: number) {
     spell.Effects.splice(index, 1);
     spell.Configs?.splice(index, 1);
     if (spell.Configs && spell.Configs.every(c => c == null)) delete spell.Configs;
+    spell.Delays?.splice(index, 1);
+    if (spell.Delays && spell.Delays.every(d => d == null)) delete spell.Delays;
     retier(spell);
 }
 
@@ -48,6 +59,25 @@ export function writeConfig(spell: SpellDefinition, index: number, config: unkno
     const configs = spell.Configs ??= [];
     configs[index] = config;
     retier(spell);
+}
+
+/** The delay (ms) the spell's author set for the effect at `index`, or undefined when they left it at the effect's default. */
+export function effectDelayFor(spell: SpellDefinition, index: number): number | undefined {
+    return cleanDelay(spell.Delays?.[index]);
+}
+
+/** Sets (ms) or clears (undefined) the author's delay for the effect at `index`. */
+export function writeDelay(spell: SpellDefinition, index: number, delay: number | undefined) {
+    const clean = cleanDelay(delay);
+    if (clean === undefined) {
+        if (!spell.Delays) return;
+        spell.Delays[index] = null;
+        if (spell.Delays.every(d => d == null)) delete spell.Delays;
+        return;
+    }
+    const delays = spell.Delays ??= [];
+    while (delays.length < spell.Effects.length) delays.push(null);
+    delays[index] = clean;
 }
 
 /** A spell's total power: each effect's tier (for ones that depend on their settings, the tier of the sanitized settings),
@@ -75,6 +105,8 @@ export function sanitizeSpell(spell: SpellDefinition): SpellDefinition {
     const copies = new Map<string, number>();
     const effects: SpellEffectId[] = [];
     const configs: unknown[] = [];
+    const delays: (number | null)[] = [];
+    const storedDelays: unknown[] = Array.isArray(spell.Delays) ? spell.Delays : [];
     ids.forEach((id, i) => {
         if (typeof id !== "string" || id === "" || effects.length >= ABSOLUTE_MAX_SPELL_EFFECTS)
             return;
@@ -86,12 +118,17 @@ export function sanitizeSpell(spell: SpellDefinition): SpellDefinition {
         const schema = getSpellEffect(id)?.config;
         const config = schema ? schema.sanitize(stored[i]) : null;
         configs.push(config !== null && JSON.stringify(config).length <= MAX_EFFECT_CONFIG_SIZE ? config : null);
+        delays.push(cleanDelay(storedDelays[i]) ?? null);
     });
     spell.Effects = effects;
     if (configs.some(c => c != null))
         spell.Configs = configs;
     else
         delete spell.Configs;
+    if (delays.some(d => d != null))
+        spell.Delays = delays;
+    else
+        delete spell.Delays;
     retier(spell);
     return spell;
 }
@@ -150,6 +187,7 @@ export function voiceCastArgs(spell: SpellDefinition, text: string): CastArgs | 
 /** A copy of the spell with only some of its effects, and the cast answers moved to their new positions. */
 export function pickEffects(spell: SpellDefinition, castArgs: CastArgs | undefined, indexes: number[]): { spell: SpellDefinition; castArgs: CastArgs | undefined } {
     const picked: SpellDefinition = { ...spell, Effects: indexes.map(i => spell.Effects[i]), Configs: indexes.map(i => spell.Configs?.[i] ?? null) };
+    if (spell.Delays) picked.Delays = indexes.map(i => spell.Delays?.[i] ?? null);
     const moved: CastArgs = {};
     indexes.forEach((from, to) => { if (castArgs?.[from]) moved[to] = castArgs[from]; });
     return { spell: picked, castArgs: Object.keys(moved).length > 0 ? moved : undefined };

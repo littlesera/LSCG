@@ -61,10 +61,15 @@ export class PublicSettingsModel implements IPublicSettingsModel {
     ExtensionData: Record<string, unknown> = {};
     CollarModule: CollarPublicSettingsModel = <CollarPublicSettingsModel>{
         enabled: false,
+        breathplayEnabled: false,
         chokeLevel: 0,
-        collarPurchased: false,
         allowedMembers: "",
         remoteAccess: false,
+        remoteLevel: "Owner",
+        remoteMemberIds: "",
+        useGlobalRemote: true,
+        remoteAccessRequiredTrance: false,
+        limitRemoteAccessToHypnotizer: false,
         lockable: false,
         locked: false,
         immersive: false,
@@ -91,8 +96,11 @@ export class PublicSettingsModel implements IPublicSettingsModel {
         awakeners: "",
         allowLocked: false,
         remoteAccess: false,
+        remoteLevel: "Owner",
+        remoteMemberIds: "",
+        useGlobalRemote: true,
         remoteAccessRequiredTrance: true,
-        limitRemoteAccessToHypnotizer: true,
+        limitRemoteAccessToHypnotizer: false,
         allowRemoteModificationOfMemberOverride: false,
         cooldownTime: 0,
         enableArousal: false,
@@ -120,6 +128,9 @@ export class PublicSettingsModel implements IPublicSettingsModel {
     GlobalModule: GlobalPublicSettingsModel = <GlobalPublicSettingsModel>{
         enabled: false,
         sharePublicCrafting: false,
+        outfitCopy: "Public",
+        remoteLevel: "Owner",
+        remoteMemberIds: "",
     };
     MiscModule: BaseSettingsModel = <BaseSettingsModel>{enabled: false};
     InjectorModule: InjectorPublicSettingsModel = <InjectorPublicSettingsModel>{
@@ -153,7 +164,9 @@ export class PublicSettingsModel implements IPublicSettingsModel {
         remoteAccess: false,
         remoteAccessRequiredTrance: false,
         limitRemoteAccessToHypnotizer: false,
+        remoteLevel: "Owner",
         remoteMemberIds: "",
+        useGlobalRemote: true,
         neverDefend: false,
         noDefenseMemberIds: "",
         limitedDuration: true,

@@ -32,6 +32,8 @@ describe("Magic™ settings pages", () => {
         magic.settings.knownSpells = [];
         magic.settings.blockedSpellEffects = [];
         magic.settings.bypassForSelfEffects = [];
+        magic.settings.lockedSpellEffects = [];
+        magic.settings.useGlobalRemote = false;
         api = registerExtension({ id: `pages-${++ids}`, name: "Page Pack", version: "1" });
     });
 
@@ -52,15 +54,15 @@ describe("Magic™ settings pages", () => {
         Array.from(root.querySelectorAll("tbody tr")).find(tr => tr.textContent?.includes(text)) as HTMLTableRowElement;
 
     it("offers every tab to the wearer, and no spell editing or astral projection remotely", () => {
-        expect(tabsFor(false).map(t => t.label)).toEqual(["General", "Effects", "Spells", "Defense", "Remote access", "Astral projection"]);
-        expect(tabsFor(true).map(t => t.label)).toEqual(["General", "Effects", "Defense", "Remote access"]);
+        expect(tabsFor(false).map(t => t.label)).toEqual(["General", "Effects", "Spells", "Defense", "Remote Access", "Astral projection"]);
+        expect(tabsFor(true).map(t => t.label)).toEqual(["General", "Effects", "Defense", "Remote Access"]);
     });
 
     describe("Effects tab", () => {
         it("lists every effect, including extension effects with their source", () => {
             api.spells.registerEffect({ name: "bark", label: "Barking", description: "Woof.", apply: () => {} });
             const root = render("Effects");
-            expect(root.querySelectorAll("tbody tr")).toHaveLength(allEffectIds().length);
+            expect(root.querySelectorAll("tbody tr:not(.lscg-kit-group-row)")).toHaveLength(allEffectIds().length);
             const row = rowFor(root, "Barking");
             expect(row.textContent).toContain("Page Pack");
             expect(row.textContent).toContain("Woof.");
@@ -117,7 +119,7 @@ describe("Magic™ settings pages", () => {
             const target = { enabled: true, blockedSpellEffects: [], bypassForSelfEffects: [] } as unknown as MagicPublicSettingsModel;
             const ctx = new KitContext(vi.fn());
             const root = render("Effects", true, target, legacyEffectIds(), ctx);
-            expect(root.querySelectorAll("tbody tr")).toHaveLength(legacyEffectIds().length);
+            expect(root.querySelectorAll("tbody tr:not(.lscg-kit-group-row)")).toHaveLength(legacyEffectIds().length);
             expect(rowFor(root, "Barking")).toBeUndefined();
 
             const block = rowFor(root, "Deafening").querySelector("input[type=checkbox]") as HTMLInputElement;
@@ -314,99 +316,162 @@ describe("Magic™ settings pages", () => {
 
             describe("each effect's own settings", () => {
                 const group = (dialog: HTMLElement, slot: number) => Array.from(dialog.querySelectorAll(".lscg-spell-effects > *"))[slot] as HTMLElement;
-                const nested = (dialog: HTMLElement, slot: number) => group(dialog, slot).querySelector(".lscg-kit-expando") as HTMLDetailsElement | null;
+                const gearOf = (dialog: HTMLElement, slot: number) => group(dialog, slot).querySelector(".lscg-spell-gear") as HTMLButtonElement | null;
+                // An effect's settings open in a dialog of their own: the gear's, opened on first use and kept for later calls. Null for no gear.
+                const opened = new WeakMap<HTMLElement, HTMLDialogElement>();
+                const nested = (dialog: HTMLElement, slot: number) => {
+                    const gear = gearOf(dialog, slot);
+                    if (!gear) return null;
+                    let settings = opened.get(gear);
+                    if (!settings?.isConnected) {
+                        const before = new Set(document.querySelectorAll("dialog"));
+                        gear.click();
+                        settings = Array.from(document.querySelectorAll("dialog")).find(d => !before.has(d)) as HTMLDialogElement;
+                        opened.set(gear, settings);
+                    }
+                    return settings;
+                };
                 const rowIn = (scope: ParentNode, label: string) =>
                     Array.from(scope.querySelectorAll(".lscg-kit-row")).find(r => r.querySelector("label")?.textContent === label) as HTMLElement;
                 const type = (el: HTMLInputElement, value: string) => { el.value = value; el.dispatchEvent(new Event("change")); };
 
-                it("shows an effect's settings directly under its dropdown, and only for effects that have any", () => {
+                it("keeps an effect's settings behind a gear beside its dropdown, only for effects that have any", () => {
                     const dialog = openEditor(spell("cfg", [LSCGSpellEffect.blindness, LSCGSpellEffect.outfit]));
-                    expect(nested(dialog, 0)).toBeNull();
+                    expect(gearOf(dialog, 0)).toBeNull();
                     const outfitGroup = group(dialog, 1);
                     expect(outfitGroup.className).toContain("lscg-spell-effect");
-                    expect(outfitGroup.firstElementChild!.querySelector("label")!.textContent).toBe("Effect 2");
-                    expect(nested(dialog, 1)).not.toBeNull();
-                    // nothing is left over at the bottom of the dialog
+                    expect(outfitGroup.querySelector(".lscg-spell-effect-head label")!.textContent).toBe("Effect 2");
+                    expect(gearOf(dialog, 1)).not.toBeNull();
+                    // the cog sits in the dropdown's control cell so it lines up with it; effects without one keep the room
+                    expect(gearOf(dialog, 1)!.parentElement).toBe(dropdowns(dialog)[1].closest(".lscg-kit-control"));
+                    expect(group(dialog, 0).querySelector(".lscg-kit-control > .lscg-spell-gear-spacer")).not.toBeNull();
+                    // nothing of the settings is in the busy effect list until the gear is used
                     expect(dialog.textContent).not.toContain("Which outfit the Outfit effect puts on");
                 });
 
-                it("are a collapsible section, set apart from the dialog by a teal border, with no shadow", () => {
-                    const dialog = openEditor(spell("expando", [LSCGSpellEffect.outfit]));
-                    const section = nested(dialog, 0)!;
-                    expect(section.tagName).toBe("DETAILS");
-                    expect(section.querySelector("summary")).not.toBeNull();
-                    expect(section.className).toContain("lscg-kit-expando");
-                    // The look lives with the kit's styles (rendered here without the overlay host, so read the source).
-                    const scss = readFileSync("src/Dom/kit.scss", "utf-8");
-                    const block = scss.slice(scss.indexOf(".lscg-kit-expando {"), scss.indexOf(".lscg-kit-expando-summary"));
-                    expect(block).toMatch(/--lscg-expando-tint:\s*#00d5d5/);
-                    expect(block).toMatch(/border:[^;]*var\(--lscg-expando-tint\)/);
-                    expect(block).not.toMatch(/box-shadow/);
-                    expect(block).toMatch(/background-color:\s*var\(--lscg-background-color\)/); // the panel's own, so the row stripes look the same
+                it("open in a dialog of their own, titled after the effect", () => {
+                    const dialog = openEditor(spell("dlg", [LSCGSpellEffect.outfit]));
+                    const settings = nested(dialog, 0)!;
+                    expect(settings.tagName).toBe("DIALOG");
+                    expect(settings.getAttribute("aria-label")).toBe("Outfit settings");
+                    expect(settings.querySelector("h2")!.textContent).toBe("Outfit settings");
+                    expect(rowIn(settings, "Other outfit")).toBeDefined();
                 });
 
-                it("open when the effect still needs something chosen, closed once it has been", () => {
-                    const fresh = openEditor(spell("fresh", [LSCGSpellEffect.outfit]));
-                    expect(nested(fresh, 0)!.open).toBe(true);
+                it("flags the gear while the effect still needs something chosen, and not once it has been", () => {
+                    const flagged = (el: HTMLElement | null) => el!.classList.contains("lscg-kit-warning");
+                    expect(flagged(gearOf(openEditor(spell("fresh", [LSCGSpellEffect.outfit])), 0))).toBe(true);
 
                     document.body.replaceChildren();
                     const done = spell("done", [LSCGSpellEffect.outfit]);
                     done.Outfit = { Code: "", Key: "Maid", Option: OutfitOption.both };
-                    expect(nested(openEditor(done), 0)!.open).toBe(false);
+                    expect(flagged(gearOf(openEditor(done), 0))).toBe(false);
 
                     document.body.replaceChildren();
                     const poly = spell("poly", [LSCGSpellEffect.polymorph]);
-                    expect(nested(openEditor(poly), 0)!.open).toBe(true);
+                    expect(flagged(gearOf(openEditor(poly), 0))).toBe(true);
                     document.body.replaceChildren();
                     poly.Polymorph = { Code: "", Key: "Fox" } as never;
-                    expect(nested(openEditor(poly), 0)!.open).toBe(false);
+                    expect(flagged(gearOf(openEditor(poly), 0))).toBe(false);
                 });
 
-                it("a newly added effect opens its settings", () => {
+                it("a newly added effect that needs settings gets a flagged gear", () => {
                     const dialog = openEditor(spell("added"));
+                    expect(gearOf(dialog, 0)).toBeNull();
                     choose(dialog, 0, LSCGSpellEffect.outfit);
-                    expect(nested(dialog, 0)!.open).toBe(true);
+                    expect(gearOf(dialog, 0)!.classList.contains("lscg-kit-warning")).toBe(true);
                 });
 
-                it("the summary line describes the current settings, even while closed, and follows edits", () => {
+                it("the gear describes the current settings and follows edits made in its dialog", () => {
                     const sp = spell("summary", [LSCGSpellEffect.outfit]);
                     sp.Outfit = { Code: "", Key: "Maid", Option: OutfitOption.clothes_only };
                     const dialog = openEditor(sp);
-                    const summary = () => nested(dialog, 0)!.querySelector("summary")!.textContent;
-                    expect(nested(dialog, 0)!.open).toBe(false);
+                    const summary = () => gearOf(dialog, 0)!.getAttribute("aria-label")!.replace(/^Settings for [^:]*: /, "");
                     expect(summary()).toBe("Outfit settings: Maid (Clothes Only)");
                     type(rowIn(nested(dialog, 0)!, "Other outfit").querySelector("input") as HTMLInputElement, "Fox");
                     expect(summary()).toBe("Outfit settings: Fox (Clothes Only)");
                     type(rowIn(nested(dialog, 0)!, "Other outfit").querySelector("input") as HTMLInputElement, "");
                     expect(summary()).toBe("Outfit settings: no outfit chosen yet (Clothes Only)");
+                    expect(gearOf(dialog, 0)!.classList.contains("lscg-kit-warning")).toBe(true);
                 });
 
-                it("remembers which sections the player opened or closed when the list rebuilds", () => {
-                    const sp = spell("remember", [LSCGSpellEffect.outfit, LSCGSpellEffect.polymorph]);
-                    sp.Outfit = { Code: "", Key: "Maid", Option: OutfitOption.both };       // closed by default
-                    const dialog = openEditor(sp);
-                    expect(nested(dialog, 0)!.open).toBe(false);
-                    expect(nested(dialog, 1)!.open).toBe(true);                             // nothing chosen: open by default
-
-                    const first = nested(dialog, 0)!;
-                    first.open = true; first.dispatchEvent(new Event("toggle"));
-                    const second = nested(dialog, 1)!;
-                    second.open = false; second.dispatchEvent(new Event("toggle"));
-
-                    choose(dialog, 2, LSCGSpellEffect.blindness);                           // rebuilds the list
-                    expect(nested(dialog, 0)!.open).toBe(true);
-                    expect(nested(dialog, 1)!.open).toBe(false);
-                });
-
-                it("the settings come and go with the effect, and follow it when the order changes", () => {
+                it("the gear comes and goes with the effect, and follows it when the order changes", () => {
                     const sp = spell("move", [LSCGSpellEffect.outfit, LSCGSpellEffect.blindness]);
                     const dialog = openEditor(sp);
-                    expect(nested(dialog, 0)).not.toBeNull();
-                    choose(dialog, 0, "");                       // outfit removed: blindness moves to slot 1
-                    expect(dialog.querySelector(".lscg-kit-expando")).toBeNull();
+                    expect(gearOf(dialog, 0)).not.toBeNull();
+                    choose(dialog, 0, "");                       // outfit removed: blindness moves to slot 0
+                    expect(dialog.querySelector(".lscg-spell-gear")).toBeNull();
                     choose(dialog, 1, LSCGSpellEffect.outfit);   // added in the second slot
-                    expect(nested(dialog, 1)).not.toBeNull();
-                    expect(nested(dialog, 0)).toBeNull();
+                    expect(gearOf(dialog, 1)).not.toBeNull();
+                    expect(gearOf(dialog, 0)).toBeNull();
+                });
+
+                describe("the delay between effects", () => {
+                    const connectorOf = (dialog: HTMLElement, slot: number) => group(dialog, slot)?.querySelector(".lscg-delay-connector") as HTMLDetailsElement | null;
+                    const text = (dialog: HTMLElement, slot: number) => connectorOf(dialog, slot)!.querySelector("summary")!.textContent;
+
+                    it("is a thin connector above every effect except the first", () => {
+                        const dialog = openEditor(spell("delays", [LSCGSpellEffect.blindness, LSCGSpellEffect.deafened, LSCGSpellEffect.muted]));
+                        expect(connectorOf(dialog, 0)).toBeNull();
+                        for (const slot of [1, 2]) {
+                            expect(connectorOf(dialog, slot)!.open).toBe(false);
+                            expect(text(dialog, slot)).toBe("\u21b3 wait 2s");
+                        }
+                        // the empty "add another" slot (when there's room) has none
+                        document.body.replaceChildren();
+                        const room = openEditor(spell("room", [LSCGSpellEffect.blindness]));
+                        expect(room.querySelectorAll(".lscg-delay-connector")).toHaveLength(0);
+                    });
+
+                    it("sits between the two effects, outside either one's dropdown row", () => {
+                        const dialog = openEditor(spell("place", [LSCGSpellEffect.blindness, LSCGSpellEffect.deafened]));
+                        expect(connectorOf(dialog, 1)!.nextElementSibling!.className).toContain("lscg-spell-effect-head");
+                        expect(connectorOf(dialog, 1)!.closest(".lscg-kit-row")).toBeNull();
+                    });
+
+                    it("sets a custom delay, shows it, and goes back to the default", () => {
+                        const sp = spell("custom", [LSCGSpellEffect.blindness, LSCGSpellEffect.deafened]);
+                        const dialog = openEditor(sp);
+                        const panel = () => connectorOf(dialog, 1)!;
+                        const custom = () => rowIn(panel(), "Custom delay").querySelector("input") as HTMLInputElement;
+                        const seconds = () => rowIn(panel(), "Wait (seconds)");
+                        expect(sp.Delays).toBeUndefined();
+                        expect(seconds().hidden || seconds().style.display === "none").toBe(true);
+
+                        custom().checked = true; custom().dispatchEvent(new Event("change"));
+                        expect(sp.Delays).toEqual([null, 2000]);
+                        expect(text(dialog, 1)).toBe("\u21b3 wait 2s (custom)");
+
+                        type(seconds().querySelector("input") as HTMLInputElement, "7.5");
+                        expect(sp.Delays).toEqual([null, 7500]);
+                        expect(text(dialog, 1)).toBe("\u21b3 wait 7.5s (custom)");
+
+                        // the editor won't go below one second: 0 is refused and the delay stays as it was
+                        expect((seconds().querySelector("input") as HTMLInputElement).min).toBe("1");
+                        type(seconds().querySelector("input") as HTMLInputElement, "0");
+                        expect(sp.Delays).toEqual([null, 7500]);
+                        type(seconds().querySelector("input") as HTMLInputElement, "1");
+                        expect(text(dialog, 1)).toBe("\u21b3 wait 1s (custom)");
+
+                        custom().checked = false; custom().dispatchEvent(new Event("change"));
+                        expect(sp.Delays).toBeUndefined();
+                        expect(text(dialog, 1)).toBe("\u21b3 wait 2s");
+                    });
+
+                    it("shows an extension effect's own default", () => {
+                        api.spells.registerEffect({ name: "slow", label: "Slow", description: "", delay: 4500, apply: () => {} });
+                        const dialog = openEditor(spell("ext", [LSCGSpellEffect.blindness, `${api.id}.slow` as SpellEffectId]));
+                        expect(text(dialog, 1)).toBe("\u21b3 wait 4.5s");
+                    });
+
+                    it("belongs to its slot when effects are removed", () => {
+                        const sp = spell("shift", [LSCGSpellEffect.blindness, LSCGSpellEffect.deafened, LSCGSpellEffect.muted]);
+                        sp.Delays = [null, 1000, 3000];
+                        const dialog = openEditor(sp);
+                        choose(dialog, 1, "");
+                        expect(sp.Delays).toEqual([null, 3000]);
+                        expect(text(dialog, 1)).toBe("\u21b3 wait 3s (custom)");
+                    });
                 });
 
                 // The collection reads player settings the harness doesn't have; stub just the list of saved names.
@@ -523,6 +588,276 @@ describe("Magic™ settings pages", () => {
         });
     });
 
+    describe("Effects tab: sorting and groups", () => {
+        const names = (root: HTMLElement) => Array.from(root.querySelectorAll("tbody tr")).map(tr => tr.querySelector("td")!.textContent!.trim());
+        const sortSelect = (root: HTMLElement) => Array.from(root.querySelectorAll(".lscg-kit-row")).find(r => r.querySelector("label")?.textContent === "Sort effects")!.querySelector("select") as HTMLSelectElement;
+        const choose = (root: HTMLElement, value: string) => { const s = sortSelect(root); s.value = value; s.dispatchEvent(new Event("change")); };
+        const groups = (root: HTMLElement) => Array.from(root.querySelectorAll<HTMLFieldSetElement>("fieldset.lscg-kit-fieldset"));
+        const nameOf = (fieldset: HTMLElement) => fieldset.querySelector(".lscg-kit-group-name")!.textContent;
+        const headings = (root: HTMLElement) => groups(root).map(nameOf);
+        const group = (root: HTMLElement, name: string) => groups(root).find(f => nameOf(f) === name)!;
+        const band = (root: HTMLElement, name: string) => group(root, name).querySelector<HTMLButtonElement>(".lscg-kit-group-toggle")!;
+        const rowNames = (fieldset: HTMLElement) => Array.from(fieldset.querySelectorAll("tbody tr")).map(tr => tr.querySelector("td")!.textContent!.trim());
+        // the table remembers which groups are folded, across opening the tab: open them all again after each test
+        afterEach(() => {
+            Array.from(render("Effects").querySelectorAll<HTMLButtonElement>('.lscg-kit-group-toggle[aria-expanded="false"]')).forEach(b => b.click());
+            choose(render("Effects"), "type");
+        });
+
+        it("groups by type by default, in the effect picker's order", () => {
+            const root = render("Effects");
+            expect(sortSelect(root).value).toBe("type");
+            expect(headings(root)).toEqual(["Mind", "Senses", "Form", "Binding", "Desire", "Harm", "Fortune", "Warding"]);
+        });
+
+        it("boxes each group in a fieldset that holds all of its effects, with its name as the legend", () => {
+            const root = render("Effects");
+            for (const fieldset of groups(root)) {
+                expect(fieldset.tagName).toBe("FIELDSET");
+                expect(fieldset.querySelector(":scope > legend .lscg-kit-group-name")).not.toBeNull();
+                expect(fieldset.querySelectorAll("table")).toHaveLength(1);
+            }
+            // every effect is inside some group's box, once, and none is left outside them
+            const inside = groups(root).flatMap(rowNames);
+            expect(inside).toHaveLength(allEffectIds().length);
+            expect(root.querySelectorAll("tbody tr")).toHaveLength(allEffectIds().length);
+            expect(Array.from(root.querySelectorAll("tbody tr")).every(tr => !!tr.closest("fieldset"))).toBe(true);
+            // ...each under its own group, A to Z
+            expect(rowNames(group(root, "Senses")).some(n => n.startsWith("Deafening"))).toBe(true);
+            expect(rowNames(group(root, "Binding")).some(n => n.startsWith("Gagged"))).toBe(true);
+            expect(rowNames(group(root, "Mind")).some(n => n.startsWith("Deafening"))).toBe(false);
+            for (const fieldset of groups(root)) {
+                const labels = rowNames(fieldset);
+                expect(labels).toEqual([...labels].sort((x, y) => x.localeCompare(y)));
+            }
+        });
+
+        it("shares one set of column headings, and every box lines its columns up with them", () => {
+            const root = render("Effects");
+            expect(root.querySelectorAll("thead")).toHaveLength(1);
+            // Sized by the same column definitions, not by widths on the headings (an em on a heading is its own, smaller font's em)
+            const widths = (table: Element) => Array.from(table.querySelectorAll("col")).map(c => (c as HTMLElement).style.width);
+            const headTable = root.querySelector("thead")!.closest("table")!;
+            expect(Array.from(headTable.querySelectorAll("th")).map(th => (th as HTMLElement).style.width)).toEqual(["", "", "", "", ""]);
+            const head = widths(headTable);
+            expect(head.filter(w => w !== "").length).toBeGreaterThan(0);
+            for (const fieldset of groups(root))
+                expect(widths(fieldset.querySelector("table")!)).toEqual(head);
+        });
+
+        it("extension effects get a group of their own after the built-in ones, and ones no longer installed come last", () => {
+            api.spells.registerEffect({ name: "bark", label: "Barking", description: "", domain: "Mind", apply: () => {} } as never);
+            const target = { ...magic.settings, blockedSpellEffects: ["gone.effect"] as SpellEffectId[] } as MagicPublicSettingsModel;
+            const root = render("Effects", true, target);
+            expect(headings(root).slice(0, 8)).toEqual(["Mind", "Senses", "Form", "Binding", "Desire", "Harm", "Fortune", "Warding"]);
+            expect(headings(root).slice(8)).toEqual(["From extensions", "Not installed"]);
+            expect(rowNames(group(root, "From extensions")).some(n => n.startsWith("Barking"))).toBe(true); // not filed under Mind, though it asked to be
+            expect(rowNames(group(root, "Mind")).some(n => n.startsWith("Barking"))).toBe(false);
+        });
+
+        it("each group's legend says how many effects are in it, and starts open", () => {
+            const root = render("Effects");
+            expect(band(root, "Mind").getAttribute("aria-expanded")).toBe("true");
+            expect(band(root, "Mind").querySelector(".lscg-kit-group-count")!.textContent).toBe("3");
+            expect(band(root, "Mind").querySelector(".lscg-kit-group-chevron")!.textContent).toBe("▾");
+        });
+
+        it("drops the domain pill from each effect while grouped, since the legend says it; the A to Z list keeps it", () => {
+            const root = render("Effects");
+            const pills = (r: HTMLElement) => Array.from(r.querySelectorAll("tbody tr td:first-child .lscg-kit-chip")).map(c => c.textContent);
+            expect(pills(root)).toEqual([]);
+            expect(rowFor(root, "Deafening").textContent).not.toContain("Senses");
+            choose(root, "name");
+            expect(rowFor(root, "Deafening").querySelector(".lscg-kit-chip")!.textContent).toBe("Senses");
+            expect(pills(root)).toHaveLength(allEffectIds().length);
+            choose(root, "type");
+            expect(pills(root)).toEqual([]);
+        });
+
+        it("still shows where an extension's effect comes from, and that an effect isn't installed", () => {
+            api.spells.registerEffect({ name: "bark", label: "Barking", description: "", apply: () => {} });
+            const target = { ...magic.settings, blockedSpellEffects: ["gone.effect"] as SpellEffectId[] } as MagicPublicSettingsModel;
+            const root = render("Effects", true, target);
+            expect(rowFor(root, "Barking").textContent).toContain("Page Pack");
+            expect(rowFor(root, "gone.effect").textContent).toContain("not installed");
+        });
+
+        it("clicking a legend folds its group's effects away, leaving the box and its legend, and clicking again brings them back", () => {
+            const root = render("Effects");
+            const before = names(root);
+            band(root, "Senses").click();
+            expect(band(root, "Senses").getAttribute("aria-expanded")).toBe("false");
+            expect(band(root, "Senses").querySelector(".lscg-kit-group-chevron")!.textContent).toBe("▸");
+            expect(group(root, "Senses").querySelector("table")).toBeNull();
+            expect(names(root)).toHaveLength(before.length - 4); // Senses has four effects
+            expect(names(root).some(n => n.startsWith("Deafening"))).toBe(false);
+            expect(names(root).some(n => n.startsWith("Gagged"))).toBe(true); // other groups are untouched
+            expect(headings(root)).toHaveLength(8);
+            band(root, "Senses").click();
+            expect(names(root)).toEqual(before);
+        });
+
+        it("folding is a view change: it doesn't mark the screen changed, and no setting moves", () => {
+            const changed = vi.fn();
+            magic.settings.blockedSpellEffects = [LSCGSpellEffect.deafened];
+            const root = render("Effects", false, magic.settings, undefined, new KitContext(changed));
+            band(root, "Senses").click();
+            band(root, "Senses").click();
+            expect(changed).not.toHaveBeenCalled();
+            expect(magic.settings.blockedSpellEffects).toEqual([LSCGSpellEffect.deafened]);
+        });
+
+        it("keeps groups folded when the tab is opened again", () => {
+            band(render("Effects"), "Harm").click();
+            const again = render("Effects");
+            expect(band(again, "Harm").getAttribute("aria-expanded")).toBe("false");
+            expect(names(again).some(n => n.startsWith("Damaging"))).toBe(false);
+        });
+
+        it("stripes alternate rows within each box", () => {
+            const root = render("Effects");
+            for (const fieldset of groups(root)) {
+                const rows = Array.from(fieldset.querySelectorAll("tbody tr"));
+                expect(rows.map(tr => tr.classList.contains("lscg-kit-stripe"))).toEqual(rows.map((_, i) => i % 2 === 1));
+            }
+        });
+
+        it("a folded group still keeps its blocks and forbids", () => {
+            const target = { ...magic.settings, blockedSpellEffects: [LSCGSpellEffect.deafened], lockedSpellEffects: [LSCGSpellEffect.deafened] } as MagicPublicSettingsModel;
+            const root = render("Effects", true, target);
+            band(root, "Senses").click();
+            band(root, "Senses").click();
+            const [block, , forbidden] = Array.from(rowFor(root, "Deafening").querySelectorAll("input[type=checkbox]")) as HTMLInputElement[];
+            expect(block.checked).toBe(true);
+            expect(forbidden.checked).toBe(true);
+        });
+
+        it("switches to one A to Z list with no boxes, and back", () => {
+            const root = render("Effects");
+            const grouped = names(root);
+            choose(root, "name");
+            expect(groups(root)).toEqual([]);
+            expect(root.querySelectorAll("table")).toHaveLength(1);
+            const alpha = names(root).map(n => n.replace(/\s.*/, ""));
+            expect(alpha).toHaveLength(allEffectIds().length);
+            expect(alpha).toEqual([...alpha].sort((a, b) => a.localeCompare(b)));
+            choose(root, "type");
+            expect(names(root)).toEqual(grouped);
+        });
+
+        it("in the A to Z list, extension effects still come last, then ones no longer installed", () => {
+            api.spells.registerEffect({ name: "aardvark", label: "Aardvark", description: "", apply: () => {} });
+            api.spells.registerEffect({ name: "zeal", label: "Zeal", description: "", apply: () => {} });
+            const target = { ...magic.settings, blockedSpellEffects: ["gone.effect"] as SpellEffectId[] } as MagicPublicSettingsModel;
+            const root = render("Effects", true, target);
+            choose(root, "name");
+            const list = names(root);
+            // built-in effects A to Z first (Aardvark would sort before them), then the extension's, then the uninstalled one
+            const builtIn = list.slice(0, allEffectIds().length - 2).map(n => n.replace(/\s.*/, ""));
+            expect(builtIn).toEqual([...builtIn].sort((a, b) => a.localeCompare(b)));
+            const tail = list.slice(-3);
+            expect(tail[0]).toMatch(/^Aardvark/);
+            expect(tail[1]).toMatch(/^Zeal/);
+            expect(tail[2]).toMatch(/gone\.effect/);
+            expect(list.findIndex(n => n.startsWith("Aardvark"))).toBeGreaterThan(list.findIndex(n => n.startsWith("Web")));
+        });
+
+        it("keeps the sort choice when the tab is opened again, and for a remote view too", () => {
+            choose(render("Effects"), "name");
+            expect(sortSelect(render("Effects")).value).toBe("name");
+            expect(sortSelect(render("Effects", true, { enabled: true, blockedSpellEffects: [], bypassForSelfEffects: [] } as unknown as MagicPublicSettingsModel)).value).toBe("name");
+        });
+    });
+
+    describe("Effects tab: the Forbidden column", () => {
+        // Block, Allow self and Forbidden are the three checkbox columns of the one effects table.
+        const lockBox = (root: HTMLElement, text: string) => rowFor(root, text)?.querySelectorAll("input[type=checkbox]")[2] as HTMLInputElement | undefined;
+
+        beforeEach(() => { magic.settings.lockedSpellEffects = []; });
+
+        it("sits next to Block and Allow self in the same table, with no second listing", () => {
+            const root = render("Effects");
+            expect(root.querySelectorAll("thead")).toHaveLength(1);
+            expect(Array.from(root.querySelectorAll("th")).map(th => th.textContent)).toEqual(["Effect", "Description", "Block", "Allow self", "Forbidden"]);
+            expect(root.querySelectorAll("tbody tr")).toHaveLength(allEffectIds().length);
+        });
+
+        it("the header explains it: a remote user prevents them from casting the effect; the wearer is told they can't", () => {
+            const tip = (root: HTMLElement) => Array.from(root.querySelectorAll("th")).find(th => th.textContent === "Forbidden")!.getAttribute("title");
+            const target = { ...magic.settings } as MagicPublicSettingsModel;
+            expect(tip(render("Effects", true, target))).toBe("Prevent them from casting this effect");
+            expect(tip(render("Effects"))).toBe("Prevents you from casting this effect. Only someone with remote access can change this.");
+        });
+
+                it("shows the wearer which effects are locked, read-only", () => {
+            magic.settings.lockedSpellEffects = [LSCGSpellEffect.deafened];
+            const root = render("Effects");
+            const locked = lockBox(root, "Deafening")!;
+            expect(locked.checked).toBe(true);
+            expect(locked.disabled).toBe(true);
+            expect(lockBox(root, "Blinding")!.checked).toBe(false);
+            expect(lockBox(root, "Blinding")!.disabled).toBe(true);
+        });
+
+        it("a wearer can't unlock by poking the checkbox", () => {
+            magic.settings.lockedSpellEffects = [LSCGSpellEffect.deafened];
+            const box = lockBox(render("Effects"), "Deafening")!;
+            box.disabled = false;
+            box.checked = false;
+            box.dispatchEvent(new Event("change"));
+            expect(magic.settings.lockedSpellEffects).toEqual([LSCGSpellEffect.deafened]);
+        });
+
+        it("the wearer's own Block and Allow self still work beside it", () => {
+            magic.settings.lockedSpellEffects = [LSCGSpellEffect.deafened];
+            const [block] = Array.from(rowFor(render("Effects"), "Deafening").querySelectorAll("input[type=checkbox]")) as HTMLInputElement[];
+            expect(block.disabled).toBe(false);
+            block.checked = true;
+            block.dispatchEvent(new Event("change"));
+            expect(magic.settings.blockedSpellEffects).toContain(LSCGSpellEffect.deafened);
+            expect(magic.settings.lockedSpellEffects).toEqual([LSCGSpellEffect.deafened]);
+        });
+
+        it("a remote user locks and unlocks effects, and it is the target's list that changes", () => {
+            const target = { ...magic.settings, lockedSpellEffects: [] as SpellEffectId[] } as MagicPublicSettingsModel;
+            const root = render("Effects", true, target);
+            expect(root.querySelectorAll("tbody tr:not(.lscg-kit-group-row)")).toHaveLength(allEffectIds().length);
+            const box = lockBox(root, "Deafening")!;
+            expect(box.disabled).toBe(false);
+            box.checked = true;
+            box.dispatchEvent(new Event("change"));
+            expect((target as unknown as { lockedSpellEffects: string[] }).lockedSpellEffects).toEqual([LSCGSpellEffect.deafened]);
+            expect(magic.settings.lockedSpellEffects).toEqual([]);
+            const again = lockBox(root, "Deafening")!;
+            again.checked = false;
+            again.dispatchEvent(new Event("change"));
+            expect((target as unknown as { lockedSpellEffects: string[] }).lockedSpellEffects).toEqual([]);
+        });
+
+        it("locking and blocking are independent", () => {
+            const target = { ...magic.settings, lockedSpellEffects: [] as SpellEffectId[], blockedSpellEffects: [] as SpellEffectId[], bypassForSelfEffects: [] as SpellEffectId[] } as MagicPublicSettingsModel;
+            const root = render("Effects", true, target);
+            const box = lockBox(root, "Deafening")!;
+            box.checked = true;
+            box.dispatchEvent(new Event("change"));
+            expect(target.blockedSpellEffects).toEqual([]);
+            const [block] = Array.from(rowFor(root, "Deafening").querySelectorAll("input[type=checkbox]")) as HTMLInputElement[];
+            block.checked = true;
+            block.dispatchEvent(new Event("change"));
+            block.checked = false;
+            block.dispatchEvent(new Event("change"));
+            expect((target as unknown as { lockedSpellEffects: string[] }).lockedSpellEffects).toEqual([LSCGSpellEffect.deafened]);
+        });
+
+        it("keeps a lock on an effect that isn't installed visible, so it can be removed, once", () => {
+            const target = { ...magic.settings, lockedSpellEffects: ["gone.effect"] as SpellEffectId[], blockedSpellEffects: ["gone.effect"] as SpellEffectId[] } as MagicPublicSettingsModel;
+            const root = render("Effects", true, target);
+            const rows = Array.from(root.querySelectorAll("tbody tr:not(.lscg-kit-group-row)")).filter(tr => tr.textContent?.includes("not installed"));
+            expect(rows).toHaveLength(1);
+            expect((rows[0].querySelectorAll("input[type=checkbox]")[2] as HTMLInputElement).checked).toBe(true);
+        });
+    });
+
     describe("Defense tab", () => {
         const labels = (root: HTMLElement) => Array.from(root.querySelectorAll(".lscg-kit-row label")).map(l => l.textContent);
 
@@ -543,7 +878,7 @@ describe("Magic™ settings pages", () => {
             const defense = labels(render("Defense"));
             for (const remoteRow of ["Allow remote access", "Lockable", "Allowed members", "Requires trance", "Only the hypnotizer"])
                 expect(defense).not.toContain(remoteRow);
-            expect(render("Defense").textContent).not.toContain("Remote access");
+            expect(render("Defense").textContent).not.toContain("Remote Access");
         });
     });
 
@@ -552,38 +887,117 @@ describe("Magic™ settings pages", () => {
             Array.from(root.querySelectorAll(".lscg-kit-row")).find(r => r.querySelector("label")?.textContent === label) as HTMLElement;
         const input = (root: HTMLElement, label: string) => row(root, label).querySelector("input") as HTMLInputElement;
         const flip = (el: HTMLInputElement, checked: boolean) => { el.checked = checked; el.dispatchEvent(new Event("change")); };
+        const levelSelect = (root: HTMLElement) => row(root, "Who can access").querySelector("select") as HTMLSelectElement;
+        const idsInput = (root: HTMLElement) => input(root, "Allowed member ids");
 
         it("is its own tab, for the wearer and for a remote view", () => {
-            expect(tabsFor(false).map(t => t.label)).toContain("Remote access");
-            expect(tabsFor(true).map(t => t.label)).toContain("Remote access");
+            expect(tabsFor(false).map(t => t.label)).toContain("Remote Access");
+            expect(tabsFor(true).map(t => t.label)).toContain("Remote Access");
         });
 
         it("the wearer chooses who can change their settings, and the rest follow from allowing it", () => {
             magic.settings.remoteAccess = false;
-            const root = render("Remote access");
+            const root = render("Remote Access");
             expect(root.textContent).toContain("Let other players change your Magic™ settings");
             expect(input(root, "Lockable").disabled).toBe(true);
-            expect(input(root, "Allowed members").disabled).toBe(true);
+            expect(levelSelect(root).disabled).toBe(true);
+            expect(idsInput(root).disabled).toBe(true);
             expect(input(root, "Requires trance").disabled).toBe(true);
             expect(input(root, "Only the hypnotizer").disabled).toBe(true);
 
             flip(input(root, "Allow remote access"), true);
             expect(magic.settings.remoteAccess).toBe(true);
             expect(input(root, "Lockable").disabled).toBe(false);
-            expect(input(root, "Allowed members").disabled).toBe(false);
+            expect(levelSelect(root).disabled).toBe(false);
+            expect(idsInput(root).disabled).toBe(false);
             expect(input(root, "Requires trance").disabled).toBe(false);
 
             flip(input(root, "Lockable"), true);
             expect(magic.settings.lockable).toBe(true);
-            const members = input(root, "Allowed members");
-            members.value = "12, 34"; members.dispatchEvent(new Event("change"));
+            const level = levelSelect(root);
+            level.value = "Lovers"; level.dispatchEvent(new Event("change"));
+            expect(magic.settings.remoteLevel).toBe("Lovers");
+            const ids = idsInput(root);
+            ids.value = "12, 34"; ids.dispatchEvent(new Event("change"));
             expect(magic.settings.remoteMemberIds).toBe("12, 34");
+        });
+
+        it("offers BC's interaction levels plus friends, from most open to most closed, and shows the owner-only floor by default", () => {
+            magic.settings.remoteAccess = true;
+            const select = levelSelect(render("Remote Access"));
+            expect(Array.from(select.options).map(o => o.textContent)).toEqual([
+                "Everyone, no exceptions", "Everyone, except blacklist", "Friends, whitelist, lovers and owner",
+                "Owner, lovers, whitelist and dominants", "Owner, lovers and whitelist", "Owner and lovers", "Owner only",
+            ]);
+            expect(Array.from(select.options).map(o => o.value)).toEqual(["Public", "PublicExceptBlacklist", "Friends", "Dominants", "Whitelist", "Lovers", "Owner"]);
+            delete (magic.settings as unknown as Record<string, unknown>).remoteLevel;
+            expect(levelSelect(render("Remote Access")).value).toBe("Owner");
+        });
+
+        it("the tab has the same rows, in order, as the other modules' remote access", () => {
+            const labels = Array.from(render("Remote Access").querySelectorAll(".lscg-kit-row label")).map(l => l.textContent);
+            expect(labels).toEqual(["Allow remote access", "Lockable", "Use global defaults", "Who can access", "Allowed member ids", "Requires trance", "Only the hypnotizer"]);
+        });
+
+        describe("global defaults", () => {
+            const globalDefaults = () => Player.LSCG.GlobalModule as unknown as Record<string, unknown>;
+
+            beforeEach(() => {
+                magic.settings.remoteAccess = true;
+                Object.assign(globalDefaults(), { remoteLevel: "Lovers", remoteMemberIds: "7, 8" });
+            });
+
+            it("'Use global defaults' shows the global level and member ids, locked, and leaves the trance rules the section's own", () => {
+                magic.settings.remoteLevel = "Public";
+                magic.settings.remoteMemberIds = "1";
+                magic.settings.remoteAccessRequiredTrance = false;
+                const root = render("Remote Access");
+                expect(input(root, "Use global defaults").checked).toBe(false);
+                expect(levelSelect(root).value).toBe("Public");
+
+                flip(input(root, "Use global defaults"), true);
+                expect(magic.settings.useGlobalRemote).toBe(true);
+                expect(levelSelect(root).value).toBe("Lovers");
+                expect(idsInput(root).value).toBe("7, 8");
+                for (const locked of [levelSelect(root), idsInput(root)])
+                    expect(locked.disabled).toBe(true);
+                // the trance rules are never taken from the defaults, so they stay editable
+                expect(input(root, "Requires trance").checked).toBe(false);
+                expect(input(root, "Requires trance").disabled).toBe(false);
+                flip(input(root, "Requires trance"), true);
+                expect(magic.settings.remoteAccessRequiredTrance).toBe(true);
+                expect(input(root, "Only the hypnotizer").disabled).toBe(false);
+                // the section's own level and ids are kept for when it stops using the defaults
+                expect(magic.settings).toMatchObject({ remoteLevel: "Public", remoteMemberIds: "1" });
+
+                flip(input(root, "Use global defaults"), false);
+                expect(levelSelect(root).value).toBe("Public");
+                expect(idsInput(root).disabled).toBe(false);
+            });
+
+            it("the 'Use global defaults' checkbox itself only needs remote access on", () => {
+                magic.settings.remoteAccess = false;
+                expect(input(render("Remote Access"), "Use global defaults").disabled).toBe(true);
+                magic.settings.remoteAccess = true;
+                expect(input(render("Remote Access"), "Use global defaults").disabled).toBe(false);
+            });
+
+            it("a remote view can still set the trance rules while they use the defaults, with no warning about it", () => {
+                const target = { enabled: true, lockable: true, locked: false, useGlobalRemote: true, remoteAccessRequiredTrance: false } as unknown as MagicPublicSettingsModel;
+                const root = render("Remote Access", true, target);
+                expect(root.textContent).not.toContain("global remote access defaults");
+                const trance = input(root, "Requires trance");
+                expect(trance.disabled).toBe(false);
+                flip(trance, true);
+                expect(target.remoteAccessRequiredTrance).toBe(true);
+                expect(input(root, "Only the hypnotizer").disabled).toBe(false);
+            });
         });
 
         it("'Only the hypnotizer' needs the trance requirement", () => {
             magic.settings.remoteAccess = true;
             magic.settings.remoteAccessRequiredTrance = true;
-            const root = render("Remote access");
+            const root = render("Remote Access");
             expect(input(root, "Only the hypnotizer").disabled).toBe(false);
             flip(input(root, "Requires trance"), false);
             expect(magic.settings.remoteAccessRequiredTrance).toBe(false);
@@ -592,14 +1006,14 @@ describe("Magic™ settings pages", () => {
 
         it("a remote view locks or unlocks the wearer, only if they allow it, and sets the trance rules", () => {
             const target = { enabled: true, lockable: false, locked: false, remoteAccessRequiredTrance: true, limitRemoteAccessToHypnotizer: true } as unknown as MagicPublicSettingsModel;
-            const root = render("Remote access", true, target);
+            const root = render("Remote Access", true, target);
             expect(root.textContent).toContain("How remote access to this player's Magic™ settings works.");
             expect(input(root, "Locked").disabled).toBe(true);
             expect(root.textContent).not.toContain("Allow remote access");
             expect(root.textContent).not.toContain("Allowed members");
 
             target.lockable = true;
-            const again = render("Remote access", true, target);
+            const again = render("Remote Access", true, target);
             flip(input(again, "Locked"), true);
             expect(target.locked).toBe(true);
 

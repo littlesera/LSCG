@@ -1,10 +1,11 @@
+import { DEFAULT_REMOTE_LEVEL, REMOTE_TRANCE_DEFAULTS } from "./remoteAccess";
 import { BaseModule } from "base";
 import { getModule } from "modules";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
-import { GetConfiguredItemBundlesFromOutfitKey, GetDelimitedList, OnChat, GetItemNameAndDescriptionConcat, GetMetadata, LSCG_SendLocal, LSCG_TEAL, OnActivity, SendAction, getCharacter, getRandomInt, hookFunction, isPhraseInString, removeAllHooksByModule, sendLSCGCommand, sendLSCGCommandBeep, settingsSave, getCharacterByNicknameOrMemberNumber, excludeParentheticalContent, escapeRegExp } from "../utils";
+import { GetConfiguredItemBundlesFromOutfitKey, GetDelimitedList, OnChat, GetItemNameAndDescriptionConcat, GetMetadata, LSCG_SendLocal, LSCG_TEAL, OnActivity, SendAction, getCharacter, getRandomInt, hookFunction, isPhraseInString, removeAllHooksByModule, sendLSCGCommand, sendLSCGCommandBeep, settingsSave, getCharacterByNicknameOrMemberNumber, excludeParentheticalContent, escapeRegExp, escapeHtml, IsBlockedSender } from "../utils";
 import { ABSOLUTE_MAX_SPELL_EFFECTS, DEFAULT_MAX_SPELL_EFFECTS, KNOWN_SPELLS_LIMIT, LSCGSpellEffect, MagicSettingsModel, OutfitOption, SpellDefinition, SpellEffectId } from "Settings/Models/magic";
 import { isSpacedWordChar } from "./Magic/phrase";
-import { effectConfigFor, pickEffects, retier, sanitizeCastArgs, sanitizeSpell, saveBehaviorFor, spellCastPrompts, voiceCastArgs } from "./Magic/spellEdit";
+import { effectConfigFor, DEFAULT_EFFECT_DELAY, cleanDelay, effectDelayFor, pickEffects, retier, sanitizeCastArgs, sanitizeSpell, saveBehaviorFor, spellCastPrompts, voiceCastArgs } from "./Magic/spellEdit";
 import { GuiMagic } from "Settings/magic";
 import { StateModule } from "./states";
 import { ActivityCheck, ActivityRoll, IsActivityEnhanced, ItemUseModule, MagicWandItems } from "./item-use";
@@ -13,6 +14,7 @@ import { RedressedState } from "./States/RedressedState";
 import { PolymorphedState } from "./States/PolymorphedState";
 import { OutfitCollectionModule } from "./outfitCollection";
 import { hasMagicModule, hasMBSSettings, hasLSCGData, safeGetLSCGProp } from "../types/guards";
+import type { LSCGSpellInfo } from "api/types";
 import { emit, emitBefore, spellInfo } from "api/events";
 import { SPELL_MENU_SHAPE, SpellMenuView } from "./Magic/spellMenu";
 import { CastArgs, CastPrompt, advertisedEffectIds, allEffectIds, effectLabel, extensionEffectIds, getSpellEffect, isLegacyEffect, spellEffects, spellForcesDuration, spellHasPairedEffect, spellIsBeneficial } from "./Magic/spellEffects";
@@ -22,6 +24,16 @@ const dialogButtonCoords: [number,number,number,number] = [dialogButtonInfo[0], 
 const dialogCastButtonCoords: [number,number,number,number] = [dialogButtonInfo[0] - (dialogButtonInfo[2] + dialogButtonInfo[4]), dialogButtonInfo[1], dialogButtonInfo[2], dialogButtonInfo[3]];
 const dialogWildButtonCoords: [number,number,number,number] = [dialogButtonInfo[0] - (dialogButtonInfo[2] + dialogButtonInfo[4]), dialogButtonInfo[1]  + (dialogButtonInfo[3] + dialogButtonInfo[4]), dialogButtonInfo[2], dialogButtonInfo[3]];
 const dialogTeachButtonCoords: [number,number,number,number] = [dialogButtonInfo[0] - (dialogButtonInfo[2] + dialogButtonInfo[4]), dialogButtonInfo[1]  + (dialogButtonInfo[3] + dialogButtonInfo[4]) * 2, dialogButtonInfo[2], dialogButtonInfo[3]];
+
+/** An incoming spell with effects still waiting to take hold: one timer per effect, by its position among the effects being applied. */
+export interface PendingSpell {
+    spell: LSCGSpellInfo;
+    sender?: number;
+    senderName: string;
+    /** The effects being applied, in order; `timers` is keyed by position in this list. */
+    effects: string[];
+    timers: Map<number, ReturnType<typeof setTimeout>>;
+}
 
 export class MagicModule extends BaseModule {
     DialogMenuOpen: boolean = false;
@@ -66,6 +78,7 @@ export class MagicModule extends BaseModule {
             enabled: false,
             blockedSpellEffects: [],
             bypassForSelfEffects: [],
+            lockedSpellEffects: [],
             enableWildMagic: false,
             forceWildMagic: false,
             trueWildMagic: false,
@@ -73,9 +86,11 @@ export class MagicModule extends BaseModule {
             lockable: false,
             locked: false,
             remoteAccess: false,
-            remoteAccessRequiredTrance: false,
-            limitRemoteAccessToHypnotizer: false,
+            remoteAccessRequiredTrance: REMOTE_TRANCE_DEFAULTS.MagicModule.trance,
+            limitRemoteAccessToHypnotizer: REMOTE_TRANCE_DEFAULTS.MagicModule.hypnotizerOnly,
+            remoteLevel: DEFAULT_REMOTE_LEVEL,
             remoteMemberIds: "",
+            useGlobalRemote: true,
             neverDefend: false,
             noDefenseMemberIds: "",
             limitedDuration: true,
@@ -260,11 +275,50 @@ export class MagicModule extends BaseModule {
         if (changed) settingsSave();
     }
 
+    get commands(): ICommand[] {
+        return [{
+            Tag: "spellbook",
+            Description: " [voice/potion/all] : List the spells you know, the phrase that voice-casts each, and which can be brewed into potions.",
+            Action: (args, msg, parsed) => this.ListSpellbook(parsed[0]),
+        }];
+    }
+
+    /** Shows the known spells in local chat: all of them, only the voice-castable ones (with the phrase that casts each, the
+     *  casting phrase or else the name), or only the ones that can be potions. */
+    ListSpellbook(filter: string = "all"): void {
+        const kind = filter.toLocaleLowerCase();
+        if (kind !== "all" && kind !== "voice" && kind !== "potion") {
+            LSCG_SendLocal("Usage: /lscg spellbook [voice/potion/all]");
+            return;
+        }
+        if (!this.Enabled) {
+            LSCG_SendLocal("Magic is not enabled.");
+            return;
+        }
+        const spells = this.AvailableSpells.filter(s => kind === "all" || (kind === "voice" ? s.AllowVoiceCast : s.AllowPotion));
+        if (spells.length === 0) {
+            LSCG_SendLocal(kind === "voice" ? "You know no spells that can be cast by voice." : kind === "potion" ? "You know no spells that can be made into potions." : "You know no spells.");
+            return;
+        }
+        const keywordColor = (Player.ChatSettings?.ColorTheme ?? "").indexOf("Light") > -1 ? "midnightblue" : "gold";
+        const items = spells.map(s => {
+            const effects = (s.Effects ?? []).filter(e => e !== LSCGSpellEffect.none).map(effectLabel).join(", ");
+            const phrase = s.CastingPhrase?.trim() ? s.CastingPhrase : s.Name;
+            const keyword = s.AllowVoiceCast && kind !== "potion" ? `: <b style="color:${keywordColor};font-style:normal;">${escapeHtml(phrase)}</b>` : "";
+            const potion = s.AllowPotion && kind === "all" ? " <small>[potion]</small>" : "";
+            return `<li>${escapeHtml(s.Name)}${effects ? ` (${escapeHtml(effects)})` : ""}${keyword}${potion}</li>`;
+        });
+        const title = kind === "voice" ? "Voice-castable spells" : kind === "potion" ? "Potion spells" : "Spellbook";
+        LSCG_SendLocal(`<div><b>${title}:</b><ul>${items.join("")}</ul></div>`, false);
+    }
+
     safeword(): void {
+        this.CancelPendingSpells("safeword");
         this.CloseSpellMenu();
     }
 
     unload(): void {
+        this.CancelPendingSpells("unload");
         this.CloseSpellMenu();
         this._unhookEffectChanges?.();
         removeAllHooksByModule(ModuleCategory.Magic);
@@ -308,6 +362,9 @@ export class MagicModule extends BaseModule {
         const rangedItemKeywords = [
             "wand",
         ];
+        // The Cosplay Girl Power Staff isn't called a wand, but is cast with like one.
+        if (item?.Asset?.Name === "AnimeGirlWand")
+            return true;
         const craftStr = GetItemNameAndDescriptionConcat(item) ?? "";
         return rangedItemKeywords.some(keyword => isPhraseInString(craftStr, keyword));
     }
@@ -423,7 +480,8 @@ export class MagicModule extends BaseModule {
 
     /** How each of a spell's effects would land on `target`: blocked by their settings, or unsupported by their client
      *  (an extension effect they don't have). A spell is castable if at least one effect would apply. */
-    GetSpellStatus(spell: SpellDefinition, target: Character): { effects: { id: SpellEffectId, status: "ok" | "blocked" | "unsupported" }[], castable: boolean } {
+    GetSpellStatus(spell: SpellDefinition, target: Character): { effects: { id: SpellEffectId, status: "ok" | "blocked" | "unsupported" | "locked" }[], castable: boolean } {
+        const locked: string[] = this.settings.lockedSpellEffects ?? [];
         const blocked: string[] = safeGetLSCGProp(target, "MagicModule", "blockedSpellEffects") ?? [];
         const bypassed: string[] = target.IsPlayer() ? (safeGetLSCGProp(target, "MagicModule", "bypassForSelfEffects") ?? []) : [];
         // Older clients don't send knownEffects: they support the legacy built-ins only.
@@ -431,7 +489,8 @@ export class MagicModule extends BaseModule {
         const effects = spell.Effects.map(id => {
             const supported = isLegacyEffect(id) || known.indexOf(id) > -1;
             const isBlocked = blocked.indexOf(id) > -1 && bypassed.indexOf(id) == -1;
-            return { id, status: !supported ? "unsupported" as const : isBlocked ? "blocked" as const : "ok" as const };
+            // Locked comes first: the caster can't cast it whatever the target thinks.
+            return { id, status: locked.indexOf(id) > -1 ? "locked" as const : !supported ? "unsupported" as const : isBlocked ? "blocked" as const : "ok" as const };
         });
         return { effects, castable: effects.some(e => e.status === "ok") };
     }
@@ -517,8 +576,33 @@ export class MagicModule extends BaseModule {
         return castingActionStrings[getRandomInt(castingActionStrings.length)];
     }
 
+    /** Positions of the spell's effects this player is locked out of casting. */
+    lockedEffectIndexes(spell: SpellDefinition): number[] {
+        const locked = this.settings.lockedSpellEffects ?? [];
+        return spell.Effects.map((effect, index) => locked.indexOf(effect) > -1 ? index : -1).filter(index => index > -1);
+    }
+
     CastSpellActual(spell: SpellDefinition | undefined, spellTarget: Character, voiceCast: boolean, pairedTarget?: Character, castArgs?: CastArgs) {
         if (!!spell && !!spellTarget) {
+            // Effects a remote user has locked fizzle on their step; the rest of the spell goes ahead.
+            const original = spell;
+            const lockedIndexes = this.lockedEffectIndexes(original);
+            const fizzled = lockedIndexes.map(i => `The ${effectLabel(original.Effects[i])} step of ${original.Name} fizzles, your magic bound.`);
+            if (lockedIndexes.length > 0) {
+                const kept = spell.Effects.map((_, index) => index).filter(index => lockedIndexes.indexOf(index) < 0);
+                if (kept.length <= 0) {
+                    LSCG_SendLocal(`${spell.Name} fizzles entirely, your magic bound.`);
+                    this.CloseSpellMenu();
+                    DialogLeave();
+                    return;
+                }
+                const picked = pickEffects(spell, castArgs, kept);
+                spell = picked.spell;
+                castArgs = picked.castArgs;
+                if (!spellHasPairedEffect(spell))
+                    pairedTarget = undefined;
+            }
+
             const wand = InventoryGet(Player, "ItemHandheld");
             if (!!wand && !!wand.Craft && wand.Craft.MemberNumber != Player.MemberNumber && getRandomInt(2) == 0) { // 50% chance of backfire when using someone else's wand
                 const crafter = getCharacter(wand.Craft.MemberNumber ?? -1);
@@ -542,12 +626,14 @@ export class MagicModule extends BaseModule {
                 SendAction(this.getCastingActionString(spell, InventoryGet(Player, "ItemHandheld"), voiceCast, spellTarget, pairedTarget), spellTarget);
             }
 
+            fizzled.forEach(message => LSCG_SendLocal(message)); // only the caster sees what their lock did
             this.UnpackSpellCodes(spell);
             emit("spell.cast", { spell: spellInfo(spell), target: spellTarget.MemberNumber ?? -1, paired: pairedTarget?.MemberNumber });
 
             if (spellTarget.IsPlayer()) {
                 const check = getModule<ItemUseModule>("ItemUseModule").UnopposedActivityRoll(spellTarget);
-                setTimeout(() => this.IncomingSpell(Player, spell, pairedTarget, Math.max(1, check.Total / 2), false, castArgs), 1000);
+                const castSpell = spell; // `spell` is reassigned above, which loses its narrowing inside the timer
+                setTimeout(() => this.IncomingSpell(Player, castSpell, pairedTarget, Math.max(1, check.Total / 2), false, castArgs), 1000);
             }
             else
                 sendLSCGCommand(spellTarget, "spell", [
@@ -708,6 +794,9 @@ export class MagicModule extends BaseModule {
      *  `castArgs`: the caster's answers to the spell's cast-time questions, already checked. */
     IncomingSpell(sender: Character | null, spell: SpellDefinition, paired?: Character | null, saveDiff: number = 1, saved: boolean = false, castArgs?: CastArgs) {
         const senderName = !sender ? "Someone" : CharacterNickname(sender);
+        // A ghosted/blacklisted player can't be paired with us, whoever cast the spell.
+        if (paired && IsBlockedSender(paired.MemberNumber))
+            paired = null;
         // However many a caster's spell claims, only so many are applied: each one is a timer on this client.
         let allowedEntries = this.allowedEffectEntries(spell, sender).slice(0, ABSOLUTE_MAX_SPELL_EFFECTS);
         if (allowedEntries.length <= 0) {
@@ -725,7 +814,7 @@ export class MagicModule extends BaseModule {
         }
 
         const info = spellInfo(spell);
-        const spellHook = emitBefore("spell.beforeReceive", { spell: info, sender: sender?.MemberNumber, effects: allowedEntries.map(e => e.effect), duration });
+        const spellHook = emitBefore("spell.beforeReceive", { spell: info, sender: sender?.MemberNumber, effects: allowedEntries.map(e => e.effect), duration, delay: DEFAULT_EFFECT_DELAY });
         if (spellHook.cancelled) {
             SendAction(`${senderName}'s ${spell.Name} fizzles when cast on %NAME%${spellHook.reason ? ` (${spellHook.reason})` : ""}.`);
             return;
@@ -733,17 +822,31 @@ export class MagicModule extends BaseModule {
         // Extensions may only remove effects, never add them.
         allowedEntries = allowedEntries.filter(e => spellHook.payload.effects.includes(e.effect));
         duration = sanitizeDuration(spellHook.payload.duration, duration);
+        const gap = sanitizeDelay(spellHook.payload.delay, DEFAULT_EFFECT_DELAY);
         if (allowedEntries.length <= 0) {
             SendAction(`${senderName}'s ${spell.Name} fizzles when cast on %NAME%, none of its effects allowed to take hold.`);
             return;
         }
         if (!!duration && duration > 0 && this.settings.maxDuration > 0)
             LSCG_SendLocal(`${sender?.IsPlayer() ? "Your" : senderName + "'s"} ${spell.Name} spell will last ${duration / (60 * 1000)} minutes.`);
-        emit("spell.received", { spell: info, sender: sender?.MemberNumber, effects: allowedEntries.map(e => e.effect), duration });
+        // Each effect waits after the one before it: what the spell's author chose for it, else the effect's own default, else the spell-wide
+        // gap. The first takes hold at once. `waits` is when each takes hold, counted from now.
+        let wait = 0;
+        const waits = allowedEntries.map(({ effect, index }, ix) => {
+            if (ix > 0) wait += effectDelayFor(spell, index) ?? sanitizeDelay(getSpellEffect(effect)?.delay, gap);
+            return wait;
+        });
+        emit("spell.received", { spell: info, sender: sender?.MemberNumber, effects: allowedEntries.map(e => e.effect), duration, delays: waits });
 
         const spellDuration = duration;
+        // Tracked until its last effect has taken hold, so a dispel or safeword in between can stop the rest.
+        const run: PendingSpell = { spell: info, sender: sender?.MemberNumber, senderName, effects: allowedEntries.map(e => e.effect), timers: new Map() };
+        this.pendingSpells.add(run);
         allowedEntries.forEach(({ effect, index }, ix, arr) => {
-            setTimeout(() => {
+            run.timers.set(ix, setTimeout(() => {
+                run.timers.delete(ix);
+                if (run.timers.size === 0)
+                    this.pendingSpells.delete(run);
                 const behavior = saved ? saveBehaviorFor(spell, index) : undefined;
                 if (behavior === "negate") {
                     SendAction(`%NAME% resists the ${effectLabel(effect)} magic of ${senderName}'s ${spell.Name}.`);
@@ -760,13 +863,37 @@ export class MagicModule extends BaseModule {
                 else if (!definition)
                     SendAction(`Part of ${senderName}'s ${spell.Name} washes over %NAME% without effect, its magic unfamiliar.`);
                 else {
-                    definition.apply({ effect, sender, senderName, spell, paired, duration, magic: this, saved: !!behavior, index, config: effectConfigFor(spell, index), castArgs: castArgs?.[index] });
+                    definition.apply({ effect, sender, senderName, spell, paired, duration, magic: this, run, saved: !!behavior, index, config: effectConfigFor(spell, index), castArgs: castArgs?.[index] });
                     emit("spell.effectApplied", { effect, spell: info, sender: sender?.MemberNumber, duration });
                 }
                 if (ix == arr.length - 1)
                     settingsSave(true);
-            }, 2000 * ix);
+            }, waits[ix]));
         });
+    }
+
+    /** Spells whose effects are still waiting to take hold on this player. */
+    pendingSpells = new Set<PendingSpell>();
+
+    /** Stops every spell's effects that haven't taken hold yet (all but `except`, the spell doing the cancelling), so nothing lands after the
+     *  player was dispelled or used safeword. Effects that already took hold are not touched. Returns how many spells were cut short. */
+    CancelPendingSpells(reason: "dispel" | "safeword" | "unload", except?: PendingSpell): number {
+        let cut = 0;
+        for (const run of [...this.pendingSpells]) {
+            if (run === except || run.timers.size === 0)
+                continue;
+            const waiting = [...run.timers.keys()].sort((a, b) => a - b);
+            run.timers.forEach(timer => clearTimeout(timer));
+            run.timers.clear();
+            this.pendingSpells.delete(run);
+            cut++;
+            if (reason === "dispel")
+                SendAction(`The rest of ${run.senderName}'s ${run.spell.name} dissipates before it can take hold on %NAME%.`);
+            emit("spell.interrupted", { spell: run.spell, sender: run.sender, reason, effects: waiting.map(ix => run.effects[ix]) });
+        }
+        if (cut > 0 && reason !== "unload")
+            settingsSave(true);
+        return cut;
     }
 
     NotifyPair(caster: Character | null, pairedTarget: Character | undefined, spellEffect: SpellEffectId, pairType: LSCGState) {
@@ -791,6 +918,8 @@ export class MagicModule extends BaseModule {
     }
 
     IncomingSpellPair(sender: Character | null, spellEffect: SpellEffectId, originalTarget: Character, pairType: LSCGState) {
+        if (IsBlockedSender(originalTarget.MemberNumber))
+            return;
         const senderName = !sender ? "Someone" : CharacterNickname(sender);
         const isAllowed = this.effectIsAllowed(spellEffect, sender);
 
@@ -951,7 +1080,8 @@ export class MagicModule extends BaseModule {
     }
 
     /** Outstanding spell lookups from other crafters, mapped to whether the potion was consented to. */
-    itemSpellRequests: Map<number, boolean> = new Map<number, boolean>();
+    /** Spell requests sent to a potion's crafter: whether the drinker consented, and who was asked. */
+    itemSpellRequests: Map<number, { consented: boolean, crafter: number }> = new Map();
 
     GetSpellFromItem(item: Item | null, itemUser: Character, consented: boolean = false): SpellDefinition | undefined {
         const itemCraft = item?.Craft;
@@ -972,7 +1102,7 @@ export class MagicModule extends BaseModule {
                 return foundSpell;
             } else {
                 const reqId = Date.now();
-                this.itemSpellRequests.set(reqId, consented);
+                this.itemSpellRequests.set(reqId, { consented, crafter: craftingMember });
                 sendLSCGCommandBeep(craftingMember, "get-spell", [{
                     name: "itemStr",
                     value: itemStr,
@@ -1025,8 +1155,10 @@ export class MagicModule extends BaseModule {
         const originator = response.command?.args.find(a => a.name == "originator")?.value as number;
         const sender = getCharacter(originator);
 
-        if (this.itemSpellRequests.has(reqId)) {
-            const consented = this.itemSpellRequests.get(reqId);
+        const request = this.itemSpellRequests.get(reqId);
+        // Only the crafter we asked answers for their potion
+        if (request && request.crafter === senderNum) {
+            const consented = request.consented;
             this.itemSpellRequests.delete(reqId);
             setTimeout(() => {
                 this.HandleQuaffWithSpell(sender, itemName, spell, consented);
@@ -1045,6 +1177,12 @@ export class MagicModule extends BaseModule {
             spell.Polymorph.Code = LZString.compressToBase64(JSON.stringify(GetConfiguredItemBundlesFromOutfitKey(spell.Polymorph.Key, item => skipFilter || PolymorphedState.ItemIsAllowed(item))));
         }
     }
+}
+
+
+/** Accepts an extension-adjusted delay (ms) only if it's sane, kept within the minimum and maximum; otherwise keeps the fallback. */
+function sanitizeDelay(delay: unknown, fallback: number): number {
+    return cleanDelay(delay) ?? fallback;
 }
 
 /** Accepts an extension-adjusted duration (ms) only if it's sane; otherwise keeps LSCG's own. `undefined` stays allowed. */

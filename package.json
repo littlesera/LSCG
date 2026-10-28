@@ -1,7 +1,7 @@
 {
   "name": "ls-club-games",
   "description": "Little Sera's Club Games",
-  "version": "0.9.10",
+  "version": "0.9.14",
   "main": "dist/bundle.js",
   "scripts": {
     "build": "typed-scss-modules src --exportType=default --nameFormat=none && vite build && npm run build:api-types",
@@ -24,6 +24,7 @@
     "test:all": "vitest run",
     "report:speech": "node scripts/speech-report.mjs",
     "coverage": "vitest run --project unit --coverage",
+    "coverage:all": "vitest run --coverage",
     "fetch-bc": "node scripts/fetch-bc.mjs"
   },
   "keywords": [],
@@ -54,7 +55,7 @@
     "@typescript-eslint/eslint-plugin": "^8.71.0",
     "@typescript-eslint/parser": "^8.71.0",
     "@vitest/coverage-v8": "^5.0.2",
-    "bc-stubs": "^132.0.0-Beta.3",
+    "bc-stubs": "^133.0.0",
     "concurrently": "^9.2.1",
     "eslint": "^10.0.1",
     "eslint-plugin-css": "^0.12.0",

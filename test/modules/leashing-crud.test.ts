@@ -19,7 +19,9 @@ describe("LeashingModule Pairings CRUD", () => {
 	});
 
 	beforeEach(() => {
-		resetWorld();
+		// Leashing on: incoming grabs are refused while it's off
+		resetWorld({ LSCG: { GlobalModule: { enabled: true } } });
+		leashing.init();
 		leashing.Pairings = [];
 	});
 

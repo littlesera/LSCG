@@ -1,7 +1,12 @@
+import { DEFAULT_REMOTE_LEVEL, REMOTE_TRANCE_DEFAULTS } from "./remoteAccess";
 import { BaseModule } from "base";
 import { HypnoInfluence, HypnoSettingsModel, LSCGHypnoInstruction } from "Settings/Models/hypno";
+import { extensionInstructions, isExtensionInstruction, sanitizeExtensionInstruction } from "api/hypno";
+import { sanitizeOptions } from "api/options";
+import { cleanDelay } from "stepDelay";
+import { builtInStates } from "api/builtInStates";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
-import { settingsSave, parseMsgWords, OnAction, OnActivity, SendAction, getRandomInt, hookFunction, removeAllHooksByModule, isAllowedMember, isPhraseInString, GetTargetCharacter, GetDelimitedList, GetActivityEntryFromContent, escapeRegExp, IsActivityAllowed, LSCG_SendLocal, getCharacter, sendLSCGCommandBeep, htmlToElement, getCharacterByNicknameOrMemberNumber, getActivities, isCloth, replace_template, hookBCXVoice, parseFromBase64 } from "../utils";
+import { settingsSave, parseMsgWords, OnAction, OnActivity, SendAction, getRandomInt, hookFunction, removeAllHooksByModule, isAllowedMember, isPhraseInString, GetTargetCharacter, GetDelimitedList, GetActivityEntryFromContent, escapeRegExp, IsActivityAllowed, LSCG_SendLocal, getCharacter, sendLSCGCommandBeep, htmlToElement, getCharacterByNicknameOrMemberNumber, getActivities, isCloth, replace_template, hookBCXVoice, parseFromBase64, IsBlockedSender } from "../utils";
 import { GuiHypno } from "Settings/hypno";
 import { getModule } from "modules";
 import { ActivityEntryModel } from "Settings/Models/activities";
@@ -41,12 +46,16 @@ export class SuggestionMiniGameOptions {
 }
 
 export class HypnoInstruction {
-    constructor(type: LSCGHypnoInstruction) {
+    constructor(type: LSCGHypnoInstruction | string) {
         this.type = type;
         this.arguments = {};
     }
-    type: LSCGHypnoInstruction = LSCGHypnoInstruction.none;
+    /** One of LSCG's own instruction types, or an extension's namespaced id ("<extension id>.<name>"). */
+    type: LSCGHypnoInstruction | string = LSCGHypnoInstruction.none;
     arguments: any = {};
+    /** How long (ms) this instruction waits after the one before it, if the suggestion's writer chose. Missing means the default. The first
+     *  instruction always happens at once. */
+    delay?: number;
 }
 export class HypnoSuggestion {
     constructor(name: string) {
@@ -85,7 +94,10 @@ export class HypnoModule extends BaseModule {
             overrideWords: "",
             allowLocked: false,
             remoteAccess: false,
-            remoteAccessRequiredTrance: true,
+            remoteLevel: DEFAULT_REMOTE_LEVEL,
+            remoteMemberIds: "",
+            useGlobalRemote: true,
+            remoteAccessRequiredTrance: REMOTE_TRANCE_DEFAULTS.HypnoModule.trance,
             allowRemoteModificationOfMemberOverride: false,
             cooldownTime: 0,
             enableArousal: false,
@@ -96,9 +108,9 @@ export class HypnoModule extends BaseModule {
             triggerTime: TRIGGER_TIMES.DEFAULT_TRIGGER_TIME_MINUTES,
             locked: false,
             awakeners: "",
-            limitRemoteAccessToHypnotizer: false,
+            limitRemoteAccessToHypnotizer: REMOTE_TRANCE_DEFAULTS.HypnoModule.hypnotizerOnly,
             suggestionRequireHypnotizer: true,
-            blockedInstructions: <LSCGHypnoInstruction[]>[],
+            blockedInstructions: <string[]>[],
             alwaysSubmit: false,
             alwaysSubmitMemberIds: "",
             hypnoEyeColor: "#A2A2A2",
@@ -112,6 +124,7 @@ export class HypnoModule extends BaseModule {
     }
 
     safeword(): void {
+        this.CancelPendingInstructions();
         this.StateModule.HypnoState.Recover();
         this.settings.allowSuggestions = false;
         this.settings.allowSuggestionRemoval = true;
@@ -273,6 +286,8 @@ export class HypnoModule extends BaseModule {
             Priority: handlerPriority, // Try to make sure we run last. Other mods could potentially add handlers after this depending on arbitrary load order.
             Description: "LSCG Hypnosis Trigger Checks",
             Callback: (data: ServerChatRoomMessage, sender: Character, msg: string, metadata?: IChatRoomMessageMetadata) => {
+                if (IsBlockedSender(data.Sender))
+                    return false;
                 if (data.Type == "Chat" || data.Type == "Whisper") {
                     const newMsg = this.BlankOutTriggers(msg, sender);
                     if (!this.TopLevelCheckTriggers(msg, sender))
@@ -417,12 +432,22 @@ export class HypnoModule extends BaseModule {
             Player.IsLoverOfMemberNumber(sender);
     }
 
+    /** Whether `sender` may see and change the player's suggestions: hypnosis on, and then the owner or a lover always, anyone
+     *  else only while the player is hypnotized, has allowed suggestions, is not limited to their hypnotizer (or it's them) and
+     *  item permission (or the override member list) lets them. */
+    CanModifySuggestions(sender: number): boolean {
+        if (!this.Enabled)
+            return false;
+        if (this._senderCanAlwaysModifySuggestions(sender))
+            return true;
+        const hypnotizer = this.StateModule.HypnoState.config.activatedBy;
+        const hypnotizerOk = !this.settings.suggestionRequireHypnotizer || hypnotizer == sender || hypnotizer == -1;
+        return this.hypnoActivated && !!this.settings.allowSuggestions && hypnotizerOk &&
+            this.allowedSpeaker(getCharacter(sender) ?? undefined);
+    }
+
     SuggestionsRequestHandler(sender: number, msg: LSCGMessageModel){
-        if (this.Enabled &&
-            this._senderCanAlwaysModifySuggestions(sender) ||
-                (this.hypnoActivated &&
-                this.settings.allowSuggestions &&
-                this.allowedSpeaker(getCharacter(sender) ?? undefined))) {
+        if (this.CanModifySuggestions(sender)) {
                 sendLSCGCommandBeep(sender, "get-suggestions-response", [{
                     name: "suggestions",
                     value: this.settings.suggestions?.filter(s => s.installedBy == sender || !s.exclusive || this._senderCanAlwaysModifySuggestions(sender)) ?? [],
@@ -435,11 +460,7 @@ export class HypnoModule extends BaseModule {
 
     SuggestionsPushHandler(sender: number, msg: LSCGMessageModel) {
         const senderChar = getCharacter(sender);
-        if (this.Enabled &&
-            this._senderCanAlwaysModifySuggestions(sender) ||
-                (this.hypnoActivated &&
-                this.settings.allowSuggestions &&
-                this.allowedSpeaker(senderChar ?? undefined))) {
+        if (this.CanModifySuggestions(sender)) {
                     if (!this.settings.suggestions)
                         this.settings.suggestions = [];
                     const incomingSuggestions = (msg.command?.args.find(a => a.name == "suggestions")?.value as HypnoSuggestion[]).filter(s => !!s.trigger) ?? [];
@@ -447,6 +468,17 @@ export class HypnoModule extends BaseModule {
                     if (!incomingSuggestions)
                         return;
                     incomingSuggestions.forEach(incoming => {
+                        // Extension instructions arrive with options nobody here has checked: keep only what their declaration allows.
+                        if (Array.isArray(incoming.instructions))
+                            incoming.instructions.forEach(instruction => {
+                                sanitizeExtensionInstruction(instruction);
+                                // A delay is a number of ms within the limits, or not there at all.
+                                const delay = cleanDelay(instruction?.delay);
+                                if (instruction && typeof instruction === "object") {
+                                    if (delay === undefined) delete instruction.delay;
+                                    else instruction.delay = delay;
+                                }
+                            });
                         const existing = this.settings.suggestions.find(s => s.id == incoming.id);
                         if (!existing) {
                             this.settings.suggestions.push(incoming);
@@ -482,6 +514,7 @@ export class HypnoModule extends BaseModule {
     }
 
     unload(): void {
+        this.CancelPendingInstructions();
         removeAllHooksByModule(ModuleCategory.Hypno);
     }
 
@@ -821,8 +854,13 @@ export class HypnoModule extends BaseModule {
         if (suggestion.installedBy != sender.MemberNumber)
             this.IncreaseSpeakerInfluence(suggestion.installedBy);
         
+        // Each instruction waits after the one before it: what the suggestion's writer chose, else the default. The first happens at once.
+        // Tracked until it has happened, so a safeword stops the ones still waiting.
+        let wait = 0;
         suggestion.instructions.forEach((instruction, ix, arr) => {
-            setTimeout(() => {
+            if (ix > 0) wait += cleanDelay(instruction.delay) ?? EFFECT_DURATIONS.SUGGESTION_INSTRUCTION_DELAY;
+            const timer = setTimeout(() => {
+                this.pendingInstructions.delete(timer);
                 if ((this.settings.blockedInstructions ?? []).indexOf(instruction.type) > -1) {
                     return this.BlockedInstruction(opts, instruction);
                 }
@@ -888,12 +926,46 @@ export class HypnoModule extends BaseModule {
                         });
                         break;
                     default:
+                        this.PerformExtensionInstruction(opts, instruction);
                         break;
                 }
                 settingsSave();
-            }, ix * EFFECT_DURATIONS.SUGGESTION_INSTRUCTION_DELAY);
+            }, wait);
+            this.pendingInstructions.add(timer);
         });
     }
+
+    /** Timers of suggestion instructions that are waiting their turn. */
+    pendingInstructions = new Set<ReturnType<typeof setTimeout>>();
+
+    /** Stops every suggestion instruction that hasn't happened yet, so nothing lands after a safeword. Returns how many were stopped. */
+    CancelPendingInstructions(): number {
+        const stopped = this.pendingInstructions.size;
+        this.pendingInstructions.forEach(timer => clearTimeout(timer));
+        this.pendingInstructions.clear();
+        return stopped;
+    }
+
+	/** An instruction an extension added. Its options are checked against what the extension declared before it sees them, whoever installed the
+	 *  suggestion; one whose extension isn't installed here just doesn't happen. */
+	PerformExtensionInstruction(opts: SuggestionMiniGameOptions, instruction: HypnoInstruction) {
+		if (!isExtensionInstruction(instruction.type))
+			return;
+		const def = extensionInstructions.get(instruction.type);
+		if (!def) {
+			LSCG_SendLocal(`Part of ${opts.senderName}'s suggestion has no effect here: its instruction isn't available.`);
+			return;
+		}
+		def.perform({
+			instruction: def.id,
+			suggestion: opts.suggestion.name,
+			options: sanitizeOptions(def.options, instruction.arguments?.options),
+			sender: opts.senderNum,
+			installedBy: opts.suggestion.installedBy,
+			sendAction: text => SendAction(String(text), opts.sender),
+			states: builtInStates(this.StateModule, opts.senderNum),
+		});
+	}
 
 	//Show a button on screen to accept or reject money from sender
 	PromptResistSuggestion(suggestion: HypnoSuggestion, sender: Character, msg: string) {

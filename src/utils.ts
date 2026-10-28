@@ -109,11 +109,17 @@ export function setOrIgnoreBlush(blushLevel: ExpressionName | null) {
 	}
 }
 
+export function IsBlockedSender(memberNumber: number | undefined | null): boolean {
+	if (memberNumber == null || memberNumber === Player.MemberNumber)
+		return false;
+	return !!(Player.GhostList?.includes(memberNumber) || Player.BlackList?.includes(memberNumber));
+}
+
 export function OnWhisper(priority: number, module: ModuleCategory, callback: (data: any, sender: Character | null, msg: string, metadata: any) => void) {
 	hookFunction("ChatRoomMessage", priority, (args, next) => {
         const data = args[0];
 		const sender = getCharacter(data.Sender);
-        if (data.Type == "Whisper")
+        if (!IsBlockedSender(data.Sender) && data.Type == "Whisper")
             callback(data, sender, data.Content, data.Dictionary);
 		next(args);
     }, module);
@@ -123,7 +129,7 @@ export function OnChat(priority: any, module: ModuleCategory, callback: (data: a
     hookFunction("ChatRoomMessage", priority, (args, next) => {
         const data = args[0];
 		const sender = getCharacter(data.Sender);
-        if (data.Type == "Chat" || data.Type == "Whisper")
+        if (!IsBlockedSender(data.Sender) && (data.Type == "Chat" || data.Type == "Whisper"))
             callback(data, sender, data.Content, data.Dictionary);
 		next(args);
     }, module);
@@ -133,7 +139,7 @@ export function OnAction(priority: any, module: ModuleCategory, callback: (data:
     hookFunction("ChatRoomMessage", priority, (args, next) => {
         const data = args[0];
 		const sender = getCharacter(data.Sender);
-        if (data.Type == "Action" || data.Type == "Emote")
+        if (!IsBlockedSender(data.Sender) && (data.Type == "Action" || data.Type == "Emote"))
 			callback(data, sender, data.Content, data.Dictionary);
 		next(args);
     }, module);
@@ -143,7 +149,7 @@ export function OnActivity(priority: any, module: ModuleCategory, callback: (dat
     hookFunction("ChatRoomMessage", priority, (args, next) => {
         const data = args[0];
 		const sender = getCharacter(data.Sender);
-        if (data.Type == "Activity")
+        if (!IsBlockedSender(data.Sender) && data.Type == "Activity")
 			callback(data, sender, data.Content, data.Dictionary);
 		next(args);
     }, module);
@@ -453,6 +459,8 @@ export function handleImportString(val: string): boolean {
 			Player.LSCG.CollarModule.stats = Object.assign({}, oldSettings.CollarModule.stats);
 			Player.LSCG.HypnoModule.stats = Object.assign({}, oldSettings.HypnoModule.stats);
 			Player.LSCG.InjectorModule.stats = Object.assign({}, oldSettings.InjectorModule.stats);
+			if (Player.LSCG.MiscModule)
+				Player.LSCG.MiscModule.stats = Object.assign({}, oldSettings.MiscModule?.stats);
 			settingsSave(true);
 			return true;
 		} else
@@ -576,10 +584,25 @@ export function isAllowedMember(member: Character | undefined) {
 	return !!member && ServerChatRoomGetAllowItem(member, Player);
 }
 
-export type RemoteAccessLevel = "Public" | "PublicExceptBlacklist" | "Friends" | "Whitelist" | "Lovers" | "Owner";
+/** Who may reach a wearer's remote settings: BC's own interaction levels, plus friends. */
+export type RemoteAccessLevel = "Public" | "PublicExceptBlacklist" | "Friends" | "Dominants" | "Whitelist" | "Lovers" | "Owner";
 
-/** Whether `memberNumber` may configure `wearer` at `level`; each level includes the stricter ones.
- *  Friend lists aren't synced for other characters, so only the wearer's own client can enforce "Friends". */
+/** The levels, from the most open to the most closed, as the settings screens list them. */
+export const REMOTE_ACCESS_LEVELS: readonly RemoteAccessLevel[] = ["Public", "PublicExceptBlacklist", "Friends", "Dominants", "Whitelist", "Lovers", "Owner"];
+
+export const REMOTE_LEVEL_LABELS: Record<RemoteAccessLevel, string> = {
+	Public: "Everyone, no exceptions",
+	PublicExceptBlacklist: "Everyone, except blacklist",
+	Friends: "Friends, whitelist, lovers and owner",
+	Dominants: "Owner, lovers, whitelist and dominants",
+	Whitelist: "Owner, lovers and whitelist",
+	Lovers: "Owner and lovers",
+	Owner: "Owner only",
+};
+
+/** Whether `memberNumber` may configure `wearer` at `level`; each level but the open ones is a set of people that includes the owner.
+ *  Friend lists aren't synced for other characters, so only the wearer's own client can enforce "Friends". "Dominants" is BC's own
+ *  rule for its interaction level of the same name: not blacklisted, and dominant enough compared to the wearer (25 points allowed). */
 export function hasRemotePermission(wearer: Character, level: RemoteAccessLevel, memberNumber: number): boolean {
 	if (wearer.IsOwnedByMemberNumber(memberNumber)) return true;
 	const lover = wearer.IsLoverOfMemberNumber(memberNumber);
@@ -588,6 +611,12 @@ export function hasRemotePermission(wearer: Character, level: RemoteAccessLevel,
 		case "Owner": return false;
 		case "Lovers": return lover;
 		case "Whitelist": return lover || whitelisted;
+		case "Dominants": {
+			if (wearer.BlackList?.includes(memberNumber)) return false;
+			const sender = getCharacter(memberNumber);
+			const dominantEnough = !!sender && ReputationCharacterGet(sender, "Dominant") + 25 >= ReputationCharacterGet(wearer, "Dominant");
+			return lover || whitelisted || dominantEnough;
+		}
 		case "Friends": return lover || whitelisted || (wearer.IsPlayer() ? (Player.FriendList?.includes(memberNumber) ?? false) : true);
 		case "PublicExceptBlacklist": return !(wearer.BlackList?.includes(memberNumber) ?? false);
 		case "Public": return true;
@@ -1276,6 +1305,10 @@ export function ApplyItem(item: ItemBundle, acting: number | undefined, replace:
 		// Secure/Loose effects) on top again, so it would grow every time the bundle is applied
 		if (item.Difficulty !== undefined)
 			newItem.Difficulty = item.Difficulty;
+		// ItemPropertiesDecompress merges into the item's own Property with those values winning, and wearing has already
+		// filled that with the asset's defaults (and the craft's), which would override the bundle's options. So decompress
+		// onto a clean item like BC's own ServerBundledItemToAppearanceItem does, when the bundle has properties to restore
+		if (item.Property) newItem.Property = {};
 		newItem.Property = ItemPropertiesDecompress(newItem, item.Property);
 		if ((<any>C).LSCG?.GlobalModule?.blockDOGS && (<any>newItem.Property)?.["Name"] == "DeviousPadlock") // REMOVE DOGS LOCKS ON APPLY
 			delete (<any>newItem.Property)["Name"];

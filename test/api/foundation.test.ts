@@ -46,6 +46,17 @@ describe("extension handles", () => {
         registerExtension({ id: "dup-test", name: "Dup", version: "1.0.1" }).dispose();
     });
 
+    it("getModApi gives back the handle for an extension that's already registered, and a fresh one after dispose", () => {
+        const first = lscg.getModApi({ id: "again-test", name: "Again", version: "1.0.0" });
+        expect(lscg.getModApi({ id: "again-test", name: "Again", version: "1.0.0" })).toBe(first);
+        expect(() => lscg.getModApi({ id: "Bad.Id", name: "x", version: "1" })).toThrow(/invalid extension id/);
+        first.dispose();
+        const second = lscg.getModApi({ id: "again-test", name: "Again", version: "1.0.1" });
+        expect(second).not.toBe(first);
+        expect(second.disposed).toBe(false);
+        second.dispose();
+    });
+
     it("namespaces ids and runs tracked disposers in reverse order", () => {
         const handle = registerExtension({ id: "scope-test", name: "Scope", version: "1" });
         expect(handle.scopedId("thing")).toBe("scope-test.thing");

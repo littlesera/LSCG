@@ -1,6 +1,7 @@
 import { RemoteGuiSubscreen } from "./remoteBase";
 import { HelpInfo } from "Settings/settingBase";
-import { hasRemotePermission, replace_template, sendLSCGCommand } from "utils";
+import { replace_template, sendLSCGCommand } from "utils";
+import { canRemoteSpeech, remoteAccessDenial } from "Modules/remoteAccess";
 import { getModule } from "modules";
 import type { CoreModule } from "Modules/core";
 import { DomSettingsHost } from "Settings/domSettingsHost";
@@ -36,27 +37,19 @@ export class RemoteSpeechAnalysis extends RemoteGuiSubscreen {
         return super.settings as SpeechAnalysisPublicSettingsModel;
     }
 
-    get isTranced(): boolean {
-        return this.Character.LSCG?.StateModule?.states?.find(s => s.type == "hypnotized")?.active ?? false;
-    }
-
-    get passesTrance(): boolean {
-        return !this.settings.remoteRequiresTrance || this.isTranced;
-    }
-
     get enabled(): boolean {
-        const s = this.settings;
-        return !!s.enabled && !!s.remoteAccess && hasRemotePermission(this.Character, s.remoteLevel, Player.MemberNumber!) && this.passesTrance;
+        return canRemoteSpeech(this.Character, Player);
     }
 
     get disabledReason(): string {
-        const s = this.settings;
-        if (!s.enabled) return "Section is Disabled";
-        if (!s.remoteAccess) return replace_template("%OPP_NAME% does not allow remote configuration.", this.Character);
-        if (!hasRemotePermission(this.Character, s.remoteLevel, Player.MemberNumber!))
-            return replace_template("You do not have permission to configure %OPP_POSSESSIVE% speech.", this.Character);
-        if (!this.passesTrance) return replace_template("%OPP_NAME% has too much willpower to let you in...", this.Character);
-        return "Section is Unavailable";
+        switch (remoteAccessDenial("SpeechAnalysisModule", this.Character, Player)) {
+            case "module-off": return "Section is Disabled";
+            case "remote-off": return replace_template("%OPP_NAME% does not allow remote configuration.", this.Character);
+            case "level": return replace_template("You do not have permission to configure %OPP_POSSESSIVE% speech.", this.Character);
+            case "trance": return replace_template("%OPP_NAME% has too much willpower to let you in...", this.Character);
+            case "hypnotizer": return replace_template("%OPP_NAME% seems suggestable, but not to you...", this.Character);
+            default: return "Section is Unavailable";
+        }
     }
 
     private build(): Node {

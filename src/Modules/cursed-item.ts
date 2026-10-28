@@ -191,7 +191,10 @@ export class CursedItemModule extends BaseModule {
         const bundle = msg.command?.args.find(a => a.name == "item")?.value as ItemBundle;
         if (!bundle) return;
         const itemStr = GetItemNameAndDescriptionConcat(bundle) ?? "";
-        const foundItem = this.settings.CursedItems.find(item => item.Enabled && isPhraseInString(itemStr, item.Name, true));
+        // The longest matching name wins, so a craft for "Maid Uniform" isn't taken by a curse named "Maid"
+        const foundItem = this.settings.CursedItems
+            .filter(item => item.Enabled && !!item.Name && isPhraseInString(itemStr, item.Name, true))
+            .sort((a, b) => b.Name.length - a.Name.length)[0];
         if (foundItem)
             this.SendCursedItemResponse(sender, bundle, foundItem);
     }
@@ -204,6 +207,8 @@ export class CursedItemModule extends BaseModule {
         // owner/lover/family checks) keys off item.Crafter -- trust the verified packet sender,
         // not this sender-controlled field, or a stranger could claim to be the owner.
         item.Crafter = sender;
+        // Only an answer about a cursed item we're wearing, that they made: we asked them about it
+        if (this.spreadingState.findWornItems(item).length <= 0) return;
         this.spreadingState.AddCursedItem(item, sender);
     }
 }

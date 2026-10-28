@@ -1,3 +1,4 @@
+import type { RemoteAccessLevel } from "utils";
 import { OutfitStorageStrategy } from "Settings/OutfitCollection/IOutfitCollection";
 
 export interface BaseSettingsModel {
@@ -20,9 +21,19 @@ export interface GlobalSettingsModel extends GlobalPublicSettingsModel {
     tamperproofElectricityEnabled: boolean;
 }
 
+/** Who may copy your outfit with /lscg get-outfit-code, on top of BC's item permission. */
+export type OutfitCopyLevel = "Public" | "Whitelist" | "Nobody";
+
 export interface GlobalPublicSettingsModel extends BaseSettingsModel {
     sharePublicCrafting: boolean;
     blockDOGS: boolean;
+    /** Older versions don't send it: treat that as "Public". */
+    outfitCopy?: OutfitCopyLevel;
+
+    // Who may get in, used by every section that has "use global defaults" on (hypno, collar, magic, speech analysis). Whether a
+    // section allows remote access at all, whether it is lockable, and its trance rules stay each section's own.
+    remoteLevel: RemoteAccessLevel;
+    remoteMemberIds: string;
 }
 
 export interface LipstickSettingsModel extends BaseSettingsModel {
@@ -60,6 +71,15 @@ export interface MiscSettingsModel extends BaseSettingsModel {
     handChokeEnabled: boolean;
     gagChokeEnabled: boolean;
     chokeChainEnabled: boolean;
+    netgunEnabled: boolean;
+    netgunIsChaotic: boolean;
+    netgunKeywords: string[];
+    stats: MiscModuleStats;
+}
+
+export interface MiscModuleStats extends ModuleStats {
+    successfulNettingsCount: number;
+    totalNettingsCount: number;
 }
 
 export interface OpacitySettingsModel extends OpacityPublicSettingsModel {

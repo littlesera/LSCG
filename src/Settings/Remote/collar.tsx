@@ -1,10 +1,11 @@
 import { RemoteGuiSubscreen } from "./remoteBase";
 import { HelpInfo } from "Settings/settingBase";
-import { GetDelimitedList, ICONS, replace_template } from "utils";
+import { ICONS, replace_template } from "utils";
 import { CollarPublicSettingsModel } from "Settings/Models/collar";
 import { DomSettingsHost } from "Settings/domSettingsHost";
 import { CheckboxRow, KitContext, Panel } from "Dom/kit";
-import { collarPromo, collarRows } from "Settings/collar";
+import { collarRows } from "Settings/collar";
+import { canRemoteCollar, remoteAccessDenial } from "Modules/remoteAccess";
 
 export class RemoteCollar extends RemoteGuiSubscreen {
 	subscreens: RemoteGuiSubscreen[] = [];
@@ -21,38 +22,20 @@ export class RemoteCollar extends RemoteGuiSubscreen {
 		};
 	}
 
-	get allowedMemberIds(): number[] {
-		const idList = GetDelimitedList(this.settings.allowedMembers).map(id => +id).filter(id => id > 0) ?? [];
-		if (this.settings.limitToCrafted && this.settings.collar.creator >= 0)
-			idList.push(this.settings.collar.creator);
-		return idList;
-	}
-
 	get disabledReason(): string {
-		if (!this.settings.collarPurchased && !this.Character.IsOwnedByPlayer())
-			return replace_template("You must be the owner to purchase this module for %OPP_NAME%...", this.Character);
-
-		let memberIdIsAllowed = ServerChatRoomGetAllowItem(Player, this.Character);
-		if (this.allowedMemberIds.length > 0)
-			memberIdIsAllowed = this.allowedMemberIds.indexOf(Player.MemberNumber!) > -1;
-
-		if (!memberIdIsAllowed)
-			return replace_template("You do not have access to %OPP_POSSESSIVE% collar...", this.Character);
-		else
-			return "Section is Unavailable";
+		switch (remoteAccessDenial("CollarModule", this.Character, Player)) {
+			case "module-off": return "Section is Disabled";
+			case "unavailable": return this.settings.breathplayEnabled === false ? replace_template("%OPP_NAME% has not enabled breathplay...", this.Character) : "Section is Unavailable";
+			case "level": return replace_template("You do not have access to %OPP_POSSESSIVE% collar...", this.Character);
+			case "trance": return replace_template("%OPP_NAME% has too much willpower to let you in...", this.Character);
+			case "hypnotizer": return replace_template("%OPP_NAME% seems suggestable, but not to you...", this.Character);
+			case "remote-off": return replace_template("%OPP_NAME% does not allow remote access.", this.Character);
+			default: return "Section is Unavailable";
+		}
 	}
 
 	get enabled(): boolean {
-		if (!this.settings.collarPurchased)
-			return this.Character.IsOwnedByPlayer();
-
-		let memberIdIsAllowed = ServerChatRoomGetAllowItem(Player, this.Character);
-		if (this.allowedMemberIds.length > 0)
-			memberIdIsAllowed = this.allowedMemberIds.indexOf(Player.MemberNumber!) > -1;
-
-		return this.settings.remoteAccess && 
-				(this.Character.IsOwnedByPlayer() ||
-					(this.settings.enabled && memberIdIsAllowed));
+		return canRemoteCollar(this.Character, Player);
 	}
 
 	get icon(): string {
@@ -66,29 +49,13 @@ export class RemoteCollar extends RemoteGuiSubscreen {
 	private build(): Node[] {
 		const s = this.settings;
 		const ctx = new KitContext(() => this.dirty = true);
-		const promo = collarPromo([
-			"Does your sub need a more 'gripping' approach to training?",
-			"Are you looking for some extra motivation for good behavior?",
-			"Act now and secure your Control Module now for the owner-discounted price of $200!",
-			"Attach this revolutionary new device to your sub's existing collar and it will",
-			"enhance it with the ability to 'tighten' and 'loosen' on command!",
-			"Quiet down those bratty moments and reward good behavior!",
-		], 200, () => this.CanAffordCollar(), "Cannot afford...", () => {
-			this.PurchaseCollar();
-			ctx.changed();
-		});
-		const rows = Panel(collarRows(ctx, s, this.Character, [
+		return [Panel(collarRows(ctx, s, this.Character, [
 			CheckboxRow(ctx, {
 				label: "Locked", description: "Locks the user out of these settings.",
 				get: () => s.locked ?? false, set: v => s.locked = v,
 				disabled: () => !s.lockable,
 			}),
-		]));
-		ctx.watch(() => {
-			promo.hidden = !!s.collarPurchased;
-			rows.hidden = !s.collarPurchased;
-		});
-		return [promo, rows];
+		]))];
 	}
 
 	Load(): void {
@@ -110,24 +77,5 @@ export class RemoteCollar extends RemoteGuiSubscreen {
 
 	Unload(): void {
 		this._host.unmount();
-	}
-
-	CanAffordCollar() {
-		return Player.Money >= 200;
-	}
-
-	PurchaseCollar() {
-		if (!this.CanAffordCollar())
-			return;
-		Player.Money -= 200;
-		this.settings.collarPurchased = true;
-		this.settings.enabled = true;
-		this.settings.remoteAccess = true;
-		this.settings.allowedMembers = `${Player.MemberNumber}`;
-		this.settings.tightTrigger = "tighten";
-		this.settings.looseTrigger = "loosen";
-		this.dirty = true;
-		this.settingsSave();
-		ServerPlayerSync();
 	}
 }

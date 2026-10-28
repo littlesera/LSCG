@@ -413,18 +413,22 @@ export class StateModule extends BaseModule {
         this.States.forEach(s => s.RecoverFor(magical ? "dispel" : "manual", emote));
     }
 
+    /** The paired state `msg` names, if `sender` is paired with us in it: only a partner may update or end a pairing. */
+    private pairingWith(sender: number, msg: LSCGMessageModel): PairedBaseState | undefined {
+        const type = msg.command?.args?.find(a => a.name == "type")?.value as LSCGState;
+        const state = this.States.find(s => s.Type == type);
+        if (!(state instanceof PairedBaseState) || !state.Pairings.some(p => p.PairedMember == sender))
+            return undefined;
+        return state;
+    }
+
     IncomingUnpair(sender: number, msg: LSCGMessageModel) {
-        const command = msg.command;
-        const unPairType = command?.args.find(a => a.name == "type")?.value as LSCGState;
-        const unPairingState = this.States.find(s => s.Type == unPairType) as PairedBaseState;
-        unPairingState.RemovePairing(sender);
+        this.pairingWith(sender, msg)?.RemovePairing(sender);
     }
 
     PairingUpdate(sender: number, msg: LSCGMessageModel) {
         if (!msg.command)
             return;
-        const pairType = msg.command.args.find(a => a.name == "type")?.value as LSCGState;
-        const pairingState = this.States.find(s => s.Type == pairType) as PairedBaseState;
-        pairingState.Update(sender, msg.command.args);
+        this.pairingWith(sender, msg)?.Update(sender, msg.command.args);
     }
 }

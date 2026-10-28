@@ -218,6 +218,40 @@
 		}
 	}
 
+	// A row's own checkbox with sub-options beside it (CheckboxRow's `inline`).
+	.lscg-kit-inline-group {
+		display: flex;
+		align-items: center;
+		flex-wrap: wrap;
+		gap: min(2dvh, 1dvw);
+	}
+
+	// A sub-option: smaller than the row's checkbox, its label in small text.
+	.lscg-kit-row .lscg-kit-inline-check {
+		display: inline-flex;
+		align-items: center;
+		gap: min(0.8dvh, 0.4dvw);
+		font-size: calc(var(--lscg-font-small) * 0.8);
+
+		&[hidden] {
+			display: none;
+		}
+
+		input[type="checkbox"] {
+			height: min(3.6dvh, 1.8dvw);
+			width: min(3.6dvh, 1.8dvw);
+
+			&::before {
+				height: min(2.4dvh, 1.2dvw);
+				width: min(2.4dvh, 1.2dvw);
+			}
+		}
+
+		label {
+			cursor: pointer;
+		}
+	}
+
 	// Only a row has a "desc" area; elsewhere (a panel or dialog grid) the name would add an implicit column.
 	.lscg-kit-row > .lscg-kit-desc {
 		grid-area: desc;
@@ -261,6 +295,11 @@
 				cursor: help;
 				text-decoration: underline dotted;
 			}
+
+			// Checkbox cells are centred, so their headers are too.
+			&.lscg-kit-center {
+				text-align: center;
+			}
 		}
 
 		td {
@@ -287,8 +326,73 @@
 			}
 		}
 
-		tbody tr:nth-child(even) {
+		tbody tr.lscg-kit-stripe {
 			background-color: var(--lscg-stripe-color);
+		}
+
+		// Under the column headings, each group of rows (the effects, by type) is a fieldset that its legend folds away. The headings
+		// sit in a table of their own, inset by the fieldsets' border and padding so the columns still line up.
+		&.lscg-kit-table-head {
+			margin: 0 calc(var(--lscg-group-inset) + var(--lscg-group-border));
+			width: calc(100% - 2 * (var(--lscg-group-inset) + var(--lscg-group-border)));
+		}
+	}
+
+	.lscg-kit-table-wrap {
+		--lscg-group-inset: min(1dvh, 0.5dvw);
+		--lscg-group-border: min(0.2dvh, 0.1dvw);
+	}
+
+	// A group of table rows, boxed in like a fieldset with its name on the box, in a quiet tint. Its legend is a button that folds it.
+	.lscg-kit-fieldset {
+		--lscg-group-tint: #5b8f95;
+		min-inline-size: 0;
+		margin: min(1.2dvh, 0.6dvw) 0 0;
+		padding: 0 var(--lscg-group-inset) min(0.4dvh, 0.2dvw);
+		border: var(--lscg-group-border) solid color-mix(in srgb, var(--lscg-group-tint) 50%, transparent);
+		border-radius: min(0.8dvh, 0.4dvw);
+		// A wash of the tint over whatever is underneath, not a colour of its own.
+		background-color: color-mix(in srgb, var(--lscg-group-tint) 8%, transparent);
+
+		// Folded: just the legend on its box, with no empty room under it.
+		&:not(:has(table)) {
+			padding-bottom: 0;
+		}
+
+		legend {
+			padding: 0 min(0.8dvh, 0.4dvw);
+		}
+
+		.lscg-kit-group-toggle {
+			display: flex;
+			align-items: center;
+			gap: min(0.8dvh, 0.4dvw);
+			padding: 0 min(0.4dvh, 0.2dvw);
+			border: 0;
+			background: transparent;
+			color: var(--lscg-text-color);
+			font-family: inherit;
+			font-size: calc(var(--lscg-font-small) * 1.05);
+			font-weight: bold;
+			cursor: pointer;
+			user-select: none;
+
+			&:hover .lscg-kit-group-name {
+				text-decoration: underline;
+			}
+
+			.lscg-kit-group-chevron {
+				width: 1em;
+				color: var(--lscg-text-color);
+			}
+
+			.lscg-kit-group-count {
+				font-weight: normal;
+				font-size: 0.8em;
+				padding: 0 min(0.8dvh, 0.4dvw);
+				border-radius: 1em;
+				background-color: color-mix(in srgb, var(--lscg-group-tint) 22%, transparent);
+			}
 		}
 	}
 
@@ -419,6 +523,55 @@
 			gap: min(0.6dvh, 0.3dvw);
 			padding: min(0.5dvh, 0.25dvw) min(1dvh, 0.5dvw) min(0.8dvh, 0.4dvw);
 			border-top: min(0.2dvh, 0.1dvw) solid color-mix(in srgb, var(--lscg-expando-tint) 25%, transparent);
+		}
+	}
+
+	// The spell editor's effect list: each effect is one dropdown with a gear beside it (its settings open in a dialog), and the delay
+	// before it is a small collapsed line tucked between it and the effect above.
+	.lscg-spell-effect-head {
+		.lscg-kit-control {
+			gap: min(1dvh, 0.5dvw);
+		}
+
+		// The cog is square, the height of the dropdown beside it; an effect with no settings holds the same room.
+		.lscg-spell-gear,
+		.lscg-spell-gear-spacer {
+			flex: none;
+			width: min(6dvh, 3dvw);
+			height: min(6dvh, 3dvw);
+		}
+
+		.lscg-spell-gear {
+			padding: 0;
+
+			&.lscg-kit-warning {
+				background-color: color-mix(in srgb, #d98a00 80%, var(--button-color, var(--lscg-button-color)));
+			}
+		}
+	}
+
+	// The delay between two effects: a thin line in the gutter between two effects, with no box when closed so it reads as the link between
+	// them, and the dashed rule makes it clearly not part of either effect.
+	.lscg-delay-connector {
+		margin: 0 0 0 min(3dvh, 1.5dvw);
+		border: none;
+		border-left: min(0.3dvh, 0.15dvw) dashed color-mix(in srgb, var(--lscg-expando-tint) 70%, transparent);
+		border-radius: 0;
+		background: transparent;
+		font-size: calc(var(--lscg-font-small) * 0.75);
+
+		.lscg-kit-expando-summary {
+			padding: 0 min(1dvh, 0.5dvw);
+			list-style: none;
+			opacity: 0.8;
+
+			&::-webkit-details-marker {
+				display: none;
+			}
+		}
+
+		&[open] .lscg-kit-expando-body {
+			background-color: var(--lscg-background-color);
 		}
 	}
 
@@ -594,12 +747,29 @@
 		}
 	}
 
-	// A sales pitch for a module you unlock on its screen (e.g. the collar control module).
-	.lscg-kit-promo {
+	// Passes the screen body's full height on to its one visible child.
+	.lscg-kit-fill {
 		display: grid;
-		justify-items: center;
-		gap: min(1dvh, 0.5dvw);
+		grid-template-rows: minmax(0, 1fr);
+		min-height: 0;
+	}
+
+	// A module's introduction, shown on its screen until it's enabled (e.g. breathplay): fills the screen, with its
+	// header at the top, flavor in the middle and the enable button (and any fine print) at the bottom.
+	.lscg-kit-promo {
+		display: flex;
+		flex-direction: column;
+		justify-content: space-between;
+		align-items: center;
+		min-height: 0;
+		padding: min(2dvh, 1dvw) 0;
 		text-align: center;
+
+		> * {
+			display: grid;
+			justify-items: center;
+			gap: min(1dvh, 0.5dvw);
+		}
 
 		p, h2 {
 			margin: 0;
@@ -609,22 +779,36 @@
 			width: auto;
 			min-width: 12em;
 			height: min(8dvh, 4dvw);
-			margin: min(2dvh, 1dvw) 0;
 		}
 	}
 
-	.lscg-kit-blink {
-		color: red;
-		animation: lscg-kit-blink 1.5s steps(1) infinite;
+	.lscg-kit-promo-title {
+		color: #c2185b;
 	}
+
+	.lscg-kit-promo-list {
+		margin: min(1dvh, 0.5dvw) 0;
+		padding: 0;
+		list-style: none;
+		text-align: center;
+		color: color-mix(in srgb, currentColor 65%, gray);
+	}
+
+	.lscg-kit-promo-fine {
+		font-size: 0.7em;
+		font-style: italic;
+		color: color-mix(in srgb, currentColor 55%, gray);
+	}
+
+	.lscg-kit-promo-warning {
+		font-size: 0.65em;
+		color: #d98a1f;
+	}
+
 
 	.lscg-kit-activity-icon {
 		width: min(12dvh, 6dvw);
 		height: min(12dvh, 6dvw);
 		border: 2px solid black;
 	}
-}
-
-@keyframes lscg-kit-blink {
-	50% { color: gray; }
 }

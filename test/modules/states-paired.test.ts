@@ -38,6 +38,16 @@ describe("PairedBaseState (via OrgasmSiphonedState)", () => {
 		expect(states.settings.states.find(s => s.type === "orgasm-siphoned")?.duration).toBe(5000);
 	});
 
+	it("DoPair()/RespondToPairing() refuse a ghosted or blacklisted member", () => {
+		const matchmaker = makeCharacter({ MemberNumber: 3 });
+		player().GhostList = [2];
+		player().BlackList = [4];
+		states.OrgasmSiphonedState.DoPair(makeCharacter({ MemberNumber: 2 }) as never, matchmaker as never, 5000);
+		states.OrgasmSiphonedState.RespondToPairing(makeCharacter({ MemberNumber: 4 }) as never, matchmaker as never, 5000);
+		expect(states.OrgasmSiphonedState.Active).toBe(false);
+		expect(states.OrgasmSiphonedState.Pairings).toEqual([]);
+	});
+
 	it("RespondToPairing() records a non-source pairing, activates, and returns the pairing", () => {
 		const source = makeCharacter({ MemberNumber: 2 });
 		const matchmaker = makeCharacter({ MemberNumber: 3 });

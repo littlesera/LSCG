@@ -9,10 +9,74 @@ import { OpacityMigrator } from "Modules/Migrators/OpacityMigrator";
 import { SuggestionSettingMigrator } from "Modules/Migrators/SuggestionSettingMigrator";
 import { OutfitMigrator } from "Modules/Migrators/OutfitMigrator";
 import { CursedItemMigrator } from "Modules/Migrators/CursedItemMigrator";
+import { RemoteLevelMigrator } from "Modules/Migrators/RemoteLevelMigrator";
 import { parseFromBase64 } from "utils";
 import { boot, resetWorld, player, booted } from "../harness/world";
 
 describe("Migrators (isolated)", () => {
+	describe("RemoteLevelMigrator (0.9.13)", () => {
+		const fixture = (allowed: number, lists: { hypno?: string; collar?: string; magic?: string } = {}) => {
+			resetWorld({
+				LSCG: {
+					HypnoModule: { overrideMemberIds: lists.hypno ?? "", remoteAccess: true },
+					CollarModule: { allowedMembers: lists.collar ?? "", remoteAccess: true },
+					MagicModule: { remoteMemberIds: lists.magic ?? "", remoteAccess: true },
+				},
+			} as never);
+			(player() as unknown as { AllowedInteractions: number }).AllowedInteractions = allowed;
+		};
+		const levels = () => [player().LSCG.HypnoModule, player().LSCG.CollarModule, player().LSCG.MagicModule].map(s => (s as unknown as { remoteLevel: string }).remoteLevel);
+
+		it.each([
+			[0, "Public"], [1, "PublicExceptBlacklist"], [2, "Dominants"], [3, "Whitelist"], [4, "Lovers"], [5, "Owner"],
+		])("with BC interaction permission %i, who got in before still does: level %s", (permission, level) => {
+			fixture(permission);
+			expect(new RemoteLevelMigrator().Migrate("0.9.12")).toBe(true);
+			expect(levels()).toEqual([level, level, level]);
+		});
+
+		const ids = () => [player().LSCG.HypnoModule, player().LSCG.CollarModule, player().LSCG.MagicModule].map(s => (s as unknown as { remoteMemberIds: string }).remoteMemberIds);
+
+		it("someone who named members keeps exactly those members: owner only, plus the list moved to allowed member ids", () => {
+			fixture(0, { hypno: "12, 34", magic: "9" });
+			new RemoteLevelMigrator().Migrate("0.9.12");
+			expect(levels()).toEqual(["Owner", "Public", "Owner"]);
+			expect(ids()).toEqual(["12, 34", "", "9"]);
+		});
+
+		it("copies the lists that also mean something else, leaving the originals in place", () => {
+			fixture(0, { hypno: "12", collar: "34", magic: "56" });
+			new RemoteLevelMigrator().Migrate("0.9.12");
+			expect(player().LSCG.HypnoModule.overrideMemberIds).toBe("12");
+			expect(player().LSCG.CollarModule.allowedMembers).toBe("34");
+			expect(ids()).toEqual(["12", "34", "56"]);
+			expect(levels()).toEqual(["Owner", "Owner", "Owner"]);
+		});
+
+		it("existing saves keep their own settings: no section starts out on the global defaults", () => {
+			fixture(0);
+			(player().LSCG as unknown as Record<string, unknown>).SpeechAnalysisModule = { remoteAccess: true, remoteLevel: "Lovers", useGlobalRemote: true };
+			for (const module of ["HypnoModule", "CollarModule", "MagicModule"] as const)
+				(player().LSCG[module] as unknown as Record<string, unknown>).useGlobalRemote = true;
+			new RemoteLevelMigrator().Migrate("0.9.12");
+			for (const module of ["HypnoModule", "CollarModule", "MagicModule", "SpeechAnalysisModule"] as const)
+				expect((player().LSCG[module] as unknown as { useGlobalRemote: boolean }).useGlobalRemote, module).toBe(false);
+		});
+
+		it("a blank list is no list", () => {
+			fixture(3, { hypno: "  ", collar: "" });
+			new RemoteLevelMigrator().Migrate("0.9.12");
+			expect(levels()).toEqual(["Whitelist", "Whitelist", "Whitelist"]);
+			expect(ids()).toEqual(["", "", ""]);
+		});
+
+		it("falls back to owner only when item permission isn't known", () => {
+			fixture(undefined as never);
+			new RemoteLevelMigrator().Migrate("0.9.12");
+			expect(levels()).toEqual(["Owner", "Owner", "Owner"]);
+		});
+	});
+
 	describe("StateMigrator (0.3.0)", () => {
 		it("sets StateModule.immersive from OR of legacy HypnoModule.immersive", () => {
 			resetWorld({
@@ -744,9 +808,28 @@ describe("CoreModule.CheckForMigrations (orchestration)", () => {
 		});
 		// fromVersion 0.7.1 will run CursedItemMigrator, but SpreadingOutfitModule is not present
 		// so CursedItemMigrator returns false. Earlier migrators (0.3.0 through 0.7.0) won't run
-		// because 0.7.1 is not less than their versions.
-		const result = core.CheckForMigrations("0.7.1");
+		// because 0.7.1 is not less than their versions. Neither will the later RemoteLevelMigrator
+		// (0.9.13) once the version is past it.
+		const result = core.CheckForMigrations("0.9.13");
 		expect(result).toBe(false);
+	});
+
+	it("RemoteLevelMigrator runs for any older version, and not again once past it", () => {
+		resetWorld({
+			LSCG: {
+				StateModule: { immersive: false, states: [] },
+				HypnoModule: { overrideMemberIds: "", remoteAccess: true, stats: { hypnotizedCount: 0 } },
+				CollarModule: { allowedMembers: "", remoteAccess: true },
+				MagicModule: { remoteMemberIds: "", remoteAccess: true, knownSpells: [] },
+			},
+		} as never);
+		(player() as unknown as { AllowedInteractions: number }).AllowedInteractions = 1;
+		expect(core.CheckForMigrations("0.9.12")).toBe(true);
+		const levels = () => [player().LSCG.HypnoModule, player().LSCG.CollarModule, player().LSCG.MagicModule].map(s => (s as unknown as { remoteLevel: string }).remoteLevel);
+		expect(levels()).toEqual(["PublicExceptBlacklist", "PublicExceptBlacklist", "PublicExceptBlacklist"]);
+		player().LSCG.HypnoModule.remoteLevel = "Lovers" as never;
+		core.CheckForMigrations("0.9.13");
+		expect(player().LSCG.HypnoModule.remoteLevel).toBe("Lovers");
 	});
 
 	it("returns true when old fromVersion triggers multiple migrators at least one returns true", () => {

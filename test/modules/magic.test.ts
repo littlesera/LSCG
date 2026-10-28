@@ -9,6 +9,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vite
 import { CoreModule } from "Modules/core";
 import { ConsentModule } from "Modules/consent";
 import { ActivityModule } from "Modules/activities";
+import { MagicWandItems } from "Modules/item-use";
 import { ItemUseModule } from "Modules/item-use";
 import { CollarModule } from "Modules/collar";
 import { InjectorModule } from "Modules/injector";
@@ -117,6 +118,31 @@ describe("MagicModule", () => {
 			magic.settings.noDefenseMemberIds = "2, 3";
 			expect(magic.DefendAgainst(2)).toBe(false);
 			expect(magic.DefendAgainst(5)).toBe(true);
+		});
+	});
+
+	describe("paired spells and ghosted players", () => {
+		it("a ghosted paired target is dropped from IncomingSpell, so no pairing or notification happens", () => {
+			player().GhostList = [3];
+			const ghost = addToRoom(makeCharacter({ MemberNumber: 3, Nickname: "Ghost" }));
+			magic.IncomingSpell(alice as never, spell("pair", [LSCGSpellEffect.paired_arousal]), ghost as never, 1);
+			vi.advanceTimersByTime(2500);
+			expect(states.ArousalPairedState.Pairings).toEqual([]);
+			expect(sent.hidden().some(m => m.command?.name === "pair")).toBe(false);
+		});
+
+		it("a pair command whose origin is ghosted is ignored", () => {
+			player().GhostList = [3];
+			const ghost = addToRoom(makeCharacter({ MemberNumber: 3, Nickname: "Ghost" }));
+			magic.IncomingSpellPair(alice as never, LSCGSpellEffect.paired_arousal, ghost as never, states.ArousalPairedState.Type);
+			expect(states.ArousalPairedState.Pairings).toEqual([]);
+		});
+
+		it("control: a non-ghosted paired target is paired", () => {
+			const bob = addToRoom(makeCharacter({ MemberNumber: 3, Nickname: "Bob" }));
+			magic.IncomingSpell(alice as never, spell("pair", [LSCGSpellEffect.paired_arousal]), bob as never, 1);
+			vi.advanceTimersByTime(2500);
+			expect(states.ArousalPairedState.Pairings.map(p => p.PairedMember)).toEqual([3]);
 		});
 	});
 
@@ -512,6 +538,15 @@ describe("MagicModule", () => {
 			expect(magic.IsMagicItem(null)).toBe(false);
 		});
 
+		it("the Cosplay Girl Power Staff counts as a magic item, with no craft needed", () => {
+			const group = makeGroup({ Name: "ItemHandheld" });
+			const staff = makeAsset(group, { Name: "AnimeGirlWand", Description: "Cosplay Girl Power Staff" });
+			expect(magic.IsMagicItem(makeItem(staff) as never)).toBe(true);
+			expect(MagicWandItems).toContain("AnimeGirlWand");
+			// ...and is cast with from a distance, like a wand, though nothing in its name says so
+			expect(magic.IsRangedItem(makeItem(staff) as never)).toBe(true);
+		});
+
 		it("IsRangedItem matches only the 'wand' keyword", () => {
 			const group = makeGroup({ Name: "ItemHandheld" });
 			const asset = makeAsset(group, { Name: "Stick" });
@@ -649,6 +684,66 @@ describe("MagicModule", () => {
 			seedRandom([0.99, 0.0]);
 			magic.HandleQuaff(alice as never, false);
 			expect(sent.actions()[0]).toContain("forcing");
+		});
+	});
+
+	describe("/lscg spellbook", () => {
+		const run = (arg?: string) => magic.commands.find(c => c.Tag === "spellbook")!.Action!(arg ?? "", "", arg ? [arg] : []);
+		const shown = () => sent.local().join(" ");
+		const keyword = (k: string) => `<b style="color:gold;font-style:normal;">${k}</b>`;
+
+		beforeEach(() => {
+			magic.settings.knownSpells = [
+				spell("Slumber", [LSCGSpellEffect.slumber], { AllowVoiceCast: true }),
+				spell("Bind", [LSCGSpellEffect.tighten, LSCGSpellEffect.none], { AllowVoiceCast: true, AllowPotion: true, CastingPhrase: "be still" }),
+				spell("Brew", [LSCGSpellEffect.slumber], { AllowPotion: true }),
+				spell("Quiet", [LSCGSpellEffect.slumber]),
+			];
+		});
+
+		it("lists every spell by default, with voice keywords and potion tags", () => {
+			run();
+			expect(shown()).toContain("Spellbook:");
+			expect(shown()).toContain(`<li>Slumber (${LSCGSpellEffect.slumber}): ${keyword("Slumber")}</li>`);
+			expect(shown()).toContain(`<li>Bind (${LSCGSpellEffect.tighten}): ${keyword("be still")} <small>[potion]</small></li>`);
+			expect(shown()).toContain(`<li>Brew (${LSCGSpellEffect.slumber}) <small>[potion]</small></li>`);
+			expect(shown()).toContain(`<li>Quiet (${LSCGSpellEffect.slumber})</li>`);
+		});
+
+		it("voice: only the voice-castable spells, with the phrase that casts each", () => {
+			run("Voice");
+			expect(shown()).toContain(`<li>Slumber (${LSCGSpellEffect.slumber}): ${keyword("Slumber")}</li>`);
+			expect(shown()).toContain(`<li>Bind (${LSCGSpellEffect.tighten}): ${keyword("be still")}</li>`);
+			expect(shown()).not.toContain("Brew");
+			expect(shown()).not.toContain("Quiet");
+		});
+
+		it("potion: only the spells that can be potions", () => {
+			run("potion");
+			expect(shown()).toContain(`<li>Bind (${LSCGSpellEffect.tighten})</li>`);
+			expect(shown()).toContain(`<li>Brew (${LSCGSpellEffect.slumber})</li>`);
+			expect(shown()).not.toContain("Slumber (");
+			expect(shown()).not.toContain("Quiet");
+		});
+
+		it("explains itself for anything else", () => {
+			run("spells");
+			expect(shown()).toContain("Usage: /lscg spellbook [voice/potion/all]");
+		});
+
+		it("escapes what the player typed", () => {
+			magic.settings.knownSpells = [spell("<img src=x>", [LSCGSpellEffect.slumber], { AllowVoiceCast: true })];
+			run();
+			expect(shown()).toContain("&lt;img src=x&gt;");
+			expect(shown()).not.toContain("<img");
+		});
+
+		it("says so when there are none", () => {
+			magic.settings.knownSpells = [spell("Quiet", [LSCGSpellEffect.slumber])];
+			run("voice");
+			expect(shown()).toContain("no spells that can be cast by voice");
+			run("potion");
+			expect(shown()).toContain("no spells that can be made into potions");
 		});
 	});
 });

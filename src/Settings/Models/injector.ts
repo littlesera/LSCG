@@ -10,8 +10,6 @@ export interface InjectorModuleStats extends ModuleStats {
     sedatedCount: number;
     brainwashedCount: number;
     curedCount: number;
-    successfulNettingsCount: number;
-    totalNettingsCount: number;
 }
 
 /** One extension drug's level bar, as published to other players. */
@@ -32,14 +30,12 @@ export interface InjectorSettingsModel extends InjectorPublicSettingsModel {
     sedativeKeywords: string[];
     mindControlKeywords: string[];
     hornyKeywords: string[];
-    netgunKeywords: string[];
     cureKeywords: string[];
     hornyTickTime: number;
     heartbeat: boolean;
     sedativeCooldown: number;
     mindControlCooldown: number;
     hornyCooldown: number;
-    netgunIsChaotic: boolean;
     showDrugLevels: boolean;
     enableContinuousDelivery: boolean;
     continuousDeliveryActivatedAt: number;
@@ -51,6 +47,8 @@ export interface InjectorSettingsModel extends InjectorPublicSettingsModel {
     enabledExtensionDrugs: string[];
     /** Current level of each extension drug, by id. */
     extensionDrugLevels: Record<string, number>;
+    /** The player's values for each extension drug's declared options, by drug id then option key. Checked against the drug's fields when read. */
+    extensionDrugOptions?: Record<string, Record<string, unknown>>;
     /** Player overrides of the built-in drugs' decay: minutes for one dose to wear off. Missing means LSCG's default. */
     decayMinutes?: { sedative?: number; mindcontrol?: number; horny?: number };
 }

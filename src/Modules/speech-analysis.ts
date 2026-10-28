@@ -1,8 +1,9 @@
 import { BaseModule } from "base";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
 import { GuiSpeechAnalysis } from "Settings/speech-analysis";
-import { GetDelimitedList, LSCG_SendLocal, excludeParentheticalContent, getCharacter, hasRemotePermission, hookFunction, isPhraseInString, removeAllHooksByModule, sendLSCGCommand, settingsSave } from "../utils";
+import { GetDelimitedList, LSCG_SendLocal, excludeParentheticalContent, getCharacter, hookFunction, isPhraseInString, removeAllHooksByModule, sendLSCGCommand, settingsSave, IsBlockedSender } from "../utils";
 import { getModule } from "modules";
+import { canRemoteSpeech } from "./remoteAccess";
 import type { CoreModule } from "./core";
 import type { StateModule } from "./states";
 import Sentiment from "sentiment";
@@ -342,6 +343,8 @@ export class SpeechAnalysisModule extends BaseModule {
             Priority: 109,
             Description: INCOMING_HANDLER_DESC,
             Callback: (data: ServerChatRoomMessage, sender: Character, msg: string, metadata?: IChatRoomMessageMetadata) => {
+                if (IsBlockedSender(data.Sender))
+                    return false;
                 if (this.Enabled && sender && !sender.IsPlayer() && (data.Type === "Chat" || data.Type === "Whisper"))
                     this._recordIncoming(data, sender, msg, metadata);
                 if (this.Enabled && (data.Type === "Chat" || data.Type === "Whisper") && data.Sender !== undefined)
@@ -472,10 +475,8 @@ export class SpeechAnalysisModule extends BaseModule {
 
     /** Access check shared by fetch and save. The sender's UI checks are advisory; this is authoritative. */
     private _canRemoteConfigure(sender: number): boolean {
-        const s = this.settings;
-        if (!this.Enabled || !s.remoteAccess || sender === Player.MemberNumber || !hasRemotePermission(Player, s.remoteLevel, sender))
-            return false;
-        return !s.remoteRequiresTrance || !!getModule<StateModule>("StateModule")?.HypnoState.Active;
+        const senderChar = getCharacter(sender);
+        return !!senderChar && canRemoteSpeech(Player, senderChar);
     }
 
     /** Like hypno suggestions: owner and lovers see every group's phrases; anyone else only those they set themselves. */

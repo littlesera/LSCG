@@ -1,8 +1,10 @@
 import { getModule } from "modules";
+import { getCharacter } from "utils";
 import type { InjectorModule } from "Modules/injector";
-import { LSCGDoseOptions, LSCGDrugType, LSCGDrugContext, LSCGDrugThreshold, LSCGDrugDefinition, LSCGDrugDoseContext, LSCGDrugsApi } from "./types";
+import { LSCGDrugLevelInfo, LSCGDoseOptions, LSCGDrugType, LSCGDrugContext, LSCGDrugThreshold, LSCGDrugDefinition, LSCGDrugDoseContext, LSCGDrugsApi } from "./types";
 import { Registry } from "./registry";
 import { ErrorOwner, safeInvoke } from "./safeInvoke";
+import { validateOptionFields, type OptionField } from "./options";
 
 /** A drug an extension registered, with its callbacks already wrapped so errors stay contained. */
 export interface ExtensionDrug {
@@ -13,6 +15,8 @@ export interface ExtensionDrug {
     label: string;
     description: string;
     keywords: string[];
+    /** Settings the player can change, drawn under the drug in Drug Enhancements. */
+    options: OptionField[];
     color: string;
     max: number;
     tickMs: number;
@@ -86,6 +90,7 @@ export function createDrugsApi(owner: ErrorOwner & { readonly info: { name: stri
                 label: requireText(owner, `drug "${def.name}" label`, def.label),
                 description: typeof def.description === "string" ? def.description : "",
                 keywords,
+                options: validateOptionFields(owner, `drug "${def.name}"`, def.options),
                 color: typeof def.color === "string" && def.color.trim() !== "" ? def.color.trim() : DEFAULT_DRUG_COLOR,
                 max,
                 tickMs: Math.max(MIN_TICK_SECONDS, positive(owner, "tickSeconds", def.tickSeconds, DEFAULT_TICK_SECONDS, true)) * 1000,
@@ -114,8 +119,20 @@ export function createDrugsApi(owner: ErrorOwner & { readonly info: { name: stri
             return !!injector?.DoseDrug(type, { ...options, multiplier });
         },
 
-        getLevel(type: LSCGDrugType): number {
-            return getModule<InjectorModule>("InjectorModule")?.GetDrugLevel(type) ?? 0;
+        getLevel(type: LSCGDrugType, memberNumber?: number): number {
+            const injector = getModule<InjectorModule>("InjectorModule");
+            if (memberNumber === undefined || memberNumber === Player.MemberNumber)
+                return injector?.GetDrugLevel(type) ?? 0;
+            return this.getLevels(memberNumber).find(bar => bar.type === type)?.level ?? 0;
+        },
+
+        getLevels(memberNumber?: number): LSCGDrugLevelInfo[] {
+            const injector = getModule<InjectorModule>("InjectorModule");
+            const mine = memberNumber === undefined || memberNumber === Player.MemberNumber;
+            const character = mine ? Player : getCharacter(memberNumber);
+            if (!injector || !character)
+                return [];
+            return injector.EstimatedBars(character as Character).map(bar => Object.freeze({ type: bar.type, level: bar.level, max: bar.max, estimated: !mine }));
         },
 
         unregister(name: string): boolean {
