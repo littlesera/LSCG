@@ -1,4 +1,4 @@
-import { REMOTE_TRANCE_DEFAULTS } from "./remoteAccess";
+import { DEFAULT_REMOTE_LEVEL, REMOTE_TRANCE_DEFAULTS } from "./remoteAccess";
 import { BaseModule } from "base";
 import { getModule } from "modules";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
@@ -88,7 +88,9 @@ export class MagicModule extends BaseModule {
             remoteAccess: false,
             remoteAccessRequiredTrance: REMOTE_TRANCE_DEFAULTS.MagicModule.trance,
             limitRemoteAccessToHypnotizer: REMOTE_TRANCE_DEFAULTS.MagicModule.hypnotizerOnly,
+            remoteLevel: DEFAULT_REMOTE_LEVEL,
             remoteMemberIds: "",
+            useGlobalRemote: true,
             neverDefend: false,
             noDefenseMemberIds: "",
             limitedDuration: true,
@@ -360,6 +362,9 @@ export class MagicModule extends BaseModule {
         const rangedItemKeywords = [
             "wand",
         ];
+        // The Cosplay Girl Power Staff isn't called a wand, but is cast with like one.
+        if (item?.Asset?.Name === "AnimeGirlWand")
+            return true;
         const craftStr = GetItemNameAndDescriptionConcat(item) ?? "";
         return rangedItemKeywords.some(keyword => isPhraseInString(craftStr, keyword));
     }

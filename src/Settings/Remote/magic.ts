@@ -1,12 +1,12 @@
 import { RemoteGuiSubscreen } from "./remoteBase";
 import { HelpInfo } from "Settings/settingBase";
-import { GetDelimitedList, replace_template } from "utils";
+import { replace_template } from "utils";
 import { MagicPublicSettingsModel, SpellEffectId } from "Settings/Models/magic";
 import { legacyEffectIds } from "Modules/Magic/spellEffects";
 import { DomSettingsHost } from "Settings/domSettingsHost";
 import { KitContext, Tabs } from "Dom/kit";
 import { buildMagicTabs } from "Settings/magic-pages";
-import { canRemoteMagic } from "Modules/remoteAccess";
+import { canRemoteMagic, remoteAccessDenial } from "Modules/remoteAccess";
 
 export class RemoteMagic extends RemoteGuiSubscreen {
 	subscreens: RemoteGuiSubscreen[] = [];
@@ -14,10 +14,6 @@ export class RemoteMagic extends RemoteGuiSubscreen {
 
 	get name(): string {
 		return "Magic™";
-	}
-
-	get overrideMemberIds(): number[] {
-		return GetDelimitedList(this.settings.remoteMemberIds).map(id => +id).filter(id => id > 0) ?? [];
 	}
 
 	get help(): HelpInfo {
@@ -28,25 +24,14 @@ export class RemoteMagic extends RemoteGuiSubscreen {
 	}
 
 	get disabledReason(): string {
-		let memberIdIsAllowed = ServerChatRoomGetAllowItem(Player, this.Character);
-		if (this.overrideMemberIds.length > 0)
-			memberIdIsAllowed = this.overrideMemberIds.indexOf(Player.MemberNumber!) > -1;
-
-		const isTrance = this.Character.LSCG.StateModule.states.find(s => s.type == "hypnotized")?.active ?? false;
-		const passTranceReq = (this.settings.remoteAccessRequiredTrance && isTrance) || !this.settings.remoteAccessRequiredTrance;
-		const passHypnotizerReq = (this.settings.limitRemoteAccessToHypnotizer && this.Character.LSCG.StateModule.states.find(s => s.type == "hypnotized")?.activatedBy == Player.MemberNumber) || 
-								!this.settings.limitRemoteAccessToHypnotizer;
-
-		if (!this.settings.enabled)
-			return "Section is Disabled";
-		if (!memberIdIsAllowed)
-			return replace_template("You do not have access to %OPP_POSSESSIVE% mind...", this.Character);
-		if (!passTranceReq)
-			return replace_template("%OPP_NAME% has too much willpower to let you in...", this.Character);
-		if (!passHypnotizerReq)
-			return replace_template("%OPP_NAME% seems suggestable, but not to you...", this.Character);
-		else
-			return "Section is Unavailable";
+		switch (remoteAccessDenial("MagicModule", this.Character, Player)) {
+			case "module-off": return "Section is Disabled";
+			case "level": return replace_template("You do not have access to %OPP_POSSESSIVE% mind...", this.Character);
+			case "trance": return replace_template("%OPP_NAME% has too much willpower to let you in...", this.Character);
+			case "hypnotizer": return replace_template("%OPP_NAME% seems suggestable, but not to you...", this.Character);
+			case "remote-off": return replace_template("%OPP_NAME% does not allow remote access.", this.Character);
+			default: return "Section is Unavailable";
+		}
 	}
 
 	get enabled(): boolean {

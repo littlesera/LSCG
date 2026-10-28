@@ -1,4 +1,4 @@
-import type { RemoteAccessLevel } from "utils";
+import { REMOTE_ACCESS_LEVELS, type RemoteAccessLevel } from "utils";
 import { BaseSettingsModel } from "./base";
 import { StripLevel } from "./cursed-item";
 import { OutfitOption } from "./magic";
@@ -42,7 +42,7 @@ export function defaultSpeechDetectors(): Record<SpeechDetectorId, boolean> {
 
 export const SPEECH_DETECTIONS: SpeechDetection[] = ["negative", "positive", "profanity", "erudite", "phrase"];
 export const SPEECH_REACTION_ACTIONS: SpeechReactionAction[] = ["applyState", "removeState", "shock", "outfit", "orgasm"];
-export const SPEECH_REMOTE_LEVELS: SpeechRemoteLevel[] = ["Owner", "Lovers", "Whitelist", "Friends", "PublicExceptBlacklist", "Public"];
+export const SPEECH_REMOTE_LEVELS: readonly SpeechRemoteLevel[] = REMOTE_ACCESS_LEVELS;
 export const SPEECH_REACTION_STATES: LSCGState[] = ["denied", "gagged", "horny", "hypnotized", "blind", "deaf", "frozen", "asleep", "redressed"];
 /** States that need extra data to apply (an outfit), so they can only be removed by a removeState rule. */
 export const SPEECH_REMOVE_ONLY_STATES: LSCGState[] = ["redressed"];
@@ -96,6 +96,10 @@ export interface SpeechReactionRule {
 export interface SpeechAnalysisPublicSettingsModel extends BaseSettingsModel {
     remoteAccess: boolean;
     remoteLevel: SpeechRemoteLevel;
+    /** Take who may get in, and when, from the General > Remote Access defaults instead of this section's own settings. */
+    useGlobalRemote: boolean;
+    /** Members let in whatever the level says (member numbers, comma separated). */
+    remoteMemberIds: string;
     /** On top of remoteLevel: remote access only works while the wearer is hypnotized. */
     remoteRequiresTrance: boolean;
     /** On top of the trance option: only the one who hypnotized the wearer may configure. */
@@ -158,6 +162,8 @@ export function defaultSpeechPublicSettings(): SpeechAnalysisPublicSettingsModel
         enabled: false,
         remoteAccess: false,
         remoteLevel: "Owner",
+        remoteMemberIds: "",
+        useGlobalRemote: true,
         remoteRequiresTrance: true,
         limitRemoteAccessToHypnotizer: false,
         lockable: false,
@@ -251,7 +257,7 @@ export type SanitizedRemoteSpeechSettings = Partial<Omit<SpeechEditableSettings,
 };
 
 /** Validates remotely-sent settings. Only editable keys with well-formed values survive; everything else is dropped.
- *  Never includes enabled, remoteAccess, remoteLevel, remoteRequiresTrance, limitRemoteAccessToHypnotizer or lockable — those stay the wearer's choice. */
+ *  Never includes enabled, remoteAccess, remoteLevel, remoteMemberIds, useGlobalRemote, remoteRequiresTrance, limitRemoteAccessToHypnotizer or lockable — those stay the wearer's choice. */
 export function sanitizeRemoteSpeechSettings(input: any): SanitizedRemoteSpeechSettings {
     const out: SanitizedRemoteSpeechSettings = {};
     if (!input || typeof input !== "object") return out;

@@ -1,4 +1,4 @@
-import { REMOTE_TRANCE_DEFAULTS } from "./remoteAccess";
+import { DEFAULT_REMOTE_LEVEL, REMOTE_TRANCE_DEFAULTS } from "./remoteAccess";
 import { BaseModule } from "base";
 import { HypnoInfluence, HypnoSettingsModel, LSCGHypnoInstruction } from "Settings/Models/hypno";
 import { extensionInstructions, isExtensionInstruction, sanitizeExtensionInstruction } from "api/hypno";
@@ -94,6 +94,9 @@ export class HypnoModule extends BaseModule {
             overrideWords: "",
             allowLocked: false,
             remoteAccess: false,
+            remoteLevel: DEFAULT_REMOTE_LEVEL,
+            remoteMemberIds: "",
+            useGlobalRemote: true,
             remoteAccessRequiredTrance: REMOTE_TRANCE_DEFAULTS.HypnoModule.trance,
             allowRemoteModificationOfMemberOverride: false,
             cooldownTime: 0,

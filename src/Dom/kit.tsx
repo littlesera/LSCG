@@ -544,7 +544,7 @@ export function RuleTable<R>(ctx: KitContext, props: RuleTableProps<R>): HTMLEle
         container.replaceChildren(
             <table class="lscg-kit-table">
                 <thead><tr>{props.columns.map(c => (
-                    <th style={c.width ? { width: c.width } : {}} title={c.tooltip ?? ""} class={c.tooltip ? "lscg-kit-has-tip" : ""}>{c.header}</th>
+                    <th style={c.width ? { width: c.width } : {}} title={c.tooltip ?? ""} class={[c.tooltip ? "lscg-kit-has-tip" : "", c.kind === "checkbox" ? "lscg-kit-center" : ""].filter(Boolean).join(" ")}>{c.header}</th>
                 ))}{props.fixed ? null : <th class="lscg-kit-delete-col" />}</tr></thead>
                 <tbody>
                     {rows.map((r, i) => (

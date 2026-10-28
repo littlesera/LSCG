@@ -16,6 +16,7 @@ import { StateModule } from "./states";
 import { GrabType, LeashingModule } from "./leashing";
 import { OpacityMigrator } from "./Migrators/OpacityMigrator";
 import { SuggestionSettingMigrator } from "./Migrators/SuggestionSettingMigrator";
+import { RemoteLevelMigrator } from "./Migrators/RemoteLevelMigrator";
 import { OutfitMigrator } from "./Migrators/OutfitMigrator";
 import { CursedItemMigrator } from "./Migrators/CursedItemMigrator";
 import { emit } from "api/events";
@@ -23,7 +24,7 @@ import { advertisedEffectIds } from "./Magic/spellEffects";
 import type { InjectorModule } from "./injector";
 import { publishedExtensionData } from "api/publish";
 import { dispatchExtensionCommand } from "api/network";
-import { canRemoteCollar, canRemoteHypno, canRemoteMagic, remoteCollarChanges, remoteHypnoChanges, remoteMagicChanges } from "./remoteAccess";
+import { DEFAULT_REMOTE_LEVEL, canRemoteCollar, canRemoteHypno, canRemoteMagic, remoteCollarChanges, remoteHypnoChanges, remoteMagicChanges } from "./remoteAccess";
 
 /** State extension keys holding compressed outfit snapshots (cursed outfits, redress slots, polymorph/redress originals). */
 const PRIVATE_STATE_EXTENSIONS = ["outfits", "slot-snapshot", "stored", "stored-outfit", "spell-effects"];
@@ -101,6 +102,8 @@ export class CoreModule extends BaseModule {
             showCheckRolls: true,
             blockDOGS: false,
             outfitCopy: "Public",
+            remoteLevel: DEFAULT_REMOTE_LEVEL,
+            remoteMemberIds: "",
         };
 	}
 
@@ -256,6 +259,7 @@ export class CoreModule extends BaseModule {
         new SuggestionSettingMigrator(),
         new OutfitMigrator(),
         new CursedItemMigrator(),
+        new RemoteLevelMigrator(),
     ];
 
     CheckForMigrations(fromVersion: string): boolean {

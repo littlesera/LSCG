@@ -1,6 +1,6 @@
 // Command()'s "remote" case (core.ts): settings sent from another player's remote screens. The receiver checks the
-// sender again with the same rules the screens use (Modules/remoteAccess.ts) -- remote access on, owner or allowed
-// member or item permission, the trance and hypnotizer limits -- since a sender needn't go through the screens at
+// sender again with the same rules the screens use (Modules/remoteAccess.ts) -- remote access on, owner or within
+// the access level the wearer picked, the trance and hypnotizer limits -- since a sender needn't go through the screens at
 // all, and takes only the settings those screens show: never remote access itself, who may use it, or anything else
 // the wearer keeps to themselves.
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
@@ -32,10 +32,10 @@ describe("CoreModule remote-settings receiver (Command() \"remote\")", () => {
 		hypno.init();
 		collar.init();
 		magic.init();
-		// Open to remote access by anyone item permissions allow, with no trance requirement
-		Object.assign(hypno.settings, { enabled: true, remoteAccess: true, remoteAccessRequiredTrance: false, limitRemoteAccessToHypnotizer: false, overrideMemberIds: "" });
-		Object.assign(collar.settings, { enabled: true, remoteAccess: true, breathplayEnabled: true, allowedMembers: "", limitToCrafted: false });
-		Object.assign(magic.settings, { enabled: true, remoteAccess: true, remoteAccessRequiredTrance: false, limitRemoteAccessToHypnotizer: false, remoteMemberIds: "" });
+		// Open to remote access by everyone, with no trance requirement
+		Object.assign(hypno.settings, { enabled: true, remoteAccess: true, useGlobalRemote: false, remoteLevel: "Public", remoteAccessRequiredTrance: false, limitRemoteAccessToHypnotizer: false, overrideMemberIds: "" });
+		Object.assign(collar.settings, { enabled: true, remoteAccess: true, useGlobalRemote: false, remoteLevel: "Public", breathplayEnabled: true, allowedMembers: "", limitToCrafted: false });
+		Object.assign(magic.settings, { enabled: true, remoteAccess: true, useGlobalRemote: false, remoteLevel: "Public", remoteAccessRequiredTrance: false, limitRemoteAccessToHypnotizer: false });
 		sender = addToRoom(makeCharacter({ MemberNumber: 111, Nickname: "Kai" }));
 	});
 
@@ -66,16 +66,18 @@ describe("CoreModule remote-settings receiver (Command() \"remote\")", () => {
 			expect(sent.local()).toEqual([]);
 		});
 
-		it("needs item permission, or to be on the allowed list when there is one", () => {
-			g.ServerChatRoomGetAllowItem.mockReturnValueOnce(false);
+		it("needs to be within the access level the wearer picked, whatever item permission says", () => {
+			hypno.settings.remoteLevel = "Lovers";
 			sendRemote(sender, { HypnoModule: { overrideWords: "a" } });
 			expect(hypno.settings.overrideWords).not.toBe("a");
-			hypno.settings.overrideMemberIds = "999";
+			player().LoverMemberNumber = [111];
 			sendRemote(sender, { HypnoModule: { overrideWords: "b" } });
-			expect(hypno.settings.overrideWords).not.toBe("b");
-			hypno.settings.overrideMemberIds = "999, 111";
+			expect(hypno.settings.overrideWords).toBe("b");
+			// the override member list no longer decides remote access
+			hypno.settings.remoteLevel = "Owner";
+			hypno.settings.overrideMemberIds = "111";
 			sendRemote(sender, { HypnoModule: { overrideWords: "c" } });
-			expect(hypno.settings.overrideWords).toBe("c");
+			expect(hypno.settings.overrideWords).toBe("b");
 		});
 
 		it("respects the trance and hypnotizer limits", () => {
@@ -140,8 +142,9 @@ describe("CoreModule remote-settings receiver (Command() \"remote\")", () => {
 			expect(collar.settings.tightTrigger).not.toBe("squeeze");
 		});
 
-		it("only from the allowed members, or the collar's maker when limited to it", () => {
-			collar.settings.allowedMembers = "999";
+		it("only within the access level, or the collar's maker when limited to it", () => {
+			collar.settings.remoteLevel = "Owner";
+			collar.settings.allowedMembers = "111"; // who may use the collar's buttons, not who may change its settings
 			sendRemote(sender, { CollarModule: { tightTrigger: "a" } });
 			expect(collar.settings.tightTrigger).not.toBe("a");
 			Object.assign(collar.settings, { limitToCrafted: true, collar: { name: "Choker", creator: 111 } });
@@ -171,16 +174,17 @@ describe("CoreModule remote-settings receiver (Command() \"remote\")", () => {
 	describe("magic", () => {
 		it("applies the screen's settings, never who may cast or whether remote access is on", () => {
 			magic.settings.knownSpells = [{ Name: "Mine" }] as never;
-			sendRemote(sender, { MagicModule: { neverDefend: true, blockedSpellEffects: ["blind"], requireWhitelist: false, remoteAccess: false, remoteMemberIds: "111", knownSpells: [] } });
-			expect(magic.settings).toMatchObject({ neverDefend: true, blockedSpellEffects: ["blind"], remoteAccess: true, remoteMemberIds: "" });
+			magic.settings.remoteLevel = "PublicExceptBlacklist";
+			sendRemote(sender, { MagicModule: { neverDefend: true, blockedSpellEffects: ["blind"], requireWhitelist: false, remoteAccess: false, remoteLevel: "Public", knownSpells: [] } });
+			expect(magic.settings).toMatchObject({ neverDefend: true, blockedSpellEffects: ["blind"], remoteAccess: true, remoteLevel: "PublicExceptBlacklist" });
 			expect(magic.settings.knownSpells).toEqual([{ Name: "Mine" }]);
 		});
 
-		it("only from the allowed members when there's a list, and not while magic is off", () => {
-			magic.settings.remoteMemberIds = "999";
+		it("only within the access level, and not while magic is off (an owner still gets in)", () => {
+			magic.settings.remoteLevel = "Lovers";
 			sendRemote(sender, { MagicModule: { neverDefend: true } });
 			expect(magic.settings.neverDefend).not.toBe(true);
-			magic.settings.remoteMemberIds = "";
+			magic.settings.remoteLevel = "Public";
 			magic.settings.enabled = false;
 			sendRemote(sender, { MagicModule: { neverDefend: true } });
 			expect(magic.settings.neverDefend).not.toBe(true);
@@ -203,9 +207,9 @@ describe("CoreModule remote-settings receiver (Command() \"remote\")", () => {
 				magic.settings.remoteAccess = false;
 				sendRemote(sender, { MagicModule: { lockedSpellEffects: ["Deafening"] } });
 				magic.settings.remoteAccess = true;
-				magic.settings.remoteMemberIds = "999";
+				magic.settings.remoteLevel = "Lovers";
 				sendRemote(sender, { MagicModule: { lockedSpellEffects: ["Deafening"] } });
-				magic.settings.remoteMemberIds = "";
+				magic.settings.remoteLevel = "Public";
 				magic.settings.remoteAccessRequiredTrance = true;
 				sendRemote(sender, { MagicModule: { lockedSpellEffects: ["Deafening"] } });
 				expect(magic.settings.lockedSpellEffects).toEqual([]);

@@ -1,11 +1,11 @@
 import { RemoteGuiSubscreen } from "./remoteBase";
 import { HelpInfo } from "Settings/settingBase";
-import { GetDelimitedList, ICONS, replace_template } from "utils";
+import { ICONS, replace_template } from "utils";
 import { CollarPublicSettingsModel } from "Settings/Models/collar";
 import { DomSettingsHost } from "Settings/domSettingsHost";
 import { CheckboxRow, KitContext, Panel } from "Dom/kit";
 import { collarRows } from "Settings/collar";
-import { canRemoteCollar } from "Modules/remoteAccess";
+import { canRemoteCollar, remoteAccessDenial } from "Modules/remoteAccess";
 
 export class RemoteCollar extends RemoteGuiSubscreen {
 	subscreens: RemoteGuiSubscreen[] = [];
@@ -22,25 +22,15 @@ export class RemoteCollar extends RemoteGuiSubscreen {
 		};
 	}
 
-	get allowedMemberIds(): number[] {
-		const idList = GetDelimitedList(this.settings.allowedMembers).map(id => +id).filter(id => id > 0) ?? [];
-		if (this.settings.limitToCrafted && this.settings.collar.creator >= 0)
-			idList.push(this.settings.collar.creator);
-		return idList;
-	}
-
 	get disabledReason(): string {
-		if (this.settings.breathplayEnabled === false)
-			return replace_template("%OPP_NAME% has not enabled breathplay...", this.Character);
-
-		let memberIdIsAllowed = ServerChatRoomGetAllowItem(Player, this.Character);
-		if (this.allowedMemberIds.length > 0)
-			memberIdIsAllowed = this.allowedMemberIds.indexOf(Player.MemberNumber!) > -1;
-
-		if (!memberIdIsAllowed)
-			return replace_template("You do not have access to %OPP_POSSESSIVE% collar...", this.Character);
-		else
-			return "Section is Unavailable";
+		switch (remoteAccessDenial("CollarModule", this.Character, Player)) {
+			case "unavailable": return this.settings.breathplayEnabled === false ? replace_template("%OPP_NAME% has not enabled breathplay...", this.Character) : "Section is Unavailable";
+			case "level": return replace_template("You do not have access to %OPP_POSSESSIVE% collar...", this.Character);
+			case "trance": return replace_template("%OPP_NAME% has too much willpower to let you in...", this.Character);
+			case "hypnotizer": return replace_template("%OPP_NAME% seems suggestable, but not to you...", this.Character);
+			case "remote-off": return replace_template("%OPP_NAME% does not allow remote access.", this.Character);
+			default: return "Section is Unavailable";
+		}
 	}
 
 	get enabled(): boolean {

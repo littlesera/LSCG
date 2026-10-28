@@ -6,6 +6,7 @@ import { SETTING_NAME_PREFIX, Subscreen, setSubscreen } from "./setting_definiti
 import { modules } from "modules";
 import { GlobalSettingsModel } from "./Models/base";
 import { ICONS } from "utils";
+import { DEFAULT_REMOTE_LEVEL } from "Modules/remoteAccess";
 import { GuiExtensions } from "./extensions";
 
 export class GUI extends BaseModule {
@@ -90,6 +91,8 @@ export class GUI extends BaseModule {
 			tamperproofElectricityEnabled: true,
 			blockDOGS: false,
 			outfitCopy: "Public",
+            remoteLevel: DEFAULT_REMOTE_LEVEL,
+            remoteMemberIds: "",
 		};
     }
 

@@ -6,7 +6,8 @@ import { ICONS } from "utils";
 import { GlobalSettingsModel, OutfitCopyLevel } from "./Models/base";
 import { GuiSubscreen } from "./settingBase";
 import { DomSettingsHost } from "./domSettingsHost";
-import { CheckboxRow, KitContext, SelectRow, Tabs } from "Dom/kit";
+import { CheckboxRow, KitContext, SectionLabel, SelectRow, Tabs } from "Dom/kit";
+import { remoteAccessRows } from "./remoteAccessRows";
 import { OpacityModule } from "Modules/opacity";
 import { LeashingModule } from "Modules/leashing";
 import { ChaoticItemModule } from "Modules/chaotic-item";
@@ -94,6 +95,13 @@ export class GuiGlobal extends GuiSubscreen {
 						],
 						get: () => s.outfitCopy ?? "Public", set: v => s.outfitCopy = v as OutfitCopyLevel, disabled: off,
 					}),
+				],
+			},
+			{
+				label: "Remote Access",
+				render: () => [
+					SectionLabel("Defaults for every section", "Hypnosis, collar, magic and speech analysis can use these instead of their own settings (each has a \"Use global defaults\" checkbox). Whether a section allows remote access at all, and whether it can be locked, stay set on the section."),
+					...remoteAccessRows(ctx, s, { disabled: off }),
 				],
 			},
 			{

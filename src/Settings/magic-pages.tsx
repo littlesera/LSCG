@@ -7,6 +7,7 @@ import { Button, Chip, IconButton, CheckboxRow, Expando, Icon, KitContext, KitTa
 import { addEffect, canHaveEffect, DEFAULT_EFFECT_DELAY, editableConfig, effectDelayFor, MAX_EFFECT_DELAY, MIN_EFFECT_DELAY, removeEffect, setEffect, writeConfig, writeDelay } from "Modules/Magic/spellEdit";
 import { EFFECT_EDITORS } from "./magic-effect-editors";
 import { optionRows } from "./optionRows";
+import { remoteAccessRows } from "./remoteAccessRows";
 import { DelayConnector } from "./delayConnector";
 import { KNOWN_SPELLS_LIMIT, MagicPublicSettingsModel, MagicSettingsModel, OutfitOption, PolymorphConfig, SpellDefinition, SpellEffectId, maxSpellEffects } from "./Models/magic";
 import type { SpiritTextType } from "./magic";
@@ -36,6 +37,12 @@ const effectRank = (id: SpellEffectId) => {
     return !getSpellEffect(id) ? 200 : domain ? domainOrder(domain) : 100;
 };
 const byLabel = (a: SpellEffectId, b: SpellEffectId) => effectRank(a) - effectRank(b) || effectLabel(a).localeCompare(effectLabel(b));
+const byName = (a: SpellEffectId, b: SpellEffectId) => effectLabel(a).localeCompare(effectLabel(b));
+
+type EffectOrder = "type" | "name";
+const EFFECT_ORDER_OPTIONS: SelectOption[] = [{ value: "type", label: "By type" }, { value: "name", label: "Alphabetical" }];
+/** How the effects table is sorted. Kept across opening the tab, not saved. */
+let effectOrder: EffectOrder = "type";
 
 function effectChip(id: SpellEffectId): HTMLElement {
     const def = getSpellEffect(id);
@@ -52,10 +59,19 @@ function effectNameCell(id: SpellEffectId): HTMLElement {
     </div> as HTMLElement;
 }
 
-function blockedEffectsTable(ctx: KitContext, s: MagicPublicSettingsModel, opts: MagicPagesOptions): HTMLElement {
-    // Keep blocks on effects that aren't listed (e.g. an uninstalled extension's) visible so they can be removed.
-    const ids = () => [...opts.effects, ...(s.blockedSpellEffects ?? []).filter(id => opts.effects.indexOf(id) < 0)].sort(byLabel).map(id => ({ id }));
-    return RuleTable(ctx, {
+/** One row per effect: whether spells can apply it to the wearer (Block, and Allow self), and whether the wearer can cast it (Lock).
+ *  Only a remote user changes Lock; the wearer sees what is locked but can't edit it. */
+function effectsTable(ctx: KitContext, s: MagicSettingsModel, opts: MagicPagesOptions): HTMLElement[] {
+    const locked = () => s.lockedSpellEffects ?? [];
+    // Keep blocks and locks on effects that aren't listed (e.g. an uninstalled extension's) visible so they can be removed.
+    const ids = () => [...opts.effects, ...[...(s.blockedSpellEffects ?? []), ...locked()].filter(id => opts.effects.indexOf(id) < 0)]
+        .filter((id, i, all) => all.indexOf(id) === i).sort(effectOrder === "name" ? byName : byLabel).map(id => ({ id }));
+    const sortRow = SelectRow(ctx, {
+        label: "Sort effects", options: EFFECT_ORDER_OPTIONS,
+        description: "By type groups effects under their domain (mind, senses, binding...), alphabetical within each.",
+        get: () => effectOrder, set: v => effectOrder = v as EffectOrder,
+    });
+    const table = RuleTable(ctx, {
         fixed: true,
         rows: ids,
         columns: [
@@ -77,30 +93,16 @@ function blockedEffectsTable(ctx: KitContext, s: MagicPublicSettingsModel, opts:
                 get: r => (s.bypassForSelfEffects ?? []).includes(r.id),
                 set: (r, v) => s.bypassForSelfEffects = toggle(s.bypassForSelfEffects ?? [], r.id, v),
             },
-        ],
-    });
-}
-
-/** Effects the wearer can't cast. Only a remote user changes these; the wearer sees what is locked but can't edit it. */
-function lockedEffectsTable(ctx: KitContext, s: MagicSettingsModel, opts: MagicPagesOptions): HTMLElement {
-    const locked = () => s.lockedSpellEffects ?? [];
-    // Keep locks on effects that aren't listed (e.g. an uninstalled extension's) visible so they can be removed.
-    const ids = () => [...(opts.remote ? opts.effects : []), ...locked().filter(id => !opts.remote || opts.effects.indexOf(id) < 0)].sort(byLabel).map(id => ({ id }));
-    return RuleTable(ctx, {
-        fixed: true,
-        rows: ids,
-        columns: [
-            { header: "Effect", kind: "custom", width: "30%", render: r => effectNameCell(r.id), get: () => "", set: () => {} },
-            { header: "Description", kind: "custom", render: r => <small class="lscg-kit-desc">{effectDescription(r.id)}</small> as HTMLElement, get: () => "", set: () => {} },
             {
                 header: "Lock", kind: "checkbox", width: "4.5em",
-                tooltip: opts.remote ? "Their spells with this effect fizzle on that step." : "Your spells with this effect fizzle on that step.",
+                tooltip: opts.remote ? "Their spells with this effect fizzle on that step." : "Your spells with this effect fizzle on that step. Only someone with remote access can change this.",
                 disabled: () => !opts.remote,
                 get: r => locked().includes(r.id),
                 set: (r, v) => { if (opts.remote) s.lockedSpellEffects = toggle(locked(), r.id, v); },
             },
         ],
     });
+    return [sortRow, table];
 }
 
 /** Picks which outfit an effect uses: from the player's saved outfits, or typed in for anything else the game accepts
@@ -386,10 +388,8 @@ export function buildMagicTabs(ctx: KitContext, s: MagicPublicSettingsModel, opt
         {
             label: "Effects",
             render: () => [
-                SectionLabel("Blocked effects", `Blocked effects never apply to ${opts.remote ? "them" : "you"}. "Allow self" still lets ${your} own spells apply them.`),
-                blockedEffectsTable(ctx, s, opts),
-                SectionLabel("Locked effects", `Locked effects fizzle on their step when ${you} cast a spell. Only someone with remote access can change this.`),
-                lockedEffectsTable(ctx, local, opts),
+                SectionLabel("Effects", `Blocked effects never apply to ${opts.remote ? "them" : "you"}; "Allow self" still lets ${your} own spells apply them. Locked effects fizzle on their step when ${you} cast a spell, and only someone with remote access can lock them.`),
+                ...effectsTable(ctx, local, opts),
             ],
         },
     ];
@@ -435,7 +435,7 @@ export function buildMagicTabs(ctx: KitContext, s: MagicPublicSettingsModel, opt
     });
 
     tabs.push({
-        label: "Remote access",
+        label: "Remote Access",
         render: () => [
             SectionLabel("Remote access", opts.remote ? "How remote access to this player's Magic™ settings works." : "Let other players change your Magic™ settings through LSCG's remote settings."),
             ...(opts.remote
@@ -444,25 +444,21 @@ export function buildMagicTabs(ctx: KitContext, s: MagicPublicSettingsModel, opt
                         label: "Locked", description: "Locks them out of their own Magic™ settings. Only possible if they allow it.",
                         get: () => !!s.locked, set: v => { if (s.lockable) s.locked = v; }, disabled: () => !s.lockable,
                     }),
+                    CheckboxRow(ctx, {
+                        label: "Requires trance", description: "Remote access only works while they are hypnotized.",
+                        get: () => s.remoteAccessRequiredTrance ?? REMOTE_TRANCE_DEFAULTS.MagicModule.trance, set: v => s.remoteAccessRequiredTrance = v,
+                    }),
+                    CheckboxRow(ctx, {
+                        label: "Only the hypnotizer", description: "Only whoever hypnotized them gets remote access.",
+                        get: () => s.limitRemoteAccessToHypnotizer ?? REMOTE_TRANCE_DEFAULTS.MagicModule.hypnotizerOnly, set: v => s.limitRemoteAccessToHypnotizer = v,
+                        disabled: () => !(s.remoteAccessRequiredTrance ?? REMOTE_TRANCE_DEFAULTS.MagicModule.trance),
+                    }),
                 ]
                 : [
                     CheckboxRow(ctx, { label: "Allow remote access", description: "Allowed players can change these settings.", get: () => !!s.remoteAccess, set: v => s.remoteAccess = v }),
                     CheckboxRow(ctx, { label: "Lockable", description: "Allowed players can lock you out of these settings.", get: () => !!s.lockable, set: v => s.lockable = v, disabled: () => !s.remoteAccess }),
-                    TextRow(ctx, {
-                        label: "Allowed members", placeholder: "Member numbers, comma separated",
-                        description: "If empty, normal item permissions decide.",
-                        get: () => s.remoteMemberIds ?? "", set: v => s.remoteMemberIds = v, disabled: () => !s.remoteAccess,
-                    }),
+                    ...remoteAccessRows(ctx, s, { module: "MagicModule", disabled: () => !s.remoteAccess }),
                 ]),
-            CheckboxRow(ctx, {
-                label: "Requires trance", description: `Remote access only works while ${you} are hypnotized.`,
-                get: () => s.remoteAccessRequiredTrance ?? REMOTE_TRANCE_DEFAULTS.MagicModule.trance, set: v => s.remoteAccessRequiredTrance = v, disabled: () => !opts.remote && !s.remoteAccess,
-            }),
-            CheckboxRow(ctx, {
-                label: "Only the hypnotizer", description: `Only whoever hypnotized ${opts.remote ? "them" : "you"} gets remote access.`,
-                get: () => s.limitRemoteAccessToHypnotizer ?? REMOTE_TRANCE_DEFAULTS.MagicModule.hypnotizerOnly, set: v => s.limitRemoteAccessToHypnotizer = v,
-                disabled: () => (!opts.remote && !s.remoteAccess) || !(s.remoteAccessRequiredTrance ?? REMOTE_TRANCE_DEFAULTS.MagicModule.trance),
-            }),
         ],
     });
 

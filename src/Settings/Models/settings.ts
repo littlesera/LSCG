@@ -65,6 +65,9 @@ export class PublicSettingsModel implements IPublicSettingsModel {
         chokeLevel: 0,
         allowedMembers: "",
         remoteAccess: false,
+        remoteLevel: "Owner",
+        remoteMemberIds: "",
+        useGlobalRemote: true,
         remoteAccessRequiredTrance: false,
         limitRemoteAccessToHypnotizer: false,
         lockable: false,
@@ -93,6 +96,9 @@ export class PublicSettingsModel implements IPublicSettingsModel {
         awakeners: "",
         allowLocked: false,
         remoteAccess: false,
+        remoteLevel: "Owner",
+        remoteMemberIds: "",
+        useGlobalRemote: true,
         remoteAccessRequiredTrance: true,
         limitRemoteAccessToHypnotizer: false,
         allowRemoteModificationOfMemberOverride: false,
@@ -123,6 +129,8 @@ export class PublicSettingsModel implements IPublicSettingsModel {
         enabled: false,
         sharePublicCrafting: false,
         outfitCopy: "Public",
+        remoteLevel: "Owner",
+        remoteMemberIds: "",
     };
     MiscModule: BaseSettingsModel = <BaseSettingsModel>{enabled: false};
     InjectorModule: InjectorPublicSettingsModel = <InjectorPublicSettingsModel>{
@@ -156,7 +164,9 @@ export class PublicSettingsModel implements IPublicSettingsModel {
         remoteAccess: false,
         remoteAccessRequiredTrance: false,
         limitRemoteAccessToHypnotizer: false,
+        remoteLevel: "Owner",
         remoteMemberIds: "",
+        useGlobalRemote: true,
         neverDefend: false,
         noDefenseMemberIds: "",
         limitedDuration: true,

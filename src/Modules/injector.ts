@@ -826,7 +826,14 @@ export class InjectorModule extends BaseModule {
         "%NAME%'s eyes flutter and defocus as %OPP_NAME%'s drink slides warmly down %POSSESSIVE% throat.",
     ];
 
-    AddMindControl(multiplier: number, minigame: boolean = true) {
+    /** Whoever last pushed the player toward brainwashing: a drinker or injector, or the crafter of the item doing it. It is who
+     *  counts as their hypnotizer when it takes hold, since the dose that tips it over may not be the only one. */
+    private mindControlSource?: number;
+
+    /** `source`: who is responsible for this dose, if anyone is (see mindControlSource). */
+    AddMindControl(multiplier: number, minigame: boolean = true, source?: number) {
+        if (source !== undefined && source >= 0)
+            this.mindControlSource = source;
         const additive = this.drugLevelMultiplier * multiplier;
         const newLevel = Math.min(this.mindControlLevel + additive, this.mindControlMax * this.drugLevelMultiplier);
         // if (gradual)
@@ -841,12 +848,12 @@ export class InjectorModule extends BaseModule {
     }
 
     DrinkMindControl(sender: Character, fullPour: boolean = false) {
-        this.AddMindControl(DRUG_EFFECT_MULTIPLIERS.DRINK_MULTIPLIER);
+        this.AddMindControl(DRUG_EFFECT_MULTIPLIERS.DRINK_MULTIPLIER, true, sender.MemberNumber);
         SendAction(this.brainwashDrinkStr[getRandomInt(this.brainwashDrinkStr.length)], sender);
     }
 
     InjectMindControl(sender: Character, location: AssetGroupItemName) {
-        this.AddMindControl(this.InjectionLocationTable.get(location) ?? 1);
+        this.AddMindControl(this.InjectionLocationTable.get(location) ?? 1, true, sender.MemberNumber);
         SendAction(this.brainwashInjectStr[getRandomInt(this.brainwashInjectStr.length)], sender);
         DrawFlashScreen("#A020F0", EFFECT_DURATIONS.FLASH_SCREEN, this.mindControlLevel * DRUG_EFFECT_MULTIPLIERS.DRINK_MULTIPLIER);
     }
@@ -981,7 +988,9 @@ export class InjectorModule extends BaseModule {
 
     Brainwash() {
         SendAction("%NAME%'s body goes limp as %POSSESSIVE% mind empties and %PRONOUN% awaits a command.");
-        this.stateModule.HypnoState.Activate();
+        const by = this.mindControlSource;
+        this.mindControlSource = undefined;
+        this.stateModule.HypnoState.Activate(by);
         this.settings.stats.brainwashedCount++;
         settingsSave();
     }
@@ -1162,7 +1171,7 @@ export class InjectorModule extends BaseModule {
         const minigame = opts.minigame ?? true;
         switch (applied) {
             case "sedative": this.AddSedative(opts.multiplier, minigame); break;
-            case "mindcontrol": this.AddMindControl(opts.multiplier, minigame); break;
+            case "mindcontrol": this.AddMindControl(opts.multiplier, minigame, opts.sender); break;
             case "horny": this.AddHorny(opts.multiplier, false); break;
             case "antidote": this.DoCure(); break;
             default: this.ApplyExtensionDrug(applied, method, { multiplier: opts.multiplier, sender, location: opts.location });
@@ -1540,14 +1549,16 @@ export class InjectorModule extends BaseModule {
         // Use new spirals setting for hypno headsets
         if (!Player.LSCG.HypnoModule.enableSpirals)
             return;
-        const isWearingHypnoItem = Player.Appearance.some(item => this.hypnoItems.some(hypnoItem => hypnoItem.name == item.Asset.Name && hypnoItem.active(item)));
+        const hypnoItem = Player.Appearance.find(item => this.hypnoItems.some(hypnoItem => hypnoItem.name == item.Asset.Name && hypnoItem.active(item)));
 
-        if (isWearingHypnoItem) {
+        if (hypnoItem) {
+            // An item has no sender: whoever crafted it is who hypnotizes the wearer.
+            const crafter = hypnoItem.Craft?.MemberNumber;
             const randomLevelIncrease = (getRandomInt(4) + 2) / (1 / BREATH_DRUG_INCREASES.MIN_INCREASE); // .2 to .5
             if (getRandomInt(RANDOM_EVENT_ODDS.HYPNO_HEADSET_BIG_JUMP) == 0) { // Odds are big jump once every 10 seconds
                 if (!this.brainwashed) SendAction(this.headsetMindControlEventStr[getRandomInt(this.headsetMindControlEventStr.length)]);
-                this.AddMindControl(randomLevelIncrease + BREATH_DRUG_INCREASES.BIG_JUMP_BASE, getRandomInt(RANDOM_EVENT_ODDS.HYPNO_HEADSET_MINIGAME_CHANCE) != 0); // 2/3 chance to start incap minigame
-            } else this.AddMindControl(randomLevelIncrease / BREATH_DRUG_INCREASES.SMALL_TICK_DIVISOR, false);
+                this.AddMindControl(randomLevelIncrease + BREATH_DRUG_INCREASES.BIG_JUMP_BASE, getRandomInt(RANDOM_EVENT_ODDS.HYPNO_HEADSET_MINIGAME_CHANCE) != 0, crafter); // 2/3 chance to start incap minigame
+            } else this.AddMindControl(randomLevelIncrease / BREATH_DRUG_INCREASES.SMALL_TICK_DIVISOR, false, crafter);
         }
     }
 
@@ -1592,8 +1603,8 @@ export class InjectorModule extends BaseModule {
             if (types.indexOf("mindcontrol") > -1 && this.settings.enableMindControl) {
                 if (getRandomInt(RANDOM_EVENT_ODDS.BREATH_MIND_CONTROL_BIG_JUMP) == 0) { // Odds are big jump once every 60 seconds
                     if (!this.brainwashed) SendAction(this.breathMindControlEventStr[getRandomInt(this.breathMindControlEventStr.length)]);
-                    this.AddMindControl(randomLevelIncrease + BREATH_DRUG_INCREASES.BIG_JUMP_BASE, getRandomInt(RANDOM_EVENT_ODDS.BREATH_MINIGAME_CHANCE) != 0); // 2/3 chance to start incap minigame
-                } else this.AddMindControl(randomLevelIncrease / BREATH_DRUG_INCREASES.SMALL_TICK_DIVISOR, false);
+                    this.AddMindControl(randomLevelIncrease + BREATH_DRUG_INCREASES.BIG_JUMP_BASE, getRandomInt(RANDOM_EVENT_ODDS.BREATH_MINIGAME_CHANCE) != 0, mask.Item.Craft?.MemberNumber); // 2/3 chance to start incap minigame
+                } else this.AddMindControl(randomLevelIncrease / BREATH_DRUG_INCREASES.SMALL_TICK_DIVISOR, false, mask.Item.Craft?.MemberNumber);
             }
             if (types.indexOf("horny") > -1 && this.settings.enableHorny) {
                 if (getRandomInt(RANDOM_EVENT_ODDS.BREATH_HORNY_BIG_JUMP) == 0) { // Odds are big jump once every 90 seconds

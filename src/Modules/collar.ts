@@ -1,4 +1,4 @@
-import { REMOTE_TRANCE_DEFAULTS } from "./remoteAccess";
+import { DEFAULT_REMOTE_LEVEL, REMOTE_TRANCE_DEFAULTS } from "./remoteAccess";
 import { BaseModule } from "base";
 import { CollarSettingsModel } from "Settings/Models/collar";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
@@ -99,6 +99,9 @@ export class CollarModule extends BaseModule {
             looseTrigger: "loosen",
             limitToCrafted: false,
             remoteAccess: false,
+            remoteLevel: DEFAULT_REMOTE_LEVEL,
+            remoteMemberIds: "",
+            useGlobalRemote: true,
             remoteAccessRequiredTrance: REMOTE_TRANCE_DEFAULTS.CollarModule.trance,
             limitRemoteAccessToHypnotizer: REMOTE_TRANCE_DEFAULTS.CollarModule.hypnotizerOnly,
             allowSelfLoosening: false,

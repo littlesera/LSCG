@@ -39,6 +39,7 @@ describe("SpeechAnalysisModule remote configuration + hidden phrases", () => {
 			addToRoom(makeCharacter({ MemberNumber: num, Nickname: name }));
 
 		speech.settings.enabled = true;
+		speech.settings.useGlobalRemote = false;
 		speech.settings.detectors = { tone: true, profanity: true, erudite: false, phrases: true };
 		speech.unload();
 		speech.load();
@@ -80,11 +81,11 @@ describe("SpeechAnalysisModule remote configuration + hidden phrases", () => {
 			expect(speech.settings.eruditeGrade).toBe(7);
 		});
 
-		it("item permission applies on top of the access level", () => {
+		it("the access level decides, not BC item permission", () => {
 			states.HypnoState.Activate(1);
 			(globalThis as unknown as { ServerChatRoomGetAllowItem: { mockReturnValueOnce(v: boolean): void } }).ServerChatRoomGetAllowItem.mockReturnValueOnce(false);
 			send(3, { eruditeGrade: 7 });
-			expect(speech.settings.eruditeGrade).not.toBe(7);
+			expect(speech.settings.eruditeGrade).toBe(7);
 		});
 
 		it("limited to the hypnotizer: only the one who hypnotized the wearer gets in (the owner still does)", () => {
@@ -261,7 +262,7 @@ describe("SpeechAnalysisModule remote configuration + hidden phrases", () => {
 		});
 
 		it("the public settings model only carries access-control fields", () => {
-			expect(Object.keys(defaultSpeechPublicSettings()).sort()).toEqual(["enabled", "limitRemoteAccessToHypnotizer", "lockable", "locked", "remoteAccess", "remoteLevel", "remoteRequiresTrance"]);
+			expect(Object.keys(defaultSpeechPublicSettings()).sort()).toEqual(["enabled", "limitRemoteAccessToHypnotizer", "lockable", "locked", "remoteAccess", "remoteLevel", "remoteMemberIds", "remoteRequiresTrance", "useGlobalRemote"]);
 		});
 
 		it("a stranger's get is answered, but they can't see the wearer's phrases", () => {
