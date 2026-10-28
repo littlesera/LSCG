@@ -326,8 +326,73 @@
 			}
 		}
 
-		tbody tr:nth-child(even) {
+		tbody tr.lscg-kit-stripe {
 			background-color: var(--lscg-stripe-color);
+		}
+
+		// Under the column headings, each group of rows (the effects, by type) is a fieldset that its legend folds away. The headings
+		// sit in a table of their own, inset by the fieldsets' border and padding so the columns still line up.
+		&.lscg-kit-table-head {
+			margin: 0 calc(var(--lscg-group-inset) + var(--lscg-group-border));
+			width: calc(100% - 2 * (var(--lscg-group-inset) + var(--lscg-group-border)));
+		}
+	}
+
+	.lscg-kit-table-wrap {
+		--lscg-group-inset: min(1dvh, 0.5dvw);
+		--lscg-group-border: min(0.2dvh, 0.1dvw);
+	}
+
+	// A group of table rows, boxed in like a fieldset with its name on the box, in a quiet tint. Its legend is a button that folds it.
+	.lscg-kit-fieldset {
+		--lscg-group-tint: #5b8f95;
+		min-inline-size: 0;
+		margin: min(1.2dvh, 0.6dvw) 0 0;
+		padding: 0 var(--lscg-group-inset) min(0.4dvh, 0.2dvw);
+		border: var(--lscg-group-border) solid color-mix(in srgb, var(--lscg-group-tint) 50%, transparent);
+		border-radius: min(0.8dvh, 0.4dvw);
+		// A wash of the tint over whatever is underneath, not a colour of its own.
+		background-color: color-mix(in srgb, var(--lscg-group-tint) 8%, transparent);
+
+		// Folded: just the legend on its box, with no empty room under it.
+		&:not(:has(table)) {
+			padding-bottom: 0;
+		}
+
+		legend {
+			padding: 0 min(0.8dvh, 0.4dvw);
+		}
+
+		.lscg-kit-group-toggle {
+			display: flex;
+			align-items: center;
+			gap: min(0.8dvh, 0.4dvw);
+			padding: 0 min(0.4dvh, 0.2dvw);
+			border: 0;
+			background: transparent;
+			color: var(--lscg-text-color);
+			font-family: inherit;
+			font-size: calc(var(--lscg-font-small) * 1.05);
+			font-weight: bold;
+			cursor: pointer;
+			user-select: none;
+
+			&:hover .lscg-kit-group-name {
+				text-decoration: underline;
+			}
+
+			.lscg-kit-group-chevron {
+				width: 1em;
+				color: var(--lscg-text-color);
+			}
+
+			.lscg-kit-group-count {
+				font-weight: normal;
+				font-size: 0.8em;
+				padding: 0 min(0.8dvh, 0.4dvw);
+				border-radius: 1em;
+				background-color: color-mix(in srgb, var(--lscg-group-tint) 22%, transparent);
+			}
 		}
 	}
 

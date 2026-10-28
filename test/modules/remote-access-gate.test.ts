@@ -15,7 +15,7 @@ import { ConsentModule } from "Modules/consent";
 import { ActivityModule } from "Modules/activities";
 import {
 	REMOTE_SETTINGS_COMMANDS, REMOTE_TRANCE_DEFAULTS, canRemoteCollar, canRemoteHypno, canRemoteMagic, canRemoteSpeech, remoteCollarChanges,
-	remoteHypnoChanges, remoteMagicChanges, tranceOptions,
+	remoteHypnoChanges, remoteMagicChanges, remoteAccessDenial, tranceOptions,
 } from "Modules/remoteAccess";
 import { boot, resetWorld, addToRoom, player } from "../harness/world";
 import { receive, sent } from "../harness/room";
@@ -99,14 +99,28 @@ describe("remote access: one rule for every module", () => {
 			expect(can(wearerWith(module), 1)).toBe(false);
 		});
 
-		it("the owner passes the module being off, the level, and the trance rules", () => {
-			const wearer = wearerWith(module, { enabled: false, remoteLevel: "Lovers", [module.tranceKey]: true, limitRemoteAccessToHypnotizer: true });
+		it("the owner passes the level and the trance rules", () => {
+			const wearer = wearerWith(module, { remoteLevel: "Lovers", [module.tranceKey]: true, limitRemoteAccessToHypnotizer: true });
 			expect(can(wearer, OWNER)).toBe(true);
 			expect(can(wearer)).toBe(false);
 		});
 
-		it("anyone else needs the module on", () => {
-			expect(can(wearerWith(module, { enabled: false }))).toBe(false);
+		it("a module that is switched off lets nobody in, the owner included, whatever else is set", () => {
+			const off = wearerWith(module, { enabled: false, remoteLevel: "Public" });
+			expect(can(off)).toBe(false);
+			expect(can(off, OWNER)).toBe(false);
+			expect(can(wearerWith(module, { enabled: false, remoteLevel: "Public", remoteMemberIds: "111" }))).toBe(false);
+			expect(can(wearerWith(module, { enabled: undefined, remoteLevel: "Public" }), OWNER)).toBe(false);
+			// ...and switching it back on lets them in again
+			expect(can(wearerWith(module, { enabled: true, remoteLevel: "Public" }))).toBe(true);
+			expect(can(wearerWith(module, { enabled: true }), OWNER)).toBe(true);
+		});
+
+		it("says it is the module being off, not the level, that turned them away", () => {
+			const off = wearerWith(module, { enabled: false, remoteLevel: "Owner" });
+			expect(remoteAccessDenial(module.key, off as never, who(SENDER) as never)).toBe("module-off");
+			expect(remoteAccessDenial(module.key, off as never, who(OWNER) as never)).toBe("module-off");
+			expect(remoteAccessDenial(module.key, wearerWith(module, { remoteLevel: "Owner" }) as never, who(SENDER) as never)).toBe("level");
 		});
 
 		it("never consults BC item permission: the level decides", () => {
@@ -272,7 +286,7 @@ describe("remote access: one rule for every module", () => {
 		it("still needs the section's own remote access and enabled switches", () => {
 			expect(can(wearer({ useGlobalRemote: true, remoteAccess: false }, { remoteLevel: "Public" }))).toBe(false);
 			expect(can(wearer({ useGlobalRemote: true, enabled: false }, { remoteLevel: "Public" }))).toBe(false);
-			expect(can(wearer({ useGlobalRemote: true, enabled: false }, { remoteLevel: "Public" }), OWNER)).toBe(true);
+			expect(can(wearer({ useGlobalRemote: true, enabled: false }, { remoteLevel: "Public" }), OWNER)).toBe(false); // not even the owner
 		});
 
 		it("defaults nobody filled in are owner only", () => {
