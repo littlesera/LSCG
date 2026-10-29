@@ -18,7 +18,7 @@ import { SuggestionMiniGame } from "MiniGames/Suggestion";
 import { registerMiniGame } from "MiniGames/minigames";
 import { StateRestrictions } from "./States/BaseState";
 import { Leashing, LeashingModule } from "./leashing";
-import { emit } from "api/events";
+import { emit, emitBefore } from "api/events";
 import type { LSCGHypnoAwakenMethod } from "api/types";
 import {
     CHECK_INTERVALS,
@@ -826,6 +826,7 @@ export class HypnoModule extends BaseModule {
         const influence = this.GetSuggestionInfluence(suggestion, sender);
         if (roll > influence) {
             LSCG_SendLocal(`Successfully resisted the suggestion! [${roll}/${influence}]`);
+            this.EmitSuggestionResolved(suggestion, sender.MemberNumber ?? -1, true);
             this.ReduceSpeakerInfluence(sender.MemberNumber ?? -1);
             if (suggestion.installedBy != sender.MemberNumber)
                 this.ReduceSpeakerInfluence(suggestion.installedBy);
@@ -837,10 +838,16 @@ export class HypnoModule extends BaseModule {
     }
 
     ResistSuggestion(opts: SuggestionMiniGameOptions) {
+        this.EmitSuggestionResolved(opts.suggestion, opts.senderNum, true);
         this.ReduceSpeakerInfluence(opts.senderNum);
         if (opts.suggestion.installedBy != opts.senderNum)
             this.ReduceSpeakerInfluence(opts.suggestion.installedBy);
         settingsSave();
+    }
+
+    /** Tells extensions how a triggered suggestion ended up: the player resisted it, or submitted and its instructions are about to run. */
+    EmitSuggestionResolved(suggestion: HypnoSuggestion, sender: number, resisted: boolean) {
+        emit("hypno.suggestionResolved", { suggestion: suggestion.name, sender, installedBy: suggestion.installedBy, resisted });
     }
 
     DoSuggestion(opts: SuggestionMiniGameOptions) {
@@ -849,6 +856,8 @@ export class HypnoModule extends BaseModule {
         // Send emote as player performs each instruction
         const suggestion = opts.suggestion;
         const sender = opts.sender;
+
+        this.EmitSuggestionResolved(suggestion, opts.senderNum, false);
 
         this.IncreaseSpeakerInfluence(sender.MemberNumber ?? -1);
         if (suggestion.installedBy != sender.MemberNumber)
@@ -864,6 +873,11 @@ export class HypnoModule extends BaseModule {
                 if ((this.settings.blockedInstructions ?? []).indexOf(instruction.type) > -1) {
                     return this.BlockedInstruction(opts, instruction);
                 }
+                // Extensions may veto this one instruction; the rest of the suggestion carries on.
+                const info = { instruction: instruction.type as string, suggestion: suggestion.name, index: ix, sender: opts.senderNum, installedBy: suggestion.installedBy };
+                if (emitBefore("hypno.beforeInstruction", info).cancelled)
+                    return;
+                let performed = true;
                 switch (instruction.type) {
                     case LSCGHypnoInstruction.activity:
                         this.ForceActivity(opts, instruction);
@@ -926,9 +940,11 @@ export class HypnoModule extends BaseModule {
                         });
                         break;
                     default:
-                        this.PerformExtensionInstruction(opts, instruction);
+                        performed = this.PerformExtensionInstruction(opts, instruction);
                         break;
                 }
+                if (performed)
+                    emit("hypno.instructionPerformed", info);
                 settingsSave();
             }, wait);
             this.pendingInstructions.add(timer);
@@ -948,13 +964,13 @@ export class HypnoModule extends BaseModule {
 
 	/** An instruction an extension added. Its options are checked against what the extension declared before it sees them, whoever installed the
 	 *  suggestion; one whose extension isn't installed here just doesn't happen. */
-	PerformExtensionInstruction(opts: SuggestionMiniGameOptions, instruction: HypnoInstruction) {
+	PerformExtensionInstruction(opts: SuggestionMiniGameOptions, instruction: HypnoInstruction): boolean {
 		if (!isExtensionInstruction(instruction.type))
-			return;
+			return false;
 		const def = extensionInstructions.get(instruction.type);
 		if (!def) {
 			LSCG_SendLocal(`Part of ${opts.senderName}'s suggestion has no effect here: its instruction isn't available.`);
-			return;
+			return false;
 		}
 		def.perform({
 			instruction: def.id,
@@ -965,6 +981,7 @@ export class HypnoModule extends BaseModule {
 			sendAction: text => SendAction(String(text), opts.sender),
 			states: builtInStates(this.StateModule, opts.senderNum),
 		});
+		return true;
 	}
 
 	//Show a button on screen to accept or reject money from sender

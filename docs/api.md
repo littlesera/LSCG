@@ -492,6 +492,10 @@ api.hypno.registerInstruction({
   still waiting, those never run `perform`.
 - **Players stay in control.** Every instruction, yours included, is in the player's list of instructions they can block
   on themselves, and a blocked one never runs `perform`. They can still resist the whole suggestion as usual.
+- **Watching and vetoing suggestions.** `hypno.suggestionResolved` tells you whether the player resisted or submitted. For each
+  instruction that then runs, `hypno.beforeInstruction` lets you skip it (a veto is silent, so don't use it to fake a result) and
+  `hypno.instructionPerformed` tells you it ran. These cover LSCG's own instructions as well as extensions'. An instruction the
+  player blocked never reaches either.
 - **Options are checked on the target's client.** A suggestion is written by another player, so before `perform` runs
   its options are validated against your declaration, and when a suggestion is installed, anything that isn't one of your
   declared options is dropped. Your callback never sees an out-of-range value.
@@ -683,6 +687,8 @@ A `lscg:ready` event is also dispatched on `window` when LSCG becomes ready, wit
 | `activities` | `api.activities.register` / `unregister` / `registerPrerequisite` |
 | `drugs` | `api.drugs.register` / `unregister` / `dose` / `getLevel` / `getLevels` |
 | `hypno.instructions` | `api.hypno.registerInstruction` / `unregisterInstruction` |
+| `hypno.events` | The `hypno.suggestionResolved`, `hypno.instructionPerformed` and `hypno.beforeInstruction` events |
+| `drugs.strength` | `strength` on `drug.beforeApply` |
 | `network` | `api.network.on` / `send` |
 | `storage` | `api.storage.get` / `set` / `getPublic` / `setPublic`, `api.sync` |
 | `settings` | `api.settings.registerScreen` / `unregisterScreen` |
@@ -701,6 +707,8 @@ A `lscg:ready` event is also dispatched on `window` when LSCG becomes ready, wit
 | `spell.effectApplied` | `{ effect, spell, sender?, duration? }`: one effect was applied. |
 | `hypno.triggered` | `{ by?, byWord }`: the player was hypnotized by a trigger. `byWord` is false for other routes. |
 | `hypno.awakened` | `{ method, by? }`: brought out of hypnosis. `method` is `"word"`, `"boop"`, `"snap"`, `"timeout"` or `"other"`. |
+| `hypno.suggestionResolved` | `{ suggestion, sender, installedBy, resisted }`: a suggestion's trigger was spoken and the player resisted it (`resisted: true`) or submitted, so its instructions are about to run. |
+| `hypno.instructionPerformed` | `{ instruction, suggestion, index, sender, installedBy }`: one instruction of a suggestion ran, LSCG's own or an extension's. It ran, which isn't the same as succeeding (an Activity whose target has left still counts). Not fired for blocked or vetoed instructions, or for an extension instruction whose extension isn't installed. |
 | `activity.sent` | `{ name, group?, target?, isLSCG }`: the player did an activity. |
 | `activity.received` | `{ name, group?, source?, isLSCG }`: an activity was done to the player, including by themselves. |
 | `grab.added` / `grab.removed` | `{ type, pairedMember, isSource }`: a grab or leash started or ended. `isSource` means the player holds it. |
@@ -721,7 +729,8 @@ A `spell` is `{ name, effects, creator? }`.
 | `spell.beforeReceive` | `duration`, `delay` (ms between effects, default 2000, from 1000 to 30000), and remove entries from `effects` | The spell fizzles, with your reason in the emote |
 | `spell.beforeEffect` | `duration` | That one effect fails to take hold |
 | `grab.beforeIncoming` | Nothing | The grab is refused, and released on the grabber's side too |
-| `drug.beforeApply` | Remove entries from `types` | Nothing is applied |
+| `drug.beforeApply` | Remove entries from `types`, and lower `strength` (0 to 1, default 1; it scales the dose, so a drink at strength 0.5 adds half. Anything higher or not a number is ignored) | Nothing is applied |
+| `hypno.beforeInstruction` | Nothing. Payload as `hypno.instructionPerformed`. | That one instruction is skipped silently, and the rest of the suggestion carries on |
 
 These can't be intercepted: LSCG's settings saves, safewords, `/lscg` commands, and player-to-player commands.
 

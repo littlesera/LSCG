@@ -182,11 +182,11 @@ describe("extension API events from LSCG modules", () => {
             const off = api.events.before("drug.beforeApply", ctx => {
                 ctx.payload.types = ctx.payload.types.filter(t => t !== "sedative").concat(["mindcontrol"]);
             });
-            expect(injector.HookDrugApply(["sedative", "antidote"], "drink", alice as never)).toEqual(["antidote"]);
+            expect(injector.HookDrugApply(["sedative", "antidote"], "drink", alice as never).types).toEqual(["antidote"]);
             off();
 
             api.events.before("drug.beforeApply", ctx => ctx.cancel());
-            expect(injector.HookDrugApply(["sedative"], "inject", alice as never, "ItemArms")).toEqual([]);
+            expect(injector.HookDrugApply(["sedative"], "inject", alice as never, "ItemArms").types).toEqual([]);
         });
     });
 });
