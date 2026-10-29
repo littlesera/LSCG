@@ -276,6 +276,45 @@ describe("extension drugs", () => {
             injector.ProcessDruggedDrink(sender as never);
             expect(onDose).not.toHaveBeenCalled();
         });
+
+        it("drug.beforeApply can lower the dose's strength, but never raise it", () => {
+            const onDose = vi.fn();
+            api.drugs.register(euphoria({ onDose }));
+            opt("euphoria");
+            give("Euphoria");
+            const strength = (s: unknown) => api.events.before("drug.beforeApply", ctx => { ctx.payload.strength = s as number; });
+
+            injector.ProcessDruggedDrink(sender as never);
+            const full = onDose.mock.calls[0][0].multiplier;
+
+            let off = strength(0.5);
+            injector.ProcessDruggedDrink(sender as never);
+            expect(onDose.mock.calls[1][0].multiplier).toBeCloseTo(full * 0.5);
+            off();
+
+            for (const bad of [5, -1, NaN, "lots"]) {
+                off = strength(bad);
+                injector.ProcessDruggedDrink(sender as never);
+                off();
+            }
+            expect(onDose.mock.calls[2][0].multiplier).toBeCloseTo(full);          // raised: capped back to 1
+            expect(onDose.mock.calls[3][0].multiplier).toBe(0);                    // negative: floored at 0
+            expect(onDose.mock.calls[4][0].multiplier).toBeCloseTo(full);          // not a number: ignored
+            expect(onDose.mock.calls[5][0].multiplier).toBeCloseTo(full);
+        });
+
+        it("a softer strength shrinks built-in doses and api.drugs.dose too", () => {
+            injector.settings.enableHorny = true;
+            const add = vi.spyOn(injector, "AddHorny").mockImplementation(() => {});
+            api.events.before("drug.beforeApply", ctx => { ctx.payload.strength = 0.25; });
+            injector.DoseDrug("horny", { multiplier: 2 });
+            expect(add).toHaveBeenLastCalledWith(0.5, false);
+            add.mockRestore();
+        });
+
+        it("is advertised as a capability", () => {
+            expect(apiCapabilities.has("drugs.strength")).toBe(true);
+        });
     });
 
     describe("levels over time", () => {

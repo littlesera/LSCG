@@ -180,6 +180,71 @@ describe("extension hypno instructions", () => {
 		});
 	});
 
+	describe("events", () => {
+		it("is advertised as a capability", () => {
+			expect(apiCapabilities.has("hypno.events")).toBe(true);
+		});
+
+		it("hypno.instructionPerformed fires for LSCG's own instructions and an extension's, with where each sits", () => {
+			api.hypno.registerInstruction(purr());
+			const strip = vi.spyOn(hypno, "ForceStrip").mockImplementation(() => {});
+			const performed = vi.fn();
+			api.events.on("hypno.instructionPerformed", performed);
+			doSuggestion(instruction(LSCGHypnoInstruction.strip), instruction(id("purr")));
+			expect(performed.mock.calls.map(c => c[0])).toEqual([
+				{ instruction: LSCGHypnoInstruction.strip, suggestion: "Kitty", index: 0, sender: 2, installedBy: 3 },
+				{ instruction: id("purr"), suggestion: "Kitty", index: 1, sender: 2, installedBy: 3 },
+			]);
+			strip.mockRestore();
+		});
+
+		it("hypno.beforeInstruction can skip one instruction silently, and the rest still run", () => {
+			const perform = vi.fn();
+			api.hypno.registerInstruction(purr({ perform }));
+			const strip = vi.spyOn(hypno, "ForceStrip").mockImplementation(() => {});
+			const performed = vi.fn();
+			api.events.on("hypno.instructionPerformed", performed);
+			api.events.before("hypno.beforeInstruction", ctx => { if (ctx.payload.instruction === LSCGHypnoInstruction.strip) ctx.cancel("no"); });
+			doSuggestion(instruction(LSCGHypnoInstruction.strip), instruction(id("purr")));
+			expect(strip).not.toHaveBeenCalled();
+			expect(perform).toHaveBeenCalledOnce();
+			expect(performed).toHaveBeenCalledOnce();
+			expect(local()).toBe("");
+			strip.mockRestore();
+		});
+
+		it("a blocked instruction raises neither event", () => {
+			api.hypno.registerInstruction(purr());
+			hypno.settings.blockedInstructions = [id("purr")];
+			const before = vi.fn();
+			const performed = vi.fn();
+			api.events.before("hypno.beforeInstruction", before);
+			api.events.on("hypno.instructionPerformed", performed);
+			doSuggestion(instruction(id("purr")));
+			expect(before).not.toHaveBeenCalled();
+			expect(performed).not.toHaveBeenCalled();
+		});
+
+		it("an extension instruction that isn't installed isn't reported as performed", () => {
+			const performed = vi.fn();
+			api.events.on("hypno.instructionPerformed", performed);
+			doSuggestion(instruction("gone.purr"));
+			expect(performed).not.toHaveBeenCalled();
+		});
+
+		it("hypno.suggestionResolved says whether the player resisted or submitted", () => {
+			api.hypno.registerInstruction(purr());
+			const resolved = vi.fn();
+			api.events.on("hypno.suggestionResolved", resolved);
+			hypno.DoSuggestion(new SuggestionMiniGameOptions(suggestion("Kitty", [], 3), alice as never, ""));
+			hypno.ResistSuggestion(new SuggestionMiniGameOptions(suggestion("Kitty", [], 3), alice as never, ""));
+			expect(resolved.mock.calls.map(c => c[0])).toEqual([
+				{ suggestion: "Kitty", sender: 2, installedBy: 3, resisted: false },
+				{ suggestion: "Kitty", sender: 2, installedBy: 3, resisted: true },
+			]);
+		});
+	});
+
 	describe("a suggestion pushed by another player", () => {
 		const push = (...instructions: HypnoInstruction[]) => {
 			const owner = addToRoom(makeCharacter({ MemberNumber: 99, Nickname: "Boss" }));

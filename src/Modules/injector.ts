@@ -718,14 +718,17 @@ export class InjectorModule extends BaseModule {
             t === "antidote");
     }
 
-    /** Runs the "drug.beforeApply" hook. Returns the types still to apply; extensions may only remove types. */
-    HookDrugApply(types: AnyDrugType[], method: LSCGDrugMethod, sender?: Character | null, location?: string): AnyDrugType[] {
+    /** Runs the "drug.beforeApply" hook. Returns the types still to apply and how strong the dose is (1 unless softened): extensions may only
+     *  remove types and lower the strength. */
+    HookDrugApply(types: AnyDrugType[], method: LSCGDrugMethod, sender?: Character | null, location?: string): { types: AnyDrugType[]; strength: number } {
         if (types.length === 0)
-            return types;
-        const hook = emitBefore("drug.beforeApply", { types: [...types], method, sender: sender?.MemberNumber, location });
+            return { types, strength: 1 };
+        const hook = emitBefore("drug.beforeApply", { types: [...types], strength: 1, method, sender: sender?.MemberNumber, location });
         if (hook.cancelled)
-            return [];
-        return types.filter(t => hook.payload.types.includes(t));
+            return { types: [], strength: 1 };
+        const asked = hook.payload.strength;
+        const strength = typeof asked === "number" && Number.isFinite(asked) ? Math.min(1, Math.max(0, asked)) : 1;
+        return { types: types.filter(t => hook.payload.types.includes(t)), strength };
     }
 
     ProcessDruggedDrink(sender: Character, fullPour: boolean = false) {
@@ -733,17 +736,17 @@ export class InjectorModule extends BaseModule {
         if (!asset?.Craft)
             return;
         //var multiplier = ((<any>asset.Property)?.SipLimit ?? 1) - ((<any>asset.Property)?.SipCount ?? 0)
-        const types = this.HookDrugApply(this.EnabledDrugTypes(this.GetDrugTypes(asset.Craft!)), "drink", sender);
+        const { types, strength } = this.HookDrugApply(this.EnabledDrugTypes(this.GetDrugTypes(asset.Craft!)), "drink", sender);
         if (types.indexOf("sedative") > -1)
-            this.DrinkSedative(sender, fullPour);
+            this.DrinkSedative(sender, fullPour, strength);
         if (types.indexOf("mindcontrol") > -1)
-            this.DrinkMindControl(sender, fullPour);
+            this.DrinkMindControl(sender, fullPour, strength);
         if (types.indexOf("horny") > -1)
-            this.DrinkHorny(sender, fullPour);
+            this.DrinkHorny(sender, fullPour, strength);
         if (types.indexOf("antidote") > -1)
             this.DrinkCure(sender);
         for (const id of types.filter(isExtensionDrugId))
-            this.ApplyExtensionDrug(id, "drink", { multiplier: DRUG_EFFECT_MULTIPLIERS.DRINK_MULTIPLIER, sender });
+            this.ApplyExtensionDrug(id, "drink", { multiplier: DRUG_EFFECT_MULTIPLIERS.DRINK_MULTIPLIER * strength, sender });
         if (types.length > 0)
             emit("drug.applied", { types, method: "drink", sender: sender.MemberNumber });
     }
@@ -754,21 +757,21 @@ export class InjectorModule extends BaseModule {
             return;
 
         const allTypes = this.GetDrugTypes(asset.Craft!);
-        const types = this.HookDrugApply(this.EnabledDrugTypes(allTypes), "inject", sender, location);
+        const { types, strength } = this.HookDrugApply(this.EnabledDrugTypes(allTypes), "inject", sender, location);
         // A vetoed injection is still a needle: only stay silent if nothing was in it.
         if (!AudioShouldSilenceSound(true) && allTypes.length > 0)
             AudioPlayInstantSound(AUDIO.INJECTION, getPlayerVolume(0));
 
         if (types.indexOf("sedative") > -1)
-            this.InjectSedative(sender, location);
+            this.InjectSedative(sender, location, strength);
         if (types.indexOf("mindcontrol") > -1)
-            this.InjectMindControl(sender, location);
+            this.InjectMindControl(sender, location, strength);
         if (types.indexOf("horny") > -1)
-            this.InjectHorny(sender, location);
+            this.InjectHorny(sender, location, strength);
         if (types.indexOf("antidote") > -1)
             this.InjectCure(sender, location);
         for (const id of types.filter(isExtensionDrugId))
-            this.ApplyExtensionDrug(id, "inject", { multiplier: this.InjectionLocationTable.get(location) ?? 1, sender, location });
+            this.ApplyExtensionDrug(id, "inject", { multiplier: (this.InjectionLocationTable.get(location) ?? 1) * strength, sender, location });
         if (types.length > 0)
             emit("drug.applied", { types, method: "inject", sender: sender.MemberNumber, location });
     }
@@ -803,13 +806,13 @@ export class InjectorModule extends BaseModule {
         CurrentModule = "Online";
     }
 
-    DrinkSedative(sender: Character, fullPour: boolean = false) {
-        this.AddSedative(DRUG_EFFECT_MULTIPLIERS.DRINK_MULTIPLIER);
+    DrinkSedative(sender: Character, fullPour: boolean = false, strength: number = 1) {
+        this.AddSedative(DRUG_EFFECT_MULTIPLIERS.DRINK_MULTIPLIER * strength);
         SendAction(this.sedativeDrinkStr[getRandomInt(this.sedativeDrinkStr.length)], sender);
     }
 
-    InjectSedative(sender: Character, location: AssetGroupItemName) {
-        this.AddSedative(this.InjectionLocationTable.get(location) ?? 1);
+    InjectSedative(sender: Character, location: AssetGroupItemName, strength: number = 1) {
+        this.AddSedative((this.InjectionLocationTable.get(location) ?? 1) * strength);
         SendAction(this.sedativeInjectStr[getRandomInt(this.sedativeInjectStr.length)], sender);
         DrawFlashScreen("#5C5CFF", EFFECT_DURATIONS.FLASH_SCREEN, this.sedativeLevel * DRUG_EFFECT_MULTIPLIERS.DRINK_MULTIPLIER);
     }
@@ -847,13 +850,13 @@ export class InjectorModule extends BaseModule {
         CurrentModule = "Online";
     }
 
-    DrinkMindControl(sender: Character, fullPour: boolean = false) {
-        this.AddMindControl(DRUG_EFFECT_MULTIPLIERS.DRINK_MULTIPLIER, true, sender.MemberNumber);
+    DrinkMindControl(sender: Character, fullPour: boolean = false, strength: number = 1) {
+        this.AddMindControl(DRUG_EFFECT_MULTIPLIERS.DRINK_MULTIPLIER * strength, true, sender.MemberNumber);
         SendAction(this.brainwashDrinkStr[getRandomInt(this.brainwashDrinkStr.length)], sender);
     }
 
-    InjectMindControl(sender: Character, location: AssetGroupItemName) {
-        this.AddMindControl(this.InjectionLocationTable.get(location) ?? 1, true, sender.MemberNumber);
+    InjectMindControl(sender: Character, location: AssetGroupItemName, strength: number = 1) {
+        this.AddMindControl((this.InjectionLocationTable.get(location) ?? 1) * strength, true, sender.MemberNumber);
         SendAction(this.brainwashInjectStr[getRandomInt(this.brainwashInjectStr.length)], sender);
         DrawFlashScreen("#A020F0", EFFECT_DURATIONS.FLASH_SCREEN, this.mindControlLevel * DRUG_EFFECT_MULTIPLIERS.DRINK_MULTIPLIER);
     }
@@ -886,13 +889,13 @@ export class InjectorModule extends BaseModule {
         }
     }
 
-    DrinkHorny(sender: Character, fullPour: boolean = false) {
-        this.AddHorny(DRUG_EFFECT_MULTIPLIERS.DRINK_MULTIPLIER);
+    DrinkHorny(sender: Character, fullPour: boolean = false, strength: number = 1) {
+        this.AddHorny(DRUG_EFFECT_MULTIPLIERS.DRINK_MULTIPLIER * strength);
         SendAction(this.hornyDrinkStr[getRandomInt(this.hornyDrinkStr.length)], sender);
     }
 
-    InjectHorny(sender: Character, location: AssetGroupItemName) {
-        this.AddHorny(this.InjectionLocationTable.get(location) ?? 1);
+    InjectHorny(sender: Character, location: AssetGroupItemName, strength: number = 1) {
+        this.AddHorny((this.InjectionLocationTable.get(location) ?? 1) * strength);
         SendAction(this.hornyInjectStr[getRandomInt(this.hornyInjectStr.length)], sender);
         DrawFlashScreen("#FF647F", EFFECT_DURATIONS.FLASH_SCREEN, this.hornyLevel * DRUG_EFFECT_MULTIPLIERS.DRINK_MULTIPLIER);
     }
@@ -1165,16 +1168,17 @@ export class InjectorModule extends BaseModule {
             return false;
         const method = opts.method ?? "drink";
         const sender = getCharacter(opts.sender);
-        const [applied] = this.HookDrugApply(this.EnabledDrugTypes([type as AnyDrugType]), method, sender, opts.location);
+        const { types: [applied], strength } = this.HookDrugApply(this.EnabledDrugTypes([type as AnyDrugType]), method, sender, opts.location);
         if (!applied)
             return false;
         const minigame = opts.minigame ?? true;
+        const multiplier = opts.multiplier * strength;
         switch (applied) {
-            case "sedative": this.AddSedative(opts.multiplier, minigame); break;
-            case "mindcontrol": this.AddMindControl(opts.multiplier, minigame, opts.sender); break;
-            case "horny": this.AddHorny(opts.multiplier, false); break;
+            case "sedative": this.AddSedative(multiplier, minigame); break;
+            case "mindcontrol": this.AddMindControl(multiplier, minigame, opts.sender); break;
+            case "horny": this.AddHorny(multiplier, false); break;
             case "antidote": this.DoCure(); break;
-            default: this.ApplyExtensionDrug(applied, method, { multiplier: opts.multiplier, sender, location: opts.location });
+            default: this.ApplyExtensionDrug(applied, method, { multiplier, sender, location: opts.location });
         }
         emit("drug.applied", { types: [applied], method, sender: opts.sender, location: opts.location });
         return true;
@@ -1591,25 +1595,25 @@ export class InjectorModule extends BaseModule {
             const mask = this.WornRespirator;
             if (!mask)
                 return;
-            const types = this.HookDrugApply(this.EnabledDrugTypes(this.GetDrugTypes(mask.Item.Craft!)), "breath");
-            const randomLevelIncrease = (getRandomInt(4) + 2) / (1 / BREATH_DRUG_INCREASES.MIN_INCREASE); // .2 to .5
+            const { types, strength } = this.HookDrugApply(this.EnabledDrugTypes(this.GetDrugTypes(mask.Item.Craft!)), "breath");
+            const randomLevelIncrease = (getRandomInt(4) + 2) / (1 / BREATH_DRUG_INCREASES.MIN_INCREASE) * strength; // .2 to .5, softened by an extension
 
             if (types.indexOf("sedative") > -1 && this.settings.enableSedative) {
                 if (getRandomInt(RANDOM_EVENT_ODDS.BREATH_SEDATIVE_BIG_JUMP) == 0) { // Odds are big jump once every 60 seconds
                     if (!this.asleep) SendAction(this.breathSedativeEventStr[getRandomInt(this.breathSedativeEventStr.length)]);
-                    this.AddSedative(randomLevelIncrease + BREATH_DRUG_INCREASES.BIG_JUMP_BASE, getRandomInt(RANDOM_EVENT_ODDS.BREATH_MINIGAME_CHANCE) != 0); // 2/3 chance to start incap minigame
+                    this.AddSedative(randomLevelIncrease + BREATH_DRUG_INCREASES.BIG_JUMP_BASE * strength, getRandomInt(RANDOM_EVENT_ODDS.BREATH_MINIGAME_CHANCE) != 0); // 2/3 chance to start incap minigame
                 } else this.AddSedative(randomLevelIncrease / BREATH_DRUG_INCREASES.SMALL_TICK_DIVISOR, false);
             }
             if (types.indexOf("mindcontrol") > -1 && this.settings.enableMindControl) {
                 if (getRandomInt(RANDOM_EVENT_ODDS.BREATH_MIND_CONTROL_BIG_JUMP) == 0) { // Odds are big jump once every 60 seconds
                     if (!this.brainwashed) SendAction(this.breathMindControlEventStr[getRandomInt(this.breathMindControlEventStr.length)]);
-                    this.AddMindControl(randomLevelIncrease + BREATH_DRUG_INCREASES.BIG_JUMP_BASE, getRandomInt(RANDOM_EVENT_ODDS.BREATH_MINIGAME_CHANCE) != 0, mask.Item.Craft?.MemberNumber); // 2/3 chance to start incap minigame
+                    this.AddMindControl(randomLevelIncrease + BREATH_DRUG_INCREASES.BIG_JUMP_BASE * strength, getRandomInt(RANDOM_EVENT_ODDS.BREATH_MINIGAME_CHANCE) != 0, mask.Item.Craft?.MemberNumber); // 2/3 chance to start incap minigame
                 } else this.AddMindControl(randomLevelIncrease / BREATH_DRUG_INCREASES.SMALL_TICK_DIVISOR, false, mask.Item.Craft?.MemberNumber);
             }
             if (types.indexOf("horny") > -1 && this.settings.enableHorny) {
                 if (getRandomInt(RANDOM_EVENT_ODDS.BREATH_HORNY_BIG_JUMP) == 0) { // Odds are big jump once every 90 seconds
                     SendAction(this.breathAphrodesiacEventStr[getRandomInt(this.breathAphrodesiacEventStr.length)]);
-                    this.AddHorny(randomLevelIncrease + BREATH_DRUG_INCREASES.BIG_JUMP_BASE, getRandomInt(RANDOM_EVENT_ODDS.HORNY_FORCE_CUM_CHANCE) == 0); // 1/3 chance to push user over the edge (if allowed...)
+                    this.AddHorny(randomLevelIncrease + BREATH_DRUG_INCREASES.BIG_JUMP_BASE * strength, getRandomInt(RANDOM_EVENT_ODDS.HORNY_FORCE_CUM_CHANCE) == 0); // 1/3 chance to push user over the edge (if allowed...)
                 } else this.AddHorny(randomLevelIncrease / BREATH_DRUG_INCREASES.SMALL_TICK_DIVISOR, false);
             }
             if (types.indexOf("antidote") > -1 && getRandomInt(RANDOM_EVENT_ODDS.BREATH_ANTIDOTE_HEAL) == 0) { // Odds are heal once every 4 minutes
