@@ -505,6 +505,19 @@ export interface LSCGSpellInfo {
 }
 export type LSCGStateRecoverReason = "expired" | "safeword" | "dispel" | "manual";
 export type LSCGDrugMethod = "drink" | "inject" | "breath";
+/** One instruction of a suggestion, as hypno events describe it. */
+export interface LSCGHypnoInstructionInfo {
+    /** The instruction's id: one of LSCG's own (e.g. "activity", "strip") or an extension's `"<id>.<name>"`. */
+    readonly instruction: string;
+    /** The suggestion's name. */
+    readonly suggestion: string;
+    /** The instruction's position in the suggestion, from 0. */
+    readonly index: number;
+    /** Member number of whoever spoke the trigger. */
+    readonly sender: number;
+    /** Member number of whoever installed the suggestion. */
+    readonly installedBy: number;
+}
 export type LSCGHypnoAwakenMethod = "word" | "boop" | "snap" | "timeout" | "other";
 export type LSCGPassoutReason = "collar" | "hand" | "plugs" | "chain";
 /** Observe-only events. Payloads are frozen snapshots; listeners can't change what LSCG does. */
@@ -567,6 +580,16 @@ export interface LSCGEventMap {
         method: LSCGHypnoAwakenMethod;
         by?: number;
     };
+    /** A suggestion's trigger was spoken and the player either resisted it or submitted (its instructions are about to run). */
+    "hypno.suggestionResolved": {
+        suggestion: string;
+        sender: number;
+        installedBy: number;
+        resisted: boolean;
+    };
+    /** One instruction of a suggestion ran, built-in or from an extension. It ran, which isn't the same as succeeding: an Activity
+     *  whose target has left, for instance, still counts. Not fired for blocked or vetoed instructions. */
+    "hypno.instructionPerformed": LSCGHypnoInstructionInfo;
     /** The player sent an activity. `isLSCG` is true for LSCG's own (and LSCG-patched) activities. */
     "activity.sent": {
         name: string;
@@ -654,13 +677,18 @@ export interface LSCGBeforeEventMap {
         readonly type: string;
         readonly sender: number;
     };
-    /** Before a drug takes effect. Mutable: `types` may only have entries removed. Cancel: nothing is applied. */
+    /** Before a drug takes effect. Mutable: `types` may only have entries removed, and `strength` may only be lowered (0 to 1, default 1; it
+     *  scales the dose, so a drink of 2 at strength 0.5 adds 1). Cancel: nothing is applied. */
     "drug.beforeApply": {
         types: string[];
+        strength?: number;
         readonly method: LSCGDrugMethod;
         readonly sender?: number;
         readonly location?: string;
     };
+    /** Before one instruction of a suggestion runs, after the player has submitted and not blocked it. Nothing is mutable. Cancel: that one
+     *  instruction is skipped silently and the rest of the suggestion carries on. */
+    "hypno.beforeInstruction": LSCGHypnoInstructionInfo;
 }
 export type LSCGEventName = keyof LSCGEventMap;
 export type LSCGBeforeEventName = keyof LSCGBeforeEventMap;
