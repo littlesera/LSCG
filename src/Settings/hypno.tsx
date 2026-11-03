@@ -147,6 +147,10 @@ export class GuiHypno extends GuiSubscreen {
 						get: () => s.enableSpirals ?? true, set: v => s.enableSpirals = v, disabled: off,
 					}),
 					CheckboxRow(ctx, {
+						label: "Spiral overlay", description: "Draws a slowly turning purple spiral over the screen while you are hypnotized.",
+						get: () => s.enableSpiralOverlay ?? true, set: v => s.enableSpiralOverlay = v,
+					}),
+					CheckboxRow(ctx, {
 						label: "Enable wake-up on snaps", description: "If checked you exit the trance when you hear someone snapping.",
 						get: () => s.enableSnapWakeup ?? true, set: v => s.enableSnapWakeup = v, disabled: off,
 					}),

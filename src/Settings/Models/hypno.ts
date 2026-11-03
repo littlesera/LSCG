@@ -36,6 +36,8 @@ export interface HypnoSettingsModel extends HypnoPublicSettingsModel {
     hypnoEyeType: number | undefined;
     enableArousal: boolean;
     enableSpirals: boolean;
+    /** Draw a slowly turning purple spiral over the screen while hypnotized. */
+    enableSpiralOverlay: boolean;
     enableSnapWakeup: boolean;
     stats: HypnoModuleStats;
     triggerCycled: boolean;

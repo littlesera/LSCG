@@ -102,6 +102,7 @@ export class HypnoModule extends BaseModule {
             cooldownTime: 0,
             enableArousal: false,
             enableSpirals: true,
+            enableSpiralOverlay: true,
             enableSnapWakeup: true,
             trigger: "",
             triggerRevealed: false,
