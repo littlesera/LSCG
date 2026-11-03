@@ -256,8 +256,11 @@ export interface LSCGDrugDefinition {
     description?: string;
     /** Phrases that make a crafted item this drug: if its name or description contains one, it's a dose. Case
      *  and punctuation don't matter. Items must be a Medical Injector, Latex Respirator, Filled Glass or Mug. A keyword followed by
-     *  "-soaked" on a crafted item in a mouth, nose or face slot soaks the wearer in it as well. */
+     *  "-soaked" or "-laced" on a crafted item in a mouth, nose or face slot soaks the wearer in it as well. */
     keywords: string[];
+    /** Phrases for soaked items when your plain keywords don't read well in front of "-soaked" or "-laced": "intoxicant" for an
+     *  "intoxicating" drug gives "intoxicant-laced". Your plain keywords work there too, so this is only for the better wording. */
+    soakKeywords?: string[];
     /** Colour of the level bar drawn beside the character, any CSS colour string (default a soft blue). */
     color?: string;
     /** The level that fills the bar (default 10). */

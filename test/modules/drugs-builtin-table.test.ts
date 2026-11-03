@@ -40,6 +40,7 @@ describe("BUILT_IN_DRUGS", () => {
 		expect((defaults[drug.keywordsKey] as string[]).length).toBeGreaterThan(0);
 		expect(drug.color).toMatch(/^#[0-9a-f]{6}$/i);
 		expect(drug.label).not.toBe("");
+		expect(drug.soakKeywords.length).toBeGreaterThan(0);
 	});
 
 	it("looks drugs up by id", () => {

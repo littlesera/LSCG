@@ -6,7 +6,7 @@ import { Consent, getModule } from "modules";
 import { GuiInjector } from "Settings/injector";
 import { InjectorSettingsModel } from "Settings/Models/injector";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
-import { OnChat, OnActivity, SendAction, getRandomInt, removeAllHooksByModule, isPhraseInString, settingsSave, hookFunction, getCharacter, AUDIO, getPlayerVolume, OnAction, hookBCXCurse, GetTargetCharacter, GetActivityName, GetMetadata, GetActivityEntryFromContent, IsActivityAllowed, GetItemName, LSCG_SendLocal } from "../utils";
+import { IsBlockedSender, OnActivity, SendAction, getRandomInt, removeAllHooksByModule, isPhraseInString, settingsSave, hookFunction, getCharacter, AUDIO, getPlayerVolume, OnAction, hookBCXCurse, GetTargetCharacter, GetActivityName, GetMetadata, GetActivityEntryFromContent, IsActivityAllowed, GetItemName, LSCG_SendLocal } from "../utils";
 import { ActivityModule, ActivityPatch } from "./activities";
 import { HypnoModule } from "./hypno";
 import { MiscModule } from "./misc";
@@ -18,7 +18,7 @@ import type { LSCGDrugContext, LSCGDrugDoseContext, LSCGDrugMethod, LSCGOptions 
 import { editableOptions, sanitizeOptions } from "api/options";
 import { DEFAULT_DRUG_COLOR, MAX_EXTENSION_BARS, extensionDrugs, isExtensionDrugId, type ExtensionDrug } from "api/drugs";
 import { builtInStates } from "api/builtInStates";
-import { clearScreenEffects, setSpiralEffect, setWaveEffect } from "Dom/screenEffects";
+import { clearScreenEffects, drawSpiralOverlay, setSpiralEffect, setWaveEffect } from "Dom/screenEffects";
 import { BUILT_IN_DRUGS, builtInDrug, isBuiltInDrugId, type BuiltInDrugId } from "./drugs/builtin";
 import type { ExtensionDrugBar } from "Settings/Models/injector";
 import {
@@ -127,6 +127,7 @@ export class InjectorModule extends BaseModule {
             continuousDeliveryTimeout: CONTINUOUS_DELIVERY.DEFAULT_TIMEOUT,
 
             enableDrugVisuals: true,
+            enableSuggestibleWave: true,
             enableSoakedItems: true,
             soakedPotencyTime: SOAKED_ITEMS.DEFAULT_POTENCY,
             infiniteSoakPotency: false,
@@ -491,15 +492,19 @@ export class InjectorModule extends BaseModule {
         hookFunction("Player.HasTints", 4, (args, next) => {
             if (!this.Enabled || !Player.ImmersionSettings?.AllowTints)
                 return next(args);
-            if (this.hornyLevel > 0) return true;
+            if (this.hornyLevel > 0 || this.SuggestibleTint() > 0) return true;
             return next(args);
         }, ModuleCategory.Injector);
 
+        // Like the blur, tints only happen when the player's own BC preferences allow them (AllowTints above): there is no LSCG setting for it.
         hookFunction("Player.GetTints", 4, (args, next) => {
             if (!this.Enabled || !Player.ImmersionSettings?.AllowTints)
                 return next(args);
-            if (this.hornyLevel > 0) return [{r: 254, g: 44, b: 84, a: (this.hornyLevel/(this.hornyLevelMax*this.drugLevelMultiplier*DRUG_EFFECT_MULTIPLIERS.HORNY_TINT_DIVISOR))}];
-            return next(args);
+            const tints: { r: number; g: number; b: number; a: number }[] = [];
+            if (this.hornyLevel > 0) tints.push({r: 254, g: 44, b: 84, a: (this.hornyLevel/(this.hornyLevelMax*this.drugLevelMultiplier*DRUG_EFFECT_MULTIPLIERS.HORNY_TINT_DIVISOR))});
+            const green = this.SuggestibleTint();
+            if (green > 0) tints.push({r: 76, g: 217, b: 100, a: green});
+            return tints.length > 0 ? tints : next(args);
         }, ModuleCategory.Injector);
 
         hookFunction("Player.GetBlurLevel", 4, (args, next) => {
@@ -512,9 +517,23 @@ export class InjectorModule extends BaseModule {
             return next(args);
         }, ModuleCategory.Injector);
 
-        OnChat(2, ModuleCategory.Injector, (data, sender, msg) => {
-            this.SuggestibleUrge(msg, sender);
-        });
+        // The hypno spiral is painted on the canvas over the room once per frame, after everything else in the room is drawn. (Not from the
+        // per-character overlay hook, which runs once per character and would stack and re-time it.)
+        hookFunction("ChatRoomRun", 4, (args, next) => {
+            const ret = next(args);
+            if (this.Enabled)
+                drawSpiralOverlay();
+            return ret;
+        }, ModuleCategory.Injector);
+
+        // After the chat line is shown (not before, as OnChat would), so the urge reads as a reaction to what was said.
+        hookFunction("ChatRoomMessage", 2, (args, next) => {
+            const result = next(args);
+            const data = args[0];
+            if (!IsBlockedSender(data.Sender) && (data.Type == "Chat" || data.Type == "Whisper"))
+                this.SuggestibleUrge(data.Content, getCharacter(data.Sender));
+            return result;
+        }, ModuleCategory.Injector);
 
         OnAction(1, ModuleCategory.Injector, (data, sender, msg, metadata) => {
             const deliverySlots = ["ItemMouth", "ItemMouth2", "ItemMouth3"];
@@ -651,6 +670,11 @@ export class InjectorModule extends BaseModule {
         this.UpdateScreenEffects();
     }
 
+    /** How strong the faint green tint of the suggestible is (the tint's alpha): it grows with the bar, and is off with the drug visuals. */
+    SuggestibleTint(): number {
+        return this.Enabled && this.settings.enableDrugVisuals !== false ? this.SuggestibleFraction() * SUGGESTIBLE_VISUALS.TINT : 0;
+    }
+
     /** How full the suggestible bar is, 0 to 1. */
     SuggestibleFraction(): number {
         const max = this.suggestibleMax * this.drugLevelMultiplier;
@@ -661,13 +685,15 @@ export class InjectorModule extends BaseModule {
      *  spiral while hypnotized (or a little, while brainwashing builds). */
     UpdateScreenEffects() {
         const visuals = this.Enabled && this.settings.enableDrugVisuals !== false;
-        const blurAllowed = Player?.GraphicsSettings?.AllowBlur !== false;
-        setWaveEffect(visuals && blurAllowed ? this.SuggestibleFraction() * SUGGESTIBLE_VISUALS.WAVE : 0);
+        // The sway is a kind of blur, so it follows BC's blur preference exactly as the blur itself does.
+        const blurAllowed = !!Player?.GraphicsSettings?.AllowBlur;
+        setWaveEffect(visuals && blurAllowed && this.settings.enableSuggestibleWave !== false ? this.SuggestibleFraction() * SUGGESTIBLE_VISUALS.WAVE : 0);
 
         const mindMax = this.mindControlMax * this.drugLevelMultiplier;
         const building = mindMax > 0 ? Math.min(1, this.mindControlLevel / mindMax) * SUGGESTIBLE_VISUALS.SPIRAL_BUILDING : 0;
-        const spiralOn = visuals && (Player?.LSCG as { HypnoModule?: { enableSpiralOverlay?: boolean } } | undefined)?.HypnoModule?.enableSpiralOverlay !== false;
-        setSpiralEffect(spiralOn ? Math.max(this.brainwashed ? SUGGESTIBLE_VISUALS.SPIRAL_HYPNOTIZED : 0, building) : 0);
+        const hypnoSettings = (Player?.LSCG as { HypnoModule?: { enableSpiralOverlay?: boolean; spiralTurnSeconds?: number } } | undefined)?.HypnoModule;
+        const spiralOn = visuals && hypnoSettings?.enableSpiralOverlay !== false;
+        setSpiralEffect(spiralOn ? Math.max(this.brainwashed ? SUGGESTIBLE_VISUALS.SPIRAL_HYPNOTIZED : 0, building) : 0, undefined, hypnoSettings?.spiralTurnSeconds);
     }
 
     /** When each drug (built-in key or extension id) last decayed. */
@@ -753,22 +779,28 @@ export class InjectorModule extends BaseModule {
 
     /** Every drug type with the keywords that name it: the built-in ones, then each extension's. Gases and soaked items both read this,
      *  so an extension drug works in both without further wiring. */
-    DrugKeywordTable(): { type: AnyDrugType; keywords: string[] }[] {
+    DrugKeywordTable(): { type: AnyDrugType; keywords: string[]; soakKeywords: string[] }[] {
         return [
-            ...BUILT_IN_DRUGS.map(drug => ({ type: drug.id as AnyDrugType, keywords: this.settings[drug.keywordsKey] ?? [] })),
-            { type: "antidote", keywords: this.settings.cureKeywords ?? [] },
-            ...extensionDrugs.all().map(drug => ({ type: drug.id as AnyDrugType, keywords: drug.keywords })),
+            ...BUILT_IN_DRUGS.map(drug => {
+                const keywords = this.settings[drug.keywordsKey] ?? [];
+                return { type: drug.id as AnyDrugType, keywords, soakKeywords: [...new Set([...drug.soakKeywords, ...keywords])] };
+            }),
+            { type: "antidote", keywords: this.settings.cureKeywords ?? [], soakKeywords: [] },
+            ...extensionDrugs.all().map(drug => ({ type: drug.id as AnyDrugType, keywords: drug.keywords, soakKeywords: [...new Set([...drug.soakKeywords, ...drug.keywords])] })),
         ];
     }
 
-    /** The drug types an item's crafted name and description name. With a `suffix`, each keyword must carry it ("sedative" + "-soaked"). */
-    ResolveDrugTypes(item: CraftingPartialItem, suffix: string = ""): AnyDrugType[] {
+    /** The drug types an item's crafted name and description name. With `suffixes`, it's the soak keywords that count, each followed by
+     *  one of them ("sedative" + "-soaked", "intoxicant" + "-laced"); a space in place of the hyphen is fine. */
+    ResolveDrugTypes(item: CraftingPartialItem, suffixes: readonly string[] = []): AnyDrugType[] {
         const name = item.Name;
         const description = CraftingDescription.Decode(item.Description);
         const totalString = name + " | " + description;
+        const soaked = suffixes.length > 0;
         return this.DrugKeywordTable()
-            .filter(entry => entry.keywords.some(ph => isPhraseInString(totalString, ph + suffix, true) ||
-                (suffix !== "" && isPhraseInString(totalString, ph + suffix.replace("-", " "), true))))
+            .filter(entry => soaked
+                ? entry.soakKeywords.some(ph => suffixes.some(suffix => isPhraseInString(totalString, ph + suffix, true) || isPhraseInString(totalString, ph + suffix.replace("-", " "), true)))
+                : entry.keywords.some(ph => isPhraseInString(totalString, ph, true)))
             .map(entry => entry.type);
     }
 
@@ -776,9 +808,10 @@ export class InjectorModule extends BaseModule {
         return this.ResolveDrugTypes(item);
     }
 
-    /** The drug types a mouth/face item is soaked in ("sedative-soaked", an extension drug's keyword + "-soaked", ...). Antidote is not soakable. */
+    /** The drug types a mouth/face item is soaked or laced with ("sedative-soaked", "intoxicant-laced", an extension drug's keyword + "-soaked", ...).
+     *  Antidote is not soakable. */
     GetSoakedDrugTypes(item: CraftingPartialItem): AnyDrugType[] {
-        return this.ResolveDrugTypes(item, SOAKED_ITEMS.KEYWORD_SUFFIX).filter(t => t !== "antidote");
+        return this.ResolveDrugTypes(item, SOAKED_ITEMS.KEYWORD_SUFFIXES).filter(t => t !== "antidote");
     }
 
     IsDrugAllowed(sender: Character): boolean {
@@ -1000,16 +1033,72 @@ export class InjectorModule extends BaseModule {
         "%NAME% smiles vaguely, suddenly very eager to please.",
     ];
 
-    /** The phrase someone asked for in "<name>, would you (please|kindly) <phrase>", or undefined if the message isn't such a request to
-     *  one of `names`. Case, a comma or colon after the name, and trailing punctuation don't matter. */
+    /** The phrase someone asked `names` to do, or undefined if the message isn't a request to one of them. Recognises, with the name first
+     *  (a comma or colon after it is fine) or last: "would/could/can/will you [please|kindly] X", "please X", "I want/need/'d like you to X",
+     *  "you will X", and "X, <name>". Case and ending punctuation don't matter, and "please" and a trailing "for me" are dropped. */
     static ParseRequest(msg: string, names: string[]): string | undefined {
         const escaped = names.map(n => n.trim()).filter(n => n !== "").map(n => n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
         if (escaped.length === 0 || !msg)
             return undefined;
-        const match = new RegExp(`^\\s*(?:${escaped.join("|")})\\s*[,:]?\\s*would you\\s+(?:(?:please|kindly)\\s*[,:]?\\s*)+(.+?)\\s*[?.!]*\\s*$`, "i").exec(msg);
-        const phrase = match?.[1]?.trim();
-        // Something to actually do: punctuation alone ("would you please:") is a request that hasn't been finished.
-        return phrase && /\w/.test(phrase) ? phrase : undefined;
+        const name = `(?:${escaped.join("|")})`;
+        const sep = String.raw`\s*[,:]?\s*`;
+        // Request openers that follow the name: "would you please", "please", "I want you to"...
+        const polite = String.raw`(?:(?:please|kindly)${sep})`;
+        const opener = String.raw`(?:(?:would|could|can|will) you(?! (?:like|mind|ever|rather|be|have|know|say|tell me|do you))\s+${polite}*|${polite}+|i(?:'d| would)? (?:want|need|would like|'d like|like) you to\s+${polite}*|you (?:will|must|shall|are going to)\s+${polite}*)`;
+
+        const text = msg.trim();
+        const lead = new RegExp(String.raw`^${name}${sep}${opener}(.+)$`, "i").exec(text);
+        // "kneel, sera" / "kneel for me sera": the name closes the line.
+        const trail = new RegExp(String.raw`^(.+?)${sep}${name}\s*[?.!]*$`, "i").exec(text);
+        const leadTrailing = new RegExp(String.raw`^${polite}*(.+?)${sep}${name}\s*[?.!]*$`, "i").exec(text);
+        const raw = lead?.[1] ?? leadTrailing?.[1] ?? trail?.[1];
+        if (raw === undefined)
+            return undefined;
+
+        const phrase = raw
+            .replace(/[?.!\s]+$/, "")
+            .replace(/\s+for me(?:\s+(?:please|kindly))?$/i, "")
+            .replace(/\s+(?:please|kindly)$/i, "")
+            .replace(/^(?:please|kindly)\b[\s,:]*/i, "")
+            .trim();
+        // Something to actually do: punctuation alone ("would you please:") is a request that hasn't been finished, and a greeting or thanks isn't one.
+        if (!phrase || !/\w/.test(phrase) || InjectorModule.IsNotARequest(phrase))
+            return undefined;
+        return phrase;
+    }
+
+    /** Short messages that are just a greeting, thanks or a one-word answer: calling someone by name with one isn't asking them to do anything. */
+    static IsNotARequest(phrase: string): boolean {
+        return /^(?:hi|hey|hello|heya|yo|hiya|thanks|thank you|thx|ty|sorry|bye|goodbye|good (?:morning|night|evening|day)|welcome|welcome back|yes|no|ok|okay|lol|haha|lmao|sure|please|kindly|sup|wb|brb|gn|gm)[\s?.!]*$/i.test(phrase.trim());
+    }
+
+    /** Turns something a speaker said about themselves into the same thing about them, for the player to read: "me" becomes their name,
+     *  and "I", "my", "mine" and "myself" become their pronouns ("he", "his", "his", "himself" / "she", "her", "hers", "herself" /
+     *  "they", "their", "theirs", "themself"). Whole words only, in any case. Verbs aren't re-conjugated beyond the contractions
+     *  ("I'm" is "he's"), so "I like" reads "he like". */
+    static AboutSpeaker(phrase: string, name: string, pronouns?: string): string {
+        const he = pronouns === "HeHim";
+        const she = pronouns === "SheHer";
+        const subject = he ? "he" : she ? "she" : "they";
+        const possessive = he ? "his" : she ? "her" : "their";
+        const independent = he ? "his" : she ? "hers" : "theirs";
+        const reflexive = he ? "himself" : she ? "herself" : "themself";
+        const plural = !he && !she;
+        const swaps: Record<string, string> = {
+            myself: reflexive,
+            mine: independent,
+            my: possessive,
+            me: name,
+            "i am": plural ? "they are" : `${subject} is`,
+            "i'm": plural ? "they're" : `${subject}'s`,
+            "i've": plural ? "they've" : `${subject}'s`,
+            "i'll": `${subject}'ll`,
+            "i'd": `${subject}'d`,
+            i: subject,
+        };
+        // One pass over whole words only, so what one swap produces (a name like "Meg") is never swapped again.
+        const words = /\b(myself|mine|my|me|I am|I['’](?:m|ve|ll|d)|I)\b/gi;
+        return phrase.replace(words, match => swaps[match.toLowerCase().replace("’", "'")] ?? match);
     }
 
     /** The names a request can open with: nickname, name, and the first word of each. */
@@ -1046,7 +1135,12 @@ export class InjectorModule extends BaseModule {
         const wording = fraction >= SUGGESTIBLE_URGE.OVERWHELMING_FRACTION ? "An overwhelming urge washes over you to"
             : fraction >= SUGGESTIBLE_URGE.STRONG_FRACTION ? "You have a strong urge to"
             : "You feel a faint urge to";
-        LSCG_SendLocal(`${wording} ${phrase}.`);
+        // The same little bell a suggestion rings.
+        if (!AudioShouldSilenceSound(true))
+            AudioPlaySoundEffect("BellMedium");
+        // "bring me my phone" was said by the speaker, so show it about them: "bring Locke his phone".
+        const shown = InjectorModule.AboutSpeaker(phrase, CharacterNickname(sender), sender.GetPronouns?.());
+        LSCG_SendLocal(`${wording} "${shown}".`);
         emit("drug.suggestionUrge", { sender: sender.MemberNumber!, phrase, level: this.suggestibleLevel, max });
         return true;
     }
@@ -1888,18 +1982,20 @@ export class InjectorModule extends BaseModule {
                     : `%NAME%'s eyes widen as the damp, cloying scent of %POSSESSIVE% ${itemName} fills %POSSESSIVE% head.`);
                 CharacterSetFacialExpression(Player, "Eyes", "Surprised", 4);
             }
-            this.ApplyBreathDoses(soaked.Types, soaked.Item.Craft?.MemberNumber, this.soakedEmotes(itemName, soaked.Group));
+            this.ApplyBreathDoses(soaked.Types, soaked.Item.Craft?.MemberNumber, this.soakedEmotes(itemName, soaked.Group), SOAKED_ITEMS.DOSE_FACTOR);
         }
     }
 
     /** One breath of drug: shared by respirators and soaked items. Applies the player's opt-ins, the extension hook, and every built-in
      *  and extension drug the types name. `crafterMemberNumber` is who is responsible for the dose. `emotes` replaces the gas wording. */
-    ApplyBreathDoses(drugTypes: AnyDrugType[], crafterMemberNumber?: number, emotes?: { sedative?: string[]; mindcontrol?: string[]; horny?: string[]; suggestible?: string[] }) {
+    ApplyBreathDoses(drugTypes: AnyDrugType[], crafterMemberNumber?: number, emotes?: { sedative?: string[]; mindcontrol?: string[]; horny?: string[]; suggestible?: string[] }, doseFactor: number = 1) {
         const pick = (lines: string[] | undefined, fallback: string[]) => { const l = lines ?? fallback; return l[getRandomInt(l.length)]; };
         if (drugTypes.length === 0)
             return;
         {
-            const { types, strength } = this.HookDrugApply(this.EnabledDrugTypes(drugTypes), "breath");
+            const hooked = this.HookDrugApply(this.EnabledDrugTypes(drugTypes), "breath");
+            const types = hooked.types;
+            const strength = hooked.strength * doseFactor; // an extension may soften the dose, and a soak is gentler than a gas to begin with
             const randomLevelIncrease = (getRandomInt(4) + 2) / (1 / BREATH_DRUG_INCREASES.MIN_INCREASE) * strength; // .2 to .5, softened by an extension
 
             if (types.indexOf("sedative") > -1 && this.settings.enableSedative) {

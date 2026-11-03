@@ -80,7 +80,7 @@ export class SleepyMiniGame extends BaseMiniGame {
 
         this.removeBlurHook = hookFunction("Player.GetBlurLevel", 10, (args, next) => {
             if (this.IsStartDelay) {
-                return 5;
+                return Player.GraphicsSettings?.AllowBlur ? 5 : next(args);
             }
             const maxBlur = 20;
             const progBlurLevel = (1 - (this.SleepyPosition/this.SleepyMaxPosition)) * maxBlur;

@@ -48,6 +48,8 @@ export interface InjectorSettingsModel extends InjectorPublicSettingsModel {
     /** Allow mouth/nose/face items crafted as "<drug>-soaked" to dose the wearer. */
     /** Visual effects of the drugs: the suggestible sway and the hypno spiral. */
     enableDrugVisuals: boolean;
+    /** The swaying, warped screen of the suggestible (the tint and blur follow the drug visuals and BC preferences). */
+    enableSuggestibleWave: boolean;
     enableSoakedItems: boolean;
     /** How long (ms) a soaked item stays potent once worn. */
     soakedPotencyTime: number;

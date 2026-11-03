@@ -19,6 +19,7 @@ import {
     LSCG_EFFECTS_MENU,
     EFFECT_DURATIONS,
     ACTIVITY_VALUES,
+    SOAKED_ITEMS,
 } from "../constants";
 import { SoulbindKeywords } from "./States/AstralProjectionState";
 
@@ -848,10 +849,9 @@ export class MiscModule extends BaseModule {
     /** One "soaked" checkbox per drug, for items in the mouth, nose and face slots. They write "<keyword>-soaked", which the injector
      *  reads to dose the wearer a little at a time. Extension drugs get one as soon as they register. */
     get soakedDrugOptions(): ScreenElem[] {
-        const suffix = "-soaked";
         const drugs: { id: string; label: string; keyword: string | undefined }[] = [
-            ...BUILT_IN_DRUGS.map(drug => ({ id: drug.id as string, label: drug.label, keyword: (BuiltInDrugKeywords(drug) ?? [drug.id])[0] })),
-            ...extensionDrugs.all().map(drug => ({ id: drug.id, label: drug.label, keyword: drug.keywords[0] })),
+            ...BUILT_IN_DRUGS.map(drug => ({ id: drug.id as string, label: drug.label, keyword: drug.soakKeywords[0] ?? BuiltInDrugKeywords(drug)?.[0] ?? drug.id })),
+            ...extensionDrugs.all().map(drug => ({ id: drug.id, label: drug.label, keyword: drug.soakKeywords[0] ?? drug.keywords[0] })),
         ];
         return drugs.filter(d => !!d.keyword).map(d => {
             const safe = d.id.replace(/[^a-z0-9_]/gi, c => `-${c.charCodeAt(0).toString(16)}-`);
@@ -861,7 +861,8 @@ export class MiscModule extends BaseModule {
                 id_button: `crafting-lscg-effects-soaked-${safe}-checkbox`,
                 label: `${d.label}-soaked`,
                 description: `Soak the item in ${d.label.toLowerCase()}, dosing the wearer gradually while worn (Only for: mouth, nose and face items)`,
-                keywords: [d.keyword + suffix],
+                // The first one is what ticking the box writes; all of them tick it.
+                keywords: SOAKED_ITEMS.KEYWORD_SUFFIXES.map(suffix => d.keyword + suffix),
                 condition: (): boolean => !!CraftingSelectedItem?.Asset && MiscModule.SoakableGroups.includes(CraftingSelectedItem.Asset.Group.Name),
             } as ScreenElem;
         });

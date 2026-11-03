@@ -1,15 +1,14 @@
 /**
- * Persistent screen effects drawn over the game canvas: a wavey distortion for the suggestible, and a slowly turning spiral for hypnosis.
- * Like pulseScreen they live in the DOM beside the canvas, so they never take clicks and leave the DOM settings screens (which sit
- * above) crisp. Each effect is set to an intensity from 0 to 1, and removed at 0; calling again with a new intensity updates it.
+ * Persistent screen effects: a wavey distortion for the suggestible (an SVG filter on the game canvas, so the DOM settings screens above
+ * it stay crisp) and a slowly turning spiral for hypnosis (painted onto the canvas itself, over the room). Each effect is set to an
+ * intensity from 0 to 1, and removed at 0; calling again with a new intensity updates it.
  */
+import { SPIRAL_TURN_SECONDS } from "../constants/game-balance";
 
 const WAVE_FILTER_ID = "lscg-wave-filter";
 const WAVE_MAX_SCALE = 28;
-const SPIRAL_ID = "lscg-spiral-layer";
-const SPIRAL_MAX_OPACITY = 0.55;
-/** Seconds for one slow turn of the spiral. */
-const SPIRAL_TURN_SECONDS = 60;
+/** Strong enough at full effect that the lines read clearly, while still tinting the room rather than covering it. */
+const SPIRAL_MAX_OPACITY = 0.65;
 export const HYPNO_SPIRAL_COLOR = "#A020F0";
 
 function canvasEl(): HTMLCanvasElement | undefined {
@@ -108,95 +107,156 @@ export function clearWaveEffect(): void {
 }
 
 // ---- Spiral ----
+// Painted straight onto BC's canvas from its own draw loop (see drawSpiralOverlay), clipped to the room view, so it always sits exactly
+// over the room, scales and moves with it, and never touches the DOM or the chat log beside it.
 
-let spiral: HTMLDivElement | undefined;
-let spiralAnimation: Animation | undefined;
-let spiralColor = "";
-let resizeListener: (() => void) | undefined;
+/** How fast the spiral fades in and out, as fractions of full strength per second. */
+const SPIRAL_FADE_PER_SECOND = 0.5;
+/** How soft the spiral's edges are, in pixels of its artwork (which is drawn at about screen size). */
+const SPIRAL_EDGE_BLUR = 2;
+/** The spiral's artwork is drawn once at this size, then only rotated and scaled. */
+const SPIRAL_SPRITE_SIZE = 1400;
 
-/** An Archimedean spiral as an SVG path, centred in a 1000 x 1000 box. */
-function spiralPath(turns = 7, steps = 420): string {
-    const points: string[] = [];
-    const maxRadius = 700;
+const spiralState = { target: 0, alpha: 0, color: HYPNO_SPIRAL_COLOR, lastDraw: 0, angle: 0, turnSeconds: SPIRAL_TURN_SECONDS.DEFAULT as number };
+let spiralSprite: HTMLCanvasElement | undefined;
+let spriteColor = "";
+let spriteSoft = false;
+
+/** The strength the spiral is heading for, 0 to 1 (0 once it is cleared). For tests and to know whether anything is drawn. */
+export function spiralTarget(): number {
+    return spiralState.target;
+}
+
+/** How strong the spiral is right now, 0 to 1: it eases toward the target. */
+export function spiralAlpha(): number {
+    return spiralState.alpha;
+}
+
+/** The classic hypnosis spiral, filled once onto an offscreen canvas: a logarithmic spiral, so each turn is a fixed multiple wider than
+ *  the one inside it. The bands and the gaps between them are equal (in that ratio) and grow outward, and the winding gets so tight toward
+ *  the middle that it collapses to a point with no visible curl, like a hypnotist's cartoon pinwheel. Null where canvas drawing isn't
+ *  available. */
+function buildSpiralSprite(color: string, soft: boolean): HTMLCanvasElement | undefined {
+    const sprite = document.createElement("canvas");
+    sprite.width = SPIRAL_SPRITE_SIZE;
+    sprite.height = SPIRAL_SPRITE_SIZE;
+    const ctx = sprite.getContext("2d");
+    if (!ctx)
+        return undefined;
+    const centre = SPIRAL_SPRITE_SIZE / 2;
+    // Each full turn is this many times wider than the last.
+    const growthPerTurn = 1.9;
+    const k = Math.log(growthPerTurn) / (Math.PI * 2);
+    // Wind inward until the arm is under half a pixel wide: it vanishes into the middle.
+    const innermost = 0.4;
+    const maxAngle = Math.log(centre / innermost) / k;
+    const steps = Math.ceil(maxAngle / 0.02);
+    // The band is half a turn's growth wide, the gap the other half.
+    const bandRatio = Math.exp(Math.PI * k);
+    const radiusAt = (angle: number) => centre * Math.exp(-k * (maxAngle - angle));
+    const inner: [number, number][] = [];
+    const outer: [number, number][] = [];
     for (let i = 0; i <= steps; i++) {
-        const t = i / steps;
-        const angle = t * turns * Math.PI * 2;
-        const r = t * maxRadius;
-        points.push(`${i === 0 ? "M" : "L"}${(500 + r * Math.cos(angle)).toFixed(1)} ${(500 + r * Math.sin(angle)).toFixed(1)}`);
+        const angle = (i / steps) * maxAngle;
+        const r = radiusAt(angle);
+        inner.push([centre + r * Math.cos(angle), centre + r * Math.sin(angle)]);
+        outer.push([centre + r * bandRatio * Math.cos(angle), centre + r * bandRatio * Math.sin(angle)]);
     }
-    return points.join(" ");
+    ctx.fillStyle = color;
+    // Soft edges, blurred into the artwork once rather than on every frame, and only where the player's BC preferences allow blur.
+    // (Browsers without canvas filters keep crisp edges.)
+    if (soft && "filter" in ctx)
+        ctx.filter = `blur(${SPIRAL_EDGE_BLUR}px)`;
+    ctx.beginPath();
+    outer.forEach(([x, y], i) => (i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)));
+    for (let i = inner.length - 1; i >= 0; i--)
+        ctx.lineTo(inner[i][0], inner[i][1]);
+    ctx.closePath();
+    ctx.fill();
+    return sprite;
 }
 
-function placeSpiral(el: HTMLElement): void {
-    const canvas = canvasEl();
-    if (canvas?.clientWidth)
-        Object.assign(el.style, { left: `${canvas.offsetLeft}px`, top: `${canvas.offsetTop}px`, width: `${canvas.clientWidth}px`, height: `${canvas.clientHeight}px`, inset: "" });
-    else
-        Object.assign(el.style, { inset: "0", width: "", height: "" });
+/** The room view in canvas units: BC's own rectangle when it says what it is, else the left half of the 2000 x 1000 canvas. */
+function roomViewSize(): { width: number; height: number } {
+    return {
+        width: typeof ChatRoomCharacterViewWidth === "number" && ChatRoomCharacterViewWidth > 0 ? ChatRoomCharacterViewWidth : 1000,
+        height: typeof ChatRoomCharacterViewHeight === "number" && ChatRoomCharacterViewHeight > 0 ? ChatRoomCharacterViewHeight : 1000,
+    };
 }
 
-function buildSpiral(color: string): HTMLDivElement {
-    const ns = "http://www.w3.org/2000/svg";
-    const layer = document.createElement("div");
-    layer.id = SPIRAL_ID;
-    layer.className = "lscg-spiral";
-    Object.assign(layer.style, { position: "fixed", pointerEvents: "none", zIndex: "9998", overflow: "hidden", opacity: "0", transition: "opacity 2s ease" });
-    const svg = document.createElementNS(ns, "svg");
-    svg.setAttribute("viewBox", "0 0 1000 1000");
-    svg.setAttribute("preserveAspectRatio", "xMidYMid slice");
-    svg.setAttribute("aria-hidden", "true");
-    Object.assign(svg.style, { width: "100%", height: "100%", display: "block" });
-    const path = document.createElementNS(ns, "path");
-    path.setAttribute("d", spiralPath());
-    path.setAttribute("fill", "none");
-    path.setAttribute("stroke", color);
-    path.setAttribute("stroke-width", "26");
-    path.setAttribute("stroke-linecap", "round");
-    svg.append(path);
-    layer.append(svg);
-    placeSpiral(layer);
-    // Spin the artwork inside the fixed layer, so the layer's box stays put.
-    if (!reducedMotion() && typeof svg.animate === "function")
-        spiralAnimation = svg.animate([{ transform: "rotate(0deg)" }, { transform: "rotate(360deg)" }], { duration: SPIRAL_TURN_SECONDS * 1000, iterations: Infinity, easing: "linear" });
-    return layer;
-}
-
-/** A slowly turning spiral over the game, in the hypno purple unless told otherwise. 0 fades it out and removes it. */
-export function setSpiralEffect(intensity: number, color: string = HYPNO_SPIRAL_COLOR): void {
-    const level = clamp01(intensity);
-    if (level <= 0) {
-        clearSpiralEffect();
+/**
+ * Draws the spiral over the room. Call it from a BC draw hook after the room and characters are drawn (the injector does, from
+ * ChatRoomRun). It eases toward the strength last set, turns slowly, and draws nothing once it has faded out.
+ */
+export function drawSpiralOverlay(now: number = Date.now()): void {
+    const dt = spiralState.lastDraw ? Math.min(0.25, Math.max(0, (now - spiralState.lastDraw) / 1000)) : 0;
+    spiralState.lastDraw = now;
+    const step = SPIRAL_FADE_PER_SECOND * dt;
+    if (spiralState.alpha < spiralState.target)
+        spiralState.alpha = Math.min(spiralState.target, spiralState.alpha + step);
+    else if (spiralState.alpha > spiralState.target)
+        spiralState.alpha = Math.max(spiralState.target, spiralState.alpha - step);
+    if (spiralState.alpha <= 0.001) {
+        spiralState.alpha = 0;
+        spiralState.lastDraw = spiralState.target > 0 ? now : 0;
         return;
     }
-    if (spiral && spiralColor !== color) {
-        clearSpiralEffect();
+    if (typeof MainCanvas === "undefined" || !MainCanvas)
+        return;
+    // Redrawn if the colour changes, or the player turns BC's blur on or off.
+    const soft = !!Player?.GraphicsSettings?.AllowBlur;
+    if (!spiralSprite || spriteColor !== spiralState.color || spriteSoft !== soft) {
+        spiralSprite = buildSpiralSprite(spiralState.color, soft);
+        spriteColor = spiralState.color;
+        spriteSoft = soft;
     }
-    if (!spiral?.isConnected) {
-        spiral = buildSpiral(color);
-        spiralColor = color;
-        document.body.append(spiral);
-        resizeListener = () => spiral && placeSpiral(spiral);
-        window.addEventListener("resize", resizeListener);
-        // Start transparent and fade in on the next frame.
-        requestAnimationFrame?.(() => { if (spiral) spiral.style.opacity = String(level * SPIRAL_MAX_OPACITY); });
+    if (!spiralSprite)
+        return;
+
+    const { width, height } = roomViewSize();
+    const size = Math.hypot(width, height); // the spiral's reach covers the room's corners
+    // Turn by how long this frame took, so changing the speed doesn't make the spiral jump. (Not held still for prefers-reduced-motion:
+    // the overlay is opt-in with its own on/off and speed settings, and a spiral that doesn't turn isn't what was asked for.)
+    spiralState.angle = (spiralState.angle + dt / spiralState.turnSeconds * Math.PI * 2) % (Math.PI * 2);
+    const turn = spiralState.angle;
+    MainCanvas.save();
+    try {
+        MainCanvas.beginPath();
+        MainCanvas.rect(0, 0, width, height);
+        MainCanvas.clip();
+        MainCanvas.globalAlpha = spiralState.alpha * SPIRAL_MAX_OPACITY;
+        // Overlay deepens the room's own light and dark under the lines, so they read clearly without a flat painted-on look.
+        MainCanvas.globalCompositeOperation = "overlay";
+        MainCanvas.translate(width / 2, height / 2);
+        MainCanvas.rotate(-turn); // counter-clockwise, so the arm appears to draw inward
+        MainCanvas.drawImage(spiralSprite, -size / 2, -size / 2, size, size);
+    } finally {
+        MainCanvas.restore();
     }
-    spiral.style.opacity = String(level * SPIRAL_MAX_OPACITY);
 }
 
+/** A turning spiral over the room, in the hypno purple unless told otherwise, making one turn every `turnSeconds`. It fades in and
+ *  out; 0 fades it out. */
+export function setSpiralEffect(intensity: number, color: string = HYPNO_SPIRAL_COLOR, turnSeconds: number = SPIRAL_TURN_SECONDS.DEFAULT): void {
+    spiralState.target = clamp01(intensity);
+    spiralState.turnSeconds = Number.isFinite(turnSeconds) ? Math.min(SPIRAL_TURN_SECONDS.MAX, Math.max(SPIRAL_TURN_SECONDS.MIN, turnSeconds)) : SPIRAL_TURN_SECONDS.DEFAULT;
+    if (spiralState.target > 0)
+        spiralState.color = color;
+}
+
+/** Fades the spiral out and forgets it. */
 export function clearSpiralEffect(): void {
-    spiralAnimation?.cancel();
-    spiralAnimation = undefined;
-    if (resizeListener) {
-        window.removeEventListener("resize", resizeListener);
-        resizeListener = undefined;
-    }
-    spiral?.remove();
-    spiral = undefined;
-    spiralColor = "";
+    spiralState.target = 0;
 }
 
-/** Removes every effect (for unload and the safeword). */
+/** Removes every effect (for unload and the safeword). The spiral is dropped at once rather than faded, since nothing will draw it again. */
 export function clearScreenEffects(): void {
     clearWaveEffect();
-    clearSpiralEffect();
+    spiralState.target = 0;
+    spiralState.alpha = 0;
+    spiralState.lastDraw = 0;
+    spiralState.angle = 0;
+    spiralSprite = undefined;
+    spriteColor = "";
+    spriteSoft = false;
 }

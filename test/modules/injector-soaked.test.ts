@@ -57,6 +57,39 @@ describe("InjectorModule soaked items", () => {
 			expect(worn.map(w => w.Types)).toEqual([["horny"], ["sedative"]]);
 		});
 
+		it("laced works as well as soaked, with a space or a hyphen", () => {
+			put("ItemMouth", "BallGag", soaked("Aphrodisiac-laced Gag"));
+			put("ItemNose", "NoseRing", soaked("Cloth", "sedative laced"));
+			expect(injector.WornSoakedItems.map(w => w.Types)).toEqual([["horny"], ["sedative"]]);
+		});
+
+		it("soak keywords read better than the plain ones: intoxicant-laced, and the plain keywords still work", () => {
+			put("ItemMouth", "BallGag", soaked("Intoxicant-laced Gag"));
+			expect(injector.WornSoakedItems[0].Types).toEqual(["suggestible"]);
+			put("ItemMouth", "BallGag", soaked("Intoxicating-soaked Gag"));
+			expect(injector.WornSoakedItems[0].Types).toEqual(["suggestible"]);
+			// "intoxicant" on its own is a soak word, not a gas keyword
+			expect(injector.GetDrugTypes(soaked("Intoxicant Mist") as never)).toEqual([]);
+			expect(injector.GetDrugTypes(soaked("Intoxicating Mist") as never)).toEqual(["suggestible"]);
+		});
+
+		it("an extension drug can name its own soak keywords", () => {
+			const unregister = extensionDrugs.register({
+				id: "test.giddy", source: "test", label: "Giddy", description: "", keywords: ["giddying"], soakKeywords: ["giddy tonic"], options: [], color: "#fff",
+				max: 10, tickMs: 6000, decayPerMinute: 1, thresholds: [], spikeChance: 0, onDose: () => { /* no-op */ },
+			});
+			try {
+				put("ItemMouth", "BallGag", soaked("Giddy tonic-laced Gag"));
+				expect(injector.WornSoakedItems[0].Types).toEqual(["test.giddy"]);
+				put("ItemMouth", "BallGag", soaked("Giddying-soaked Gag"));
+				expect(injector.WornSoakedItems[0].Types).toEqual(["test.giddy"]);
+				put("ItemMouth", "BallGag", soaked("Giddy tonic Gag"));
+				expect(injector.WornSoakedItems).toEqual([]);
+			} finally {
+				unregister();
+			}
+		});
+
 		it("also accepts 'soaked in' spelled with a space", () => {
 			put("ItemMouth", "BallGag", soaked("Sedative soaked rag"));
 			expect(injector.WornSoakedItems).toHaveLength(1);
@@ -76,7 +109,7 @@ describe("InjectorModule soaked items", () => {
 
 		it("resolves extension drug keywords like gases do", () => {
 			const unregister = extensionDrugs.register({
-				id: "test.giggle", source: "test", label: "Giggle", description: "", keywords: ["giggle"], options: [], color: "#fff",
+				id: "test.giggle", source: "test", label: "Giggle", description: "", keywords: ["giggle"], soakKeywords: [], options: [], color: "#fff",
 				max: 10, tickMs: 6000, decayPerMinute: 1, thresholds: [], spikeChance: 0, onDose: () => { /* no-op */ },
 			});
 			try {
@@ -135,6 +168,19 @@ describe("InjectorModule soaked items", () => {
 			seedRandom([0.5]);
 			injector.SoakedDrugEvent();
 			expect(sent.actions()).toEqual([]);
+		});
+
+		it("builds more gently than the same drug from a gas mask", () => {
+			put("ItemMouth", "BallGag", soaked("Aphrodisiac-soaked Gag"));
+			seedRandom([0.5]);
+			injector.SoakedDrugEvent();
+			const soakedDose = injector.hornyLevel;
+			injector.hornyLevel = 0;
+			seedRandom([0.5]);
+			injector.ApplyBreathDoses(["horny"], 2);
+			const gasDose = injector.hornyLevel;
+			expect(soakedDose).toBeGreaterThan(0);
+			expect(soakedDose / gasDose).toBeCloseTo(0.6, 2);
 		});
 
 		it("respects the player's opt-in for the drug", () => {

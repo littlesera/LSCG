@@ -93,6 +93,8 @@ export const CONTINUOUS_DELIVERY = {
 export const SOAKED_ITEMS = {
     /** 1 hour - How long a "<drug>-soaked" item stays potent once worn */
     DEFAULT_POTENCY: 60 * 60 * 1000,            // 3600000
-    /** Suffix that turns a drug keyword into a soaked keyword, e.g. "sedative-soaked" */
-    KEYWORD_SUFFIX: "-soaked",
+    /** Endings that turn a drug's soak keyword into a soaked item, e.g. "sedative-soaked" or "sedative-laced". A space also works ("sedative laced"). */
+    KEYWORD_SUFFIXES: ["-soaked", "-laced"],
+    /** How strong each breath from a soaked item is next to the same drug from a gas mask (1 = the same). Soaks build more gently. */
+    DOSE_FACTOR: 0.6,
 } as const;

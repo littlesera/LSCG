@@ -309,7 +309,7 @@ the crafting screen offers it as a checkbox.
 
 Your keywords also work as gases and soaks without any extra wiring. A Latex Respirator or Cryo Capsule carrying one of your keywords
 doses the wearer a little at each breath, and so does any crafted gag, mask or other item in the mouth, nose or face slots whose name or
-description has a keyword followed by `-soaked` (e.g. `giggly-soaked`). Soaks dry out after an hour unless the player has made them
+description has a keyword followed by `-soaked` or `-laced` (e.g. `giggly-soaked`, `giggly-laced`). If your plain keywords are adjectives that read badly there ("intoxicating-laced"), give `soakKeywords` too (`["intoxicant"]` gives `intoxicant-laced`); the plain keywords still work. Soaks dry out after an hour unless the player has made them
 permanent. Both arrive as `method: "breath"` in `drug.beforeApply` and `drug.applied`, so the same veto and softening hooks apply.
 
 **Players must opt in.** A drug does nothing to a player until they enable it on the Extension drugs tab of their Drug Enhancements

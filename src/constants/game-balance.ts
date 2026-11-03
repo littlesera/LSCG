@@ -81,10 +81,24 @@ export const SUGGESTIBLE_VISUALS = {
     WAVE: 1,
     /** Blur level at a full bar */
     BLUR: 3,
+    /** Alpha of the green tint at a full bar: faint (0 to 1) */
+    TINT: 0.2,
     /** Spiral strength while hypnotized (0 to 1) */
     SPIRAL_HYPNOTIZED: 0.6,
     /** Spiral strength at a full mind-control bar, before the trance takes hold (0 to 1) */
     SPIRAL_BUILDING: 0.35,
+} as const;
+
+// The hypno spiral overlay's turn time, in seconds per full turn
+export const SPIRAL_TURN_SECONDS = {
+    /** Fastest the player can set */
+    MIN: 0.5,
+    /** Slowest the player can set */
+    MAX: 10,
+    /** A steady, hypnotic turn */
+    DEFAULT: 3,
+    /** How much the setting moves per step */
+    STEP: 0.5,
 } as const;
 
 // Random Event Odds

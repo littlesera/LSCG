@@ -76,8 +76,12 @@ export function buildInjectorTabs(ctx: KitContext, s: InjectorSettingsModel, mis
                     get: () => s.showDrugLevels ?? true, set: v => s.showDrugLevels = v,
                 }),
                 CheckboxRow(ctx, {
-                    label: "Drug visuals", description: "Visual effects of the drugs, like the swaying screen of the suggestible and the spiral while hypnotized.",
+                    label: "Drug visuals", description: "Master switch for the drugs' visual effects: the suggestible's sway, tint and blur, and the hypno spiral. (The spiral also has its own switch in Hypnosis settings.)",
                     get: () => s.enableDrugVisuals ?? true, set: v => s.enableDrugVisuals = v,
+                }),
+                CheckboxRow(ctx, {
+                    label: "Swaying screen", description: "The warped, swaying screen while suggestible. Turn it off to keep just the green tint and blur. (Needs Drug visuals.)",
+                    get: () => s.enableSuggestibleWave ?? true, set: v => s.enableSuggestibleWave = v, disabled: () => s.enableDrugVisuals === false,
                 }),
                 CheckboxRow(ctx, {
                     label: "Heartbeat sound", description: "An occasional heartbeat sound while under the influence of aphrodisiac.",
@@ -126,7 +130,7 @@ export function buildInjectorTabs(ctx: KitContext, s: InjectorSettingsModel, mis
                     label: "Inexhaustible gases", description: "Any continuous delivery (e.g. a respirator) on you never runs out of gas.",
                     get: () => s.continuousDeliveryForever ?? false, set: v => s.continuousDeliveryForever = v,
                 }),
-                SectionLabel("Soaked items", "Crafted gags and masks with a drug keyword followed by \"-soaked\" (e.g. \"aphrodisiac-soaked\") dose you gradually while worn."),
+                SectionLabel("Soaked items", "Crafted gags and masks with a drug word followed by \"-soaked\" or \"-laced\" (e.g. \"aphrodisiac-soaked\", \"intoxicant-laced\") dose you gradually while worn."),
                 CheckboxRow(ctx, {
                     label: "Allow soaked items", description: "Allows crafted mouth, nose and face items soaked in a drug to dose you gradually.",
                     get: () => s.enableSoakedItems ?? true, set: v => s.enableSoakedItems = v,

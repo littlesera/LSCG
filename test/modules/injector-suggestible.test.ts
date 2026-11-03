@@ -17,6 +17,9 @@ import { sent } from "../harness/room";
 import { seedRandom, restoreRandom } from "../harness/time";
 import { registerExtension, type ModApiHandle } from "api/extensions";
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const g = globalThis as any;
+
 describe("Suggestible drug", () => {
 	let injector: InjectorModule;
 	let states: StateModule;
@@ -62,17 +65,39 @@ describe("Suggestible drug", () => {
 			["Sera would you kindly, kneel?", "kneel"],
 			["SERA, WOULD YOU PLEASE KINDLY sit down!", "sit down"],
 			["  Sera: would you please stand up.  ", "stand up"],
+			// the ways people actually ask
+			["Sera, would you please kneel for me", "kneel"],
+			["sera please kneel", "kneel"],
+			["Sera, please kneel for me", "kneel"],
+			["kneel, sera", "kneel"],
+			["kneel for me, Sera", "kneel"],
+			["please kneel, sera", "kneel"],
+			["Sera, I want you to kneel for me", "kneel"],
+			["Sera, I need you to hold still", "hold still"],
+			["Sera, I'd like you to come here", "come here"],
+			["Sera, could you hand me that", "hand me that"],
+			["Sera can you please sit", "sit"],
+			["Sera, you will kneel", "kneel"],
+			["Sera, would you kindly kneel for me please", "kneel"],
 		])("reads %j as %j", (msg, phrase) => {
 			expect(InjectorModule.ParseRequest(msg, names)).toBe(phrase);
 		});
 
 		it.each([
 			"Sera, dance",
-			"Sera, would you dance",
 			"Bob, would you kindly dance",
+			"please kneel, bob",
 			"would you kindly dance",
 			"Sera, would you kindly",
 			"Sera, would you please:",
+			"Sera, I want you",
+			"Sera, would you like some tea?",
+			"Sera, would you mind if I sat here",
+			"Sera, can you be quiet",
+			"hi, sera",
+			"thanks, Sera!",
+			"Sera, sorry",
+			"Sera please",
 			"",
 		])("ignores %j", msg => {
 			expect(InjectorModule.ParseRequest(msg, names)).toBeUndefined();
@@ -157,7 +182,92 @@ describe("Suggestible drug", () => {
 			injector.suggestibleLevel = full() * 0.6;
 			seedRandom([0.1]);
 			expect(ask("Sera, would you kindly dance")).toBe(true);
-			expect(sent.local().at(-1)).toContain("You have a strong urge to dance.");
+			expect(sent.local().at(-1)).toContain("You have a strong urge to \"dance\".");
+		});
+
+		describe("the bell", () => {
+			beforeEach(() => { g.AudioPlaySoundEffect.mockClear(); g.AudioShouldSilenceSound.mockReturnValue(false); });
+			afterEach(() => { g.AudioShouldSilenceSound.mockReturnValue(true); });
+
+			it("rings the suggestion bell with the urge", () => {
+				injector.suggestibleLevel = full();
+				expect(ask("Sera, would you kindly dance")).toBe(true);
+				expect(g.AudioPlaySoundEffect).toHaveBeenLastCalledWith("BellMedium");
+			});
+
+			it("stays quiet when sounds are silenced", () => {
+				g.AudioShouldSilenceSound.mockReturnValue(true);
+				injector.suggestibleLevel = full();
+				expect(ask("Sera, would you kindly dance")).toBe(true);
+				expect(g.AudioPlaySoundEffect).not.toHaveBeenCalled();
+			});
+
+			it("no bell when no urge is felt", () => {
+				injector.suggestibleLevel = 0;
+				expect(ask("Sera, would you kindly dance")).toBe(false);
+				expect(g.AudioPlaySoundEffect).not.toHaveBeenCalled();
+			});
+		});
+
+		it("swaps \"me\" for the speaker's name in what is shown, not in what extensions receive", () => {
+			injector.suggestibleLevel = full();
+			const seen: { phrase: string }[] = [];
+			const off = api.events.on("drug.suggestionUrge", p => seen.push(p));
+			expect(ask("Sera, would you kindly bring me a drink")).toBe(true);
+			expect(sent.local().at(-1)).toContain('to \"bring Alice a drink\".');
+			expect(seen[0].phrase).toBe("bring me a drink");
+			off();
+		});
+
+		it("only swaps the whole word, every time, whatever the case", () => {
+			injector.suggestibleLevel = full();
+			expect(ask("Sera, I want you to tell ME something and give me more")).toBe(true);
+			expect(sent.local().at(-1)).toContain('"tell Alice something and give Alice more"');
+			injector.lastUrgeAt.clear();
+			expect(ask("Sera, would you kindly remember the meme")).toBe(true);
+			expect(sent.local().at(-1)).toContain('"remember the meme"');
+		});
+
+		describe("AboutSpeaker: what the speaker said about themselves, shown about them", () => {
+			it.each([
+				["HeHim", "bring me my phone, it's mine", "bring Locke his phone, it's his"],
+				["SheHer", "bring me my phone, it's mine", "bring Locke her phone, it's hers"],
+				["TheyThem", "bring me my phone, it's mine", "bring Locke their phone, it's theirs"],
+				["HeHim", "tell me what I think of myself", "tell Locke what he think of himself"],
+				["SheHer", "tell me what I think of myself", "tell Locke what she think of herself"],
+				["TheyThem", "tell me what I think of myself", "tell Locke what they think of themself"],
+				["HeHim", "wait until I'm ready, I'll come and I've seen I'd go", "wait until he's ready, he'll come and he's seen he'd go"],
+				["SheHer", "wait until I'm ready, I'll come and I've seen I'd go", "wait until she's ready, she'll come and she's seen she'd go"],
+				["TheyThem", "wait until I'm ready, I'll come and I've seen I'd go", "wait until they're ready, they'll come and they've seen they'd go"],
+				["HeHim", "stay while I am here", "stay while he is here"],
+				["TheyThem", "stay while I am here", "stay while they are here"],
+				["SheHer", "wait until I’m ready", "wait until she's ready"],
+			])("%s: %j", (pronouns, said, shown) => {
+				expect(InjectorModule.AboutSpeaker(said, "Locke", pronouns)).toBe(shown);
+			});
+
+			it("leaves other words alone, whatever the case, and unknown pronouns read as they", () => {
+				expect(InjectorModule.AboutSpeaker("remember the meme, my mine mighty mythic, Mia", "Locke", "SheHer")).toBe("remember the meme, her hers mighty mythic, Mia");
+				expect(InjectorModule.AboutSpeaker("ME and MY and i and I", "Locke", "HeHim")).toBe("Locke and his and he and he");
+				expect(InjectorModule.AboutSpeaker("my way", "Locke")).toBe("their way");
+				expect(InjectorModule.AboutSpeaker("kneel", "Locke", "SheHer")).toBe("kneel");
+			});
+
+			it("never swaps what a swap just produced, even a name that is itself a swap word", () => {
+				expect(InjectorModule.AboutSpeaker("hug me and I", "My", "SheHer")).toBe("hug My and she");
+			});
+
+			it("the urge line uses the speaker's own pronouns", () => {
+				injector.suggestibleLevel = full();
+				alice.flags.pronouns = "HeHim";
+				expect(ask("Sera, would you kindly bring me my phone")).toBe(true);
+				expect(sent.local().at(-1)).toContain('"bring Alice his phone"');
+				injector.lastUrgeAt.clear();
+				alice.flags.pronouns = "TheyThem";
+				expect(ask("Sera, would you kindly say I am sorry")).toBe(true);
+				expect(sent.local().at(-1)).toContain('"say they are sorry"');
+				alice.flags.pronouns = "SheHer";
+			});
 		});
 
 		it("a faint urge near the minimum, and not when the roll fails", () => {
@@ -166,14 +276,14 @@ describe("Suggestible drug", () => {
 			expect(ask("Sera, would you kindly dance")).toBe(false);
 			seedRandom([0.1]);
 			expect(ask("Sera, would you kindly dance")).toBe(true);
-			expect(sent.local().at(-1)).toContain("You feel a faint urge to dance.");
+			expect(sent.local().at(-1)).toContain("You feel a faint urge to \"dance\".");
 		});
 
 		it("always felt at the top of the bar", () => {
 			injector.suggestibleLevel = full();
 			seedRandom([0.99]);
 			expect(ask("Sera, would you please: spin around")).toBe(true);
-			expect(sent.local().at(-1)).toContain("An overwhelming urge washes over you to spin around.");
+			expect(sent.local().at(-1)).toContain("An overwhelming urge washes over you to \"spin around\".");
 		});
 
 		it("the same speaker can't stir another urge straight away", () => {

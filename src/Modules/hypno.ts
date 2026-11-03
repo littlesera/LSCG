@@ -24,6 +24,7 @@ import {
     CHECK_INTERVALS,
     EFFECT_DURATIONS,
     TRIGGER_TIMES,
+    SPIRAL_TURN_SECONDS,
 } from "../constants";
 
 export class SuggestionMiniGameOptions {
@@ -103,6 +104,7 @@ export class HypnoModule extends BaseModule {
             enableArousal: false,
             enableSpirals: true,
             enableSpiralOverlay: true,
+            spiralTurnSeconds: SPIRAL_TURN_SECONDS.DEFAULT,
             enableSnapWakeup: true,
             trigger: "",
             triggerRevealed: false,
