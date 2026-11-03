@@ -6,7 +6,7 @@ import { Consent, getModule } from "modules";
 import { GuiInjector } from "Settings/injector";
 import { InjectorSettingsModel } from "Settings/Models/injector";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
-import { IsBlockedSender, OnActivity, SendAction, getRandomInt, removeAllHooksByModule, isPhraseInString, settingsSave, hookFunction, getCharacter, AUDIO, getPlayerVolume, OnAction, hookBCXCurse, GetTargetCharacter, GetActivityName, GetMetadata, GetActivityEntryFromContent, IsActivityAllowed, GetItemName, LSCG_SendLocal } from "../utils";
+import { IsBlockedSender, OnActivity, SendAction, getRandomInt, removeAllHooksByModule, isPhraseInString, settingsSave, hookFunction, getCharacter, AUDIO, getPlayerVolume, OnAction, hookBCXCurse, GetTargetCharacter, GetActivityName, GetMetadata, GetActivityEntryFromContent, IsActivityAllowed, GetItemName, LSCG_SendLocal, replace_template } from "../utils";
 import { ActivityModule, ActivityPatch } from "./activities";
 import { HypnoModule } from "./hypno";
 import { MiscModule } from "./misc";
@@ -31,6 +31,7 @@ import {
     ACTIVITY_VALUES,
     DRUG_EFFECT_MULTIPLIERS,
     RANDOM_EVENT_ODDS,
+    BREATH_STRENGTH_PERCENT,
     BREATH_DRUG_INCREASES,
     AROUSAL_LIMITS,
     DRUG_BAR_DIMENSIONS,
@@ -128,6 +129,11 @@ export class InjectorModule extends BaseModule {
 
             enableDrugVisuals: true,
             enableSuggestibleWave: true,
+            enableDrugEmotes: true,
+            drugEmotesLocal: false,
+            drugEmoteMinutes: CHECK_INTERVALS.BREATH_DRUG_EMOTE_MIN / 60_000,
+            gasStrength: BREATH_STRENGTH_PERCENT.GAS_DEFAULT,
+            soakedStrength: Math.round(SOAKED_ITEMS.DOSE_FACTOR * 100),
             enableSoakedItems: true,
             soakedPotencyTime: SOAKED_ITEMS.DEFAULT_POTENCY,
             infiniteSoakPotency: false,
@@ -1909,7 +1915,7 @@ export class InjectorModule extends BaseModule {
             const mask = this.WornRespirator;
             if (!mask)
                 return;
-            this.ApplyBreathDoses(this.GetDrugTypes(mask.Item.Craft!), mask.Item.Craft?.MemberNumber);
+            this.ApplyBreathDoses(this.GetDrugTypes(mask.Item.Craft!), mask.Item.Craft?.MemberNumber, undefined, this.GasStrength);
         }
     }
 
@@ -1971,20 +1977,50 @@ export class InjectorModule extends BaseModule {
             if (!this.IsSoakPotent(soaked.Key, now)) {
                 if (!this.driedSoaks.has(soaked.Key)) {
                     this.driedSoaks.add(soaked.Key);
-                    SendAction(`The drug soaking %NAME%'s ${GetItemName(soaked.Item)} has finally dried out.`);
+                    this.DrugEmote(`The drug soaking %NAME%'s ${GetItemName(soaked.Item)} has finally dried out.`, false);
                 }
                 continue;
             }
             const itemName = GetItemName(soaked.Item);
             if (justPutOn && !this.asleep && !this.brainwashed && this.EnabledDrugTypes(soaked.Types).length > 0) {
-                SendAction(this.isMouthSoakSlot(soaked.Group)
+                this.DrugEmote(this.isMouthSoakSlot(soaked.Group)
                     ? `%NAME%'s eyes widen at the wet, bitter-sweet taste of %POSSESSIVE% ${itemName}.`
-                    : `%NAME%'s eyes widen as the damp, cloying scent of %POSSESSIVE% ${itemName} fills %POSSESSIVE% head.`);
+                    : `%NAME%'s eyes widen as the damp, cloying scent of %POSSESSIVE% ${itemName} fills %POSSESSIVE% head.`, false);
                 CharacterSetFacialExpression(Player, "Eyes", "Surprised", 4);
             }
-            this.ApplyBreathDoses(soaked.Types, soaked.Item.Craft?.MemberNumber, this.soakedEmotes(itemName, soaked.Group), SOAKED_ITEMS.DOSE_FACTOR);
+            this.ApplyBreathDoses(soaked.Types, soaked.Item.Craft?.MemberNumber, this.soakedEmotes(itemName, soaked.Group), this.SoakedStrength);
         }
     }
+
+    /** The player's gas strength as a multiplier (1 = standard). */
+    get GasStrength() { return (this.settings.gasStrength ?? BREATH_STRENGTH_PERCENT.GAS_DEFAULT) / 100; }
+    /** The player's soak strength as a multiplier of a standard gas dose. */
+    get SoakedStrength() { return (this.settings.soakedStrength ?? SOAKED_ITEMS.DOSE_FACTOR * 100) / 100; }
+
+    private lastBreathEmote = -Infinity;
+    /** Least time (ms) between breathed-drug emotes, from the player's setting. 0 means no limit. */
+    get DrugEmoteGap() {
+        const minutes = this.settings.drugEmoteMinutes ?? CHECK_INTERVALS.BREATH_DRUG_EMOTE_MIN / 60_000;
+        return Math.max(0, minutes) * 60_000;
+    }
+
+    /** A drug flavor emote, if the player has them on. Said to the room, or only shown to the player when they chose local.
+     *  `rateLimited` emotes also wait out the gap since the last one: the dosing is steady, the chatter should not be. */
+    DrugEmote(line: string, rateLimited = true) {
+        if (this.settings.enableDrugEmotes === false)
+            return;
+        if (rateLimited) {
+            const now = CommonTime();
+            if (this.lastBreathEmote + this.DrugEmoteGap > now)
+                return;
+            this.lastBreathEmote = now;
+        }
+        if (this.settings.drugEmotesLocal)
+            LSCG_SendLocal(replace_template(line));
+        else
+            SendAction(line);
+    }
+    BreathEmote(line: string) { this.DrugEmote(line); }
 
     /** One breath of drug: shared by respirators and soaked items. Applies the player's opt-ins, the extension hook, and every built-in
      *  and extension drug the types name. `crafterMemberNumber` is who is responsible for the dose. `emotes` replaces the gas wording. */
@@ -2000,30 +2036,30 @@ export class InjectorModule extends BaseModule {
 
             if (types.indexOf("sedative") > -1 && this.settings.enableSedative) {
                 if (getRandomInt(RANDOM_EVENT_ODDS.BREATH_SEDATIVE_BIG_JUMP) == 0) { // Odds are big jump once every 60 seconds
-                    if (!this.asleep) SendAction(pick(emotes?.sedative, this.breathSedativeEventStr));
+                    if (!this.asleep) this.BreathEmote(pick(emotes?.sedative, this.breathSedativeEventStr));
                     this.AddSedative(randomLevelIncrease + BREATH_DRUG_INCREASES.BIG_JUMP_BASE * strength, getRandomInt(RANDOM_EVENT_ODDS.BREATH_MINIGAME_CHANCE) != 0); // 2/3 chance to start incap minigame
                 } else this.AddSedative(randomLevelIncrease / BREATH_DRUG_INCREASES.SMALL_TICK_DIVISOR, false);
             }
             if (types.indexOf("mindcontrol") > -1 && this.settings.enableMindControl) {
                 if (getRandomInt(RANDOM_EVENT_ODDS.BREATH_MIND_CONTROL_BIG_JUMP) == 0) { // Odds are big jump once every 60 seconds
-                    if (!this.brainwashed) SendAction(pick(emotes?.mindcontrol, this.breathMindControlEventStr));
+                    if (!this.brainwashed) this.BreathEmote(pick(emotes?.mindcontrol, this.breathMindControlEventStr));
                     this.AddMindControl(randomLevelIncrease + BREATH_DRUG_INCREASES.BIG_JUMP_BASE * strength, getRandomInt(RANDOM_EVENT_ODDS.BREATH_MINIGAME_CHANCE) != 0, crafterMemberNumber); // 2/3 chance to start incap minigame
                 } else this.AddMindControl(randomLevelIncrease / BREATH_DRUG_INCREASES.SMALL_TICK_DIVISOR, false, crafterMemberNumber);
             }
             if (types.indexOf("horny") > -1 && this.settings.enableHorny) {
                 if (getRandomInt(RANDOM_EVENT_ODDS.BREATH_HORNY_BIG_JUMP) == 0) { // Odds are big jump once every 90 seconds
-                    SendAction(pick(emotes?.horny, this.breathAphrodesiacEventStr));
+                    this.BreathEmote(pick(emotes?.horny, this.breathAphrodesiacEventStr));
                     this.AddHorny(randomLevelIncrease + BREATH_DRUG_INCREASES.BIG_JUMP_BASE * strength, getRandomInt(RANDOM_EVENT_ODDS.HORNY_FORCE_CUM_CHANCE) == 0); // 1/3 chance to push user over the edge (if allowed...)
                 } else this.AddHorny(randomLevelIncrease / BREATH_DRUG_INCREASES.SMALL_TICK_DIVISOR, false);
             }
             if (types.indexOf("suggestible") > -1 && this.settings.enableSuggestible) {
                 if (getRandomInt(RANDOM_EVENT_ODDS.BREATH_SUGGESTIBLE_BIG_JUMP) == 0) {
-                    SendAction(pick(emotes?.suggestible, this.breathSuggestibleEventStr));
+                    this.BreathEmote(pick(emotes?.suggestible, this.breathSuggestibleEventStr));
                     this.AddSuggestible(randomLevelIncrease + BREATH_DRUG_INCREASES.BIG_JUMP_BASE * strength);
                 } else this.AddSuggestible(randomLevelIncrease / BREATH_DRUG_INCREASES.SMALL_TICK_DIVISOR);
             }
             if (types.indexOf("antidote") > -1 && getRandomInt(RANDOM_EVENT_ODDS.BREATH_ANTIDOTE_HEAL) == 0) { // Odds are heal once every 4 minutes
-                SendAction(this.breathAntidoteEventStr[getRandomInt(this.breathAntidoteEventStr.length)]);
+                this.DrugEmote(this.breathAntidoteEventStr[getRandomInt(this.breathAntidoteEventStr.length)]);
                 this.DoCure();
             }
             // Each breath is a small dose, like the built-in drugs' small ticks.
