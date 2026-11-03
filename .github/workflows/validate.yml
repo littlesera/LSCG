@@ -25,6 +25,13 @@ jobs:
       with:
         path: .cache/bc-*
         key: bc-client-${{ hashFiles('test/bc-client.json') }}
+    # gitgud.io (where the BC client comes from) sits behind a Cloudflare challenge that only a browser passes, so CI can't download
+    # from it. The pinned client files are packed once (npm run bc:pack) and attached to this repo's "bc-client" release; this
+    # unpacks them into .cache/ so the tests never reach gitgud. Missing archive: it says so, and the old download is the fallback.
+    - name: Unpack the BC client from this repo's release
+      env:
+        BC_CLIENT_ARCHIVE_BASE: https://github.com/${{ github.repository }}/releases/download/bc-client
+      run: npm run bc:fetch
     # Both test projects in one run: "unit" and "bc" (against the cached real BC client), with
     # coverage. Fails if coverage drops below vitest.config.ts's thresholds.
     - run: npm run coverage:all

@@ -17,6 +17,12 @@ declare module "node:fs" {
 	export function existsSync(path: string): boolean;
 	export function mkdirSync(path: string, options?: { recursive?: boolean }): void;
 	export function writeFileSync(path: string, data: string): void;
+	export function mkdtempSync(prefix: string): string;
+	export function rmSync(path: string, options?: { recursive?: boolean; force?: boolean }): void;
+}
+
+declare module "node:os" {
+	export function tmpdir(): string;
 }
 
 declare module "node:path" {

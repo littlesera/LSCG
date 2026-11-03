@@ -25,7 +25,9 @@
     "report:speech": "node scripts/speech-report.mjs",
     "coverage": "vitest run --project unit --coverage",
     "coverage:all": "vitest run --coverage",
-    "fetch-bc": "node scripts/fetch-bc.mjs"
+    "fetch-bc": "node scripts/fetch-bc.mjs",
+    "bc:pack": "node scripts/bc-client-archive.mjs pack",
+    "bc:fetch": "node scripts/bc-client-archive.mjs fetch"
   },
   "keywords": [],
   "author": "Little Sera",
