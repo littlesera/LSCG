@@ -1,4 +1,5 @@
 import { remoteAccessRows } from "./remoteAccessRows";
+import { SPIRAL_TURN_SECONDS } from "constants/game-balance";
 import { h } from "tsx-dom";
 import { getModule } from "modules";
 import { HypnoModule } from "Modules/hypno";
@@ -145,6 +146,15 @@ export class GuiHypno extends GuiSubscreen {
 					CheckboxRow(ctx, {
 						label: "Enable spirals", description: "If checked headsets and other spirals can cause trance.",
 						get: () => s.enableSpirals ?? true, set: v => s.enableSpirals = v, disabled: off,
+					}),
+					CheckboxRow(ctx, {
+						label: "Spiral overlay", description: "Draws a slowly turning purple spiral over the screen while you are hypnotized.",
+						get: () => s.enableSpiralOverlay ?? true, set: v => s.enableSpiralOverlay = v,
+					}),
+					NumberRow(ctx, {
+						label: "Spiral turn time (sec.)", description: "Seconds for the spiral overlay to make one full turn. Lower is faster.",
+						min: SPIRAL_TURN_SECONDS.MIN, max: SPIRAL_TURN_SECONDS.MAX, step: SPIRAL_TURN_SECONDS.STEP, get: () => s.spiralTurnSeconds ?? SPIRAL_TURN_SECONDS.DEFAULT, set: v => s.spiralTurnSeconds = v,
+						disabled: () => off() || s.enableSpiralOverlay === false,
 					}),
 					CheckboxRow(ctx, {
 						label: "Enable wake-up on snaps", description: "If checked you exit the trance when you hear someone snapping.",

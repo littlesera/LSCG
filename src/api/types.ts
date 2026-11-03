@@ -255,8 +255,12 @@ export interface LSCGDrugDefinition {
     /** One line for the settings and crafting screens. */
     description?: string;
     /** Phrases that make a crafted item this drug: if its name or description contains one, it's a dose. Case
-     *  and punctuation don't matter. Items must be a Medical Injector, Latex Respirator, Filled Glass or Mug. */
+     *  and punctuation don't matter. Items must be a Medical Injector, Latex Respirator, Filled Glass or Mug. A keyword followed by
+     *  "-soaked" or "-laced" on a crafted item in a mouth, nose or face slot soaks the wearer in it as well. */
     keywords: string[];
+    /** Phrases for soaked items when your plain keywords don't read well in front of "-soaked" or "-laced": "intoxicant" for an
+     *  "intoxicating" drug gives "intoxicant-laced". Your plain keywords work there too, so this is only for the better wording. */
+    soakKeywords?: string[];
     /** Colour of the level bar drawn beside the character, any CSS colour string (default a soft blue). */
     color?: string;
     /** The level that fills the bar (default 10). */
@@ -288,7 +292,7 @@ export interface LSCGDrugDefinition {
     onWearOff?(ctx: LSCGDrugContext): void;
 }
 
-/** Where a dose comes from. Built-in drug types are "sedative", "mindcontrol", "horny" and "antidote"; an
+/** Where a dose comes from. Built-in drug types are "sedative", "mindcontrol", "horny", "suggestible" and "antidote"; an
  *  extension's drug is its namespaced id ("<extension id>.<name>"), yours or another extension's. */
 export type LSCGDrugType = "sedative" | "mindcontrol" | "horny" | "antidote" | (string & {});
 
@@ -609,6 +613,9 @@ export interface LSCGEventMap {
     /** A drug's level changed, including slow decay (built-in or extension). `level` and `max` are on the same scale
      *  as `LSCGDrugsApi.getLevel`; `level / max` is the fraction of the bar, e.g. to apply effects at thresholds. */
     "drug.levelChanged": { type: string; previous: number; level: number; max: number };
+    /** Someone asked a suggestible player to do something ("<name>, would you kindly <phrase>") and they felt the urge. `level` and
+     *  `max` are the suggestible bar. Nothing is forced: the player only gets a prompt. */
+    "drug.suggestionUrge": { sender: number; phrase: string; level: number; max: number };
     /** A drug took effect on the player. */
     "drug.applied": { types: string[]; method: LSCGDrugMethod; sender?: number; location?: string };
     /** The player's collar choke level changed. */

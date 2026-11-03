@@ -519,6 +519,9 @@ const _phraseRegexCache = new Map<string, RegExp>();
 export function isPhraseInString(string: string, phrase: string, ignoreOOC: boolean = false) {
 	if (!string || string === "")
 		return false;
+	// An empty phrase would match anything (its pattern is just the edges), and never means "everything" when someone gives a phrase.
+	if (!phrase || phrase.trim() === "")
+		return false;
 	let praseMatch = _phraseRegexCache.get(phrase);
 	if (!praseMatch) {
 		// Punctuation edges too: "[changing]?" has no \b after "]" (#669)

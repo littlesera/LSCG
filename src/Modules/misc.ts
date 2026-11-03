@@ -2,8 +2,9 @@ import { BaseModule } from "base";
 import { MiscSettingsModel } from "Settings/Models/base";
 import { ModuleCategory } from "Settings/setting_definitions";
 import { getCharacter, GetItemNameAndDescriptionConcat, GetMetadata, getRandomInt, GetTargetCharacter, hookFunction, isPhraseInString, LSCG_SendLocal, OnAction, OnActivity, removeAllHooksByModule, SendAction, settingsSave, ICONS, GetCraftingNameAndDescriptionConcat, GetHandheldItemNameAndDescriptionConcat } from "../utils";
-import { CureKeywords, getModule, HornyKeywords, MindControlKeywords, NetgunKeywords, SedativeKeywords } from "modules";
+import { BuiltInDrugKeywords, CureKeywords, getModule, HornyKeywords, MindControlKeywords, NetgunKeywords, SedativeKeywords } from "modules";
 import { extensionDrugs, type ExtensionDrug } from "api/drugs";
+import { BUILT_IN_DRUGS } from "./drugs/builtin";
 import { StateModule } from "./states";
 import { SleepState } from "./States/SleepState";
 import { LeashingModule } from "./leashing";
@@ -18,6 +19,7 @@ import {
     LSCG_EFFECTS_MENU,
     EFFECT_DURATIONS,
     ACTIVITY_VALUES,
+    SOAKED_ITEMS,
 } from "../constants";
 import { SoulbindKeywords } from "./States/AstralProjectionState";
 
@@ -823,7 +825,47 @@ export class MiscModule extends BaseModule {
 
     /** The built-in drugs, then any extensions have registered, which can appear after this module is built. */
     get allDrugOptions(): ScreenElem[] {
-        return [...this.drugOptionsList, ...extensionDrugs.all().map(drug => this.extensionDrugOption(drug))];
+        return [...this.drugOptionsList, ...this.tableDrugOptions, ...extensionDrugs.all().map(drug => this.extensionDrugOption(drug)), ...this.soakedDrugOptions];
+    }
+
+    /** Crafting checkboxes for built-in drugs defined in the drug table that drugOptionsList (written before the table) doesn't list by hand. */
+    get tableDrugOptions(): ScreenElem[] {
+        const listed = ["sedative", "horny", "mindcontrol"];
+        const allowedItems = ["MedicalInjector", "LatexRespirator", "GlassFilled", "Mug"];
+        return BUILT_IN_DRUGS.filter(drug => !listed.includes(drug.id)).map(drug => ({
+            type: "checkbox",
+            id_label: `crafting-lscg-effects-${drug.id}-label`,
+            id_button: `crafting-lscg-effects-${drug.id}-checkbox`,
+            label: drug.label,
+            description: `Add ${drug.label.toLowerCase()} effect to the item (Only for: Medical Injector, Latex Respirator, Filled Glass or Mug)`,
+            keywords: BuiltInDrugKeywords(drug) ?? [drug.id],
+            condition: (): boolean => !!CraftingSelectedItem?.Asset && allowedItems.includes(CraftingSelectedItem.Asset.Name),
+        } as ScreenElem));
+    }
+
+    /** Crafted mouth, nose and face slots a "<drug>-soaked" item can sit in (see InjectorModule.soakedSlots). */
+    static readonly SoakableGroups: string[] = ["ItemMouth", "ItemMouth2", "ItemMouth3", "ItemNose", "ItemHood", "ItemHead"];
+
+    /** One "soaked" checkbox per drug, for items in the mouth, nose and face slots. They write "<keyword>-soaked", which the injector
+     *  reads to dose the wearer a little at a time. Extension drugs get one as soon as they register. */
+    get soakedDrugOptions(): ScreenElem[] {
+        const drugs: { id: string; label: string; keyword: string | undefined }[] = [
+            ...BUILT_IN_DRUGS.map(drug => ({ id: drug.id as string, label: drug.label, keyword: drug.soakKeywords[0] ?? BuiltInDrugKeywords(drug)?.[0] ?? drug.id })),
+            ...extensionDrugs.all().map(drug => ({ id: drug.id, label: drug.label, keyword: drug.soakKeywords[0] ?? drug.keywords[0] })),
+        ];
+        return drugs.filter(d => !!d.keyword).map(d => {
+            const safe = d.id.replace(/[^a-z0-9_]/gi, c => `-${c.charCodeAt(0).toString(16)}-`);
+            return {
+                type: "checkbox",
+                id_label: `crafting-lscg-effects-soaked-${safe}-label`,
+                id_button: `crafting-lscg-effects-soaked-${safe}-checkbox`,
+                label: `${d.label}-soaked`,
+                description: `Soak the item in ${d.label.toLowerCase()}, dosing the wearer gradually while worn (Only for: mouth, nose and face items)`,
+                // The first one is what ticking the box writes; all of them tick it.
+                keywords: SOAKED_ITEMS.KEYWORD_SUFFIXES.map(suffix => d.keyword + suffix),
+                condition: (): boolean => !!CraftingSelectedItem?.Asset && MiscModule.SoakableGroups.includes(CraftingSelectedItem.Asset.Group.Name),
+            } as ScreenElem;
+        });
     }
 
     extensionDrugOption(drug: ExtensionDrug): ScreenElem {

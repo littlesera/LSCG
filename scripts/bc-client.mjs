@@ -173,7 +173,7 @@ async function fetchText(url) {
 	throw lastError;
 }
 
-function cacheDirFor(gameVersion, sha) {
+export function cacheDirFor(gameVersion, sha) {
 	return join(ROOT, ".cache", `bc-${gameVersion}-${sha.slice(0, 7)}`);
 }
 

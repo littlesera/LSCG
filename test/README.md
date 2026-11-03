@@ -69,6 +69,18 @@ values need an explicit sync step onto Node's own `globalThis`).
   `bc-stubs` in the same change; `.github/workflows/bc-bump.yml` does this
   automatically on a weekly schedule (or on demand).
 
+### Where CI gets the BC client
+
+gitgud.io (where BC lives) sits behind a Cloudflare challenge that only a real browser passes, so CI can't download the
+client from it. Instead the pinned files are packed once and attached to this repo's `bc-client` release; `validate.yml`
+unpacks them into `.cache/` (`npm run bc:fetch`), where `scripts/bc-client.mjs` finds them already present.
+
+When `test/bc-client.json` moves to a new BC commit (the weekly bump workflow can't download either), in a browser-reachable
+checkout: get the new files into `.cache/bc-<version>-<sha7>/` (for example by running `npm run fetch-bc` where gitgud
+answers, or copying a complete folder), then `npm run bc:pack` and upload the archive it prints the command for
+(`gh release upload bc-client <archive> --clobber`). Until that archive exists CI falls back to the (blocked) download.
+The playground's much larger `.cache/bc-full-*` cache for the UI job is not packed this way; that job is non-blocking.
+
 ## The playground (real browser)
 
 Neither project above draws anything: jsdom has no canvas or layout. For UI work, `npm run playground` serves a

@@ -1,6 +1,6 @@
 import { h } from "tsx-dom";
 import { Chip, CheckboxRow, Expando, Icon, KitContext, KitTab, NumberRow, RuleTable, SectionLabel } from "Dom/kit";
-import { COOLDOWNS } from "constants/timing";
+import { BUILT_IN_DRUGS } from "Modules/drugs/builtin";
 import { extensionDrugs, type ExtensionDrug } from "api/drugs";
 import { optionRows } from "./optionRows";
 import { summarizeOptions } from "api/options";
@@ -10,11 +10,6 @@ import type { MiscSettingsModel } from "./Models/base";
 
 const MAX_SIPS = 1000;
 const MAX_DECAY_MINUTES = 240;
-const DEFAULT_DECAY_MINUTES = {
-    sedative: COOLDOWNS.SEDATIVE / 60_000,
-    mindcontrol: COOLDOWNS.MIND_CONTROL / 60_000,
-    horny: COOLDOWNS.AROUSAL / 60_000,
-};
 
 /** What a crafted item needs to say to be this drug, as chips so long keyword lists stay readable. */
 function keywordChips(drug: ExtensionDrug): HTMLElement {
@@ -81,6 +76,14 @@ export function buildInjectorTabs(ctx: KitContext, s: InjectorSettingsModel, mis
                     get: () => s.showDrugLevels ?? true, set: v => s.showDrugLevels = v,
                 }),
                 CheckboxRow(ctx, {
+                    label: "Drug visuals", description: "Master switch for the drugs' visual effects: the suggestible's sway, tint and blur, and the hypno spiral. (The spiral also has its own switch in Hypnosis settings.)",
+                    get: () => s.enableDrugVisuals ?? true, set: v => s.enableDrugVisuals = v,
+                }),
+                CheckboxRow(ctx, {
+                    label: "Swaying screen", description: "The warped, swaying screen while suggestible. Turn it off to keep just the green tint and blur. (Needs Drug visuals.)",
+                    get: () => s.enableSuggestibleWave ?? true, set: v => s.enableSuggestibleWave = v, disabled: () => s.enableDrugVisuals === false,
+                }),
+                CheckboxRow(ctx, {
                     label: "Heartbeat sound", description: "An occasional heartbeat sound while under the influence of aphrodisiac.",
                     get: () => s.heartbeat ?? true, set: v => s.heartbeat = v,
                 }),
@@ -90,25 +93,17 @@ export function buildInjectorTabs(ctx: KitContext, s: InjectorSettingsModel, mis
             label: "Drugs",
             render: () => [
                 SectionLabel("LSCG's drugs", "Each activates for any injector or drink with one of its keywords in its crafted name or description."),
-                CheckboxRow(ctx, {
-                    label: "Sedative", description: "Activates for \"sedative\" or \"tranquilizer\".",
-                    get: () => s.enableSedative ?? false, set: v => s.enableSedative = v,
-                }),
-                CheckboxRow(ctx, {
-                    label: "Brainwash drug", description: "Activates for \"mind control,\" \"hypnotizing,\" or \"brainwashing\".",
-                    get: () => s.enableMindControl ?? false, set: v => s.enableMindControl = v,
-                }),
-                CheckboxRow(ctx, {
-                    label: "Aphrodisiac", description: "Activates for \"horny\" or \"aphrodisiac\".",
-                    get: () => s.enableHorny ?? false, set: v => s.enableHorny = v,
-                }),
+                ...BUILT_IN_DRUGS.map(drug => CheckboxRow(ctx, {
+                    label: drug.label, description: drug.activatesFor,
+                    get: () => s[drug.enableKey] ?? false, set: v => s[drug.enableKey] = v,
+                })),
                 SectionLabel("How fast they wear off", "Minutes for one dose to wear off while you're online. Leave at 0 for LSCG's default."),
-                ...(["sedative", "mindcontrol", "horny"] as const).map(type => NumberRow(ctx, {
-                    label: { sedative: "Sedative", mindcontrol: "Brainwash drug", horny: "Aphrodisiac" }[type],
-                    description: `Default: ${DEFAULT_DECAY_MINUTES[type]} minutes per dose.`,
+                ...BUILT_IN_DRUGS.map(drug => NumberRow(ctx, {
+                    label: drug.label,
+                    description: `Default: ${drug.defaultCooldown / 60_000} minutes per dose.`,
                     min: 0, max: MAX_DECAY_MINUTES, step: 0.5,
-                    get: () => injector?.GetDecayOverride(type) ?? 0,
-                    set: v => injector?.SetDecayOverride(type, v),
+                    get: () => injector?.GetDecayOverride(drug.id) ?? 0,
+                    set: v => injector?.SetDecayOverride(drug.id, v),
                     disabled: () => !injector,
                 })),
             ],
@@ -134,6 +129,15 @@ export function buildInjectorTabs(ctx: KitContext, s: InjectorSettingsModel, mis
                 CheckboxRow(ctx, {
                     label: "Inexhaustible gases", description: "Any continuous delivery (e.g. a respirator) on you never runs out of gas.",
                     get: () => s.continuousDeliveryForever ?? false, set: v => s.continuousDeliveryForever = v,
+                }),
+                SectionLabel("Soaked items", "Crafted gags and masks with a drug word followed by \"-soaked\" or \"-laced\" (e.g. \"aphrodisiac-soaked\", \"intoxicant-laced\") dose you gradually while worn."),
+                CheckboxRow(ctx, {
+                    label: "Allow soaked items", description: "Allows crafted mouth, nose and face items soaked in a drug to dose you gradually.",
+                    get: () => s.enableSoakedItems ?? true, set: v => s.enableSoakedItems = v,
+                }),
+                CheckboxRow(ctx, {
+                    label: "Soaks never dry", description: "Soaked items on you stay potent for as long as they are worn; otherwise they dry out after an hour.",
+                    get: () => s.infiniteSoakPotency ?? false, set: v => s.infiniteSoakPotency = v,
                 }),
                 SectionLabel("Chloroform"),
                 CheckboxRow(ctx, {

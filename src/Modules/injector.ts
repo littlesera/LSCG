@@ -6,7 +6,7 @@ import { Consent, getModule } from "modules";
 import { GuiInjector } from "Settings/injector";
 import { InjectorSettingsModel } from "Settings/Models/injector";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
-import { OnActivity, SendAction, getRandomInt, removeAllHooksByModule, isPhraseInString, settingsSave, hookFunction, getCharacter, AUDIO, getPlayerVolume, OnAction, hookBCXCurse, GetTargetCharacter, GetActivityName, GetMetadata, GetActivityEntryFromContent, IsActivityAllowed, GetItemName, LSCG_SendLocal } from "../utils";
+import { IsBlockedSender, OnActivity, SendAction, getRandomInt, removeAllHooksByModule, isPhraseInString, settingsSave, hookFunction, getCharacter, AUDIO, getPlayerVolume, OnAction, hookBCXCurse, GetTargetCharacter, GetActivityName, GetMetadata, GetActivityEntryFromContent, IsActivityAllowed, GetItemName, LSCG_SendLocal } from "../utils";
 import { ActivityModule, ActivityPatch } from "./activities";
 import { HypnoModule } from "./hypno";
 import { MiscModule } from "./misc";
@@ -18,12 +18,14 @@ import type { LSCGDrugContext, LSCGDrugDoseContext, LSCGDrugMethod, LSCGOptions 
 import { editableOptions, sanitizeOptions } from "api/options";
 import { DEFAULT_DRUG_COLOR, MAX_EXTENSION_BARS, extensionDrugs, isExtensionDrugId, type ExtensionDrug } from "api/drugs";
 import { builtInStates } from "api/builtInStates";
+import { clearScreenEffects, drawSpiralOverlay, setSpiralEffect, setWaveEffect } from "Dom/screenEffects";
+import { BUILT_IN_DRUGS, builtInDrug, isBuiltInDrugId, type BuiltInDrugId } from "./drugs/builtin";
 import type { ExtensionDrugBar } from "Settings/Models/injector";
 import {
-    COOLDOWNS,
     CHECK_INTERVALS,
     EFFECT_DURATIONS,
     CONTINUOUS_DELIVERY,
+    SOAKED_ITEMS,
     DRUG_LEVELS,
     INJECTION_MULTIPLIERS,
     ACTIVITY_VALUES,
@@ -32,6 +34,8 @@ import {
     BREATH_DRUG_INCREASES,
     AROUSAL_LIMITS,
     DRUG_BAR_DIMENSIONS,
+    SUGGESTIBLE_URGE,
+    SUGGESTIBLE_VISUALS,
 } from "../constants";
 
 /** How often decayed (but otherwise unchanged) drug levels are saved. */
@@ -39,7 +43,7 @@ const DECAY_SAVE_INTERVAL_MS = 5 * 60 * 1000;
 /** Most decay one tick can apply, a little over the 1-minute timer throttling of a hidden tab. */
 const MAX_DECAY_STEP_MS = 2 * 60 * 1000;
 
-type DrugType = "sedative" | "mindcontrol" | "horny" | "antidote";
+type DrugType = BuiltInDrugId | "antidote";
 /** A built-in drug, or an extension's namespaced "<extension id>.<name>". */
 type AnyDrugType = DrugType | `${string}.${string}`;
 
@@ -96,29 +100,38 @@ export class InjectorModule extends BaseModule {
             enableSedative: false,
             enableMindControl: false,
             enableHorny: false,
+            enableSuggestible: false,
             showDrugLevels: true,
             sedativeLevel: 0,
             mindControlLevel: 0,
             hornyLevel: 0,
+            suggestibleLevel: 0,
 
             sedativeKeywords: ["tranquilizer","sedative"],
             mindControlKeywords: ["mind control", "hypnotizing", "brainwashing"],
             hornyKeywords: ["horny", "aphrodisiac", "arousing"],
+            suggestibleKeywords: ["suggestible", "suggestable", "intoxicating", "compliance"],
             cureKeywords: ["antidote", "healing", "curing", "cure"],
             hornyTickTime: CHECK_INTERVALS.HORNY_TICK,
-            sedativeCooldown: COOLDOWNS.SEDATIVE,
-            mindControlCooldown: COOLDOWNS.MIND_CONTROL,
-            hornyCooldown: COOLDOWNS.AROUSAL,
+            ...Object.fromEntries(BUILT_IN_DRUGS.map(drug => [drug.cooldownKey, drug.defaultCooldown])),
             drugLevelMultiplier: DRUG_LEVELS.MULTIPLIER,
             sedativeMax: DRUG_LEVELS.SEDATIVE_MAX,
             mindControlMax: DRUG_LEVELS.MIND_CONTROL_MAX,
             hornyLevelMax: DRUG_LEVELS.HORNY_MAX,
+            suggestibleMax: DRUG_LEVELS.SUGGESTIBLE_MAX,
             heartbeat: true,
 
             enableContinuousDelivery: true,
             continuousDeliveryForever: false,
             continuousDeliveryActivatedAt: 0,
             continuousDeliveryTimeout: CONTINUOUS_DELIVERY.DEFAULT_TIMEOUT,
+
+            enableDrugVisuals: true,
+            enableSuggestibleWave: true,
+            enableSoakedItems: true,
+            soakedPotencyTime: SOAKED_ITEMS.DEFAULT_POTENCY,
+            infiniteSoakPotency: false,
+            soakedAt: <Record<string, number>>{},
 
             //asleep: false,
             //brainwashed: false,
@@ -142,7 +155,7 @@ export class InjectorModule extends BaseModule {
     get commands(): ICommand[] {
         return [{
             Tag: "drug-boost",
-            Description: "<sleepy|hypno|horny> : Apply a one-drink boost of the specified drug type to yourself.",
+            Description: "<sleepy|hypno|horny|suggestible> : Apply a one-drink boost of the specified drug type to yourself.",
             Action: (args, msg, parsed) => {
                 if (!this.Enabled) {
                     LSCG_SendLocal("Injector module is not enabled.");
@@ -161,8 +174,31 @@ export class InjectorModule extends BaseModule {
                         this.AddHorny(DRUG_EFFECT_MULTIPLIERS.DRINK_MULTIPLIER, false);
                         LSCG_SendLocal(`Aphrodisiac boosted. Level: ${this.hornyLevel.toFixed(1)}`);
                         break;
+                    case "suggestible":
+                        this.AddSuggestible(DRUG_EFFECT_MULTIPLIERS.DRINK_MULTIPLIER);
+                        LSCG_SendLocal(`Suggestible boosted. Level: ${this.suggestibleLevel.toFixed(1)}`);
+                        break;
                     default:
-                        LSCG_SendLocal("Usage: /lscg drug-boost &lt;sleepy|hypno|horny&gt;");
+                        LSCG_SendLocal("Usage: /lscg drug-boost &lt;sleepy|hypno|horny|suggestible&gt;");
+                }
+            },
+        }, {
+            Tag: "soaked-status",
+            Description: ": Shows which soaked items LSCG sees on you, what they carry, and why they would or wouldn't be dosing you.",
+            Action: () => {
+                const s = this.settings;
+                LSCG_SendLocal(`Injector module enabled: ${this.Enabled}; soaked items allowed: ${s.enableSoakedItems}; drug opt-ins: ${BUILT_IN_DRUGS.map(d => `${d.label} ${s[d.enableKey]}`).join(", ")}.`);
+                for (const group of this.soakedSlots) {
+                    const item = InventoryGet(Player, group);
+                    if (!item) continue;
+                    if (!item.Craft) {
+                        LSCG_SendLocal(`${group}: ${item.Asset.Name} is not crafted, so it can't be soaked.`);
+                        continue;
+                    }
+                    const types = this.GetSoakedDrugTypes(item.Craft);
+                    const enabled = this.EnabledDrugTypes(types);
+                    const potent = types.length > 0 ? this.IsSoakPotent(this.soakedKey(group, item)) : false;
+                    LSCG_SendLocal(`${group}: "${item.Craft.Name}" -> soaked in [${types.join(", ") || "nothing recognised"}], enabled for you [${enabled.join(", ") || "none"}], potent: ${potent}.`);
                 }
             },
         }];
@@ -171,23 +207,24 @@ export class InjectorModule extends BaseModule {
     safeword(): void {
         this.settings.continuousDeliveryActivatedAt = 0;
         this.settings.continuousDeliveryForever = false;
+        this.settings.soakedAt = {};
+        this.driedSoaks.clear();
+        this.lastUrgeAt.clear();
         this.DoCure();
     }
 
     load(): void {
         // Override these with defaults. Remove from here if opened to user configuration later.
         const d = this.defaultSettings;
-        this.settings.sedativeKeywords = d.sedativeKeywords;
-        this.settings.mindControlKeywords = d.mindControlKeywords;
-        this.settings.hornyKeywords = d.hornyKeywords;
+        for (const drug of BUILT_IN_DRUGS)
+            this.settings[drug.keywordsKey] = d[drug.keywordsKey];
         this.settings.cureKeywords = d.cureKeywords;
         this.settings.hornyTickTime = d.hornyTickTime;
         // Decay rates follow the defaults unless the player set their own in the Drugs settings.
         this.ApplyDecayOverrides();
         this.settings.drugLevelMultiplier = d.drugLevelMultiplier;
-        this.settings.sedativeMax = d.sedativeMax;
-        this.settings.mindControlMax = d.mindControlMax;
-        this.settings.hornyLevelMax = d.hornyLevelMax;
+        for (const drug of BUILT_IN_DRUGS)
+            this.settings[drug.maxKey] = d[drug.maxKey];
 
         this.InitStates();
 
@@ -297,9 +334,7 @@ export class InjectorModule extends BaseModule {
 
         this.decaySaveInterval = setInterval(() => this.SaveDecayedLevels(), DECAY_SAVE_INTERVAL_MS);
         window.addEventListener("beforeunload", this.saveOnUnload);
-        this.sedativeCooldownInterval = setInterval(() => this.SedativeCooldown(Date.now()), this.cooldownTickMs);
-        this.mindControlCooldownInterval = setInterval(() => this.MindControlCooldown(Date.now()), this.cooldownTickMs);
-        this.hornyCooldownInterval = setInterval(() => this.HornyCooldown(Date.now()), this.cooldownTickMs);
+        this.cooldownIntervals = BUILT_IN_DRUGS.map(drug => setInterval(() => this.BuiltInCooldown(drug.id, Date.now()), this.cooldownTickMs));
         // Polled every second so a drug can tick faster than the default (see ExtensionDrugTick).
         this.extensionDrugInterval = setInterval(() => this.ExtensionDrugTick(Date.now()), 1000);
     }
@@ -405,9 +440,9 @@ export class InjectorModule extends BaseModule {
 
     unload(): void {
         removeAllHooksByModule(ModuleCategory.Injector);
-        clearInterval(this.sedativeCooldownInterval);
-        clearInterval(this.mindControlCooldownInterval);
-        clearInterval(this.hornyCooldownInterval);
+        clearScreenEffects();
+        this.cooldownIntervals.forEach(i => clearInterval(i));
+        this.cooldownIntervals = [];
         clearInterval(this.extensionDrugInterval);
         clearInterval(this.decaySaveInterval);
         window.removeEventListener("beforeunload", this.saveOnUnload);
@@ -428,11 +463,11 @@ export class InjectorModule extends BaseModule {
     }
 
     /** Built-in decay: minutes for one dose to wear off, or undefined for LSCG's default. */
-    GetDecayOverride(type: "sedative" | "mindcontrol" | "horny"): number | undefined {
+    GetDecayOverride(type: BuiltInDrugId): number | undefined {
         return this.settings.decayMinutes?.[type];
     }
 
-    SetDecayOverride(type: "sedative" | "mindcontrol" | "horny", minutes: number | undefined) {
+    SetDecayOverride(type: BuiltInDrugId, minutes: number | undefined) {
         const overrides = { ...(this.settings.decayMinutes ?? {}) };
         if (minutes && minutes > 0)
             overrides[type] = minutes;
@@ -445,13 +480,10 @@ export class InjectorModule extends BaseModule {
 
     private ApplyDecayOverrides() {
         const d = this.defaultSettings;
-        const ms = (type: "sedative" | "mindcontrol" | "horny", fallback: number) => {
-            const minutes = this.GetDecayOverride(type);
-            return minutes && minutes > 0 ? minutes * 60_000 : fallback;
-        };
-        this.settings.sedativeCooldown = ms("sedative", d.sedativeCooldown);
-        this.settings.mindControlCooldown = ms("mindcontrol", d.mindControlCooldown);
-        this.settings.hornyCooldown = ms("horny", d.hornyCooldown);
+        for (const drug of BUILT_IN_DRUGS) {
+            const minutes = this.GetDecayOverride(drug.id);
+            this.settings[drug.cooldownKey] = minutes && minutes > 0 ? minutes * 60_000 : d[drug.cooldownKey];
+        }
     }
 
     _bcxHooked: boolean = false;
@@ -460,22 +492,47 @@ export class InjectorModule extends BaseModule {
         hookFunction("Player.HasTints", 4, (args, next) => {
             if (!this.Enabled || !Player.ImmersionSettings?.AllowTints)
                 return next(args);
-            if (this.hornyLevel > 0) return true;
+            if (this.hornyLevel > 0 || this.SuggestibleTint() > 0) return true;
             return next(args);
         }, ModuleCategory.Injector);
 
+        // Like the blur, tints only happen when the player's own BC preferences allow them (AllowTints above): there is no LSCG setting for it.
         hookFunction("Player.GetTints", 4, (args, next) => {
             if (!this.Enabled || !Player.ImmersionSettings?.AllowTints)
                 return next(args);
-            if (this.hornyLevel > 0) return [{r: 254, g: 44, b: 84, a: (this.hornyLevel/(this.hornyLevelMax*this.drugLevelMultiplier*DRUG_EFFECT_MULTIPLIERS.HORNY_TINT_DIVISOR))}];
-            return next(args);
+            const tints: { r: number; g: number; b: number; a: number }[] = [];
+            if (this.hornyLevel > 0) tints.push({r: 254, g: 44, b: 84, a: (this.hornyLevel/(this.hornyLevelMax*this.drugLevelMultiplier*DRUG_EFFECT_MULTIPLIERS.HORNY_TINT_DIVISOR))});
+            const green = this.SuggestibleTint();
+            if (green > 0) tints.push({r: 76, g: 217, b: 100, a: green});
+            return tints.length > 0 ? tints : next(args);
         }, ModuleCategory.Injector);
 
         hookFunction("Player.GetBlurLevel", 4, (args, next) => {
             if (!this.Enabled || !Player.GraphicsSettings!.AllowBlur)
                 return next(args);
-            if (this.hornyLevel > 0) return Math.max(0, (this.hornyLevel / this.drugLevelMultiplier) - 1);
+            const hornyBlur = this.hornyLevel > 0 ? Math.max(0, (this.hornyLevel / this.drugLevelMultiplier) - 1) : 0;
+            // The suggestible's blur breathes slowly in and out, to go with their swaying screen.
+            const sway = this.settings.enableDrugVisuals !== false ? this.SuggestibleFraction() * SUGGESTIBLE_VISUALS.BLUR * (0.6 + 0.4 * Math.sin(Date.now() / 2500)) : 0;
+            if (hornyBlur > 0 || sway > 0) return Math.max(hornyBlur, sway);
             return next(args);
+        }, ModuleCategory.Injector);
+
+        // The hypno spiral is painted on the canvas over the room once per frame, after everything else in the room is drawn. (Not from the
+        // per-character overlay hook, which runs once per character and would stack and re-time it.)
+        hookFunction("ChatRoomRun", 4, (args, next) => {
+            const ret = next(args);
+            if (this.Enabled)
+                drawSpiralOverlay();
+            return ret;
+        }, ModuleCategory.Injector);
+
+        // After the chat line is shown (not before, as OnChat would), so the urge reads as a reaction to what was said.
+        hookFunction("ChatRoomMessage", 2, (args, next) => {
+            const result = next(args);
+            const data = args[0];
+            if (!IsBlockedSender(data.Sender) && (data.Type == "Chat" || data.Type == "Whisper"))
+                this.SuggestibleUrge(data.Content, getCharacter(data.Sender));
+            return result;
         }, ModuleCategory.Injector);
 
         OnAction(1, ModuleCategory.Injector, (data, sender, msg, metadata) => {
@@ -507,9 +564,13 @@ export class InjectorModule extends BaseModule {
         });
 
         let lastBreathEvent = 0;
+        let lastSoakedEvent = 0;
+        let lastVisualsUpdate = 0;
         const breathInterval = CHECK_INTERVALS.BREATH_DRUG_EVENT;
         hookFunction("TimerProcess", 1, (args, next) => {
             const now = CommonTime();
+            if (!this.Enabled)
+                clearScreenEffects();
             if (!ActivityAllowed() || !this.Enabled)
                 return next(args);
 
@@ -531,6 +592,17 @@ export class InjectorModule extends BaseModule {
                 lastBreathEvent = now;
                 this.BreathInDrugEvent();
                 this.CheckForHypnoHelmet();
+            }
+
+            if (lastVisualsUpdate + breathInterval < now) {
+                lastVisualsUpdate = now;
+                this.UpdateScreenEffects();
+            }
+
+            // Soaked gags and masks breathe in on the same beat, whether or not a respirator is worn
+            if (this.settings.enableSoakedItems && lastSoakedEvent + breathInterval < now) {
+                lastSoakedEvent = now;
+                this.SoakedDrugEvent();
             }
 
             return next(args);
@@ -561,12 +633,27 @@ export class InjectorModule extends BaseModule {
     get brainwashed(): boolean { return this.stateModule.HypnoState.Active; };
     // set brainwashed(val: boolean) { if (this.settings.brainwashed != val) {this.settings.brainwashed = val; settingsSave(true);}}
 
-    get sedativeLevel(): number {return this.settings.sedativeLevel;};
-    set sedativeLevel(val: number) {const previous = this.settings.sedativeLevel; if (previous != val) {this.settings.sedativeLevel = val; this.LevelChanged("sedative", previous, val, this.settings.sedativeMax * this.drugLevelMultiplier);}}
-    get mindControlLevel(): number {return this.settings.mindControlLevel;};
-    set mindControlLevel(val: number) {const previous = this.settings.mindControlLevel; if (previous != val) {this.settings.mindControlLevel = val; this.LevelChanged("mindcontrol", previous, val, this.settings.mindControlMax * this.drugLevelMultiplier);}}
-    get hornyLevel(): number {return this.settings.hornyLevel;};
-    set hornyLevel(val: number) {const previous = this.settings.hornyLevel; if (previous != val) {this.settings.hornyLevel = val; this.LevelChanged("horny", previous, val, this.settings.hornyLevelMax * this.drugLevelMultiplier);}}
+    /** A built-in drug's current level, on its internal scale. */
+    GetBuiltInLevel(id: BuiltInDrugId): number { return this.settings[builtInDrug(id)!.levelKey]; }
+
+    /** Sets a built-in drug's level, saving and announcing the change. */
+    SetBuiltInLevel(id: BuiltInDrugId, val: number) {
+        const def = builtInDrug(id)!;
+        const previous = this.settings[def.levelKey];
+        if (previous != val) {
+            this.settings[def.levelKey] = val;
+            this.LevelChanged(id, previous, val, this.settings[def.maxKey] * this.drugLevelMultiplier);
+        }
+    }
+
+    get sedativeLevel(): number {return this.GetBuiltInLevel("sedative");};
+    set sedativeLevel(val: number) {this.SetBuiltInLevel("sedative", val);}
+    get mindControlLevel(): number {return this.GetBuiltInLevel("mindcontrol");};
+    set mindControlLevel(val: number) {this.SetBuiltInLevel("mindcontrol", val);}
+    get hornyLevel(): number {return this.GetBuiltInLevel("horny");};
+    set hornyLevel(val: number) {this.SetBuiltInLevel("horny", val);}
+    get suggestibleLevel(): number {return this.GetBuiltInLevel("suggestible");};
+    set suggestibleLevel(val: number) {this.SetBuiltInLevel("suggestible", val);}
 
     /** True while a cooldown tick is lowering a built-in level, so the change can be saved lazily. */
     private decaying = false;
@@ -580,6 +667,33 @@ export class InjectorModule extends BaseModule {
         else
             settingsSave(true);
         emit("drug.levelChanged", { type, previous, level, max });
+        this.UpdateScreenEffects();
+    }
+
+    /** How strong the faint green tint of the suggestible is (the tint's alpha): it grows with the bar, and is off with the drug visuals. */
+    SuggestibleTint(): number {
+        return this.Enabled && this.settings.enableDrugVisuals !== false ? this.SuggestibleFraction() * SUGGESTIBLE_VISUALS.TINT : 0;
+    }
+
+    /** How full the suggestible bar is, 0 to 1. */
+    SuggestibleFraction(): number {
+        const max = this.suggestibleMax * this.drugLevelMultiplier;
+        return max > 0 ? Math.min(1, Math.max(0, this.suggestibleLevel / max)) : 0;
+    }
+
+    /** Brings the screen effects in line with the drugs and hypnosis: a sway that grows with the suggestible bar, and a turning
+     *  spiral while hypnotized (or a little, while brainwashing builds). */
+    UpdateScreenEffects() {
+        const visuals = this.Enabled && this.settings.enableDrugVisuals !== false;
+        // The sway is a kind of blur, so it follows BC's blur preference exactly as the blur itself does.
+        const blurAllowed = !!Player?.GraphicsSettings?.AllowBlur;
+        setWaveEffect(visuals && blurAllowed && this.settings.enableSuggestibleWave !== false ? this.SuggestibleFraction() * SUGGESTIBLE_VISUALS.WAVE : 0);
+
+        const mindMax = this.mindControlMax * this.drugLevelMultiplier;
+        const building = mindMax > 0 ? Math.min(1, this.mindControlLevel / mindMax) * SUGGESTIBLE_VISUALS.SPIRAL_BUILDING : 0;
+        const hypnoSettings = (Player?.LSCG as { HypnoModule?: { enableSpiralOverlay?: boolean; spiralTurnSeconds?: number } } | undefined)?.HypnoModule;
+        const spiralOn = visuals && hypnoSettings?.enableSpiralOverlay !== false;
+        setSpiralEffect(spiralOn ? Math.max(this.brainwashed ? SUGGESTIBLE_VISUALS.SPIRAL_HYPNOTIZED : 0, building) : 0, undefined, hypnoSettings?.spiralTurnSeconds);
     }
 
     /** When each drug (built-in key or extension id) last decayed. */
@@ -597,11 +711,7 @@ export class InjectorModule extends BaseModule {
     /** Each built-in drug's decay in level units per second, as published for other clients to animate. */
     DecayRatesPerSec() {
         const perSec = (cooldownMs: number) => cooldownMs > 0 ? this.drugLevelMultiplier * 1000 / cooldownMs : 0;
-        return {
-            sedative: perSec(this.settings.sedativeCooldown),
-            mindcontrol: perSec(this.settings.mindControlCooldown),
-            horny: perSec(this.settings.hornyCooldown),
-        };
+        return Object.fromEntries(BUILT_IN_DRUGS.map(drug => [drug.id, perSec(this.settings[drug.cooldownKey])])) as Record<BuiltInDrugId, number>;
     }
 
     /** Every drug bar above zero for `C` (LSCG's own, then extensions'), as best this client can tell. Your own are exact. Someone else's
@@ -615,15 +725,12 @@ export class InjectorModule extends BaseModule {
         const rates = published.drugDecay;
         const at = published.receivedAt; // only set for other players: our own levels are live
         const estimate = (level: number, rate?: number) => InjectorModule.EstimateLevel(level, rate, at);
-        const sedative = estimate(published.sedativeLevel, rates?.sedative);
-        const mindControl = estimate(published.mindControlLevel, rates?.mindcontrol);
-        const horny = estimate(published.hornyLevel, rates?.horny);
-        if (sedative > 0)
-            bars.push({ type: "sedative", level: sedative, max: published.sedativeMax * published.drugLevelMultiplier });
-        if (mindControl > 0)
-            bars.push({ type: "mindcontrol", level: mindControl, max: published.mindControlMax * published.drugLevelMultiplier });
-        if (horny > 0)
-            bars.push({ type: "horny", level: horny, max: published.hornyLevelMax * published.drugLevelMultiplier });
+        for (const drug of BUILT_IN_DRUGS) {
+            // Another client may not publish a drug this one knows (an older version), so its level reads as missing.
+            const level = estimate(published[drug.levelKey] ?? 0, rates?.[drug.id]);
+            if (level > 0)
+                bars.push({ type: drug.id, level, max: (published[drug.maxKey] ?? 0) * published.drugLevelMultiplier });
+        }
         for (const bar of this.ExtensionBarsFor(C, published.drugLevels)) {
             const level = InjectorModule.EstimateLevel(bar.level, bar.decayPerSec, at);
             if (level > 0)
@@ -653,6 +760,8 @@ export class InjectorModule extends BaseModule {
     set mindControlMax(val: number) {if (this.settings.mindControlMax != val) {this.settings.mindControlMax = val; settingsSave(true);}}
     get hornyLevelMax(): number {return this.settings.hornyLevelMax;};
     set hornyLevelMax(val: number) {if (this.settings.hornyLevelMax != val) {this.settings.hornyLevelMax = val; settingsSave(true);}}
+    get suggestibleMax(): number {return this.settings.suggestibleMax;};
+    set suggestibleMax(val: number) {if (this.settings.suggestibleMax != val) {this.settings.suggestibleMax = val; settingsSave(true);}}
 
     _targetSedativeLevel: number = 0;
     get targetSedativeLevel(): number {return Math.max(this.sedativeLevel, this._targetSedativeLevel);};
@@ -661,36 +770,48 @@ export class InjectorModule extends BaseModule {
     _targetHornyLevel: number = 0;
     get targetHornyLevel(): number {return Math.max(this.hornyLevel, this._targetHornyLevel);};
 
-    sedativeCooldownInterval: number = 0;
-    mindControlCooldownInterval: number = 0;
-    hornyCooldownInterval: number = 0;
+    cooldownIntervals: number[] = [];
     extensionDrugInterval: number = 0;
     hornyLastBumped: number = 0;
     cooldownTickMs: number = CHECK_INTERVALS.COOLDOWN_TICK;
 
     InjectionLocationTable: Map<string, number> = new Map<string, number>(Object.entries(locationObj));
 
-    GetDrugTypes(item: CraftingPartialItem): AnyDrugType[] {
+    /** Every drug type with the keywords that name it: the built-in ones, then each extension's. Gases and soaked items both read this,
+     *  so an extension drug works in both without further wiring. */
+    DrugKeywordTable(): { type: AnyDrugType; keywords: string[]; soakKeywords: string[] }[] {
+        return [
+            ...BUILT_IN_DRUGS.map(drug => {
+                const keywords = this.settings[drug.keywordsKey] ?? [];
+                return { type: drug.id as AnyDrugType, keywords, soakKeywords: [...new Set([...drug.soakKeywords, ...keywords])] };
+            }),
+            { type: "antidote", keywords: this.settings.cureKeywords ?? [], soakKeywords: [] },
+            ...extensionDrugs.all().map(drug => ({ type: drug.id as AnyDrugType, keywords: drug.keywords, soakKeywords: [...new Set([...drug.soakKeywords, ...drug.keywords])] })),
+        ];
+    }
+
+    /** The drug types an item's crafted name and description name. With `suffixes`, it's the soak keywords that count, each followed by
+     *  one of them ("sedative" + "-soaked", "intoxicant" + "-laced"); a space in place of the hyphen is fine. */
+    ResolveDrugTypes(item: CraftingPartialItem, suffixes: readonly string[] = []): AnyDrugType[] {
         const name = item.Name;
         const description = CraftingDescription.Decode(item.Description);
         const totalString = name + " | " + description;
+        const soaked = suffixes.length > 0;
+        return this.DrugKeywordTable()
+            .filter(entry => soaked
+                ? entry.soakKeywords.some(ph => suffixes.some(suffix => isPhraseInString(totalString, ph + suffix, true) || isPhraseInString(totalString, ph + suffix.replace("-", " "), true)))
+                : entry.keywords.some(ph => isPhraseInString(totalString, ph, true)))
+            .map(entry => entry.type);
+    }
 
-        const types: AnyDrugType[] = [];
+    GetDrugTypes(item: CraftingPartialItem): AnyDrugType[] {
+        return this.ResolveDrugTypes(item);
+    }
 
-        if (this.settings.sedativeKeywords?.some(ph => isPhraseInString(totalString, ph, true)))
-            types.push("sedative");
-        if (this.settings.mindControlKeywords?.some(ph => isPhraseInString(totalString, ph, true)))
-            types.push("mindcontrol");
-        if (this.settings.hornyKeywords?.some(ph => isPhraseInString(totalString, ph, true)))
-            types.push("horny");
-        if (this.settings.cureKeywords?.some(ph => isPhraseInString(totalString, ph, true)))
-            types.push("antidote");
-        for (const drug of extensionDrugs.all()) {
-            if (drug.keywords.some(ph => isPhraseInString(totalString, ph, true)))
-                types.push(drug.id as AnyDrugType);
-        }
-
-        return types;
+    /** The drug types a mouth/face item is soaked or laced with ("sedative-soaked", "intoxicant-laced", an extension drug's keyword + "-soaked", ...).
+     *  Antidote is not soakable. */
+    GetSoakedDrugTypes(item: CraftingPartialItem): AnyDrugType[] {
+        return this.ResolveDrugTypes(item, SOAKED_ITEMS.KEYWORD_SUFFIXES).filter(t => t !== "antidote");
     }
 
     IsDrugAllowed(sender: Character): boolean {
@@ -698,24 +819,20 @@ export class InjectorModule extends BaseModule {
         if (!asset?.Craft)
             return false;
         const types = this.GetDrugTypes(asset.Craft!);
-        if ((types.indexOf("sedative") > -1 && this.settings.enableSedative) ||
-            (types.indexOf("mindcontrol") > -1 && this.settings.enableMindControl) ||
-            (types.indexOf("horny") > -1 && this.settings.enableHorny) ||
-            (types.indexOf("antidote") > -1) ||
-            types.some(t => isExtensionDrugId(t) && this.ExtensionDrugEnabled(t)))
-            return true;
-
-        return false;
+        return types.some(t => t === "antidote" || this.IsDrugTypeEnabled(t));
     }
 
     /** Drug types this player has enabled (antidote is always allowed). */
     EnabledDrugTypes(types: AnyDrugType[]): AnyDrugType[] {
-        return types.filter(t =>
-            (isExtensionDrugId(t) && this.ExtensionDrugEnabled(t)) ||
-            (t === "sedative" && this.settings.enableSedative) ||
-            (t === "mindcontrol" && this.settings.enableMindControl) ||
-            (t === "horny" && this.settings.enableHorny) ||
-            t === "antidote");
+        return types.filter(t => t === "antidote" || this.IsDrugTypeEnabled(t));
+    }
+
+    /** Whether the player has opted in to a built-in or extension drug type. */
+    IsDrugTypeEnabled(type: string): boolean {
+        if (isExtensionDrugId(type))
+            return this.ExtensionDrugEnabled(type);
+        const def = builtInDrug(type);
+        return !!def && !!this.settings[def.enableKey];
     }
 
     /** Runs the "drug.beforeApply" hook. Returns the types still to apply and how strong the dose is (1 unless softened): extensions may only
@@ -743,6 +860,8 @@ export class InjectorModule extends BaseModule {
             this.DrinkMindControl(sender, fullPour, strength);
         if (types.indexOf("horny") > -1)
             this.DrinkHorny(sender, fullPour, strength);
+        if (types.indexOf("suggestible") > -1)
+            this.DrinkSuggestible(sender, fullPour, strength);
         if (types.indexOf("antidote") > -1)
             this.DrinkCure(sender);
         for (const id of types.filter(isExtensionDrugId))
@@ -768,6 +887,8 @@ export class InjectorModule extends BaseModule {
             this.InjectMindControl(sender, location, strength);
         if (types.indexOf("horny") > -1)
             this.InjectHorny(sender, location, strength);
+        if (types.indexOf("suggestible") > -1)
+            this.InjectSuggestible(sender, location, strength);
         if (types.indexOf("antidote") > -1)
             this.InjectCure(sender, location);
         for (const id of types.filter(isExtensionDrugId))
@@ -900,6 +1021,147 @@ export class InjectorModule extends BaseModule {
         DrawFlashScreen("#FF647F", EFFECT_DURATIONS.FLASH_SCREEN, this.hornyLevel * DRUG_EFFECT_MULTIPLIERS.DRINK_MULTIPLIER);
     }
 
+    suggestibleInjectStr = [
+        "%NAME% sways, a warm, pliant haze sinking through %POSSESSIVE% thoughts.",
+        "%NAME%'s eyes go soft as %OPP_NAME%'s drug makes every little thing sound like a very good idea.",
+        "%NAME% giggles dreamily, %POSSESSIVE% resistance melting away.",
+    ];
+
+    suggestibleDrinkStr = [
+        "%NAME% blinks slowly, %POSSESSIVE% thoughts going pleasantly fuzzy.",
+        "%NAME% sighs and sways as %OPP_NAME%'s drink warms %POSSESSIVE% head and loosens %POSSESSIVE% will.",
+        "%NAME% smiles vaguely, suddenly very eager to please.",
+    ];
+
+    /** The phrase someone asked `names` to do, or undefined if the message isn't a request to one of them. Recognises, with the name first
+     *  (a comma or colon after it is fine) or last: "would/could/can/will you [please|kindly] X", "please X", "I want/need/'d like you to X",
+     *  "you will X", and "X, <name>". Case and ending punctuation don't matter, and "please" and a trailing "for me" are dropped. */
+    static ParseRequest(msg: string, names: string[]): string | undefined {
+        const escaped = names.map(n => n.trim()).filter(n => n !== "").map(n => n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+        if (escaped.length === 0 || !msg)
+            return undefined;
+        const name = `(?:${escaped.join("|")})`;
+        const sep = String.raw`\s*[,:]?\s*`;
+        // Request openers that follow the name: "would you please", "please", "I want you to"...
+        const polite = String.raw`(?:(?:please|kindly)${sep})`;
+        const opener = String.raw`(?:(?:would|could|can|will) you(?! (?:like|mind|ever|rather|be|have|know|say|tell me|do you))\s+${polite}*|${polite}+|i(?:'d| would)? (?:want|need|would like|'d like|like) you to\s+${polite}*|you (?:will|must|shall|are going to)\s+${polite}*)`;
+
+        const text = msg.trim();
+        const lead = new RegExp(String.raw`^${name}${sep}${opener}(.+)$`, "i").exec(text);
+        // "kneel, sera" / "kneel for me sera": the name closes the line.
+        const trail = new RegExp(String.raw`^(.+?)${sep}${name}\s*[?.!]*$`, "i").exec(text);
+        const leadTrailing = new RegExp(String.raw`^${polite}*(.+?)${sep}${name}\s*[?.!]*$`, "i").exec(text);
+        const raw = lead?.[1] ?? leadTrailing?.[1] ?? trail?.[1];
+        if (raw === undefined)
+            return undefined;
+
+        const phrase = raw
+            .replace(/[?.!\s]+$/, "")
+            .replace(/\s+for me(?:\s+(?:please|kindly))?$/i, "")
+            .replace(/\s+(?:please|kindly)$/i, "")
+            .replace(/^(?:please|kindly)\b[\s,:]*/i, "")
+            .trim();
+        // Something to actually do: punctuation alone ("would you please:") is a request that hasn't been finished, and a greeting or thanks isn't one.
+        if (!phrase || !/\w/.test(phrase) || InjectorModule.IsNotARequest(phrase))
+            return undefined;
+        return phrase;
+    }
+
+    /** Short messages that are just a greeting, thanks or a one-word answer: calling someone by name with one isn't asking them to do anything. */
+    static IsNotARequest(phrase: string): boolean {
+        return /^(?:hi|hey|hello|heya|yo|hiya|thanks|thank you|thx|ty|sorry|bye|goodbye|good (?:morning|night|evening|day)|welcome|welcome back|yes|no|ok|okay|lol|haha|lmao|sure|please|kindly|sup|wb|brb|gn|gm)[\s?.!]*$/i.test(phrase.trim());
+    }
+
+    /** Turns something a speaker said about themselves into the same thing about them, for the player to read: "me" becomes their name,
+     *  and "I", "my", "mine" and "myself" become their pronouns ("he", "his", "his", "himself" / "she", "her", "hers", "herself" /
+     *  "they", "their", "theirs", "themself"). Whole words only, in any case. Verbs aren't re-conjugated beyond the contractions
+     *  ("I'm" is "he's"), so "I like" reads "he like". */
+    static AboutSpeaker(phrase: string, name: string, pronouns?: string): string {
+        const he = pronouns === "HeHim";
+        const she = pronouns === "SheHer";
+        const subject = he ? "he" : she ? "she" : "they";
+        const possessive = he ? "his" : she ? "her" : "their";
+        const independent = he ? "his" : she ? "hers" : "theirs";
+        const reflexive = he ? "himself" : she ? "herself" : "themself";
+        const plural = !he && !she;
+        const swaps: Record<string, string> = {
+            myself: reflexive,
+            mine: independent,
+            my: possessive,
+            me: name,
+            "i am": plural ? "they are" : `${subject} is`,
+            "i'm": plural ? "they're" : `${subject}'s`,
+            "i've": plural ? "they've" : `${subject}'s`,
+            "i'll": `${subject}'ll`,
+            "i'd": `${subject}'d`,
+            i: subject,
+        };
+        // One pass over whole words only, so what one swap produces (a name like "Meg") is never swapped again.
+        const words = /\b(myself|mine|my|me|I am|I['’](?:m|ve|ll|d)|I)\b/gi;
+        return phrase.replace(words, match => swaps[match.toLowerCase().replace("’", "'")] ?? match);
+    }
+
+    /** The names a request can open with: nickname, name, and the first word of each. */
+    get RequestNames(): string[] {
+        const names = [CharacterNickname(Player), Player.Name].filter(n => !!n);
+        return [...new Set(names.flatMap(n => [n, n.split(/\s+/)[0]]))];
+    }
+
+    /** When each speaker last stirred an urge, so one speaker can't spam the player with them. */
+    lastUrgeAt = new Map<number, number>();
+
+    /** If the player is suggestible enough, tells them they feel an urge to do what another player just asked. Only a prompt: the
+     *  player decides what to do. Returns whether an urge was felt. */
+    SuggestibleUrge(msg: string, sender: Character | null): boolean {
+        if (!this.Enabled || !this.settings.enableSuggestible || !sender || sender.IsPlayer())
+            return false;
+        const phrase = InjectorModule.ParseRequest(msg, this.RequestNames);
+        if (!phrase)
+            return false;
+        const max = this.suggestibleMax * this.drugLevelMultiplier;
+        const fraction = max > 0 ? this.suggestibleLevel / max : 0;
+        if (fraction < SUGGESTIBLE_URGE.MIN_FRACTION)
+            return false;
+        const now = Date.now();
+        if (now - (this.lastUrgeAt.get(sender.MemberNumber!) ?? 0) < SUGGESTIBLE_URGE.SENDER_COOLDOWN_MS)
+            return false;
+        // Always felt at the top of the bar; otherwise as likely as the bar is full.
+        if (fraction < SUGGESTIBLE_URGE.OVERWHELMING_FRACTION && getRandomInt(100) >= fraction * 100)
+            return false;
+        const { types, strength } = this.HookDrugApply(this.EnabledDrugTypes(["suggestible"]), "breath", sender);
+        if (!types.includes("suggestible") || strength <= 0)
+            return false;
+        this.lastUrgeAt.set(sender.MemberNumber!, now);
+        const wording = fraction >= SUGGESTIBLE_URGE.OVERWHELMING_FRACTION ? "An overwhelming urge washes over you to"
+            : fraction >= SUGGESTIBLE_URGE.STRONG_FRACTION ? "You have a strong urge to"
+            : "You feel a faint urge to";
+        // The same little bell a suggestion rings.
+        if (!AudioShouldSilenceSound(true))
+            AudioPlaySoundEffect("BellMedium");
+        // "bring me my phone" was said by the speaker, so show it about them: "bring Locke his phone".
+        const shown = InjectorModule.AboutSpeaker(phrase, CharacterNickname(sender), sender.GetPronouns?.());
+        LSCG_SendLocal(`${wording} "${shown}".`);
+        emit("drug.suggestionUrge", { sender: sender.MemberNumber!, phrase, level: this.suggestibleLevel, max });
+        return true;
+    }
+
+    /** Suggestible: the higher the bar, the more agreeable the player becomes (see SuggestibleUrge). */
+    AddSuggestible(multiplier: number) {
+        const additive = this.drugLevelMultiplier * multiplier;
+        this.suggestibleLevel = Math.min(this.suggestibleLevel + additive, this.suggestibleMax * this.drugLevelMultiplier);
+    }
+
+    DrinkSuggestible(sender: Character, fullPour: boolean = false, strength: number = 1) {
+        this.AddSuggestible(DRUG_EFFECT_MULTIPLIERS.DRINK_MULTIPLIER * strength);
+        SendAction(this.suggestibleDrinkStr[getRandomInt(this.suggestibleDrinkStr.length)], sender);
+    }
+
+    InjectSuggestible(sender: Character, location: AssetGroupItemName, strength: number = 1) {
+        this.AddSuggestible((this.InjectionLocationTable.get(location) ?? 1) * strength);
+        SendAction(this.suggestibleInjectStr[getRandomInt(this.suggestibleInjectStr.length)], sender);
+        DrawFlashScreen("#4CD964", EFFECT_DURATIONS.FLASH_SCREEN, this.suggestibleLevel * DRUG_EFFECT_MULTIPLIERS.DRINK_MULTIPLIER);
+    }
+
     cureInjectStr = [
         "%NAME% moans thankfully as %OPP_NAME_POSSESSIVE% medicine heals %POSSESSIVE%.",
         "%NAME%'s body glows slightly as %OPP_NAME_POSSESSIVE% cure washes warmly over %POSSESSIVE%.",
@@ -923,47 +1185,42 @@ export class InjectorModule extends BaseModule {
     }
 
     DoCure() {
-        this.settings.sedativeLevel = 0;
-        this.settings.mindControlLevel = 0;
-        this.settings.hornyLevel = 0;
+        for (const drug of BUILT_IN_DRUGS)
+            this.settings[drug.levelKey] = 0;
         // An antidote (and a safeword) clears extension drugs too.
         for (const id of Object.keys(this.settings.extensionDrugLevels ?? {}))
             this.SetExtensionLevel(id, 0);
         if (this.asleep) this.Wake();
         if (this.brainwashed) this.SnapBack();
+        this.UpdateScreenEffects();
         this.settings.stats.curedCount++;
         settingsSave(true);
     }
 
     // Cooldown funcs fire every cooldownTickMs and decay by the wall-clock time since their last run. Called without
     // `now` (tests, forced ticks) they decay by exactly one tick.
-    SedativeCooldown(now?: number) {
-        const elapsed = now === undefined ? this.cooldownTickMs : this.DecayElapsedMs("sedative", now);
-        if (this.sedativeLevel <= 0)
+    BuiltInCooldown(id: BuiltInDrugId, now?: number) {
+        const def = builtInDrug(id)!;
+        const elapsed = now === undefined ? this.cooldownTickMs : this.DecayElapsedMs(id, now);
+        if (this.GetBuiltInLevel(id) <= 0)
             return;
-        const subtractive = this.drugLevelMultiplier * elapsed / this.settings.sedativeCooldown;
-        this.Decay(() => { this.sedativeLevel = Math.max(0, this.sedativeLevel - subtractive); });
-        if (this.sedativeLevel <= 0 && this.asleep)
-            this.Wake();
+        const subtractive = this.drugLevelMultiplier * elapsed / this.settings[def.cooldownKey];
+        this.Decay(() => { this.SetBuiltInLevel(id, Math.max(0, this.GetBuiltInLevel(id) - subtractive)); });
+        if (this.GetBuiltInLevel(id) <= 0)
+            this.OnBuiltInDepleted(id);
     }
 
-    MindControlCooldown(now?: number) {
-        const elapsed = now === undefined ? this.cooldownTickMs : this.DecayElapsedMs("mindcontrol", now);
-        if (this.mindControlLevel <= 0)
-            return;
-        const subtractive = this.drugLevelMultiplier * elapsed / this.settings.mindControlCooldown;
-        this.Decay(() => { this.mindControlLevel = Math.max(0, this.mindControlLevel - subtractive); });
-        if (this.mindControlLevel <= 0 && this.brainwashed)
+    /** What running out of a drug does beyond the bar emptying. */
+    private OnBuiltInDepleted(id: BuiltInDrugId) {
+        if (id === "sedative" && this.asleep)
+            this.Wake();
+        else if (id === "mindcontrol" && this.brainwashed)
             this.SnapBack();
     }
 
-    HornyCooldown(now?: number) {
-        const elapsed = now === undefined ? this.cooldownTickMs : this.DecayElapsedMs("horny", now);
-        if (this.hornyLevel <= 0)
-            return;
-        const subtractive = this.drugLevelMultiplier * elapsed / this.settings.hornyCooldown;
-        this.Decay(() => { this.hornyLevel = Math.max(0, this.hornyLevel - subtractive); });
-    }
+    SedativeCooldown(now?: number) { this.BuiltInCooldown("sedative", now); }
+    MindControlCooldown(now?: number) { this.BuiltInCooldown("mindcontrol", now); }
+    HornyCooldown(now?: number) { this.BuiltInCooldown("horny", now); }
 
     MiniGameEnd(type: "sedative" | "mindcontrol", success: boolean) {
         CommonSetScreen("Online", "ChatRoom");
@@ -1152,18 +1409,14 @@ export class InjectorModule extends BaseModule {
 
     /** Current level of any drug type: built-ins on their internal scale, extensions 0 to their max. */
     GetDrugLevel(type: string): number {
-        switch (type) {
-            case "sedative": return this.sedativeLevel;
-            case "mindcontrol": return this.mindControlLevel;
-            case "horny": return this.hornyLevel;
-            case "antidote": return 0;
-            default: return isExtensionDrugId(type) ? this.GetExtensionLevel(type) : 0;
-        }
+        if (isBuiltInDrugId(type))
+            return this.GetBuiltInLevel(type);
+        return isExtensionDrugId(type) ? this.GetExtensionLevel(type) : 0;
     }
 
     /** Doses the player as an item would (opt-in check, "drug.beforeApply", "drug.applied") without the flavour text. */
     DoseDrug(type: string, opts: { method?: LSCGDrugMethod; multiplier: number; sender?: number; location?: string; minigame?: boolean }): boolean {
-        const known = isExtensionDrugId(type) ? extensionDrugs.get(type) !== undefined : ["sedative", "mindcontrol", "horny", "antidote"].includes(type);
+        const known = isExtensionDrugId(type) ? extensionDrugs.get(type) !== undefined : (isBuiltInDrugId(type) || type === "antidote");
         if (!known || !this.Enabled) // like an item dose: nothing happens while Drug Enhancements is off
             return false;
         const method = opts.method ?? "drink";
@@ -1177,6 +1430,7 @@ export class InjectorModule extends BaseModule {
             case "sedative": this.AddSedative(multiplier, minigame); break;
             case "mindcontrol": this.AddMindControl(multiplier, minigame, opts.sender); break;
             case "horny": this.AddHorny(multiplier, false); break;
+            case "suggestible": this.AddSuggestible(multiplier); break;
             case "antidote": this.DoCure(); break;
             default: this.ApplyExtensionDrug(applied, method, { multiplier, sender, location: opts.location });
         }
@@ -1232,9 +1486,7 @@ export class InjectorModule extends BaseModule {
             const barY = Y + (DRUG_BAR_DIMENSIONS.Y_OFFSET * Zoom) - (DRUG_BAR_DIMENSIONS.ROW_SPACING * row * Zoom);
             const barZoom = Zoom * DRUG_BAR_DIMENSIONS.BAR_ZOOM;
             const barProgress = Math.max(0, Math.min(100, bar.level / bar.max)) * 100;
-            let color = bar.color ?? "#5C5CFF";
-            if (bar.type == "mindcontrol") color = "#A020F0";
-            else if (bar.type == "horny") color = "#FF647F";
+            const color = builtInDrug(bar.type)?.color ?? bar.color ?? "#5C5CFF";
             DrawRect(barX, barY, (DRUG_BAR_DIMENSIONS.BAR_WIDTH * barZoom), (Math.round(DRUG_BAR_DIMENSIONS.BAR_HEIGHT * barZoom)), "Black");
             DrawRect(barX, barY + (Math.round((100 - barProgress) * DRUG_EFFECT_MULTIPLIERS.HORNY_AROUSAL_FACTOR * barZoom)), (DRUG_BAR_DIMENSIONS.BAR_WIDTH * barZoom), (Math.round(barProgress * DRUG_EFFECT_MULTIPLIERS.HORNY_AROUSAL_FACTOR * barZoom)), color);
             DrawEmptyRect(barX, barY, (DRUG_BAR_DIMENSIONS.BAR_WIDTH * barZoom), (Math.round(DRUG_BAR_DIMENSIONS.BAR_HEIGHT * barZoom)), color);
@@ -1584,6 +1836,68 @@ export class InjectorModule extends BaseModule {
         "%NAME%'s sensitive areas burn hot as %PRONOUN% breathes of drug.",
     ];
 
+    /** Whether a soakable slot is in the mouth (tasted and swallowed) rather than over the nose or face (breathed through damp cloth). */
+    isMouthSoakSlot(group: string): boolean {
+        return group.startsWith("ItemMouth");
+    }
+
+    /** Big-jump emotes for soaked items: short, one beat each. In the mouth a soak is tasted and swallowed; over the nose or face the
+     *  damp cloth is breathed through. */
+    soakedEmotes(item: string, group: string): { sedative: string[]; mindcontrol: string[]; horny: string[]; suggestible: string[] } {
+        if (!this.isMouthSoakSlot(group)) {
+            return {
+                sedative: [
+                    "%NAME% breathes damply, %POSSESSIVE% eyelids drooping...",
+                    "%NAME%'s eyes flutter as the cloying dampness fills %POSSESSIVE% head.",
+                    `%NAME% sags weakly behind %POSSESSIVE% ${item}.`,
+                ],
+                mindcontrol: [
+                    "%NAME% breathes shakily, %POSSESSIVE% eyes glazing over...",
+                    "%NAME% whimpers, the damp scent dissolving %POSSESSIVE% thoughts.",
+                    `%NAME% goes limp behind %POSSESSIVE% ${item}, %POSSESSIVE% will slipping.`,
+                ],
+                horny: [
+                    "%NAME% shivers, flushing warm.",
+                    "%NAME% moans softly as the sweet scent clings to %POSSESSIVE% breath.",
+                    `%NAME% squirms, breathing deep behind %POSSESSIVE% ${item}.`,
+                ],
+                suggestible: [
+                    "%NAME% sways, the damp scent softening %POSSESSIVE% thoughts.",
+                    "%NAME% giggles faintly, eyes unfocused.",
+                    `%NAME% sighs behind %POSSESSIVE% ${item}, suddenly eager to please...`,
+                ],
+            };
+        }
+        return {
+            sedative: [
+                "%NAME% swallows, %POSSESSIVE% eyelids drooping...",
+                "%NAME%'s eyes flutter as the bitter taste spreads across %POSSESSIVE% tongue.",
+                `%NAME% sags weakly around %POSSESSIVE% ${item}, drool slipping free.`,
+            ],
+            mindcontrol: [
+                "%NAME% swallows, %POSSESSIVE% eyes glazing over...",
+                "%NAME% whimpers, the taste dissolving %POSSESSIVE% thoughts.",
+                `%NAME% gulps reflexively around %POSSESSIVE% ${item}, %POSSESSIVE% will slipping.`,
+            ],
+            horny: [
+                "%NAME% shivers and swallows, flushing warm.",
+                "%NAME% moans softly as the sweet taste floods %POSSESSIVE% tongue.",
+                `%NAME% squirms, sucking helplessly at %POSSESSIVE% ${item}.`,
+            ],
+            suggestible: [
+                "%NAME% swallows, thoughts going pleasantly fuzzy.",
+                "%NAME% giggles faintly around %POSSESSIVE% " + item + ", eyes unfocused.",
+                "%NAME% sighs, the taste making everything sound like a good idea...",
+            ],
+        };
+    }
+
+    breathSuggestibleEventStr: string[] = [
+        "%NAME% sways, a pleasant haze settling over %POSSESSIVE% thoughts.",
+        "%NAME% giggles faintly, eyes unfocused.",
+        "%NAME% sighs, suddenly eager to be told what to do...",
+    ];
+
     breathAntidoteEventStr: string[] = [
         "%NAME% sighs with relief as %PRONOUN% takes a deep gulp of healing mist.",
         "%NAME% feels a tingle across %POSSESSIVE% skin as %POSSESSIVE% device heals %INTENSIVE%.",
@@ -1595,26 +1909,118 @@ export class InjectorModule extends BaseModule {
             const mask = this.WornRespirator;
             if (!mask)
                 return;
-            const { types, strength } = this.HookDrugApply(this.EnabledDrugTypes(this.GetDrugTypes(mask.Item.Craft!)), "breath");
+            this.ApplyBreathDoses(this.GetDrugTypes(mask.Item.Craft!), mask.Item.Craft?.MemberNumber);
+        }
+    }
+
+    /** Slots a "<drug>-soaked" item can sit in: anything in or over the mouth or nose. */
+    soakedSlots: AssetGroupName[] = ["ItemMouth", "ItemMouth2", "ItemMouth3", "ItemNose", "ItemHood", "ItemHead"];
+
+    soakedKey(group: string, item: Item): string {
+        return `${group}:${item.Asset.Name}:${item.Craft?.MemberNumber ?? 0}:${item.Craft?.Name ?? ""}`;
+    }
+
+    /** Crafted items worn in a soakable slot that name a drug they are soaked in. */
+    get WornSoakedItems(): { Key: string; Item: Item; Group: string; Types: AnyDrugType[] }[] {
+        const worn: { Key: string; Item: Item; Group: string; Types: AnyDrugType[] }[] = [];
+        for (const group of this.soakedSlots) {
+            const item = InventoryGet(Player, group);
+            if (!item?.Craft)
+                continue;
+            const types = this.GetSoakedDrugTypes(item.Craft);
+            if (types.length > 0)
+                worn.push({ Key: this.soakedKey(group, item), Item: item, Group: group, Types: types });
+        }
+        return worn;
+    }
+
+    /** Whether a soaked item (by key) is still wet: it starts the moment it is first seen worn and dries after the potency time. */
+    IsSoakPotent(key: string, now: number = CommonTime()): boolean {
+        const stamps = this.settings.soakedAt ??= {};
+        if (stamps[key] === undefined) {
+            stamps[key] = now;
+            settingsSave();
+        }
+        return !!this.settings.infiniteSoakPotency || stamps[key] + (this.settings.soakedPotencyTime ?? SOAKED_ITEMS.DEFAULT_POTENCY) > now;
+    }
+
+    /** Soaked items that dried out, so the "dried" message is said once per item. */
+    private driedSoaks: Set<string> = new Set();
+
+    /** Doses the wearer from every potent soaked item, one small breath at a time like a gas mask. Also forgets items no longer worn. */
+    SoakedDrugEvent() {
+        const stamps = this.settings.soakedAt ??= {};
+        const worn = this.WornSoakedItems;
+        const wornKeys = new Set(worn.map(w => w.Key));
+        let pruned = false;
+        for (const key of Object.keys(stamps)) {
+            if (!wornKeys.has(key)) {
+                delete stamps[key];
+                this.driedSoaks.delete(key);
+                pruned = true;
+            }
+        }
+        if (pruned)
+            settingsSave();
+
+        if (!this.settings.enableSoakedItems)
+            return;
+        const now = CommonTime();
+        for (const soaked of worn) {
+            const justPutOn = stamps[soaked.Key] === undefined;
+            if (!this.IsSoakPotent(soaked.Key, now)) {
+                if (!this.driedSoaks.has(soaked.Key)) {
+                    this.driedSoaks.add(soaked.Key);
+                    SendAction(`The drug soaking %NAME%'s ${GetItemName(soaked.Item)} has finally dried out.`);
+                }
+                continue;
+            }
+            const itemName = GetItemName(soaked.Item);
+            if (justPutOn && !this.asleep && !this.brainwashed && this.EnabledDrugTypes(soaked.Types).length > 0) {
+                SendAction(this.isMouthSoakSlot(soaked.Group)
+                    ? `%NAME%'s eyes widen at the wet, bitter-sweet taste of %POSSESSIVE% ${itemName}.`
+                    : `%NAME%'s eyes widen as the damp, cloying scent of %POSSESSIVE% ${itemName} fills %POSSESSIVE% head.`);
+                CharacterSetFacialExpression(Player, "Eyes", "Surprised", 4);
+            }
+            this.ApplyBreathDoses(soaked.Types, soaked.Item.Craft?.MemberNumber, this.soakedEmotes(itemName, soaked.Group), SOAKED_ITEMS.DOSE_FACTOR);
+        }
+    }
+
+    /** One breath of drug: shared by respirators and soaked items. Applies the player's opt-ins, the extension hook, and every built-in
+     *  and extension drug the types name. `crafterMemberNumber` is who is responsible for the dose. `emotes` replaces the gas wording. */
+    ApplyBreathDoses(drugTypes: AnyDrugType[], crafterMemberNumber?: number, emotes?: { sedative?: string[]; mindcontrol?: string[]; horny?: string[]; suggestible?: string[] }, doseFactor: number = 1) {
+        const pick = (lines: string[] | undefined, fallback: string[]) => { const l = lines ?? fallback; return l[getRandomInt(l.length)]; };
+        if (drugTypes.length === 0)
+            return;
+        {
+            const hooked = this.HookDrugApply(this.EnabledDrugTypes(drugTypes), "breath");
+            const types = hooked.types;
+            const strength = hooked.strength * doseFactor; // an extension may soften the dose, and a soak is gentler than a gas to begin with
             const randomLevelIncrease = (getRandomInt(4) + 2) / (1 / BREATH_DRUG_INCREASES.MIN_INCREASE) * strength; // .2 to .5, softened by an extension
 
             if (types.indexOf("sedative") > -1 && this.settings.enableSedative) {
                 if (getRandomInt(RANDOM_EVENT_ODDS.BREATH_SEDATIVE_BIG_JUMP) == 0) { // Odds are big jump once every 60 seconds
-                    if (!this.asleep) SendAction(this.breathSedativeEventStr[getRandomInt(this.breathSedativeEventStr.length)]);
+                    if (!this.asleep) SendAction(pick(emotes?.sedative, this.breathSedativeEventStr));
                     this.AddSedative(randomLevelIncrease + BREATH_DRUG_INCREASES.BIG_JUMP_BASE * strength, getRandomInt(RANDOM_EVENT_ODDS.BREATH_MINIGAME_CHANCE) != 0); // 2/3 chance to start incap minigame
                 } else this.AddSedative(randomLevelIncrease / BREATH_DRUG_INCREASES.SMALL_TICK_DIVISOR, false);
             }
             if (types.indexOf("mindcontrol") > -1 && this.settings.enableMindControl) {
                 if (getRandomInt(RANDOM_EVENT_ODDS.BREATH_MIND_CONTROL_BIG_JUMP) == 0) { // Odds are big jump once every 60 seconds
-                    if (!this.brainwashed) SendAction(this.breathMindControlEventStr[getRandomInt(this.breathMindControlEventStr.length)]);
-                    this.AddMindControl(randomLevelIncrease + BREATH_DRUG_INCREASES.BIG_JUMP_BASE * strength, getRandomInt(RANDOM_EVENT_ODDS.BREATH_MINIGAME_CHANCE) != 0, mask.Item.Craft?.MemberNumber); // 2/3 chance to start incap minigame
-                } else this.AddMindControl(randomLevelIncrease / BREATH_DRUG_INCREASES.SMALL_TICK_DIVISOR, false, mask.Item.Craft?.MemberNumber);
+                    if (!this.brainwashed) SendAction(pick(emotes?.mindcontrol, this.breathMindControlEventStr));
+                    this.AddMindControl(randomLevelIncrease + BREATH_DRUG_INCREASES.BIG_JUMP_BASE * strength, getRandomInt(RANDOM_EVENT_ODDS.BREATH_MINIGAME_CHANCE) != 0, crafterMemberNumber); // 2/3 chance to start incap minigame
+                } else this.AddMindControl(randomLevelIncrease / BREATH_DRUG_INCREASES.SMALL_TICK_DIVISOR, false, crafterMemberNumber);
             }
             if (types.indexOf("horny") > -1 && this.settings.enableHorny) {
                 if (getRandomInt(RANDOM_EVENT_ODDS.BREATH_HORNY_BIG_JUMP) == 0) { // Odds are big jump once every 90 seconds
-                    SendAction(this.breathAphrodesiacEventStr[getRandomInt(this.breathAphrodesiacEventStr.length)]);
+                    SendAction(pick(emotes?.horny, this.breathAphrodesiacEventStr));
                     this.AddHorny(randomLevelIncrease + BREATH_DRUG_INCREASES.BIG_JUMP_BASE * strength, getRandomInt(RANDOM_EVENT_ODDS.HORNY_FORCE_CUM_CHANCE) == 0); // 1/3 chance to push user over the edge (if allowed...)
                 } else this.AddHorny(randomLevelIncrease / BREATH_DRUG_INCREASES.SMALL_TICK_DIVISOR, false);
+            }
+            if (types.indexOf("suggestible") > -1 && this.settings.enableSuggestible) {
+                if (getRandomInt(RANDOM_EVENT_ODDS.BREATH_SUGGESTIBLE_BIG_JUMP) == 0) {
+                    SendAction(pick(emotes?.suggestible, this.breathSuggestibleEventStr));
+                    this.AddSuggestible(randomLevelIncrease + BREATH_DRUG_INCREASES.BIG_JUMP_BASE * strength);
+                } else this.AddSuggestible(randomLevelIncrease / BREATH_DRUG_INCREASES.SMALL_TICK_DIVISOR);
             }
             if (types.indexOf("antidote") > -1 && getRandomInt(RANDOM_EVENT_ODDS.BREATH_ANTIDOTE_HEAL) == 0) { // Odds are heal once every 4 minutes
                 SendAction(this.breathAntidoteEventStr[getRandomInt(this.breathAntidoteEventStr.length)]);

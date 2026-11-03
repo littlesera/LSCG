@@ -11,6 +11,8 @@ export const COOLDOWNS = {
     MIND_CONTROL: 4 * 60 * 1000,    // 240000
     /** 5 minutes - Arousal/horny effect cooldown */
     AROUSAL: 5 * 60 * 1000,         // 300000
+    /** 5 minutes - Suggestible (intoxicated) effect cooldown */
+    SUGGESTIBLE: 5 * 60 * 1000,     // 300000
 } as const;
 
 // Effect Durations
@@ -85,4 +87,14 @@ export const TRIGGER_TIMES = {
 export const CONTINUOUS_DELIVERY = {
     /** 1 hour - Default timeout for continuous drug delivery */
     DEFAULT_TIMEOUT: 60 * 60 * 1000,            // 3600000
+} as const;
+
+// Drug-soaked mouth/face items
+export const SOAKED_ITEMS = {
+    /** 1 hour - How long a "<drug>-soaked" item stays potent once worn */
+    DEFAULT_POTENCY: 60 * 60 * 1000,            // 3600000
+    /** Endings that turn a drug's soak keyword into a soaked item, e.g. "sedative-soaked" or "sedative-laced". A space also works ("sedative laced"). */
+    KEYWORD_SUFFIXES: ["-soaked", "-laced"],
+    /** How strong each breath from a soaked item is next to the same drug from a gas mask (1 = the same). Soaks build more gently. */
+    DOSE_FACTOR: 0.6,
 } as const;

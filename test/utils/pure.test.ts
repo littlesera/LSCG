@@ -79,6 +79,12 @@ describe("excludeParentheticalContent", () => {
 });
 
 describe("isPhraseInString", () => {
+	it("an empty or blank phrase is never found, however much text there is", () => {
+		expect(isPhraseInString("anything at all", "")).toBe(false);
+		expect(isPhraseInString("anything at all", "   ")).toBe(false);
+		expect(isPhraseInString("anything at all", undefined as never)).toBe(false);
+	});
+
 	it("matches a whole-word phrase, case-insensitively", () => {
 		expect(isPhraseInString("Please Sit Down", "sit")).toBe(true);
 	});

@@ -28,7 +28,7 @@ const HOOK_TARGETS = [
 	"DialogInventoryBuild", "CommandParse", "DrawArousalMeter", "ServerPlayerIsInChatRoom",
 	"DialogLoad", "DialogLeave", "DialogResize", "ActivityGenerateItemActivitiesFromNeed",
 	"StruggleMinigameStart", "StruggleMinigameStop", "DrawStatus", "DialogFacialExpressionsLoad",
-	"ChatRoomLeave", "ChatRoomCharacterViewDrawOverlay", "ChatRoomCharacterViewClickCharacter",
+	"ChatRoomLeave", "ChatRoomRun", "ChatRoomCharacterViewDrawOverlay", "ChatRoomCharacterViewClickCharacter",
 	"ChatRoomCanBeLeashedBy", "ChatRoomPingLeashedPlayers", "ChatRoomDoPingLeashedPlayers",
 	"ServerHandleLeashBeep", "ChatRoomBreakLeash", "ChatRoomMapViewLeash", "ChatRoomActivateView",
 	"RgbaArrayToHTMLColor", "DrawImageResize", "ChatRoomMapViewDrawGrid", "ChatRoomMapViewSyncMapData",

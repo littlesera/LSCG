@@ -1,3 +1,4 @@
+import type { BuiltInDrugDef } from "Modules/drugs/builtin";
 import { OutfitMigrator } from "Modules/Migrators/OutfitMigrator";
 import { SpeechAnalysisModule } from "Modules/speech-analysis";
 import { ActivityModule } from "Modules/activities";
@@ -60,6 +61,11 @@ export function HornyKeywords(): string[] {
 
 export function MindControlKeywords(): string[] {
 	return getModule<InjectorModule>("InjectorModule")?.settings.mindControlKeywords;
+}
+
+/** The keywords naming a built-in drug, from the injector's settings. */
+export function BuiltInDrugKeywords(drug: BuiltInDrugDef): string[] | undefined {
+	return getModule<InjectorModule>("InjectorModule")?.settings[drug.keywordsKey];
 }
 
 export function CureKeywords(): string[] {

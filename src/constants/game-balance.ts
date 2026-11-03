@@ -13,6 +13,8 @@ export const DRUG_LEVELS = {
     MIND_CONTROL_MAX: 4,
     /** Maximum horny/arousal level */
     HORNY_MAX: 4,
+    /** Maximum suggestible level */
+    SUGGESTIBLE_MAX: 4,
     /** Default sip limit for drugged drinks */
     DEFAULT_SIP_LIMIT: 0,
 } as const;
@@ -61,6 +63,44 @@ export const DRUG_EFFECT_MULTIPLIERS = {
     GRADUAL_LEVEL_DIVISOR: 10,
 } as const;
 
+// Suggestible urges: what a request in chat does to someone who is suggestible
+export const SUGGESTIBLE_URGE = {
+    /** Fraction of the bar below which nothing happens */
+    MIN_FRACTION: 0.25,
+    /** Fraction of the bar from which the urge is "strong" */
+    STRONG_FRACTION: 0.5,
+    /** Fraction of the bar from which the urge is overwhelming (and always felt) */
+    OVERWHELMING_FRACTION: 0.85,
+    /** The same speaker can only stir an urge this often (ms) */
+    SENDER_COOLDOWN_MS: 10 * 1000,
+} as const;
+
+// Screen effects of the drugs and hypnosis, as fractions of the full effect
+export const SUGGESTIBLE_VISUALS = {
+    /** Strength of the swaying distortion at a full bar (0 to 1) */
+    WAVE: 1,
+    /** Blur level at a full bar */
+    BLUR: 3,
+    /** Alpha of the green tint at a full bar: faint (0 to 1) */
+    TINT: 0.2,
+    /** Spiral strength while hypnotized (0 to 1) */
+    SPIRAL_HYPNOTIZED: 0.6,
+    /** Spiral strength at a full mind-control bar, before the trance takes hold (0 to 1) */
+    SPIRAL_BUILDING: 0.35,
+} as const;
+
+// The hypno spiral overlay's turn time, in seconds per full turn
+export const SPIRAL_TURN_SECONDS = {
+    /** Fastest the player can set */
+    MIN: 0.5,
+    /** Slowest the player can set */
+    MAX: 10,
+    /** A steady, hypnotic turn */
+    DEFAULT: 3,
+    /** How much the setting moves per step */
+    STEP: 0.5,
+} as const;
+
 // Random Event Odds
 export const RANDOM_EVENT_ODDS = {
     /** 1 in X chance for big sedative jump (every ~60s at 2s intervals) */
@@ -69,6 +109,8 @@ export const RANDOM_EVENT_ODDS = {
     BREATH_MIND_CONTROL_BIG_JUMP: 30,
     /** 1 in X chance for big horny jump (every ~90s at 2s intervals) */
     BREATH_HORNY_BIG_JUMP: 45,
+    /** 1 in X chance for big suggestible jump (every ~90s at 2s intervals) */
+    BREATH_SUGGESTIBLE_BIG_JUMP: 45,
     /** 1 in X chance for antidote heal (every ~4 min at 2s intervals) */
     BREATH_ANTIDOTE_HEAL: 120,
     /** 1 in X chance for hypno headset big jump (every ~10s at 2s intervals) */
