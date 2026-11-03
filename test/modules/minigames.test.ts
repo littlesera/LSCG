@@ -58,6 +58,15 @@ describe("minigames", () => {
 			expect(texts.at(-1)).toBe(game.startText);
 		});
 
+		it("doesn't blur at all when the player's BC preferences turn blur off", () => {
+			game.Load();
+			expect(g.Player.GetBlurLevel()).toBe(5);
+			g.Player.GraphicsSettings.AllowBlur = false;
+			expect(g.Player.GetBlurLevel()).toBe(0);
+			later(game.StartDelay);
+			expect(g.Player.GetBlurLevel()).toBe(0);
+		});
+
 		it("a harder game lasts longer", () => {
 			g.MiniGameDifficulty = 16;
 			game.Load();

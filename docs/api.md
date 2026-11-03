@@ -307,6 +307,11 @@ Add a drug that works like LSCG's own sedative, brainwashing drug and aphrodisia
 Latex Respirator, Filled Glass or Mug whose name or description contains one of your keywords is a dose of it, and
 the crafting screen offers it as a checkbox.
 
+Your keywords also work as gases and soaks without any extra wiring. A Latex Respirator or Cryo Capsule carrying one of your keywords
+doses the wearer a little at each breath, and so does any crafted gag, mask or other item in the mouth, nose or face slots whose name or
+description has a keyword followed by `-soaked` or `-laced` (e.g. `giggly-soaked`, `giggly-laced`). If your plain keywords are adjectives that read badly there ("intoxicating-laced"), give `soakKeywords` too (`["intoxicant"]` gives `intoxicant-laced`); the plain keywords still work. Soaks dry out after an hour unless the player has made them
+permanent. Both arrive as `method: "breath"` in `drug.beforeApply` and `drug.applied`, so the same veto and softening hooks apply.
+
 **Players must opt in.** A drug does nothing to a player until they enable it on the Extension drugs tab of their Drug Enhancements
 settings, which lists it with your extension's name and keywords.
 
@@ -689,6 +694,7 @@ A `lscg:ready` event is also dispatched on `window` when LSCG becomes ready, wit
 | `hypno.instructions` | `api.hypno.registerInstruction` / `unregisterInstruction` |
 | `hypno.events` | The `hypno.suggestionResolved`, `hypno.instructionPerformed` and `hypno.beforeInstruction` events |
 | `drugs.strength` | `strength` on `drug.beforeApply` |
+| `drugs.suggestible` | The `suggestible` built-in drug type and the `drug.suggestionUrge` event |
 | `network` | `api.network.on` / `send` |
 | `storage` | `api.storage.get` / `set` / `getPublic` / `setPublic`, `api.sync` |
 | `settings` | `api.settings.registerScreen` / `unregisterScreen` |
@@ -713,6 +719,7 @@ A `lscg:ready` event is also dispatched on `window` when LSCG becomes ready, wit
 | `activity.received` | `{ name, group?, source?, isLSCG }`: an activity was done to the player, including by themselves. |
 | `grab.added` / `grab.removed` | `{ type, pairedMember, isSource }`: a grab or leash started or ended. `isSource` means the player holds it. |
 | `drug.levelChanged` | `{ type, previous, level, max }`: any drug's level changed, including slow decay. `level / max` is how full the bar is. |
+| `drug.suggestionUrge` | `{ sender, phrase, level, max }`: someone asked a suggestible player to do something (`<name>, would you kindly <phrase>`) and the player felt the urge. They only get a prompt; nothing is forced. |
 | `drug.applied` | `{ types, method, sender?, location? }`: a dose took effect. `method` is `"drink"`, `"inject"` or `"breath"`. |
 | `collar.choke` | `{ level, previousLevel }`: the collar's choke level changed. |
 | `collar.passout` | `{ reason, by? }`: the player started passing out. `reason` is `"collar"`, `"hand"`, `"plugs"` or `"chain"`. |

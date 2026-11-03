@@ -112,6 +112,41 @@ describe("HypnoModule", () => {
 			expect(states.HypnoState.Active).toBe(false);
 		});
 
+		describe("with no trigger word at all", () => {
+			// random trigger off, and no trigger words given: there is nothing to trigger on, so nothing should
+			beforeEach(() => {
+				hypno.settings.randomTrigger = false;
+				hypno.settings.trigger = "";
+				hypno.settings.overrideWords = "";
+				hypno.settings.enableCycle = false;
+			});
+
+			it("has no triggers, and no trigger word is picked for it", () => {
+				expect(hypno.triggers).toEqual([]);
+				expect(hypno.getNewTriggerWord()).toBe("");
+			});
+
+			it.each(["you are getting sleepy now", "hello there", "wakey wakey", "a", "  ", "!"])("does not hypnotize on %j", msg => {
+				hypno.TopLevelCheckTriggers(msg, alice as never);
+				expect(hypno.CheckTrigger(msg, alice as never)).toBe(false);
+				expect(states.HypnoState.Active).toBe(false);
+			});
+
+			it("only a trigger word actually given works", () => {
+				hypno.settings.overrideWords = "sleepy";
+				hypno.TopLevelCheckTriggers("hello there", alice as never);
+				expect(states.HypnoState.Active).toBe(false);
+				hypno.TopLevelCheckTriggers("you are getting sleepy now", alice as never);
+				expect(states.HypnoState.Active).toBe(true);
+			});
+		});
+
+		it("blank entries in a trigger list never match anything", () => {
+			hypno.settings.overrideWords = " , ,";
+			expect(hypno._CheckForTriggers("hello there", alice as never, ["", "  "])).toBe(false);
+			expect(hypno._CheckForTriggers("hello there", alice as never, [""], true)).toBe(false);
+		});
+
 		it("does nothing when the module is disabled", () => {
 			hypno.settings.enabled = false;
 			hypno.TopLevelCheckTriggers("you are getting sleepy now", alice as never);

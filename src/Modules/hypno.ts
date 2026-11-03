@@ -24,6 +24,7 @@ import {
     CHECK_INTERVALS,
     EFFECT_DURATIONS,
     TRIGGER_TIMES,
+    SPIRAL_TURN_SECONDS,
 } from "../constants";
 
 export class SuggestionMiniGameOptions {
@@ -102,6 +103,8 @@ export class HypnoModule extends BaseModule {
             cooldownTime: 0,
             enableArousal: false,
             enableSpirals: true,
+            enableSpiralOverlay: true,
+            spiralTurnSeconds: SPIRAL_TURN_SECONDS.DEFAULT,
             enableSnapWakeup: true,
             trigger: "",
             triggerRevealed: false,
@@ -526,8 +529,9 @@ export class HypnoModule extends BaseModule {
         const overrideWords = GetDelimitedList(this.settings.overrideWords);
         if (overrideWords.length > 0 && !this.settings.enableCycle)
             return overrideWords;
+        // No trigger word at all (random off and none given) means there is nothing to trigger on, not that anything triggers.
         else
-            return [this.settings.trigger];
+            return this.settings.trigger ? [this.settings.trigger] : [];
     }
 
     get blockSpeechTriggers(): string[] {
@@ -664,9 +668,8 @@ export class HypnoModule extends BaseModule {
         if (msg.startsWith("(") || !triggers)
             return false;
 
-        const matched = triggers.some(trigger => {
-            return isPhraseInString(msg, trigger);
-        });        
+        // A blank trigger is no trigger: it must never match (an empty phrase is "found" in every message).
+        const matched = triggers.some(trigger => !!trigger?.trim() && isPhraseInString(msg, trigger));
 
         return (matched && 
             (awakener ? this.hypnoActivated : !this.hypnoActivated) &&

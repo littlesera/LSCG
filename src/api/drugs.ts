@@ -15,6 +15,8 @@ export interface ExtensionDrug {
     label: string;
     description: string;
     keywords: string[];
+    /** Words that read right before "-soaked" or "-laced" (see LSCGDrugDefinition.soakKeywords). Empty: the plain keywords. */
+    soakKeywords: string[];
     /** Settings the player can change, drawn under the drug in Drug Enhancements. */
     options: OptionField[];
     color: string;
@@ -75,6 +77,9 @@ export function createDrugsApi(owner: ErrorOwner & { readonly info: { name: stri
             if (!Array.isArray(def.keywords) || def.keywords.length === 0)
                 throw new Error(`LSCG[ext:${owner.id}]: drug "${def.name}" needs at least one keyword.`);
             const keywords = def.keywords.map((k, i) => requireText(owner, `drug "${def.name}" keyword ${i + 1}`, k));
+            if (def.soakKeywords !== undefined && !Array.isArray(def.soakKeywords))
+                throw new Error(`LSCG[ext:${owner.id}]: drug "${def.name}" soakKeywords must be a list of phrases.`);
+            const soakKeywords = (def.soakKeywords ?? []).map((k, i) => requireText(owner, `drug "${def.name}" soak keyword ${i + 1}`, k));
 
             const max = positive(owner, "max", def.max, DEFAULT_MAX, false);
             const thresholds = (def.thresholds ?? []).map((t, i) => {
@@ -90,6 +95,7 @@ export function createDrugsApi(owner: ErrorOwner & { readonly info: { name: stri
                 label: requireText(owner, `drug "${def.name}" label`, def.label),
                 description: typeof def.description === "string" ? def.description : "",
                 keywords,
+                soakKeywords,
                 options: validateOptionFields(owner, `drug "${def.name}"`, def.options),
                 color: typeof def.color === "string" && def.color.trim() !== "" ? def.color.trim() : DEFAULT_DRUG_COLOR,
                 max,
