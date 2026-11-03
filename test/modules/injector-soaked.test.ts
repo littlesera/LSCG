@@ -11,6 +11,7 @@ import { StateModule } from "Modules/states";
 import { ItemUseModule } from "Modules/item-use";
 import { CollarModule } from "Modules/collar";
 import { extensionDrugs } from "api/drugs";
+import { SOAKED_ITEMS } from "../../src/constants/timing";
 import { boot, resetWorld, player } from "../harness/world";
 import { makeGroup, makeAsset, wear, makeItem } from "../harness/fixtures";
 import { sent } from "../harness/room";
@@ -180,7 +181,19 @@ describe("InjectorModule soaked items", () => {
 			injector.ApplyBreathDoses(["horny"], 2);
 			const gasDose = injector.hornyLevel;
 			expect(soakedDose).toBeGreaterThan(0);
-			expect(soakedDose / gasDose).toBeCloseTo(0.6, 2);
+			expect(soakedDose / gasDose).toBeCloseTo(SOAKED_ITEMS.DOSE_FACTOR, 2);
+		});
+
+		it("scales with the player's soak strength setting", () => {
+			put("ItemMouth", "BallGag", soaked("Aphrodisiac-soaked Gag"));
+			seedRandom([0.5]);
+			injector.settings.soakedStrength = 30;
+			injector.SoakedDrugEvent();
+			const base = injector.hornyLevel;
+			injector.hornyLevel = 0;
+			injector.settings.soakedStrength = 60;
+			injector.SoakedDrugEvent();
+			expect(injector.hornyLevel / base).toBeCloseTo(2, 2);
 		});
 
 		it("respects the player's opt-in for the drug", () => {
@@ -189,6 +202,29 @@ describe("InjectorModule soaked items", () => {
 			seedRandom([0.5]);
 			injector.SoakedDrugEvent();
 			expect(injector.hornyLevel).toBe(0);
+		});
+
+		it("keeps flavor emotes rare and lets the player turn them off", () => {
+			const lines = () => sent.actions().length;
+			const emote = () => { injector.BreathEmote("%NAME% shivers."); };
+			(injector as any).lastBreathEmote = -Infinity;
+			const before = lines();
+			emote();
+			emote(); // inside the cooldown: silent
+			expect(lines() - before).toBe(1);
+			injector.settings.drugEmoteMinutes = 0; // no limit: every one gets through
+			emote();
+			emote();
+			expect(lines() - before).toBe(3);
+			injector.settings.drugEmotesLocal = true; // local: shown to the player only, not said to the room
+			emote();
+			expect(lines() - before).toBe(3);
+			injector.settings.drugEmotesLocal = false;
+			injector.settings.enableDrugEmotes = false;
+			emote();
+			expect(lines() - before).toBe(3);
+			injector.settings.enableDrugEmotes = true;
+			injector.settings.drugEmoteMinutes = 4;
 		});
 
 		it("does nothing when soaked items are turned off", () => {
