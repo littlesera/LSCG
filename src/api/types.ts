@@ -40,6 +40,105 @@ export interface LSCGModApi {
     readonly storage: LSCGStorageApi;
     /** Screens in LSCG's settings (capability "settings"). */
     readonly settings: LSCGSettingsApi;
+    /** Actions on the player through LSCG's modules, which the player allows per extension (capability "operations"). */
+    readonly operations: LSCGOperationsApi;
+}
+
+// ---------------------------------------------------------------------------------------------------------------
+// Operations
+// ---------------------------------------------------------------------------------------------------------------
+
+/** What an extension can ask the player to let it do. Each scope covers one group of operations. */
+export type LSCGOperationScope = "magic" | "hypno" | "collar" | "leashing" | "states" | "drugs";
+
+export interface LSCGSpellbookEntry {
+    readonly name: string;
+    /** Effect ids, in the order they take hold. */
+    readonly effects: readonly string[];
+    readonly voiceCastable: boolean;
+    readonly potion: boolean;
+}
+
+export interface LSCGMagicOperations {
+    /** The spells the player knows. Empty while magic is off. */
+    list(): LSCGSpellbookEntry[];
+    /** Casts a spell the player knows on themself, as if they had cast it with the spell menu (its saving throw, durations and
+     *  blocked-effect settings all apply; questions the spell asks at cast time take their defaults). Returns false if it wasn't
+     *  cast: magic is off, the spell is unknown, needs a paired target, or every effect of it is blocked. */
+    castOnSelf(name: string): boolean;
+    /** Stops the effects of spells cast on the player that haven't taken hold yet. Returns how many spells were cut short. */
+    dispel(): number;
+}
+
+export interface LSCGHypnoOperations {
+    /** Whether the player is under hypnosis now. */
+    isHypnotized(): boolean;
+    /** Puts the player under hypnosis, as a trigger word would. Returns false if hypnosis is off, they already are, or it is on cooldown. */
+    trigger(): boolean;
+    /** Wakes the player. Returns false if they weren't hypnotized. */
+    awaken(): boolean;
+}
+
+export interface LSCGCollarOperations {
+    /** 0 (loose) to 4 (passing out). Includes a choke from plugs, when worn. */
+    getChokeLevel(): number;
+    /** Tightens the player's collar one step. Returns false unless the collar is active and the player lets themself tighten it. */
+    tighten(): boolean;
+    /** Loosens the player's collar one step. Returns false unless the collar is active and the player lets themself loosen it. */
+    loosen(): boolean;
+    /** Lets the collar go fully loose. Always allowed while the collar is active. */
+    release(): boolean;
+}
+
+export interface LSCGGrabInfo {
+    /** Grab type, such as "arm", "collar", "leash" or "hand". */
+    readonly type: string;
+    /** The other player's member number. */
+    readonly member: number;
+    /** True when the player is the one holding; false when the player is the one held. */
+    readonly holding: boolean;
+}
+
+export interface LSCGLeashingOperations {
+    /** Every grab the player is part of. */
+    list(): LSCGGrabInfo[];
+    /** Lets go of what the player is holding (all of it, or one grab type). Returns how many grabs ended. */
+    release(type?: string): number;
+    /** Tries to break free of whoever holds the player, with the same check as `/lscg escape`. */
+    escape(): void;
+}
+
+export interface LSCGStatesOperations {
+    /** A state of the player (see `LSCGBuiltInStateType`), or undefined for one that can't be driven. */
+    get(type: LSCGBuiltInStateType): LSCGStateHandle | undefined;
+}
+
+export interface LSCGDrugOperations {
+    /** Same as `drugs.dose`, but only when the player has allowed the "drugs" scope. */
+    dose(type: LSCGDrugType, options?: LSCGDoseOptions): boolean;
+    /** Same as `drugs.getLevels()` for the player. */
+    getLevels(): LSCGDrugLevelInfo[];
+}
+
+/** Calls here act on the player only, never on someone else. Until the player allows an extension a scope (LSCG settings,
+ *  Extensions), any call in it throws an error named "LSCGPermissionError" and shows the request there. Each call still
+ *  keeps the player's own settings: it can return false, or do nothing, where they say no. Only usable once LSCG is ready. */
+export interface LSCGOperationsApi {
+    /** Every scope that exists. */
+    readonly scopes: readonly LSCGOperationScope[];
+    /** The scopes the player has allowed this extension so far. */
+    granted(): LSCGOperationScope[];
+    isGranted(scope: LSCGOperationScope): boolean;
+    /** Shows the player a request to allow these scopes (nothing is granted until they do). Calling a denied operation requests its scope too. */
+    request(scopes: LSCGOperationScope[], reason?: string): void;
+    /** Runs when the player allows or revokes one of this extension's scopes. Returns an unsubscribe function. */
+    onChange(handler: (granted: LSCGOperationScope[]) => void): () => void;
+    readonly magic: LSCGMagicOperations;
+    readonly hypno: LSCGHypnoOperations;
+    readonly collar: LSCGCollarOperations;
+    readonly leashing: LSCGLeashingOperations;
+    readonly states: LSCGStatesOperations;
+    readonly drugs: LSCGDrugOperations;
 }
 
 // ---------------------------------------------------------------------------------------------------------------

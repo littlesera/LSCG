@@ -63,6 +63,25 @@ function positive(owner: ErrorOwner, what: string, value: unknown, fallback: num
     return value;
 }
 
+/** Doses the player; shared by `drugs.dose` and the gated `operations.drugs.dose`. */
+export function doseDrug(owner: ErrorOwner, type: LSCGDrugType, options: LSCGDoseOptions = {}): boolean {
+    if (typeof type !== "string" || type === "")
+        throw new Error(`LSCG[ext:${owner.id}]: dose needs a drug type.`);
+    const multiplier = positive(owner, "multiplier", options.multiplier, 1, true);
+    const injector = getModule<InjectorModule>("InjectorModule");
+    return !!injector?.DoseDrug(type, { ...options, multiplier });
+}
+
+/** Levels above 0 for the player (no `memberNumber`) or an estimate for someone else. */
+export function drugLevels(memberNumber?: number): LSCGDrugLevelInfo[] {
+    const injector = getModule<InjectorModule>("InjectorModule");
+    const mine = memberNumber === undefined || memberNumber === Player.MemberNumber;
+    const character = mine ? Player : getCharacter(memberNumber);
+    if (!injector || !character)
+        return [];
+    return injector.EstimatedBars(character as Character).map(bar => Object.freeze({ type: bar.type, level: bar.level, max: bar.max, estimated: !mine }));
+}
+
 /** Builds the `drugs` member of an extension handle. */
 export function createDrugsApi(owner: ErrorOwner & { readonly info: { name: string } }, scopedId: (name: string) => `${string}.${string}`, track: (disposer: () => void) => void): LSCGDrugsApi {
     const mine = new Map<string, () => void>();
@@ -117,13 +136,7 @@ export function createDrugsApi(owner: ErrorOwner & { readonly info: { name: stri
             return remove;
         },
 
-        dose(type: LSCGDrugType, options: LSCGDoseOptions = {}): boolean {
-            if (typeof type !== "string" || type === "")
-                throw new Error(`LSCG[ext:${owner.id}]: dose needs a drug type.`);
-            const multiplier = positive(owner, "multiplier", options.multiplier, 1, true);
-            const injector = getModule<InjectorModule>("InjectorModule");
-            return !!injector?.DoseDrug(type, { ...options, multiplier });
-        },
+        dose: (type: LSCGDrugType, options: LSCGDoseOptions = {}) => doseDrug(owner, type, options),
 
         getLevel(type: LSCGDrugType, memberNumber?: number): number {
             const injector = getModule<InjectorModule>("InjectorModule");
@@ -132,14 +145,7 @@ export function createDrugsApi(owner: ErrorOwner & { readonly info: { name: stri
             return this.getLevels(memberNumber).find(bar => bar.type === type)?.level ?? 0;
         },
 
-        getLevels(memberNumber?: number): LSCGDrugLevelInfo[] {
-            const injector = getModule<InjectorModule>("InjectorModule");
-            const mine = memberNumber === undefined || memberNumber === Player.MemberNumber;
-            const character = mine ? Player : getCharacter(memberNumber);
-            if (!injector || !character)
-                return [];
-            return injector.EstimatedBars(character as Character).map(bar => Object.freeze({ type: bar.type, level: bar.level, max: bar.max, estimated: !mine }));
-        },
+        getLevels: (memberNumber?: number) => drugLevels(memberNumber),
 
         unregister(name: string): boolean {
             const remove = mine.get(name);

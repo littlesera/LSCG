@@ -1,8 +1,9 @@
 import { h } from "tsx-dom";
 import { GuiSubscreen, HelpInfo } from "./settingBase";
 import { DomSettingsHost } from "./domSettingsHost";
-import { KitContext, Notice, SelectRow } from "Dom/kit";
+import { CheckboxRow, KitContext, Notice, Panel, SectionLabel, SelectRow } from "Dom/kit";
 import { extensionScreens, type ExtensionScreen } from "api/settings";
+import { OPERATION_SCOPES, OPERATION_SCOPE_LABELS, isScopeGranted, onOperationsChange, operationRequests, setScopeGranted } from "api/operations";
 import { createExtensionKit } from "./extensionKit";
 
 /** One page, "Extensions", that holds every settings screen an extension registered, so the main menu needs a
@@ -17,17 +18,39 @@ export class GuiExtensions extends GuiSubscreen {
     }
 
     get hidden(): boolean {
-        return extensionScreens.all().length === 0;
+        return extensionScreens.all().length === 0 && operationRequests().length === 0;
     }
 
     get help(): HelpInfo {
         return { label: "Open LSCG Wiki on GitHub", link: "https://github.com/littlesera/LSCG/wiki" };
     }
 
+    /** What extensions asked to be allowed to do to the player (see api/operations), one checkbox per scope. */
+    private buildPermissions(): HTMLElement[] {
+        const requests = operationRequests();
+        if (requests.length === 0)
+            return [];
+        const ctx = new KitContext();
+        return [
+            SectionLabel("Extension permissions", "Extensions can ask to act on you through LSCG. They only act on you, and only in ways your own LSCG settings allow. Saved on this browser."),
+            ...requests.map(request => Panel([
+                SectionLabel(request.name, request.reason),
+                ...OPERATION_SCOPES.filter(scope => request.scopes.has(scope) || isScopeGranted(request.id, scope)).map(scope =>
+                    CheckboxRow(ctx, {
+                        label: OPERATION_SCOPE_LABELS[scope].label,
+                        description: OPERATION_SCOPE_LABELS[scope].description,
+                        get: () => isScopeGranted(request.id, scope),
+                        set: value => { setScopeGranted(request.id, scope, value); },
+                    })),
+            ])),
+        ];
+    }
+
     private build(): Node[] {
         const screens = extensionScreens.all();
+        const permissions = this.buildPermissions();
         if (screens.length === 0)
-            return [Notice("No installed extension has settings here.")];
+            return permissions.length > 0 ? permissions : [Notice("No installed extension has settings here.")];
         if (!screens.some(s => s.id === this._selected))
             this._selected = screens[0].id;
 
@@ -51,6 +74,7 @@ export class GuiExtensions extends GuiSubscreen {
                 {picker}
                 <div class="lscg-kit-body scroll-box">{[...panels.values()]}</div>
             </div> as HTMLElement,
+            ...permissions,
         ];
     }
 
@@ -68,7 +92,17 @@ export class GuiExtensions extends GuiSubscreen {
         super.Load();
         this._host.mount();
         // Screens registered or removed while the page is open show up straight away.
-        this._unwatch = extensionScreens.onChange(() => this._host.remount());
+        const unwatchScreens = extensionScreens.onChange(() => this._host.remount());
+        // A request arriving while the page is open shows up too; a checkbox ticked here doesn't need a rebuild.
+        const signature = () => operationRequests().map(r => `${r.id}:${[...r.scopes].sort().join(",")}:${r.reason ?? ""}`).join("|");
+        let shown = signature();
+        const unwatchRequests = onOperationsChange(() => {
+            const now = signature();
+            if (now === shown) return;
+            shown = now;
+            this._host.remount();
+        });
+        this._unwatch = () => { unwatchScreens(); unwatchRequests(); };
     }
 
     Exit(): void {

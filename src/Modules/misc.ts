@@ -956,8 +956,8 @@ export class MiscModule extends BaseModule {
             parent.style.setProperty("display", "grid");
             parent.style.setProperty("grid-template", `
                 "${this.LscgEffectCraftingId.topBar} ${this.LscgEffectCraftingId.topBar}" var(--menu-button-size)
-                "${this.LscgEffectCraftingId.chaoticEvolvingGrid} ${this.LscgEffectCraftingId.miscGrid}" auto
-                "${this.LscgEffectCraftingId.tamperproofGrid} ${this.LscgEffectCraftingId.drugGrid}" auto
+                "${this.LscgEffectCraftingId.chaoticEvolvingGrid} ${this.LscgEffectCraftingId.miscGrid}" minmax(0, 1fr)
+                "${this.LscgEffectCraftingId.tamperproofGrid} ${this.LscgEffectCraftingId.drugGrid}" minmax(0, 1.5fr)
                 "${this.LscgEffectCraftingId.toolTip} ${this.LscgEffectCraftingId.toolTip}" var(--menu-button-size)
                 / 3fr 3fr`);
             parent.style.setProperty("gap", "calc(var(--menu-button-size) / 15)");
@@ -1065,6 +1065,9 @@ export class MiscModule extends BaseModule {
                 "padding-right": "calc(var(--menu-button-size) / 12)",
                 "border": "1px dotted var(--lscg-border-color)",
                 "padding": "0.5rem",
+                // The menu is a fixed size and a cell can hold more rows than fit (the drugs plus their soaked variants): scroll, don't spill out.
+                "min-height": "0",
+                "overflow-y": "auto",
             },
             children: children,
         });

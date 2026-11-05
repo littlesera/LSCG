@@ -582,7 +582,31 @@ export class MagicModule extends BaseModule {
         return spell.Effects.map((effect, index) => locked.indexOf(effect) > -1 ? index : -1).filter(index => index > -1);
     }
 
-    CastSpellActual(spell: SpellDefinition | undefined, spellTarget: Character, voiceCast: boolean, pairedTarget?: Character, castArgs?: CastArgs) {
+    /** Closes the spell menu and dialog after a cast; a cast that didn't come from the menu (the extension API) has neither to close. */
+    private endCast(fromMenu: boolean) {
+        if (!fromMenu) return;
+        this.CloseSpellMenu();
+        DialogLeave();
+    }
+
+    /** Casts a spell the player knows on themself without the spell menu, for the extension API. Prompts take their defaults; a spell that
+     *  needs a paired target can't be cast this way. Returns whether it was cast. */
+    CastKnownSpellOnSelf(name: string): boolean {
+        if (!this.Enabled || !Player.MemberNumber)
+            return false;
+        const known = this.AvailableSpells.find(s => s?.Name === name);
+        if (!known || this.SpellNeedsPair(known) || !this.GetSpellStatus(known, Player).castable)
+            return false;
+        const spell = structuredClone(known);
+        const prompts = spellCastPrompts(spell, Player);
+        const castArgs: CastArgs | undefined = prompts.length > 0
+            ? Object.fromEntries(prompts.map(p => [p.index, Object.fromEntries(p.prompts.map(q => [q.key, q.default]))]))
+            : undefined;
+        this.CastSpellActual(spell, Player, false, undefined, castArgs, false);
+        return true;
+    }
+
+    CastSpellActual(spell: SpellDefinition | undefined, spellTarget: Character, voiceCast: boolean, pairedTarget?: Character, castArgs?: CastArgs, fromMenu: boolean = true) {
         if (!!spell && !!spellTarget) {
             // Effects a remote user has locked fizzle on their step; the rest of the spell goes ahead.
             const original = spell;
@@ -592,8 +616,7 @@ export class MagicModule extends BaseModule {
                 const kept = spell.Effects.map((_, index) => index).filter(index => lockedIndexes.indexOf(index) < 0);
                 if (kept.length <= 0) {
                     LSCG_SendLocal(`${spell.Name} fizzles entirely, your magic bound.`);
-                    this.CloseSpellMenu();
-                    DialogLeave();
+                    this.endCast(fromMenu);
                     return;
                 }
                 const picked = pickEffects(spell, castArgs, kept);
@@ -612,14 +635,13 @@ export class MagicModule extends BaseModule {
                     spellTarget = Player;
                 } else {
                     SendAction(`%NAME% struggles to wield ${crafterName}'s ${wand.Craft.Name}, %POSSESSIVE% spell fizzling with no effect.`);
-                    DialogLeave();
+                    this.endCast(fromMenu);
                     return;
                 }
             }
             else if (!hasMagicModule(spellTarget)) {
                 SendAction(`%NAME% casts ${spell.Name} at %OPP_NAME% but it seems to fizzle.`, spellTarget);
-                this.CloseSpellMenu();
-                DialogLeave();
+                this.endCast(fromMenu);
                 return;
             }
             else {
@@ -647,8 +669,7 @@ export class MagicModule extends BaseModule {
                     ...(castArgs ? [{ name: "args", value: castArgs }] : []),
                 ]);
         }
-        this.CloseSpellMenu();
-        DialogLeave();
+        this.endCast(fromMenu);
     }
 
     TeachSpellActual(spell: SpellDefinition, target: OtherCharacter) {
