@@ -270,6 +270,8 @@ export interface ZonePickerProps {
 export function ZonePicker(ctx: KitContext, props: ZonePickerProps): HTMLCanvasElement {
     // Drawn on a standing copy (same worn items, base poses), so kneeling etc. doesn't hide zones; deleted when done.
     const C = CharacterLoadSimple(uid("zones"));
+    // CharacterLoadSimple leaves ArousalSettings empty; mods' ScriptDraw hooks (e.g. Echo's) read ArousalSettings.Zone while drawing.
+    C.ArousalSettings = structuredClone(props.character.ArousalSettings);
     C.Appearance = AppearanceItemParse(CharacterAppearanceStringify(props.character));
     PoseSetActive(C, "BaseUpper", true);
     PoseSetActive(C, "BaseLower", true);
