@@ -50,6 +50,16 @@ export interface InjectorSettingsModel extends InjectorPublicSettingsModel {
     enableDrugVisuals: boolean;
     /** The swaying, warped screen of the suggestible (the tint and blur follow the drug visuals and BC preferences). */
     enableSuggestibleWave: boolean;
+    /** The flavor emotes of breathed gases and soaked items (the doses still land without them). */
+    enableDrugEmotes: boolean;
+    /** Show the emotes only to the player instead of saying them to the room. */
+    drugEmotesLocal: boolean;
+    /** Least minutes between breathed-drug emotes (0 for no limit). */
+    drugEmoteMinutes: number;
+    /** How strong each breath from a gas is, in percent (100 = standard). */
+    gasStrength: number;
+    /** How strong each breath from a soaked item is, in percent of a standard gas dose. */
+    soakedStrength: number;
     enableSoakedItems: boolean;
     /** How long (ms) a soaked item stays potent once worn. */
     soakedPotencyTime: number;

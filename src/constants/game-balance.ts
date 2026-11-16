@@ -101,6 +101,15 @@ export const SPIRAL_TURN_SECONDS = {
     STEP: 0.5,
 } as const;
 
+// How strong a breathed dose is, as a percent of the standard gas dose (player setting)
+export const BREATH_STRENGTH_PERCENT = {
+    MIN: 10,
+    MAX: 200,
+    STEP: 10,
+    /** Gas from a respirator */
+    GAS_DEFAULT: 100,
+} as const;
+
 // Random Event Odds
 export const RANDOM_EVENT_ODDS = {
     /** 1 in X chance for big sedative jump (every ~60s at 2s intervals) */

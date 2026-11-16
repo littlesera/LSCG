@@ -7,6 +7,8 @@ import { summarizeOptions } from "api/options";
 import type { InjectorModule } from "Modules/injector";
 import type { InjectorSettingsModel } from "./Models/injector";
 import type { MiscSettingsModel } from "./Models/base";
+import { BREATH_STRENGTH_PERCENT } from "constants/game-balance";
+import { SOAKED_ITEMS } from "constants/timing";
 
 const MAX_SIPS = 1000;
 const MAX_DECAY_MINUTES = 240;
@@ -131,6 +133,29 @@ export function buildInjectorTabs(ctx: KitContext, s: InjectorSettingsModel, mis
                     get: () => s.continuousDeliveryForever ?? false, set: v => s.continuousDeliveryForever = v,
                 }),
                 SectionLabel("Soaked items", "Crafted gags and masks with a drug word followed by \"-soaked\" or \"-laced\" (e.g. \"aphrodisiac-soaked\", \"intoxicant-laced\") dose you gradually while worn."),
+                CheckboxRow(ctx, {
+                    label: "Gas and soak emotes", description: "Occasional emotes as you breathe in a drug from a gas or a soaked item (rate-limited below). The doses still land without them.",
+                    get: () => s.enableDrugEmotes ?? true, set: v => s.enableDrugEmotes = v,
+                }),
+                CheckboxRow(ctx, {
+                    label: "Emotes only to me", description: "Show those emotes only to you instead of saying them to the room.",
+                    get: () => s.drugEmotesLocal ?? false, set: v => s.drugEmotesLocal = v, disabled: () => s.enableDrugEmotes === false,
+                }),
+                NumberRow(ctx, {
+                    label: "Minutes between emotes", description: "The least time between those emotes. 0 for no limit.",
+                    min: 0, max: 30, step: 0.5,
+                    get: () => s.drugEmoteMinutes ?? 4, set: v => s.drugEmoteMinutes = v, disabled: () => s.enableDrugEmotes === false,
+                }),
+                NumberRow(ctx, {
+                    label: "Gas strength (%)", description: "How strong each breath from a gas is. 100 is standard.",
+                    min: BREATH_STRENGTH_PERCENT.MIN, max: BREATH_STRENGTH_PERCENT.MAX, step: BREATH_STRENGTH_PERCENT.STEP,
+                    get: () => s.gasStrength ?? BREATH_STRENGTH_PERCENT.GAS_DEFAULT, set: v => s.gasStrength = v,
+                }),
+                NumberRow(ctx, {
+                    label: "Soak strength (%)", description: "How strong each breath from a soaked item is, as a percent of a standard gas. Default 30.",
+                    min: BREATH_STRENGTH_PERCENT.MIN, max: BREATH_STRENGTH_PERCENT.MAX, step: BREATH_STRENGTH_PERCENT.STEP,
+                    get: () => s.soakedStrength ?? Math.round(SOAKED_ITEMS.DOSE_FACTOR * 100), set: v => s.soakedStrength = v,
+                }),
                 CheckboxRow(ctx, {
                     label: "Allow soaked items", description: "Allows crafted mouth, nose and face items soaked in a drug to dose you gradually.",
                     get: () => s.enableSoakedItems ?? true, set: v => s.enableSoakedItems = v,
