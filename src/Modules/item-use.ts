@@ -242,8 +242,8 @@ function makeButton(
 			const props = resolveStateChange(item, moduleKey, resolveTarget(currentIndex));
 			if (!props) return false;
 			SendAction(chatAction, C);
-			PropertyDifference(item.Property, props.previous);
-			PropertyUnion(item.Property, props.next);
+            ItemPropertiesDifference([props.previous], item.Asset, { output: item.Property });
+            ItemPropertiesUnion([props.next], item.Asset, { output: item.Property });
 			CharacterRefresh(C, false, false);
 			ChatRoomCharacterItemUpdate(C, item.Asset.Group.Name);
 			return true;
