@@ -1,5 +1,5 @@
 import { flattenPolygon, generateSegments, getVisibilityPolygon, mergeSegments } from "./lighting.math";
-import { Point, Segment } from "./lighting.types";
+import { Segment } from "./lighting.types";
 
 // Persistent Worker State: only what later jobs need. Results are sent back as flat buffers and handed over (transferred), so
 // the worker does not keep them.

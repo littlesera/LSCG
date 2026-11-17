@@ -347,7 +347,6 @@ export class LightingEngine {
         const {
             mainCtx, width, height, lights, viewpoint,
             ambientColor = "rgb(60, 60, 60)",
-            camera = { x: 0, y: 0 },
         } = options;
         const view = this.viewOf(options);
 
