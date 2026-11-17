@@ -34,14 +34,10 @@ export class MapModule extends BaseModule {
     lastMouseX: number = 0;
     lastMouseY: number = 0;
 
-    debouncedParseMap = debounce(() => {
-        this.ParseMapForObjects();
-    }, 500, {
-        // Lodash gives you some awesome optional settings:
-        leading: false,  // Run on the very first event? (default: false)
-        trailing: true,  // Run after the wait time ends? (default: true)
-        maxWait: 1000,    // Force it to run every 1000ms even if events keep firing
-    });
+    /** Character lights (what people hold or wear) change in bursts, e.g. everyone's canvas loading as a room fills. */
+    debouncedCharacterLightRefresh = debounce(() => {
+        this.RefreshCharacterLightsIfChanged();
+    }, 150, { leading: false, trailing: true, maxWait: 500 });
 
     get zoomLevel(): number {
         return ChatRoomMapViewPerceptionRange;
@@ -189,6 +185,13 @@ export class MapModule extends BaseModule {
     
     drawingMapFlag: boolean = false;
 
+    /** Bumped whenever the room's map data (tiles, objects, effects) is seen to have changed. */
+    private mapRevision = 0;
+    private mapFingerprint: { tiles?: string; objects?: string; effects?: string } = {};
+    /** What the last ParseMapForObjects was computed from; a request for the same inputs is skipped. */
+    private lastParseSignature = "";
+    private lastCharacterLightSignature = "";
+
     load(): void {
         (window as any).lighting = this.lightingEngine; // Expose the lighting engine for debugging/testing
         exposePerf(); // window.lscgPerf: rolling map/lighting frame timings, for profiling and the browser perf test
@@ -199,7 +202,7 @@ export class MapModule extends BaseModule {
             if (ChatRoomActiveView == ChatRoomViews[viewName])
                 return;
             next(args);
-            if (viewName === ChatRoomMapViewName) this.ParseMapForObjects();
+            if (viewName === ChatRoomMapViewName) this.RequestParse(true);
         }, ModuleCategory.Map);
 
         hookFunction("RgbaArrayToHTMLColor", 1, (args, next) => { // Hack for effect overlay rectangles, since we're overriding them as lighting 'indicators'
@@ -217,6 +220,7 @@ export class MapModule extends BaseModule {
         }, ModuleCategory.Map);
 
         hookFunction("ChatRoomMapViewDrawGrid", 1, (args, next) => {
+            this.CheckMapDataChanged();
             this.drawingMapFlag = true;
             const drawStart = performance.now();
             next(args);
@@ -286,27 +290,31 @@ export class MapModule extends BaseModule {
 
         hookFunction("ChatRoomSyncRoomProperties", 1, (args, next) => {
             next(args);
-            this.ParseMapForObjects();
+            this.CheckMapDataChanged();
+            this.RequestParse();
         }, ModuleCategory.Map);
 
         hookFunction("ChatRoomMapViewUpdatePlayerFlag", 1, (args, next) => {
             next(args);
-            this.ParseMapForObjects();
+            this.RequestParse();
         }, ModuleCategory.Map);
 
         hookFunction("ChatRoomMapViewMouseWheel", 1, (args, next) => {
             next(args);
-            this.ParseMapForObjects();
+            this.RequestParse();
         }, ModuleCategory.Map);
 
         hookFunction("ChatRoomMapViewUpdateFlag", 1, (args, next) => {
             next(args);
-            this.ParseMapForObjects();
+            this.CheckMapDataChanged();
+            this.RequestParse();
         }, ModuleCategory.Map);
 
+        // A character's canvas (re)loading means their appearance may have changed. That can only change character lights, so
+        // it no longer rescans the whole map.
         hookFunction("CharacterLoadCanvas", 1, (args, next) => {
             const ret = next(args);
-            this.ParseMapForObjects();
+            this.debouncedCharacterLightRefresh();
             return ret;
         }, ModuleCategory.Map);
 
@@ -315,10 +323,62 @@ export class MapModule extends BaseModule {
 
             if (ChatRoomMapViewEditMode == "") {
                 if (MouseIn(10, 10, 60, 60) || MouseIn(10, 80, 60, 60)) {
-                    this.ParseMapForObjects();
+                    this.CheckMapDataChanged();
+                    this.RequestParse();
                 }
             }
         }, ModuleCategory.Map);
+    }
+
+    /**
+     * Notices the room's map data (tiles, objects, effects) changing, from the encoded strings BC keeps in
+     * ChatRoomData.MapData; map edits and room updates both end up there. Comparing the strings is cheap enough to do every
+     * frame (a saved map is two 1600-character strings and one short effects string).
+     */
+    CheckMapDataChanged(): void {
+        const data = ChatRoomData?.MapData as { Tiles?: string; Objects?: string; Effects?: string } | undefined;
+        if (!data) return;
+        const fp = this.mapFingerprint;
+        if (data.Tiles === fp.tiles && data.Objects === fp.objects && data.Effects === fp.effects) return;
+        const first = fp.tiles === undefined && fp.objects === undefined && fp.effects === undefined;
+        this.mapFingerprint = { tiles: data.Tiles, objects: data.Objects, effects: data.Effects };
+        if (!first) this.mapRevision++;
+    }
+
+    /** Everything ParseMapForObjects's output depends on. A parse is skipped when this has not changed since the last one. */
+    private get parseSignature(): string {
+        const pos = Player?.MapData?.Pos;
+        return [this.mapRevision, pos?.X, pos?.Y, ChatRoomMapViewPerceptionRange, this.MapWidth, this.lightingVisionMax,
+            ChatRoomMapViewWidth, ChatRoomMapViewHeight, this.settings.hideDarkLights ? 1 : 0].join("|");
+    }
+
+    /** Parses the map unless nothing it depends on has changed since the last parse. `force` always parses. */
+    RequestParse(force: boolean = false): void {
+        if (!force && this.parseSignature === this.lastParseSignature) return;
+        this.ParseMapForObjects();
+    }
+
+    /** What character lights are computed from: who is where, kneeling or not, and what they hold or wear. */
+    private get characterLightSignature(): string {
+        const parts: string[] = [];
+        for (const C of ChatRoomCharacter ?? []) {
+            const pos = C.MapData?.Pos;
+            const worn = (C.Appearance ?? []).map(i => `${i.Asset?.Name}${i.Craft?.Name ?? ""}${i.Craft?.Description ?? ""}`).join(",");
+            const handheld = InventoryGet(C, "ItemHandheld")?.Property?.TypeRecord?.typed ?? "";
+            const astral = (C as OtherCharacter).LSCG?.StateModule?.states?.find(st => st.type === "astral-projection")?.active ? 1 : 0;
+            parts.push(`${C.MemberNumber}:${pos?.X},${pos?.Y}:${C.IsKneeling?.() ? 1 : 0}:${handheld}:${astral}:${worn}`);
+        }
+        return parts.join(";");
+    }
+
+    /** Recomputes character lights only if something that affects them changed. Cheap enough for a debounced event. */
+    RefreshCharacterLightsIfChanged(): void {
+        if (!this.EnhancedLightingEnabled || !Player?.MapData) return;
+        const signature = this.characterLightSignature;
+        if (signature === this.lastCharacterLightSignature) return;
+        this.lastCharacterLightSignature = signature;
+        this.ParseOtherCharactersForLight();
+        this.lightingEngine.updateLights(this.allLights, this.viewpoint);
     }
 
     GetCharacterLights(C: Character, X: number, Y: number): Light[] {
@@ -454,7 +514,7 @@ export class MapModule extends BaseModule {
             this.ParseOtherCharactersForLight();
             this.lightingEngine.updateLights(this.allLights, this.viewpoint);
         } else {
-            this.ParseMapForObjects();
+            this.RequestParse();
         }
     }
 
@@ -482,6 +542,7 @@ export class MapModule extends BaseModule {
         if (!ChatRoomData || !ChatRoomData.MapData) return;
         if (!this.EnhancedLightingEnabled) return;
         if (!this.MapLoaded) return;
+        this.lastParseSignature = this.parseSignature;
 
         const objects: OpaqueObstacle[] = [];
         this.mapLights = [];
@@ -570,6 +631,7 @@ export class MapModule extends BaseModule {
         
         //this.lights.push(...this.GetCharacterLights(Player));
         this.ParseOtherCharactersForLight();
+        this.lastCharacterLightSignature = this.characterLightSignature;
 
         // Trim out any "off" lights.
         if (this.settings.hideDarkLights) {

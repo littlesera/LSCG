@@ -175,15 +175,115 @@ describe("MapModule lighting", () => {
 	});
 
 	describe("hooks", () => {
-		it("re-parse the map when the room or view changes", () => {
-			room(["P.L"]);
-			const parse = vi.spyOn(map, "ParseMapForObjects");
-			for (const name of ["ChatRoomSyncRoomProperties", "ChatRoomMapViewUpdatePlayerFlag", "ChatRoomMapViewMouseWheel", "ChatRoomMapViewUpdateFlag", "CharacterLoadCanvas"])
-				g[name](player());
-			g.MouseIn.mockReturnValueOnce(true);
-			g.ChatRoomMapViewClick();
-			expect(parse).toHaveBeenCalledTimes(6);
-			parse.mockRestore();
+		describe("re-parsing the map only when something it depends on changed", () => {
+			let parse: ReturnType<typeof vi.spyOn>;
+			const triggers = ["ChatRoomSyncRoomProperties", "ChatRoomMapViewUpdatePlayerFlag", "ChatRoomMapViewMouseWheel", "ChatRoomMapViewUpdateFlag"];
+
+			beforeEach(() => {
+				room(["P.L"]);
+				g.ChatRoomData = { Admin: [], MapData: { Tiles: "a", Objects: "b", Effects: "c" } };
+				map.CheckMapDataChanged();
+				map.RequestParse(true);
+				parse = vi.spyOn(map, "ParseMapForObjects");
+			});
+			afterEach(() => parse.mockRestore());
+
+			it("skips every trigger while nothing changed", () => {
+				for (const name of triggers) g[name](player());
+				g.MouseIn.mockReturnValueOnce(true);
+				g.ChatRoomMapViewClick();
+				expect(parse).not.toHaveBeenCalled();
+			});
+
+			it("always parses when the map view is activated", () => {
+				Object.assign(g, { ChatRoomMapViewName: "Map", ChatRoomViews: { Map: {} }, ChatRoomActiveView: null });
+				g.ChatRoomActivateView("Map");
+				expect(parse).toHaveBeenCalledTimes(1);
+			});
+
+			it("parses when the player moved, once for that move", () => {
+				g.Player.MapData.Pos.X += 1;
+				g.ChatRoomMapViewUpdatePlayerFlag(player());
+				g.ChatRoomMapViewUpdatePlayerFlag(player());
+				expect(parse).toHaveBeenCalledTimes(1);
+			});
+
+			it("parses when the zoom changed", () => {
+				g.ChatRoomMapViewPerceptionRange = 6;
+				g.ChatRoomMapViewMouseWheel(player());
+				expect(parse).toHaveBeenCalledTimes(1);
+			});
+
+			it("parses when the map is resized (BC R134)", () => {
+				g.ChatRoomMapViewSplitPosition = 1400;
+				g.ChatRoomMapViewUpdatePlayerFlag(player());
+				expect(parse).toHaveBeenCalledTimes(1);
+				delete g.ChatRoomMapViewSplitPosition;
+			});
+
+			it("parses when the room's map data changed, e.g. a wall was edited", () => {
+				g.ChatRoomData.MapData.Tiles = "changed";
+				g.ChatRoomSyncRoomProperties(player());
+				expect(parse).toHaveBeenCalledTimes(1);
+				g.ChatRoomSyncRoomProperties(player());
+				expect(parse).toHaveBeenCalledTimes(1);
+			});
+
+			it("notices a map change on the next draw, as when an editor saves", () => {
+				g.ChatRoomData.MapData.Objects = "edited";
+				map.CheckMapDataChanged();
+				map.RequestParse();
+				expect(parse).toHaveBeenCalledTimes(1);
+			});
+
+			it("ignores a map save that wrote the same content into new strings", () => {
+				g.ChatRoomData.MapData = { Tiles: "a".slice(), Objects: ["b"].join(""), Effects: ["c"].join("") };
+				map.CheckMapDataChanged();
+				map.RequestParse();
+				expect(parse).not.toHaveBeenCalled();
+			});
+
+			it("does nothing when there is no map data yet", () => {
+				g.ChatRoomData = { Admin: [] };
+				expect(() => map.CheckMapDataChanged()).not.toThrow();
+			});
+		});
+
+		describe("character lights", () => {
+			it("a character's canvas loading refreshes character lights (debounced), not the whole map", () => {
+				room(["P.L"]);
+				const parse = vi.spyOn(map, "ParseMapForObjects");
+				const refresh = vi.spyOn(map, "debouncedCharacterLightRefresh");
+				g.CharacterLoadCanvas(player());
+				expect(refresh).toHaveBeenCalledTimes(1);
+				expect(parse).not.toHaveBeenCalled();
+				parse.mockRestore();
+				refresh.mockRestore();
+			});
+
+			it("recomputes only when what characters hold or wear changed", () => {
+				room(["P.L"]);
+				const C = makeCharacter({ MemberNumber: 7, Appearance: [] });
+				g.ChatRoomCharacter = [asChar(C)];
+				const update = vi.spyOn(map.lightingEngine, "updateLights").mockImplementation(() => {});
+				map.RefreshCharacterLightsIfChanged();
+				expect(update).toHaveBeenCalledTimes(1);
+				map.RefreshCharacterLightsIfChanged();
+				expect(update).toHaveBeenCalledTimes(1);
+				wear(C, makeItem(makeAsset(makeGroup({ Name: "Necklace", Category: "Appearance" }), { Name: "Pendant" }), { Craft: { Name: "Glowing Pendant", Description: "" } }));
+				map.RefreshCharacterLightsIfChanged();
+				expect(update).toHaveBeenCalledTimes(2);
+				update.mockRestore();
+			});
+
+			it("does nothing with enhanced lighting off", () => {
+				room(["P.L"]);
+				map.settings.enhancedLighting = false;
+				const update = vi.spyOn(map.lightingEngine, "updateLights").mockImplementation(() => {});
+				map.RefreshCharacterLightsIfChanged();
+				expect(update).not.toHaveBeenCalled();
+				update.mockRestore();
+			});
 		});
 
 		it("hide the vanilla effect colours and half fog while drawing the grid, then render", () => {
