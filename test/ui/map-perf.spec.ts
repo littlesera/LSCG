@@ -96,6 +96,8 @@ for (const v of variants) {
         }, { ...v, walkMs: WALK_MS, software: SOFTWARE });
 
         mkdirSync("test/.out", { recursive: true });
+        // A picture of the last frame, to check by eye that lights, walls and fog line up
+        await bc.page.locator("#MainCanvas").screenshot({ path: `test/.out/map-shot-${v.name}${SOFTWARE ? "-software" : ""}.png` });
         writeFileSync(`test/.out/map-perf-${v.name}${SOFTWARE ? "-software" : ""}.json`, JSON.stringify(result, null, 2));
         const p = result.perf;
         console.log(`${v.name}${SOFTWARE ? " [software]" : ""}: ${result.fps.toFixed(1)} fps | drawGrid mean ${p.drawGrid.mean.toFixed(2)} p95 ${p.drawGrid.p95.toFixed(2)} ms | ` +

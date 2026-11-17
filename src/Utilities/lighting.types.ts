@@ -12,6 +12,9 @@ export type Color = [number, number, number, number];
 
 export interface Light extends Point {
     id: string;
+    /** The tile the light belongs to (world units are tiles), used to decide whether it is near enough the player to draw. */
+    tileX?: number;
+    tileY?: number;
     radius: number;
     color: Color; 
     
@@ -64,6 +67,11 @@ export interface RenderOptions {
     ambientColor?: string;
     focus?: Point;  // For aiming flashlights
     camera?: Point; // X/Y offset for panning the map
+    /**
+     * Maps lights, vision and obstacles (in world units) onto the canvas: canvas = world * scale + offset. When given it is
+     * used instead of `camera`, and `width`/`height` are the canvas area being lit.
+     */
+    view?: { scale: number; x: number; y: number };
 }
 
 export interface Segment {

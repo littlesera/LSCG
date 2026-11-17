@@ -168,8 +168,8 @@ export class LightingEngine {
                     break;
                 case "hover":
                     if (!this.disableSpatialAnimations) {
-                        const hoverRangeX = 12; 
-                        const hoverRangeY = 6;  
+                        const hoverRangeX = 0.1; 
+                        const hoverRangeY = 0.05;  
                         light.x = state.baseX + Math.sin(t * 0.5) * hoverRangeX;
                         light.y = state.baseY + Math.sin(t * 1.0) * hoverRangeY; 
                     }
@@ -318,6 +318,7 @@ export class LightingEngine {
             ambientColor = "rgb(60, 60, 60)",
             camera = { x: 0, y: 0 },
         } = options;
+        const view = this.viewOf(options);
 
         // A compute that was held back (see fallbackHeldUntil) runs once its hold is over.
         if (this.fallbackPending && performance.now() >= this.fallbackHeldUntil) {
@@ -353,7 +354,7 @@ export class LightingEngine {
             this.visionCtx.fillRect(0, 0, width, height);
 
             this.visionCtx.save();
-            this.visionCtx.translate(-camera.x, -camera.y);
+            this.visionCtx.setTransform(view.scale, 0, 0, view.scale, view.x, view.y);
 
             const visionPolygon = this.visionMaskCache;
             if (visionPolygon.length > 0) {
@@ -387,8 +388,8 @@ export class LightingEngine {
         // --- 4. DEBUG OVERLAY ---
         if (this.debug) {
             mainCtx.save();
-            mainCtx.translate(-camera.x, -camera.y);
-            mainCtx.lineWidth = 2;
+            mainCtx.transform(view.scale, 0, 0, view.scale, view.x, view.y);
+            mainCtx.lineWidth = 2 / view.scale;
 
             for (let i = 0; i < this.segments.length; i++) {
                 const seg = this.segments[i];
@@ -401,8 +402,9 @@ export class LightingEngine {
 
                 mainCtx.fillStyle = "rgba(255, 255, 255, 0.8)";
                 mainCtx.beginPath();
-                mainCtx.arc(seg.p1.x, seg.p1.y, 3, 0, Math.PI * 2);
-                mainCtx.arc(seg.p2.x, seg.p2.y, 3, 0, Math.PI * 2);
+                mainCtx.arc(seg.p1.x, seg.p1.y, 3 / view.scale, 0, Math.PI * 2);
+                mainCtx.moveTo(seg.p2.x + 3 / view.scale, seg.p2.y);
+                mainCtx.arc(seg.p2.x, seg.p2.y, 3 / view.scale, 0, Math.PI * 2);
                 mainCtx.fill();
             }
 
@@ -410,7 +412,7 @@ export class LightingEngine {
                 mainCtx.fillStyle = `rgba(${light.color[0]}, ${light.color[1]}, ${light.color[2]}, 1)`;
                 mainCtx.strokeStyle = "black";
                 mainCtx.beginPath();
-                mainCtx.arc(light.x, light.y, 5, 0, Math.PI * 2);
+                mainCtx.arc(light.x, light.y, 5 / view.scale, 0, Math.PI * 2);
                 mainCtx.fill();
                 mainCtx.stroke();
             }
@@ -464,22 +466,32 @@ export class LightingEngine {
         }
     }
 
+    /** Maps world space to the canvas. Without `view`, world space is the canvas, shifted by `camera` (how lighting used to work). */
+    private viewOf(options: RenderOptions): { scale: number; x: number; y: number } {
+        if (options.view) return options.view;
+        const camera = options.camera ?? { x: 0, y: 0 };
+        return { scale: 1, x: -camera.x, y: -camera.y };
+    }
+
     private drawLights(ctx: CanvasRenderingContext2D, lights: Light[], composition: GlobalCompositeOperation, options: RenderOptions) {
-        const camera = options.camera ?? {x: 0, y: 0};
-        const width = options.width;
-        const height = options.height;
+        const view = this.viewOf(options);
+        // The canvas area being lit, in world units; lights that cannot reach it are skipped.
+        const left = -view.x / view.scale;
+        const top = -view.y / view.scale;
+        const right = (options.width - view.x) / view.scale;
+        const bottom = (options.height - view.y) / view.scale;
 
         this.lightCtx.save();
-        this.lightCtx.translate(-camera.x, -camera.y);
+        this.lightCtx.setTransform(view.scale, 0, 0, view.scale, view.x, view.y);
         this.lightCtx.globalCompositeOperation = composition;
 
         for (const light of lights) {
             if (
-                light.x + light.radius < camera.x ||
-                light.x - light.radius > camera.x + width ||
-                light.y + light.radius < camera.y ||
-                light.y - light.radius > camera.y + height
-            ) continue; 
+                light.x + light.radius < left ||
+                light.x - light.radius > right ||
+                light.y + light.radius < top ||
+                light.y - light.radius > bottom
+            ) continue;
 
             // Look up by dictionary ID instead of array index
             const cachedPolygon = this.lightMaskCache[this.getLightId(light)];

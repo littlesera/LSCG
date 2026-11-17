@@ -84,34 +84,85 @@ describe("MapModule lighting", () => {
 			room(["P.L"]);
 			map.ParseMapForObjects();
 			expect(map.mapLights).toHaveLength(1);
-			expect(map.mapLights[0]).toMatchObject({ color: [200, 200, 200, 0.8], radius: map.TileUnit * 6 });
+			// World space (tiles): two tiles right of the player, the post's light raised 1.4 tiles, reaching 6 tiles
+			expect(map.mapLights[0]).toMatchObject({ color: [200, 200, 200, 0.8], radius: 6, tileX: 2, tileY: 0 });
+			expect(map.mapLights[0].x).toBeCloseTo(2.5);
+			expect(map.mapLights[0].y).toBeCloseTo(0.5 - 1.4);
 		});
 
-		it("leaves out lights that are entirely off the drawn map", () => {
-			// A static light reaches 5 tiles. At zoom 4 a tile is about 111 px: 8 tiles away its reach still touches the screen, 9 does not.
-			room(["P" + ".".repeat(7) + "S"]);
-			map.ParseMapForObjects();
-			expect(map.mapLights).toHaveLength(1);
+		it("builds lights for the whole map, and draws only those inside the window around the player", () => {
+			// The window is lightingVisionMax tiles either way (10 at the default range)
 			room(["P" + ".".repeat(9) + "S"]);
 			map.ParseMapForObjects();
-			expect(map.mapLights).toHaveLength(0);
+			expect(map.mapLights).toHaveLength(1);
+			expect(map.visibleLights).toHaveLength(1);
+			room(["P" + ".".repeat(10) + "S"]);
+			map.ParseMapForObjects();
+			expect(map.mapLights).toHaveLength(1);
+			expect(map.visibleLights).toHaveLength(0);
 		});
 
 		it("brings a distant light back once the player is near it", () => {
-			room(["P" + ".".repeat(9) + "S"]);
+			room(["P" + ".".repeat(10) + "S"]);
 			map.ParseMapForObjects();
-			expect(map.mapLights).toHaveLength(0);
+			expect(map.visibleLights).toHaveLength(0);
 			g.Player.MapData.Pos.X = 5;
-			map.ParseMapForObjects();
-			expect(map.mapLights).toHaveLength(1);
+			expect(map.visibleLights).toHaveLength(1);
 		});
 
-		it("keeps a distant light that is on screen on a wider map (BC R134)", () => {
+		it("keeps a light that is further to the side when the map is wider (BC R134)", () => {
 			g.ChatRoomMapViewSplitPosition = 2000;
-			room(["P" + ".".repeat(9) + "S"]);
+			room(["P" + ".".repeat(12) + "S"]);
 			map.ParseMapForObjects();
-			expect(map.mapLights).toHaveLength(1);
+			expect(map.visibleLights).toHaveLength(1);
+			g.ChatRoomMapViewSplitPosition = 1000;
+			expect(map.visibleLights).toHaveLength(0);
 			delete g.ChatRoomMapViewSplitPosition;
+		});
+
+		it("does not rebuild the walls or lights when the player walks, or when the zoom changes within a pillar style", () => {
+			room(["#####", "#P.L#", "#...#", "#####"]);
+			map.ParseMapForObjects();
+			const lights = map.mapLights;
+			compute.mockClear();
+			const parse = vi.spyOn(map, "ParseMapForObjects");
+			g.Player.MapData.Pos.X = 2;
+			g.ChatRoomMapViewUpdatePlayerFlag(player());
+			g.ChatRoomMapViewPerceptionRange = 7;
+			g.ChatRoomMapViewMouseWheel(player());
+			expect(parse).not.toHaveBeenCalled();
+			expect(map.mapLights).toBe(lights);
+			expect(compute).not.toHaveBeenCalled();
+			parse.mockRestore();
+		});
+
+		it("recomputes when the player passes a door (its blocked side depends on it), but not for other moves", () => {
+			room(["#D#####", ".P....."]);
+			map.ParseMapForObjects();
+			compute.mockClear();
+			const update = vi.spyOn(map.lightingEngine, "updateLights").mockImplementation(() => {});
+			// Moving to the right of the door changes which side of it is blocked: the walls are recomputed
+			g.Player.MapData.Pos.X = 3;
+			g.ChatRoomMapViewUpdatePlayerFlag(player());
+			expect(compute).toHaveBeenCalledTimes(1);
+			// Moving on, still to the right of it, only moves the vision
+			g.Player.MapData.Pos.X = 4;
+			g.ChatRoomMapViewUpdatePlayerFlag(player());
+			expect(compute).toHaveBeenCalledTimes(1);
+			expect(update).toHaveBeenCalledTimes(1);
+			update.mockRestore();
+		});
+
+		it("describes the same geometry wherever the player stands and however far it is zoomed", () => {
+			const layout = ["#######", "#P....#", "#..L..#", "#######"];
+			const snapshot = () => JSON.stringify({ lights: map.mapLights.map(l => [l.id, l.x, l.y, l.radius]), walls: obstacles() });
+			room(layout);
+			map.ParseMapForObjects();
+			const home = snapshot();
+			g.Player.MapData.Pos = { X: 5, Y: 2 };
+			g.ChatRoomMapViewPerceptionRange = 8;
+			map.ParseMapForObjects();
+			expect(snapshot()).toBe(home);
 		});
 
 		it("lights a static-lighting effect", () => {
@@ -170,7 +221,7 @@ describe("MapModule lighting", () => {
 			hold(C, "CandleWax");
 			expect(map.GetCharacterLights(asChar(C), 0, 0)[0].animType).toBe("flicker");
 			hold(C, "Cigarette", { Property: { TypeRecord: { typed: 0 } } });
-			expect(map.GetCharacterLights(asChar(C), 0, 0)[0].radius).toBe(map.TileUnit / 4);
+			expect(map.GetCharacterLights(asChar(C), 0, 0)[0].radius).toBe(0.25);
 			hold(C, "Smartphone");
 			expect(map.GetCharacterLights(asChar(C), 0, 0)[0].fov).toBe(45);
 		});
@@ -194,23 +245,26 @@ describe("MapModule lighting", () => {
 			expect(light.color).toEqual([0, 255, 0, 0x88 / 255]);
 		});
 
-		it("only characters in range are considered", () => {
+		it("takes lights from every character, and draws only those near the player", () => {
 			room(["P..."]);
 			const near = addToRoom(Object.assign(makeCharacter({ MemberNumber: 5 }), { MapData: { Pos: { X: 1, Y: 0 } } }));
-			const far = addToRoom(Object.assign(makeCharacter({ MemberNumber: 6 }), { MapData: { Pos: { X: 99, Y: 0 } } }));
+			const far = addToRoom(Object.assign(makeCharacter({ MemberNumber: 6 }), { MapData: { Pos: { X: 30, Y: 0 } } }));
 			hold(near, "CandleWax");
 			hold(far, "CandleWax");
 			map.ParseOtherCharactersForLight();
-			expect(map.charLights).toHaveLength(1);
+			expect(map.charLights).toHaveLength(2);
+			expect(map.visibleLights).toHaveLength(1);
+			expect(map.visibleLights[0].tileX).toBe(1);
 		});
 
-		it("RecomputeCharacterLights updates moving lights, or parses the map if there are none", () => {
+		it("RecomputeCharacterLights updates only the characters' lights, not the map's or the walls", () => {
 			room(["P.L"]);
-			const update = vi.spyOn(map.lightingEngine, "updateLights");
+			map.ParseMapForObjects();
+			compute.mockClear();
+			const update = vi.spyOn(map.lightingEngine, "updateLights").mockImplementation(() => {});
 			map.RecomputeCharacterLights();
-			expect(compute).toHaveBeenCalled();
-			map.RecomputeCharacterLights();
-			expect(update).toHaveBeenCalled();
+			expect(update).toHaveBeenCalledWith(map.charLights);
+			expect(compute).not.toHaveBeenCalled();
 			update.mockRestore();
 		});
 	});
@@ -242,24 +296,40 @@ describe("MapModule lighting", () => {
 				expect(parse).toHaveBeenCalledTimes(1);
 			});
 
-			it("parses when the player moved, once for that move", () => {
+			it("only updates the vision polygon when the player moved, once for that move", () => {
+				const update = vi.spyOn(map.lightingEngine, "updateLights").mockImplementation(() => {});
 				g.Player.MapData.Pos.X += 1;
 				g.ChatRoomMapViewUpdatePlayerFlag(player());
 				g.ChatRoomMapViewUpdatePlayerFlag(player());
-				expect(parse).toHaveBeenCalledTimes(1);
+				expect(parse).not.toHaveBeenCalled();
+				expect(update).toHaveBeenCalledTimes(1);
+				expect(update).toHaveBeenCalledWith([], expect.objectContaining({ radius: 8 }));
+				update.mockRestore();
 			});
 
-			it("parses when the zoom changed", () => {
+			it("only moves the viewpoint when the zoom changes within the same pillar style", () => {
+				const update = vi.spyOn(map.lightingEngine, "updateLights").mockImplementation(() => {});
 				g.ChatRoomMapViewPerceptionRange = 6;
+				g.ChatRoomMapViewMouseWheel(player());
+				expect(parse).not.toHaveBeenCalled();
+				expect(update).toHaveBeenCalledTimes(1);
+				update.mockRestore();
+			});
+
+			it("rebuilds the walls when the zoom changes how lone pillars are drawn", () => {
+				g.ChatRoomMapViewPerceptionRange = 12;
 				g.ChatRoomMapViewMouseWheel(player());
 				expect(parse).toHaveBeenCalledTimes(1);
 			});
 
-			it("parses when the map is resized (BC R134)", () => {
+			it("does nothing when the map is resized (BC R134): only the camera changes", () => {
+				const update = vi.spyOn(map.lightingEngine, "updateLights").mockImplementation(() => {});
 				g.ChatRoomMapViewSplitPosition = 1400;
 				g.ChatRoomMapViewUpdatePlayerFlag(player());
-				expect(parse).toHaveBeenCalledTimes(1);
+				expect(parse).not.toHaveBeenCalled();
+				expect(update).not.toHaveBeenCalled();
 				delete g.ChatRoomMapViewSplitPosition;
+				update.mockRestore();
 			});
 
 			it("parses when the room's map data changed, e.g. a wall was edited", () => {
@@ -387,18 +457,24 @@ describe("MapModule lighting", () => {
 			}
 		});
 
-		it.each([500, 1000, 2000])("casts vision from the middle of a %i px map, and sizes the light render to it", (split) => {
+		it.each([500, 1000, 2000])("casts vision from the player's tile and lights a %i px map through the camera", (split) => {
 			g.ChatRoomMapViewSplitPosition = split;
 			room(["...P."]);
-			expect(map.viewpoint.x).toBe(split / 2);
+			const T = map.TileUnit;
+			expect(map.viewpoint.x).toBeCloseTo(3.5);
+			expect(map.viewpoint.y).toBeCloseTo(0.5 - 50 / T);
+			expect(map.viewpoint.radius).toBe(8);
+			// The player's tile lands in the middle of the drawn map
+			expect(map.camera.x + 3 * map.camera.scale).toBeCloseTo((split - T) / 2);
 			g.ChatRoomMapFogIsActive = () => true;
 			g.ChatRoomMapViewHasSuperPowers = () => false;
 			g.MainCanvas = Object.assign(recordingContext().ctx, { canvas: { width: 2000, height: 1000 } });
 			g.MouseX = 10; g.MouseY = 20;
 			const render = vi.spyOn(map.lightingEngine, "render").mockImplementation(() => {});
 			g.ChatRoomMapViewDrawGrid();
-			expect(render.mock.calls[0][0]).toMatchObject({ width: split, height: 1000 });
-			expect(render.mock.calls[0][0].viewpoint).toMatchObject({ x: split / 2 });
+			expect(render.mock.calls[0][0]).toMatchObject({ width: split, height: 1000, view: { scale: T } });
+			expect(render.mock.calls[0][0].view!.x).toBeCloseTo(-3 * T + (split - T) / 2);
+			expect(render.mock.calls[0][0].viewpoint).toMatchObject({ radius: 8 });
 			render.mockRestore();
 		});
 
@@ -407,8 +483,21 @@ describe("MapModule lighting", () => {
 			room(["P.L"]);
 			map.ParseMapForObjects();
 			const T = map.TileUnit;
-			// The lamppost is two tiles right of the player; the player's tile is centred in 2000 px.
-			expect(map.mapLights[0].x).toBeCloseTo((2000 - T) / 2 + 2 * T + T / 2);
+			// World position is the tile; the camera puts the player's tile (0) in the middle of 2000 px.
+			expect(map.mapLights[0].x).toBeCloseTo(2.5);
+			expect(map.camera.x + map.mapLights[0].x * map.camera.scale).toBeCloseTo((2000 - T) / 2 + 2 * T + T / 2);
+		});
+
+		it("the camera agrees with ScreenX and ScreenY (BC's own tile placement), at any zoom, split and position", () => {
+			for (const [range, split, px, py] of [[4, 1000, 3, 2], [12, 1000, 0, 0], [8, 2000, 7, 5], [2, 500, 1, 9]] as const) {
+				g.ChatRoomMapViewPerceptionRange = range;
+				g.ChatRoomMapViewSplitPosition = split;
+				room(["P"]);
+				g.Player.MapData.Pos = { X: px, Y: py };
+				const cam = map.camera;
+				expect(cam.x + 11 * cam.scale).toBeCloseTo(map.ScreenX(11));
+				expect(cam.y + 4 * cam.scale).toBeCloseTo(map.ScreenY(4));
+			}
 		});
 
 		it("looks further to the sides on a wide map, since more columns are on screen", () => {
@@ -421,16 +510,6 @@ describe("MapModule lighting", () => {
 			expect(map.lightingVisionMaxX).toBeGreaterThan(map.lightingVisionMax);
 		});
 
-		it("lights a lamppost beyond the usual window when the map is wide", () => {
-			g.ChatRoomMapViewSplitPosition = 2000;
-			const far = map.lightingVisionMax + 2;
-			room(["P" + ".".repeat(far - 1) + "L"]);
-			map.ParseMapForObjects();
-			expect(map.mapLights).toHaveLength(1);
-			g.ChatRoomMapViewSplitPosition = 1000;
-			map.ParseMapForObjects();
-			expect(map.mapLights).toHaveLength(0);
-		});
 	});
 });
 
@@ -464,6 +543,48 @@ describe("LightingEngine", () => {
 		engine.disableSpatialAnimations = true;
 		engine.updateAnimations(lights);
 		expect(lights[0].radius).toBe(40);
+	});
+
+	it("renders world-space lights through the view transform, and skips lights that cannot reach the lit area", () => {
+		const engine = new LightingEngine();
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const internals = engine as any;
+		const lightRec = recordingContext();
+		const visionRec = recordingContext();
+		const setTransform = vi.fn();
+		const fillRect = vi.fn();
+		// The ambient fill is a fillRect over the whole layer; only count the lights' boxes
+		const lightBoxes = () => fillRect.mock.calls.filter(c => !(c[0] === 0 && c[1] === 0 && c[2] === 100 && c[3] === 100));
+		Object.assign(lightRec.ctx, { setTransform, fillRect });
+		internals.lightCtx = lightRec.ctx;
+		internals.visionCtx = visionRec.ctx;
+		const square = new Float32Array([0, 0, 100, 0, 100, 100, 0, 100]);
+		internals.lightMaskCache = { near: square, far: square };
+		const near = light({ id: "near", x: 5, y: 5, radius: 2 });
+		const far = light({ id: "far", x: 50, y: 50, radius: 2 });
+		// 10 canvas px per world unit, 100 px lit: the visible world is 0 to 10 each way
+		engine.render({ mainCtx: recordingContext().ctx, width: 100, height: 100, lights: [near, far], view: { scale: 10, x: 0, y: 0 } });
+		expect(setTransform).toHaveBeenCalledWith(10, 0, 0, 10, 0, 0);
+		expect(lightBoxes()).toEqual([[3, 3, 4, 4]]); // the near light's box in world units
+
+		// The camera moving to the far light brings it in and takes the near one out
+		fillRect.mockClear();
+		engine.render({ mainCtx: recordingContext().ctx, width: 100, height: 100, lights: [near, far], view: { scale: 10, x: -450, y: -450 } });
+		expect(lightBoxes()).toEqual([[48, 48, 4, 4]]);
+	});
+
+	it("still pans by `camera` when no view is given", () => {
+		const engine = new LightingEngine();
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const internals = engine as any;
+		const lightRec = recordingContext();
+		const setTransform = vi.fn();
+		Object.assign(lightRec.ctx, { setTransform });
+		internals.lightCtx = lightRec.ctx;
+		internals.visionCtx = recordingContext().ctx;
+		engine.render({ mainCtx: recordingContext().ctx, width: 100, height: 100, lights: [], camera: { x: 30, y: 40 } });
+		// no lights, so only ambient; drawLights still sets the transform for each pass
+		expect(setTransform).toHaveBeenCalledWith(1, 0, 0, 1, -30, -40);
 	});
 
 	it("animates colours in place, without touching the colour array a light source shares", () => {

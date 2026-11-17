@@ -186,25 +186,69 @@ export class MapModule extends BaseModule {
     mapLights: Light[] = [];
     charLights: Light[] = [];
     /**
-     * Where vision is cast from: the player's tile, centred in the drawn map. Rebuilt on each read so it follows zoom (the
-     * radius) and, on BC R134 and later, the map's width.
+     * Everything the lighting engine works with is in WORLD space: one unit is one tile, and tile (X, Y)'s top-left corner is
+     * at (X, Y). Walls, light positions and radii never depend on where the player is or how zoomed in the view is, so their
+     * visibility polygons stay valid as the player walks and zooms; only the camera (below) moves.
+     *
+     * Where vision is cast from: slightly above the middle of the player's tile (50 canvas px, whatever the zoom).
      */
     get viewpoint(): Viewpoint {
+        const pos = Player?.MapData?.Pos;
         return {
-            x: this.MapWidth / 2,
-            y: 450,
-            radius: this.TileUnit * 8,
+            x: (pos?.X ?? 0) + 0.5,
+            y: (pos?.Y ?? 0) + 0.5 - 50 / this.TileUnit,
+            radius: 8,
         };
     }
-    
+
+    /**
+     * Maps world space to the canvas, the way BC's DrawGrid places tiles: the player's tile is centred in the drawn map
+     * (which is 1000 px wide, or the width of the resizable map on BC R134), so canvas = world * scale + offset.
+     */
+    get camera(): { scale: number; x: number; y: number } {
+        const scale = this.TileUnit;
+        const pos = Player?.MapData?.Pos;
+        return {
+            scale,
+            x: -(pos?.X ?? 0) * scale + (this.MapWidth - scale) / 2,
+            y: -(pos?.Y ?? 0) * scale + (1000 - scale) / 2,
+        };
+    }
+
+    /** The lights worth drawing now: those inside the lighting window around the player (see lightingVisionMax). */
+    get visibleLights(): Light[] {
+        const all = this.allLights;
+        const pos = Player?.MapData?.Pos;
+        const key = `${pos?.X},${pos?.Y},${this.lightingVisionMax},${this.lightingVisionMaxX}`;
+        if (this._visibleFor === all && this._visibleKey === key && this._visibleLength === all.length) return this._visible!;
+        const rangeY = Math.max(this.lightingVisionMax, 1);
+        const rangeX = Math.max(rangeY, this.lightingVisionMaxX);
+        const px = pos?.X ?? 0, py = pos?.Y ?? 0;
+        this._visibleFor = all;
+        this._visibleKey = key;
+        this._visibleLength = all.length;
+        return this._visible = all.filter(l => Math.abs((l.tileX ?? Math.floor(l.x)) - px) <= rangeX && Math.abs((l.tileY ?? Math.floor(l.y)) - py) <= rangeY);
+    }
+    private _visible?: Light[];
+    private _visibleFor?: Light[];
+    private _visibleKey = "";
+    private _visibleLength = -1;
+
     drawingMapFlag: boolean = false;
 
     /** Bumped whenever the room's map data (tiles, objects, effects) is seen to have changed. */
     private mapRevision = 0;
     private mapFingerprint: { tiles?: string; objects?: string; effects?: string } = {};
-    /** What the last ParseMapForObjects was computed from; a request for the same inputs is skipped. */
-    private lastParseSignature = "";
+    /** What the walls and map lights were last built from; they are rebuilt only when this changes. */
+    private lastStaticSignature = "";
+    /** What the door obstacles and the vision polygon were last computed for. */
+    private lastDoorSignature = "";
+    private lastViewSignature = "";
     private lastCharacterLightSignature = "";
+    /** Wall obstacles (everything but doors) from the last static parse. */
+    private wallObstacles: OpaqueObstacle[] = [];
+    /** Tiles holding a door, from the last static parse. Door obstacles depend on where the player stands. */
+    private doorTiles: { X: number; Y: number }[] = [];
 
     load(): void {
         (window as any).lighting = this.lightingEngine; // Expose the lighting engine for debugging/testing
@@ -266,7 +310,9 @@ export class MapModule extends BaseModule {
                 if (!this.settings.disableLightAnimation) {
                     this.lastMouseX = MouseX >= 0 ? MouseX : this.lastMouseX;
                     this.lastMouseY = MouseY >= 0 ? MouseY : this.lastMouseY;
-                    this.lightingEngine.updateAnimations(this.allLights, {x: this.lastMouseX, y: this.lastMouseY});
+                    const cam = this.camera;
+                    // The flashlight aims at the mouse; lights are in world space, the mouse is on the canvas.
+                    this.lightingEngine.updateAnimations(this.visibleLights, {x: (this.lastMouseX - cam.x) / cam.scale, y: (this.lastMouseY - cam.y) / cam.scale});
                 }
 
                 let ambientColor = "rgb(60, 60, 60)";
@@ -281,7 +327,8 @@ export class MapModule extends BaseModule {
                     mainCtx: MainCanvas, 
                     width: this.MapWidth, 
                     height: MainCanvas.canvas.height, 
-                    lights: this.allLights, 
+                    lights: this.visibleLights,
+                    view: this.camera,
                     viewpoint: (useViewpoint ? this.viewpoint : undefined),
                     ambientColor: ambientColor,
                 });
@@ -359,17 +406,47 @@ export class MapModule extends BaseModule {
         if (!first) this.mapRevision++;
     }
 
-    /** Everything ParseMapForObjects's output depends on. A parse is skipped when this has not changed since the last one. */
-    private get parseSignature(): string {
-        const pos = Player?.MapData?.Pos;
-        return [this.mapRevision, pos?.X, pos?.Y, ChatRoomMapViewPerceptionRange, this.MapWidth, this.lightingVisionMax,
-            ChatRoomMapViewWidth, ChatRoomMapViewHeight, this.settings.hideDarkLights ? 1 : 0].join("|");
+    /**
+     * What the walls and map lights are built from. Notably not the player's position, the zoom, or the map's width: those
+     * only move the camera (see `camera`). Zoom only matters through whether lone pillars are ovals or lines.
+     */
+    private get staticSignature(): string {
+        return [this.mapRevision, this.zoomLevel <= 10 ? "oval" : "line", ChatRoomMapViewWidth, ChatRoomMapViewHeight,
+            this.settings.hideDarkLights ? 1 : 0].join("|");
     }
 
-    /** Parses the map unless nothing it depends on has changed since the last parse. `force` always parses. */
+    /** What the door obstacles depend on: each door's state and which side of it the player is on. */
+    private get doorSignature(): string {
+        const px = Player?.MapData?.Pos?.X ?? 0;
+        return this.doorTiles.map(({ X, Y }) => `${this.DootAtPositionIsOpen(X, Y) ? 1 : 0}${X >= px ? 1 : 0}${X <= px ? 1 : 0}`).join("");
+    }
+
+    /** What the vision polygon depends on: where the player is, and the 50 px lift of the viewpoint, which depends on zoom. */
+    private get viewSignature(): string {
+        const pos = Player?.MapData?.Pos;
+        return `${pos?.X},${pos?.Y},${ChatRoomMapViewPerceptionRange}`;
+    }
+
+    /**
+     * Brings lighting up to date with the least work. The walls and map lights are rebuilt only when the map itself (or the
+     * pillar style) changed; if a door's state or the player's side of it changed, the doors are rebuilt and everything is
+     * recomputed; if only the player moved, just the vision polygon is. Zooming and resizing cost nothing here.
+     * `force` always rebuilds.
+     */
     RequestParse(force: boolean = false): void {
-        if (!force && this.parseSignature === this.lastParseSignature) return;
-        this.ParseMapForObjects();
+        if (force || this.staticSignature !== this.lastStaticSignature) {
+            this.ParseMapForObjects();
+            return;
+        }
+        if (!this.EnhancedLightingEnabled || !Player?.MapData) return;
+        if (this.doorSignature !== this.lastDoorSignature) {
+            this.ComputeLighting();
+            return;
+        }
+        if (this.viewSignature !== this.lastViewSignature) {
+            this.lastViewSignature = this.viewSignature;
+            this.lightingEngine.updateLights([], this.viewpoint);
+        }
     }
 
     /** What character lights are computed from: who is where, kneeling or not, and what they hold or wear. */
@@ -392,22 +469,21 @@ export class MapModule extends BaseModule {
         if (signature === this.lastCharacterLightSignature) return;
         this.lastCharacterLightSignature = signature;
         this.ParseOtherCharactersForLight();
-        this.lightingEngine.updateLights(this.allLights, this.viewpoint);
+        this.lightingEngine.updateLights(this.charLights);
     }
 
     GetCharacterLights(C: Character, X: number, Y: number): Light[] {
-        const ScreenX = this.ScreenX(X);
-        const ScreenY = this.ScreenY(Y);
-        const CX = ScreenX + (this.TileUnit/2);
-        const CY = C.IsKneeling() ? ScreenY + (this.TileUnit*0.45) : ScreenY;
+        // World space: the middle of the tile horizontally; standing characters' lights sit at the top of the tile, kneeling ones lower.
+        const CX = X + 0.5;
+        const CY = C.IsKneeling() ? Y + 0.45 : Y;
 
         const charLights: Light[] = [];
         const handheldItem = InventoryGet(C, "ItemHandheld");
         if (handheldItem?.Asset?.Name == "CandleWax") {
             charLights.push(this.NewLight(X, Y, {
                 x: CX,
-                y: CY + (this.TileUnit/10),
-                radius: this.TileUnit * 3,
+                y: CY + 0.1,
+                radius: 3,
                 color: [250, 220, 150, 0.5],
                 animType: "flicker",
             }, C.MemberNumber));
@@ -415,12 +491,12 @@ export class MapModule extends BaseModule {
 
         if (handheldItem?.Asset?.Name == "Cigarette") {
             const inMouth = handheldItem.Property?.TypeRecord?.typed == 0;
-            const xOffset = inMouth ? (this.TileUnit * 0.06) : (this.TileUnit * 0.09);
-            const yOffset = inMouth ? (this.TileUnit * 0.4) : (this.TileUnit * 0.02);
+            const xOffset = inMouth ? 0.06 : 0.09;
+            const yOffset = inMouth ? 0.4 : 0.02;
             charLights.push(this.NewLight(X, Y, {
                 x: CX + xOffset,
                 y: CY - yOffset,
-                radius: this.TileUnit/4,
+                radius: 0.25,
                 color: [250, 220, 150, 0.5],
                 animType: "flicker",
             }, C.MemberNumber));
@@ -430,7 +506,7 @@ export class MapModule extends BaseModule {
             charLights.push(this.NewLight(X, Y, {
                 x: CX,
                 y: CY,
-                radius: this.TileUnit * 0.8,
+                radius: 0.8,
                 color: [64, 183, 255, 0.4],
                 fov: 45,
                 angle: 270,
@@ -441,7 +517,7 @@ export class MapModule extends BaseModule {
             charLights.push(this.NewLight(X, Y, {
                 x: CX,
                 y: CY,
-                radius: this.TileUnit * 2,
+                radius: 2,
                 color: [173, 216, 230, 0.4],
                 animType: "pulse",
             }, C.MemberNumber));
@@ -449,14 +525,14 @@ export class MapModule extends BaseModule {
 
         const flashlight = C.Appearance.find(i => isPhraseInString(GetItemNameAndDescriptionConcat(i) || "", "flashlight", true));
         if (flashlight) {
-            const searchStr = GetItemNameAndDescriptionConcat(flashlight) ?? ""; 
+            const searchStr = GetItemNameAndDescriptionConcat(flashlight) ?? "";
             let fov = 40;
             if (isPhraseInString(searchStr, "narrow")) fov = 20;
             if (isPhraseInString(searchStr, "wide")) fov = 60;
             charLights.push(this.NewLight(X, Y, {
                 x: CX,
                 y: CY,
-                radius: C.IsPlayer() ? (this.TileUnit * 6) : (this.TileUnit * 3),
+                radius: C.IsPlayer() ? 6 : 3,
                 fov: fov,
                 color: [200, 200, 200, C.IsPlayer() ? 0.8 : 0.2],
                 animType: C.IsPlayer() ? "flashlight" : "none",
@@ -470,7 +546,7 @@ export class MapModule extends BaseModule {
                 charLights.push(this.NewLight(X, Y, {
                     x: CX,
                     y: CY,
-                    radius: this.TileUnit * 2,
+                    radius: 2,
                     color: this.hexToColor(hexColor, 0.6),
                     animType: "pulse",
                 }, C.MemberNumber));
@@ -492,17 +568,6 @@ export class MapModule extends BaseModule {
         return typeof ChatRoomMapViewSplitPosition === "number" ? ChatRoomMapViewSplitPosition : 1000;
     }
 
-    /**
-     * Whether any part of a light's reach is on the drawn map. A light entirely off screen contributes nothing this frame, so
-     * it is not given a visibility polygon (the render pass already skips it, but its polygon would still be computed). The
-     * margin covers lights that drift a little ("hover").
-     */
-    private lightIsOnScreen(light: Light): boolean {
-        const margin = 20;
-        return light.x + light.radius >= -margin && light.x - light.radius <= this.MapWidth + margin
-            && light.y + light.radius >= -margin && light.y - light.radius <= 1000 + margin;
-    }
-
     /** Canvas X of a tile's left edge. The player's tile is centred in the drawn map, as BC's DrawGrid does. */
     ScreenX(tileX: number): number {
         return (tileX - (Player?.MapData?.Pos?.X ?? 0)) * this.TileUnit + (this.MapWidth - this.TileUnit) / 2;
@@ -513,18 +578,18 @@ export class MapModule extends BaseModule {
         return (tileY - (Player?.MapData?.Pos?.Y ?? 0)) * this.TileUnit + (1000 - this.TileUnit) / 2;
     }
 
+    /** A light in world space (tile units), by default in the middle of its tile with a reach of 4 tiles. */
     NewLight(tileX: number, tileY: number, light: Partial<Light>, playerNum: number = 0): Light {
         const key = playerNum ? `${playerNum}` : `${tileX}_${tileY}`;
         const customId = `L_${key}_${light.color}`;
-        
-        const ScreenX = this.ScreenX(tileX);
-        const ScreenY = this.ScreenY(tileY);
 
         const defaults: Light = {
             id: customId,
-            x: ScreenX + (this.TileUnit/2), // (Assuming a 32px grid, adjust to your actual tile size)
-            y: ScreenY + (this.TileUnit/2),
-            radius: this.TileUnit * 4, 
+            tileX,
+            tileY,
+            x: tileX + 0.5,
+            y: tileY + 0.5,
+            radius: 4,
             color: [250, 220, 150, 0.5],
         };
 
@@ -535,41 +600,43 @@ export class MapModule extends BaseModule {
     }
 
     RecomputeCharacterLights() {
-        if (this.allLights.length > 0) {
-            this.ParseOtherCharactersForLight();
-            this.lightingEngine.updateLights(this.allLights, this.viewpoint);
-        } else {
-            this.RequestParse();
-        }
+        // Other players moving only moves their own lights; the map's lights and the walls are untouched.
+        this.ParseOtherCharactersForLight();
+        this.lightingEngine.updateLights(this.charLights);
+        this.lastCharacterLightSignature = this.characterLightSignature;
+        this.RequestParse();
     }
 
+    /** Every character's lights, wherever they are; which of them are worth drawing is decided per frame (visibleLights). */
     ParseOtherCharactersForLight() {
         if (!Player) return;
         if (!Player.MapData) return;
         if (!this.EnhancedLightingEnabled) return;
 
-        let MaxVisibleRange = this.lightingVisionMax;
-	    if (MaxVisibleRange < 1) MaxVisibleRange = 1;
-        const MaxVisibleRangeX = Math.max(MaxVisibleRange, this.lightingVisionMaxX);
         this.charLights = [];
         for (const C of ChatRoomCharacter) {
             //if (C.IsPlayer()) continue;
             const X = C.MapData?.Pos.X ?? 0;
             const Y = C.MapData?.Pos.Y ?? 0;
-            if (Math.abs(X - Player.MapData.Pos.X) > MaxVisibleRangeX || Math.abs(Y - Player.MapData.Pos.Y) > MaxVisibleRange) continue;
-            this.charLights.push(...this.GetCharacterLights(C, X, Y).filter(l => this.lightIsOnScreen(l)));
+            this.charLights.push(...this.GetCharacterLights(C, X, Y));
         }
     }
 
+    /**
+     * Rebuilds the walls and the lights placed on the map, in world space, for the whole map, then recomputes lighting.
+     * Nothing here depends on where the player is or the zoom (beyond the pillar style), so it runs when the map changes,
+     * not as the player walks.
+     */
     ParseMapForObjects() {
         if (!Player) return;
         if (!Player.MapData) return;
         if (!ChatRoomData || !ChatRoomData.MapData) return;
         if (!this.EnhancedLightingEnabled) return;
         if (!this.MapLoaded) return;
-        this.lastParseSignature = this.parseSignature;
+        this.lastStaticSignature = this.staticSignature;
 
-        const objects: OpaqueObstacle[] = [];
+        const walls: OpaqueObstacle[] = [];
+        const doors: { X: number; Y: number }[] = [];
         this.mapLights = [];
 
         // Light sources by object id, so each tile looks its object up instead of filtering the whole list.
@@ -579,21 +646,9 @@ export class MapModule extends BaseModule {
             if (list) list.push(source); else sourcesByObject.set(source.objId, [source]);
         }
 
-        let MaxVisibleRange = this.lightingVisionMax;
-	    if (MaxVisibleRange < 1) MaxVisibleRange = 1;
-        const MaxVisibleRangeX = Math.max(MaxVisibleRange, this.lightingVisionMaxX);
-
-        const TileWidth = this.TileUnit;
-        const TileHeight = this.TileUnit;
-
         for (let Pos = 0; Pos < ChatRoomMapViewWidth * ChatRoomMapViewHeight; Pos++) {
             const X = Pos % ChatRoomMapViewWidth;
             const Y = Math.floor(Pos / ChatRoomMapViewWidth);
-
-            if (Math.abs(X - Player.MapData.Pos.X) > MaxVisibleRangeX || Math.abs(Y - Player.MapData.Pos.Y) > MaxVisibleRange) continue;
-
-            const ScreenX = this.ScreenX(X);
-            const ScreenY = this.ScreenY(Y);
 
             const Object = ChatRoomMapViewGetObjectAtPos(X, Y);
             const TileData = ChatRoomMapViewGetTileAtPos(X, Y);
@@ -604,9 +659,9 @@ export class MapModule extends BaseModule {
             if (!!ObjectID && !!lightingSources && lightingSources.length > 0) {
                 for (const lightSource of lightingSources) {
                     this.mapLights.push(this.NewLight(X, Y, {
-                        x: ScreenX + (TileWidth/2) + ((lightSource.xOffset ?? 0) * TileWidth),
-                        y: ScreenY + ((TileHeight/2) - ((lightSource.heightOffset ?? 0) * TileHeight)),
-                        radius: TileWidth * (lightSource.radius ?? 4),
+                        x: X + 0.5 + (lightSource.xOffset ?? 0),
+                        y: Y + 0.5 - (lightSource.heightOffset ?? 0),
+                        radius: lightSource.radius ?? 4,
                         color: lightSource.color ?? [250, 220, 150, 0.8],
                         animType: lightSource.animType ?? "none",
                         angle: lightSource.angle,
@@ -616,43 +671,42 @@ export class MapModule extends BaseModule {
             }
 
             // Parse Effect
-            this.mapLights.push(...this.ParseMapEffectsForLighting(X, Y, ScreenX, ScreenY));
+            this.mapLights.push(...this.ParseMapEffectsForLighting(X, Y));
 
             // Parse Obstacles
             if (!!TileData && TileData.Type == "Wall") {
-                const effectbottom = ScreenY + (this.TileUnit * 0.4);
-
-                if (this.PositionContainsDoor(X, Y)) { // Special Door Cutout
-                    objects.push(...this.GetDoorObstacles(X, Y, ScreenX, ScreenY));
+                if (this.PositionContainsDoor(X, Y)) { // Special Door Cutout, depends on the player: rebuilt by BuildDoorObstacles
+                    doors.push({ X, Y });
                 } else {
                     const sides = this.GetWallSides(X, Y);
                     if (sides.isolated) {
-                        objects.push(...this.GetSingleColumnWallLines(X, Y, ScreenX, ScreenY));
+                        walls.push(...this.GetSingleColumnWallLines(X, Y));
                     } else {
+                        const effectbottom = Y + 0.4;
                         if (sides.top) {
-                            objects.push({
+                            walls.push({
                                 type: "line",
                                 points: [
-                                    {x: ScreenX, y: ScreenY},
-                                    {x: ScreenX + TileWidth, y: ScreenY},
+                                    {x: X, y: Y},
+                                    {x: X + 1, y: Y},
                                 ],
                             });
                         }
                         if (sides.left) {
-                            objects.push({
+                            walls.push({
                                 type: "line",
                                 points: [
-                                    {x: ScreenX, y: ScreenY},
-                                    {x: ScreenX, y: sides.doorBelow ? effectbottom : ScreenY + TileHeight},
+                                    {x: X, y: Y},
+                                    {x: X, y: sides.doorBelow ? effectbottom : Y + 1},
                                 ],
                             });
                         }
                         if (sides.right) {
-                            objects.push({
+                            walls.push({
                                 type: "line",
                                 points: [
-                                    {x: ScreenX + TileWidth, y: ScreenY},
-                                    {x: ScreenX + TileWidth, y: sides.doorBelow ? effectbottom : ScreenY + TileHeight},
+                                    {x: X + 1, y: Y},
+                                    {x: X + 1, y: sides.doorBelow ? effectbottom : Y + 1},
                                 ],
                             });
                         }
@@ -660,12 +714,9 @@ export class MapModule extends BaseModule {
                 }
             }
         }
-        
-        //this.lights.push(...this.GetCharacterLights(Player));
-        this.ParseOtherCharactersForLight();
-        this.lastCharacterLightSignature = this.characterLightSignature;
 
-        this.mapLights = this.mapLights.filter(l => this.lightIsOnScreen(l));
+        this.wallObstacles = walls;
+        this.doorTiles = doors;
 
         // Trim out any "off" lights.
         if (this.settings.hideDarkLights) {
@@ -675,7 +726,25 @@ export class MapModule extends BaseModule {
             });
         }
 
-        this.lightingEngine.compute(this.allLights, objects, this.viewpoint);
+        //this.lights.push(...this.GetCharacterLights(Player));
+        this.ParseOtherCharactersForLight();
+        this.lastCharacterLightSignature = this.characterLightSignature;
+
+        this.ComputeLighting();
+    }
+
+    /** Door obstacles for the player's current position, added to the walls. */
+    private BuildDoorObstacles(): OpaqueObstacle[] {
+        const obstacles: OpaqueObstacle[] = [];
+        for (const { X, Y } of this.doorTiles) obstacles.push(...this.GetDoorObstacles(X, Y));
+        return obstacles;
+    }
+
+    /** Sends the walls (with doors as they are now) and every light to the engine, and records what that was computed for. */
+    private ComputeLighting(): void {
+        this.lastDoorSignature = this.doorSignature;
+        this.lastViewSignature = this.viewSignature;
+        this.lightingEngine.compute(this.allLights, [...this.wallObstacles, ...this.BuildDoorObstacles()], this.viewpoint);
     }
 
     get MapLoaded(): boolean {
@@ -687,16 +756,14 @@ export class MapModule extends BaseModule {
         }
     }
 
-    ParseMapEffectsForLighting(X: number, Y: number, ScreenX: number, ScreenY: number): Light[] {
+    ParseMapEffectsForLighting(X: number, Y: number): Light[] {
         if (ChatRoomMapViewEditMode == "Effect") return [];
         const effects = MapManager.Map.getEffects(X, Y);
         const lights: Light[] = [];
         for (const effect of effects) {
             if (effect.Type == "StaticLighting") {
                 lights.push(this.NewLight(X, Y, {
-                    x: ScreenX + (this.TileUnit/2),
-                    y: ScreenY + (this.TileUnit/2),
-                    radius: this.TileUnit * 5,
+                    radius: 5,
                     color: effect.Color ?? [250, 220, 150, 0.4],
                     animType: "none",
                 }));
@@ -738,42 +805,42 @@ export class MapModule extends BaseModule {
         };
     }
 
-    private GetDoorObstacles(X: number, Y: number, ScreenX: number, ScreenY: number): OpaqueObstacle[] {
+    private GetDoorObstacles(X: number, Y: number): OpaqueObstacle[] {
         if (!this.PositionContainsDoor(X, Y)) return [];
 
-        const effectTop = ScreenY - (this.TileUnit * 0.6);
+        const effectTop = Y - 0.6;
 
         const isHorizontalDoor = !ChatRoomMapViewIsWall(X - 1, Y) && !ChatRoomMapViewIsWall(X + 1, Y);
 
         const lines: LineObstacle[] = [];
-        
+
         if (!this.DootAtPositionIsOpen(X, Y) || ChatRoomMapViewIsWall(X, Y - 1)) {
             // always block top of door when closed or if wall north
             lines.push({
                 type: "line",
                 points: [
-                    {x: ScreenX, y: effectTop},
-                    {x: ScreenX + this.TileUnit, y: effectTop},
+                    {x: X, y: effectTop},
+                    {x: X + 1, y: effectTop},
                 ],
             });
-        } 
+        }
 
         if (!this.DootAtPositionIsOpen(X, Y)) {
             if (X >= (Player?.MapData?.Pos?.X ?? X)) { // Door is right of Player, block right side
                 lines.push({
                     type: "line",
                     points: [
-                        {x: ScreenX + this.TileUnit, y: isHorizontalDoor ? ScreenY + this.TileUnit : ScreenY},
-                        {x: ScreenX + this.TileUnit, y: effectTop},
+                        {x: X + 1, y: isHorizontalDoor ? Y + 1 : Y},
+                        {x: X + 1, y: effectTop},
                     ],
                 });
-            } 
+            }
             if (X <= (Player?.MapData?.Pos?.X ?? X)) { // Door is left of Player, block left side
                 lines.push({
                     type: "line",
                     points: [
-                        {x: ScreenX, y: isHorizontalDoor ? ScreenY + this.TileUnit : ScreenY},
-                        {x: ScreenX, y: effectTop},
+                        {x: X, y: isHorizontalDoor ? Y + 1 : Y},
+                        {x: X, y: effectTop},
                     ],
                 });
             }
@@ -782,13 +849,13 @@ export class MapModule extends BaseModule {
         return lines;
     }
 
-    private GetSingleColumnWallLines(X: number, Y: number, ScreenX: number, ScreenY: number): OpaqueObstacle[] {
-        const fxUnit = (this.TileUnit * 0.8);
+    private GetSingleColumnWallLines(X: number, Y: number): OpaqueObstacle[] {
+        const fxUnit = 0.8;
         if (this.zoomLevel <= 10) {
             return [
                 {
                     type: "oval",
-                    center: {x: ScreenX + (this.TileUnit/2), y: ScreenY - (fxUnit/2) + (this.TileUnit * 0.2)},
+                    center: {x: X + 0.5, y: Y - (fxUnit/2) + 0.2},
                     radiusX: fxUnit / 2,
                     radiusY: fxUnit / 2,
                     resolution: 3,
@@ -799,8 +866,8 @@ export class MapModule extends BaseModule {
                 {
                     type: "line",
                     points: [
-                        {x: ScreenX , y: ScreenY},
-                        {x: ScreenX + this.TileUnit, y: ScreenY},
+                        {x: X, y: Y},
+                        {x: X + 1, y: Y},
                     ],
                 },
             ];
