@@ -396,6 +396,22 @@ describe("MapModule lighting", () => {
 describe("LightingEngine", () => {
 	const light = (over: Partial<Light> = {}): Light => ({ id: "l", x: 50, y: 50, radius: 40, color: [200, 100, 50, 0.8], ...over });
 
+	it("keeps a light's animation phase when the map is parsed again and the light object is rebuilt", () => {
+		const engine = new LightingEngine();
+		const first = light({ id: "L_3_4_x", animType: "flicker" });
+		engine.updateAnimations([first]);
+		const seed = first._animState!.seed;
+		// A re-parse builds a fresh object for the same lamp, possibly at a new screen position
+		const rebuilt = light({ id: "L_3_4_x", animType: "flicker", x: 200, y: 90 });
+		engine.updateAnimations([rebuilt]);
+		expect(rebuilt._animState!.seed).toBe(seed);
+		expect(rebuilt._animState!.baseX).toBe(200);
+		// A different lamp gets its own phase
+		const other = light({ id: "L_9_9_x", animType: "flicker" });
+		engine.updateAnimations([other]);
+		expect(other._animState!.seed).not.toBe(seed);
+	});
+
 	it("animates each kind of light around its base values", () => {
 		const engine = new LightingEngine();
 		const lights = (["pulse", "flicker", "hover", "glitch", "flashlight", "none"] as const).map(animType => light({ animType }));

@@ -24,6 +24,12 @@ export class LightingEngine {
 
     private lightIds = new WeakMap<Light, string>();
 
+    /**
+     * Animation phase per light id. Lights are rebuilt whenever the map is parsed, so the phase cannot live on the Light
+     * itself without every rebuild re-randomising it and making flicker and pulse jump.
+     */
+    private animSeeds = new Map<string, number>();
+
     // Raycast Caches (Now Dictionary-based using string IDs)
     private lightMaskCache: Record<string, Point[]> = {};
     private visionMaskCache: Point[] = [];
@@ -87,6 +93,18 @@ export class LightingEngine {
         return id;
     }
 
+    private seedFor(light: Light): number {
+        const id = this.getLightId(light);
+        let seed = this.animSeeds.get(id);
+        if (seed === undefined) {
+            // Ids are per tile and per colour, so a long session in an edited map could collect stale ones; start over rather than leak.
+            if (this.animSeeds.size > 4000) this.animSeeds.clear();
+            seed = Math.random() * 2000;
+            this.animSeeds.set(id, seed);
+        }
+        return seed;
+    }
+
     public updateAnimations(lights: Light[], focus?: Point) {
         // ... (Your exact same updateAnimations logic remains untouched here) ...
         const time = performance.now();
@@ -97,7 +115,7 @@ export class LightingEngine {
                 light._animState = {
                     baseX: light.x, baseY: light.y, baseRadius: light.radius,
                     baseR: light.color[0], baseG: light.color[1], baseB: light.color[2], baseIntensity: light.color[3],
-                    seed: Math.random() * 2000,
+                    seed: this.seedFor(light),
                 };
             }
 
