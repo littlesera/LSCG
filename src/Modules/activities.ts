@@ -953,6 +953,18 @@ export class ActivityModule extends BaseModule {
             }],
         });
 
+        // Suck / SuckPenetrateItem / DeepThroat: BC's UseMouth needs CanTalk(), which any gag fails, even one that
+        // leaves the mouth open (ring gag etc.). Accept an open mouth too; a blocked mouth still fails.
+        ["Suck", "SuckPenetrateItem", "DeepThroat"].forEach(activityName => this.PatchActivity(<ActivityPatch>{
+            ActivityName: activityName,
+            RemovedPrerequisites: ["UseMouth"],
+            AddedPrerequisites: ["UseMouthOrOpenGag"],
+            CustomPrereqs: [{
+                Name: "UseMouthOrOpenGag",
+                Func: (acting) => !acting.IsMouthBlocked() && (acting.CanTalk() || acting.IsMouthOpen()),
+            }],
+        }));
+
         // ReleaseEar
         this.AddActivity({
             Activity: {
