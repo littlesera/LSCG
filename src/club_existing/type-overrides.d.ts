@@ -229,6 +229,7 @@ type LSCGActivityPrerequisite = ActivityPrerequisite
     | "TargetTongueIsGrabbed"
     | "TargetTongueIsToeGrabbed"
     | "UseLegs"
+    | "UseMouthOrOpenGag"
     | "CanHighFive"
 ;
 

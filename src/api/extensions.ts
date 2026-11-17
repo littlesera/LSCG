@@ -1,4 +1,4 @@
-import { LSCGActivitiesApi, LSCGDrugsApi, LSCGEventsApi, LSCGExtensionInfo, LSCGHypnoApi, LSCGModApi, LSCGNetworkApi, LSCGSettingsApi, LSCGSpellsApi, LSCGStorageApi } from "./types";
+import { LSCGActivitiesApi, LSCGDrugsApi, LSCGEventsApi, LSCGExtensionInfo, LSCGHypnoApi, LSCGModApi, LSCGNetworkApi, LSCGOperationsApi, LSCGSettingsApi, LSCGSpellsApi, LSCGStorageApi } from "./types";
 import { Registry } from "./registry";
 import { isLSCGReady, whenReady } from "./ready";
 import { settingsSave } from "utils";
@@ -11,6 +11,7 @@ import { createHypnoApi } from "./hypno";
 import { createNetworkApi } from "./network";
 import { createStorageApi } from "./storage";
 import { createSettingsApi } from "./settings";
+import { createOperationsApi } from "./operations";
 
 export { safeInvoke };
 
@@ -32,6 +33,7 @@ export class ModApiHandle implements LSCGModApi {
     private _network: LSCGNetworkApi | undefined;
     private _storage: LSCGStorageApi | undefined;
     private _settings: LSCGSettingsApi | undefined;
+    private _operations: LSCGOperationsApi | undefined;
 
     constructor(info: LSCGExtensionInfo) {
         this.id = info.id;
@@ -72,6 +74,10 @@ export class ModApiHandle implements LSCGModApi {
 
     get settings(): LSCGSettingsApi {
         return this._settings ??= createSettingsApi(this, name => this.scopedId(name), disposer => this.track(disposer));
+    }
+
+    get operations(): LSCGOperationsApi {
+        return this._operations ??= createOperationsApi(this, disposer => this.track(disposer));
     }
 
     sync(): void {
