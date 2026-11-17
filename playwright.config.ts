@@ -22,6 +22,8 @@ export default defineConfig({
         viewport: { width: 1600, height: 800 },
         trace: "retain-on-failure",
         screenshot: "only-on-failure",
+        // MAP_PERF_SOFTWARE=1 (npm run perf:map -- --software) forces a software-rasterised canvas, the low-end case.
+        launchOptions: process.env.MAP_PERF_SOFTWARE ? { args: ["--disable-gpu", "--disable-accelerated-2d-canvas", "--disable-gpu-compositing"] } : {},
     },
     webServer: {
         command: "node scripts/bc-playground.mjs",

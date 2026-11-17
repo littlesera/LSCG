@@ -6,12 +6,13 @@ import { ICONS } from "utils";
 import { MapSettingsModel } from "./Models/base";
 import { GuiSubscreen, HelpInfo } from "./settingBase";
 import { DomSettingsHost } from "./domSettingsHost";
-import { CheckboxRow, KitContext, Panel } from "Dom/kit";
+import { CheckboxRow, KitContext, Panel, SelectRow } from "Dom/kit";
 import { OpacityModule } from "Modules/opacity";
 import { LeashingModule } from "Modules/leashing";
 import { ChaoticItemModule } from "Modules/chaotic-item";
 import { SplatterModule } from "Modules/splatter";
 import { MapModule } from "Modules/map";
+import { isDevBuild } from "Utilities/dev";
 
 export class GuiMaps extends GuiSubscreen {
 	private _host = new DomSettingsHost("lscg-map-settings", this, () => this.build());
@@ -64,6 +65,22 @@ export class GuiMaps extends GuiSubscreen {
 			CheckboxRow(ctx, {
 				label: "Hide dark lights", description: "If checked, lights that emit 'darkness' will not be used.",
 				get: () => s.hideDarkLights ?? false, set: v => s.hideDarkLights = v,
+			}),
+			CheckboxRow(ctx, {
+				label: "Faster map drawing [EXPERIMENTAL]", description: "If checked, the map's images are drawn through a shortcut that skips some of the game's per-image work. Helps most when zoomed out. Turn off if the map looks wrong.",
+				get: () => s.perfDrawImageFastPath ?? false, set: v => s.perfDrawImageFastPath = v,
+			}),
+			SelectRow(ctx, {
+				label: "Light quality", description: "Half draws the lighting at half resolution, which is quicker on slow devices and makes shadow edges a little softer.",
+				options: [{ value: "full", label: "Full" }, { value: "half", label: "Half (faster)" }],
+				get: () => s.perfLightQuality ?? "full", set: v => s.perfLightQuality = v === "half" ? "half" : "full",
+				disabled: () => !s.enhancedLighting,
+			}),
+			SelectRow(ctx, {
+				label: "Map statistics overlay (developer)", description: "Shows frame timings and lighting counts on the map. Stats adds the lighting geometry. Also Alt+Shift+L on the map, or lscgPerf.hud() in the console.",
+				options: [{ value: "off", label: "Off" }, { value: "stats", label: "Stats" }, { value: "debug", label: "Stats and geometry" }],
+				get: () => getModule<MapModule>("MapModule")?.StatsMode ?? "off", set: v => getModule<MapModule>("MapModule")?.SetStatsMode(v),
+				hidden: () => !isDevBuild(),
 			}),
 		]);
 	}

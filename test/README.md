@@ -134,6 +134,29 @@ agent-browser screenshot shot.png
    ephemeral cross-test state (e.g. `ConsentModule.sentOffers`) should be reset
    explicitly in `beforeEach` — see `consent.test.ts`.
 
+## Map and lighting performance tools
+
+These are opt-in measurements and comparisons, not part of `npm test`. They drive the real client in the BC playground, so build
+first (`npm run build`). Results and what they showed are in `docs/perf-baseline.md`; the reasoning is in
+`docs/map-performance-plan.md`.
+
+- `npm run bench`: timings of the lighting math in Node (`test/bench/`). Writes `test/.out/bench-lighting.json`.
+- `npm run perf:map`: a 40x40 map room in the browser with the player walking, frame timings read from `window.lscgPerf`
+  (`test/ui/map-perf.spec.ts`). `-- --software` forces a software canvas; `-- --grep <name>` picks scenarios. Writes
+  `test/.out/map-perf-*.json` and a picture of the last frame.
+- `npm run parity:map`: renders fixed map states and compares the canvas with an earlier run, to prove a change did not alter
+  the picture (`test/ui/map-parity.spec.ts`). Run it with `MAP_PARITY=ref` on the code to compare against (a checkout of an earlier
+  commit, built), then `MAP_PARITY=new MAP_PARITY_REFERENCE=<that run's test/.out/parity/ref>` on the changed code.
+  `MAP_PARITY_FAST=1` runs the scenarios with the opt-in faster map drawing on.
+- `test/ui/map-room.ts` builds the map room both use. It gives the player's room entry the account's `OnlineID`: with any other
+  id BC does not treat the entry as the player, sees "another character" on the player's tile, and its collision handling shoves
+  the player to a random neighbouring tile every frame.
+- The map statistics overlay (frame timings, lighting counts, optionally the lighting geometry): Alt+Shift+L on the map in a
+  development build (`npm run watch`, or `localStorage.LSCG_DEV = "1"` on any build), `lscgPerf.hud("stats" | "debug" | "off")` in
+  the console, or the "Map statistics overlay (developer)" row on the Map Enhancements settings page (shown in development builds).
+- `test/bc-tier/map-source-fingerprint.bc.test.ts` hashes the BC map functions this work depends on. If BC changes one it fails,
+  and the message says how to refresh the hashes after reading the upstream change.
+
 ## What's not here yet
 
 Milestones 1 (fake-BC harness + pure-logic tests + one full integration smoke
