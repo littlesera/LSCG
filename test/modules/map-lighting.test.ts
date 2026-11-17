@@ -10,6 +10,7 @@ import { MapModule } from "Modules/map";
 import { LightingEngine } from "Utilities/lighting.engine";
 import type { Light } from "Utilities/lighting.types";
 import { boot, resetWorld, player, addToRoom } from "../harness/world";
+import { room } from "../harness/map-fixtures";
 import { makeAsset, makeCharacter, makeGroup, makeItem, wear, type FixtureCharacter } from "../harness/fixtures";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -26,24 +27,6 @@ function recordingContext() {
 		set: (t, key, value) => { t[key] = value; return true; },
 	});
 	return { ctx: proxy as CanvasRenderingContext2D, calls };
-}
-
-/** A room from rows of characters: "#" wall, "D" door, "L" lamppost, "." floor. The player stands at "P". */
-function room(rows: string[]) {
-	const height = rows.length;
-	const width = rows[0].length;
-	const at = (x: number, y: number) => rows[y]?.[x] ?? " ";
-	let px = 0, py = 0;
-	rows.forEach((r, y) => { const x = r.indexOf("P"); if (x >= 0) { px = x; py = y; } });
-	g.ChatRoomMapViewWidth = width;
-	g.ChatRoomMapViewHeight = height;
-	g.Player.MapData = { Pos: { X: px, Y: py } };
-	g.ChatRoomData = { Admin: [], MapData: {} };
-	g.ChatRoomMapViewIsWall = (x: number, y: number) => at(x, y) === "#";
-	g.ChatRoomMapViewGetTileAtPos = (x: number, y: number) => (at(x, y) === "#" || at(x, y) === "D") ? { Type: "Wall" } : { Type: "Floor" };
-	g.ChatRoomMapViewGetObjectAtPos = (x: number, y: number) => at(x, y) === "D" ? { Type: "WallPath", Style: "Wood" } : at(x, y) === "L" ? { ID: 2090 } : at(x, y) === "W" ? { Type: "WallPath", Style: "WoodOpen" } : null;
-	g.ChatRoomMapViewGetCharacterAtPos = () => null;
-	g.MapManager = { Map: { getTileId: () => 0, getEffects: (x: number, y: number) => at(x, y) === "S" ? [{ Type: "StaticLighting", Color: [10, 20, 30, 1] }] : [] } };
 }
 
 describe("MapModule lighting", () => {
