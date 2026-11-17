@@ -547,6 +547,13 @@ export class MapModule extends BaseModule {
         const objects: OpaqueObstacle[] = [];
         this.mapLights = [];
 
+        // Light sources by object id, so each tile looks its object up instead of filtering the whole list.
+        const sourcesByObject = new Map<number, lightingSource[]>();
+        for (const source of this.lightSources) {
+            const list = sourcesByObject.get(source.objId);
+            if (list) list.push(source); else sourcesByObject.set(source.objId, [source]);
+        }
+
         let MaxVisibleRange = this.lightingVisionMax;
 	    if (MaxVisibleRange < 1) MaxVisibleRange = 1;
         const MaxVisibleRangeX = Math.max(MaxVisibleRange, this.lightingVisionMaxX);
@@ -568,7 +575,7 @@ export class MapModule extends BaseModule {
 
             // Parse Light Sources
             const ObjectID = Object?.ID;
-            const lightingSources = this.lightSources.filter(ls => ls.objId == ObjectID);
+            const lightingSources = ObjectID ? sourcesByObject.get(ObjectID) : undefined;
             if (!!ObjectID && !!lightingSources && lightingSources.length > 0) {
                 for (const lightSource of lightingSources) {
                     this.mapLights.push(this.NewLight(X, Y, {
