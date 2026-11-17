@@ -263,3 +263,14 @@ describe("LightingEngine", () => {
 		expect(main.calls).toContain("drawImage");
 	});
 });
+
+describe("MapModule performance settings", () => {
+	it("keeps every vanilla-changing improvement opt-in, and light quality at full", () => {
+		const defaults = new MapModule().defaultSettings;
+		expect(defaults.perfWallEffectTable).toBe(false);
+		expect(defaults.perfFastPerception).toBe(false);
+		expect(defaults.perfFastMapRenderer).toBe(false);
+		expect(defaults.perfDrawImageFastPath).toBe(false);
+		expect(defaults.perfLightQuality).toBe("full");
+	});
+});

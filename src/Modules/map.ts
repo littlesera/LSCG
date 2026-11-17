@@ -60,6 +60,11 @@ export class MapModule extends BaseModule {
             useRoomCustomization: true,
             hideVanillaFog: false,
             hideDarkLights: false,
+            perfWallEffectTable: false,
+            perfFastPerception: false,
+            perfFastMapRenderer: false,
+            perfDrawImageFastPath: false,
+            perfLightQuality: "full",
         };
     }
 
