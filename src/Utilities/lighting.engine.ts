@@ -3,6 +3,9 @@ import { flattenPolygon, generateSegments, getVisibilityPolygon, mergeSegments }
 import WorkerFactory from "./lighting.worker?worker&inline";
 import { recordPerf } from "./perf";
 
+/** How long a main-thread compute may take before the next one is held back. About a third of a 60 fps frame. */
+const FALLBACK_BUDGET_MS = 6;
+
 export class LightingEngine {
     public debug: boolean = false;
     public suppressOptimization: boolean = false;
@@ -21,6 +24,11 @@ export class LightingEngine {
     private isWorkerBusy: boolean = false;
     private pendingJob: PendingJob | null = null;
     private jobPostedAt = 0;
+
+    // Without a Web Worker, computing runs on the main thread, in the frame. When one takes longer than FALLBACK_BUDGET_MS the
+    // next is held back (and only the newest request is kept), so a heavy map cannot stall every frame it changes.
+    private fallbackHeldUntil = 0;
+    private fallbackPending: { lights: Light[]; obstacles: OpaqueObstacle[]; viewpoint?: Viewpoint } | null = null;
 
     private lightIds = new WeakMap<Light, string>();
 
@@ -234,7 +242,12 @@ export class LightingEngine {
     public compute(lights: Light[], obstacles: OpaqueObstacle[], viewpoint?: Viewpoint) {
         if (this.useFallback) {
             const start = performance.now();
-            
+            if (start < this.fallbackHeldUntil) {
+                this.fallbackPending = { lights, obstacles, viewpoint };
+                return;
+            }
+            this.fallbackPending = null;
+
             const raw = generateSegments(obstacles);
             this.segments = this.suppressOptimization ? raw : mergeSegments(raw);
 
@@ -248,9 +261,11 @@ export class LightingEngine {
             const duration = performance.now() - start;
             recordPerf("lightingCompute", duration);
             this.timings.compute = (this.timings.compute * 0.9) + (duration * 0.1);
+            // Only a slow compute holds the next one back, for three times how far it ran over; fast ones are never delayed.
+            this.fallbackHeldUntil = duration > FALLBACK_BUDGET_MS ? performance.now() + (duration - FALLBACK_BUDGET_MS) * 3 : 0;
             return;
         }
-        
+
         if (!this.worker) return;
 
         if (this.isWorkerBusy) {
@@ -303,6 +318,12 @@ export class LightingEngine {
             ambientColor = "rgb(60, 60, 60)",
             camera = { x: 0, y: 0 },
         } = options;
+
+        // A compute that was held back (see fallbackHeldUntil) runs once its hold is over.
+        if (this.fallbackPending && performance.now() >= this.fallbackHeldUntil) {
+            const { lights: heldLights, obstacles, viewpoint: heldViewpoint } = this.fallbackPending;
+            this.compute(heldLights, obstacles, heldViewpoint);
+        }
 
         this.syncCanvasSizes(width, height);
 

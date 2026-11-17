@@ -528,6 +528,58 @@ describe("LightingEngine", () => {
 		send.mockRestore();
 	});
 
+	describe("main-thread fallback budget", () => {
+		const wall = [{ type: "rectangle" as const, topLeft: { x: 70, y: 0 }, bottomRight: { x: 80, y: 100 } }];
+		let clock: ReturnType<typeof vi.spyOn>;
+		let now = 1000;
+
+		beforeEach(() => {
+			now = 1000;
+			clock = vi.spyOn(performance, "now").mockImplementation(() => now);
+		});
+		afterEach(() => clock.mockRestore());
+
+		it("does not hold back a compute that was fast", () => {
+			const engine = new LightingEngine();
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			const internals = engine as any;
+			engine.compute([light()], wall, undefined);
+			engine.compute([light({ id: "second" })], wall, undefined);
+			expect(Object.keys(internals.lightMaskCache)).toEqual(["second"]);
+			expect(internals.fallbackPending).toBeNull();
+		});
+
+		it("holds back the next compute after a slow one, keeps only the newest request, and runs it on render", () => {
+			const engine = new LightingEngine();
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			const internals = engine as any;
+			// The first compute takes 106 ms of the stubbed clock (merge is where the time passes), 100 over the budget.
+			const slow = vi.spyOn(internals, "getLightId").mockImplementationOnce((l: Light) => { now += 106; return l.id; });
+			engine.compute([light({ id: "first" })], wall, undefined);
+			slow.mockRestore();
+			expect(Object.keys(internals.lightMaskCache)).toEqual(["first"]);
+
+			// Within the hold: nothing computed, the newest request waits
+			engine.compute([light({ id: "dropped" })], wall, undefined);
+			engine.compute([light({ id: "newest" })], wall, undefined);
+			expect(Object.keys(internals.lightMaskCache)).toEqual(["first"]);
+			expect(internals.fallbackPending.lights[0].id).toBe("newest");
+
+			// Rendering before the hold is over does not run it
+			internals.lightCtx = recordingContext().ctx;
+			internals.visionCtx = recordingContext().ctx;
+			const ctx = recordingContext().ctx;
+			engine.render({ mainCtx: ctx, width: 100, height: 100, lights: [] });
+			expect(Object.keys(internals.lightMaskCache)).toEqual(["first"]);
+
+			// After the hold, the next render runs the waiting compute
+			now += 1000;
+			engine.render({ mainCtx: ctx, width: 100, height: 100, lights: [] });
+			expect(Object.keys(internals.lightMaskCache)).toEqual(["newest"]);
+			expect(internals.fallbackPending).toBeNull();
+		});
+	});
+
 	it("computes light and vision masks without a worker, and updates moving lights", () => {
 		const engine = new LightingEngine();
 		const lamp = light();
