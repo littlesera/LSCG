@@ -356,14 +356,16 @@ export class SpeechAnalysisModule extends BaseModule {
         // Capture the text before sender-side speech transforms (gag garble etc.) are applied.
         hookFunction("ChatRoomMessageDisplay", 1, (args, next) => {
             const message = next(args);
-            try {
-                const line = message && canTuneInline(this) ? this._lineForDisplayed(args[0], args[2], args[3]?.MsgId) : undefined;
-                if (line) {
-                    line.shown = true;
-                    attachChatTune(message, this, line);
+            if (message !== null) {
+                try {
+                    const line = message && canTuneInline(this) ? this._lineForDisplayed(args[0], args[2], args[3]?.MsgId) : undefined;
+                    if (line) {
+                        line.shown = true;
+                        attachChatTune(message, this, line);
+                    }
+                } catch (e) {
+                    console.error("LSCG: speech tune button failed", e);
                 }
-            } catch (e) {
-                console.error("LSCG: speech tune button failed", e);
             }
             return message;
         }, ModuleCategory.SpeechAnalysis);

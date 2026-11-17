@@ -26,7 +26,7 @@ export class HypnoState extends BaseState {
         this.Restrictions.Walk = "whenImmersive";
         this.Restrictions.Wardrobe = "true";
         this.Restrictions.Eyes = "true";
-        if ((DialogSelfMenuSelected as unknown) === "Expression" && DialogSelfMenuMapping.Expression.C.IsPlayer()) {
+        if (DialogSelfMenuSelected === "Expression" && DialogSelfMenuMapping.Expression.C?.IsPlayer()) {
             // Refresh the expression pannel upon modifying the `Emoticon`, `Walk` or `Eyes` restrictions
             DialogSelfMenuMapping.Expression.Reload();
         }

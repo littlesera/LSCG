@@ -57,7 +57,7 @@
     "@typescript-eslint/eslint-plugin": "^8.71.0",
     "@typescript-eslint/parser": "^8.71.0",
     "@vitest/coverage-v8": "^5.0.2",
-    "bc-stubs": "^133.0.0",
+    "bc-stubs": "^134.0.0-Beta.2",
     "concurrently": "^9.2.1",
     "eslint": "^10.0.1",
     "eslint-plugin-css": "^0.12.0",
