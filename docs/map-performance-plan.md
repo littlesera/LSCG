@@ -196,3 +196,39 @@ map code this plan touches. The stored fingerprints in `test/bc-tier/map-source-
 Plan changes from this: add **1.0** (derive width, offsets and canvas size from `ChatRoomMapViewSplitPosition` when it
 exists), make the lighting window rectangular in 1.6 and 2.1, treat full-width zoom-out as the primary benchmark in 0.6,
 and reorder Phase 3 so 3.1 and 3.2 precede 3.3.
+
+## Outcome (what was built, and what the measurements said)
+
+The plan above was written before anything was measured in a browser. Measuring changed it; this records what was done.
+Numbers are in `docs/perf-baseline.md`.
+
+**Built, and shipped without a flag (lighting is LSCG's own code):**
+- The sweep segment merge (Phase 1.1), gating of map re-parses (1.2), light-source lookup (1.3), stable animation phase (1.4),
+  transferable polygon buffers and less per-frame allocation (1.5), the main-thread fallback guard (1.7), and the R134
+  map-width fix (1.0). Culling lights by screen rectangle (1.6) was replaced by culling to the lighting window at draw time.
+- World-space lighting with one camera (2.1-2.3): geometry and lights in tile units, so walking costs a viewpoint update and
+  zooming or resizing costs nothing.
+- Layer caching (2.4): the light and vision layers are redrawn only when something they are made from changed.
+- A half-resolution light quality setting (2.4d), the one lighting setting, since it is a visible trade-off.
+- **A fix that was not in the plan and mattered most:** BC puts a "Blank" lighting effect on every tile, and LSCG made a light
+  of each, so a map held up to 1600 invisible lights. Dropping lights that cannot change a pixel is output-identical.
+
+**Built as an opt-in toggle (changes what vanilla BC runs):**
+- A shortcut for the map's plain image draws (`perfDrawImageFastPath`, "Faster map drawing", default off). Same pixels, about 45%
+  less `drawGrid` time zoomed out. It is hooked on `DrawImageEx` and only acts while `ChatRoomMapViewDrawGrid` is running.
+
+**Measured, and not built:**
+- Wall-effect lookup table (3.1): the lookup costs about 10 ns a call.
+- Windowed `updatePlayerPerception` (3.2): 0.15 ms a step at the default range, 2.4 ms at range 20, once per step. The estimates
+  of "several to tens of ms" were wrong.
+- Replacing `ChatRoomMapViewDrawGrid` with a chunk-cached renderer (3.3): with the shortcut above zoomed-out `drawGrid` is about
+  12 ms, and BC R134's `DrawGrid` is much heavier (stacked characters, tethers, teleport pads, per-object settings), so a
+  replacement would be large and fragile for the remaining gain. Revisit only if zoomed-out frames still need more.
+- Sprite caches and a static lightmap (2.4b/c): lighting render is about 1 ms a frame on a still scene, so there is nothing left
+  to win.
+- An upstream BC pull request (3.6): not started. The shortcut is the only vanilla-facing change and it lives in LSCG.
+
+**Safety nets that exist:** `npm run parity:map` (pixel comparison against an earlier build, six scenarios), the BC source
+tripwire in the bc test tier (functions this work depends on, hashed), a browser perf scenario (`npm run perf:map`), the Node
+benchmark (`npm run bench`), property tests that the new segment merge equals the old, and the opt-in toggle for the one vanilla
+change. A map statistics overlay (Alt+Shift+L in a dev build, or `lscgPerf.hud()`) shows timings live.

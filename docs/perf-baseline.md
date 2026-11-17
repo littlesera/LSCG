@@ -38,6 +38,34 @@ is the whole of the remaining cost, and the half-quality row there is within run
 
 Vanilla map drawing (`drawGrid`) is about 1.8 ms at range 4 and about 20 ms at range 20, and is untouched by lighting work.
 
+## Faster map drawing (opt-in), zoomed out
+
+The "Faster map drawing" setting (default off) draws the map's plain resized images through one `drawImage` call instead of BC's
+`DrawImageEx`, which does a transform save/restore and, for URLs, a cache lookup that allocates an Error and a promise per call.
+For 1600 tile draws in this browser: raw `drawImage` 8.0 ms, `DrawImageResize` with a bitmap 12.1 ms, with a URL 18.6 ms.
+
+| Scenario | `drawGrid` off | `drawGrid` on | fps off | fps on |
+|---|---|---|---|---|
+| range 4, lighting | 1.9-2.0 ms | **1.2 ms** | 60 | 60 |
+| range 20, vanilla | 19.4-22.2 ms | **11.9 ms** | 30.7-34.4 | **44.3** |
+| range 20, lighting | 21.1-21.7 ms | **12.3 ms** | 29.2-29.9 | **39.8** |
+
+Pixel parity with the original code holds with it on (the same six scenarios, 0.000% to 0.002% of pixels differ). The off figures
+are shown as a range because that scenario varies by a couple of milliseconds between runs.
+
+## Costs that turned out not to matter
+
+Measured in the same browser, to decide what not to build:
+
+| Cost | range 4 | range 7 | range 20 |
+|---|---|---|---|
+| `updatePlayerPerception`, per player step | 0.155 ms | 0.150 ms | 2.4 ms |
+| `ChatRoomMapViewFindWallEffectTile`, per 1000 calls | 0.018 ms | 0.010 ms | 0.008 ms |
+| `drawGrid` per frame | 1.7 ms | 3.8 ms | 23 ms |
+
+Perception runs once per step and the wall lookup is nanoseconds, so a windowed perception or a lookup table would win nothing
+measurable. `drawGrid` is the only vanilla cost that matters.
+
 ## What made the difference
 
 BC puts a "Blank" static-lighting effect (colour `[0, 0, 0, 0]`) on every tile that has no other lighting. LSCG turned each into
