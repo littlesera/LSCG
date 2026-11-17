@@ -492,6 +492,17 @@ export class MapModule extends BaseModule {
         return typeof ChatRoomMapViewSplitPosition === "number" ? ChatRoomMapViewSplitPosition : 1000;
     }
 
+    /**
+     * Whether any part of a light's reach is on the drawn map. A light entirely off screen contributes nothing this frame, so
+     * it is not given a visibility polygon (the render pass already skips it, but its polygon would still be computed). The
+     * margin covers lights that drift a little ("hover").
+     */
+    private lightIsOnScreen(light: Light): boolean {
+        const margin = 20;
+        return light.x + light.radius >= -margin && light.x - light.radius <= this.MapWidth + margin
+            && light.y + light.radius >= -margin && light.y - light.radius <= 1000 + margin;
+    }
+
     /** Canvas X of a tile's left edge. The player's tile is centred in the drawn map, as BC's DrawGrid does. */
     ScreenX(tileX: number): number {
         return (tileX - (Player?.MapData?.Pos?.X ?? 0)) * this.TileUnit + (this.MapWidth - this.TileUnit) / 2;
@@ -546,7 +557,7 @@ export class MapModule extends BaseModule {
             const X = C.MapData?.Pos.X ?? 0;
             const Y = C.MapData?.Pos.Y ?? 0;
             if (Math.abs(X - Player.MapData.Pos.X) > MaxVisibleRangeX || Math.abs(Y - Player.MapData.Pos.Y) > MaxVisibleRange) continue;
-            this.charLights.push(...this.GetCharacterLights(C, X, Y));
+            this.charLights.push(...this.GetCharacterLights(C, X, Y).filter(l => this.lightIsOnScreen(l)));
         }
     }
 
@@ -653,6 +664,8 @@ export class MapModule extends BaseModule {
         //this.lights.push(...this.GetCharacterLights(Player));
         this.ParseOtherCharactersForLight();
         this.lastCharacterLightSignature = this.characterLightSignature;
+
+        this.mapLights = this.mapLights.filter(l => this.lightIsOnScreen(l));
 
         // Trim out any "off" lights.
         if (this.settings.hideDarkLights) {

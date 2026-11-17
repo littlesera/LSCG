@@ -87,6 +87,33 @@ describe("MapModule lighting", () => {
 			expect(map.mapLights[0]).toMatchObject({ color: [200, 200, 200, 0.8], radius: map.TileUnit * 6 });
 		});
 
+		it("leaves out lights that are entirely off the drawn map", () => {
+			// A static light reaches 5 tiles. At zoom 4 a tile is about 111 px: 8 tiles away its reach still touches the screen, 9 does not.
+			room(["P" + ".".repeat(7) + "S"]);
+			map.ParseMapForObjects();
+			expect(map.mapLights).toHaveLength(1);
+			room(["P" + ".".repeat(9) + "S"]);
+			map.ParseMapForObjects();
+			expect(map.mapLights).toHaveLength(0);
+		});
+
+		it("brings a distant light back once the player is near it", () => {
+			room(["P" + ".".repeat(9) + "S"]);
+			map.ParseMapForObjects();
+			expect(map.mapLights).toHaveLength(0);
+			g.Player.MapData.Pos.X = 5;
+			map.ParseMapForObjects();
+			expect(map.mapLights).toHaveLength(1);
+		});
+
+		it("keeps a distant light that is on screen on a wider map (BC R134)", () => {
+			g.ChatRoomMapViewSplitPosition = 2000;
+			room(["P" + ".".repeat(9) + "S"]);
+			map.ParseMapForObjects();
+			expect(map.mapLights).toHaveLength(1);
+			delete g.ChatRoomMapViewSplitPosition;
+		});
+
 		it("lights a static-lighting effect", () => {
 			room(["P.S"]);
 			map.ParseMapForObjects();
