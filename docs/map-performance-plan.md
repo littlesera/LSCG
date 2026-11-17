@@ -176,3 +176,23 @@ for a full release with no regressions.
 3. Is a slightly softer shadow edge at half resolution acceptable, or must lighting look identical to today?
 4. Should LSCG own the camera (2.2) now, or only after smooth scrolling is wanted?
 5. Is an upstream BC pull request for the vanilla fixes (wall LUT, windowed perception, draw-call reduction) something you'd want, as an alternative to maintaining a replacement renderer in LSCG?
+
+## R134 impact (checked against BC `master` 0d08cfbf, reporting `R134`, still beta)
+
+`test/bc-client.json` stays pinned to R133 until R134 is stable. The R134 client sources were diffed against R133 for the
+map code this plan touches. The stored fingerprints in `test/bc-tier/map-source-fingerprints.json` are R133's.
+
+| Area | R134 change | Effect on this plan |
+|---|---|---|
+| **Map width is variable** | `ChatRoomMapViewDraw` now passes `ChatRoomMapViewSplitPosition` (default 1000, range 500-2000; 2000 when the chat is hidden) as the width, and the map is centred with `OffsetX = (Width - TileSize) / 2`. Tile size is still `1000 / (2R+1)`. | **LSCG lighting assumes a 1000 px wide map** (`TileUnit`, the `R * TileUnit` offset, `MainCanvas.canvas.width / 2`, viewpoint x = 500). At the default split the numbers coincide, but at any other split lights, vision and fog are misaligned or cropped. This is a correctness fix needed on R134 regardless of performance work: new step 1.0. It also makes the single camera source (2.2) more important. |
+| **Visible window is rectangular** | `MaxRangeX = ceil(Width / (2 * TileSize)) + 1`, `MaxRangeY` likewise. A full-width map shows about twice as many columns. | Lighting window, culling and any renderer windowing must be a rectangle from the view size, not a square from `lightingVisionMax`. Full-width zoom-out is now the worst case for tile count too. |
+| **`DrawGrid` is heavier** | Stacked characters (`CharacterMap` values are arrays), tethers, teleport-pad highlights, per-object settings (Size, Rotation, Decal, Colors), coloured image caches, `rowOverflow` clipping, obstacle marks. | The fast renderer (3.3) must mirror all of it or fall back. Natural split: bake only objects with default settings into chunks; draw settings objects, tethers, pads and characters in the dynamic pass. 3.3 is now larger and riskier; do it last and only if the baseline still shows need. |
+| **Wall effect and perception are unchanged** | `ChatRoomMapViewWallEffect`, `FindWallEffectTile`, `FloorWallEffect` and `updatePlayerPerception` are byte-identical (comment and whitespace aside). | 3.1 and 3.2 are unaffected by R134 and should go before 3.3. |
+| **`DrawImageEx`** | Only `Options` gained a `= {}` default. | The optional fast path (3.4) is unaffected. |
+| **MapManager API** | `getTile`, `getTileId`, `getObject`, `getObjectId`, `getEffects`, `isTileVisible`, `isTileHearable`, `updateGlobalMapData`, `OnMapDataUpdated` are all still there. New: `getObjectSettings`, `getTeleporterDestination`. | The plan's hooks keep working. Hooking `updateGlobalMapData` (1.2) is more robust than the old UI-click triggers. |
+| **Editor UI moved to the DOM** | `ChatRoomMapViewDrawUi` is empty and movement and editor buttons are DOM elements. | LSCG's `ChatRoomMapViewClick` hook checks canvas coordinates `MouseIn(10, 10, 60, 60)`, which is probably dead now. Re-parse triggers should come from map-data change hooks, not clicks (covered by 1.2). Verify in the playground. |
+| **Tripwire result** | `ChatRoomMapViewDrawGrid` and `DrawImageEx` hashes changed; the other four watched functions did not. | The tripwire does what it is for. Moving the pin to R134 means reviewing those two and refreshing the hashes. |
+
+Plan changes from this: add **1.0** (derive width, offsets and canvas size from `ChatRoomMapViewSplitPosition` when it
+exists), make the lighting window rectangular in 1.6 and 2.1, treat full-width zoom-out as the primary benchmark in 0.6,
+and reorder Phase 3 so 3.1 and 3.2 precede 3.3.
