@@ -18,6 +18,7 @@
     "ui:shots": "node scripts/ui-shots.mjs",
     "test:ui": "playwright test",
     "perf:map": "node scripts/map-perf.mjs",
+    "parity:map": "node scripts/map-perf.mjs --spec test/ui/map-parity.spec.ts",
     "typecheck": "tsc --noEmit -p . && tsc --noEmit -p tsconfig.test.json && tsc --noEmit -p tsconfig.ui.json",
     "test": "vitest run --project unit",
     "test:watch": "vitest --project unit",

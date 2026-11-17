@@ -7,6 +7,7 @@
 // Writes test/.out/map-perf-<variant>.json and prints a summary; docs/perf-baseline.md records the numbers.
 import { mkdirSync, writeFileSync } from "node:fs";
 import { expect, test } from "./fixtures";
+import { enterMapRoom } from "./map-room";
 
 test.skip(!process.env.MAP_PERF, "set MAP_PERF=1 (npm run perf:map) to run the map performance scenario");
 
@@ -32,34 +33,9 @@ const variants: Variant[] = [
 for (const v of variants) {
     test(`map perf: ${v.name}${SOFTWARE ? " (software canvas)" : ""}`, async ({ bc }, testInfo) => {
         testInfo.setTimeout(180_000);
+        await enterMapRoom(bc, { range: v.range, split: v.split, lighting: v.lighting });
         const result = await bc.run(async (variant) => {
             const w = window as any;
-            const W = 40, H = 40;
-            const floor = String.fromCharCode(100), wall = String.fromCharCode(1000), blank = String.fromCharCode(100), lamp = String.fromCharCode(2090);
-            let tiles = "", objects = "";
-            for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-                const border = x === 0 || y === 0 || x === W - 1 || y === H - 1;
-                const run = (y % 8 === 0 && x % 8 !== 4) || (x % 8 === 0 && y % 8 !== 4);
-                tiles += (border || run) ? wall : floor;
-                objects += (!border && !run && x % 5 === 2 && y % 5 === 2) ? lamp : blank;
-            }
-            w.ChatRoomMapViewPerceptionRange = variant.range;
-            w.ChatRoomMapViewPerceptionRangeMax = Math.max(variant.range, 7);
-            w.LSCG.getModule("MapModule").settings.enhancedLighting = variant.lighting;
-
-            w.Playground.receive("ChatRoomSync", {
-                SourceMemberNumber: w.Player.MemberNumber, Name: "Map perf room", Description: "", Admin: [w.Player.MemberNumber], Whitelist: [], Ban: [],
-                Background: "MainHall", Limit: 10, Game: "", Visibility: ["All"], Access: ["All"], BlockCategory: [], Language: "EN", Space: "",
-                MapData: { Type: "Always", Tiles: tiles, Objects: objects },
-                Character: [{
-                    ID: `playground-${w.Player.MemberNumber}`, Name: w.Player.Name, MemberNumber: w.Player.MemberNumber,
-                    Appearance: w.ServerAppearanceBundle(w.Player.Appearance), ActivePose: [], ItemPermission: 1, WhiteList: [], BlackList: [],
-                }],
-            });
-            await w.Playground.until(() => w.CurrentScreen === "ChatRoom" && !!w.ChatRoomData?.MapData && w.ChatRoomMapViewIsActive?.(), 30000);
-            if (typeof w.ChatRoomMapViewSetSplitPosition === "function") w.ChatRoomMapViewSetSplitPosition(variant.split);
-            w.Player.MapData = { Pos: { X: 20, Y: 20 }, PrivateState: {} };
-            await new Promise(r => setTimeout(r, 1500)); // let assets load and lighting parse
 
             let longTasks = 0, longTaskMs = 0;
             const observer = new PerformanceObserver(list => { for (const e of list.getEntries()) { longTasks++; longTaskMs += e.duration; } });
