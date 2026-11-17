@@ -439,6 +439,59 @@ describe("MapModule lighting", () => {
 
 	// BC R134 lets the player resize the map (ChatRoomMapViewSplitPosition, 500 to 2000, 1000 by default) and centres the
 	// player's tile in it. R133 always draws a 1000 px map and has no such variable.
+	describe("map statistics overlay", () => {
+		afterEach(() => {
+			map.lightingEngine.setHudMode("off");
+			try { localStorage.removeItem("LSCG_MAP_STATS"); localStorage.removeItem("LSCG_DEV"); } catch { /* none */ }
+		});
+
+		it("steps off, stats, debug, off, and can be set directly", () => {
+			expect(map.StatsMode).toBe("off");
+			expect(map.SetStatsMode()).toBe("stats");
+			expect(map.SetStatsMode()).toBe("debug");
+			expect(map.SetStatsMode()).toBe("off");
+			expect(map.SetStatsMode("debug")).toBe("debug");
+			expect(map.StatsMode).toBe("debug");
+			// something that is not a mode steps on instead
+			expect(map.SetStatsMode("nonsense")).toBe("off");
+		});
+
+		it("is available from the console as lscgPerf.hud()", () => {
+			expect(typeof g.lscgPerf.hud).toBe("function");
+			expect(g.lscgPerf.hud()).toBe("stats");
+			expect(g.lscgPerf.hud("off")).toBe("off");
+			expect(typeof g.lscgPerf.snapshot).toBe("function");
+		});
+
+		it("is remembered between reloads in a development build, and only there", () => {
+			map.SetStatsMode("stats");
+			expect(localStorage.getItem("LSCG_MAP_STATS")).toBe("stats");
+			map.lightingEngine.setHudMode("off");
+			map.RestoreStatsMode(); // not a development build
+			expect(map.StatsMode).toBe("off");
+			localStorage.setItem("LSCG_DEV", "1");
+			map.RestoreStatsMode();
+			expect(map.StatsMode).toBe("stats");
+			map.SetStatsMode("off");
+			expect(localStorage.getItem("LSCG_MAP_STATS")).toBeNull();
+		});
+
+		it("Alt+Shift+L steps it in a development build, and does nothing otherwise", () => {
+			const press = (extra: Partial<KeyboardEventInit> = {}) => g.GameKeyDown(new KeyboardEvent("keydown", { code: "KeyL", altKey: true, shiftKey: true, ...extra }));
+			press();
+			expect(map.StatsMode).toBe("off"); // not a development build
+			localStorage.setItem("LSCG_DEV", "1");
+			expect(press()).toBe(true);
+			expect(map.StatsMode).toBe("stats");
+			press({ shiftKey: false });
+			press({ altKey: false });
+			press({ code: "KeyP" });
+			expect(map.StatsMode).toBe("stats"); // other keys leave it alone
+			press();
+			expect(map.StatsMode).toBe("debug");
+		});
+	});
+
 	describe("on a resizable map (BC R134)", () => {
 		afterEach(() => { delete g.ChatRoomMapViewSplitPosition; });
 
@@ -694,6 +747,101 @@ describe("LightingEngine", () => {
 			expect(lightSetTransform).toHaveBeenCalledWith(5, 0, 0, 5, 0, 0);
 			expect(drawImage).toHaveBeenCalledWith(internals.lightCanvas, 0, 0, 100, 50, 0, 0, 200, 100);
 			expect(drawImage).toHaveBeenCalledWith(internals.visionCanvas, 0, 0, 100, 50, 0, 0, 200, 100);
+		});
+
+		describe("statistics overlay", () => {
+			/** The text drawn on the main canvas, and the boxes filled on it. */
+			const overlay = () => {
+				const ctx = setup();
+				const texts: string[] = [], boxes: number[][] = [];
+				const stroke = vi.fn();
+				Object.assign(ctx.main.ctx, { fillText: (t: string) => texts.push(t), fillRect: (...a: number[]) => boxes.push(a), stroke });
+				return { ...ctx, texts, boxes, stroke };
+			};
+
+			it("draws nothing extra when off", () => {
+				const { engine, render, texts, stroke } = overlay();
+				expect(engine.hudMode).toBe("off");
+				render();
+				expect(texts).toEqual([]);
+				expect(stroke).not.toHaveBeenCalled();
+			});
+
+			it("stats shows the timings and counts but not the geometry", () => {
+				const { engine, render, texts, stroke } = overlay();
+				engine.setHudMode("stats");
+				render({ totalLights: 7 });
+				const text = texts.join("\n");
+				for (const label of ["LSCG map stats [stats]", "FPS", "Map draw", "Lighting", "Redraws/s", "Worker", "Segments"]) expect(text).toContain(label);
+				expect(text).toContain("1 drawn of 7");
+				expect(stroke).not.toHaveBeenCalled();
+			});
+
+			it("debug adds the lighting geometry", () => {
+				const { engine, internals, render, texts, stroke } = overlay();
+				internals.segments = [{ p1: { x: 0, y: 0 }, p2: { x: 10, y: 0 } }];
+				engine.setHudMode("debug");
+				render();
+				expect(texts.join("\n")).toContain("[debug]");
+				expect(stroke).toHaveBeenCalled();
+				expect(texts.join("\n")).toContain("Segments  1");
+			});
+
+			it("sits inside the right edge of the map, not over the chat, whatever the map's width", () => {
+				const { engine, render, boxes } = overlay();
+				engine.setHudMode("stats");
+				render({ width: 1000 });
+				expect(boxes.at(-1)![0]).toBe(1000 - 340 - 10);
+				render({ width: 2000 });
+				expect(boxes.at(-1)![0]).toBe(2000 - 340 - 10);
+				render({ width: 200 });
+				expect(boxes.at(-1)![0]).toBe(0);
+			});
+
+			it("keeps `debug` working as an on/off flag", () => {
+				const { engine } = overlay();
+				engine.debug = true;
+				expect(engine.hudMode).toBe("debug");
+				expect(engine.debug).toBe(true);
+				engine.setHudMode("stats");
+				expect(engine.debug).toBe(false);
+				engine.debug = false;
+				expect(engine.hudMode).toBe("off");
+			});
+
+			it("asks for the walls again when geometry is switched on, since the worker only returns them when asked", () => {
+				const { engine } = overlay();
+				const lamp = light();
+				const walls = [{ type: "rectangle" as const, topLeft: { x: 0, y: 0 }, bottomRight: { x: 5, y: 5 } }];
+				engine.compute([lamp], walls, undefined);
+				const compute = vi.spyOn(engine, "compute");
+				engine.setHudMode("stats");
+				expect(compute).not.toHaveBeenCalled();
+				engine.setHudMode("debug");
+				expect(compute).toHaveBeenCalledWith([lamp], walls, undefined);
+				compute.mockClear();
+				engine.setHudMode("debug");
+				expect(compute).not.toHaveBeenCalled();
+				compute.mockRestore();
+			});
+
+			it("counts compute jobs and layer redraws per second", () => {
+				let now = 5000;
+				const clock = vi.spyOn(performance, "now").mockImplementation(() => now);
+				const { engine, internals, render, lamp } = overlay();
+				engine.setHudMode("stats");
+				engine.compute([lamp], [], undefined);
+				engine.updateLights([lamp]);
+				render();
+				lamp.color[3] = 0.5;
+				render();
+				now += 1500;
+				render();
+				expect(internals.hz.compute).toBe(2);
+				expect(internals.hz.lightsRedrawn).toBeGreaterThanOrEqual(2);
+				expect(internals.hz.visionRedrawn).toBeGreaterThanOrEqual(1);
+				clock.mockRestore();
+			});
 		});
 
 		it("switching quality resizes the layers and redraws them", () => {

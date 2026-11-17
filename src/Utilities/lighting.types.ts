@@ -77,7 +77,12 @@ export interface RenderOptions {
      * to fill, with shadow edges a little softer. Defaults to "full".
      */
     quality?: "full" | "half";
+    /** How many lights the map has in all, for the statistics overlay (`lights` are only the ones worth drawing). */
+    totalLights?: number;
 }
+
+/** The map statistics overlay: off, statistics only, or statistics plus the lighting geometry (walls, light positions). */
+export type HudMode = "off" | "stats" | "debug";
 
 export interface Segment {
     p1: Point;

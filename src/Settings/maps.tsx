@@ -12,6 +12,7 @@ import { LeashingModule } from "Modules/leashing";
 import { ChaoticItemModule } from "Modules/chaotic-item";
 import { SplatterModule } from "Modules/splatter";
 import { MapModule } from "Modules/map";
+import { isDevBuild } from "Utilities/dev";
 
 export class GuiMaps extends GuiSubscreen {
 	private _host = new DomSettingsHost("lscg-map-settings", this, () => this.build());
@@ -70,6 +71,12 @@ export class GuiMaps extends GuiSubscreen {
 				options: [{ value: "full", label: "Full" }, { value: "half", label: "Half (faster)" }],
 				get: () => s.perfLightQuality ?? "full", set: v => s.perfLightQuality = v === "half" ? "half" : "full",
 				disabled: () => !s.enhancedLighting,
+			}),
+			SelectRow(ctx, {
+				label: "Map statistics overlay (developer)", description: "Shows frame timings and lighting counts on the map. Stats adds the lighting geometry. Also Alt+Shift+L on the map, or lscgPerf.hud() in the console.",
+				options: [{ value: "off", label: "Off" }, { value: "stats", label: "Stats" }, { value: "debug", label: "Stats and geometry" }],
+				get: () => getModule<MapModule>("MapModule")?.StatsMode ?? "off", set: v => getModule<MapModule>("MapModule")?.SetStatsMode(v),
+				hidden: () => !isDevBuild(),
 			}),
 		]);
 	}

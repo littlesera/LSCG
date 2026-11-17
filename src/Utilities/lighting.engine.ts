@@ -1,13 +1,32 @@
-import { JobType, Light, OpaqueObstacle, PendingJob, Point, RenderOptions, Segment, Viewpoint } from "./lighting.types";
+import { HudMode, JobType, Light, OpaqueObstacle, PendingJob, Point, RenderOptions, Segment, Viewpoint } from "./lighting.types";
 import { flattenPolygon, generateSegments, getVisibilityPolygon, mergeSegments } from "./lighting.math";
 import WorkerFactory from "./lighting.worker?worker&inline";
-import { recordPerf } from "./perf";
+import { perfSnapshot, recordPerf } from "./perf";
 
 /** How long a main-thread compute may take before the next one is held back. About a third of a 60 fps frame. */
 const FALLBACK_BUDGET_MS = 6;
 
 export class LightingEngine {
-    public debug: boolean = false;
+    /** The statistics overlay: "off", "stats" (timings and counts), or "debug" (those plus the lighting geometry). */
+    public hudMode: HudMode = "off";
+
+    /** Draws the lighting geometry as well as the statistics. Kept as a plain flag for anyone toggling it from the console. */
+    public get debug(): boolean {
+        return this.hudMode === "debug";
+    }
+    public set debug(on: boolean) {
+        this.setHudMode(on ? "debug" : "off");
+    }
+
+    /** Changes what the overlay shows. Walls are only sent back from the worker when asked for, so turning geometry on asks again. */
+    public setHudMode(mode: HudMode) {
+        const wasDebug = this.hudMode === "debug";
+        this.hudMode = mode;
+        if (mode === "debug" && !wasDebug && this.lastComputeArgs) {
+            const { lights, obstacles, viewpoint } = this.lastComputeArgs;
+            this.compute(lights, obstacles, viewpoint);
+        }
+    }
     public suppressOptimization: boolean = false;
     public disableSpatialAnimations: boolean = false; 
     
@@ -16,8 +35,10 @@ export class LightingEngine {
     private timings = { anim: 0, compute: 0, render: 0 };
     
     private lastHzTime: number = 0;
-    private counters = { anim: 0, compute: 0, render: 0 };
-    private hz = { anim: 0, compute: 0, render: 0 };
+    private counters = { anim: 0, compute: 0, render: 0, lightsRedrawn: 0, visionRedrawn: 0 };
+    private hz = { anim: 0, compute: 0, render: 0, lightsRedrawn: 0, visionRedrawn: 0 };
+    /** What the last full compute was given, kept so the overlay can ask for the walls again when switched on. */
+    private lastComputeArgs: { lights: Light[]; obstacles: OpaqueObstacle[]; viewpoint?: Viewpoint } | null = null;
 
     private worker: Worker | null = null;
     private useFallback: boolean = false;
@@ -223,7 +244,7 @@ export class LightingEngine {
         viewpoint?: Viewpoint,
     ) {
         const start = performance.now();
-        const payload: any = { viewpoint, suppressOptimization: this.suppressOptimization, debug: this.debug };
+        const payload: any = { viewpoint, suppressOptimization: this.suppressOptimization, debug: this.hudMode === "debug" };
 
         if (type === "COMPUTE") {
             payload.obstacles = obstacles;
@@ -247,6 +268,8 @@ export class LightingEngine {
     }
 
     public compute(lights: Light[], obstacles: OpaqueObstacle[], viewpoint?: Viewpoint) {
+        this.lastComputeArgs = { lights, obstacles, viewpoint };
+        this.counters.compute++;
         if (this.useFallback) {
             const start = performance.now();
             if (start < this.fallbackHeldUntil) {
@@ -285,6 +308,7 @@ export class LightingEngine {
     }
 
     public updateLights(movingLights: Light[], viewpoint?: Viewpoint) {
+        this.counters.compute++;
         if (this.useFallback) {
             for (const light of movingLights) {
                 this.lightMaskCache[this.getLightId(light)] = flattenPolygon(getVisibilityPolygon(light, this.segments));
@@ -343,6 +367,7 @@ export class LightingEngine {
         const lightsKey = this.lightLayerKey(lights, view, width, height, quality, ambientColor);
         if (lightsKey !== this.lastLightsKey) {
             this.lastLightsKey = lightsKey;
+            this.counters.lightsRedrawn++;
             this.lightCtx.globalCompositeOperation = "copy";
             this.lightCtx.fillStyle = ambientColor;
             this.lightCtx.fillRect(0, 0, layerWidth, layerHeight);
@@ -369,6 +394,7 @@ export class LightingEngine {
         const visionKey = viewpoint ? `${this.polygonId(this.visionMaskCache)}|${view.scale},${view.x},${view.y}|${width}x${height}@${quality}` : "";
         if (visionKey !== this.lastVisionKey) {
             this.lastVisionKey = visionKey;
+            if (viewpoint) this.counters.visionRedrawn++;
             if (viewpoint) {
                 this.visionCtx.setTransform(1, 0, 0, 1, 0, 0);
                 this.visionCtx.globalCompositeOperation = "source-over";
@@ -413,85 +439,97 @@ export class LightingEngine {
         recordPerf("lightingComposite", performance.now() - compositeStart);
         recordPerf("lightingRender", performance.now() - renderStart);
 
-        // --- 4. DEBUG OVERLAY ---
-        if (this.debug) {
-            mainCtx.save();
-            mainCtx.transform(view.scale, 0, 0, view.scale, view.x, view.y);
-            mainCtx.lineWidth = 2 / view.scale;
-
-            for (let i = 0; i < this.segments.length; i++) {
-                const seg = this.segments[i];
-                mainCtx.strokeStyle = `hsl(${(i * 137.5) % 360}, 100%, 50%)`;
-                
-                mainCtx.beginPath();
-                mainCtx.moveTo(seg.p1.x, seg.p1.y);
-                mainCtx.lineTo(seg.p2.x, seg.p2.y);
-                mainCtx.stroke();
-
-                mainCtx.fillStyle = "rgba(255, 255, 255, 0.8)";
-                mainCtx.beginPath();
-                mainCtx.arc(seg.p1.x, seg.p1.y, 3 / view.scale, 0, Math.PI * 2);
-                mainCtx.moveTo(seg.p2.x + 3 / view.scale, seg.p2.y);
-                mainCtx.arc(seg.p2.x, seg.p2.y, 3 / view.scale, 0, Math.PI * 2);
-                mainCtx.fill();
-            }
-
-            for (const light of lights) {
-                mainCtx.fillStyle = `rgba(${light.color[0]}, ${light.color[1]}, ${light.color[2]}, 1)`;
-                mainCtx.strokeStyle = "black";
-                mainCtx.beginPath();
-                mainCtx.arc(light.x, light.y, 5 / view.scale, 0, Math.PI * 2);
-                mainCtx.fill();
-                mainCtx.stroke();
-            }
-            mainCtx.restore(); 
-
-            const renderDuration = performance.now() - renderStart;
-            this.timings.render = (this.timings.render * 0.9) + (renderDuration * 0.1);
-            this.counters.render++;
-
-            const now = performance.now();
-            const delta = now - this.lastRenderTime;
-            if (delta > 0) {
-                this.currentFps = (this.currentFps * 0.9) + ((1000 / delta) * 0.1);
-            }
-            this.lastRenderTime = now;
-
-            if (now - this.lastHzTime >= 1000) {
-                this.hz.anim = this.counters.anim;
-                this.hz.compute = this.counters.compute;
-                this.hz.render = this.counters.render;
-                this.counters = { anim: 0, compute: 0, render: 0 };
-                this.lastHzTime = now;
-            }
-
-            const boxWidth = 240; 
-            const boxHeight = 130; 
-            const boxX = (width) - (boxWidth / 2); 
-            const textX = boxX + 10;
-
-            mainCtx.save();
-            mainCtx.fillStyle = "rgba(0, 0, 0, 0.7)";
-            mainCtx.fillRect(boxX, 10, boxWidth, boxHeight);
-            
-            mainCtx.fillStyle = "#00ff00"; 
-            mainCtx.font = "bold 14px monospace";
-            mainCtx.textBaseline = "top";
-            
-            mainCtx.fillText(`FPS:     ${Math.round(this.currentFps)}`, textX, 20);
-            mainCtx.fillText(`Segs:    ${this.segments.length}`, textX, 40);
-            mainCtx.fillText(`Lights:  ${lights.length}`, textX, 60);
-            
-            mainCtx.fillStyle = this.timings.anim > 2 ? "#ff4444" : "#00ff00";
-            mainCtx.fillText(`Anim:    ${this.timings.anim.toFixed(2)}ms (${this.hz.anim}Hz)`, textX, 85);
-            
-            mainCtx.fillStyle = this.timings.compute > 8 ? "#ff4444" : "#00ff00";
-            mainCtx.fillText(`Compute: ${this.timings.compute.toFixed(2)}ms (${this.hz.compute}Hz)`, textX, 105);
-            
-            mainCtx.fillStyle = this.timings.render > 8 ? "#ff4444" : "#00ff00";
-            mainCtx.fillText(`Render:  ${this.timings.render.toFixed(2)}ms (${this.hz.render}Hz)`, textX, 125);
-            mainCtx.restore();
+        // --- 4. STATISTICS OVERLAY ---
+        if (this.hudMode !== "off") {
+            if (this.hudMode === "debug") this.drawGeometry(mainCtx, view, lights);
+            this.drawHud(mainCtx, width, lights.length, options.totalLights);
         }
+    }
+
+    /** The lighting geometry: merged wall segments, with each light's position. Only in "debug" mode. */
+    private drawGeometry(mainCtx: CanvasRenderingContext2D, view: { scale: number; x: number; y: number }, lights: Light[]) {
+        mainCtx.save();
+        mainCtx.transform(view.scale, 0, 0, view.scale, view.x, view.y);
+        mainCtx.lineWidth = 2 / view.scale;
+
+        for (let i = 0; i < this.segments.length; i++) {
+            const seg = this.segments[i];
+            mainCtx.strokeStyle = `hsl(${(i * 137.5) % 360}, 100%, 50%)`;
+
+            mainCtx.beginPath();
+            mainCtx.moveTo(seg.p1.x, seg.p1.y);
+            mainCtx.lineTo(seg.p2.x, seg.p2.y);
+            mainCtx.stroke();
+
+            mainCtx.fillStyle = "rgba(255, 255, 255, 0.8)";
+            mainCtx.beginPath();
+            mainCtx.arc(seg.p1.x, seg.p1.y, 3 / view.scale, 0, Math.PI * 2);
+            mainCtx.moveTo(seg.p2.x + 3 / view.scale, seg.p2.y);
+            mainCtx.arc(seg.p2.x, seg.p2.y, 3 / view.scale, 0, Math.PI * 2);
+            mainCtx.fill();
+        }
+
+        for (const light of lights) {
+            mainCtx.fillStyle = `rgba(${light.color[0]}, ${light.color[1]}, ${light.color[2]}, 1)`;
+            mainCtx.strokeStyle = "black";
+            mainCtx.beginPath();
+            mainCtx.arc(light.x, light.y, 5 / view.scale, 0, Math.PI * 2);
+            mainCtx.fill();
+            mainCtx.stroke();
+        }
+        mainCtx.restore();
+    }
+
+    /**
+     * Timings and counts, from the rolling samples in perf.ts (the same ones `lscgPerf.snapshot()` returns), drawn in the top
+     * right of the map. Red means a number worth looking at: a slow frame, or a worker that is behind.
+     */
+    private drawHud(mainCtx: CanvasRenderingContext2D, width: number, visibleLights: number, totalLights?: number) {
+        const now = performance.now();
+        const delta = now - this.lastRenderTime;
+        if (delta > 0 && this.lastRenderTime > 0) this.currentFps = (this.currentFps * 0.9) + ((1000 / delta) * 0.1);
+        this.lastRenderTime = now;
+        this.counters.render++;
+        if (this.lastHzTime === 0) this.lastHzTime = now; // the first window starts now, so its figures cover a whole second
+        if (now - this.lastHzTime >= 1000) {
+            this.hz = { ...this.counters };
+            this.counters = { anim: 0, compute: 0, render: 0, lightsRedrawn: 0, visionRedrawn: 0 };
+            this.lastHzTime = now;
+        }
+
+        const stats = perfSnapshot();
+        const ms = (n: number) => n.toFixed(1).padStart(5);
+        const worker = this.useFallback
+            ? `main thread ${ms(stats.lightingCompute.mean)} ms (max ${ms(stats.lightingCompute.max)})`
+            : `${ms(stats.lightingLatency.mean)} ms (max ${ms(stats.lightingLatency.max)})`;
+        const lines: { text: string; bad?: boolean }[] = [
+            { text: `LSCG map stats [${this.hudMode}]` },
+            { text: `FPS       ${Math.round(this.currentFps)}`, bad: this.currentFps > 0 && this.currentFps < 30 },
+            { text: `Map draw  ${ms(stats.drawGrid.mean)} ms  p95 ${ms(stats.drawGrid.p95)}`, bad: stats.drawGrid.p95 > 12 },
+            { text: `Lighting  ${ms(stats.lightingRender.mean)} ms  p95 ${ms(stats.lightingRender.p95)}`, bad: stats.lightingRender.p95 > 8 },
+            { text: `Redraws/s lights ${this.hz.lightsRedrawn}  vision ${this.hz.visionRedrawn}` },
+            { text: `Lights    ${visibleLights} drawn of ${totalLights ?? "?"}, ${Object.keys(this.lightMaskCache).length} polygons` },
+            { text: `Worker    ${worker}  ${this.hz.compute}/s`, bad: !this.useFallback && stats.lightingLatency.max > 150 },
+            { text: `Segments  ${this.hudMode === "debug" || this.segments.length ? this.segments.length : "n/a"}` },
+        ];
+
+        const lineHeight = 18;
+        const boxWidth = 340;
+        const boxHeight = lines.length * lineHeight + 12;
+        // Inside the map's right edge, not half over the chat as the old overlay was
+        const boxX = Math.max(0, width - boxWidth - 10);
+
+        mainCtx.save();
+        mainCtx.fillStyle = "rgba(0, 0, 0, 0.72)";
+        mainCtx.fillRect(boxX, 10, boxWidth, boxHeight);
+        mainCtx.font = "bold 14px monospace";
+        mainCtx.textAlign = "left";
+        mainCtx.textBaseline = "top";
+        lines.forEach((line, i) => {
+            mainCtx.fillStyle = i === 0 ? "#9ecbff" : line.bad ? "#ff6666" : "#66ff66";
+            mainCtx.fillText(line.text, boxX + 10, 16 + i * lineHeight);
+        });
+        mainCtx.restore();
     }
 
     /** Maps world space to the canvas. Without `view`, world space is the canvas, shifted by `camera` (how lighting used to work). */

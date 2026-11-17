@@ -72,7 +72,12 @@ export function resetPerf(): void {
 	for (const s of Object.values(series)) s.clear();
 }
 
-/** Installs `window.lscgPerf = { snapshot, reset }`. */
-export function exposePerf(target: { lscgPerf?: unknown } = window as unknown as { lscgPerf?: unknown }): void {
-	target.lscgPerf = { snapshot: perfSnapshot, reset: resetPerf };
+/**
+ * Installs `window.lscgPerf`:
+ *  - `snapshot()` and `reset()` for the rolling timings.
+ *  - `hud(mode?)` for the map statistics overlay: "off", "stats", or "debug" (statistics plus the lighting geometry). With no
+ *    argument it steps to the next mode. Returns the mode now showing. Set by `onHud`, which the map module provides.
+ */
+export function exposePerf(target: { lscgPerf?: unknown } = window as unknown as { lscgPerf?: unknown }, hud?: (mode?: string) => string): void {
+	target.lscgPerf = { snapshot: perfSnapshot, reset: resetPerf, ...(hud ? { hud } : {}) };
 }

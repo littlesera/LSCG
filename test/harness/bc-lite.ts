@@ -33,7 +33,7 @@ const HOOK_TARGETS = [
 	"ServerHandleLeashBeep", "ChatRoomBreakLeash", "ChatRoomMapViewLeash", "ChatRoomActivateView",
 	"RgbaArrayToHTMLColor", "DrawImageResize", "ChatRoomMapViewDrawGrid", "ChatRoomMapViewSyncMapData",
 	"ChatRoomSyncRoomProperties", "ChatRoomMapViewUpdatePlayerFlag", "ChatRoomMapViewMouseWheel",
-	"ChatRoomMapViewUpdateFlag", "CharacterLoadCanvas", "ChatRoomMapViewClick", "DialogDraw",
+	"ChatRoomMapViewUpdateFlag", "CharacterLoadCanvas", "ChatRoomMapViewClick", "GameKeyDown", "DialogDraw",
 	"DialogClick", "AppearanceRun", "AppearanceClick", "InformationSheetRun", "InformationSheetClick", "InformationSheetExit",
 	"ItemColorLoad", "ItemColorRevert", "ColorPickerExit", "CommonCallFunctionByNameWarn",
 	"CommonDrawAppearanceBuild", "CommonDrawApplyLayerAlphaMasks", "AssetLayerSort",

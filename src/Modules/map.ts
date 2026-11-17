@@ -2,7 +2,7 @@ import { BaseModule } from "base";
 import { getModule } from "modules";
 import { MapSettingsModel } from "Settings/Models/base";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
-import { Color, Light, LineObstacle, OpaqueObstacle, Viewpoint } from "Utilities/lighting.types";
+import { Color, HudMode, Light, LineObstacle, OpaqueObstacle, Viewpoint } from "Utilities/lighting.types";
 import { drawBlindfold, GetItemNameAndDescriptionConcat, hookFunction, isPhraseInString } from "utils";
 import { StateModule } from "./states";
 import { ScreenItems } from "./item-use";
@@ -10,6 +10,7 @@ import { debounce } from "lodash-es";
 import { GuiMaps } from "Settings/maps";
 import { LightingEngine } from "Utilities/lighting.engine";
 import { exposePerf, recordPerf } from "Utilities/perf";
+import { isDevBuild } from "Utilities/dev";
 
 interface lightingSource {
     objId: number;
@@ -29,6 +30,9 @@ interface WallSides {
     top: boolean;
     doorBelow: boolean;
 }
+
+/** Where the map statistics overlay mode is remembered, per browser. */
+const STATS_MODE_KEY = "LSCG_MAP_STATS";
 
 /** The engine treats a light at or below this opacity as drawing nothing worth keeping (see LightingEngine.render). */
 const MIN_VISIBLE_LIGHT_ALPHA = 0.01;
@@ -255,7 +259,19 @@ export class MapModule extends BaseModule {
 
     load(): void {
         (window as any).lighting = this.lightingEngine; // Expose the lighting engine for debugging/testing
-        exposePerf(); // window.lscgPerf: rolling map/lighting frame timings, for profiling and the browser perf test
+        // window.lscgPerf: rolling map/lighting frame timings for profiling and the browser perf test, and hud() to show them on the map
+        exposePerf(window as unknown as { lscgPerf?: unknown }, (mode?: string) => this.SetStatsMode(mode));
+        this.RestoreStatsMode();
+
+        // In a development build (or with localStorage.LSCG_DEV = "1"), Alt+Shift+L steps the map statistics overlay.
+        hookFunction("GameKeyDown", 1, (args, next) => {
+            const event = args[0] as KeyboardEvent | undefined;
+            if (event?.altKey && event.shiftKey && event.code === "KeyL" && isDevBuild() && this.Enabled) {
+                this.SetStatsMode();
+                return true;
+            }
+            return next(args);
+        }, ModuleCategory.Map);
 
         // Performance hack, ChatRoomActivateView is fired every frame if the map is always, causing a flood of redundant event hookups and disconnects.
         hookFunction("ChatRoomActivateView", 1, (args, next) => {
@@ -333,6 +349,7 @@ export class MapModule extends BaseModule {
                     lights: this.visibleLights,
                     view: this.camera,
                     quality: this.settings.perfLightQuality === "half" ? "half" : "full",
+                    totalLights: this.allLights.length,
                     viewpoint: (useViewpoint ? this.viewpoint : undefined),
                     ambientColor: ambientColor,
                 });
@@ -754,6 +771,34 @@ export class MapModule extends BaseModule {
         this.lastDoorSignature = this.doorSignature;
         this.lastViewSignature = this.viewSignature;
         this.lightingEngine.compute(this.allLights, [...this.wallObstacles, ...this.BuildDoorObstacles()], this.viewpoint);
+    }
+
+    /** Which map statistics overlay is showing: "off", "stats", or "debug" (statistics plus lighting geometry). */
+    get StatsMode(): HudMode {
+        return this.lightingEngine.hudMode;
+    }
+
+    /**
+     * Shows or steps the map statistics overlay. With a mode, shows that one; without, steps off, stats, debug, off. The choice is
+     * remembered in this browser so it survives a reload while developing. Returns the mode now showing.
+     */
+    SetStatsMode(mode?: string): HudMode {
+        const order: HudMode[] = ["off", "stats", "debug"];
+        const next = order.includes(mode as HudMode) ? mode as HudMode : order[(order.indexOf(this.StatsMode) + 1) % order.length];
+        this.lightingEngine.setHudMode(next);
+        try {
+            if (next === "off") localStorage.removeItem(STATS_MODE_KEY); else localStorage.setItem(STATS_MODE_KEY, next);
+        } catch { /* private window or blocked storage: not remembered */ }
+        return next;
+    }
+
+    /** Brings back the overlay mode from before a reload, in development builds. */
+    RestoreStatsMode(): void {
+        if (!isDevBuild()) return;
+        try {
+            const saved = localStorage.getItem(STATS_MODE_KEY);
+            if (saved === "stats" || saved === "debug") this.lightingEngine.setHudMode(saved);
+        } catch { /* nothing remembered */ }
     }
 
     get MapLoaded(): boolean {

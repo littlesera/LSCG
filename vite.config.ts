@@ -25,6 +25,8 @@ export default defineConfig(({ mode }) => {
     const isDev = mode === 'development';
 
     return {
+        // True for `npm run watch` / `npm run dev`; lets developer tools (see Utilities/dev.ts) show only in a local build.
+        define: { LSCG_DEV: JSON.stringify(isDev) },
         plugins: [
             tsconfigPaths(),
             cssInjectedByJsPlugin() 
