@@ -30,6 +30,9 @@ interface WallSides {
     doorBelow: boolean;
 }
 
+/** The engine treats a light at or below this opacity as drawing nothing worth keeping (see LightingEngine.render). */
+const MIN_VISIBLE_LIGHT_ALPHA = 0.01;
+
 export class MapModule extends BaseModule {
     lastMouseX: number = 0;
     lastMouseY: number = 0;
@@ -717,6 +720,11 @@ export class MapModule extends BaseModule {
 
         this.wallObstacles = walls;
         this.doorTiles = doors;
+
+        // BC puts a "Blank" static-lighting effect (colour 0, 0, 0 at 0 opacity) on every tile that has no other lighting, so a map
+        // parses into a light per tile. They add nothing to the picture, but each would get a visibility polygon and be drawn every
+        // frame, so a 40x40 map was lighting 1600 invisible lights. Only lights that can change a pixel are kept.
+        this.mapLights = this.mapLights.filter(l => l.color[3] > MIN_VISIBLE_LIGHT_ALPHA);
 
         // Trim out any "off" lights.
         if (this.settings.hideDarkLights) {

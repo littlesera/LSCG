@@ -165,6 +165,17 @@ describe("MapModule lighting", () => {
 			expect(snapshot()).toBe(home);
 		});
 
+		it("builds no lights for BC's blank lighting effect, which every tile without other lighting carries", () => {
+			room(["P.L.."]);
+			const blank = { Type: "StaticLighting", Color: [0, 0, 0, 0] };
+			const shadow = { Type: "StaticLighting", Color: [0, 0, 0, 0.2] };
+			g.MapManager.Map.getEffects = (x: number) => [x === 3 ? shadow : blank];
+			map.ParseMapForObjects();
+			// the lamppost and the one real shadow remain; the other tiles' blank effects are not lights
+			expect(map.mapLights.map(l => l.color)).toEqual([[200, 200, 200, 0.8], [0, 0, 0, 0.2]]);
+			expect(compute.mock.calls.at(-1)?.[0]).toHaveLength(2);
+		});
+
 		it("lights a static-lighting effect", () => {
 			room(["P.S"]);
 			map.ParseMapForObjects();

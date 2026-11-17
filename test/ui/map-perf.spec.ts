@@ -77,7 +77,7 @@ for (const v of variants) {
         writeFileSync(`test/.out/map-perf-${v.name}${SOFTWARE ? "-software" : ""}.json`, JSON.stringify(result, null, 2));
         const p = result.perf;
         console.log(`${v.name}${SOFTWARE ? " [software]" : ""}: ${result.fps.toFixed(1)} fps | drawGrid mean ${p.drawGrid.mean.toFixed(2)} p95 ${p.drawGrid.p95.toFixed(2)} ms | ` +
-            `light render mean ${p.lightingRender.mean.toFixed(2)} p95 ${p.lightingRender.p95.toFixed(2)} ms | worker round trip mean ${p.lightingLatency.mean.toFixed(1)} max ${p.lightingLatency.max.toFixed(1)} ms | long tasks ${result.longTasks} (${result.longTaskMs.toFixed(0)} ms)`);
+            `light render mean ${p.lightingRender.mean.toFixed(2)} p95 ${p.lightingRender.p95.toFixed(2)} ms | worker round trip mean ${(p.lightingLatency?.mean ?? 0).toFixed(1)} max ${(p.lightingLatency?.max ?? 0).toFixed(1)} ms | long tasks ${result.longTasks} (${result.longTaskMs.toFixed(0)} ms)`);
         expect(result.perf.drawGrid.count, "map was drawn while walking").toBeGreaterThan(0);
     });
 }
