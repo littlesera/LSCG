@@ -17,6 +17,7 @@
     "playground": "node scripts/bc-playground.mjs",
     "ui:shots": "node scripts/ui-shots.mjs",
     "test:ui": "playwright test",
+    "perf:map": "node scripts/map-perf.mjs",
     "typecheck": "tsc --noEmit -p . && tsc --noEmit -p tsconfig.test.json && tsc --noEmit -p tsconfig.ui.json",
     "test": "vitest run --project unit",
     "test:watch": "vitest --project unit",
