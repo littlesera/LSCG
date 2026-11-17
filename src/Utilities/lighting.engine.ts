@@ -1,6 +1,7 @@
 import { JobType, Light, OpaqueObstacle, PendingJob, Point, RenderOptions, Segment, Viewpoint } from "./lighting.types";
 import { generateSegments, getVisibilityPolygon, optimizeSegments } from "./lighting.math";
 import WorkerFactory from "./lighting.worker?worker&inline";
+import { recordPerf } from "./perf";
 
 export class LightingEngine {
     public debug: boolean = false;
@@ -165,6 +166,7 @@ export class LightingEngine {
         }
 
         const duration = performance.now() - time;
+        recordPerf("lightingAnim", duration);
         this.timings.anim = (this.timings.anim * 0.9) + (duration * 0.1);
         this.counters.anim++;
     }
@@ -194,6 +196,7 @@ export class LightingEngine {
         this.worker!.postMessage({ type, payload });
 
         const duration = performance.now() - start;
+        recordPerf("lightingCompute", duration);
         this.timings.compute = (this.timings.compute * 0.9) + (duration * 0.1);
     }
 
@@ -212,6 +215,7 @@ export class LightingEngine {
             this.visionMaskCache = viewpoint ? getVisibilityPolygon(viewpoint, this.segments) : [];
 
             const duration = performance.now() - start;
+            recordPerf("lightingCompute", duration);
             this.timings.compute = (this.timings.compute * 0.9) + (duration * 0.1);
             return;
         }
@@ -325,6 +329,8 @@ export class LightingEngine {
             mainCtx.drawImage(this.visionCanvas, 0, 0);
         }
         mainCtx.restore();
+
+        recordPerf("lightingRender", performance.now() - renderStart);
 
         // --- 4. DEBUG OVERLAY ---
         if (this.debug) {

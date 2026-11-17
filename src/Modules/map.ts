@@ -9,6 +9,7 @@ import { ScreenItems } from "./item-use";
 import { debounce } from "lodash-es";
 import { GuiMaps } from "Settings/maps";
 import { LightingEngine } from "Utilities/lighting.engine";
+import { exposePerf, recordPerf } from "Utilities/perf";
 
 interface lightingSource {
     objId: number;
@@ -175,6 +176,7 @@ export class MapModule extends BaseModule {
 
     load(): void {
         (window as any).lighting = this.lightingEngine; // Expose the lighting engine for debugging/testing
+        exposePerf(); // window.lscgPerf: rolling map/lighting frame timings, for profiling and the browser perf test
 
         // Performance hack, ChatRoomActivateView is fired every frame if the map is always, causing a flood of redundant event hookups and disconnects.
         hookFunction("ChatRoomActivateView", 1, (args, next) => {
@@ -201,7 +203,9 @@ export class MapModule extends BaseModule {
 
         hookFunction("ChatRoomMapViewDrawGrid", 1, (args, next) => {
             this.drawingMapFlag = true;
+            const drawStart = performance.now();
             next(args);
+            recordPerf("drawGrid", performance.now() - drawStart);
             this.drawingMapFlag = false;
 
             if (this.EnhancedLightingEnabled) {
