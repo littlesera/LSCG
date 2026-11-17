@@ -139,6 +139,16 @@ const EXTRA_FILES = [
 
 export const ALL_FILES = [...NEEDED_FILES, ...EXTRA_FILES];
 
+/**
+ * Downloaded and cached like ALL_FILES but never evaluated: the "bc" tier only reads their text, to fingerprint BC code
+ * that LSCG's map performance work depends on or replaces (test/bc-tier/map-source-fingerprint.bc.test.ts). They are not
+ * in ALL_FILES because loading map/canvas code into jsdom would need far more stubbing than a text comparison deserves.
+ */
+export const FINGERPRINT_FILES = [
+	"Scripts/Map.js",
+	"Screens/Online/ChatRoom/ChatRoomMapView.js",
+];
+
 function readPin() {
 	return JSON.parse(readFileSync(PIN_FILE, "utf-8"));
 }
@@ -197,7 +207,7 @@ async function downloadInto(dir, repo, sha, gameVersionForGuard, { allowVersionM
 		else throw new Error(message);
 	}
 
-	for (const relPath of ALL_FILES) {
+	for (const relPath of [...ALL_FILES, ...FINGERPRINT_FILES]) {
 		const dest = join(dir, ...relPath.split("/"));
 		if (existsSync(dest)) continue;
 		const text = await fetchText(rawUrl(repo, sha, relPath));
