@@ -52,6 +52,15 @@ export class MapModule extends BaseModule {
         return this.lightingEngine.debug ? ChatRoomMapViewPerceptionRangeMax : Math.min(ChatRoomMapViewPerceptionRangeMax + 3, 40); // push an extra 3 tiles for lights to still see some effects while blinded
     }
 
+    /**
+     * How many columns either side of the player lights and walls are considered. The same as the rows (lightingVisionMax)
+     * except on a map drawn wider than 1000 px (BC R134's resizable split), where the extra columns on screen need lights too.
+     */
+    get lightingVisionMaxX(): number {
+        const extraColumns = this.MapWidth > 1000 ? Math.ceil((this.MapWidth - 1000) / (2 * this.TileUnit)) : 0;
+        return Math.min(this.lightingVisionMax + extraColumns, ChatRoomMapViewWidth);
+    }
+
     get defaultSettings() {
         return <MapSettingsModel>{
             enabled: true,
@@ -166,11 +175,17 @@ export class MapModule extends BaseModule {
     }
     mapLights: Light[] = [];
     charLights: Light[] = [];
-    viewpoint: Viewpoint = {
-        x: 500, 
-        y: 450,
-        radius: this.TileUnit * 8,
-    };
+    /**
+     * Where vision is cast from: the player's tile, centred in the drawn map. Rebuilt on each read so it follows zoom (the
+     * radius) and, on BC R134 and later, the map's width.
+     */
+    get viewpoint(): Viewpoint {
+        return {
+            x: this.MapWidth / 2,
+            y: 450,
+            radius: this.TileUnit * 8,
+        };
+    }
     
     drawingMapFlag: boolean = false;
 
@@ -216,8 +231,8 @@ export class MapModule extends BaseModule {
                         const MaxRange = Math.max(Math.abs(X - Player.MapData?.Pos.X), Math.abs(Y - Player?.MapData?.Pos.Y));
                         if (MaxRange > ChatRoomMapViewGetSightRange()) continue;
 
-                        const ScreenX = (X - Player.MapData.Pos.X) * this.TileUnit + ChatRoomMapViewPerceptionRange * this.TileUnit;
-                        const ScreenY = (Y - Player.MapData.Pos.Y) * this.TileUnit + ChatRoomMapViewPerceptionRange * this.TileUnit;
+                        const ScreenX = this.ScreenX(X);
+                        const ScreenY = this.ScreenY(Y);
                         MainCanvas.save();
                         MainCanvas.textAlign = "left";
                         MainCanvas.textBaseline = "top";
@@ -246,7 +261,7 @@ export class MapModule extends BaseModule {
                 
                 this.lightingEngine.render({
                     mainCtx: MainCanvas, 
-                    width: MainCanvas.canvas.width / 2, 
+                    width: this.MapWidth, 
                     height: MainCanvas.canvas.height, 
                     lights: this.allLights, 
                     viewpoint: (useViewpoint ? this.viewpoint : undefined),
@@ -307,8 +322,8 @@ export class MapModule extends BaseModule {
     }
 
     GetCharacterLights(C: Character, X: number, Y: number): Light[] {
-        const ScreenX = (X - (Player?.MapData?.Pos?.X ?? 0)) * this.TileUnit + ChatRoomMapViewPerceptionRange * this.TileUnit;
-        const ScreenY = (Y - (Player?.MapData?.Pos?.Y ?? 0)) * this.TileUnit + ChatRoomMapViewPerceptionRange * this.TileUnit;
+        const ScreenX = this.ScreenX(X);
+        const ScreenY = this.ScreenY(Y);
         const CX = ScreenX + (this.TileUnit/2);
         const CY = C.IsKneeling() ? ScreenY + (this.TileUnit*0.45) : ScreenY;
 
@@ -395,12 +410,30 @@ export class MapModule extends BaseModule {
         return 1000 / ((ChatRoomMapViewPerceptionRange * 2) + 1);
     }
 
+    /**
+     * Width in canvas pixels of the area the map is drawn in. BC R134 lets the player resize it (the chat/map split, 500 to
+     * 2000, 1000 by default); earlier clients always draw a 1000 px map.
+     */
+    get MapWidth(): number {
+        return typeof ChatRoomMapViewSplitPosition === "number" ? ChatRoomMapViewSplitPosition : 1000;
+    }
+
+    /** Canvas X of a tile's left edge. The player's tile is centred in the drawn map, as BC's DrawGrid does. */
+    ScreenX(tileX: number): number {
+        return (tileX - (Player?.MapData?.Pos?.X ?? 0)) * this.TileUnit + (this.MapWidth - this.TileUnit) / 2;
+    }
+
+    /** Canvas Y of a tile's top edge. The map is always 1000 px tall. */
+    ScreenY(tileY: number): number {
+        return (tileY - (Player?.MapData?.Pos?.Y ?? 0)) * this.TileUnit + (1000 - this.TileUnit) / 2;
+    }
+
     NewLight(tileX: number, tileY: number, light: Partial<Light>, playerNum: number = 0): Light {
         const key = playerNum ? `${playerNum}` : `${tileX}_${tileY}`;
         const customId = `L_${key}_${light.color}`;
         
-        const ScreenX = (tileX - (Player?.MapData?.Pos?.X ?? 0)) * this.TileUnit + ChatRoomMapViewPerceptionRange * this.TileUnit;
-        const ScreenY = (tileY - (Player?.MapData?.Pos?.Y ?? 0)) * this.TileUnit + ChatRoomMapViewPerceptionRange * this.TileUnit;
+        const ScreenX = this.ScreenX(tileX);
+        const ScreenY = this.ScreenY(tileY);
 
         const defaults: Light = {
             id: customId,
@@ -432,13 +465,13 @@ export class MapModule extends BaseModule {
 
         let MaxVisibleRange = this.lightingVisionMax;
 	    if (MaxVisibleRange < 1) MaxVisibleRange = 1;
+        const MaxVisibleRangeX = Math.max(MaxVisibleRange, this.lightingVisionMaxX);
         this.charLights = [];
         for (const C of ChatRoomCharacter) {
             //if (C.IsPlayer()) continue;
             const X = C.MapData?.Pos.X ?? 0;
             const Y = C.MapData?.Pos.Y ?? 0;
-            const MaxRange = Math.max(Math.abs(X - Player.MapData.Pos.X), Math.abs(Y - Player.MapData.Pos.Y));
-            if (MaxRange > MaxVisibleRange) continue;
+            if (Math.abs(X - Player.MapData.Pos.X) > MaxVisibleRangeX || Math.abs(Y - Player.MapData.Pos.Y) > MaxVisibleRange) continue;
             this.charLights.push(...this.GetCharacterLights(C, X, Y));
         }
     }
@@ -453,22 +486,21 @@ export class MapModule extends BaseModule {
         const objects: OpaqueObstacle[] = [];
         this.mapLights = [];
 
-        const [Left, Top, Width, Height] = [0, 0, 1000, 1000];
         let MaxVisibleRange = this.lightingVisionMax;
 	    if (MaxVisibleRange < 1) MaxVisibleRange = 1;
+        const MaxVisibleRangeX = Math.max(MaxVisibleRange, this.lightingVisionMaxX);
 
-        const TileWidth = Width / ((ChatRoomMapViewPerceptionRange * 2) + 1);
-        const TileHeight = Height / ((ChatRoomMapViewPerceptionRange * 2) + 1);
+        const TileWidth = this.TileUnit;
+        const TileHeight = this.TileUnit;
 
         for (let Pos = 0; Pos < ChatRoomMapViewWidth * ChatRoomMapViewHeight; Pos++) {
             const X = Pos % ChatRoomMapViewWidth;
             const Y = Math.floor(Pos / ChatRoomMapViewWidth);
 
-            const MaxRange = Math.max(Math.abs(X - Player.MapData.Pos.X), Math.abs(Y - Player.MapData.Pos.Y));
-		    if (MaxRange > MaxVisibleRange) continue;
+            if (Math.abs(X - Player.MapData.Pos.X) > MaxVisibleRangeX || Math.abs(Y - Player.MapData.Pos.Y) > MaxVisibleRange) continue;
 
-            const ScreenX = (X - Player.MapData.Pos.X) * TileWidth + ChatRoomMapViewPerceptionRange * TileWidth;
-            const ScreenY = (Y - Player.MapData.Pos.Y) * TileHeight + ChatRoomMapViewPerceptionRange * TileWidth;
+            const ScreenX = this.ScreenX(X);
+            const ScreenY = this.ScreenY(Y);
 
             const Object = ChatRoomMapViewGetObjectAtPos(X, Y);
             const TileData = ChatRoomMapViewGetTileAtPos(X, Y);

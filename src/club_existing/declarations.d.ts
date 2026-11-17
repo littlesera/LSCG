@@ -17,6 +17,8 @@ declare function InventoryWear(C: Character, AssetName: AssetName, AssetGroup: A
 
 declare let ChatRoomMapViewWidth: number;
 declare let ChatRoomMapViewHeight: number;
+/** BC R134 and later: width in canvas pixels of the area the map is drawn in. Not defined on R133, so test it with typeof. */
+declare let ChatRoomMapViewSplitPosition: number | undefined;
 declare let MapManager: {
 	Map: {
 		getTileId(index: number): number | null;

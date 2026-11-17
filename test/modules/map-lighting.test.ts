@@ -214,6 +214,83 @@ describe("MapModule lighting", () => {
 			render.mockRestore();
 		});
 	});
+
+	// BC R134 lets the player resize the map (ChatRoomMapViewSplitPosition, 500 to 2000, 1000 by default) and centres the
+	// player's tile in it. R133 always draws a 1000 px map and has no such variable.
+	describe("on a resizable map (BC R134)", () => {
+		afterEach(() => { delete g.ChatRoomMapViewSplitPosition; });
+
+		it("is 1000 px wide when the client has no split (R133)", () => {
+			delete g.ChatRoomMapViewSplitPosition;
+			expect(map.MapWidth).toBe(1000);
+		});
+
+		it.each([500, 1000, 1500, 2000])("centres the player's tile in a %i px wide map, as DrawGrid does", (split) => {
+			g.ChatRoomMapViewSplitPosition = split;
+			room(["...P."]);
+			const T = map.TileUnit;
+			// BC: OffsetX = (Width - TileSize) / 2, ScreenX = (X - PlayerX) * TileSize + OffsetX
+			expect(map.ScreenX(3)).toBeCloseTo((split - T) / 2);
+			expect(map.ScreenX(4)).toBeCloseTo((split - T) / 2 + T);
+			expect(map.ScreenY(0)).toBeCloseTo((1000 - T) / 2 - 0 * T);
+		});
+
+		it("matches the old fixed formula at the default 1000 px split, at any zoom", () => {
+			for (const range of [1, 4, 12, 20]) {
+				g.ChatRoomMapViewPerceptionRange = range;
+				g.ChatRoomMapViewSplitPosition = 1000;
+				room(["...P."]);
+				const T = map.TileUnit;
+				expect(map.ScreenX(5)).toBeCloseTo((5 - 3) * T + range * T);
+				expect(map.ScreenY(2)).toBeCloseTo(2 * T + range * T);
+			}
+		});
+
+		it.each([500, 1000, 2000])("casts vision from the middle of a %i px map, and sizes the light render to it", (split) => {
+			g.ChatRoomMapViewSplitPosition = split;
+			room(["...P."]);
+			expect(map.viewpoint.x).toBe(split / 2);
+			g.ChatRoomMapFogIsActive = () => true;
+			g.ChatRoomMapViewHasSuperPowers = () => false;
+			g.MainCanvas = Object.assign(recordingContext().ctx, { canvas: { width: 2000, height: 1000 } });
+			g.MouseX = 10; g.MouseY = 20;
+			const render = vi.spyOn(map.lightingEngine, "render").mockImplementation(() => {});
+			g.ChatRoomMapViewDrawGrid();
+			expect(render.mock.calls[0][0]).toMatchObject({ width: split, height: 1000 });
+			expect(render.mock.calls[0][0].viewpoint).toMatchObject({ x: split / 2 });
+			render.mockRestore();
+		});
+
+		it("places a light on its tile for the current split", () => {
+			g.ChatRoomMapViewSplitPosition = 2000;
+			room(["P.L"]);
+			map.ParseMapForObjects();
+			const T = map.TileUnit;
+			// The lamppost is two tiles right of the player; the player's tile is centred in 2000 px.
+			expect(map.mapLights[0].x).toBeCloseTo((2000 - T) / 2 + 2 * T + T / 2);
+		});
+
+		it("looks further to the sides on a wide map, since more columns are on screen", () => {
+			g.ChatRoomMapViewWidth = 40;
+			g.ChatRoomMapViewSplitPosition = 1000;
+			expect(map.lightingVisionMaxX).toBe(map.lightingVisionMax);
+			g.ChatRoomMapViewSplitPosition = 2000;
+			const extra = Math.ceil(1000 / (2 * map.TileUnit));
+			expect(map.lightingVisionMaxX).toBe(Math.min(map.lightingVisionMax + extra, 40));
+			expect(map.lightingVisionMaxX).toBeGreaterThan(map.lightingVisionMax);
+		});
+
+		it("lights a lamppost beyond the usual window when the map is wide", () => {
+			g.ChatRoomMapViewSplitPosition = 2000;
+			const far = map.lightingVisionMax + 2;
+			room(["P" + ".".repeat(far - 1) + "L"]);
+			map.ParseMapForObjects();
+			expect(map.mapLights).toHaveLength(1);
+			g.ChatRoomMapViewSplitPosition = 1000;
+			map.ParseMapForObjects();
+			expect(map.mapLights).toHaveLength(0);
+		});
+	});
 });
 
 describe("LightingEngine", () => {
