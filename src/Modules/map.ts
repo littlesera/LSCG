@@ -11,6 +11,7 @@ import { GuiMaps } from "Settings/maps";
 import { LightingEngine } from "Utilities/lighting.engine";
 import { exposePerf, recordPerf } from "Utilities/perf";
 import { isDevBuild } from "Utilities/dev";
+import { FastImageDrawer } from "Utilities/fastImageDraw";
 
 interface lightingSource {
     objId: number;
@@ -73,9 +74,6 @@ export class MapModule extends BaseModule {
             useRoomCustomization: true,
             hideVanillaFog: false,
             hideDarkLights: false,
-            perfWallEffectTable: false,
-            perfFastPerception: false,
-            perfFastMapRenderer: false,
             perfDrawImageFastPath: false,
             perfLightQuality: "full",
         };
@@ -243,6 +241,9 @@ export class MapModule extends BaseModule {
 
     drawingMapFlag: boolean = false;
 
+    /** The shortcut for plain image draws while the map is drawing, when the "faster map drawing" setting is on. */
+    fastImages = new FastImageDrawer(url => DrawGetImage(url));
+
     /** Bumped whenever the room's map data (tiles, objects, effects) is seen to have changed. */
     private mapRevision = 0;
     private mapFingerprint: { tiles?: string; objects?: string; effects?: string } = {};
@@ -292,6 +293,17 @@ export class MapModule extends BaseModule {
         hookFunction("DrawImageResize", 1, (args, next) => {
             if (this.EnhancedLightingEnabled && this.drawingMapFlag && this.settings.hideVanillaFog && args[0] === "Assets/Map/Tiles/Fog/Half.png") {
                 return true; // Hack to prevent half fog squares
+            }
+            return next(args);
+        }, ModuleCategory.Map);
+
+        // While the map draws, plain resized images (nearly all of a zoomed-out map's thousands of draws) skip DrawImageEx's per-call
+        // overhead. Opt-in: it replaces what runs for those calls, though it draws the same pixels. Anything it does not recognise
+        // as plain goes to BC's own function.
+        hookFunction("DrawImageEx", 1, (args, next) => {
+            if (this.drawingMapFlag && this.settings.perfDrawImageFastPath) {
+                const drawn = this.fastImages.draw(args);
+                if (drawn !== undefined) return drawn;
             }
             return next(args);
         }, ModuleCategory.Map);

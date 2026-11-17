@@ -22,6 +22,8 @@ interface Variant {
     lighting: boolean;
     /** Light quality setting, "full" unless given. */
     quality?: "full" | "half";
+    /** The opt-in faster map drawing. */
+    fastDraw?: boolean;
 }
 
 const variants: Variant[] = [
@@ -32,12 +34,15 @@ const variants: Variant[] = [
     { name: "range20-split2000-lighting", range: 20, split: 2000, lighting: true },
     { name: "range4-split1000-lighting-half", range: 4, split: 1000, lighting: true, quality: "half" },
     { name: "range20-split1000-lighting-half", range: 20, split: 1000, lighting: true, quality: "half" },
+    { name: "range4-split1000-lighting-fastdraw", range: 4, split: 1000, lighting: true, fastDraw: true },
+    { name: "range20-split1000-vanilla-fastdraw", range: 20, split: 1000, lighting: false, fastDraw: true },
+    { name: "range20-split1000-lighting-fastdraw", range: 20, split: 1000, lighting: true, fastDraw: true },
 ];
 
 for (const v of variants) {
     test(`map perf: ${v.name}${SOFTWARE ? " (software canvas)" : ""}`, async ({ bc }, testInfo) => {
         testInfo.setTimeout(180_000);
-        await enterMapRoom(bc, { range: v.range, split: v.split, lighting: v.lighting, quality: v.quality });
+        await enterMapRoom(bc, { range: v.range, split: v.split, lighting: v.lighting, quality: v.quality, fastDraw: v.fastDraw });
         const result = await bc.run(async (variant) => {
             const w = window as any;
 

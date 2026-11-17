@@ -31,7 +31,7 @@ const HOOK_TARGETS = [
 	"ChatRoomLeave", "ChatRoomRun", "ChatRoomCharacterViewDrawOverlay", "ChatRoomCharacterViewClickCharacter",
 	"ChatRoomCanBeLeashedBy", "ChatRoomPingLeashedPlayers", "ChatRoomDoPingLeashedPlayers",
 	"ServerHandleLeashBeep", "ChatRoomBreakLeash", "ChatRoomMapViewLeash", "ChatRoomActivateView",
-	"RgbaArrayToHTMLColor", "DrawImageResize", "ChatRoomMapViewDrawGrid", "ChatRoomMapViewSyncMapData",
+	"RgbaArrayToHTMLColor", "DrawImageResize", "DrawImageEx", "ChatRoomMapViewDrawGrid", "ChatRoomMapViewSyncMapData",
 	"ChatRoomSyncRoomProperties", "ChatRoomMapViewUpdatePlayerFlag", "ChatRoomMapViewMouseWheel",
 	"ChatRoomMapViewUpdateFlag", "CharacterLoadCanvas", "ChatRoomMapViewClick", "GameKeyDown", "DialogDraw",
 	"DialogClick", "AppearanceRun", "AppearanceClick", "InformationSheetRun", "InformationSheetClick", "InformationSheetExit",

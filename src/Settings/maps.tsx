@@ -66,6 +66,10 @@ export class GuiMaps extends GuiSubscreen {
 				label: "Hide dark lights", description: "If checked, lights that emit 'darkness' will not be used.",
 				get: () => s.hideDarkLights ?? false, set: v => s.hideDarkLights = v,
 			}),
+			CheckboxRow(ctx, {
+				label: "Faster map drawing [EXPERIMENTAL]", description: "If checked, the map's images are drawn through a shortcut that skips some of the game's per-image work. Helps most when zoomed out. Turn off if the map looks wrong.",
+				get: () => s.perfDrawImageFastPath ?? false, set: v => s.perfDrawImageFastPath = v,
+			}),
 			SelectRow(ctx, {
 				label: "Light quality", description: "Half draws the lighting at half resolution, which is quicker on slow devices and makes shadow edges a little softer.",
 				options: [{ value: "full", label: "Full" }, { value: "half", label: "Half (faster)" }],

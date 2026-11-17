@@ -439,6 +439,55 @@ describe("MapModule lighting", () => {
 
 	// BC R134 lets the player resize the map (ChatRoomMapViewSplitPosition, 500 to 2000, 1000 by default) and centres the
 	// player's tile in it. R133 always draws a 1000 px map and has no such variable.
+	describe("faster map drawing (the DrawImageEx shortcut)", () => {
+		// BC's own DrawImageEx is a stub in these tests that returns undefined, so a call it handled shows as undefined and one the
+		// shortcut took shows as the shortcut's result.
+		const simple = ["Assets/Map/Tiles/Floor/OakWood.png", {}, 1, 2, { Width: 30, Height: 30 }];
+		let fast: ReturnType<typeof vi.spyOn>;
+
+		beforeEach(() => {
+			fast = vi.spyOn(map.fastImages, "draw");
+		});
+		afterEach(() => {
+			fast.mockRestore();
+			map.settings.perfDrawImageFastPath = false;
+			map.drawingMapFlag = false;
+		});
+
+		it("is off by default, so BC's own function draws everything", () => {
+			expect(map.settings.perfDrawImageFastPath).toBe(false);
+			map.drawingMapFlag = true;
+			fast.mockReturnValue(true);
+			expect(g.DrawImageEx(...simple)).toBeUndefined();
+			expect(fast).not.toHaveBeenCalled();
+		});
+
+		it("only applies while the map is being drawn, not to other screens' images", () => {
+			map.settings.perfDrawImageFastPath = true;
+			map.drawingMapFlag = false;
+			fast.mockReturnValue(true);
+			expect(g.DrawImageEx(...simple)).toBeUndefined();
+			expect(fast).not.toHaveBeenCalled();
+		});
+
+		it("takes a plain image draw while the map draws, when switched on", () => {
+			map.settings.perfDrawImageFastPath = true;
+			map.drawingMapFlag = true;
+			fast.mockReturnValue(true);
+			expect(g.DrawImageEx(...simple)).toBe(true);
+			expect(fast).toHaveBeenCalledOnce();
+			expect(fast.mock.calls[0][0]).toEqual(simple);
+		});
+
+		it("hands a call it does not take back to BC's own function", () => {
+			map.settings.perfDrawImageFastPath = true;
+			map.drawingMapFlag = true;
+			fast.mockReturnValue(undefined);
+			expect(g.DrawImageEx(...simple)).toBeUndefined(); // BC's stub answered
+			expect(fast).toHaveBeenCalledOnce();
+		});
+	});
+
 	describe("map statistics overlay", () => {
 		afterEach(() => {
 			map.lightingEngine.setHudMode("off");
@@ -1006,11 +1055,8 @@ describe("LightingEngine", () => {
 });
 
 describe("MapModule performance settings", () => {
-	it("keeps every vanilla-changing improvement opt-in, and light quality at full", () => {
+	it("keeps the vanilla-changing improvement opt-in, and light quality at full", () => {
 		const defaults = new MapModule().defaultSettings;
-		expect(defaults.perfWallEffectTable).toBe(false);
-		expect(defaults.perfFastPerception).toBe(false);
-		expect(defaults.perfFastMapRenderer).toBe(false);
 		expect(defaults.perfDrawImageFastPath).toBe(false);
 		expect(defaults.perfLightQuality).toBe("full");
 	});

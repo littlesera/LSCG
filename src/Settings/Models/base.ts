@@ -61,12 +61,9 @@ export interface MapSettingsModel extends BaseSettingsModel {
     hideVanillaFog: boolean;
     hideDarkLights: boolean;
 
-    // Performance. The first four change how vanilla BC draws or computes the map, so each is its own opt-in toggle
-    // (default off, and off means BC's own function runs untouched). The lighting speedups are built in and have no
-    // toggle; light quality is a setting only because half resolution visibly softens shadow edges.
-    perfWallEffectTable: boolean;
-    perfFastPerception: boolean;
-    perfFastMapRenderer: boolean;
+    // Performance. perfDrawImageFastPath changes how vanilla BC draws the map's images, so it is an opt-in toggle (default off, and
+    // off means BC's own function runs untouched). The lighting speedups are built in and have no toggle; light quality is a
+    // setting only because half resolution visibly softens shadow edges.
     perfDrawImageFastPath: boolean;
     perfLightQuality: "full" | "half";
 }

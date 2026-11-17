@@ -15,6 +15,8 @@ const LABEL = process.env.MAP_PARITY;
 test.skip(!LABEL, "set MAP_PARITY=<label> (npm run parity:map) to run the map parity scenarios");
 
 const REFERENCE = process.env.MAP_PARITY_REFERENCE;
+/** MAP_PARITY_FAST=1 runs every scenario with the opt-in faster map drawing switched on. */
+const FAST = !!process.env.MAP_PARITY_FAST;
 const OUT = join("test", ".out", "parity", LABEL ?? "run");
 
 /** Fraction of pixels that may differ visibly, and how much a channel must differ to count. */
@@ -33,7 +35,7 @@ const scenarios: { name: string; opts: MapRoomOptions }[] = [
 for (const { name, opts } of scenarios) {
     test(`map parity: ${name}`, async ({ bc }) => {
         test.setTimeout(120_000);
-        console.log(`${name} placed:`, await enterMapRoom(bc, opts));
+        console.log(`${name} placed:`, await enterMapRoom(bc, { ...opts, fastDraw: FAST }));
         // Let the lighting settle: polygons computed (worker), assets loaded, a few frames drawn
         await bc.page.waitForTimeout(2500);
 
