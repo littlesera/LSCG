@@ -7,7 +7,7 @@
 // Results are printed as a table and written to test/.out/bench-lighting.json.
 import { describe, expect, it } from "vitest";
 import { mkdirSync, writeFileSync } from "node:fs";
-import { generateSegments, getVisibilityPolygon, optimizeSegments } from "Utilities/lighting.math";
+import { generateSegments, getVisibilityPolygon, mergeSegments, optimizeSegments } from "Utilities/lighting.math";
 import { lightingScenarios, makeLights, makeRoomObstacles } from "./lighting-rooms";
 
 /** Mean milliseconds per call over `iterations` calls, after `warmup` untimed calls. */
@@ -34,15 +34,18 @@ describe("lighting math timings", () => {
 			const generate = measure(() => { generateSegments(obstacles); }, 20);
 			// The O(n^3) merge dominated every full compute before the sweep merge replaced it.
 			const legacyMerge = measure(() => { optimizeSegments(raw); }, size > 30 ? 1 : 3);
+			const fastMerge = measure(() => { mergeSegments(raw); }, 200);
 			const lightPolys = measure(() => { for (const light of origins) getVisibilityPolygon(light, merged); }, 5);
 			const vision = measure(() => { getVisibilityPolygon(viewpoint, merged); }, 5);
 
 			rows.push(
 				{ scenario: name, step: "generateSegments", ms: generate, detail: `${raw.length} raw segments` },
 				{ scenario: name, step: "optimizeSegments (legacy)", ms: legacyMerge, detail: `${merged.length} merged segments` },
+				{ scenario: name, step: "mergeSegments (current)", ms: fastMerge },
 				{ scenario: name, step: `${lights} light polygons`, ms: lightPolys },
 				{ scenario: name, step: "viewpoint polygon", ms: vision },
 				{ scenario: name, step: "full compute (legacy)", ms: generate + legacyMerge + lightPolys + vision },
+				{ scenario: name, step: "full compute (current)", ms: generate + fastMerge + lightPolys + vision },
 			);
 			expect(merged.length).toBeGreaterThan(0);
 			expect(merged.length).toBeLessThanOrEqual(raw.length);

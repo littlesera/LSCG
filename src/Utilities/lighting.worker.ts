@@ -1,4 +1,4 @@
-import { generateSegments, getVisibilityPolygon, optimizeSegments } from "./lighting.math";
+import { generateSegments, getVisibilityPolygon, mergeSegments } from "./lighting.math";
 import { Point, Segment } from "./lighting.types";
 
 // Persistent Worker State
@@ -14,7 +14,7 @@ self.onmessage = (e: MessageEvent) => {
         const { lights, obstacles, viewpoint, suppressOptimization } = payload;
 
         const rawSegments = generateSegments(obstacles || []);
-        cachedSegments = suppressOptimization ? rawSegments : optimizeSegments(rawSegments);
+        cachedSegments = suppressOptimization ? rawSegments : mergeSegments(rawSegments);
 
         // Clear the old cache and rebuild it
         cachedLightPolygons = {};

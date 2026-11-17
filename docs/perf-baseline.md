@@ -36,4 +36,14 @@ What this changes in the plan:
 | 41x41, 20 lights | ~204 ms | ~202 ms |
 | 41x41, 40 lights | ~198 ms | ~195 ms |
 
+## After step 1.1 (`mergeSegments` replaces `optimizeSegments`)
+
+| Scenario | Full compute before | Full compute after | Merge step before / after |
+|---|---|---|---|
+| 21x21, 6 lights | ~4.6 ms | ~0.8 ms | ~3.8 ms / ~0.02 ms |
+| 41x41, 20 lights | ~205 ms | ~3.0 ms | ~203 ms / ~0.08 ms |
+| 41x41, 40 lights | ~202 ms | ~3.0 ms | ~199 ms / ~0.06 ms |
+
+Segment output is identical to the legacy merge (property tests in `test/utils/lighting-math.test.ts`, including oval pillars).
+
 Later phases add their after-numbers below.

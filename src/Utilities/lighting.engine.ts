@@ -1,5 +1,5 @@
 import { JobType, Light, OpaqueObstacle, PendingJob, Point, RenderOptions, Segment, Viewpoint } from "./lighting.types";
-import { generateSegments, getVisibilityPolygon, optimizeSegments } from "./lighting.math";
+import { generateSegments, getVisibilityPolygon, mergeSegments } from "./lighting.math";
 import WorkerFactory from "./lighting.worker?worker&inline";
 import { recordPerf } from "./perf";
 
@@ -20,6 +20,7 @@ export class LightingEngine {
     private useFallback: boolean = false;
     private isWorkerBusy: boolean = false;
     private pendingJob: PendingJob | null = null;
+    private jobPostedAt = 0;
 
     private lightIds = new WeakMap<Light, string>();
 
@@ -45,6 +46,7 @@ export class LightingEngine {
             this.worker = new WorkerFactory();
             this.worker.onmessage = (e) => {
                 if (e.data.type === "COMPUTE_DONE") {
+                    if (this.jobPostedAt) recordPerf("lightingLatency", performance.now() - this.jobPostedAt);
                     this.lightMaskCache = e.data.payload.lightPolygons;
                     this.visionMaskCache = e.data.payload.visionPolygon;
                     this.segments = e.data.payload.segments; 
@@ -193,6 +195,7 @@ export class LightingEngine {
             }));
         }
 
+        this.jobPostedAt = performance.now();
         this.worker!.postMessage({ type, payload });
 
         const duration = performance.now() - start;
@@ -205,7 +208,7 @@ export class LightingEngine {
             const start = performance.now();
             
             const raw = generateSegments(obstacles);
-            this.segments = this.suppressOptimization ? raw : optimizeSegments(raw);
+            this.segments = this.suppressOptimization ? raw : mergeSegments(raw);
 
             // Rebuild cache as dictionary
             this.lightMaskCache = {};
