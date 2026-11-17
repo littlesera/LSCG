@@ -222,6 +222,16 @@ export function getVisibilityPolygon(origin: { x: number, y: number, radius: num
     return polygon;
 }
 
+/** A polygon as one flat [x0, y0, x1, y1, ...] array. Light polygons are made in a worker and handed over as transferable buffers. */
+export function flattenPolygon(points: Point[]): Float32Array {
+    const flat = new Float32Array(points.length * 2);
+    for (let i = 0; i < points.length; i++) {
+        flat[i * 2] = points[i].x;
+        flat[i * 2 + 1] = points[i].y;
+    }
+    return flat;
+}
+
 export function getIntersection(
     origin: Point, dx: number, dy: number, seg: Segment, result: { x: number; y: number; t1: number },
 ): boolean {

@@ -166,9 +166,23 @@ export class MapModule extends BaseModule {
     ];
 
     lightingEngine: LightingEngine = new LightingEngine();
+    /** Map lights then character lights. Read several times a frame, so the combined array is only rebuilt when either list changed. */
     get allLights(): Light[] {
-        return [...this.mapLights, ...this.charLights];
+        if (this._allLights && this._allMap === this.mapLights && this._allChar === this.charLights
+            && this._allMapLength === this.mapLights.length && this._allCharLength === this.charLights.length) {
+            return this._allLights;
+        }
+        this._allMap = this.mapLights;
+        this._allChar = this.charLights;
+        this._allMapLength = this.mapLights.length;
+        this._allCharLength = this.charLights.length;
+        return this._allLights = [...this.mapLights, ...this.charLights];
     }
+    private _allLights?: Light[];
+    private _allMap?: Light[];
+    private _allChar?: Light[];
+    private _allMapLength = -1;
+    private _allCharLength = -1;
     mapLights: Light[] = [];
     charLights: Light[] = [];
     /**

@@ -54,6 +54,7 @@ describe("MapModule lighting", () => {
 	afterEach(() => compute.mockRestore());
 
 	const obstacles = () => compute.mock.calls.at(-1)?.[1] ?? [];
+	const light = (over: Partial<Light> = {}): Light => ({ id: "l", x: 50, y: 50, radius: 40, color: [200, 100, 50, 0.8], ...over });
 
 	describe("ParseMapForObjects", () => {
 		it("does nothing with enhanced lighting off, or no map", () => {
@@ -64,6 +65,19 @@ describe("MapModule lighting", () => {
 			g.MapManager = { Map: { getTileId: () => { throw new Error("no map"); } } };
 			map.ParseMapForObjects();
 			expect(compute).not.toHaveBeenCalled();
+		});
+
+		it("allLights is the map lights then the character lights, rebuilt only when either list changes", () => {
+			const a = light({ id: "a" }), b = light({ id: "b" }), c = light({ id: "c" });
+			map.mapLights = [a];
+			map.charLights = [b];
+			const first = map.allLights;
+			expect(first).toEqual([a, b]);
+			expect(map.allLights).toBe(first);
+			map.mapLights.push(c);
+			expect(map.allLights).toEqual([a, c, b]);
+			map.charLights = [];
+			expect(map.allLights).toEqual([a, c]);
 		});
 
 		it("lights a lamppost from its object, offset up the post", () => {
@@ -425,6 +439,68 @@ describe("LightingEngine", () => {
 		expect(lights[0].radius).toBe(40);
 	});
 
+	it("animates colours in place, without touching the colour array a light source shares", () => {
+		const engine = new LightingEngine();
+		const shared: [number, number, number, number] = [250, 220, 150, 0.8];
+		const lamp = light({ id: "shared", animType: "flicker", color: shared });
+		engine.updateAnimations([lamp]);
+		const own = lamp.color;
+		expect(own).not.toBe(shared);
+		engine.updateAnimations([lamp]);
+		engine.updateAnimations([lamp]);
+		expect(lamp.color).toBe(own); // updated in place, not replaced each frame
+		expect(shared).toEqual([250, 220, 150, 0.8]);
+	});
+
+	it("merges a partial worker result into the cache, and replaces it on a full one", () => {
+		const engine = new LightingEngine();
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const internals = engine as any;
+		const poly = (n: number) => new Float32Array([n, n, n + 1, n, n, n + 1]);
+		const done = (payload: object) => internals.handleWorkerMessage({ data: { type: "COMPUTE_DONE", payload } });
+
+		done({ full: true, lightPolygons: { a: poly(1), b: poly(2) }, visionPolygon: poly(9) });
+		expect(Object.keys(internals.lightMaskCache).sort()).toEqual(["a", "b"]);
+
+		// An update for one moving light and no new vision polygon leaves the rest alone
+		done({ full: false, lightPolygons: { b: poly(5) } });
+		expect(Array.from(internals.lightMaskCache.a)).toEqual(Array.from(poly(1)));
+		expect(Array.from(internals.lightMaskCache.b)).toEqual(Array.from(poly(5)));
+		expect(Array.from(internals.visionMaskCache)).toEqual(Array.from(poly(9)));
+
+		// ...and a new vision polygon replaces only the vision
+		done({ full: false, lightPolygons: {}, visionPolygon: poly(7) });
+		expect(Array.from(internals.visionMaskCache)).toEqual(Array.from(poly(7)));
+		expect(Object.keys(internals.lightMaskCache).sort()).toEqual(["a", "b"]);
+
+		// A full result drops lights that no longer exist
+		done({ full: true, lightPolygons: { c: poly(3) }, visionPolygon: poly(4) });
+		expect(Object.keys(internals.lightMaskCache)).toEqual(["c"]);
+	});
+
+	it("ignores worker messages that are not results", () => {
+		const engine = new LightingEngine();
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const internals = engine as any;
+		internals.handleWorkerMessage({ data: { type: "SOMETHING_ELSE", payload: { full: true, lightPolygons: { x: new Float32Array(2) } } } });
+		expect(internals.lightMaskCache).toEqual({});
+	});
+
+	it("starts the queued job when a result arrives, and frees the worker when none is queued", () => {
+		const engine = new LightingEngine();
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const internals = engine as any;
+		const send = vi.spyOn(internals, "sendToWorker").mockImplementation(() => {});
+		internals.isWorkerBusy = true;
+		internals.pendingJob = { type: "UPDATE_LIGHTS", lights: [], movingLights: [light()], viewpoint: undefined };
+		internals.handleWorkerMessage({ data: { type: "COMPUTE_DONE", payload: { full: false, lightPolygons: {} } } });
+		expect(send).toHaveBeenCalledWith("UPDATE_LIGHTS", expect.any(Array), undefined, undefined);
+		expect(internals.isWorkerBusy).toBe(true);
+		internals.handleWorkerMessage({ data: { type: "COMPUTE_DONE", payload: { full: false, lightPolygons: {} } } });
+		expect(internals.isWorkerBusy).toBe(false);
+		send.mockRestore();
+	});
+
 	it("computes light and vision masks without a worker, and updates moving lights", () => {
 		const engine = new LightingEngine();
 		const lamp = light();
@@ -432,11 +508,13 @@ describe("LightingEngine", () => {
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		const internals = engine as any;
 		expect(internals.lightMaskCache.l.length).toBeGreaterThan(0);
-		expect(Math.max(...internals.lightMaskCache.l.map((p: { x: number }) => p.x))).toBeCloseTo(70);
+		// Polygons are flat [x0, y0, x1, y1, ...] arrays
+		const xs = (poly: Float32Array) => Array.from(poly).filter((_, i) => i % 2 === 0);
+		expect(Math.max(...xs(internals.lightMaskCache.l))).toBeCloseTo(70);
 		expect(internals.visionMaskCache.length).toBeGreaterThan(0);
 		lamp.x = 20;
 		engine.updateLights([lamp], undefined);
-		expect(Math.min(...internals.lightMaskCache.l.map((p: { x: number }) => p.x))).toBeCloseTo(-20);
+		expect(Math.min(...xs(internals.lightMaskCache.l))).toBeCloseTo(-20);
 	});
 
 	it("renders lights, the vision mask and dark lights onto the main canvas", () => {

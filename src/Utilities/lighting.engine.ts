@@ -1,5 +1,5 @@
 import { JobType, Light, OpaqueObstacle, PendingJob, Point, RenderOptions, Segment, Viewpoint } from "./lighting.types";
-import { generateSegments, getVisibilityPolygon, mergeSegments } from "./lighting.math";
+import { flattenPolygon, generateSegments, getVisibilityPolygon, mergeSegments } from "./lighting.math";
 import WorkerFactory from "./lighting.worker?worker&inline";
 import { recordPerf } from "./perf";
 
@@ -31,8 +31,9 @@ export class LightingEngine {
     private animSeeds = new Map<string, number>();
 
     // Raycast Caches (Now Dictionary-based using string IDs)
-    private lightMaskCache: Record<string, Point[]> = {};
-    private visionMaskCache: Point[] = [];
+    // Polygons are flat [x0, y0, x1, y1, ...] arrays.
+    private lightMaskCache: Record<string, Float32Array> = {};
+    private visionMaskCache: Float32Array = new Float32Array(0);
 
     private segments: Segment[] = [];
 
@@ -50,34 +51,37 @@ export class LightingEngine {
 
         try {
             this.worker = new WorkerFactory();
-            this.worker.onmessage = (e) => {
-                if (e.data.type === "COMPUTE_DONE") {
-                    if (this.jobPostedAt) recordPerf("lightingLatency", performance.now() - this.jobPostedAt);
-                    this.lightMaskCache = e.data.payload.lightPolygons;
-                    this.visionMaskCache = e.data.payload.visionPolygon;
-                    this.segments = e.data.payload.segments; 
-                    
-                    if (this.pendingJob) {
-                        const nextJob = this.pendingJob;
-                        this.pendingJob = null; 
-                        
-                        // Pick the correct light array depending on the job type
-                        const targetLights = nextJob.type === "COMPUTE" ? nextJob.lights : nextJob.movingLights!;
-                        
-                        this.sendToWorker(
-                            nextJob.type, 
-                            targetLights, 
-                            nextJob.obstacles, 
-                            nextJob.viewpoint,
-                        );
-                    } else {
-                        this.isWorkerBusy = false;
-                    }
-                }
-            };
+            this.worker.onmessage = (e) => this.handleWorkerMessage(e);
         } catch (error) {
             console.warn("LightingEngine: Web Worker blocked. Falling back to main thread.", error);
             this.useFallback = true;
+        }
+    }
+
+    /** A result from the worker: merges it into the caches, then starts the next queued job if there is one. */
+    private handleWorkerMessage(e: { data: { type: string; payload: { full: boolean; lightPolygons: Record<string, Float32Array>; visionPolygon?: Float32Array; segments?: Segment[] } } }) {
+        if (e.data.type !== "COMPUTE_DONE") return;
+        if (this.jobPostedAt) recordPerf("lightingLatency", performance.now() - this.jobPostedAt);
+        const { full, lightPolygons, visionPolygon, segments } = e.data.payload;
+        this.lightMaskCache = full ? lightPolygons : { ...this.lightMaskCache, ...lightPolygons };
+        if (visionPolygon) this.visionMaskCache = visionPolygon;
+        if (segments) this.segments = segments;
+
+        if (this.pendingJob) {
+            const nextJob = this.pendingJob;
+            this.pendingJob = null;
+
+            // Pick the correct light array depending on the job type
+            const targetLights = nextJob.type === "COMPUTE" ? nextJob.lights : nextJob.movingLights!;
+
+            this.sendToWorker(
+                nextJob.type,
+                targetLights,
+                nextJob.obstacles,
+                nextJob.viewpoint,
+            );
+        } else {
+            this.isWorkerBusy = false;
         }
     }
 
@@ -112,6 +116,9 @@ export class LightingEngine {
             if (!light.animType || light.animType === "none") continue;
 
             if (!light._animState) {
+                // The colour array can be shared (map lights start from a light source's own colour), so take a private copy
+                // once; every later frame then updates it in place instead of allocating a new array per light per frame.
+                light.color = [...light.color];
                 light._animState = {
                     baseX: light.x, baseY: light.y, baseRadius: light.radius,
                     baseR: light.color[0], baseG: light.color[1], baseB: light.color[2], baseIntensity: light.color[3],
@@ -126,7 +133,10 @@ export class LightingEngine {
             light.x = state.baseX;
             light.y = state.baseY;
             light.radius = state.baseRadius;
-            light.color = [state.baseR, state.baseG, state.baseB, state.baseIntensity];
+            light.color[0] = state.baseR;
+            light.color[1] = state.baseG;
+            light.color[2] = state.baseB;
+            light.color[3] = state.baseIntensity;
 
             switch (light.animType) {
                 case "flashlight":
@@ -198,7 +208,7 @@ export class LightingEngine {
         viewpoint?: Viewpoint,
     ) {
         const start = performance.now();
-        const payload: any = { viewpoint, suppressOptimization: this.suppressOptimization };
+        const payload: any = { viewpoint, suppressOptimization: this.suppressOptimization, debug: this.debug };
 
         if (type === "COMPUTE") {
             payload.obstacles = obstacles;
@@ -231,9 +241,9 @@ export class LightingEngine {
             // Rebuild cache as dictionary
             this.lightMaskCache = {};
             for (const light of lights) {
-                this.lightMaskCache[this.getLightId(light)] = getVisibilityPolygon(light, this.segments);
+                this.lightMaskCache[this.getLightId(light)] = flattenPolygon(getVisibilityPolygon(light, this.segments));
             }
-            this.visionMaskCache = viewpoint ? getVisibilityPolygon(viewpoint, this.segments) : [];
+            this.visionMaskCache = flattenPolygon(viewpoint ? getVisibilityPolygon(viewpoint, this.segments) : []);
 
             const duration = performance.now() - start;
             recordPerf("lightingCompute", duration);
@@ -255,10 +265,10 @@ export class LightingEngine {
     public updateLights(movingLights: Light[], viewpoint?: Viewpoint) {
         if (this.useFallback) {
             for (const light of movingLights) {
-                this.lightMaskCache[this.getLightId(light)] = getVisibilityPolygon(light, this.segments);
+                this.lightMaskCache[this.getLightId(light)] = flattenPolygon(getVisibilityPolygon(light, this.segments));
             }
             if (viewpoint !== undefined) {
-                this.visionMaskCache = viewpoint ? getVisibilityPolygon(viewpoint, this.segments) : [];
+                this.visionMaskCache = flattenPolygon(viewpoint ? getVisibilityPolygon(viewpoint, this.segments) : []);
             }
             return;
         }
@@ -328,9 +338,9 @@ export class LightingEngine {
             if (visionPolygon.length > 0) {
                 this.visionCtx.globalCompositeOperation = "destination-out";
                 this.visionCtx.beginPath();
-                this.visionCtx.moveTo(visionPolygon[0].x, visionPolygon[0].y);
-                for (let i = 1; i < visionPolygon.length; i++) {
-                    this.visionCtx.lineTo(visionPolygon[i].x, visionPolygon[i].y);
+                this.visionCtx.moveTo(visionPolygon[0], visionPolygon[1]);
+                for (let i = 2; i < visionPolygon.length; i += 2) {
+                    this.visionCtx.lineTo(visionPolygon[i], visionPolygon[i + 1]);
                 }
                 this.visionCtx.closePath();
                 this.visionCtx.fillStyle = "white"; 
@@ -461,14 +471,14 @@ export class LightingEngine {
         this.lightCtx.restore();
     }
 
-    private drawLight(ctx: CanvasRenderingContext2D, light: Light, lightPolygon: Point[]) {
+    private drawLight(ctx: CanvasRenderingContext2D, light: Light, lightPolygon: Float32Array) {
         // ... (Your exact same drawLight logic remains untouched here) ...
         ctx.save();
         
         ctx.beginPath();
-        ctx.moveTo(lightPolygon[0].x, lightPolygon[0].y);
-        for (let i = 1; i < lightPolygon.length; i++) {
-            ctx.lineTo(lightPolygon[i].x, lightPolygon[i].y);
+        ctx.moveTo(lightPolygon[0], lightPolygon[1]);
+        for (let i = 2; i < lightPolygon.length; i += 2) {
+            ctx.lineTo(lightPolygon[i], lightPolygon[i + 1]);
         }
         ctx.closePath();
         ctx.clip();
