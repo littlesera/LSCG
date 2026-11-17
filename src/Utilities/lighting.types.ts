@@ -72,6 +72,11 @@ export interface RenderOptions {
      * used instead of `camera`, and `width`/`height` are the canvas area being lit.
      */
     view?: { scale: number; x: number; y: number };
+    /**
+     * "half" renders the light and vision layers at half resolution and scales them up when compositing: a quarter of the pixels
+     * to fill, with shadow edges a little softer. Defaults to "full".
+     */
+    quality?: "full" | "half";
 }
 
 export interface Segment {

@@ -36,7 +36,7 @@ export class PerfSeries {
 	}
 }
 
-export type PerfSeriesName = "drawGrid" | "lightingRender" | "lightingAnim" | "lightingCompute" | "lightingLatency";
+export type PerfSeriesName = "drawGrid" | "lightingRender" | "lightingAnim" | "lightingCompute" | "lightingLatency" | "lightingLayerLights" | "lightingLayerVision" | "lightingComposite";
 
 const series: Record<PerfSeriesName, PerfSeries> = {
 	drawGrid: new PerfSeries(),
@@ -45,6 +45,10 @@ const series: Record<PerfSeriesName, PerfSeries> = {
 	lightingCompute: new PerfSeries(),
 	// Worker round trip: from posting a compute job to its result arriving. The worker's own time is not on the main thread.
 	lightingLatency: new PerfSeries(),
+	// Where a lighting render's time goes: the light layer, the vision layer, and compositing both onto the map.
+	lightingLayerLights: new PerfSeries(),
+	lightingLayerVision: new PerfSeries(),
+	lightingComposite: new PerfSeries(),
 };
 
 export function recordPerf(name: PerfSeriesName, ms: number): void {
@@ -58,6 +62,9 @@ export function perfSnapshot(): Record<PerfSeriesName, ReturnType<PerfSeries["st
 		lightingAnim: series.lightingAnim.stats(),
 		lightingCompute: series.lightingCompute.stats(),
 		lightingLatency: series.lightingLatency.stats(),
+		lightingLayerLights: series.lightingLayerLights.stats(),
+		lightingLayerVision: series.lightingLayerVision.stats(),
+		lightingComposite: series.lightingComposite.stats(),
 	};
 }
 

@@ -9,6 +9,8 @@ export interface MapRoomOptions {
     lighting: boolean;
     /** Where the player stands. */
     pos?: { X: number; Y: number };
+    /** The light quality setting; "full" if not given. */
+    quality?: "full" | "half";
     /** Turn off light animation, so a frame can be compared with another run's. */
     freezeLights?: boolean;
 }
@@ -40,6 +42,7 @@ export async function enterMapRoom(bc: Bc, opts: MapRoomOptions): Promise<string
         const map = w.LSCG.getModule("MapModule");
         map.settings.enhancedLighting = o.lighting;
         map.settings.disableLightAnimation = !!o.freezeLights;
+        map.settings.perfLightQuality = o.quality ?? "full";
 
         w.Playground.receive("ChatRoomSync", {
             SourceMemberNumber: w.Player.MemberNumber, Name: "Map room", Description: "", Admin: [w.Player.MemberNumber], Whitelist: [], Ban: [],

@@ -598,6 +598,117 @@ describe("LightingEngine", () => {
 		expect(setTransform).toHaveBeenCalledWith(1, 0, 0, 1, -30, -40);
 	});
 
+	describe("layer caching and quality", () => {
+		const square = () => new Float32Array([0, 0, 100, 0, 100, 100, 0, 100]);
+		const setup = () => {
+			const engine = new LightingEngine();
+			// eslint-disable-next-line @typescript-eslint/no-explicit-any
+			const internals = engine as any;
+			const lightFill = vi.fn(), visionFill = vi.fn(), lightSetTransform = vi.fn(), drawImage = vi.fn();
+			const lightRec = recordingContext(), visionRec = recordingContext(), main = recordingContext();
+			Object.assign(lightRec.ctx, { fillRect: lightFill, setTransform: lightSetTransform });
+			Object.assign(visionRec.ctx, { fillRect: visionFill });
+			Object.assign(main.ctx, { drawImage });
+			internals.lightCtx = lightRec.ctx;
+			internals.visionCtx = visionRec.ctx;
+			internals.lightMaskCache = { l: square() };
+			internals.visionMaskCache = new Float32Array([0, 0, 10, 0, 10, 10]);
+			const lamp = light({ id: "l", x: 5, y: 5, radius: 3 });
+			const render = (over: Record<string, unknown> = {}) =>
+				engine.render({ mainCtx: main.ctx, width: 200, height: 100, lights: [lamp], viewpoint: { x: 0, y: 0, radius: 8 }, view: { scale: 10, x: 0, y: 0 }, ...over });
+			return { engine, internals, lamp, render, lightFill, visionFill, lightSetTransform, drawImage, main };
+		};
+
+		it("redraws neither layer when nothing changed, but still composites both onto the map every frame", () => {
+			const { render, lightFill, visionFill, drawImage } = setup();
+			render();
+			const [lightCalls, visionCalls] = [lightFill.mock.calls.length, visionFill.mock.calls.length];
+			expect(lightCalls).toBeGreaterThan(0);
+			expect(visionCalls).toBe(1);
+			render();
+			render();
+			expect(lightFill.mock.calls.length).toBe(lightCalls);
+			expect(visionFill.mock.calls.length).toBe(visionCalls);
+			expect(drawImage).toHaveBeenCalledTimes(6); // light layer and vision layer, three frames
+		});
+
+		it("redraws the light layer when a light's opacity changes (a flicker), but not the vision layer", () => {
+			const { render, lamp, lightFill, visionFill } = setup();
+			render();
+			const [lightCalls, visionCalls] = [lightFill.mock.calls.length, visionFill.mock.calls.length];
+			lamp.color[3] = 0.7;
+			render();
+			expect(lightFill.mock.calls.length).toBeGreaterThan(lightCalls);
+			expect(visionFill.mock.calls.length).toBe(visionCalls);
+		});
+
+		it("redraws both layers when the camera moves", () => {
+			const { render, lightFill, visionFill } = setup();
+			render();
+			const [lightCalls, visionCalls] = [lightFill.mock.calls.length, visionFill.mock.calls.length];
+			render({ view: { scale: 10, x: -10, y: 0 } });
+			expect(lightFill.mock.calls.length).toBeGreaterThan(lightCalls);
+			expect(visionFill.mock.calls.length).toBeGreaterThan(visionCalls);
+		});
+
+		it("redraws when a new polygon arrives from the worker, the light layer for a light's and the vision layer for the player's", () => {
+			const { render, internals, lightFill, visionFill } = setup();
+			render();
+			const [lightCalls, visionCalls] = [lightFill.mock.calls.length, visionFill.mock.calls.length];
+			internals.lightMaskCache = { l: square() };
+			render();
+			expect(lightFill.mock.calls.length).toBeGreaterThan(lightCalls);
+			expect(visionFill.mock.calls.length).toBe(visionCalls);
+			internals.visionMaskCache = new Float32Array([0, 0, 20, 0, 20, 20]);
+			render();
+			expect(visionFill.mock.calls.length).toBeGreaterThan(visionCalls);
+		});
+
+		it("redraws the layers when the light's polygon changes, the ambient colour changes, or the area is resized", () => {
+			const { render, lightFill } = setup();
+			render();
+			let calls = lightFill.mock.calls.length;
+			render({ ambientColor: "rgb(10, 10, 10)" });
+			expect(lightFill.mock.calls.length).toBeGreaterThan(calls);
+			calls = lightFill.mock.calls.length;
+			render({ ambientColor: "rgb(10, 10, 10)", width: 300 });
+			expect(lightFill.mock.calls.length).toBeGreaterThan(calls);
+		});
+
+		it("skips the vision layer entirely without a viewpoint, and redraws it when the viewpoint comes back", () => {
+			const { render, visionFill, drawImage } = setup();
+			render({ viewpoint: undefined });
+			expect(visionFill).not.toHaveBeenCalled();
+			expect(drawImage).toHaveBeenCalledTimes(1);
+			render();
+			expect(visionFill).toHaveBeenCalledTimes(1);
+		});
+
+		it("half quality draws the layers at half size and scales them up onto the map", () => {
+			const { render, internals, lightSetTransform, drawImage } = setup();
+			render({ quality: "half" });
+			expect(internals.lightCanvas.width).toBe(100);
+			expect(internals.lightCanvas.height).toBe(50);
+			expect(internals.visionCanvas.width).toBe(100);
+			// the view (10 px per world unit) is halved too, so the lights land in the same place
+			expect(lightSetTransform).toHaveBeenCalledWith(5, 0, 0, 5, 0, 0);
+			expect(drawImage).toHaveBeenCalledWith(internals.lightCanvas, 0, 0, 100, 50, 0, 0, 200, 100);
+			expect(drawImage).toHaveBeenCalledWith(internals.visionCanvas, 0, 0, 100, 50, 0, 0, 200, 100);
+		});
+
+		it("switching quality resizes the layers and redraws them", () => {
+			const { render, internals, lightFill } = setup();
+			render();
+			expect(internals.lightCanvas.width).toBe(200);
+			const calls = lightFill.mock.calls.length;
+			render({ quality: "half" });
+			expect(internals.lightCanvas.width).toBe(100);
+			expect(lightFill.mock.calls.length).toBeGreaterThan(calls);
+			render({ quality: "full" });
+			expect(internals.lightCanvas.width).toBe(200);
+		});
+	});
+
 	it("animates colours in place, without touching the colour array a light source shares", () => {
 		const engine = new LightingEngine();
 		const shared: [number, number, number, number] = [250, 220, 150, 0.8];

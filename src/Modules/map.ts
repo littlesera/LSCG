@@ -332,6 +332,7 @@ export class MapModule extends BaseModule {
                     height: MainCanvas.canvas.height, 
                     lights: this.visibleLights,
                     view: this.camera,
+                    quality: this.settings.perfLightQuality === "half" ? "half" : "full",
                     viewpoint: (useViewpoint ? this.viewpoint : undefined),
                     ambientColor: ambientColor,
                 });

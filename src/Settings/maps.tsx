@@ -6,7 +6,7 @@ import { ICONS } from "utils";
 import { MapSettingsModel } from "./Models/base";
 import { GuiSubscreen, HelpInfo } from "./settingBase";
 import { DomSettingsHost } from "./domSettingsHost";
-import { CheckboxRow, KitContext, Panel } from "Dom/kit";
+import { CheckboxRow, KitContext, Panel, SelectRow } from "Dom/kit";
 import { OpacityModule } from "Modules/opacity";
 import { LeashingModule } from "Modules/leashing";
 import { ChaoticItemModule } from "Modules/chaotic-item";
@@ -64,6 +64,12 @@ export class GuiMaps extends GuiSubscreen {
 			CheckboxRow(ctx, {
 				label: "Hide dark lights", description: "If checked, lights that emit 'darkness' will not be used.",
 				get: () => s.hideDarkLights ?? false, set: v => s.hideDarkLights = v,
+			}),
+			SelectRow(ctx, {
+				label: "Light quality", description: "Half draws the lighting at half resolution, which is quicker on slow devices and makes shadow edges a little softer.",
+				options: [{ value: "full", label: "Full" }, { value: "half", label: "Half (faster)" }],
+				get: () => s.perfLightQuality ?? "full", set: v => s.perfLightQuality = v === "half" ? "half" : "full",
+				disabled: () => !s.enhancedLighting,
 			}),
 		]);
 	}

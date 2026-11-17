@@ -20,6 +20,8 @@ interface Variant {
     /** Map width in px (R134 and later; ignored on clients without the split). */
     split: number;
     lighting: boolean;
+    /** Light quality setting, "full" unless given. */
+    quality?: "full" | "half";
 }
 
 const variants: Variant[] = [
@@ -28,12 +30,14 @@ const variants: Variant[] = [
     { name: "range20-split1000-vanilla", range: 20, split: 1000, lighting: false },
     { name: "range20-split1000-lighting", range: 20, split: 1000, lighting: true },
     { name: "range20-split2000-lighting", range: 20, split: 2000, lighting: true },
+    { name: "range4-split1000-lighting-half", range: 4, split: 1000, lighting: true, quality: "half" },
+    { name: "range20-split1000-lighting-half", range: 20, split: 1000, lighting: true, quality: "half" },
 ];
 
 for (const v of variants) {
     test(`map perf: ${v.name}${SOFTWARE ? " (software canvas)" : ""}`, async ({ bc }, testInfo) => {
         testInfo.setTimeout(180_000);
-        await enterMapRoom(bc, { range: v.range, split: v.split, lighting: v.lighting });
+        await enterMapRoom(bc, { range: v.range, split: v.split, lighting: v.lighting, quality: v.quality });
         const result = await bc.run(async (variant) => {
             const w = window as any;
 
@@ -77,7 +81,7 @@ for (const v of variants) {
         writeFileSync(`test/.out/map-perf-${v.name}${SOFTWARE ? "-software" : ""}.json`, JSON.stringify(result, null, 2));
         const p = result.perf;
         console.log(`${v.name}${SOFTWARE ? " [software]" : ""}: ${result.fps.toFixed(1)} fps | drawGrid mean ${p.drawGrid.mean.toFixed(2)} p95 ${p.drawGrid.p95.toFixed(2)} ms | ` +
-            `light render mean ${p.lightingRender.mean.toFixed(2)} p95 ${p.lightingRender.p95.toFixed(2)} ms | worker round trip mean ${(p.lightingLatency?.mean ?? 0).toFixed(1)} max ${(p.lightingLatency?.max ?? 0).toFixed(1)} ms | long tasks ${result.longTasks} (${result.longTaskMs.toFixed(0)} ms)`);
+            `light render mean ${p.lightingRender.mean.toFixed(2)} p95 ${p.lightingRender.p95.toFixed(2)} ms (lights ${(p.lightingLayerLights?.mean ?? 0).toFixed(1)}, vision ${(p.lightingLayerVision?.mean ?? 0).toFixed(1)}, composite ${(p.lightingComposite?.mean ?? 0).toFixed(1)}) | worker round trip mean ${(p.lightingLatency?.mean ?? 0).toFixed(1)} max ${(p.lightingLatency?.max ?? 0).toFixed(1)} ms | long tasks ${result.longTasks} (${result.longTaskMs.toFixed(0)} ms)`);
         expect(result.perf.drawGrid.count, "map was drawn while walking").toBeGreaterThan(0);
     });
 }

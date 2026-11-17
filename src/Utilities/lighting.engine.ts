@@ -25,6 +25,13 @@ export class LightingEngine {
     private pendingJob: PendingJob | null = null;
     private jobPostedAt = 0;
 
+    // Each layer is drawn onto its own canvas, and redrawn only when something it is made from changed. A scene whose lights are
+    // not animating and whose camera is still costs only the compositing below, not a full-canvas redraw of every layer.
+    private lastLightsKey = "";
+    private lastVisionKey = "";
+    private polygonIds = new WeakMap<object, number>();
+    private nextPolygonId = 1;
+
     // Without a Web Worker, computing runs on the main thread, in the frame. When one takes longer than FALLBACK_BUDGET_MS the
     // next is held back (and only the newest request is kept), so a heavy map cannot stall every frame it changes.
     private fallbackHeldUntil = 0;
@@ -326,63 +333,84 @@ export class LightingEngine {
             this.compute(heldLights, obstacles, heldViewpoint);
         }
 
-        this.syncCanvasSizes(width, height);
+        const quality = options.quality === "half" ? 0.5 : 1;
+        this.syncCanvasSizes(width, height, quality);
+        const layerWidth = this.lightCanvas.width;
+        const layerHeight = this.lightCanvas.height;
 
         // --- 1. RENDER LIGHTING LAYER ---
-        this.lightCtx.globalCompositeOperation = "copy";
-        this.lightCtx.fillStyle = ambientColor;
-        this.lightCtx.fillRect(0, 0, width, height);
+        const lightsStart = performance.now();
+        const lightsKey = this.lightLayerKey(lights, view, width, height, quality, ambientColor);
+        if (lightsKey !== this.lastLightsKey) {
+            this.lastLightsKey = lightsKey;
+            this.lightCtx.globalCompositeOperation = "copy";
+            this.lightCtx.fillStyle = ambientColor;
+            this.lightCtx.fillRect(0, 0, layerWidth, layerHeight);
 
-        const normalLights: Light[] = [];
-        const darkLights: Light[] = [];
+            const normalLights: Light[] = [];
+            const darkLights: Light[] = [];
 
-        for (const light of lights) {
-            const [r, g, b, a] = light.color;
-            if (a > 0.01 && (r > 0 || g > 0 || b > 0))
-                normalLights.push(light);
-            else
-                darkLights.push(light);
+            for (const light of lights) {
+                const [r, g, b, a] = light.color;
+                if (a > 0.01 && (r > 0 || g > 0 || b > 0))
+                    normalLights.push(light);
+                else
+                    darkLights.push(light);
+            }
+
+            this.drawLights(this.lightCtx, darkLights, "darken", options, quality);
+            this.drawLights(this.lightCtx, normalLights, "lighten", options, quality);
         }
 
-        this.drawLights(this.lightCtx, darkLights, "darken", options);
-        this.drawLights(this.lightCtx, normalLights, "lighten", options);
+        recordPerf("lightingLayerLights", performance.now() - lightsStart);
 
         // --- 2. RENDER VISION MASK LAYER ---
-        if (viewpoint) {
-            this.visionCtx.globalCompositeOperation = "source-over";
-            this.visionCtx.fillStyle = "black";
-            this.visionCtx.fillRect(0, 0, width, height);
+        const visionStart = performance.now();
+        const visionKey = viewpoint ? `${this.polygonId(this.visionMaskCache)}|${view.scale},${view.x},${view.y}|${width}x${height}@${quality}` : "";
+        if (visionKey !== this.lastVisionKey) {
+            this.lastVisionKey = visionKey;
+            if (viewpoint) {
+                this.visionCtx.setTransform(1, 0, 0, 1, 0, 0);
+                this.visionCtx.globalCompositeOperation = "source-over";
+                this.visionCtx.fillStyle = "black";
+                this.visionCtx.fillRect(0, 0, layerWidth, layerHeight);
 
-            this.visionCtx.save();
-            this.visionCtx.setTransform(view.scale, 0, 0, view.scale, view.x, view.y);
+                this.visionCtx.save();
+                this.visionCtx.setTransform(view.scale * quality, 0, 0, view.scale * quality, view.x * quality, view.y * quality);
 
-            const visionPolygon = this.visionMaskCache;
-            if (visionPolygon.length > 0) {
-                this.visionCtx.globalCompositeOperation = "destination-out";
-                this.visionCtx.beginPath();
-                this.visionCtx.moveTo(visionPolygon[0], visionPolygon[1]);
-                for (let i = 2; i < visionPolygon.length; i += 2) {
-                    this.visionCtx.lineTo(visionPolygon[i], visionPolygon[i + 1]);
+                const visionPolygon = this.visionMaskCache;
+                if (visionPolygon.length > 0) {
+                    this.visionCtx.globalCompositeOperation = "destination-out";
+                    this.visionCtx.beginPath();
+                    this.visionCtx.moveTo(visionPolygon[0], visionPolygon[1]);
+                    for (let i = 2; i < visionPolygon.length; i += 2) {
+                        this.visionCtx.lineTo(visionPolygon[i], visionPolygon[i + 1]);
+                    }
+                    this.visionCtx.closePath();
+                    this.visionCtx.fillStyle = "white";
+                    this.visionCtx.fill();
                 }
-                this.visionCtx.closePath();
-                this.visionCtx.fillStyle = "white"; 
-                this.visionCtx.fill();
+                this.visionCtx.restore();
             }
-            this.visionCtx.restore();
         }
 
+        recordPerf("lightingLayerVision", performance.now() - visionStart);
+
         // --- 3. COMPOSITE ONTO MAIN CANVAS ---
+        const compositeStart = performance.now();
         mainCtx.save();
         mainCtx.globalCompositeOperation = "multiply";
-        mainCtx.drawImage(this.lightCanvas, 0, 0);
+        // Layers drawn at reduced resolution are scaled back up to the map's size here.
+        mainCtx.drawImage(this.lightCanvas, 0, 0, layerWidth, layerHeight, 0, 0, width, height);
 
         if (viewpoint) {
             mainCtx.globalCompositeOperation = "source-over";
-            mainCtx.globalAlpha = 0.5; 
-            mainCtx.drawImage(this.visionCanvas, 0, 0);
+            mainCtx.globalAlpha = 0.5;
+            mainCtx.drawImage(this.visionCanvas, 0, 0, layerWidth, layerHeight, 0, 0, width, height);
         }
         mainCtx.restore();
 
+        recordPerf("lightingComposite", performance.now() - compositeStart);
         recordPerf("lightingRender", performance.now() - renderStart);
 
         // --- 4. DEBUG OVERLAY ---
@@ -473,7 +501,7 @@ export class LightingEngine {
         return { scale: 1, x: -camera.x, y: -camera.y };
     }
 
-    private drawLights(ctx: CanvasRenderingContext2D, lights: Light[], composition: GlobalCompositeOperation, options: RenderOptions) {
+    private drawLights(ctx: CanvasRenderingContext2D, lights: Light[], composition: GlobalCompositeOperation, options: RenderOptions, layerScale = 1) {
         const view = this.viewOf(options);
         // The canvas area being lit, in world units; lights that cannot reach it are skipped.
         const left = -view.x / view.scale;
@@ -482,7 +510,7 @@ export class LightingEngine {
         const bottom = (options.height - view.y) / view.scale;
 
         this.lightCtx.save();
-        this.lightCtx.setTransform(view.scale, 0, 0, view.scale, view.x, view.y);
+        this.lightCtx.setTransform(view.scale * layerScale, 0, 0, view.scale * layerScale, view.x * layerScale, view.y * layerScale);
         this.lightCtx.globalCompositeOperation = composition;
 
         for (const light of lights) {
@@ -552,12 +580,38 @@ export class LightingEngine {
         ctx.restore();
     }
 
-    private syncCanvasSizes(width: number, height: number) {
-        if (this.lightCanvas.width !== width || this.lightCanvas.height !== height) {
-            this.lightCanvas.width = width;
-            this.lightCanvas.height = height;
-            this.visionCanvas.width = width;
-            this.visionCanvas.height = height;
+    /** A number for a polygon array that stays the same for as long as it is the same array, so layers can tell it was replaced. */
+    private polygonId(polygon: object): number {
+        let id = this.polygonIds.get(polygon);
+        if (id === undefined) {
+            id = this.nextPolygonId++;
+            this.polygonIds.set(polygon, id);
+        }
+        return id;
+    }
+
+    /** Everything the light layer is drawn from. If this is the same as last frame the layer is already right. */
+    private lightLayerKey(lights: Light[], view: { scale: number; x: number; y: number }, width: number, height: number, quality: number, ambientColor: string): string {
+        let key = `${width}x${height}@${quality}|${ambientColor}|${view.scale},${view.x},${view.y}`;
+        for (const l of lights) {
+            const id = this.getLightId(l);
+            const polygon = this.lightMaskCache[id];
+            key += `|${id}:${l.x},${l.y},${l.radius},${l.color[0]},${l.color[1]},${l.color[2]},${l.color[3]},${l.angle ?? ""},${l.fov ?? ""},${polygon ? this.polygonId(polygon) : 0}`;
+        }
+        return key;
+    }
+
+    private syncCanvasSizes(width: number, height: number, quality = 1) {
+        const layerWidth = Math.max(1, Math.ceil(width * quality));
+        const layerHeight = Math.max(1, Math.ceil(height * quality));
+        if (this.lightCanvas.width !== layerWidth || this.lightCanvas.height !== layerHeight) {
+            // Resizing a canvas clears it, so both layers have to be drawn again.
+            this.lightCanvas.width = layerWidth;
+            this.lightCanvas.height = layerHeight;
+            this.visionCanvas.width = layerWidth;
+            this.visionCanvas.height = layerHeight;
+            this.lastLightsKey = "";
+            this.lastVisionKey = "";
         }
     }
 }
