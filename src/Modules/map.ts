@@ -278,10 +278,12 @@ export class MapModule extends BaseModule {
         // R134 rebuilds the open view's buttons (map arrows, editor) when returning to the room, via this same call. Let the first
         // activation after each room (re)load through even if the view is already open, and only skip the per-frame repeats.
         let roomReloaded = true;
-        hookFunction("ChatRoomLoad", 1, (args, next) => {
-            roomReloaded = true;
-            return next(args);
-        }, ModuleCategory.Map);
+        if (typeof (globalThis as any).ChatRoomLoad === "function") {
+            hookFunction("ChatRoomLoad", 1, (args, next) => {
+                roomReloaded = true;
+                return next(args);
+            }, ModuleCategory.Map);
+        }
         hookFunction("ChatRoomActivateView", 1, (args, next) => {
             const viewName = args[0] as "Character" | "Map";
             if (ChatRoomActiveView == ChatRoomViews[viewName] && !roomReloaded)

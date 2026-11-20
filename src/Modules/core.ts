@@ -118,12 +118,7 @@ export class CoreModule extends BaseModule {
         const isR134Plus = () => parseInt(/R(\d+)/.exec(String((window as any).GameVersion ?? ""))?.[1] ?? "0") >= 134;
         // ModSDK throws for a function that doesn't exist, so only hook what this BC build actually has.
         const has = (name: string) => typeof (globalThis as any)[name] === "function";
-        if (has("MiniGameStart")) {
-            hookFunction("MiniGameStart", 1, (args, next) => {
-                if (isR134Plus()) args[2] = resolveMiniGameReturn(args[2]) as string;
-                return next(args);
-            }, ModuleCategory.Core);
-        }
+        // Only MiniGameEnd is hooked (not MiniGameStart, which tests and other mods spy on): the name BC stored is converted when the game ends.
         if (has("MiniGameEnd")) {
             hookFunction("MiniGameEnd", 1, (args, next) => {
                 if (isR134Plus()) (window as any).MiniGameReturnFunction = resolveMiniGameReturn((window as any).MiniGameReturnFunction);
