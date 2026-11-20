@@ -508,6 +508,32 @@ api.hypno.registerInstruction({
   as "(unavailable)" in their editor, keeps none of its options, and does nothing but a note when the suggestion fires.
 - **`dispose()`** removes your instructions. Suggestions that hold them stay stored and work again once you're back.
 
+## Binaural beats
+
+Players can opt in to a binaural beat (a tone in each ear, a few hertz apart) that fades in when hypnosis starts and fades out
+over a second when they wake. It is their choice, in their hypnosis settings, and nothing here can make it play for a player who hasn't
+turned it on. The evidence that beats change anything in the brain is mixed, so treat them as atmosphere.
+
+Your extension can steer it through `api.operations.hypno.binaural`. Like everything under `operations`, it needs the player to
+allow your extension the `hypno` scope first (see `api.operations.request`).
+
+```js
+const beats = api.operations.hypno.binaural;
+
+beats.getState();       // { enabled, playing, hypnotized, beatHz, carrierHz, volume, maxVolume }
+beats.setVolume(0.5);   // half of the player's own volume setting (0 to 1); it can only go down, never above their setting
+beats.setBeat(4);       // glide to 4 Hz (1 to 30). Alpha is about 8 to 12 Hz, theta about 4 to 7
+beats.play();           // start now, hypnotized or not, fading in over 10 seconds. false if the player hasn't opted in or has their sound off
+beats.stop();           // fade out over a second, and stay off until this trance ends. Returns whether it was playing
+beats.play({ fadeSeconds: 30 });   // a slower fade in (0 to 60 seconds)
+beats.stop({ fadeSeconds: 0 });    // as close to instant as it gets without a click
+```
+
+Whatever you change lasts until the trance ends, then the player's own settings apply again. `hypno.binauralChanged` tells you
+when a beat starts or stops. Check the `hypno.binaural` capability first.
+
+---
+
 ## Options players can change
 
 Spell effects, drugs and hypnosis instructions all take an `options` list. You describe each setting; LSCG draws the controls, saves the
@@ -692,6 +718,7 @@ A `lscg:ready` event is also dispatched on `window` when LSCG becomes ready, wit
 | `activities` | `api.activities.register` / `unregister` / `registerPrerequisite` |
 | `drugs` | `api.drugs.register` / `unregister` / `dose` / `getLevel` / `getLevels` |
 | `hypno.instructions` | `api.hypno.registerInstruction` / `unregisterInstruction` |
+| `hypno.binaural` | `api.operations.hypno.binaural` and the `hypno.binauralChanged` event |
 | `hypno.events` | The `hypno.suggestionResolved`, `hypno.instructionPerformed` and `hypno.beforeInstruction` events |
 | `drugs.strength` | `strength` on `drug.beforeApply` |
 | `drugs.suggestible` | The `suggestible` built-in drug type and the `drug.suggestionUrge` event |
@@ -713,6 +740,7 @@ A `lscg:ready` event is also dispatched on `window` when LSCG becomes ready, wit
 | `spell.effectApplied` | `{ effect, spell, sender?, duration? }`: one effect was applied. |
 | `hypno.triggered` | `{ by?, byWord }`: the player was hypnotized by a trigger. `byWord` is false for other routes. |
 | `hypno.awakened` | `{ method, by? }`: brought out of hypnosis. `method` is `"word"`, `"boop"`, `"snap"`, `"timeout"` or `"other"`. |
+| `hypno.binauralChanged` | `{ playing, beatHz, volume }`: a binaural beat started or stopped. `volume` is the output gain (0 to 1) it is heading for. Both are 0 when it stops. |
 | `hypno.suggestionResolved` | `{ suggestion, sender, installedBy, resisted }`: a suggestion's trigger was spoken and the player resisted it (`resisted: true`) or submitted, so its instructions are about to run. |
 | `hypno.instructionPerformed` | `{ instruction, suggestion, index, sender, installedBy }`: one instruction of a suggestion ran, LSCG's own or an extension's. It ran, which isn't the same as succeeding (an Activity whose target has left still counts). Not fired for blocked or vetoed instructions, or for an extension instruction whose extension isn't installed. |
 | `activity.sent` | `{ name, group?, target?, isLSCG }`: the player did an activity. |

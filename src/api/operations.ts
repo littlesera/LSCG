@@ -5,20 +5,21 @@ import type { CollarModule } from "Modules/collar";
 import type { LeashingModule } from "Modules/leashing";
 import type { StateModule } from "Modules/states";
 import {
-    LSCGBuiltInStateType, LSCGCollarOperations, LSCGDoseOptions, LSCGDrugOperations, LSCGDrugType, LSCGHypnoOperations,
+    LSCGBinauralFadeOptions, LSCGBinauralOperations, LSCGBuiltInStateType, LSCGCollarOperations, LSCGDoseOptions, LSCGDrugOperations, LSCGDrugType, LSCGHypnoOperations,
     LSCGLeashingOperations, LSCGMagicOperations, LSCGOperationScope, LSCGOperationsApi, LSCGStateHandle, LSCGStatesOperations,
 } from "./types";
 import { isLSCGReady } from "./ready";
 import { ErrorOwner, safeInvoke } from "./safeInvoke";
 import { builtInStates } from "./builtInStates";
 import { doseDrug, drugLevels } from "./drugs";
+import { BINAURAL_BEATS } from "../constants/game-balance";
 
 export const OPERATION_SCOPES: readonly LSCGOperationScope[] = ["magic", "hypno", "collar", "leashing", "states", "drugs"];
 
 /** What the player sees when deciding whether to allow a scope. */
 export const OPERATION_SCOPE_LABELS: Readonly<Record<LSCGOperationScope, { label: string; description: string }>> = {
     magic: { label: "Magic", description: "Cast spells you know on yourself, and dispel spells that haven't taken hold." },
-    hypno: { label: "Hypnosis", description: "Put you under hypnosis or wake you." },
+    hypno: { label: "Hypnosis", description: "Put you under hypnosis or wake you, and steer the binaural beats you have turned on (never louder than your own volume setting)." },
     collar: { label: "Collar", description: "Tighten and loosen your collar (only as far as your own collar settings allow)." },
     leashing: { label: "Leashing", description: "Let go of what you are holding and try to break free of what holds you." },
     states: { label: "States", description: "Turn states on you on and off: sleep, hypnosis, arousal, denial, blindness, deafness, freezing, gagging, x-ray vision." },
@@ -172,7 +173,36 @@ export function createOperationsApi(owner: ErrorOwner & { readonly info: { name:
         dispel: () => guarded("magic", () => getModule<MagicModule>("MagicModule")?.CancelPendingSpells("dispel") ?? 0),
     };
 
+    const fadeSeconds = (options: LSCGBinauralFadeOptions | undefined): number | undefined => {
+        const value = options?.fadeSeconds;
+        if (value === undefined) return undefined;
+        if (typeof value !== "number" || !Number.isFinite(value) || value < 0)
+            throw new Error(`LSCG[ext:${owner.id}]: fadeSeconds needs a number of seconds, 0 or more.`);
+        return Math.min(BINAURAL_BEATS.MAX_FADE_SECONDS, value);
+    };
+    const hypnoModule = () => getModule<HypnoModule>("HypnoModule");
+    const binaural: LSCGBinauralOperations = {
+        getState: () => guarded("hypno", () => {
+            const module = hypnoModule();
+            if (!module) throw new Error("LSCG: hypnosis isn't loaded.");
+            return Object.freeze(module.binauralState());
+        }),
+        play: options => guarded("hypno", () => !!hypnoModule()?.playBinaural(fadeSeconds(options))),
+        stop: options => guarded("hypno", () => !!hypnoModule()?.stopBinaural(fadeSeconds(options))),
+        setVolume: volume => guarded("hypno", () => {
+            if (typeof volume !== "number" || !Number.isFinite(volume))
+                throw new Error(`LSCG[ext:${owner.id}]: setVolume needs a number from 0 to 1.`);
+            hypnoModule()?.setBinauralLevel(volume);
+        }),
+        setBeat: hz => guarded("hypno", () => {
+            if (typeof hz !== "number" || !Number.isFinite(hz))
+                throw new Error(`LSCG[ext:${owner.id}]: setBeat needs a number of hertz.`);
+            hypnoModule()?.setBinauralBeatHz(hz);
+        }),
+    };
+
     const hypno: LSCGHypnoOperations = {
+        binaural,
         isHypnotized: () => guarded("hypno", () => !!getModule<HypnoModule>("HypnoModule")?.hypnoActivated),
         trigger: () => guarded("hypno", () => {
             const module = getModule<HypnoModule>("HypnoModule");

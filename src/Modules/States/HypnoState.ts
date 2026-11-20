@@ -65,6 +65,7 @@ export class HypnoState extends BaseState {
             super.Activate(memberNumber, duration, emote);
             this.SaveExistingEyes();
             this.SetHypnotizedFace();
+            getModule<HypnoModule>("HypnoModule")?.onTranceChanged();
         }
         return this;
     }
@@ -74,6 +75,7 @@ export class HypnoState extends BaseState {
             if (emote) SendAction("%NAME% blinks and returns to %POSSESSIVE% senses.");
             this.ResetEyes();
             super.Recover(false);
+            getModule<HypnoModule>("HypnoModule")?.onTranceChanged();
         }
         return this;
     }
