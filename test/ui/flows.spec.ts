@@ -202,7 +202,8 @@ test("Outfit Collection: the item panel sets, configures, colors and removes an 
         // Color: BC's color widget, closed with its own save
         $("item-color").click();
         await wait(() => !!ItemColorState && !!ItemColorItem);
-        await new Promise(r => setTimeout(r, 600)); // the opacity module adds its controls once the picker has loaded
+        // the opacity module adds its controls once the picker has loaded, which waits on BC's text files (slow on a cold cache)
+        await wait(() => !!document.querySelector("#lscg-layers-lead-lined-check"));
         out.layerControls = document.querySelectorAll("[id^=lscg-layers]").length > 0; // LSCG's opacity/translation apply to restraints too
         // ...but lead-lined is dropped by BC from every bundle, so it's hidden rather than left as a dead control
         out.leadLinedHidden = getComputedStyle(document.querySelector("#lscg-layers-lead-lined-check")!.closest("label")!).display === "none";
