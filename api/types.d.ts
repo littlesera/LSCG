@@ -36,6 +36,128 @@ export interface LSCGModApi {
     readonly storage: LSCGStorageApi;
     /** Screens in LSCG's settings (capability "settings"). */
     readonly settings: LSCGSettingsApi;
+    /** Actions on the player through LSCG's modules, which the player allows per extension (capability "operations"). */
+    readonly operations: LSCGOperationsApi;
+}
+/** What an extension can ask the player to let it do. Each scope covers one group of operations. */
+export type LSCGOperationScope = "magic" | "hypno" | "collar" | "leashing" | "states" | "drugs";
+export interface LSCGSpellbookEntry {
+    readonly name: string;
+    /** Effect ids, in the order they take hold. */
+    readonly effects: readonly string[];
+    readonly voiceCastable: boolean;
+    readonly potion: boolean;
+}
+export interface LSCGMagicOperations {
+    /** The spells the player knows. Empty while magic is off. */
+    list(): LSCGSpellbookEntry[];
+    /** Casts a spell the player knows on themself, as if they had cast it with the spell menu (its saving throw, durations and
+     *  blocked-effect settings all apply; questions the spell asks at cast time take their defaults). Returns false if it wasn't
+     *  cast: magic is off, the spell is unknown, needs a paired target, or every effect of it is blocked. */
+    castOnSelf(name: string): boolean;
+    /** Stops the effects of spells cast on the player that haven't taken hold yet. Returns how many spells were cut short. */
+    dispel(): number;
+}
+/** What `operations.hypno.binaural.getState()` tells you. */
+export interface LSCGBinauralState {
+    /** True if the player turned binaural beats on in their hypnosis settings. If false, nothing here can make them play. */
+    readonly enabled: boolean;
+    /** Whether a beat is sounding right now. */
+    readonly playing: boolean;
+    /** Whether the player is hypnotized. By default the beat plays exactly while they are. */
+    readonly hypnotized: boolean;
+    /** The beat (Hz) it is heading for or holding; 0 while silent. */
+    readonly beatHz: number;
+    /** The pitch (Hz) both ears are centred on. */
+    readonly carrierHz: number;
+    /** What you asked for with `setVolume`, 0 to 1 of the player's own volume setting. 1 until you change it. */
+    readonly volume: number;
+    /** The player's own volume setting, 0 to 1. The beat is never louder than this, whatever you ask. */
+    readonly maxVolume: number;
+}
+/** Binaural beats played while the player is hypnotized. They are the player's opt-in: until they turn them on in their hypnosis
+ *  settings, `play` returns false and nothing sounds. Their volume setting is the ceiling for everything here. By default the beat
+ *  fades in when hypnosis starts and fades out over a second when it ends; what you change here lasts until the trance ends. */
+/** How long a fade lasts, in seconds (0 to 60; 0 is as close to instant as it can be without a click). Leave it out for the default. */
+export interface LSCGBinauralFadeOptions {
+    fadeSeconds?: number;
+}
+export interface LSCGBinauralOperations {
+    getState(): LSCGBinauralState;
+    /** Plays the beat now, hypnotized or not (it still stops when a trance ends), fading in over `fadeSeconds` (default 10). If it is already playing, nothing changes. Returns false if the player hasn't opted in or has their sound off. */
+    play(options?: LSCGBinauralFadeOptions): boolean;
+    /** Fades the beat out over `fadeSeconds` (default 1). Returns whether it was playing. During a trance it stays off until that trance ends. */
+    stop(options?: LSCGBinauralFadeOptions): boolean;
+    /** Sets how loud, 0 to 1 of the player's own volume setting (it can only turn the beat down, never above what they chose). */
+    setVolume(volume: number): void;
+    /** Glides to a different beat (about 1 to 30 Hz; alpha is roughly 8 to 12, theta 4 to 7). Replaces the player's chosen pattern. */
+    setBeat(hz: number): void;
+}
+export interface LSCGHypnoOperations {
+    /** Binaural beats during hypnosis (capability "hypno.binaural"). */
+    readonly binaural: LSCGBinauralOperations;
+    /** Whether the player is under hypnosis now. */
+    isHypnotized(): boolean;
+    /** Puts the player under hypnosis, as a trigger word would. Returns false if hypnosis is off, they already are, or it is on cooldown. */
+    trigger(): boolean;
+    /** Wakes the player. Returns false if they weren't hypnotized. */
+    awaken(): boolean;
+}
+export interface LSCGCollarOperations {
+    /** 0 (loose) to 4 (passing out). Includes a choke from plugs, when worn. */
+    getChokeLevel(): number;
+    /** Tightens the player's collar one step. Returns false unless the collar is active and the player lets themself tighten it. */
+    tighten(): boolean;
+    /** Loosens the player's collar one step. Returns false unless the collar is active and the player lets themself loosen it. */
+    loosen(): boolean;
+    /** Lets the collar go fully loose. Always allowed while the collar is active. */
+    release(): boolean;
+}
+export interface LSCGGrabInfo {
+    /** Grab type, such as "arm", "collar", "leash" or "hand". */
+    readonly type: string;
+    /** The other player's member number. */
+    readonly member: number;
+    /** True when the player is the one holding; false when the player is the one held. */
+    readonly holding: boolean;
+}
+export interface LSCGLeashingOperations {
+    /** Every grab the player is part of. */
+    list(): LSCGGrabInfo[];
+    /** Lets go of what the player is holding (all of it, or one grab type). Returns how many grabs ended. */
+    release(type?: string): number;
+    /** Tries to break free of whoever holds the player, with the same check as `/lscg escape`. */
+    escape(): void;
+}
+export interface LSCGStatesOperations {
+    /** A state of the player (see `LSCGBuiltInStateType`), or undefined for one that can't be driven. */
+    get(type: LSCGBuiltInStateType): LSCGStateHandle | undefined;
+}
+export interface LSCGDrugOperations {
+    /** Same as `drugs.dose`, but only when the player has allowed the "drugs" scope. */
+    dose(type: LSCGDrugType, options?: LSCGDoseOptions): boolean;
+    /** Same as `drugs.getLevels()` for the player. */
+    getLevels(): LSCGDrugLevelInfo[];
+}
+/** Calls here act on the player only, never on someone else. Until the player allows an extension a scope (LSCG settings,
+ *  Extensions), any call in it throws an error named "LSCGPermissionError" and shows the request there. Each call still
+ *  keeps the player's own settings: it can return false, or do nothing, where they say no. Only usable once LSCG is ready. */
+export interface LSCGOperationsApi {
+    /** Every scope that exists. */
+    readonly scopes: readonly LSCGOperationScope[];
+    /** The scopes the player has allowed this extension so far. */
+    granted(): LSCGOperationScope[];
+    isGranted(scope: LSCGOperationScope): boolean;
+    /** Shows the player a request to allow these scopes (nothing is granted until they do). Calling a denied operation requests its scope too. */
+    request(scopes: LSCGOperationScope[], reason?: string): void;
+    /** Runs when the player allows or revokes one of this extension's scopes. Returns an unsubscribe function. */
+    onChange(handler: (granted: LSCGOperationScope[]) => void): () => void;
+    readonly magic: LSCGMagicOperations;
+    readonly hypno: LSCGHypnoOperations;
+    readonly collar: LSCGCollarOperations;
+    readonly leashing: LSCGLeashingOperations;
+    readonly states: LSCGStatesOperations;
+    readonly drugs: LSCGDrugOperations;
 }
 export interface LSCGKitRow {
     label: string;
@@ -583,6 +705,12 @@ export interface LSCGEventMap {
     "hypno.awakened": {
         method: LSCGHypnoAwakenMethod;
         by?: number;
+    };
+    /** A binaural beat started or stopped (capability "hypno.binaural"). `beatHz` and `volume` (0 to 1 gain) describe it while `playing`, and are 0 otherwise. */
+    "hypno.binauralChanged": {
+        playing: boolean;
+        beatHz: number;
+        volume: number;
     };
     /** A suggestion's trigger was spoken and the player either resisted it or submitted (its instructions are about to run). */
     "hypno.suggestionResolved": {
