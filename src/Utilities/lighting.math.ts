@@ -106,6 +106,61 @@ export function optimizeSegments(rawSegments: Segment[]): Segment[] {
     return result.filter(s => Math.hypot(s.p1.x - s.p2.x, s.p1.y - s.p2.y) > 0.01);
 }
 
+/** Segments closer than this to a line count as on it, and ends closer than this count as touching (same as optimizeSegments). */
+const MERGE_TOLERANCE = 0.01;
+
+/**
+ * Merges collinear, overlapping or touching segments, like optimizeSegments but without its repeated pairwise scan, which
+ * takes cubic time in the segment count (about 200 ms for the 271 segments of a full 40x40 map, per player step).
+ *
+ * Walls sit on the tile grid, so nearly every segment is horizontal or vertical. Those are grouped by the line they lie on
+ * (sorted, then clustered within the tolerance), and each group's intervals are sorted and joined in one sweep, which is
+ * O(n log n). Anything not axis-aligned (oval pillars, diagonals) still goes through optimizeSegments, on its own, where
+ * the count is small. Segment direction is not preserved (each comes out left-to-right or top-to-bottom); nothing that
+ * uses segments depends on it.
+ */
+export function mergeSegments(rawSegments: Segment[]): Segment[] {
+    const horizontal: { c: number; a: number; b: number }[] = [];
+    const vertical: { c: number; a: number; b: number }[] = [];
+    const other: Segment[] = [];
+
+    for (const seg of rawSegments) {
+        const { p1, p2 } = seg;
+        if (Math.abs(p1.y - p2.y) < MERGE_TOLERANCE) {
+            horizontal.push({ c: (p1.y + p2.y) / 2, a: Math.min(p1.x, p2.x), b: Math.max(p1.x, p2.x) });
+        } else if (Math.abs(p1.x - p2.x) < MERGE_TOLERANCE) {
+            vertical.push({ c: (p1.x + p2.x) / 2, a: Math.min(p1.y, p2.y), b: Math.max(p1.y, p2.y) });
+        } else {
+            other.push(seg);
+        }
+    }
+
+    const result: Segment[] = [];
+    const sweep = (lines: { c: number; a: number; b: number }[], make: (c: number, a: number, b: number) => Segment) => {
+        lines.sort((l, r) => l.c - r.c || l.a - r.a);
+        let i = 0;
+        while (i < lines.length) {
+            // One group: consecutive lines within the tolerance of the first line's coordinate.
+            const c = lines[i].c;
+            let j = i;
+            while (j < lines.length && lines[j].c - c < MERGE_TOLERANCE) j++;
+            const group = lines.slice(i, j).sort((l, r) => l.a - r.a);
+            let a = group[0].a, b = group[0].b;
+            for (let k = 1; k < group.length; k++) {
+                if (group[k].a <= b + MERGE_TOLERANCE) b = Math.max(b, group[k].b);
+                else { result.push(make(c, a, b)); a = group[k].a; b = group[k].b; }
+            }
+            result.push(make(c, a, b));
+            i = j;
+        }
+    };
+    sweep(horizontal, (c, a, b) => ({ p1: { x: a, y: c }, p2: { x: b, y: c } }));
+    sweep(vertical, (c, a, b) => ({ p1: { x: c, y: a }, p2: { x: c, y: b } }));
+
+    if (other.length > 0) result.push(...optimizeSegments(other));
+    return result.filter(s => Math.hypot(s.p1.x - s.p2.x, s.p1.y - s.p2.y) > MERGE_TOLERANCE);
+}
+
 export function getVisibilityPolygon(origin: { x: number, y: number, radius: number }, segments: Segment[]): Point[] {
     const angles: Set<number> = new Set();
     const r = origin.radius;
@@ -165,6 +220,16 @@ export function getVisibilityPolygon(origin: { x: number, y: number, radius: num
     }
 
     return polygon;
+}
+
+/** A polygon as one flat [x0, y0, x1, y1, ...] array. Light polygons are made in a worker and handed over as transferable buffers. */
+export function flattenPolygon(points: Point[]): Float32Array {
+    const flat = new Float32Array(points.length * 2);
+    for (let i = 0; i < points.length; i++) {
+        flat[i * 2] = points[i].x;
+        flat[i * 2 + 1] = points[i].y;
+    }
+    return flat;
 }
 
 export function getIntersection(

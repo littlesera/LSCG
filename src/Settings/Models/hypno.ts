@@ -40,6 +40,12 @@ export interface HypnoSettingsModel extends HypnoPublicSettingsModel {
     enableSpiralOverlay: boolean;
     /** Seconds for the spiral overlay to make one full turn. */
     spiralTurnSeconds: number;
+    /** Play binaural beats while hypnotized (headphones needed). Off unless the player turns it on. */
+    enableBinaural: boolean;
+    /** How loud the beats get, in percent. The ceiling for anything an extension asks for. */
+    binauralVolume: number;
+    /** Which beat plan to play (a key of BINAURAL_BEATS.PRESETS). */
+    binauralPreset: string;
     enableSnapWakeup: boolean;
     stats: HypnoModuleStats;
     triggerCycled: boolean;

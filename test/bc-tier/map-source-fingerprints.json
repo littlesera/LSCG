@@ -1,0 +1,11 @@
+{
+	"gameVersion": "R134",
+	"functions": {
+		"ChatRoomMapViewDrawGrid": "add0e0f5bb8cf87f",
+		"ChatRoomMapViewWallEffect": "95bf0837e1f62dc2",
+		"ChatRoomMapViewFindWallEffectTile": "4b106031cd8577e6",
+		"ChatRoomMapViewFloorWallEffect": "7ab7fdd9e8e19e5d",
+		"updatePlayerPerception": "979ead8e231a84f0",
+		"DrawImageEx": "0f010645196c6748"
+	}
+}

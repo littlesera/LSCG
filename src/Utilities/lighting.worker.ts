@@ -1,59 +1,54 @@
-import { generateSegments, getVisibilityPolygon, optimizeSegments } from "./lighting.math";
-import { Point, Segment } from "./lighting.types";
+import { flattenPolygon, generateSegments, getVisibilityPolygon, mergeSegments } from "./lighting.math";
+import { Segment } from "./lighting.types";
 
-// Persistent Worker State
+// Persistent Worker State: only what later jobs need. Results are sent back as flat buffers and handed over (transferred), so
+// the worker does not keep them.
 let cachedSegments: Segment[] = [];
-let cachedLightPolygons: Record<string, Point[]> = {};
-let cachedVisionPolygon: Point[] = [];
 
 self.onmessage = (e: MessageEvent) => {
     const { type, payload } = e.data;
+    const lightPolygons: Record<string, Float32Array> = {};
+    let visionPolygon: Float32Array | undefined;
+    let full = false;
 
     if (type === "COMPUTE") {
         // FULL RECOMPUTE: Obstacles changed
         const { lights, obstacles, viewpoint, suppressOptimization } = payload;
 
         const rawSegments = generateSegments(obstacles || []);
-        cachedSegments = suppressOptimization ? rawSegments : optimizeSegments(rawSegments);
+        cachedSegments = suppressOptimization ? rawSegments : mergeSegments(rawSegments);
+        full = true;
 
-        // Clear the old cache and rebuild it
-        cachedLightPolygons = {};
         if (lights) {
             for (const light of lights) {
-                cachedLightPolygons[light.id] = getVisibilityPolygon(light, cachedSegments);
+                lightPolygons[light.id] = flattenPolygon(getVisibilityPolygon(light, cachedSegments));
             }
         }
-
-        cachedVisionPolygon = viewpoint ? getVisibilityPolygon(viewpoint, cachedSegments) : [];
-
-        sendDone();
-    } 
+        visionPolygon = flattenPolygon(viewpoint ? getVisibilityPolygon(viewpoint, cachedSegments) : []);
+    }
     else if (type === "UPDATE_LIGHTS") {
         // PARTIAL RECOMPUTE: Only moving lights changed
         const { updates, viewpoint } = payload;
 
         if (updates) {
             for (const light of updates) {
-                cachedLightPolygons[light.id] = getVisibilityPolygon(light, cachedSegments);
+                lightPolygons[light.id] = flattenPolygon(getVisibilityPolygon(light, cachedSegments));
             }
         }
-
         if (viewpoint !== undefined) {
-            cachedVisionPolygon = viewpoint ? getVisibilityPolygon(viewpoint, cachedSegments) : [];
+            visionPolygon = flattenPolygon(viewpoint ? getVisibilityPolygon(viewpoint, cachedSegments) : []);
         }
-
-        sendDone();
     }
-};
+    else {
+        return;
+    }
 
-function sendDone() {
-    self.postMessage({
+    const transfer: ArrayBuffer[] = Object.values(lightPolygons).map(p => p.buffer as ArrayBuffer);
+    if (visionPolygon) transfer.push(visionPolygon.buffer as ArrayBuffer);
+    // The project's lib is DOM-only, so `self` is typed as a Window; in a worker it is the dedicated worker scope.
+    (self as unknown as Worker).postMessage({
         type: "COMPUTE_DONE",
-        payload: { 
-            lightPolygons: cachedLightPolygons, 
-            visionPolygon: cachedVisionPolygon, 
-            segments: cachedSegments, 
-        },
-    });
-}
-
+        // `full` replaces the engine's cache; otherwise these lights and (if present) the vision polygon are merged in.
+        payload: { full, lightPolygons, visionPolygon, segments: payload.debug ? cachedSegments : undefined },
+    }, transfer);
+};

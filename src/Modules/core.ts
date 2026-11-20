@@ -108,6 +108,50 @@ export class CoreModule extends BaseModule {
 	}
 
     load(): void {
+        // R134 calls a minigame's return as a function, where R133 took the name of one. LSCG's sleepy/brainwash/suggestion
+        // games still pass names, so on R134 the game called a string when it ended. Turn a name into its function there.
+        const resolveMiniGameReturn = (name: unknown) => {
+            if (typeof name !== "string") return name;
+            const target = (window as any)[name.trim().replace(/\(\)$/, "")];
+            return typeof target === "function" ? () => target() : name;
+        };
+        const isR134Plus = () => parseInt(/R(\d+)/.exec(String((window as any).GameVersion ?? ""))?.[1] ?? "0") >= 134;
+        // ModSDK throws for a function that doesn't exist, so only hook what this BC build actually has.
+        const has = (name: string) => typeof (globalThis as any)[name] === "function";
+        // Only MiniGameEnd is hooked (not MiniGameStart, which tests and other mods spy on): the name BC stored is converted when the game ends.
+        if (has("MiniGameEnd")) {
+            hookFunction("MiniGameEnd", 1, (args, next) => {
+                if (isR134Plus()) (window as any).MiniGameReturnFunction = resolveMiniGameReturn((window as any).MiniGameReturnFunction);
+                return next(args);
+            }, ModuleCategory.Core);
+        }
+
+        // R134 only bundles item properties from its own allowlist and drops names it has no rules for when validating. Layer
+        // translation, scale, rotation and opacity are BC's own now (the opacity UI already uses them), so only LSCGLeadLined, a real
+        // LSCG setting, needs putting back on save. The legacy LayerOverrides (BC allowlists it for save already) is only kept
+        // through validation so old data survives until the opacity UI migrates it to LayerTranslationX/Y.
+        // Anything the game already kept is left alone, so this does nothing on R133 or once BC keeps them.
+        if (has("ItemPropertiesCompress")) {
+            hookFunction("ItemPropertiesCompress", 1, (args, next) => {
+                const out = next(args) as Record<string, unknown> | undefined;
+                const source = (args[0] as Item | undefined)?.Property as Record<string, unknown> | undefined;
+                if (source?.LSCGLeadLined === undefined || (out && "LSCGLeadLined" in out)) return out as ReturnType<typeof ItemPropertiesCompress>;
+                return { ...out, LSCGLeadLined: source.LSCGLeadLined } as ReturnType<typeof ItemPropertiesCompress>;
+            }, ModuleCategory.Core);
+        }
+        if (has("ItemPropertiesValidate")) {
+            hookFunction("ItemPropertiesValidate", 1, (args, next) => {
+                const res = next(args);
+                const input = args[0] as Record<string, unknown> | undefined;
+                const value = (res as any)?.value as Record<string, unknown> | undefined;
+                if (!value || !input || typeof input !== "object" || Array.isArray(input)) return res;
+                for (const key of ["LSCGLeadLined", "LayerOverrides"]) {
+                    if (input[key] !== undefined && !(key in value)) value[key] = input[key];
+                }
+                return res;
+            }, ModuleCategory.Core);
+        }
+
         hookFunction("ChatRoomSync", 1, (args, next) => {
             this.SendPublicPacket(true);
             return next(args);

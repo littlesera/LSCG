@@ -6,7 +6,7 @@ import { sanitizeOptions } from "api/options";
 import { cleanDelay } from "stepDelay";
 import { builtInStates } from "api/builtInStates";
 import { ModuleCategory, Subscreen } from "Settings/setting_definitions";
-import { settingsSave, parseMsgWords, OnAction, OnActivity, SendAction, getRandomInt, hookFunction, removeAllHooksByModule, isAllowedMember, isPhraseInString, GetTargetCharacter, GetDelimitedList, GetActivityEntryFromContent, escapeRegExp, IsActivityAllowed, LSCG_SendLocal, getCharacter, sendLSCGCommandBeep, htmlToElement, getCharacterByNicknameOrMemberNumber, getActivities, isCloth, replace_template, hookBCXVoice, parseFromBase64, IsBlockedSender } from "../utils";
+import { settingsSave, parseMsgWords, OnAction, OnActivity, SendAction, getRandomInt, hookFunction, removeAllHooksByModule, isAllowedMember, isPhraseInString, GetTargetCharacter, GetDelimitedList, GetActivityEntryFromContent, escapeRegExp, IsActivityAllowed, LSCG_SendLocal, getCharacter, sendLSCGCommandBeep, htmlToElement, getCharacterByNicknameOrMemberNumber, getActivities, isCloth, replace_template, hookBCXVoice, parseFromBase64, IsBlockedSender, getPlayerVolume } from "../utils";
 import { GuiHypno } from "Settings/hypno";
 import { getModule } from "modules";
 import { ActivityEntryModel } from "Settings/Models/activities";
@@ -25,7 +25,12 @@ import {
     EFFECT_DURATIONS,
     TRIGGER_TIMES,
     SPIRAL_TURN_SECONDS,
+    BINAURAL_BEATS,
+    type BinauralPresetName,
 } from "../constants";
+import {
+    binauralInfo, binauralSupported, setBinauralBeat, setBinauralGain, startBinaural, stopBinaural,
+} from "Dom/binauralBeats";
 
 export class SuggestionMiniGameOptions {
     constructor(suggestion: HypnoSuggestion, sender: Character, command: string) {
@@ -106,6 +111,9 @@ export class HypnoModule extends BaseModule {
             enableSpiralOverlay: true,
             spiralTurnSeconds: SPIRAL_TURN_SECONDS.DEFAULT,
             enableSnapWakeup: true,
+            enableBinaural: false,
+            binauralVolume: BINAURAL_BEATS.VOLUME_PERCENT.DEFAULT,
+            binauralPreset: BINAURAL_BEATS.DEFAULT_PRESET,
             trigger: "",
             triggerRevealed: false,
             triggerTime: TRIGGER_TIMES.DEFAULT_TRIGGER_TIME_MINUTES,
@@ -308,6 +316,7 @@ export class HypnoModule extends BaseModule {
         const bcxCheckInterval = CHECK_INTERVALS.BCX_CHECK;
         const lastbcxCheck = CommonTime();
         hookFunction("TimerProcess", 1, (args, next) => {
+            this.syncBinaural();
             if (ActivityAllowed()) {
                 const now = CommonTime();
                 const triggerTimer = (this.settings.triggerTime ?? TRIGGER_TIMES.DEFAULT_TRIGGER_TIME_MINUTES) * 60000;
@@ -519,6 +528,122 @@ export class HypnoModule extends BaseModule {
     unload(): void {
         this.CancelPendingInstructions();
         removeAllHooksByModule(ModuleCategory.Hypno);
+        this.binauralMode = "auto";
+        this.syncBinaural();
+    }
+
+    // -- Binaural beats ---------------------------------------------------------------------------------------------------
+    // Played only if the player opted in. They follow the trance (fading in when it starts, out when it ends); extensions
+    // can steer them within the player's own volume setting through `operations.hypno.binaural`.
+
+    /** "auto" follows the trance; "on" plays regardless (an extension asked); "off" is silent for the rest of this trance. Reset when it ends. */
+    binauralMode: "auto" | "on" | "off" = "auto";
+    /** Fraction (0 to 1) of the player's volume setting an extension has asked for. */
+    binauralLevel: number = 1;
+    /** One-shot fade lengths (seconds) an extension asked for with its next play or stop. */
+    private binauralFadeIn?: number;
+    private binauralFadeOut?: number;
+    /** Beat (Hz) an extension asked for; replaces the preset until the trance ends. */
+    binauralBeatOverride?: number;
+
+    get binauralOptedIn(): boolean {
+        return !!this.settings?.enableBinaural && binauralSupported();
+    }
+
+    private binauralWanted(): boolean {
+        if (!this.Enabled || !this.binauralOptedIn || AudioShouldSilenceSound(true))
+            return false;
+        return this.binauralMode === "on" || (this.binauralMode === "auto" && this.hypnoActivated);
+    }
+
+    /** Gain for the engine: the player's volume setting, scaled by what an extension asked for and by BC's own volume. */
+    private binauralGain(): number {
+        const percent = Math.min(BINAURAL_BEATS.VOLUME_PERCENT.MAX, Math.max(0, Number(this.settings.binauralVolume ?? BINAURAL_BEATS.VOLUME_PERCENT.DEFAULT)));
+        const bcVolume = Number(getPlayerVolume(0));
+        return (percent / 100) * BINAURAL_BEATS.MAX_GAIN * this.binauralLevel * (Number.isFinite(bcVolume) ? Math.min(1, Math.max(0, bcVolume)) : 1);
+    }
+
+    /** Starts, stops or retunes the beat so it matches what is wanted now. Cheap; called every tick and wherever hypnosis changes. */
+    syncBinaural(): void {
+        const wanted = this.binauralWanted();
+        const info = binauralInfo();
+        if (wanted && !info.playing) {
+            const preset = BINAURAL_BEATS.PRESETS[this.settings.binauralPreset as BinauralPresetName] ?? BINAURAL_BEATS.PRESETS[BINAURAL_BEATS.DEFAULT_PRESET];
+            const override = this.binauralBeatOverride;
+            if (startBinaural({
+                fromHz: override ?? preset.from,
+                toHz: override ?? preset.to,
+                glideSeconds: override === undefined ? preset.glideSeconds : 0,
+                gain: this.binauralGain(),
+                fadeInSeconds: this.binauralFadeIn,
+            })) {
+                const now = binauralInfo();
+                emit("hypno.binauralChanged", { playing: true, beatHz: now.beatHz, volume: now.gain });
+            }
+        } else if (!wanted && info.playing) {
+            stopBinaural(this.binauralFadeOut);
+            emit("hypno.binauralChanged", { playing: false, beatHz: 0, volume: 0 });
+        } else if (wanted) {
+            const gain = this.binauralGain();
+            if (Math.abs(gain - info.gain) > 0.001)
+                setBinauralGain(gain);
+        }
+    }
+
+    /** Called when hypnosis starts or ends. Whatever an extension steered ends with the trance. */
+    onTranceChanged(): void {
+        if (!this.hypnoActivated) {
+            this.binauralMode = "auto";
+            this.binauralLevel = 1;
+            this.binauralBeatOverride = undefined;
+        }
+        this.syncBinaural();
+    }
+
+    binauralState() {
+        const info = binauralInfo();
+        return {
+            enabled: this.binauralOptedIn,
+            playing: info.playing,
+            hypnotized: this.hypnoActivated,
+            beatHz: info.beatHz,
+            carrierHz: info.carrierHz,
+            volume: this.binauralLevel,
+            maxVolume: Math.min(100, Math.max(0, this.settings.binauralVolume ?? 0)) / 100,
+        };
+    }
+
+    /** Plays the beat now, trance or not. Returns false if the player hasn't opted in or the sound is silenced. */
+    playBinaural(fadeInSeconds?: number): boolean {
+        this.binauralMode = "on";
+        this.binauralFadeIn = fadeInSeconds;
+        this.syncBinaural();
+        this.binauralFadeIn = undefined;
+        const playing = binauralInfo().playing;
+        if (!playing) this.binauralMode = "auto";
+        return playing;
+    }
+
+    /** Fades the beat out now (over `fadeOutSeconds`, or the default); during a trance it stays off until the trance ends. Returns whether it was playing. */
+    stopBinaural(fadeOutSeconds?: number): boolean {
+        const was = binauralInfo().playing;
+        this.binauralMode = this.hypnoActivated ? "off" : "auto";
+        this.binauralFadeOut = fadeOutSeconds;
+        this.syncBinaural();
+        this.binauralFadeOut = undefined;
+        return was;
+    }
+
+    /** `level` is 0 to 1 of the player's volume setting. */
+    setBinauralLevel(level: number): void {
+        this.binauralLevel = Math.min(1, Math.max(0, Number.isFinite(level) ? level : 0));
+        this.syncBinaural();
+    }
+
+    setBinauralBeatHz(hz: number): void {
+        const beat = Math.min(BINAURAL_BEATS.MAX_BEAT_HZ, Math.max(BINAURAL_BEATS.MIN_BEAT_HZ, Number.isFinite(hz) ? hz : BINAURAL_BEATS.MIN_BEAT_HZ));
+        this.binauralBeatOverride = beat;
+        setBinauralBeat(beat);
     }
 
     get awakeners(): string[] {

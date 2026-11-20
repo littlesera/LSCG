@@ -12,6 +12,9 @@ export type Color = [number, number, number, number];
 
 export interface Light extends Point {
     id: string;
+    /** The tile the light belongs to (world units are tiles), used to decide whether it is near enough the player to draw. */
+    tileX?: number;
+    tileY?: number;
     radius: number;
     color: Color; 
     
@@ -64,7 +67,22 @@ export interface RenderOptions {
     ambientColor?: string;
     focus?: Point;  // For aiming flashlights
     camera?: Point; // X/Y offset for panning the map
+    /**
+     * Maps lights, vision and obstacles (in world units) onto the canvas: canvas = world * scale + offset. When given it is
+     * used instead of `camera`, and `width`/`height` are the canvas area being lit.
+     */
+    view?: { scale: number; x: number; y: number };
+    /**
+     * "half" renders the light and vision layers at half resolution and scales them up when compositing: a quarter of the pixels
+     * to fill, with shadow edges a little softer. Defaults to "full".
+     */
+    quality?: "full" | "half";
+    /** How many lights the map has in all, for the statistics overlay (`lights` are only the ones worth drawing). */
+    totalLights?: number;
 }
+
+/** The map statistics overlay: off, statistics only, or statistics plus the lighting geometry (walls, light positions). */
+export type HudMode = "off" | "stats" | "debug";
 
 export interface Segment {
     p1: Point;

@@ -101,6 +101,49 @@ export const SPIRAL_TURN_SECONDS = {
     STEP: 0.5,
 } as const;
 
+// Binaural beats played while hypnotized (opt-in). The evidence that they entrain the brain is weak; these are the
+// conventional trance bands: alpha (about 8-12 Hz) for relaxed focus, theta (about 4-7 Hz) for the deeper end.
+export const BINAURAL_BEATS = {
+    /** Pitch both ears are centred on. Low carriers (a few hundred Hz) are the ones that make beats audible */
+    CARRIER_HZ: 250,
+    /** Seconds to fade in when the trance starts */
+    FADE_IN_SECONDS: 10,
+    /** Seconds to fade out to silence when it stops */
+    FADE_OUT_SECONDS: 1,
+    /** Longest fade in or out an extension can ask for, in seconds */
+    MAX_FADE_SECONDS: 60,
+    /** Seconds a beat change from an extension glides over */
+    BEAT_CHANGE_SECONDS: 2,
+    /** Seconds a volume change glides over, so it never clicks */
+    VOLUME_CHANGE_SECONDS: 0.2,
+    /** Gain at 100% on the player's volume setting. Two pure tones are loud for their level, so this stays well under 1 */
+    MAX_GAIN: 0.35,
+    /** Lowest and highest beat (Hz) an extension can ask for */
+    MIN_BEAT_HZ: 1,
+    MAX_BEAT_HZ: 30,
+    /** Player's volume setting, in percent */
+    VOLUME_PERCENT: { MIN: 0, MAX: 100, STEP: 5, DEFAULT: 15 },
+    /** The beat starts at `from` and glides to `to` over `glideSeconds`, then holds */
+    PRESETS: {
+        glide: { label: "Alpha to theta glide (10 to 5 Hz over 3 minutes)", from: 10, to: 5, glideSeconds: 180 },
+        alpha: { label: "Alpha (10 Hz)", from: 10, to: 10, glideSeconds: 0 },
+        theta: { label: "Theta (6 Hz)", from: 6, to: 6, glideSeconds: 0 },
+        deep: { label: "Deep theta (4.5 Hz)", from: 4.5, to: 4.5, glideSeconds: 0 },
+    },
+    DEFAULT_PRESET: "glide",
+} as const;
+
+export type BinauralPresetName = keyof typeof BINAURAL_BEATS.PRESETS;
+
+// How strong a breathed dose is, as a percent of the standard gas dose (player setting)
+export const BREATH_STRENGTH_PERCENT = {
+    MIN: 10,
+    MAX: 200,
+    STEP: 10,
+    /** Gas from a respirator */
+    GAS_DEFAULT: 100,
+} as const;
+
 // Random Event Odds
 export const RANDOM_EVENT_ODDS = {
     /** 1 in X chance for big sedative jump (every ~60s at 2s intervals) */
