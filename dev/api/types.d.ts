@@ -58,7 +58,44 @@ export interface LSCGMagicOperations {
     /** Stops the effects of spells cast on the player that haven't taken hold yet. Returns how many spells were cut short. */
     dispel(): number;
 }
+/** What `operations.hypno.binaural.getState()` tells you. */
+export interface LSCGBinauralState {
+    /** True if the player turned binaural beats on in their hypnosis settings. If false, nothing here can make them play. */
+    readonly enabled: boolean;
+    /** Whether a beat is sounding right now. */
+    readonly playing: boolean;
+    /** Whether the player is hypnotized. By default the beat plays exactly while they are. */
+    readonly hypnotized: boolean;
+    /** The beat (Hz) it is heading for or holding; 0 while silent. */
+    readonly beatHz: number;
+    /** The pitch (Hz) both ears are centred on. */
+    readonly carrierHz: number;
+    /** What you asked for with `setVolume`, 0 to 1 of the player's own volume setting. 1 until you change it. */
+    readonly volume: number;
+    /** The player's own volume setting, 0 to 1. The beat is never louder than this, whatever you ask. */
+    readonly maxVolume: number;
+}
+/** Binaural beats played while the player is hypnotized. They are the player's opt-in: until they turn them on in their hypnosis
+ *  settings, `play` returns false and nothing sounds. Their volume setting is the ceiling for everything here. By default the beat
+ *  fades in when hypnosis starts and fades out over a second when it ends; what you change here lasts until the trance ends. */
+/** How long a fade lasts, in seconds (0 to 60; 0 is as close to instant as it can be without a click). Leave it out for the default. */
+export interface LSCGBinauralFadeOptions {
+    fadeSeconds?: number;
+}
+export interface LSCGBinauralOperations {
+    getState(): LSCGBinauralState;
+    /** Plays the beat now, hypnotized or not (it still stops when a trance ends), fading in over `fadeSeconds` (default 10). If it is already playing, nothing changes. Returns false if the player hasn't opted in or has their sound off. */
+    play(options?: LSCGBinauralFadeOptions): boolean;
+    /** Fades the beat out over `fadeSeconds` (default 1). Returns whether it was playing. During a trance it stays off until that trance ends. */
+    stop(options?: LSCGBinauralFadeOptions): boolean;
+    /** Sets how loud, 0 to 1 of the player's own volume setting (it can only turn the beat down, never above what they chose). */
+    setVolume(volume: number): void;
+    /** Glides to a different beat (about 1 to 30 Hz; alpha is roughly 8 to 12, theta 4 to 7). Replaces the player's chosen pattern. */
+    setBeat(hz: number): void;
+}
 export interface LSCGHypnoOperations {
+    /** Binaural beats during hypnosis (capability "hypno.binaural"). */
+    readonly binaural: LSCGBinauralOperations;
     /** Whether the player is under hypnosis now. */
     isHypnotized(): boolean;
     /** Puts the player under hypnosis, as a trigger word would. Returns false if hypnosis is off, they already are, or it is on cooldown. */
@@ -668,6 +705,12 @@ export interface LSCGEventMap {
     "hypno.awakened": {
         method: LSCGHypnoAwakenMethod;
         by?: number;
+    };
+    /** A binaural beat started or stopped (capability "hypno.binaural"). `beatHz` and `volume` (0 to 1 gain) describe it while `playing`, and are 0 otherwise. */
+    "hypno.binauralChanged": {
+        playing: boolean;
+        beatHz: number;
+        volume: number;
     };
     /** A suggestion's trigger was spoken and the player either resisted it or submitted (its instructions are about to run). */
     "hypno.suggestionResolved": {
