@@ -1,5 +1,5 @@
 import { remoteAccessRows } from "./remoteAccessRows";
-import { SPIRAL_TURN_SECONDS } from "constants/game-balance";
+import { BINAURAL_BEATS, SPIRAL_TURN_SECONDS, type BinauralPresetName } from "constants/game-balance";
 import { h } from "tsx-dom";
 import { getModule } from "modules";
 import { HypnoModule } from "Modules/hypno";
@@ -8,7 +8,7 @@ import { HypnoSettingsModel, InstructionDescription, LSCGHypnoInstruction } from
 import { GuiSubscreen, HelpInfo } from "./settingBase";
 import { DomSettingsHost } from "./domSettingsHost";
 import { extensionInstructionIds, extensionInstructions, instructionLabel } from "api/hypno";
-import { CheckboxRow, Chip, Icon, KitContext, Notice, NumberRow, RuleTable, SectionLabel, Tabs, TextRow } from "Dom/kit";
+import { CheckboxRow, Chip, Icon, KitContext, Notice, NumberRow, RuleTable, SectionLabel, SelectRow, Tabs, TextRow } from "Dom/kit";
 
 /** An instruction's name in the block list: LSCG's own plain, an extension's marked the way the spell effects table marks one, with the
  *  extension icon before the name and a chip naming the extension that added it. */
@@ -155,6 +155,22 @@ export class GuiHypno extends GuiSubscreen {
 						label: "Spiral turn time (sec.)", description: "Seconds for the spiral overlay to make one full turn. Lower is faster.",
 						min: SPIRAL_TURN_SECONDS.MIN, max: SPIRAL_TURN_SECONDS.MAX, step: SPIRAL_TURN_SECONDS.STEP, get: () => s.spiralTurnSeconds ?? SPIRAL_TURN_SECONDS.DEFAULT, set: v => s.spiralTurnSeconds = v,
 						disabled: () => off() || s.enableSpiralOverlay === false,
+					}),
+					CheckboxRow(ctx, {
+						label: "Binaural beats", description: "Plays a soft binaural beat while you are hypnotized, fading in as the trance starts and fading out when you wake. Needs headphones. The evidence that beats affect the brain is mixed, so treat them as atmosphere. Not recommended if you have a history of seizures.",
+						get: () => s.enableBinaural ?? false, set: v => s.enableBinaural = v, disabled: off,
+					}),
+					SelectRow(ctx, {
+						label: "Beat pattern", description: "Alpha (about 10 Hz) is relaxed focus and theta (4 to 7 Hz) the deeper end. The glide starts in alpha and settles into theta.",
+						options: (Object.keys(BINAURAL_BEATS.PRESETS) as BinauralPresetName[]).map(value => ({ value, label: BINAURAL_BEATS.PRESETS[value].label })),
+						get: () => s.binauralPreset ?? BINAURAL_BEATS.DEFAULT_PRESET, set: v => s.binauralPreset = v,
+						disabled: () => off() || !s.enableBinaural,
+					}),
+					NumberRow(ctx, {
+						label: "Beat volume (%)", description: "How loud the beats get. Extensions can only play them at or below this.",
+						min: BINAURAL_BEATS.VOLUME_PERCENT.MIN, max: BINAURAL_BEATS.VOLUME_PERCENT.MAX, step: BINAURAL_BEATS.VOLUME_PERCENT.STEP, slider: true,
+						get: () => s.binauralVolume ?? BINAURAL_BEATS.VOLUME_PERCENT.DEFAULT, set: v => s.binauralVolume = v,
+						disabled: () => off() || !s.enableBinaural,
 					}),
 					CheckboxRow(ctx, {
 						label: "Enable wake-up on snaps", description: "If checked you exit the trance when you hear someone snapping.",
