@@ -34,7 +34,7 @@ const HOOK_TARGETS = [
 	"RgbaArrayToHTMLColor", "DrawImageResize", "DrawImageEx", "ChatRoomMapViewDrawGrid", "ChatRoomMapViewSyncMapData",
 	"ChatRoomSyncRoomProperties", "ChatRoomMapViewUpdatePlayerFlag", "ChatRoomMapViewMouseWheel",
 	"ChatRoomMapViewUpdateFlag", "CharacterLoadCanvas", "ChatRoomMapViewClick", "GameKeyDown", "DialogDraw",
-	"DialogClick", "AppearanceRun", "AppearanceClick", "InformationSheetRun", "InformationSheetClick", "InformationSheetExit",
+	"DialogClick", "AppearanceRun", "AppearanceClick", "InformationSheetLoad", "InformationSheetRun", "InformationSheetClick", "InformationSheetExit",
 	"ItemColorLoad", "ItemColorRevert", "ColorPickerExit", "CommonCallFunctionByNameWarn",
 	"CommonDrawAppearanceBuild", "CommonDrawApplyLayerAlphaMasks", "AssetLayerSort",
 	"CharacterAppearanceSortLayers", "ActivityOrgasmStart", "ChatRoomDrawArousalOverlay",
