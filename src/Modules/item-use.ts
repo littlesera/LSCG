@@ -1638,25 +1638,55 @@ export class ItemUseModule extends BaseModule {
 		]);
 	}
 
-	_handleWeirdColorStuff(itemToMove: Item, gagTarget: GagTarget, sourceLocation: string, targetLocation: string): ItemColor | undefined {
-		let color = itemToMove?.Color;
-		// BallGag necklace + mouth gag alternate order...
-		if (!!color && gagTarget.MouthItemName == "BallGag") {
-			if (!Array.isArray(color))
-				color = [color];
+	/** The ball gag's colorable layer names, in ColorIndex order, per slot. The mouth, necklace and hand versions are
+	 *  different assets with different layers and orders. Read live from the asset when possible; this is the fallback. */
+	static readonly BallGagLayers: Record<"mouth" | "neck" | "hand", string[]> = {
+		mouth: ["Ball", "Strap", "Lock"],
+		neck: ["Strap", "Ball"],
+		hand: ["Ball"], // a single unnamed layer: the ball
+	};
 
-			if ((sourceLocation?.startsWith("ItemMouth") && targetLocation == "Necklace") ||
-				(sourceLocation == "Necklace" && targetLocation?.startsWith("ItemMouth")))
-				color = color.reverse();
-				if (targetLocation == "Necklace" && color[0] == "Default" && color[1] == "Default")
-					color = ["#828282", "#BC3030"]; // default hack :c
-			else if (sourceLocation == "Necklace" && targetLocation == "ItemHandheld")
-				color = [color[1]];
-			else if (sourceLocation == "ItemHandheld") {
-				color = [color[0], color[0]];
-			}
+	private _ballGagSlot(location: string): "mouth" | "neck" | "hand" | undefined {
+		if (location?.startsWith("ItemMouth")) return "mouth";
+		if (location == "Necklace") return "neck";
+		if (location == "ItemHandheld") return "hand";
+		return undefined;
+	}
+
+	/** Colorable layer names for the ball gag asset in a slot, ordered by ColorIndex. Unnamed layers are the ball. */
+	private _ballGagLayerNames(slot: "mouth" | "neck" | "hand", assetName?: string): string[] {
+		const fallback = ItemUseModule.BallGagLayers[slot];
+		const group = slot == "mouth" ? "ItemMouth" : slot == "neck" ? "Necklace" : "ItemHandheld";
+		const name = assetName ?? (slot == "mouth" ? "BallGag" : slot == "neck" ? "NecklaceBallGag" : "Ballgag");
+		try {
+			const layers = AssetGet("Female3DCG", group as AssetGroupName, name)?.Layer?.filter(l => l.AllowColorize);
+			if (!layers?.length) return fallback;
+			const names: string[] = [];
+			for (const l of layers) names[l.ColorIndex ?? names.length] ??= l.Name ?? "Ball";
+			return names.length ? names : fallback;
+		} catch {
+			return fallback;
 		}
-		return color;
+	}
+
+	_handleWeirdColorStuff(itemToMove: Item, gagTarget: GagTarget, sourceLocation: string, targetLocation: string): ItemColor | undefined {
+		const color = itemToMove?.Color;
+		const srcSlot = this._ballGagSlot(sourceLocation);
+		const tgtSlot = this._ballGagSlot(targetLocation);
+		if (!color || gagTarget.MouthItemName != "BallGag" || !srcSlot || !tgtSlot)
+			return color;
+
+		// Colors by layer name, from the source asset's layers. A lone string colors every layer.
+		const srcNames = this._ballGagLayerNames(srcSlot, itemToMove?.Asset?.Name);
+		const byName: Record<string, string> = {};
+		srcNames.forEach((n, i) => byName[n] = (Array.isArray(color) ? color[i] : color) ?? "Default");
+		// A hand ball gag has one color for the whole thing, so it paints the strap as well as the ball.
+		if (srcSlot == "hand") byName["Strap"] = byName["Ball"];
+
+		let result: string[] = this._ballGagLayerNames(tgtSlot).map(n => byName[n] ?? "Default");
+		if (tgtSlot == "neck" && result.every(c => c == "Default"))
+			result = this._ballGagLayerNames("neck").map(n => n == "Ball" ? "#BC3030" : "#828282"); // necklace's real defaults
+		return result as ItemColor;
 	}
 
 	ApplyGag(target: Character, source: Character, gagTarget: GagTarget, targetLocation: AssetGroupName, sourceLocation: AssetGroupName = "ItemHandheld") {
