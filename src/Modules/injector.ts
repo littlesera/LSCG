@@ -1808,8 +1808,9 @@ export class InjectorModule extends BaseModule {
     ];
 
     CheckForHypnoHelmet() {
-        // Use new spirals setting for hypno headsets
-        if (!Player.LSCG.HypnoModule.enableSpirals)
+        // A visor or headset feeds the mind control drug and trance, so it needs both of those on, as well as the spirals setting for hypno headsets.
+        const hypno = Player.LSCG.HypnoModule;
+        if (!this.settings.enableMindControl || !hypno.enabled || !hypno.enableSpirals)
             return;
         const hypnoItem = Player.Appearance.find(item => this.hypnoItems.some(hypnoItem => hypnoItem.name == item.Asset.Name && hypnoItem.active(item)));
 

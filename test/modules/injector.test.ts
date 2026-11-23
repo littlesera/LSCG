@@ -375,7 +375,7 @@ describe("InjectorModule", () => {
 		function wearHeadset(craft?: { MemberNumber?: number }) {
 			const asset = makeAsset(makeGroup({ Name: "ItemHead" }), { Name: "InteractiveVRHeadset" });
 			wear(player(), makeItem(asset, { Property: { TypeRecord: { b: 5 } }, ...(craft ? { Craft: { Name: "Spiral Visor", Description: "", MemberNumber: craft.MemberNumber } } : {}) } as never));
-			player().LSCG.HypnoModule.enableSpirals = true;
+			Object.assign(player().LSCG.HypnoModule, { enabled: true, enableSpirals: true });
 		}
 
 		it("a drugged drink: whoever gave it", () => {
