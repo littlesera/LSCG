@@ -524,7 +524,7 @@ export class SplatterModule extends BaseModule {
                         DrawButton(this.START_X + 250, 480, 240, 60, "Nobody", "White", undefined, undefined, false);
                         DrawButton(this.START_X + 500, 480, 240, 60, "Uncontrolled", "White", undefined, undefined, false);
 
-                        if (!this.settings.uncontrollableWhenBound || !Player.IsRestrained()) { // If bound, remove control of where to cum if setting is true
+                        if (this.playerControlsSplat()) { // If bound, remove control of where to cum if setting is true
                             this.getTargetSelectAreas().forEach(pair => {
                                 const rect = pair[0];
                                 const char = pair[1];
@@ -561,7 +561,7 @@ export class SplatterModule extends BaseModule {
                     if (MouseIn(this.START_X + 250, 480, 240, 60)) this.ResetPrompt();
                     if (MouseIn(this.START_X + 500, 480, 240, 60)) this.RandomSplat();
 
-                    if (!Player.IsRestrained() || Player.CanWalk()) { // If bound, remove control of where to cum
+                    if (this.playerControlsSplat()) { // If bound, remove control of where to cum
                         this.getTargetSelectAreas().forEach(pair => {
                             const rect = pair[0];
                             const char = pair[1];
@@ -584,6 +584,12 @@ export class SplatterModule extends BaseModule {
             }
             return next(args);
         }, ModuleCategory.Splatter);
+    }
+
+    /** Whether the player picks where an orgasm lands. Only "uncontrollable when bound" takes that away, and only while
+     *  restrained; being unable to walk doesn't matter. The prompt, its buttons and its clicks all use this. */
+    playerControlsSplat(): boolean {
+        return !this.settings.uncontrollableWhenBound || !Player.IsRestrained();
     }
 
     getTargetSelectAreas(): [RectTuple, Character][] {
@@ -684,7 +690,7 @@ export class SplatterModule extends BaseModule {
             Player.ArousalSettings.OrgasmStage = 2;
         }
 
-        if (Player.IsRestrained() && !Player.CanWalk()) { // If bound, remove control of where to cum
+        if (!this.playerControlsSplat()) { // If bound, remove control of where to cum
             this.RandomSplat();
         }
     }
