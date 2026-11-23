@@ -231,12 +231,25 @@ describe("Splatter", () => {
 			expect(callback).toHaveBeenCalledOnce();
 		});
 
-		it("a bound player has no say in where it lands", () => {
+		it("a bound player has no say in where it lands when uncontrollable-when-bound is on", () => {
+			splatter.settings.uncontrollableWhenBound = true;
 			player().flags.restrained = true;
-			player().flags.canWalk = false;
 			const random = vi.spyOn(splatter, "RandomSplat").mockImplementation(() => {});
 			splatter.PromptForSplat(vi.fn());
 			expect(random).toHaveBeenCalledOnce();
+			random.mockRestore();
+		});
+
+		it("being unable to walk doesn't take control away with the setting off, or without being restrained", () => {
+			player().flags.canWalk = false;
+			const random = vi.spyOn(splatter, "RandomSplat").mockImplementation(() => {});
+			splatter.settings.uncontrollableWhenBound = false;
+			player().flags.restrained = true;
+			splatter.PromptForSplat(vi.fn());
+			splatter.settings.uncontrollableWhenBound = true;
+			player().flags.restrained = false;
+			splatter.PromptForSplat(vi.fn());
+			expect(random).not.toHaveBeenCalled();
 			random.mockRestore();
 		});
 

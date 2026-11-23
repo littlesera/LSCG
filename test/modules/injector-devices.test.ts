@@ -342,7 +342,7 @@ describe("InjectorModule devices", () => {
 	});
 
 	describe("CheckForHypnoHelmet", () => {
-		beforeEach(() => { player().LSCG.HypnoModule = { enableSpirals: true }; });
+		beforeEach(() => { player().LSCG.HypnoModule = { enabled: true, enableSpirals: true }; });
 
 		it("an active hypno visor slowly raises mind control", () => {
 			put("ItemHead", "HypnoticVisor", { Property: { TypeRecord: { p: 1 } } });
@@ -363,6 +363,17 @@ describe("InjectorModule devices", () => {
 			injector.CheckForHypnoHelmet();
 			put("ItemHead", "HypnoticVisor", { Property: { TypeRecord: { p: 1 } } });
 			player().LSCG.HypnoModule.enableSpirals = false;
+			injector.CheckForHypnoHelmet();
+			expect(injector.mindControlLevel).toBe(0);
+		});
+
+		it("does nothing while the mind control drug is off, or triggered hypnosis is off", () => {
+			put("ItemHead", "HypnoticVisor", { Property: { TypeRecord: { p: 1 } } });
+			seedRandom([0.5]);
+			injector.settings.enableMindControl = false;
+			injector.CheckForHypnoHelmet();
+			injector.settings.enableMindControl = true;
+			player().LSCG.HypnoModule.enabled = false;
 			injector.CheckForHypnoHelmet();
 			expect(injector.mindControlLevel).toBe(0);
 		});
