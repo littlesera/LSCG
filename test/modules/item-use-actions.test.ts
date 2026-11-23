@@ -262,21 +262,37 @@ describe("ItemUseModule actions", () => {
 			expect(color(["#111", "#222"], { MouthItemName: "ClothGag" })("ItemMouth", "Necklace")).toEqual(["#111", "#222"]);
 		});
 
-		it("reverses ball gag colors moving between the mouth and the necklace", () => {
+		it("maps mouth colors onto the necklace by layer name (Ball, Strap, Lock -> Strap, Ball)", () => {
+			expect(color(["#red", "#cyan", "#purple"])("ItemMouth", "Necklace")).toEqual(["#cyan", "#red"]);
 			expect(color(["#111", "#222"])("ItemMouth", "Necklace")).toEqual(["#222", "#111"]);
-			expect(color(["#111", "#222"])("Necklace", "ItemMouth")).toEqual(["#222", "#111"]);
+		});
+
+		it("maps necklace colors back onto the mouth gag, leaving the lock default", () => {
+			expect(color(["#strap", "#ball"])("Necklace", "ItemMouth")).toEqual(["#ball", "#strap", "Default"]);
+		});
+
+		it("round-trips the ball and strap colors through the necklace", () => {
+			const toNeck = color(["#red", "#cyan", "#purple"])("ItemMouth", "Necklace");
+			expect(color(toNeck)("Necklace", "ItemMouth")).toEqual(["#red", "#cyan", "Default"]);
+		});
+
+		it("does not mutate the source item's color array", () => {
+			const original = ["#111", "#222", "#333"];
+			color(original)("ItemMouth", "Necklace");
+			expect(original).toEqual(["#111", "#222", "#333"]);
 		});
 
 		it("substitutes the necklace's real default colors", () => {
-			expect(color(["Default", "Default"])("ItemMouth", "Necklace")).toEqual(["#828282", "#BC3030"]);
+			expect(color(["Default", "Default", "Default"])("ItemMouth", "Necklace")).toEqual(["#828282", "#BC3030"]);
 		});
 
 		it("keeps only the ball color going from necklace to hand", () => {
-			expect(color(["#111", "#222"])("Necklace", "ItemHandheld")).toEqual(["#222"]);
+			expect(color(["#strap", "#ball"])("Necklace", "ItemHandheld")).toEqual(["#ball"]);
 		});
 
-		it("doubles a single hand color, and wraps a non-array color", () => {
-			expect(color("#333")("ItemHandheld", "ItemMouth")).toEqual(["#333", "#333"]);
+		it("paints both ball and strap from the single hand color", () => {
+			expect(color(["#333"])("ItemHandheld", "ItemMouth")).toEqual(["#333", "#333", "Default"]);
+			expect(color("#333")("ItemHandheld", "Necklace")).toEqual(["#333", "#333"]);
 		});
 
 		it("returns undefined for an uncolored item", () => {
